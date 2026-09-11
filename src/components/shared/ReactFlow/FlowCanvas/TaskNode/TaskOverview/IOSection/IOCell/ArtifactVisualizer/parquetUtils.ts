@@ -1,7 +1,6 @@
 import {
   type AsyncBuffer,
   asyncBufferFromUrl,
-  byteLengthFromUrl,
   cachedAsyncBuffer,
   type FileMetaData,
   parquetMetadata,
@@ -13,10 +12,7 @@ import {
 
 import { ArtifactFetchError } from "@/services/executionService";
 
-import {
-  fetchArtifactForHyparquet,
-  fetchArtifactOrThrow,
-} from "./useArtifactFetch";
+import { fetchArtifactOrThrow } from "./useArtifactFetch";
 import {
   type ArtifactCell,
   type ArtifactColumn,
@@ -33,44 +29,67 @@ export interface OpenedParquet {
   metadata: FileMetaData;
 }
 
-export async function openParquet(signedUrl: string): Promise<OpenedParquet> {
+export async function openParquet(
+  signedUrl: string,
+  byteLength?: number,
+): Promise<OpenedParquet> {
   try {
-    const byteLength = await byteLengthFromUrl(
-      signedUrl,
-      undefined,
-      fetchArtifactForHyparquet,
-    );
     const source = cachedAsyncBuffer(
       await asyncBufferFromUrl({
         url: signedUrl,
-        byteLength,
-        fetch: fetchArtifactForHyparquet,
+        byteLength:
+          typeof byteLength === "number" && byteLength > 0
+            ? byteLength
+            : await byteLengthFromRangedGet(signedUrl),
+        fetch: fetchArtifactOrThrow,
       }),
     );
     const metadata = await parquetMetadataAsync(source);
     return { source, metadata };
   } catch (error) {
     if (error instanceof ArtifactFetchError) throw error;
-
-    const response = await fetchArtifactOrThrow(signedUrl);
-    const contentLengthHeader = response.headers.get("Content-Length");
-    const contentLength = contentLengthHeader
-      ? Number(contentLengthHeader)
-      : NaN;
-    if (
-      !Number.isFinite(contentLength) ||
-      contentLength > MAX_VISUALIZABLE_SIZE_BYTES
-    ) {
-      throw new ArtifactFetchError(
-        413,
-        "Payload Too Large",
-        "This parquet file is too large to preview without range-request support.",
-      );
-    }
-
-    const source = await response.arrayBuffer();
-    return { source, metadata: parquetMetadata(source) };
+    return openByFullDownload(signedUrl);
   }
+}
+
+/**
+ * Signed object-store URLs reject HEAD — the method is part of the signature —
+ * and a bucket's CORS policy need not allow it either, so a blocked HEAD
+ * surfaces as an opaque network error rather than a 403 the caller could fall
+ * back from. A ranged GET is signed and needs no preflight, but reading the
+ * total size back requires the bucket to expose `Content-Range`; where it does
+ * not, this throws and the caller downloads the whole object instead.
+ */
+async function byteLengthFromRangedGet(url: string): Promise<number> {
+  const controller = new AbortController();
+  const response = await fetchArtifactOrThrow(url, {
+    headers: { Range: "bytes=0-0" },
+    signal: controller.signal,
+  });
+  const totalSize = response.headers
+    .get("Content-Range")
+    ?.match(/\/(\d+)$/)?.[1];
+  controller.abort();
+
+  if (response.status !== 206 || !totalSize) {
+    throw new Error("Artifact host does not support range requests.");
+  }
+  return Number(totalSize);
+}
+
+async function openByFullDownload(signedUrl: string): Promise<OpenedParquet> {
+  const response = await fetchArtifactOrThrow(signedUrl);
+  const contentLength = Number(response.headers.get("Content-Length"));
+  if (!contentLength || contentLength > MAX_VISUALIZABLE_SIZE_BYTES) {
+    throw new ArtifactFetchError(
+      413,
+      "Payload Too Large",
+      "This parquet file is too large to preview.",
+    );
+  }
+
+  const source = await response.arrayBuffer();
+  return { source, metadata: parquetMetadata(source) };
 }
 
 export async function readParquetRows(

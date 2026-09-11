@@ -89,6 +89,7 @@ function ComparisonPane({
               artifactId={artifact.id}
               type={normalizedType}
               isFullscreen
+              byteLength={artifact.artifact_data?.total_size}
             />
           </SuspenseWrapper>
         )}

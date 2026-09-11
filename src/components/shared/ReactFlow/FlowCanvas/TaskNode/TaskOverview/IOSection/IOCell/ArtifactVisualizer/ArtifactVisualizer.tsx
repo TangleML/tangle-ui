@@ -197,6 +197,7 @@ const ArtifactVisualizer = ({
                 artifactId={artifact.id}
                 type={normalizedType}
                 isFullscreen={isFullscreen}
+                byteLength={artifactData?.total_size}
               />
             </SuspenseWrapper>
           )}

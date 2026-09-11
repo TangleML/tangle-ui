@@ -6,7 +6,6 @@ import { ErrorBoundary } from "react-error-boundary";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import useToastNotification from "@/hooks/useToastNotification";
-import { ArtifactFetchError } from "@/services/executionService";
 
 import { PARQUET_PREVIEW_ROWS } from "./parquetUtils";
 import ParquetVisualizer from "./ParquetVisualizer";
@@ -22,7 +21,6 @@ vi.mock("hyparquet", () => ({
   parquetMetadata: vi.fn(),
   parquetMetadataAsync: vi.fn(),
   asyncBufferFromUrl: vi.fn(),
-  byteLengthFromUrl: vi.fn(),
   cachedAsyncBuffer: vi.fn((buffer) => buffer),
   toJson: vi.fn((value) => value),
 }));
@@ -94,7 +92,6 @@ const {
   parquetMetadata,
   parquetMetadataAsync,
   asyncBufferFromUrl,
-  byteLengthFromUrl,
 } = await import("hyparquet");
 const { downloadStringAsFile } = await import("@/utils/URL");
 
@@ -166,6 +163,14 @@ const mockWideDataset = (columnCount: number, numRows: number) => {
   );
 };
 
+/** A `Range: bytes=0-0` probe answered with the total size, as object stores do. */
+const mockRangeProbe = (totalSize: number) =>
+  vi.spyOn(globalThis, "fetch").mockResolvedValue({
+    ok: true,
+    status: 206,
+    headers: new Headers({ "Content-Range": `bytes 0-0/${totalSize}` }),
+  } as unknown as Response);
+
 beforeEach(() => {
   queryClient.clear();
   lastDownloadFull = undefined;
@@ -176,7 +181,7 @@ beforeEach(() => {
   vi.mocked(parquetMetadataAsync).mockReset();
   vi.mocked(parquetReadObjects).mockReset();
   vi.mocked(downloadStringAsFile).mockReset();
-  vi.mocked(byteLengthFromUrl).mockResolvedValue(1024);
+  mockRangeProbe(1024);
   vi.mocked(asyncBufferFromUrl).mockResolvedValue({
     byteLength: 1024,
     slice: vi.fn(),
@@ -184,6 +189,56 @@ beforeEach(() => {
 });
 
 describe("ParquetVisualizer", () => {
+  it("opens the file at the reported size without any size request", async () => {
+    const fetchSpy = mockRangeProbe(1024);
+    mockDataset(SCHEMA, 2);
+
+    renderWithSuspense(
+      <ParquetVisualizer
+        signedUrl="https://storage.example.com/sized.parquet"
+        isFullscreen={false}
+        byteLength={9446073}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId("table-visualizer")).toBeInTheDocument(),
+    );
+
+    expect(vi.mocked(asyncBufferFromUrl)).toHaveBeenCalledWith(
+      expect.objectContaining({ byteLength: 9446073 }),
+    );
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("probes the size with a ranged GET, never a HEAD, when none is reported", async () => {
+    const fetchSpy = mockRangeProbe(9446073);
+    mockDataset(SCHEMA, 2);
+
+    renderWithSuspense(
+      <ParquetVisualizer
+        signedUrl="https://storage.example.com/unsized.parquet"
+        isFullscreen={false}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId("table-visualizer")).toBeInTheDocument(),
+    );
+
+    expect(vi.mocked(asyncBufferFromUrl)).toHaveBeenCalledWith(
+      expect.objectContaining({ byteLength: 9446073 }),
+    );
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "https://storage.example.com/unsized.parquet",
+      expect.objectContaining({ headers: { Range: "bytes=0-0" } }),
+    );
+    const methods = fetchSpy.mock.calls.map(([, init]) =>
+      (init?.method ?? "GET").toUpperCase(),
+    );
+    expect(methods).not.toContain("HEAD");
+  });
+
   it("reads via range requests, parses, and renders TableVisualizer with stats", async () => {
     mockDataset(SCHEMA, 2);
 
@@ -381,6 +436,10 @@ describe("ParquetVisualizer", () => {
     expect(screen.queryByRole("button", { name: "Load max" })).toBeNull();
   });
 
+  /**
+   * A host that ignores `Range` and returns the whole object: the size probe
+   * sees 200 with no `Content-Range`, which is the no-range-support signal.
+   */
   const mockFullDownload = (contentLength: string | null) =>
     vi.spyOn(globalThis, "fetch").mockResolvedValue({
       ok: true,
@@ -390,10 +449,6 @@ describe("ParquetVisualizer", () => {
     } as unknown as Response);
 
   it("falls back to a full download when range requests are unavailable", async () => {
-    // Simulate a CORS/network failure on the range path (not an HTTP error).
-    vi.mocked(byteLengthFromUrl).mockRejectedValue(
-      new TypeError("Failed to fetch"),
-    );
     mockFullDownload(String(1024));
     vi.mocked(parquetMetadata).mockReturnValue({
       schema: SCHEMA,
@@ -418,9 +473,6 @@ describe("ParquetVisualizer", () => {
   });
 
   it("errors instead of downloading a huge file when range requests are unavailable", async () => {
-    vi.mocked(byteLengthFromUrl).mockRejectedValue(
-      new TypeError("Failed to fetch"),
-    );
     mockFullDownload(String(200 * 1024 * 1024));
 
     renderWithSuspense(
@@ -437,10 +489,6 @@ describe("ParquetVisualizer", () => {
   });
 
   it("errors instead of downloading when Content-Length is absent", async () => {
-    vi.mocked(byteLengthFromUrl).mockRejectedValue(
-      new TypeError("Failed to fetch"),
-    );
-
     mockFullDownload(null);
 
     renderWithSuspense(
@@ -514,9 +562,11 @@ describe("ParquetVisualizer", () => {
   });
 
   it("surfaces artifact failures to the error boundary", async () => {
-    vi.mocked(byteLengthFromUrl).mockRejectedValue(
-      new ArtifactFetchError(500, "Server Error", "Failed to fetch artifact."),
-    );
+    vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: false,
+      status: 500,
+      statusText: "Server Error",
+    } as unknown as Response);
 
     renderWithSuspense(
       <ParquetVisualizer
