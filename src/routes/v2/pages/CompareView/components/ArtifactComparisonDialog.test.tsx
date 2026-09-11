@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ArtifactNodeResponse } from "@/api/types.gen";
 
@@ -11,15 +11,15 @@ vi.mock(
   () => ({
     PreviewContent: ({
       artifactId,
-      totalSize,
+      byteLength,
     }: {
       artifactId: string;
-      totalSize?: number;
+      byteLength?: number;
     }) => (
       <div
         data-testid="preview-content"
         data-artifact-id={artifactId}
-        data-total-size={totalSize}
+        data-byte-length={byteLength}
       />
     ),
     PreviewSkeleton: () => null,
@@ -28,6 +28,10 @@ vi.mock(
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
+});
+
+beforeEach(() => {
+  queryClient.clear();
 });
 
 const artifact = (
@@ -64,9 +68,9 @@ describe("ArtifactComparisonDialog", () => {
 
     const [paneA, paneB] = screen.getAllByTestId("preview-content");
     expect(paneA).toHaveAttribute("data-artifact-id", "a1");
-    expect(paneA).toHaveAttribute("data-total-size", "1024");
+    expect(paneA).toHaveAttribute("data-byte-length", "1024");
     expect(paneB).toHaveAttribute("data-artifact-id", "b1");
-    expect(paneB).toHaveAttribute("data-total-size", "9446073");
+    expect(paneB).toHaveAttribute("data-byte-length", "9446073");
   });
 
   it("omits the size when a side reports no artifact data", () => {
@@ -76,7 +80,7 @@ describe("ArtifactComparisonDialog", () => {
     );
 
     const [paneA, paneB] = screen.getAllByTestId("preview-content");
-    expect(paneA).not.toHaveAttribute("data-total-size");
-    expect(paneB).toHaveAttribute("data-total-size", "1024");
+    expect(paneA).not.toHaveAttribute("data-byte-length");
+    expect(paneB).toHaveAttribute("data-byte-length", "1024");
   });
 });

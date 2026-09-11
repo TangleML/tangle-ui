@@ -137,7 +137,7 @@ const ArtifactPreviewBody = ({
           artifactId={artifactId}
           type={normalizedType}
           isFullscreen={true}
-          totalSize={artifactData?.total_size}
+          byteLength={artifactData?.total_size}
         />
       </div>
     </div>
