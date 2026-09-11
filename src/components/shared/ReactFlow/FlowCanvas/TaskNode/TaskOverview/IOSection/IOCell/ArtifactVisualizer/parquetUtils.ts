@@ -84,7 +84,7 @@ async function openByFullDownload(signedUrl: string): Promise<OpenedParquet> {
     throw new ArtifactFetchError(
       413,
       "Payload Too Large",
-      "This parquet file is too large to preview without range-request support.",
+      "This parquet file is too large to preview.",
     );
   }
 

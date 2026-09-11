@@ -45,7 +45,7 @@ const ParquetVisualizer = ({
   byteLength,
 }: ParquetVisualizerProps) => {
   const { data: base } = useSuspenseQuery<ParquetBase>({
-    queryKey: ["artifact-parquet", signedUrl],
+    queryKey: ["artifact-parquet", signedUrl, byteLength],
     queryFn: async () => {
       const opened = await openParquet(signedUrl, byteLength);
       const columnCount = countColumns(opened.metadata);
