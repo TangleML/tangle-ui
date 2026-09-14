@@ -23,12 +23,6 @@ function usedComponentsQueryKeyDigests(
     .sort();
 }
 
-/**
- * Hook to get the outdated components in the graph
- *
- * @param usedComponents - The components that are used in the graph
- * @returns
- */
 export function useOutdatedComponents(usedComponents: ComponentReference[]) {
   const { data: publishedComponents } = useAllPublishedComponents();
   const { existingComponentLibraries, getComponentLibrary } =
@@ -40,14 +34,12 @@ export function useOutdatedComponents(usedComponents: ComponentReference[]) {
     queryKey: ["outdated-components", usedDigestsKey],
     staleTime: 1000 * 60 * 5,
     queryFn: async () => {
+      const hydratedComponents = await hydrateAllComponents(usedComponents);
       const mostRecentComponents = await findMostRecentComponents(
         publishedComponents.components ?? [],
+        hydratedComponents,
       );
 
-      const hydratedComponents = await hydrateAllComponents(usedComponents);
-
-      // check for github components
-      // todo: generalize this to all libraries
       const githubLibs = existingComponentLibraries?.filter(
         (l) => l.type === "github",
       );
@@ -99,7 +91,9 @@ export function useOutdatedComponents(usedComponents: ComponentReference[]) {
 
 async function findMostRecentComponents(
   components: ComponentReference[],
+  usedComponents: HydratedComponentReference[],
 ): Promise<Map<string, HydratedComponentReference>> {
+  const usedDigests = new Set(usedComponents.map((c) => c.digest));
   const componentsWithDigest = components.filter((c) =>
     isDiscoverableComponentReference(c),
   );
@@ -115,13 +109,28 @@ async function findMostRecentComponents(
   const leafList = componentsWithDigest.filter((c) => !c.superseded_by);
 
   for (const leaf of leafList) {
+    const outdatedDigests: string[] = [];
     let current: ComponentReferenceWithDigest | undefined = supersededIndex.get(
       leaf.digest,
     );
-    const hydratedLeaf = await hydrateComponentReference(leaf);
-    while (current && hydratedLeaf) {
-      mostRecentComponents.set(current.digest, hydratedLeaf);
+    while (current) {
+      if (usedDigests.has(current.digest)) {
+        outdatedDigests.push(current.digest);
+      }
       current = supersededIndex.get(current.digest);
+    }
+
+    if (outdatedDigests.length === 0) {
+      continue;
+    }
+
+    const hydratedLeaf = await hydrateComponentReference(leaf);
+    if (!hydratedLeaf) {
+      continue;
+    }
+
+    for (const digest of outdatedDigests) {
+      mostRecentComponents.set(digest, hydratedLeaf);
     }
   }
 
