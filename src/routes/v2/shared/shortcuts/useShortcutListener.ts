@@ -18,6 +18,7 @@ export function useShortcutListener(): void {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (typeof event.key !== "string") return;
       if (event.repeat && event.metaKey) return;
 
       keyboard.syncModifiers(event);
@@ -48,6 +49,8 @@ export function useShortcutListener(): void {
     };
 
     const handleKeyUp = (event: KeyboardEvent) => {
+      if (typeof event.key !== "string") return;
+
       const keys = normalizeKeyFromEvent(event);
       if (keys.includes(CMDALT)) {
         keyboard.clearPressed();
