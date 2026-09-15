@@ -1,11 +1,6 @@
-import {
-  fetchExecutionDetails,
-  fetchPipelineRun,
-} from "@/services/executionService";
-import { copyRunToPipeline } from "@/services/pipelineRunService";
+import { fetchPipelineRun } from "@/services/executionService";
 import { findById } from "@/services/pipelineStorage/pipelineRegistry";
 import type { PipelineRef } from "@/services/pipelineStorage/types";
-import type { ComponentSpec } from "@/utils/componentSpec";
 
 const PIPELINE_PROTOCOL = "pipeline://";
 
@@ -15,7 +10,8 @@ const PIPELINE_PROTOCOL = "pipeline://";
  */
 export type ResolvedWorkareaView =
   | { kind: "artifact"; title: string; url: string }
-  | { kind: "pipeline"; title: string; pipelineRef: PipelineRef };
+  | { kind: "pipeline"; title: string; pipelineRef: PipelineRef }
+  | { kind: "run"; title: string; runId: string };
 
 export interface ResolveWorkareaTargetOptions {
   /** Backend base URL, used when a run has to be cloned into a draft. */
@@ -25,51 +21,24 @@ export interface ResolveWorkareaTargetOptions {
 }
 
 /**
- * Extracts a run id from a `run:<id>` target or a run URL such as
- * `https://host/runs/v2/123`. Returns `null` when the target is not a run.
+ * Extracts a run id from a `run:<id>` target or a run URL. Matches both the v1
+ * (`/runs/<id>`) and v2 (`/runs-v2/<id>`) route shapes, with or without a
+ * trailing subgraph-execution segment. Returns `null` when the target is not a
+ * run.
  */
 function extractRunId(target: string): string | null {
   if (target.startsWith("run:")) {
     const id = target.slice("run:".length).trim();
     return id.length > 0 ? id : null;
   }
-  const match = target.match(/\/runs\/(?:v1|v2)\/([^/?#]+)/);
+  const match = target.match(/\/runs(?:-v2)?\/([^/?#]+)/);
   return match ? decodeURIComponent(match[1]) : null;
-}
-
-/**
- * Clones a run into a local draft pipeline and returns a ref to open it. Reads
- * the run's component spec from its root execution, mirroring how RunView seeds
- * its spec, then reuses the shared clone service.
- */
-async function clonePipelineFromRun(
-  runId: string,
-  backendUrl: string,
-): Promise<PipelineRef> {
-  const run = await fetchPipelineRun(runId, backendUrl);
-  const rootExecutionId = run.root_execution_id
-    ? String(run.root_execution_id)
-    : runId;
-  const details = await fetchExecutionDetails(rootExecutionId, backendUrl);
-  const spec = details.task_spec.componentRef.spec;
-  if (!spec) {
-    throw new Error("This run has no pipeline spec to clone.");
-  }
-
-  // The API response uses `ComponentSpecOutput` (nullable name) while the clone
-  // service works with the domain `ComponentSpec`; the divergence is only in
-  // optionality, so a cast is safe here (same pattern as RunView).
-  const result = await copyRunToPipeline(spec as ComponentSpec, runId);
-  if (!result.name) {
-    throw new Error("Failed to clone the run into a pipeline.");
-  }
-  return { name: result.name };
 }
 
 /**
  * Resolves a string target into a concrete workarea view:
  * - `pipeline://<fileId>` opens the local draft editor.
- * - a run URL or `run:<id>` clones the run into a draft and opens it.
+ * - a run URL or `run:<id>` opens the run's canvas to inspect its execution.
  * - an `http(s)` URL opens the artifact viewer.
  * - anything else is treated as a pipeline name.
  */
@@ -89,11 +58,15 @@ export async function resolveWorkareaTarget(
 
   const runId = extractRunId(trimmed);
   if (runId) {
-    const pipelineRef = await clonePipelineFromRun(runId, backendUrl);
+    // Best-effort title: the run view handles its own loading/errors, so a
+    // failed metadata fetch should still open the tab.
+    const run = await fetchPipelineRun(runId, backendUrl).catch(
+      () => undefined,
+    );
     return {
-      kind: "pipeline",
-      title: title ?? pipelineRef.name,
-      pipelineRef,
+      kind: "run",
+      title: title ?? run?.pipeline_name ?? `Run ${runId}`,
+      runId,
     };
   }
 

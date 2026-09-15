@@ -7,6 +7,7 @@ import { VerticalResizeHandle } from "@/components/ui/resize-handle";
 import { Tabs, TabsContent, TabsList } from "@/components/ui/tabs";
 import { Text } from "@/components/ui/typography";
 import { EmbeddedPipelineEditor } from "@/routes/v2/pages/Editor/EmbeddedPipelineEditor";
+import { EmbeddedRunView } from "@/routes/v2/pages/RunView/EmbeddedRunView";
 import type { WorkareaTab } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { CloseableTabTrigger } from "@/routes/v2/shared/tangent/CloseableTabTrigger";
@@ -19,6 +20,12 @@ const MAX_WIDTH = 960;
 function pipelineEnvironmentId(sessionId: string, tabId: string): string {
   return `${sessionId}:${tabId}`;
 }
+
+const WORKAREA_TAB_ICONS = {
+  pipeline: "Workflow",
+  run: "Play",
+  artifact: "FileText",
+} as const;
 
 function WorkareaArtifactBody({
   tab,
@@ -104,7 +111,7 @@ export function DynamicWorkarea() {
                 key={tab.id}
                 value={tab.id}
                 title={tab.title}
-                icon={tab.kind === "pipeline" ? "Workflow" : "FileText"}
+                icon={WORKAREA_TAB_ICONS[tab.kind]}
                 onClose={() => closeWorkareaTab(tab.id)}
               />
             ))}
@@ -134,6 +141,22 @@ export function DynamicWorkarea() {
                       registerTabBridge(tab.id, bridge)
                     }
                     onBridgeClosed={() => unregisterTabBridge(tab.id)}
+                    onStoreReady={(store) => registerTabStore(tab.id, store)}
+                    onStoreClosed={() => unregisterTabStore(tab.id)}
+                  />
+                </TabsContent>
+              );
+            }
+            if (tab.kind === "run") {
+              return (
+                <TabsContent
+                  key={tab.id}
+                  value={tab.id}
+                  forceMount
+                  className="flex min-h-0 flex-1 flex-col data-[state=inactive]:hidden"
+                >
+                  <EmbeddedRunView
+                    runId={tab.runId}
                     onStoreReady={(store) => registerTabStore(tab.id, store)}
                     onStoreClosed={() => unregisterTabStore(tab.id)}
                   />

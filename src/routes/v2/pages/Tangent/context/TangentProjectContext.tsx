@@ -74,6 +74,7 @@ interface TangentProjectContextValue {
   activeWorkareaTabId: string | null;
   openArtifactTab: (url: string, title: string) => WorkareaTab;
   openPipelineTab: (pipelineRef: PipelineRef, title: string) => WorkareaTab;
+  openRunTab: (runId: string, title: string) => WorkareaTab;
   openWorkareaTarget: (target: string, title?: string) => Promise<WorkareaTab>;
   selectWorkareaTab: (id: string) => void;
   closeWorkareaTab: (id: string) => void;
@@ -464,6 +465,25 @@ export function TangentProjectProvider({
     return tab;
   }
 
+  function openRunTab(runId: string, title: string): WorkareaTab {
+    const existing = workareaTabs.find(
+      (tab) => tab.kind === "run" && tab.runId === runId,
+    );
+    if (existing) {
+      setActiveWorkareaTabId(existing.id);
+      return existing;
+    }
+    const tab: WorkareaTab = {
+      id: crypto.randomUUID(),
+      kind: "run",
+      title,
+      runId,
+    };
+    setWorkareaTabs((prev) => [...prev, tab]);
+    setActiveWorkareaTabId(tab.id);
+    return tab;
+  }
+
   async function openWorkareaTarget(
     target: string,
     title?: string,
@@ -471,6 +491,9 @@ export function TangentProjectProvider({
     const view = await resolveWorkareaTarget(target, { backendUrl, title });
     if (view.kind === "artifact") {
       return openArtifactTab(view.url, view.title);
+    }
+    if (view.kind === "run") {
+      return openRunTab(view.runId, view.title);
     }
     return openPipelineTab(view.pipelineRef, view.title);
   }
@@ -689,6 +712,7 @@ export function TangentProjectProvider({
     activeWorkareaTabId,
     openArtifactTab,
     openPipelineTab,
+    openRunTab,
     openWorkareaTarget,
     selectWorkareaTab,
     closeWorkareaTab,

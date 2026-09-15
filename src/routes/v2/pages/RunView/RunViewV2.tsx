@@ -49,7 +49,7 @@ import { useAiChatWindow } from "./hooks/useAiChatWindow";
 import { useFocusTaskFromUrl } from "./hooks/useFocusTaskFromUrl";
 import { useRunViewSelectionSync } from "./hooks/useRunViewSelectionSync";
 import { useRunViewSpecLifecycle } from "./hooks/useRunViewSpecLifecycle";
-import { useRunViewSubgraphUrlSync } from "./hooks/useRunViewSubgraphUrlSync";
+import { useRunViewSubgraphSync } from "./hooks/useRunViewSubgraphUrlSync";
 import { useRunViewWindows } from "./hooks/useRunViewWindows";
 import { runViewRegistry } from "./nodes";
 import { createRunViewAgentWorker } from "./toolBridge/runViewAgentWorker";
@@ -64,10 +64,16 @@ function deserializeRunSpec(data: unknown): ComponentSpec {
 
 interface RunViewContentProps {
   runId: string;
+  /** Embedded (Tangent workarea): no menu bar, no AI window, no URL sync. */
+  embedded?: boolean;
+  /** Embedded subgraph navigation reports its execution id here. */
+  onSubgraphExecutionIdChange?: (executionId: string | undefined) => void;
 }
 
-const RunViewContent = observer(function RunViewContent({
+export const RunViewContent = observer(function RunViewContent({
   runId,
+  embedded = false,
+  onSubgraphExecutionIdChange,
 }: RunViewContentProps) {
   const { setComponentSpec, clearComponentSpec } = useComponentSpec();
   const { configured, available, ready } = useBackend();
@@ -106,7 +112,13 @@ const RunViewContent = observer(function RunViewContent({
   const csomSpec = specRef.current;
 
   if (csomSpec) {
-    return <RunViewLayout spec={csomSpec} />;
+    return (
+      <RunViewLayout
+        spec={csomSpec}
+        embedded={embedded}
+        onSubgraphExecutionIdChange={onSubgraphExecutionIdChange}
+      />
+    );
   }
 
   if (isLoading || !ready) {
@@ -157,10 +169,14 @@ const RunViewContent = observer(function RunViewContent({
 
 interface RunViewLayoutProps {
   spec: ComponentSpec;
+  embedded?: boolean;
+  onSubgraphExecutionIdChange?: (executionId: string | undefined) => void;
 }
 
 const RunViewLayout = observer(function RunViewLayout({
   spec,
+  embedded = false,
+  onSubgraphExecutionIdChange,
 }: RunViewLayoutProps) {
   useRunViewSpecLifecycle(spec);
   useShortcutListener();
@@ -168,12 +184,14 @@ const RunViewLayout = observer(function RunViewLayout({
   useDockAreaAccordion();
   useRunViewWindows();
   useRunViewSelectionSync();
-  useRunViewSubgraphUrlSync();
-  useFocusTaskFromUrl(spec);
+  useRunViewSubgraphSync({ embedded, onSubgraphExecutionIdChange });
+  // `nodeId` deep-linking reads/writes the page URL, which the embedded host
+  // owns; only the full-page route consumes it.
+  useFocusTaskFromUrl(embedded ? null : spec);
   useCanvasControlsWindow("v2.run_view");
 
   const aiEnabled = useFlagValue("ai-assistant");
-  useAiChatWindow(aiEnabled);
+  useAiChatWindow(!embedded && aiEnabled);
 
   const { navigation } = useSharedStores();
   const activeSpec = navigation.activeSpec;
@@ -183,7 +201,7 @@ const RunViewLayout = observer(function RunViewLayout({
   return (
     <NodeRegistryProvider registry={runViewRegistry}>
       <SpecProvider spec={activeSpec}>
-        <RunViewMenuBar />
+        {!embedded && <RunViewMenuBar />}
         <InlineStack
           className="flex-1 min-h-0 w-full"
           blockAlign="stretch"

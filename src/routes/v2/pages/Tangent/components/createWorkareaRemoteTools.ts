@@ -47,12 +47,14 @@ export function createWorkareaRemoteTools(
   return {
     open_pipeline: {
       description:
-        "Open a pipeline in the project's Dynamic Workarea. `target` may be a " +
-        "`pipeline://<fileId>` draft URI, a run URL or `run:<id>` (cloned into " +
-        "a new editable draft), or a pipeline name. Returns the tab's " +
-        "`environmentId`: to edit this pipeline, spawn an editor sub-agent into " +
-        "that environment (its CSOM tools drive this exact pipeline). Do not " +
-        "use the workarea tools to edit pipeline contents.",
+        "Open a pipeline or run in the project's Dynamic Workarea. `target` may " +
+        "be a `pipeline://<fileId>` draft URI, a run URL or `run:<id>` (opens " +
+        "the run's canvas to inspect its execution), or a pipeline name. For a " +
+        "pipeline tab, returns the tab's `environmentId`: to edit the pipeline, " +
+        "spawn an editor sub-agent into that environment (its CSOM tools drive " +
+        "this exact pipeline). Run tabs are inspect-only and have no " +
+        "`environmentId`. Do not use the workarea tools to edit pipeline " +
+        "contents.",
       inputSchema: {
         type: "object",
         properties: {

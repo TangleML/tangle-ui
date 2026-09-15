@@ -7,7 +7,6 @@ import { type ReactNode, useEffect, useRef } from "react";
 import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import { ComponentLibraryProvider } from "@/providers/ComponentLibraryProvider";
 import { ForcedSearchProvider } from "@/providers/ComponentLibraryProvider/ForcedSearchProvider";
-import { DialogProvider } from "@/providers/DialogProvider/DialogProvider";
 import {
   SharedStoreProvider,
   type SharedUIStore,
