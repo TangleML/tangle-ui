@@ -369,6 +369,7 @@ export function createCsomTools(bridge: ToolBridgeApi) {
 
   return {
     getPipelineState,
+    validatePipeline,
     allTools: [
       getPipelineState,
       setPipelineName,

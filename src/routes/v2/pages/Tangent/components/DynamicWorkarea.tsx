@@ -16,8 +16,8 @@ const DEFAULT_WIDTH = 960;
 const MIN_WIDTH = 320;
 const MAX_WIDTH = 960;
 
-/** Stable, per-tab remote-env id so the server can route spawns to this editor. */
-function pipelineEnvironmentId(sessionId: string, tabId: string): string {
+/** Stable, per-tab remote-env id so the server can route spawns to this tab. */
+function tabEnvironmentId(sessionId: string, tabId: string): string {
   return `${sessionId}:${tabId}`;
 }
 
@@ -130,7 +130,7 @@ export function DynamicWorkarea() {
                     sessionId={activeSessionId}
                     environmentId={
                       activeSessionId
-                        ? pipelineEnvironmentId(activeSessionId, tab.id)
+                        ? tabEnvironmentId(activeSessionId, tab.id)
                         : undefined
                     }
                     onEnvironmentReady={(environmentId) =>
@@ -157,6 +157,20 @@ export function DynamicWorkarea() {
                 >
                   <EmbeddedRunView
                     runId={tab.runId}
+                    sessionId={activeSessionId}
+                    environmentId={
+                      activeSessionId
+                        ? tabEnvironmentId(activeSessionId, tab.id)
+                        : undefined
+                    }
+                    onEnvironmentReady={(environmentId) =>
+                      registerTabEnvironment(tab.id, environmentId)
+                    }
+                    onEnvironmentClosed={() => unregisterTabEnvironment(tab.id)}
+                    onBridgeReady={(bridge) =>
+                      registerTabBridge(tab.id, bridge)
+                    }
+                    onBridgeClosed={() => unregisterTabBridge(tab.id)}
                     onStoreReady={(store) => registerTabStore(tab.id, store)}
                     onStoreClosed={() => unregisterTabStore(tab.id)}
                   />

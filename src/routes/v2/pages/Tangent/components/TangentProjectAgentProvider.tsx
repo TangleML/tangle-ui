@@ -14,6 +14,7 @@
  * It mints a scoped token, boots the agent worker, connects, and re-registers
  * the tool catalog on reconnect. It renders `children` unchanged.
  */
+import { useQueryClient } from "@tanstack/react-query";
 import * as Comlink from "comlink";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 
@@ -22,15 +23,20 @@ import { useAuthLocalStorage } from "@/components/shared/Authentication/useAuthL
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import { useTangentSettings } from "@/hooks/useTangentSettings";
 import useToastNotification from "@/hooks/useToastNotification";
-import { fetchRemoteEnvToken } from "@/routes/v2/pages/Editor/components/TangentChat/fetchRemoteEnvToken";
-import { createRemoteEnvAgentWorker } from "@/routes/v2/pages/Editor/components/TangentChat/remoteEnvAgentWorker";
-import { createRemoteEnvHost } from "@/routes/v2/pages/Editor/components/TangentChat/remoteEnvHost";
+import { useBackend } from "@/providers/BackendProvider";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
+import { createDebugBridgeHandlers } from "@/routes/v2/shared/components/AiChat/toolBridge/debugBridge";
+import { createRunBridgeHandlers } from "@/routes/v2/shared/components/AiChat/toolBridge/runBridge";
+import type { BridgeDeps } from "@/routes/v2/shared/components/AiChat/toolBridge/utils";
+import { fetchRemoteEnvToken } from "@/routes/v2/shared/tangent/fetchRemoteEnvToken";
+import { createRemoteEnvAgentWorker } from "@/routes/v2/shared/tangent/remoteEnvAgentWorker";
+import { createRemoteEnvHost } from "@/routes/v2/shared/tangent/remoteEnvHost";
 import { getErrorMessage } from "@/utils/string";
 
 import { createActiveTabRoutingBridge } from "./createActiveTabRoutingBridge";
 import {
   createWorkareaRemoteTools,
+  type RunInspectDeps,
   type WorkareaToolDeps,
 } from "./createWorkareaRemoteTools";
 
@@ -51,9 +57,12 @@ export function TangentProjectAgentProvider({
   const authStorage = useAuthLocalStorage();
   const { config: aiConfig } = useAiProviderSettings();
   const { baseUrl } = useTangentSettings();
+  const { backendUrl } = useBackend();
+  const queryClient = useQueryClient();
   const {
     openWorkareaTarget,
     workareaTabs,
+    activeWorkareaTabId,
     closeWorkareaTab,
     getTabEnvironmentId,
     waitForTabEnvironment,
@@ -62,25 +71,56 @@ export function TangentProjectAgentProvider({
 
   const authToken = authStorage.getToken();
   const authTokenRef = useRef(authToken);
+  const backendUrlRef = useRef(backendUrl);
   const notifyRef = useRef(notify);
   const aiConfigRef = useRef(aiConfig);
   const workerRef = useRef<Comlink.Remote<RemoteEnvWorkerApi> | null>(null);
   // The routing bridge reads the active tab's bridge via this ref, so a single
   // bridge instance always targets the current pipeline as tabs change.
   const getActiveTabBridgeRef = useRef(getActiveTabBridge);
+
+  // A project-level backend bridge for the run inspect tools: read-only run and
+  // execution fetches that don't need any one tab's canvas spec, so Prime can
+  // inspect runs without spawning a sub-agent. Backend/auth are read lazily via
+  // refs so a single instance survives config changes.
+  const [runInspect] = useState<RunInspectDeps>(() => {
+    const deps: BridgeDeps = {
+      getSpec: () => null,
+      getActiveSubgraphPath: () => [],
+      getBackendUrl: () => backendUrlRef.current,
+      getAuthToken: () => authTokenRef.current,
+      queryClient,
+    };
+    const run = createRunBridgeHandlers(deps);
+    const debug = createDebugBridgeHandlers(deps);
+    return {
+      getRunDetails: run.getRunDetails,
+      debugPipelineRun: run.debugPipelineRun,
+      getExecutionDetails: debug.getExecutionDetails,
+      getExecutionState: debug.getExecutionState,
+      getContainerState: debug.getContainerState,
+      getContainerLog: debug.getContainerLog,
+    };
+  });
+
   // The tools read deps via this ref so a single catalog instance always acts
   // on the current workarea state without rebuilding the socket connection.
   const depsRef = useRef<WorkareaToolDeps>({
     openTarget: openWorkareaTarget,
     getTabs: () => workareaTabs,
+    getActiveTabId: () => activeWorkareaTabId ?? undefined,
     closeTab: closeWorkareaTab,
     getEnvironmentId: getTabEnvironmentId,
     waitForEnvironment: waitForTabEnvironment,
+    runInspect,
   });
 
   useEffect(() => {
     authTokenRef.current = authToken;
   }, [authToken]);
+  useEffect(() => {
+    backendUrlRef.current = backendUrl;
+  }, [backendUrl]);
   useEffect(() => {
     notifyRef.current = notify;
   }, [notify]);
@@ -91,16 +131,20 @@ export function TangentProjectAgentProvider({
     depsRef.current = {
       openTarget: openWorkareaTarget,
       getTabs: () => workareaTabs,
+      getActiveTabId: () => activeWorkareaTabId ?? undefined,
       closeTab: closeWorkareaTab,
       getEnvironmentId: getTabEnvironmentId,
       waitForEnvironment: waitForTabEnvironment,
+      runInspect,
     };
   }, [
     openWorkareaTarget,
     workareaTabs,
+    activeWorkareaTabId,
     closeWorkareaTab,
     getTabEnvironmentId,
     waitForTabEnvironment,
+    runInspect,
   ]);
 
   // Push AI config into the worker whenever the user changes it, so a turn

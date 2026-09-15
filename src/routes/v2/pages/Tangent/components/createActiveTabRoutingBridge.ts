@@ -13,7 +13,7 @@ import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 
 function noActivePipeline(): never {
   throw new Error(
-    "No pipeline is open in the workarea. Open a pipeline first (open_pipeline), then try again.",
+    "No pipeline or run is open in the workarea. Open one first (open_pipeline), then try again.",
   );
 }
 
