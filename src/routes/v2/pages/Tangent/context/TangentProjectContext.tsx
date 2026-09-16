@@ -13,12 +13,35 @@ import {
 } from "@/routes/v2/pages/Tangent/hooks/useProjectSessions";
 import { useTangentSessionTabs } from "@/routes/v2/pages/Tangent/hooks/useTangentSessionTabs";
 import { resolveWorkareaTarget } from "@/routes/v2/pages/Tangent/services/resolveWorkareaTarget";
-import type { WorkareaTab } from "@/routes/v2/pages/Tangent/workarea/types";
+import type {
+  ResolvedWorkareaView,
+  WorkareaTab,
+} from "@/routes/v2/pages/Tangent/workarea/types";
 import type { Project } from "@/services/projects/types";
-import { useProject } from "@/services/projects/useProjects";
+import {
+  useCreateProjectResource,
+  useDeleteProjectResource,
+  useProjectResources,
+} from "@/services/projects/useProjectResources";
+import { useProject, useUpdateProject } from "@/services/projects/useProjects";
 import { getErrorMessage } from "@/utils/string";
 
 type SessionTabs = ReturnType<typeof useTangentSessionTabs>;
+
+export type ProjectResourceKind = "pipeline";
+
+export interface ProjectResourceItem {
+  id: string;
+  name: string;
+  entity: ProjectResourceKind;
+  target: string;
+}
+
+export interface AttachResourceInput {
+  entity: ProjectResourceKind;
+  entityId: string;
+  name: string;
+}
 
 interface TangentProjectContextValue {
   projectId: string;
@@ -30,9 +53,17 @@ interface TangentProjectContextValue {
   startSession: () => void;
   recordSessionPrompt: (content: string) => void;
   tabs: SessionTabs;
+  resources: ProjectResourceItem[];
+  attachResource: (input: AttachResourceInput) => void;
+  isAttachingResource: boolean;
+  detachResource: (resourceId: string) => void;
+  isDetachingResource: boolean;
+  instructions: string;
+  setInstructions: (text: string) => void;
+  isSavingInstructions: boolean;
   workareaTabs: WorkareaTab[];
   activeWorkareaTabId: string | null;
-  openWorkareaTarget: (target: string, title?: string) => WorkareaTab;
+  openWorkareaTarget: (target: string, title?: string) => Promise<WorkareaTab>;
   selectWorkareaTab: (id: string) => void;
   closeWorkareaTab: (id: string) => void;
   onOpenArtifact: (url: string, title: string) => void;
@@ -57,6 +88,13 @@ export function TangentProjectProvider({
   const { data: project } = useProject(projectId);
   const { sessions, attachSession, detachSession } =
     useProjectSessions(projectId);
+  const { data: resourcesPage } = useProjectResources(projectId);
+  const { mutate: createResource, isPending: isAttachingResource } =
+    useCreateProjectResource(projectId);
+  const { mutate: deleteResource, isPending: isDetachingResource } =
+    useDeleteProjectResource(projectId);
+  const { mutate: updateProject, isPending: isSavingInstructions } =
+    useUpdateProject();
   const tabs = useTangentSessionTabs();
   const [selectedSessionId, setSelectedSessionId] = useState<
     string | undefined
@@ -152,31 +190,48 @@ export function TangentProjectProvider({
     sessionsWithPromptRef.current.add(sessionId);
   }
 
-  function openArtifactTab(url: string, title: string): WorkareaTab {
-    const existing = workareaTabs.find(
-      (tab) => tab.kind === "artifact" && tab.url === url,
-    );
+  function findExistingTab(
+    view: ResolvedWorkareaView,
+  ): WorkareaTab | undefined {
+    return workareaTabs.find((tab) => {
+      if (tab.kind !== view.kind) return false;
+      if (tab.kind === "artifact" && view.kind === "artifact") {
+        return tab.url === view.url;
+      }
+      if (tab.kind === "pipeline" && view.kind === "pipeline") {
+        return tab.pipelineRef.fileId
+          ? tab.pipelineRef.fileId === view.pipelineRef.fileId
+          : tab.title === view.title;
+      }
+      return false;
+    });
+  }
+
+  function openResolvedView(view: ResolvedWorkareaView): WorkareaTab {
+    const existing = findExistingTab(view);
     if (existing) {
       setActiveWorkareaTabId(existing.id);
       return existing;
     }
-    const tab: WorkareaTab = {
-      id: crypto.randomUUID(),
-      kind: "artifact",
-      title,
-      url,
-    };
+    const tab: WorkareaTab = { ...view, id: crypto.randomUUID() };
     setWorkareaTabs((prev) => [...prev, tab]);
     setActiveWorkareaTabId(tab.id);
     return tab;
   }
 
-  // String-target entry point (`pipeline://`, run refs, …) for opening the
-  // workarea from chat/agents. Only `http(s)` artifacts resolve today; the
-  // remaining kinds — and the callers that pass them — land with later PRs.
-  function openWorkareaTarget(target: string, title?: string): WorkareaTab {
-    const view = resolveWorkareaTarget(target, { title });
-    return openArtifactTab(view.url, view.title);
+  function openArtifactTab(url: string, title: string): WorkareaTab {
+    return openResolvedView({ kind: "artifact", title, url });
+  }
+
+  // String-target entry point (`pipeline://`, run refs, artifact URLs, …) for
+  // opening the workarea from the resources dock, chat, or agents. Resolves the
+  // target to a concrete view and routes it through the workarea registry.
+  async function openWorkareaTarget(
+    target: string,
+    title?: string,
+  ): Promise<WorkareaTab> {
+    const view = await resolveWorkareaTarget(target, { title });
+    return openResolvedView(view);
   }
 
   function selectWorkareaTab(id: string) {
@@ -189,6 +244,40 @@ export function TangentProjectProvider({
     if (activeWorkareaTabId === id) {
       setActiveWorkareaTabId(next.length > 0 ? next[next.length - 1].id : null);
     }
+  }
+
+  const resources: ProjectResourceItem[] = (resourcesPage?.items ?? []).flatMap(
+    (resource) => {
+      if (resource.entity !== "pipeline") return [];
+      if (!resource.entityId) return [];
+      const target = `pipeline://${resource.entityId}`;
+      return [
+        {
+          id: resource.id,
+          name: resource.name ?? target,
+          entity: resource.entity,
+          target,
+        },
+      ];
+    },
+  );
+
+  function attachResource(input: AttachResourceInput) {
+    createResource({
+      entity: input.entity,
+      entityId: input.entityId,
+      name: input.name,
+    });
+  }
+
+  function detachResource(resourceId: string) {
+    deleteResource(resourceId);
+  }
+
+  const instructions = project?.notes ?? "";
+
+  function setInstructions(text: string) {
+    updateProject({ id: projectId, input: { notes: text } });
   }
 
   function onError(message: string) {
@@ -205,6 +294,14 @@ export function TangentProjectProvider({
     startSession,
     recordSessionPrompt,
     tabs,
+    resources,
+    attachResource,
+    isAttachingResource,
+    detachResource,
+    isDetachingResource,
+    instructions,
+    setInstructions,
+    isSavingInstructions,
     workareaTabs,
     activeWorkareaTabId,
     openWorkareaTarget,
