@@ -30,6 +30,8 @@ export function DynamicWorkarea() {
     activeSessionId,
     selectWorkareaTab,
     closeWorkareaTab,
+    registerWorkareaTabStore,
+    unregisterWorkareaTabStore,
   } = useTangentProject();
   const [width, setWidth] = useState(DEFAULT_WIDTH);
 
@@ -37,7 +39,11 @@ export function DynamicWorkarea() {
     setWidth(Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, attemptedWidth)));
   }
 
-  const hostProps: WorkareaHostProps = { sessionId: activeSessionId };
+  const hostProps: WorkareaHostProps = {
+    sessionId: activeSessionId,
+    registerTabStore: registerWorkareaTabStore,
+    unregisterTabStore: unregisterWorkareaTabStore,
+  };
 
   return (
     <div

@@ -245,6 +245,13 @@ export class WindowStoreImpl implements WindowStoreRef {
     this.dockAreas[side].collapsed = !this.dockAreas[side].collapsed;
   }
 
+  @action setDockAreaCollapsed(
+    side: "left" | "right",
+    collapsed: boolean,
+  ): void {
+    this.dockAreas[side].collapsed = collapsed;
+  }
+
   @action enableDockSide(side: "left" | "right"): void {
     this.enabledDockSides = new Set([...this.enabledDockSides, side]);
   }
