@@ -2,30 +2,14 @@ import "@xyflow/react/dist/style.css";
 
 import { useParams } from "@tanstack/react-router";
 import { ReactFlowProvider } from "@xyflow/react";
-import { registerRootStore } from "mobx-keystone";
 import { observer } from "mobx-react-lite";
-import { useEffect, useRef } from "react";
 
-import { InfoBox } from "@/components/shared/InfoBox";
-import { LoadingScreen } from "@/components/shared/LoadingScreen";
-import { RemoteAuthErrorView } from "@/components/shared/RemoteAuthErrorView";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
-import { BlockStack, InlineStack } from "@/components/ui/layout";
-import { Paragraph } from "@/components/ui/typography";
-import { useTrackRecentlyViewedRun } from "@/hooks/useTrackRecentlyViewedRun";
+import { InlineStack } from "@/components/ui/layout";
 import type { ComponentSpec } from "@/models/componentSpec";
-import {
-  IncrementingIdGenerator,
-  YamlDeserializer,
-} from "@/models/componentSpec";
-import { useBackend } from "@/providers/BackendProvider";
 import { ComponentLibraryProvider } from "@/providers/ComponentLibraryProvider";
-import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { ContextPanelProvider } from "@/providers/ContextPanelProvider";
-import {
-  ExecutionDataProvider,
-  useExecutionData,
-} from "@/providers/ExecutionDataProvider";
+import { ExecutionDataProvider } from "@/providers/ExecutionDataProvider";
 import { AiChatStoreProvider } from "@/routes/v2/shared/components/AiChat/AiChatStoreContext";
 import { useCanvasControlsWindow } from "@/routes/v2/shared/components/MiniMap/useCanvasControlsWindow";
 import { useDockAreaAccordion } from "@/routes/v2/shared/hooks/useDockAreaAccordion";
@@ -39,28 +23,19 @@ import {
 import { DockArea } from "@/routes/v2/shared/windows/DockArea";
 import { WindowContainer } from "@/routes/v2/shared/windows/WindowContainer";
 import { useWindowPersistence } from "@/routes/v2/shared/windows/windowPersistence";
-import { getBackendStatusString } from "@/utils/backend";
-import type { ComponentSpec as DomainComponentSpec } from "@/utils/componentSpec";
-import { RemoteAuthError } from "@/utils/fetchWithErrorHandling";
 
 import { RunViewFlowCanvas } from "./components/RunViewFlowCanvas";
+import { RunViewLoadStateFallback } from "./components/RunViewLoadStateFallback";
 import { RunViewMenuBar } from "./components/RunViewMenuBar/RunViewMenuBar";
 import { useAiChatWindow } from "./hooks/useAiChatWindow";
 import { useFocusTaskFromUrl } from "./hooks/useFocusTaskFromUrl";
+import { useRunViewLoadState } from "./hooks/useRunViewLoadState";
 import { useRunViewSelectionSync } from "./hooks/useRunViewSelectionSync";
 import { useRunViewSpecLifecycle } from "./hooks/useRunViewSpecLifecycle";
 import { useRunViewSubgraphUrlSync } from "./hooks/useRunViewSubgraphUrlSync";
 import { useRunViewWindows } from "./hooks/useRunViewWindows";
 import { runViewRegistry } from "./nodes";
 import { createRunViewAgentWorker } from "./toolBridge/runViewAgentWorker";
-
-function deserializeRunSpec(data: unknown): ComponentSpec {
-  const generator = new IncrementingIdGenerator();
-  const deserializer = new YamlDeserializer(generator);
-  const spec = deserializer.deserialize(data);
-  registerRootStore(spec);
-  return spec;
-}
 
 interface RunViewContentProps {
   runId: string;
@@ -69,94 +44,13 @@ interface RunViewContentProps {
 const RunViewContent = observer(function RunViewContent({
   runId,
 }: RunViewContentProps) {
-  const { setComponentSpec, clearComponentSpec } = useComponentSpec();
-  const { configured, available, ready } = useBackend();
+  const loadState = useRunViewLoadState(runId);
 
-  const { details, state, rootDetails, isLoading, error } = useExecutionData();
-  useTrackRecentlyViewedRun(
-    runId,
-    rootDetails?.task_spec.componentRef.spec?.name,
-  );
-
-  const specRef = useRef<ComponentSpec | null>(null);
-
-  useEffect(() => {
-    if (rootDetails?.task_spec.componentRef.spec) {
-      // API response uses ComponentSpecOutput (name: string | null | undefined)
-      // while the domain type uses ComponentSpec (name: string | undefined).
-      // The null case is handled at runtime by downstream consumers.
-      setComponentSpec(
-        rootDetails.task_spec.componentRef.spec as DomainComponentSpec,
-      );
-    }
-
-    return () => {
-      clearComponentSpec();
-    };
-  }, [rootDetails, setComponentSpec, clearComponentSpec]);
-
-  useEffect(() => {
-    if (rootDetails?.task_spec.componentRef.spec && !specRef.current) {
-      specRef.current = deserializeRunSpec(
-        rootDetails.task_spec.componentRef.spec,
-      );
-    }
-  }, [rootDetails]);
-
-  const csomSpec = specRef.current;
-
-  if (csomSpec) {
-    return <RunViewLayout spec={csomSpec} />;
+  if (loadState.status === "spec") {
+    return <RunViewLayout spec={loadState.spec} />;
   }
 
-  if (isLoading || !ready) {
-    return <LoadingScreen message="Loading Pipeline Run" />;
-  }
-
-  if (!configured) {
-    return (
-      <BlockStack fill>
-        <InfoBox title="Backend not configured" variant="warning">
-          Configure a backend to view this pipeline run.
-        </InfoBox>
-      </BlockStack>
-    );
-  }
-
-  if (!available) {
-    return (
-      <BlockStack fill>
-        <InfoBox title="Backend not available" variant="error">
-          The configured backend is not available.
-        </InfoBox>
-      </BlockStack>
-    );
-  }
-
-  if (error) {
-    if (error instanceof RemoteAuthError) {
-      return <RemoteAuthErrorView />;
-    }
-    const backendStatusString = getBackendStatusString(configured, available);
-    return (
-      <BlockStack fill>
-        <InfoBox title="Error loading pipeline run" variant="error">
-          <Paragraph size="sm" className="mb-2">
-            {error.message}
-          </Paragraph>
-          <Paragraph size="sm" className="italic">
-            {backendStatusString}
-          </Paragraph>
-        </InfoBox>
-      </BlockStack>
-    );
-  }
-
-  if (!details || !state) {
-    return <LoadingScreen message="Loading Pipeline Run" />;
-  }
-
-  return null;
+  return <RunViewLoadStateFallback state={loadState} />;
 });
 
 interface RunViewLayoutProps {

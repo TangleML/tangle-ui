@@ -19,6 +19,16 @@ export const RUN_DEFAULT_VIEW_PRESET: ViewPreset = {
   },
 };
 
+export const RUN_EMBEDDED_VIEW_PRESET: ViewPreset = {
+  label: "Embedded",
+  description: "Run Details and Run Tools docked on the right",
+  visible: new Set([RUN_DETAILS_WINDOW_ID, RUN_TOOLS_WINDOW_ID]),
+  dockAreas: {
+    left: [],
+    right: [RUN_DETAILS_WINDOW_ID, RUN_TOOLS_WINDOW_ID],
+  },
+};
+
 export const RUN_VIEW_PRESETS: ViewPreset[] = [
   RUN_DEFAULT_VIEW_PRESET,
   {
