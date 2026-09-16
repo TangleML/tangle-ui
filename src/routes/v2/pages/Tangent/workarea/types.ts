@@ -1,18 +1,17 @@
 import type { ReactNode } from "react";
 
 import type { IconName } from "@/components/ui/icon";
+import type { PipelineRef } from "@/services/pipelineStorage/types";
 
 /**
  * A resolved workarea view, ready to become a tab. The `id` is assigned by the
- * context when the tab is opened. PR 2 ships only the `artifact` kind; later
- * PRs register `pipeline` and `run` kinds by widening this union — the workarea
- * shell never switches on the kind, it looks each one up in the registry.
+ * context when the tab is opened. The workarea shell never switches on the
+ * kind — it looks each one up in the registry — so a new kind is a new union
+ * arm plus a registered descriptor.
  */
-export type ResolvedWorkareaView = {
-  kind: "artifact";
-  title: string;
-  url: string;
-};
+export type ResolvedWorkareaView =
+  | { kind: "artifact"; title: string; url: string }
+  | { kind: "pipeline"; title: string; pipelineRef: PipelineRef };
 
 export type WorkareaTab = ResolvedWorkareaView & { id: string };
 

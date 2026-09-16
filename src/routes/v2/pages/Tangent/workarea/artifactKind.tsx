@@ -10,7 +10,7 @@ function ArtifactWorkareaView({
   tab,
   sessionId,
 }: {
-  tab: WorkareaTab;
+  tab: Extract<WorkareaTab, { kind: "artifact" }>;
   sessionId: string | undefined;
 }) {
   if (sessionId === undefined) {
@@ -41,7 +41,8 @@ registerWorkareaKind({
   kind: "artifact",
   icon: "FileText",
   keepMounted: false,
-  render: (tab, hostProps) => (
-    <ArtifactWorkareaView tab={tab} sessionId={hostProps.sessionId} />
-  ),
+  render: (tab, hostProps) => {
+    if (tab.kind !== "artifact") return null;
+    return <ArtifactWorkareaView tab={tab} sessionId={hostProps.sessionId} />;
+  },
 });
