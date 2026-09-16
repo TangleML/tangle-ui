@@ -1,10 +1,112 @@
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { reaction } from "mobx";
-import { useEffect, useRef } from "react";
+import { type RefObject, useEffect, useRef } from "react";
 
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
 import { getRunPath } from "@/routes/runRoutes";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+
+/**
+ * The slice of execution data the navigation → execution-id resolution reads.
+ * Kept structural so both the live context and tests can supply it.
+ */
+interface SubgraphExecutionSource {
+  runId: string | null | undefined;
+  details:
+    { child_task_execution_ids?: Record<string, string> | null } | undefined;
+  segments: { executionId: string }[];
+}
+
+type ResolvedExecutionId =
+  { skip: true } | { skip: false; executionId: string | undefined };
+
+interface ResolveSubgraphExecutionIdInput {
+  path: string[];
+  prevPath: string[];
+  source: SubgraphExecutionSource;
+}
+
+/**
+ * Given a navigation-path change, resolves which execution id the run's
+ * execution context should scope to:
+ * - root level (`path.length <= 1`) resolves to `undefined` (the root run),
+ * - deepening one level (double-click) reads the child execution id off the
+ *   current level's details,
+ * - shallowing (breadcrumbs) reuses the already-resolved breadcrumb segment.
+ *
+ * Returns `{ skip: true }` when there is nothing to sync (empty path from
+ * `clearNavigation()`, no run yet, or an unresolved child id).
+ */
+function resolveSubgraphExecutionId({
+  path,
+  prevPath,
+  source,
+}: ResolveSubgraphExecutionIdInput): ResolvedExecutionId {
+  // `clearNavigation()` (spec lifecycle cleanup / unmount / StrictMode remount)
+  // empties the path. Ignore it so we never drop a valid subgraph segment.
+  if (path.length === 0) return { skip: true };
+  if (!source.runId) return { skip: true };
+  if (path.length <= 1) return { skip: false, executionId: undefined };
+
+  const targetDepth = path.length - 1;
+  const isDeepening = path.length > prevPath.length;
+
+  // Deepening happens one level at a time (double-click), so the current
+  // execution details are the parent level and hold the child execution id.
+  // Shallowing (breadcrumbs) reuses the already-resolved breadcrumb segments.
+  const executionId = isDeepening
+    ? source.details?.child_task_execution_ids?.[path[path.length - 1]]
+    : source.segments[targetDepth - 1]?.executionId;
+
+  if (!executionId) return { skip: true };
+  return { skip: false, executionId };
+}
+
+/**
+ * Fires `onExecutionId` whenever the V2 navigation path changes with the
+ * execution id that the run's execution context should scope to. This is the
+ * mode-agnostic half of subgraph sync: the URL variant turns it into a route
+ * push, the embedded variant turns it into React state.
+ *
+ * `isApplyingFromUrl` lets the URL variant suppress the reaction while it is
+ * itself driving the navigation store from the URL (avoids a redundant push).
+ */
+export function useRunViewSubgraphExecutionSync(
+  onExecutionId: (executionId: string | undefined) => void,
+  options: { isApplyingFromUrl?: RefObject<boolean> } = {},
+): void {
+  const { navigation } = useSharedStores();
+  const executionData = useExecutionData();
+  const isApplyingRef = options.isApplyingFromUrl;
+
+  // Refs let the (stable) mobx reaction read the latest values without being
+  // recreated on every data change. Updated in a passive effect to avoid
+  // writing refs during render (React Compiler compatibility).
+  const executionDataRef = useRef(executionData);
+  const onExecutionIdRef = useRef(onExecutionId);
+
+  useEffect(() => {
+    executionDataRef.current = executionData;
+    onExecutionIdRef.current = onExecutionId;
+  });
+
+  useEffect(() => {
+    const dispose = reaction(
+      () => navigation.navigationPath.map((entry) => entry.displayName),
+      (path, prevPath) => {
+        if (isApplyingRef?.current) return;
+        const resolved = resolveSubgraphExecutionId({
+          path,
+          prevPath,
+          source: executionDataRef.current,
+        });
+        if (resolved.skip) return;
+        onExecutionIdRef.current(resolved.executionId);
+      },
+    );
+    return dispose;
+  }, [navigation, isApplyingRef]);
+}
 
 /**
  * Keeps the URL `subgraphExecutionId` in sync with the V2 `navigationStore`
@@ -17,7 +119,7 @@ import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
  * subgraph tasks. This mirrors V1 (`TaskNodeCard.handleDoubleClick`), which
  * pushes the child execution id onto the URL when entering a subgraph.
  */
-export function useRunViewSubgraphUrlSync() {
+export function useRunViewSubgraphUrlSync(): void {
   const navigate = useNavigate();
   const { navigation } = useSharedStores();
   const executionData = useExecutionData();
@@ -29,15 +131,12 @@ export function useRunViewSubgraphUrlSync() {
       ? params.subgraphExecutionId
       : undefined;
 
-  // Refs let the (stable) mobx reaction read the latest values without being
-  // recreated on every data change. Updated in a passive effect to avoid
-  // writing refs during render (React Compiler compatibility).
-  const executionDataRef = useRef(executionData);
   const navigateRef = useRef(navigate);
+  const executionDataRef = useRef(executionData);
 
   useEffect(() => {
-    executionDataRef.current = executionData;
     navigateRef.current = navigate;
+    executionDataRef.current = executionData;
   });
 
   // Set while direction B mutates the navigation store so the direction A
@@ -51,48 +150,19 @@ export function useRunViewSubgraphUrlSync() {
   const lastPushedExecutionId = useRef<string | undefined>(undefined);
 
   // Direction A: navigationStore path -> URL subgraphExecutionId.
-  useEffect(() => {
-    const dispose = reaction(
-      () => navigation.navigationPath.map((entry) => entry.displayName),
-      (path, prevPath) => {
-        if (isApplyingFromUrl.current) return;
+  useRunViewSubgraphExecutionSync(
+    (executionId) => {
+      const runId = executionDataRef.current.runId;
+      if (!runId) return;
 
-        // `clearNavigation()` (spec lifecycle cleanup / unmount / StrictMode
-        // remount) empties the path. Ignore it so we never push a stray root
-        // URL that would drop a valid subgraph segment.
-        if (path.length === 0) return;
+      const target = getRunPath(runId, "v2", executionId);
+      if (window.location.pathname === target) return;
 
-        const data = executionDataRef.current;
-        const runId = data.runId;
-        if (!runId) return;
-
-        let executionId: string | undefined;
-
-        if (path.length > 1) {
-          const targetDepth = path.length - 1;
-          const isDeepening = path.length > prevPath.length;
-
-          // Deepening happens one level at a time (double-click), so the
-          // current execution details are the parent level and hold the child
-          // execution id. Shallowing (breadcrumbs) reuses the already-resolved
-          // breadcrumb segments for the target level.
-          executionId = isDeepening
-            ? data.details?.child_task_execution_ids?.[path[path.length - 1]]
-            : data.segments[targetDepth - 1]?.executionId;
-
-          if (!executionId) return;
-        }
-
-        const target = getRunPath(runId, "v2", executionId);
-        if (window.location.pathname === target) return;
-
-        lastPushedExecutionId.current = executionId;
-        navigateRef.current({ to: target });
-      },
-    );
-
-    return dispose;
-  }, [navigation]);
+      lastPushedExecutionId.current = executionId;
+      navigateRef.current({ to: target });
+    },
+    { isApplyingFromUrl },
+  );
 
   // Direction B: external URL subgraphExecutionId -> navigationStore path.
   useEffect(() => {

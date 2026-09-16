@@ -2,7 +2,10 @@ import { act, cleanup, renderHook } from "@testing-library/react";
 import { makeAutoObservable } from "mobx";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { useRunViewSubgraphUrlSync } from "./useRunViewSubgraphUrlSync";
+import {
+  useRunViewSubgraphExecutionSync,
+  useRunViewSubgraphUrlSync,
+} from "./useRunViewSubgraphUrlSync";
 
 const routerMocks = vi.hoisted(() => ({
   navigate: vi.fn(),
@@ -206,5 +209,74 @@ describe("useRunViewSubgraphUrlSync", () => {
 
     expect(navigation.displayNames).toEqual([ROOT_NAME]);
     expect(routerMocks.navigate).not.toHaveBeenCalled();
+  });
+});
+
+describe("useRunViewSubgraphExecutionSync (callback mode)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    sharedStoreMock.navigation = new MockNavigationStore();
+    executionDataMock.current = {
+      runId: "run-1",
+      details: { child_task_execution_ids: {} },
+      segments: [],
+    };
+  });
+
+  afterEach(cleanup);
+
+  it("emits the child execution id when entering a subgraph, without navigating", () => {
+    executionDataMock.current.details = {
+      child_task_execution_ids: { "sub-task": "exec-sub" },
+    };
+    const onExecutionId = vi.fn();
+    const navigation = sharedStoreMock.navigation;
+
+    renderHook(() => useRunViewSubgraphExecutionSync(onExecutionId));
+
+    act(() => navigation.navigateToSubgraph("sub-task"));
+
+    expect(onExecutionId).toHaveBeenCalledWith("exec-sub");
+    expect(routerMocks.navigate).not.toHaveBeenCalled();
+  });
+
+  it("emits undefined when returning to the root", () => {
+    const onExecutionId = vi.fn();
+    const navigation = sharedStoreMock.navigation;
+    navigation.navigateToSubgraph("sub-task");
+
+    renderHook(() => useRunViewSubgraphExecutionSync(onExecutionId));
+
+    act(() => navigation.navigateToLevel(0));
+
+    expect(onExecutionId).toHaveBeenCalledWith(undefined);
+  });
+
+  it("emits the breadcrumb execution id when going shallower", () => {
+    executionDataMock.current.segments = [
+      { taskId: "t-a", executionId: "exec-a", taskName: "a" },
+      { taskId: "t-b", executionId: "exec-b", taskName: "b" },
+    ];
+    const onExecutionId = vi.fn();
+    const navigation = sharedStoreMock.navigation;
+    navigation.navigateToSubgraph("a");
+    navigation.navigateToSubgraph("b");
+
+    renderHook(() => useRunViewSubgraphExecutionSync(onExecutionId));
+
+    act(() => navigation.navigateToLevel(1));
+
+    expect(onExecutionId).toHaveBeenCalledWith("exec-a");
+  });
+
+  it("does not emit when the child execution id cannot be resolved", () => {
+    const onExecutionId = vi.fn();
+    const navigation = sharedStoreMock.navigation;
+
+    renderHook(() => useRunViewSubgraphExecutionSync(onExecutionId));
+
+    act(() => navigation.navigateToSubgraph("sub-task"));
+
+    expect(onExecutionId).not.toHaveBeenCalled();
   });
 });
