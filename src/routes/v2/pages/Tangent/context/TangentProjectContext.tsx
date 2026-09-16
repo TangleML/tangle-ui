@@ -17,6 +17,7 @@ import type {
   ResolvedWorkareaView,
   WorkareaTab,
 } from "@/routes/v2/pages/Tangent/workarea/types";
+import type { SharedUIStore } from "@/routes/v2/shared/store/SharedStoreContext";
 import type { Project } from "@/services/projects/types";
 import {
   useCreateProjectResource,
@@ -66,6 +67,8 @@ interface TangentProjectContextValue {
   openWorkareaTarget: (target: string, title?: string) => Promise<WorkareaTab>;
   selectWorkareaTab: (id: string) => void;
   closeWorkareaTab: (id: string) => void;
+  registerWorkareaTabStore: (tabId: string, store: SharedUIStore) => void;
+  unregisterWorkareaTabStore: (tabId: string) => void;
   onOpenArtifact: (url: string, title: string) => void;
   onError: (message: string) => void;
 }
@@ -104,6 +107,11 @@ export function TangentProjectProvider({
   const [activeWorkareaTabId, setActiveWorkareaTabId] = useState<string | null>(
     null,
   );
+
+  // Each embeddable workarea tab (pipeline today, run later) surfaces its live
+  // SharedUIStore here on mount and drops it on unmount, so chat chips (PR 10)
+  // can focus an entity on the right tab's canvas.
+  const workareaTabStoresRef = useRef(new Map<string, SharedUIStore>());
 
   // The selected session wins while it exists; otherwise fall back to the most
   // recent attached session (the list is newest-first).
@@ -246,6 +254,14 @@ export function TangentProjectProvider({
     }
   }
 
+  function registerWorkareaTabStore(tabId: string, store: SharedUIStore) {
+    workareaTabStoresRef.current.set(tabId, store);
+  }
+
+  function unregisterWorkareaTabStore(tabId: string) {
+    workareaTabStoresRef.current.delete(tabId);
+  }
+
   const resources: ProjectResourceItem[] = (resourcesPage?.items ?? []).flatMap(
     (resource) => {
       if (resource.entity !== "pipeline") return [];
@@ -307,6 +323,8 @@ export function TangentProjectProvider({
     openWorkareaTarget,
     selectWorkareaTab,
     closeWorkareaTab,
+    registerWorkareaTabStore,
+    unregisterWorkareaTabStore,
     onOpenArtifact: openArtifactTab,
     onError,
   };

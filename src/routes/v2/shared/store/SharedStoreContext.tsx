@@ -12,7 +12,7 @@ import { EditorStore } from "./editorStore";
 import { KeyboardStore } from "./keyboardStore";
 import { NavigationStore } from "./navigationStore";
 
-class SharedUIStore {
+export class SharedUIStore {
   readonly editor: EditorStore;
   readonly keyboard: KeyboardStore;
   readonly navigation: NavigationStore;
