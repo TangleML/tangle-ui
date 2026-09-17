@@ -5,10 +5,11 @@ import { Input } from "@/components/ui/input";
 import { InlineStack } from "@/components/ui/layout";
 import { Heading } from "@/components/ui/typography";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
-import { useUpdateProject } from "@/services/projects/useProjects";
+import { useProject, useUpdateProject } from "@/services/projects/useProjects";
 
 export function ProjectHeader() {
-  const { project } = useTangentProject();
+  const store = useTangentProject();
+  const { data: project } = useProject(store.projectId);
   const { mutate: updateProject } = useUpdateProject();
   const [isEditing, setIsEditing] = useState(false);
   const [draftName, setDraftName] = useState("");

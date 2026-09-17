@@ -6,7 +6,7 @@ import { CloseableTabTrigger } from "@/routes/v2/pages/Tangent/components/Closea
 import {
   type AgentTab,
   CHAT_TAB_VALUE,
-} from "@/routes/v2/pages/Tangent/hooks/useTangentSessionTabs";
+} from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
 
 const FORCE_MOUNTED_TAB_PANEL =
   "min-h-0 overflow-hidden data-[state=active]:flex data-[state=active]:flex-col data-[state=inactive]:hidden";

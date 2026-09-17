@@ -1,19 +1,18 @@
+import { observer } from "mobx-react-lite";
+
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
+import { useProjectSessions } from "@/routes/v2/pages/Tangent/hooks/useProjectSessions";
 import { formatRelativeTime } from "@/utils/date";
 
-export function SessionsWindowContent() {
-  const {
-    sessions,
-    activeSessionId,
-    selectSession,
-    startSession,
-    isStartingSession,
-  } = useTangentProject();
+export const SessionsWindowContent = observer(function SessionsWindowContent() {
+  const store = useTangentProject();
+  const { sessions } = useProjectSessions(store.projectId);
+  const activeSessionId = store.activeSessionId;
 
   return (
     <BlockStack gap="2" className="p-2">
@@ -30,7 +29,7 @@ export function SessionsWindowContent() {
               <button
                 key={session.sessionId}
                 type="button"
-                onClick={() => selectSession(session.sessionId)}
+                onClick={() => store.selectSession(session.sessionId)}
                 className={cn(
                   "w-full rounded-md px-2 py-1.5 text-left hover:bg-accent",
                   isActive && "bg-accent",
@@ -55,13 +54,13 @@ export function SessionsWindowContent() {
         variant="outline"
         aria-label="New session"
         title="New session"
-        onClick={startSession}
-        disabled={isStartingSession}
+        onClick={() => void store.startSession()}
+        disabled={store.isStartingSession}
         className="w-full"
       >
-        <Icon name={isStartingSession ? "Loader" : "Plus"} size="xs" />
+        <Icon name={store.isStartingSession ? "Loader" : "Plus"} size="xs" />
         New session
       </Button>
     </BlockStack>
   );
-}
+});
