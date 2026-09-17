@@ -44,6 +44,14 @@ const UNTITLED = "Untitled";
 const capitalize = (value: string) =>
   value.charAt(0).toUpperCase() + value.slice(1);
 
+// A heading names the kind of thing, so it stays plural whatever the count.
+const PLURAL = 2;
+
+const sectionHeading = (entity: string, count: number) => {
+  const label = capitalize(pluralize(entity, PLURAL));
+  return count === 0 ? label : `${label} (${count})`;
+};
+
 function groupByEntity(resources: ProjectResourceSummary[]) {
   const grouped = new Map<string, ProjectResourceSummary[]>();
   for (const entity of ENTITY_ORDER) {
@@ -156,16 +164,10 @@ function EntityGroup({
   onRemove,
   actions,
 }: EntityGroupProps) {
-  const heading = capitalize(pluralize(entity, resources.length));
-
   return (
     <BlockStack gap="2">
-      <InlineStack align="space-between" blockAlign="center" className="w-full">
-        <Heading level={3}>
-          {resources.length === 0
-            ? heading
-            : `${heading} (${resources.length})`}
-        </Heading>
+      <InlineStack gap="3" blockAlign="center">
+        <Heading level={3}>{sectionHeading(entity, resources.length)}</Heading>
         {actions}
       </InlineStack>
 

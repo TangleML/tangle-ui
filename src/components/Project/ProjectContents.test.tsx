@@ -109,7 +109,7 @@ describe("ProjectContents", () => {
       screen.getByRole("heading", { name: "Pipelines (2)" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "Document (1)" }),
+      screen.getByRole("heading", { name: "Documents (1)" }),
     ).toBeInTheDocument();
   });
 
@@ -152,7 +152,7 @@ describe("ProjectContents", () => {
     renderContents();
 
     expect(
-      screen.getByRole("heading", { name: "Dataset (1)" }),
+      screen.getByRole("heading", { name: "Datasets (1)" }),
     ).toBeInTheDocument();
     expect(screen.getByText("customers")).toBeInTheDocument();
   });
