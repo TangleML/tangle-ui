@@ -22,6 +22,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => ({
 
 vi.mock("@/services/projects/useProjects", () => ({
   useDeleteProject: vi.fn(),
+  useUpdateProject: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 vi.mock("@/hooks/useToastNotification", () => ({

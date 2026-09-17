@@ -9,6 +9,7 @@ import { APP_ROUTES } from "@/routes/appRoutes";
 import { ProjectsApiError } from "@/services/projects/errors";
 import { useProject } from "@/services/projects/useProjects";
 
+import { ProjectAbout } from "./ProjectAbout";
 import { ProjectHeader } from "./ProjectHeader";
 
 export function ProjectPage() {
@@ -78,6 +79,7 @@ function ProjectDetail({ projectId }: { projectId: string | undefined }) {
   return (
     <BlockStack gap="6">
       <ProjectHeader project={project} />
+      <ProjectAbout project={project} />
     </BlockStack>
   );
 }

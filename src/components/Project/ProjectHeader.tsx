@@ -1,4 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 
 import {
   formatResourceCounts,
@@ -27,11 +28,14 @@ import { copyToClipboard } from "@/utils/string";
 import { tracking } from "@/utils/tracking";
 import { getProjectUrl } from "@/utils/URL";
 
+import { RenameProjectDialog } from "./RenameProjectDialog";
+
 interface ProjectHeaderProps {
   project: Project;
 }
 
 export function ProjectHeader({ project }: ProjectHeaderProps) {
+  const [renameOpen, setRenameOpen] = useState(false);
   const navigate = useNavigate();
   const notify = useToastNotification();
   const { track } = useAnalytics();
@@ -129,6 +133,13 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem
+              onSelect={() => setRenameOpen(true)}
+              {...tracking("projects.rename_project_open")}
+            >
+              <Icon name="Pencil" size="sm" />
+              Rename project
+            </DropdownMenuItem>
+            <DropdownMenuItem
               onSelect={handleShare}
               {...tracking("projects.share_project")}
             >
@@ -151,6 +162,12 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
       <Text size="sm" tone="subdued">
         {meta}
       </Text>
+
+      <RenameProjectDialog
+        project={project}
+        open={renameOpen}
+        onOpenChange={setRenameOpen}
+      />
 
       <ConfirmationDialog
         {...confirmationProps}
