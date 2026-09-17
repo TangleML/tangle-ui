@@ -22,6 +22,15 @@ vi.mock("@/providers/BackendProvider", () => ({
 
 vi.mock("@/services/projects/useProjects", () => ({
   useProjects: vi.fn(),
+  useDeleteProject: () => ({ mutate: vi.fn(), isPending: false }),
+}));
+
+vi.mock("@/hooks/useToastNotification", () => ({
+  default: () => vi.fn(),
+}));
+
+vi.mock("@/providers/AnalyticsProvider", () => ({
+  useAnalytics: () => ({ track: vi.fn() }),
 }));
 
 vi.mock("@/services/projects/useWorkspaces", () => ({
