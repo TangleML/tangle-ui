@@ -22,7 +22,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Text } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import type { Workspace } from "@/services/projects/types";
@@ -31,9 +30,13 @@ import { tracking } from "@/utils/tracking";
 
 interface CreateProjectDialogProps {
   workspaces: Workspace[];
+  canChooseWorkspace: boolean;
 }
 
-export function CreateProjectDialog({ workspaces }: CreateProjectDialogProps) {
+export function CreateProjectDialog({
+  workspaces,
+  canChooseWorkspace,
+}: CreateProjectDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [nameTouched, setNameTouched] = useState(false);
@@ -50,8 +53,13 @@ export function CreateProjectDialog({ workspaces }: CreateProjectDialogProps) {
     }
   }, [open, track]);
 
-  const onlyWorkspaceId = workspaces.length === 1 ? workspaces[0].id : "";
-  const selectedWorkspaceId = workspaceId || onlyWorkspaceId;
+  // Workspaces are deliberately invisible until a deployment has more than one
+  // to choose between; everything lands in the only one that exists.
+  const showWorkspacePicker = canChooseWorkspace && workspaces.length > 1;
+  const defaultWorkspaceId = workspaces[0]?.id ?? "";
+  const selectedWorkspaceId = showWorkspacePicker
+    ? workspaceId || defaultWorkspaceId
+    : defaultWorkspaceId;
 
   const trimmedName = name.trim();
   const nameError = trimmedName === "" ? "Name cannot be empty" : undefined;
@@ -128,31 +136,29 @@ export function CreateProjectDialog({ workspaces }: CreateProjectDialogProps) {
               )}
             </BlockStack>
 
-            <BlockStack gap="2">
-              <Label htmlFor="create-project-workspace">Workspace</Label>
-              <Select
-                value={selectedWorkspaceId}
-                onValueChange={setWorkspaceId}
-                disabled={workspaces.length === 0}
-              >
-                <SelectTrigger id="create-project-workspace" className="w-full">
-                  <SelectValue placeholder="Select a workspace" />
-                </SelectTrigger>
-                <SelectContent>
-                  {workspaces.map((workspace) => (
-                    <SelectItem key={workspace.id} value={workspace.id}>
-                      {workspace.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {workspaces.length === 0 && (
-                <Text size="sm" tone="subdued">
-                  No workspaces are available. An administrator has to create
-                  one before you can create a project.
-                </Text>
-              )}
-            </BlockStack>
+            {showWorkspacePicker && (
+              <BlockStack gap="2">
+                <Label htmlFor="create-project-workspace">Workspace</Label>
+                <Select
+                  value={selectedWorkspaceId}
+                  onValueChange={setWorkspaceId}
+                >
+                  <SelectTrigger
+                    id="create-project-workspace"
+                    className="w-full"
+                  >
+                    <SelectValue placeholder="Select a workspace" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {workspaces.map((workspace) => (
+                      <SelectItem key={workspace.id} value={workspace.id}>
+                        {workspace.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </BlockStack>
+            )}
 
             <BlockStack gap="2">
               <Label htmlFor="create-project-description">

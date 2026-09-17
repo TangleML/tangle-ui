@@ -58,12 +58,7 @@ function mockDeleteProject({ isPending = false } = {}) {
 }
 
 function renderCard(overrides: Partial<ProjectSummary> = {}) {
-  return render(
-    <ProjectCard
-      project={{ ...project, ...overrides }}
-      workspaceName="ML Research"
-    />,
-  );
+  return render(<ProjectCard project={{ ...project, ...overrides }} />);
 }
 
 async function openDeleteConfirmation(overrides: Partial<ProjectSummary> = {}) {
@@ -90,12 +85,11 @@ describe("ProjectCard", () => {
     vi.resetAllMocks();
   });
 
-  it("shows the project's name, description, workspace and contents", () => {
+  it("shows the project's name, description and contents", () => {
     renderCard();
 
     expect(screen.getByText("Churn model")).toBeInTheDocument();
     expect(screen.getByText("Q3 churn work")).toBeInTheDocument();
-    expect(screen.getByText("ML Research")).toBeInTheDocument();
     expect(screen.getByText("3 pipelines · 1 document")).toBeInTheDocument();
   });
 
@@ -130,10 +124,11 @@ describe("ProjectCard", () => {
     expect(screen.queryByRole("alertdialog")).toBeNull();
   });
 
-  it("names the workspace the project lives in", () => {
+  it("says nothing about the workspace a project lives in", () => {
     renderCard();
 
-    expect(screen.getByText("ML Research")).toBeInTheDocument();
+    expect(screen.queryByText("ML Research")).toBeNull();
+    expect(screen.queryByText("workspace-1")).toBeNull();
   });
 
   it("warns what a delete will take with it", async () => {

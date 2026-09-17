@@ -50,11 +50,17 @@ export function ProjectsSection() {
   return (
     <ProjectsGrid
       createdBy={user?.id === UNRESOLVED_USER_ID ? undefined : user?.id}
+      isAdmin={user?.permissions.includes("admin") ?? false}
     />
   );
 }
 
-function ProjectsGrid({ createdBy }: { createdBy: string | undefined }) {
+interface ProjectsGridProps {
+  createdBy: string | undefined;
+  isAdmin: boolean;
+}
+
+function ProjectsGrid({ createdBy, isAdmin }: ProjectsGridProps) {
   const { data, isPending, error } = useProjects({
     createdBy,
     pageSize: PAGE_SIZE,
@@ -73,6 +79,20 @@ function ProjectsGrid({ createdBy }: { createdBy: string | undefined }) {
     );
   }
 
+  const availableWorkspaces = workspaces ?? [];
+
+  const createAction =
+    availableWorkspaces.length === 0 ? (
+      <InfoBox title="No workspace available" variant="warning" width="fit">
+        Projects cannot be created yet. Contact your Tangle Admin for help.
+      </InfoBox>
+    ) : (
+      <CreateProjectDialog
+        workspaces={availableWorkspaces}
+        canChooseWorkspace={isAdmin}
+      />
+    );
+
   if (data.items.length === 0) {
     return (
       <EmptyState
@@ -82,29 +102,19 @@ function ProjectsGrid({ createdBy }: { createdBy: string | undefined }) {
         title="No projects yet"
         description="Create a project to group pipelines, agent sessions, and documents."
       >
-        <InlineStack align="center">
-          <CreateProjectDialog workspaces={workspaces ?? []} />
-        </InlineStack>
+        <InlineStack align="center">{createAction}</InlineStack>
       </EmptyState>
     );
   }
 
-  const workspaceNames = new Map(
-    (workspaces ?? []).map((workspace) => [workspace.id, workspace.name]),
-  );
-
   return (
     <BlockStack gap="4">
       <InlineStack align="end" className="w-full">
-        <CreateProjectDialog workspaces={workspaces ?? []} />
+        {createAction}
       </InlineStack>
       <div className="grid w-full grid-cols-[repeat(auto-fill,minmax(13rem,15rem))] gap-4">
         {data.items.map((project) => (
-          <ProjectCard
-            key={project.id}
-            project={project}
-            workspaceName={workspaceNames.get(project.workspaceId)}
-          />
+          <ProjectCard key={project.id} project={project} />
         ))}
       </div>
       {data.nextPageToken && (
