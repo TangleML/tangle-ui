@@ -1,5 +1,6 @@
 import { ProjectsSection } from "@/components/Home/ProjectsSection/ProjectsSection";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { Badge } from "@/components/ui/badge";
 import { BlockStack } from "@/components/ui/layout";
 
 export function DashboardProjectsView() {
@@ -7,8 +8,13 @@ export function DashboardProjectsView() {
     <BlockStack gap="4">
       <PageHeader
         title="My Projects"
-        description="Group the pipelines, agent sessions and documents you are working on."
+        description="Organise Pipelines and Runs into shareable containers alongside supporting documents."
         icon="FolderKanban"
+        badge={
+          <Badge variant="brand" shape="rounded" size="sm">
+            Beta
+          </Badge>
+        }
       />
       <ProjectsSection />
     </BlockStack>
