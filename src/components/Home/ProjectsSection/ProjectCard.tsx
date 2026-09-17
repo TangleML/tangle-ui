@@ -6,6 +6,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
@@ -19,7 +20,9 @@ import { APP_ROUTES } from "@/routes/appRoutes";
 import type { ProjectSummary } from "@/services/projects/types";
 import { useDeleteProject } from "@/services/projects/useProjects";
 import { formatDate, formatRelativeTime } from "@/utils/date";
+import { copyToClipboard } from "@/utils/string";
 import { tracking } from "@/utils/tracking";
+import { getProjectUrl } from "@/utils/URL";
 
 import {
   formatResourceCounts,
@@ -42,6 +45,11 @@ export function ProjectCard({ project, workspaceName }: ProjectCardProps) {
   } = useConfirmationDialog();
 
   const resourceTotal = totalResourceCount(project.resourceCounts);
+
+  const handleShare = () => {
+    copyToClipboard(getProjectUrl(project.id));
+    notify("Project URL copied to clipboard", "success");
+  };
 
   const handleDelete = async () => {
     const confirmed = await triggerConfirmation({
@@ -112,9 +120,12 @@ export function ProjectCard({ project, workspaceName }: ProjectCardProps) {
         </BlockStack>
 
         <BlockStack gap="1">
-          <Text size="xs" tone="subdued" className="truncate">
-            {workspaceName ?? "Unknown workspace"}
-          </Text>
+          <InlineStack gap="1" blockAlign="center" wrap="nowrap">
+            <Icon name="Boxes" size="sm" className="shrink-0" />
+            <Text size="xs" weight="medium" className="truncate">
+              {workspaceName ?? "Unknown workspace"}
+            </Text>
+          </InlineStack>
           <Text size="xs" tone="subdued" className="truncate">
             {formatResourceCounts(project.resourceCounts)}
           </Text>
@@ -140,6 +151,14 @@ export function ProjectCard({ project, workspaceName }: ProjectCardProps) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          <DropdownMenuItem
+            onSelect={handleShare}
+            {...tracking("projects.share_project")}
+          >
+            <Icon name="Share2" size="sm" />
+            Share project
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
           <DropdownMenuItem
             className="text-destructive"
             onSelect={handleDelete}
