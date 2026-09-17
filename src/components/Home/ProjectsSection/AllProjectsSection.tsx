@@ -76,9 +76,13 @@ function AllProjectsBody({
           No projects match these filters.
         </Text>
       ) : (
-        <div className="grid w-full grid-cols-[repeat(auto-fill,minmax(13rem,15rem))] gap-4">
+        // One row, however wide the window: everyone's projects are a strip to
+        // scan past, not a second grid competing with the user's own.
+        <div className="-mx-1 flex w-full gap-4 overflow-x-auto px-1 pb-2">
           {filteredProjects.map((project) => (
-            <ProjectCard key={project.id} project={project} showAuthor />
+            <div key={project.id} className="w-60 shrink-0">
+              <ProjectCard project={project} showAuthor />
+            </div>
           ))}
         </div>
       )}
