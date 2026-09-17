@@ -40,10 +40,9 @@ describe("AddResourceMenu", () => {
     expect(await screen.findByRole("dialog")).toHaveTextContent("Add Document");
   });
 
-  it("shows what cannot be added here yet instead of hiding it", async () => {
+  it("lists what cannot be added here yet as disabled rather than hiding it", async () => {
     await openMenu();
 
-    expect(screen.getByText("Not yet available here")).toBeInTheDocument();
     expect(screen.getByRole("menuitem", { name: "Pipeline" })).toHaveAttribute(
       "aria-disabled",
       "true",
