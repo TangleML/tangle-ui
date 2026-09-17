@@ -127,6 +127,14 @@ describe("ProjectsSection", () => {
     vi.resetAllMocks();
   });
 
+  it("names itself, so it reads apart from every other project", () => {
+    renderSection();
+
+    expect(
+      screen.getByRole("heading", { name: "My Projects" }),
+    ).toBeInTheDocument();
+  });
+
   it("asks the backend only for the current user's projects", async () => {
     renderSection();
 

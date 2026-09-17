@@ -5,7 +5,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
-import { Text } from "@/components/ui/typography";
+import { Heading, Text } from "@/components/ui/typography";
 import { userQueryOptions } from "@/hooks/useUserDetails";
 import { useBackend } from "@/providers/BackendProvider";
 import { useProjects } from "@/services/projects/useProjects";
@@ -26,6 +26,15 @@ const LoadingProjects = () => (
 );
 
 export function ProjectsSection() {
+  return (
+    <BlockStack gap="4">
+      <Heading level={2}>My Projects</Heading>
+      <MyProjects />
+    </BlockStack>
+  );
+}
+
+function MyProjects() {
   const { configured, available, ready } = useBackend();
   const { data: user, isPending: isUserPending } = useQuery(userQueryOptions);
 

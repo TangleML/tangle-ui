@@ -9,7 +9,7 @@ export function DashboardProjectsView() {
   return (
     <BlockStack gap="4">
       <PageHeader
-        title="My Projects"
+        title="Projects"
         description="Organise Pipelines and Runs into shareable containers alongside supporting documents."
         icon="FolderKanban"
         badge={
