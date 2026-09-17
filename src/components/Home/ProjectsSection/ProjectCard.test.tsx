@@ -1,0 +1,156 @@
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import type { ProjectSummary } from "@/services/projects/types";
+import { useDeleteProject } from "@/services/projects/useProjects";
+
+import { ProjectCard } from "./ProjectCard";
+
+const mutate = vi.fn();
+const notify = vi.fn();
+const track = vi.fn();
+
+vi.mock("@tanstack/react-router", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@tanstack/react-router")>()),
+  Link: ({ children }: { children: ReactNode }) => <a>{children}</a>,
+}));
+
+vi.mock("@/services/projects/useProjects", () => ({
+  useDeleteProject: vi.fn(),
+}));
+
+vi.mock("@/hooks/useToastNotification", () => ({
+  default: () => notify,
+}));
+
+vi.mock("@/providers/AnalyticsProvider", () => ({
+  useAnalytics: () => ({ track }),
+}));
+
+const project: ProjectSummary = {
+  id: "project-1",
+  workspaceId: "workspace-1",
+  name: "Churn model",
+  description: "Q3 churn work",
+  createdBy: "someone@example.com",
+  origin: "user",
+  createdAt: new Date("2026-09-02T10:00:00Z"),
+  updatedAt: new Date("2026-09-15T10:00:00Z"),
+  resourceCounts: { pipeline: 3, document: 1 },
+};
+
+function mockDeleteProject({ isPending = false } = {}) {
+  vi.mocked(useDeleteProject).mockReturnValue({
+    mutate,
+    isPending,
+  } as unknown as ReturnType<typeof useDeleteProject>);
+}
+
+function renderCard(overrides: Partial<ProjectSummary> = {}) {
+  return render(
+    <ProjectCard
+      project={{ ...project, ...overrides }}
+      workspaceName="ML Research"
+    />,
+  );
+}
+
+async function openDeleteConfirmation(overrides: Partial<ProjectSummary> = {}) {
+  const user = userEvent.setup();
+  renderCard(overrides);
+
+  await user.click(
+    screen.getByRole("button", { name: "Project actions: Churn model" }),
+  );
+  await user.click(await screen.findByRole("menuitem", { name: /Delete/ }));
+
+  return screen.findByRole("alertdialog");
+}
+
+describe("ProjectCard", () => {
+  beforeEach(() => {
+    // jsdom implements neither, and Radix's menu calls both while opening.
+    Element.prototype.scrollIntoView = vi.fn();
+    Element.prototype.hasPointerCapture = vi.fn();
+    mockDeleteProject();
+  });
+
+  afterEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it("shows the project's name, description, workspace and contents", () => {
+    renderCard();
+
+    expect(screen.getByText("Churn model")).toBeInTheDocument();
+    expect(screen.getByText("Q3 churn work")).toBeInTheDocument();
+    expect(screen.getByText("ML Research")).toBeInTheDocument();
+    expect(screen.getByText("3 pipelines · 1 document")).toBeInTheDocument();
+  });
+
+  it("warns what a delete will take with it", async () => {
+    const dialog = await openDeleteConfirmation();
+
+    expect(dialog).toHaveTextContent('Delete "Churn model"?');
+    expect(dialog).toHaveTextContent(
+      "This will also delete 3 pipelines · 1 document.",
+    );
+  });
+
+  it("says so when there is nothing in the project to lose", async () => {
+    const dialog = await openDeleteConfirmation({ resourceCounts: {} });
+
+    expect(dialog).toHaveTextContent("This project is empty.");
+  });
+
+  it("deletes the project once the warning is accepted", async () => {
+    await openDeleteConfirmation();
+
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+
+    await waitFor(() => {
+      expect(mutate).toHaveBeenCalledWith("project-1", expect.anything());
+    });
+  });
+
+  it("keeps the project when the warning is dismissed", async () => {
+    await openDeleteConfirmation();
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("alertdialog")).toBeNull();
+    });
+    expect(mutate).not.toHaveBeenCalled();
+  });
+
+  it("reports how much the delete removed", async () => {
+    await openDeleteConfirmation();
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+
+    await waitFor(() => expect(mutate).toHaveBeenCalled());
+    const [, options] = mutate.mock.calls[0];
+    options.onSuccess({ id: "project-1", deletedResourceTotal: 4 });
+
+    expect(notify).toHaveBeenCalledWith(
+      "Project deleted along with 4 resources",
+      "success",
+    );
+    expect(track).toHaveBeenCalledWith("projects.delete_project_completed", {
+      deleted_resource_total: 4,
+    });
+  });
+
+  it("does not mention resources when an empty project is deleted", async () => {
+    await openDeleteConfirmation({ resourceCounts: {} });
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+
+    await waitFor(() => expect(mutate).toHaveBeenCalled());
+    const [, options] = mutate.mock.calls[0];
+    options.onSuccess({ id: "project-1", deletedResourceTotal: 0 });
+
+    expect(notify).toHaveBeenCalledWith("Project deleted", "success");
+  });
+});
