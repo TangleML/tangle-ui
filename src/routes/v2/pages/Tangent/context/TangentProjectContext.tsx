@@ -16,7 +16,13 @@ import { resolveWorkareaTarget } from "@/routes/v2/pages/Tangent/services/resolv
 import type {
   ResolvedWorkareaView,
   WorkareaTab,
+  WorkareaTarget,
 } from "@/routes/v2/pages/Tangent/workarea/types";
+import {
+  formatWorkareaTarget,
+  idIdentity,
+  sameTarget,
+} from "@/routes/v2/pages/Tangent/workarea/workareaTarget";
 import type { SharedUIStore } from "@/routes/v2/shared/store/SharedStoreContext";
 import type { Project } from "@/services/projects/types";
 import {
@@ -35,7 +41,7 @@ export interface ProjectResourceItem {
   id: string;
   name: string;
   entity: ProjectResourceKind;
-  target: string;
+  target: WorkareaTarget;
 }
 
 export interface AttachResourceInput {
@@ -64,7 +70,10 @@ interface TangentProjectContextValue {
   isSavingInstructions: boolean;
   workareaTabs: WorkareaTab[];
   activeWorkareaTabId: string | null;
-  openWorkareaTarget: (target: string, title?: string) => Promise<WorkareaTab>;
+  openWorkareaTarget: (
+    target: WorkareaTarget,
+    title?: string,
+  ) => Promise<WorkareaTab>;
   selectWorkareaTab: (id: string) => void;
   closeWorkareaTab: (id: string) => void;
   registerWorkareaTabStore: (tabId: string, store: SharedUIStore) => void;
@@ -201,21 +210,7 @@ export function TangentProjectProvider({
   function findExistingTab(
     view: ResolvedWorkareaView,
   ): WorkareaTab | undefined {
-    return workareaTabs.find((tab) => {
-      if (tab.kind !== view.kind) return false;
-      if (tab.kind === "artifact" && view.kind === "artifact") {
-        return tab.url === view.url;
-      }
-      if (tab.kind === "pipeline" && view.kind === "pipeline") {
-        return tab.pipelineRef.fileId
-          ? tab.pipelineRef.fileId === view.pipelineRef.fileId
-          : tab.title === view.title;
-      }
-      if (tab.kind === "run" && view.kind === "run") {
-        return tab.runId === view.runId;
-      }
-      return false;
-    });
+    return workareaTabs.find((tab) => sameTarget(tab.target, view.target));
   }
 
   function openResolvedView(view: ResolvedWorkareaView): WorkareaTab {
@@ -231,14 +226,16 @@ export function TangentProjectProvider({
   }
 
   function openArtifactTab(url: string, title: string): WorkareaTab {
-    return openResolvedView({ kind: "artifact", title, url });
+    return openResolvedView({
+      title,
+      target: { type: "artifact", identity: idIdentity(url) },
+    });
   }
 
-  // String-target entry point (`pipeline://`, run refs, artifact URLs, …) for
-  // opening the workarea from the resources dock, chat, or agents. Resolves the
-  // target to a concrete view and routes it through the workarea registry.
+  // Target entry point for opening the workarea from the resources dock, chat,
+  // or agents. Resolves the target's title and routes it through the registry.
   async function openWorkareaTarget(
-    target: string,
+    target: WorkareaTarget,
     title?: string,
   ): Promise<WorkareaTab> {
     const view = await resolveWorkareaTarget(target, { title });
@@ -269,11 +266,14 @@ export function TangentProjectProvider({
     (resource) => {
       if (resource.entity !== "pipeline") return [];
       if (!resource.entityId) return [];
-      const target = `pipeline://${resource.entityId}`;
+      const target: WorkareaTarget = {
+        type: "pipeline",
+        identity: idIdentity(resource.entityId),
+      };
       return [
         {
           id: resource.id,
-          name: resource.name ?? target,
+          name: resource.name ?? formatWorkareaTarget(target),
           entity: resource.entity,
           target,
         },
