@@ -135,7 +135,7 @@ export function CreateProjectDialog({ workspaces }: CreateProjectDialogProps) {
                 onValueChange={setWorkspaceId}
                 disabled={workspaces.length === 0}
               >
-                <SelectTrigger id="create-project-workspace">
+                <SelectTrigger id="create-project-workspace" className="w-full">
                   <SelectValue placeholder="Select a workspace" />
                 </SelectTrigger>
                 <SelectContent>
