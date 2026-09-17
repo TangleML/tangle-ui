@@ -31,7 +31,12 @@ function mockCreateProject({ isPending = false } = {}) {
 
 async function openDialog(workspaceId = "workspace-1") {
   const user = userEvent.setup();
-  render(<CreateProjectDialog workspaceId={workspaceId} />);
+  render(
+    <CreateProjectDialog
+      workspaceId={workspaceId}
+      trigger={<button>New Project</button>}
+    />,
+  );
   await user.click(screen.getByRole("button", { name: /New Project/ }));
   return user;
 }
