@@ -2,8 +2,10 @@ import type { EmbedAgent, EmbedAsset } from "@tangent/embed-react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
+import { ComponentSpec, Input, Output, Task } from "@/models/componentSpec";
 import type { WorkareaTarget } from "@/routes/v2/pages/Tangent/workarea/types";
 import { idIdentity } from "@/routes/v2/pages/Tangent/workarea/workareaTarget";
+import type { SharedUIStore } from "@/routes/v2/shared/store/SharedStoreContext";
 
 import {
   CHAT_TAB_VALUE,
@@ -299,6 +301,80 @@ describe("TangentProjectStore.getActiveTabBridge", () => {
     store.closeWorkareaTab(p2.id);
 
     expect(store.getActiveTabBridge()).toBe(bridgeP1);
+  });
+});
+
+interface FakeSharedStore {
+  editor: {
+    setPendingFocusNode: ReturnType<typeof vi.fn>;
+    selectNode: ReturnType<typeof vi.fn>;
+  };
+  navigation: {
+    rootSpec: ComponentSpec | null;
+    navigateToPath: ReturnType<typeof vi.fn>;
+  };
+}
+
+function makeSharedStore(rootSpec: ComponentSpec | null): SharedUIStore {
+  const fake: FakeSharedStore = {
+    editor: { setPendingFocusNode: vi.fn(), selectNode: vi.fn() },
+    navigation: { rootSpec, navigateToPath: vi.fn() },
+  };
+  return fake as unknown as SharedUIStore;
+}
+
+function specWithTask(): ComponentSpec {
+  const spec = new ComponentSpec({ $id: "spec_1", name: "MyPipeline" });
+  spec.addInput(new Input({ $id: "input_1", name: "rows", type: "Integer" }));
+  spec.addOutput(
+    new Output({ $id: "output_1", name: "result", type: "String" }),
+  );
+  spec.addTask(
+    new Task({ $id: "task_1", name: "Load CSV", componentRef: { name: "l" } }),
+  );
+  return spec;
+}
+
+describe("TangentProjectStore.revealEntity", () => {
+  it("activates the owning pipeline tab and focuses the entity", () => {
+    const store = activeStore();
+    const p1 = store.openResolvedView({ title: "P1", target: pipeline("p1") });
+    const p2 = store.openResolvedView({ title: "P2", target: pipeline("p2") });
+    const shared = makeSharedStore(specWithTask());
+    store.registerTabStore(p2.id, shared);
+    store.selectWorkareaTab(p1.id);
+
+    expect(store.revealEntity("task_1", "Load CSV")).toBe(true);
+    expect(store.activeWorkareaTabId).toBe(p2.id);
+    expect(shared.navigation.navigateToPath).toHaveBeenCalledWith([
+      "MyPipeline",
+    ]);
+    expect(shared.editor.selectNode).toHaveBeenCalledWith("task_1", "task");
+  });
+
+  it("resolves a drifted id by its label", () => {
+    const store = activeStore();
+    const p1 = store.openResolvedView({ title: "P1", target: pipeline("p1") });
+    const shared = makeSharedStore(specWithTask());
+    store.registerTabStore(p1.id, shared);
+
+    expect(store.revealEntity("task_stale", "Load CSV")).toBe(true);
+    expect(shared.editor.selectNode).toHaveBeenCalledWith("task_1", "task");
+  });
+
+  it("returns false when no open pipeline tab resolves the entity", () => {
+    const store = activeStore();
+    const p1 = store.openResolvedView({ title: "P1", target: pipeline("p1") });
+    store.registerTabStore(p1.id, makeSharedStore(specWithTask()));
+
+    expect(store.revealEntity("task_missing", "Nope")).toBe(false);
+  });
+
+  it("returns false when the pipeline tab has no registered store yet", () => {
+    const store = activeStore();
+    store.openResolvedView({ title: "P1", target: pipeline("p1") });
+
+    expect(store.revealEntity("task_1", "Load CSV")).toBe(false);
   });
 });
 
