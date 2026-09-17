@@ -114,19 +114,16 @@ describe("ProjectPage", () => {
     expect(screen.getByText("Churn model")).toBeInTheDocument();
   });
 
-  it("attributes the project and dates it", () => {
+  it("puts the project's resources, runs and details on one page", () => {
     render(<ProjectPage />);
 
-    expect(screen.getByText(/alice@example.com/)).toBeInTheDocument();
-    expect(screen.getByText(/Created Sep 9/)).toBeInTheDocument();
-    expect(screen.getByText(/Updated/)).toBeInTheDocument();
-  });
-
-  it("leaves the attribution out when nobody is recorded", () => {
-    mockProject({ data: { ...project, createdBy: null } });
-    render(<ProjectPage />);
-
-    expect(screen.getByText(/^Created Sep 9/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Resources" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Runs/ })).toBeInTheDocument();
+    expect(screen.getByLabelText("Project details")).toHaveTextContent(
+      "alice@example.com",
+    );
   });
 
   it("offers a way back to the list", () => {
