@@ -18,6 +18,7 @@ const track = vi.fn();
 vi.mock("@/services/projects/useProjectResources", () => ({
   useProjectResources: vi.fn(),
   useDeleteProjectResource: vi.fn(),
+  useCreateProjectResource: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 vi.mock("@/hooks/useToastNotification", () => ({
