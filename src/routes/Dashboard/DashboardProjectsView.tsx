@@ -1,7 +1,9 @@
+import { AllProjectsSection } from "@/components/Home/ProjectsSection/AllProjectsSection";
 import { ProjectsSection } from "@/components/Home/ProjectsSection/ProjectsSection";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { BlockStack } from "@/components/ui/layout";
+import { Separator } from "@/components/ui/separator";
 
 export function DashboardProjectsView() {
   return (
@@ -17,6 +19,8 @@ export function DashboardProjectsView() {
         }
       />
       <ProjectsSection />
+      <Separator className="my-2" />
+      <AllProjectsSection />
     </BlockStack>
   );
 }
