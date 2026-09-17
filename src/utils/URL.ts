@@ -1,3 +1,4 @@
+import { APP_ROUTES } from "@/routes/appRoutes";
 import { RUNS_BASE_PATH } from "@/routes/router";
 import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
 
@@ -251,6 +252,14 @@ const getRawExecutionLogsUrl = (
 ): string =>
   `${backendUrl}/api/executions/${encodeURIComponent(executionId)}/stream_container_log`;
 
+const getProjectUrl = (projectId: string): string =>
+  buildAbsoluteAppUrl(
+    APP_ROUTES.PROJECT_DETAIL.replace(
+      "$projectId",
+      encodeURIComponent(projectId),
+    ),
+  );
+
 export {
   buildComponentSourceUrl,
   convertArtifactUriToHTTPUrl,
@@ -263,6 +272,7 @@ export {
   getArtifactPreviewUrl,
   getExecutionLogsUrl,
   getIdOrTitleFromPath,
+  getProjectUrl,
   getRawExecutionLogsUrl,
   isGithubUrl,
   normalizeUrl,

@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ProjectSummary } from "@/services/projects/types";
 import { useDeleteProject } from "@/services/projects/useProjects";
+import { copyToClipboard } from "@/utils/string";
 
 import { ProjectCard } from "./ProjectCard";
 
@@ -27,6 +28,14 @@ vi.mock("@/hooks/useToastNotification", () => ({
 
 vi.mock("@/providers/AnalyticsProvider", () => ({
   useAnalytics: () => ({ track }),
+}));
+
+vi.mock("@/utils/string", () => ({
+  copyToClipboard: vi.fn(),
+}));
+
+vi.mock("@/utils/URL", () => ({
+  getProjectUrl: (id: string) => `https://tangle.example/projects/${id}`,
 }));
 
 const project: ProjectSummary = {
@@ -88,6 +97,43 @@ describe("ProjectCard", () => {
     expect(screen.getByText("Q3 churn work")).toBeInTheDocument();
     expect(screen.getByText("ML Research")).toBeInTheDocument();
     expect(screen.getByText("3 pipelines · 1 document")).toBeInTheDocument();
+  });
+
+  it("copies the project's own url when sharing", async () => {
+    const user = userEvent.setup();
+    renderCard();
+
+    await user.click(
+      screen.getByRole("button", { name: "Project actions: Churn model" }),
+    );
+    await user.click(await screen.findByRole("menuitem", { name: /Share/ }));
+
+    expect(copyToClipboard).toHaveBeenCalledWith(
+      "https://tangle.example/projects/project-1",
+    );
+    expect(notify).toHaveBeenCalledWith(
+      "Project URL copied to clipboard",
+      "success",
+    );
+  });
+
+  it("does not delete anything when sharing", async () => {
+    const user = userEvent.setup();
+    renderCard();
+
+    await user.click(
+      screen.getByRole("button", { name: "Project actions: Churn model" }),
+    );
+    await user.click(await screen.findByRole("menuitem", { name: /Share/ }));
+
+    expect(mutate).not.toHaveBeenCalled();
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+  });
+
+  it("names the workspace the project lives in", () => {
+    renderCard();
+
+    expect(screen.getByText("ML Research")).toBeInTheDocument();
   });
 
   it("warns what a delete will take with it", async () => {
