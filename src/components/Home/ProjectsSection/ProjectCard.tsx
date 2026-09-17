@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { Separator } from "@/components/ui/separator";
 import { Paragraph, Text } from "@/components/ui/typography";
 import useConfirmationDialog from "@/hooks/useConfirmationDialog";
 import useToastNotification from "@/hooks/useToastNotification";
@@ -31,10 +32,9 @@ import {
 
 interface ProjectCardProps {
   project: ProjectSummary;
-  workspaceName: string | undefined;
 }
 
-export function ProjectCard({ project, workspaceName }: ProjectCardProps) {
+export function ProjectCard({ project }: ProjectCardProps) {
   const deleteProject = useDeleteProject();
   const notify = useToastNotification();
   const { track } = useAnalytics();
@@ -119,22 +119,19 @@ export function ProjectCard({ project, workspaceName }: ProjectCardProps) {
           )}
         </BlockStack>
 
-        <BlockStack gap="1">
-          <InlineStack gap="1" blockAlign="center" wrap="nowrap">
-            <Icon name="Boxes" size="sm" className="shrink-0" />
-            <Text size="xs" weight="medium" className="truncate">
-              {workspaceName ?? "Unknown workspace"}
-            </Text>
-          </InlineStack>
-          <Text size="xs" tone="subdued" className="truncate">
+        <BlockStack gap="2">
+          <Text size="xs" weight="medium" className="truncate">
             {formatResourceCounts(project.resourceCounts)}
           </Text>
-          <Text size="xs" tone="subdued" className="truncate">
-            {`Created ${formatDate(project.createdAt)}`}
-          </Text>
-          <Text size="xs" tone="subdued" className="truncate">
-            {`Updated ${formatRelativeTime(project.updatedAt)}`}
-          </Text>
+          <Separator />
+          <BlockStack gap="1">
+            <Text size="xs" tone="subdued" className="truncate">
+              {`Created ${formatDate(project.createdAt)}`}
+            </Text>
+            <Text size="xs" tone="subdued" className="truncate">
+              {`Updated ${formatRelativeTime(project.updatedAt)}`}
+            </Text>
+          </BlockStack>
         </BlockStack>
       </Link>
 
