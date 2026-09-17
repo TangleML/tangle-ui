@@ -4,6 +4,7 @@ import { ReactFlowProvider } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
 import { useRef, useState } from "react";
 
+import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import { InlineStack } from "@/components/ui/layout";
 import type { ComponentSpec } from "@/models/componentSpec";
 import { ComponentLibraryProvider } from "@/providers/ComponentLibraryProvider";
@@ -31,15 +32,43 @@ import { useRunViewSpecLifecycle } from "./hooks/useRunViewSpecLifecycle";
 import { useRunViewSubgraphExecutionSync } from "./hooks/useRunViewSubgraphUrlSync";
 import { useRunViewWindows } from "./hooks/useRunViewWindows";
 import { runViewRegistry } from "./nodes";
+import { TangentRunAgentProvider } from "./TangentRunAgentProvider";
 
 interface EmbeddedRunViewProps {
   runId: string;
   isActive: boolean;
   onStoreReady?: (store: SharedUIStore) => void;
   onStoreClosed?: () => void;
+  sessionId?: string;
+  environmentId?: string;
+  onEnvironmentReady?: (environmentId: string) => void;
+  onEnvironmentClosed?: () => void;
+  onBridgeReady?: (bridge: ToolBridgeApi) => void;
+  onBridgeClosed?: () => void;
 }
 
-interface EmbeddedRunViewLayoutProps {
+interface RunAgentBoundaryProps {
+  runId: string;
+  subgraphExecutionId?: string;
+  sessionId?: string;
+  environmentId?: string;
+  onEnvironmentReady?: (environmentId: string) => void;
+  onEnvironmentClosed?: () => void;
+  onBridgeReady?: (bridge: ToolBridgeApi) => void;
+  onBridgeClosed?: () => void;
+}
+
+/**
+ * Hosts the Tangent run-inspector sub-agent only when this run view is embedded
+ * in a Tangent session. The standalone `/runs-v2` route renders without a
+ * `sessionId`, so it stays entirely agent-free.
+ */
+function RunAgentBoundary({ sessionId, ...rest }: RunAgentBoundaryProps) {
+  if (!sessionId) return null;
+  return <TangentRunAgentProvider sessionId={sessionId} {...rest} />;
+}
+
+interface EmbeddedRunViewLayoutProps extends RunAgentBoundaryProps {
   spec: ComponentSpec;
   isActive: boolean;
   onSubgraphExecutionIdChange: (executionId: string | undefined) => void;
@@ -49,6 +78,7 @@ const EmbeddedRunViewLayout = observer(function EmbeddedRunViewLayout({
   spec,
   isActive,
   onSubgraphExecutionIdChange,
+  ...agentBoundaryProps
 }: EmbeddedRunViewLayoutProps) {
   const canvasRef = useRef<HTMLDivElement | null>(null);
 
@@ -74,31 +104,33 @@ const EmbeddedRunViewLayout = observer(function EmbeddedRunViewLayout({
   if (!activeSpec) return null;
 
   return (
-    <NodeRegistryProvider registry={runViewRegistry}>
-      <SpecProvider spec={activeSpec}>
-        <InlineStack
-          className="flex-1 min-h-0 w-full"
-          blockAlign="stretch"
-          wrap="nowrap"
-          data-testid="run-view-v2"
-        >
-          <div ref={canvasRef} className="relative flex-1 min-w-0 h-full">
-            <RunViewFlowCanvas
-              key={activeSpec?.$id ?? "root"}
-              spec={activeSpec}
-              className="h-full"
-            />
-            <WindowContainer />
-          </div>
-          <DockArea side="right" />
-        </InlineStack>
-      </SpecProvider>
-    </NodeRegistryProvider>
+    <>
+      <NodeRegistryProvider registry={runViewRegistry}>
+        <SpecProvider spec={activeSpec}>
+          <InlineStack
+            className="flex-1 min-h-0 w-full"
+            blockAlign="stretch"
+            wrap="nowrap"
+            data-testid="run-view-v2"
+          >
+            <div ref={canvasRef} className="relative flex-1 min-w-0 h-full">
+              <RunViewFlowCanvas
+                key={activeSpec.$id ?? "root"}
+                spec={activeSpec}
+                className="h-full"
+              />
+              <WindowContainer />
+            </div>
+            <DockArea side="right" />
+          </InlineStack>
+        </SpecProvider>
+      </NodeRegistryProvider>
+      <RunAgentBoundary {...agentBoundaryProps} />
+    </>
   );
 });
 
-interface EmbeddedRunViewContentProps {
-  runId: string;
+interface EmbeddedRunViewContentProps extends RunAgentBoundaryProps {
   isActive: boolean;
   onSubgraphExecutionIdChange: (executionId: string | undefined) => void;
 }
@@ -107,6 +139,7 @@ const EmbeddedRunViewContent = observer(function EmbeddedRunViewContent({
   runId,
   isActive,
   onSubgraphExecutionIdChange,
+  ...agentBoundaryProps
 }: EmbeddedRunViewContentProps) {
   const loadState = useRunViewLoadState(runId);
 
@@ -115,7 +148,9 @@ const EmbeddedRunViewContent = observer(function EmbeddedRunViewContent({
       <EmbeddedRunViewLayout
         spec={loadState.spec}
         isActive={isActive}
+        runId={runId}
         onSubgraphExecutionIdChange={onSubgraphExecutionIdChange}
+        {...agentBoundaryProps}
       />
     );
   }
@@ -141,6 +176,12 @@ export function EmbeddedRunView({
   isActive,
   onStoreReady,
   onStoreClosed,
+  sessionId,
+  environmentId,
+  onEnvironmentReady,
+  onEnvironmentClosed,
+  onBridgeReady,
+  onBridgeClosed,
 }: EmbeddedRunViewProps) {
   const [subgraphExecutionId, setSubgraphExecutionId] = useState<
     string | undefined
@@ -161,6 +202,13 @@ export function EmbeddedRunView({
                   <EmbeddedRunViewContent
                     runId={runId}
                     isActive={isActive}
+                    subgraphExecutionId={subgraphExecutionId}
+                    sessionId={sessionId}
+                    environmentId={environmentId}
+                    onEnvironmentReady={onEnvironmentReady}
+                    onEnvironmentClosed={onEnvironmentClosed}
+                    onBridgeReady={onBridgeReady}
+                    onBridgeClosed={onBridgeClosed}
                     onSubgraphExecutionIdChange={setSubgraphExecutionId}
                   />
                 </ComponentLibraryProvider>

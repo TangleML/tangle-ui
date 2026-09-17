@@ -28,6 +28,16 @@ registerWorkareaKind({
       isActive={hostProps.isActive}
       onStoreReady={(store) => hostProps.registerTabStore(tab.id, store)}
       onStoreClosed={() => hostProps.unregisterTabStore(tab.id)}
+      sessionId={hostProps.sessionId}
+      environmentId={hostProps.tabEnvironmentId(tab.id)}
+      onEnvironmentReady={(environmentId) =>
+        hostProps.registerTabEnvironment(tab.id, environmentId)
+      }
+      onEnvironmentClosed={() => hostProps.unregisterTabEnvironment(tab.id)}
+      onBridgeReady={(bridge) =>
+        hostProps.registerTabBridge(tab.id, "pipeline", bridge)
+      }
+      onBridgeClosed={() => hostProps.unregisterTabBridge(tab.id)}
     />
   ),
 });

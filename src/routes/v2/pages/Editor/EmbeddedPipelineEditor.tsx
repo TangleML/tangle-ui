@@ -5,6 +5,7 @@ import { ReactFlowProvider } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
 import { useRef } from "react";
 
+import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import { ComponentEditorProvider } from "@/components/shared/ComponentEditor/ComponentEditorProvider";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
@@ -42,12 +43,46 @@ import { useSpecLifecycle } from "./hooks/useSpecLifecycle";
 import { useUndoRedoKeyboard } from "./hooks/useUndoRedoKeyboard";
 import { editorRegistry } from "./nodes";
 import { EditorSessionProvider } from "./store/EditorSessionContext";
+import { TangentEditorAgentProvider } from "./TangentEditorAgentProvider";
 
 interface EmbeddedPipelineEditorProps {
   pipelineRef: PipelineRef;
   isActive: boolean;
   onStoreReady?: (store: SharedUIStore) => void;
   onStoreClosed?: () => void;
+  sessionId?: string;
+  environmentId?: string;
+  onEnvironmentReady?: (environmentId: string) => void;
+  onEnvironmentClosed?: () => void;
+  onBridgeReady?: (bridge: ToolBridgeApi) => void;
+  onBridgeClosed?: () => void;
+}
+
+interface EmbeddedEditorAgentBoundaryProps {
+  sessionId?: string;
+  environmentId?: string;
+  onEnvironmentReady?: (environmentId: string) => void;
+  onEnvironmentClosed?: () => void;
+  onBridgeReady?: (bridge: ToolBridgeApi) => void;
+  onBridgeClosed?: () => void;
+}
+
+interface EmbeddedPipelineEditorCanvasProps extends EmbeddedEditorAgentBoundaryProps {
+  pipelineRef: PipelineRef;
+  isActive: boolean;
+}
+
+/**
+ * Hosts the Tangent editor sub-agent only when this editor is embedded in a
+ * Tangent session. The standalone `/editor-v2` route renders without a
+ * `sessionId`, so it stays entirely agent-free.
+ */
+function EmbeddedEditorAgentBoundary({
+  sessionId,
+  ...rest
+}: EmbeddedEditorAgentBoundaryProps) {
+  if (!sessionId) return null;
+  return <TangentEditorAgentProvider sessionId={sessionId} {...rest} />;
 }
 
 const EmbeddedPipelineEditorSkeleton = () => (
@@ -59,10 +94,8 @@ const EmbeddedPipelineEditorCanvas = withSuspenseWrapper(
     ({
       pipelineRef,
       isActive,
-    }: {
-      pipelineRef: PipelineRef;
-      isActive: boolean;
-    }) => {
+      ...agentBoundaryProps
+    }: EmbeddedPipelineEditorCanvasProps) => {
       const {
         data: { spec: rootSpec, restoredUndoStore },
       } = useLoadSpec(pipelineRef);
@@ -101,27 +134,30 @@ const EmbeddedPipelineEditorCanvas = withSuspenseWrapper(
       if (!activeSpec) return null;
 
       return (
-        <NodeRegistryProvider registry={editorRegistry}>
-          <SpecProvider spec={activeSpec}>
-            <InlineStack
-              className="flex-1 min-h-0 w-full"
-              blockAlign="stretch"
-              wrap="nowrap"
-              data-testid="editor-v2"
-              data-editor-ready="true"
-            >
-              <div ref={canvasRef} className="relative flex-1 min-w-0 h-full">
-                <FlowCanvas
-                  key={activeSpec?.$id ?? "root"}
-                  spec={activeSpec}
-                  className="h-full"
-                />
-                <WindowContainer />
-              </div>
-              <DockArea side="right" />
-            </InlineStack>
-          </SpecProvider>
-        </NodeRegistryProvider>
+        <>
+          <NodeRegistryProvider registry={editorRegistry}>
+            <SpecProvider spec={activeSpec}>
+              <InlineStack
+                className="flex-1 min-h-0 w-full"
+                blockAlign="stretch"
+                wrap="nowrap"
+                data-testid="editor-v2"
+                data-editor-ready="true"
+              >
+                <div ref={canvasRef} className="relative flex-1 min-w-0 h-full">
+                  <FlowCanvas
+                    key={activeSpec.$id ?? "root"}
+                    spec={activeSpec}
+                    className="h-full"
+                  />
+                  <WindowContainer />
+                </div>
+                <DockArea side="right" />
+              </InlineStack>
+            </SpecProvider>
+          </NodeRegistryProvider>
+          <EmbeddedEditorAgentBoundary {...agentBoundaryProps} />
+        </>
       );
     },
   ),
@@ -133,6 +169,12 @@ export function EmbeddedPipelineEditor({
   isActive,
   onStoreReady,
   onStoreClosed,
+  sessionId,
+  environmentId,
+  onEnvironmentReady,
+  onEnvironmentClosed,
+  onBridgeReady,
+  onBridgeClosed,
 }: EmbeddedPipelineEditorProps) {
   return (
     <div className="h-full w-full flex flex-col bg-slate-100 dark:bg-background select-none">
@@ -147,6 +189,12 @@ export function EmbeddedPipelineEditor({
                     <EmbeddedPipelineEditorCanvas
                       pipelineRef={pipelineRef}
                       isActive={isActive}
+                      sessionId={sessionId}
+                      environmentId={environmentId}
+                      onEnvironmentReady={onEnvironmentReady}
+                      onEnvironmentClosed={onEnvironmentClosed}
+                      onBridgeReady={onBridgeReady}
+                      onBridgeClosed={onBridgeClosed}
                     />
                   </DriverPermissionGate>
                 </ForcedSearchProvider>
