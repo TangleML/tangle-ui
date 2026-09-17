@@ -36,6 +36,14 @@ vi.mock("@/services/projects/useProjectResources", () => ({
   useCreateProjectResource: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
+vi.mock("@/services/projects/useProjectRuns", () => ({
+  useProjectRuns: () => ({
+    data: { items: [], nextPageToken: null },
+    isPending: false,
+    error: null,
+  }),
+}));
+
 vi.mock("@/hooks/useToastNotification", () => ({
   default: () => vi.fn(),
 }));

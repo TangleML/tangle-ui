@@ -13,6 +13,7 @@ import { useProject } from "@/services/projects/useProjects";
 import { ProjectAbout } from "./ProjectAbout";
 import { ProjectContents } from "./ProjectContents";
 import { ProjectHeader } from "./ProjectHeader";
+import { ProjectRuns } from "./ProjectRuns";
 
 export function ProjectPage() {
   const { projectId } = useParams({ strict: false });
@@ -84,6 +85,8 @@ function ProjectDetail({ projectId }: { projectId: string | undefined }) {
       <ProjectAbout project={project} />
       <Separator />
       <ProjectContents projectId={project.id} />
+      <Separator />
+      <ProjectRuns projectId={project.id} />
     </BlockStack>
   );
 }
