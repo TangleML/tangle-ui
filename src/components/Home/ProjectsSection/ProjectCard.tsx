@@ -77,14 +77,14 @@ export function ProjectCard({ project, workspaceName }: ProjectCardProps) {
   return (
     <div
       className={cn(
-        "relative rounded-lg border border-border bg-card transition-colors hover:bg-muted/50",
+        "relative min-h-56 rounded-lg border border-border bg-card transition-colors hover:bg-muted/50",
         deleteProject.isPending && "pointer-events-none opacity-50",
       )}
     >
       <Link
         to={APP_ROUTES.PROJECT_DETAIL}
         params={{ projectId: project.id }}
-        className="block p-4"
+        className="flex h-full flex-col justify-between gap-2 p-4"
         {...tracking("projects.project_card")}
       >
         <BlockStack gap="2">
@@ -105,22 +105,25 @@ export function ProjectCard({ project, workspaceName }: ProjectCardProps) {
           </InlineStack>
 
           {project.description && (
-            <Paragraph size="sm" tone="subdued" className="line-clamp-2">
+            <Paragraph size="sm" tone="subdued" className="line-clamp-3">
               {project.description}
             </Paragraph>
           )}
+        </BlockStack>
 
-          <BlockStack gap="1">
-            <Text size="xs" tone="subdued">
-              {workspaceName ?? "Unknown workspace"}
-            </Text>
-            <Text size="xs" tone="subdued">
-              {formatResourceCounts(project.resourceCounts)}
-            </Text>
-            <Text size="xs" tone="subdued">
-              {`Created ${formatDate(project.createdAt)} · Updated ${formatRelativeTime(project.updatedAt)}`}
-            </Text>
-          </BlockStack>
+        <BlockStack gap="1">
+          <Text size="xs" tone="subdued" className="truncate">
+            {workspaceName ?? "Unknown workspace"}
+          </Text>
+          <Text size="xs" tone="subdued" className="truncate">
+            {formatResourceCounts(project.resourceCounts)}
+          </Text>
+          <Text size="xs" tone="subdued" className="truncate">
+            {`Created ${formatDate(project.createdAt)}`}
+          </Text>
+          <Text size="xs" tone="subdued" className="truncate">
+            {`Updated ${formatRelativeTime(project.updatedAt)}`}
+          </Text>
         </BlockStack>
       </Link>
 

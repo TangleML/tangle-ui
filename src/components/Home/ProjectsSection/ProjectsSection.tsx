@@ -98,7 +98,7 @@ function ProjectsGrid({ createdBy }: { createdBy: string | undefined }) {
       <InlineStack align="end" className="w-full">
         <CreateProjectDialog workspaces={workspaces ?? []} />
       </InlineStack>
-      <div className="grid w-full gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid w-full grid-cols-[repeat(auto-fill,minmax(13rem,15rem))] gap-4">
         {data.items.map((project) => (
           <ProjectCard
             key={project.id}
