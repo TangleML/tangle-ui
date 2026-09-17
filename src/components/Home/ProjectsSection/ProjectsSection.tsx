@@ -1,7 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { InfoBox } from "@/components/shared/InfoBox";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
@@ -50,17 +52,11 @@ export function ProjectsSection() {
   return (
     <ProjectsGrid
       createdBy={user?.id === UNRESOLVED_USER_ID ? undefined : user?.id}
-      isAdmin={user?.permissions.includes("admin") ?? false}
     />
   );
 }
 
-interface ProjectsGridProps {
-  createdBy: string | undefined;
-  isAdmin: boolean;
-}
-
-function ProjectsGrid({ createdBy, isAdmin }: ProjectsGridProps) {
+function ProjectsGrid({ createdBy }: { createdBy: string | undefined }) {
   const { data, isPending, error } = useProjects({
     createdBy,
     pageSize: PAGE_SIZE,
@@ -79,19 +75,20 @@ function ProjectsGrid({ createdBy, isAdmin }: ProjectsGridProps) {
     );
   }
 
-  const availableWorkspaces = workspaces ?? [];
+  // Nothing in the UI names a workspace: a project goes into the first one the
+  // backend offers, and creation is withdrawn when it offers none.
+  const targetWorkspaceId = workspaces?.[0]?.id;
 
-  const createAction =
-    availableWorkspaces.length === 0 ? (
-      <InfoBox title="No workspace available" variant="warning" width="fit">
+  const createAction = targetWorkspaceId ? (
+    <CreateProjectDialog workspaceId={targetWorkspaceId} />
+  ) : (
+    <Alert className="w-fit">
+      <Icon name="CircleAlert" />
+      <AlertDescription>
         Projects cannot be created yet. Contact your Tangle Admin for help.
-      </InfoBox>
-    ) : (
-      <CreateProjectDialog
-        workspaces={availableWorkspaces}
-        canChooseWorkspace={isAdmin}
-      />
-    );
+      </AlertDescription>
+    </Alert>
+  );
 
   if (data.items.length === 0) {
     return (
