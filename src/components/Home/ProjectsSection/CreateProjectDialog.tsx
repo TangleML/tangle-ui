@@ -14,33 +14,20 @@ import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
-import type { Workspace } from "@/services/projects/types";
 import { useCreateProject } from "@/services/projects/useProjects";
 import { tracking } from "@/utils/tracking";
 
 interface CreateProjectDialogProps {
-  workspaces: Workspace[];
-  canChooseWorkspace: boolean;
+  workspaceId: string;
 }
 
-export function CreateProjectDialog({
-  workspaces,
-  canChooseWorkspace,
-}: CreateProjectDialogProps) {
+export function CreateProjectDialog({ workspaceId }: CreateProjectDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [nameTouched, setNameTouched] = useState(false);
-  const [workspaceId, setWorkspaceId] = useState("");
   const [description, setDescription] = useState("");
 
   const createProject = useCreateProject();
@@ -53,23 +40,13 @@ export function CreateProjectDialog({
     }
   }, [open, track]);
 
-  // Workspaces are deliberately invisible until a deployment has more than one
-  // to choose between; everything lands in the only one that exists.
-  const showWorkspacePicker = canChooseWorkspace && workspaces.length > 1;
-  const defaultWorkspaceId = workspaces[0]?.id ?? "";
-  const selectedWorkspaceId = showWorkspacePicker
-    ? workspaceId || defaultWorkspaceId
-    : defaultWorkspaceId;
-
   const trimmedName = name.trim();
   const nameError = trimmedName === "" ? "Name cannot be empty" : undefined;
-  const canSubmit =
-    !nameError && selectedWorkspaceId !== "" && !createProject.isPending;
+  const canSubmit = !nameError && !createProject.isPending;
 
   const resetForm = () => {
     setName("");
     setNameTouched(false);
-    setWorkspaceId("");
     setDescription("");
   };
 
@@ -86,7 +63,7 @@ export function CreateProjectDialog({
 
     createProject.mutate(
       {
-        workspaceId: selectedWorkspaceId,
+        workspaceId,
         name: trimmedName,
         description: trimmedDescription === "" ? undefined : trimmedDescription,
       },
@@ -135,30 +112,6 @@ export function CreateProjectDialog({
                 </Alert>
               )}
             </BlockStack>
-
-            {showWorkspacePicker && (
-              <BlockStack gap="2">
-                <Label htmlFor="create-project-workspace">Workspace</Label>
-                <Select
-                  value={selectedWorkspaceId}
-                  onValueChange={setWorkspaceId}
-                >
-                  <SelectTrigger
-                    id="create-project-workspace"
-                    className="w-full"
-                  >
-                    <SelectValue placeholder="Select a workspace" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {workspaces.map((workspace) => (
-                      <SelectItem key={workspace.id} value={workspace.id}>
-                        {workspace.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </BlockStack>
-            )}
 
             <BlockStack gap="2">
               <Label htmlFor="create-project-description">

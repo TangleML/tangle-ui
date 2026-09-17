@@ -71,6 +71,15 @@ export const ExistingFlags: ConfigFlags = {
     default: false,
     category: "beta",
     canEnable: isTangentEnabled,
+    dependsOn: "projects",
+  },
+
+  ["projects"]: {
+    name: "Projects",
+    description:
+      "Enable the Projects dashboard for grouping pipelines, documents and runs.",
+    default: false,
+    category: "beta",
   },
 
   ["component-search-v2"]: {
@@ -95,14 +104,6 @@ export const ExistingFlags: ConfigFlags = {
     description:
       "Select two runs to compare their pipeline structure and results side by side.",
     default: true,
-    category: "beta",
-  },
-
-  ["projects"]: {
-    name: "Projects",
-    description:
-      "Enable the Projects dashboard for grouping pipelines, agent sessions, and documents.",
-    default: false,
     category: "beta",
   },
 

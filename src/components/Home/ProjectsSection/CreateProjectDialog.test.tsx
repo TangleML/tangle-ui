@@ -1,8 +1,7 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { Workspace } from "@/services/projects/types";
 import { useCreateProject } from "@/services/projects/useProjects";
 
 import { CreateProjectDialog } from "./CreateProjectDialog";
@@ -23,25 +22,6 @@ vi.mock("@/providers/AnalyticsProvider", () => ({
   useAnalytics: () => ({ track }),
 }));
 
-const workspaces: Workspace[] = [
-  {
-    id: "workspace-1",
-    name: "ML Research",
-    description: null,
-    isActive: true,
-    extraData: null,
-    createdAt: new Date("2026-09-01T10:00:00Z"),
-  },
-  {
-    id: "workspace-2",
-    name: "Growth",
-    description: null,
-    isActive: true,
-    extraData: null,
-    createdAt: new Date("2026-09-01T10:00:00Z"),
-  },
-];
-
 function mockCreateProject({ isPending = false } = {}) {
   vi.mocked(useCreateProject).mockReturnValue({
     mutate,
@@ -49,17 +29,9 @@ function mockCreateProject({ isPending = false } = {}) {
   } as unknown as ReturnType<typeof useCreateProject>);
 }
 
-async function openDialog(
-  available: Workspace[] = workspaces,
-  canChooseWorkspace = true,
-) {
+async function openDialog(workspaceId = "workspace-1") {
   const user = userEvent.setup();
-  render(
-    <CreateProjectDialog
-      workspaces={available}
-      canChooseWorkspace={canChooseWorkspace}
-    />,
-  );
+  render(<CreateProjectDialog workspaceId={workspaceId} />);
   await user.click(screen.getByRole("button", { name: /New Project/ }));
   return user;
 }
@@ -92,47 +64,19 @@ describe("CreateProjectDialog", () => {
     expect(submitButton()).toBeDisabled();
   });
 
-  it("never mentions the workspace when there is only one to use", async () => {
-    const user = await openDialog([workspaces[0]]);
+  it("never asks which workspace to use", async () => {
+    const user = await openDialog();
 
     await user.type(screen.getByLabelText("Name"), "Churn model");
 
     expect(screen.queryByLabelText("Workspace")).toBeNull();
-    expect(screen.queryByText("ML Research")).toBeNull();
+    expect(screen.queryByRole("combobox")).toBeNull();
+    expect(screen.queryByText(/workspace/i)).toBeNull();
     expect(submitButton()).toBeEnabled();
-  });
-
-  it("hides the workspace choice from a non-admin who has several", async () => {
-    const user = await openDialog(workspaces, false);
-
-    await user.type(screen.getByLabelText("Name"), "Churn model");
-
-    expect(screen.queryByLabelText("Workspace")).toBeNull();
-    expect(submitButton()).toBeEnabled();
-  });
-
-  it("files a non-admin's project in the first workspace without asking", async () => {
-    const user = await openDialog(workspaces, false);
-
-    await user.type(screen.getByLabelText("Name"), "Churn model");
-    await user.click(submitButton());
-
-    expect(mutate).toHaveBeenCalledWith(
-      expect.objectContaining({ workspaceId: "workspace-1" }),
-      expect.anything(),
-    );
-  });
-
-  it("offers the choice to an admin with more than one workspace", async () => {
-    const user = await openDialog(workspaces, true);
-
-    await user.type(screen.getByLabelText("Name"), "Churn model");
-
-    expect(screen.getByLabelText("Workspace")).toHaveTextContent("ML Research");
   });
 
   it("creates a project with a trimmed name and no description", async () => {
-    const user = await openDialog([workspaces[0]]);
+    const user = await openDialog();
 
     await user.type(screen.getByLabelText("Name"), "  Churn model  ");
     await user.click(submitButton());
@@ -147,12 +91,10 @@ describe("CreateProjectDialog", () => {
     );
   });
 
-  it("creates a project with the chosen workspace and description", async () => {
-    const user = await openDialog();
+  it("files the project in whichever workspace it was handed", async () => {
+    const user = await openDialog("workspace-from-backend");
 
     await user.type(screen.getByLabelText("Name"), "Churn model");
-    fireEvent.click(screen.getByLabelText("Workspace"));
-    fireEvent.click(await screen.findByRole("option", { name: "Growth" }));
     await user.type(
       screen.getByLabelText("Description (optional)"),
       "Q3 churn work",
@@ -161,7 +103,7 @@ describe("CreateProjectDialog", () => {
 
     expect(mutate).toHaveBeenCalledWith(
       {
-        workspaceId: "workspace-2",
+        workspaceId: "workspace-from-backend",
         name: "Churn model",
         description: "Q3 churn work",
       },
@@ -170,7 +112,7 @@ describe("CreateProjectDialog", () => {
   });
 
   it("confirms and closes once the project is created", async () => {
-    const user = await openDialog([workspaces[0]]);
+    const user = await openDialog();
 
     await user.type(screen.getByLabelText("Name"), "Churn model");
     await user.click(submitButton());
@@ -201,7 +143,7 @@ describe("CreateProjectDialog", () => {
   it("cannot be submitted twice while the first attempt is in flight", async () => {
     mockCreateProject({ isPending: true });
 
-    const user = await openDialog([workspaces[0]]);
+    const user = await openDialog();
     await user.type(screen.getByLabelText("Name"), "Churn model");
 
     expect(submitButton()).toBeDisabled();

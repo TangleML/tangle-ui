@@ -42,19 +42,8 @@ vi.mock("@/utils/user", () => ({
 }));
 
 vi.mock("./CreateProjectDialog", () => ({
-  CreateProjectDialog: ({
-    workspaces,
-    canChooseWorkspace,
-  }: {
-    workspaces: Workspace[];
-    canChooseWorkspace: boolean;
-  }) => (
-    <button
-      data-workspace-count={workspaces.length}
-      data-can-choose-workspace={String(canChooseWorkspace)}
-    >
-      New Project
-    </button>
+  CreateProjectDialog: ({ workspaceId }: { workspaceId: string }) => (
+    <button data-workspace-id={workspaceId}>New Project</button>
   ),
 }));
 
@@ -174,28 +163,35 @@ describe("ProjectsSection", () => {
     expect(screen.queryByText("workspace-1")).toBeNull();
   });
 
-  it("lets an admin choose between workspaces", async () => {
+  it("creates into the first workspace the backend offers", async () => {
+    vi.mocked(useWorkspaces).mockReturnValue({
+      data: [workspace, { ...workspace, id: "workspace-2", name: "Growth" }],
+    } as ReturnType<typeof useWorkspaces>);
+
+    renderSection();
+
+    expect(
+      await screen.findByRole("button", { name: "New Project" }),
+    ).toHaveAttribute("data-workspace-id", "workspace-1");
+  });
+
+  it("picks the same workspace for an admin as for anyone else", async () => {
     vi.mocked(getUserDetails).mockResolvedValue({
       id: "someone@example.com",
       permissions: ["read", "write", "admin"],
     });
+    vi.mocked(useWorkspaces).mockReturnValue({
+      data: [workspace, { ...workspace, id: "workspace-2", name: "Growth" }],
+    } as ReturnType<typeof useWorkspaces>);
 
     renderSection();
 
     expect(
       await screen.findByRole("button", { name: "New Project" }),
-    ).toHaveAttribute("data-can-choose-workspace", "true");
+    ).toHaveAttribute("data-workspace-id", "workspace-1");
   });
 
-  it("does not let a plain writer choose between workspaces", async () => {
-    renderSection();
-
-    expect(
-      await screen.findByRole("button", { name: "New Project" }),
-    ).toHaveAttribute("data-can-choose-workspace", "false");
-  });
-
-  it("points at an admin when the deployment has no workspace to create in", async () => {
+  it("points at an admin when there is nowhere to create a project", async () => {
     vi.mocked(useWorkspaces).mockReturnValue({
       data: [],
     } as unknown as ReturnType<typeof useWorkspaces>);
@@ -203,14 +199,12 @@ describe("ProjectsSection", () => {
     renderSection();
 
     expect(
-      await screen.findByText("No workspace available"),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(
+      await screen.findByText(
         "Projects cannot be created yet. Contact your Tangle Admin for help.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "New Project" })).toBeNull();
+    expect(screen.queryByText(/workspace/i)).toBeNull();
   });
 
   it("invites the user to create a project when they have none", async () => {
@@ -231,7 +225,7 @@ describe("ProjectsSection", () => {
 
     expect(
       await screen.findByRole("button", { name: "New Project" }),
-    ).toHaveAttribute("data-workspace-count", "1");
+    ).toBeInTheDocument();
   });
 
   it("says how much of a truncated list is shown", async () => {
