@@ -42,8 +42,16 @@ vi.mock("@/utils/user", () => ({
 }));
 
 vi.mock("./CreateProjectDialog", () => ({
-  CreateProjectDialog: ({ workspaceId }: { workspaceId: string }) => (
-    <button data-workspace-id={workspaceId}>New Project</button>
+  CreateProjectDialog: ({
+    workspaceId,
+    trigger,
+  }: {
+    workspaceId: string;
+    trigger: ReactNode;
+  }) => (
+    <div data-testid="create-project" data-workspace-id={workspaceId}>
+      {trigger}
+    </div>
   ),
 }));
 
@@ -170,9 +178,12 @@ describe("ProjectsSection", () => {
 
     renderSection();
 
-    expect(
-      await screen.findByRole("button", { name: "New Project" }),
-    ).toHaveAttribute("data-workspace-id", "workspace-1");
+    await screen.findByRole("button", { name: "New project" });
+
+    expect(screen.getByTestId("create-project")).toHaveAttribute(
+      "data-workspace-id",
+      "workspace-1",
+    );
   });
 
   it("picks the same workspace for an admin as for anyone else", async () => {
@@ -186,9 +197,12 @@ describe("ProjectsSection", () => {
 
     renderSection();
 
-    expect(
-      await screen.findByRole("button", { name: "New Project" }),
-    ).toHaveAttribute("data-workspace-id", "workspace-1");
+    await screen.findByRole("button", { name: "New project" });
+
+    expect(screen.getByTestId("create-project")).toHaveAttribute(
+      "data-workspace-id",
+      "workspace-1",
+    );
   });
 
   it("points at an admin when there is nowhere to create a project", async () => {
@@ -203,29 +217,29 @@ describe("ProjectsSection", () => {
         "Projects cannot be created yet. Contact your Tangle Admin for help.",
       ),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "New Project" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "New project" })).toBeNull();
     expect(screen.queryByText(/workspace/i)).toBeNull();
   });
 
-  it("invites the user to create a project when they have none", async () => {
+  it("offers a new project card when the user has none", async () => {
     mockProjects({
       data: { items: [], nextPageToken: null, totalCount: 0 },
     } as Partial<ReturnType<typeof useProjects>>);
 
     renderSection();
 
-    expect(await screen.findByText("No projects yet")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "New Project" }),
+      await screen.findByRole("button", { name: "New project" }),
     ).toBeInTheDocument();
   });
 
-  it("offers project creation alongside an existing list", async () => {
+  it("puts the new project card ahead of the existing projects", async () => {
     renderSection();
 
-    expect(
-      await screen.findByRole("button", { name: "New Project" }),
-    ).toBeInTheDocument();
+    await screen.findByText("Churn model");
+
+    const tiles = screen.getAllByRole("button", { name: /New project|Churn/ });
+    expect(tiles[0]).toHaveAccessibleName("New project");
   });
 
   it("says how much of a truncated list is shown", async () => {
