@@ -1,3 +1,4 @@
+import { observer } from "mobx-react-lite";
 import { useState } from "react";
 
 import { Icon } from "@/components/ui/icon";
@@ -23,20 +24,11 @@ const MAX_WIDTH = 960;
  * A `keepMounted` view stays mounted while inactive (hidden via CSS) so a live
  * view survives background switches; other views mount only when active.
  */
-export function DynamicWorkarea() {
-  const {
-    workareaTabs,
-    activeWorkareaTabId,
-    activeSessionId,
-    selectWorkareaTab,
-    closeWorkareaTab,
-    registerWorkareaTabStore,
-    unregisterWorkareaTabStore,
-    registerTabEnvironment,
-    unregisterTabEnvironment,
-    registerTabBridge,
-    unregisterTabBridge,
-  } = useTangentProject();
+export const DynamicWorkarea = observer(function DynamicWorkarea() {
+  const store = useTangentProject();
+  const activeSessionId = store.activeSessionId;
+  const workareaTabs = store.workareaTabs;
+  const activeWorkareaTabId = store.activeWorkareaTabId;
   const [width, setWidth] = useState(DEFAULT_WIDTH);
 
   function handleResizeEnd(attemptedWidth: number) {
@@ -45,15 +37,18 @@ export function DynamicWorkarea() {
 
   const hostProps: WorkareaHostProps = {
     sessionId: activeSessionId,
-    registerTabStore: registerWorkareaTabStore,
-    unregisterTabStore: unregisterWorkareaTabStore,
+    registerTabStore: (tabId, tabStore) =>
+      store.registerTabStore(tabId, tabStore),
+    unregisterTabStore: (tabId) => store.unregisterTabStore(tabId),
     // A stable per-tab remote-env id so the server can route spawns to this tab.
     tabEnvironmentId: (tabId) =>
       activeSessionId ? `${activeSessionId}:${tabId}` : undefined,
-    registerTabEnvironment,
-    unregisterTabEnvironment,
-    registerTabBridge,
-    unregisterTabBridge,
+    registerTabEnvironment: (tabId, environmentId) =>
+      store.registerTabEnvironment(tabId, environmentId),
+    unregisterTabEnvironment: (tabId) => store.unregisterTabEnvironment(tabId),
+    registerTabBridge: (tabId, kind, bridge) =>
+      store.registerTabBridge(tabId, kind, bridge),
+    unregisterTabBridge: (tabId) => store.unregisterTabBridge(tabId),
   };
 
   return (
@@ -70,7 +65,7 @@ export function DynamicWorkarea() {
       {workareaTabs.length > 0 ? (
         <Tabs
           value={activeWorkareaTabId ?? undefined}
-          onValueChange={selectWorkareaTab}
+          onValueChange={(id) => store.selectWorkareaTab(id)}
           className="flex h-full min-h-0 flex-col gap-1"
         >
           <TabsList className="max-w-full shrink-0 overflow-x-auto rounded-none border-b border-border bg-card">
@@ -80,7 +75,7 @@ export function DynamicWorkarea() {
                 value={tab.id}
                 title={tab.title}
                 icon={getWorkareaKind(tab.target.type)?.icon ?? "FileText"}
-                onClose={() => closeWorkareaTab(tab.id)}
+                onClose={() => store.closeWorkareaTab(tab.id)}
               />
             ))}
           </TabsList>
@@ -133,4 +128,4 @@ export function DynamicWorkarea() {
       )}
     </div>
   );
-}
+});
