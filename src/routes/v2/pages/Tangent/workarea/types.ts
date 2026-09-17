@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import type { IconName } from "@/components/ui/icon";
 import type { SharedUIStore } from "@/routes/v2/shared/store/SharedStoreContext";
 
@@ -53,14 +54,25 @@ export type WorkareaTab = ResolvedWorkareaView & { id: string };
 
 /**
  * Props the workarea shell passes to every view kind's `render`. Carries the
- * active Tangent session plus the per-tab store registry embeddable kinds use
- * to surface their live `SharedUIStore`; later PRs extend this bag rather than
- * the shell.
+ * active Tangent session, the per-tab store registry embeddable kinds use to
+ * surface their live `SharedUIStore`, and the per-tab agent-environment wiring
+ * a spawnable kind (pipeline / run) uses to host a remote sub-agent bound to
+ * its live canvas. The shell fills this bag from context; kinds pass the pieces
+ * they need into their view.
  */
 export interface WorkareaHostProps {
   sessionId?: string;
   registerTabStore: (tabId: string, store: SharedUIStore) => void;
   unregisterTabStore: (tabId: string) => void;
+  tabEnvironmentId: (tabId: string) => string | undefined;
+  registerTabEnvironment: (tabId: string, environmentId: string) => void;
+  unregisterTabEnvironment: (tabId: string) => void;
+  registerTabBridge: (
+    tabId: string,
+    kind: "pipeline" | "run",
+    bridge: ToolBridgeApi,
+  ) => void;
+  unregisterTabBridge: (tabId: string) => void;
 }
 
 /**

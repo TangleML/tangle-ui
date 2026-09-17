@@ -427,6 +427,7 @@ export function createCsomTools(bridge: ToolBridgeApi) {
   return {
     getPipelineState,
     getSubgraphState,
+    validatePipeline,
     allTools: [
       getPipelineState,
       getSubgraphState,
