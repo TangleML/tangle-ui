@@ -98,7 +98,7 @@ export function CreateProjectDialog({ workspaces }: CreateProjectDialogProps) {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button {...tracking("projects.create_project_open")}>
+        <Button variant="outline" {...tracking("projects.create_project_open")}>
           <Icon name="FolderPlus" size="lg" />
           New Project
         </Button>
