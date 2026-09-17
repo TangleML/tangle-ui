@@ -32,6 +32,12 @@ vi.mock("@/utils/user", () => ({
   getUserDetails: vi.fn(),
 }));
 
+vi.mock("./CreateProjectDialog", () => ({
+  CreateProjectDialog: ({ workspaces }: { workspaces: Workspace[] }) => (
+    <button data-workspace-count={workspaces.length}>New Project</button>
+  ),
+}));
+
 const workspace: Workspace = {
   id: "workspace-1",
   name: "ML Research",
@@ -158,6 +164,17 @@ describe("ProjectsSection", () => {
     renderSection();
 
     expect(await screen.findByText("No projects yet")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "New Project" }),
+    ).toBeInTheDocument();
+  });
+
+  it("offers project creation alongside an existing list", async () => {
+    renderSection();
+
+    expect(
+      await screen.findByRole("button", { name: "New Project" }),
+    ).toHaveAttribute("data-workspace-count", "1");
   });
 
   it("says how much of a truncated list is shown", async () => {
