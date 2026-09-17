@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 
 import { Icon, type IconName } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -9,6 +10,7 @@ interface PageHeaderProps {
   title: string;
   description?: string;
   icon?: IconName;
+  badge?: ReactNode;
   backTo?: string;
   backLabel?: string;
   backTrackingId?: string;
@@ -18,6 +20,7 @@ export function PageHeader({
   title,
   description,
   icon,
+  badge,
   backTo,
   backLabel = "Back",
   backTrackingId,
@@ -44,6 +47,7 @@ export function PageHeader({
           />
         )}
         <Heading level={1}>{title}</Heading>
+        {badge}
       </InlineStack>
       {description && (
         <Paragraph size="md" tone="subdued">
