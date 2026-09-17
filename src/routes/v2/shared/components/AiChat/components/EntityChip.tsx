@@ -1,6 +1,5 @@
 import { observer } from "mobx-react-lite";
 
-import { type IconName } from "@/components/ui/icon";
 import type { ComponentSpec } from "@/models/componentSpec";
 import type { LocatedEntityKind } from "@/models/componentSpec/queries/locateEntity";
 import { locateEntity } from "@/models/componentSpec/queries/locateEntity";
@@ -10,16 +9,9 @@ import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { useFocusActions } from "@/routes/v2/shared/store/useFocusActions";
 
 import { ChatEntityChip } from "./ChatEntityChip";
+import { entityIcon } from "./entityIcon";
 
 type ChipEntityKind = Exclude<LocatedEntityKind, "binding">;
-
-const ENTITY_ICON: Record<ChipEntityKind, IconName> = {
-  task: "SquareFunction",
-  input: "ArrowRightToLine",
-  output: "ArrowLeftFromLine",
-};
-
-const UNKNOWN_ICON: IconName = "CircleQuestionMark";
 
 interface EntityChipProps {
   entityId: string;
@@ -52,7 +44,7 @@ export const EntityChip = observer(function EntityChip({
 
   return (
     <ChatEntityChip
-      icon={located ? ENTITY_ICON[located.type] : UNKNOWN_ICON}
+      icon={entityIcon(located?.type ?? "unknown")}
       label={label}
       disabled={!target}
       onClick={handleClick}

@@ -1,10 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
-import {
-  type ComponentProps,
-  createContext,
-  type ReactNode,
-  useContext,
-} from "react";
+import { type ComponentProps, type ReactNode } from "react";
 import { type Components, defaultUrlTransform } from "react-markdown";
 
 import {
@@ -12,20 +6,17 @@ import {
   Markdown,
 } from "@/components/shared/Markdown/Markdown";
 import { Link } from "@/components/ui/link";
-import { getComponentQueryKey } from "@/hooks/useHydrateComponentReference";
 import type { ComponentRefData } from "@/routes/v2/shared/components/AiChat/types";
 import { CodeBlock } from "@/routes/v2/shared/components/CodeBlock";
-import { hydrateComponentReference } from "@/services/componentService";
 
-import { ComponentChip } from "./ComponentChip";
+import {
+  ComponentChipFromContext,
+  ComponentRefsContext,
+} from "./ComponentChipFromContext";
 import { EntityChip } from "./EntityChip";
 
 const ENTITY_PROTOCOL = "entity://";
 const COMPONENT_PROTOCOL = "component://";
-
-const ComponentRefsContext = createContext<
-  Record<string, ComponentRefData> | undefined
->(undefined);
 
 function urlTransform(url: string): string {
   if (url.startsWith(ENTITY_PROTOCOL)) return url;
@@ -67,44 +58,6 @@ function MarkdownLink({
       {children}
     </Link>
   );
-}
-
-function useComponentRefData(
-  componentId: string,
-): ComponentRefData | undefined {
-  const refs = useContext(ComponentRefsContext);
-  const fromContext = refs?.[componentId];
-
-  const { data: hydrated } = useQuery({
-    queryKey: [
-      "component",
-      "hydrate",
-      getComponentQueryKey({ digest: componentId }),
-    ],
-    staleTime: 1000 * 60 * 60,
-    enabled: !fromContext,
-    queryFn: () => hydrateComponentReference({ digest: componentId }),
-  });
-
-  if (fromContext) return fromContext;
-  if (hydrated) return { name: hydrated.name, yamlText: hydrated.text };
-  return undefined;
-}
-
-function ComponentChipFromContext({
-  componentId,
-  label,
-}: {
-  componentId: string;
-  label: string;
-}) {
-  const refData = useComponentRefData(componentId);
-
-  if (!refData) {
-    return <span className={INLINE_CODE_CLASS}>{label}</span>;
-  }
-
-  return <ComponentChip componentRef={refData} label={label} />;
 }
 
 function MarkdownCode({
