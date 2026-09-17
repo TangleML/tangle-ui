@@ -79,6 +79,7 @@ describe("DashboardProjectDetailView", () => {
     mockProject();
     vi.mocked(useWorkspace).mockReturnValue({
       data: workspace,
+      isPending: false,
     } as ReturnType<typeof useWorkspace>);
   });
 
@@ -110,14 +111,28 @@ describe("DashboardProjectDetailView", () => {
     ).toHaveAttribute("href", "/projects");
   });
 
-  it("falls back to the workspace id until the workspace loads", () => {
+  it("says nothing about the workspace until it is known", () => {
     vi.mocked(useWorkspace).mockReturnValue({
       data: undefined,
+      isPending: true,
     } as ReturnType<typeof useWorkspace>);
 
     render(<DashboardProjectDetailView />);
 
-    expect(screen.getByText("workspace-1")).toBeInTheDocument();
+    expect(screen.queryByText("workspace-1")).toBeNull();
+    expect(screen.queryByText("Unknown workspace")).toBeNull();
+  });
+
+  it("does not show a raw workspace id when the workspace cannot be read", () => {
+    vi.mocked(useWorkspace).mockReturnValue({
+      data: undefined,
+      isPending: false,
+    } as ReturnType<typeof useWorkspace>);
+
+    render(<DashboardProjectDetailView />);
+
+    expect(screen.getByText("Unknown workspace")).toBeInTheDocument();
+    expect(screen.queryByText("workspace-1")).toBeNull();
   });
 
   it("surfaces a failure to load the project", () => {
