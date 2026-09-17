@@ -8,6 +8,9 @@ import {
   useTangentSessionTabs,
 } from "./useTangentSessionTabs";
 
+const SESSION_A = "session-a";
+const SESSION_B = "session-b";
+
 const prime: EmbedAgent = {
   id: PRIME_AGENT_ID,
   name: "Prime",
@@ -34,7 +37,7 @@ const builder: EmbedAgent = {
 
 describe("useTangentSessionTabs", () => {
   it("starts on the Chat tab with Prime selected and no agent tabs", () => {
-    const { result } = renderHook(() => useTangentSessionTabs());
+    const { result } = renderHook(() => useTangentSessionTabs(SESSION_A));
 
     expect(result.current.tabs).toEqual([]);
     expect(result.current.activeTab).toBe(CHAT_TAB_VALUE);
@@ -42,7 +45,7 @@ describe("useTangentSessionTabs", () => {
   });
 
   it("focuses Chat and does not add a tab when Prime is opened", () => {
-    const { result } = renderHook(() => useTangentSessionTabs());
+    const { result } = renderHook(() => useTangentSessionTabs(SESSION_A));
 
     act(() => {
       result.current.openAgent(researcher);
@@ -59,7 +62,7 @@ describe("useTangentSessionTabs", () => {
   });
 
   it("adds a tab and focuses it when a sub-agent is opened", () => {
-    const { result } = renderHook(() => useTangentSessionTabs());
+    const { result } = renderHook(() => useTangentSessionTabs(SESSION_A));
 
     act(() => {
       result.current.openAgent(researcher);
@@ -73,7 +76,7 @@ describe("useTangentSessionTabs", () => {
   });
 
   it("focuses an existing tab without duplicating it", () => {
-    const { result } = renderHook(() => useTangentSessionTabs());
+    const { result } = renderHook(() => useTangentSessionTabs(SESSION_A));
 
     act(() => {
       result.current.openAgent(researcher);
@@ -93,7 +96,7 @@ describe("useTangentSessionTabs", () => {
   });
 
   it("falls back to Chat when the active tab is closed", () => {
-    const { result } = renderHook(() => useTangentSessionTabs());
+    const { result } = renderHook(() => useTangentSessionTabs(SESSION_A));
 
     act(() => {
       result.current.openAgent(researcher);
@@ -108,7 +111,7 @@ describe("useTangentSessionTabs", () => {
   });
 
   it("leaves the active tab unchanged when an inactive tab is closed", () => {
-    const { result } = renderHook(() => useTangentSessionTabs());
+    const { result } = renderHook(() => useTangentSessionTabs(SESSION_A));
 
     act(() => {
       result.current.openAgent(researcher);
@@ -127,7 +130,7 @@ describe("useTangentSessionTabs", () => {
   });
 
   it("drops a removed agent tab and falls back to Chat when it was active", () => {
-    const { result } = renderHook(() => useTangentSessionTabs());
+    const { result } = renderHook(() => useTangentSessionTabs(SESSION_A));
 
     act(() => {
       result.current.openAgent(researcher);
@@ -143,5 +146,56 @@ describe("useTangentSessionTabs", () => {
       { id: researcher.id, title: researcher.name },
     ]);
     expect(result.current.activeTab).toBe(CHAT_TAB_VALUE);
+  });
+
+  it("keeps each session's tabs independent and restores them on switch", () => {
+    const { result, rerender } = renderHook(
+      (sessionId: string) => useTangentSessionTabs(sessionId),
+      { initialProps: SESSION_A },
+    );
+
+    act(() => {
+      result.current.openAgent(researcher);
+    });
+    expect(result.current.tabs).toEqual([
+      { id: researcher.id, title: researcher.name },
+    ]);
+    expect(result.current.activeTab).toBe(researcher.id);
+
+    rerender(SESSION_B);
+    expect(result.current.tabs).toEqual([]);
+    expect(result.current.activeTab).toBe(CHAT_TAB_VALUE);
+
+    act(() => {
+      result.current.openAgent(builder);
+    });
+    expect(result.current.tabs).toEqual([
+      { id: builder.id, title: builder.name },
+    ]);
+    expect(result.current.activeTab).toBe(builder.id);
+
+    rerender(SESSION_A);
+    expect(result.current.tabs).toEqual([
+      { id: researcher.id, title: researcher.name },
+    ]);
+    expect(result.current.activeTab).toBe(researcher.id);
+
+    rerender(SESSION_B);
+    expect(result.current.tabs).toEqual([
+      { id: builder.id, title: builder.name },
+    ]);
+    expect(result.current.activeTab).toBe(builder.id);
+  });
+
+  it("no-ops when there is no active session", () => {
+    const { result } = renderHook(() => useTangentSessionTabs(undefined));
+
+    act(() => {
+      result.current.openAgent(researcher);
+    });
+
+    expect(result.current.tabs).toEqual([]);
+    expect(result.current.activeTab).toBe(CHAT_TAB_VALUE);
+    expect(result.current.selectedAgentId).toBe(PRIME_AGENT_ID);
   });
 });
