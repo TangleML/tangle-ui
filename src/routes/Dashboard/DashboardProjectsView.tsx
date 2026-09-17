@@ -1,11 +1,15 @@
 import { ProjectsSection } from "@/components/Home/ProjectsSection/ProjectsSection";
+import { PageHeader } from "@/components/shared/PageHeader";
 import { BlockStack } from "@/components/ui/layout";
-import { Heading } from "@/components/ui/typography";
 
 export function DashboardProjectsView() {
   return (
     <BlockStack gap="4">
-      <Heading level={2}>Projects</Heading>
+      <PageHeader
+        title="My Projects"
+        description="Group the pipelines, agent sessions and documents you are working on."
+        icon="FolderKanban"
+      />
       <ProjectsSection />
     </BlockStack>
   );
