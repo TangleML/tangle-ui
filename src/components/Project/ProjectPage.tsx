@@ -2,6 +2,7 @@ import { Link, useParams } from "@tanstack/react-router";
 
 import { InfoBox } from "@/components/shared/InfoBox";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
 import { useBackend } from "@/providers/BackendProvider";
@@ -10,6 +11,7 @@ import { ProjectsApiError } from "@/services/projects/errors";
 import { useProject } from "@/services/projects/useProjects";
 
 import { ProjectAbout } from "./ProjectAbout";
+import { ProjectContents } from "./ProjectContents";
 import { ProjectHeader } from "./ProjectHeader";
 
 export function ProjectPage() {
@@ -80,6 +82,8 @@ function ProjectDetail({ projectId }: { projectId: string | undefined }) {
     <BlockStack gap="6">
       <ProjectHeader project={project} />
       <ProjectAbout project={project} />
+      <Separator />
+      <ProjectContents projectId={project.id} />
     </BlockStack>
   );
 }
