@@ -17,7 +17,7 @@ export function ProjectSidebar({ project }: ProjectSidebarProps) {
   return (
     <aside
       aria-label="Project details"
-      className="w-full max-w-md lg:max-w-none"
+      className="w-full max-w-md lg:w-80 lg:max-w-none lg:shrink-0"
     >
       <BlockStack
         gap="4"

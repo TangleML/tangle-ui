@@ -112,7 +112,7 @@ export function ProjectResources({ projectId }: ProjectResourcesProps) {
           icon="Box"
           placement="start"
           title="Nothing in this project yet"
-          description="Add a document to keep notes and context alongside the work. Pipelines and agent sessions can be added once that is built."
+          description="Add pipelines, documents and other context for this Project."
         />
       )}
 
