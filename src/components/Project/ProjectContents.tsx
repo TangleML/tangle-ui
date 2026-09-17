@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import {
   ENTITY_ORDER,
   pluralize,
@@ -32,6 +34,8 @@ import {
   useProjectResources,
 } from "@/services/projects/useProjectResources";
 import { formatDate } from "@/utils/date";
+
+import { AddDocumentDialog } from "./AddDocumentDialog";
 
 const PAGE_SIZE = 100;
 
@@ -116,6 +120,11 @@ export function ProjectContents({ projectId }: ProjectContentsProps) {
             entity={entity}
             resources={resources}
             onRemove={handleRemove}
+            actions={
+              entity === "document" ? (
+                <AddDocumentDialog projectId={projectId} />
+              ) : null
+            }
           />
         ))}
 
@@ -138,16 +147,27 @@ interface EntityGroupProps {
   entity: string;
   resources: ProjectResourceSummary[];
   onRemove: (resource: ProjectResourceSummary) => void;
+  actions: ReactNode;
 }
 
-function EntityGroup({ entity, resources, onRemove }: EntityGroupProps) {
+function EntityGroup({
+  entity,
+  resources,
+  onRemove,
+  actions,
+}: EntityGroupProps) {
   const heading = capitalize(pluralize(entity, resources.length));
 
   return (
     <BlockStack gap="2">
-      <Heading level={3}>
-        {resources.length === 0 ? heading : `${heading} (${resources.length})`}
-      </Heading>
+      <InlineStack align="space-between" blockAlign="center" className="w-full">
+        <Heading level={3}>
+          {resources.length === 0
+            ? heading
+            : `${heading} (${resources.length})`}
+        </Heading>
+        {actions}
+      </InlineStack>
 
       {resources.length === 0 ? (
         <Text size="sm" tone="subdued">

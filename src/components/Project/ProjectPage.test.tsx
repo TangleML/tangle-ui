@@ -33,6 +33,7 @@ vi.mock("@/services/projects/useProjectResources", () => ({
     error: null,
   }),
   useDeleteProjectResource: () => ({ mutate: vi.fn(), isPending: false }),
+  useCreateProjectResource: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 vi.mock("@/hooks/useToastNotification", () => ({
