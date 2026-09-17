@@ -27,3 +27,13 @@ export class ProjectResourcesApiError extends Error {
     this.status = status;
   }
 }
+
+export class ProjectRunsApiError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ProjectRunsApiError";
+    this.status = status;
+  }
+}

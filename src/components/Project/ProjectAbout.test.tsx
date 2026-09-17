@@ -158,12 +158,35 @@ describe("ProjectAbout", () => {
     });
   });
 
-  it("holds both fields while a save is in flight", () => {
+  it("leaves both fields usable while a save is in flight", () => {
     mockUpdate({ isPending: true });
     renderAbout();
 
-    expect(description()).toBeDisabled();
-    expect(notes()).toBeDisabled();
+    expect(description()).toBeEnabled();
+    expect(notes()).toBeEnabled();
+  });
+
+  it("keeps an edit to one field while the other is saving", async () => {
+    const user = userEvent.setup();
+    renderAbout();
+
+    await user.clear(description());
+    await user.type(description(), "Monthly churn scoring");
+    await user.click(notes());
+    await user.clear(notes());
+    await user.type(notes(), "Owner is the growth team");
+    await user.tab();
+
+    expect(mutate).toHaveBeenNthCalledWith(
+      1,
+      { id: "project-1", input: { description: "Monthly churn scoring" } },
+      expect.anything(),
+    );
+    expect(mutate).toHaveBeenNthCalledWith(
+      2,
+      { id: "project-1", input: { notes: "Owner is the growth team" } },
+      expect.anything(),
+    );
   });
 
   it("takes up a value that changed elsewhere", () => {

@@ -36,7 +36,6 @@ export function ProjectAbout({ project }: ProjectAboutProps) {
         label="Description"
         value={project.description}
         placeholder="What this project is for"
-        disabled={updateProject.isPending}
         onCommit={(value) => commit("description", { description: value })}
       />
       <EditableText
@@ -44,7 +43,6 @@ export function ProjectAbout({ project }: ProjectAboutProps) {
         label="Notes"
         value={project.notes}
         placeholder="Anything worth knowing about this project"
-        disabled={updateProject.isPending}
         onCommit={(value) => commit("notes", { notes: value })}
       />
     </BlockStack>
@@ -56,7 +54,6 @@ interface EditableTextProps {
   label: string;
   value: string | null;
   placeholder: string;
-  disabled: boolean;
   onCommit: (value: string | null) => void;
 }
 
@@ -65,7 +62,6 @@ function EditableText({
   label,
   value,
   placeholder,
-  disabled,
   onCommit,
 }: EditableTextProps) {
   const saved = value ?? "";
@@ -90,7 +86,6 @@ function EditableText({
         onChange={(event) => setDraft(event.target.value)}
         onBlur={handleBlur}
         placeholder={placeholder}
-        disabled={disabled}
       />
     </BlockStack>
   );
