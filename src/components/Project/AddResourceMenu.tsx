@@ -5,13 +5,9 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
-import { BlockStack } from "@/components/ui/layout";
-import { Text } from "@/components/ui/typography";
 import { tracking } from "@/utils/tracking";
 
 import { AddDocumentDialog } from "./AddDocumentDialog";
@@ -47,18 +43,6 @@ export function AddResourceMenu({ projectId }: AddResourceMenuProps) {
             Document
           </DropdownMenuItem>
 
-          <DropdownMenuSeparator />
-          <DropdownMenuLabel>
-            <BlockStack gap="1">
-              <Text size="xs" tone="subdued">
-                Not yet available here
-              </Text>
-              <Text size="xs" tone="subdued" className="max-w-56">
-                Add a pipeline or an agent session from where it lives, once
-                that is built.
-              </Text>
-            </BlockStack>
-          </DropdownMenuLabel>
           <DropdownMenuItem disabled>
             <Icon name={entityIcon("pipeline")} size="sm" />
             Pipeline
