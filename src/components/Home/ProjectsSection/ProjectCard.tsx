@@ -141,7 +141,7 @@ export function ProjectCard({ project, workspaceName }: ProjectCardProps) {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem
-            className="text-destructive focus:text-destructive"
+            className="text-destructive"
             onSelect={handleDelete}
             {...tracking("projects.delete_project_open")}
           >
