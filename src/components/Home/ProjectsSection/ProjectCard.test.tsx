@@ -61,6 +61,23 @@ function renderCard(overrides: Partial<ProjectSummary> = {}) {
   return render(<ProjectCard project={{ ...project, ...overrides }} />);
 }
 
+async function openColorPicker() {
+  const user = userEvent.setup();
+  renderCard();
+
+  await user.click(
+    screen.getByRole("button", { name: "Project actions: Churn model" }),
+  );
+  await user.click(await screen.findByRole("menuitem", { name: /Colour/ }));
+  await screen.findByRole("button", { name: "Cyan" });
+}
+
+// Radix's submenu swallows userEvent's pointer sequence in jsdom, so the swatch
+// never sees the click; a bare click event still reaches it.
+function pickColor(name: string) {
+  fireEvent.click(screen.getByRole("button", { name }));
+}
+
 async function openDeleteConfirmation(overrides: Partial<ProjectSummary> = {}) {
   const user = userEvent.setup();
   renderCard(overrides);
@@ -78,6 +95,7 @@ describe("ProjectCard", () => {
     // jsdom implements neither, and Radix's menu calls both while opening.
     Element.prototype.scrollIntoView = vi.fn();
     Element.prototype.hasPointerCapture = vi.fn();
+    window.localStorage.clear();
     mockDeleteProject();
   });
 
@@ -129,6 +147,79 @@ describe("ProjectCard", () => {
 
     expect(screen.queryByText("ML Research")).toBeNull();
     expect(screen.queryByText("workspace-1")).toBeNull();
+  });
+
+  it("starts a project off with no colour", async () => {
+    await openColorPicker();
+
+    expect(screen.getByRole("button", { name: "No colour" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  it("remembers the colour a user gives the card", async () => {
+    await openColorPicker();
+
+    pickColor("Cyan");
+
+    expect(track).toHaveBeenCalledWith("projects.set_project_color", {
+      color: "cyan",
+    });
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Cyan" })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+    });
+  });
+
+  it("offers a stored colour back as the card's current one", async () => {
+    window.localStorage.setItem(
+      "projectColors",
+      JSON.stringify({ "project-1": "rose" }),
+    );
+
+    await openColorPicker();
+
+    expect(screen.getByRole("button", { name: "Rose" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  it("lets a user take a colour back off the card", async () => {
+    window.localStorage.setItem(
+      "projectColors",
+      JSON.stringify({ "project-1": "rose" }),
+    );
+    await openColorPicker();
+
+    pickColor("No colour");
+
+    expect(track).toHaveBeenCalledWith("projects.set_project_color", {
+      color: "none",
+    });
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "No colour" })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+    });
+  });
+
+  it("keeps one project's colour off another project's card", async () => {
+    window.localStorage.setItem(
+      "projectColors",
+      JSON.stringify({ "project-2": "rose" }),
+    );
+
+    await openColorPicker();
+
+    expect(screen.getByRole("button", { name: "No colour" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
   });
 
   it("warns what a delete will take with it", async () => {

@@ -20,6 +20,10 @@ import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useCreateProject } from "@/services/projects/useProjects";
 import { tracking } from "@/utils/tracking";
 
+import { ProjectColorPicker } from "./ProjectColorPicker";
+import type { ProjectColor } from "./projectColors";
+import { useProjectColors } from "./useProjectColors";
+
 interface CreateProjectDialogProps {
   workspaceId: string;
   trigger: ReactNode;
@@ -33,10 +37,12 @@ export function CreateProjectDialog({
   const [name, setName] = useState("");
   const [nameTouched, setNameTouched] = useState(false);
   const [description, setDescription] = useState("");
+  const [color, setColor] = useState<ProjectColor | undefined>(undefined);
 
   const createProject = useCreateProject();
   const notify = useToastNotification();
   const { track } = useAnalytics();
+  const projectColors = useProjectColors();
 
   useEffect(() => {
     if (open) {
@@ -52,6 +58,7 @@ export function CreateProjectDialog({
     setName("");
     setNameTouched(false);
     setDescription("");
+    setColor(undefined);
   };
 
   const handleOpenChange = (nextOpen: boolean) => {
@@ -72,9 +79,11 @@ export function CreateProjectDialog({
         description: trimmedDescription === "" ? undefined : trimmedDescription,
       },
       {
-        onSuccess: () => {
+        onSuccess: (project) => {
+          projectColors.setColor(project.id, color);
           track("projects.create_project_completed", {
             has_description: trimmedDescription !== "",
+            color: color ?? "none",
           });
           notify("Project created", "success");
           resetForm();
@@ -124,6 +133,11 @@ export function CreateProjectDialog({
                 onChange={(event) => setDescription(event.target.value)}
                 placeholder="What this project is for"
               />
+            </BlockStack>
+
+            <BlockStack gap="2">
+              <Label>Colour (optional)</Label>
+              <ProjectColorPicker value={color} onChange={setColor} />
             </BlockStack>
 
             <DialogFooter className="w-full">
