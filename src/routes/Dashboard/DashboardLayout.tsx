@@ -79,9 +79,7 @@ export function DashboardLayout() {
 
   const baseItems = isProjectsEnabled
     ? componentItems.flatMap((item) =>
-        item.to === APP_ROUTES.DASHBOARD_PIPELINES
-          ? [item, PROJECTS_ITEM]
-          : [item],
+        item.to === APP_ROUTES.DASHBOARD_RUNS ? [item, PROJECTS_ITEM] : [item],
       )
     : componentItems;
 

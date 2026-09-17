@@ -3,10 +3,10 @@ import { FaqPanel } from "@/components/Learn/FaqPanel";
 import { FeaturedExamples } from "@/components/Learn/FeaturedExamples";
 import { FeaturedTours } from "@/components/Learn/FeaturedTours";
 import { HelpCard } from "@/components/Learn/HelpCard";
-import { LearnPageHeader } from "@/components/Learn/LearnPageHeader";
 import { LearnSearchBar } from "@/components/Learn/LearnSearchBar";
 import { OnboardingHero } from "@/components/Learn/OnboardingHero";
 import { TipOfTheDay } from "@/components/Learn/TipOfTheDay";
+import { PageHeader } from "@/components/shared/PageHeader";
 import { BlockStack } from "@/components/ui/layout";
 import { useOnboarding } from "@/providers/OnboardingProvider/OnboardingProvider";
 
@@ -15,7 +15,7 @@ export function LearnHomeView() {
   return (
     <BlockStack gap="6">
       <BlockStack gap="4">
-        <LearnPageHeader
+        <PageHeader
           title="Learning Hub"
           description="Everything you need to get the most out of Tangle, all in one place."
           icon="GraduationCap"
