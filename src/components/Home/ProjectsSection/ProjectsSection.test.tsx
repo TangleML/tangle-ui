@@ -42,8 +42,19 @@ vi.mock("@/utils/user", () => ({
 }));
 
 vi.mock("./CreateProjectDialog", () => ({
-  CreateProjectDialog: ({ workspaces }: { workspaces: Workspace[] }) => (
-    <button data-workspace-count={workspaces.length}>New Project</button>
+  CreateProjectDialog: ({
+    workspaces,
+    canChooseWorkspace,
+  }: {
+    workspaces: Workspace[];
+    canChooseWorkspace: boolean;
+  }) => (
+    <button
+      data-workspace-count={workspaces.length}
+      data-can-choose-workspace={String(canChooseWorkspace)}
+    >
+      New Project
+    </button>
   ),
 }));
 
@@ -146,23 +157,60 @@ describe("ProjectsSection", () => {
     });
   });
 
-  it("renders a project with its workspace name and resource counts", async () => {
+  it("renders a project with its resource counts", async () => {
     renderSection();
 
     expect(await screen.findByText("Churn model")).toBeInTheDocument();
     expect(screen.getByText("Q3 churn work")).toBeInTheDocument();
-    expect(screen.getByText("ML Research")).toBeInTheDocument();
     expect(screen.getByText("3 pipelines · 1 document")).toBeInTheDocument();
   });
 
-  it("falls back to a placeholder when the workspace is unknown", async () => {
+  it("keeps the workspace out of the project list entirely", async () => {
+    renderSection();
+
+    await screen.findByText("Churn model");
+
+    expect(screen.queryByText("ML Research")).toBeNull();
+    expect(screen.queryByText("workspace-1")).toBeNull();
+  });
+
+  it("lets an admin choose between workspaces", async () => {
+    vi.mocked(getUserDetails).mockResolvedValue({
+      id: "someone@example.com",
+      permissions: ["read", "write", "admin"],
+    });
+
+    renderSection();
+
+    expect(
+      await screen.findByRole("button", { name: "New Project" }),
+    ).toHaveAttribute("data-can-choose-workspace", "true");
+  });
+
+  it("does not let a plain writer choose between workspaces", async () => {
+    renderSection();
+
+    expect(
+      await screen.findByRole("button", { name: "New Project" }),
+    ).toHaveAttribute("data-can-choose-workspace", "false");
+  });
+
+  it("points at an admin when the deployment has no workspace to create in", async () => {
     vi.mocked(useWorkspaces).mockReturnValue({
       data: [],
     } as unknown as ReturnType<typeof useWorkspaces>);
 
     renderSection();
 
-    expect(await screen.findByText("Unknown workspace")).toBeInTheDocument();
+    expect(
+      await screen.findByText("No workspace available"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Projects cannot be created yet. Contact your Tangle Admin for help.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "New Project" })).toBeNull();
   });
 
   it("invites the user to create a project when they have none", async () => {
