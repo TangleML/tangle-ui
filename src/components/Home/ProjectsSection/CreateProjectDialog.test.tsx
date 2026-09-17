@@ -49,9 +49,17 @@ function mockCreateProject({ isPending = false } = {}) {
   } as unknown as ReturnType<typeof useCreateProject>);
 }
 
-async function openDialog(available: Workspace[] = workspaces) {
+async function openDialog(
+  available: Workspace[] = workspaces,
+  canChooseWorkspace = true,
+) {
   const user = userEvent.setup();
-  render(<CreateProjectDialog workspaces={available} />);
+  render(
+    <CreateProjectDialog
+      workspaces={available}
+      canChooseWorkspace={canChooseWorkspace}
+    />,
+  );
   await user.click(screen.getByRole("button", { name: /New Project/ }));
   return user;
 }
@@ -84,20 +92,42 @@ describe("CreateProjectDialog", () => {
     expect(submitButton()).toBeDisabled();
   });
 
-  it("cannot be submitted without a workspace", async () => {
-    const user = await openDialog();
-
-    await user.type(screen.getByLabelText("Name"), "Churn model");
-
-    expect(submitButton()).toBeDisabled();
-  });
-
-  it("preselects the only available workspace", async () => {
+  it("never mentions the workspace when there is only one to use", async () => {
     const user = await openDialog([workspaces[0]]);
 
     await user.type(screen.getByLabelText("Name"), "Churn model");
 
+    expect(screen.queryByLabelText("Workspace")).toBeNull();
+    expect(screen.queryByText("ML Research")).toBeNull();
     expect(submitButton()).toBeEnabled();
+  });
+
+  it("hides the workspace choice from a non-admin who has several", async () => {
+    const user = await openDialog(workspaces, false);
+
+    await user.type(screen.getByLabelText("Name"), "Churn model");
+
+    expect(screen.queryByLabelText("Workspace")).toBeNull();
+    expect(submitButton()).toBeEnabled();
+  });
+
+  it("files a non-admin's project in the first workspace without asking", async () => {
+    const user = await openDialog(workspaces, false);
+
+    await user.type(screen.getByLabelText("Name"), "Churn model");
+    await user.click(submitButton());
+
+    expect(mutate).toHaveBeenCalledWith(
+      expect.objectContaining({ workspaceId: "workspace-1" }),
+      expect.anything(),
+    );
+  });
+
+  it("offers the choice to an admin with more than one workspace", async () => {
+    const user = await openDialog(workspaces, true);
+
+    await user.type(screen.getByLabelText("Name"), "Churn model");
+
     expect(screen.getByLabelText("Workspace")).toHaveTextContent("ML Research");
   });
 
@@ -166,19 +196,6 @@ describe("CreateProjectDialog", () => {
     await user.tab();
 
     expect(screen.getByText("Name cannot be empty")).toBeInTheDocument();
-  });
-
-  it("explains that a project needs a workspace to live in", async () => {
-    const user = await openDialog([]);
-
-    await user.type(screen.getByLabelText("Name"), "Churn model");
-
-    expect(
-      screen.getByText(
-        "No workspaces are available. An administrator has to create one before you can create a project.",
-      ),
-    ).toBeInTheDocument();
-    expect(submitButton()).toBeDisabled();
   });
 
   it("cannot be submitted twice while the first attempt is in flight", async () => {
