@@ -10,6 +10,7 @@ import { useBackend } from "@/providers/BackendProvider";
 import { useProjects } from "@/services/projects/useProjects";
 import { useWorkspaces } from "@/services/projects/useWorkspaces";
 
+import { CreateProjectDialog } from "./CreateProjectDialog";
 import { ProjectCard } from "./ProjectCard";
 
 const UNRESOLVED_USER_ID = "Unknown";
@@ -80,7 +81,11 @@ function ProjectsGrid({ createdBy }: { createdBy: string | undefined }) {
         placement="start"
         title="No projects yet"
         description="Create a project to group pipelines, agent sessions, and documents."
-      />
+      >
+        <InlineStack align="center">
+          <CreateProjectDialog workspaces={workspaces ?? []} />
+        </InlineStack>
+      </EmptyState>
     );
   }
 
@@ -90,6 +95,9 @@ function ProjectsGrid({ createdBy }: { createdBy: string | undefined }) {
 
   return (
     <BlockStack gap="4">
+      <InlineStack align="end" className="w-full">
+        <CreateProjectDialog workspaces={workspaces ?? []} />
+      </InlineStack>
       <div className="grid w-full gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {data.items.map((project) => (
           <ProjectCard
