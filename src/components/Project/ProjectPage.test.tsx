@@ -23,6 +23,7 @@ vi.mock("@/providers/BackendProvider", () => ({
 vi.mock("@/services/projects/useProjects", () => ({
   useProject: vi.fn(),
   useDeleteProject: () => ({ mutate: vi.fn(), isPending: false }),
+  useUpdateProject: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 vi.mock("@/hooks/useToastNotification", () => ({
