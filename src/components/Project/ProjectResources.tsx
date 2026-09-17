@@ -112,7 +112,8 @@ export function ProjectResources({ projectId }: ProjectResourcesProps) {
           icon="Box"
           placement="start"
           title="Nothing in this project yet"
-          description="Add pipelines, documents and other context for this Project."
+          description="Add pipelines, documents and other context for this project."
+          className="max-w-lg"
         />
       )}
 

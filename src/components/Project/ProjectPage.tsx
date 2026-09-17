@@ -81,8 +81,8 @@ function ProjectDetail({ projectId }: { projectId: string | undefined }) {
 
   return (
     <div className="flex w-full flex-col items-start gap-6 lg:flex-row lg:gap-10">
-      <div className="flex min-w-0 flex-1 justify-center">
-        <BlockStack gap="6" className="max-w-4xl">
+      <div className="min-w-0 flex-1">
+        <BlockStack gap="6" className="max-w-5xl">
           <ProjectHeader project={project} />
           <ProjectResources projectId={project.id} />
           <Separator />
