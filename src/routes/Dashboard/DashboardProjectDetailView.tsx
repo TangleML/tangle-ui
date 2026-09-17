@@ -37,7 +37,9 @@ export function DashboardProjectDetailView() {
 function ProjectDetail({ projectId }: { projectId: string | undefined }) {
   const { configured, available, ready } = useBackend();
   const { data: project, isPending, error } = useProject(projectId);
-  const { data: workspace } = useWorkspace(project?.workspaceId);
+  const { data: workspace, isPending: isWorkspacePending } = useWorkspace(
+    project?.workspaceId,
+  );
 
   if (!ready) {
     return <LoadingProject />;
@@ -78,9 +80,11 @@ function ProjectDetail({ projectId }: { projectId: string | undefined }) {
         <Paragraph tone="subdued">{project.description}</Paragraph>
       )}
       <BlockStack gap="1">
-        <Text size="sm" tone="subdued">
-          {workspace?.name ?? project.workspaceId}
-        </Text>
+        {!isWorkspacePending && (
+          <Text size="sm" tone="subdued">
+            {workspace?.name ?? "Unknown workspace"}
+          </Text>
+        )}
         <Text size="sm" tone="subdued">
           {formatResourceCounts(project.resourceCounts)}
         </Text>
