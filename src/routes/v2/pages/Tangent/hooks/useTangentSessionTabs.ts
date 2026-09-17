@@ -11,52 +11,84 @@ export interface AgentTab {
   title: string;
 }
 
-export function useTangentSessionTabs() {
-  const [tabs, setTabs] = useState<AgentTab[]>([]);
-  const [activeTab, setActiveTab] = useState(CHAT_TAB_VALUE);
-  const [selectedAssetId, setSelectedAssetId] = useState<string | undefined>();
+interface SessionTabState {
+  tabs: AgentTab[];
+  activeTab: string;
+  selectedAssetId?: string;
+}
+
+const EMPTY_SESSION_TABS: SessionTabState = {
+  tabs: [],
+  activeTab: CHAT_TAB_VALUE,
+};
+
+export function useTangentSessionTabs(sessionId: string | undefined) {
+  const [bySession, setBySession] = useState<Record<string, SessionTabState>>(
+    {},
+  );
+
+  const current =
+    (sessionId ? bySession[sessionId] : undefined) ?? EMPTY_SESSION_TABS;
+
+  function updateSession(update: (prev: SessionTabState) => SessionTabState) {
+    if (!sessionId) return;
+    setBySession((prev) => ({
+      ...prev,
+      [sessionId]: update(prev[sessionId] ?? EMPTY_SESSION_TABS),
+    }));
+  }
 
   function openAgent(agent: EmbedAgent) {
     if (agent.kind === "prime") {
-      setActiveTab(CHAT_TAB_VALUE);
+      updateSession((prev) => ({ ...prev, activeTab: CHAT_TAB_VALUE }));
       return;
     }
 
-    setTabs((prev) =>
-      prev.some((tab) => tab.id === agent.id)
-        ? prev
-        : [...prev, { id: agent.id, title: agent.name }],
-    );
-    setActiveTab(agent.id);
+    updateSession((prev) => ({
+      ...prev,
+      tabs: prev.tabs.some((tab) => tab.id === agent.id)
+        ? prev.tabs
+        : [...prev.tabs, { id: agent.id, title: agent.name }],
+      activeTab: agent.id,
+    }));
   }
 
   function closeTab(id: string) {
-    setTabs((prev) => prev.filter((tab) => tab.id !== id));
-    setActiveTab((prev) => (prev === id ? CHAT_TAB_VALUE : prev));
+    updateSession((prev) => ({
+      ...prev,
+      tabs: prev.tabs.filter((tab) => tab.id !== id),
+      activeTab: prev.activeTab === id ? CHAT_TAB_VALUE : prev.activeTab,
+    }));
   }
 
   function selectAsset(asset: EmbedAsset) {
-    setSelectedAssetId(asset.id);
+    updateSession((prev) => ({ ...prev, selectedAssetId: asset.id }));
   }
 
-  function resetTabs() {
-    setTabs([]);
-    setActiveTab(CHAT_TAB_VALUE);
-    setSelectedAssetId(undefined);
+  function setActiveTab(value: string) {
+    updateSession((prev) => ({ ...prev, activeTab: value }));
+  }
+
+  function dropSession(id: string) {
+    setBySession((prev) => {
+      if (!(id in prev)) return prev;
+      const { [id]: _removed, ...rest } = prev;
+      return rest;
+    });
   }
 
   const selectedAgentId =
-    activeTab === CHAT_TAB_VALUE ? PRIME_AGENT_ID : activeTab;
+    current.activeTab === CHAT_TAB_VALUE ? PRIME_AGENT_ID : current.activeTab;
 
   return {
-    tabs,
-    activeTab,
+    tabs: current.tabs,
+    activeTab: current.activeTab,
     selectedAgentId,
-    selectedAssetId,
+    selectedAssetId: current.selectedAssetId,
     openAgent,
     closeTab,
     selectAsset,
     setActiveTab,
-    resetTabs,
+    dropSession,
   };
 }
