@@ -10,10 +10,10 @@ import { APP_ROUTES } from "@/routes/appRoutes";
 import { ProjectsApiError } from "@/services/projects/errors";
 import { useProject } from "@/services/projects/useProjects";
 
-import { ProjectAbout } from "./ProjectAbout";
-import { ProjectContents } from "./ProjectContents";
 import { ProjectHeader } from "./ProjectHeader";
+import { ProjectResources } from "./ProjectResources";
 import { ProjectRuns } from "./ProjectRuns";
+import { ProjectSidebar } from "./ProjectSidebar";
 
 export function ProjectPage() {
   const { projectId } = useParams({ strict: false });
@@ -80,13 +80,18 @@ function ProjectDetail({ projectId }: { projectId: string | undefined }) {
   }
 
   return (
-    <BlockStack gap="6">
+    <BlockStack gap="6" className="max-w-7xl">
       <ProjectHeader project={project} />
-      <ProjectAbout project={project} />
-      <Separator />
-      <ProjectContents projectId={project.id} />
-      <Separator />
-      <ProjectRuns projectId={project.id} />
+
+      <div className="grid w-full grid-cols-1 items-start gap-6 lg:grid-cols-3">
+        <BlockStack gap="6" className="lg:col-span-2">
+          <ProjectResources projectId={project.id} />
+          <Separator />
+          <ProjectRuns projectId={project.id} />
+        </BlockStack>
+
+        <ProjectSidebar project={project} />
+      </div>
     </BlockStack>
   );
 }

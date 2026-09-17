@@ -7,9 +7,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -21,10 +19,15 @@ import { tracking } from "@/utils/tracking";
 
 interface AddDocumentDialogProps {
   projectId: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
-export function AddDocumentDialog({ projectId }: AddDocumentDialogProps) {
-  const [open, setOpen] = useState(false);
+export function AddDocumentDialog({
+  projectId,
+  open,
+  onOpenChange,
+}: AddDocumentDialogProps) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
 
@@ -49,7 +52,7 @@ export function AddDocumentDialog({ projectId }: AddDocumentDialogProps) {
   };
 
   const handleOpenChange = (nextOpen: boolean) => {
-    setOpen(nextOpen);
+    onOpenChange(nextOpen);
     if (!nextOpen) resetForm();
   };
 
@@ -70,7 +73,7 @@ export function AddDocumentDialog({ projectId }: AddDocumentDialogProps) {
           track("projects.add_document_completed");
           notify("Document added", "success");
           resetForm();
-          setOpen(false);
+          onOpenChange(false);
         },
       },
     );
@@ -78,12 +81,6 @@ export function AddDocumentDialog({ projectId }: AddDocumentDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild {...tracking("projects.add_document_open")}>
-        <Button variant="outline" size="sm">
-          <Icon name="Plus" size="xs" />
-          Add document
-        </Button>
-      </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Add Document</DialogTitle>

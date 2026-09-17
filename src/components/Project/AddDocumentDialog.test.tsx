@@ -1,5 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useCreateProjectResource } from "@/services/projects/useProjectResources";
@@ -29,11 +30,28 @@ function mockCreate({ isPending = false } = {}) {
   } as unknown as ReturnType<typeof useCreateProjectResource>);
 }
 
+function Harness() {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)}>
+        Open
+      </button>
+      <AddDocumentDialog
+        projectId="project-1"
+        open={open}
+        onOpenChange={setOpen}
+      />
+    </>
+  );
+}
+
 async function openDialog() {
   const user = userEvent.setup();
-  render(<AddDocumentDialog projectId="project-1" />);
+  render(<Harness />);
 
-  await user.click(screen.getByRole("button", { name: /Add document/ }));
+  await user.click(screen.getByRole("button", { name: "Open" }));
   await screen.findByRole("dialog");
 
   return user;
@@ -133,10 +151,13 @@ describe("AddDocumentDialog", () => {
     await user.click(addButton());
 
     const [, options] = mutate.mock.calls[0];
-    options.onSuccess();
+    await act(async () => options.onSuccess());
 
     expect(notify).toHaveBeenCalledWith("Document added", "success");
     expect(track).toHaveBeenCalledWith("projects.add_document_completed");
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
   });
 
   it("forgets a draft that was cancelled", async () => {
@@ -144,7 +165,7 @@ describe("AddDocumentDialog", () => {
 
     await user.type(titleField(), "Abandoned");
     await user.click(screen.getByRole("button", { name: "Cancel" }));
-    await user.click(screen.getByRole("button", { name: /Add document/ }));
+    await user.click(screen.getByRole("button", { name: "Open" }));
 
     expect(await screen.findByLabelText("Title")).toHaveValue("");
     expect(mutate).not.toHaveBeenCalled();
