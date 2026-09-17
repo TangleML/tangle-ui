@@ -41,6 +41,7 @@ interface RunRowProps {
   selectable?: boolean;
   isSelected?: boolean;
   onToggleSelected?: (runId: string) => void;
+  onRunClick?: (run: PipelineRunResponse) => void;
 }
 
 const RunRow = ({
@@ -49,6 +50,7 @@ const RunRow = ({
   selectable = false,
   isSelected = false,
   onToggleSelected,
+  onRunClick,
 }: RunRowProps) => {
   const navigate = useNavigate();
   const { backendUrl } = useBackend();
@@ -85,6 +87,11 @@ const RunRow = ({
 
   const handleRowClick = (e: MouseEvent<HTMLElement>) => {
     if (e.target instanceof HTMLElement && e.target.closest("button")) {
+      return;
+    }
+
+    if (onRunClick) {
+      onRunClick(run);
       return;
     }
 

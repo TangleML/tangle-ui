@@ -1,6 +1,7 @@
 import { useLocation, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
+import type { PipelineRunResponse } from "@/api/types.gen";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,7 @@ interface RunSectionProps {
   hideFilters?: boolean;
   forcedFilter?: string;
   maxItems?: number;
+  onRunClick?: (run: PipelineRunResponse) => void;
 }
 
 export const RunSection = ({
@@ -47,6 +49,7 @@ export const RunSection = ({
   hideFilters,
   forcedFilter,
   maxItems,
+  onRunClick,
 }: RunSectionProps) => {
   const { configured, available, ready } = useBackend();
   const navigate = useNavigate();
@@ -327,6 +330,7 @@ export const RunSection = ({
               selectable={compareEnabled}
               isSelected={selectedRuns.has(`${run.id}`)}
               onToggleSelected={toggleRun}
+              onRunClick={onRunClick}
             />
           ))}
         </TableBody>
