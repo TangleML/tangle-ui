@@ -98,6 +98,14 @@ export const ExistingFlags: ConfigFlags = {
     category: "beta",
   },
 
+  ["projects"]: {
+    name: "Projects",
+    description:
+      "Enable the Projects dashboard for grouping pipelines, agent sessions, and documents.",
+    default: false,
+    category: "beta",
+  },
+
   ["conditional-execution"]: {
     name: "Conditional task execution",
     description:
