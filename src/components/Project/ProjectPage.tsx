@@ -80,18 +80,17 @@ function ProjectDetail({ projectId }: { projectId: string | undefined }) {
   }
 
   return (
-    <BlockStack gap="6" className="max-w-7xl">
-      <ProjectHeader project={project} />
-
-      <div className="grid w-full grid-cols-1 items-start gap-6 lg:grid-cols-3">
-        <BlockStack gap="6" className="lg:col-span-2">
+    <div className="flex w-full flex-col items-start gap-6 lg:flex-row lg:gap-10">
+      <div className="flex min-w-0 flex-1 justify-center">
+        <BlockStack gap="6" className="max-w-4xl">
+          <ProjectHeader project={project} />
           <ProjectResources projectId={project.id} />
           <Separator />
           <ProjectRuns projectId={project.id} />
         </BlockStack>
-
-        <ProjectSidebar project={project} />
       </div>
-    </BlockStack>
+
+      <ProjectSidebar project={project} />
+    </div>
   );
 }
