@@ -1,11 +1,13 @@
-import type { WorkareaViewKind } from "./types";
+import type { WorkareaViewKind, WorkareaViewKindName } from "./types";
 
-const workareaKinds = new Map<string, WorkareaViewKind>();
+const workareaKinds = new Map<WorkareaViewKindName, WorkareaViewKind>();
 
 export function registerWorkareaKind(kind: WorkareaViewKind): void {
-  workareaKinds.set(kind.kind, kind);
+  workareaKinds.set(kind.type, kind);
 }
 
-export function getWorkareaKind(kind: string): WorkareaViewKind | undefined {
-  return workareaKinds.get(kind);
+export function getWorkareaKind(
+  type: WorkareaViewKindName,
+): WorkareaViewKind | undefined {
+  return workareaKinds.get(type);
 }

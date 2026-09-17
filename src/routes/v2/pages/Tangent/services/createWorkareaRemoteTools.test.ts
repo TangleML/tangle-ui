@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { WorkareaTab } from "@/routes/v2/pages/Tangent/workarea/types";
+import {
+  idIdentity,
+  nameIdentity,
+} from "@/routes/v2/pages/Tangent/workarea/workareaTarget";
 
 import {
   createWorkareaRemoteTools,
@@ -8,20 +12,30 @@ import {
 } from "./createWorkareaRemoteTools";
 
 function artifactTab(id: string, url: string): WorkareaTab {
-  return { id, kind: "artifact", title: `Artifact ${id}`, url };
+  return {
+    id,
+    title: `Artifact ${id}`,
+    target: { type: "artifact", identity: idIdentity(url) },
+  };
 }
 
 function pipelineTab(id: string, fileId?: string): WorkareaTab {
   return {
     id,
-    kind: "pipeline",
     title: "Pipeline",
-    pipelineRef: fileId ? { fileId, name: "Draft" } : { name: "Draft" },
+    target: {
+      type: "pipeline",
+      identity: fileId ? idIdentity(fileId) : nameIdentity("Draft"),
+    },
   };
 }
 
 function runTab(id: string, runId: string): WorkareaTab {
-  return { id, kind: "run", title: `Run ${runId}`, runId };
+  return {
+    id,
+    title: `Run ${runId}`,
+    target: { type: "run", identity: idIdentity(runId) },
+  };
 }
 
 function makeDeps(overrides: Partial<WorkareaToolDeps> = {}): WorkareaToolDeps {
@@ -35,22 +49,25 @@ function makeDeps(overrides: Partial<WorkareaToolDeps> = {}): WorkareaToolDeps {
 }
 
 describe("createWorkareaRemoteTools", () => {
-  it("open_workarea_target opens the target and returns the active summary", async () => {
+  it("open_workarea_target parses the target, opens it, and returns the active summary", async () => {
     const tab = pipelineTab("tab-pipe", "file-1");
     const openTarget = vi.fn().mockResolvedValue(tab);
     const tools = createWorkareaRemoteTools(() => makeDeps({ openTarget }));
 
     const result = await tools.open_workarea_target.execute({
-      target: "pipeline://file-1",
+      target: "pipeline://id/file-1",
       title: "My pipeline",
     });
 
-    expect(openTarget).toHaveBeenCalledWith("pipeline://file-1", "My pipeline");
+    expect(openTarget).toHaveBeenCalledWith(
+      { type: "pipeline", identity: "id/file-1" },
+      "My pipeline",
+    );
     expect(result).toEqual({
       id: "tab-pipe",
       kind: "pipeline",
       title: "Pipeline",
-      target: "pipeline://file-1",
+      target: "pipeline://id/file-1",
       active: true,
     });
   });
@@ -80,21 +97,21 @@ describe("createWorkareaRemoteTools", () => {
         id: "tab-art",
         kind: "artifact",
         title: "Artifact tab-art",
-        target: "https://example.com/report",
+        target: "artifact://id/https://example.com/report",
         active: false,
       },
       {
         id: "tab-pipe",
         kind: "pipeline",
         title: "Pipeline",
-        target: "Draft",
+        target: "pipeline://name/Draft",
         active: true,
       },
       {
         id: "tab-run",
         kind: "run",
         title: "Run run-1",
-        target: "run:run-1",
+        target: "run://id/run-1",
         active: false,
       },
     ]);
@@ -111,7 +128,7 @@ describe("createWorkareaRemoteTools", () => {
       id: "tab-pipe",
       kind: "pipeline",
       title: "Pipeline",
-      target: "pipeline://file-9",
+      target: "pipeline://id/file-9",
       active: true,
     });
 

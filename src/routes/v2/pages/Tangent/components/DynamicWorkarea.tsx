@@ -71,13 +71,13 @@ export function DynamicWorkarea() {
                 key={tab.id}
                 value={tab.id}
                 title={tab.title}
-                icon={getWorkareaKind(tab.kind)?.icon ?? "FileText"}
+                icon={getWorkareaKind(tab.target.type)?.icon ?? "FileText"}
                 onClose={() => closeWorkareaTab(tab.id)}
               />
             ))}
           </TabsList>
           {workareaTabs.map((tab) => {
-            const viewKind = getWorkareaKind(tab.kind);
+            const viewKind = getWorkareaKind(tab.target.type);
             if (!viewKind) return null;
             const content = viewKind.render(tab, hostPropsFor(tab.id));
             if (viewKind.keepMounted) {

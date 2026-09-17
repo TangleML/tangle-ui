@@ -13,7 +13,6 @@
     "@typescript-eslint/eslint-plugin",
     "@typescript-eslint/parser",
     "react-scripts",
-    "@tangent/remote-subagent",
     "@tangent/shared"
   ]
 }

@@ -1,11 +1,19 @@
 import type { RemoteToolMap } from "@tangent/remote-subagent";
 
-import type { WorkareaTab } from "@/routes/v2/pages/Tangent/workarea/types";
+import type {
+  WorkareaTab,
+  WorkareaTarget,
+  WorkareaViewKindName,
+} from "@/routes/v2/pages/Tangent/workarea/types";
+import {
+  formatWorkareaTarget,
+  parseWorkareaTarget,
+} from "@/routes/v2/pages/Tangent/workarea/workareaTarget";
 import { isRecord } from "@/utils/typeGuards";
 
 /** Live handles into the workarea the remote tools drive. */
 export interface WorkareaToolDeps {
-  openTarget: (target: string, title?: string) => Promise<WorkareaTab>;
+  openTarget: (target: WorkareaTarget, title?: string) => Promise<WorkareaTab>;
   getTabs: () => WorkareaTab[];
   getActiveTabId: () => string | undefined;
   closeTab: (id: string) => void;
@@ -13,18 +21,10 @@ export interface WorkareaToolDeps {
 
 interface WorkareaTabSummary {
   id: string;
-  kind: WorkareaTab["kind"];
+  kind: WorkareaViewKindName;
   title: string;
   target: string;
   active: boolean;
-}
-
-function tabTarget(tab: WorkareaTab): string {
-  if (tab.kind === "artifact") return tab.url;
-  if (tab.kind === "run") return `run:${tab.runId}`;
-  return tab.pipelineRef.fileId
-    ? `pipeline://${tab.pipelineRef.fileId}`
-    : tab.pipelineRef.name;
 }
 
 function summarize(
@@ -33,12 +33,16 @@ function summarize(
 ): WorkareaTabSummary {
   return {
     id: tab.id,
-    kind: tab.kind,
+    kind: tab.target.type,
     title: tab.title,
-    target: tabTarget(tab),
+    target: formatWorkareaTarget(tab.target),
     active: tab.id === activeTabId,
   };
 }
+
+const TARGET_DESCRIPTION =
+  "A `type://identity` target: `artifact://id/<url>`, " +
+  "`pipeline://id/<fileId>`, `pipeline://name/<name>`, or `run://id/<runId>`.";
 
 /**
  * The tab-management tools an agent uses to arrange the Dynamic Workarea: open
@@ -56,17 +60,14 @@ export function createWorkareaRemoteTools(
     open_workarea_target: {
       description:
         "Open a target in the Dynamic Workarea and return the resulting tab. " +
-        "The target is a `pipeline://<fileId>` URI, a `run:<id>` URI or run " +
-        "URL, an artifact URL, or a pipeline name. Returns the tab summary " +
+        `${TARGET_DESCRIPTION} Returns the tab summary ` +
         "`{ id, kind, title, target, active }`.",
       inputSchema: {
         type: "object",
         properties: {
           target: {
             type: "string",
-            description:
-              "A `pipeline://<fileId>` URI, a `run:<id>` URI or run URL, an " +
-              "artifact URL, or a pipeline name.",
+            description: TARGET_DESCRIPTION,
           },
           title: {
             type: "string",
@@ -80,7 +81,8 @@ export function createWorkareaRemoteTools(
           throw new Error("`target` is required and must be a string.");
         }
         const title = typeof args.title === "string" ? args.title : undefined;
-        const tab = await getDeps().openTarget(args.target, title);
+        const target = parseWorkareaTarget(args.target);
+        const tab = await getDeps().openTarget(target, title);
         return summarize(tab, tab.id);
       },
     },
