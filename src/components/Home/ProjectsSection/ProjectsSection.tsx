@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 
 import { InfoBox } from "@/components/shared/InfoBox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { EmptyState } from "@/components/ui/empty-state";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
@@ -13,6 +12,7 @@ import { useProjects } from "@/services/projects/useProjects";
 import { useWorkspaces } from "@/services/projects/useWorkspaces";
 
 import { CreateProjectDialog } from "./CreateProjectDialog";
+import { NewProjectCard } from "./NewProjectCard";
 import { ProjectCard } from "./ProjectCard";
 
 const UNRESOLVED_USER_ID = "Unknown";
@@ -79,37 +79,23 @@ function ProjectsGrid({ createdBy }: { createdBy: string | undefined }) {
   // backend offers, and creation is withdrawn when it offers none.
   const targetWorkspaceId = workspaces?.[0]?.id;
 
-  const createAction = targetWorkspaceId ? (
-    <CreateProjectDialog workspaceId={targetWorkspaceId} />
-  ) : (
-    <Alert className="w-fit">
-      <Icon name="CircleAlert" />
-      <AlertDescription>
-        Projects cannot be created yet. Contact your Tangle Admin for help.
-      </AlertDescription>
-    </Alert>
-  );
-
-  if (data.items.length === 0) {
-    return (
-      <EmptyState
-        icon="FolderKanban"
-        spotlight
-        placement="start"
-        title="No projects yet"
-        description="Create a project to group pipelines, agent sessions, and documents."
-      >
-        <InlineStack align="center">{createAction}</InlineStack>
-      </EmptyState>
-    );
-  }
-
   return (
     <BlockStack gap="4">
-      <InlineStack align="end" className="w-full">
-        {createAction}
-      </InlineStack>
+      {!targetWorkspaceId && (
+        <Alert className="w-fit">
+          <Icon name="CircleAlert" />
+          <AlertDescription>
+            Projects cannot be created yet. Contact your Tangle Admin for help.
+          </AlertDescription>
+        </Alert>
+      )}
       <div className="grid w-full grid-cols-[repeat(auto-fill,minmax(13rem,15rem))] gap-4">
+        {targetWorkspaceId && (
+          <CreateProjectDialog
+            workspaceId={targetWorkspaceId}
+            trigger={<NewProjectCard />}
+          />
+        )}
         {data.items.map((project) => (
           <ProjectCard key={project.id} project={project} />
         ))}

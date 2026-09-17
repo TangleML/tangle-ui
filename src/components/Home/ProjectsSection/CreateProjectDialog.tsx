@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, type ReactNode, useEffect, useState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -22,9 +22,13 @@ import { tracking } from "@/utils/tracking";
 
 interface CreateProjectDialogProps {
   workspaceId: string;
+  trigger: ReactNode;
 }
 
-export function CreateProjectDialog({ workspaceId }: CreateProjectDialogProps) {
+export function CreateProjectDialog({
+  workspaceId,
+  trigger,
+}: CreateProjectDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [nameTouched, setNameTouched] = useState(false);
@@ -82,11 +86,8 @@ export function CreateProjectDialog({ workspaceId }: CreateProjectDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button variant="outline" {...tracking("projects.create_project_open")}>
-          <Icon name="FolderPlus" size="lg" />
-          New Project
-        </Button>
+      <DialogTrigger asChild {...tracking("projects.create_project_open")}>
+        {trigger}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
