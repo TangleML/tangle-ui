@@ -7,6 +7,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
@@ -29,6 +32,9 @@ import {
   formatResourceCounts,
   totalResourceCount,
 } from "./formatResourceCounts";
+import { ProjectColorPicker } from "./ProjectColorPicker";
+import { projectColorStyles } from "./projectColors";
+import { useProjectColors } from "./useProjectColors";
 
 interface ProjectCardProps {
   project: ProjectSummary;
@@ -38,6 +44,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
   const deleteProject = useDeleteProject();
   const notify = useToastNotification();
   const { track } = useAnalytics();
+  const { getColor, setColor } = useProjectColors();
   const {
     handlers: confirmationHandlers,
     triggerDialog: triggerConfirmation,
@@ -45,6 +52,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
   } = useConfirmationDialog();
 
   const resourceTotal = totalResourceCount(project.resourceCounts);
+  const color = getColor(project.id);
 
   const handleShare = () => {
     copyToClipboard(getProjectUrl(project.id));
@@ -89,10 +97,19 @@ export function ProjectCard({ project }: ProjectCardProps) {
         deleteProject.isPending && "pointer-events-none opacity-50",
       )}
     >
+      {color && (
+        <div
+          aria-hidden="true"
+          className={cn(
+            "absolute inset-y-0 left-0 w-1.5 rounded-l-lg",
+            projectColorStyles[color].accent,
+          )}
+        />
+      )}
       <Link
         to={APP_ROUTES.PROJECT_DETAIL}
         params={{ projectId: project.id }}
-        className="flex h-full flex-col justify-between gap-2 p-4"
+        className="flex h-full flex-col justify-between gap-2 p-4 pl-5"
         {...tracking("projects.project_card")}
       >
         <BlockStack gap="2">
@@ -105,7 +122,12 @@ export function ProjectCard({ project }: ProjectCardProps) {
             <Icon
               name="Folder"
               size="lg"
-              className="text-muted-foreground shrink-0"
+              className={cn(
+                "shrink-0",
+                color
+                  ? projectColorStyles[color].text
+                  : "text-muted-foreground",
+              )}
             />
             <Text weight="semibold" className="truncate">
               {project.name}
@@ -148,6 +170,23 @@ export function ProjectCard({ project }: ProjectCardProps) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <Icon name="Palette" size="sm" />
+              Colour
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="p-2">
+              <ProjectColorPicker
+                value={color}
+                onChange={(next) => {
+                  setColor(project.id, next);
+                  track("projects.set_project_color", {
+                    color: next ?? "none",
+                  });
+                }}
+              />
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
           <DropdownMenuItem
             onSelect={handleShare}
             {...tracking("projects.share_project")}

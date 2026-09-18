@@ -48,6 +48,7 @@ describe("CreateProjectDialog", () => {
     // jsdom implements neither, and Radix's select calls both while opening.
     Element.prototype.scrollIntoView = vi.fn();
     Element.prototype.hasPointerCapture = vi.fn();
+    window.localStorage.clear();
     mockCreateProject();
   });
 
@@ -123,15 +124,53 @@ describe("CreateProjectDialog", () => {
     await user.click(submitButton());
 
     const [, options] = mutate.mock.calls[0];
-    options.onSuccess();
+    options.onSuccess({ id: "project-1" });
 
     expect(notify).toHaveBeenCalledWith("Project created", "success");
-    expect(track).toHaveBeenCalledWith("projects.create_project_completed", {
-      has_description: false,
-    });
+    expect(track).toHaveBeenCalledWith(
+      "projects.create_project_completed",
+      expect.objectContaining({ has_description: false }),
+    );
     await waitFor(() => {
       expect(screen.queryByLabelText("Name")).toBeNull();
     });
+  });
+
+  it("colours the project it just created", async () => {
+    const user = await openDialog();
+
+    await user.type(screen.getByLabelText("Name"), "Churn model");
+    await user.click(screen.getByRole("button", { name: "Emerald" }));
+    await user.click(submitButton());
+
+    const [, options] = mutate.mock.calls[0];
+    options.onSuccess({ id: "project-1" });
+
+    expect(
+      JSON.parse(window.localStorage.getItem("projectColors") ?? "{}"),
+    ).toEqual({ "project-1": "emerald" });
+    expect(track).toHaveBeenCalledWith(
+      "projects.create_project_completed",
+      expect.objectContaining({ color: "emerald" }),
+    );
+  });
+
+  it("leaves a project uncoloured when no colour was picked", async () => {
+    const user = await openDialog();
+
+    await user.type(screen.getByLabelText("Name"), "Churn model");
+    await user.click(submitButton());
+
+    const [, options] = mutate.mock.calls[0];
+    options.onSuccess({ id: "project-1" });
+
+    expect(
+      JSON.parse(window.localStorage.getItem("projectColors") ?? "{}"),
+    ).toEqual({});
+    expect(track).toHaveBeenCalledWith(
+      "projects.create_project_completed",
+      expect.objectContaining({ color: "none" }),
+    );
   });
 
   it("complains about an empty name only once the field has been visited", async () => {
