@@ -34,6 +34,7 @@ import {
 import { TourPipelineStorageProvider } from "@/providers/TourProvider/tourPipelineStorage/TourPipelineStorageProvider";
 import { TourCompletionActions } from "@/providers/TourProvider/TourPopover";
 import { TourTelemetryBridge } from "@/providers/TourProvider/TourTelemetryBridge";
+import { getEditorLocation } from "@/routes/editorRoutes";
 import { APP_ROUTES } from "@/routes/router";
 import { EditorV2 } from "@/routes/v2/pages/Editor/EditorV2";
 import {
@@ -174,12 +175,8 @@ export function TourPage() {
 
   const promoteToPipeline = async (newName: string, yamlContent: string) => {
     try {
-      const file = await storage.rootFolder.addFile(newName, yamlContent);
-      await navigate({
-        to: APP_ROUTES.EDITOR_V2_PIPELINE,
-        params: { pipelineName: newName },
-        search: { fileId: file.id },
-      });
+      const file = await storage.createPipeline(newName, yamlContent);
+      await navigate(getEditorLocation(file));
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to save pipeline";

@@ -19,11 +19,11 @@ export function resetAllTourPipelineState(queryClient: QueryClient): void {
 
   queryClient.removeQueries({
     predicate: (query) => {
-      const [head, second] = query.queryKey;
+      const [head, , pipelineId] = query.queryKey;
       return (
         head === EDITOR_SPEC_QUERY_KEY &&
-        typeof second === "string" &&
-        second.startsWith(TOUR_PIPELINE_PREFIX)
+        typeof pipelineId === "string" &&
+        pipelineId.startsWith(TOUR_PIPELINE_PREFIX)
       );
     },
   });

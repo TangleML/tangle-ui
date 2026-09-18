@@ -83,8 +83,12 @@ const ImportPipeline = ({
       setSuccessMessage(`Pipeline "${result.name}" imported successfully.`);
     }
 
-    const file = await storage.rootFolder.assignFile(result.name);
-    setImportedPipeline({ name: result.name, fileId: file.id });
+    if (result.referenceId) {
+      setImportedPipeline({ name: result.referenceId, fileId: result.fileId });
+    } else {
+      const file = await storage.rootFolder.assignFile(result.name);
+      setImportedPipeline({ name: result.name, fileId: file.id });
+    }
   };
 
   const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
