@@ -1,5 +1,11 @@
 import type { RemoteToolMap } from "@tangent/remote-subagent";
 
+import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
+import {
+  truncateContainerLog,
+  truncateContainerState,
+  truncateExecutionDetails,
+} from "@/agent/util/truncate";
 import type {
   WorkareaTab,
   WorkareaTarget,
@@ -7,9 +13,27 @@ import type {
 } from "@/routes/v2/pages/Tangent/workarea/types";
 import {
   formatWorkareaTarget,
+  parseIdentity,
   parseWorkareaTarget,
 } from "@/routes/v2/pages/Tangent/workarea/workareaTarget";
+import { getOverallExecutionStatusFromStats } from "@/utils/executionStatus";
 import { isRecord } from "@/utils/typeGuards";
+
+/**
+ * The read-only run/execution fetches the workarea inspect tools drive. These
+ * mirror the same-named `ToolBridgeApi` methods, but are backed by a
+ * project-level backend bridge (not any one tab's canvas) so Prime can inspect
+ * runs without spawning a sub-agent.
+ */
+export type RunInspectDeps = Pick<
+  ToolBridgeApi,
+  | "getRunDetails"
+  | "debugPipelineRun"
+  | "getExecutionDetails"
+  | "getExecutionState"
+  | "getContainerState"
+  | "getContainerLog"
+>;
 
 /** Live handles into the workarea the remote tools drive. */
 export interface WorkareaToolDeps {
@@ -17,6 +41,9 @@ export interface WorkareaToolDeps {
   getTabs: () => WorkareaTab[];
   getActiveTabId: () => string | undefined;
   closeTab: (id: string) => void;
+  getEnvironmentId: (tabId: string) => string | undefined;
+  waitForEnvironment: (tabId: string) => Promise<string | undefined>;
+  runInspect: RunInspectDeps;
 }
 
 interface WorkareaTabSummary {
@@ -25,30 +52,106 @@ interface WorkareaTabSummary {
   title: string;
   target: string;
   active: boolean;
+  environmentId?: string;
+  ready?: boolean;
+}
+
+/** Tabs that host a spawnable sub-agent environment. */
+function isSpawnable(tab: WorkareaTab): boolean {
+  return tab.target.type === "pipeline" || tab.target.type === "run";
 }
 
 function summarize(
   tab: WorkareaTab,
   activeTabId: string | undefined,
+  environmentId?: string,
 ): WorkareaTabSummary {
-  return {
+  const base: WorkareaTabSummary = {
     id: tab.id,
     kind: tab.target.type,
     title: tab.title,
     target: formatWorkareaTarget(tab.target),
     active: tab.id === activeTabId,
   };
+  if (!isSpawnable(tab)) return base;
+  return { ...base, environmentId, ready: environmentId != null };
+}
+
+function optionalRunId(args: unknown): string | undefined {
+  if (!isRecord(args) || !("runId" in args)) return undefined;
+  if (typeof args.runId !== "string" || args.runId.trim().length === 0) {
+    throw new Error("`runId` must be a non-empty string when provided.");
+  }
+  return args.runId;
+}
+
+function requireExecutionId(args: unknown): string {
+  if (
+    !isRecord(args) ||
+    typeof args.executionId !== "string" ||
+    args.executionId.trim().length === 0
+  ) {
+    throw new Error(
+      "`executionId` is required and must be a non-empty string.",
+    );
+  }
+  return args.executionId;
+}
+
+/**
+ * Resolves which run to inspect: an explicit `runId` wins, else the active run
+ * tab, else the only open run tab. Throws a model-friendly error when the
+ * choice is ambiguous or there is no run open.
+ */
+function resolveRunId(deps: WorkareaToolDeps, explicit?: string): string {
+  if (explicit) return explicit;
+  const runTabs = deps.getTabs().filter((tab) => tab.target.type === "run");
+  if (runTabs.length === 0) {
+    throw new Error(
+      "No run is open in the workarea. Open a run first (open_workarea_target with `run://id/<runId>`), or pass an explicit `runId`.",
+    );
+  }
+  const activeId = deps.getActiveTabId();
+  const active = runTabs.find((tab) => tab.id === activeId);
+  if (active) return parseIdentity(active.target.identity).value;
+  if (runTabs.length === 1) {
+    return parseIdentity(runTabs[0].target.identity).value;
+  }
+  throw new Error(
+    "Multiple runs are open — pass an explicit `runId` to say which one to inspect.",
+  );
 }
 
 const TARGET_DESCRIPTION =
   "A `type://identity` target: `artifact://id/<url>`, " +
-  "`pipeline://id/<fileId>`, `pipeline://name/<name>`, or `run://id/<runId>`.";
+  "`pipeline://id/<fileId>`, `pipeline://name/<name>`, or `run://id/<runId>`. " +
+  "Legacy `pipeline://<fileId>`, `run:<id>`, run URLs, artifact URLs, and bare " +
+  "pipeline names are also accepted.";
+
+const RUN_ID_SCHEMA = {
+  type: "object",
+  properties: {
+    runId: {
+      type: "string",
+      description:
+        "Pipeline run id. Optional — defaults to the active or only open run tab.",
+    },
+  },
+} as const;
+
+const EXECUTION_ID_SCHEMA = {
+  type: "object",
+  properties: {
+    executionId: { type: "string", description: "Execution id." },
+  },
+  required: ["executionId"],
+} as const;
 
 /**
- * The tab-management tools an agent uses to arrange the Dynamic Workarea: open
- * a resource, list open tabs, read the active tab, and close a tab. Summaries
- * are derived from workarea state alone — no live spec, `ToolBridgeApi`, or
- * sub-agent environment (those arrive with the remote agent in a later change).
+ * The tab-management + run-inspect tools an agent uses to arrange and read the
+ * Dynamic Workarea: open a resource, list open tabs, read the active tab, close
+ * a tab, and inspect an open run. Spawnable (pipeline / run) tabs carry the
+ * `environmentId` a sub-agent is spawned into.
  *
  * `getDeps` reads the live handles per call so a single catalog instance always
  * acts on the current tab state without rebuilding the socket connection.
@@ -61,7 +164,9 @@ export function createWorkareaRemoteTools(
       description:
         "Open a target in the Dynamic Workarea and return the resulting tab. " +
         `${TARGET_DESCRIPTION} Returns the tab summary ` +
-        "`{ id, kind, title, target, active }`.",
+        "`{ id, kind, title, target, active }`. For a pipeline or run tab it " +
+        "also returns the `environmentId` to spawn a sub-agent into (its tools " +
+        "drive this exact tab).",
       inputSchema: {
         type: "object",
         properties: {
@@ -83,18 +188,38 @@ export function createWorkareaRemoteTools(
         const title = typeof args.title === "string" ? args.title : undefined;
         const target = parseWorkareaTarget(args.target);
         const tab = await getDeps().openTarget(target, title);
-        return summarize(tab, tab.id);
+        if (!isSpawnable(tab)) return summarize(tab, tab.id);
+        const environmentId = await getDeps().waitForEnvironment(tab.id);
+        const currentDeps = getDeps();
+        const currentTab = currentDeps
+          .getTabs()
+          .find((candidate) => candidate.id === tab.id);
+        if (!currentTab) {
+          throw new Error(
+            `Workarea tab "${tab.id}" was closed before its environment became ready.`,
+          );
+        }
+        return summarize(
+          currentTab,
+          currentDeps.getActiveTabId(),
+          environmentId,
+        );
       },
     },
     list_workarea_tabs: {
       description:
         "List the tabs currently open in the Dynamic Workarea, each as `{ id, " +
-        "kind, title, target, active }`.",
+        "kind, title, target, active }`. Pipeline and run tabs also include the " +
+        "`environmentId` to spawn a sub-agent into.",
       inputSchema: { type: "object", properties: {} },
       execute: () => {
         const deps = getDeps();
         const activeTabId = deps.getActiveTabId();
-        return deps.getTabs().map((tab) => summarize(tab, activeTabId));
+        return deps
+          .getTabs()
+          .map((tab) =>
+            summarize(tab, activeTabId, deps.getEnvironmentId(tab.id)),
+          );
       },
     },
     get_active_workarea_tab: {
@@ -106,7 +231,9 @@ export function createWorkareaRemoteTools(
         const deps = getDeps();
         const activeTabId = deps.getActiveTabId();
         const active = deps.getTabs().find((tab) => tab.id === activeTabId);
-        return active ? summarize(active, activeTabId) : null;
+        return active
+          ? summarize(active, activeTabId, deps.getEnvironmentId(active.id))
+          : null;
       },
     },
     close_workarea_tab: {
@@ -124,6 +251,85 @@ export function createWorkareaRemoteTools(
         }
         getDeps().closeTab(args.tabId);
         return { ok: true };
+      },
+    },
+    get_run_status: {
+      description:
+        "Fetch run metadata and the derived overall execution status (e.g. " +
+        "RUNNING, SUCCEEDED, FAILED) for a run open in the workarea. `runId` is " +
+        "optional and defaults to the active or only open run tab.",
+      inputSchema: RUN_ID_SCHEMA,
+      execute: async (args) => {
+        const deps = getDeps();
+        const runId = resolveRunId(deps, optionalRunId(args));
+        const run = await deps.runInspect.getRunDetails(runId);
+        return {
+          run,
+          status: getOverallExecutionStatusFromStats(
+            run.execution_status_stats,
+          ),
+        };
+      },
+    },
+    debug_pipeline_run: {
+      description:
+        "Composite debug snapshot for a run open in the workarea: run metadata " +
+        "plus each FAILED / SYSTEM_ERROR / INVALID child execution with " +
+        "truncated container state, execution details, and logs. Use this as a " +
+        "single high-signal call before drilling in with the fine-grained debug " +
+        "tools. `runId` is optional and defaults to the active or only open run " +
+        "tab.",
+      inputSchema: RUN_ID_SCHEMA,
+      execute: async (args) => {
+        const deps = getDeps();
+        const runId = resolveRunId(deps, optionalRunId(args));
+        return deps.runInspect.debugPipelineRun(runId);
+      },
+    },
+    get_execution_details: {
+      description:
+        "Fetch task spec, parent/child ids, and artifact id maps for a single " +
+        "execution. Artifact id maps are summarized to keep the payload small.",
+      inputSchema: EXECUTION_ID_SCHEMA,
+      execute: async (args) => {
+        const executionId = requireExecutionId(args);
+        const details =
+          await getDeps().runInspect.getExecutionDetails(executionId);
+        return truncateExecutionDetails(details);
+      },
+    },
+    get_execution_state: {
+      description:
+        "Fetch aggregated child execution status counts for a graph execution. " +
+        "Useful for figuring out which child tasks failed.",
+      inputSchema: EXECUTION_ID_SCHEMA,
+      execute: async (args) => {
+        const executionId = requireExecutionId(args);
+        return getDeps().runInspect.getExecutionState(executionId);
+      },
+    },
+    get_container_state: {
+      description:
+        "Fetch pod/container state (status, exit code, debug_info) for a leaf " +
+        "execution. `debug_info` is capped at 20 keys with each string value " +
+        "capped at 2KB.",
+      inputSchema: EXECUTION_ID_SCHEMA,
+      execute: async (args) => {
+        const executionId = requireExecutionId(args);
+        const state = await getDeps().runInspect.getContainerState(executionId);
+        return truncateContainerState(state);
+      },
+    },
+    get_container_log: {
+      description:
+        "Fetch the trailing 8KB of stdout/stderr and any captured " +
+        "error/orchestration messages for a leaf execution. Each field is " +
+        "independently truncated; `truncated: true` flags any drop.",
+      inputSchema: EXECUTION_ID_SCHEMA,
+      execute: async (args) => {
+        const executionId = requireExecutionId(args);
+        const log = await getDeps().runInspect.getContainerLog(executionId);
+        return truncateContainerLog(log);
       },
     },
   };
