@@ -103,7 +103,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
         className="flex h-full flex-col justify-between gap-2 p-4"
         {...tracking("projects.project_card")}
       >
-        <BlockStack gap="2">
+        <BlockStack gap="2" align="stretch">
           <InlineStack
             gap="2"
             blockAlign="center"
@@ -115,24 +115,28 @@ export function ProjectCard({ project }: ProjectCardProps) {
               size="lg"
               className="text-muted-foreground shrink-0"
             />
-            <Text weight="semibold" className="truncate">
+            <Text weight="semibold" className="min-w-0 truncate">
               {project.name}
             </Text>
           </InlineStack>
 
           {project.description && (
-            <Paragraph size="sm" tone="subdued" className="line-clamp-3">
+            <Paragraph
+              size="sm"
+              tone="subdued"
+              className="line-clamp-3 wrap-break-word"
+            >
               {project.description}
             </Paragraph>
           )}
         </BlockStack>
 
-        <BlockStack gap="2">
+        <BlockStack gap="2" align="stretch">
           <Text size="xs" weight="medium" className="truncate">
             {formatResourceCounts(project.resourceCounts)}
           </Text>
           <Separator />
-          <BlockStack gap="1">
+          <BlockStack gap="1" align="stretch">
             <Text size="xs" tone="subdued" className="truncate">
               {`Created ${formatDate(project.createdAt)}`}
             </Text>
