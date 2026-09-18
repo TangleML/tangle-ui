@@ -32,6 +32,7 @@ import { proxy } from "comlink";
 
 import type { RemoteEnvWorkerApi } from "@/agent/createRemoteEnvWorkerApi";
 import { getTangentSocketConfig } from "@/routes/v2/pages/Tangent/services/socketConfig";
+import { isRecord } from "@/utils/typeGuards";
 
 const THINKING_STATUS_LABELS = new Set([
   "Thinking...",
@@ -50,6 +51,80 @@ function errorMessage(error: unknown): string {
 
 function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === "AbortError";
+}
+
+// Investigation instrumentation: without it a dropped socket, a call that never
+// arrives, and a hung `execute` all look identical (see the workarea remote
+// tools RCA). Filter DevTools on `[remote-env]`.
+const REMOTE_ENV_TOOLS_CALL_EVENT = "remote:tools:call";
+
+type RemoteEnvSocket = RemoteEnvironmentClient["socket"];
+
+function logRemoteEnv(message: string, ...details: unknown[]): void {
+  console.info(`[remote-env] ${message}`, ...details);
+}
+
+function envLabel(environmentId: string, socketId: string | undefined): string {
+  return `${environmentId} (socket ${socketId ?? "?"})`;
+}
+
+function describeToolCall(request: unknown): { name: string; args: unknown } {
+  if (!isRecord(request)) return { name: "<unknown>", args: undefined };
+  const name = typeof request.name === "string" ? request.name : "<unknown>";
+  return { name, args: request.arguments };
+}
+
+function wrapToolsWithLogging(
+  tools: RemoteToolMap,
+  environmentId: string,
+  getSocketId: () => string | undefined,
+): RemoteToolMap {
+  const wrapped: RemoteToolMap = {};
+  for (const [name, tool] of Object.entries(tools)) {
+    wrapped[name] = {
+      ...tool,
+      execute: async (args) => {
+        const startedAt = Date.now();
+        const label = envLabel(environmentId, getSocketId());
+        logRemoteEnv(`${label} tool start ${name}`, args);
+        try {
+          const result = await tool.execute(args);
+          logRemoteEnv(`${label} tool ok ${name} ${Date.now() - startedAt}ms`);
+          return result;
+        } catch (error) {
+          logRemoteEnv(
+            `${label} tool error ${name} ${Date.now() - startedAt}ms`,
+            errorMessage(error),
+          );
+          throw error;
+        }
+      },
+    };
+  }
+  return wrapped;
+}
+
+function attachDiagnosticLogging(
+  socket: RemoteEnvSocket,
+  environmentId: string,
+): void {
+  socket.on("connect", () =>
+    logRemoteEnv(`connected ${envLabel(environmentId, socket.id)}`),
+  );
+  socket.on("disconnect", (reason) =>
+    logRemoteEnv(`disconnected ${envLabel(environmentId, socket.id)}`, reason),
+  );
+  socket.on("connect_error", (error: Error) =>
+    logRemoteEnv(`connect_error ${environmentId}`, error.message),
+  );
+  // Do not ack here — the SDK's own listener owns the ack; this only observes.
+  socket.on(REMOTE_ENV_TOOLS_CALL_EVENT, (request: unknown) => {
+    const { name, args } = describeToolCall(request);
+    logRemoteEnv(
+      `call received ${envLabel(environmentId, socket.id)} ${name}`,
+      args,
+    );
+  });
 }
 
 interface RemoteEnvHostBaseOptions {
@@ -265,17 +340,26 @@ export function createRemoteEnvHost(
       // stays `/remote-env` and the transport path keeps the prefix (e.g.
       // `/tangent/socket.io`) instead of hitting the host root.
       const { socketUrl, socketPath } = getTangentSocketConfig(url);
+      const socketHolder: { socket: RemoteEnvSocket | null } = { socket: null };
+      const loggedTools = tools
+        ? wrapToolsWithLogging(
+            tools,
+            environmentId,
+            () => socketHolder.socket?.id,
+          )
+        : undefined;
       const nextClient = connectRemoteEnvironment({
         url: socketUrl,
         socketPath,
         token,
         environmentId,
         handlers,
-        ...(tools ? { tools, sessionId } : {}),
+        ...(loggedTools ? { tools: loggedTools, sessionId } : {}),
       });
       client = nextClient;
+      socketHolder.socket = nextClient.socket;
 
-      return new Promise<void>((resolve, reject) => {
+      const connection = new Promise<void>((resolve, reject) => {
         let connected = nextClient.socket.connected;
 
         nextClient.socket.on("connect", () => {
@@ -300,6 +384,10 @@ export function createRemoteEnvHost(
 
         if (connected) resolve();
       });
+
+      attachDiagnosticLogging(nextClient.socket, environmentId);
+
+      return connection;
     },
 
     disconnect() {

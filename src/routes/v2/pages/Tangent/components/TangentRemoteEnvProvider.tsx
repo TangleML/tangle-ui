@@ -18,10 +18,10 @@ import { type ReactNode, useEffect, useRef } from "react";
 import type { RemoteEnvWorkerApi } from "@/agent/createRemoteEnvWorkerApi";
 import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import type { AgentContext } from "@/agent/types";
-import { useAuthLocalStorage } from "@/components/shared/Authentication/useAuthLocalStorage";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
+import { useRemoteEnvAuthToken } from "@/routes/v2/pages/Tangent/hooks/useRemoteEnvAuthToken";
 import { useTangentBaseUrl } from "@/routes/v2/pages/Tangent/hooks/useTangentBaseUrl";
 import { connectRemoteEnvWithRefresh } from "@/routes/v2/pages/Tangent/services/connectRemoteEnvWithRefresh";
 import { createRemoteEnvAgentWorker } from "@/routes/v2/pages/Tangent/services/remoteEnvAgentWorker";
@@ -51,12 +51,11 @@ export function TangentRemoteEnvProvider({
   onBridgeClosed,
 }: TangentRemoteEnvProviderProps) {
   const notify = useToastNotification();
-  const authStorage = useAuthLocalStorage();
   const { config: aiConfig } = useAiProviderSettings();
   const { projectId } = useTangentProject();
   const { baseUrl } = useTangentBaseUrl(projectId);
 
-  const authToken = authStorage.getToken();
+  const authToken = useRemoteEnvAuthToken();
   const authTokenRef = useRef(authToken);
   const aiConfigRef = useRef(aiConfig);
   const contextRef = useRef(context);
