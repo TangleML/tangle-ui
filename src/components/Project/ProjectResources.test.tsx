@@ -194,9 +194,9 @@ describe("ProjectResources", () => {
     });
     renderResources();
 
-    const names = [...document.querySelectorAll("tbody td:first-child")].map(
-      (cell) => cell.textContent,
-    );
+    const names = [
+      ...document.querySelectorAll("tbody td:first-child button"),
+    ].map((button) => button.textContent);
     expect(names).toEqual(["in this browser", "Model card"]);
   });
 
