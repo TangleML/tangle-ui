@@ -226,43 +226,15 @@ function PipelinePreview({ resource, pipelineId }: PipelinePreviewProps) {
         filename={resource.name ?? UNTITLED}
       />
       <InlineStack gap="3" blockAlign="center" className="w-full">
-        <EditorLinkIfHeldLocally name={pipeline.editorName} />
+        {/* The editor opens a pipeline by name out of browser storage, so it
+            cannot reach one held on the backend, and a local pipeline that
+            merely shares the name is a different pipeline. */}
+        <Text size="xs" tone="subdued">
+          Stored on the backend, which the editor cannot open yet.
+        </Text>
         <ValidityBadge validity={pipelineValidity(pipeline.spec)} />
       </InlineStack>
     </BlockStack>
-  );
-}
-
-/**
- * The editor opens a pipeline by name out of browser storage, so a pipeline
- * that only exists on the backend opens as an empty canvas. Offering the link
- * regardless looked like the pipeline had been lost.
- */
-function EditorLinkIfHeldLocally({ name }: { name: string }) {
-  const { data: pipeline, isPending } = useLocalPipeline({ localName: name });
-
-  if (isPending) {
-    return null;
-  }
-
-  if (!pipeline) {
-    return (
-      <Text size="xs" tone="subdued">
-        Stored on the backend, so there is nothing here to edit.
-      </Text>
-    );
-  }
-
-  return (
-    <Button variant="outline" size="sm" asChild>
-      <Link
-        to={getDefaultEditorPath(pipeline.name)}
-        {...tracking("projects.open_pipeline")}
-      >
-        <Icon name="PencilRuler" size="xs" />
-        Open in the editor
-      </Link>
-    </Button>
   );
 }
 
