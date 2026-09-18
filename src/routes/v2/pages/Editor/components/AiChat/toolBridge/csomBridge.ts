@@ -29,9 +29,9 @@ import {
   deleteOutput,
   renameInput,
   renameOutput,
-  setInputDefaultValue,
   setInputDescription,
   setInputType,
+  setInputValue,
   setOutputDescription,
 } from "@/routes/v2/pages/Editor/store/actions/io.actions";
 import {
@@ -201,8 +201,7 @@ export function createCsomBridgeHandlers(deps: CsomBridgeDeps): CsomHandlers {
       if (type) setInputType(deps.undo, spec, input.$id, type);
       if (description)
         setInputDescription(deps.undo, spec, input.$id, description);
-      if (defaultValue)
-        setInputDefaultValue(deps.undo, spec, input.$id, defaultValue);
+      if (defaultValue) setInputValue(deps.undo, spec, input.$id, defaultValue);
       if (optional !== undefined) {
         deps.undo.withGroup("Set input optional", () => {
           input.setOptional(optional);
