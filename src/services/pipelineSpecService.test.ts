@@ -42,10 +42,27 @@ describe("getPipelineSpec", () => {
   it("digs the component spec out of the root task", async () => {
     mockResponse({
       id: "pipeline-1",
+      file_path: "Hello World",
       root_pipeline_task: { componentRef: { spec } },
     });
 
-    await expect(getPipelineSpec("pipeline-1")).resolves.toEqual(spec);
+    await expect(getPipelineSpec("pipeline-1")).resolves.toEqual({
+      editorName: "Hello World",
+      spec,
+    });
+  });
+
+  it("hands back the path the editor opens, not the pipeline's title", async () => {
+    mockResponse({
+      id: "pipeline-1",
+      file_path: "drafts/churn v3",
+      pipeline_name: "Churn model",
+      root_pipeline_task: { componentRef: { spec } },
+    });
+
+    const pipeline = await getPipelineSpec("pipeline-1");
+
+    expect(pipeline.editorName).toBe("drafts/churn v3");
   });
 
   it("throws with the status when the backend gives nothing back", async () => {

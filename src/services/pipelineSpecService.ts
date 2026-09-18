@@ -19,13 +19,19 @@ export class PipelineSpecApiError extends Error {
  */
 interface SavedPipelineDto {
   id: string;
+  file_path: string;
   pipeline_name: string | null;
   root_pipeline_task: { componentRef?: { spec?: ComponentSpec } } | null;
 }
 
+export interface SavedPipeline {
+  editorName: string;
+  spec: ComponentSpec;
+}
+
 export async function getPipelineSpec(
   pipelineId: string,
-): Promise<ComponentSpec> {
+): Promise<SavedPipeline> {
   const result = await client.get<{ 200: SavedPipelineDto }>({
     url: "/api/pipelines/{pipeline_id}",
     path: { pipeline_id: pipelineId },
@@ -47,5 +53,5 @@ export async function getPipelineSpec(
     );
   }
 
-  return spec;
+  return { editorName: result.data.file_path, spec };
 }

@@ -22,7 +22,7 @@ export function ProjectRunStatus({ runId }: { runId: string }) {
     : getOverallExecutionStatusFromStats(data ?? undefined);
 
   return (
-    <InlineStack gap="1" blockAlign="center" wrap="nowrap">
+    <InlineStack gap="1" blockAlign="center" wrap="nowrap" className="min-w-0">
       <StatusIcon status={status} />
       <Text size="xs" tone="subdued" className="truncate">
         {getExecutionStatusLabel(status)}
