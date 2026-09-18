@@ -155,6 +155,33 @@ describe("createRemoteEnvHost", () => {
     expect(client.subagentUpdate).not.toHaveBeenCalledWith("s1", "a1", "error");
   });
 
+  it("emits an immediate placeholder delta after start and before end", async () => {
+    const worker = makeWorker();
+    worker.runTurn.mockResolvedValue({ answer: "done" });
+    const { handlers } = connectedHost(worker);
+    await handlers.onSpawn(spawnCommand("a1"));
+
+    await handlers.onMessage(messageCommand("a1", "hello"));
+
+    const events = client.agentEvent.mock.calls;
+    const startIndex = events.findIndex((call) => call[2].type === "start");
+    const deltaIndex = events.findIndex((call) => call[2].type === "delta");
+    const endIndex = events.findIndex((call) => call[2].type === "end");
+
+    expect(startIndex).toBeGreaterThanOrEqual(0);
+    expect(deltaIndex).toBeGreaterThan(startIndex);
+    expect(deltaIndex).toBeLessThan(endIndex);
+
+    const startCall = events[startIndex];
+    const deltaCall = events[deltaIndex];
+    expect(deltaCall[2]).toMatchObject({
+      type: "delta",
+      messageId: startCall[2].messageId,
+      delta: expect.stringContaining("Working on it"),
+    });
+    expect(deltaCall[3]).toBe("r1");
+  });
+
   it("serializes turns per agentId", async () => {
     const worker = makeWorker();
     const first = defer<{ answer: string }>();
