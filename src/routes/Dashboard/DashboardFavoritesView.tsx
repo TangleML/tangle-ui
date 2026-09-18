@@ -7,20 +7,23 @@ import { Input } from "@/components/ui/input";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
 import { type FavoriteItem, useFavorites } from "@/hooks/useFavorites";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 
-import { getFavoriteUrl, TypePill } from "./TypePill";
+import { getFavoriteUrl, getItemStorageLabel, TypePill } from "./TypePill";
 
 const PAGE_SIZE = 20;
 
 const FavoriteCard = ({
   item,
   onRemove,
+  backendUrl,
 }: {
   item: FavoriteItem;
   onRemove: () => void;
+  backendUrl: string;
 }) => (
   <Link
-    to={getFavoriteUrl(item)}
+    to={getFavoriteUrl(item, backendUrl)}
     className="group relative flex flex-col gap-2.5 p-3 rounded-lg transition-all shadow-sm hover:shadow-md bg-card border border-border hover:border-foreground/20 no-underline overflow-hidden"
   >
     <Button
@@ -44,7 +47,7 @@ const FavoriteCard = ({
     </Text>
 
     <Text size="xs" tone="subdued" font="mono" className="truncate">
-      {item.id}
+      {getItemStorageLabel(item)}
     </Text>
   </Link>
 );
@@ -84,6 +87,7 @@ const FavoritesSearchBar = ({
 );
 
 export function DashboardFavoritesView() {
+  const backendUrl = usePipelineStorage().remote?.backendUrl ?? "";
   const { favorites, removeFavorite } = useFavorites();
   const [page, setPage] = useState(0);
   const [query, setQuery] = useState("");
@@ -131,6 +135,7 @@ export function DashboardFavoritesView() {
                 <FavoriteCard
                   key={`${item.type}-${item.id}`}
                   item={item}
+                  backendUrl={backendUrl}
                   onRemove={() => removeFavorite(item.type, item.id)}
                 />
               ))}
