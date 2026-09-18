@@ -160,7 +160,11 @@ export function ProjectResources({
                   key={resource.id}
                   resource={resource}
                   selected={resource.id === selectedResourceId}
-                  onSelect={(selected) => onSelect(selected.id)}
+                  onSelect={(picked) =>
+                    onSelect(
+                      picked.id === selectedResourceId ? null : picked.id,
+                    )
+                  }
                   onRemove={handleRemove}
                 />
               ))}

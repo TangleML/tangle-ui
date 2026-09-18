@@ -161,16 +161,35 @@ describe("ProjectResources", () => {
     expect(screen.queryByText(/Agent sessions/)).toBeNull();
   });
 
+  it("previews the item that was picked", async () => {
+    mockResources({ items: [resource()], totalCount: 1 });
+    renderResources();
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "Model card" }));
+
+    expect(onSelect).toHaveBeenCalledWith("resource-1");
+  });
+
+  it("lets the item already being previewed be picked off again", async () => {
+    mockResources({ items: [resource()], totalCount: 1 });
+    renderResources("resource-1");
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "Model card" }));
+
+    expect(onSelect).toHaveBeenCalledWith(null);
+  });
+
   it("removes an item only once the removal is confirmed", async () => {
     mockResources({ items: [resource()], totalCount: 1 });
     renderResources();
     const user = userEvent.setup();
 
     await user.click(
-      screen.getByRole("button", { name: "Item actions: Model card" }),
-    );
-    await user.click(
-      await screen.findByRole("menuitem", { name: /Remove from project/ }),
+      screen.getByRole("button", {
+        name: "Remove Model card from this project",
+      }),
     );
 
     const dialog = await screen.findByRole("alertdialog");
@@ -188,10 +207,9 @@ describe("ProjectResources", () => {
     const user = userEvent.setup();
 
     await user.click(
-      screen.getByRole("button", { name: "Item actions: Model card" }),
-    );
-    await user.click(
-      await screen.findByRole("menuitem", { name: /Remove from project/ }),
+      screen.getByRole("button", {
+        name: "Remove Model card from this project",
+      }),
     );
     fireEvent.click(await screen.findByRole("button", { name: "Continue" }));
 
@@ -208,10 +226,9 @@ describe("ProjectResources", () => {
     const user = userEvent.setup();
 
     await user.click(
-      screen.getByRole("button", { name: "Item actions: Model card" }),
-    );
-    await user.click(
-      await screen.findByRole("menuitem", { name: /Remove from project/ }),
+      screen.getByRole("button", {
+        name: "Remove Model card from this project",
+      }),
     );
     fireEvent.click(await screen.findByRole("button", { name: "Cancel" }));
 

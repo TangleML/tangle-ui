@@ -60,7 +60,9 @@ describe("ResourceRow", () => {
 
     expect(screen.getByText("Untitled")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Item actions: Untitled" }),
+      screen.getByRole("button", {
+        name: "Remove Untitled from this project",
+      }),
     ).toBeInTheDocument();
   });
 
@@ -90,14 +92,26 @@ describe("ResourceRow", () => {
     const user = userEvent.setup();
 
     await user.click(
-      screen.getByRole("button", { name: "Item actions: Model card" }),
-    );
-    await user.click(
-      await screen.findByRole("menuitem", { name: /Remove from project/ }),
+      screen.getByRole("button", {
+        name: "Remove Model card from this project",
+      }),
     );
 
     expect(onRemove).toHaveBeenCalledWith(
       expect.objectContaining({ id: "resource-1" }),
     );
+  });
+
+  it("does not preview an item when the remove button is the thing clicked", async () => {
+    const { onSelect } = renderRow();
+    const user = userEvent.setup();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Remove Model card from this project",
+      }),
+    );
+
+    expect(onSelect).not.toHaveBeenCalled();
   });
 });
