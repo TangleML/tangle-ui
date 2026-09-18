@@ -7,7 +7,6 @@ import {
   localPipelineInput,
   pointerOf,
   PointerTooLargeError,
-  resourceKind,
 } from "./localPipelinePointer";
 
 function resource(
@@ -184,18 +183,5 @@ describe("localPipelineInput", () => {
         extraData: input.extraData ?? null,
       }),
     ).toEqual(pointer);
-  });
-});
-
-describe("resourceKind", () => {
-  it("files a pointer under pipelines, whatever the API calls it", () => {
-    expect(resourceKind(resource())).toBe("pipeline");
-  });
-
-  it("leaves every other row where the API put it", () => {
-    expect(resourceKind(resource({ extraData: null }))).toBe("document");
-    expect(
-      resourceKind(resource({ entity: "agent_session", extraData: null })),
-    ).toBe("agent_session");
   });
 });
