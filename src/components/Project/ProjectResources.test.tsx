@@ -199,7 +199,7 @@ describe("ProjectResources", () => {
     );
 
     const dialog = await screen.findByRole("alertdialog");
-    expect(dialog).toHaveTextContent("stays in this browser");
+    expect(dialog).toHaveTextContent("stays in the browser that holds it");
     expect(dialog).not.toHaveTextContent(/only copy/);
   });
 
