@@ -12,7 +12,8 @@ import type { PipelineRef } from "@/services/pipelineStorage/types";
  */
 export type ResolvedWorkareaView =
   | { kind: "artifact"; title: string; url: string }
-  | { kind: "pipeline"; title: string; pipelineRef: PipelineRef };
+  | { kind: "pipeline"; title: string; pipelineRef: PipelineRef }
+  | { kind: "run"; title: string; runId: string };
 
 export type WorkareaTab = ResolvedWorkareaView & { id: string };
 

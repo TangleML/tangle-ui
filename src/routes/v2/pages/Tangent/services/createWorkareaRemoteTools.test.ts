@@ -20,6 +20,10 @@ function pipelineTab(id: string, fileId?: string): WorkareaTab {
   };
 }
 
+function runTab(id: string, runId: string): WorkareaTab {
+  return { id, kind: "run", title: `Run ${runId}`, runId };
+}
+
 function makeDeps(overrides: Partial<WorkareaToolDeps> = {}): WorkareaToolDeps {
   return {
     openTarget: vi.fn(),
@@ -63,6 +67,7 @@ describe("createWorkareaRemoteTools", () => {
       getTabs: () => [
         artifactTab("tab-art", "https://example.com/report"),
         pipelineTab("tab-pipe"),
+        runTab("tab-run", "run-1"),
       ],
       getActiveTabId: () => "tab-pipe",
     });
@@ -84,6 +89,13 @@ describe("createWorkareaRemoteTools", () => {
         title: "Pipeline",
         target: "Draft",
         active: true,
+      },
+      {
+        id: "tab-run",
+        kind: "run",
+        title: "Run run-1",
+        target: "run:run-1",
+        active: false,
       },
     ]);
   });

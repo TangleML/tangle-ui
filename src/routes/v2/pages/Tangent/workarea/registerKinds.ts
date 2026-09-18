@@ -4,3 +4,4 @@
 // import a kind first.
 import "./artifactKind";
 import "./pipelineKind";
+import "./runKind";

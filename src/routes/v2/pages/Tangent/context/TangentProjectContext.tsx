@@ -211,6 +211,9 @@ export function TangentProjectProvider({
           ? tab.pipelineRef.fileId === view.pipelineRef.fileId
           : tab.title === view.title;
       }
+      if (tab.kind === "run" && view.kind === "run") {
+        return tab.runId === view.runId;
+      }
       return false;
     });
   }

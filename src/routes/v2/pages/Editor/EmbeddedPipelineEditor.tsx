@@ -3,7 +3,7 @@ import "@/styles/editor.css";
 
 import { ReactFlowProvider } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 
 import { ComponentEditorProvider } from "@/components/shared/ComponentEditor/ComponentEditorProvider";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
@@ -20,6 +20,7 @@ import {
   type SharedUIStore,
   useSharedStores,
 } from "@/routes/v2/shared/store/SharedStoreContext";
+import { SharedStoreRegistrar } from "@/routes/v2/shared/store/SharedStoreRegistrar";
 import { DockArea } from "@/routes/v2/shared/windows/DockArea";
 import { WindowContainer } from "@/routes/v2/shared/windows/WindowContainer";
 import type { PipelineRef } from "@/services/pipelineStorage/types";
@@ -117,32 +118,6 @@ const EmbeddedPipelineEditorCanvas = withSuspenseWrapper(
   }),
   EmbeddedPipelineEditorSkeleton,
 );
-
-function SharedStoreRegistrar({
-  onReady,
-  onClosed,
-}: {
-  onReady?: (store: SharedUIStore) => void;
-  onClosed?: () => void;
-}) {
-  const store = useSharedStores();
-  const onReadyRef = useRef(onReady);
-  const onClosedRef = useRef(onClosed);
-
-  useEffect(() => {
-    onReadyRef.current = onReady;
-    onClosedRef.current = onClosed;
-  });
-
-  // Key registration off the stable store instance, not callback identity, so a
-  // parent re-render with fresh callbacks doesn't re-fire ready/closed.
-  useEffect(() => {
-    onReadyRef.current?.(store);
-    return () => onClosedRef.current?.();
-  }, [store]);
-
-  return null;
-}
 
 export function EmbeddedPipelineEditor({
   pipelineRef,
