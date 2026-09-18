@@ -218,6 +218,15 @@ const normalizeUrl = (url: string) => {
   return normalizedUrl;
 };
 
+const buildAbsoluteAppUrl = (path: string): string => {
+  const basepath = BASE_URL.replace(/\/$/, "");
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+
+  return IS_GITHUB_PAGES
+    ? `${origin}${basepath}/#${path}`
+    : `${origin}${basepath}${path}`;
+};
+
 const getArtifactPreviewUrl = (
   artifactId: string,
   type?: string,
@@ -228,14 +237,19 @@ const getArtifactPreviewUrl = (
   if (name) search.set("name", name);
   const query = search.toString() ? `?${search}` : "";
 
-  const basepath = BASE_URL.replace(/\/$/, "");
-  const path = `/artifact/${encodeURIComponent(artifactId)}${query}`;
-
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
-  return IS_GITHUB_PAGES
-    ? `${origin}${basepath}/#${path}`
-    : `${origin}${basepath}${path}`;
+  return buildAbsoluteAppUrl(
+    `/artifact/${encodeURIComponent(artifactId)}${query}`,
+  );
 };
+
+const getExecutionLogsUrl = (executionId: string | number): string =>
+  buildAbsoluteAppUrl(`/logs/${encodeURIComponent(executionId)}`);
+
+const getRawExecutionLogsUrl = (
+  executionId: string | number,
+  backendUrl: string,
+): string =>
+  `${backendUrl}/api/executions/${encodeURIComponent(executionId)}/stream_container_log`;
 
 export {
   buildComponentSourceUrl,
@@ -247,7 +261,9 @@ export {
   downloadStringAsFile,
   downloadYamlFromComponentText,
   getArtifactPreviewUrl,
+  getExecutionLogsUrl,
   getIdOrTitleFromPath,
+  getRawExecutionLogsUrl,
   isGithubUrl,
   normalizeUrl,
   parseHttpUrl,
