@@ -1,3 +1,4 @@
+import { useNavigate } from "@tanstack/react-router";
 import { type FormEvent, type ReactNode, useEffect, useState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -17,6 +18,7 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Textarea } from "@/components/ui/textarea";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
+import { APP_ROUTES } from "@/routes/appRoutes";
 import { useCreateProject } from "@/services/projects/useProjects";
 import { tracking } from "@/utils/tracking";
 
@@ -37,6 +39,7 @@ export function CreateProjectDialog({
   const createProject = useCreateProject();
   const notify = useToastNotification();
   const { track } = useAnalytics();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (open) {
@@ -72,13 +75,17 @@ export function CreateProjectDialog({
         description: trimmedDescription === "" ? undefined : trimmedDescription,
       },
       {
-        onSuccess: () => {
+        onSuccess: (project) => {
           track("projects.create_project_completed", {
             has_description: trimmedDescription !== "",
           });
           notify("Project created", "success");
           resetForm();
           setOpen(false);
+          void navigate({
+            to: APP_ROUTES.TANGENT_PROJECT,
+            params: { projectId: project.id },
+          });
         },
       },
     );
