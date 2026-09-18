@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
   const deleteProject = useDeleteProject();
   const notify = useToastNotification();
   const { track } = useAnalytics();
+  const navigate = useNavigate();
   const {
     handlers: confirmationHandlers,
     triggerDialog: triggerConfirmation,
@@ -45,6 +46,13 @@ export function ProjectCard({ project }: ProjectCardProps) {
   } = useConfirmationDialog();
 
   const resourceTotal = totalResourceCount(project.resourceCounts);
+
+  const openDetails = () => {
+    void navigate({
+      to: APP_ROUTES.PROJECT_DETAIL,
+      params: { projectId: project.id },
+    });
+  };
 
   const handleShare = () => {
     copyToClipboard(getProjectUrl(project.id));
@@ -90,7 +98,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
       )}
     >
       <Link
-        to={APP_ROUTES.PROJECT_DETAIL}
+        to={APP_ROUTES.TANGENT_PROJECT}
         params={{ projectId: project.id }}
         className="flex h-full flex-col justify-between gap-2 p-4"
         {...tracking("projects.project_card")}
@@ -148,6 +156,13 @@ export function ProjectCard({ project }: ProjectCardProps) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          <DropdownMenuItem
+            onSelect={openDetails}
+            {...tracking("projects.open_project_details")}
+          >
+            <Icon name="Info" size="sm" />
+            Details
+          </DropdownMenuItem>
           <DropdownMenuItem
             onSelect={handleShare}
             {...tracking("projects.share_project")}
