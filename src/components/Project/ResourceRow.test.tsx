@@ -2,10 +2,11 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { Table, TableBody } from "@/components/ui/table";
 import type { ProjectResourceSummary } from "@/services/projects/types";
 import { formatDate } from "@/utils/date";
 
-import { ResourceCard } from "./ResourceCard";
+import { ResourceRow } from "./ResourceRow";
 
 const resource: ProjectResourceSummary = {
   id: "resource-1",
@@ -18,41 +19,44 @@ const resource: ProjectResourceSummary = {
   updatedAt: new Date("2026-09-09T10:00:00Z"),
 };
 
-function renderCard(
+function renderRow(
   overrides: Partial<ProjectResourceSummary> = {},
   selected = false,
 ) {
   const onRemove = vi.fn();
   const onSelect = vi.fn();
   render(
-    <ResourceCard
-      resource={{ ...resource, ...overrides }}
-      selected={selected}
-      onSelect={onSelect}
-      onRemove={onRemove}
-    />,
+    <Table>
+      <TableBody>
+        <ResourceRow
+          resource={{ ...resource, ...overrides }}
+          selected={selected}
+          onSelect={onSelect}
+          onRemove={onRemove}
+        />
+      </TableBody>
+    </Table>,
   );
   return { onRemove, onSelect };
 }
 
-describe("ResourceCard", () => {
+describe("ResourceRow", () => {
   beforeEach(() => {
     Element.prototype.scrollIntoView = vi.fn();
     Element.prototype.hasPointerCapture = vi.fn();
   });
 
-  it("shows what the item is, what it is called, and when it arrived", () => {
-    renderCard();
+  it("names the item and dates it", () => {
+    renderRow();
 
-    expect(screen.getByText("document")).toBeInTheDocument();
     expect(screen.getByText("Model card")).toBeInTheDocument();
     expect(
-      screen.getByText(`Added ${formatDate(resource.createdAt)}`),
+      screen.getByText(formatDate(resource.createdAt)),
     ).toBeInTheDocument();
   });
 
-  it("stands in for a missing name rather than showing a blank card", () => {
-    renderCard({ name: null });
+  it("stands in for a missing name rather than showing a blank row", () => {
+    renderRow({ name: null });
 
     expect(screen.getByText("Untitled")).toBeInTheDocument();
     expect(
@@ -60,14 +64,8 @@ describe("ResourceCard", () => {
     ).toBeInTheDocument();
   });
 
-  it("reads an unfamiliar entity as words", () => {
-    renderCard({ entity: "agent_session" });
-
-    expect(screen.getByText("agent session")).toBeInTheDocument();
-  });
-
   it("selects the item it belongs to when picked", async () => {
-    const { onSelect } = renderCard();
+    const { onSelect } = renderRow();
     const user = userEvent.setup();
 
     await user.click(screen.getByRole("button", { name: "Model card" }));
@@ -78,16 +76,17 @@ describe("ResourceCard", () => {
   });
 
   it("says which item is being previewed", () => {
-    renderCard({}, true);
+    renderRow({}, true);
 
     expect(screen.getByRole("button", { name: "Model card" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
+    expect(screen.getByRole("row")).toHaveAttribute("data-state", "selected");
   });
 
   it("asks to remove the item it belongs to", async () => {
-    const { onRemove } = renderCard();
+    const { onRemove } = renderRow();
     const user = userEvent.setup();
 
     await user.click(

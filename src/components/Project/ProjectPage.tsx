@@ -89,7 +89,7 @@ function ProjectDetail({ projectId }: { projectId: string | undefined }) {
       <ProjectHeader project={project} />
 
       <div className="flex w-full flex-col items-start gap-6 xl:flex-row xl:gap-8">
-        <BlockStack gap="6" className="w-full shrink-0 xl:w-104">
+        <BlockStack gap="6" className="w-full shrink-0 xl:w-96">
           <ProjectResources
             projectId={project.id}
             selectedResourceId={selectedResourceId}

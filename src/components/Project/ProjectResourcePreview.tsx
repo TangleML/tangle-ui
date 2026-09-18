@@ -13,7 +13,7 @@ import { usePipelineSpec } from "@/services/usePipelineSpec";
 import { componentSpecToText } from "@/utils/yaml";
 
 import { ColumnHeadingRow } from "./ColumnHeadingRow";
-import { UNTITLED } from "./ResourceCard";
+import { UNTITLED } from "./ResourceRow";
 
 const PLAIN_TEXT = "plaintext";
 
