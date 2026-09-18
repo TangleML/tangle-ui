@@ -103,6 +103,39 @@ describe("ProjectCard", () => {
     expect(screen.getByText("3 pipelines · 1 document")).toBeInTheDocument();
   });
 
+  /**
+   * A tile sits in a fixed-width grid track, and its stacks lay children out
+   * at their content width unless told otherwise — so without these a long
+   * name or a long list of counts runs out over the tile beside it. jsdom
+   * computes no layout, so the classes that do the containing are what can be
+   * pinned here; the rendering itself was checked in a browser.
+   */
+  it("keeps a name too long for the tile inside it", () => {
+    renderCard({ name: "Supercalifragilisticexpialidocious_Churn_Model_V4" });
+
+    const name = screen.getByText(
+      "Supercalifragilisticexpialidocious_Churn_Model_V4",
+    );
+    expect(name).toHaveClass("truncate");
+    expect(name).toHaveClass("min-w-0");
+  });
+
+  it("wraps a description that is one unbroken word", () => {
+    renderCard({ description: "Averyverylongsinglewordwithoutanyspacesatall" });
+
+    expect(
+      screen.getByText("Averyverylongsinglewordwithoutanyspacesatall"),
+    ).toHaveClass("wrap-break-word");
+  });
+
+  it("keeps a long list of counts inside the tile", () => {
+    renderCard({
+      resourceCounts: { pipeline: 12, document: 34, run: 56, notebook: 7 },
+    });
+
+    expect(screen.getByText(/12 pipelines/)).toHaveClass("truncate");
+  });
+
   it("opens the project where the work happens, not its details", () => {
     renderCard();
 
