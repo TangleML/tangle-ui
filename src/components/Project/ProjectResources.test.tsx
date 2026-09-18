@@ -63,6 +63,11 @@ function mockResources(page: Partial<ProjectResourcePage> = {}) {
 
 const onSelect = vi.fn();
 
+const groupHeadings = () =>
+  [...document.querySelectorAll("th[scope='rowgroup']")].map(
+    (heading) => heading.textContent,
+  );
+
 function renderResources(selectedResourceId: string | null = null) {
   return render(
     <ProjectResources
@@ -123,11 +128,7 @@ describe("ProjectResources", () => {
     });
     renderResources();
 
-    const headings = screen
-      .getAllByRole("columnheader")
-      .map((heading) => heading.textContent);
-
-    expect(headings).toEqual([
+    expect(groupHeadings()).toEqual([
       "Pipelines (1)",
       "Agent sessions (1)",
       "Documents (1)",
@@ -144,11 +145,16 @@ describe("ProjectResources", () => {
     });
     renderResources();
 
-    const headings = screen
-      .getAllByRole("columnheader")
-      .map((heading) => heading.textContent);
+    expect(groupHeadings()).toEqual(["Documents (1)", "Widgets (1)"]);
+  });
 
-    expect(headings).toEqual(["Documents (1)", "Widgets (1)"]);
+  it("gives the columns headings of their own", () => {
+    mockResources({ items: [resource()], totalCount: 1 });
+    renderResources();
+
+    expect(
+      screen.getAllByRole("columnheader").map((heading) => heading.textContent),
+    ).toEqual(["Name", "Added", "Actions"]);
   });
 
   it("leaves out a kind the project holds none of", () => {
@@ -182,20 +188,40 @@ describe("ProjectResources", () => {
     expect(onSelect).toHaveBeenCalledWith(null);
   });
 
-  it("removes an item only once the removal is confirmed", async () => {
-    mockResources({ items: [resource()], totalCount: 1 });
+  it("promises an item it only points at is left where it lives", async () => {
+    mockResources({
+      items: [
+        resource({ entity: "pipeline", name: "churn", entityId: "pipeline-9" }),
+      ],
+      totalCount: 1,
+    });
     renderResources();
     const user = userEvent.setup();
 
     await user.click(
-      screen.getByRole("button", {
-        name: "Remove Model card from this project",
-      }),
+      screen.getByRole("button", { name: "Remove churn from this project" }),
     );
 
     const dialog = await screen.findByRole("alertdialog");
-    expect(dialog).toHaveTextContent('Remove "Model card" from this project?');
+    expect(dialog).toHaveTextContent('Remove "churn" from this project?');
     expect(dialog).toHaveTextContent(/item itself is not deleted/);
+
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+
+    await waitFor(() => expect(mutate).toHaveBeenCalled());
+    expect(mutate).toHaveBeenCalledWith("resource-1", expect.anything());
+  });
+
+  it("warns that removing an item it holds outright destroys it", async () => {
+    mockResources({ items: [resource()], totalCount: 1 });
+    renderResources();
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "Delete Model card" }));
+
+    const dialog = await screen.findByRole("alertdialog");
+    expect(dialog).toHaveTextContent('Delete "Model card"?');
+    expect(dialog).toHaveTextContent(/only copy/);
 
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
 
@@ -208,11 +234,7 @@ describe("ProjectResources", () => {
     renderResources("resource-1");
     const user = userEvent.setup();
 
-    await user.click(
-      screen.getByRole("button", {
-        name: "Remove Model card from this project",
-      }),
-    );
+    await user.click(screen.getByRole("button", { name: "Delete Model card" }));
     fireEvent.click(await screen.findByRole("button", { name: "Continue" }));
 
     await waitFor(() => expect(mutate).toHaveBeenCalled());
@@ -227,11 +249,7 @@ describe("ProjectResources", () => {
     renderResources();
     const user = userEvent.setup();
 
-    await user.click(
-      screen.getByRole("button", {
-        name: "Remove Model card from this project",
-      }),
-    );
+    await user.click(screen.getByRole("button", { name: "Delete Model card" }));
     fireEvent.click(await screen.findByRole("button", { name: "Cancel" }));
 
     await waitFor(() => {

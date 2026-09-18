@@ -8,7 +8,13 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
-import { Table, TableBody, TableHead, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Heading, Text } from "@/components/ui/typography";
 import useConfirmationDialog from "@/hooks/useConfirmationDialog";
 import useToastNotification from "@/hooks/useToastNotification";
@@ -21,7 +27,7 @@ import {
 
 import { AddResourceMenu } from "./AddResourceMenu";
 import { ColumnHeadingRow } from "./ColumnHeadingRow";
-import { entityIcon } from "./resourceEntities";
+import { entityIcon, removingDestroys } from "./resourceEntities";
 import { ResourceRow, UNTITLED } from "./ResourceRow";
 
 const PAGE_SIZE = 100;
@@ -83,11 +89,22 @@ export function ProjectResources({
   } = useConfirmationDialog();
 
   const handleRemove = async (resource: ProjectResourceSummary) => {
-    const confirmed = await triggerConfirmation({
-      title: `Remove "${resource.name ?? UNTITLED}" from this project?`,
-      description:
-        "This only takes it out of this project. The item itself is not deleted and stays wherever it lives.",
-    });
+    const destroys = removingDestroys(resource);
+    const name = resource.name ?? UNTITLED;
+
+    const confirmed = await triggerConfirmation(
+      destroys
+        ? {
+            title: `Delete "${name}"?`,
+            description:
+              "This is the only copy, so deleting it here deletes it for good.",
+          }
+        : {
+            title: `Remove "${name}" from this project?`,
+            description:
+              "This only takes it out of this project. The item itself is not deleted and stays wherever it lives.",
+          },
+    );
 
     if (!confirmed) return;
 
@@ -98,8 +115,9 @@ export function ProjectResources({
         }
         track("projects.remove_resource_completed", {
           entity: resource.entity,
+          destroyed: destroys,
         });
-        notify("Removed from project", "success");
+        notify(destroys ? "Deleted" : "Removed from project", "success");
       },
     });
   };
@@ -137,10 +155,31 @@ export function ProjectResources({
 
       {data && resources.length > 0 && (
         <Table className="table-fixed">
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="px-2">
+                <Text size="xs" tone="subdued">
+                  Name
+                </Text>
+              </TableHead>
+              <TableHead className="w-28 px-2 text-right">
+                <Text size="xs" tone="subdued">
+                  Added
+                </Text>
+              </TableHead>
+              <TableHead className="w-12 px-2">
+                <span className="sr-only">Actions</span>
+              </TableHead>
+            </TableRow>
+          </TableHeader>
           {groupByEntity(resources).map(({ entity, items }) => (
             <TableBody key={entity}>
               <TableRow className="hover:bg-transparent">
-                <TableHead colSpan={COLUMN_COUNT} className="px-2 pt-4">
+                <TableHead
+                  colSpan={COLUMN_COUNT}
+                  scope="rowgroup"
+                  className="px-2 pt-4"
+                >
                   <InlineStack gap="1" blockAlign="center" wrap="nowrap">
                     <Icon
                       name={entityIcon(entity)}

@@ -2,9 +2,12 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Text } from "@/components/ui/typography";
+import { cn } from "@/lib/utils";
 import type { ProjectResourceSummary } from "@/services/projects/types";
 import { formatDate } from "@/utils/date";
 import { tracking } from "@/utils/tracking";
+
+import { removingDestroys } from "./resourceEntities";
 
 export const UNTITLED = "Untitled";
 
@@ -22,6 +25,7 @@ export function ResourceRow({
   onRemove,
 }: ResourceRowProps) {
   const name = resource.name ?? UNTITLED;
+  const destroys = removingDestroys(resource);
 
   return (
     <TableRow
@@ -48,25 +52,30 @@ export function ResourceRow({
         </button>
       </TableCell>
 
-      <TableCell className="w-28 text-right">
+      <TableCell className="text-right">
         <Text size="xs" tone="subdued">
           {formatDate(resource.createdAt)}
         </Text>
       </TableCell>
 
-      <TableCell className="w-8 pr-0">
-        {/* An X, not a bin: this takes the item out of the project and leaves
-            what it points at alone. */}
+      <TableCell className="text-right">
         <Button
           variant="ghost"
           size="icon"
           onClick={() => onRemove(resource)}
-          className="relative z-10 size-7 text-muted-foreground hover:text-foreground"
-          aria-label={`Remove ${name} from this project`}
-          title={`Remove ${name} from this project`}
+          className={cn(
+            "relative z-10 size-7 text-muted-foreground",
+            destroys ? "hover:text-destructive" : "hover:text-foreground",
+          )}
+          aria-label={
+            destroys ? `Delete ${name}` : `Remove ${name} from this project`
+          }
+          title={
+            destroys ? `Delete ${name}` : `Remove ${name} from this project`
+          }
           {...tracking("projects.remove_resource_open")}
         >
-          <Icon name="X" size="sm" />
+          <Icon name={destroys ? "Trash2" : "X"} size="sm" />
         </Button>
       </TableCell>
     </TableRow>
