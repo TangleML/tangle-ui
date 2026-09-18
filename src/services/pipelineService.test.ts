@@ -14,6 +14,7 @@ import { pipelineStorageDb } from "./pipelineStorage/db";
 import { remotePipelineRecoveryDb } from "./pipelineStorage/remotePipelineRecovery";
 import { ROOT_FOLDER_ID } from "./pipelineStorage/types";
 
+vi.mock("@/utils/remotePipelines", () => ({ REMOTE_PIPELINES_ENABLED: false }));
 vi.mock("@/appSettings", () => ({
   getAppSettings: () => ({ pipelineLibraryUrl: "https://example.com/library" }),
 }));

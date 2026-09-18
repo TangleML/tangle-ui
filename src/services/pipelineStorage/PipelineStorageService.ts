@@ -1,6 +1,8 @@
 import { makeObservable, observable } from "mobx";
 import { z } from "zod";
 
+import { REMOTE_PIPELINES_ENABLED } from "@/utils/remotePipelines";
+
 import { createDriver } from "./createDriver";
 import { pipelineStorageDb } from "./db";
 import { RootFolderDbStorageDriver } from "./drivers/RootFolderDbStorageDriver";
@@ -189,6 +191,24 @@ export class PipelineStorageService {
         a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
       );
   }
+}
+
+let activeService: PipelineStorageService | undefined;
+
+export function setPipelineStorageService(
+  service: PipelineStorageService,
+): () => void {
+  activeService = service;
+  return () => {
+    if (activeService === service) activeService = undefined;
+  };
+}
+
+export function getPipelineStorageService(): PipelineStorageService {
+  if (activeService) return activeService;
+  if (REMOTE_PIPELINES_ENABLED)
+    throw new Error("Pipeline storage is not ready.");
+  return new PipelineStorageService();
 }
 
 function createRoot(options?: { driver: PipelineStorageDriver }) {

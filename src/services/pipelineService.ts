@@ -16,6 +16,7 @@ import {
   writeComponentToFileListFromText,
 } from "@/utils/componentStore";
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
+import { REMOTE_PIPELINES_ENABLED } from "@/utils/remotePipelines";
 import { componentSpecToYaml } from "@/utils/yaml";
 import { componentSpecFromYaml } from "@/utils/yaml";
 
@@ -27,6 +28,19 @@ import {
   assertLocalPipelineVisible,
   PipelineMovedToRemoteError,
 } from "./pipelineStorage/remotePipelineRecovery";
+
+export async function savePipelineText(name: string, content: string) {
+  if (REMOTE_PIPELINES_ENABLED) {
+    const { getPipelineStorageService } =
+      await import("./pipelineStorage/PipelineStorageService");
+    return getPipelineStorageService().createPipeline(name, content);
+  }
+  await writeComponentToFileListFromText(
+    USER_PIPELINES_LIST_NAME,
+    name,
+    content,
+  );
+}
 
 export const deletePipeline = async (name: string, onDelete?: () => void) => {
   try {
@@ -52,11 +66,7 @@ export const useSavePipeline = (componentSpec: ComponentSpec) => {
 
     const componentSpecAsYaml = componentSpecToYaml(componentSpecWithNewName);
 
-    await writeComponentToFileListFromText(
-      USER_PIPELINES_LIST_NAME,
-      componentSpecWithNewName.name,
-      componentSpecAsYaml,
-    );
+    return savePipelineText(componentSpecWithNewName.name, componentSpecAsYaml);
   };
 
   return {
@@ -149,6 +159,8 @@ export const loadPipelineByName = async (name: string) => {
 
 export interface ImportResult {
   name: string;
+  referenceId?: string;
+  fileId?: string;
   overwritten: boolean;
   successful: boolean;
   errorMessage?: string;
@@ -216,6 +228,21 @@ export async function importPipelineFromYaml(
     // Use the name from the YAML or default to "Imported Pipeline"
     let pipelineName = componentSpec.name || "Imported Pipeline";
     let wasRenamed = false;
+
+    if (REMOTE_PIPELINES_ENABLED) {
+      componentSpec.name = pipelineName;
+      const file = await savePipelineText(
+        pipelineName,
+        componentSpecToYaml(componentSpec),
+      );
+      return {
+        name: pipelineName,
+        referenceId: file?.referenceId,
+        fileId: file?.referenceId,
+        overwritten: false,
+        successful: true,
+      };
+    }
 
     // Check if a pipeline with this name already exists
     const existingPipeline = await getComponentFileFromList(
