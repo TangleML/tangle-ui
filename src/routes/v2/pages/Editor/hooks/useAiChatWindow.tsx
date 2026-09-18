@@ -1,3 +1,4 @@
+import { useReactFlow } from "@xyflow/react";
 import { useEffect } from "react";
 
 import { createEditorToolBridge } from "@/routes/v2/pages/Editor/components/AiChat/toolBridge";
@@ -22,6 +23,7 @@ const SUGGESTED_PROMPTS_EDITOR: SuggestedPrompt[] = [
 export function useAiChatWindow(enabled: boolean) {
   const { windows } = useSharedStores();
   const editorSession = useEditorSession();
+  const { getNodes, getEdges } = useReactFlow();
 
   useEffect(() => {
     if (!enabled) {
@@ -33,7 +35,12 @@ export function useAiChatWindow(enabled: boolean) {
     windows.openWindow(
       <AiChatContent
         createBridge={(deps) =>
-          createEditorToolBridge({ ...deps, undo: editorSession.undo })
+          createEditorToolBridge({
+            ...deps,
+            getNodes,
+            getEdges,
+            undo: editorSession.undo,
+          })
         }
         suggestedPrompts={SUGGESTED_PROMPTS_EDITOR}
       />,
@@ -55,5 +62,5 @@ export function useAiChatWindow(enabled: boolean) {
         ),
       },
     );
-  }, [enabled, windows, editorSession]);
+  }, [enabled, windows, editorSession, getNodes, getEdges]);
 }

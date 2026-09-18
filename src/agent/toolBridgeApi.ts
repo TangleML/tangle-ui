@@ -168,6 +168,8 @@ export interface ToolBridgeApi {
   ): Promise<BridgeResult & { subgraphTaskId?: string }>;
   unpackSubgraph(taskEntityId: string): Promise<BridgeResult>;
 
+  autoLayout(): Promise<BridgeResult>;
+
   validatePipeline(): Promise<ValidationResult>;
 
   searchComponents(args: SearchComponentsArgs): Promise<SearchComponentsResult>;

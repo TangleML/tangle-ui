@@ -74,7 +74,7 @@ function hasAllOf(schema: JsonSchemaNode | undefined): boolean {
 }
 
 describe("createCsomTools", () => {
-  it("exposes the full 19-tool surface", () => {
+  it("exposes the full 20-tool surface", () => {
     const { allTools } = createCsomTools(makeBridge());
     const names = allTools.map((t) => t.name).sort();
     expect(names).toEqual(
@@ -82,6 +82,7 @@ describe("createCsomTools", () => {
         "add_input",
         "add_output",
         "add_task",
+        "auto_layout",
         "connect_nodes",
         "create_subgraph",
         "delete_edge",
@@ -133,6 +134,15 @@ describe("createCsomTools", () => {
 
     const result = await invoke(findTool(allTools, "validate_pipeline"), {});
     expect(result).toEqual({ valid: true, issueCount: 0, issues: [] });
+  });
+
+  it("auto_layout JSON-stringifies the bridge result for the model", async () => {
+    const autoLayout = vi.fn().mockResolvedValue({ success: true });
+    const { allTools } = createCsomTools(makeBridge({ autoLayout }));
+
+    const result = await invoke(findTool(allTools, "auto_layout"), {});
+    expect(result).toEqual({ success: true });
+    expect(autoLayout).toHaveBeenCalledOnce();
   });
 
   it("add_task strips null fields from the componentRef before calling the bridge", async () => {

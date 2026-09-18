@@ -416,6 +416,14 @@ export function createCsomTools(bridge: ToolBridgeApi) {
       asJson(await bridge.unpackSubgraph(taskEntityId)),
   });
 
+  const autoLayout = tool({
+    name: "auto_layout",
+    description:
+      "Automatically arrange the pipeline's nodes into a clean left-to-right layout. Call after adding or rewiring tasks so the canvas stays readable.",
+    parameters: z.object({}),
+    execute: async () => asJson(await bridge.autoLayout()),
+  });
+
   const validatePipeline = tool({
     name: "validate_pipeline",
     description:
@@ -447,6 +455,7 @@ export function createCsomTools(bridge: ToolBridgeApi) {
       setTaskArgument,
       createSubgraph,
       unpackSubgraph,
+      autoLayout,
       validatePipeline,
     ],
   };

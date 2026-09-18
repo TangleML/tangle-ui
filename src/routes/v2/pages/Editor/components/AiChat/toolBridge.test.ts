@@ -1,4 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
+import type { Node } from "@xyflow/react";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -13,6 +14,7 @@ import { YamlDeserializer } from "@/models/componentSpec/serialization/yamlDeser
 import { ONBOARDING_MY_RUN_COUNT_KEY } from "@/providers/OnboardingProvider/onboardingQueryKeys";
 import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
 import { hydrateComponentReference } from "@/services/componentService";
+import { EDITOR_POSITION_ANNOTATION } from "@/utils/annotations";
 
 vi.mock("@/services/componentService", () => ({
   hydrateComponentReference: vi.fn(async (ref) => ref),
@@ -358,6 +360,92 @@ describe("createEditorToolBridge", () => {
       const result = await bridge.renameTask("task_1", "Renamed");
       expect(result.success).toBe(true);
       expect(spec.tasks[0].name).toBe("Renamed");
+    });
+  });
+
+  describe("autoLayout", () => {
+    function layoutNode(id: string): Node {
+      return {
+        id,
+        position: { x: 0, y: 0 },
+        data: {},
+        measured: { width: 100, height: 40 },
+      };
+    }
+
+    it("applies layouted positions to the top-level spec inside one undo group", async () => {
+      const spec = buildSpec();
+      const undo = new RecordingUndo();
+      const bridge = createEditorToolBridge({
+        getSpec: () => spec,
+        getActiveSubgraphPath: () => [],
+        getActiveSubgraphTaskId: () => undefined,
+        getNodes: () => [layoutNode("task_1")],
+        getEdges: () => [],
+        undo,
+      });
+
+      const result = await bridge.autoLayout();
+
+      expect(result).toEqual({ success: true });
+      const task = spec.tasks.find((t) => t.$id === "task_1");
+      expect(task?.annotations.get(EDITOR_POSITION_ANNOTATION)).toBeDefined();
+      expect(undo.labels).toContain("Auto layout");
+    });
+
+    it("applies positions to the active subgraph, not the root spec", async () => {
+      const spec = new YamlDeserializer(
+        new IncrementingIdGenerator(),
+      ).deserialize(nestedPipelineYaml());
+      const preprocess = spec.tasks.find((t) => t.name === "Preprocess");
+      const inner = preprocess?.subgraphSpec;
+      if (!preprocess || !inner) {
+        throw new Error("Preprocess did not deserialize as a subgraph");
+      }
+      const dropNulls = inner.tasks.find((t) => t.name === "DropNulls");
+      if (!dropNulls) throw new Error("DropNulls task missing from subgraph");
+
+      const undo = new RecordingUndo();
+      const bridge = createEditorToolBridge({
+        getSpec: () => spec,
+        getActiveSubgraphPath: () => ["Preprocess"],
+        getActiveSubgraphTaskId: () => preprocess.$id,
+        getNodes: () => [layoutNode(dropNulls.$id)],
+        getEdges: () => [],
+        undo,
+      });
+
+      const result = await bridge.autoLayout();
+
+      expect(result).toEqual({ success: true });
+      expect(
+        dropNulls.annotations.get(EDITOR_POSITION_ANNOTATION),
+      ).toBeDefined();
+    });
+
+    it("fails when the bridge has no live canvas accessors", async () => {
+      const { bridge } = makeBridge();
+      const result = await bridge.autoLayout();
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("live pipeline canvas");
+    });
+
+    it("reports failure when there are no positioned nodes to arrange", async () => {
+      const spec = buildSpec();
+      const undo = new RecordingUndo();
+      const bridge = createEditorToolBridge({
+        getSpec: () => spec,
+        getActiveSubgraphPath: () => [],
+        getActiveSubgraphTaskId: () => undefined,
+        getNodes: () => [],
+        getEdges: () => [],
+        undo,
+      });
+
+      const result = await bridge.autoLayout();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("no positioned nodes");
     });
   });
 
