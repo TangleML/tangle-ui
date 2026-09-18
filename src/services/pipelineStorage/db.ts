@@ -42,9 +42,7 @@ pipelineStorageDb.on("ready", async () => {
     /**
      * This code may be revisited to ensure stability and performance.
      */
-    pipelineForRegistry.forEach(async (row) => {
-      await pipelineStorageDb.pipeline_registry.upsert(row.id, row);
-    });
+    await pipelineStorageDb.pipeline_registry.bulkPut(pipelineForRegistry);
   } catch (e) {
     console.error(e);
     throw e;

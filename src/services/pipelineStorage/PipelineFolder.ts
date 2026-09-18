@@ -3,6 +3,7 @@ import { action, makeObservable, observable } from "mobx";
 import { createDriver } from "./createDriver";
 import { pipelineStorageDb } from "./db";
 import { PipelineFile } from "./PipelineFile";
+import { withPipelineLock } from "./pipelineLock";
 import {
   addEntry,
   assertStorageKeyUnique,
@@ -243,18 +244,20 @@ async function resolveOrCreateRegistryEntry(
   folder: PipelineFolder,
   metadata?: FileMetadata,
 ): Promise<PipelineFile> {
-  const existing = await findByStorageKey(storageKey);
+  return withPipelineLock(`registry:${storageKey}`, async () => {
+    const existing = await findByStorageKey(storageKey);
 
-  if (existing) {
-    return new PipelineFile({
-      id: existing.id,
-      storageKey: existing.storageKey,
-      folder,
-      ...metadata,
-    });
-  }
+    if (existing) {
+      return new PipelineFile({
+        id: existing.id,
+        storageKey: existing.storageKey,
+        folder,
+        ...metadata,
+      });
+    }
 
-  const id = crypto.randomUUID();
-  await addEntry({ id, storageKey, folderId: folder.id });
-  return new PipelineFile({ id, storageKey, folder, ...metadata });
+    const id = crypto.randomUUID();
+    await addEntry({ id, storageKey, folderId: folder.id });
+    return new PipelineFile({ id, storageKey, folder, ...metadata });
+  });
 }
