@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
+import { InlineStack } from "@/components/ui/layout";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
@@ -7,7 +8,7 @@ import type { ProjectResourceSummary } from "@/services/projects/types";
 import { formatDate } from "@/utils/date";
 import { tracking } from "@/utils/tracking";
 
-import { removingDestroys } from "./resourceEntities";
+import { removingDestroys, resourceIcon } from "./resourceEntities";
 
 export const UNTITLED = "Untitled";
 
@@ -39,16 +40,30 @@ export function ResourceRow({
           type="button"
           onClick={() => onSelect(resource)}
           aria-pressed={selected}
-          className="block w-full cursor-pointer truncate text-left after:absolute after:inset-0"
+          className="block w-full cursor-pointer text-left after:absolute after:inset-0"
           {...tracking("projects.preview_resource")}
         >
-          <Text
-            size="sm"
-            weight={selected ? "medium" : "regular"}
-            tone={resource.name ? "inherit" : "subdued"}
+          <InlineStack
+            gap="2"
+            blockAlign="center"
+            wrap="nowrap"
+            className="w-full"
           >
-            {name}
-          </Text>
+            <Icon
+              name={resourceIcon(resource)}
+              size="sm"
+              className="shrink-0 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <Text
+              size="sm"
+              weight={selected ? "medium" : "regular"}
+              tone={resource.name ? "inherit" : "subdued"}
+              className="truncate"
+            >
+              {name}
+            </Text>
+          </InlineStack>
         </button>
       </TableCell>
 

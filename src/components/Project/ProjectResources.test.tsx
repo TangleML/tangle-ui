@@ -149,10 +149,11 @@ describe("ProjectResources", () => {
   });
 
   /**
-   * The API has to file a browser-held pipeline as a document, but a reader
-   * looking for their pipelines should find it with the pipelines.
+   * The project's tile counts by entity, straight from the API, and cannot tell
+   * a browser-held pipeline from any other document. The page counts the same
+   * way so the two never contradict each other.
    */
-  it("files a pipeline held in this browser with the pipelines", () => {
+  it("counts a browser-held pipeline the way the project's tile does", () => {
     mockResources({
       items: [
         resource({
@@ -174,7 +175,29 @@ describe("ProjectResources", () => {
     });
     renderResources();
 
-    expect(groupHeadings()).toEqual(["Pipelines (2)", "Documents (1)"]);
+    expect(groupHeadings()).toEqual(["Pipelines (1)", "Documents (2)"]);
+  });
+
+  it("keeps a browser-held pipeline in the order the project gave it", () => {
+    mockResources({
+      items: [
+        resource({
+          id: "a",
+          entity: "document",
+          name: "in this browser",
+          entityId: null,
+          extraData: { kind: "pipeline", localName: "in this browser" },
+        }),
+        resource({ id: "b", entity: "document", name: "Model card" }),
+      ],
+      totalCount: 2,
+    });
+    renderResources();
+
+    const names = [...document.querySelectorAll("tbody td:first-child")].map(
+      (cell) => cell.textContent,
+    );
+    expect(names).toEqual(["in this browser", "Model card"]);
   });
 
   it("promises a pipeline it only names is left in this browser", async () => {

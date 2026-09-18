@@ -22,6 +22,16 @@ export const entityIcon = (entity: string): IconName =>
   ENTITY_ICONS[entity] ?? UNKNOWN_ENTITY_ICON;
 
 /**
+ * A group is headed by what the API calls its rows, which leaves rows inside it
+ * that are not all the same thing — a browser-held pipeline is filed as a
+ * document. Each row therefore says what it is on its own.
+ */
+export const resourceIcon = (resource: ResourceRowShape): IconName =>
+  claimsLocalPipeline(resource)
+    ? entityIcon("pipeline")
+    : entityIcon(resource.entity);
+
+/**
  * A resource that points at something — a pipeline on the backend, an agent
  * session, a pipeline in this browser — only borrows it, so taking it out of
  * the project leaves it where it lives. A resource that carries its own
