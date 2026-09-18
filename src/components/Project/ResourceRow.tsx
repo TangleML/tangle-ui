@@ -1,10 +1,4 @@
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Text } from "@/components/ui/typography";
@@ -36,12 +30,12 @@ export function ResourceRow({
     >
       <TableCell className="max-w-0 overflow-hidden">
         {/* The pseudo-element makes the whole row the button's hit area
-            without nesting the actions menu inside a button. */}
+            without swallowing the remove button beside it. */}
         <button
           type="button"
           onClick={() => onSelect(resource)}
           aria-pressed={selected}
-          className="block w-full truncate text-left after:absolute after:inset-0"
+          className="block w-full cursor-pointer truncate text-left after:absolute after:inset-0"
           {...tracking("projects.preview_resource")}
         >
           <Text
@@ -61,27 +55,16 @@ export function ResourceRow({
       </TableCell>
 
       <TableCell className="w-8 pr-0">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="relative z-10 size-7"
-              aria-label={`Item actions: ${name}`}
-            >
-              <Icon name="EllipsisVertical" size="sm" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              className="text-destructive"
-              onSelect={() => onRemove(resource)}
-            >
-              <Icon name="Trash2" size="sm" />
-              Remove from project
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => onRemove(resource)}
+          className="relative z-10 size-7 text-muted-foreground hover:text-destructive"
+          aria-label={`Remove ${name} from this project`}
+          {...tracking("projects.remove_resource_open")}
+        >
+          <Icon name="Trash2" size="sm" />
+        </Button>
       </TableCell>
     </TableRow>
   );
