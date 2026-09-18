@@ -103,7 +103,6 @@ function ProjectDetail({ projectId }: { projectId: string | undefined }) {
           <ProjectResourcePreview
             projectId={project.id}
             resourceId={selectedResourceId}
-            onClear={() => setSelectedResourceId(null)}
           />
         </div>
 
