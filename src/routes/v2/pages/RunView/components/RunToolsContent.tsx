@@ -99,6 +99,7 @@ export const RunToolsContent = observer(function RunToolsContent({
         {isComplete && (
           <RerunPipelineButton
             componentSpec={componentSpec}
+            runId={runId}
             aria-label="Rerun pipeline"
             className={RAIL_TOOL_CLASS_NAME}
             tooltipSide="right"
@@ -170,6 +171,7 @@ export const RunToolsContent = observer(function RunToolsContent({
       {isComplete && (
         <RerunPipelineButton
           componentSpec={componentSpec}
+          runId={runId}
           displayLabel="Rerun pipeline"
           showTooltip={false}
           className={toolClassName}

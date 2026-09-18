@@ -23,13 +23,12 @@ import { Text } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
 import { getDefaultRunPath } from "@/routes/runRoutes";
-import { fetchRunAnnotations } from "@/services/pipelineRunService";
+import { runAnnotationsQueryOptions } from "@/services/runAnnotations";
 import {
   getAnnotationValue,
   getPipelineTagsFromAnnotations,
   RUN_SOURCE_ANNOTATION,
 } from "@/utils/annotations";
-import { TWENTY_FOUR_HOURS_IN_MS } from "@/utils/constants";
 import { formatDate } from "@/utils/date";
 import { getOverallExecutionStatusFromStats } from "@/utils/executionStatus";
 import { copyToClipboard } from "@/utils/string";
@@ -59,11 +58,7 @@ const RunRow = ({
   const runId = `${run.id}`;
 
   const { data: annotations } = useQuery({
-    queryKey: ["pipeline-run-annotations", runId],
-    queryFn: () => fetchRunAnnotations(runId, backendUrl),
-    enabled: !!runId,
-    refetchOnWindowFocus: false,
-    staleTime: TWENTY_FOUR_HOURS_IN_MS,
+    ...runAnnotationsQueryOptions(runId, backendUrl),
   });
 
   const name = run.pipeline_name ?? "Unknown pipeline";

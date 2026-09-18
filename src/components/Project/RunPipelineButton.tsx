@@ -7,8 +7,8 @@ import { useSubmitPipeline } from "@/components/shared/Submitters/Tangle/useSubm
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import useToastNotification from "@/hooks/useToastNotification";
-import { useBackend } from "@/providers/BackendProvider";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
+import { useBackend } from "@/providers/BackendProvider";
 import type { PipelineRun } from "@/types/pipelineRun";
 import type { ArgumentType, ComponentSpec } from "@/utils/componentSpec";
 import { tracking } from "@/utils/tracking";
