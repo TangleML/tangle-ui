@@ -3,16 +3,13 @@ import type { ReactNode } from "react";
 
 import { CodeViewer } from "@/components/shared/CodeViewer";
 import { InfoBox } from "@/components/shared/InfoBox";
-import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
 import { Heading } from "@/components/ui/typography";
 import type { ProjectResource } from "@/services/projects/types";
 import { useProjectResource } from "@/services/projects/useProjectResources";
 import { usePipelineSpec } from "@/services/usePipelineSpec";
-import { tracking } from "@/utils/tracking";
 import { componentSpecToText } from "@/utils/yaml";
 
 import { ColumnHeadingRow } from "./ColumnHeadingRow";
@@ -43,29 +40,16 @@ const CONTENT_KEY = "content";
 interface ProjectResourcePreviewProps {
   projectId: string;
   resourceId: string | null;
-  onClear: () => void;
 }
 
 export function ProjectResourcePreview({
   projectId,
   resourceId,
-  onClear,
 }: ProjectResourcePreviewProps) {
   return (
     <BlockStack gap="4">
       <ColumnHeadingRow>
         <Heading level={2}>Resource preview</Heading>
-        {resourceId && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClear}
-            {...tracking("projects.clear_preview")}
-          >
-            <Icon name="X" size="xs" />
-            Clear
-          </Button>
-        )}
       </ColumnHeadingRow>
 
       {resourceId ? (
