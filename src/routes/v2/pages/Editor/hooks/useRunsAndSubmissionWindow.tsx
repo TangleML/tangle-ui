@@ -6,7 +6,9 @@ import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 const RUNS_AND_SUBMISSION_WINDOW_ID = "runs-and-submission";
 
-export function useRunsAndSubmissionWindow() {
+export function useRunsAndSubmissionWindow({
+  renderSubmitter = false,
+}: { renderSubmitter?: boolean } = {}) {
   const { windows } = useSharedStores();
   useEffect(() => {
     if (windows.getWindowById(RUNS_AND_SUBMISSION_WINDOW_ID)) return;
@@ -22,7 +24,9 @@ export function useRunsAndSubmissionWindow() {
       disabledActions: ["close"],
       persisted: true,
       defaultDockState: "left",
-      miniContent: <RunsAndSubmissionWindowMiniContent />,
+      miniContent: (
+        <RunsAndSubmissionWindowMiniContent renderSubmitter={renderSubmitter} />
+      ),
     });
-  }, [windows]);
+  }, [windows, renderSubmitter]);
 }

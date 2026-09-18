@@ -118,7 +118,7 @@ const EmbeddedPipelineEditorCanvas = withSuspenseWrapper(
       useHistoryWindow();
 
       useRecentRunsWindow();
-      useRunsAndSubmissionWindow();
+      useRunsAndSubmissionWindow({ renderSubmitter: true });
       useUndoRedoKeyboard();
       useShortcutListener();
       useEditorEscapeShortcut();
