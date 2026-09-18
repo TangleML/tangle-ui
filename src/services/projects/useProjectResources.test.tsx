@@ -11,7 +11,12 @@ vi.mock("@/providers/BackendProvider", () => ({
 }));
 
 import * as projectResourcesService from "./projectResourcesService";
-import type { ProjectResource, ProjectResourcePage } from "./types";
+import type {
+  ProjectResource,
+  ProjectResourcePage,
+  ProjectResourceSummary,
+} from "./types";
+import { ProjectResourcesQueryKeys, ProjectRunsQueryKeys } from "./types";
 import {
   useCreateProjectResource,
   useDeleteProjectResource,
@@ -117,7 +122,28 @@ describe("project resource query hooks", () => {
 });
 
 describe("project resource mutation hooks", () => {
-  it("useCreateProjectResource invalidates resources and project detail", async () => {
+  const listKey = ProjectResourcesQueryKeys.List("p1", { pageSize: 100 });
+  const runsKey = ProjectRunsQueryKeys.List("p1");
+
+  function clientHoldingAList(items: ProjectResourceSummary[]) {
+    const client = makeClient();
+    client.setQueryData(listKey, {
+      items,
+      nextPageToken: null,
+      totalCount: items.length,
+    });
+    client.setQueryData(runsKey, {
+      items: [],
+      nextPageToken: null,
+      totalCount: 0,
+    });
+    return client;
+  }
+
+  const page = (client: QueryClient) =>
+    client.getQueryData<ProjectResourcePage>(listKey);
+
+  it("useCreateProjectResource refreshes the resources and the project", async () => {
     vi.mocked(projectResourcesService.createProjectResource).mockResolvedValue(
       resource,
     );
@@ -135,10 +161,13 @@ describe("project resource mutation hooks", () => {
     expect(invalidate).toHaveBeenCalledWith({
       queryKey: ["projects", "p1", "resources"],
     });
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["projects", "p1"] });
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: ["projects", "p1"],
+      exact: true,
+    });
   });
 
-  it("useUpdateProjectResource invalidates list and detail", async () => {
+  it("useUpdateProjectResource refreshes the resources and the project", async () => {
     vi.mocked(projectResourcesService.updateProjectResource).mockResolvedValue(
       resource,
     );
@@ -160,16 +189,74 @@ describe("project resource mutation hooks", () => {
       queryKey: ["projects", "p1", "resources"],
     });
     expect(invalidate).toHaveBeenCalledWith({
-      queryKey: ["projects", "p1", "resources", "r1"],
+      queryKey: ["projects", "p1"],
+      exact: true,
     });
   });
 
-  it("useDeleteProjectResource invalidates resources and project detail", async () => {
+  /**
+   * The row is gone before the request is: waiting for the delete and then a
+   * re-read of the list is two round trips in which nothing visibly happens.
+   */
+  it("useDeleteProjectResource takes the row out before the request finishes", async () => {
+    let finish = () => {};
+    vi.mocked(projectResourcesService.deleteProjectResource).mockReturnValue(
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+    );
+    const client = clientHoldingAList([
+      { ...resource, id: "r1" },
+      { ...resource, id: "r2" },
+    ]);
+
+    const { result } = renderHook(() => useDeleteProjectResource("p1"), {
+      wrapper: wrapperFor(client),
+    });
+
+    await act(async () => {
+      result.current.mutate("r1");
+    });
+
+    expect(page(client)?.items.map((item) => item.id)).toEqual(["r2"]);
+    expect(page(client)?.totalCount).toBe(1);
+
+    await act(async () => {
+      finish();
+    });
+  });
+
+  it("useDeleteProjectResource puts the row back when the request fails", async () => {
+    vi.mocked(projectResourcesService.deleteProjectResource).mockRejectedValue(
+      new Error("nope"),
+    );
+    const client = clientHoldingAList([
+      { ...resource, id: "r1" },
+      { ...resource, id: "r2" },
+    ]);
+
+    const { result } = renderHook(() => useDeleteProjectResource("p1"), {
+      wrapper: wrapperFor(client),
+    });
+
+    await act(async () => {
+      await result.current.mutateAsync("r1").catch(() => {});
+    });
+
+    expect(page(client)?.items.map((item) => item.id)).toEqual(["r1", "r2"]);
+    expect(page(client)?.totalCount).toBe(2);
+  });
+
+  /**
+   * The project's key is a prefix of its runs, so invalidating it loosely
+   * re-reads the run feed — and the resource list a second time — for a change
+   * that cannot have touched either.
+   */
+  it("useDeleteProjectResource leaves the run feed alone", async () => {
     vi.mocked(projectResourcesService.deleteProjectResource).mockResolvedValue(
       undefined,
     );
-    const client = makeClient();
-    const invalidate = vi.spyOn(client, "invalidateQueries");
+    const client = clientHoldingAList([{ ...resource, id: "r1" }]);
 
     const { result } = renderHook(() => useDeleteProjectResource("p1"), {
       wrapper: wrapperFor(client),
@@ -179,12 +266,6 @@ describe("project resource mutation hooks", () => {
       await result.current.mutateAsync("r1");
     });
 
-    expect(invalidate).toHaveBeenCalledWith({
-      queryKey: ["projects", "p1", "resources"],
-    });
-    expect(invalidate).toHaveBeenCalledWith({
-      queryKey: ["projects", "p1", "resources", "r1"],
-    });
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["projects", "p1"] });
+    expect(client.getQueryState(runsKey)?.isInvalidated).toBe(false);
   });
 });
