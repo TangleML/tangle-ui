@@ -9,6 +9,7 @@ import { createProjectResource } from "@/services/projects/projectResourcesServi
 import {
   createProject,
   deleteProject,
+  updateProject,
 } from "@/services/projects/projectsService";
 import { ProjectsQueryKeys } from "@/services/projects/types";
 import { useWorkspaces } from "@/services/projects/useWorkspaces";
@@ -41,11 +42,14 @@ export function useDebugInTangent() {
         workspaceId: workspace.id,
         name: `Debug: ${pipelineName}`,
         origin: "agent",
-        notes: buildDebugInstructions(runId),
         extraData: { startingPrompt: buildDebugStartingPrompt(runId) },
       });
 
       try {
+        await updateProject(project.id, {
+          notes: buildDebugInstructions(runId, project.id),
+        });
+
         const url = new URL(getDefaultRunPath(runId), window.location.origin)
           .href;
         await createProjectResource(project.id, {

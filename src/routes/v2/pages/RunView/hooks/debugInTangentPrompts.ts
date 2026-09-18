@@ -1,5 +1,9 @@
-export function buildDebugInstructions(runId: string): string {
+export function buildDebugInstructions(
+  runId: string,
+  projectId: string,
+): string {
   return [
+    `You are working within Tangent project ${projectId}.`,
     `Your goal is to diagnose and fix the failed pipeline run ${runId}.`,
     "The failed run is attached to this project as a resource.",
   ].join("\n");
