@@ -493,13 +493,11 @@ export const isGraphInputArgument = (
   typeof arg === "object" && arg !== null && "graphInput" in arg;
 
 export const isDynamicDataArgument = (
-  arg?: ArgumentType,
+  arg?: unknown,
 ): arg is DynamicDataArgument =>
   typeof arg === "object" && arg !== null && "dynamicData" in arg;
 
-export const isSecretArgument = (
-  arg?: ArgumentType,
-): arg is DynamicDataArgument =>
+export const isSecretArgument = (arg?: unknown): arg is DynamicDataArgument =>
   isDynamicDataArgument(arg) &&
   typeof arg.dynamicData === "object" &&
   arg.dynamicData !== null &&

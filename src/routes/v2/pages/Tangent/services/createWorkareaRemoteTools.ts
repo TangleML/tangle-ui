@@ -13,6 +13,7 @@ import type {
 } from "@/routes/v2/pages/Tangent/workarea/types";
 import {
   formatWorkareaTarget,
+  nameIdentity,
   parseIdentity,
   parseWorkareaTarget,
 } from "@/routes/v2/pages/Tangent/workarea/workareaTarget";
@@ -44,6 +45,8 @@ export interface WorkareaToolDeps {
   getEnvironmentId: (tabId: string) => string | undefined;
   waitForEnvironment: (tabId: string) => Promise<string | undefined>;
   runInspect: RunInspectDeps;
+  clonePipeline: (runId: string) => Promise<{ pipelineName: string }>;
+  refreshResources: () => Promise<void>;
 }
 
 interface WorkareaTabSummary {
@@ -150,8 +153,10 @@ const EXECUTION_ID_SCHEMA = {
 /**
  * The tab-management + run-inspect tools an agent uses to arrange and read the
  * Dynamic Workarea: open a resource, list open tabs, read the active tab, close
- * a tab, and inspect an open run. Spawnable (pipeline / run) tabs carry the
- * `environmentId` a sub-agent is spawned into.
+ * a tab, and inspect an open run. Spawnable (pipeline / run) tabs report an
+ * `environmentId` that identifies whether that tab's sub-agent host is
+ * connected; the server routes spawns to the prompting person's host, so an
+ * agent cannot pick one.
  *
  * `getDeps` reads the live handles per call so a single catalog instance always
  * acts on the current tab state without rebuilding the socket connection.
@@ -165,8 +170,8 @@ export function createWorkareaRemoteTools(
         "Open a target in the Dynamic Workarea and return the resulting tab. " +
         `${TARGET_DESCRIPTION} Returns the tab summary ` +
         "`{ id, kind, title, target, active }`. For a pipeline or run tab it " +
-        "also returns the `environmentId` to spawn a sub-agent into (its tools " +
-        "drive this exact tab).",
+        "also returns the `environmentId` and `ready` flag showing whether that " +
+        "tab's sub-agent host is connected.",
       inputSchema: {
         type: "object",
         properties: {
@@ -206,11 +211,34 @@ export function createWorkareaRemoteTools(
         );
       },
     },
+    clone_pipeline: {
+      description:
+        "Clone the pipeline behind a failed run into a new editable local " +
+        "pipeline so it can be fixed without touching the original. `runId` is " +
+        "optional and defaults to the active or only open run tab. The clone is " +
+        "attached to the project automatically (it shows up in Resources), so " +
+        "you do not need to attach or refresh it yourself. Returns the new " +
+        "pipeline `name` and a `pipeline://name/<name>` `target` to open with " +
+        "open_workarea_target.",
+      inputSchema: RUN_ID_SCHEMA,
+      execute: async (args) => {
+        const deps = getDeps();
+        const runId = resolveRunId(deps, optionalRunId(args));
+        const { pipelineName } = await deps.clonePipeline(runId);
+        return {
+          name: pipelineName,
+          target: formatWorkareaTarget({
+            type: "pipeline",
+            identity: nameIdentity(pipelineName),
+          }),
+        };
+      },
+    },
     list_workarea_tabs: {
       description:
         "List the tabs currently open in the Dynamic Workarea, each as `{ id, " +
         "kind, title, target, active }`. Pipeline and run tabs also include the " +
-        "`environmentId` to spawn a sub-agent into.",
+        "`environmentId` and `ready` flag for that tab's sub-agent host.",
       inputSchema: { type: "object", properties: {} },
       execute: () => {
         const deps = getDeps();
@@ -250,6 +278,18 @@ export function createWorkareaRemoteTools(
           throw new Error("`tabId` is required and must be a string.");
         }
         getDeps().closeTab(args.tabId);
+        return { ok: true };
+      },
+    },
+    refresh_project_resources: {
+      description:
+        "Refresh the project's resource list so the Resources window reflects " +
+        "the latest state. Call this after creating, updating, or deleting a " +
+        "project resource (e.g. a pipeline or run) that the user did not make " +
+        "through the UI, so the newly added or modified resource shows up.",
+      inputSchema: { type: "object", properties: {} },
+      execute: async () => {
+        await getDeps().refreshResources();
         return { ok: true };
       },
     },

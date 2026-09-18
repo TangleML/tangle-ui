@@ -59,3 +59,21 @@ export function extractTaskArguments(
       ),
   );
 }
+
+/**
+ * Task arguments safe to seed a cloned pipeline's inputs with: plain string
+ * values only. Secret arguments are dropped because they render as masked
+ * placeholders (`🔒 name`) rather than values a cloned input can hold.
+ */
+export function extractCloneableTaskArguments(
+  taskArguments: TaskSpecOutput["arguments"],
+  componentSpec?: ComponentSpec,
+): Record<string, string> {
+  const stringArguments = extractTaskArguments(taskArguments, componentSpec);
+  for (const [name, argument] of Object.entries(taskArguments ?? {})) {
+    if (isSecretArgument(argument)) {
+      delete stringArguments[name];
+    }
+  }
+  return stringArguments;
+}
