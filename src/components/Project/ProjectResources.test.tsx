@@ -60,8 +60,16 @@ function mockResources(page: Partial<ProjectResourcePage> = {}) {
   } as unknown as ReturnType<typeof useProjectResources>);
 }
 
-function renderResources() {
-  return render(<ProjectResources projectId="project-1" />);
+const onSelect = vi.fn();
+
+function renderResources(selectedResourceId: string | null = null) {
+  return render(
+    <ProjectResources
+      projectId="project-1"
+      selectedResourceId={selectedResourceId}
+      onSelect={onSelect}
+    />,
+  );
 }
 
 describe("ProjectResources", () => {
@@ -150,6 +158,26 @@ describe("ProjectResources", () => {
 
     await waitFor(() => expect(mutate).toHaveBeenCalled());
     expect(mutate).toHaveBeenCalledWith("resource-1", expect.anything());
+  });
+
+  it("stops previewing an item it just removed", async () => {
+    mockResources({ items: [resource()], totalCount: 1 });
+    renderResources("resource-1");
+    const user = userEvent.setup();
+
+    await user.click(
+      screen.getByRole("button", { name: "Item actions: Model card" }),
+    );
+    await user.click(
+      await screen.findByRole("menuitem", { name: /Remove from project/ }),
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Continue" }));
+
+    await waitFor(() => expect(mutate).toHaveBeenCalled());
+    const [, options] = mutate.mock.calls[0];
+    options.onSuccess();
+
+    expect(onSelect).toHaveBeenCalledWith(null);
   });
 
   it("keeps the item when the removal is dismissed", async () => {

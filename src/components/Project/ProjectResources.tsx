@@ -19,6 +19,7 @@ import {
 import { tracking } from "@/utils/tracking";
 
 import { AddResourceMenu } from "./AddResourceMenu";
+import { ColumnHeadingRow } from "./ColumnHeadingRow";
 import { ResourceCard, UNTITLED } from "./ResourceCard";
 import { entityLabel } from "./resourceEntities";
 
@@ -45,9 +46,15 @@ function entitiesPresent(resources: ProjectResourceSummary[]) {
 
 interface ProjectResourcesProps {
   projectId: string;
+  selectedResourceId: string | null;
+  onSelect: (resourceId: string | null) => void;
 }
 
-export function ProjectResources({ projectId }: ProjectResourcesProps) {
+export function ProjectResources({
+  projectId,
+  selectedResourceId,
+  onSelect,
+}: ProjectResourcesProps) {
   const [filter, setFilter] = useState(ALL);
 
   const { data, isPending, error } = useProjectResources(projectId, {
@@ -73,6 +80,9 @@ export function ProjectResources({ projectId }: ProjectResourcesProps) {
 
     removeResource.mutate(resource.id, {
       onSuccess: () => {
+        if (resource.id === selectedResourceId) {
+          onSelect(null);
+        }
         track("projects.remove_resource_completed", {
           entity: resource.entity,
         });
@@ -90,10 +100,10 @@ export function ProjectResources({ projectId }: ProjectResourcesProps) {
 
   return (
     <BlockStack gap="4">
-      <InlineStack gap="3" blockAlign="center">
+      <ColumnHeadingRow>
         <Heading level={2}>Resources</Heading>
         <AddResourceMenu projectId={projectId} />
-      </InlineStack>
+      </ColumnHeadingRow>
 
       {isPending && (
         <InlineStack gap="2" blockAlign="center">
@@ -142,6 +152,8 @@ export function ProjectResources({ projectId }: ProjectResourcesProps) {
               <ResourceCard
                 key={resource.id}
                 resource={resource}
+                selected={resource.id === selectedResourceId}
+                onSelect={(selected) => onSelect(selected.id)}
                 onRemove={handleRemove}
               />
             ))}

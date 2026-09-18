@@ -8,8 +8,10 @@ import {
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
+import { cn } from "@/lib/utils";
 import type { ProjectResourceSummary } from "@/services/projects/types";
 import { formatDate } from "@/utils/date";
+import { tracking } from "@/utils/tracking";
 
 import { entityIcon, entityLabel } from "./resourceEntities";
 
@@ -17,14 +19,28 @@ export const UNTITLED = "Untitled";
 
 interface ResourceCardProps {
   resource: ProjectResourceSummary;
+  selected: boolean;
+  onSelect: (resource: ProjectResourceSummary) => void;
   onRemove: (resource: ProjectResourceSummary) => void;
 }
 
-export function ResourceCard({ resource, onRemove }: ResourceCardProps) {
+export function ResourceCard({
+  resource,
+  selected,
+  onSelect,
+  onRemove,
+}: ResourceCardProps) {
   const name = resource.name ?? UNTITLED;
 
   return (
-    <div className="relative rounded-lg border border-border bg-card p-4 transition-colors hover:bg-muted/50">
+    <div
+      className={cn(
+        "relative rounded-lg border bg-card p-4 transition-colors",
+        selected
+          ? "border-primary bg-muted/60"
+          : "border-border hover:bg-muted/50",
+      )}
+    >
       <BlockStack gap="2">
         <InlineStack
           gap="1"
@@ -44,15 +60,23 @@ export function ResourceCard({ resource, onRemove }: ResourceCardProps) {
         </InlineStack>
 
         <div className="pr-8">
-          {resource.name ? (
-            <Text weight="medium" className="truncate">
+          {/* The pseudo-element makes the whole card the button's hit area
+              without nesting the actions menu inside a button. */}
+          <button
+            type="button"
+            onClick={() => onSelect(resource)}
+            aria-pressed={selected}
+            className="w-full text-left after:absolute after:inset-0 after:rounded-lg"
+            {...tracking("projects.preview_resource")}
+          >
+            <Text
+              weight="medium"
+              tone={resource.name ? "inherit" : "subdued"}
+              className="truncate"
+            >
               {name}
             </Text>
-          ) : (
-            <Text weight="medium" tone="subdued" className="truncate">
-              {UNTITLED}
-            </Text>
-          )}
+          </button>
         </div>
 
         <Text size="xs" tone="subdued" className="truncate">
@@ -65,7 +89,7 @@ export function ResourceCard({ resource, onRemove }: ResourceCardProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="absolute right-2 top-2"
+            className="absolute right-2 top-2 z-10"
             aria-label={`Item actions: ${name}`}
           >
             <Icon name="EllipsisVertical" size="sm" />

@@ -1,4 +1,5 @@
 import { Link, useParams } from "@tanstack/react-router";
+import { useState } from "react";
 
 import { InfoBox } from "@/components/shared/InfoBox";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -11,6 +12,7 @@ import { ProjectsApiError } from "@/services/projects/errors";
 import { useProject } from "@/services/projects/useProjects";
 
 import { ProjectHeader } from "./ProjectHeader";
+import { ProjectResourcePreview } from "./ProjectResourcePreview";
 import { ProjectResources } from "./ProjectResources";
 import { ProjectRuns } from "./ProjectRuns";
 import { ProjectSidebar } from "./ProjectSidebar";
@@ -55,6 +57,9 @@ const BackToProjects = () => (
 );
 
 function ProjectDetail({ projectId }: { projectId: string | undefined }) {
+  const [selectedResourceId, setSelectedResourceId] = useState<string | null>(
+    null,
+  );
   const { data: project, isPending, error } = useProject(projectId);
 
   if (isPending) {
@@ -80,17 +85,29 @@ function ProjectDetail({ projectId }: { projectId: string | undefined }) {
   }
 
   return (
-    <div className="flex w-full flex-col items-start gap-6 lg:flex-row lg:gap-10">
-      <div className="min-w-0 flex-1">
-        <BlockStack gap="6" className="max-w-5xl">
-          <ProjectHeader project={project} />
-          <ProjectResources projectId={project.id} />
+    <BlockStack gap="6">
+      <ProjectHeader project={project} />
+
+      <div className="flex w-full flex-col items-start gap-6 xl:flex-row xl:gap-8">
+        <BlockStack gap="6" className="w-full shrink-0 xl:w-104">
+          <ProjectResources
+            projectId={project.id}
+            selectedResourceId={selectedResourceId}
+            onSelect={setSelectedResourceId}
+          />
           <Separator />
           <ProjectRuns projectId={project.id} />
         </BlockStack>
-      </div>
 
-      <ProjectSidebar project={project} />
-    </div>
+        <div className="min-w-0 w-full flex-1">
+          <ProjectResourcePreview
+            projectId={project.id}
+            resourceId={selectedResourceId}
+          />
+        </div>
+
+        <ProjectSidebar project={project} />
+      </div>
+    </BlockStack>
   );
 }
