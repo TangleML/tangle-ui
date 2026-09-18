@@ -5,6 +5,7 @@ import { Text } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import { TangentChatPane } from "@/routes/v2/pages/Tangent/components/TangentChatPane";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
+import { ChatEntityRevealProvider } from "@/routes/v2/shared/components/AiChat/components/ChatEntityRevealContext";
 
 export const ProjectChatArea = observer(function ProjectChatArea() {
   const store = useTangentProject();
@@ -29,15 +30,23 @@ export const ProjectChatArea = observer(function ProjectChatArea() {
   }
 
   return (
-    <TangentChatPane
-      sessionId={activeSessionId}
-      tabs={store.chatTabs}
-      activeTab={store.chatActiveTab}
-      onTabChange={(value) => store.setChatActiveTab(value)}
-      onCloseTab={(id) => store.closeChatTab(id)}
-      onOpenArtifact={(url, title) => store.openArtifactTab(url, title)}
-      onSendPrompt={(content) => store.recordSessionPrompt(content)}
-      onError={(message) => notify(message, "error")}
-    />
+    <ChatEntityRevealProvider
+      value={{
+        revealEntity: (entityId, label) => {
+          store.revealEntity(entityId, label);
+        },
+      }}
+    >
+      <TangentChatPane
+        sessionId={activeSessionId}
+        tabs={store.chatTabs}
+        activeTab={store.chatActiveTab}
+        onTabChange={(value) => store.setChatActiveTab(value)}
+        onCloseTab={(id) => store.closeChatTab(id)}
+        onOpenArtifact={(url, title) => store.openArtifactTab(url, title)}
+        onSendPrompt={(content) => store.recordSessionPrompt(content)}
+        onError={(message) => notify(message, "error")}
+      />
+    </ChatEntityRevealProvider>
   );
 });

@@ -8,6 +8,7 @@ import { Text } from "@/components/ui/typography";
 import { DialogProvider } from "@/providers/DialogProvider/DialogProvider";
 import { useTheme } from "@/providers/ThemeProvider";
 import { getTangentSocketConfig } from "@/routes/v2/pages/Tangent/services/socketConfig";
+import { chatAnchorProtocols } from "@/routes/v2/shared/components/AiChat/components/chatAnchorProtocols";
 import { SharedStoreProvider } from "@/routes/v2/shared/store/SharedStoreContext";
 import { TOP_NAV_HEIGHT } from "@/utils/constants";
 
@@ -62,6 +63,7 @@ function TangentProjectPageContent({ projectId }: { projectId: string }) {
         colorScheme={resolvedTheme}
         socketUrl={socketUrl}
         socketPath={socketPath}
+        anchorProtocols={chatAnchorProtocols}
       >
         <SharedStoreProvider>
           <TangentProjectProvider projectId={projectId}>

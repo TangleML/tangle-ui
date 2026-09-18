@@ -19,6 +19,8 @@ import {
   idIdentity,
   sameTarget,
 } from "@/routes/v2/pages/Tangent/workarea/workareaTarget";
+import { resolveChatEntity } from "@/routes/v2/shared/components/AiChat/components/resolveChatEntity";
+import { navigateToEntity } from "@/routes/v2/shared/store/focus.actions";
 import type { SharedUIStore } from "@/routes/v2/shared/store/SharedStoreContext";
 import { getErrorMessage } from "@/utils/string";
 
@@ -336,6 +338,43 @@ export class TangentProjectStore {
 
   unregisterTabStore(tabId: string) {
     this.#tabStores.delete(tabId);
+  }
+
+  // Reveal an `entity://` chat chip: find the open pipeline tab whose live spec
+  // owns the entity, activate it, and focus the entity on its canvas. Returns
+  // false when no open pipeline tab resolves the id/label (the chip is inert).
+  revealEntity(entityId: string, label: string): boolean {
+    for (const tab of this.workareaTabs) {
+      if (tab.target.type !== "pipeline") continue;
+      const store = this.#tabStores.get(tab.id);
+      if (store && this.#focusEntityInStore(store, entityId, label)) {
+        this.selectWorkareaTab(tab.id);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  #focusEntityInStore(
+    store: SharedUIStore,
+    entityId: string,
+    label: string,
+  ): boolean {
+    const resolved = resolveChatEntity(
+      store.navigation.rootSpec,
+      entityId,
+      label,
+    );
+    if (!resolved) return false;
+    const rootName = store.navigation.rootSpec?.name;
+    navigateToEntity(
+      store.editor,
+      store.navigation,
+      rootName ? [rootName, ...resolved.subgraphTaskNames] : [],
+      resolved.entityId,
+      resolved.kind,
+    );
+    return true;
   }
 
   registerTabEnvironment(tabId: string, environmentId: string) {
