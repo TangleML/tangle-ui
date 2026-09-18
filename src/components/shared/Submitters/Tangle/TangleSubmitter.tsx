@@ -1,8 +1,10 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { AlertCircle, CheckCircle, Loader2, SendHorizonal } from "lucide-react";
 import { type MouseEvent, useRef, useState } from "react";
 
+import { RunProjectField } from "@/components/Project/RunProjectField";
+import { useRunProjectContext } from "@/components/Project/useRunProjectContext";
 import { useAwaitAuthorization } from "@/components/shared/Authentication/useAwaitAuthorization";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Button } from "@/components/ui/button";
@@ -12,94 +14,26 @@ import useCooldownTimer from "@/hooks/useCooldownTimer";
 import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
 import { useBackend } from "@/providers/BackendProvider";
-import { ONBOARDING_MY_RUN_COUNT_KEY } from "@/providers/OnboardingProvider/onboardingQueryKeys";
-import { useRunSubmissionAnnotations } from "@/providers/RunSubmissionScopeProvider";
 import { useTourMockBackend } from "@/providers/TourProvider/tourMockBackend";
 import { getDefaultRunPath } from "@/routes/runRoutes";
-import { updateRunAnnotation } from "@/services/pipelineRunService";
 import type { PipelineRun } from "@/types/pipelineRun";
-import {
-  getPipelineTagsFromSpec,
-  PIPELINE_RUN_NOTES_ANNOTATION,
-  PIPELINE_TAGS_ANNOTATION,
-} from "@/utils/annotations";
 import {
   type ArgumentType,
   type ComponentSpec,
   isGraphImplementation,
 } from "@/utils/componentSpec";
-import { submitPipelineRun } from "@/utils/submitPipeline";
 import { validateArguments } from "@/utils/validations";
 
-import { isAuthorizationRequired } from "../../Authentication/helpers";
-import { useAuthLocalStorage } from "../../Authentication/useAuthLocalStorage";
 import TooltipButton from "../../Buttons/TooltipButton";
 import { SubmitTaskArgumentsDialog } from "./components/SubmitTaskArgumentsDialog";
+import { saveRunAnnotations } from "./saveRunAnnotations";
+import { useSubmitPipeline } from "./useSubmitPipeline";
 
 interface TangleSubmitterProps {
   componentSpec?: ComponentSpec;
   onSubmitComplete?: () => void;
   isComponentTreeValid?: boolean;
   onlyFixableIssues?: boolean;
-}
-
-function useSubmitPipeline() {
-  const { awaitAuthorization, isAuthorized } = useAwaitAuthorization();
-  const queryClient = useQueryClient();
-  const { getToken } = useAuthLocalStorage();
-
-  const { backendUrl } = useBackend();
-  const runAnnotations = useRunSubmissionAnnotations();
-
-  const authorizationToken = useRef<string | undefined>(getToken());
-
-  return useMutation({
-    mutationFn: async ({
-      componentSpec,
-      taskArguments,
-      onSuccess,
-      onError,
-    }: {
-      componentSpec: ComponentSpec;
-      taskArguments?: Record<string, ArgumentType>;
-      onSuccess: (data: PipelineRun) => void;
-      onError: (error: Error | string) => void;
-    }) => {
-      const authorizationRequired = isAuthorizationRequired();
-      if (authorizationRequired && !isAuthorized) {
-        const token = await awaitAuthorization();
-        if (token) {
-          authorizationToken.current = token;
-        }
-      }
-
-      return new Promise<PipelineRun>((resolve, reject) => {
-        submitPipelineRun(componentSpec, backendUrl, {
-          authorizationToken: authorizationToken.current,
-          taskArguments,
-          runAnnotations,
-          onSuccess: (data) => {
-            resolve(data);
-            onSuccess(data);
-          },
-          onError: (error) => {
-            reject(error);
-            onError(error);
-          },
-        });
-      });
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["pipelineRuns"],
-      });
-      // Refresh the onboarding checklist's run-count so a first run flips
-      // `execute_run` immediately rather than after the 5-minute stale window.
-      await queryClient.invalidateQueries({
-        queryKey: ONBOARDING_MY_RUN_COUNT_KEY,
-      });
-    },
-  });
 }
 
 const TangleSubmitter = ({
@@ -113,6 +47,7 @@ const TangleSubmitter = ({
   const mockBackend = useTourMockBackend();
   const { mutate: submit, isPending: isSubmitting } = useSubmitPipeline();
   const isAutoRedirect = useFlagValue("redirect-on-new-pipeline-run");
+  const { projectIds } = useRunProjectContext();
 
   const [submitSuccess, setSubmitSuccess] = useState<boolean | null>(null);
   const [isArgumentsDialogOpen, setIsArgumentsDialogOpen] = useState(false);
@@ -122,19 +57,11 @@ const TangleSubmitter = ({
 
   const runNotes = useRef<string>("");
 
-  const { mutate: saveNotes } = useMutation({
+  const { mutate: saveAnnotations } = useMutation({
     mutationFn: (runId: string) =>
-      updateRunAnnotation(runId, backendUrl, {
-        key: PIPELINE_RUN_NOTES_ANNOTATION,
-        value: runNotes.current,
-      }),
-  });
-
-  const { mutate: saveTags } = useMutation({
-    mutationFn: (runId: string) =>
-      updateRunAnnotation(runId, backendUrl, {
-        key: PIPELINE_TAGS_ANNOTATION,
-        value: getPipelineTagsFromSpec(componentSpec).join(","),
+      saveRunAnnotations(runId, backendUrl, {
+        notes: runNotes.current,
+        componentSpec,
       }),
   });
 
@@ -169,14 +96,7 @@ const TangleSubmitter = ({
   };
 
   const onSuccess = (response: PipelineRun) => {
-    if (runNotes.current.trim() !== "") {
-      saveNotes(response.id.toString());
-    }
-
-    const tags = getPipelineTagsFromSpec(componentSpec);
-    if (tags.length > 0) {
-      saveTags(response.id.toString());
-    }
+    saveAnnotations(response.id.toString());
 
     setSubmitSuccess(true);
     setCooldownTime(3);
@@ -224,6 +144,7 @@ const TangleSubmitter = ({
     submit({
       componentSpec,
       taskArguments,
+      projectIds,
       onSuccess,
       onError,
     });
@@ -332,6 +253,7 @@ const TangleSubmitter = ({
           onCancel={() => setIsArgumentsDialogOpen(false)}
           onConfirm={handleSubmitWithArguments}
           componentSpec={componentSpec}
+          projectField={<RunProjectField pipelineName={componentSpec.name} />}
         />
       )}
     </>
