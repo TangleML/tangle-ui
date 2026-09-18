@@ -114,6 +114,41 @@ describe("ResourceRow", () => {
     expect(remove.className).toMatch(/text-destructive/);
   });
 
+  /**
+   * A row naming a pipeline in this browser carries no content of its own, so
+   * offering it as a deletion would suggest the pipeline is about to go.
+   */
+  it("does not offer to delete a pipeline it only names", () => {
+    renderRow({
+      entity: "document",
+      name: "Churn model",
+      entityId: null,
+      extraData: { kind: "pipeline", localName: "Churn model" },
+    });
+
+    const remove = screen.getByRole("button", {
+      name: "Remove Churn model from this project",
+    });
+
+    expect(remove.querySelector(".lucide-x")).toBeInTheDocument();
+    expect(remove.querySelector("[class*='trash']")).toBeNull();
+  });
+
+  it("keeps saying so when the pipeline it names can no longer be worked out", () => {
+    renderRow({
+      entity: "document",
+      name: "Churn model",
+      entityId: null,
+      extraData: { kind: "pipeline" },
+    });
+
+    expect(
+      screen.getByRole("button", {
+        name: "Remove Churn model from this project",
+      }).className,
+    ).not.toMatch(/text-destructive/);
+  });
+
   it("asks to remove the item it belongs to", async () => {
     const { onRemove } = renderRow();
     const user = userEvent.setup();

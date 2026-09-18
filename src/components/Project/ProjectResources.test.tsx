@@ -148,6 +148,61 @@ describe("ProjectResources", () => {
     expect(groupHeadings()).toEqual(["Documents (1)", "Widgets (1)"]);
   });
 
+  /**
+   * The API has to file a browser-held pipeline as a document, but a reader
+   * looking for their pipelines should find it with the pipelines.
+   */
+  it("files a pipeline held in this browser with the pipelines", () => {
+    mockResources({
+      items: [
+        resource({
+          id: "a",
+          entity: "pipeline",
+          name: "on the backend",
+          entityId: "pipeline-9",
+        }),
+        resource({
+          id: "b",
+          entity: "document",
+          name: "in this browser",
+          entityId: null,
+          extraData: { kind: "pipeline", localName: "in this browser" },
+        }),
+        resource({ id: "c", entity: "document", name: "Model card" }),
+      ],
+      totalCount: 3,
+    });
+    renderResources();
+
+    expect(groupHeadings()).toEqual(["Pipelines (2)", "Documents (1)"]);
+  });
+
+  it("promises a pipeline it only names is left in this browser", async () => {
+    mockResources({
+      items: [
+        resource({
+          entity: "document",
+          name: "Churn model",
+          entityId: null,
+          extraData: { kind: "pipeline", localName: "Churn model" },
+        }),
+      ],
+      totalCount: 1,
+    });
+    renderResources();
+    const user = userEvent.setup();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Remove Churn model from this project",
+      }),
+    );
+
+    const dialog = await screen.findByRole("alertdialog");
+    expect(dialog).toHaveTextContent("stays in this browser");
+    expect(dialog).not.toHaveTextContent(/only copy/);
+  });
+
   it("gives the columns headings of their own", () => {
     mockResources({ items: [resource()], totalCount: 1 });
     renderResources();
