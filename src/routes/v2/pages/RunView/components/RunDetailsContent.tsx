@@ -18,7 +18,10 @@ import {
   getRunSourceMessage,
   RunSourceIcon,
 } from "@/components/shared/RunSource";
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { TagList } from "@/components/shared/Tags/TagList";
+import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Paragraph, Text } from "@/components/ui/typography";
@@ -26,6 +29,7 @@ import { useUserDetails } from "@/hooks/useUserDetails";
 import type { ComponentSpec } from "@/models/componentSpec";
 import { useBackend } from "@/providers/BackendProvider";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
+import { useDebugInTangent } from "@/routes/v2/pages/RunView/hooks/useDebugInTangent";
 import { PipelineDetailsCollapsibleSection } from "@/routes/v2/shared/components/PipelineDetailsCollapsibleSection";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { fetchRunAnnotations } from "@/services/pipelineRunService";
@@ -42,8 +46,11 @@ import {
   getExecutionStatusLabel,
   getOverallExecutionStatusFromStats,
 } from "@/utils/executionStatus";
+import { tracking } from "@/utils/tracking";
 
 import { RunDetailsHeader } from "./RunDetailsHeader";
+
+const FAILURE_STATUSES = ["FAILED", "SYSTEM_ERROR", "INVALID"];
 
 export const RunDetailsContent = observer(function RunDetailsContent() {
   const { configured } = useBackend();
@@ -115,6 +122,11 @@ function RunDetailsContentLoaded({
     getOverallExecutionStatusFromStats(executionStatusStats);
   const statusLabel = getExecutionStatusLabel(overallStatus);
 
+  const tangentShellEnabled = useFlagValue("tangent-shell");
+  const isFailedRun = FAILURE_STATUSES.includes(overallStatus ?? "");
+  const showDebugInTangent =
+    tangentShellEnabled && isFailedRun && !!metadata?.id;
+
   const specAnnotations = spec.annotations;
   const pipelineNotes = specAnnotations.get(PIPELINE_NOTES_ANNOTATION);
   const tags = specAnnotations.get(PIPELINE_TAGS_ANNOTATION);
@@ -130,6 +142,15 @@ function RunDetailsContentLoaded({
         executionStatusStats={executionStatusStats}
         statusLabel={statusLabel}
       />
+
+      {showDebugInTangent && metadata?.id && (
+        <BlockStack className="shrink-0 px-4 pb-2">
+          <DebugInTangentButton
+            runId={metadata.id}
+            pipelineName={spec.name ?? "Unnamed Pipeline"}
+          />
+        </BlockStack>
+      )}
 
       <Separator />
 
@@ -190,6 +211,32 @@ function RunDetailsContentLoaded({
         </PipelineDetailsCollapsibleSection>
       </BlockStack>
     </BlockStack>
+  );
+}
+
+interface DebugInTangentButtonProps {
+  runId: string;
+  pipelineName: string;
+}
+
+function DebugInTangentButton({
+  runId,
+  pipelineName,
+}: DebugInTangentButtonProps) {
+  const { debug, isPending } = useDebugInTangent();
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      className="w-full"
+      disabled={isPending}
+      onClick={() => debug({ runId, pipelineName })}
+      {...tracking("v2.run_view.debug_in_tangent")}
+    >
+      <Icon name="Bug" size="sm" />
+      {isPending ? "Starting…" : "Debug in Tangent"}
+    </Button>
   );
 }
 

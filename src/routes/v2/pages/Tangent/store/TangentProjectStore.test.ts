@@ -1,5 +1,13 @@
 import type { EmbedAgent, EmbedAsset } from "@tangent/embed-react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  type Mock,
+  vi,
+} from "vitest";
 
 import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import { ComponentSpec, Input, Output, Task } from "@/models/componentSpec";
@@ -11,6 +19,7 @@ import {
   CHAT_TAB_VALUE,
   PRIME_AGENT_ID,
   TangentProjectStore,
+  type TangentSessionIo,
 } from "./TangentProjectStore";
 
 const SESSION_A = "session-a";
@@ -366,6 +375,124 @@ describe("TangentProjectStore.revealEntity", () => {
     store.openResolvedView({ title: "P1", target: pipeline("p1") });
 
     expect(store.revealEntity("task_1", "Load CSV")).toBe(false);
+  });
+});
+
+interface StartSessionIoMock extends TangentSessionIo {
+  newSession: Mock<TangentSessionIo["newSession"]>;
+  attachSession: Mock<TangentSessionIo["attachSession"]>;
+  detachSession: Mock<TangentSessionIo["detachSession"]>;
+  notify: Mock<TangentSessionIo["notify"]>;
+}
+
+function makeSessionIo(projectNotes?: string | null): StartSessionIoMock {
+  return {
+    newSession: vi
+      .fn<TangentSessionIo["newSession"]>()
+      .mockResolvedValue({ sessionId: "new-session" }),
+    attachSession: vi
+      .fn<TangentSessionIo["attachSession"]>()
+      .mockResolvedValue({ id: "resource-1" }),
+    detachSession: vi
+      .fn<TangentSessionIo["detachSession"]>()
+      .mockResolvedValue(undefined),
+    notify: vi.fn<TangentSessionIo["notify"]>(),
+    projectNotes,
+  };
+}
+
+describe("TangentProjectStore.startSession", () => {
+  it("seeds project notes as a session-scoped memory resource", async () => {
+    const store = new TangentProjectStore("project-1");
+    const io = makeSessionIo("Prefer concise plans.");
+    store.setSessionIo(io);
+
+    await store.startSession();
+
+    expect(io.newSession).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      {
+        name: "New Tangent session",
+        resources: [
+          {
+            kind: "memory",
+            scope: "session",
+            content: "Prefer concise plans.",
+          },
+        ],
+      },
+    );
+  });
+
+  it("omits resources when notes are null", async () => {
+    const store = new TangentProjectStore("project-1");
+    const io = makeSessionIo(null);
+    store.setSessionIo(io);
+
+    await store.startSession();
+
+    const options = io.newSession.mock.calls[0][2];
+    expect(options.resources).toBeUndefined();
+  });
+
+  it("omits resources when notes are only whitespace", async () => {
+    const store = new TangentProjectStore("project-1");
+    const io = makeSessionIo("   \n  ");
+    store.setSessionIo(io);
+
+    await store.startSession();
+
+    const options = io.newSession.mock.calls[0][2];
+    expect(options.resources).toBeUndefined();
+  });
+
+  it("attaches the session after creating it", async () => {
+    const store = new TangentProjectStore("project-1");
+    const io = makeSessionIo("Notes");
+    store.setSessionIo(io);
+
+    await store.startSession();
+
+    expect(io.attachSession).toHaveBeenCalledWith("new-session");
+    expect(io.newSession.mock.invocationCallOrder[0]).toBeLessThan(
+      io.attachSession.mock.invocationCallOrder[0],
+    );
+  });
+
+  it("runs the opening turn with the given prompt and session name", async () => {
+    const store = new TangentProjectStore("project-1");
+    const io = makeSessionIo(null);
+    store.setSessionIo(io);
+
+    await store.startSession({
+      prompt: "Fix the failed run",
+      name: "Debug session",
+    });
+
+    const [prompt, , options] = io.newSession.mock.calls[0];
+    expect(prompt).toBe("Fix the failed run");
+    expect(options.name).toBe("Debug session");
+  });
+
+  it("keeps a prompted session out of auto-discard", async () => {
+    const store = new TangentProjectStore("project-1");
+    const io = makeSessionIo(null);
+    store.setSessionIo(io);
+
+    await store.startSession({ prompt: "Fix it" });
+    await store.discardActiveSessionOnUnmount();
+
+    expect(io.detachSession).not.toHaveBeenCalled();
+  });
+
+  it("reports success only when a session was created", async () => {
+    const withoutIo = new TangentProjectStore("project-1");
+    await expect(withoutIo.startSession()).resolves.toBe(false);
+
+    const withIo = new TangentProjectStore("project-1");
+    withIo.setSessionIo(makeSessionIo(null));
+    await expect(withIo.startSession()).resolves.toBe(true);
   });
 });
 

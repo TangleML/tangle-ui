@@ -20,6 +20,7 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import type { RemoteEnvWorkerApi } from "@/agent/createRemoteEnvWorkerApi";
 import { useAuthLocalStorage } from "@/components/shared/Authentication/useAuthLocalStorage";
+import { buildTaskSpecShape } from "@/components/shared/PipelineRunNameTemplate/types";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
@@ -33,13 +34,66 @@ import {
 } from "@/routes/v2/pages/Tangent/services/createWorkareaRemoteTools";
 import { createRemoteEnvAgentWorker } from "@/routes/v2/pages/Tangent/services/remoteEnvAgentWorker";
 import { createRemoteEnvHost } from "@/routes/v2/pages/Tangent/services/remoteEnvHost";
+import { localPipelineByNameResourceExtraData } from "@/routes/v2/pages/Tangent/workarea/resourceExtraData";
 import { createDebugBridgeHandlers } from "@/routes/v2/shared/components/AiChat/toolBridge/debugBridge";
 import { createRunBridgeHandlers } from "@/routes/v2/shared/components/AiChat/toolBridge/runBridge";
 import type { BridgeDeps } from "@/routes/v2/shared/components/AiChat/toolBridge/utils";
+import { copyRunToPipeline } from "@/services/pipelineRunService";
+import { createProjectResource } from "@/services/projects/projectResourcesService";
+import {
+  ProjectResourcesQueryKeys,
+  ProjectsQueryKeys,
+} from "@/services/projects/types";
+import { extractCanonicalName } from "@/utils/canonicalPipelineName";
+import { isValidComponentSpec } from "@/utils/componentSpec";
+import { getInitialName } from "@/utils/getComponentName";
+import { extractCloneableTaskArguments } from "@/utils/nodes/taskArguments";
 
 interface TangentProjectAgentProviderProps {
   sessionId: string | undefined;
   children: ReactNode;
+}
+
+/**
+ * @todo: deduplicate with ClonePipelineButton
+ */
+async function clonePipelineFromRun(
+  runInspect: RunInspectDeps,
+  runId: string,
+): Promise<{ pipelineName: string }> {
+  const run = await runInspect.getRunDetails(runId);
+  const rootExecutionId = run.root_execution_id;
+  if (!rootExecutionId) {
+    throw new Error(`Run ${runId} has no root execution to clone.`);
+  }
+  const details = await runInspect.getExecutionDetails(rootExecutionId);
+  const componentSpec = details.task_spec.componentRef.spec;
+
+  if (!isValidComponentSpec(componentSpec)) {
+    throw new Error(`Run ${runId} has no pipeline spec to clone.`);
+  }
+  const taskArguments = extractCloneableTaskArguments(
+    details.task_spec.arguments,
+  );
+  // The API types the spec as ComponentSpecOutput (nullable name); the domain
+  // ComponentSpec differs only in that nullability and is handled at runtime by
+  // downstream consumers, matching useRunViewLoadState.
+  const canonicalName = extractCanonicalName(
+    buildTaskSpecShape(details?.task_spec, componentSpec),
+  );
+
+  const name = getInitialName(componentSpec, canonicalName);
+  const result = await copyRunToPipeline(
+    componentSpec,
+    runId,
+    name,
+    taskArguments,
+  );
+
+  if (!result.name) {
+    throw new Error(`Failed to clone the pipeline for run ${runId}.`);
+  }
+  return { pipelineName: result.name };
 }
 
 export function TangentProjectAgentProvider({
@@ -103,6 +157,17 @@ export function TangentProjectAgentProvider({
     void workerRef.current?.setAiConfig(aiConfig);
   }, [aiConfig]);
 
+  const refreshProjectResources = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: ProjectResourcesQueryKeys.All(store.projectId),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ProjectsQueryKeys.Id(store.projectId),
+      }),
+    ]);
+  };
+
   const [tools] = useState(() =>
     createWorkareaRemoteTools(() => ({
       openTarget: (target, title) => store.openWorkareaTarget(target, title),
@@ -112,6 +177,18 @@ export function TangentProjectAgentProvider({
       getEnvironmentId: (id) => store.getTabEnvironmentId(id),
       waitForEnvironment: (id) => store.waitForTabEnvironment(id),
       runInspect,
+      clonePipeline: async (runId) => {
+        const { pipelineName } = await clonePipelineFromRun(runInspect, runId);
+        await createProjectResource(store.projectId, {
+          entity: "document",
+          name: pipelineName,
+          extraData: localPipelineByNameResourceExtraData(pipelineName),
+          payload: {},
+        });
+        await refreshProjectResources();
+        return { pipelineName };
+      },
+      refreshResources: refreshProjectResources,
     })),
   );
   const [routingBridge] = useState(() =>

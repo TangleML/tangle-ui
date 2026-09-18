@@ -18,6 +18,12 @@ export interface RemoteEnvToken {
   expiresAtMs?: number;
 }
 
+/** Body of `POST /api/embed/remote-env-token` (mirrors `RemoteEnvTokenRequest`). */
+interface RemoteEnvTokenRequestBody {
+  sessionId: string;
+  environmentId?: string;
+}
+
 const REMOTE_ENV_TOKEN_PATH = "/api/embed/remote-env-token";
 
 function parseExpiresAtMs(value: unknown): number | undefined {
@@ -49,10 +55,11 @@ function readFallbackToken(): string | undefined {
 }
 
 /**
- * `environmentId` pins a stable identity across token refreshes: the server
- * routes an agent's spawns to a specific `environmentId` within a session, so a
- * caller hosting one environment must keep it rather than take a fresh
- * server-minted id on every refresh. Omit to accept the server's id.
+ * `environmentId` asks the server to keep this host's place across token
+ * refreshes: the server reuses the id when it is free, but mints a fresh one
+ * when another person's live host already holds it. So the pin is a request,
+ * not a guarantee — the response's `environmentId` is authoritative. Omit to
+ * always take a server-minted id.
  */
 export interface FetchRemoteEnvTokenParams {
   baseUrl: string;
@@ -81,13 +88,14 @@ export async function fetchRemoteEnvToken({
   };
   if (authToken) headers.Authorization = `Bearer ${authToken}`;
 
+  const body: RemoteEnvTokenRequestBody = {
+    sessionId,
+    ...(environmentId ? { environmentId } : {}),
+  };
   const response = await fetch(url, {
     method: "POST",
     headers,
-    body: JSON.stringify({
-      sessionId,
-      ...(environmentId ? { environmentId } : {}),
-    }),
+    body: JSON.stringify(body),
   });
   if (!response.ok) {
     throw new Error(
@@ -99,6 +107,7 @@ export async function fetchRemoteEnvToken({
   if (!parsed) {
     throw new Error("Remote-env token response was malformed.");
   }
-  // Keep the caller's stable id authoritative so it survives token refreshes.
-  return environmentId ? { ...parsed, environmentId } : parsed;
+  // The server decides the id: it honors the pin when free, else mints a fresh
+  // one. The socket lives under the token's claimed id, so the response wins.
+  return parsed;
 }

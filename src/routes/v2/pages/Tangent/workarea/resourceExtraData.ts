@@ -3,6 +3,7 @@ import {
   formatWorkareaTarget,
   idIdentity,
   isWorkareaTargetString,
+  nameIdentity,
 } from "./workareaTarget";
 
 export interface ResourceExtraData {
@@ -35,6 +36,18 @@ export function localPipelineResourceExtraData(
     identity: formatWorkareaTarget({
       type: "pipeline",
       identity: idIdentity(fileId),
+    }),
+  };
+}
+
+export function localPipelineByNameResourceExtraData(
+  name: string,
+): Record<string, unknown> {
+  return {
+    type: "local_pipeline",
+    identity: formatWorkareaTarget({
+      type: "pipeline",
+      identity: nameIdentity(name),
     }),
   };
 }

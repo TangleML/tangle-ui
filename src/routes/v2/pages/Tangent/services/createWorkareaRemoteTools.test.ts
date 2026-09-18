@@ -63,6 +63,8 @@ function makeDeps(overrides: Partial<WorkareaToolDeps> = {}): WorkareaToolDeps {
     getEnvironmentId: () => undefined,
     waitForEnvironment: vi.fn().mockResolvedValue(undefined),
     runInspect: makeRunInspect(),
+    clonePipeline: vi.fn(),
+    refreshResources: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }
@@ -291,6 +293,54 @@ describe("createWorkareaRemoteTools", () => {
     expect(closeTab).toHaveBeenCalledWith("tab-1");
 
     expect(() => tools.close_workarea_tab.execute({})).toThrow(/tabId/);
+  });
+
+  it("refresh_project_resources refreshes the resource list and returns ok", async () => {
+    const refreshResources = vi.fn().mockResolvedValue(undefined);
+    const tools = createWorkareaRemoteTools(() =>
+      makeDeps({ refreshResources }),
+    );
+
+    const result = await tools.refresh_project_resources.execute({});
+
+    expect(refreshResources).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({ ok: true });
+  });
+
+  it("clone_pipeline clones the resolved run tab and returns the new pipeline target", async () => {
+    const clonePipeline = vi
+      .fn()
+      .mockResolvedValue({ pipelineName: "My Pipeline (Copy)" });
+    const tools = createWorkareaRemoteTools(() =>
+      makeDeps({
+        getTabs: () => [runTab("tab-run", "run-42")],
+        getActiveTabId: () => "tab-run",
+        clonePipeline,
+      }),
+    );
+
+    const result = await tools.clone_pipeline.execute({});
+
+    expect(clonePipeline).toHaveBeenCalledWith("run-42");
+    expect(result).toEqual({
+      name: "My Pipeline (Copy)",
+      target: "pipeline://name/My Pipeline (Copy)",
+    });
+  });
+
+  it("clone_pipeline prefers an explicit runId over the open tabs", async () => {
+    const clonePipeline = vi.fn().mockResolvedValue({ pipelineName: "P" });
+    const tools = createWorkareaRemoteTools(() =>
+      makeDeps({
+        getTabs: () => [runTab("tab-run", "run-open")],
+        getActiveTabId: () => "tab-run",
+        clonePipeline,
+      }),
+    );
+
+    await tools.clone_pipeline.execute({ runId: "run-explicit" });
+
+    expect(clonePipeline).toHaveBeenCalledWith("run-explicit");
   });
 
   describe("run inspect tools", () => {
