@@ -57,8 +57,13 @@ function mockDeleteProject({ isPending = false } = {}) {
   } as unknown as ReturnType<typeof useDeleteProject>);
 }
 
-function renderCard(overrides: Partial<ProjectSummary> = {}) {
-  return render(<ProjectCard project={{ ...project, ...overrides }} />);
+function renderCard(
+  overrides: Partial<ProjectSummary> = {},
+  props: { showAuthor?: boolean } = {},
+) {
+  return render(
+    <ProjectCard project={{ ...project, ...overrides }} {...props} />,
+  );
 }
 
 async function openDeleteConfirmation(overrides: Partial<ProjectSummary> = {}) {
@@ -122,6 +127,25 @@ describe("ProjectCard", () => {
 
     expect(mutate).not.toHaveBeenCalled();
     expect(screen.queryByRole("alertdialog")).toBeNull();
+  });
+
+  it("leaves the author off by default", () => {
+    renderCard();
+
+    expect(screen.queryByText("someone@example.com")).toBeNull();
+  });
+
+  it("names the author when asked to", () => {
+    renderCard({}, { showAuthor: true });
+
+    expect(screen.getByText("someone@example.com")).toBeInTheDocument();
+  });
+
+  it("stays quiet about an author nobody recorded", () => {
+    renderCard({ createdBy: null }, { showAuthor: true });
+
+    expect(screen.getByText("Churn model")).toBeInTheDocument();
+    expect(screen.queryByText("someone@example.com")).toBeNull();
   });
 
   it("says nothing about the workspace a project lives in", () => {

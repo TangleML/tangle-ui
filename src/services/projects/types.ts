@@ -117,6 +117,7 @@ export const ProjectsQueryKeys = {
   Id: (id: string) => ["projects", id] as const,
   List: (params: ListProjectsParams = {}) =>
     ["projects", "list", params] as const,
+  EveryPage: () => ["projects", "list", "every-page"] as const,
 } as const;
 
 export const ProjectResourcesQueryKeys = {

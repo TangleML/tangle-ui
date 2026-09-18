@@ -32,9 +32,10 @@ import {
 
 interface ProjectCardProps {
   project: ProjectSummary;
+  showAuthor?: boolean;
 }
 
-export function ProjectCard({ project }: ProjectCardProps) {
+export function ProjectCard({ project, showAuthor = false }: ProjectCardProps) {
   const deleteProject = useDeleteProject();
   const notify = useToastNotification();
   const { track } = useAnalytics();
@@ -125,6 +126,23 @@ export function ProjectCard({ project }: ProjectCardProps) {
           </Text>
           <Separator />
           <BlockStack gap="1">
+            {showAuthor && project.createdBy && (
+              <InlineStack
+                gap="1"
+                blockAlign="center"
+                wrap="nowrap"
+                className="w-full"
+              >
+                <Icon
+                  name="User"
+                  size="xs"
+                  className="shrink-0 text-muted-foreground"
+                />
+                <Text size="xs" tone="subdued" className="truncate">
+                  {project.createdBy}
+                </Text>
+              </InlineStack>
+            )}
             <Text size="xs" tone="subdued" className="truncate">
               {`Created ${formatDate(project.createdAt)}`}
             </Text>
