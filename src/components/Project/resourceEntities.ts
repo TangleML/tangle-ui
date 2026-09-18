@@ -21,15 +21,41 @@ const UNKNOWN_ENTITY_ICON: IconName = "Box";
 export const entityIcon = (entity: string): IconName =>
   ENTITY_ICONS[entity] ?? UNKNOWN_ENTITY_ICON;
 
+const LOCAL_PIPELINE_LABEL = "Local pipeline";
+
+const LABEL_LIMIT = 24;
+
+function humanize(value: string) {
+  const words = value.replaceAll(/[_-]+/g, " ").trim().slice(0, LABEL_LIMIT);
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+const sameAs = (label: string, entity: string) =>
+  label.toLowerCase() === humanize(entity).toLowerCase();
+
 /**
- * A group is headed by what the API calls its rows, which leaves rows inside it
- * that are not all the same thing — a browser-held pipeline is filed as a
- * document. Each row therefore says what it is on its own.
+ * A group is headed by the entity the API files its rows under, which leaves a
+ * group holding rows that are not all the same thing — a browser-held pipeline
+ * is filed as a document. Whatever a row's `extra_data` calls itself is
+ * therefore said on the row, and a row calling itself what its group already
+ * says stays quiet. The text is the backend's, and anyone may PATCH it, so it
+ * is cut to a length a badge can hold.
  */
-export const resourceIcon = (resource: ResourceRowShape): IconName =>
-  claimsLocalPipeline(resource)
-    ? entityIcon("pipeline")
-    : entityIcon(resource.entity);
+export function resourceKindLabel(
+  resource: ResourceRowShape,
+): string | undefined {
+  if (claimsLocalPipeline(resource)) {
+    return LOCAL_PIPELINE_LABEL;
+  }
+
+  const kind = resource.extraData?.kind;
+  if (typeof kind !== "string") {
+    return undefined;
+  }
+
+  const label = humanize(kind);
+  return label && !sameAs(label, resource.entity) ? label : undefined;
+}
 
 /**
  * A resource that points at something — a pipeline on the backend, an agent
