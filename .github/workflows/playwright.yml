@@ -66,6 +66,9 @@ jobs:
         env:
           VITE_BACKEND_API_URL: http://localhost:8000
 
+      - name: Run remote pipeline tests
+        run: pnpm run test:e2e:remote
+
       - name: Upload HTML report
         uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
