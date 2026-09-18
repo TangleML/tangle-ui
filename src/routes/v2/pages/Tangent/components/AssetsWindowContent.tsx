@@ -1,17 +1,19 @@
 import type { EmbedAsset } from "@tangent/embed-react";
 import { AssetList } from "@tangent/embed-react";
+import { observer } from "mobx-react-lite";
 
 import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 
-export function AssetsWindowContent() {
-  const { activeSessionId, tabs, onOpenArtifact } = useTangentProject();
+export const AssetsWindowContent = observer(function AssetsWindowContent() {
+  const store = useTangentProject();
+  const activeSessionId = store.activeSessionId;
 
   function handleOpenAsset(asset: EmbedAsset) {
-    tabs.selectAsset(asset);
+    store.selectAsset(asset);
     if (asset.kind !== "trigger") {
-      onOpenArtifact(asset.url, asset.title);
+      store.openArtifactTab(asset.url, asset.title);
     }
   }
 
@@ -28,8 +30,8 @@ export function AssetsWindowContent() {
   return (
     <AssetList
       sessionId={activeSessionId}
-      selectedId={tabs.selectedAssetId}
+      selectedId={store.selectedAssetId}
       onOpen={handleOpenAsset}
     />
   );
-}
+});
