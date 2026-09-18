@@ -13,6 +13,7 @@ import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { InlineStack } from "@/components/ui/layout";
 import { ComponentLibraryProvider } from "@/providers/ComponentLibraryProvider";
 import { ForcedSearchProvider } from "@/providers/ComponentLibraryProvider/ForcedSearchProvider";
+import { RunSubmissionScopeProvider } from "@/providers/RunSubmissionScopeProvider";
 import { NodeRegistryProvider } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { SpecProvider } from "@/routes/v2/shared/providers/SpecContext";
 import { useShortcutListener } from "@/routes/v2/shared/shortcuts/useShortcutListener";
@@ -47,6 +48,7 @@ import { TangentEditorAgentProvider } from "./TangentEditorAgentProvider";
 
 interface EmbeddedPipelineEditorProps {
   pipelineRef: PipelineRef;
+  projectId: string;
   onStoreReady?: (store: SharedUIStore) => void;
   onStoreClosed?: () => void;
   sessionId?: string;
@@ -163,6 +165,7 @@ const EmbeddedPipelineEditorCanvas = withSuspenseWrapper(
 
 export function EmbeddedPipelineEditor({
   pipelineRef,
+  projectId,
   onStoreReady,
   onStoreClosed,
   sessionId,
@@ -173,31 +176,36 @@ export function EmbeddedPipelineEditor({
   onBridgeClosed,
 }: EmbeddedPipelineEditorProps) {
   return (
-    <div className="h-full w-full flex flex-col bg-slate-100 dark:bg-background select-none">
-      <SharedStoreProvider>
-        <SharedStoreRegistrar onReady={onStoreReady} onClosed={onStoreClosed} />
-        <EditorSessionProvider>
-          <ComponentLibraryProvider>
-            <ComponentEditorProvider>
-              <ReactFlowProvider>
-                <ForcedSearchProvider>
-                  <DriverPermissionGate pipelineRef={pipelineRef}>
-                    <EmbeddedPipelineEditorCanvas
-                      pipelineRef={pipelineRef}
-                      sessionId={sessionId}
-                      environmentId={environmentId}
-                      onEnvironmentReady={onEnvironmentReady}
-                      onEnvironmentClosed={onEnvironmentClosed}
-                      onBridgeReady={onBridgeReady}
-                      onBridgeClosed={onBridgeClosed}
-                    />
-                  </DriverPermissionGate>
-                </ForcedSearchProvider>
-              </ReactFlowProvider>
-            </ComponentEditorProvider>
-          </ComponentLibraryProvider>
-        </EditorSessionProvider>
-      </SharedStoreProvider>
-    </div>
+    <RunSubmissionScopeProvider projectId={projectId}>
+      <div className="h-full w-full flex flex-col bg-slate-100 dark:bg-background select-none">
+        <SharedStoreProvider>
+          <SharedStoreRegistrar
+            onReady={onStoreReady}
+            onClosed={onStoreClosed}
+          />
+          <EditorSessionProvider>
+            <ComponentLibraryProvider>
+              <ComponentEditorProvider>
+                <ReactFlowProvider>
+                  <ForcedSearchProvider>
+                    <DriverPermissionGate pipelineRef={pipelineRef}>
+                      <EmbeddedPipelineEditorCanvas
+                        pipelineRef={pipelineRef}
+                        sessionId={sessionId}
+                        environmentId={environmentId}
+                        onEnvironmentReady={onEnvironmentReady}
+                        onEnvironmentClosed={onEnvironmentClosed}
+                        onBridgeReady={onBridgeReady}
+                        onBridgeClosed={onBridgeClosed}
+                      />
+                    </DriverPermissionGate>
+                  </ForcedSearchProvider>
+                </ReactFlowProvider>
+              </ComponentEditorProvider>
+            </ComponentLibraryProvider>
+          </EditorSessionProvider>
+        </SharedStoreProvider>
+      </div>
+    </RunSubmissionScopeProvider>
   );
 }

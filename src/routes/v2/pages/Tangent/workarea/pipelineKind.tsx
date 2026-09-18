@@ -25,6 +25,7 @@ registerWorkareaKind({
   render: (tab, hostProps) => (
     <EmbeddedPipelineEditor
       pipelineRef={toPipelineRef(tab.target, tab.title)}
+      projectId={hostProps.projectId}
       onStoreReady={(store) => hostProps.registerTabStore(tab.id, store)}
       onStoreClosed={() => hostProps.unregisterTabStore(tab.id)}
       sessionId={hostProps.sessionId}

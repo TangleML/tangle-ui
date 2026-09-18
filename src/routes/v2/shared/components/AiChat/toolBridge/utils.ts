@@ -33,6 +33,7 @@ export interface BridgeDeps {
   getEdges?: () => Edge[];
   getBackendUrl?: () => string;
   getAuthToken?: () => string | undefined;
+  getRunAnnotations?: () => Record<string, string>;
   queryClient?: QueryClient;
 }
 

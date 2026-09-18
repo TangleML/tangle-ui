@@ -13,6 +13,7 @@ registerWorkareaKind({
     return (
       <EmbeddedRunView
         runId={runId}
+        projectId={hostProps.projectId}
         onStoreReady={(store) => hostProps.registerTabStore(tab.id, store)}
         onStoreClosed={() => hostProps.unregisterTabStore(tab.id)}
         sessionId={hostProps.sessionId}
