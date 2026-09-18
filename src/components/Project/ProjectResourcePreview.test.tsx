@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ProjectResource } from "@/services/projects/types";
@@ -13,6 +14,17 @@ vi.mock("@/services/projects/useProjectResources", () => ({
 
 vi.mock("@/services/usePipelineSpec", () => ({
   usePipelineSpec: vi.fn(),
+}));
+
+vi.mock("@tanstack/react-router", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@tanstack/react-router")>()),
+  Link: ({ to, children }: { to: string; children: ReactNode }) => (
+    <a href={to}>{children}</a>
+  ),
+}));
+
+vi.mock("@/routes/editorRoutes", () => ({
+  getDefaultEditorPath: (name: string) => `/editor/${name}`,
 }));
 
 vi.mock("@/components/shared/CodeViewer", () => ({
@@ -59,7 +71,13 @@ function mockSpec(
   value: Partial<ReturnType<typeof usePipelineSpec>> = {},
 ): void {
   vi.mocked(usePipelineSpec).mockReturnValue({
-    data: { name: "Churn training", implementation: { graph: { tasks: {} } } },
+    data: {
+      editorName: "churn training",
+      spec: {
+        name: "Churn training",
+        implementation: { graph: { tasks: {} } },
+      },
+    },
     isPending: false,
     error: null,
     ...value,
@@ -125,6 +143,28 @@ describe("ProjectResourcePreview", () => {
     expect(usePipelineSpec).toHaveBeenCalledWith("pipeline-1");
     expect(viewer()).toHaveAttribute("data-language", "yaml");
     expect(viewer()).toHaveTextContent("name: Churn training");
+  });
+
+  it("offers a way into the editor for the pipeline it is showing", () => {
+    mockResource({
+      entity: "pipeline",
+      name: "churn-training-v2",
+      entityId: "pipeline-1",
+      payload: null,
+    });
+    renderPreview("resource-1");
+
+    expect(
+      screen.getByRole("link", { name: /Open in the editor/ }),
+    ).toHaveAttribute("href", "/editor/churn training");
+  });
+
+  it("offers no editor link for something that is not a pipeline", () => {
+    renderPreview("resource-1");
+
+    expect(
+      screen.queryByRole("link", { name: /Open in the editor/ }),
+    ).toBeNull();
   });
 
   it("says a pipeline cannot be shown rather than showing an empty viewer", () => {
