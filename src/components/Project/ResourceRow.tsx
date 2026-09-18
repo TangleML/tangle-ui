@@ -1,3 +1,4 @@
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
@@ -8,7 +9,7 @@ import type { ProjectResourceSummary } from "@/services/projects/types";
 import { formatDate } from "@/utils/date";
 import { tracking } from "@/utils/tracking";
 
-import { removingDestroys, resourceIcon } from "./resourceEntities";
+import { removingDestroys, resourceKindLabel } from "./resourceEntities";
 
 export const UNTITLED = "Untitled";
 
@@ -27,6 +28,7 @@ export function ResourceRow({
 }: ResourceRowProps) {
   const name = resource.name ?? UNTITLED;
   const destroys = removingDestroys(resource);
+  const kindLabel = resourceKindLabel(resource);
 
   return (
     <TableRow
@@ -34,37 +36,36 @@ export function ResourceRow({
       data-state={selected ? "selected" : undefined}
     >
       <TableCell className="max-w-0 overflow-hidden">
-        {/* The pseudo-element makes the whole row the button's hit area
-            without swallowing the remove button beside it. */}
-        <button
-          type="button"
-          onClick={() => onSelect(resource)}
-          aria-pressed={selected}
-          className="block w-full cursor-pointer text-left after:absolute after:inset-0"
-          {...tracking("projects.preview_resource")}
+        <InlineStack
+          gap="2"
+          blockAlign="center"
+          wrap="nowrap"
+          className="w-full"
         >
-          <InlineStack
-            gap="2"
-            blockAlign="center"
-            wrap="nowrap"
-            className="w-full"
+          {/* The pseudo-element makes the whole row the button's hit area
+              without swallowing the remove button beside it. */}
+          <button
+            type="button"
+            onClick={() => onSelect(resource)}
+            aria-pressed={selected}
+            className="min-w-0 cursor-pointer truncate text-left after:absolute after:inset-0"
+            {...tracking("projects.preview_resource")}
           >
-            <Icon
-              name={resourceIcon(resource)}
-              size="sm"
-              className="shrink-0 text-muted-foreground"
-              aria-hidden="true"
-            />
             <Text
               size="sm"
               weight={selected ? "medium" : "regular"}
               tone={resource.name ? "inherit" : "subdued"}
-              className="truncate"
             >
               {name}
             </Text>
-          </InlineStack>
-        </button>
+          </button>
+
+          {kindLabel && (
+            <Badge size="sm" variant="secondary">
+              {kindLabel}
+            </Badge>
+          )}
+        </InlineStack>
       </TableCell>
 
       <TableCell className="text-right">
