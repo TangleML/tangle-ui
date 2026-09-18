@@ -86,7 +86,7 @@ export function ProjectResources({
     const confirmed = await triggerConfirmation({
       title: `Remove "${resource.name ?? UNTITLED}" from this project?`,
       description:
-        "This takes the item out of the project. It does not delete what the item points at.",
+        "This only takes it out of this project. The item itself is not deleted and stays wherever it lives.",
     });
 
     if (!confirmed) return;
