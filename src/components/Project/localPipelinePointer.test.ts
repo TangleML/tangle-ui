@@ -5,8 +5,8 @@ import type { ProjectResourceSummary } from "@/services/projects/types";
 import {
   claimsLocalPipeline,
   localPipelineInput,
-  PointerTooLargeError,
   pointerOf,
+  PointerTooLargeError,
   resourceKind,
 } from "./localPipelinePointer";
 

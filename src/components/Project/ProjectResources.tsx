@@ -27,6 +27,7 @@ import {
 
 import { AddResourceMenu } from "./AddResourceMenu";
 import { ColumnHeadingRow } from "./ColumnHeadingRow";
+import { claimsLocalPipeline, resourceKind } from "./localPipelinePointer";
 import { entityIcon, removingDestroys } from "./resourceEntities";
 import { ResourceRow, UNTITLED } from "./ResourceRow";
 
@@ -43,25 +44,36 @@ const capitalize = (value: string) =>
 const groupHeading = (entity: string, count: number) =>
   `${capitalize(pluralize(entity, PLURAL))} (${count})`;
 
-function groupByEntity(resources: ProjectResourceSummary[]) {
+function removalConsequence(resource: ProjectResourceSummary) {
+  if (claimsLocalPipeline(resource)) {
+    return "This only takes it out of this project. The pipeline itself stays in this browser.";
+  }
+  if (removingDestroys(resource)) {
+    return "This is the only copy, so deleting it here deletes it for good.";
+  }
+  return "This only takes it out of this project. The item itself is not deleted and stays wherever it lives.";
+}
+
+function groupByKind(resources: ProjectResourceSummary[]) {
   const grouped = new Map<string, ProjectResourceSummary[]>();
   for (const resource of resources) {
-    const existing = grouped.get(resource.entity);
+    const kind = resourceKind(resource);
+    const existing = grouped.get(kind);
     if (existing) {
       existing.push(resource);
     } else {
-      grouped.set(resource.entity, [resource]);
+      grouped.set(kind, [resource]);
     }
   }
 
-  const known = ENTITY_ORDER.filter((entity) => grouped.has(entity));
+  const known = ENTITY_ORDER.filter((kind) => grouped.has(kind));
   const unknown = [...grouped.keys()]
-    .filter((entity) => !ENTITY_ORDER.includes(entity))
+    .filter((kind) => !ENTITY_ORDER.includes(kind))
     .sort();
 
-  return [...known, ...unknown].map((entity) => ({
-    entity,
-    items: grouped.get(entity) ?? [],
+  return [...known, ...unknown].map((kind) => ({
+    kind,
+    items: grouped.get(kind) ?? [],
   }));
 }
 
@@ -92,19 +104,12 @@ export function ProjectResources({
     const destroys = removingDestroys(resource);
     const name = resource.name ?? UNTITLED;
 
-    const confirmed = await triggerConfirmation(
-      destroys
-        ? {
-            title: `Delete "${name}"?`,
-            description:
-              "This is the only copy, so deleting it here deletes it for good.",
-          }
-        : {
-            title: `Remove "${name}" from this project?`,
-            description:
-              "This only takes it out of this project. The item itself is not deleted and stays wherever it lives.",
-          },
-    );
+    const confirmed = await triggerConfirmation({
+      title: destroys
+        ? `Delete "${name}"?`
+        : `Remove "${name}" from this project?`,
+      description: removalConsequence(resource),
+    });
 
     if (!confirmed) return;
 
@@ -172,8 +177,8 @@ export function ProjectResources({
               </TableHead>
             </TableRow>
           </TableHeader>
-          {groupByEntity(resources).map(({ entity, items }) => (
-            <TableBody key={entity}>
+          {groupByKind(resources).map(({ kind, items }) => (
+            <TableBody key={kind}>
               <TableRow className="hover:bg-transparent">
                 <TableHead
                   colSpan={COLUMN_COUNT}
@@ -182,13 +187,13 @@ export function ProjectResources({
                 >
                   <InlineStack gap="1" blockAlign="center" wrap="nowrap">
                     <Icon
-                      name={entityIcon(entity)}
+                      name={entityIcon(kind)}
                       size="xs"
                       className="shrink-0 text-muted-foreground"
                       aria-hidden="true"
                     />
                     <Text size="xs" tone="subdued">
-                      {groupHeading(entity, items.length)}
+                      {groupHeading(kind, items.length)}
                     </Text>
                   </InlineStack>
                 </TableHead>
