@@ -1,3 +1,4 @@
+import { APP_ROUTES } from "@/routes/appRoutes";
 import { RUNS_BASE_PATH } from "@/routes/router";
 import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
 
@@ -218,6 +219,15 @@ const normalizeUrl = (url: string) => {
   return normalizedUrl;
 };
 
+const toAbsoluteAppUrl = (path: string): string => {
+  const basepath = BASE_URL.replace(/\/$/, "");
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+
+  return IS_GITHUB_PAGES
+    ? `${origin}${basepath}/#${path}`
+    : `${origin}${basepath}${path}`;
+};
+
 const getArtifactPreviewUrl = (
   artifactId: string,
   type?: string,
@@ -228,14 +238,18 @@ const getArtifactPreviewUrl = (
   if (name) search.set("name", name);
   const query = search.toString() ? `?${search}` : "";
 
-  const basepath = BASE_URL.replace(/\/$/, "");
-  const path = `/artifact/${encodeURIComponent(artifactId)}${query}`;
-
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
-  return IS_GITHUB_PAGES
-    ? `${origin}${basepath}/#${path}`
-    : `${origin}${basepath}${path}`;
+  return toAbsoluteAppUrl(
+    `/artifact/${encodeURIComponent(artifactId)}${query}`,
+  );
 };
+
+const getProjectUrl = (projectId: string): string =>
+  toAbsoluteAppUrl(
+    APP_ROUTES.PROJECT_DETAIL.replace(
+      "$projectId",
+      encodeURIComponent(projectId),
+    ),
+  );
 
 export {
   buildComponentSourceUrl,
@@ -248,6 +262,7 @@ export {
   downloadYamlFromComponentText,
   getArtifactPreviewUrl,
   getIdOrTitleFromPath,
+  getProjectUrl,
   isGithubUrl,
   normalizeUrl,
   parseHttpUrl,

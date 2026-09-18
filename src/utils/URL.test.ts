@@ -7,6 +7,7 @@ import {
   convertHfUrlToDirectoryUrl,
   downloadYamlFromComponentText,
   getIdOrTitleFromPath,
+  getProjectUrl,
   normalizeUrl,
   parseHttpUrl,
   toAbsoluteHttpUrl,
@@ -59,6 +60,20 @@ describe("toAbsoluteHttpUrl", () => {
     expect(toAbsoluteHttpUrl(42)).toBeNull();
     expect(toAbsoluteHttpUrl({ url: "https://example.com" })).toBeNull();
     expect(toAbsoluteHttpUrl(["https://example.com"])).toBeNull();
+  });
+});
+
+describe("getProjectUrl", () => {
+  it("builds an absolute url for the project's own page", () => {
+    expect(getProjectUrl("abc-123")).toBe(
+      `${window.location.origin}/projects/abc-123`,
+    );
+  });
+
+  it("escapes an id that would otherwise change the path", () => {
+    expect(getProjectUrl("a/b?c")).toBe(
+      `${window.location.origin}/projects/a%2Fb%3Fc`,
+    );
   });
 });
 

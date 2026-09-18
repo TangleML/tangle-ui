@@ -26,6 +26,8 @@ import { DashboardFavoritesView } from "./Dashboard/DashboardFavoritesView";
 import { DashboardHomeView } from "./Dashboard/DashboardHomeView";
 import { DashboardLayout } from "./Dashboard/DashboardLayout";
 import { DashboardPipelinesView } from "./Dashboard/DashboardPipelinesView";
+import { DashboardProjectDetailView } from "./Dashboard/DashboardProjectDetailView";
+import { DashboardProjectsView } from "./Dashboard/DashboardProjectsView";
 import { DashboardRecentlyViewedView } from "./Dashboard/DashboardRecentlyViewedView";
 import { DashboardRunsView } from "./Dashboard/DashboardRunsView";
 import { LearnExamplesView } from "./Dashboard/Learn/LearnExamplesView";
@@ -128,6 +130,28 @@ const dashboardComponentsV2Route = createRoute({
   beforeLoad: ({ search }) => {
     if (!isFlagEnabled("component-search-v2")) {
       throw redirect({ to: APP_ROUTES.DASHBOARD_COMPONENTS, search });
+    }
+  },
+});
+
+const dashboardProjectsRoute = createRoute({
+  getParentRoute: () => dashboardRoute,
+  path: APP_ROUTES.PROJECTS,
+  component: DashboardProjectsView,
+  beforeLoad: () => {
+    if (!isFlagEnabled("projects")) {
+      throw redirect({ to: APP_ROUTES.DASHBOARD });
+    }
+  },
+});
+
+const dashboardProjectDetailRoute = createRoute({
+  getParentRoute: () => dashboardRoute,
+  path: APP_ROUTES.PROJECT_DETAIL,
+  component: DashboardProjectDetailView,
+  beforeLoad: () => {
+    if (!isFlagEnabled("projects")) {
+      throw redirect({ to: APP_ROUTES.DASHBOARD });
     }
   },
 });
@@ -406,6 +430,8 @@ const dashboardRouteTree = dashboardRoute.addChildren([
   welcomeRoute,
   dashboardRunsRoute,
   dashboardPipelinesRoute,
+  dashboardProjectsRoute,
+  dashboardProjectDetailRoute,
   dashboardComponentsRoute,
   dashboardComponentsV2Route,
   dashboardFavoritesRoute,
