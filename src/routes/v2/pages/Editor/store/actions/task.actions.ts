@@ -138,12 +138,16 @@ export function applyAutoLayoutPositions(
   undo: UndoGroupable,
   spec: ComponentSpec,
   layoutedNodes: Node[],
-) {
-  undo.withGroup("Auto layout", () => {
+): number {
+  return undo.withGroup("Auto layout", () => {
+    let appliedCount = 0;
     for (const node of layoutedNodes) {
       const manifest = editorRegistry.getByNodeId(spec, node.id);
-      manifest?.updatePosition(undo, spec, node.id, node.position);
+      if (!manifest) continue;
+      manifest.updatePosition(undo, spec, node.id, node.position);
+      appliedCount += 1;
     }
+    return appliedCount;
   });
 }
 

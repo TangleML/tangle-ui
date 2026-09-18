@@ -13,6 +13,7 @@ import type {
   ToolBridgeApi,
   ValidationResult,
 } from "@/agent/toolBridgeApi";
+import { autoLayoutNodes } from "@/components/shared/ReactFlow/FlowCanvas/utils/autolayout";
 import {
   describeBindingEndpointProblem,
   findBindingEndpointProblems,
@@ -41,6 +42,7 @@ import {
 } from "@/routes/v2/pages/Editor/store/actions/pipeline.actions";
 import {
   addTask,
+  applyAutoLayoutPositions,
   deleteTask,
   renameTask,
   unpackSubgraphTask,
@@ -93,6 +95,7 @@ type CsomHandlers = Pick<
   | "setTaskArgument"
   | "createSubgraph"
   | "unpackSubgraph"
+  | "autoLayout"
   | "validatePipeline"
 >;
 
@@ -464,6 +467,38 @@ export function createCsomBridgeHandlers(deps: CsomBridgeDeps): CsomHandlers {
           unpackSubgraphTask(deps.undo, location.spec, taskEntityId),
         (location) => explainNotASubgraph(location, taskEntityId),
       );
+    },
+
+    async autoLayout() {
+      const root = requireSpec(deps);
+      if (!deps.getNodes || !deps.getEdges) {
+        return {
+          success: false,
+          error:
+            "Auto-layout is unavailable here — it needs a live pipeline canvas.",
+        };
+      }
+      const destination = resolveDestination(
+        root,
+        deps.getActiveSubgraphTaskId(),
+      );
+      if (!destination.ok) {
+        return { success: false, error: destination.error };
+      }
+      const layoutedNodes = autoLayoutNodes(deps.getNodes(), deps.getEdges());
+      const appliedCount = applyAutoLayoutPositions(
+        deps.undo,
+        destination.spec,
+        layoutedNodes,
+      );
+      if (appliedCount === 0) {
+        return {
+          success: false,
+          error:
+            "Auto-layout made no changes — the visible canvas has no positioned nodes to arrange.",
+        };
+      }
+      return { success: true };
     },
 
     async validatePipeline(): Promise<ValidationResult> {

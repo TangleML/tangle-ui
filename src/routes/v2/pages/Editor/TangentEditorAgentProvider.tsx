@@ -10,6 +10,7 @@
  * Must render inside the embed's `SharedStoreProvider` + `EditorSessionProvider`
  * so `useSharedStores` / `useEditorSession` resolve this tab's live stores.
  */
+import { useReactFlow } from "@xyflow/react";
 import { type ReactNode, useState } from "react";
 
 import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
@@ -42,6 +43,7 @@ export function TangentEditorAgentProvider({
   const { navigation } = useSharedStores();
   const editorSession = useEditorSession();
   const { getBackendUrl, getAuthToken, queryClient } = useLazyBridgeAuth();
+  const { getNodes, getEdges } = useReactFlow();
 
   // A single bridge instance per mount: every method re-reads the live spec,
   // active subgraph, and backend/auth values lazily, so navigation and config
@@ -52,6 +54,8 @@ export function TangentEditorAgentProvider({
       getActiveSubgraphPath: () =>
         navigation.navigationPath.slice(1).map((entry) => entry.displayName),
       getActiveSubgraphTaskId: () => navigation.parentContext?.taskId,
+      getNodes,
+      getEdges,
       getBackendUrl,
       getAuthToken,
       queryClient,

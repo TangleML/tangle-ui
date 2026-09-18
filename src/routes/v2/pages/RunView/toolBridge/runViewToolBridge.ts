@@ -41,6 +41,7 @@ type ReadOnlyCsomHandlers = Pick<
   | "setTaskArgument"
   | "createSubgraph"
   | "unpackSubgraph"
+  | "autoLayout"
   | "validatePipeline"
   | "searchComponents"
 >;
@@ -112,6 +113,9 @@ function createReadOnlyCsomHandlers(deps: BridgeDeps): ReadOnlyCsomHandlers {
       return { success: false, error: READ_ONLY_ERROR };
     },
     async unpackSubgraph() {
+      return { success: false, error: READ_ONLY_ERROR };
+    },
+    async autoLayout() {
       return { success: false, error: READ_ONLY_ERROR };
     },
   };
