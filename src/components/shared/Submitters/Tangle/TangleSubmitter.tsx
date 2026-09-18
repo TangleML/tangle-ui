@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { AlertCircle, CheckCircle, Loader2, SendHorizonal } from "lucide-react";
 import { type MouseEvent, useRef, useState } from "react";
 
+import { useRunProjectContext } from "@/components/Project/useRunProjectContext";
 import { useAwaitAuthorization } from "@/components/shared/Authentication/useAwaitAuthorization";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,7 @@ const TangleSubmitter = ({
   const mockBackend = useTourMockBackend();
   const { mutate: submit, isPending: isSubmitting } = useSubmitPipeline();
   const isAutoRedirect = useFlagValue("redirect-on-new-pipeline-run");
+  const { projectIds } = useRunProjectContext();
 
   const [submitSuccess, setSubmitSuccess] = useState<boolean | null>(null);
   const [isArgumentsDialogOpen, setIsArgumentsDialogOpen] = useState(false);
@@ -141,6 +143,7 @@ const TangleSubmitter = ({
     submit({
       componentSpec,
       taskArguments,
+      projectIds,
       onSuccess,
       onError,
     });
