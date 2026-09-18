@@ -3,6 +3,7 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  notFound,
   Outlet,
   redirect,
 } from "@tanstack/react-router";
@@ -408,7 +409,7 @@ const tangentProjectRoute = createRoute({
   component: TangentProjectPage,
   beforeLoad: () => {
     if (!isFlagEnabled("tangent-shell")) {
-      throw redirect({ to: APP_ROUTES.DASHBOARD });
+      throw notFound();
     }
   },
 });
