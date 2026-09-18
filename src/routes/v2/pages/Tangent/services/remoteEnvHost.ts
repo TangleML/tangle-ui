@@ -40,6 +40,11 @@ const THINKING_STATUS_LABELS = new Set([
   "Preparing response...",
 ]);
 
+// The worker runs the whole turn before streaming any text, so the sub-agent's
+// message bubble would sit empty until `end`. This first delta fills it at once;
+// the finalized `end` replaces the whole message with the real answer.
+const WORKING_ON_IT_DELTA = "Working on it…";
+
 function generateMessageId(): string {
   return `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 }
@@ -219,6 +224,12 @@ export function createRemoteEnvHost(
       turnSessionId,
       agentId,
       { type: "start", messageId },
+      runId,
+    );
+    client?.agentEvent(
+      turnSessionId,
+      agentId,
+      { type: "delta", messageId, delta: WORKING_ON_IT_DELTA },
       runId,
     );
 
