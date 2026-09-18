@@ -17,6 +17,8 @@ import { useProjectRuns } from "@/services/projects/useProjectRuns";
 import { formatDate } from "@/utils/date";
 import { tracking } from "@/utils/tracking";
 
+import { ProjectRunStatus } from "./ProjectRunStatus";
+
 const UNNAMED_PIPELINE = "Unnamed pipeline";
 
 interface ProjectRunsProps {
@@ -51,31 +53,48 @@ export function ProjectRuns({ projectId }: ProjectRunsProps) {
       )}
 
       {data && data.items.length > 0 && (
-        <Table>
+        <Table className="table-fixed">
           <TableHeader>
-            <TableRow>
-              <TableHead>Pipeline</TableHead>
-              <TableHead>Started</TableHead>
-              <TableHead>Started by</TableHead>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="px-2">
+                <Text size="xs" tone="subdued">
+                  Pipeline
+                </Text>
+              </TableHead>
+              <TableHead className="w-28 px-2">
+                <Text size="xs" tone="subdued">
+                  Status
+                </Text>
+              </TableHead>
+              <TableHead className="w-24 px-2 text-right">
+                <Text size="xs" tone="subdued">
+                  Started
+                </Text>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {data.items.map((run) => (
               <TableRow key={run.id}>
-                <TableCell>
+                <TableCell className="max-w-0 overflow-hidden">
                   <Link
                     to={getDefaultRunPath(run.id)}
-                    className="underline"
+                    className="block max-w-full truncate underline"
+                    title={run.pipelineName ?? UNNAMED_PIPELINE}
                     {...tracking("projects.project_runs.open_run")}
                   >
-                    {run.pipelineName ?? UNNAMED_PIPELINE}
+                    <Text size="sm">
+                      {run.pipelineName ?? UNNAMED_PIPELINE}
+                    </Text>
                   </Link>
                 </TableCell>
                 <TableCell>
-                  <Text tone="subdued">{formatDate(run.createdAt)}</Text>
+                  <ProjectRunStatus runId={run.id} />
                 </TableCell>
-                <TableCell>
-                  <Text tone="subdued">{run.createdBy ?? "Unknown"}</Text>
+                <TableCell className="text-right">
+                  <Text size="xs" tone="subdued">
+                    {formatDate(run.createdAt)}
+                  </Text>
                 </TableCell>
               </TableRow>
             ))}

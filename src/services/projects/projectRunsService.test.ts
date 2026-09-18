@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { client } from "@/api/client.gen";
 
 import { ProjectRunsApiError } from "./errors";
-import { listProjectRuns } from "./projectRunsService";
+import { getRunExecutionStats, listProjectRuns } from "./projectRunsService";
 
 vi.mock("@/api/client.gen", () => ({
   client: { get: vi.fn() },
@@ -118,5 +118,46 @@ describe("listProjectRuns", () => {
     await expect(listProjectRuns("project-1")).rejects.toMatchObject({
       status: 503,
     });
+  });
+});
+
+describe("getRunExecutionStats", () => {
+  afterEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it("asks for the stats the endpoint withholds by default", async () => {
+    mockResponse({ execution_status_stats: { SUCCEEDED: 2 } });
+
+    await getRunExecutionStats("run-1");
+
+    expect(client.get).toHaveBeenCalledWith({
+      url: "/api/pipeline_runs/{id}",
+      path: { id: "run-1" },
+      query: { include_execution_stats: true },
+    });
+  });
+
+  it("hands back the task counts it was given", async () => {
+    mockResponse({ execution_status_stats: { SUCCEEDED: 2, FAILED: 1 } });
+
+    await expect(getRunExecutionStats("run-1")).resolves.toEqual({
+      SUCCEEDED: 2,
+      FAILED: 1,
+    });
+  });
+
+  it("reads a run with no counts as nothing known rather than empty", async () => {
+    mockResponse({ execution_status_stats: null });
+
+    await expect(getRunExecutionStats("run-1")).resolves.toBeNull();
+  });
+
+  it("throws with the status when the backend gives nothing back", async () => {
+    mockResponse(undefined, 404);
+
+    await expect(getRunExecutionStats("run-1")).rejects.toThrow(
+      ProjectRunsApiError,
+    );
   });
 });

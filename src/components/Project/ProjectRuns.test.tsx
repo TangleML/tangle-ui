@@ -23,6 +23,12 @@ vi.mock("@/routes/runRoutes", () => ({
   getDefaultRunPath: (id: string) => `/runs/${id}`,
 }));
 
+vi.mock("./ProjectRunStatus", () => ({
+  ProjectRunStatus: ({ runId }: { runId: string }) => (
+    <span data-testid={`status-${runId}`} />
+  ),
+}));
+
 function makeRun(overrides: Partial<ProjectRun> = {}): ProjectRun {
   return {
     id: "run-1",
@@ -61,10 +67,33 @@ describe("ProjectRuns", () => {
     renderRuns();
 
     expect(screen.getByText("Hello World")).toBeInTheDocument();
-    expect(screen.getByText("alice@example.com")).toBeInTheDocument();
     expect(
       screen.getByText(formatDate(new Date("2026-09-16T18:24:57Z"))),
     ).toBeInTheDocument();
+  });
+
+  it("leaves out who started a run, which the project already implies", () => {
+    renderRuns();
+
+    expect(screen.queryByText("alice@example.com")).toBeNull();
+  });
+
+  it("heads each column it shows", () => {
+    renderRuns();
+
+    const headers = screen
+      .getAllByRole("columnheader")
+      .map((header) => header.textContent);
+
+    expect(headers).toEqual(["Pipeline", "Status", "Started"]);
+  });
+
+  it("shows each run's overall status", () => {
+    mockRuns([makeRun({ id: "a" }), makeRun({ id: "b" })]);
+    renderRuns();
+
+    expect(screen.getByTestId("status-a")).toBeInTheDocument();
+    expect(screen.getByTestId("status-b")).toBeInTheDocument();
   });
 
   it("counts the runs in its heading", () => {
@@ -92,13 +121,6 @@ describe("ProjectRuns", () => {
     expect(
       screen.getByRole("link", { name: "Unnamed pipeline" }),
     ).toHaveAttribute("href", "/runs/run-1");
-  });
-
-  it("says who is unknown rather than leaving a blank", () => {
-    mockRuns([makeRun({ createdBy: null })]);
-    renderRuns();
-
-    expect(screen.getByText("Unknown")).toBeInTheDocument();
   });
 
   it("says when nothing has been run", () => {
