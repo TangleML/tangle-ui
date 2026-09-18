@@ -195,6 +195,7 @@ describe("ProjectResources", () => {
 
     const dialog = await screen.findByRole("alertdialog");
     expect(dialog).toHaveTextContent('Remove "Model card" from this project?');
+    expect(dialog).toHaveTextContent(/item itself is not deleted/);
 
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
 
