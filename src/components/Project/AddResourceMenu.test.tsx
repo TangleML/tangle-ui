@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -16,9 +16,18 @@ vi.mock("@/providers/AnalyticsProvider", () => ({
   useAnalytics: () => ({ track: vi.fn() }),
 }));
 
+vi.mock("@/services/localPipelines/useLocalPipelines", () => ({
+  useLocalPipelineNames: () => ({
+    data: ["Churn model"],
+    isPending: false,
+    error: null,
+  }),
+  useResolvedPointers: () => ({ data: {} }),
+}));
+
 async function openMenu() {
   const user = userEvent.setup();
-  render(<AddResourceMenu projectId="project-1" />);
+  render(<AddResourceMenu projectId="project-1" resources={[]} />);
 
   await user.click(screen.getByRole("button", { name: /Add/ }));
   await screen.findByRole("menu");
@@ -40,13 +49,19 @@ describe("AddResourceMenu", () => {
     expect(await screen.findByRole("dialog")).toHaveTextContent("Add Document");
   });
 
+  it("opens the pipeline picker", async () => {
+    await openMenu();
+
+    fireEvent.click(screen.getByRole("menuitem", { name: "Pipeline" }));
+
+    expect(await screen.findByRole("dialog")).toHaveTextContent(
+      "Add a pipeline",
+    );
+  });
+
   it("lists what cannot be added here yet as disabled rather than hiding it", async () => {
     await openMenu();
 
-    expect(screen.getByRole("menuitem", { name: "Pipeline" })).toHaveAttribute(
-      "aria-disabled",
-      "true",
-    );
     expect(
       screen.getByRole("menuitem", { name: "Agent session" }),
     ).toHaveAttribute("aria-disabled", "true");

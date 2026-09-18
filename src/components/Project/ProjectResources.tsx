@@ -47,7 +47,7 @@ const groupHeading = (entity: string, count: number) =>
 
 function removalConsequence(resource: ProjectResourceSummary) {
   if (claimsLocalPipeline(resource)) {
-    return "This only takes it out of this project. The pipeline itself stays in this browser.";
+    return "This only takes it out of this project. The pipeline itself is not deleted and stays in the browser that holds it.";
   }
   if (removingDestroys(resource)) {
     return "This is the only copy, so deleting it here deletes it for good.";
@@ -134,7 +134,7 @@ export function ProjectResources({
     <BlockStack gap="4">
       <ColumnHeadingRow>
         <Heading level={2}>Resources</Heading>
-        <AddResourceMenu projectId={projectId} />
+        <AddResourceMenu projectId={projectId} resources={resources} />
       </ColumnHeadingRow>
 
       {isPending && (

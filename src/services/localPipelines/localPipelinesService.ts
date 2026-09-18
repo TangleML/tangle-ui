@@ -23,7 +23,7 @@ export async function listLocalPipelineNames(): Promise<string[]> {
  * reused, so an id that still resolves names the pipeline that was added. The
  * name is the fallback, because most pipelines have no registry row at all.
  */
-export async function resolvePointer(
+async function resolvePointer(
   pointer: LocalPipelinePointer,
   names: ReadonlySet<string>,
 ): Promise<string | undefined> {
