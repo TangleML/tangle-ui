@@ -97,9 +97,9 @@ describe("ResourceRow", () => {
   /**
    * A group is headed by what the API calls its rows, so a browser-held
    * pipeline is headed as a document. The row itself is the only place it can
-   * be told apart from one.
+   * say otherwise.
    */
-  it("marks a pipeline it names as a pipeline, not as the document it is filed as", () => {
+  it("says a pipeline it names is one, not the document it is filed as", () => {
     renderRow({
       entity: "document",
       name: "Churn model",
@@ -107,19 +107,52 @@ describe("ResourceRow", () => {
       extraData: { kind: "pipeline", localName: "Churn model" },
     });
 
-    const name = screen.getByRole("button", { name: "Churn model" });
-
-    expect(name.querySelector(".lucide-git-branch")).toBeInTheDocument();
-    expect(name.querySelector(".lucide-file-text")).toBeNull();
+    expect(screen.getByText("Local pipeline")).toBeInTheDocument();
   });
 
-  it("marks an ordinary document as one", () => {
+  it("says nothing extra about a document that does not say what kind it is", () => {
     renderRow(ownContent);
 
+    expect(screen.queryByText("Local pipeline")).toBeNull();
+  });
+
+  it("says what kind a document calls itself, whatever that kind is", () => {
+    renderRow({ ...ownContent, extraData: { kind: "data_sheet" } });
+
+    expect(screen.getByText("Data sheet")).toBeInTheDocument();
+  });
+
+  /** The group heading already said it, so the row saying it again is noise. */
+  it("does not repeat back a kind that only names the entity", () => {
+    renderRow({ ...ownContent, extraData: { kind: "document" } });
+
+    expect(screen.queryByText("Document")).toBeNull();
+  });
+
+  it("does not label a pipeline the backend holds", () => {
+    renderRow({ extraData: { kind: "pipeline" } });
+
+    expect(screen.queryByText("Pipeline")).toBeNull();
+  });
+
+  /** Anyone may PATCH `extra_data`, so the text is the backend's, not ours. */
+  it("cuts a kind too long to fit a badge", () => {
+    renderRow({ ...ownContent, extraData: { kind: "k".repeat(500) } });
+
+    expect(screen.getByText(/^Kk{23}$/)).toBeInTheDocument();
+  });
+
+  /** The name is what a reader picks the row out by, and what tests address. */
+  it("keeps the label out of the name it is picked by", () => {
+    renderRow({
+      entity: "document",
+      name: "Churn model",
+      entityId: null,
+      extraData: { kind: "pipeline", localName: "Churn model" },
+    });
+
     expect(
-      screen
-        .getByRole("button", { name: "Model card" })
-        .querySelector(".lucide-file-text"),
+      screen.getByRole("button", { name: "Churn model" }),
     ).toBeInTheDocument();
   });
 
