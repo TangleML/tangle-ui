@@ -18,6 +18,7 @@ export function useClipboardShortcuts(
   spec: ComponentSpec | null,
   containerRef: RefObject<HTMLDivElement | null>,
   reactFlowInstance: ReactFlowInstance | null,
+  canEdit = true,
 ): void {
   const registry = useNodeRegistry();
   const { editor, keyboard } = useSharedStores();
@@ -30,7 +31,7 @@ export function useClipboardShortcuts(
       label: "Duplicate",
       action: (e) => {
         e.preventDefault();
-        if (!spec) return;
+        if (!spec || !canEdit) return;
         const selection = getEffectiveSelection(registry, spec, editor);
         if (selection.length > 0)
           duplicateSelectedNodes(clipboard, spec, selection);
@@ -63,7 +64,7 @@ export function useClipboardShortcuts(
       label: "Paste",
       action: (e) => {
         e.preventDefault();
-        if (!spec) return;
+        if (!spec || !canEdit) return;
         const rect = containerRef.current?.getBoundingClientRect();
         if (rect && reactFlowInstance) {
           const center = reactFlowInstance.screenToFlowPosition({
@@ -88,5 +89,6 @@ export function useClipboardShortcuts(
     editor,
     keyboard,
     registry,
+    canEdit,
   ]);
 }

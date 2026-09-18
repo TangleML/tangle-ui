@@ -3,6 +3,7 @@ import { type RefObject, useEffect, useRef, useState } from "react";
 
 import useToastNotification from "@/hooks/useToastNotification";
 import { useTourMode } from "@/providers/TourProvider/TourModeContext";
+import { getEditorLocation } from "@/routes/editorRoutes";
 import { APP_ROUTES } from "@/routes/router";
 import { usePipelineRename } from "@/routes/v2/pages/Editor/hooks/usePipelineRename";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
@@ -76,31 +77,38 @@ export function useFileMenuState(): FileMenuState {
   };
 
   const handleNewPipeline = async () => {
-    const file = await createNewPipeline(storage);
-    navigate({
-      to: APP_ROUTES.EDITOR_V2_PIPELINE,
-      params: { pipelineName: file.storageKey },
-      search: { fileId: file.id },
-    });
+    try {
+      const file = await createNewPipeline(storage);
+      navigate(getEditorLocation(file));
+    } catch (error) {
+      notify(`Could not create pipeline: ${error}`, "error");
+    }
   };
 
   const handlePipelineClick = (pipeline: PipelineRef) => {
-    navigate({
-      to: APP_ROUTES.EDITOR_V2_PIPELINE,
-      params: { pipelineName: pipeline.name },
-      search: { fileId: pipeline.fileId },
-    });
+    navigate(getEditorLocation(pipeline));
     setOpenDialogOpen(false);
   };
 
   const handleSavePipelineAs = async (name: string) => {
-    const file = await savePipelineAs(navigation, name, storage);
-    notify(`Pipeline saved as "${name}"`, "success");
-    navigate({
-      to: APP_ROUTES.EDITOR_V2_PIPELINE,
-      params: { pipelineName: name },
-      search: { fileId: file?.id },
-    });
+    try {
+      const file = await savePipelineAs(
+        navigation,
+        name,
+        storage,
+        pipelineFileStore.activePipelineFile ?? undefined,
+      );
+      if (!file) return;
+      notify(
+        file.storageKind === "pending"
+          ? `Pipeline "${name}" is pending upload`
+          : `Pipeline saved as "${name}"`,
+        file.storageKind === "pending" ? "warning" : "success",
+      );
+      navigate(getEditorLocation(file));
+    } catch (error) {
+      notify(`Could not clone pipeline: ${error}`, "error");
+    }
   };
 
   const getRenameInitialName = () => navigation.rootSpec?.name ?? "";
@@ -111,9 +119,16 @@ export function useFileMenuState(): FileMenuState {
 
   const handleDeletePipeline = async () => {
     const file = pipelineFileStore.activePipelineFile;
-    if (!file) return;
-    await file.deleteFile();
-    void navigate({ to: APP_ROUTES.HOME });
+    if (!file?.canEdit) return;
+    await autoSave.dispose();
+    try {
+      await file.deleteFile();
+      void navigate({ to: APP_ROUTES.HOME });
+    } catch (error) {
+      if (navigation.rootSpec)
+        autoSave.init(navigation.rootSpec, file.referenceId);
+      notify(`Could not delete pipeline: ${error}`, "error");
+    }
   };
 
   const getSaveAsInitialName = () => {

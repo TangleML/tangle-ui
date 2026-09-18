@@ -17,6 +17,7 @@ import { ReplaceSecretView } from "@/components/shared/SecretsManagement/compone
 import { SecretsListView } from "@/components/shared/SecretsManagement/components/SecretsListView";
 import { isFlagEnabled } from "@/components/shared/Settings/useFlags";
 import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
+import { REMOTE_PIPELINES_ENABLED } from "@/utils/remotePipelines";
 
 import RootLayout from "../components/layout/RootLayout";
 import { APP_ROUTES } from "./appRoutes";
@@ -262,9 +263,19 @@ const editorRoute = createRoute({
   getParentRoute: () => mainLayout,
   path: APP_ROUTES.PIPELINE_EDITOR,
   component: Editor,
-  beforeLoad: ({ search }: { search: { name?: string } }) => {
-    const name = search.name || "";
-    return { name };
+  beforeLoad: ({ params, search }) => {
+    if (REMOTE_PIPELINES_ENABLED) {
+      throw redirect({
+        to: APP_ROUTES.EDITOR_V2_PIPELINE,
+        params: { pipelineName: params.name },
+        search: (previous) => previous,
+        replace: true,
+      });
+    }
+    return {
+      name:
+        "name" in search && typeof search.name === "string" ? search.name : "",
+    };
   },
 });
 
@@ -312,7 +323,7 @@ const editorV2Route = createRoute({
   path: APP_ROUTES.EDITOR_V2,
   component: EditorV2,
   beforeLoad: () => {
-    if (!isFlagEnabled("v2_editor")) {
+    if (!REMOTE_PIPELINES_ENABLED && !isFlagEnabled("v2_editor")) {
       throw redirect({ to: APP_ROUTES.DASHBOARD_PIPELINES });
     }
   },
@@ -323,7 +334,7 @@ const editorV2PipelineRoute = createRoute({
   path: APP_ROUTES.EDITOR_V2_PIPELINE,
   component: EditorV2,
   beforeLoad: ({ params }) => {
-    if (!isFlagEnabled("v2_editor")) {
+    if (!REMOTE_PIPELINES_ENABLED && !isFlagEnabled("v2_editor")) {
       throw redirect({
         to: APP_ROUTES.PIPELINE_EDITOR,
         params: { name: params.pipelineName },
