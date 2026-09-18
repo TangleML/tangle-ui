@@ -177,18 +177,20 @@ describe("ProjectResourcePreview", () => {
     expect(viewer()).toHaveTextContent("name: Churn training");
   });
 
-  it("offers a way into the editor for the pipeline it is showing", () => {
-    mockResource({
-      entity: "pipeline",
-      name: "churn-training-v2",
-      entityId: "pipeline-1",
-      payload: null,
-    });
+  /**
+   * The editor addresses a pipeline by name out of browser storage, so a local
+   * pipeline that happens to share a backend pipeline's name is a different
+   * pipeline, and linking to it opened the wrong one.
+   */
+  it("does not send a backend pipeline to a local one of the same name", () => {
+    mockPipeline();
+    mockLocalPipeline(localPipeline("churn training"));
     renderPreview("resource-1");
 
     expect(
-      screen.getByRole("link", { name: /Open in the editor/ }),
-    ).toHaveAttribute("href", "/editor/churn training");
+      screen.queryByRole("link", { name: /Open in the editor/ }),
+    ).toBeNull();
+    expect(screen.getByText(/editor cannot open/)).toBeInTheDocument();
   });
 
   it("offers no editor link for something that is not a pipeline", () => {
@@ -264,11 +266,7 @@ describe("ProjectResourcePreview", () => {
     expect(screen.queryByText(/valid/i)).toBeNull();
   });
 
-  /**
-   * The editor reads browser storage, so a pipeline only the backend holds
-   * would open as an empty canvas and look lost.
-   */
-  it("offers no editor link for a pipeline this browser does not hold", () => {
+  it("says why a backend pipeline cannot be opened rather than leaving a gap", () => {
     mockPipeline();
     mockLocalPipeline(null);
     renderPreview("resource-1");
