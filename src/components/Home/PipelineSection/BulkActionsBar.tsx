@@ -10,22 +10,26 @@ interface BulkActionsBarProps {
   selectedPipelines: string[];
   onDeleteSuccess: () => void;
   onClearSelection: () => void;
+  onDeletePipeline?: (id: string) => Promise<void>;
+  onDeleteSettled?: () => void;
 }
 
 const BulkActionsBar = ({
   selectedPipelines,
   onDeleteSuccess,
   onClearSelection,
+  onDeletePipeline = deletePipeline,
+  onDeleteSettled,
 }: BulkActionsBarProps) => {
   const notify = useToastNotification();
 
   const handleBulkDelete = async () => {
-    const deletePromises = selectedPipelines.map((pipelineName) =>
-      deletePipeline(pipelineName),
-    );
-
     try {
-      await Promise.all(deletePromises);
+      const results = await Promise.allSettled(
+        selectedPipelines.map((id) => onDeletePipeline(id)),
+      );
+      const failure = results.find((result) => result.status === "rejected");
+      if (failure) throw failure.reason;
       onDeleteSuccess();
       notify(
         `${selectedPipelines.length} pipelines successfully deleted`,
@@ -34,6 +38,8 @@ const BulkActionsBar = ({
     } catch (error) {
       const errorMessage = getErrorMessage(error);
       notify("Failed to delete some pipelines: " + errorMessage, "error");
+    } finally {
+      onDeleteSettled?.();
     }
   };
 

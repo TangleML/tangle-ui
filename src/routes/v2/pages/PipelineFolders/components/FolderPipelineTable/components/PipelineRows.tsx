@@ -1,5 +1,4 @@
 import PipelineRow from "@/components/Home/PipelineSection/PipelineRow";
-import { Icon } from "@/components/ui/icon";
 import { useFolderNavigation } from "@/routes/v2/pages/PipelineFolders/context/FolderNavigationContext";
 import type { DragItem } from "@/routes/v2/pages/PipelineFolders/types";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
@@ -17,16 +16,6 @@ interface PipelineRowsProps {
   onDelete: () => void;
 }
 
-const pipelineIcon = (
-  <Icon
-    name="FileSpreadsheet"
-    fill="currentColor"
-    stroke="#2563eb"
-    size="lg"
-    className="shrink-0 text-blue-500"
-  />
-);
-
 export function PipelineRows({
   pipelines,
   selectedPipelines,
@@ -42,27 +31,37 @@ export function PipelineRows({
   return (
     <>
       {pipelines.map((file) => {
-        const name = file.storageKey;
+        const name = file.displayName;
         const pipelineItem: DragItem = { type: "pipeline", id: file.id };
         const items = getDragItems(pipelineItem);
 
         return (
           <PipelineRow
             key={file.id}
+            file={file}
             name={name}
             modificationTime={file.modifiedAt}
             analyticsTrackingPrefix={PIPELINE_FOLDERS_TABLE_ANALYTICS_PREFIX}
             onDelete={onDelete}
             isSelected={selectedPipelines.has(file.id)}
             onSelect={(checked) => onSelectPipeline(file.id, checked)}
-            onPipelineClick={(clickedName: string) =>
-              folderNav?.onPipelineClick!({
-                name: clickedName,
-                fileId: file.id,
-              })
+            onPipelineClick={
+              folderNav?.onPipelineClick
+                ? (clickedName: string) =>
+                    folderNav.onPipelineClick?.({
+                      name: clickedName,
+                      fileId:
+                        file.storageKind === "local"
+                          ? file.id
+                          : file.referenceId,
+                    })
+                : undefined
             }
-            icon={pipelineIcon}
-            dragData={canDrag ? JSON.stringify(items) : undefined}
+            dragData={
+              canDrag && file.storageKind === "local"
+                ? JSON.stringify(items)
+                : undefined
+            }
             isDragging={draggingIds.has(file.id)}
             dragItemCount={items.length}
             onDragStateChange={(dragging) => onDragStateChange(items, dragging)}

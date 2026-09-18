@@ -1,5 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
-import { type DragEvent, type MouseEvent, type ReactNode } from "react";
+import { observer } from "mobx-react-lite";
+import { type DragEvent, type MouseEvent } from "react";
 
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
 import { FavoriteToggle } from "@/components/shared/FavoriteToggle";
@@ -28,15 +29,18 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Paragraph, Text } from "@/components/ui/typography";
+import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { getDefaultEditorPath } from "@/routes/editorRoutes";
 import { deletePipeline } from "@/services/pipelineService";
+import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import { getPipelineTagsFromSpec } from "@/utils/annotations";
 import type { ComponentReferenceWithSpec } from "@/utils/componentStore";
 import { formatDate } from "@/utils/date";
 import { tracking } from "@/utils/tracking";
 
+import { SavePipelineToCloudButton } from "./SavePipelineToCloudButton";
 import type { MatchedField } from "./usePipelineFilters";
 
 const MAX_TITLE_LENGTH = 80;
@@ -45,6 +49,7 @@ const MAX_TITLE_LENGTH = 80;
 const DEFAULT_PIPELINE_ROW_ANALYTICS_PREFIX = "pipeline_home.table";
 
 interface PipelineRowProps {
+  file?: PipelineFile;
   url?: string;
   componentRef?: ComponentReferenceWithSpec;
   name?: string;
@@ -57,7 +62,6 @@ interface PipelineRowProps {
   componentQuery?: string;
   matchedComponentNames?: string[];
   onPipelineClick?: (name: string) => void;
-  icon?: ReactNode;
   dragData?: string;
   isDragging?: boolean;
   dragItemCount?: number;
@@ -66,193 +70,251 @@ interface PipelineRowProps {
 }
 
 const PipelineRow = withSuspenseWrapper(
-  ({
-    name,
-    componentRef,
-    modificationTime,
-    onDelete,
-    isSelected = false,
-    onSelect,
-    searchQuery,
-    matchedFields,
-    componentQuery,
-    matchedComponentNames,
-    onPipelineClick,
-    icon,
-    dragData,
-    isDragging,
-    dragItemCount,
-    onDragStateChange,
-    analyticsTrackingPrefix = DEFAULT_PIPELINE_ROW_ANALYTICS_PREFIX,
-  }: PipelineRowProps) => {
-    const navigate = useNavigate();
-    const { track } = useAnalytics();
+  observer(
+    ({
+      file,
+      name,
+      componentRef,
+      modificationTime,
+      onDelete,
+      isSelected = false,
+      onSelect,
+      searchQuery,
+      matchedFields,
+      componentQuery,
+      matchedComponentNames,
+      onPipelineClick,
+      dragData,
+      isDragging,
+      dragItemCount,
+      onDragStateChange,
+      analyticsTrackingPrefix = DEFAULT_PIPELINE_ROW_ANALYTICS_PREFIX,
+    }: PipelineRowProps) => {
+      const navigate = useNavigate();
+      const { track } = useAnalytics();
+      const notify = useToastNotification();
+      const referenceId = file?.referenceId ?? name;
 
-    const rowTrack = (suffix: string, metadata?: Record<string, unknown>) => {
-      track(`${analyticsTrackingPrefix}.${suffix}`, metadata);
-    };
-
-    const componentSpec = componentRef?.spec;
-
-    const tags = getPipelineTagsFromSpec(componentSpec);
-
-    const handleRowClick = (e: MouseEvent) => {
-      if ((e.target as HTMLElement).closest("[data-popover-trigger]")) {
-        return;
-      }
-
-      if (onPipelineClick && name) {
-        rowTrack("pipeline_opened", { open_mode: "embedded" });
-        onPipelineClick(name);
-        return;
-      }
-
-      if (!name) return;
-
-      if (e.ctrlKey || e.metaKey) {
-        rowTrack("pipeline_opened", { open_mode: "editor_new_tab" });
-        window.open(getDefaultEditorPath(name), "_blank");
-        return;
-      }
-      rowTrack("pipeline_opened", { open_mode: "editor_same_tab" });
-      navigate({ to: getDefaultEditorPath(name) });
-    };
-
-    const handleCheckboxChange = (checked: boolean | "indeterminate") => {
-      if (checked === "indeterminate") return;
-      rowTrack("pipeline_selection_toggled", { new_value: checked });
-      onSelect?.(checked);
-    };
-
-    const confirmPipelineDelete = async () => {
-      if (!name) return;
-
-      const deleteCallback = () => {
-        onDelete?.();
+      const rowTrack = (suffix: string, metadata?: Record<string, unknown>) => {
+        track(`${analyticsTrackingPrefix}.${suffix}`, metadata);
       };
 
-      await deletePipeline(name, deleteCallback);
-    };
+      const componentSpec = componentRef?.spec;
 
-    const handleClick = (e: MouseEvent) => {
-      // Prevent row click when clicking on the checkbox
-      e.stopPropagation();
-    };
+      const tags = getPipelineTagsFromSpec(componentSpec);
 
-    const formattedDate = formatModificationTime(modificationTime);
+      const handleRowClick = (e: MouseEvent) => {
+        if ((e.target as HTMLElement).closest("[data-popover-trigger]")) {
+          return;
+        }
 
-    return (
-      <TableRow
-        className={cn(
-          "cursor-pointer hover:bg-muted/50 group text-xs h-10",
-          isDragging && "opacity-50",
-        )}
-        onClick={handleRowClick}
-      >
-        <TableCell onClick={(e) => e.stopPropagation()}>
-          <Checkbox
-            data-checkbox
-            checked={isSelected}
-            onCheckedChange={handleCheckboxChange}
-            onClick={handleClick}
-          />
-        </TableCell>
-        <TableCell>
-          <div
-            draggable={!!dragData}
-            onDragStart={(e: DragEvent<HTMLDivElement>) => {
-              if (!dragData) return;
-              e.dataTransfer.setData("application/x-folder-move", dragData);
-              e.dataTransfer.effectAllowed = "move";
-              if (dragItemCount && dragItemCount > 1) {
-                const ghost = document.createElement("div");
-                ghost.style.cssText =
-                  "position:fixed;top:-1000px;left:-1000px;padding:6px 12px;border-radius:6px;font-size:14px;font-weight:500;color:white;background:#0f172a;box-shadow:0 4px 12px rgba(0,0,0,0.15);white-space:nowrap;";
-                ghost.textContent = `${dragItemCount} items`;
-                document.body.appendChild(ghost);
-                e.dataTransfer.setDragImage(ghost, 0, 0);
-                requestAnimationFrame(() => ghost.remove());
-              }
-              onDragStateChange?.(true);
-            }}
-            onDragEnd={() => onDragStateChange?.(false)}
-          >
-            <InlineStack
-              gap="2"
-              blockAlign="start"
-              className="w-full truncate"
-              wrap="nowrap"
-            >
-              {icon}
-              <InlineStack gap="1" blockAlign="center">
-                {name && name.length > MAX_TITLE_LENGTH ? (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="text-sm truncate">
-                          <HighlightText
-                            text={name.slice(0, MAX_TITLE_LENGTH) + "..."}
-                            query={searchQuery}
-                          />
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent>{name}</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                ) : (
-                  <span className="text-sm truncate">
-                    <HighlightText text={name ?? ""} query={searchQuery} />
-                  </span>
-                )}
-                <MatchBadges
-                  matchedFields={matchedFields}
-                  matchedComponentNames={matchedComponentNames}
-                  searchQuery={searchQuery}
-                  componentQuery={componentQuery}
-                />
-              </InlineStack>
-            </InlineStack>
-          </div>
-        </TableCell>
-        <TableCell>
-          <Text size="xs" tone="subdued">
-            {formattedDate}
-          </Text>
-        </TableCell>
-        <TableCell className="max-w-64">
-          {tags && tags.length > 0 && <TagList tags={tags} />}
-        </TableCell>
-        <TableCell>
-          {name && <PipelineRecentRunInfo pipelineName={name} />}
-        </TableCell>
-        <TableCell>
-          {name && <PipelineRunsButton pipelineName={name} />}
-        </TableCell>
-        <TableCell className="w-16">
-          <InlineStack gap="1" blockAlign="center" wrap="nowrap">
-            {name && <FavoriteToggle type="pipeline" id={name} name={name} />}
-            <ConfirmationDialog
-              trigger={
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="opacity-0 group-hover:opacity-100 cursor-pointer text-destructive-foreground hover:text-destructive-foreground"
-                  {...tracking(
-                    `${analyticsTrackingPrefix}.pipeline_delete_confirm_open`,
-                  )}
-                >
-                  <Icon name="Trash" />
-                </Button>
-              }
-              title={`Delete pipeline "${name}"?`}
-              description="Are you sure you want to delete this pipeline? Existing pipeline runs will not be impacted. This action cannot be undone."
-              onConfirm={confirmPipelineDelete}
+        if (onPipelineClick && referenceId) {
+          rowTrack("pipeline_opened", { open_mode: "embedded" });
+          onPipelineClick(referenceId);
+          return;
+        }
+
+        if (!referenceId) return;
+
+        if (e.ctrlKey || e.metaKey) {
+          rowTrack("pipeline_opened", { open_mode: "editor_new_tab" });
+          window.open(getDefaultEditorPath(referenceId), "_blank");
+          return;
+        }
+        rowTrack("pipeline_opened", { open_mode: "editor_same_tab" });
+        navigate({ to: getDefaultEditorPath(referenceId) });
+      };
+
+      const handleCheckboxChange = (checked: boolean | "indeterminate") => {
+        if (checked === "indeterminate") return;
+        rowTrack("pipeline_selection_toggled", { new_value: checked });
+        onSelect?.(checked);
+      };
+
+      const confirmPipelineDelete = async () => {
+        if (!name) return;
+
+        if (file) {
+          try {
+            await file.deleteFile();
+            onDelete?.();
+          } catch (error) {
+            notify(
+              `Could not delete pipeline: ${error instanceof Error ? error.message : String(error)}`,
+              "error",
+            );
+          }
+          return;
+        }
+
+        const deleteCallback = () => {
+          onDelete?.();
+        };
+
+        await deletePipeline(name, deleteCallback);
+      };
+
+      const handleClick = (e: MouseEvent) => {
+        e.stopPropagation();
+      };
+
+      const formattedDate = formatModificationTime(modificationTime);
+
+      return (
+        <TableRow
+          className={cn(
+            "cursor-pointer hover:bg-muted/50 group text-xs h-10",
+            isDragging && "opacity-50",
+          )}
+          onClick={handleRowClick}
+        >
+          <TableCell onClick={(e) => e.stopPropagation()}>
+            <Checkbox
+              data-checkbox
+              checked={isSelected}
+              disabled={file?.canEdit === false}
+              onCheckedChange={handleCheckboxChange}
+              onClick={handleClick}
             />
-          </InlineStack>
-        </TableCell>
-      </TableRow>
-    );
-  },
+          </TableCell>
+          <TableCell>
+            <div
+              draggable={!!dragData}
+              onDragStart={(e: DragEvent<HTMLDivElement>) => {
+                if (!dragData) return;
+                e.dataTransfer.setData("application/x-folder-move", dragData);
+                e.dataTransfer.effectAllowed = "move";
+                if (dragItemCount && dragItemCount > 1) {
+                  const ghost = document.createElement("div");
+                  ghost.style.cssText =
+                    "position:fixed;top:-1000px;left:-1000px;padding:6px 12px;border-radius:6px;font-size:14px;font-weight:500;color:white;background:#0f172a;box-shadow:0 4px 12px rgba(0,0,0,0.15);white-space:nowrap;";
+                  ghost.textContent = `${dragItemCount} items`;
+                  document.body.appendChild(ghost);
+                  e.dataTransfer.setDragImage(ghost, 0, 0);
+                  requestAnimationFrame(() => ghost.remove());
+                }
+                onDragStateChange?.(true);
+              }}
+              onDragEnd={() => onDragStateChange?.(false)}
+            >
+              <InlineStack
+                gap="2"
+                blockAlign="start"
+                className="w-full truncate"
+                wrap="nowrap"
+              >
+                <InlineStack gap="1" blockAlign="center">
+                  {name && name.length > MAX_TITLE_LENGTH ? (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="text-sm truncate">
+                            <HighlightText
+                              text={name.slice(0, MAX_TITLE_LENGTH) + "..."}
+                              query={searchQuery}
+                            />
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>{name}</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ) : (
+                    <span className="text-sm truncate">
+                      <HighlightText text={name ?? ""} query={searchQuery} />
+                    </span>
+                  )}
+                  <MatchBadges
+                    matchedFields={matchedFields}
+                    matchedComponentNames={matchedComponentNames}
+                    searchQuery={searchQuery}
+                    componentQuery={componentQuery}
+                  />
+                  {file?.storageKind === "local" &&
+                    ["root-indexdb", "folder-indexdb"].includes(
+                      file.folder.driver.type,
+                    ) && (
+                      <Badge
+                        variant="outline"
+                        size="sm"
+                        className="font-normal text-muted-foreground"
+                      >
+                        Local
+                      </Badge>
+                    )}
+                  {file?.storageKind === "pending" && (
+                    <Badge
+                      variant="outline"
+                      size="sm"
+                      className="font-normal text-muted-foreground"
+                    >
+                      Pending upload
+                    </Badge>
+                  )}
+                  {file?.saveError && (
+                    <span className="text-destructive text-xs">
+                      Not saved to server
+                    </span>
+                  )}
+                </InlineStack>
+              </InlineStack>
+            </div>
+          </TableCell>
+          <TableCell>
+            <Text size="xs" tone="subdued">
+              {formattedDate}
+            </Text>
+          </TableCell>
+          <TableCell className="max-w-64">
+            {tags && tags.length > 0 && <TagList tags={tags} />}
+          </TableCell>
+          <TableCell>
+            {name && <PipelineRecentRunInfo pipelineName={name} />}
+          </TableCell>
+          <TableCell>
+            {name && <PipelineRunsButton pipelineName={name} />}
+          </TableCell>
+          <TableCell className="w-px">
+            <div className="grid w-max grid-cols-3 gap-1">
+              <div className="flex size-9 items-center justify-center">
+                {file && <SavePipelineToCloudButton file={file} />}
+              </div>
+              <div className="flex size-9 items-center justify-center">
+                {referenceId && name && (
+                  <FavoriteToggle
+                    type="pipeline"
+                    id={referenceId}
+                    name={name}
+                  />
+                )}
+              </div>
+              <div className="flex size-9 items-center justify-center">
+                {file?.canEdit !== false && (
+                  <ConfirmationDialog
+                    trigger={
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`Delete pipeline: ${name}`}
+                        className="text-muted-foreground hover:text-destructive-foreground"
+                        {...tracking(
+                          `${analyticsTrackingPrefix}.pipeline_delete_confirm_open`,
+                        )}
+                      >
+                        <Icon name="Trash" />
+                      </Button>
+                    }
+                    title={`Delete pipeline "${name}"?`}
+                    description="Are you sure you want to delete this pipeline? Existing pipeline runs will not be impacted. This action cannot be undone."
+                    onConfirm={confirmPipelineDelete}
+                  />
+                )}
+              </div>
+            </div>
+          </TableCell>
+        </TableRow>
+      );
+    },
+  ),
   (props) => {
     const formattedDate = formatModificationTime(props.modificationTime);
 

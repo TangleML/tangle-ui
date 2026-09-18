@@ -36,6 +36,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/hooks/useNaturalLanguageComponentSearch.ts",
   "src/hooks/useDebouncedSearchValue.ts",
   "src/hooks/useFavorites.ts",
+  "src/hooks/useSavePipelineToCloud.ts",
   "src/hooks/useRecentlyViewed.ts",
   "src/hooks/useDocsVisitTracking.ts",
   "src/hooks/useExecutionArtifacts.ts",
