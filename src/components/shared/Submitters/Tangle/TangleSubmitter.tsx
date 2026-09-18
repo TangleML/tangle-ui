@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { AlertCircle, CheckCircle, Loader2, SendHorizonal } from "lucide-react";
 import { type MouseEvent, useRef, useState } from "react";
 
+import { RunProjectField } from "@/components/Project/RunProjectField";
 import { useRunProjectContext } from "@/components/Project/useRunProjectContext";
 import { useAwaitAuthorization } from "@/components/shared/Authentication/useAwaitAuthorization";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
@@ -252,6 +253,7 @@ const TangleSubmitter = ({
           onCancel={() => setIsArgumentsDialogOpen(false)}
           onConfirm={handleSubmitWithArguments}
           componentSpec={componentSpec}
+          projectField={<RunProjectField pipelineName={componentSpec.name} />}
         />
       )}
     </>
