@@ -32,6 +32,20 @@ vi.mock("@/routes/editorRoutes", () => ({
   getDefaultEditorPath: (name: string) => `/editor/${name}`,
 }));
 
+vi.mock("./RunPipelineButton", () => ({
+  RunPipelineButton: ({
+    projectId,
+    spec,
+  }: {
+    projectId: string;
+    spec: { name?: string };
+  }) => (
+    <button type="button" data-project={projectId} data-spec={spec.name}>
+      Run pipeline
+    </button>
+  ),
+}));
+
 vi.mock("@/components/shared/CodeViewer", () => ({
   CodeViewer: ({
     code,
@@ -266,6 +280,21 @@ describe("ProjectResourcePreview", () => {
     expect(screen.queryByText(/valid/i)).toBeNull();
   });
 
+  it("offers to run a pipeline the backend holds, into this project", () => {
+    mockPipeline();
+    renderPreview("resource-1");
+
+    const run = screen.getByRole("button", { name: "Run pipeline" });
+    expect(run).toHaveAttribute("data-project", "project-1");
+    expect(run).toHaveAttribute("data-spec", "Churn training");
+  });
+
+  it("offers no run for something that is not a pipeline", () => {
+    renderPreview("resource-1");
+
+    expect(screen.queryByRole("button", { name: "Run pipeline" })).toBeNull();
+  });
+
   it("says why a backend pipeline cannot be opened rather than leaving a gap", () => {
     mockPipeline();
     mockLocalPipeline(null);
@@ -307,6 +336,25 @@ describe("ProjectResourcePreview", () => {
       expect(
         screen.getByRole("link", { name: /Open in the editor/ }),
       ).toHaveAttribute("href", "/editor/Churn model v2");
+    });
+
+    it("offers to run it into this project, from the browser that holds it", () => {
+      mockResource(pointerResource);
+      mockLocalPipeline(localPipeline("Churn model", { name: "Churn model" }));
+      renderPreview("resource-1");
+
+      expect(
+        screen.getByRole("button", { name: "Run pipeline" }),
+      ).toHaveAttribute("data-project", "project-1");
+    });
+
+    /** There is nothing to submit when the pipeline is in another browser. */
+    it("offers no run for a pipeline this browser does not hold", () => {
+      mockResource(pointerResource);
+      mockLocalPipeline(null);
+      renderPreview("resource-1");
+
+      expect(screen.queryByRole("button", { name: "Run pipeline" })).toBeNull();
     });
 
     it("says whether it is valid, as it would for any other pipeline", () => {

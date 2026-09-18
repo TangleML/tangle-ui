@@ -59,6 +59,7 @@ interface SubmitTaskArgumentsDialogProps {
   onCancel: () => void;
   onConfirm: (args: Record<string, ArgumentType>, notes: string) => void;
   componentSpec: ComponentSpec;
+  showCopyFromRun?: boolean;
 }
 
 export const SubmitTaskArgumentsDialog = ({
@@ -66,6 +67,7 @@ export const SubmitTaskArgumentsDialog = ({
   onCancel,
   onConfirm,
   componentSpec,
+  showCopyFromRun = true,
 }: SubmitTaskArgumentsDialogProps) => {
   const notify = useToastNotification();
   const tourMode = useTourMode();
@@ -163,12 +165,17 @@ export const SubmitTaskArgumentsDialog = ({
               <Paragraph tone="subdued" size="sm">
                 Customize the pipeline input values before submitting.
               </Paragraph>
-              <InlineStack align="end" className="w-full">
-                <CopyFromRunPopover
-                  componentSpec={componentSpec}
-                  onCopy={handleCopyFromRun}
-                />
-              </InlineStack>
+              {/* Past runs are found by the pipeline's name in this browser,
+                  so they are only this pipeline's runs where the pipeline is
+                  the one this browser holds. */}
+              {showCopyFromRun && (
+                <InlineStack align="end" className="w-full">
+                  <CopyFromRunPopover
+                    componentSpec={componentSpec}
+                    onCopy={handleCopyFromRun}
+                  />
+                </InlineStack>
+              )}
             </BlockStack>
           ) : (
             <Paragraph tone="subdued">

@@ -14,13 +14,7 @@ import { cn } from "@/lib/utils";
 import { useBackend } from "@/providers/BackendProvider";
 import { useTourMockBackend } from "@/providers/TourProvider/tourMockBackend";
 import { getDefaultRunPath } from "@/routes/runRoutes";
-import { updateRunAnnotation } from "@/services/pipelineRunService";
 import type { PipelineRun } from "@/types/pipelineRun";
-import {
-  getPipelineTagsFromSpec,
-  PIPELINE_RUN_NOTES_ANNOTATION,
-  PIPELINE_TAGS_ANNOTATION,
-} from "@/utils/annotations";
 import {
   type ArgumentType,
   type ComponentSpec,
@@ -30,6 +24,7 @@ import { validateArguments } from "@/utils/validations";
 
 import TooltipButton from "../../Buttons/TooltipButton";
 import { SubmitTaskArgumentsDialog } from "./components/SubmitTaskArgumentsDialog";
+import { saveRunAnnotations } from "./saveRunAnnotations";
 import { useSubmitPipeline } from "./useSubmitPipeline";
 
 interface TangleSubmitterProps {
@@ -59,19 +54,11 @@ const TangleSubmitter = ({
 
   const runNotes = useRef<string>("");
 
-  const { mutate: saveNotes } = useMutation({
+  const { mutate: saveAnnotations } = useMutation({
     mutationFn: (runId: string) =>
-      updateRunAnnotation(runId, backendUrl, {
-        key: PIPELINE_RUN_NOTES_ANNOTATION,
-        value: runNotes.current,
-      }),
-  });
-
-  const { mutate: saveTags } = useMutation({
-    mutationFn: (runId: string) =>
-      updateRunAnnotation(runId, backendUrl, {
-        key: PIPELINE_TAGS_ANNOTATION,
-        value: getPipelineTagsFromSpec(componentSpec).join(","),
+      saveRunAnnotations(runId, backendUrl, {
+        notes: runNotes.current,
+        componentSpec,
       }),
   });
 
@@ -106,14 +93,7 @@ const TangleSubmitter = ({
   };
 
   const onSuccess = (response: PipelineRun) => {
-    if (runNotes.current.trim() !== "") {
-      saveNotes(response.id.toString());
-    }
-
-    const tags = getPipelineTagsFromSpec(componentSpec);
-    if (tags.length > 0) {
-      saveTags(response.id.toString());
-    }
+    saveAnnotations(response.id.toString());
 
     setSubmitSuccess(true);
     setCooldownTime(3);

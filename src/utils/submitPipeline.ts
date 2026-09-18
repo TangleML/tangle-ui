@@ -12,7 +12,7 @@ import {
 import type { PipelineRun } from "@/types/pipelineRun";
 
 import { transformAggregatorComponentSpec } from "./aggregatorTransform";
-import { RUN_SOURCE_ANNOTATION } from "./annotations";
+import { RUN_SOURCE_ANNOTATION } from "./annotationKeys";
 import { buildAnnotationsWithCanonicalName } from "./canonicalPipelineName";
 import type {
   ArgumentType,
