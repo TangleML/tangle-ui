@@ -24,6 +24,7 @@ const project: Project = {
   updatedAt: new Date("2026-09-15T10:00:00Z"),
   resourceCounts: { pipeline: 1, document: 1 },
   notes: null,
+  extraData: null,
 };
 
 describe("ProjectHeader", () => {

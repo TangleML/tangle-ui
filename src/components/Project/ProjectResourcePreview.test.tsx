@@ -51,6 +51,7 @@ function resource(overrides: Partial<ProjectResource> = {}): ProjectResource {
     entity: "document",
     name: "readme.md",
     entityId: null,
+    extraData: null,
     createdBy: "alice@example.com",
     createdAt: new Date("2026-09-09T10:00:00Z"),
     updatedAt: new Date("2026-09-09T10:00:00Z"),

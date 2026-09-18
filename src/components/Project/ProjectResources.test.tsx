@@ -40,6 +40,7 @@ function resource(
     entity: "document",
     name: "Model card",
     entityId: null,
+    extraData: null,
     createdBy: "alice@example.com",
     createdAt: new Date("2026-09-09T10:00:00Z"),
     updatedAt: new Date("2026-09-09T10:00:00Z"),
