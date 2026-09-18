@@ -1,4 +1,4 @@
-export type PipelineFileSource = "v1" | "v2";
+export type PipelineFileSource = "v1" | "v2" | "remote";
 
 export interface PipelineFileChange {
   storageKey: string;

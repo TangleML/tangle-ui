@@ -5,7 +5,7 @@ import { useUserDetails } from "@/hooks/useUserDetails";
 import { cn } from "@/lib/utils";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
-import { getDefaultEditorPath } from "@/routes/editorRoutes";
+import { getDefaultEditorHref } from "@/routes/editorRoutes";
 import { extractCanonicalName } from "@/utils/canonicalPipelineName";
 import {
   countInProgressFromStats,
@@ -31,7 +31,7 @@ export const RunToolbar = () => {
   const { data: currentUserDetails } = useUserDetails();
 
   const editorRoute = componentSpec.name
-    ? getDefaultEditorPath(componentSpec.name)
+    ? getDefaultEditorHref({ name: componentSpec.name })
     : "";
 
   const canAccessEditorSpec = useCheckComponentSpecFromPath(

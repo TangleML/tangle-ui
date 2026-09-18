@@ -3,12 +3,14 @@ import { generate } from "random-words";
 import type { MouseEvent, ReactNode } from "react";
 
 import { Button, type ButtonProps } from "@/components/ui/button";
-import { getDefaultEditorPath } from "@/routes/editorRoutes";
-import { writeComponentToFileListFromText } from "@/utils/componentStore";
+import {
+  getDefaultEditorHref,
+  getDefaultEditorTarget,
+} from "@/routes/editorRoutes";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import {
   defaultPipelineYamlWithName,
   IS_GITHUB_PAGES,
-  USER_PIPELINES_LIST_NAME,
 } from "@/utils/constants";
 
 const randomName = () => (generate(4) as string[]).join(" ");
@@ -22,25 +24,23 @@ const NewPipelineButton = ({
   ...buttonProps
 }: NewPipelineButtonProps) => {
   const navigate = useNavigate();
+  const storage = usePipelineStorage();
 
   const handleCreate = async (e: MouseEvent<HTMLButtonElement>) => {
     const name = randomName();
-    const componentText = defaultPipelineYamlWithName(name);
-    await writeComponentToFileListFromText(
-      USER_PIPELINES_LIST_NAME,
+    const file = await storage.createPipeline(
       name,
-      componentText,
+      defaultPipelineYamlWithName(name),
     );
-
-    const clickThroughUrl = getDefaultEditorPath(name);
+    const ref = { name: file.displayName, fileId: file.id };
 
     if (e.ctrlKey || e.metaKey) {
-      window.open(clickThroughUrl, "_blank");
+      window.open(getDefaultEditorHref(ref), "_blank");
       return;
     }
 
     navigate({
-      to: clickThroughUrl,
+      ...getDefaultEditorTarget(ref),
       reloadDocument: !IS_GITHUB_PAGES,
     });
   };

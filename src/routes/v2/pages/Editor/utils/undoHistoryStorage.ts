@@ -9,18 +9,29 @@ const CURRENT_VERSION = 2;
 const MAX_UNDO_EVENTS = 10;
 
 interface StoredUndoHistory {
-  pipelineName: string;
+  fileId: string;
   version: number;
   idStack: string[];
   undoEvents: UndoEvent[];
 }
 
 const UndoHistoryDB = new Dexie("undo-history") as Dexie & {
-  entries: EntityTable<StoredUndoHistory, "pipelineName">;
+  history: EntityTable<StoredUndoHistory, "fileId">;
 };
 
 UndoHistoryDB.version(1).stores({
   entries: "pipelineName",
+});
+
+/**
+ * The old table keyed on the pipeline's name, which two pipelines are allowed
+ * to share once storage keys are opaque — and a collision here replays one
+ * pipeline's undo events onto another. There is nothing to migrate: the events
+ * only make sense against the ids of the spec they were recorded from.
+ */
+UndoHistoryDB.version(2).stores({
+  entries: null,
+  history: "fileId",
 });
 
 /**
@@ -33,15 +44,15 @@ UndoHistoryDB.version(1).stores({
  * to strip MobX observables while preserving the original format.
  */
 export async function saveUndoHistory(
-  pipelineName: string,
+  fileId: string,
   idStack: string[],
   undoManager: UndoManager,
 ): Promise<void> {
   const rawEvents = undoManager.undoQueue.slice(-MAX_UNDO_EVENTS);
   const clonedEvents: UndoEvent[] = JSON.parse(JSON.stringify(rawEvents));
 
-  await UndoHistoryDB.entries.put({
-    pipelineName,
+  await UndoHistoryDB.history.put({
+    fileId,
     version: CURRENT_VERSION,
     idStack,
     undoEvents: clonedEvents,
@@ -49,9 +60,9 @@ export async function saveUndoHistory(
 }
 
 export async function loadUndoHistory(
-  pipelineName: string,
+  fileId: string,
 ): Promise<StoredUndoHistory | null> {
-  const data = await UndoHistoryDB.entries.get(pipelineName);
+  const data = await UndoHistoryDB.history.get(fileId);
 
   if (!data) return null;
   if (data.version !== CURRENT_VERSION) return null;

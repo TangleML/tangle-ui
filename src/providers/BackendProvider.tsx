@@ -8,6 +8,7 @@ import {
 
 import { client } from "@/api/client.gen";
 import useToastNotification from "@/hooks/useToastNotification";
+import { setBackendEndpoint } from "@/services/pipelineStorage/backendEndpoint";
 import { API_URL } from "@/utils/constants";
 import {
   getUseEnv,
@@ -146,6 +147,15 @@ export const BackendProvider = ({ children }: { children: ReactNode }) => {
       ping({ notifyResult: false });
     }
   }, [backendUrl, settingsLoaded]);
+
+  /**
+   * Pipeline storage reaches the same backend from outside React, and this is
+   * where the setting is resolved. Published whether or not the ping succeeds:
+   * where to send a request is a different question from whether it will work.
+   */
+  useEffect(() => {
+    setBackendEndpoint(backendUrl);
+  }, [backendUrl]);
 
   useEffect(() => {
     const getSettings = async () => {

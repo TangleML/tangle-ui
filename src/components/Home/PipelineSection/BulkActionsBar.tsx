@@ -3,11 +3,11 @@ import { FloatingSelectionBar } from "@/components/shared/FloatingSelectionBar";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import useToastNotification from "@/hooks/useToastNotification";
-import { deletePipeline } from "@/services/pipelineService";
+import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import { getErrorMessage, pluralize } from "@/utils/string";
 
 interface BulkActionsBarProps {
-  selectedPipelines: string[];
+  selectedPipelines: PipelineFile[];
   onDeleteSuccess: () => void;
   onClearSelection: () => void;
 }
@@ -20,12 +20,8 @@ const BulkActionsBar = ({
   const notify = useToastNotification();
 
   const handleBulkDelete = async () => {
-    const deletePromises = selectedPipelines.map((pipelineName) =>
-      deletePipeline(pipelineName),
-    );
-
     try {
-      await Promise.all(deletePromises);
+      await Promise.all(selectedPipelines.map((file) => file.deleteFile()));
       onDeleteSuccess();
       notify(
         `${selectedPipelines.length} pipelines successfully deleted`,

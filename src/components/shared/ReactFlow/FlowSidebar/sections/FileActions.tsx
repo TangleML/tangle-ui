@@ -5,7 +5,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
 import { useAutoSaveStatus } from "@/providers/AutoSaveProvider";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
-import { getPipelineFile } from "@/services/pipelineService";
+import { findPipelineFile } from "@/services/pipelineStorage/pipelineOperations";
 import { formatRelativeTime } from "@/utils/date";
 
 import { SidebarSection } from "../components/SidebarSection";
@@ -50,8 +50,8 @@ const FileActions = () => {
   useEffect(() => {
     const fetchLastSaved = async () => {
       if (componentSpec?.name) {
-        const lastSavedPipeline = await getPipelineFile(componentSpec.name);
-        setLastSavedAt(lastSavedPipeline?.modificationTime ?? null);
+        const file = await findPipelineFile({ name: componentSpec.name });
+        setLastSavedAt(file?.modifiedAt ?? null);
       }
     };
     fetchLastSaved();

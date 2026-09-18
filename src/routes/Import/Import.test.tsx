@@ -142,7 +142,8 @@ describe("ImportPage", () => {
 
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith({
-        to: "/editor-v2/Test%20Pipeline",
+        to: "/editor-v2/$pipelineName",
+        params: { pipelineName: "Test Pipeline" },
       });
     });
   });

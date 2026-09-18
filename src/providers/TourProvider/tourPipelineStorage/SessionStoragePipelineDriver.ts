@@ -37,8 +37,12 @@ export class SessionStoragePipelineDriver implements PipelineStorageDriver {
     return content;
   }
 
-  async write(storageKey: string, content: string): Promise<void> {
+  async write(
+    storageKey: string,
+    content: string,
+  ): Promise<PipelineFileDescriptor> {
     sessionStorage.setItem(this.key(storageKey), content);
+    return { storageKey };
   }
 
   async delete(storageKey: string): Promise<void> {
