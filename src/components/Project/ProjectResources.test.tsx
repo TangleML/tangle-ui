@@ -94,49 +94,71 @@ describe("ProjectResources", () => {
     expect(screen.getByRole("button", { name: /Add/ })).toBeInTheDocument();
   });
 
-  it("lists every kind of item together, newest first as the backend sends them", () => {
+  it("gathers each kind of item under a heading that counts it", () => {
     mockResources({
       items: [
         resource({ id: "a", entity: "pipeline", name: "churn-training" }),
         resource({ id: "b", entity: "document", name: "Model card" }),
+        resource({ id: "c", entity: "document", name: "readme.md" }),
       ],
-      totalCount: 2,
+      totalCount: 3,
     });
     renderResources();
 
+    expect(screen.getByText("Pipelines (1)")).toBeInTheDocument();
+    expect(screen.getByText("Documents (2)")).toBeInTheDocument();
     expect(screen.getByText("churn-training")).toBeInTheDocument();
     expect(screen.getByText("Model card")).toBeInTheDocument();
   });
 
-  it("offers no filter while every item is the same kind", () => {
+  it("orders the groups the way the rest of the app names them", () => {
     mockResources({
       items: [
-        resource({ id: "a", name: "First" }),
-        resource({ id: "b", name: "Second" }),
+        resource({ id: "a", entity: "document", name: "Model card" }),
+        resource({ id: "b", entity: "agent_session", name: "Tuesday" }),
+        resource({ id: "c", entity: "pipeline", name: "churn-training" }),
       ],
-      totalCount: 2,
+      totalCount: 3,
     });
     renderResources();
 
-    expect(screen.queryByRole("button", { name: /^All/ })).toBeNull();
+    const headings = screen
+      .getAllByRole("columnheader")
+      .map((heading) => heading.textContent);
+
+    expect(headings).toEqual([
+      "Pipelines (1)",
+      "Agent sessions (1)",
+      "Documents (1)",
+    ]);
   });
 
-  it("narrows to one kind of item, counting each", async () => {
+  it("puts a kind it does not recognise after the ones it does", () => {
     mockResources({
       items: [
-        resource({ id: "a", entity: "pipeline", name: "churn-training" }),
+        resource({ id: "a", entity: "widget", name: "Gadget" }),
         resource({ id: "b", entity: "document", name: "Model card" }),
       ],
       totalCount: 2,
     });
     renderResources();
-    const user = userEvent.setup();
 
-    expect(screen.getByRole("button", { name: "All 2" })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "pipeline 1" }));
+    const headings = screen
+      .getAllByRole("columnheader")
+      .map((heading) => heading.textContent);
 
-    expect(screen.getByText("churn-training")).toBeInTheDocument();
-    expect(screen.queryByText("Model card")).toBeNull();
+    expect(headings).toEqual(["Documents (1)", "Widgets (1)"]);
+  });
+
+  it("leaves out a kind the project holds none of", () => {
+    mockResources({
+      items: [resource({ id: "a", entity: "document", name: "Model card" })],
+      totalCount: 1,
+    });
+    renderResources();
+
+    expect(screen.queryByText(/Pipelines/)).toBeNull();
+    expect(screen.queryByText(/Agent sessions/)).toBeNull();
   });
 
   it("removes an item only once the removal is confirmed", async () => {
