@@ -11,6 +11,8 @@ import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { AnnotationsBlock } from "@/routes/v2/pages/Editor/components/AnnotationsBlock/AnnotationsBlock";
 import { ValidationSummary } from "@/routes/v2/pages/Editor/components/ValidationSummary";
 import { usePipelineActions } from "@/routes/v2/pages/Editor/store/actions/usePipelineActions";
+import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
+import { CodeBlock } from "@/routes/v2/shared/components/CodeBlock";
 import { PipelineDetailsCollapsibleSection } from "@/routes/v2/shared/components/PipelineDetailsCollapsibleSection";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
@@ -31,6 +33,7 @@ export const PipelineDetailsContent = observer(
   function PipelineDetailsContent() {
     const { track } = useAnalytics();
     const { navigation } = useSharedStores();
+    const { pipelineFile } = useEditorSession();
     const pipelineSpec = useSpec();
     const notify = useToastNotification();
     const {
@@ -53,6 +56,27 @@ export const PipelineDetailsContent = observer(
 
     const yamlText = serializeComponentSpecToYaml(pipelineSpec);
     const isNestedSubgraph = navigation.navigationDepth > 0;
+    if (!pipelineFile.activePipelineFile?.canEdit) {
+      return (
+        <BlockStack className="h-full min-h-0 w-full">
+          <PipelineDetailsHeader
+            canNavigateBack={navigation.canNavigateBack}
+            navigationPath={navigation.navigationPath}
+            onNavigateToLevel={(index) => navigation.navigateToLevel(index)}
+            isNestedSubgraph={isNestedSubgraph}
+            pipelineName={pipelineSpec.name}
+            yamlText={yamlText}
+          />
+          <div className="min-h-0 flex-1 overflow-auto p-3">
+            <CodeBlock
+              code={yamlText}
+              language="yaml"
+              showLineNumbers={false}
+            />
+          </div>
+        </BlockStack>
+      );
+    }
 
     const handleNavigateToLevel = (index: number) => {
       navigation.navigateToLevel(index);

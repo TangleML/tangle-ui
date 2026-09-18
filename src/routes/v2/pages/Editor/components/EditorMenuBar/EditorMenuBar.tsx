@@ -32,6 +32,7 @@ import { WindowsMenu } from "./components/WindowsMenu";
 export const EditorMenuBar = observer(function EditorMenuBar() {
   const { navigation } = useSharedStores();
   const { pipelineFile } = useEditorSession();
+  const canEdit = pipelineFile.activePipelineFile?.canEdit ?? false;
   const handlePipelineRename = usePipelineRename();
   const tourMode = useTourMode();
   const { setIsOpen: setTourPopupOpen } = useTour();
@@ -103,7 +104,7 @@ export const EditorMenuBar = observer(function EditorMenuBar() {
                     Tour
                   </Badge>
                 )}
-                {!tourMode && (
+                {!tourMode && canEdit && (
                   <Button
                     variant="ghost"
                     size="inline-xs"
@@ -115,7 +116,7 @@ export const EditorMenuBar = observer(function EditorMenuBar() {
                   </Button>
                 )}
               </InlineStack>
-              {!tourMode && (
+              {!tourMode && canEdit && (
                 <PipelineNameDialog
                   open={renameOpen}
                   onOpenChange={setRenameOpen}
@@ -136,9 +137,9 @@ export const EditorMenuBar = observer(function EditorMenuBar() {
                 <FileMenu />
                 <ViewMenu />
                 <RunsMenu />
-                <ComponentsLibraryMenu />
+                {canEdit && <ComponentsLibraryMenu />}
                 <WindowsMenu />
-                <NodeMenu />
+                {canEdit && <NodeMenu />}
               </InlineStack>
             </BlockStack>
           )}
