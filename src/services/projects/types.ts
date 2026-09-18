@@ -149,6 +149,7 @@ export const ProjectResourcesQueryKeys = {
 } as const;
 
 export const ProjectRunsQueryKeys = {
+  All: (projectId: string) => ["projects", projectId, "runs"] as const,
   List: (projectId: string, params: ListProjectRunsParams = {}) =>
     ["projects", projectId, "runs", "list", params] as const,
   Stats: (runId: string) => ["pipeline-run-stats", runId] as const,

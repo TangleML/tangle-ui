@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { AlertCircle, CheckCircle, Loader2, SendHorizonal } from "lucide-react";
 import { type MouseEvent, useRef, useState } from "react";
@@ -12,8 +12,6 @@ import useCooldownTimer from "@/hooks/useCooldownTimer";
 import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
 import { useBackend } from "@/providers/BackendProvider";
-import { ONBOARDING_MY_RUN_COUNT_KEY } from "@/providers/OnboardingProvider/onboardingQueryKeys";
-import { useRunSubmissionAnnotations } from "@/providers/RunSubmissionScopeProvider";
 import { useTourMockBackend } from "@/providers/TourProvider/tourMockBackend";
 import { getDefaultRunPath } from "@/routes/runRoutes";
 import { updateRunAnnotation } from "@/services/pipelineRunService";
@@ -28,78 +26,17 @@ import {
   type ComponentSpec,
   isGraphImplementation,
 } from "@/utils/componentSpec";
-import { submitPipelineRun } from "@/utils/submitPipeline";
 import { validateArguments } from "@/utils/validations";
 
-import { isAuthorizationRequired } from "../../Authentication/helpers";
-import { useAuthLocalStorage } from "../../Authentication/useAuthLocalStorage";
 import TooltipButton from "../../Buttons/TooltipButton";
 import { SubmitTaskArgumentsDialog } from "./components/SubmitTaskArgumentsDialog";
+import { useSubmitPipeline } from "./useSubmitPipeline";
 
 interface TangleSubmitterProps {
   componentSpec?: ComponentSpec;
   onSubmitComplete?: () => void;
   isComponentTreeValid?: boolean;
   onlyFixableIssues?: boolean;
-}
-
-function useSubmitPipeline() {
-  const { awaitAuthorization, isAuthorized } = useAwaitAuthorization();
-  const queryClient = useQueryClient();
-  const { getToken } = useAuthLocalStorage();
-
-  const { backendUrl } = useBackend();
-  const runAnnotations = useRunSubmissionAnnotations();
-
-  const authorizationToken = useRef<string | undefined>(getToken());
-
-  return useMutation({
-    mutationFn: async ({
-      componentSpec,
-      taskArguments,
-      onSuccess,
-      onError,
-    }: {
-      componentSpec: ComponentSpec;
-      taskArguments?: Record<string, ArgumentType>;
-      onSuccess: (data: PipelineRun) => void;
-      onError: (error: Error | string) => void;
-    }) => {
-      const authorizationRequired = isAuthorizationRequired();
-      if (authorizationRequired && !isAuthorized) {
-        const token = await awaitAuthorization();
-        if (token) {
-          authorizationToken.current = token;
-        }
-      }
-
-      return new Promise<PipelineRun>((resolve, reject) => {
-        submitPipelineRun(componentSpec, backendUrl, {
-          authorizationToken: authorizationToken.current,
-          taskArguments,
-          runAnnotations,
-          onSuccess: (data) => {
-            resolve(data);
-            onSuccess(data);
-          },
-          onError: (error) => {
-            reject(error);
-            onError(error);
-          },
-        });
-      });
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["pipelineRuns"],
-      });
-      // Refresh the onboarding checklist's run-count so a first run flips
-      // `execute_run` immediately rather than after the 5-minute stale window.
-      await queryClient.invalidateQueries({
-        queryKey: ONBOARDING_MY_RUN_COUNT_KEY,
-      });
-    },
-  });
 }
 
 const TangleSubmitter = ({
