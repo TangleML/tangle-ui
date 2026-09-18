@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ProjectResource } from "@/services/projects/types";
@@ -66,9 +67,15 @@ function mockSpec(
   } as unknown as ReturnType<typeof usePipelineSpec>);
 }
 
+const onClear = vi.fn();
+
 function renderPreview(resourceId: string | null) {
   return render(
-    <ProjectResourcePreview projectId="project-1" resourceId={resourceId} />,
+    <ProjectResourcePreview
+      projectId="project-1"
+      resourceId={resourceId}
+      onClear={onClear}
+    />,
   );
 }
 
@@ -91,6 +98,21 @@ describe("ProjectResourcePreview", () => {
       screen.getByText("Select a resource to preview it here."),
     ).toBeInTheDocument();
     expect(useProjectResource).not.toHaveBeenCalled();
+  });
+
+  it("offers no way out when there is nothing to leave", () => {
+    renderPreview(null);
+
+    expect(screen.queryByRole("button", { name: "Clear" })).toBeNull();
+  });
+
+  it("offers a way back to nothing selected", async () => {
+    renderPreview("resource-1");
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "Clear" }));
+
+    expect(onClear).toHaveBeenCalled();
   });
 
   it("shows a document's own body", () => {
