@@ -85,6 +85,15 @@ function mockSpec(
   } as unknown as ReturnType<typeof usePipelineSpec>);
 }
 
+function mockPipeline() {
+  mockResource({
+    entity: "pipeline",
+    name: "churn-training-v2",
+    entityId: "pipeline-1",
+    payload: null,
+  });
+}
+
 function renderPreview(resourceId: string | null) {
   return render(
     <ProjectResourcePreview projectId="project-1" resourceId={resourceId} />,
@@ -166,6 +175,71 @@ describe("ProjectResourcePreview", () => {
     expect(
       screen.queryByRole("link", { name: /Open in the editor/ }),
     ).toBeNull();
+  });
+
+  it("vouches for a pipeline that validates", () => {
+    mockPipeline();
+    mockSpec({
+      data: {
+        editorName: "churn training",
+        spec: {
+          name: "Churn training",
+          implementation: {
+            graph: {
+              tasks: {
+                Greet: {
+                  componentRef: {
+                    spec: {
+                      name: "Greet",
+                      implementation: {
+                        container: { image: "python:3.11", command: ["echo"] },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    } as unknown as ReturnType<typeof usePipelineSpec>);
+    renderPreview("resource-1");
+
+    expect(screen.getByText("Valid")).toBeInTheDocument();
+  });
+
+  it("calls out a pipeline that does not validate", () => {
+    mockPipeline();
+    renderPreview("resource-1");
+
+    expect(screen.getByText("Not valid")).toBeInTheDocument();
+  });
+
+  it("gives no verdict on a pipeline whose tasks arrived without their components", () => {
+    mockPipeline();
+    mockSpec({
+      data: {
+        editorName: "churn training",
+        spec: {
+          name: "Churn training",
+          implementation: {
+            graph: {
+              tasks: { Greet: { componentRef: { url: "https://x.test/c" } } },
+            },
+          },
+        },
+      },
+    } as unknown as ReturnType<typeof usePipelineSpec>);
+    renderPreview("resource-1");
+
+    expect(screen.queryByText("Valid")).toBeNull();
+    expect(screen.queryByText("Not valid")).toBeNull();
+  });
+
+  it("says nothing about the validity of something that is not a pipeline", () => {
+    renderPreview("resource-1");
+
+    expect(screen.queryByText(/valid/i)).toBeNull();
   });
 
   it("says a pipeline cannot be shown rather than showing an empty viewer", () => {
