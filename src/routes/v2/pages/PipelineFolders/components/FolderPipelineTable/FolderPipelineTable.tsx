@@ -1,4 +1,5 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { observer } from "mobx-react-lite";
 import { type ChangeEvent, useState } from "react";
 
 import { PaginationControls } from "@/components/shared/PaginationControls";
@@ -55,7 +56,9 @@ const FolderPipelineTableSkeleton = () => (
 );
 
 export const FolderPipelineTable = withSuspenseWrapper(
-  function FolderPipelineTableContent({ folderId }: FolderPipelineTableProps) {
+  observer(function FolderPipelineTableContent({
+    folderId,
+  }: FolderPipelineTableProps) {
     const storage = usePipelineStorage();
 
     const { data: currentFolder } = useSuspenseQuery({
@@ -94,6 +97,13 @@ export const FolderPipelineTable = withSuspenseWrapper(
     const requiresPermission = currentFolder.requiresPermission;
     const canMoveOut = currentFolder.canMoveFilesOut;
     const canDrag = canMoveOut && folders.length > 0;
+    const canMoveSelection =
+      canMoveOut &&
+      pipelines.every(
+        (file) =>
+          !selection.selectedPipelines.has(file.id) ||
+          file.storageKind === "local",
+      );
 
     const filteredFolders = folders.filter((f) =>
       f.name.toLowerCase().includes(searchQuery.toLowerCase()),
@@ -101,7 +111,7 @@ export const FolderPipelineTable = withSuspenseWrapper(
 
     const filteredPipelines = pipelines
       .filter((p) =>
-        p.storageKey.toLowerCase().includes(searchQuery.toLowerCase()),
+        p.displayName.toLowerCase().includes(searchQuery.toLowerCase()),
       )
       .sort(
         (a, b) =>
@@ -121,7 +131,9 @@ export const FolderPipelineTable = withSuspenseWrapper(
         new_value: checked,
       });
       if (checked) {
-        const pipelineIds = filteredPipelines.map((p) => p.id);
+        const pipelineIds = filteredPipelines
+          .filter((p) => p.canEdit)
+          .map((p) => p.id);
         const folderIds = filteredFolders.map((f) => f.id);
         selection.selectAll({ pipelineIds, folderIds });
       } else {
@@ -145,7 +157,12 @@ export const FolderPipelineTable = withSuspenseWrapper(
             type: "folder",
             id,
           })),
-        ];
+        ].filter(
+          (dragItem) =>
+            dragItem.type !== "pipeline" ||
+            pipelines.find((file) => file.id === dragItem.id)?.storageKind ===
+              "local",
+        );
       }
 
       return [item];
@@ -169,12 +186,29 @@ export const FolderPipelineTable = withSuspenseWrapper(
 
     return (
       <BlockStack gap="4" className="w-full">
+        {storage.remoteListError && (
+          <div role="alert">
+            <InlineStack
+              gap="2"
+              blockAlign="center"
+              className="text-destructive"
+            >
+              <Icon name="CloudAlert" />
+              <Text size="sm">
+                Could not load remote pipelines: {storage.remoteListError}
+              </Text>
+              <Button variant="outline" size="sm" onClick={() => refetch()}>
+                <Icon name="RotateCw" /> Retry
+              </Button>
+            </InlineStack>
+          </div>
+        )}
         {requiresPermission && (
           <FolderPermissionBanner folder={currentFolder} onGranted={refetch} />
         )}
 
         {hasContent ? (
-          <Table className="table-fixed">
+          <Table className="table-fixed min-w-210">
             <TableHeader>
               <TableRow className="text-xs">
                 <TableHead className="w-10">
@@ -188,7 +222,7 @@ export const FolderPipelineTable = withSuspenseWrapper(
                 <TableHead className="w-36">Tags</TableHead>
                 <TableHead className="w-36">Last run</TableHead>
                 <TableHead className="w-16">Runs</TableHead>
-                <TableHead className="w-20"></TableHead>
+                <TableHead className="w-28"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -199,6 +233,7 @@ export const FolderPipelineTable = withSuspenseWrapper(
                     <InlineStack gap="1" wrap="nowrap" className="w-full">
                       <Input
                         type="text"
+                        aria-label="Search pipelines"
                         className="w-full"
                         value={searchQuery}
                         onChange={handleSearch}
@@ -219,7 +254,7 @@ export const FolderPipelineTable = withSuspenseWrapper(
                 </TableCell>
               </TableRow>
 
-              {folderId !== null && (
+              {folderId !== null && !currentFolder.isRoot && (
                 <ParentFolderRow breadcrumbPath={breadcrumbPath} />
               )}
 
@@ -251,7 +286,9 @@ export const FolderPipelineTable = withSuspenseWrapper(
 
               {filteredFolders.length === 0 &&
                 filteredPipelines.length === 0 && (
-                  <TableRow>No items found.</TableRow>
+                  <TableRow>
+                    <TableCell colSpan={7}>No items found.</TableCell>
+                  </TableRow>
                 )}
             </TableBody>
           </Table>
@@ -274,9 +311,20 @@ export const FolderPipelineTable = withSuspenseWrapper(
 
         <SelectionToolbar
           totalSelected={selection.totalSelected}
-          canMove={canMoveOut}
+          canMove={canMoveSelection}
           onMove={() => setMoveDialogOpen(true)}
-          onDelete={() => bulkDelete(Array.from(selection.selectedPipelines))}
+          onDelete={() =>
+            bulkDelete(
+              pipelines
+                .filter(
+                  (file) =>
+                    selection.selectedPipelines.has(file.id) && file.canEdit,
+                )
+                .map((file) =>
+                  file.storageKind === "local" ? file.id : file.referenceId,
+                ),
+            )
+          }
           onClear={selection.clearSelection}
           isDeleting={isBulkDeleting}
         />
@@ -291,6 +339,16 @@ export const FolderPipelineTable = withSuspenseWrapper(
         />
       </BlockStack>
     );
-  },
+  }),
   FolderPipelineTableSkeleton,
+  ({ resetErrorBoundary }) => (
+    <div role="alert">
+      <InlineStack gap="2" blockAlign="center">
+        <Text>Could not load pipelines.</Text>
+        <Button variant="outline" onClick={resetErrorBoundary}>
+          <Icon name="RotateCw" /> Retry
+        </Button>
+      </InlineStack>
+    </div>
+  ),
 );

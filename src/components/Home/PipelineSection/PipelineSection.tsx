@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { ExamplePipelines } from "@/components/Learn/ExamplePipelines";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
@@ -22,20 +22,15 @@ import {
 import { Paragraph, Text } from "@/components/ui/typography";
 import { usePagination } from "@/hooks/usePagination";
 import { APP_ROUTES } from "@/routes/router";
-import {
-  type ComponentFileEntry,
-  getAllComponentFilesFromList,
-} from "@/utils/componentStore";
-import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
+import { deletePipeline } from "@/services/pipelineService";
 
 import BulkActionsBar from "./BulkActionsBar";
 import { PipelineFiltersBar } from "./PipelineFiltersBar";
 import PipelineRow from "./PipelineRow";
 import { usePipelineFilters } from "./usePipelineFilters";
+import { type PipelineListEntry, usePipelineList } from "./usePipelineList";
 
 const DEFAULT_PAGE_SIZE = 10;
-
-type Pipelines = Map<string, ComponentFileEntry>;
 
 const PipelineSectionSkeleton = () => (
   <BlockStack className="h-full" gap="3">
@@ -65,8 +60,9 @@ interface PipelineSectionProps {
 
 export const PipelineSection = withSuspenseWrapper(
   ({ onPipelineClick }: PipelineSectionProps) => {
-    const [pipelines, setPipelines] = useState<Pipelines>(new Map());
-    const [isLoading, setIsLoading] = useState(false);
+    const { data, error, isPending, refetch } = usePipelineList();
+    const pipelines = data?.pipelines ?? new Map<string, PipelineListEntry>();
+    const loadError = error?.message ?? data?.error;
     const [selectedPipelines, setSelectedPipelines] = useState<Set<string>>(
       new Set(),
     );
@@ -85,22 +81,21 @@ export const PipelineSection = withSuspenseWrapper(
       resetPage,
     } = usePagination(filteredPipelines, DEFAULT_PAGE_SIZE, filterKey);
 
-    const fetchUserPipelines = async () => {
-      setIsLoading(true);
-      try {
-        setPipelines(
-          await getAllComponentFilesFromList(USER_PIPELINES_LIST_NAME),
-        );
-      } catch (error) {
-        console.error("Failed to load user pipelines:", error);
-      } finally {
-        setIsLoading(false);
-      }
+    const fetchUserPipelines = () => {
+      void refetch();
     };
+
+    const selectablePipelines = filteredPipelines.filter(
+      ([, entry]) => entry.file?.canEdit !== false,
+    );
+    const selectedIds = [...selectedPipelines].filter((id) => {
+      const entry = pipelines.get(id);
+      return entry && entry.file?.canEdit !== false;
+    });
 
     const handleSelectAll = (checked: boolean) => {
       setSelectedPipelines(
-        checked ? new Set(filteredPipelines.map(([name]) => name)) : new Set(),
+        checked ? new Set(selectablePipelines.map(([id]) => id)) : new Set(),
       );
     };
 
@@ -111,13 +106,9 @@ export const PipelineSection = withSuspenseWrapper(
       setSelectedPipelines(next);
     };
 
-    useEffect(() => {
-      fetchUserPipelines();
-    }, []);
+    if (isPending) return <LoadingScreen message="Loading Pipelines" />;
 
-    if (isLoading) return <LoadingScreen message="Loading Pipelines" />;
-
-    if (pipelines.size === 0) {
+    if (pipelines.size === 0 && !loadError) {
       return (
         <BlockStack gap="4" align="center">
           <BlockStack gap="2">
@@ -136,11 +127,16 @@ export const PipelineSection = withSuspenseWrapper(
     }
 
     const isAllSelected =
-      filteredPipelines.length > 0 &&
-      filteredPipelines.every(([name]) => selectedPipelines.has(name));
+      selectablePipelines.length > 0 &&
+      selectablePipelines.every(([id]) => selectedPipelines.has(id));
 
     return (
       <BlockStack gap="4" className="w-full">
+        {loadError && (
+          <div role="alert" className="text-sm text-destructive">
+            {loadError}
+          </div>
+        )}
         <PipelineFiltersBar
           filters={filterBarProps}
           actions={<ExamplePipelineButton />}
@@ -152,6 +148,7 @@ export const PipelineSection = withSuspenseWrapper(
               <TableHead className="w-10">
                 <Checkbox
                   checked={isAllSelected}
+                  aria-label="Select all pipelines"
                   onCheckedChange={handleSelectAll}
                 />
               </TableHead>
@@ -171,15 +168,16 @@ export const PipelineSection = withSuspenseWrapper(
                 </TableCell>
               </TableRow>
             )}
-            {paginatedPipelines.map(([name, fileEntry, matchMetadata]) => (
+            {paginatedPipelines.map(([id, fileEntry, matchMetadata]) => (
               <PipelineRow
-                key={fileEntry.componentRef.digest}
-                name={name}
+                key={id}
+                name={fileEntry.name}
+                file={fileEntry.file}
                 componentRef={fileEntry.componentRef}
                 modificationTime={fileEntry.modificationTime}
                 onDelete={fetchUserPipelines}
-                isSelected={selectedPipelines.has(name)}
-                onSelect={(checked) => handleSelectPipeline(name, checked)}
+                isSelected={selectedPipelines.has(id)}
+                onSelect={(checked) => handleSelectPipeline(id, checked)}
                 searchQuery={matchMetadata.searchQuery}
                 matchedFields={matchMetadata.matchedFields}
                 componentQuery={matchMetadata.componentQuery}
@@ -204,13 +202,18 @@ export const PipelineSection = withSuspenseWrapper(
           Refresh
         </Button>
 
-        {selectedPipelines.size > 0 && (
+        {selectedIds.length > 0 && (
           <BulkActionsBar
-            selectedPipelines={Array.from(selectedPipelines)}
+            selectedPipelines={selectedIds}
+            onDeletePipeline={async (id) => {
+              const entry = pipelines.get(id);
+              if (entry?.file) await entry.file.deleteFile();
+              else if (entry) await deletePipeline(entry.name);
+            }}
             onDeleteSuccess={() => {
               setSelectedPipelines(new Set());
-              fetchUserPipelines();
             }}
+            onDeleteSettled={fetchUserPipelines}
             onClearSelection={() => setSelectedPipelines(new Set())}
           />
         )}
