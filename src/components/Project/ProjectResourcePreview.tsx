@@ -11,6 +11,7 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
 import { Heading, Text } from "@/components/ui/typography";
 import { getDefaultEditorPath } from "@/routes/editorRoutes";
+import { PROJECT_ID_SEARCH_PARAM } from "@/routes/projectRunSearch";
 import type { LocalPipelinePointer } from "@/services/localPipelines/types";
 import { useLocalPipeline } from "@/services/localPipelines/useLocalPipelines";
 import type { ProjectResource } from "@/services/projects/types";
@@ -204,6 +205,7 @@ function LocalPipelinePreview({
         <Button variant="outline" size="sm" asChild>
           <Link
             to={getDefaultEditorPath(pipeline.name)}
+            search={{ [PROJECT_ID_SEARCH_PARAM]: projectId }}
             {...tracking("projects.open_local_pipeline")}
           >
             <Icon name="PencilRuler" size="xs" />
