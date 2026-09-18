@@ -13,8 +13,13 @@ import { SharedStoreProvider } from "@/routes/v2/shared/store/SharedStoreContext
 import { TOP_NAV_HEIGHT } from "@/utils/constants";
 
 import { TangentProjectWorkspace } from "./components/TangentProjectWorkspace";
+import { TangentUnreachable } from "./components/TangentUnreachable";
 import { TangentProjectProvider } from "./context/TangentProjectContext";
 import { useTangentBaseUrl } from "./hooks/useTangentBaseUrl";
+import {
+  tangentChannelUrl,
+  useTangentRuntime,
+} from "./hooks/useTangentRuntime";
 
 export function TangentProjectPage() {
   const params = useParams({ strict: false });
@@ -39,8 +44,10 @@ export function TangentProjectPage() {
 function TangentProjectPageContent({ projectId }: { projectId: string }) {
   const { resolvedTheme } = useTheme();
   const { baseUrl, isLoading } = useTangentBaseUrl(projectId);
+  const channelUrl = tangentChannelUrl(baseUrl);
+  const runtime = useTangentRuntime(channelUrl);
 
-  if (isLoading) {
+  if (isLoading || runtime === "loading") {
     return (
       <BlockStack fill align="center" gap="1" className="p-10">
         <Text size="sm" weight="semibold">
@@ -48,6 +55,10 @@ function TangentProjectPageContent({ projectId }: { projectId: string }) {
         </Text>
       </BlockStack>
     );
+  }
+
+  if (runtime === "unreachable") {
+    return <TangentUnreachable baseUrl={baseUrl} />;
   }
 
   const { socketUrl, socketPath } = getTangentSocketConfig(baseUrl);
@@ -60,6 +71,7 @@ function TangentProjectPageContent({ projectId }: { projectId: string }) {
       <TangentProvider
         key={baseUrl}
         baseUrl={baseUrl}
+        channelUrl={channelUrl}
         colorScheme={resolvedTheme}
         socketUrl={socketUrl}
         socketPath={socketPath}
