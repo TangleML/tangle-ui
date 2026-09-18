@@ -25,7 +25,7 @@ export function ProjectSidebar({ project }: ProjectSidebarProps) {
       <BlockStack gap="4">
         <ColumnHeadingRow>
           <Heading level={2} id={HEADING_ID}>
-            About
+            Details
           </Heading>
         </ColumnHeadingRow>
 
