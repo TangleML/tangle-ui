@@ -9,7 +9,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
-import { Heading } from "@/components/ui/typography";
+import { Heading, Text } from "@/components/ui/typography";
 import { getDefaultEditorPath } from "@/routes/editorRoutes";
 import type { ProjectResource } from "@/services/projects/types";
 import { useProjectResource } from "@/services/projects/useProjectResources";
@@ -18,6 +18,7 @@ import { tracking } from "@/utils/tracking";
 import { componentSpecToText } from "@/utils/yaml";
 
 import { ColumnHeadingRow } from "./ColumnHeadingRow";
+import { type PipelineValidity, pipelineValidity } from "./pipelineValidity";
 import { UNTITLED } from "./ResourceRow";
 
 const PLAIN_TEXT = "plaintext";
@@ -170,16 +171,41 @@ function PipelinePreview({ resource, pipelineId }: PipelinePreviewProps) {
         language="yaml"
         filename={resource.name ?? UNTITLED}
       />
-      <Button variant="outline" size="sm" asChild>
-        <Link
-          to={getDefaultEditorPath(pipeline.editorName)}
-          {...tracking("projects.open_pipeline")}
-        >
-          <Icon name="PencilRuler" size="xs" />
-          Open in the editor
-        </Link>
-      </Button>
+      <InlineStack gap="3" blockAlign="center" className="w-full">
+        <Button variant="outline" size="sm" asChild>
+          <Link
+            to={getDefaultEditorPath(pipeline.editorName)}
+            {...tracking("projects.open_pipeline")}
+          >
+            <Icon name="PencilRuler" size="xs" />
+            Open in the editor
+          </Link>
+        </Button>
+        <ValidityBadge validity={pipelineValidity(pipeline.spec)} />
+      </InlineStack>
     </BlockStack>
+  );
+}
+
+function ValidityBadge({ validity }: { validity: PipelineValidity }) {
+  if (validity === "unknown") {
+    return null;
+  }
+
+  const valid = validity === "valid";
+
+  return (
+    <InlineStack gap="1" blockAlign="center" wrap="nowrap">
+      <Icon
+        name={valid ? "CircleCheck" : "CircleAlert"}
+        size="xs"
+        className={valid ? "text-status-succeeded" : "text-status-failed"}
+        aria-hidden="true"
+      />
+      <Text size="xs" tone="subdued">
+        {valid ? "Valid" : "Not valid"}
+      </Text>
+    </InlineStack>
   );
 }
 
