@@ -18,6 +18,7 @@ import {
 import { Icon } from "@/components/ui/icon";
 import { serializeComponentSpecToText } from "@/models/componentSpec";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
+import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButton";
 import { ShortcutBadge } from "@/routes/v2/shared/components/ShortcutBadge";
 import { focusModeStore } from "@/routes/v2/shared/hooks/useFocusMode";
@@ -34,6 +35,7 @@ const LAYOUT_ALGORITHMS: { key: LayoutAlgorithm; label: string }[] = [
 export const ViewMenu = observer(function ViewMenu() {
   const { track } = useAnalytics();
   const { keyboard, navigation } = useSharedStores();
+  const { pipelineFile } = useEditorSession();
   const autoLayoutShortcut = keyboard.getShortcut("auto-layout");
   const [showYaml, setShowYaml] = useState(false);
 
@@ -49,7 +51,11 @@ export const ViewMenu = observer(function ViewMenu() {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" sideOffset={2}>
           <DropdownMenuSub>
-            <DropdownMenuSubTrigger disabled={!autoLayoutShortcut}>
+            <DropdownMenuSubTrigger
+              disabled={
+                !autoLayoutShortcut || !pipelineFile.activePipelineFile?.canEdit
+              }
+            >
               <Icon name="LayoutDashboard" size="sm" />
               Auto-layout
             </DropdownMenuSubTrigger>

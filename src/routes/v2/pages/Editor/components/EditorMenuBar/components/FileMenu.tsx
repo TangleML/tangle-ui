@@ -1,4 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
+import { observer } from "mobx-react-lite";
 import { useState } from "react";
 
 import {
@@ -17,7 +18,7 @@ import {
 import { Icon } from "@/components/ui/icon";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useTourMode } from "@/providers/TourProvider/TourModeContext";
-import { APP_ROUTES } from "@/routes/router";
+import { getEditorLocation } from "@/routes/editorRoutes";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButton";
 import { MovePipelineDialog } from "@/routes/v2/shared/components/MovePipelineDialog";
@@ -27,7 +28,7 @@ import { tracking } from "@/utils/tracking";
 import { OpenPipelineDialog } from "./OpenPipelineDialog";
 import { useFileMenuState } from "./useFileMenuState";
 
-export function FileMenu() {
+export const FileMenu = observer(function FileMenu() {
   const { track } = useAnalytics();
   const {
     importTriggerRef,
@@ -54,8 +55,12 @@ export function FileMenu() {
   const navigate = useNavigate();
   const { pipelineFile: pipelineFileStore } = useEditorSession();
   const activePipeline = pipelineFileStore.activePipelineFile;
+  const canEdit = activePipeline?.canEdit ?? false;
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
-  const canMove = activePipeline?.folder.canMoveFilesOut ?? false;
+  const canMove =
+    canEdit &&
+    activePipeline?.storageKind === "local" &&
+    activePipeline.folder.canMoveFilesOut;
   const tourMode = useTourMode();
 
   const isTour = !!tourMode;
@@ -84,6 +89,7 @@ export function FileMenu() {
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
+            disabled={!canEdit}
             onClick={() => {
               track("v2.pipeline_editor.file_menu.save.click");
               void handleSave();
@@ -100,10 +106,10 @@ export function FileMenu() {
             }}
           >
             <Icon name="SaveAll" size="sm" />
-            Save as
+            {canEdit ? "Save as" : "Clone to my pipelines"}
           </DropdownMenuItem>
           <DropdownMenuItem
-            disabled={isTour}
+            disabled={isTour || !canEdit}
             onClick={() => {
               track("v2.pipeline_editor.file_menu.rename.click");
               setRenameDialogOpen(true);
@@ -158,7 +164,7 @@ export function FileMenu() {
           )}
           <DropdownMenuSeparator />
           <DropdownMenuItem
-            disabled={isTour}
+            disabled={isTour || !canEdit}
             onClick={() => {
               track("v2.pipeline_editor.file_menu.delete_pipeline.click");
               setDeleteDialogOpen(true);
@@ -180,7 +186,7 @@ export function FileMenu() {
       <PipelineNameDialog
         open={saveAsDialogOpen}
         onOpenChange={setSaveAsDialogOpen}
-        title="Save Pipeline As"
+        title={canEdit ? "Save Pipeline As" : "Clone to My Pipelines"}
         description="Enter a name for your pipeline"
         initialName={getSaveAsInitialName()}
         onSubmit={handleSavePipelineAs}
@@ -211,7 +217,7 @@ export function FileMenu() {
       <ConfirmationDialog
         isOpen={deleteDialogOpen}
         title="Delete pipeline?"
-        description={`"${activePipeline?.storageKey ?? "This pipeline"}" will be permanently deleted. This action cannot be undone.`}
+        description={`"${activePipeline?.displayName ?? "This pipeline"}" will be permanently deleted. This action cannot be undone.`}
         onConfirm={() => {
           void handleDeletePipeline();
           setDeleteDialogOpen(false);
@@ -229,13 +235,9 @@ export function FileMenu() {
           />
         }
         onImportComplete={(pipeline) => {
-          navigate({
-            to: APP_ROUTES.EDITOR_V2_PIPELINE,
-            params: { pipelineName: pipeline.name },
-            search: { fileId: pipeline.fileId },
-          });
+          navigate(getEditorLocation(pipeline));
         }}
       />
     </>
   );
-}
+});
