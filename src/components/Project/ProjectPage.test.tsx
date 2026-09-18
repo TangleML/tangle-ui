@@ -130,7 +130,7 @@ describe("ProjectPage", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Runs/ })).toBeInTheDocument();
     expect(
-      screen.getByRole("complementary", { name: "About" }),
+      screen.getByRole("complementary", { name: "Details" }),
     ).toHaveTextContent("alice@example.com");
   });
 

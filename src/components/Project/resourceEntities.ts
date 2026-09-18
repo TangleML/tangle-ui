@@ -12,5 +12,3 @@ const UNKNOWN_ENTITY_ICON: IconName = "Box";
 
 export const entityIcon = (entity: string): IconName =>
   ENTITY_ICONS[entity] ?? UNKNOWN_ENTITY_ICON;
-
-export const entityLabel = (entity: string) => entity.replaceAll("_", " ");

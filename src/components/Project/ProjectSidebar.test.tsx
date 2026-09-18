@@ -46,7 +46,7 @@ describe("ProjectSidebar", () => {
     renderSidebar();
 
     expect(
-      screen.getByRole("complementary", { name: "About" }),
+      screen.getByRole("complementary", { name: "Details" }),
     ).toBeInTheDocument();
   });
 

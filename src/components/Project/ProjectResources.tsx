@@ -1,12 +1,14 @@
-import { useState } from "react";
-
-import { ENTITY_ORDER } from "@/components/Home/ProjectsSection/formatResourceCounts";
+import {
+  ENTITY_ORDER,
+  pluralize,
+} from "@/components/Home/ProjectsSection/formatResourceCounts";
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
 import { InfoBox } from "@/components/shared/InfoBox";
-import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
+import { Table, TableBody, TableHead, TableRow } from "@/components/ui/table";
 import { Heading, Text } from "@/components/ui/typography";
 import useConfirmationDialog from "@/hooks/useConfirmationDialog";
 import useToastNotification from "@/hooks/useToastNotification";
@@ -16,31 +18,44 @@ import {
   useDeleteProjectResource,
   useProjectResources,
 } from "@/services/projects/useProjectResources";
-import { tracking } from "@/utils/tracking";
 
 import { AddResourceMenu } from "./AddResourceMenu";
 import { ColumnHeadingRow } from "./ColumnHeadingRow";
-import { ResourceCard, UNTITLED } from "./ResourceCard";
-import { entityLabel } from "./resourceEntities";
+import { entityIcon } from "./resourceEntities";
+import { ResourceRow, UNTITLED } from "./ResourceRow";
 
 const PAGE_SIZE = 100;
 
-const ALL = "all";
+const COLUMN_COUNT = 3;
 
-function entitiesPresent(resources: ProjectResourceSummary[]) {
-  const counts = new Map<string, number>();
+// A group names the kind of thing it holds, so it stays plural whatever the count.
+const PLURAL = 2;
+
+const capitalize = (value: string) =>
+  value.charAt(0).toUpperCase() + value.slice(1);
+
+const groupHeading = (entity: string, count: number) =>
+  `${capitalize(pluralize(entity, PLURAL))} (${count})`;
+
+function groupByEntity(resources: ProjectResourceSummary[]) {
+  const grouped = new Map<string, ProjectResourceSummary[]>();
   for (const resource of resources) {
-    counts.set(resource.entity, (counts.get(resource.entity) ?? 0) + 1);
+    const existing = grouped.get(resource.entity);
+    if (existing) {
+      existing.push(resource);
+    } else {
+      grouped.set(resource.entity, [resource]);
+    }
   }
 
-  const known = ENTITY_ORDER.filter((entity) => counts.has(entity));
-  const unknown = [...counts.keys()]
+  const known = ENTITY_ORDER.filter((entity) => grouped.has(entity));
+  const unknown = [...grouped.keys()]
     .filter((entity) => !ENTITY_ORDER.includes(entity))
     .sort();
 
   return [...known, ...unknown].map((entity) => ({
     entity,
-    count: counts.get(entity) ?? 0,
+    items: grouped.get(entity) ?? [],
   }));
 }
 
@@ -55,8 +70,6 @@ export function ProjectResources({
   selectedResourceId,
   onSelect,
 }: ProjectResourcesProps) {
-  const [filter, setFilter] = useState(ALL);
-
   const { data, isPending, error } = useProjectResources(projectId, {
     pageSize: PAGE_SIZE,
   });
@@ -92,11 +105,6 @@ export function ProjectResources({
   };
 
   const resources = data?.items ?? [];
-  const kinds = entitiesPresent(resources);
-  const shown =
-    filter === ALL
-      ? resources
-      : resources.filter((resource) => resource.entity === filter);
 
   return (
     <BlockStack gap="4">
@@ -128,37 +136,37 @@ export function ProjectResources({
       )}
 
       {data && resources.length > 0 && (
-        <BlockStack gap="3">
-          {kinds.length > 1 && (
-            <InlineStack gap="2" blockAlign="center" wrap="wrap">
-              <FilterPill
-                label={`All ${resources.length}`}
-                active={filter === ALL}
-                onSelect={() => setFilter(ALL)}
-              />
-              {kinds.map(({ entity, count }) => (
-                <FilterPill
-                  key={entity}
-                  label={`${entityLabel(entity)} ${count}`}
-                  active={filter === entity}
-                  onSelect={() => setFilter(entity)}
+        <Table className="table-fixed">
+          {groupByEntity(resources).map(({ entity, items }) => (
+            <TableBody key={entity}>
+              <TableRow className="hover:bg-transparent">
+                <TableHead colSpan={COLUMN_COUNT} className="px-2 pt-4">
+                  <InlineStack gap="1" blockAlign="center" wrap="nowrap">
+                    <Icon
+                      name={entityIcon(entity)}
+                      size="xs"
+                      className="shrink-0 text-muted-foreground"
+                      aria-hidden="true"
+                    />
+                    <Text size="xs" tone="subdued">
+                      {groupHeading(entity, items.length)}
+                    </Text>
+                  </InlineStack>
+                </TableHead>
+              </TableRow>
+
+              {items.map((resource) => (
+                <ResourceRow
+                  key={resource.id}
+                  resource={resource}
+                  selected={resource.id === selectedResourceId}
+                  onSelect={(selected) => onSelect(selected.id)}
+                  onRemove={handleRemove}
                 />
               ))}
-            </InlineStack>
-          )}
-
-          <div className="grid w-full grid-cols-[repeat(auto-fill,minmax(12rem,1fr))] gap-3">
-            {shown.map((resource) => (
-              <ResourceCard
-                key={resource.id}
-                resource={resource}
-                selected={resource.id === selectedResourceId}
-                onSelect={(selected) => onSelect(selected.id)}
-                onRemove={handleRemove}
-              />
-            ))}
-          </div>
-        </BlockStack>
+            </TableBody>
+          ))}
+        </Table>
       )}
 
       {data?.nextPageToken && (
@@ -173,26 +181,5 @@ export function ProjectResources({
         onCancel={() => confirmationHandlers?.onCancel()}
       />
     </BlockStack>
-  );
-}
-
-interface FilterPillProps {
-  label: string;
-  active: boolean;
-  onSelect: () => void;
-}
-
-function FilterPill({ label, active, onSelect }: FilterPillProps) {
-  return (
-    <Button
-      variant={active ? "secondary" : "ghost"}
-      size="sm"
-      onClick={onSelect}
-      aria-pressed={active}
-      className="capitalize"
-      {...tracking("projects.filter_resources")}
-    >
-      {label}
-    </Button>
   );
 }
