@@ -142,6 +142,8 @@ export const ProjectResourcesQueryKeys = {
   All: (projectId: string) => ["projects", projectId, "resources"] as const,
   Id: (projectId: string, resourceId: string) =>
     ["projects", projectId, "resources", resourceId] as const,
+  Lists: (projectId: string) =>
+    ["projects", projectId, "resources", "list"] as const,
   List: (projectId: string, params: ListProjectResourcesParams = {}) =>
     ["projects", projectId, "resources", "list", params] as const,
 } as const;
