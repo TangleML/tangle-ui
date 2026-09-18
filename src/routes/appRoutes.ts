@@ -46,5 +46,6 @@ export const APP_ROUTES = {
   PIPELINE_FOLDERS: "/pipeline-folders",
   PLAYGROUND: "/playground",
   ARTIFACT_PREVIEW: "/artifact/$artifactId",
+  EXECUTION_LOGS: "/logs/$executionId",
   COMPARE: "/compare",
 } as const;

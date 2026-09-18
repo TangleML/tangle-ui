@@ -4,6 +4,7 @@ import { observer } from "mobx-react-lite";
 import { useEffect, useState } from "react";
 
 import type { ContainerExecutionStatus } from "@/api/types.gen";
+import type { CodeViewerHeaderActions } from "@/components/shared/CodeViewer/CodeViewer";
 import IOSection from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/TaskOverview/IOSection/IOSection";
 import Logs, {
   OpenLogsInNewWindowLink,
@@ -17,6 +18,7 @@ import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Text } from "@/components/ui/typography";
+import { useContainerLog } from "@/hooks/useContainerLog";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
@@ -24,6 +26,7 @@ import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import type { TaskSpec } from "@/utils/componentSpec";
 import { tracking } from "@/utils/tracking";
 
+import { getLogsWindowSize } from "./logsWindowSize";
 import { RunViewTaskActions } from "./RunViewTaskActions";
 import { getTaskAnnotationSections } from "./RunViewTaskAnnotations";
 
@@ -65,6 +68,20 @@ export const RunViewTaskDetails = observer(function RunViewTaskDetails({
     editor.setPendingTaskDetailTab(null);
   }, [pendingTab, hasLogsTab, editor]);
 
+  const status = task
+    ? executionData?.taskExecutionStatusMap.get(task.name)
+    : undefined;
+  const executionId = task
+    ? executionData?.details?.child_task_execution_ids?.[task.name]
+    : undefined;
+
+  // Scoped to the logs tab: there it shares the cache entry the nested <Logs>
+  // populates, so sizing the pop-out window costs no request. Unscoped it would
+  // fetch and poll logs for every task the user merely selects.
+  const { data: containerLog } = useContainerLog(executionId, status, {
+    enabled: activeTab === "logs",
+  });
+
   if (!task) {
     return (
       <BlockStack className="p-4">
@@ -74,10 +91,6 @@ export const RunViewTaskDetails = observer(function RunViewTaskDetails({
       </BlockStack>
     );
   }
-
-  const status = executionData?.taskExecutionStatusMap.get(task.name);
-  const executionId =
-    executionData?.details?.child_task_execution_ids?.[task.name];
 
   const componentRef = task.resolvedComponentRef;
 
@@ -90,13 +103,53 @@ export const RunViewTaskDetails = observer(function RunViewTaskDetails({
         executionId={executionId}
         status={status}
         allowFullscreen={false}
+        headerActions={
+          <OpenLogsInNewWindowLink
+            executionId={executionId}
+            status={status}
+            iconOnly
+            {...tracking("v2.run_view.context_panel.open_logs_new_tab")}
+          />
+        }
       />,
       {
         id: `task-logs-${task.name}`,
         title: `Logs: ${task.name}`,
-        size: { width: 500, height: 400 },
+        size: getLogsWindowSize(
+          [containerLog?.log_text, containerLog?.system_error_exception_full],
+          { width: window.innerWidth, height: window.innerHeight },
+        ),
         minDockedHeight: LOGS_MIN_DOCKED_HEIGHT,
       },
+    );
+  };
+
+  const logsHeaderActions: CodeViewerHeaderActions = ({ exitFullscreen }) => {
+    if (!executionId) return null;
+
+    return (
+      <>
+        <Button
+          variant="ghost"
+          size="min"
+          onClick={() => {
+            exitFullscreen();
+            handlePopOutLogs();
+          }}
+          className="text-muted-foreground hover:text-foreground"
+          title="Pop out logs"
+          aria-label="Pop out logs"
+          {...tracking("v2.run_view.context_panel.logs_pop_out")}
+        >
+          <Icon name="PictureInPicture2" />
+        </Button>
+        <OpenLogsInNewWindowLink
+          executionId={executionId}
+          status={status}
+          iconOnly
+          {...tracking("v2.run_view.context_panel.open_logs_new_tab")}
+        />
+      </>
     );
   };
 
@@ -174,29 +227,6 @@ export const RunViewTaskDetails = observer(function RunViewTaskDetails({
 
           {!isSubgraphTask && (
             <TabsContent value="logs">
-              {!!executionId && (
-                <InlineStack
-                  gap="2"
-                  blockAlign="center"
-                  align="end"
-                  className="w-full pr-4"
-                >
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handlePopOutLogs}
-                    {...tracking("v2.run_view.context_panel.logs_pop_out")}
-                  >
-                    <Icon name="PictureInPicture2" size="xs" />
-                    Pop out
-                  </Button>
-                  <OpenLogsInNewWindowLink
-                    executionId={executionId}
-                    status={status}
-                    {...tracking("v2.run_view.context_panel.open_logs_new_tab")}
-                  />
-                </InlineStack>
-              )}
               <LogsEventsOverlaySection
                 executionId={executionId}
                 status={status as ContainerExecutionStatus}
@@ -204,7 +234,7 @@ export const RunViewTaskDetails = observer(function RunViewTaskDetails({
               <Logs
                 executionId={executionId}
                 status={status}
-                allowFullscreen={false}
+                headerActions={logsHeaderActions}
               />
             </TabsContent>
           )}
