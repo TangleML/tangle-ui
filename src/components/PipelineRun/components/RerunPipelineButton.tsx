@@ -11,6 +11,7 @@ import { Icon } from "@/components/ui/icon";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
 import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
+import { useRunSubmissionAnnotations } from "@/providers/RunSubmissionScopeProvider";
 import { getDefaultRunPath } from "@/routes/runRoutes";
 import type { PipelineRun } from "@/types/pipelineRun";
 import { extractCanonicalName } from "@/utils/canonicalPipelineName";
@@ -38,6 +39,7 @@ export const RerunPipelineButton = ({
   const navigate = useNavigate();
   const notify = useToastNotification();
   const executionData = useExecutionDataOptional();
+  const runAnnotations = useRunSubmissionAnnotations();
 
   const { awaitAuthorization, isAuthorized } = useAwaitAuthorization();
   const { getToken } = useAuthLocalStorage();
@@ -83,6 +85,7 @@ export const RerunPipelineButton = ({
           taskArguments: executionData?.rootDetails?.task_spec
             .arguments as Record<string, ArgumentType>,
           authorizationToken,
+          runAnnotations,
           onSuccess: resolve,
           onError: reject,
         });

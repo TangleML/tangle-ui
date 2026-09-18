@@ -14,6 +14,7 @@ import { useReactFlow } from "@xyflow/react";
 import { type ReactNode, useState } from "react";
 
 import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
+import { useRunSubmissionAnnotations } from "@/providers/RunSubmissionScopeProvider";
 import { TangentRemoteEnvProvider } from "@/routes/v2/pages/Tangent/components/TangentRemoteEnvProvider";
 import { useLazyBridgeAuth } from "@/routes/v2/shared/components/AiChat/toolBridge/useLazyBridgeAuth";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
@@ -44,6 +45,7 @@ export function TangentEditorAgentProvider({
   const editorSession = useEditorSession();
   const { getBackendUrl, getAuthToken, queryClient } = useLazyBridgeAuth();
   const { getNodes, getEdges } = useReactFlow();
+  const runAnnotations = useRunSubmissionAnnotations();
 
   // A single bridge instance per mount: every method re-reads the live spec,
   // active subgraph, and backend/auth values lazily, so navigation and config
@@ -58,6 +60,7 @@ export function TangentEditorAgentProvider({
       getEdges,
       getBackendUrl,
       getAuthToken,
+      getRunAnnotations: () => runAnnotations,
       queryClient,
       undo: editorSession.undo,
     }),

@@ -14,6 +14,7 @@
 import { type ReactNode, useState } from "react";
 
 import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
+import { useRunSubmissionAnnotations } from "@/providers/RunSubmissionScopeProvider";
 import { TangentRemoteEnvProvider } from "@/routes/v2/pages/Tangent/components/TangentRemoteEnvProvider";
 import { useLazyBridgeAuth } from "@/routes/v2/shared/components/AiChat/toolBridge/useLazyBridgeAuth";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
@@ -45,6 +46,7 @@ export function TangentRunAgentProvider({
 }: TangentRunAgentProviderProps) {
   const { navigation } = useSharedStores();
   const { getBackendUrl, getAuthToken, queryClient } = useLazyBridgeAuth();
+  const runAnnotations = useRunSubmissionAnnotations();
 
   const [bridge] = useState<ToolBridgeApi>(() =>
     createRunViewToolBridge({
@@ -54,6 +56,7 @@ export function TangentRunAgentProvider({
       getActiveSubgraphTaskId: () => navigation.parentContext?.taskId,
       getBackendUrl,
       getAuthToken,
+      getRunAnnotations: () => runAnnotations,
       queryClient,
     }),
   );
