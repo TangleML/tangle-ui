@@ -2,7 +2,7 @@
 name: address-pr-comments
 description: Find the PR for the current branch, read review comments, and address them — either by fixing the code or pushing back with a reply. Use when the user wants to handle PR feedback.
 disable-model-invocation: true
-allowed-tools: Bash(gh *), Bash(git *), Bash(gt *), Read, Edit, Write, Grep, Glob, Agent
+allowed-tools: Bash(gh *), Bash(git *), Read, Edit, Write, Grep, Glob, Agent
 ---
 
 # Address PR Comments
