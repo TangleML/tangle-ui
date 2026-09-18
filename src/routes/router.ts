@@ -48,6 +48,7 @@ import { CompareView } from "./v2/pages/CompareView/CompareView";
 import { EditorV2 } from "./v2/pages/Editor/EditorV2";
 import { PipelineFoldersPage } from "./v2/pages/PipelineFolders/PipelineFoldersPage";
 import { RunViewV2 } from "./v2/pages/RunView/RunViewV2";
+import { TangentProjectPage } from "./v2/pages/Tangent/TangentProjectPage";
 
 // Re-exported so existing `@/routes/router` import paths keep working after the
 // constants moved to the dependency-free `./appRoutes` leaf module.
@@ -220,7 +221,8 @@ const settingsAgentRoute = createRoute({
   beforeLoad: () => {
     if (
       !isFlagEnabled("component-search-v2") &&
-      !isFlagEnabled("ai-assistant")
+      !isFlagEnabled("ai-assistant") &&
+      !isFlagEnabled("tangent-shell")
     ) {
       throw redirect({ to: APP_ROUTES.SETTINGS_BACKEND });
     }
@@ -375,6 +377,17 @@ const compareRoute = createRoute({
   },
 });
 
+const tangentProjectRoute = createRoute({
+  getParentRoute: () => mainLayout,
+  path: APP_ROUTES.TANGENT_PROJECT,
+  component: TangentProjectPage,
+  beforeLoad: () => {
+    if (!isFlagEnabled("tangent-shell")) {
+      throw redirect({ to: APP_ROUTES.DASHBOARD });
+    }
+  },
+});
+
 const pipelineFoldersRoute = createRoute({
   getParentRoute: () => mainLayout,
   path: APP_ROUTES.PIPELINE_FOLDERS,
@@ -416,6 +429,7 @@ const appRouteTree = mainLayout.addChildren([
   runV2Route,
   runV2WithSubgraphRoute,
   compareRoute,
+  tangentProjectRoute,
   pipelineFoldersRoute,
   artifactPreviewRoute,
   tourRoute,
