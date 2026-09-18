@@ -66,7 +66,7 @@ export function ProjectRuns({ projectId }: ProjectRunsProps) {
                   Status
                 </Text>
               </TableHead>
-              <TableHead className="w-24 px-2 text-right">
+              <TableHead className="w-28 px-2 text-right">
                 <Text size="xs" tone="subdued">
                   Started
                 </Text>

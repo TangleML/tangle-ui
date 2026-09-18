@@ -48,7 +48,7 @@ export function ResourceRow({
         </button>
       </TableCell>
 
-      <TableCell className="text-right">
+      <TableCell className="w-28 text-right">
         <Text size="xs" tone="subdued">
           {formatDate(resource.createdAt)}
         </Text>
