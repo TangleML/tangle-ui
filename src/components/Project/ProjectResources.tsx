@@ -5,6 +5,7 @@ import {
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { EmptyState } from "@/components/ui/empty-state";
+import type { IconName } from "@/components/ui/icon";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
@@ -27,6 +28,7 @@ import {
 
 import { AddResourceMenu } from "./AddResourceMenu";
 import { ColumnHeadingRow } from "./ColumnHeadingRow";
+import { claimsLocalPipeline } from "./localPipelinePointer";
 import { entityIcon, removingDestroys } from "./resourceEntities";
 import { ResourceRow, UNTITLED } from "./ResourceRow";
 
@@ -43,6 +45,48 @@ const capitalize = (value: string) =>
 const groupHeading = (entity: string, count: number) =>
   `${capitalize(pluralize(entity, PLURAL))} (${count})`;
 
+interface GroupHeadingProps {
+  icon: IconName;
+  label: string;
+}
+
+function GroupHeading({ icon, label }: GroupHeadingProps) {
+  return (
+    <TableRow className="hover:bg-transparent">
+      <TableHead colSpan={COLUMN_COUNT} scope="rowgroup" className="px-2 pt-4">
+        <InlineStack gap="1" blockAlign="center" wrap="nowrap">
+          <Icon
+            name={icon}
+            size="xs"
+            className="shrink-0 text-muted-foreground"
+            aria-hidden="true"
+          />
+          <Text size="xs" tone="subdued">
+            {label}
+          </Text>
+        </InlineStack>
+      </TableHead>
+    </TableRow>
+  );
+}
+
+function removalConsequence(resource: ProjectResourceSummary) {
+  if (claimsLocalPipeline(resource)) {
+    return "This only takes it out of this project. The pipeline itself is not deleted and stays in the browser that holds it.";
+  }
+  if (removingDestroys(resource)) {
+    return "This is the only copy, so deleting it here deletes it for good.";
+  }
+  return "This only takes it out of this project. The item itself is not deleted and stays wherever it lives.";
+}
+
+/**
+ * Grouped by what the API calls each thing, not by what it is, so the counts
+ * here agree with the counts on the project's tile — which are read straight
+ * off the API and cannot be worked out per-kind without reading every
+ * project's resources. A browser-held pipeline is therefore filed with the
+ * documents, and says what it is for itself on its own row.
+ */
 function groupByEntity(resources: ProjectResourceSummary[]) {
   const grouped = new Map<string, ProjectResourceSummary[]>();
   for (const resource of resources) {
@@ -92,19 +136,12 @@ export function ProjectResources({
     const destroys = removingDestroys(resource);
     const name = resource.name ?? UNTITLED;
 
-    const confirmed = await triggerConfirmation(
-      destroys
-        ? {
-            title: `Delete "${name}"?`,
-            description:
-              "This is the only copy, so deleting it here deletes it for good.",
-          }
-        : {
-            title: `Remove "${name}" from this project?`,
-            description:
-              "This only takes it out of this project. The item itself is not deleted and stays wherever it lives.",
-          },
-    );
+    const confirmed = await triggerConfirmation({
+      title: destroys
+        ? `Delete "${name}"?`
+        : `Remove "${name}" from this project?`,
+      description: removalConsequence(resource),
+    });
 
     if (!confirmed) return;
 
@@ -128,7 +165,7 @@ export function ProjectResources({
     <BlockStack gap="4">
       <ColumnHeadingRow>
         <Heading level={2}>Resources</Heading>
-        <AddResourceMenu projectId={projectId} />
+        <AddResourceMenu projectId={projectId} resources={resources} />
       </ColumnHeadingRow>
 
       {isPending && (
@@ -174,25 +211,10 @@ export function ProjectResources({
           </TableHeader>
           {groupByEntity(resources).map(({ entity, items }) => (
             <TableBody key={entity}>
-              <TableRow className="hover:bg-transparent">
-                <TableHead
-                  colSpan={COLUMN_COUNT}
-                  scope="rowgroup"
-                  className="px-2 pt-4"
-                >
-                  <InlineStack gap="1" blockAlign="center" wrap="nowrap">
-                    <Icon
-                      name={entityIcon(entity)}
-                      size="xs"
-                      className="shrink-0 text-muted-foreground"
-                      aria-hidden="true"
-                    />
-                    <Text size="xs" tone="subdued">
-                      {groupHeading(entity, items.length)}
-                    </Text>
-                  </InlineStack>
-                </TableHead>
-              </TableRow>
+              <GroupHeading
+                icon={entityIcon(entity)}
+                label={groupHeading(entity, items.length)}
+              />
 
               {items.map((resource) => (
                 <ResourceRow

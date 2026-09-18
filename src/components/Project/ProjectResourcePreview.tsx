@@ -11,6 +11,8 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
 import { Heading, Text } from "@/components/ui/typography";
 import { getDefaultEditorPath } from "@/routes/editorRoutes";
+import type { LocalPipelinePointer } from "@/services/localPipelines/types";
+import { useLocalPipeline } from "@/services/localPipelines/useLocalPipelines";
 import type { ProjectResource } from "@/services/projects/types";
 import { useProjectResource } from "@/services/projects/useProjectResources";
 import { usePipelineSpec } from "@/services/usePipelineSpec";
@@ -18,6 +20,7 @@ import { tracking } from "@/utils/tracking";
 import { componentSpecToText } from "@/utils/yaml";
 
 import { ColumnHeadingRow } from "./ColumnHeadingRow";
+import { pointerOf } from "./localPipelinePointer";
 import { type PipelineValidity, pipelineValidity } from "./pipelineValidity";
 import { UNTITLED } from "./ResourceRow";
 
@@ -135,6 +138,11 @@ function SelectedResource({ projectId, resourceId }: SelectedResourceProps) {
     );
   }
 
+  const pointer = pointerOf(resource);
+  if (pointer) {
+    return <LocalPipelinePreview resource={resource} pointer={pointer} />;
+  }
+
   if (resource.entity === "pipeline" && resource.entityId) {
     return (
       <PipelinePreview resource={resource} pipelineId={resource.entityId} />
@@ -142,6 +150,52 @@ function SelectedResource({ projectId, resourceId }: SelectedResourceProps) {
   }
 
   return <PayloadPreview resource={resource} />;
+}
+
+interface LocalPipelinePreviewProps {
+  resource: ProjectResource;
+  pointer: LocalPipelinePointer;
+}
+
+function LocalPipelinePreview({
+  resource,
+  pointer,
+}: LocalPipelinePreviewProps) {
+  const { data: pipeline, isPending } = useLocalPipeline(pointer);
+
+  if (isPending) {
+    return <Loading />;
+  }
+
+  if (!pipeline) {
+    return (
+      <Placeholder>
+        <EmptyState
+          icon="MonitorOff"
+          title="Not in this browser"
+          description={`A pipeline lives in the browser it was made in, and this one is not in this browser. ${resource.createdBy ?? "Whoever added it"} added it to the project.`}
+        />
+      </Placeholder>
+    );
+  }
+
+  return (
+    <BlockStack gap="2">
+      <Code code={pipeline.yaml} language="yaml" filename={pipeline.name} />
+      <InlineStack gap="3" blockAlign="center" className="w-full">
+        <Button variant="outline" size="sm" asChild>
+          <Link
+            to={getDefaultEditorPath(pipeline.name)}
+            {...tracking("projects.open_local_pipeline")}
+          >
+            <Icon name="PencilRuler" size="xs" />
+            Open in the editor
+          </Link>
+        </Button>
+        <ValidityBadge validity={pipelineValidity(pipeline.spec)} />
+      </InlineStack>
+    </BlockStack>
+  );
 }
 
 interface PipelinePreviewProps {
@@ -172,15 +226,12 @@ function PipelinePreview({ resource, pipelineId }: PipelinePreviewProps) {
         filename={resource.name ?? UNTITLED}
       />
       <InlineStack gap="3" blockAlign="center" className="w-full">
-        <Button variant="outline" size="sm" asChild>
-          <Link
-            to={getDefaultEditorPath(pipeline.editorName)}
-            {...tracking("projects.open_pipeline")}
-          >
-            <Icon name="PencilRuler" size="xs" />
-            Open in the editor
-          </Link>
-        </Button>
+        {/* The editor opens a pipeline by name out of browser storage, so it
+            cannot reach one held on the backend, and a local pipeline that
+            merely shares the name is a different pipeline. */}
+        <Text size="xs" tone="subdued">
+          Stored on the backend, which the editor cannot open yet.
+        </Text>
         <ValidityBadge validity={pipelineValidity(pipeline.spec)} />
       </InlineStack>
     </BlockStack>
