@@ -4,6 +4,7 @@ import { emitUserPipelineWritten } from "@/utils/userPipelineWriteEvents";
 
 import { emitPipelineFileChanged } from "./pipelineFileEvents";
 import type { PipelineFolder } from "./PipelineFolder";
+import { withPipelineLock } from "./pipelineLock";
 import { deleteEntry, updateEntry } from "./pipelineRegistry";
 
 interface PipelineFileInit {
@@ -21,6 +22,43 @@ export class PipelineFile {
 
   @observable accessor storageKey: string;
   @observable accessor folder: PipelineFolder;
+  @observable.ref accessor redirectedFile: PipelineFile | undefined;
+  resolveRedirect?: () => Promise<PipelineFile | undefined>;
+
+  get canEdit(): boolean {
+    return this.redirectedFile?.canEdit ?? true;
+  }
+  get storageKind(): "local" | "remote" | "pending" {
+    return this.redirectedFile?.storageKind ?? "local";
+  }
+  get displayName(): string {
+    return this.redirectedFile?.displayName ?? this.storageKey;
+  }
+  get referenceId(): string {
+    return this.redirectedFile?.referenceId ?? this.storageKey;
+  }
+  get saveError(): string | undefined {
+    return this.redirectedFile?.saveError;
+  }
+  get isSaving(): boolean {
+    return this.redirectedFile?.isSaving ?? false;
+  }
+
+  async retry(): Promise<void> {
+    await this.redirectedFile?.retry();
+  }
+  async persistRecovery(content: string): Promise<void> {
+    await this.redirectedFile?.persistRecovery(content);
+  }
+
+  private async redirect(): Promise<PipelineFile | undefined> {
+    const file = (await this.resolveRedirect?.()) ?? this.redirectedFile;
+    if (file)
+      runInAction(() => {
+        this.redirectedFile = file;
+      });
+    return file;
+  }
 
   constructor(options: PipelineFileInit) {
     this.id = options.id;
@@ -33,22 +71,32 @@ export class PipelineFile {
   }
 
   async read(): Promise<string> {
+    const redirect = await this.redirect();
+    if (redirect) return redirect.read();
     return this.folder.driver.read(this.storageKey);
   }
 
   async write(content: string): Promise<void> {
-    await this.folder.driver.write(this.storageKey, content);
+    await withPipelineLock(this.id, async () => {
+      const redirect = await this.redirect();
+      if (redirect) return redirect.write(content);
+      await this.folder.driver.write(this.storageKey, content);
+    });
     emitPipelineFileChanged({ storageKey: this.storageKey, source: "v2" });
     emitUserPipelineWritten();
   }
 
   @action
   async rename(newName: string): Promise<void> {
-    await this.folder.driver.rename(this.storageKey, newName);
-    await updateEntry(this.id, { storageKey: newName });
+    return withPipelineLock(this.id, async () => {
+      const redirect = await this.redirect();
+      if (redirect) return redirect.rename(newName);
+      await this.folder.driver.rename(this.storageKey, newName);
+      await updateEntry(this.id, { storageKey: newName });
 
-    runInAction(() => {
-      this.storageKey = newName;
+      runInAction(() => {
+        this.storageKey = newName;
+      });
     });
   }
 
@@ -69,7 +117,11 @@ export class PipelineFile {
 
   @action
   async deleteFile(): Promise<void> {
-    await this.folder.driver.delete(this.storageKey);
-    await deleteEntry(this.id);
+    return withPipelineLock(this.id, async () => {
+      const redirect = await this.redirect();
+      if (redirect) return redirect.deleteFile();
+      await this.folder.driver.delete(this.storageKey);
+      await deleteEntry(this.id);
+    });
   }
 }
