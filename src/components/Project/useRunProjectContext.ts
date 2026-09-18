@@ -30,19 +30,21 @@ export function useRunProjectContext() {
   const gone = error instanceof ProjectsApiError && error.status === NOT_FOUND;
   const projectId = gone ? undefined : claimedId;
 
-  const dismiss = () => {
+  const setProjectId = (next: string | undefined) => {
     void navigate({
       search: (previous: Record<string, unknown>) => ({
         ...previous,
-        [PROJECT_ID_SEARCH_PARAM]: undefined,
+        [PROJECT_ID_SEARCH_PARAM]: next,
       }),
     } as never);
   };
 
   return {
+    enabled,
     projectId,
     projectName: project?.name,
     projectIds: projectId ? [projectId] : [],
-    dismiss,
+    setProjectId,
+    dismiss: () => setProjectId(undefined),
   };
 }
