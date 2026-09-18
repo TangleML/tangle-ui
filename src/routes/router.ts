@@ -38,6 +38,7 @@ import { ImportPage } from "./Import";
 import NotFoundPage from "./NotFoundPage";
 import PipelineRun from "./PipelineRun";
 import ArtifactPreviewPage from "./PipelineRun/ArtifactPreview";
+import ExecutionLogsPage from "./PipelineRun/ExecutionLogs";
 import { AgentSettings } from "./Settings/sections/AgentSettings";
 import { BackendSettings } from "./Settings/sections/BackendSettings";
 import { BetaFeaturesSettings } from "./Settings/sections/BetaFeaturesSettings";
@@ -387,6 +388,12 @@ const artifactPreviewRoute = createRoute({
   component: ArtifactPreviewPage,
 });
 
+const executionLogsRoute = createRoute({
+  getParentRoute: () => mainLayout,
+  path: APP_ROUTES.EXECUTION_LOGS,
+  component: ExecutionLogsPage,
+});
+
 const dashboardRouteTree = dashboardRoute.addChildren([
   dashboardIndexRoute,
   dashboardHomeRoute,
@@ -418,6 +425,7 @@ const appRouteTree = mainLayout.addChildren([
   compareRoute,
   pipelineFoldersRoute,
   artifactPreviewRoute,
+  executionLogsRoute,
   tourRoute,
 ]);
 
