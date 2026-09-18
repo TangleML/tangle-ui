@@ -86,12 +86,3 @@ export function localPipelineInput(
     extraData,
   };
 }
-
-/**
- * What a resource should be filed under for a reader, as opposed to what the
- * API files it as: a pointer is a pipeline to everyone but the database. The
- * value stays inside the vocabulary the rest of the app orders and labels
- * resources by, so a pointer sorts and reads as the pipeline it names.
- */
-export const resourceKind = (resource: PointerRow) =>
-  claimsLocalPipeline(resource) ? POINTER_KIND : resource.entity;

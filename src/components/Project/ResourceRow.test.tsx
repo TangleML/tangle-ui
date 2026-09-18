@@ -94,6 +94,35 @@ describe("ResourceRow", () => {
     expect(screen.getByRole("row")).toHaveAttribute("data-state", "selected");
   });
 
+  /**
+   * A group is headed by what the API calls its rows, so a browser-held
+   * pipeline is headed as a document. The row itself is the only place it can
+   * be told apart from one.
+   */
+  it("marks a pipeline it names as a pipeline, not as the document it is filed as", () => {
+    renderRow({
+      entity: "document",
+      name: "Churn model",
+      entityId: null,
+      extraData: { kind: "pipeline", localName: "Churn model" },
+    });
+
+    const name = screen.getByRole("button", { name: "Churn model" });
+
+    expect(name.querySelector(".lucide-git-branch")).toBeInTheDocument();
+    expect(name.querySelector(".lucide-file-text")).toBeNull();
+  });
+
+  it("marks an ordinary document as one", () => {
+    renderRow(ownContent);
+
+    expect(
+      screen
+        .getByRole("button", { name: "Model card" })
+        .querySelector(".lucide-file-text"),
+    ).toBeInTheDocument();
+  });
+
   it("offers an item it only points at as taking it out, not as a deletion", () => {
     renderRow();
 
