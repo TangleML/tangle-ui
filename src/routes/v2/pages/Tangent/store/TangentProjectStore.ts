@@ -1,4 +1,8 @@
-import type { EmbedAgent, EmbedAsset } from "@tangent/embed-react";
+import type {
+  EmbedAgent,
+  EmbedAsset,
+  HostResourceInput,
+} from "@tangent/embed-react";
 import {
   action,
   computed,
@@ -61,11 +65,17 @@ export interface TangentSessionIo {
   newSession: (
     prompt: string,
     bundleId: string,
-    options: { name: string },
+    options: { name: string; resources?: HostResourceInput[] },
   ) => Promise<{ sessionId: string }>;
   attachSession: (sessionId: string) => Promise<{ id: string }>;
   detachSession: (resourceId: string) => Promise<void>;
   notify: (message: string, type: "error") => void;
+  projectNotes?: string | null;
+}
+
+export interface StartSessionOptions {
+  prompt?: string;
+  name?: string;
 }
 
 /**
@@ -186,19 +196,26 @@ export class TangentProjectStore {
     this.#sessionsWithPrompt.add(sessionId);
   }
 
-  async startSession(): Promise<void> {
-    if (this.isStartingSession) return;
+  async startSession(options?: StartSessionOptions): Promise<boolean> {
+    if (this.isStartingSession) return false;
     const io = this.#io;
-    if (!io) return;
+    if (!io) return false;
     const previous = this.activeSessionId;
     runInAction(() => {
       this.isStartingSession = true;
     });
     try {
-      // Empty prompt: the embed skips the opening turn so the human types the
-      // first message. `name` labels the session in Tangent's own session list.
-      const { sessionId } = await io.newSession("", TANGENT_BUNDLE_ID, {
-        name: "New Tangent session",
+      // An empty prompt makes the embed skip the opening turn so the human types
+      // the first message; a non-empty prompt runs the opening turn immediately
+      // so the agent starts working. `name` labels the session in Tangent's own
+      // session list.
+      const prompt = options?.prompt ?? "";
+      const notes = io.projectNotes?.trim();
+      const { sessionId } = await io.newSession(prompt, TANGENT_BUNDLE_ID, {
+        name: options?.name ?? "New Tangent session",
+        resources: notes
+          ? [{ kind: "memory", scope: "session", content: notes }]
+          : undefined,
       });
       const resource = await io.attachSession(sessionId);
       runInAction(() => {
@@ -206,11 +223,16 @@ export class TangentProjectStore {
         this.selectedSessionId = sessionId;
         this.#syncLastEditor();
       });
+      if (prompt.trim()) {
+        this.#sessionsWithPrompt.add(sessionId);
+      }
       if (previous && previous !== sessionId) {
         await this.discardEmptySession(previous);
       }
+      return true;
     } catch (error) {
       io.notify(getErrorMessage(error), "error");
+      return false;
     } finally {
       runInAction(() => {
         this.isStartingSession = false;

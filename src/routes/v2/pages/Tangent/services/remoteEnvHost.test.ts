@@ -321,6 +321,33 @@ describe("createRemoteEnvHost", () => {
     expect(client.subagentUpdate).toHaveBeenCalledWith("s1", "a1", "completed");
   });
 
+  it("forwards the token, environmentId, sessionId, and tools to the SDK", () => {
+    const worker = makeWorker();
+    const tools = {
+      echo: {
+        description: "echo",
+        inputSchema: { type: "object", properties: {} },
+        execute: vi.fn(),
+      },
+    };
+    const host = createRemoteEnvHost({
+      url: "http://localhost:8000",
+      worker: worker as unknown as Remote<RemoteEnvWorkerApi>,
+      tools,
+      sessionId: "s1",
+    });
+
+    void host.connect("token", "env-1");
+
+    const options = connectRemoteEnvironment.mock.calls.at(-1)?.[0];
+    expect(options).toMatchObject({
+      token: "token",
+      environmentId: "env-1",
+      sessionId: "s1",
+      tools,
+    });
+  });
+
   it("surfaces spawn and kill worker failures", async () => {
     const worker = makeWorker();
     const { handlers, onError } = connectedHost(worker);

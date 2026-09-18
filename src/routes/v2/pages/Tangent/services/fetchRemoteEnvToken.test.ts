@@ -8,7 +8,7 @@ function mockFetch(response: {
   statusText?: string;
   json?: () => Promise<unknown>;
 }) {
-  const fetchMock = vi.fn(async () => ({
+  const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => ({
     ok: response.ok,
     status: response.status ?? 200,
     statusText: response.statusText ?? "OK",
@@ -47,6 +47,53 @@ describe("fetchRemoteEnvToken", () => {
       environmentId: "env-42",
       expiresAtMs: 1_900_000_000_000,
     });
+  });
+
+  it("sends the pinned environmentId in the request body", async () => {
+    vi.stubEnv("VITE_TANGENT_REMOTE_ENV_TOKEN", "");
+    const fetchMock = mockFetch({
+      ok: true,
+      json: async () => ({
+        token: "scoped-token",
+        environmentId: "env-pinned",
+        expiresAt: 1_900_000_000_000,
+      }),
+    });
+
+    await fetchRemoteEnvToken({
+      baseUrl: "http://tangent",
+      sessionId: "s1",
+      environmentId: "env-pinned",
+    });
+
+    const requestInit = fetchMock.mock.calls[0]?.[1];
+    if (!requestInit || typeof requestInit.body !== "string") {
+      throw new Error("Expected a POST request with a JSON body");
+    }
+    expect(JSON.parse(requestInit.body)).toEqual({
+      sessionId: "s1",
+      environmentId: "env-pinned",
+    });
+  });
+
+  it("takes the server's environmentId when the pin was refused", async () => {
+    vi.stubEnv("VITE_TANGENT_REMOTE_ENV_TOKEN", "");
+    mockFetch({
+      ok: true,
+      json: async () => ({
+        token: "scoped-token",
+        environmentId: "env-fresh",
+        expiresAt: 1_900_000_000_000,
+      }),
+    });
+
+    const result = await fetchRemoteEnvToken({
+      baseUrl: "http://tangent",
+      sessionId: "s1",
+      environmentId: "env-pinned",
+    });
+
+    expect(result.environmentId).toBe("env-fresh");
   });
 
   it("throws on a malformed response body", async () => {
