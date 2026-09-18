@@ -15,7 +15,7 @@ export function useImportPipeline() {
     onSuccess: (result) => {
       notify(`Pipeline "${result.name}" created successfully`, "success");
       navigate({
-        to: getDefaultEditorPath(result.name),
+        to: getDefaultEditorPath(result.referenceId ?? result.name),
       });
     },
   });
