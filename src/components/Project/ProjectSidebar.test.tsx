@@ -42,6 +42,14 @@ function renderSidebar(overrides: Partial<Project> = {}) {
 }
 
 describe("ProjectSidebar", () => {
+  it("names itself so its column lines up with the others", () => {
+    renderSidebar();
+
+    expect(
+      screen.getByRole("complementary", { name: "About" }),
+    ).toBeInTheDocument();
+  });
+
   it("holds the editable description and notes", () => {
     renderSidebar();
 

@@ -32,8 +32,13 @@ vi.mock("@/services/projects/useProjectResources", () => ({
     isPending: false,
     error: null,
   }),
+  useProjectResource: () => ({ data: undefined, isPending: true, error: null }),
   useDeleteProjectResource: () => ({ mutate: vi.fn(), isPending: false }),
   useCreateProjectResource: () => ({ mutate: vi.fn(), isPending: false }),
+}));
+
+vi.mock("@/services/usePipelineSpec", () => ({
+  usePipelineSpec: () => ({ data: undefined, isPending: true, error: null }),
 }));
 
 vi.mock("@/services/projects/useProjectRuns", () => ({
@@ -114,16 +119,27 @@ describe("ProjectPage", () => {
     expect(screen.getByText("Churn model")).toBeInTheDocument();
   });
 
-  it("puts the project's resources, runs and details on one page", () => {
+  it("puts the project's resources, preview, runs and details on one page", () => {
     render(<ProjectPage />);
 
     expect(
       screen.getByRole("heading", { name: "Resources" }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Resource preview" }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Runs/ })).toBeInTheDocument();
-    expect(screen.getByLabelText("Project details")).toHaveTextContent(
-      "alice@example.com",
-    );
+    expect(
+      screen.getByRole("complementary", { name: "About" }),
+    ).toHaveTextContent("alice@example.com");
+  });
+
+  it("previews nothing until something is picked", () => {
+    render(<ProjectPage />);
+
+    expect(
+      screen.getByText("Select a resource to preview it here."),
+    ).toBeInTheDocument();
   });
 
   it("offers a way back to the list", () => {
