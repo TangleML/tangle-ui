@@ -37,6 +37,33 @@ function mapProjectRun(dto: ProjectRunDto): ProjectRun {
   };
 }
 
+/**
+ * A project's run feed carries no execution stats, and `include_execution_stats`
+ * is the only way to get them out of `/api/pipeline_runs/{id}` — the shared
+ * `fetchPipelineRun` omits it, and adding it there would change the payload
+ * every other caller caches. So the project page asks for its own.
+ */
+export async function getRunExecutionStats(
+  runId: string,
+): Promise<Record<string, number> | null> {
+  const result = await client.get<{
+    200: { execution_status_stats?: Record<string, number> | null };
+  }>({
+    url: "/api/pipeline_runs/{id}",
+    path: { id: runId },
+    query: { include_execution_stats: true },
+  });
+
+  if (!result.data) {
+    throw new ProjectRunsApiError(
+      `Failed to fetch run ${runId}`,
+      result.response.status,
+    );
+  }
+
+  return result.data.execution_status_stats ?? null;
+}
+
 export async function listProjectRuns(
   projectId: string,
   params: ListProjectRunsParams = {},
