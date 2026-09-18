@@ -29,6 +29,7 @@ const project: Project = {
   updatedAt: new Date("2026-09-15T10:00:00Z"),
   resourceCounts: {},
   notes: "Retrain weekly",
+  extraData: null,
 };
 
 function mockUpdate({ isPending = false } = {}) {

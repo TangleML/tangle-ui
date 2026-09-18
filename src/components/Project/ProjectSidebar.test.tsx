@@ -35,6 +35,7 @@ const project: Project = {
   updatedAt: new Date("2026-09-15T10:00:00Z"),
   resourceCounts: { pipeline: 1 },
   notes: "Retrain weekly",
+  extraData: null,
 };
 
 function renderSidebar(overrides: Partial<Project> = {}) {
