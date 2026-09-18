@@ -1,138 +1,43 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
+
+import { registerWorkareaKind } from "@/routes/v2/pages/Tangent/workarea/registry";
+import type { WorkareaTarget } from "@/routes/v2/pages/Tangent/workarea/types";
 
 import { resolveWorkareaTarget } from "./resolveWorkareaTarget";
 
-const mocks = vi.hoisted(() => ({
-  findById: vi.fn(),
-}));
-
-vi.mock("@/services/pipelineStorage/pipelineRegistry", () => ({
-  findById: mocks.findById,
-}));
-
-const options = {};
+registerWorkareaKind({
+  type: "run",
+  icon: "Play",
+  keepMounted: true,
+  resolveTitle: (target) => `Run ${target.identity}`,
+  render: () => null,
+});
 
 describe("resolveWorkareaTarget", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+  it("defaults the title to the kind's resolveTitle and passes the target through", async () => {
+    const target: WorkareaTarget = { type: "run", identity: "id/run-123" };
+
+    const view = await resolveWorkareaTarget(target);
+
+    expect(view).toEqual({ title: "Run id/run-123", target });
   });
 
-  it("resolves a pipeline:// URI to a pipeline view", async () => {
-    mocks.findById.mockResolvedValue({ storageKey: "My Pipeline" });
+  it("prefers an explicit title", async () => {
+    const target: WorkareaTarget = { type: "run", identity: "id/run-123" };
 
-    const view = await resolveWorkareaTarget("pipeline://abc", options);
+    const view = await resolveWorkareaTarget(target, { title: "My Run" });
 
-    expect(view).toEqual({
-      kind: "pipeline",
-      title: "My Pipeline",
-      pipelineRef: { name: "My Pipeline", fileId: "abc" },
-    });
+    expect(view).toEqual({ title: "My Run", target });
   });
 
-  it("falls back to the fileId when no registry entry exists", async () => {
-    mocks.findById.mockResolvedValue(undefined);
+  it("throws for a target type with no registered kind", async () => {
+    const target: WorkareaTarget = {
+      type: "artifact",
+      identity: "id/https://host/a.txt",
+    };
 
-    const view = await resolveWorkareaTarget("pipeline://abc", options);
-
-    expect(view).toEqual({
-      kind: "pipeline",
-      title: "abc",
-      pipelineRef: { name: "abc", fileId: "abc" },
-    });
-  });
-
-  it("resolves a run:<id> target to a run view", async () => {
-    const view = await resolveWorkareaTarget("run:run-123", options);
-
-    expect(view).toEqual({
-      kind: "run",
-      title: "Run run-123",
-      runId: "run-123",
-    });
-  });
-
-  it("resolves a /runs-v2/<id> URL to a run view", async () => {
-    const view = await resolveWorkareaTarget(
-      "https://host/runs-v2/run-abc",
-      options,
+    await expect(resolveWorkareaTarget(target)).rejects.toThrow(
+      /Unsupported workarea target type/,
     );
-
-    expect(view).toEqual({
-      kind: "run",
-      title: "Run run-abc",
-      runId: "run-abc",
-    });
-  });
-
-  it("resolves a /runs/<id> URL (with a trailing segment) to a run view", async () => {
-    const view = await resolveWorkareaTarget(
-      "https://host/runs/run-xyz/exec-1",
-      options,
-    );
-
-    expect(view).toEqual({
-      kind: "run",
-      title: "Run run-xyz",
-      runId: "run-xyz",
-    });
-  });
-
-  it("prefers an explicit title for a run view", async () => {
-    const view = await resolveWorkareaTarget("run:run-123", {
-      title: "My Run",
-    });
-
-    expect(view).toEqual({
-      kind: "run",
-      title: "My Run",
-      runId: "run-123",
-    });
-  });
-
-  it("resolves an http URL to an artifact view", async () => {
-    const view = await resolveWorkareaTarget(
-      "https://host/artifact.txt",
-      options,
-    );
-
-    expect(view).toEqual({
-      kind: "artifact",
-      title: "https://host/artifact.txt",
-      url: "https://host/artifact.txt",
-    });
-  });
-
-  it("treats an unknown target as a pipeline name", async () => {
-    const view = await resolveWorkareaTarget("My Draft", options);
-
-    expect(view).toEqual({
-      kind: "pipeline",
-      title: "My Draft",
-      pipelineRef: { name: "My Draft" },
-    });
-  });
-
-  it("prefers an explicit title over resolved metadata", async () => {
-    mocks.findById.mockResolvedValue({ storageKey: "My Pipeline" });
-
-    const view = await resolveWorkareaTarget("pipeline://abc", {
-      title: "My Title",
-    });
-
-    expect(view).toEqual({
-      kind: "pipeline",
-      title: "My Title",
-      pipelineRef: { name: "My Title", fileId: "abc" },
-    });
-  });
-
-  it("trims surrounding whitespace before resolving", async () => {
-    const view = await resolveWorkareaTarget("  https://host/a.txt  ", options);
-
-    expect(view).toEqual({
-      kind: "artifact",
-      title: "https://host/a.txt",
-      url: "https://host/a.txt",
-    });
   });
 });

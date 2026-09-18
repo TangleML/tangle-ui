@@ -5,12 +5,13 @@ import { Text } from "@/components/ui/typography";
 
 import { registerWorkareaKind } from "./registry";
 import type { WorkareaTab } from "./types";
+import { parseIdentity } from "./workareaTarget";
 
 function ArtifactWorkareaView({
   tab,
   sessionId,
 }: {
-  tab: Extract<WorkareaTab, { kind: "artifact" }>;
+  tab: WorkareaTab;
   sessionId: string | undefined;
 }) {
   if (sessionId === undefined) {
@@ -29,7 +30,7 @@ function ArtifactWorkareaView({
   return (
     <ArtifactViewer
       sessionId={sessionId}
-      url={tab.url}
+      url={parseIdentity(tab.target.identity).value}
       title={tab.title}
       className="min-h-0 flex-1"
       style={{ height: "100%" }}
@@ -38,11 +39,11 @@ function ArtifactWorkareaView({
 }
 
 registerWorkareaKind({
-  kind: "artifact",
+  type: "artifact",
   icon: "FileText",
   keepMounted: false,
-  render: (tab, hostProps) => {
-    if (tab.kind !== "artifact") return null;
-    return <ArtifactWorkareaView tab={tab} sessionId={hostProps.sessionId} />;
-  },
+  resolveTitle: (target) => parseIdentity(target.identity).value,
+  render: (tab, hostProps) => (
+    <ArtifactWorkareaView tab={tab} sessionId={hostProps.sessionId} />
+  ),
 });
