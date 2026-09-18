@@ -11,6 +11,7 @@ import { ComponentLibraryProvider } from "@/providers/ComponentLibraryProvider";
 import { ComponentSpecProvider } from "@/providers/ComponentSpecProvider";
 import { ContextPanelProvider } from "@/providers/ContextPanelProvider";
 import { ExecutionDataProvider } from "@/providers/ExecutionDataProvider";
+import { RunSubmissionScopeProvider } from "@/providers/RunSubmissionScopeProvider";
 import { NodeRegistryProvider } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { SpecProvider } from "@/routes/v2/shared/providers/SpecContext";
 import { useShortcutListener } from "@/routes/v2/shared/shortcuts/useShortcutListener";
@@ -36,6 +37,7 @@ import { TangentRunAgentProvider } from "./TangentRunAgentProvider";
 
 interface EmbeddedRunViewProps {
   runId: string;
+  projectId: string;
   onStoreReady?: (store: SharedUIStore) => void;
   onStoreClosed?: () => void;
   sessionId?: string;
@@ -167,6 +169,7 @@ const EmbeddedRunViewContent = observer(function EmbeddedRunViewContent({
  */
 export function EmbeddedRunView({
   runId,
+  projectId,
   onStoreReady,
   onStoreClosed,
   sessionId,
@@ -181,34 +184,39 @@ export function EmbeddedRunView({
   >(undefined);
 
   return (
-    <div className="h-full w-full flex flex-col bg-slate-100 dark:bg-background select-none">
-      <SharedStoreProvider>
-        <SharedStoreRegistrar onReady={onStoreReady} onClosed={onStoreClosed} />
-        <ComponentSpecProvider>
-          <ReactFlowProvider>
-            <ContextPanelProvider>
-              <ExecutionDataProvider
-                pipelineRunId={runId}
-                subgraphExecutionId={subgraphExecutionId}
-              >
-                <ComponentLibraryProvider>
-                  <EmbeddedRunViewContent
-                    runId={runId}
-                    subgraphExecutionId={subgraphExecutionId}
-                    sessionId={sessionId}
-                    environmentId={environmentId}
-                    onEnvironmentReady={onEnvironmentReady}
-                    onEnvironmentClosed={onEnvironmentClosed}
-                    onBridgeReady={onBridgeReady}
-                    onBridgeClosed={onBridgeClosed}
-                    onSubgraphExecutionIdChange={setSubgraphExecutionId}
-                  />
-                </ComponentLibraryProvider>
-              </ExecutionDataProvider>
-            </ContextPanelProvider>
-          </ReactFlowProvider>
-        </ComponentSpecProvider>
-      </SharedStoreProvider>
-    </div>
+    <RunSubmissionScopeProvider projectId={projectId}>
+      <div className="h-full w-full flex flex-col bg-slate-100 dark:bg-background select-none">
+        <SharedStoreProvider>
+          <SharedStoreRegistrar
+            onReady={onStoreReady}
+            onClosed={onStoreClosed}
+          />
+          <ComponentSpecProvider>
+            <ReactFlowProvider>
+              <ContextPanelProvider>
+                <ExecutionDataProvider
+                  pipelineRunId={runId}
+                  subgraphExecutionId={subgraphExecutionId}
+                >
+                  <ComponentLibraryProvider>
+                    <EmbeddedRunViewContent
+                      runId={runId}
+                      subgraphExecutionId={subgraphExecutionId}
+                      sessionId={sessionId}
+                      environmentId={environmentId}
+                      onEnvironmentReady={onEnvironmentReady}
+                      onEnvironmentClosed={onEnvironmentClosed}
+                      onBridgeReady={onBridgeReady}
+                      onBridgeClosed={onBridgeClosed}
+                      onSubgraphExecutionIdChange={setSubgraphExecutionId}
+                    />
+                  </ComponentLibraryProvider>
+                </ExecutionDataProvider>
+              </ContextPanelProvider>
+            </ReactFlowProvider>
+          </ComponentSpecProvider>
+        </SharedStoreProvider>
+      </div>
+    </RunSubmissionScopeProvider>
   );
 }

@@ -36,6 +36,7 @@ export const DynamicWorkarea = observer(function DynamicWorkarea() {
   }
 
   const hostProps: WorkareaHostProps = {
+    projectId: store.projectId,
     sessionId: activeSessionId,
     registerTabStore: (tabId, tabStore) =>
       store.registerTabStore(tabId, tabStore),
