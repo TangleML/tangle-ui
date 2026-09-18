@@ -88,6 +88,18 @@ describe("ResourceRow", () => {
     expect(screen.getByRole("row")).toHaveAttribute("data-state", "selected");
   });
 
+  it("offers removal as taking the item out, not as a deletion", () => {
+    renderRow();
+
+    const remove = screen.getByRole("button", {
+      name: "Remove Model card from this project",
+    });
+
+    expect(remove.querySelector(".lucide-x")).toBeInTheDocument();
+    expect(remove.querySelector("[class*='trash']")).toBeNull();
+    expect(remove.className).not.toMatch(/text-destructive/);
+  });
+
   it("asks to remove the item it belongs to", async () => {
     const { onRemove } = renderRow();
     const user = userEvent.setup();

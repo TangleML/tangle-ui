@@ -55,15 +55,18 @@ export function ResourceRow({
       </TableCell>
 
       <TableCell className="w-8 pr-0">
+        {/* An X, not a bin: this takes the item out of the project and leaves
+            what it points at alone. */}
         <Button
           variant="ghost"
           size="icon"
           onClick={() => onRemove(resource)}
-          className="relative z-10 size-7 text-muted-foreground hover:text-destructive"
+          className="relative z-10 size-7 text-muted-foreground hover:text-foreground"
           aria-label={`Remove ${name} from this project`}
+          title={`Remove ${name} from this project`}
           {...tracking("projects.remove_resource_open")}
         >
-          <Icon name="Trash2" size="sm" />
+          <Icon name="X" size="sm" />
         </Button>
       </TableCell>
     </TableRow>
