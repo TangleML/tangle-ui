@@ -7,6 +7,10 @@ export type PipelineValidity = "valid" | "invalid" | "unknown";
 function everyTaskCarriesItsComponent(spec: ComponentSpec) {
   const implementation = spec.implementation;
 
+  if (!implementation || typeof implementation !== "object") {
+    return false;
+  }
+
   if (!("graph" in implementation)) {
     return true;
   }
@@ -22,6 +26,10 @@ function everyTaskCarriesItsComponent(spec: ComponentSpec) {
  * hydration failure — indistinguishable from a real error. A saved pipeline
  * always embeds them, so rather than fetch the components to find out, an
  * unembedded one is reported as unknown and shows no verdict at all.
+ *
+ * The same answer covers a spec too malformed to have an implementation at
+ * all: a pipeline read from browser storage is whatever yaml is there, and
+ * refusing to judge it beats failing the panel it is previewed in.
  */
 export function pipelineValidity(spec: ComponentSpec): PipelineValidity {
   if (!everyTaskCarriesItsComponent(spec)) {

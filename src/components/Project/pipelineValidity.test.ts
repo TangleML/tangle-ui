@@ -76,6 +76,14 @@ describe("pipelineValidity", () => {
     expect(pipelineValidity(graph(tasks))).toBe("unknown");
   });
 
+  /** A pipeline read out of browser storage is whatever yaml is there. */
+  it("withholds a verdict on a spec too malformed to have an implementation", () => {
+    expect(pipelineValidity({ name: "Broken" } as ComponentSpec)).toBe(
+      "unknown",
+    );
+    expect(pipelineValidity({} as ComponentSpec)).toBe("unknown");
+  });
+
   it("stays fast enough to run while a row is being clicked", () => {
     const spec = examplePipeline(
       "validation-errors-demo.pipeline.component.yaml",
