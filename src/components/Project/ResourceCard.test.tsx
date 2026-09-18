@@ -18,15 +18,21 @@ const resource: ProjectResourceSummary = {
   updatedAt: new Date("2026-09-09T10:00:00Z"),
 };
 
-function renderCard(overrides: Partial<ProjectResourceSummary> = {}) {
+function renderCard(
+  overrides: Partial<ProjectResourceSummary> = {},
+  selected = false,
+) {
   const onRemove = vi.fn();
+  const onSelect = vi.fn();
   render(
     <ResourceCard
       resource={{ ...resource, ...overrides }}
+      selected={selected}
+      onSelect={onSelect}
       onRemove={onRemove}
     />,
   );
-  return onRemove;
+  return { onRemove, onSelect };
 }
 
 describe("ResourceCard", () => {
@@ -60,8 +66,28 @@ describe("ResourceCard", () => {
     expect(screen.getByText("agent session")).toBeInTheDocument();
   });
 
+  it("selects the item it belongs to when picked", async () => {
+    const { onSelect } = renderCard();
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "Model card" }));
+
+    expect(onSelect).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "resource-1" }),
+    );
+  });
+
+  it("says which item is being previewed", () => {
+    renderCard({}, true);
+
+    expect(screen.getByRole("button", { name: "Model card" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
   it("asks to remove the item it belongs to", async () => {
-    const onRemove = renderCard();
+    const { onRemove } = renderCard();
     const user = userEvent.setup();
 
     await user.click(
