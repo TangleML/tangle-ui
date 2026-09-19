@@ -18,6 +18,8 @@ interface ResourceRowProps {
   selected: boolean;
   onSelect: (resource: ProjectResourceSummary) => void;
   onRemove: (resource: ProjectResourceSummary) => void;
+  label?: string;
+  opensElsewhere?: boolean;
 }
 
 export function ResourceRow({
@@ -25,8 +27,10 @@ export function ResourceRow({
   selected,
   onSelect,
   onRemove,
+  label,
+  opensElsewhere = false,
 }: ResourceRowProps) {
-  const name = resource.name ?? UNTITLED;
+  const name = label ?? resource.name ?? UNTITLED;
   const destroys = removingDestroys(resource);
   const kindLabel = resourceKindLabel(resource);
 
@@ -47,14 +51,18 @@ export function ResourceRow({
           <button
             type="button"
             onClick={() => onSelect(resource)}
-            aria-pressed={selected}
+            aria-pressed={opensElsewhere ? undefined : selected}
             className="min-w-0 cursor-pointer truncate text-left after:absolute after:inset-0"
-            {...tracking("projects.preview_resource")}
+            {...tracking(
+              opensElsewhere
+                ? "projects.open_resource"
+                : "projects.preview_resource",
+            )}
           >
             <Text
               size="sm"
               weight={selected ? "medium" : "regular"}
-              tone={resource.name ? "inherit" : "subdued"}
+              tone={(label ?? resource.name) ? "inherit" : "subdued"}
             >
               {name}
             </Text>
