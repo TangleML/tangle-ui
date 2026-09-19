@@ -17,7 +17,7 @@ interface ResourceRowProps {
   resource: ProjectResourceSummary;
   selected: boolean;
   onSelect: (resource: ProjectResourceSummary) => void;
-  onRemove: (resource: ProjectResourceSummary) => void;
+  onRemove?: (resource: ProjectResourceSummary) => void;
   label?: string;
   opensElsewhere?: boolean;
 }
@@ -82,25 +82,29 @@ export function ResourceRow({
         </Text>
       </TableCell>
 
+      {/* The cell stays whether or not anything can be done in it, so every
+          row's columns line up under the fixed table layout. */}
       <TableCell className="text-right">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onRemove(resource)}
-          className={cn(
-            "relative z-10 size-7 text-muted-foreground",
-            destroys ? "hover:text-destructive" : "hover:text-foreground",
-          )}
-          aria-label={
-            destroys ? `Delete ${name}` : `Remove ${name} from this project`
-          }
-          title={
-            destroys ? `Delete ${name}` : `Remove ${name} from this project`
-          }
-          {...tracking("projects.remove_resource_open")}
-        >
-          <Icon name={destroys ? "Trash2" : "X"} size="sm" />
-        </Button>
+        {onRemove && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onRemove(resource)}
+            className={cn(
+              "relative z-10 size-7 text-muted-foreground",
+              destroys ? "hover:text-destructive" : "hover:text-foreground",
+            )}
+            aria-label={
+              destroys ? `Delete ${name}` : `Remove ${name} from this project`
+            }
+            title={
+              destroys ? `Delete ${name}` : `Remove ${name} from this project`
+            }
+            {...tracking("projects.remove_resource_open")}
+          >
+            <Icon name={destroys ? "Trash2" : "X"} size="sm" />
+          </Button>
+        )}
       </TableCell>
     </TableRow>
   );
