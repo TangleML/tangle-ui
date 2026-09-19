@@ -175,7 +175,9 @@ export function ProjectResources({
   const resources = data?.items ?? [];
 
   // A session is the one resource that is not a thing to look at here: it is a
-  // conversation that lives in Tangent, so its row goes there.
+  // conversation that lives in Tangent, so its row goes there. It is also not a
+  // thing to take back out — like a run, a session that happened belongs to the
+  // project it happened in — so its row is not offered a way to.
   const sessionLabels = sessionLabelsById(
     resources
       .filter(
@@ -281,7 +283,7 @@ export function ProjectResources({
                         picked.id === selectedResourceId ? null : picked.id,
                       );
                     }}
-                    onRemove={handleRemove}
+                    onRemove={label ? undefined : handleRemove}
                   />
                 );
               })}
