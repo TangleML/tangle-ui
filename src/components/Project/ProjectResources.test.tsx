@@ -157,6 +157,27 @@ describe("ProjectResources", () => {
       expect(navigate).not.toHaveBeenCalled();
     });
 
+    /** Like a run, a session that happened belongs to the project it happened in. */
+    it("does not offer to take a session back out of the project", () => {
+      mockResources({
+        items: [
+          session("a", "sess-a", "2026-09-16T10:00:00Z"),
+          resource({ id: "doc", name: "Model card" }),
+        ],
+        totalCount: 2,
+      });
+      renderResources();
+
+      expect(
+        screen.queryByRole("button", {
+          name: /Remove Session 1|Delete Session/,
+        }),
+      ).toBeNull();
+      expect(
+        screen.getByRole("button", { name: "Delete Model card" }),
+      ).toBeInTheDocument();
+    });
+
     it("starts a session in Tangent, since one cannot be started here", async () => {
       const user = userEvent.setup();
       renderResources();
