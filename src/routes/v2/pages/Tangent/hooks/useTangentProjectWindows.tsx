@@ -10,8 +10,14 @@ import { SessionsWindowContent } from "@/routes/v2/pages/Tangent/components/Sess
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { WindowMiniButton } from "@/routes/v2/shared/windows/WindowMiniButton";
 
+import {
+  placeProjectDockWindows,
+  PROJECT_DOCK_WINDOW_IDS,
+  rememberedDockWindows,
+} from "./tangentProjectWindowOrder";
+
 interface ProjectDockWindow {
-  id: string;
+  id: (typeof PROJECT_DOCK_WINDOW_IDS)[number];
   title: string;
   icon: IconName;
   content: ReactNode;
@@ -54,7 +60,9 @@ export function useTangentProjectWindows() {
   const { windows } = useSharedStores();
 
   useEffect(() => {
-    PROJECT_DOCK_WINDOWS.forEach((win, index) => {
+    const remembered = rememberedDockWindows(windows);
+
+    PROJECT_DOCK_WINDOWS.forEach((win) => {
       if (windows.getWindowById(win.id)) return;
       windows.openWindow(win.content, {
         id: win.id,
@@ -70,10 +78,8 @@ export function useTangentProjectWindows() {
           />
         ),
       });
-      // Opening a window appends it to the dock, which would file a window
-      // added here later underneath the ones a saved layout already knows
-      // about. Docking it again by index puts it where this list says.
-      windows.dockWindow(win.id, "left", index);
     });
+
+    placeProjectDockWindows(windows, remembered);
   }, [windows]);
 }
