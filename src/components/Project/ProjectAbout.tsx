@@ -9,9 +9,10 @@ import { useUpdateProject } from "@/services/projects/useProjects";
 
 interface ProjectAboutProps {
   project: Project;
+  showNotes?: boolean;
 }
 
-export function ProjectAbout({ project }: ProjectAboutProps) {
+export function ProjectAbout({ project, showNotes = true }: ProjectAboutProps) {
   const updateProject = useUpdateProject();
   const { track } = useAnalytics();
 
@@ -38,13 +39,15 @@ export function ProjectAbout({ project }: ProjectAboutProps) {
         placeholder="What this project is for"
         onCommit={(value) => commit("description", { description: value })}
       />
-      <EditableText
-        id="project-notes"
-        label="Notes"
-        value={project.notes}
-        placeholder="Anything worth knowing about this project"
-        onCommit={(value) => commit("notes", { notes: value })}
-      />
+      {showNotes && (
+        <EditableText
+          id="project-notes"
+          label="Notes"
+          value={project.notes}
+          placeholder="Anything worth knowing about this project"
+          onCommit={(value) => commit("notes", { notes: value })}
+        />
+      )}
     </BlockStack>
   );
 }
