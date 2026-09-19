@@ -16,6 +16,12 @@ import { ProjectResources } from "./ProjectResources";
 const mutate = vi.fn();
 const notify = vi.fn();
 const track = vi.fn();
+const navigate = vi.fn();
+
+vi.mock("@tanstack/react-router", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@tanstack/react-router")>()),
+  useNavigate: () => navigate,
+}));
 
 vi.mock("@/services/projects/useProjectResources", () => ({
   useProjectResources: vi.fn(),
@@ -91,6 +97,78 @@ describe("ProjectResources", () => {
 
   afterEach(() => {
     vi.resetAllMocks();
+  });
+
+  describe("agent sessions", () => {
+    const session = (id: string, entityId: string, iso: string) =>
+      resource({
+        id,
+        entity: "agent_session",
+        name: null,
+        entityId,
+        createdAt: new Date(iso),
+      });
+
+    /** They are attached without a name, so a row of its own has nothing to say. */
+    it("numbers the sessions in the order they were started", () => {
+      mockResources({
+        items: [
+          session("b", "sess-b", "2026-09-17T10:00:00Z"),
+          session("a", "sess-a", "2026-09-16T10:00:00Z"),
+        ],
+        totalCount: 2,
+      });
+      renderResources();
+
+      expect(screen.getByText("Session 1")).toBeInTheDocument();
+      expect(screen.getByText("Session 2")).toBeInTheDocument();
+      expect(screen.queryByText("Untitled")).toBeNull();
+    });
+
+    it("opens the session in Tangent instead of previewing it here", async () => {
+      const user = userEvent.setup();
+      mockResources({
+        items: [session("a", "sess-a", "2026-09-16T10:00:00Z")],
+        totalCount: 1,
+      });
+      renderResources();
+
+      await user.click(screen.getByText("Session 1"));
+
+      expect(navigate).toHaveBeenCalledWith({
+        to: "/tangent/$projectId",
+        params: { projectId: "project-1" },
+        search: { session: "sess-a" },
+      });
+      expect(onSelect).not.toHaveBeenCalled();
+    });
+
+    it("still previews a resource that is not a session", async () => {
+      const user = userEvent.setup();
+      mockResources({
+        items: [resource({ id: "doc", name: "Model card" })],
+        totalCount: 1,
+      });
+      renderResources();
+
+      await user.click(screen.getByText("Model card"));
+
+      expect(onSelect).toHaveBeenCalledWith("doc");
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it("starts a session in Tangent, since one cannot be started here", async () => {
+      const user = userEvent.setup();
+      renderResources();
+
+      await user.click(screen.getByRole("button", { name: /New session/ }));
+
+      expect(navigate).toHaveBeenCalledWith({
+        to: "/tangent/$projectId",
+        params: { projectId: "project-1" },
+        search: { session: "new" },
+      });
+    });
   });
 
   it("invites the first item into an empty project", () => {
