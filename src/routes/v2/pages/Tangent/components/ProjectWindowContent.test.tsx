@@ -50,7 +50,18 @@ describe("ProjectWindowContent", () => {
     render(<ProjectWindowContent />);
 
     expect(screen.getByDisplayValue("Q3 churn work")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("Watch the drift")).toBeInTheDocument();
+  });
+
+  /**
+   * Notes are the agent's instructions here, edited under that name from the
+   * Resources window, so a box calling them Notes would be a second name for
+   * one field.
+   */
+  it("leaves the notes to the instructions that own them", () => {
+    render(<ProjectWindowContent />);
+
+    expect(screen.queryByText("Notes")).toBeNull();
+    expect(screen.queryByDisplayValue("Watch the drift")).toBeNull();
   });
 
   it("shows who made it and when", () => {
