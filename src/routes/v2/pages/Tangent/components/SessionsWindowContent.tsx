@@ -7,12 +7,16 @@ import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { useProjectSessions } from "@/routes/v2/pages/Tangent/hooks/useProjectSessions";
+import { sessionLabelsById } from "@/services/projects/sessionLabel";
 import { formatRelativeTime } from "@/utils/date";
 
 export const SessionsWindowContent = observer(function SessionsWindowContent() {
   const store = useTangentProject();
   const { sessions } = useProjectSessions(store.projectId);
   const activeSessionId = store.activeSessionId;
+  const labels = sessionLabelsById(
+    sessions.map((session) => [session.sessionId, session]),
+  );
 
   return (
     <BlockStack gap="2" className="p-2">
@@ -22,9 +26,9 @@ export const SessionsWindowContent = observer(function SessionsWindowContent() {
         </Text>
       ) : (
         <BlockStack gap="1">
-          {sessions.map((session, index) => {
+          {sessions.map((session) => {
             const isActive = session.sessionId === activeSessionId;
-            const label = `Session ${sessions.length - index}`;
+            const label = labels.get(session.sessionId) ?? "Session";
             return (
               <button
                 key={session.sessionId}

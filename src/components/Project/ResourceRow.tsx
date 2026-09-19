@@ -17,7 +17,9 @@ interface ResourceRowProps {
   resource: ProjectResourceSummary;
   selected: boolean;
   onSelect: (resource: ProjectResourceSummary) => void;
-  onRemove: (resource: ProjectResourceSummary) => void;
+  onRemove?: (resource: ProjectResourceSummary) => void;
+  label?: string;
+  opensElsewhere?: boolean;
 }
 
 export function ResourceRow({
@@ -25,8 +27,10 @@ export function ResourceRow({
   selected,
   onSelect,
   onRemove,
+  label,
+  opensElsewhere = false,
 }: ResourceRowProps) {
-  const name = resource.name ?? UNTITLED;
+  const name = label ?? resource.name ?? UNTITLED;
   const destroys = removingDestroys(resource);
   const kindLabel = resourceKindLabel(resource);
 
@@ -47,14 +51,18 @@ export function ResourceRow({
           <button
             type="button"
             onClick={() => onSelect(resource)}
-            aria-pressed={selected}
+            aria-pressed={opensElsewhere ? undefined : selected}
             className="min-w-0 cursor-pointer truncate text-left after:absolute after:inset-0"
-            {...tracking("projects.preview_resource")}
+            {...tracking(
+              opensElsewhere
+                ? "projects.open_resource"
+                : "projects.preview_resource",
+            )}
           >
             <Text
               size="sm"
               weight={selected ? "medium" : "regular"}
-              tone={resource.name ? "inherit" : "subdued"}
+              tone={(label ?? resource.name) ? "inherit" : "subdued"}
             >
               {name}
             </Text>
@@ -74,25 +82,29 @@ export function ResourceRow({
         </Text>
       </TableCell>
 
+      {/* The cell stays whether or not anything can be done in it, so every
+          row's columns line up under the fixed table layout. */}
       <TableCell className="text-right">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onRemove(resource)}
-          className={cn(
-            "relative z-10 size-7 text-muted-foreground",
-            destroys ? "hover:text-destructive" : "hover:text-foreground",
-          )}
-          aria-label={
-            destroys ? `Delete ${name}` : `Remove ${name} from this project`
-          }
-          title={
-            destroys ? `Delete ${name}` : `Remove ${name} from this project`
-          }
-          {...tracking("projects.remove_resource_open")}
-        >
-          <Icon name={destroys ? "Trash2" : "X"} size="sm" />
-        </Button>
+        {onRemove && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onRemove(resource)}
+            className={cn(
+              "relative z-10 size-7 text-muted-foreground",
+              destroys ? "hover:text-destructive" : "hover:text-foreground",
+            )}
+            aria-label={
+              destroys ? `Delete ${name}` : `Remove ${name} from this project`
+            }
+            title={
+              destroys ? `Delete ${name}` : `Remove ${name} from this project`
+            }
+            {...tracking("projects.remove_resource_open")}
+          >
+            <Icon name={destroys ? "Trash2" : "X"} size="sm" />
+          </Button>
+        )}
       </TableCell>
     </TableRow>
   );

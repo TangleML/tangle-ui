@@ -3,6 +3,7 @@ import { observer } from "mobx-react-lite";
 import { InlineStack } from "@/components/ui/layout";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { useTangentProjectWindows } from "@/routes/v2/pages/Tangent/hooks/useTangentProjectWindows";
+import { useTangentSessionParam } from "@/routes/v2/pages/Tangent/hooks/useTangentSessionParam";
 import { DockArea } from "@/routes/v2/shared/windows/DockArea";
 import { WindowContainer } from "@/routes/v2/shared/windows/WindowContainer";
 import { useWindowPersistence } from "@/routes/v2/shared/windows/windowPersistence";
@@ -17,6 +18,7 @@ export const TangentProjectWorkspace = observer(
     useWindowPersistence("tangent-project");
     useTangentProjectWindows();
     const store = useTangentProject();
+    useTangentSessionParam(store);
 
     return (
       <TangentProjectAgentProvider sessionId={store.activeSessionId}>
