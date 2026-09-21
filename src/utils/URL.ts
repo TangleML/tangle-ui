@@ -252,9 +252,15 @@ const getRawExecutionLogsUrl = (
 ): string =>
   `${backendUrl}/api/executions/${encodeURIComponent(executionId)}/stream_container_log`;
 
+/**
+ * Where a project card goes, which is where someone following a shared link
+ * expects to arrive. Its own page is reachable from there, so linking to the
+ * details page instead would leave two links for one project and hand over the
+ * one nobody navigates to.
+ */
 const getProjectUrl = (projectId: string): string =>
   buildAbsoluteAppUrl(
-    APP_ROUTES.PROJECT_DETAIL.replace(
+    APP_ROUTES.TANGENT_PROJECT.replace(
       "$projectId",
       encodeURIComponent(projectId),
     ),

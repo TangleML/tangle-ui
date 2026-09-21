@@ -1,4 +1,6 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useProject } from "@/services/projects/useProjects";
@@ -12,7 +14,16 @@ vi.mock("@/routes/v2/pages/Tangent/context/TangentProjectContext", () => ({
 vi.mock("@/services/projects/useProjects", () => ({
   useProject: vi.fn(),
   useUpdateProject: () => ({ mutate: vi.fn(), isPending: false }),
+  useDeleteProject: () => ({ mutate: deleteProject, isPending: false }),
 }));
+
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({ children }: { children: ReactNode }) => <a>{children}</a>,
+  useNavigate: () => navigate,
+}));
+
+const deleteProject = vi.fn();
+const navigate = vi.fn();
 
 vi.mock("@/providers/AnalyticsProvider", () => ({
   useAnalytics: () => ({ track: vi.fn() }),
@@ -33,6 +44,7 @@ const project = {
   extraData: null,
   createdAt: new Date("2026-09-02T10:00:00Z"),
   updatedAt: new Date("2026-09-15T10:00:00Z"),
+  resourceCounts: { pipeline: 1 },
 };
 
 function mockProject(overrides: Record<string, unknown> = {}) {
@@ -87,5 +99,32 @@ describe("ProjectWindowContent", () => {
     render(<ProjectWindowContent />);
 
     expect(screen.getByText("Loading…")).toBeInTheDocument();
+  });
+});
+
+describe("deleting the project from Tangent", () => {
+  beforeEach(() => mockProject());
+  afterEach(() => vi.resetAllMocks());
+
+  it("offers it here, so it need not be done from the project's own page", () => {
+    render(<ProjectWindowContent />);
+
+    expect(
+      screen.getByRole("button", { name: "Delete project" }),
+    ).toBeInTheDocument();
+  });
+
+  /** Destroying a project is not something a stray click should achieve. */
+  it("asks before destroying anything", async () => {
+    const user = userEvent.setup();
+    render(<ProjectWindowContent />);
+
+    await user.click(screen.getByRole("button", { name: "Delete project" }));
+
+    const dialog = await screen.findByRole("alertdialog");
+
+    expect(dialog).toHaveTextContent('Delete "Churn model"?');
+    expect(dialog).toHaveTextContent("This will also delete 1 pipeline");
+    expect(deleteProject).not.toHaveBeenCalled();
   });
 });
