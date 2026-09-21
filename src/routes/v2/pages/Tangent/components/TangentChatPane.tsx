@@ -65,6 +65,7 @@ export function TangentChatPane({
         >
           <Chat
             sessionId={sessionId}
+            autoFocus
             className="h-full min-h-0"
             style={{ height: "100%" }}
             onOpenArtifact={onOpenArtifact}
