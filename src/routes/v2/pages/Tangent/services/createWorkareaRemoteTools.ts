@@ -13,6 +13,7 @@ import type {
 } from "@/routes/v2/pages/Tangent/workarea/types";
 import {
   formatWorkareaTarget,
+  idIdentity,
   nameIdentity,
   parseIdentity,
   parseWorkareaTarget,
@@ -45,6 +46,9 @@ export interface WorkareaToolDeps {
   getEnvironmentId: (tabId: string) => string | undefined;
   waitForEnvironment: (tabId: string) => Promise<string | undefined>;
   runInspect: RunInspectDeps;
+  createPipeline: (
+    name?: string,
+  ) => Promise<{ pipelineName: string; fileId: string }>;
   clonePipeline: (runId: string) => Promise<{ pipelineName: string }>;
   refreshResources: () => Promise<void>;
 }
@@ -78,6 +82,42 @@ function summarize(
   };
   if (!isSpawnable(tab)) return base;
   return { ...base, environmentId, ready: environmentId != null };
+}
+
+/**
+ * Opens a target and reports the tab. A pipeline or run tab is held back until
+ * its sub-agent host connects or the wait gives up, because the tab is worth
+ * little to an agent until it can be spawned into; `ready` says which happened.
+ */
+async function openAndSummarize(
+  getDeps: () => WorkareaToolDeps,
+  target: WorkareaTarget,
+  title?: string,
+): Promise<WorkareaTabSummary> {
+  const tab = await getDeps().openTarget(target, title);
+  if (!isSpawnable(tab)) return summarize(tab, tab.id);
+
+  const environmentId = await getDeps().waitForEnvironment(tab.id);
+  const currentDeps = getDeps();
+  const currentTab = currentDeps
+    .getTabs()
+    .find((candidate) => candidate.id === tab.id);
+  if (!currentTab) {
+    throw new Error(
+      `Workarea tab "${tab.id}" was closed before its environment became ready.`,
+    );
+  }
+  return summarize(currentTab, currentDeps.getActiveTabId(), environmentId);
+}
+
+function optionalName(args: unknown): string | undefined {
+  if (!isRecord(args) || !("name" in args) || args.name === undefined) {
+    return undefined;
+  }
+  if (typeof args.name !== "string" || args.name.trim().length === 0) {
+    throw new Error("`name` must be a non-empty string when provided.");
+  }
+  return args.name.trim();
 }
 
 function optionalRunId(args: unknown): string | undefined {
@@ -152,11 +192,17 @@ const EXECUTION_ID_SCHEMA = {
 
 /**
  * The tab-management + run-inspect tools an agent uses to arrange and read the
- * Dynamic Workarea: open a resource, list open tabs, read the active tab, close
- * a tab, and inspect an open run. Spawnable (pipeline / run) tabs report an
- * `environmentId` that identifies whether that tab's sub-agent host is
- * connected; the server routes spawns to the prompting person's host, so an
- * agent cannot pick one.
+ * Dynamic Workarea: create a pipeline, open a resource, list open tabs, read
+ * the active tab, close a tab, and inspect an open run.
+ *
+ * Creating one belongs here rather than with the canvas tools, which are a
+ * spawned sub-agent's view of an editor that is already mounted on a loaded
+ * pipeline. Nothing downstream of a tab can bring a pipeline into being, so
+ * without this an agent asked to build one has nowhere to start.
+ *
+ * Spawnable (pipeline / run) tabs report an `environmentId` that identifies
+ * whether that tab's sub-agent host is connected; the server routes spawns to
+ * the prompting person's host, so an agent cannot pick one.
  *
  * `getDeps` reads the live handles per call so a single catalog instance always
  * acts on the current tab state without rebuilding the socket connection.
@@ -191,24 +237,45 @@ export function createWorkareaRemoteTools(
           throw new Error("`target` is required and must be a string.");
         }
         const title = typeof args.title === "string" ? args.title : undefined;
-        const target = parseWorkareaTarget(args.target);
-        const tab = await getDeps().openTarget(target, title);
-        if (!isSpawnable(tab)) return summarize(tab, tab.id);
-        const environmentId = await getDeps().waitForEnvironment(tab.id);
-        const currentDeps = getDeps();
-        const currentTab = currentDeps
-          .getTabs()
-          .find((candidate) => candidate.id === tab.id);
-        if (!currentTab) {
-          throw new Error(
-            `Workarea tab "${tab.id}" was closed before its environment became ready.`,
-          );
-        }
-        return summarize(
-          currentTab,
-          currentDeps.getActiveTabId(),
-          environmentId,
+        return openAndSummarize(
+          getDeps,
+          parseWorkareaTarget(args.target),
+          title,
         );
+      },
+    },
+    create_pipeline: {
+      description:
+        "Create a new, empty pipeline and open it in the Dynamic Workarea, " +
+        "ready to build on. Use this when asked to build a pipeline and none " +
+        "is open — there is no other way to get a canvas from nothing, and the " +
+        "canvas editing tools only exist once a pipeline tab is open. `name` is " +
+        "optional and is made unique if it is already taken. The pipeline is " +
+        "attached to the project automatically (it shows up in Resources). " +
+        "Returns the tab summary plus the pipeline `name` and its " +
+        "`pipeline://id/<fileId>` `target`, including the `environmentId` and " +
+        "`ready` flag for that tab's sub-agent host, so a spawn can follow " +
+        "straight on.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          name: {
+            type: "string",
+            description:
+              "Optional name for the new pipeline. Defaults to an untitled one.",
+          },
+        },
+      },
+      execute: async (args) => {
+        const { pipelineName, fileId } = await getDeps().createPipeline(
+          optionalName(args),
+        );
+        const target: WorkareaTarget = {
+          type: "pipeline",
+          identity: idIdentity(fileId),
+        };
+        const tab = await openAndSummarize(getDeps, target, pipelineName);
+        return { ...tab, name: pipelineName };
       },
     },
     clone_pipeline: {

@@ -60,6 +60,7 @@ function makeDeps(overrides: Partial<WorkareaToolDeps> = {}): WorkareaToolDeps {
     getEnvironmentId: () => undefined,
     waitForEnvironment: vi.fn().mockResolvedValue(undefined),
     runInspect: makeRunInspect(),
+    createPipeline: vi.fn(),
     clonePipeline: vi.fn(),
     refreshResources: vi.fn().mockResolvedValue(undefined),
     ...overrides,
@@ -302,6 +303,73 @@ describe("createWorkareaRemoteTools", () => {
 
     expect(refreshResources).toHaveBeenCalledTimes(1);
     expect(result).toEqual({ ok: true });
+  });
+
+  /**
+   * Nothing downstream of a tab can bring a pipeline into being, so an agent
+   * asked to build one with nothing open has only this to start from.
+   */
+  it("create_pipeline creates one, opens it, and reports the tab it can spawn into", async () => {
+    const createPipeline = vi
+      .fn()
+      .mockResolvedValue({ pipelineName: "Mordor DAG", fileId: "file-9" });
+    const tab = { ...pipelineTab("tab-new", "file-9"), title: "Mordor DAG" };
+    const openTarget = vi.fn().mockResolvedValue(tab);
+    const tools = createWorkareaRemoteTools(() =>
+      makeDeps({
+        createPipeline,
+        openTarget,
+        getTabs: () => [tab],
+        getActiveTabId: () => "tab-new",
+        waitForEnvironment: vi.fn().mockResolvedValue("env-1"),
+      }),
+    );
+
+    const result = await tools.create_pipeline.execute({ name: "Mordor DAG" });
+
+    expect(createPipeline).toHaveBeenCalledWith("Mordor DAG");
+    expect(openTarget).toHaveBeenCalledWith(
+      { type: "pipeline", identity: "id/file-9" },
+      "Mordor DAG",
+    );
+    expect(result).toEqual({
+      id: "tab-new",
+      kind: "pipeline",
+      name: "Mordor DAG",
+      title: "Mordor DAG",
+      target: "pipeline://id/file-9",
+      active: true,
+      environmentId: "env-1",
+      ready: true,
+    });
+  });
+
+  it("create_pipeline leaves the name to the caller's default when none is given", async () => {
+    const createPipeline = vi
+      .fn()
+      .mockResolvedValue({ pipelineName: "Untitled pipeline", fileId: "f-1" });
+    const tab = pipelineTab("tab-new", "f-1");
+    const tools = createWorkareaRemoteTools(() =>
+      makeDeps({
+        createPipeline,
+        openTarget: vi.fn().mockResolvedValue(tab),
+        getTabs: () => [tab],
+      }),
+    );
+
+    await tools.create_pipeline.execute({});
+
+    expect(createPipeline).toHaveBeenCalledWith(undefined);
+  });
+
+  it("create_pipeline refuses a name that is not worth a pipeline", async () => {
+    const createPipeline = vi.fn();
+    const tools = createWorkareaRemoteTools(() => makeDeps({ createPipeline }));
+
+    await expect(tools.create_pipeline.execute({ name: "  " })).rejects.toThrow(
+      /non-empty string/,
+    );
+    expect(createPipeline).not.toHaveBeenCalled();
   });
 
   it("clone_pipeline clones the resolved run tab and returns the new pipeline target", async () => {
