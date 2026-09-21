@@ -11,7 +11,7 @@ import {
   idIdentity,
   nameIdentity,
   parseWorkareaTarget,
-} from "@/routes/v2/pages/Tangent/workarea/workareaTarget";
+} from "@/services/projects/resourceTarget";
 import type {
   CreateResourceInput,
   ProjectResourceSummary,
