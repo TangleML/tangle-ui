@@ -34,7 +34,8 @@ const ExecutionLogsBody = ({
   if (isLoading) {
     return (
       <InlineStack gap="2">
-        <Spinner /> Loading logs...
+        <Spinner />
+        <Text>Loading logs…</Text>
       </InlineStack>
     );
   }
@@ -56,7 +57,7 @@ const ExecutionLogsPage = () => {
     data: details,
     isLoading,
     error,
-  } = useFetchExecutionDetails(executionId, undefined, true);
+  } = useFetchExecutionDetails(executionId, undefined, configured);
   const status = details?.status_history?.at(-1)?.status;
 
   return (

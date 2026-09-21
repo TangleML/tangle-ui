@@ -2,13 +2,13 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, test, vi } from "vitest";
 
+import CodeViewer from "./CodeViewer";
+
 vi.mock("@monaco-editor/react", () => ({
   default: ({ defaultValue }: { defaultValue: string }) => (
     <pre data-testid="monaco-mock">{defaultValue}</pre>
   ),
 }));
-
-import CodeViewer from "./CodeViewer";
 
 describe("<CodeViewer />", () => {
   test("renders static header actions alongside the fullscreen toggle", () => {

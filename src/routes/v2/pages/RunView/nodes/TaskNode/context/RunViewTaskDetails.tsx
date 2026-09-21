@@ -4,7 +4,10 @@ import { observer } from "mobx-react-lite";
 import { useEffect, useState } from "react";
 
 import type { ContainerExecutionStatus } from "@/api/types.gen";
-import type { CodeViewerHeaderActions } from "@/components/shared/CodeViewer/CodeViewer";
+import {
+  type CodeViewerHeaderActions,
+  CodeViewerHeaderButton,
+} from "@/components/shared/CodeViewer";
 import IOSection from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/TaskOverview/IOSection/IOSection";
 import Logs, {
   OpenLogsInNewWindowLink,
@@ -13,7 +16,6 @@ import { LogsEventsOverlaySection } from "@/components/shared/ReactFlow/FlowCanv
 import { RemoteTroubleshootButton } from "@/components/shared/RemoteTroubleshootAction/RemoteTroubleshootButton";
 import { StatusIcon } from "@/components/shared/Status";
 import TaskDetails from "@/components/shared/TaskDetails/Details";
-import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -96,6 +98,15 @@ export const RunViewTaskDetails = observer(function RunViewTaskDetails({
 
   const taskSpecForIO = { componentRef } as TaskSpec;
 
+  const openLogsInNewTabAction = executionId ? (
+    <OpenLogsInNewWindowLink
+      executionId={executionId}
+      status={status}
+      iconOnly
+      {...tracking("v2.run_view.context_panel.open_logs_new_tab")}
+    />
+  ) : null;
+
   const handlePopOutLogs = () => {
     if (!executionId) return;
     windows.openWindow(
@@ -103,14 +114,7 @@ export const RunViewTaskDetails = observer(function RunViewTaskDetails({
         executionId={executionId}
         status={status}
         allowFullscreen={false}
-        headerActions={
-          <OpenLogsInNewWindowLink
-            executionId={executionId}
-            status={status}
-            iconOnly
-            {...tracking("v2.run_view.context_panel.open_logs_new_tab")}
-          />
-        }
+        headerActions={openLogsInNewTabAction}
       />,
       {
         id: `task-logs-${task.name}`,
@@ -129,26 +133,18 @@ export const RunViewTaskDetails = observer(function RunViewTaskDetails({
 
     return (
       <>
-        <Button
-          variant="ghost"
-          size="min"
+        <CodeViewerHeaderButton
           onClick={() => {
             exitFullscreen();
             handlePopOutLogs();
           }}
-          className="text-muted-foreground hover:text-foreground"
           title="Pop out logs"
           aria-label="Pop out logs"
           {...tracking("v2.run_view.context_panel.logs_pop_out")}
         >
           <Icon name="PictureInPicture2" />
-        </Button>
-        <OpenLogsInNewWindowLink
-          executionId={executionId}
-          status={status}
-          iconOnly
-          {...tracking("v2.run_view.context_panel.open_logs_new_tab")}
-        />
+        </CodeViewerHeaderButton>
+        {openLogsInNewTabAction}
       </>
     );
   };

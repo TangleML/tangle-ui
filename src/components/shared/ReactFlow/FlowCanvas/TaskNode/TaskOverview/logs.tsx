@@ -1,11 +1,15 @@
 import { type ComponentPropsWithoutRef, useEffect, useState } from "react";
 
-import { CodeViewer } from "@/components/shared/CodeViewer";
-import type { CodeViewerHeaderActions } from "@/components/shared/CodeViewer/CodeViewer";
+import {
+  CodeViewer,
+  type CodeViewerHeaderActions,
+  CodeViewerHeaderButton,
+} from "@/components/shared/CodeViewer";
 import { InfoBox } from "@/components/shared/InfoBox";
-import { Button } from "@/components/ui/button";
+import { InlineStack } from "@/components/ui/layout";
 import { Link } from "@/components/ui/link";
 import { Spinner } from "@/components/ui/spinner";
+import { Text } from "@/components/ui/typography";
 import { useContainerLog } from "@/hooks/useContainerLog";
 import { useBackend } from "@/providers/BackendProvider";
 import { getBackendStatusString } from "@/utils/backend";
@@ -126,9 +130,10 @@ const Logs = ({
 
   if (isLoading) {
     return (
-      <div className="flex gap-2 items-center">
-        <Spinner /> Loading Logs...
-      </div>
+      <InlineStack gap="2">
+        <Spinner />
+        <Text>Loading logs…</Text>
+      </InlineStack>
     );
   }
 
@@ -186,24 +191,25 @@ export const OpenLogsInNewWindowLink = ({
     : "Can't open logs — backend not available";
 
   if (iconOnly) {
-    return (
-      <Button
-        asChild
-        variant="ghost"
-        size="min"
-        className="text-muted-foreground hover:text-foreground"
-      >
+    const iconLink = (
+      <CodeViewerHeaderButton asChild>
         <Link
           href={logsUrl}
           external
           variant={available ? "block" : "disabled"}
           size="sm"
-          title={label}
+          title={available ? label : undefined}
           aria-label={label}
           {...linkRest}
         />
-      </Button>
+      </CodeViewerHeaderButton>
     );
+
+    if (available) return iconLink;
+
+    // The disabled link variant sets pointer-events-none, so its own title never
+    // fires. The wrapper still receives hover, leaving the icon explainable.
+    return <span title={label}>{iconLink}</span>;
   }
 
   return (

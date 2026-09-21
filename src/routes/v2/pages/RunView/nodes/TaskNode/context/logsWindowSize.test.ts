@@ -53,4 +53,10 @@ describe("getLogsWindowSize", () => {
       400,
     );
   });
+
+  test("never drops below the minimum height on a short viewport", () => {
+    expect(getLogsWindowSize([], { width: 1024, height: 300 }).height).toBe(
+      280,
+    );
+  });
 });

@@ -2,6 +2,7 @@ import type { Size } from "@/routes/v2/shared/windows/types";
 
 const MIN_WIDTH = 520;
 const MAX_WIDTH = 1280;
+const MIN_HEIGHT = 280;
 const MAX_HEIGHT = 520;
 
 // Monaco's default 14px monospace face advances ~8.4px per character; the gutter
@@ -24,10 +25,7 @@ export function getLogsWindowSize(
   logTexts: (string | null | undefined)[],
   viewport: Size,
 ): Size {
-  const longestLine = longestLineLength(logTexts);
-  const contentWidth = longestLine
-    ? longestLine * CHAR_WIDTH + GUTTER_WIDTH
-    : MIN_WIDTH;
+  const contentWidth = longestLineLength(logTexts) * CHAR_WIDTH + GUTTER_WIDTH;
 
   const widthCeiling = Math.max(
     MIN_WIDTH,
@@ -38,6 +36,8 @@ export function getLogsWindowSize(
     width: Math.round(
       Math.min(widthCeiling, Math.max(MIN_WIDTH, contentWidth)),
     ),
-    height: Math.round(Math.min(MAX_HEIGHT, viewport.height * 0.8)),
+    height: Math.round(
+      Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, viewport.height * 0.8)),
+    ),
   };
 }

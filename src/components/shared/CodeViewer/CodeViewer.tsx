@@ -1,11 +1,12 @@
 import { type ReactNode, useEffect, useState } from "react";
 
-import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
+import { InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 
 import { FullscreenElement } from "../FullscreenElement";
 import CodeSyntaxHighlighter from "./CodeSyntaxHighlighter";
+import { CodeViewerHeaderButton } from "./CodeViewerHeaderButton";
 
 interface CodeViewerHeaderControls {
   exitFullscreen: () => void;
@@ -86,26 +87,23 @@ const CodeViewer = ({
               (Read Only)
             </Text>
           </div>
-          <div className="flex items-center gap-0.5 shrink-0">
+          <InlineStack gap="1" className="shrink-0">
             {typeof headerActions === "function"
               ? headerActions({ exitFullscreen })
               : headerActions}
             {allowFullscreen && (
-              <Button
+              <CodeViewerHeaderButton
                 type="button"
-                variant="ghost"
-                size="min"
                 onClick={handleToggleFullscreen}
-                className="text-muted-foreground hover:text-foreground"
                 title={isFullscreen ? "Exit fullscreen" : "View fullscreen"}
                 aria-label={
                   isFullscreen ? "Exit fullscreen" : "View fullscreen"
                 }
               >
                 {isFullscreen ? <Icon name="X" /> : <Icon name="Maximize2" />}
-              </Button>
+              </CodeViewerHeaderButton>
             )}
-          </div>
+          </InlineStack>
         </div>
         <div className="flex-1 relative">
           <div
