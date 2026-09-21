@@ -1,10 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { WorkareaTab } from "@/routes/v2/pages/Tangent/workarea/types";
-import {
-  idIdentity,
-  nameIdentity,
-} from "@/routes/v2/pages/Tangent/workarea/workareaTarget";
+import { idIdentity, nameIdentity } from "@/services/projects/resourceTarget";
 import { getOverallExecutionStatusFromStats } from "@/utils/executionStatus";
 
 import {

@@ -5,7 +5,7 @@ import type {
   PipelineTarget,
   RunTarget,
   WorkareaTarget,
-} from "./types";
+} from "./resourceTarget";
 import {
   formatWorkareaTarget,
   idIdentity,
@@ -14,7 +14,7 @@ import {
   parseIdentity,
   parseWorkareaTarget,
   sameTarget,
-} from "./workareaTarget";
+} from "./resourceTarget";
 
 describe("workareaTarget", () => {
   it("round-trips between object and string form", () => {

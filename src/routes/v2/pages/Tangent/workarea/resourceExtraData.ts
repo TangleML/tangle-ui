@@ -1,10 +1,11 @@
-import type { WorkareaTargetString } from "./types";
 import {
   formatWorkareaTarget,
   idIdentity,
   isWorkareaTargetString,
   nameIdentity,
-} from "./workareaTarget";
+} from "@/services/projects/resourceTarget";
+
+import type { WorkareaTargetString } from "./types";
 
 export interface ResourceExtraData {
   type: string;

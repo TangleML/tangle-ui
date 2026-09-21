@@ -2,10 +2,10 @@ import { ArtifactViewer } from "@tangent/embed-react";
 
 import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
+import { parseIdentity } from "@/services/projects/resourceTarget";
 
 import { registerWorkareaKind } from "./registry";
 import type { WorkareaTab } from "./types";
-import { parseIdentity } from "./workareaTarget";
 
 function ArtifactWorkareaView({
   tab,

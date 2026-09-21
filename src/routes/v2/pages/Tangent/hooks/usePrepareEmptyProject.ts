@@ -4,9 +4,9 @@ import { useEffect, useRef } from "react";
 import { createNewPipeline } from "@/routes/v2/pages/Editor/components/EditorMenuBar/components/fileMenu.actions";
 import type { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
 import type { WorkareaTarget } from "@/routes/v2/pages/Tangent/workarea/types";
-import { idIdentity } from "@/routes/v2/pages/Tangent/workarea/workareaTarget";
 import { availablePipelineName } from "@/services/localPipelines/localPipelinesService";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
+import { idIdentity } from "@/services/projects/resourceTarget";
 import type { ProjectResourceSummary } from "@/services/projects/types";
 import {
   useCreateProjectResource,

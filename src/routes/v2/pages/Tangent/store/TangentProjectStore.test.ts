@@ -12,8 +12,8 @@ import {
 import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import { ComponentSpec, Input, Output, Task } from "@/models/componentSpec";
 import type { WorkareaTarget } from "@/routes/v2/pages/Tangent/workarea/types";
-import { idIdentity } from "@/routes/v2/pages/Tangent/workarea/workareaTarget";
 import type { SharedUIStore } from "@/routes/v2/shared/store/SharedStoreContext";
+import { idIdentity } from "@/services/projects/resourceTarget";
 
 import {
   CHAT_TAB_VALUE,

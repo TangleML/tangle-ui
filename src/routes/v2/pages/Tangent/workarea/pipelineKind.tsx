@@ -1,10 +1,10 @@
 import { EmbeddedPipelineEditor } from "@/routes/v2/pages/Editor/EmbeddedPipelineEditor";
 import { findById } from "@/services/pipelineStorage/pipelineRegistry";
 import type { PipelineRef } from "@/services/pipelineStorage/types";
+import { parseIdentity } from "@/services/projects/resourceTarget";
 
 import { registerWorkareaKind } from "./registry";
 import type { WorkareaTarget } from "./types";
-import { parseIdentity } from "./workareaTarget";
 
 function toPipelineRef(target: WorkareaTarget, title: string): PipelineRef {
   const { key, value } = parseIdentity(target.identity);

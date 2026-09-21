@@ -14,7 +14,7 @@ import type { WorkareaTarget } from "@/routes/v2/pages/Tangent/workarea/types";
 import {
   formatWorkareaTarget,
   parseWorkareaTarget,
-} from "@/routes/v2/pages/Tangent/workarea/workareaTarget";
+} from "@/services/projects/resourceTarget";
 import {
   useDeleteProjectResource,
   useProjectResources,
