@@ -9,13 +9,8 @@ import type {
 } from "@/services/projects/resourceTarget";
 
 export type {
-  ArtifactTarget,
-  IdentityKey,
-  PipelineTarget,
-  RunTarget,
   WorkareaIdentity,
   WorkareaTarget,
-  WorkareaTargetString,
   WorkareaViewKindName,
 } from "@/services/projects/resourceTarget";
 

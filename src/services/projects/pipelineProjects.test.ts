@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { localPipelineInput } from "@/components/Project/localPipelinePointer";
-
 import { holdsPipeline } from "./pipelineProjects";
+import { localPipelineResourceInput } from "./resourceDescriptor";
 import type { ProjectResourceSummary } from "./types";
 
 function row(
@@ -23,7 +22,9 @@ function row(
 }
 
 const pointerRow = (localName: string, localId?: string) =>
-  row(localPipelineInput({ localName, ...(localId ? { localId } : {}) }));
+  row(
+    localPipelineResourceInput({ localName, ...(localId ? { localId } : {}) }),
+  );
 
 describe("holdsPipeline", () => {
   it("recognises the pipeline a project points at", () => {
