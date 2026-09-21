@@ -6,7 +6,7 @@ import type { FlexNodeData } from "@/components/shared/ReactFlow/FlowCanvas/Flex
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
-import { findFlexNode } from "@/routes/v2/pages/Editor/nodes/FlexNode/flexNode.actions";
+import { findFlexNode } from "@/models/componentSpec/queries/flexNodes";
 import { useFlexNodeActions } from "@/routes/v2/pages/Editor/nodes/FlexNode/useFlexNodeActions";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { tracking } from "@/utils/tracking";

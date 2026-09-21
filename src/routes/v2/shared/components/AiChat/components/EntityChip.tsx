@@ -2,6 +2,7 @@ import { observer } from "mobx-react-lite";
 
 import { type IconName } from "@/components/ui/icon";
 import type { ComponentSpec } from "@/models/componentSpec";
+import { locateFlexNode } from "@/models/componentSpec/queries/flexNodes";
 import type { LocatedEntityKind } from "@/models/componentSpec/queries/locateEntity";
 import { locateEntity } from "@/models/componentSpec/queries/locateEntity";
 import { useAiChatMode } from "@/routes/v2/shared/components/AiChat/AiChatStoreContext";
@@ -11,12 +12,13 @@ import { useFocusActions } from "@/routes/v2/shared/store/useFocusActions";
 
 import { ChatEntityChip } from "./ChatEntityChip";
 
-type ChipEntityKind = Exclude<LocatedEntityKind, "binding">;
+type ChipEntityKind = Exclude<LocatedEntityKind, "binding"> | "flex";
 
 const ENTITY_ICON: Record<ChipEntityKind, IconName> = {
   task: "SquareFunction",
   input: "ArrowRightToLine",
   output: "ArrowLeftFromLine",
+  flex: "StickyNote",
 };
 
 const UNKNOWN_ICON: IconName = "CircleQuestionMark";
@@ -65,6 +67,9 @@ export const EntityChip = observer(function EntityChip({
  * just their `$id` — `navigateToPath` expects the root pipeline name followed by
  * the chain of subgraph task names. Bindings have no node to focus, so they are
  * not navigable.
+ *
+ * Sticky notes are annotation data rather than entities, so `locateEntity`
+ * cannot see them and they need the separate descent.
  */
 function resolveNavigableEntity(
   rootSpec: ComponentSpec | null,
@@ -73,11 +78,20 @@ function resolveNavigableEntity(
   if (!rootSpec) return undefined;
 
   const location = locateEntity(rootSpec, entityId);
-  if (!location || location.kind === "binding") return undefined;
+  if (location) {
+    if (location.kind === "binding") return undefined;
+    return {
+      type: location.kind,
+      navigationPath: [rootSpec.name, ...location.subgraphTaskNames],
+    };
+  }
+
+  const note = locateFlexNode(rootSpec, entityId);
+  if (!note) return undefined;
 
   return {
-    type: location.kind,
-    navigationPath: [rootSpec.name, ...location.subgraphTaskNames],
+    type: "flex",
+    navigationPath: [rootSpec.name, ...note.subgraphTaskNames],
   };
 }
 

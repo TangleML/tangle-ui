@@ -9,14 +9,14 @@ import {
   type ComponentSpec,
   IncrementingIdGenerator,
 } from "@/models/componentSpec";
+import {
+  findFlexNode,
+  getFlexNodes,
+} from "@/models/componentSpec/queries/flexNodes";
 import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
 import { FLEX_NODES_ANNOTATION } from "@/utils/annotations";
 
 const idGen = new IncrementingIdGenerator();
-
-export function getFlexNodes(spec: ComponentSpec): FlexNodeData[] {
-  return spec.annotations.get(FLEX_NODES_ANNOTATION);
-}
 
 export function setFlexNodes(
   undo: UndoGroupable,
@@ -26,13 +26,6 @@ export function setFlexNodes(
   undo.withGroup("Update flex nodes", () => {
     spec.annotations.set(FLEX_NODES_ANNOTATION, nodes);
   });
-}
-
-export function findFlexNode(
-  spec: ComponentSpec,
-  id: string,
-): FlexNodeData | undefined {
-  return getFlexNodes(spec).find((n) => n.id === id);
 }
 
 export function updateFlexNode(
@@ -68,23 +61,28 @@ export function addFlexNode(
   undo: UndoGroupable,
   spec: ComponentSpec,
   position: XYPosition,
-) {
+  overrides: {
+    properties?: Partial<FlexNodeData["properties"]>;
+    size?: FlexNodeData["size"];
+    createdBy?: string;
+  } = {},
+): FlexNodeData {
   const nodes = getFlexNodes(spec);
-  const id = idGen.next("flex");
   const newNode: FlexNodeData = {
-    id,
-    properties: { ...DEFAULT_STICKY_NOTE },
+    id: idGen.next("flex"),
+    properties: { ...DEFAULT_STICKY_NOTE, ...overrides.properties },
     metadata: {
       createdAt: new Date().toISOString(),
-      createdBy: "user",
+      createdBy: overrides.createdBy ?? "user",
     },
-    size: { ...DEFAULT_FLEX_NODE_SIZE },
+    size: { ...DEFAULT_FLEX_NODE_SIZE, ...overrides.size },
     position,
     zIndex: 0,
   };
   undo.withGroup("Add flex node", () => {
     setFlexNodes(undo, spec, [...nodes, newNode]);
   });
+  return newNode;
 }
 
 export function removeFlexNode(

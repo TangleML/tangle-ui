@@ -41,6 +41,9 @@ type ReadOnlyCsomHandlers = Pick<
   | "setTaskArgument"
   | "createSubgraph"
   | "unpackSubgraph"
+  | "addStickyNote"
+  | "updateStickyNote"
+  | "deleteStickyNote"
   | "validatePipeline"
   | "searchComponents"
 >;
@@ -112,6 +115,15 @@ function createReadOnlyCsomHandlers(deps: BridgeDeps): ReadOnlyCsomHandlers {
       return { success: false, error: READ_ONLY_ERROR };
     },
     async unpackSubgraph() {
+      return { success: false, error: READ_ONLY_ERROR };
+    },
+    async addStickyNote() {
+      return { success: false, error: READ_ONLY_ERROR };
+    },
+    async updateStickyNote() {
+      return { success: false, error: READ_ONLY_ERROR };
+    },
+    async deleteStickyNote() {
       return { success: false, error: READ_ONLY_ERROR };
     },
   };

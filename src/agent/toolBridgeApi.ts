@@ -48,6 +48,25 @@ export interface ConnectArgs {
   targetPortName: string;
 }
 
+interface StickyNoteContent {
+  title?: string;
+  content?: string;
+  color?: string;
+  borderColor?: string;
+  size?: { width: number; height: number };
+}
+
+export interface AddStickyNoteArgs extends StickyNoteContent {
+  position?: { x: number; y: number };
+  anchorEntityId?: string;
+  inSubgraphTaskId?: string;
+}
+
+export interface StickyNoteUpdates extends StickyNoteContent {
+  position?: { x: number; y: number };
+  locked?: boolean;
+}
+
 export interface RunSubmissionResult {
   success: boolean;
   runId?: string;
@@ -167,6 +186,15 @@ export interface ToolBridgeApi {
     subgraphName: string,
   ): Promise<BridgeResult & { subgraphTaskId?: string }>;
   unpackSubgraph(taskEntityId: string): Promise<BridgeResult>;
+
+  addStickyNote(
+    args: AddStickyNoteArgs,
+  ): Promise<BridgeResult & { stickyNoteId?: string }>;
+  updateStickyNote(
+    noteId: string,
+    updates: StickyNoteUpdates,
+  ): Promise<BridgeResult>;
+  deleteStickyNote(noteId: string): Promise<BridgeResult>;
 
   validatePipeline(): Promise<ValidationResult>;
 

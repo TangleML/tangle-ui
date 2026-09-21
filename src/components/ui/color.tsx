@@ -14,26 +14,12 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "./collapsible";
+import { PRESET_COLORS } from "./colorPresets";
 import { Icon } from "./icon";
 import { Input } from "./input";
 import { BlockStack, InlineStack } from "./layout";
 import { Popover, PopoverContent, PopoverTrigger } from "./popover";
 import { Heading, Text } from "./typography";
-
-const PRESET_COLORS = [
-  "#FFF9C4",
-  "#C8E6C9",
-  "#BBDEFB",
-  "#D1C4E9",
-  "#FFE0B2",
-  "#EF9A9A",
-  "#FFCCBC",
-  "#D7CCC8",
-  "#F5F5F5",
-  "#CFD8DC",
-  "#B0BEC5",
-  "transparent",
-];
 
 interface ColorPickerProps {
   title?: string;
