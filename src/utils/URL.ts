@@ -243,9 +243,15 @@ const getArtifactPreviewUrl = (
   );
 };
 
+/**
+ * Where a project card goes, which is where someone following a shared link
+ * expects to arrive. Its own page is reachable from there, so linking to the
+ * details page instead would leave two links for one project and hand over the
+ * one nobody navigates to.
+ */
 const getProjectUrl = (projectId: string): string =>
   toAbsoluteAppUrl(
-    APP_ROUTES.PROJECT_DETAIL.replace(
+    APP_ROUTES.TANGENT_PROJECT.replace(
       "$projectId",
       encodeURIComponent(projectId),
     ),
