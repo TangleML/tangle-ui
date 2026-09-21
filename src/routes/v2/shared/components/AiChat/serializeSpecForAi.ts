@@ -26,16 +26,24 @@ import type {
   TypeSpecType,
 } from "@/models/componentSpec";
 import { getFlexNodes } from "@/models/componentSpec/queries/flexNodes";
+import { EDITOR_POSITION_ANNOTATION } from "@/utils/annotationKeys";
 import { isGraphImplementation } from "@/utils/componentSpec";
+
+interface CanvasPosition {
+  x: number;
+  y: number;
+}
 
 type AiInputSpec = Pick<Input, "$id" | "name" | "type"> & {
   description?: string;
   default?: string;
   optional?: boolean;
+  position?: CanvasPosition;
 };
 
 type AiOutputSpec = Pick<Output, "$id" | "name" | "type"> & {
   description?: string;
+  position?: CanvasPosition;
 };
 
 interface AiComponentRef {
@@ -52,6 +60,7 @@ type AiTaskSpec = Pick<Task, "$id" | "name"> & {
   componentRef: AiComponentRef;
   arguments: Array<{ name: string; value?: unknown }>;
   isSubgraph?: boolean;
+  position?: CanvasPosition;
 };
 
 type AiBindingSpec = Pick<
@@ -100,6 +109,25 @@ function pickDefined<T extends object>(obj: T): T {
   return out;
 }
 
+/**
+ * A node that has never been placed is not the same as one sitting at the
+ * origin, and omitting the field keeps the model from "restoring" a node to
+ * coordinates it made up. `has` is what separates the two cases: the position
+ * codec defaults to `{ x: 0, y: 0 }`, so `get` alone cannot.
+ */
+const canvasPosition = (entity: {
+  annotations: {
+    has(key: string): boolean;
+    get(key: string): unknown;
+  };
+}): CanvasPosition | undefined => {
+  if (!entity.annotations.has(EDITOR_POSITION_ANNOTATION)) return undefined;
+  const pos = entity.annotations.get(
+    EDITOR_POSITION_ANNOTATION,
+  ) as CanvasPosition;
+  return { x: pos.x, y: pos.y };
+};
+
 const serializeInput = (input: Input): AiInputSpec =>
   pickDefined({
     $id: input.$id,
@@ -108,6 +136,7 @@ const serializeInput = (input: Input): AiInputSpec =>
     description: input.description || undefined,
     default: input.defaultValue || undefined,
     optional: input.optional,
+    position: canvasPosition(input),
   });
 
 const serializeOutput = (output: Output): AiOutputSpec =>
@@ -116,6 +145,7 @@ const serializeOutput = (output: Output): AiOutputSpec =>
     name: output.name,
     type: output.type,
     description: output.description || undefined,
+    position: canvasPosition(output),
   });
 
 const serializeArgument = (arg: {
@@ -135,6 +165,7 @@ const serializeTask = (task: Task): AiTaskSpec =>
     )
       ? true
       : undefined,
+    position: canvasPosition(task),
   });
 
 const serializeStickyNote = (note: FlexNodeData): AiStickyNoteSpec =>

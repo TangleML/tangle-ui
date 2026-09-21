@@ -17,11 +17,13 @@ import type {
 } from "@/agent/toolBridgeApi";
 import type { FlexNodeData } from "@/components/shared/ReactFlow/FlowCanvas/FlexNode/types";
 import { MIN_FLEX_NODE_SIZE } from "@/components/shared/ReactFlow/FlowCanvas/FlexNode/utils";
+import type { LayoutAlgorithm } from "@/components/shared/ReactFlow/FlowCanvas/utils/autolayout";
 import {
   describeBindingEndpointProblem,
   findBindingEndpointProblems,
 } from "@/models/componentSpec/queries/bindingEndpoints";
 import type { EntityLocationOf } from "@/models/componentSpec/queries/locateEntity";
+import { editorRegistry } from "@/routes/v2/pages/Editor/nodes";
 import {
   addFlexNode,
   removeFlexNode,
@@ -79,17 +81,25 @@ import {
   resolveArgumentValue,
   resolveConnectable,
   resolveDestination,
+  resolveMovable,
   resolveStickyNote,
   resolveTarget,
 } from "./mutationTarget";
 
 /**
  * CSOM handlers need the Editor's undo store to make the agent's spec
- * edits user-visible and undoable as a single step. `undo` lives here
- * (not in the shared `BridgeDeps`) because only the Editor's mutating
- * bridge depends on it.
+ * edits user-visible and undoable as a single step, and a way to run the
+ * editor's own auto-layout — dagre needs React Flow's measured node
+ * dimensions, which only the mounted canvas knows, so it cannot be computed
+ * from the spec. Both live here (not in the shared `BridgeDeps`) because only
+ * the Editor's mutating bridge depends on them. `invokeAutoLayout` is optional
+ * for the same reason `getBackendUrl` is: without a mounted canvas the tool
+ * reports that there is nothing to lay out rather than throwing.
  */
-export type CsomBridgeDeps = BridgeDeps & { undo: UndoGroupable };
+export type CsomBridgeDeps = BridgeDeps & {
+  undo: UndoGroupable;
+  invokeAutoLayout?: (algorithm?: LayoutAlgorithm) => boolean;
+};
 
 type CsomHandlers = Pick<
   ToolBridgeApi,
@@ -113,6 +123,8 @@ type CsomHandlers = Pick<
   | "addStickyNote"
   | "updateStickyNote"
   | "deleteStickyNote"
+  | "moveNode"
+  | "autoLayout"
   | "validatePipeline"
 >;
 
@@ -650,6 +662,40 @@ export function createCsomBridgeHandlers(deps: CsomBridgeDeps): CsomHandlers {
       }
 
       removeFlexNode(deps.undo, location.spec, noteId);
+      return { success: true };
+    },
+
+    async moveNode(entityId, position) {
+      const root = requireSpec(deps);
+
+      const target = resolveMovable(root, entityId);
+      if (!target.ok) {
+        return { success: false, error: target.error };
+      }
+
+      // The manifests own how each node type stores its position — a task keeps
+      // it in an annotation, a sticky note in the flex-nodes list — so the
+      // registry is what keeps one tool working across all of them.
+      const manifest = editorRegistry.getByNodeId(target.spec, entityId);
+      if (!manifest) {
+        return {
+          success: false,
+          error: `${target.description} cannot be moved — the editor has no node type registered for it.`,
+        };
+      }
+
+      manifest.updatePosition(deps.undo, target.spec, entityId, position);
+      return { success: true };
+    },
+
+    async autoLayout(algorithm) {
+      if (!deps.invokeAutoLayout?.(algorithm)) {
+        return {
+          success: false,
+          error:
+            "Could not lay out the canvas — no pipeline canvas is open to lay out.",
+        };
+      }
       return { success: true };
     },
 

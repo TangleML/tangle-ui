@@ -1239,6 +1239,106 @@ describe("createEditorToolBridge", () => {
     });
   });
 
+  describe("layout", () => {
+    it("moveNode writes a task's position through its manifest", async () => {
+      const { bridge, spec } = makeBridge();
+
+      const result = await bridge.moveNode("task_1", { x: 600, y: 120 });
+
+      expect(result).toEqual({ success: true });
+      expect(
+        spec.tasks[0]?.annotations.get(EDITOR_POSITION_ANNOTATION),
+      ).toEqual({ x: 600, y: 120 });
+    });
+
+    it("moves a sticky note and a node nested in a subgraph alike", async () => {
+      const { bridge, spec, inner } = makeNestedBridge();
+      const { stickyNoteId } = await bridge.addStickyNote({
+        content: "inner",
+        inSubgraphTaskId: taskId(spec, "Preprocess"),
+      });
+
+      expect(await bridge.moveNode(stickyNoteId!, { x: 10, y: 20 })).toEqual({
+        success: true,
+      });
+      expect(getFlexNodes(inner)[0]?.position).toEqual({ x: 10, y: 20 });
+
+      expect(
+        await bridge.moveNode(taskId(inner, "DropNulls"), { x: 30, y: 40 }),
+      ).toEqual({ success: true });
+      expect(
+        inner.tasks[0]?.annotations.get(EDITOR_POSITION_ANNOTATION),
+      ).toEqual({ x: 30, y: 40 });
+    });
+
+    it("refuses to move a locked sticky note", async () => {
+      const { bridge, spec } = makeBridge();
+      const { stickyNoteId } = await bridge.addStickyNote({ content: "note" });
+      await bridge.updateStickyNote(stickyNoteId!, { locked: true });
+
+      const result = await bridge.moveNode(stickyNoteId!, { x: 1, y: 2 });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("locked");
+      expect(getFlexNodes(spec)[0]?.position).not.toEqual({ x: 1, y: 2 });
+    });
+
+    it("explains that a connection has no position of its own", async () => {
+      const { bridge, spec } = makeBridge();
+      spec.addBinding(
+        new Binding({
+          $id: "bind_1",
+          sourceEntityId: "input_1",
+          sourcePortName: "data",
+          targetEntityId: "task_1",
+          targetPortName: "input",
+        }),
+      );
+
+      const result = await bridge.moveNode("bind_1", { x: 1, y: 2 });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("refers to a connection");
+    });
+
+    it("reports an unknown node id", async () => {
+      const { bridge } = makeBridge();
+
+      const result = await bridge.moveNode("nope", { x: 1, y: 2 });
+
+      expect(result).toEqual({
+        success: false,
+        error:
+          'No task, input, output or sticky note with id "nope" exists in this pipeline.',
+      });
+    });
+
+    it("autoLayout delegates to the editor's own layout command", async () => {
+      const spec = buildSpec();
+      const undo = new RecordingUndo();
+      const invokeAutoLayout = vi.fn().mockReturnValue(true);
+      const bridge = createEditorToolBridge({
+        getSpec: () => spec,
+        getActiveSubgraphPath: () => [],
+        getActiveSubgraphTaskId: () => undefined,
+        undo,
+        invokeAutoLayout,
+      });
+
+      expect(await bridge.autoLayout("dwyer")).toEqual({ success: true });
+      expect(invokeAutoLayout).toHaveBeenCalledWith("dwyer");
+    });
+
+    it("autoLayout reports when no canvas is mounted to lay out", async () => {
+      const { bridge } = makeBridge();
+
+      const result = await bridge.autoLayout();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("no pipeline canvas is open");
+    });
+  });
+
   describe("validatePipeline", () => {
     it("reports valid: true on a clean spec", async () => {
       const spec = new ComponentSpec({ $id: "spec_1", name: "Pipe" });

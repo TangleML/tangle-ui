@@ -8,7 +8,10 @@ import {
   Output,
   Task,
 } from "@/models/componentSpec";
-import { FLEX_NODES_ANNOTATION } from "@/utils/annotationKeys";
+import {
+  EDITOR_POSITION_ANNOTATION,
+  FLEX_NODES_ANNOTATION,
+} from "@/utils/annotationKeys";
 
 import { serializeSpecForAi } from "./serializeSpecForAi";
 
@@ -203,6 +206,20 @@ describe("serializeSpecForAi", () => {
     const ai = serializeSpecForAi(spec, { activeSubgraphPath: [] });
 
     expect(ai.activeSubgraphPath).toBeUndefined();
+  });
+
+  it("serializes canvas positions, omitting them for nodes never placed", () => {
+    const spec = buildBasicSpec();
+    spec.tasks[0]?.annotations.set(EDITOR_POSITION_ANNOTATION, {
+      x: 120,
+      y: 340,
+    });
+
+    const ai = serializeSpecForAi(spec);
+
+    expect(ai.tasks[0]?.position).toEqual({ x: 120, y: 340 });
+    expect(ai.inputs[0]?.position).toBeUndefined();
+    expect(ai.outputs[0]?.position).toBeUndefined();
   });
 
   it("omits stickyNotes when the canvas has none", () => {

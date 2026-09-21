@@ -206,6 +206,53 @@ export function resolveStickyNote(
   return { ok: true, location };
 }
 
+/**
+ * Anything with a place on the canvas, which cuts across the entity model and
+ * the sticky-note list: tasks, ports and notes all move the same way, so
+ * `move_node` resolves them together rather than as three tools.
+ */
+export function resolveMovable(
+  root: ComponentSpec,
+  nodeId: string,
+):
+  | { ok: true; spec: ComponentSpec; description: string }
+  | { ok: false; error: string } {
+  const entity = locateEntity(root, nodeId);
+  if (entity) {
+    if (entity.kind === "binding") {
+      return {
+        ok: false,
+        error: `$id "${nodeId}" refers to a connection, which has no position of its own — it follows the nodes it joins.`,
+      };
+    }
+    return {
+      ok: true,
+      spec: entity.spec,
+      description: describeEntityLocation(entity, nodeId),
+    };
+  }
+
+  const note = locateFlexNode(root, nodeId);
+  if (note) {
+    if (note.node.locked) {
+      return {
+        ok: false,
+        error: `${describeStickyNoteLocation(note)} is locked, so it cannot be moved. Ask the user to unlock it first.`,
+      };
+    }
+    return {
+      ok: true,
+      spec: note.spec,
+      description: describeStickyNoteLocation(note),
+    };
+  }
+
+  return {
+    ok: false,
+    error: `No task, input, output or sticky note with id "${nodeId}" exists in this pipeline.`,
+  };
+}
+
 export function describeStickyNoteLocation(location: FlexNodeLocation): string {
   const { title } = location.node.properties;
   const note = title

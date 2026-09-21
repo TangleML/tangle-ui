@@ -44,6 +44,8 @@ type ReadOnlyCsomHandlers = Pick<
   | "addStickyNote"
   | "updateStickyNote"
   | "deleteStickyNote"
+  | "moveNode"
+  | "autoLayout"
   | "validatePipeline"
   | "searchComponents"
 >;
@@ -124,6 +126,12 @@ function createReadOnlyCsomHandlers(deps: BridgeDeps): ReadOnlyCsomHandlers {
       return { success: false, error: READ_ONLY_ERROR };
     },
     async deleteStickyNote() {
+      return { success: false, error: READ_ONLY_ERROR };
+    },
+    async moveNode() {
+      return { success: false, error: READ_ONLY_ERROR };
+    },
+    async autoLayout() {
       return { success: false, error: READ_ONLY_ERROR };
     },
   };

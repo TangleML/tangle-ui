@@ -20,7 +20,7 @@ const SUGGESTED_PROMPTS_EDITOR: SuggestedPrompt[] = [
 ];
 
 export function useAiChatWindow(enabled: boolean) {
-  const { windows } = useSharedStores();
+  const { windows, keyboard } = useSharedStores();
   const editorSession = useEditorSession();
 
   useEffect(() => {
@@ -33,7 +33,15 @@ export function useAiChatWindow(enabled: boolean) {
     windows.openWindow(
       <AiChatContent
         createBridge={(deps) =>
-          createEditorToolBridge({ ...deps, undo: editorSession.undo })
+          createEditorToolBridge({
+            ...deps,
+            undo: editorSession.undo,
+            invokeAutoLayout: (algorithm) => {
+              if (!keyboard.getShortcut("auto-layout")) return false;
+              keyboard.invokeShortcut("auto-layout", { algorithm });
+              return true;
+            },
+          })
         }
         suggestedPrompts={SUGGESTED_PROMPTS_EDITOR}
       />,
@@ -55,5 +63,5 @@ export function useAiChatWindow(enabled: boolean) {
         ),
       },
     );
-  }, [enabled, windows, editorSession]);
+  }, [enabled, windows, editorSession, keyboard]);
 }
