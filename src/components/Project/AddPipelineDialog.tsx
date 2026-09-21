@@ -22,15 +22,14 @@ import {
   useLocalPipelineNames,
   useResolvedPointers,
 } from "@/services/localPipelines/useLocalPipelines";
+import {
+  DescriptorTooLargeError,
+  localPipelinePointerOf,
+  localPipelineResourceInput,
+} from "@/services/projects/resourceDescriptor";
 import type { ProjectResourceSummary } from "@/services/projects/types";
 import { useCreateProjectResource } from "@/services/projects/useProjectResources";
 import { tracking } from "@/utils/tracking";
-
-import {
-  localPipelineInput,
-  pointerOf,
-  PointerTooLargeError,
-} from "./localPipelinePointer";
 
 interface AddPipelineDialogProps {
   projectId: string;
@@ -52,7 +51,7 @@ export function AddPipelineDialog({
   const { track } = useAnalytics();
 
   const pointers = resources
-    .map((resource) => pointerOf(resource))
+    .map((resource) => localPipelinePointerOf(resource))
     .filter((pointer) => pointer !== undefined);
   const { data: resolved } = useResolvedPointers(pointers);
 
@@ -80,10 +79,10 @@ export function AddPipelineDialog({
   const add = async (name: string) => {
     let input;
     try {
-      input = localPipelineInput(await pointerTo(name));
+      input = localPipelineResourceInput(await pointerTo(name));
     } catch (problem) {
       notify(
-        problem instanceof PointerTooLargeError
+        problem instanceof DescriptorTooLargeError
           ? problem.message
           : "Could not add that pipeline",
         "error",

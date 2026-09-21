@@ -203,14 +203,15 @@ describe("usePrepareEmptyProject", () => {
     expect(createResource).not.toHaveBeenCalled();
   });
 
-  /** Added from the project page, which records a pointer rather than a target. */
-  it("recognises a pipeline the project page attached", async () => {
+  /** A pipeline cloned from a run has no registry row, so it is named, not id'd. */
+  it("recognises a pipeline addressed by name rather than by id", async () => {
     given({
       documents: [
         document({
-          kind: "pipeline",
-          localName: "Churn model",
-          localId: "f-7",
+          type: "local_pipeline",
+          storage: "browser",
+          identity: "pipeline://name/Cloned from run 42",
+          fallbackName: "Cloned from run 42",
         }),
       ],
     });
@@ -218,7 +219,12 @@ describe("usePrepareEmptyProject", () => {
 
     prepare(store);
 
-    await waitFor(() => expect(store.openWorkareaTarget).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(store.openWorkareaTarget).toHaveBeenCalledWith(
+        { type: "pipeline", identity: "name/Cloned from run 42" },
+        "Churn model",
+      ),
+    );
     expect(createNewPipeline).not.toHaveBeenCalled();
   });
 

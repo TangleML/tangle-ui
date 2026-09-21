@@ -104,7 +104,12 @@ describe("ResourceRow", () => {
       entity: "document",
       name: "Churn model",
       entityId: null,
-      extraData: { kind: "pipeline", localName: "Churn model" },
+      extraData: {
+        type: "local_pipeline",
+        storage: "browser",
+        identity: "pipeline://name/Churn model",
+        fallbackName: "Churn model",
+      },
     });
 
     expect(screen.getByText("Local pipeline")).toBeInTheDocument();
@@ -117,27 +122,27 @@ describe("ResourceRow", () => {
   });
 
   it("says what kind a document calls itself, whatever that kind is", () => {
-    renderRow({ ...ownContent, extraData: { kind: "data_sheet" } });
+    renderRow({ ...ownContent, extraData: { type: "data_sheet" } });
 
     expect(screen.getByText("Data sheet")).toBeInTheDocument();
   });
 
   /** The group heading already said it, so the row saying it again is noise. */
   it("does not repeat back a kind that only names the entity", () => {
-    renderRow({ ...ownContent, extraData: { kind: "document" } });
+    renderRow({ ...ownContent, extraData: { type: "document" } });
 
     expect(screen.queryByText("Document")).toBeNull();
   });
 
   it("does not label a pipeline the backend holds", () => {
-    renderRow({ extraData: { kind: "pipeline" } });
+    renderRow({ extraData: { type: "local_pipeline" } });
 
     expect(screen.queryByText("Pipeline")).toBeNull();
   });
 
   /** Anyone may PATCH `extra_data`, so the text is the backend's, not ours. */
   it("cuts a kind too long to fit a badge", () => {
-    renderRow({ ...ownContent, extraData: { kind: "k".repeat(500) } });
+    renderRow({ ...ownContent, extraData: { type: "k".repeat(500) } });
 
     expect(screen.getByText(/^Kk{23}$/)).toBeInTheDocument();
   });
@@ -148,7 +153,12 @@ describe("ResourceRow", () => {
       entity: "document",
       name: "Churn model",
       entityId: null,
-      extraData: { kind: "pipeline", localName: "Churn model" },
+      extraData: {
+        type: "local_pipeline",
+        storage: "browser",
+        identity: "pipeline://name/Churn model",
+        fallbackName: "Churn model",
+      },
     });
 
     expect(
@@ -185,7 +195,12 @@ describe("ResourceRow", () => {
       entity: "document",
       name: "Churn model",
       entityId: null,
-      extraData: { kind: "pipeline", localName: "Churn model" },
+      extraData: {
+        type: "local_pipeline",
+        storage: "browser",
+        identity: "pipeline://name/Churn model",
+        fallbackName: "Churn model",
+      },
     });
 
     const remove = screen.getByRole("button", {
@@ -201,7 +216,7 @@ describe("ResourceRow", () => {
       entity: "document",
       name: "Churn model",
       entityId: null,
-      extraData: { kind: "pipeline" },
+      extraData: { type: "local_pipeline" },
     });
 
     expect(
