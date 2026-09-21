@@ -23,6 +23,7 @@ import { buildTaskSpecShape } from "@/components/shared/PipelineRunNameTemplate/
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
+import { createNewPipeline } from "@/routes/v2/pages/Editor/components/EditorMenuBar/components/fileMenu.actions";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { useRemoteEnvAuthToken } from "@/routes/v2/pages/Tangent/hooks/useRemoteEnvAuthToken";
 import { useTangentBaseUrl } from "@/routes/v2/pages/Tangent/hooks/useTangentBaseUrl";
@@ -40,7 +41,9 @@ import { createRemoteEnvHost } from "@/routes/v2/pages/Tangent/services/remoteEn
 import { createDebugBridgeHandlers } from "@/routes/v2/shared/components/AiChat/toolBridge/debugBridge";
 import { createRunBridgeHandlers } from "@/routes/v2/shared/components/AiChat/toolBridge/runBridge";
 import type { BridgeDeps } from "@/routes/v2/shared/components/AiChat/toolBridge/utils";
+import { availablePipelineName } from "@/services/localPipelines/localPipelinesService";
 import { copyRunToPipeline } from "@/services/pipelineRunService";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import { createProjectResource } from "@/services/projects/projectResourcesService";
 import { localPipelineResourceInput } from "@/services/projects/resourceDescriptor";
 import {
@@ -51,6 +54,8 @@ import { extractCanonicalName } from "@/utils/canonicalPipelineName";
 import { isValidComponentSpec } from "@/utils/componentSpec";
 import { getInitialName } from "@/utils/getComponentName";
 import { extractCloneableTaskArguments } from "@/utils/nodes/taskArguments";
+
+const UNTITLED_PIPELINE = "Untitled pipeline";
 
 interface TangentProjectAgentProviderProps {
   sessionId: string | undefined;
@@ -108,6 +113,7 @@ export function TangentProjectAgentProvider({
   const { backendUrl } = useBackend();
   const queryClient = useQueryClient();
   const store = useTangentProject();
+  const storage = usePipelineStorage();
   const { baseUrl } = useTangentBaseUrl(store.projectId);
 
   const authToken = useRemoteEnvAuthToken();
@@ -179,6 +185,21 @@ export function TangentProjectAgentProvider({
       getEnvironmentId: (id) => store.getTabEnvironmentId(id),
       waitForEnvironment: (id) => store.waitForTabEnvironment(id),
       runInspect,
+      createPipeline: async (name) => {
+        const pipelineName = await availablePipelineName(
+          name ?? UNTITLED_PIPELINE,
+        );
+        const file = await createNewPipeline(storage, pipelineName);
+        await createProjectResource(
+          store.projectId,
+          localPipelineResourceInput({
+            localName: file.storageKey,
+            localId: file.id,
+          }),
+        );
+        await refreshProjectResources();
+        return { pipelineName: file.storageKey, fileId: file.id };
+      },
       clonePipeline: async (runId) => {
         const { pipelineName } = await clonePipelineFromRun(runInspect, runId);
         await createProjectResource(
