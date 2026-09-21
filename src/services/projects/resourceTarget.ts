@@ -1,10 +1,41 @@
-import type {
-  IdentityKey,
-  WorkareaIdentity,
-  WorkareaTarget,
-  WorkareaTargetString,
-  WorkareaViewKindName,
-} from "./types";
+export type WorkareaViewKindName = "artifact" | "pipeline" | "run";
+
+export type IdentityKey = "id" | "name";
+
+export type WorkareaIdentity = `${IdentityKey}/${string}`;
+
+/**
+ * A workarea target: its `type` is both the view kind and the scheme, and its
+ * `identity` is sub-key prefixed (`id/<value>` or `name/<value>`). The pair is
+ * two-way convertible with its `type://identity` string form.
+ *
+ * Only a pipeline can be addressed by `name/`; a run and an artifact are always
+ * `id/`, so the union rejects `run://name/…` and `artifact://name/…` at compile
+ * time as well as in `parseWorkareaTarget`.
+ *
+ * This lives beside the projects service rather than with the Tangent workarea
+ * that dispatches on it, because a project's resource rows record these strings
+ * and the project page has to read them too.
+ */
+export type WorkareaTarget = ArtifactTarget | PipelineTarget | RunTarget;
+
+export interface ArtifactTarget {
+  type: "artifact";
+  identity: `id/${string}`;
+}
+
+export interface PipelineTarget {
+  type: "pipeline";
+  identity: WorkareaIdentity;
+}
+
+export interface RunTarget {
+  type: "run";
+  identity: `id/${string}`;
+}
+
+export type WorkareaTargetString =
+  `${WorkareaViewKindName}://${WorkareaIdentity}`;
 
 const WORKAREA_VIEW_KIND_NAMES: readonly WorkareaViewKindName[] = [
   "artifact",
