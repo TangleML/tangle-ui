@@ -1,6 +1,6 @@
-import { pointerOf } from "@/components/Project/localPipelinePointer";
 import type { LocalPipelinePointer } from "@/services/localPipelines/types";
 
+import { localPipelinePointerOf } from "./resourceDescriptor";
 import type {
   ListProjectResourcesParams,
   ProjectResourceSummary,
@@ -21,7 +21,7 @@ function pointsAt(
   resource: ProjectResourceSummary,
   pipeline: LocalPipelinePointer,
 ) {
-  const pointer = pointerOf(resource);
+  const pointer = localPipelinePointerOf(resource);
   if (!pointer) {
     return false;
   }

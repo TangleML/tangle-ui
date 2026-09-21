@@ -47,7 +47,12 @@ function pointerResource(
     entity: "document",
     name: localName,
     entityId: null,
-    extraData: { kind: "pipeline", storage: "browser", localName },
+    extraData: {
+      type: "local_pipeline",
+      storage: "browser",
+      identity: `pipeline://name/${localName}`,
+      fallbackName: localName,
+    },
     createdBy: "alice@example.com",
     createdAt: new Date("2026-09-09T10:00:00Z"),
     updatedAt: new Date("2026-09-09T10:00:00Z"),
@@ -161,9 +166,10 @@ describe("AddPipelineDialog", () => {
       name: "Churn model",
       payload: {},
       extraData: {
-        kind: "pipeline",
+        type: "local_pipeline",
         storage: "browser",
-        localName: "Churn model",
+        identity: "pipeline://name/Churn model",
+        fallbackName: "Churn model",
       },
     });
   });
@@ -179,7 +185,8 @@ describe("AddPipelineDialog", () => {
 
     await waitFor(() => expect(mutate).toHaveBeenCalled());
     expect(mutate.mock.calls[0][0].extraData).toMatchObject({
-      localId: "id-9",
+      identity: "pipeline://id/id-9",
+      fallbackName: "Churn model",
     });
   });
 
