@@ -261,4 +261,40 @@ describe("serializeSpecForAi", () => {
     expect(note?.content).toBeUndefined();
     expect(note?.createdBy).toBe("AI assistant");
   });
+
+  describe("structured-clone safety", () => {
+    it("survives the Comlink hop with observable-backed values throughout", () => {
+      const spec = new ComponentSpec({ $id: "spec_1", name: "Leaky" });
+      spec.addInput(
+        new Input({
+          $id: "in_1",
+          name: "cfg",
+          type: { JsonObject: { schema: "x" } },
+        }),
+      );
+      spec.addTask(
+        new Task({
+          $id: "task_1",
+          name: "Fetch",
+          componentRef: {
+            name: "Fetch",
+            spec: {
+              name: "Fetch",
+              inputs: [{ name: "token", type: { JsonObject: { a: "b" } } }],
+              implementation: { container: { image: "fetch:1" } },
+            },
+          },
+          arguments: [
+            {
+              name: "token",
+              value: { dynamicData: { secret: { name: "k" } } },
+            },
+          ],
+        }),
+      );
+      spec.annotations.set(FLEX_NODES_ANNOTATION, [stickyNote()]);
+
+      expect(() => structuredClone(serializeSpecForAi(spec))).not.toThrow();
+    });
+  });
 });

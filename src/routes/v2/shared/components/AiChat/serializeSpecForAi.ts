@@ -181,21 +181,37 @@ function serializeComponentRef(ref: ComponentReference): AiComponentRef {
   });
 }
 
+/**
+ * The bridge hands this result to the agent worker over Comlink, so every value
+ * in it has to survive `postMessage`'s structured clone. Anything read straight
+ * off a keystone model is a MobX observable and throws `DataCloneError` there,
+ * killing the whole `get_pipeline_state` call — and the fields that can carry
+ * one are not obvious: a `dynamicData` argument value, a structured
+ * `TypeSpecType`, a string array out of an annotation codec. `toJS` does not
+ * help, because the object being returned is a plain one and MobX only
+ * recurses into observable containers. A round-trip is lossless for this
+ * shape: `AiSpec` is declared plain JSON and `pickDefined` has already
+ * dropped every `undefined`.
+ */
+const toPlainJson = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+
 export function serializeSpecForAi(
   spec: ComponentSpec,
   { activeSubgraphPath = [], activeSubgraphTaskId }: SerializeSpecOptions = {},
 ): AiSpec {
   const insideSubgraph = activeSubgraphPath.length > 0;
   const stickyNotes = getFlexNodes(spec).map(serializeStickyNote);
-  return pickDefined({
-    name: spec.name,
-    description: spec.description || undefined,
-    inputs: spec.inputs.map(serializeInput),
-    outputs: spec.outputs.map(serializeOutput),
-    tasks: spec.tasks.map(serializeTask),
-    bindings: spec.bindings.map(serializeBinding),
-    stickyNotes: stickyNotes.length > 0 ? stickyNotes : undefined,
-    activeSubgraphPath: insideSubgraph ? activeSubgraphPath : undefined,
-    activeSubgraphTaskId: insideSubgraph ? activeSubgraphTaskId : undefined,
-  });
+  return toPlainJson(
+    pickDefined({
+      name: spec.name,
+      description: spec.description || undefined,
+      inputs: spec.inputs.map(serializeInput),
+      outputs: spec.outputs.map(serializeOutput),
+      tasks: spec.tasks.map(serializeTask),
+      bindings: spec.bindings.map(serializeBinding),
+      stickyNotes: stickyNotes.length > 0 ? stickyNotes : undefined,
+      activeSubgraphPath: insideSubgraph ? activeSubgraphPath : undefined,
+      activeSubgraphTaskId: insideSubgraph ? activeSubgraphTaskId : undefined,
+    }),
+  );
 }
