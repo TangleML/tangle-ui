@@ -93,6 +93,7 @@ export class TangentProjectStore {
   @observable accessor selectedSessionId: string | undefined = undefined;
   @observable accessor defaultSessionId: string | undefined = undefined;
   @observable accessor isStartingSession = false;
+  @observable accessor canStartSession = false;
 
   @observable.shallow accessor workareaBySession = new Map<
     string,
@@ -120,8 +121,9 @@ export class TangentProjectStore {
     makeObservable(this);
   }
 
-  setSessionIo(io: TangentSessionIo) {
+  @action setSessionIo(io: TangentSessionIo) {
     this.#io = io;
+    this.canStartSession = true;
   }
 
   // The selected session wins while it exists; otherwise fall back to the most
