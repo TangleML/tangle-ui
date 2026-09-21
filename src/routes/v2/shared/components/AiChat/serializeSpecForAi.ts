@@ -31,6 +31,7 @@ import {
   PIPELINE_NOTES_ANNOTATION,
   PIPELINE_TAGS_ANNOTATION,
   RUN_NAME_TEMPLATE_ANNOTATION,
+  TASK_COLOR_ANNOTATION,
 } from "@/utils/annotationKeys";
 import { isGraphImplementation } from "@/utils/componentSpec";
 
@@ -66,6 +67,7 @@ type AiTaskSpec = Pick<Task, "$id" | "name"> & {
   arguments: Array<{ name: string; value?: unknown }>;
   isSubgraph?: boolean;
   position?: CanvasPosition;
+  color?: string;
 };
 
 type AiBindingSpec = Pick<
@@ -153,8 +155,9 @@ const serializeArgument = (arg: {
 const serializeTask = (
   task: Task,
   position: CanvasPosition | undefined,
-): AiTaskSpec =>
-  pickDefined({
+): AiTaskSpec => {
+  const color = task.annotations.get(TASK_COLOR_ANNOTATION);
+  return pickDefined({
     $id: task.$id,
     name: task.name,
     componentRef: serializeComponentRef(task.resolvedComponentRef),
@@ -165,7 +168,9 @@ const serializeTask = (
       ? true
       : undefined,
     position,
+    color: color === "transparent" ? undefined : color,
   });
+};
 
 const serializeStickyNote = (note: FlexNodeData): AiStickyNoteSpec =>
   pickDefined({

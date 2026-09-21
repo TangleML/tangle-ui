@@ -33,6 +33,7 @@ type ReadOnlyCsomHandlers = Pick<
   | "addTask"
   | "deleteTask"
   | "renameTask"
+  | "setTaskColor"
   | "addInput"
   | "deleteInput"
   | "renameInput"
@@ -98,6 +99,9 @@ function createReadOnlyCsomHandlers(deps: BridgeDeps): ReadOnlyCsomHandlers {
       return { success: false, error: READ_ONLY_ERROR };
     },
     async renameTask() {
+      return { success: false, error: READ_ONLY_ERROR };
+    },
+    async setTaskColor() {
       return { success: false, error: READ_ONLY_ERROR };
     },
     async addInput() {
