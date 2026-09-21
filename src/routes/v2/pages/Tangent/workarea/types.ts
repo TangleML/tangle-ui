@@ -3,41 +3,21 @@ import type { ReactNode } from "react";
 import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import type { IconName } from "@/components/ui/icon";
 import type { SharedUIStore } from "@/routes/v2/shared/store/SharedStoreContext";
+import type {
+  WorkareaTarget,
+  WorkareaViewKindName,
+} from "@/services/projects/resourceTarget";
 
-export type WorkareaViewKindName = "artifact" | "pipeline" | "run";
-
-export type IdentityKey = "id" | "name";
-
-export type WorkareaIdentity = `${IdentityKey}/${string}`;
-
-/**
- * A workarea target: its `type` is both the view kind and the scheme, and its
- * `identity` is sub-key prefixed (`id/<value>` or `name/<value>`). The pair is
- * two-way convertible with its `type://identity` string form.
- *
- * Only a pipeline can be addressed by `name/`; a run and an artifact are always
- * `id/`, so the union rejects `run://name/…` and `artifact://name/…` at compile
- * time as well as in `parseWorkareaTarget`.
- */
-export type WorkareaTarget = ArtifactTarget | PipelineTarget | RunTarget;
-
-export interface ArtifactTarget {
-  type: "artifact";
-  identity: `id/${string}`;
-}
-
-export interface PipelineTarget {
-  type: "pipeline";
-  identity: WorkareaIdentity;
-}
-
-export interface RunTarget {
-  type: "run";
-  identity: `id/${string}`;
-}
-
-export type WorkareaTargetString =
-  `${WorkareaViewKindName}://${WorkareaIdentity}`;
+export type {
+  ArtifactTarget,
+  IdentityKey,
+  PipelineTarget,
+  RunTarget,
+  WorkareaIdentity,
+  WorkareaTarget,
+  WorkareaTargetString,
+  WorkareaViewKindName,
+} from "@/services/projects/resourceTarget";
 
 /**
  * A resolved workarea view, ready to become a tab. The `id` is assigned by the
