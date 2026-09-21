@@ -1,5 +1,6 @@
 import { ProjectAbout } from "@/components/Project/ProjectAbout";
 import { useDeleteProjectAction } from "@/components/Project/useDeleteProjectAction";
+import { useShareProjectAction } from "@/components/Project/useShareProjectAction";
 import ConfirmationDialog from "@/components/shared/Dialogs/ConfirmationDialog";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -56,8 +57,28 @@ export function ProjectWindowContent() {
 
       <Separator />
 
-      <DeleteProject project={project} />
+      <BlockStack gap="1" align="stretch">
+        <ShareProject projectId={project.id} />
+        <DeleteProject project={project} />
+      </BlockStack>
     </BlockStack>
+  );
+}
+
+function ShareProject({ projectId }: { projectId: string }) {
+  const share = useShareProjectAction(projectId);
+
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="w-full justify-start"
+      onClick={share}
+      {...tracking("projects.share_project")}
+    >
+      <Icon name="Share2" size="sm" />
+      Share project
+    </Button>
   );
 }
 
