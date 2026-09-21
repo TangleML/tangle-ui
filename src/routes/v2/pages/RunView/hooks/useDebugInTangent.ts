@@ -4,13 +4,13 @@ import { useNavigate } from "@tanstack/react-router";
 import useToastNotification from "@/hooks/useToastNotification";
 import { APP_ROUTES } from "@/routes/appRoutes";
 import { getDefaultRunPath } from "@/routes/runRoutes";
-import { pipelineRunResourceExtraData } from "@/routes/v2/pages/Tangent/workarea/resourceExtraData";
 import { createProjectResource } from "@/services/projects/projectResourcesService";
 import {
   createProject,
   deleteProject,
   updateProject,
 } from "@/services/projects/projectsService";
+import { pipelineRunResourceInput } from "@/services/projects/resourceDescriptor";
 import { ProjectsQueryKeys } from "@/services/projects/types";
 import { useWorkspaces } from "@/services/projects/useWorkspaces";
 import { getErrorMessage } from "@/utils/string";
@@ -52,12 +52,10 @@ export function useDebugInTangent() {
 
         const url = new URL(getDefaultRunPath(runId), window.location.origin)
           .href;
-        await createProjectResource(project.id, {
-          entity: "document",
-          name: pipelineName,
-          extraData: pipelineRunResourceExtraData(runId, url),
-          payload: {},
-        });
+        await createProjectResource(
+          project.id,
+          pipelineRunResourceInput(runId, url, pipelineName),
+        );
       } catch (error) {
         await deleteProject(project.id).catch((rollbackError) =>
           console.error("Failed to roll back debug project", rollbackError),

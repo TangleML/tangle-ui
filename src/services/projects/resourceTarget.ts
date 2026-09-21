@@ -1,6 +1,6 @@
 export type WorkareaViewKindName = "artifact" | "pipeline" | "run";
 
-export type IdentityKey = "id" | "name";
+type IdentityKey = "id" | "name";
 
 export type WorkareaIdentity = `${IdentityKey}/${string}`;
 
@@ -126,18 +126,27 @@ export function parseWorkareaTarget(raw: string): WorkareaTarget {
   return buildTarget(type, key, value);
 }
 
-function isCanonicalTarget(raw: string): boolean {
-  const separatorIndex = raw.indexOf(TARGET_SEPARATOR);
-  if (separatorIndex === -1) return false;
-  const type = raw.slice(0, separatorIndex);
-  const identity = raw.slice(separatorIndex + TARGET_SEPARATOR.length);
-  return isWorkareaViewKindName(type) && isWorkareaIdentity(identity);
-}
-
+/**
+ * The identity key is checked against the kind, not just the shape, so this
+ * guard passing means `parseWorkareaTarget` will succeed. Without that, a
+ * well-shaped `run://name/x` satisfied the guard and then threw on parse, which
+ * is a crash in whatever had just been told the string was fine.
+ */
 export function isWorkareaTargetString(
   raw: string,
 ): raw is WorkareaTargetString {
-  return isCanonicalTarget(raw);
+  const separatorIndex = raw.indexOf(TARGET_SEPARATOR);
+  if (separatorIndex === -1) return false;
+
+  const type = raw.slice(0, separatorIndex);
+  const identity = raw.slice(separatorIndex + TARGET_SEPARATOR.length);
+  if (!isWorkareaViewKindName(type) || !isWorkareaIdentity(identity)) {
+    return false;
+  }
+
+  const slashIndex = identity.indexOf("/");
+  const key = identity.slice(0, slashIndex);
+  return isIdentityKey(key) && IDENTITY_KEYS_BY_TYPE[type].includes(key);
 }
 
 export function sameTarget(a: WorkareaTarget, b: WorkareaTarget): boolean {
