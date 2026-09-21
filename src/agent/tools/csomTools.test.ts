@@ -74,7 +74,7 @@ function hasAllOf(schema: JsonSchemaNode | undefined): boolean {
 }
 
 describe("createCsomTools", () => {
-  it("exposes the full 24-tool surface", () => {
+  it("exposes the full 26-tool surface", () => {
     const { allTools } = createCsomTools(makeBridge());
     const names = allTools.map((t) => t.name).sort();
     expect(names).toEqual(
@@ -101,6 +101,8 @@ describe("createCsomTools", () => {
         "set_pipeline_name",
         "set_task_argument",
         "unpack_subgraph",
+        "update_input",
+        "update_output",
         "update_sticky_note",
         "validate_pipeline",
       ].sort(),
@@ -369,6 +371,42 @@ describe("createCsomTools", () => {
       "flex_1",
       expect.objectContaining({ content: "Revised", locked: false }),
     );
+  });
+
+  it("update_input keeps an explicit empty string as a clear instruction", async () => {
+    const updateInput = vi.fn().mockResolvedValue({ success: true });
+    const { allTools } = createCsomTools(makeBridge({ updateInput }));
+
+    await invoke(findTool(allTools, "update_input"), {
+      entityId: "input_1",
+      type: "Integer",
+      description: "",
+      defaultValue: null,
+      optional: false,
+    });
+
+    expect(updateInput).toHaveBeenCalledWith("input_1", {
+      type: "Integer",
+      description: "",
+      defaultValue: undefined,
+      optional: false,
+    });
+  });
+
+  it("update_output forwards (entityId, updates) in the right order", async () => {
+    const updateOutput = vi.fn().mockResolvedValue({ success: true });
+    const { allTools } = createCsomTools(makeBridge({ updateOutput }));
+
+    await invoke(findTool(allTools, "update_output"), {
+      entityId: "output_1",
+      type: "String",
+      description: null,
+    });
+
+    expect(updateOutput).toHaveBeenCalledWith("output_1", {
+      type: "String",
+      description: undefined,
+    });
   });
 
   it("move_node forwards (entityId, position) in the right order", async () => {

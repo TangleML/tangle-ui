@@ -294,6 +294,38 @@ export function createCsomTools(bridge: ToolBridgeApi) {
       asJson(await bridge.renameInput(entityId, newName)),
   });
 
+  const updateInput = tool({
+    name: "update_input",
+    description:
+      "Change an existing graph input's type, description, default value or optional flag, wherever it lives. Only the fields you pass are changed; pass an empty string to clear a text field. Use rename_input for the name. On an input inside a subgraph, the matching port on the subgraph task picks up the new type automatically.",
+    parameters: z.object({
+      entityId: z.string().describe("The $id of the input"),
+      type: z
+        .string()
+        .nullable()
+        .optional()
+        .describe("Type (e.g. String, Integer, Float)"),
+      description: z.string().nullable().optional(),
+      defaultValue: z.string().nullable().optional(),
+      optional: z
+        .boolean()
+        .nullable()
+        .optional()
+        .describe(
+          "An optional input need not be supplied at run time; a required one must be.",
+        ),
+    }),
+    execute: async ({ entityId, type, description, defaultValue, optional }) =>
+      asJson(
+        await bridge.updateInput(entityId, {
+          type: type ?? undefined,
+          description: description ?? undefined,
+          defaultValue: defaultValue ?? undefined,
+          optional: optional ?? undefined,
+        }),
+      ),
+  });
+
   const addOutput = tool({
     name: "add_output",
     description:
@@ -342,6 +374,24 @@ export function createCsomTools(bridge: ToolBridgeApi) {
     }),
     execute: async ({ entityId, newName }) =>
       asJson(await bridge.renameOutput(entityId, newName)),
+  });
+
+  const updateOutput = tool({
+    name: "update_output",
+    description:
+      "Change an existing graph output's type or description, wherever it lives. Only the fields you pass are changed; pass an empty string to clear the description. Use rename_output for the name. On an output inside a subgraph, the matching port on the subgraph task picks up the new type automatically.",
+    parameters: z.object({
+      entityId: z.string().describe("The $id of the output"),
+      type: z.string().nullable().optional().describe("Type"),
+      description: z.string().nullable().optional(),
+    }),
+    execute: async ({ entityId, type, description }) =>
+      asJson(
+        await bridge.updateOutput(entityId, {
+          type: type ?? undefined,
+          description: description ?? undefined,
+        }),
+      ),
   });
 
   const connectNodes = tool({
@@ -599,9 +649,11 @@ export function createCsomTools(bridge: ToolBridgeApi) {
       addInput,
       deleteInput,
       renameInput,
+      updateInput,
       addOutput,
       deleteOutput,
       renameOutput,
+      updateOutput,
       connectNodes,
       deleteEdge,
       setTaskArgument,

@@ -395,6 +395,57 @@ describe("createEditorToolBridge", () => {
       expect(result.success).toBe(true);
       expect(spec.inputs[0].name).toBe("renamed_input");
     });
+
+    it("updateInput changes only the fields passed, as one undo step", async () => {
+      const { bridge, spec, undo } = makeBridge();
+      await bridge.updateInput("input_1", {
+        description: "cutoff",
+        defaultValue: "0.5",
+      });
+      undo.labels.length = 0;
+
+      const result = await bridge.updateInput("input_1", {
+        type: "Integer",
+        optional: true,
+      });
+
+      expect(result).toEqual({ success: true });
+      expect(spec.inputs[0].type).toBe("Integer");
+      expect(spec.inputs[0].optional).toBe(true);
+      expect(spec.inputs[0].description).toBe("cutoff");
+      expect(spec.inputs[0].defaultValue).toBe("0.5");
+      expect(undo.labels[0]).toBe("Update input");
+    });
+
+    it("updateInput clears a text field given an empty string", async () => {
+      const { bridge, spec } = makeBridge();
+      await bridge.updateInput("input_1", { description: "cutoff" });
+
+      await bridge.updateInput("input_1", { description: "" });
+
+      expect(spec.inputs[0].description).toBe("");
+    });
+
+    it("updateInput refuses an unknown id and an empty update", async () => {
+      const { bridge } = makeBridge();
+
+      expect(await bridge.updateInput("nope", { type: "Integer" })).toEqual({
+        success: false,
+        error: 'No input with $id "nope" exists in this pipeline.',
+      });
+      const empty = await bridge.updateInput("input_1", {});
+      expect(empty.success).toBe(false);
+      expect(empty.error).toContain("no fields to update");
+    });
+
+    it("updateInput rejects an $id that is not an input", async () => {
+      const { bridge } = makeBridge();
+
+      const result = await bridge.updateInput("task_1", { type: "Integer" });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("not an input");
+    });
   });
 
   describe("outputs", () => {
@@ -424,6 +475,32 @@ describe("createEditorToolBridge", () => {
       const result = await bridge.renameOutput("output_1", "renamed_output");
       expect(result.success).toBe(true);
       expect(spec.outputs[0].name).toBe("renamed_output");
+    });
+
+    it("updateOutput changes type and description as one undo step", async () => {
+      const { bridge, spec, undo } = makeBridge();
+
+      const result = await bridge.updateOutput("output_1", {
+        type: "Json",
+        description: "summary",
+      });
+
+      expect(result).toEqual({ success: true });
+      expect(spec.outputs[0].type).toBe("Json");
+      expect(spec.outputs[0].description).toBe("summary");
+      expect(undo.labels).toContain("Update output");
+    });
+
+    it("updateOutput refuses an unknown id and an empty update", async () => {
+      const { bridge } = makeBridge();
+
+      expect(await bridge.updateOutput("nope", { type: "Json" })).toEqual({
+        success: false,
+        error: 'No output with $id "nope" exists in this pipeline.',
+      });
+      const empty = await bridge.updateOutput("output_1", {});
+      expect(empty.success).toBe(false);
+      expect(empty.error).toContain("no fields to update");
     });
   });
 
@@ -918,6 +995,25 @@ describe("createEditorToolBridge", () => {
       expect(result).toMatchObject({ success: true, name: "extra" });
       expect(spec.inputs.map((i) => i.name)).toEqual(["raw_path", "extra"]);
       expect(inner.inputs.map((i) => i.name)).toEqual(["path"]);
+    });
+
+    it("updateInput on a subgraph input retypes the port on the subgraph task", async () => {
+      const { bridge, spec, inner } = makeNestedBridge();
+      const preprocessId = taskId(spec, "Preprocess");
+      const innerInput = inner.inputs.find((i) => i.name === "path");
+
+      const result = await bridge.updateInput(innerInput!.$id, {
+        type: "Integer",
+        description: "row count",
+      });
+
+      expect(result).toEqual({ success: true });
+      expect(innerInput?.type).toBe("Integer");
+      expect(
+        spec.tasks
+          .find((t) => t.$id === preprocessId)
+          ?.resolvedComponentSpec?.inputs?.find((i) => i.name === "path")?.type,
+      ).toBe("Integer");
     });
 
     it("refuses a destination that is not a subgraph", async () => {

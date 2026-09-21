@@ -70,6 +70,14 @@ Two limits remain, and both are about structure rather than depth:
 
 - **`create_subgraph` cannot group across levels.** Every task you pass must already sit in the same graph.
 
+## Changing an existing port
+
+`add_input` / `add_output` set a port's type, description, default and optional flag at creation. To change any of them afterwards, use `update_input` / `update_output` — do not delete and re-add a port to change its type, which destroys every connection to it. `rename_input` / `rename_output` still own the name.
+
+Only the fields you pass change; an empty string clears a text field. A port inside a subgraph picks up the new type on the matching port of the subgraph task automatically, so there is nothing to do in the parent.
+
+A required input with no default is what makes the user configure a value at run time. Making one optional, or giving it a default, silently changes what a run does with no value supplied — so do that when the user asked, not to clear a validation error.
+
 ## Canvas layout
 
 Tasks, inputs, outputs and sticky notes each carry a `position` in `get_pipeline_state` — canvas coordinates where x increases to the right and y downwards. This is where the node is drawn for the user, so you can describe the layout from it and reason about where a `move_node` would land. A pipeline the user never laid out by hand still reports positions: those come from the same defaults the canvas draws it with, so they are real, but they are not a layout anyone chose. Do not move nodes the user did not ask you to move.
