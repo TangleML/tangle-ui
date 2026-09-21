@@ -5,6 +5,7 @@ import type { ComponentFileEntry } from "@/utils/componentStore";
 import * as componentStore from "@/utils/componentStore";
 
 import {
+  availablePipelineName,
   listLocalPipelineNames,
   pointerTo,
   readLocalPipeline,
@@ -216,5 +217,55 @@ describe("pointerTo", () => {
       localName: "Churn model",
     });
     expect(rows.addEntry).not.toHaveBeenCalled();
+  });
+});
+
+describe("availablePipelineName", () => {
+  it("keeps the name it was given when nothing holds it", async () => {
+    held("Fraud model");
+
+    await expect(availablePipelineName("Churn model")).resolves.toBe(
+      "Churn model",
+    );
+  });
+
+  it("numbers the name when something already holds it", async () => {
+    held("Churn model");
+
+    await expect(availablePipelineName("Churn model")).resolves.toBe(
+      "Churn model 2",
+    );
+  });
+
+  it("keeps counting past a number that is also taken", async () => {
+    held("Churn model", "Churn model 2", "Churn model 3");
+
+    await expect(availablePipelineName("Churn model")).resolves.toBe(
+      "Churn model 4",
+    );
+  });
+
+  /**
+   * The name is recorded in a project's `extra_data`, which the resources API
+   * caps, so a project titled with an essay cannot be passed on whole.
+   */
+  it("shortens a name too long to record", async () => {
+    held();
+
+    const name = await availablePipelineName("x".repeat(400));
+
+    expect(name).toHaveLength(120);
+  });
+
+  /**
+   * The list is the keyspace the driver writes into; the registry is only a
+   * partial view of it, so a name free there can still be occupied.
+   */
+  it("asks the stored pipelines, not the registry", async () => {
+    held("Churn model");
+
+    await availablePipelineName("Churn model");
+
+    expect(rows.findByStorageKey).not.toHaveBeenCalled();
   });
 });
