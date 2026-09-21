@@ -57,7 +57,25 @@ describe("OpenLogsInNewWindowLink", () => {
 
     expect(link).toHaveAttribute(
       "href",
-      `${defaultBackendUrl}/api/executions/${testExecutionId}/stream_container_log`,
+      `${window.location.origin}/logs/${testExecutionId}`,
+    );
+  });
+
+  test("renders an icon-only link that keeps its accessible name", () => {
+    render(
+      <OpenLogsInNewWindowLink
+        executionId={testExecutionId}
+        status="SUCCEEDED"
+        iconOnly
+      />,
+    );
+
+    const link = screen.getByRole("link", { name: "Open logs in a new tab" });
+    expect(link).toHaveTextContent("");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute(
+      "href",
+      `${window.location.origin}/logs/${testExecutionId}`,
     );
   });
 
@@ -79,7 +97,7 @@ describe("OpenLogsInNewWindowLink", () => {
     expect(link).toHaveClass("pointer-events-none");
     expect(link).toHaveAttribute(
       "aria-label",
-      "Cant open logs: Backend not available",
+      "Can't open logs — backend not available",
     );
   });
 
