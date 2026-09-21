@@ -14,7 +14,12 @@ import { YamlDeserializer } from "@/models/componentSpec/serialization/yamlDeser
 import { ONBOARDING_MY_RUN_COUNT_KEY } from "@/providers/OnboardingProvider/onboardingQueryKeys";
 import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
 import { hydrateComponentReference } from "@/services/componentService";
-import { EDITOR_POSITION_ANNOTATION } from "@/utils/annotationKeys";
+import {
+  EDITOR_POSITION_ANNOTATION,
+  PIPELINE_NOTES_ANNOTATION,
+  PIPELINE_TAGS_ANNOTATION,
+  RUN_NAME_TEMPLATE_ANNOTATION,
+} from "@/utils/annotationKeys";
 
 vi.mock("@/services/componentService", () => ({
   hydrateComponentReference: vi.fn(async (ref) => ref),
@@ -286,6 +291,65 @@ describe("createEditorToolBridge", () => {
       expect(result).toEqual({ success: true });
       expect(spec.description).toBe("hi");
       expect(undo.labels).toContain("Update pipeline description");
+    });
+
+    it("setPipelineNotes writes and clears the notes annotation", async () => {
+      const { bridge, undo, spec } = makeBridge();
+
+      expect(
+        await bridge.setPipelineNotes("Owned by the ranking team"),
+      ).toEqual({ success: true });
+      expect(spec.annotations.get(PIPELINE_NOTES_ANNOTATION)).toBe(
+        "Owned by the ranking team",
+      );
+      expect(undo.labels).toContain("Update pipeline notes");
+
+      await bridge.setPipelineNotes("");
+      expect(spec.annotations.has(PIPELINE_NOTES_ANNOTATION)).toBe(false);
+    });
+
+    it("setPipelineTags replaces the whole list and clears on empty", async () => {
+      const { bridge, undo, spec } = makeBridge();
+
+      expect(await bridge.setPipelineTags(["ranking", " nightly "])).toEqual({
+        success: true,
+      });
+      expect(spec.annotations.get(PIPELINE_TAGS_ANNOTATION)).toEqual([
+        "ranking",
+        "nightly",
+      ]);
+      expect(undo.labels).toContain("Update pipeline tags");
+
+      await bridge.setPipelineTags([]);
+      expect(spec.annotations.has(PIPELINE_TAGS_ANNOTATION)).toBe(false);
+    });
+
+    it("setRunNameTemplate writes and clears the template", async () => {
+      const { bridge, undo, spec } = makeBridge();
+
+      expect(await bridge.setRunNameTemplate("nightly ${date.short}")).toEqual({
+        success: true,
+      });
+      expect(spec.annotations.get(RUN_NAME_TEMPLATE_ANNOTATION)).toBe(
+        "nightly ${date.short}",
+      );
+      expect(undo.labels).toContain("Update run name template");
+
+      await bridge.setRunNameTemplate("");
+      expect(spec.annotations.has(RUN_NAME_TEMPLATE_ANNOTATION)).toBe(false);
+    });
+
+    it("getPipelineState surfaces notes, tags and the run name template", async () => {
+      const { bridge } = makeBridge();
+      await bridge.setPipelineNotes("read me");
+      await bridge.setPipelineTags(["ranking"]);
+      await bridge.setRunNameTemplate("${date.short}");
+
+      const state = await bridge.getPipelineState();
+
+      expect(state.notes).toBe("read me");
+      expect(state.tags).toEqual(["ranking"]);
+      expect(state.runNameTemplate).toBe("${date.short}");
     });
   });
 

@@ -142,6 +142,9 @@ export interface ToolBridgeApi {
 
   setPipelineName(name: string): Promise<BridgeResult>;
   setPipelineDescription(description: string): Promise<BridgeResult>;
+  setPipelineNotes(notes: string): Promise<BridgeResult>;
+  setPipelineTags(tags: string[]): Promise<BridgeResult>;
+  setRunNameTemplate(template: string): Promise<BridgeResult>;
 
   addTask(args: {
     name: string;

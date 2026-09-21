@@ -138,6 +138,43 @@ export function createCsomTools(bridge: ToolBridgeApi) {
       asJson(await bridge.setPipelineDescription(description)),
   });
 
+  const setPipelineNotes = tool({
+    name: "set_pipeline_notes",
+    description:
+      "Set the top-level pipeline's notes — a free-text field for whatever someone needs to know about this pipeline, separate from the one-line description. It is the user's own document: read the `notes` field in `get_pipeline_state` and preserve what is there, appending rather than replacing, unless they asked you to rewrite it. Pass an empty string to clear it.",
+    parameters: z.object({
+      notes: z.string().describe("Full new notes text; replaces the existing"),
+    }),
+    execute: async ({ notes }) => asJson(await bridge.setPipelineNotes(notes)),
+  });
+
+  const setPipelineTags = tool({
+    name: "set_pipeline_tags",
+    description:
+      "Set the top-level pipeline's tags, used to group and find pipelines. This replaces the whole list, so read `tags` from `get_pipeline_state` first and pass the existing ones along with any you add. Pass an empty array to clear them.",
+    parameters: z.object({
+      tags: z
+        .array(z.string())
+        .describe("The complete tag list; commas are not allowed in a tag"),
+    }),
+    execute: async ({ tags }) => asJson(await bridge.setPipelineTags(tags)),
+  });
+
+  const setRunNameTemplate = tool({
+    name: "set_run_name_template",
+    description:
+      "Set the template that names each run of this pipeline, so runs are identifiable in the run list instead of all sharing the pipeline's name. Placeholders are `${arguments.<input name>}` for a pipeline input's value, `${date.timestamp}` / `${date.short}` / `${date.long}`, and `${annotations.<key>}`. An input name must match a real pipeline input exactly. Pass an empty string to clear the template.",
+    parameters: z.object({
+      template: z
+        .string()
+        .describe(
+          'Template string, e.g. "nightly ${arguments.dataset} ${date.short}"',
+        ),
+    }),
+    execute: async ({ template }) =>
+      asJson(await bridge.setRunNameTemplate(template)),
+  });
+
   const addTask = tool({
     name: "add_task",
     description:
@@ -643,6 +680,9 @@ export function createCsomTools(bridge: ToolBridgeApi) {
       getSubgraphState,
       setPipelineName,
       setPipelineDescription,
+      setPipelineNotes,
+      setPipelineTags,
+      setRunNameTemplate,
       addTask,
       deleteTask,
       renameTask,

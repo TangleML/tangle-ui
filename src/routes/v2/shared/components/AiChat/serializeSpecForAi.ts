@@ -27,6 +27,11 @@ import type {
 } from "@/models/componentSpec";
 import { getFlexNodes } from "@/models/componentSpec/queries/flexNodes";
 import { resolveEntityPositions } from "@/routes/v2/shared/nodes/buildUtils";
+import {
+  PIPELINE_NOTES_ANNOTATION,
+  PIPELINE_TAGS_ANNOTATION,
+  RUN_NAME_TEMPLATE_ANNOTATION,
+} from "@/utils/annotationKeys";
 import { isGraphImplementation } from "@/utils/componentSpec";
 
 interface CanvasPosition {
@@ -87,6 +92,9 @@ interface AiStickyNoteSpec {
 export interface AiSpec {
   name: string;
   description?: string;
+  notes?: string;
+  tags?: string[];
+  runNameTemplate?: string;
   inputs: AiInputSpec[];
   outputs: AiOutputSpec[];
   tasks: AiTaskSpec[];
@@ -213,10 +221,15 @@ export function serializeSpecForAi(
   const insideSubgraph = activeSubgraphPath.length > 0;
   const stickyNotes = getFlexNodes(spec).map(serializeStickyNote);
   const positions = resolveEntityPositions(spec);
+  const tags = spec.annotations.get(PIPELINE_TAGS_ANNOTATION);
   return toPlainJson(
     pickDefined({
       name: spec.name,
       description: spec.description || undefined,
+      notes: spec.annotations.get(PIPELINE_NOTES_ANNOTATION) || undefined,
+      tags: tags.length > 0 ? tags : undefined,
+      runNameTemplate:
+        spec.annotations.get(RUN_NAME_TEMPLATE_ANNOTATION) || undefined,
       inputs: spec.inputs.map((input) =>
         serializeInput(input, positions.get(input.$id)),
       ),
