@@ -6,9 +6,11 @@ import { useDialog } from "@/providers/DialogProvider/hooks/useDialog";
 import { convertCancelErrorTo } from "@/providers/DialogProvider/utils";
 import { AddResourceButton } from "@/routes/v2/pages/Tangent/components/AddResourceButton";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
+import { pointerKey } from "@/services/localPipelines/types";
 import {
   describeResource,
   DOCUMENT,
+  localPipelinePointerOf,
 } from "@/services/projects/resourceDescriptor";
 import {
   conceptForDescriptorType,
@@ -28,6 +30,7 @@ import {
 import { getErrorMessage } from "@/utils/string";
 
 import { EditInstructionsDialog } from "./EditInstructionsDialog";
+import { useAbsentLocalPipelines } from "./useAbsentLocalPipelines";
 import { WindowListRow } from "./WindowListRow";
 
 interface ProjectResourceItem {
@@ -41,6 +44,11 @@ interface ProjectResourceItem {
 const BACKEND_PIPELINE_META = {
   icon: resourceMeta("pipeline").icon,
   description: "Backend pipeline — not supported yet",
+};
+
+const ABSENT_PIPELINE_META: ResourceTypeMeta = {
+  icon: "Workflow",
+  description: "Pipeline — not in this browser",
 };
 
 /**
@@ -59,14 +67,15 @@ function targetOf(
 }
 
 /**
- * A row with no target is listed but cannot be opened. A pipeline the backend
- * holds is the only one: it belongs to the project and saying nothing about it
- * makes the list look wrong, but nothing here can open one — the editor reads
- * browser storage, and fetching a pipeline from the backend is being brought in
- * separately rather than written twice.
+ * A row with no target is listed but cannot be opened. Two kinds land there: a
+ * pipeline the backend holds, which nothing here can open because the editor
+ * reads browser storage; and a pipeline held in a browser that is not this one,
+ * which is the ordinary case in a project someone shared. Both belong to the
+ * project, so leaving them out would make the list look wrong.
  */
 function toResourceItem(
   resource: ProjectResourceSummary,
+  absentPipelines: ReadonlySet<string>,
 ): ProjectResourceItem | undefined {
   if (resource.entity === "pipeline") {
     return resource.entityId
@@ -86,10 +95,17 @@ function toResourceItem(
       : undefined;
   if (!target || !concept) return undefined;
 
+  const name = resource.name ?? formatWorkareaTarget(target);
+  const pointer = localPipelinePointerOf(resource);
+
+  if (pointer && absentPipelines.has(pointerKey(pointer))) {
+    return { id: resource.id, name, ...ABSENT_PIPELINE_META };
+  }
+
   const meta = resourceMeta(concept);
   return {
     id: resource.id,
-    name: resource.name ?? formatWorkareaTarget(target),
+    name,
     target,
     icon: meta.icon,
     description: meta.label,
@@ -105,8 +121,11 @@ export function ResourcesWindowContent() {
   const { mutate: deleteResource, isPending: isDetachingResource } =
     useDeleteProjectResource(store.projectId);
 
-  const resources: ProjectResourceItem[] = (resourcesPage?.items ?? []).flatMap(
-    (resource) => toResourceItem(resource) ?? [],
+  const items = resourcesPage?.items ?? [];
+  const absentPipelines = useAbsentLocalPipelines(items);
+
+  const resources: ProjectResourceItem[] = items.flatMap(
+    (resource) => toResourceItem(resource, absentPipelines) ?? [],
   );
 
   async function handleOpenResource(resource: ProjectResourceItem) {

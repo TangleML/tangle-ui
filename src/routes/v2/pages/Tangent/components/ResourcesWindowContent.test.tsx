@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { useResolvedPointers } from "@/services/localPipelines/useLocalPipelines";
 import type { ProjectResourceSummary } from "@/services/projects/types";
 import { useProjectResources } from "@/services/projects/useProjectResources";
 
@@ -38,6 +39,10 @@ vi.mock("@/providers/DialogProvider/hooks/useDialog", () => ({
 
 vi.mock("@/hooks/useToastNotification", () => ({ default: () => vi.fn() }));
 
+vi.mock("@/services/localPipelines/useLocalPipelines", () => ({
+  useResolvedPointers: vi.fn(),
+}));
+
 // The add button reaches the runs list, and through it the whole editor tree,
 // which does not survive being imported on its own.
 vi.mock("@/routes/v2/pages/Tangent/components/AddResourceButton", () => ({
@@ -67,14 +72,32 @@ function resource(
 const backendPipeline = (id: string, name: string) =>
   resource(id, name, null, { entity: "pipeline", entityId: "uuid-1" });
 
+const localPipeline = (id: string, name: string) =>
+  resource(id, name, {
+    type: "local_pipeline",
+    storage: "browser",
+    identity: `pipeline://name/${name}`,
+    fallbackName: name,
+  });
+
 function given(...resources: ProjectResourceSummary[]) {
   vi.mocked(useProjectResources).mockReturnValue({
     data: { items: resources },
   } as unknown as ReturnType<typeof useProjectResources>);
 }
 
+/** Which pointers this browser holds, keyed as `localName|localId`. */
+function browserHolds(resolved: Record<string, string | null>) {
+  vi.mocked(useResolvedPointers).mockReturnValue({
+    data: resolved,
+  } as unknown as ReturnType<typeof useResolvedPointers>);
+}
+
 describe("ResourcesWindowContent", () => {
-  beforeEach(() => given());
+  beforeEach(() => {
+    given();
+    browserHolds({});
+  });
   afterEach(() => vi.resetAllMocks());
 
   it("lists a pipeline the project holds", () => {
@@ -150,6 +173,64 @@ describe("ResourcesWindowContent", () => {
     );
 
     expect(deleteResource).toHaveBeenCalledWith("r-5");
+  });
+
+  /**
+   * A project is shareable but the pipelines inside it are not: one lives in
+   * the browser it was made in. Everyone else needs telling, rather than a row
+   * that opens a tab and collapses into an error icon.
+   */
+  it("greys out a pipeline held in some other browser", () => {
+    given(localPipeline("r-6", "Ada's preprocessing"));
+    browserHolds({ "Ada's preprocessing|": null });
+
+    render(<ResourcesWindowContent />);
+
+    expect(
+      screen.getByText("Pipeline — not in this browser"),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("open-resource-r-6")).toBeDisabled();
+  });
+
+  it("leaves a pipeline this browser does hold alone", async () => {
+    given(localPipeline("r-7", "Churn model"));
+    browserHolds({ "Churn model|": "Churn model" });
+    const user = userEvent.setup();
+
+    render(<ResourcesWindowContent />);
+    expect(screen.getByText("Pipeline")).toBeInTheDocument();
+
+    await user.click(screen.getByTestId("open-resource-r-7"));
+
+    expect(openWorkareaTarget).toHaveBeenCalledWith(
+      { type: "pipeline", identity: "name/Churn model" },
+      "Churn model",
+    );
+  });
+
+  it("still lets an absent pipeline be removed", async () => {
+    given(localPipeline("r-6", "Ada's preprocessing"));
+    browserHolds({ "Ada's preprocessing|": null });
+    const user = userEvent.setup();
+
+    render(<ResourcesWindowContent />);
+    await user.click(
+      screen.getByRole("button", { name: "Remove Ada's preprocessing" }),
+    );
+
+    expect(deleteResource).toHaveBeenCalledWith("r-6");
+  });
+
+  /** A local read, so a moment of "unavailable" on every row would just flicker. */
+  it("assumes nothing while the lookup is still running", () => {
+    given(localPipeline("r-7", "Churn model"));
+    vi.mocked(useResolvedPointers).mockReturnValue({
+      data: undefined,
+    } as unknown as ReturnType<typeof useResolvedPointers>);
+
+    render(<ResourcesWindowContent />);
+
+    expect(screen.getByTestId("open-resource-r-7")).toBeEnabled();
   });
 
   it("asks for both the documents and the pipelines a project holds", () => {

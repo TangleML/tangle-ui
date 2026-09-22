@@ -31,7 +31,7 @@ export function RenameProjectDialog({
   onOpenChange,
 }: RenameProjectDialogProps) {
   const [name, setName] = useState(project.name);
-  const [touched, setTouched] = useState(false);
+  const [submitAttempted, setSubmitAttempted] = useState(false);
 
   const updateProject = useUpdateProject();
   const notify = useToastNotification();
@@ -40,17 +40,22 @@ export function RenameProjectDialog({
   useEffect(() => {
     if (open) {
       setName(project.name);
-      setTouched(false);
+      setSubmitAttempted(false);
       track("projects.rename_project_dialog_impression");
     }
   }, [open, project.name, track]);
 
   const trimmedName = name.trim();
   const nameError = trimmedName === "" ? "Name cannot be empty" : undefined;
+  // Rename stays pressable while the name is empty, because pressing it is what
+  // asks for the complaint. Revealing the complaint on blur instead grew the
+  // dialog between mousedown and mouseup, which moved Cancel out from under the
+  // pointer and swallowed the click.
   const canSubmit = !nameError && !updateProject.isPending;
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
+    setSubmitAttempted(true);
     if (!canSubmit) return;
 
     if (trimmedName === project.name) {
@@ -84,11 +89,10 @@ export function RenameProjectDialog({
                 id="rename-project-name"
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-                onBlur={() => setTouched(true)}
-                aria-invalid={touched && nameError !== undefined}
+                aria-invalid={submitAttempted && nameError !== undefined}
                 autoFocus
               />
-              {touched && nameError && (
+              {submitAttempted && nameError && (
                 <Alert variant="destructive">
                   <Icon name="CircleAlert" />
                   <AlertDescription>{nameError}</AlertDescription>
@@ -108,7 +112,7 @@ export function RenameProjectDialog({
                 </Button>
                 <Button
                   type="submit"
-                  disabled={!canSubmit}
+                  disabled={updateProject.isPending}
                   {...tracking("projects.rename_project_submit")}
                 >
                   Rename

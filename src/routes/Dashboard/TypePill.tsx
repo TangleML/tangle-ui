@@ -6,7 +6,7 @@ import { getDefaultEditorPath } from "@/routes/editorRoutes";
 import { APP_ROUTES } from "@/routes/router";
 import { getDefaultRunPath } from "@/routes/runRoutes";
 
-type ItemType = "pipeline" | "run" | "component" | "tour";
+type ItemType = "pipeline" | "run" | "component" | "tour" | "project";
 
 const TYPE_CONFIG: Record<
   ItemType,
@@ -34,6 +34,12 @@ const TYPE_CONFIG: Record<
     icon: "Compass",
     label: "Tour",
   },
+  project: {
+    className:
+      "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-500/15 dark:text-fuchsia-300",
+    icon: "Bot",
+    label: "Project",
+  },
 };
 
 export const TypePill = ({
@@ -58,8 +64,12 @@ export const TypePill = ({
   );
 };
 
+const projectPath = (id: string) =>
+  APP_ROUTES.TANGENT_PROJECT.replace("$projectId", encodeURIComponent(id));
+
 export function getFavoriteUrl(item: FavoriteItem): string {
   if (item.type === "pipeline") return getDefaultEditorPath(item.id);
+  if (item.type === "project") return projectPath(item.id);
   return getDefaultRunPath(item.id);
 }
 
@@ -67,5 +77,6 @@ export function getRecentlyViewedUrl(item: RecentItem): string {
   if (item.type === "pipeline") return getDefaultEditorPath(item.id);
   if (item.type === "run") return getDefaultRunPath(item.id);
   if (item.type === "tour") return `${APP_ROUTES.TOUR}/${item.id}`;
+  if (item.type === "project") return projectPath(item.id);
   return APP_ROUTES.DASHBOARD_COMPONENTS;
 }

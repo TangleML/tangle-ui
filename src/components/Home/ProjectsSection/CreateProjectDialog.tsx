@@ -33,7 +33,7 @@ export function CreateProjectDialog({
 }: CreateProjectDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
-  const [nameTouched, setNameTouched] = useState(false);
+  const [submitAttempted, setSubmitAttempted] = useState(false);
   const [description, setDescription] = useState("");
 
   const createProject = useCreateProject();
@@ -49,11 +49,15 @@ export function CreateProjectDialog({
 
   const trimmedName = name.trim();
   const nameError = trimmedName === "" ? "Name cannot be empty" : undefined;
+  // Create stays pressable while the name is empty, because pressing it is what
+  // asks for the complaint. Revealing the complaint on blur instead grew the
+  // dialog between mousedown and mouseup, which moved Cancel out from under the
+  // pointer and swallowed the click.
   const canSubmit = !nameError && !createProject.isPending;
 
   const resetForm = () => {
     setName("");
-    setNameTouched(false);
+    setSubmitAttempted(false);
     setDescription("");
   };
 
@@ -64,6 +68,7 @@ export function CreateProjectDialog({
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
+    setSubmitAttempted(true);
     if (!canSubmit) return;
 
     const trimmedDescription = description.trim();
@@ -108,12 +113,11 @@ export function CreateProjectDialog({
                 id="create-project-name"
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-                onBlur={() => setNameTouched(true)}
-                aria-invalid={nameTouched && nameError !== undefined}
+                aria-invalid={submitAttempted && nameError !== undefined}
                 placeholder="Churn model"
                 autoFocus
               />
-              {nameTouched && nameError && (
+              {submitAttempted && nameError && (
                 <Alert variant="destructive">
                   <Icon name="CircleAlert" />
                   <AlertDescription>{nameError}</AlertDescription>
@@ -145,7 +149,7 @@ export function CreateProjectDialog({
                 </Button>
                 <Button
                   type="submit"
-                  disabled={!canSubmit}
+                  disabled={createProject.isPending}
                   {...tracking("projects.create_project_submit")}
                 >
                   Create

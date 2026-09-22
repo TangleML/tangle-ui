@@ -13,6 +13,10 @@ vi.mock("@/components/Home/ProjectsSection/StartSessionPrompt", () => ({
   StartSessionPrompt: () => <input aria-label="Start a new session" />,
 }));
 
+vi.mock("@/components/Home/ProjectsSection/SharedProjectsSection", () => ({
+  SharedProjectsSection: () => <div data-testid="shared-projects" />,
+}));
+
 describe("DashboardProjectsView", () => {
   /**
    * The page is where you go to work with an agent; the list of projects that
@@ -37,6 +41,19 @@ describe("DashboardProjectsView", () => {
 
     expect(
       prompt.compareDocumentPosition(projects) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  /** Your own work comes first; what you were invited into follows it. */
+  it("puts the projects shared with you after your own", () => {
+    render(<DashboardProjectsView />);
+
+    const projects = screen.getByRole("heading", { name: "My Projects" });
+    const shared = screen.getByTestId("shared-projects");
+
+    expect(
+      projects.compareDocumentPosition(shared) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
   });
