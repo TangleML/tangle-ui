@@ -118,7 +118,7 @@ const serializeInput = (
     name: input.name,
     type: input.type,
     description: input.description || undefined,
-    default: input.defaultValue || undefined,
+    default: input.value || input.defaultValue || undefined,
     optional: input.optional,
     position,
   });

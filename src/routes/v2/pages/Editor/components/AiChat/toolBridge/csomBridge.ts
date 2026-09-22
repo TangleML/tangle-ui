@@ -43,9 +43,9 @@ import {
   deleteOutput,
   renameInput,
   renameOutput,
-  setInputDefaultValue,
   setInputDescription,
   setInputType,
+  setInputValue,
   setOutputDescription,
 } from "@/routes/v2/pages/Editor/store/actions/io.actions";
 import {
@@ -287,8 +287,7 @@ export function createCsomBridgeHandlers(deps: CsomBridgeDeps): CsomHandlers {
       if (type) setInputType(deps.undo, spec, input.$id, type);
       if (description)
         setInputDescription(deps.undo, spec, input.$id, description);
-      if (defaultValue)
-        setInputDefaultValue(deps.undo, spec, input.$id, defaultValue);
+      if (defaultValue) setInputValue(deps.undo, spec, input.$id, defaultValue);
       if (optional !== undefined) {
         deps.undo.withGroup("Set input optional", () => {
           input.setOptional(optional);
@@ -342,11 +341,12 @@ export function createCsomBridgeHandlers(deps: CsomBridgeDeps): CsomHandlers {
 
       deps.undo.withGroup("Update input", () => {
         const { spec } = location;
-        if (type !== undefined) setInputType(deps.undo, spec, entityId, type);
+        if (type !== undefined)
+          setInputType(deps.undo, spec, entityId, type || undefined);
         if (description !== undefined)
           setInputDescription(deps.undo, spec, entityId, description);
         if (defaultValue !== undefined)
-          setInputDefaultValue(deps.undo, spec, entityId, defaultValue);
+          setInputValue(deps.undo, spec, entityId, defaultValue || undefined);
         if (optional !== undefined) location.entity.setOptional(optional);
       });
       return { success: true };
@@ -425,7 +425,7 @@ export function createCsomBridgeHandlers(deps: CsomBridgeDeps): CsomHandlers {
       }
 
       deps.undo.withGroup("Update output", () => {
-        if (type !== undefined) location.entity.setType(type);
+        if (type !== undefined) location.entity.setType(type || undefined);
         if (description !== undefined)
           setOutputDescription(deps.undo, location.spec, entityId, description);
       });

@@ -90,7 +90,7 @@ A port added without steps 2 and 3 is wired to nothing on either side, which tur
 
 ## Changing an existing port
 
-`update_input` / `update_output` change a port's type, description, default or optional flag in place. Reach for these rather than deleting and re-adding a port: a delete takes every connection to that port with it, so a type change done that way turns one issue into several. Only the fields you pass change, and a port inside a subgraph retypes the matching port on the subgraph task automatically.
+`update_input` changes an input's type, description, default or optional flag in place; `update_output` changes an output's type or description — outputs have neither of the other two. Reach for these rather than deleting and re-adding a port: a delete takes every connection to that port with it, so a type change done that way turns one issue into several. Only the fields you pass change, and a port inside a subgraph retypes the matching port on the subgraph task automatically.
 
 Type mismatches are the obvious use, but be careful which end you change — retyping a port to match a wrong connection makes the error go away without making the pipeline correct. If it is not clear which end is wrong, ask.
 

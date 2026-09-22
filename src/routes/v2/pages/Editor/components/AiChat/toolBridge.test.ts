@@ -426,6 +426,36 @@ describe("createEditorToolBridge", () => {
       expect(spec.inputs[0].description).toBe("");
     });
 
+    it("updateInput overwrites a value the user typed, not just the default", async () => {
+      const { bridge, spec } = makeBridge();
+      spec.inputs[0]?.setValue("typed-by-hand");
+
+      await bridge.updateInput("input_1", { defaultValue: "0.5" });
+
+      expect(spec.inputs[0]?.value).toBe("0.5");
+      expect(spec.inputs[0]?.defaultValue).toBe("0.5");
+      const state = await bridge.getPipelineState();
+      expect(state.inputs[0]?.default).toBe("0.5");
+    });
+
+    it("updateInput clears the type rather than storing an empty string", async () => {
+      const { bridge, spec } = makeBridge();
+
+      await bridge.updateInput("input_1", { type: "" });
+
+      expect(spec.inputs[0]?.type).toBeUndefined();
+      const state = await bridge.getPipelineState();
+      expect(state.inputs[0]?.type).toBeUndefined();
+    });
+
+    it("updateOutput clears the type rather than storing an empty string", async () => {
+      const { bridge, spec } = makeBridge();
+
+      await bridge.updateOutput("output_1", { type: "" });
+
+      expect(spec.outputs[0]?.type).toBeUndefined();
+    });
+
     it("updateInput refuses an unknown id and an empty update", async () => {
       const { bridge } = makeBridge();
 

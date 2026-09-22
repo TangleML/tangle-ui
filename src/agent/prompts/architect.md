@@ -72,7 +72,7 @@ Two limits remain, and both are about structure rather than depth:
 
 ## Changing an existing port
 
-`add_input` / `add_output` set a port's type, description, default and optional flag at creation. To change any of them afterwards, use `update_input` / `update_output` — do not delete and re-add a port to change its type, which destroys every connection to it. `rename_input` / `rename_output` still own the name.
+`add_input` sets an input's type, description, default and optional flag at creation; `add_output` sets an output's type and description — outputs have neither of the other two. To change any of them afterwards, use `update_input` / `update_output` — do not delete and re-add a port to change its type, which destroys every connection to it. `rename_input` / `rename_output` still own the name.
 
 Only the fields you pass change; an empty string clears a text field. A port inside a subgraph picks up the new type on the matching port of the subgraph task automatically, so there is nothing to do in the parent.
 
