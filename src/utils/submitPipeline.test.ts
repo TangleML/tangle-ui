@@ -1,4 +1,5 @@
 import yaml from "js-yaml";
+import { observable } from "mobx";
 import {
   afterEach,
   beforeEach,
@@ -1221,6 +1222,45 @@ describe("submitPipelineRun", () => {
           originalSpec.implementation.graph.tasks["task-1"].componentRef.spec,
         ).toBeUndefined();
       }
+    });
+
+    /**
+     * An agent submits the spec straight off the editor's store, where
+     * `serializeComponentSpec` passes each `componentRef` through by reference.
+     * The wire object is plain but the reference inside it is still live, and
+     * `structuredClone` refuses it — the submit died before a run was created.
+     */
+    it("submits a spec that still holds a live observable inside it", async () => {
+      const spec: ComponentSpec = {
+        name: "from-the-editor",
+        implementation: {
+          graph: {
+            tasks: {
+              "task-1": {
+                componentRef: observable({
+                  url: "https://example.com/component.yaml",
+                }),
+              },
+            },
+          },
+        },
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: () =>
+          Promise.resolve(
+            yaml.dump({
+              name: "fetched-component",
+              implementation: { container: { image: "fetched:latest" } },
+            }),
+          ),
+      });
+      const onError = vi.fn();
+
+      await submitPipelineRun(spec, mockBackendUrl, { onError });
+
+      expect(onError).not.toHaveBeenCalled();
     });
   });
 });
