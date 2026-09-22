@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 
 import { createNewPipeline } from "@/routes/v2/pages/Editor/components/EditorMenuBar/components/fileMenu.actions";
 import type { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { availablePipelineName } from "@/services/localPipelines/localPipelinesService";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import {
@@ -18,6 +19,8 @@ import {
   useProjectResources,
 } from "@/services/projects/useProjectResources";
 import { useProject, useUpdateProject } from "@/services/projects/useProjects";
+
+import { PROJECT_DETAILS_WINDOW_ID } from "./tangentProjectWindowOrder";
 
 const DEBUG_SESSION_NAME = "Debug session";
 
@@ -43,10 +46,11 @@ function oldestFirst(resources: readonly ProjectResourceSummary[]) {
 }
 
 /**
- * A project with no sessions gets one started on arrival, and a pipeline opened
+ * A project with no sessions gets one started on arrival, a pipeline opened
  * beside it to work in — created and attached to the project first if it has
- * none. Both halves ask only whether the project has nothing, so a project
- * someone has already worked in comes up as they left it.
+ * none — and the project window folded away. All of it asks only whether the
+ * project has nothing, so a project someone has already worked in comes up as
+ * they left it, project window included.
  *
  * A session nobody typed into is detached again on unmount, so an untouched new
  * project arrives session-less a second time and is set up again. Finding the
@@ -63,6 +67,7 @@ export function usePrepareEmptyProject(
   { projectId, sessionCount, isSessionsLoading }: PrepareEmptyProjectOptions,
 ) {
   const storage = usePipelineStorage();
+  const { windows } = useSharedStores();
   const { data: project } = useProject(projectId);
   const { data: documents } = useProjectResources(projectId, {
     entity: ["document"],
@@ -81,6 +86,11 @@ export function usePrepareEmptyProject(
           : undefined,
       );
       if (!started) return;
+
+      // Nothing has been written about a project nobody has worked in yet, so
+      // its window is a tall empty form sitting above the sessions and
+      // resources someone arriving actually came for.
+      windows.getWindowById(PROJECT_DETAILS_WINDOW_ID)?.minimize();
 
       if (startingPrompt) {
         const nextExtraData = { ...(project?.extraData ?? {}) };
