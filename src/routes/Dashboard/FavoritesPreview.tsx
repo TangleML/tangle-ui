@@ -15,6 +15,7 @@ import {
   useFavorites,
 } from "@/hooks/useFavorites";
 import { APP_ROUTES } from "@/routes/router";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import { tracking } from "@/utils/tracking";
 
 import { getFavoriteUrl, TypePill } from "./TypePill";
@@ -25,14 +26,16 @@ const FavoritePreviewRow = ({
   item,
   onRemove,
   trackingId,
+  backendUrl,
 }: {
   item: FavoriteItem;
   onRemove: () => void;
   trackingId: string;
+  backendUrl: string;
 }) => (
   <InlineStack gap="2" className="min-w-0 overflow-hidden">
     <Link
-      to={getFavoriteUrl(item)}
+      to={getFavoriteUrl(item, backendUrl)}
       {...tracking(trackingId)}
       className="group flex w-full items-center gap-3 px-4 py-3 hover:bg-muted/50 no-underline"
     >
@@ -77,6 +80,7 @@ export const FavoritesPreview = ({
   hideWhenEmpty = false,
   trackingId = "homepage.favorites.item",
 }: FavoritesPreviewProps) => {
+  const backendUrl = usePipelineStorage().remote?.backendUrl ?? "";
   const { favorites, removeFavorite } = useFavorites();
   const filtered = typeFilter
     ? favorites.filter((f) => f.type === typeFilter)
@@ -108,6 +112,7 @@ export const FavoritesPreview = ({
             <FavoritePreviewRow
               key={`${item.type}-${item.id}`}
               item={item}
+              backendUrl={backendUrl}
               onRemove={() => removeFavorite(item.type, item.id)}
               trackingId={trackingId}
             />

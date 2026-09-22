@@ -107,9 +107,7 @@ export function PipelineFiltersBar({
   return (
     <Collapsible open={isAdvancedOpen} onOpenChange={setIsAdvancedOpen}>
       <BlockStack gap="3">
-        {/* Row 1: Basic Filters */}
         <InlineStack gap="3" align="center">
-          {/* Search */}
           <div className="relative flex-1 min-w-0">
             <Icon
               name="Search"
@@ -117,6 +115,7 @@ export function PipelineFiltersBar({
             />
             <Input
               placeholder="Search..."
+              aria-label="Search local pipelines"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9 pr-8 w-full"
@@ -134,7 +133,6 @@ export function PipelineFiltersBar({
             )}
           </div>
 
-          {/* Date Range */}
           <div className="shrink-0">
             <DatePickerWithRange
               value={dateRange}
@@ -143,7 +141,6 @@ export function PipelineFiltersBar({
             />
           </div>
 
-          {/* Sort Controls */}
           <InlineStack gap="1" align="center" className="shrink-0">
             <Select value={sortField} onValueChange={handleSortFieldChange}>
               <SelectTrigger className="w-24">
@@ -166,7 +163,6 @@ export function PipelineFiltersBar({
             </Button>
           </InlineStack>
 
-          {/* Advanced Toggle */}
           <CollapsibleTrigger asChild>
             <Button
               variant={componentQuery ? "secondary" : "outline"}
@@ -190,7 +186,6 @@ export function PipelineFiltersBar({
           {actions}
         </InlineStack>
 
-        {/* Row 2: Advanced (Collapsible) */}
         <CollapsibleContent>
           <BlockStack
             gap="2"
@@ -221,7 +216,6 @@ export function PipelineFiltersBar({
           </BlockStack>
         </CollapsibleContent>
 
-        {/* Row 3: Count + Active filter badges */}
         {(hasActiveFilters || totalCount > 0) && (
           <InlineStack gap="2" align="center" blockAlign="center">
             <Text size="sm" tone="subdued">
