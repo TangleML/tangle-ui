@@ -23,9 +23,9 @@ import type { UndoStore } from "./undoStore";
 interface SaveSession {
   spec: ComponentSpec;
   file: PipelineFile;
-  pipelineName: string;
   savedYaml: string;
   queuedYaml: string;
+  hasPendingRecovery: boolean;
   pending: Promise<boolean>;
   pendingCount: number;
 }
@@ -53,7 +53,7 @@ export class AutoSaveStore {
     makeObservable(this);
   }
 
-  @action init(spec: ComponentSpec, pipelineName: string) {
+  @action init(spec: ComponentSpec) {
     this.dispose();
     const file = this.pipelineFileStore.activePipelineFile;
     if (!file?.canEdit) return;
@@ -61,9 +61,9 @@ export class AutoSaveStore {
     const session: SaveSession = {
       spec,
       file,
-      pipelineName,
       savedYaml: yamlText,
       queuedYaml: yamlText,
+      hasPendingRecovery: false,
       pending: Promise.resolve(true),
       pendingCount: 0,
     };
@@ -75,8 +75,10 @@ export class AutoSaveStore {
     this.disposeReaction = reaction(
       () => serializeComponentSpecToText(spec),
       (content) => {
+        session.hasPendingRecovery ||= file.storageKind !== "local";
         runInAction(() => {
-          this.hasUnsavedChanges = content !== session.savedYaml;
+          this.hasUnsavedChanges =
+            content !== session.savedYaml || session.hasPendingRecovery;
         });
         void file.persistRecovery(content).catch((error: unknown) => {
           if (session !== this.session) return;
@@ -88,6 +90,7 @@ export class AutoSaveStore {
         if (
           content === session.savedYaml &&
           session.pendingCount === 0 &&
+          !session.hasPendingRecovery &&
           !this.error &&
           !file.saveError
         ) {
@@ -106,7 +109,7 @@ export class AutoSaveStore {
     const session = this.session;
     if (session) {
       const content = serializeComponentSpecToText(session.spec);
-      if (content !== session.queuedYaml)
+      if (content !== session.queuedYaml || session.hasPendingRecovery)
         void this.performSave(session, content);
     }
     this.session = null;
@@ -119,10 +122,15 @@ export class AutoSaveStore {
     const session = this.session;
     if (!session) return false;
     const content = serializeComponentSpecToText(session.spec);
-    if (session.pendingCount > 0 && content === session.queuedYaml)
+    if (
+      session.pendingCount > 0 &&
+      content === session.queuedYaml &&
+      !session.hasPendingRecovery
+    )
       return session.pending;
     if (
       content === session.savedYaml &&
+      !session.hasPendingRecovery &&
       !this.error &&
       !session.file.saveError &&
       session.file.storageKind !== "pending" &&
@@ -137,6 +145,8 @@ export class AutoSaveStore {
     yamlText: string,
   ): Promise<boolean> {
     session.queuedYaml = yamlText;
+    // Even reverted edits stage dirty recovery; only a queued flush can clear it.
+    session.hasPendingRecovery = false;
     session.pendingCount++;
     if (session === this.session)
       runInAction(() => {
@@ -158,7 +168,8 @@ export class AutoSaveStore {
             this.error = null;
             this.lastSavedAt = new Date();
             this.hasUnsavedChanges =
-              serializeComponentSpecToText(session.spec) !== yamlText;
+              serializeComponentSpecToText(session.spec) !== yamlText ||
+              session.hasPendingRecovery;
           });
         return true;
       } catch (error) {
@@ -185,7 +196,7 @@ export class AutoSaveStore {
     if (!manager) return;
     try {
       await saveUndoHistory(
-        session.pipelineName,
+        session.file.referenceId,
         collectIdStack(session.spec),
         manager,
       );

@@ -506,7 +506,75 @@ describe("remote ownership and deletion", () => {
       expect.objectContaining({ id: CLOUD_ID }),
       expect.anything(),
     );
-    expect(await store.records()).toEqual([]);
+    expect((await store.records())[0]).toMatchObject({
+      deleted: true,
+      dirty: false,
+      pipeline: { id: CLOUD_ID },
+    });
+  });
+
+  it.each(["remote", "pending"])(
+    "rejects stale edits and retries after deleting a native %s pipeline",
+    async (kind) => {
+      const { store, folder } = setup();
+      if (kind === "pending")
+        vi.mocked(writeCloudPipeline).mockRejectedValueOnce(
+          new Error("Offline"),
+        );
+      const file = await store.create(NAME, CONTENT);
+      const stale = new RemotePipelineFile(
+        store,
+        folder,
+        structuredClone(file.recovery),
+      );
+
+      await file.deleteFile();
+
+      await expect(stale.write(UPDATED_CONTENT)).rejects.toThrow("deleted");
+      await expect(stale.retry()).rejects.toThrow("deleted");
+      await expect(stale.read()).rejects.toThrow("deleted");
+      await expect(store.resolve(file.recovery.key)).rejects.toThrow("deleted");
+      expect(writeCloudPipeline).toHaveBeenCalledTimes(1);
+      expect(deleteCloudPipeline).toHaveBeenCalledTimes(
+        kind === "remote" ? 1 : 0,
+      );
+      expect(await store.list()).toEqual([]);
+    },
+  );
+
+  it("rejects a pending retry queued behind deletion before making a server request", async () => {
+    const { store, folder } = setup();
+    vi.mocked(writeCloudPipeline).mockRejectedValueOnce(new Error("Offline"));
+    const file = await store.create(NAME, CONTENT);
+    const stale = new RemotePipelineFile(
+      store,
+      folder,
+      structuredClone(file.recovery),
+    );
+
+    const deleting = file.deleteFile();
+    const retry = expect(stale.retry()).rejects.toThrow("deleted");
+    await deleting;
+    await retry;
+
+    expect(writeCloudPipeline).toHaveBeenCalledTimes(1);
+    expect(deleteCloudPipeline).not.toHaveBeenCalled();
+    expect((await store.records())[0]).toMatchObject({
+      deleted: true,
+      dirty: false,
+    });
+  });
+
+  it("keeps a deleted pipeline hidden if the server list still includes it", async () => {
+    const { store } = setup();
+    const file = await store.create(NAME, CONTENT);
+    vi.mocked(listCloudPipelines).mockResolvedValue([
+      pipeline({ file_path: file.recovery.filePath }),
+    ]);
+
+    await file.deleteFile();
+
+    expect(await store.list()).toEqual([]);
   });
 
   it("retains the hidden local backup after deletion and rejects its old pending reference", async () => {

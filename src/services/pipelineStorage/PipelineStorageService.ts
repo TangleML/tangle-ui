@@ -133,17 +133,18 @@ export class PipelineStorageService {
   }
 
   async resolvePipelineByName(name: string): Promise<PipelineFile | undefined> {
-    const reference =
-      this.remote && z.string().uuid().safeParse(name).success
-        ? remotePipelineReference(this.remote.backendUrl, name)
-        : name;
-    const remote = await this.resolveRemoteReference(reference);
+    const remote = await this.resolveRemoteReference(name);
     if (remote) return remote;
     const existing = await findByStorageKey(name);
 
     if (!existing) {
       const file = await this.rootFolder.findFile(name);
-      return file ? this.manageFile(file) : undefined;
+      if (file) return this.manageFile(file);
+      return this.remote && z.string().uuid().safeParse(name).success
+        ? this.resolveRemoteReference(
+            remotePipelineReference(this.remote.backendUrl, name),
+          )
+        : undefined;
     }
 
     const redirected = await this.remote?.resolveLocal(existing.id);
