@@ -4,8 +4,14 @@ import { useState } from "react";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
 import { VerticalResizeHandle } from "@/components/ui/resize-handle";
-import { Tabs, TabsContent, TabsList } from "@/components/ui/tabs";
+import {
+  SCROLLING_TAB_STRIP,
+  Tabs,
+  TabsContent,
+  TabsList,
+} from "@/components/ui/tabs";
 import { Text } from "@/components/ui/typography";
+import { cn } from "@/lib/utils";
 import { CloseableTabTrigger } from "@/routes/v2/pages/Tangent/components/CloseableTabTrigger";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { getWorkareaKind } from "@/routes/v2/pages/Tangent/workarea/registry";
@@ -69,7 +75,12 @@ export const DynamicWorkarea = observer(function DynamicWorkarea() {
           onValueChange={(id) => store.selectWorkareaTab(id)}
           className="flex h-full min-h-0 flex-col gap-1"
         >
-          <TabsList className="max-w-full shrink-0 overflow-x-auto rounded-none border-b border-border bg-card">
+          <TabsList
+            className={cn(
+              "max-w-full shrink-0 rounded-none border-b border-border bg-card",
+              SCROLLING_TAB_STRIP,
+            )}
+          >
             {workareaTabs.map((tab) => (
               <CloseableTabTrigger
                 key={tab.id}
