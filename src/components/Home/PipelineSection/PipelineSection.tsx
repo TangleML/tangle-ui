@@ -121,11 +121,9 @@ function PipelineTabs({
         className="data-[state=inactive]:hidden"
       >
         <BlockStack gap="4">
-          <PipelineFiltersBar
-            remote
-            filters={remote.filterBarProps}
-            actions={<ExamplePipelineButton />}
-          />
+          <InlineStack align="end">
+            <ExamplePipelineButton />
+          </InlineStack>
           {remote.error && (
             <Paragraph role="alert" size="sm" className="text-destructive">
               Could not load remote pipelines: {remote.error}
@@ -142,16 +140,14 @@ function PipelineTabs({
           ) : (
             <>
               <PipelineListTable
-                key={`remote:${activeTab}:${remote.pagination.currentPage}:${remote.filterKey}`}
+                key={`remote:${activeTab}:${remote.pagination.currentPage}`}
                 rows={remote.rows}
                 selectableRows={remote.rows}
                 remote
                 emptyMessage={
                   remote.error && remote.totalCount === 0
                     ? "No cached remote pipelines are available."
-                    : remote.filterBarProps.hasActiveFilters
-                      ? "No remote pipelines match these filters."
-                      : "No remote pipelines yet. Create a pipeline or save one from Local pipelines."
+                    : "No remote pipelines yet. Create a pipeline or save one from Local pipelines."
                 }
                 onRefresh={() => void remote.refresh()}
                 onPipelineClick={onPipelineClick}
