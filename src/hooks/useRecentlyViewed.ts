@@ -8,7 +8,13 @@ const MAX_ITEMS = 100;
 
 type RecentKey = typeof RECENTLY_VIEWED_KEY | typeof RECENTLY_USED_KEY;
 
-const RECENT_ITEM_TYPES = ["pipeline", "run", "component", "tour"] as const;
+const RECENT_ITEM_TYPES = [
+  "pipeline",
+  "run",
+  "component",
+  "tour",
+  "project",
+] as const;
 
 type RecentItemType = (typeof RECENT_ITEM_TYPES)[number];
 

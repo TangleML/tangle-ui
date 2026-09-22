@@ -1,4 +1,5 @@
 import { ProjectsSection } from "@/components/Home/ProjectsSection/ProjectsSection";
+import { SharedProjectsSection } from "@/components/Home/ProjectsSection/SharedProjectsSection";
 import { StartSessionPrompt } from "@/components/Home/ProjectsSection/StartSessionPrompt";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { BlockStack } from "@/components/ui/layout";
@@ -27,6 +28,8 @@ export function DashboardProjectsView() {
         <Heading level={2}>My Projects</Heading>
         <ProjectsSection />
       </BlockStack>
+
+      <SharedProjectsSection />
     </BlockStack>
   );
 }

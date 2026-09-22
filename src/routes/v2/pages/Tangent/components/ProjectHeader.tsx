@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { RenameProjectDialog } from "@/components/Project/RenameProjectDialog";
+import { FavoriteToggle } from "@/components/shared/FavoriteToggle";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
@@ -62,6 +63,13 @@ export function ProjectHeader() {
         >
           <Icon name="Pencil" size="sm" />
         </Button>
+
+        <FavoriteToggle
+          type="project"
+          id={project.id}
+          name={project.name}
+          analyticsActionType="tangent.favorite_project"
+        />
       </InlineStack>
 
       <RenameProjectDialog
