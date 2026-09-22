@@ -29,7 +29,7 @@ export interface StoredLibrary extends StoredLibraryFolder {
   knownDigests: string[];
 }
 
-export type FavoriteType = "pipeline" | "run";
+export type FavoriteType = "pipeline" | "run" | "project";
 
 export interface FavoriteItem {
   type: FavoriteType;

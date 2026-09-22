@@ -5,6 +5,7 @@ import { useParams } from "@tanstack/react-router";
 
 import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
+import { useTrackRecentlyViewedProject } from "@/hooks/useTrackRecentlyViewedProject";
 import { DialogProvider } from "@/providers/DialogProvider/DialogProvider";
 import { useTheme } from "@/providers/ThemeProvider";
 import { getTangentSocketConfig } from "@/routes/v2/pages/Tangent/services/socketConfig";
@@ -44,6 +45,7 @@ export function TangentProjectPage() {
 function TangentProjectPageContent({ projectId }: { projectId: string }) {
   const { resolvedTheme } = useTheme();
   const { baseUrl, isLoading } = useTangentBaseUrl(projectId);
+  useTrackRecentlyViewedProject(projectId);
   const channelUrl = tangentChannelUrl(baseUrl);
   const runtime = useTangentRuntime(channelUrl);
 

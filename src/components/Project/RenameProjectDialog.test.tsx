@@ -111,9 +111,10 @@ describe("RenameProjectDialog", () => {
     renderDialog();
 
     await user.clear(nameField());
+    await user.click(renameButton());
 
-    expect(renameButton()).toBeDisabled();
     expect(mutate).not.toHaveBeenCalled();
+    expect(screen.getByText("Name cannot be empty")).toBeInTheDocument();
   });
 
   it("refuses a name of nothing but spaces", async () => {
@@ -122,19 +123,24 @@ describe("RenameProjectDialog", () => {
 
     await user.clear(nameField());
     await user.type(nameField(), "   ");
+    await user.click(renameButton());
 
-    expect(renameButton()).toBeDisabled();
+    expect(mutate).not.toHaveBeenCalled();
   });
 
-  it("stays quiet about an empty name until the field is left", async () => {
+  /**
+   * The complaint used to appear on blur, which grew the dialog underneath a
+   * pointer already on its way to Cancel and swallowed the click. Leaving the
+   * field has to say nothing at all.
+   */
+  it("stays quiet about an empty name until Rename is pressed", async () => {
     const user = userEvent.setup();
     renderDialog();
 
     await user.clear(nameField());
-    expect(screen.queryByText("Name cannot be empty")).toBeNull();
-
     await user.tab();
-    expect(screen.getByText("Name cannot be empty")).toBeInTheDocument();
+
+    expect(screen.queryByText("Name cannot be empty")).toBeNull();
   });
 
   it("closes and says so once the rename lands", async () => {

@@ -68,10 +68,12 @@ describe("CreateProjectDialog", () => {
     );
   });
 
-  it("cannot be submitted without a name", async () => {
-    await openDialog();
+  it("makes nothing out of an empty name", async () => {
+    const user = await openDialog();
 
-    expect(submitButton()).toBeDisabled();
+    await user.click(submitButton());
+
+    expect(mutate).not.toHaveBeenCalled();
   });
 
   it("never asks which workspace to use", async () => {
@@ -163,15 +165,38 @@ describe("CreateProjectDialog", () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
-  it("complains about an empty name only once the field has been visited", async () => {
+  /**
+   * The complaint used to appear on blur, which grew the dialog underneath a
+   * pointer already on its way to Cancel and swallowed the click. Leaving the
+   * field has to say nothing at all.
+   */
+  it("says nothing when an empty name is merely left", async () => {
     const user = await openDialog();
-
-    expect(screen.queryByText("Name cannot be empty")).toBeNull();
 
     await user.click(screen.getByLabelText("Name"));
     await user.tab();
 
+    expect(screen.queryByText("Name cannot be empty")).toBeNull();
+  });
+
+  it("complains about an empty name once Create is pressed", async () => {
+    const user = await openDialog();
+
+    expect(screen.queryByText("Name cannot be empty")).toBeNull();
+
+    await user.click(submitButton());
+
     expect(screen.getByText("Name cannot be empty")).toBeInTheDocument();
+  });
+
+  it("can be cancelled after visiting the name field", async () => {
+    const user = await openDialog();
+
+    await user.click(screen.getByLabelText("Name"));
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(screen.queryByLabelText("Name")).toBeNull();
+    expect(mutate).not.toHaveBeenCalled();
   });
 
   it("cannot be submitted twice while the first attempt is in flight", async () => {
