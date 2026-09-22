@@ -7,6 +7,7 @@ import {
   deleteCloudPipeline,
   getCloudPipeline,
   getCloudPipelineAccount,
+  getCloudPipelineSavedTaskArguments,
   listCloudPipelinePage,
   listCloudPipelines,
   writeCloudPipeline,
@@ -664,6 +665,66 @@ describe("remote pipeline input round trips", () => {
       secret,
       replace: "new value",
     });
+  });
+
+  it("extracts saved secret and system arguments for current inputs", () => {
+    const secret = { dynamicData: { secret: { name: "source-token" } } };
+    const system = {
+      dynamicData: { "system/multi_node/node_index": {} },
+    };
+    const saved = pipeline({
+      root_pipeline_task: {
+        componentRef: {
+          spec: {
+            ...localSpec,
+            inputs: [
+              { name: "secret" },
+              { name: "system" },
+              { name: "literal" },
+            ],
+          },
+        },
+        arguments: {
+          secret,
+          system,
+          literal: "value",
+          removed: { dynamicData: { secret: { name: "old-token" } } },
+        },
+      },
+    });
+    const before = structuredClone(saved);
+
+    expect(getCloudPipelineSavedTaskArguments(saved)).toEqual({
+      secret,
+      system,
+    });
+    expect(saved).toEqual(before);
+  });
+
+  it("ignores malformed saved dynamic arguments", () => {
+    const saved = pipeline({
+      root_pipeline_task: {
+        componentRef: {
+          spec: {
+            ...localSpec,
+            inputs: [
+              { name: "empty" },
+              { name: "invalidSecret" },
+              { name: "invalidSystem" },
+            ],
+          },
+        },
+        arguments: {
+          empty: { dynamicData: {} },
+          invalidSecret: { dynamicData: { secret: {} } },
+          invalidSystem: {
+            dynamicData: { "system/multi_node/node_index": "invalid" },
+          },
+        },
+      },
+    });
+
+    expect(getCloudPipelineSavedTaskArguments(saved)).toEqual({});
   });
 
   it("rejects remote definitions that have no inline component", () => {
