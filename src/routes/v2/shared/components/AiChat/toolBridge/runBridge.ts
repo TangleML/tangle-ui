@@ -25,6 +25,7 @@ import {
   truncateContainerState,
   truncateExecutionDetails,
 } from "@/agent/util/truncate";
+import { selectTaskArgumentsForInputs } from "@/components/shared/Submitters/Tangle/taskArguments";
 import { serializeComponentSpec } from "@/models/componentSpec/serialization/serialize";
 import { ONBOARDING_MY_RUN_COUNT_KEY } from "@/providers/OnboardingProvider/onboardingQueryKeys";
 import {
@@ -66,12 +67,18 @@ export function createRunBridgeHandlers(deps: BridgeDeps): RunHandlers {
       }
       const wireSpec = serializeComponentSpec(spec);
       const authorizationToken = deps.getAuthToken?.();
+      const taskArguments = selectTaskArgumentsForInputs(
+        wireSpec,
+        deps.getSavedTaskArguments?.(),
+      );
       const submission = await new Promise<{
         run: PipelineRun | null;
         error: string | null;
       }>((resolve) => {
         submitPipelineRunHelper(wireSpec, backendUrl, {
           authorizationToken,
+          taskArguments,
+          prepareSourcePipeline: deps.prepareSourcePipeline,
           onSuccess: (data) => resolve({ run: data, error: null }),
           onError: (err) => resolve({ run: null, error: errorMessage(err) }),
         });
@@ -86,6 +93,7 @@ export function createRunBridgeHandlers(deps: BridgeDeps): RunHandlers {
       }
       // Refresh both the editor list (per pipeline) and the home runs page.
       deps.queryClient?.invalidateQueries({ queryKey: ["pipelineRuns"] });
+      deps.queryClient?.invalidateQueries({ queryKey: ["runs", backendUrl] });
       // Keep the onboarding checklist's run-count fresh so a first run flips
       // `execute_run` immediately rather than after its stale window.
       deps.queryClient?.invalidateQueries({

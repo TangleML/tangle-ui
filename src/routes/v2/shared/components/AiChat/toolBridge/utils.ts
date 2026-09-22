@@ -20,6 +20,7 @@ import {
   ROOT_PATH_ID,
 } from "@/models/componentSpec/validation/collectIssues";
 import { EDITOR_POSITION_ANNOTATION } from "@/utils/annotations";
+import type { ArgumentType } from "@/utils/componentSpec";
 
 const DEFAULT_POSITION = { x: 250, y: 250 };
 const POSITION_OFFSET = 200;
@@ -30,6 +31,8 @@ export interface BridgeDeps {
   getActiveSubgraphTaskId: () => string | undefined;
   getBackendUrl?: () => string;
   getAuthToken?: () => string | undefined;
+  getSavedTaskArguments?: () => Record<string, ArgumentType>;
+  prepareSourcePipeline?: (backendUrl: string) => Promise<string | undefined>;
   queryClient?: QueryClient;
 }
 

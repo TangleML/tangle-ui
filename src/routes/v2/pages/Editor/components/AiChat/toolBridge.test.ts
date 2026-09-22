@@ -13,6 +13,7 @@ import { YamlDeserializer } from "@/models/componentSpec/serialization/yamlDeser
 import { ONBOARDING_MY_RUN_COUNT_KEY } from "@/providers/OnboardingProvider/onboardingQueryKeys";
 import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
 import { hydrateComponentReference } from "@/services/componentService";
+import type { ArgumentType } from "@/utils/componentSpec";
 
 vi.mock("@/services/componentService", () => ({
   hydrateComponentReference: vi.fn(async (ref) => ref),
@@ -40,6 +41,10 @@ const submitPipelineRunHelperMock = vi.fn<
     _url: string,
     options: {
       authorizationToken?: string;
+      taskArguments?: Record<string, ArgumentType>;
+      prepareSourcePipeline?: (
+        backendUrl: string,
+      ) => Promise<string | undefined>;
       onSuccess?: (data: unknown) => void;
       onError?: (error: Error) => void;
     },
@@ -207,6 +212,8 @@ function makeBackendBridge(
   overrides: {
     authToken?: string;
     queryClient?: QueryClient;
+    prepareSourcePipeline?: (backendUrl: string) => Promise<string | undefined>;
+    getSavedTaskArguments?: () => Record<string, ArgumentType>;
   } = {},
 ) {
   const spec = buildSpec();
@@ -218,7 +225,9 @@ function makeBackendBridge(
     undo,
     getBackendUrl: () => TEST_BACKEND_URL,
     getAuthToken: () => overrides.authToken,
+    getSavedTaskArguments: overrides.getSavedTaskArguments,
     queryClient: overrides.queryClient,
+    prepareSourcePipeline: overrides.prepareSourcePipeline,
   });
   return { bridge, spec };
 }
@@ -1019,6 +1028,12 @@ describe("createEditorToolBridge", () => {
 
     it("submits the spec, invalidates the cache, and returns ids", async () => {
       const invalidate = vi.fn();
+      const prepareSourcePipeline = vi.fn(
+        async () => "00000000-0000-4000-8000-000000000001",
+      );
+      const savedSecret = {
+        dynamicData: { secret: { name: "saved-token" } },
+      };
       const queryClient = {
         invalidateQueries: invalidate,
       } as unknown as QueryClient;
@@ -1037,6 +1052,11 @@ describe("createEditorToolBridge", () => {
       const { bridge } = makeBackendBridge({
         authToken: "auth-token",
         queryClient,
+        prepareSourcePipeline,
+        getSavedTaskArguments: () => ({
+          data: savedSecret,
+          removed: { dynamicData: { secret: { name: "old-token" } } },
+        }),
       });
       const result = await bridge.submitPipelineRun();
 
@@ -1049,7 +1069,12 @@ describe("createEditorToolBridge", () => {
       const [, urlArg, optionsArg] = submitPipelineRunHelperMock.mock.calls[0]!;
       expect(urlArg).toBe(TEST_BACKEND_URL);
       expect(optionsArg.authorizationToken).toBe("auth-token");
+      expect(optionsArg.taskArguments).toEqual({ data: savedSecret });
+      expect(optionsArg.prepareSourcePipeline).toBe(prepareSourcePipeline);
       expect(invalidate).toHaveBeenCalledWith({ queryKey: ["pipelineRuns"] });
+      expect(invalidate).toHaveBeenCalledWith({
+        queryKey: ["runs", TEST_BACKEND_URL],
+      });
       expect(invalidate).toHaveBeenCalledWith({
         queryKey: ONBOARDING_MY_RUN_COUNT_KEY,
       });

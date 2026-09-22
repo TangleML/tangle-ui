@@ -1,5 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
 
+import type { BodyCreateApiPipelineRunsPost } from "../../src/api/types.gen";
+
 // These flows require the deployment flag; the default E2E server tests local mode.
 test.beforeEach(({ browserName }, testInfo) => {
   // eslint-disable-next-line playwright/no-skipped-test
@@ -13,6 +15,24 @@ const backendUrl = "http://localhost:3001";
 const ownerId = "owner-account";
 const pipelineId = "00000000-0000-4000-8000-000000000001";
 const viewerPipelineId = "00000000-0000-4000-8000-000000000002";
+const savedPipelineAnnotation = "tangleml.com/user-pipeline/pipeline-id";
+const sourcePipelineAnnotation = "tangleml.com/source/pipeline-id";
+
+function pipelineRun(
+  id: string,
+  annotation = savedPipelineAnnotation,
+  sourceId = pipelineId,
+) {
+  return {
+    id,
+    root_execution_id: `execution-${id}`,
+    pipeline_name: "Remote report",
+    created_by: "teammate-account",
+    created_at: "2026-09-18T10:00:00Z",
+    execution_status_stats: { SUCCEEDED: 1 },
+    annotations: { [annotation]: sourceId },
+  };
+}
 
 function pipeline(id = pipelineId, userId = ownerId, name = "Remote report") {
   return {
@@ -55,15 +75,20 @@ async function mockBackend(page: Page, initial = [pipeline()]) {
       body: ReturnType<typeof pipeline>["root_pipeline_task"];
     }[],
     failWrites: false,
+    runs: [] as ReturnType<typeof pipelineRun>[],
+    runSubmissions: [] as BodyCreateApiPipelineRunsPost[],
+    writeOrder: [] as string[],
   };
-  await page.addInitScript(() => {
+  const context = page.context();
+  await context.addInitScript(() => {
     localStorage.setItem("seen-editor-v2-welcome", "true");
+    localStorage.setItem("seen-run-v2-welcome", "true");
     localStorage.setItem("betaFlags", JSON.stringify({ v2_editor: true }));
   });
-  await page.route("**/services/ping", (route) =>
+  await context.route("**/services/ping", (route) =>
     route.fulfill({ status: 200, body: "ok" }),
   );
-  await page.route("**/api/**", async (route) => {
+  await context.route("**/api/**", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
     if (!url.pathname.startsWith("/api/")) return route.continue();
@@ -121,6 +146,56 @@ async function mockBackend(page: Page, initial = [pipeline()]) {
         ? route.fulfill({ json: item })
         : route.fulfill({ status: 404, json: { detail: "Not found" } });
     }
+    if (url.pathname === "/api/pipeline_runs/") {
+      if (request.method() === "POST") {
+        const body = request.postDataJSON() as BodyCreateApiPipelineRunsPost;
+        state.runSubmissions.push(body);
+        state.writeOrder.push("run");
+        return route.fulfill({ json: pipelineRun("new-run") });
+      }
+      const query = JSON.parse(url.searchParams.get("filter_query") ?? "{}");
+      const sourcePredicates:
+        { value_equals: { key: string; value: string } }[] | undefined =
+        query.and?.find((predicate: { or?: unknown }) => predicate.or)?.or;
+      const runs = sourcePredicates
+        ? state.runs.filter((run) =>
+            sourcePredicates.some(
+              ({ value_equals: { key, value } }) =>
+                run.annotations[key] === value,
+            ),
+          )
+        : state.runs;
+      return route.fulfill({
+        json: { pipeline_runs: runs, next_page_token: null },
+      });
+    }
+    if (url.pathname.startsWith("/api/pipeline_runs/")) {
+      const run = state.runs.find(
+        (run) => run.id === url.pathname.split("/")[3],
+      );
+      if (run) {
+        return route.fulfill({
+          json: url.pathname.endsWith("/annotations/") ? run.annotations : run,
+        });
+      }
+    }
+    if (url.pathname.startsWith("/api/executions/")) {
+      const run = state.runs.find(
+        (run) => run.root_execution_id === url.pathname.split("/")[3],
+      );
+      if (run) {
+        return route.fulfill({
+          json: url.pathname.endsWith("/state")
+            ? { child_execution_status_stats: { task: { SUCCEEDED: 1 } } }
+            : {
+                id: run.root_execution_id,
+                pipeline_run_id: run.id,
+                task_spec: pipeline().root_pipeline_task,
+                child_task_execution_ids: {},
+              },
+        });
+      }
+    }
     if (
       url.pathname === "/api/users/me/pipelines" &&
       request.method() === "DELETE"
@@ -170,6 +245,7 @@ async function mockBackend(page: Page, initial = [pipeline()]) {
         ...state.pipelines.filter((entry) => entry.id !== item.id),
         item,
       ];
+      state.writeOrder.push("save");
       return route.fulfill({ json: item });
     }
     return route.fulfill({
@@ -205,18 +281,22 @@ function legacyEditorUrl(id: string) {
   return `/editor-v2/${encodeURIComponent(`remote:${encodeURIComponent(backendUrl)}:${id}`)}`;
 }
 
-async function addLocalPipeline(page: Page, name = "Local report") {
+async function addLocalPipeline(
+  page: Page,
+  name = "Local report",
+  content = `name: ${name}\nimplementation:\n  graph:\n    tasks: {}\n`,
+) {
   await page.goto("/pipelines");
   await expect(page.getByTestId("new-pipeline-button").first()).toBeVisible();
-  await page.evaluate(async (name) => {
-    const storageModule =
-      "/src/services/pipelineStorage/PipelineStorageService.ts";
-    const { PipelineStorageService } = await import(storageModule);
-    await new PipelineStorageService().rootFolder.addFile(
-      name,
-      `name: ${name}\nimplementation:\n  graph:\n    tasks: {}\n`,
-    );
-  }, name);
+  await page.evaluate(
+    async ({ name, content }) => {
+      const storageModule =
+        "/src/services/pipelineStorage/PipelineStorageService.ts";
+      const { PipelineStorageService } = await import(storageModule);
+      await new PipelineStorageService().rootFolder.addFile(name, content);
+    },
+    { name, content },
+  );
 }
 
 async function readLocalBackup(page: Page) {
@@ -243,6 +323,270 @@ async function expectStorageIcon(page: Page, kind: "local" | "remote") {
   ).toBeHidden();
 }
 
+for (const { label, viewport } of [
+  { label: "desktop", viewport: { width: 1280, height: 900 } },
+  { label: "mobile", viewport: { width: 390, height: 844 } },
+]) {
+  test(`associated runs use saved identity and return to the source pipeline on ${label}`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize(viewport);
+    const state = await mockBackend(page);
+    state.runs = [
+      pipelineRun("saved-run"),
+      pipelineRun("editor-run", sourcePipelineAnnotation),
+      pipelineRun(
+        "same-name-clone-run",
+        savedPipelineAnnotation,
+        viewerPipelineId,
+      ),
+    ];
+    await page.goto("/pipelines");
+    const runsLink = page.getByRole("link", {
+      name: "View runs for Remote report",
+    });
+    await expect(runsLink).toBeVisible();
+    await page.reload();
+    await expect(runsLink).toBeVisible();
+    await runsLink.scrollIntoViewIfNeeded();
+    await page.screenshot({
+      path: testInfo.outputPath(`associated-runs-link-${label}.png`),
+    });
+
+    const filteredRequest = page.waitForRequest((request) => {
+      const url = new URL(request.url());
+      return (
+        url.pathname === "/api/pipeline_runs/" &&
+        url.searchParams.has("filter_query")
+      );
+    });
+    await runsLink.click();
+    await expect(page).toHaveURL(/\/runs\?filter=/);
+    expect(
+      JSON.parse(new URL(page.url()).searchParams.get("filter") ?? "{}"),
+    ).toEqual({ saved_pipeline_id: pipelineId });
+    const requestUrl = new URL((await filteredRequest).url());
+    expect(
+      JSON.parse(requestUrl.searchParams.get("filter_query") ?? "{}"),
+    ).toEqual({
+      and: [
+        {
+          or: [savedPipelineAnnotation, sourcePipelineAnnotation].map(
+            (key) => ({ value_equals: { key, value: pipelineId } }),
+          ),
+        },
+      ],
+    });
+    await expect(page.getByText(`Saved pipeline: ${pipelineId}`)).toBeVisible();
+    await expect(page.getByPlaceholder("Search by user...")).toHaveValue("");
+    await expect(page.getByText("saved-run", { exact: true })).toBeVisible();
+    await expect(page.getByText("editor-run", { exact: true })).toBeVisible();
+    await expect(
+      page.getByText("same-name-clone-run", { exact: true }),
+    ).toBeHidden();
+    await page.screenshot({
+      path: testInfo.outputPath(`associated-runs-list-${label}.png`),
+    });
+
+    await page
+      .getByRole("row")
+      .filter({ hasText: "saved-run" })
+      .getByText("Remote report", { exact: true })
+      .click();
+    await expect(page.getByTestId("run-view-v2")).toBeVisible();
+    await expect(
+      page.getByText("Source pipeline", { exact: true }),
+    ).toBeVisible();
+    const backlink = page.getByRole("link", {
+      name: "Open pipeline",
+      exact: true,
+    });
+    await expect(backlink).toHaveAttribute("href", editorUrl(pipelineId));
+    await expect(backlink).toHaveAttribute("title", pipelineId);
+    await expect(backlink).not.toHaveAttribute("target", "_blank");
+    await expect(backlink).toBeVisible();
+    const linkLayout = await backlink.evaluate((link) => {
+      const rect = link.getBoundingClientRect();
+      const parent = link.parentElement?.getBoundingClientRect();
+      return {
+        height: rect.height,
+        lineHeight: parseFloat(getComputedStyle(link).lineHeight),
+        fitsParent:
+          parent !== undefined &&
+          rect.left >= parent.left &&
+          rect.right <= parent.right + 1,
+        overflows: link.scrollWidth > link.clientWidth,
+      };
+    });
+    expect(linkLayout.height).toBeLessThanOrEqual(linkLayout.lineHeight + 1);
+    expect(linkLayout.fitsParent).toBe(true);
+    expect(linkLayout.overflows).toBe(false);
+    const runInfo = page
+      .getByRole("button", { name: "Run Info", exact: true })
+      .locator("..");
+    const createdAt = await page.evaluate((timestamp) => {
+      return new Date(timestamp).toLocaleString();
+    }, state.runs[0].created_at);
+    const runInfoValues = [
+      "saved-run",
+      "execution-saved-run",
+      "Open pipeline",
+      "teammate-account",
+      createdAt,
+    ].map((value) => runInfo.getByText(value, { exact: true }));
+    const valuePositions = async () => {
+      const panelLeft = await runInfo.evaluate(
+        (element) => element.getBoundingClientRect().left,
+      );
+      return Promise.all(
+        runInfoValues.map((value) =>
+          value.evaluate(
+            (element, panelLeft) =>
+              element.getBoundingClientRect().left - panelLeft,
+            panelLeft,
+          ),
+        ),
+      );
+    };
+    for (const value of runInfoValues) {
+      await expect(value).toBeVisible();
+    }
+    const alignedValuePositions = await valuePositions();
+    expect(
+      Math.max(...alignedValuePositions) - Math.min(...alignedValuePositions),
+    ).toBeLessThanOrEqual(1);
+    const sourceLabelCenter = await runInfo
+      .getByText("Source pipeline", { exact: true })
+      .evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        return rect.top + rect.height / 2;
+      });
+    const sourceLinkCenter = await backlink.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      return rect.top + rect.height / 2;
+    });
+    expect(Math.abs(sourceLabelCenter - sourceLinkCenter)).toBeLessThanOrEqual(
+      1,
+    );
+    await testInfo.attach("run-info-value-positions", {
+      body: JSON.stringify({
+        alignedValuePositions,
+        sourceLabelCenter,
+        sourceLinkCenter,
+      }),
+      contentType: "application/json",
+    });
+    for (const label of [
+      "Run Id",
+      "Execution Id",
+      "Source pipeline",
+      "Created by",
+      "Created at",
+    ]) {
+      await runInfo.getByText(label, { exact: true }).hover();
+      expect(await valuePositions()).toEqual(alignedValuePositions);
+    }
+    await page.mouse.move(0, 0);
+    await runInfo.screenshot({
+      path: testInfo.outputPath(`associated-runs-run-info-${label}-spa.png`),
+    });
+    await page.emulateMedia({ colorScheme: "dark" });
+    await expect(page.locator("html")).toHaveClass(/\bdark\b/);
+    await runInfo.screenshot({
+      path: testInfo.outputPath(
+        `associated-runs-run-info-${label}-dark-spa.png`,
+      ),
+    });
+    const documentBeforeNavigation = await page.evaluateHandle(() => document);
+    const newPages: Page[] = [];
+    const documentNavigations: string[] = [];
+    page.context().on("page", (newPage) => newPages.push(newPage));
+    page.on("request", (request) => {
+      if (
+        request.isNavigationRequest() &&
+        request.frame() === page.mainFrame()
+      ) {
+        documentNavigations.push(request.url());
+      }
+    });
+    await backlink.click();
+    await expect(page).toHaveURL(editorUrl(pipelineId));
+    await expect(page.locator("[data-editor-ready]")).toBeVisible();
+    await expectStorageIcon(page, "remote");
+    expect(
+      await documentBeforeNavigation.evaluate(
+        (previousDocument) => previousDocument === document,
+      ),
+    ).toBe(true);
+    expect(documentNavigations).toEqual([]);
+    expect(newPages).toHaveLength(0);
+    expect(page.context().pages()).toEqual([page]);
+    expect(state.writes).toHaveLength(0);
+    await documentBeforeNavigation.dispose();
+  });
+}
+
+const runnableLocalPipeline = `name: Local report
+implementation:
+  graph:
+    tasks:
+      hello:
+        componentRef:
+          spec:
+            name: Hello
+            implementation:
+              container:
+                image: alpine:3.20
+                command: [echo, hello]
+`;
+
+test("Quick Run uploads a local pipeline before submitting its source annotation", async ({
+  page,
+}) => {
+  const state = await mockBackend(page, []);
+  await addLocalPipeline(page, "Local report", runnableLocalPipeline);
+  await page.goto("/editor-v2/Local%20report");
+  await expect(page.locator("[data-editor-ready]")).toBeVisible();
+  await expectStorageIcon(page, "local");
+  expect(state.writes).toHaveLength(0);
+
+  await page
+    .locator('[data-tracking-id="v2.pipeline_editor.quick_run"]')
+    .click();
+  await expect(
+    page.getByText("Pipeline successfully submitted", { exact: true }),
+  ).toBeVisible();
+  await expectStorageIcon(page, "remote");
+  expect(state.writeOrder).toEqual(["save", "run"]);
+  expect(state.runSubmissions).toHaveLength(1);
+  expect(state.runSubmissions[0].annotations).toMatchObject({
+    [sourcePipelineAnnotation]: state.pipelines[0].id,
+  });
+  expect(state.runSubmissions[0].annotations).not.toHaveProperty(
+    savedPipelineAnnotation,
+  );
+  await expect(page).toHaveURL(editorUrl(state.pipelines[0].id));
+});
+
+test("Quick Run does not create a run when the first local upload fails", async ({
+  page,
+}) => {
+  const state = await mockBackend(page, []);
+  state.failWrites = true;
+  await addLocalPipeline(page, "Local report", runnableLocalPipeline);
+  await page.goto("/editor-v2/Local%20report");
+  await expect(page.locator("[data-editor-ready]")).toBeVisible();
+
+  await page
+    .locator('[data-tracking-id="v2.pipeline_editor.quick_run"]')
+    .click();
+  await expect(page.getByText(/Failed to submit pipeline\./)).toBeVisible();
+  expect(state.writes).toHaveLength(1);
+  expect(state.runSubmissions).toHaveLength(0);
+  await expect(page).toHaveURL("/editor-v2/Local%20report");
+  await expect(page.getByText("Not saved", { exact: true })).toBeVisible();
+});
+
 test("remote omits filters while local keeps its filters and toolbar", async ({
   page,
 }) => {
@@ -264,6 +608,7 @@ test("remote omits filters while local keeps its filters and toolbar", async ({
     page.getByRole("button", { name: "Connect Folder" }),
   ).toBeHidden();
   await expect(page.getByRole("button", { name: "New Folder" })).toBeHidden();
+
   await expect(
     page.getByPlaceholder("Search...", { exact: true }),
   ).toBeHidden();

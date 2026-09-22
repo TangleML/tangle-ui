@@ -20,6 +20,10 @@ import type {
   ComponentReference,
   ComponentSpec,
 } from "./componentSpec";
+import {
+  isPipelineId,
+  SOURCE_PIPELINE_ID_ANNOTATION,
+} from "./pipelineRunSource";
 import { runPreSubmitHooks } from "./runPreSubmitHooks";
 import { componentSpecFromYaml } from "./yaml";
 
@@ -30,6 +34,8 @@ export async function submitPipelineRun(
     taskArguments?: Record<string, ArgumentType>;
     authorizationToken?: string;
     canonicalName?: string;
+    sourcePipelineId?: string;
+    prepareSourcePipeline?: (backendUrl: string) => Promise<string | undefined>;
     onSuccess?: (data: PipelineRun) => void;
     onError?: (error: Error) => void;
   },
@@ -48,6 +54,12 @@ export async function submitPipelineRun(
   }
 
   try {
+    const sourcePipelineId = options?.prepareSourcePipeline
+      ? await options.prepareSourcePipeline(backendUrl)
+      : options?.sourcePipelineId;
+    if (sourcePipelineId !== undefined && !isPipelineId(sourcePipelineId)) {
+      throw new Error("The source pipeline ID is invalid.");
+    }
     const specCopy = structuredClone(componentSpec);
     const componentCache = new Map<string, ComponentSpec>();
     const fullyLoadedSpec = await processComponentSpec(
@@ -90,6 +102,9 @@ export async function submitPipelineRun(
     const payload = {
       annotations: {
         [RUN_SOURCE_ANNOTATION]: "web-app",
+        ...(sourcePipelineId && {
+          [SOURCE_PIPELINE_ID_ANNOTATION]: sourcePipelineId,
+        }),
       },
       root_task: {
         componentRef: {

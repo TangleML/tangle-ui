@@ -19,6 +19,7 @@ export interface PipelineRunFilters {
   created_after?: string; // ISO datetime
   created_before?: string; // ISO datetime
   pipeline_name?: string;
+  saved_pipeline_id?: string;
   annotations?: AnnotationFilter[];
   sort_field?: "created_at" | "pipeline_name";
   sort_direction?: "asc" | "desc";
