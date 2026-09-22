@@ -4,19 +4,25 @@ import { useIsModalSurface } from "@/providers/ModalSurfaceProvider";
 
 const CONTAINED_EVENTS = ["copy", "cut", "paste"] as const;
 
-const openSurfaces = new Set<HTMLElement>();
+const openSurfaces = new Map<HTMLElement, boolean>();
 
 function containEvent(event: Event) {
-  event.stopPropagation();
+  const { target } = event;
+  for (const [surface, modal] of openSurfaces) {
+    if (modal || (target instanceof Node && surface.contains(target))) {
+      event.stopPropagation();
+      return;
+    }
+  }
 }
 
-function openSurface(surface: HTMLElement) {
+function openSurface(surface: HTMLElement, modal: boolean) {
   if (openSurfaces.size === 0) {
     for (const type of CONTAINED_EVENTS) {
       document.documentElement.addEventListener(type, containEvent);
     }
   }
-  openSurfaces.add(surface);
+  openSurfaces.set(surface, modal);
 }
 
 function closeSurface(surface: HTMLElement) {
@@ -28,16 +34,6 @@ function closeSurface(surface: HTMLElement) {
   }
 }
 
-/**
- * Keeps clipboard events inside the page while a modal surface is open, so
- * document- and window-level listeners cannot act on a paste the user meant
- * for the dialog. Attach the returned callback as the surface element's ref.
- *
- * The boundary sits on the bubble phase of the root element, so everything
- * nested below it still runs: the dialog's own handlers, and React's listeners
- * on both the app root and the portal container. Propagation is all that
- * stops, so native pasting into fields is unaffected.
- */
 export function useModalClipboardGuard<
   T extends HTMLElement,
 >(): RefCallback<T> {
@@ -50,8 +46,8 @@ export function useModalClipboardGuard<
         closeSurface(contained.current);
         contained.current = null;
       }
-      if (surface && modal) {
-        openSurface(surface);
+      if (surface) {
+        openSurface(surface, modal);
         contained.current = surface;
       }
     },

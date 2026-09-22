@@ -1,4 +1,4 @@
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import {
@@ -154,6 +154,56 @@ describe("useModalClipboardGuard", () => {
     pasteAt(document.body);
 
     expect(pageListener).toHaveBeenCalledOnce();
+  });
+
+  test("keeps a paste aimed at a non-modal dialog from reaching the page", () => {
+    render(
+      <Dialog open modal={false}>
+        <DialogContent>
+          <DialogTitle>Component details</DialogTitle>
+          <button>Publish</button>
+        </DialogContent>
+      </Dialog>,
+    );
+
+    pasteAt(screen.getByRole("button", { name: "Publish" }));
+
+    expect(pageListener).not.toHaveBeenCalled();
+  });
+
+  test("still delivers a paste to handlers inside a non-modal dialog", () => {
+    const dialogListener = vi.fn();
+    render(
+      <Dialog open modal={false}>
+        <DialogContent>
+          <DialogTitle>Component details</DialogTitle>
+          <input onPaste={dialogListener} />
+        </DialogContent>
+      </Dialog>,
+    );
+
+    pasteAt(field());
+
+    expect(dialogListener).toHaveBeenCalledOnce();
+  });
+
+  test("keeps a background paste from reaching the page behind an alert dialog nested in a non-modal dialog", () => {
+    render(
+      <Dialog open modal={false}>
+        <DialogContent>
+          <DialogTitle>Component details</DialogTitle>
+          <AlertDialog open>
+            <AlertDialogContent>
+              <AlertDialogTitle>Deprecate component</AlertDialogTitle>
+            </AlertDialogContent>
+          </AlertDialog>
+        </DialogContent>
+      </Dialog>,
+    );
+
+    pasteAt(document.body);
+
+    expect(pageListener).not.toHaveBeenCalled();
   });
 
   test.each([
