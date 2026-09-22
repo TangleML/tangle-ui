@@ -24,6 +24,8 @@ export class PipelineFile {
   @observable accessor folder: PipelineFolder;
   @observable.ref accessor redirectedFile: PipelineFile | undefined;
   resolveRedirect?: () => Promise<PipelineFile | undefined>;
+  stageLocalRecovery?: (content: string) => Promise<void>;
+  readLocalRecovery?: () => Promise<string | undefined>;
 
   get canEdit(): boolean {
     return this.redirectedFile?.canEdit ?? true;
@@ -48,7 +50,11 @@ export class PipelineFile {
     await this.redirectedFile?.retry();
   }
   async persistRecovery(content: string): Promise<void> {
-    await this.redirectedFile?.persistRecovery(content);
+    if (this.redirectedFile) {
+      await this.redirectedFile.persistRecovery(content);
+    } else {
+      await this.stageLocalRecovery?.(content);
+    }
   }
 
   private async redirect(): Promise<PipelineFile | undefined> {
@@ -73,10 +79,14 @@ export class PipelineFile {
   async read(): Promise<string> {
     const redirect = await this.redirect();
     if (redirect) return redirect.read();
+    const recovery = await this.readLocalRecovery?.();
+    if (recovery !== undefined) return recovery;
     return this.folder.driver.read(this.storageKey);
   }
 
   async write(content: string): Promise<void> {
+    if (!this.redirectedFile && this.stageLocalRecovery)
+      await this.stageLocalRecovery(content);
     await withPipelineLock(this.id, async () => {
       const redirect = await this.redirect();
       if (redirect) return redirect.write(content);

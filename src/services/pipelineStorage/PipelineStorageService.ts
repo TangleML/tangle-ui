@@ -76,9 +76,14 @@ export class PipelineStorageService {
   }
 
   private manageFile(file: PipelineFile): PipelineFile {
-    if (this.canMigrate(file))
+    if (this.canMigrate(file)) {
       file.resolveRedirect = () =>
         this.remote?.resolveLocal(file.id) ?? Promise.resolve(undefined);
+      file.stageLocalRecovery = (content) =>
+        this.remote?.stageLocal(file, content) ?? Promise.resolve();
+      file.readLocalRecovery = () =>
+        this.remote?.readLocalRecovery(file) ?? Promise.resolve(undefined);
+    }
     return file;
   }
 

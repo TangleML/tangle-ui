@@ -257,29 +257,64 @@ export class RemotePipelineStore {
       const existing = await this.resolveLocal(file.id);
       if (existing) return existing;
       const content = await file.read();
-      const filePath = `pipeline-studio/${file.id}.yaml`;
-      const previous = await remotePipelineRecoveryDb.copies.get(
-        this.recoveryKey(filePath),
+      const initial = this.localRecovery(file, content);
+      // A newer edit can be staged while the local read is in flight.
+      const record = await remotePipelineRecoveryDb.transaction(
+        "rw",
+        remotePipelineRecoveryDb.copies,
+        async () => {
+          const previous = await remotePipelineRecoveryDb.copies.get(
+            initial.key,
+          );
+          const record = previous
+            ? {
+                ...previous,
+                displayName: file.displayName,
+                localStorageKey: file.storageKey,
+              }
+            : initial;
+          await remotePipelineRecoveryDb.copies.put(record);
+          return record;
+        },
       );
-      const record: RemotePipelineRecovery = {
-        ...previous,
-        key: this.recoveryKey(filePath),
-        scope: this.scope,
-        filePath,
-        displayName: file.displayName,
-        content,
-        dirty: true,
-        modifiedAt: Date.now(),
-        localFileId: file.id,
-        localStorageKey: file.storageKey,
-      };
       const remote = new RemotePipelineFile(this, this.folder, record);
-      await remote.write(content);
+      await remote.retry();
       runInAction(() => {
         file.redirectedFile = remote;
       });
       return remote;
     });
+  }
+
+  private localRecovery(
+    file: PipelineFile,
+    content: string,
+  ): RemotePipelineRecovery {
+    const filePath = `pipeline-studio/${file.id}.yaml`;
+    return {
+      key: this.recoveryKey(filePath),
+      scope: this.scope,
+      filePath,
+      displayName: file.displayName,
+      content,
+      dirty: true,
+      modifiedAt: Date.now(),
+      localFileId: file.id,
+      localStorageKey: file.storageKey,
+    };
+  }
+
+  async stageLocal(file: PipelineFile, content: string): Promise<void> {
+    await this.stageRecord(this.localRecovery(file, content), content);
+  }
+
+  async readLocalRecovery(file: PipelineFile): Promise<string | undefined> {
+    const record = await remotePipelineRecoveryDb.copies.get(
+      this.recoveryKey(`pipeline-studio/${file.id}.yaml`),
+    );
+    if (record?.deleted)
+      throw new Error("This pipeline has been deleted from the server.");
+    return record?.dirty ? record.content : undefined;
   }
 
   async read(file: RemotePipelineFile): Promise<string> {
@@ -385,13 +420,19 @@ export class RemotePipelineStore {
   async stage(file: RemotePipelineFile, content: string): Promise<void> {
     if (!file.canEdit)
       throw new Error("Only the owner can change this remote pipeline.");
-    const record = await remotePipelineRecoveryDb.transaction(
+    file.setRecovery(await this.stageRecord(file.recovery, content));
+  }
+
+  private async stageRecord(
+    recovery: RemotePipelineRecovery,
+    content: string,
+  ): Promise<RemotePipelineRecovery> {
+    return remotePipelineRecoveryDb.transaction(
       "rw",
       remotePipelineRecoveryDb.copies,
       async () => {
         const previous =
-          (await remotePipelineRecoveryDb.copies.get(file.recovery.key)) ??
-          file.recovery;
+          (await remotePipelineRecoveryDb.copies.get(recovery.key)) ?? recovery;
         if (previous.deleted)
           throw new Error("This pipeline has been deleted from the server.");
         const next: RemotePipelineRecovery = {
@@ -405,7 +446,6 @@ export class RemotePipelineStore {
         return next;
       },
     );
-    file.setRecovery(record);
   }
 
   private async mergeCompletion(

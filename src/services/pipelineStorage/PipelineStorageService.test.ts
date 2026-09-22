@@ -1,5 +1,6 @@
 import "fake-indexeddb/auto";
 
+import { waitFor } from "@testing-library/react";
 import yaml from "js-yaml";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -13,6 +14,7 @@ import {
 } from "@/services/cloudPipelineService";
 import { pipelineStorageDb } from "@/services/pipelineStorage/db";
 import { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
+import { PipelineFolder } from "@/services/pipelineStorage/PipelineFolder";
 import { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
 import {
   type RemotePipelineRecovery,
@@ -279,4 +281,232 @@ describe("stable pipeline identity", () => {
       vi.mocked(writeCloudPipeline).mock.calls[1][0].existingPipeline?.id,
     ).toBe(CLOUD_ID);
   });
+});
+
+describe("local recovery before remote migration", () => {
+  it("preserves local edits when the cloud account does not have write permission", async () => {
+    const service = remoteService();
+    vi.mocked(getCloudPipelineAccount).mockResolvedValue({
+      id: ACCOUNT,
+      permissions: ["read"],
+    });
+    await service.remote?.list();
+    const original = await service.rootFolder.assignFile(NAME);
+    const file = await service.findPipelineById(original.id);
+    const localWrite = vi.spyOn(service.rootFolder.driver, "write");
+    const content = yaml.dump({
+      ...SPEC,
+      description: "Local draft without cloud access",
+    });
+
+    expect(file.canEdit).toBe(true);
+    await file.persistRecovery(content);
+    await file.write(content);
+    await expect(service.migratePipeline(file)).rejects.toThrow(
+      "Only the owner",
+    );
+
+    await expect(file.read()).resolves.toBe(content);
+    expect(localWrite).toHaveBeenCalledWith(NAME, content);
+    expect((await service.remote?.records())?.[0]).toMatchObject({
+      content,
+      dirty: true,
+      localFileId: file.id,
+    });
+    expect(file.storageKind).toBe("local");
+    expect(writeCloudPipeline).not.toHaveBeenCalled();
+  });
+
+  it("replaces a failed migration draft when directly saving newer local content", async () => {
+    const service = remoteService();
+    const original = await service.rootFolder.assignFile(NAME);
+    const file = await service.findPipelineById(original.id);
+    await file.persistRecovery(CONTENT);
+    vi.mocked(writeCloudPipeline).mockRejectedValueOnce(new Error("Offline"));
+    await expect(service.migratePipeline(file)).rejects.toThrow("Offline");
+    const content = yaml.dump({
+      ...SPEC,
+      description: "Saved after the failure",
+    });
+
+    await file.write(content);
+
+    await expect(file.read()).resolves.toBe(content);
+    await service.migratePipeline(file);
+    expect(vi.mocked(writeCloudPipeline).mock.calls[1][0]).toMatchObject({
+      componentSpec: { description: "Saved after the failure" },
+    });
+  });
+
+  it("does not replace newer staged edits after a slow local write finishes", async () => {
+    const service = remoteService();
+    const original = await service.rootFolder.assignFile(NAME);
+    const file = await service.findPipelineById(original.id);
+    const content = yaml.dump({
+      ...SPEC,
+      description: "Edited during local save",
+    });
+    let finishWrite!: () => void;
+    const localWrite = vi
+      .spyOn(service.rootFolder.driver, "write")
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          finishWrite = resolve;
+        }),
+      );
+
+    const writing = file.write(CONTENT);
+    await waitFor(() => expect(localWrite).toHaveBeenCalledTimes(1));
+    await file.persistRecovery(content);
+    finishWrite();
+    await writing;
+
+    await expect(file.read()).resolves.toBe(content);
+    await service.migratePipeline(file);
+    expect(vi.mocked(writeCloudPipeline).mock.calls[0][0]).toMatchObject({
+      componentSpec: { description: "Edited during local save" },
+    });
+  });
+
+  it("recovers updated content after a local rename without changing scope or upload identity", async () => {
+    const service = remoteService();
+    const original = await service.rootFolder.assignFile(NAME);
+    const file = await service.findPipelineById(original.id);
+    await file.persistRecovery(CONTENT);
+    const firstKey = (await service.remote?.records())?.[0].key;
+    const name = "Renamed before uploading";
+    const content = yaml.dump({
+      ...SPEC,
+      name,
+      description: "Latest local draft",
+    });
+
+    await file.rename(name);
+    await file.write(content);
+    const reopened = await remoteService().findPipelineById(file.id);
+
+    expect(reopened.displayName).toBe(name);
+    await expect(reopened.read()).resolves.toBe(content);
+    await expect(
+      remoteService("another-account").remote?.readLocalRecovery(file),
+    ).resolves.toBeUndefined();
+    await service.migratePipeline(file);
+    expect((await service.remote?.records())?.[0]).toMatchObject({
+      key: firstKey,
+      scope: SCOPE,
+      filePath: `pipeline-studio/${original.id}.yaml`,
+      localStorageKey: name,
+      content,
+    });
+    expect(vi.mocked(writeCloudPipeline).mock.calls[0][0]).toMatchObject({
+      componentSpec: { name, description: "Latest local draft" },
+    });
+  });
+
+  it("durably stages edits and restores them in a new service without uploading", async () => {
+    const service = remoteService();
+    await pipelineStorageDb.pipeline_registry.put({
+      id: LOCAL_ID,
+      storageKey: NAME,
+      folderId: ROOT_FOLDER_ID,
+    });
+    const file = await service.findPipelineById(LOCAL_ID);
+    const content = yaml.dump({
+      ...SPEC,
+      description: "Before the upload timer",
+    });
+    const localWrite = vi.spyOn(service.rootFolder.driver, "write");
+
+    await file.persistRecovery(content);
+    const reopened = await remoteService().findPipelineById(LOCAL_ID);
+
+    await expect(reopened.read()).resolves.toBe(content);
+    expect(reopened.storageKind).toBe("local");
+    expect(await service.filterVisibleLocalPipelines([file])).toEqual([file]);
+    expect((await service.remote?.records())?.[0]).toMatchObject({
+      content,
+      dirty: true,
+      localFileId: LOCAL_ID,
+      revision: 1,
+    });
+    expect(localWrite).not.toHaveBeenCalled();
+    expect(writeCloudPipeline).not.toHaveBeenCalled();
+    expect(getCloudPipelineAccount).not.toHaveBeenCalled();
+  });
+
+  it("preserves edits during a slow first upload and retries the newest draft", async () => {
+    const service = remoteService();
+    const original = await service.rootFolder.assignFile(NAME);
+    const file = await service.findPipelineById(original.id);
+    const content = yaml.dump({
+      ...SPEC,
+      description: "Edited while uploading",
+    });
+    await file.persistRecovery(CONTENT);
+    let finishSave!: (saved: CloudPipeline) => void;
+    vi.mocked(writeCloudPipeline).mockReturnValueOnce(
+      new Promise((resolve) => {
+        finishSave = resolve;
+      }),
+    );
+
+    const migration = service.migratePipeline(file);
+    await waitFor(() => expect(writeCloudPipeline).toHaveBeenCalledTimes(1));
+    await file.persistRecovery(content);
+
+    expect(file.storageKind).toBe("local");
+    expect((await service.remote?.records())?.[0]).toMatchObject({
+      content,
+      dirty: true,
+    });
+    await expect(service.remote?.readLocalRecovery(file)).resolves.toBe(
+      content,
+    );
+
+    finishSave(pipeline({ file_path: `pipeline-studio/${file.id}.yaml` }));
+    await migration;
+
+    expect(file.storageKind).toBe("remote");
+    expect(file.saveError).toBe("Not saved to server");
+    await file.retry();
+    expect(vi.mocked(writeCloudPipeline).mock.calls[1][0]).toMatchObject({
+      componentSpec: { description: "Edited while uploading" },
+      existingPipeline: { id: CLOUD_ID },
+    });
+    expect(file.saveError).toBeUndefined();
+  });
+
+  it.each(["local-only", "google-drive", "local-fs"])(
+    "does not add recovery writes to %s files",
+    async (type) => {
+      const service =
+        type === "local-only" ? new PipelineStorageService() : remoteService();
+      const folder = new PipelineFolder({
+        id: "unmanaged",
+        name: "Unmanaged",
+        parentId: null,
+        driver: {
+          type: type === "local-only" ? "root-indexdb" : type,
+          allowsMoveIn: true,
+          allowsMoveOut: true,
+          list: vi.fn().mockResolvedValue([]),
+          read: vi.fn().mockResolvedValue(CONTENT),
+          write: vi.fn().mockResolvedValue(undefined),
+          rename: vi.fn().mockResolvedValue(undefined),
+          delete: vi.fn().mockResolvedValue(undefined),
+          hasKey: vi.fn().mockResolvedValue(true),
+        },
+      });
+      const file = new PipelineFile({ id: LOCAL_ID, storageKey: NAME, folder });
+      await service.filterVisibleLocalPipelines([file]);
+
+      await file.persistRecovery("Changed");
+
+      expect(file.stageLocalRecovery).toBeUndefined();
+      expect(file.readLocalRecovery).toBeUndefined();
+      expect(await remotePipelineRecoveryDb.copies.count()).toBe(0);
+      expect(folder.driver.write).not.toHaveBeenCalled();
+      await expect(file.read()).resolves.toBe(CONTENT);
+    },
+  );
 });
