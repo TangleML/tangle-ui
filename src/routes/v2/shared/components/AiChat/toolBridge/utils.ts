@@ -29,6 +29,7 @@ const ANCHOR_GAP = 140;
 
 export interface BridgeDeps {
   getSpec: () => ComponentSpec | null;
+  getActiveSpec?: () => ComponentSpec | null;
   getActiveSubgraphPath: () => string[];
   getActiveSubgraphTaskId: () => string | undefined;
   getBackendUrl?: () => string;
@@ -44,6 +45,15 @@ export function requireSpec(deps: BridgeDeps): ComponentSpec {
     );
   }
   return spec;
+}
+
+/**
+ * The graph the user is looking at, which is what the pipeline details panel
+ * reads and writes. Falls back to the root so a bridge without navigation
+ * behaves as it did before.
+ */
+export function requireActiveSpec(deps: BridgeDeps): ComponentSpec {
+  return deps.getActiveSpec?.() ?? requireSpec(deps);
 }
 
 export function requireBackendUrl(deps: BridgeDeps): string {

@@ -90,6 +90,7 @@ export const AiChatContent = observer(function AiChatContent({
   const [bridge] = useState(() =>
     createBridge({
       getSpec: () => navigation.rootSpec,
+      getActiveSpec: () => navigation.activeSpec,
       getActiveSubgraphPath: () =>
         navigation.navigationPath.slice(1).map((e) => e.displayName),
       getActiveSubgraphTaskId: () => navigation.parentContext?.taskId,

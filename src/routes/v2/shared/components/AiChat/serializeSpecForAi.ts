@@ -107,6 +107,7 @@ export interface AiSpec {
 export interface SerializeSpecOptions {
   activeSubgraphPath?: string[];
   activeSubgraphTaskId?: string;
+  activeSpec?: ComponentSpec;
 }
 
 function pickDefined<T extends object>(obj: T): T {
@@ -216,20 +217,24 @@ const toPlainJson = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
 export function serializeSpecForAi(
   spec: ComponentSpec,
-  { activeSubgraphPath = [], activeSubgraphTaskId }: SerializeSpecOptions = {},
+  {
+    activeSubgraphPath = [],
+    activeSubgraphTaskId,
+    activeSpec = spec,
+  }: SerializeSpecOptions = {},
 ): AiSpec {
   const insideSubgraph = activeSubgraphPath.length > 0;
   const stickyNotes = getFlexNodes(spec).map(serializeStickyNote);
   const positions = resolveEntityPositions(spec);
-  const tags = spec.annotations.get(PIPELINE_TAGS_ANNOTATION);
+  const tags = activeSpec.annotations.get(PIPELINE_TAGS_ANNOTATION);
   return toPlainJson(
     pickDefined({
       name: spec.name,
       description: spec.description || undefined,
-      notes: spec.annotations.get(PIPELINE_NOTES_ANNOTATION) || undefined,
+      notes: activeSpec.annotations.get(PIPELINE_NOTES_ANNOTATION) || undefined,
       tags: tags.length > 0 ? tags : undefined,
       runNameTemplate:
-        spec.annotations.get(RUN_NAME_TEMPLATE_ANNOTATION) || undefined,
+        activeSpec.annotations.get(RUN_NAME_TEMPLATE_ANNOTATION) || undefined,
       inputs: spec.inputs.map((input) =>
         serializeInput(input, positions.get(input.$id)),
       ),

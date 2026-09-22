@@ -141,7 +141,7 @@ export function createCsomTools(bridge: ToolBridgeApi) {
   const setPipelineNotes = tool({
     name: "set_pipeline_notes",
     description:
-      "Set the top-level pipeline's notes — a free-text field for whatever someone needs to know about this pipeline, separate from the one-line description. It is the user's own document: read the `notes` field in `get_pipeline_state` and preserve what is there, appending rather than replacing, unless they asked you to rewrite it. Pass an empty string to clear it.",
+      "Set the notes on the graph the user is currently viewing — a free-text field for whatever someone needs to know about it, separate from the one-line description. Notes belong to a graph, so this writes the subgraph's notes while the user is inside one, matching what the details panel shows them; `get_pipeline_state` reports that same field. It is the user's own document: read `notes` and preserve what is there, appending rather than replacing, unless they asked you to rewrite it. Pass an empty string to clear it.",
     parameters: z.object({
       notes: z.string().describe("Full new notes text; replaces the existing"),
     }),
@@ -151,7 +151,7 @@ export function createCsomTools(bridge: ToolBridgeApi) {
   const setPipelineTags = tool({
     name: "set_pipeline_tags",
     description:
-      "Set the top-level pipeline's tags, used to group and find pipelines. This replaces the whole list, so read `tags` from `get_pipeline_state` first and pass the existing ones along with any you add. Pass an empty array to clear them.",
+      "Set the tags on the graph the user is currently viewing, used to group and find pipelines. This replaces the whole list, so read `tags` from `get_pipeline_state` first and pass the existing ones along with any you add. A tag cannot contain a comma, no tag may repeat, and a graph takes at most 10; the call is refused rather than half-applied. Pass an empty array to clear them.",
     parameters: z.object({
       tags: z
         .array(z.string())
@@ -163,7 +163,7 @@ export function createCsomTools(bridge: ToolBridgeApi) {
   const setRunNameTemplate = tool({
     name: "set_run_name_template",
     description:
-      "Set the template that names each run of this pipeline, so runs are identifiable in the run list instead of all sharing the pipeline's name. Placeholders are `${arguments.<input name>}` for a pipeline input's value, `${date.timestamp}` / `${date.short}` / `${date.long}`, and `${annotations.<key>}`. An input name must match a real pipeline input exactly. Pass an empty string to clear the template.",
+      "Set the template that names each run, so runs are identifiable in the run list instead of all sharing the pipeline's name. Applies to the graph the user is currently viewing, like the details panel it mirrors. Placeholders are `${arguments.<input name>}` for a pipeline input's value and `${date.timestamp}` / `${date.short}` / `${date.long}`. An input name must match a real pipeline input exactly — anything that cannot be resolved is left in the run name verbatim, braces and all, so check `inputs` before writing one. Pass an empty string to clear the template.",
     parameters: z.object({
       template: z
         .string()

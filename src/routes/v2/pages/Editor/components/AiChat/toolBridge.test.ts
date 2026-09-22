@@ -191,6 +191,25 @@ function makeNestedBridge(extraInnerTasks?: Record<string, unknown>) {
   return { bridge, spec, undo, inner: preprocess.subgraphSpec };
 }
 
+function makeInnerActiveBridge() {
+  const spec = new YamlDeserializer(new IncrementingIdGenerator()).deserialize(
+    nestedPipelineYaml(),
+  );
+  const preprocess = spec.tasks.find((t) => t.name === "Preprocess");
+  if (!preprocess?.subgraphSpec) {
+    throw new Error("Preprocess did not deserialize as a subgraph");
+  }
+  const inner = preprocess.subgraphSpec;
+  const bridge = createEditorToolBridge({
+    getSpec: () => spec,
+    getActiveSpec: () => inner,
+    getActiveSubgraphPath: () => ["Preprocess"],
+    getActiveSubgraphTaskId: () => preprocess.$id,
+    undo: new RecordingUndo(),
+  });
+  return { bridge, spec, inner };
+}
+
 function taskId(spec: ComponentSpec, name: string): string {
   const task = spec.tasks.find((t) => t.name === name);
   if (!task) throw new Error(`No task named ${name}`);
@@ -350,6 +369,43 @@ describe("createEditorToolBridge", () => {
       expect(state.notes).toBe("read me");
       expect(state.tags).toEqual(["ranking"]);
       expect(state.runNameTemplate).toBe("${date.short}");
+    });
+
+    it("reads and writes the notes of the subgraph the user is inside", async () => {
+      const { bridge, spec, inner } = makeInnerActiveBridge();
+      inner.annotations.set(PIPELINE_NOTES_ANNOTATION, "inner notes");
+
+      expect((await bridge.getPipelineState()).notes).toBe("inner notes");
+
+      await bridge.setPipelineNotes("inner notes, extended");
+
+      expect(inner.annotations.get(PIPELINE_NOTES_ANNOTATION)).toBe(
+        "inner notes, extended",
+      );
+      expect(spec.annotations.has(PIPELINE_NOTES_ANNOTATION)).toBe(false);
+    });
+
+    it("refuses a tag list the tags UI could not have produced", async () => {
+      const { bridge, spec } = makeBridge();
+      await bridge.setPipelineTags(["ranking"]);
+
+      const comma = await bridge.setPipelineTags(["ranking", "a,b"]);
+      expect(comma.success).toBe(false);
+      expect(comma.error).toContain("comma");
+
+      const duplicate = await bridge.setPipelineTags(["ranking", "ranking"]);
+      expect(duplicate.success).toBe(false);
+      expect(duplicate.error).toContain("more than once");
+
+      const tooMany = await bridge.setPipelineTags(
+        Array.from({ length: 11 }, (_, i) => `tag-${i}`),
+      );
+      expect(tooMany.success).toBe(false);
+      expect(tooMany.error).toContain("at most 10");
+
+      expect(spec.annotations.get(PIPELINE_TAGS_ANNOTATION)).toEqual([
+        "ranking",
+      ]);
     });
   });
 

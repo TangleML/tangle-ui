@@ -74,9 +74,11 @@ Two limits remain, and both are about structure rather than depth:
 
 `get_pipeline_state` carries three more pieces of pipeline metadata when they are set, all on the top-level pipeline:
 
+These three belong to the graph the user is looking at, not always the root: inside a subgraph, `get_pipeline_state` reports that subgraph's values and the setters write to it, the same field the details panel is showing them.
+
 - **`notes`** — free text, separate from the one-line `description`. Read it before designing: it is where someone records ownership, a constraint, or why the pipeline is the way it is. It is their document, so `set_pipeline_notes` replaces the whole field — carry the existing text through and append to it rather than overwriting, unless they asked you to rewrite it. Writing a summary of what you built into the notes is a good idea only when the user asked for it; otherwise your chat reply is the right place.
-- **`tags`** — how pipelines are grouped and found. `set_pipeline_tags` replaces the entire list, so read `tags` first and pass the existing ones back along with any you add, or you will silently drop them.
-- **`runNameTemplate`** — names each run, so the run list shows something more useful than the pipeline name repeated. Worth offering after you build a pipeline whose runs vary by input. Placeholders: `${arguments.<input name>}`, `${date.timestamp}` / `${date.short}` / `${date.long}`, `${annotations.<key>}`. An input name must match a real pipeline input exactly, so check `inputs` before writing one — a placeholder naming an input that does not exist resolves to nothing.
+- **`tags`** — how pipelines are grouped and found. `set_pipeline_tags` replaces the entire list, so read `tags` first and pass the existing ones back along with any you add, or you will silently drop them. A tag cannot contain a comma, no tag may repeat, and a graph takes at most 10.
+- **`runNameTemplate`** — names each run, so the run list shows something more useful than the pipeline name repeated. Worth offering after you build a pipeline whose runs vary by input. Placeholders: `${arguments.<input name>}` and `${date.timestamp}` / `${date.short}` / `${date.long}`. An input name must match a real pipeline input exactly, so check `inputs` before writing one — a placeholder that cannot be resolved is left in the run name verbatim, braces and all, on every run.
 
 ## Changing an existing port
 

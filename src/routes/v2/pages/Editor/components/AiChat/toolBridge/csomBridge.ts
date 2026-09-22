@@ -70,6 +70,7 @@ import type {
 } from "@/routes/v2/shared/components/AiChat/toolBridge/utils";
 import {
   computeNextPosition,
+  requireActiveSpec,
   requireSpec,
   resolveNoteAnchor,
   toValidationResult,
@@ -83,6 +84,7 @@ import {
   describeStickyNoteLocation,
   explainNameCollision,
   explainNotASubgraph,
+  explainTagProblem,
   explainUnpickableColor,
   resolveArgumentValue,
   resolveConnectable,
@@ -194,6 +196,7 @@ export function createCsomBridgeHandlers(deps: CsomBridgeDeps): CsomHandlers {
       return serializeSpecForAi(requireSpec(deps), {
         activeSubgraphPath: deps.getActiveSubgraphPath(),
         activeSubgraphTaskId: deps.getActiveSubgraphTaskId(),
+        activeSpec: requireActiveSpec(deps),
       });
     },
 
@@ -210,19 +213,27 @@ export function createCsomBridgeHandlers(deps: CsomBridgeDeps): CsomHandlers {
     },
 
     async setPipelineNotes(notes) {
-      updatePipelineNotes(deps.undo, requireSpec(deps), notes || undefined);
+      updatePipelineNotes(
+        deps.undo,
+        requireActiveSpec(deps),
+        notes || undefined,
+      );
       return { success: true };
     },
 
     async setPipelineTags(tags) {
-      updatePipelineTags(deps.undo, requireSpec(deps), tags);
+      const problem = explainTagProblem(tags);
+      if (problem) {
+        return { success: false, error: `Nothing was changed. ${problem}` };
+      }
+      updatePipelineTags(deps.undo, requireActiveSpec(deps), tags);
       return { success: true };
     },
 
     async setRunNameTemplate(template) {
       updateRunNameTemplate(
         deps.undo,
-        requireSpec(deps),
+        requireActiveSpec(deps),
         template || undefined,
       );
       return { success: true };
