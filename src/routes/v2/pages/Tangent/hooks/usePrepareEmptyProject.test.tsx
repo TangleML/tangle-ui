@@ -5,7 +5,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createNewPipeline } from "@/routes/v2/pages/Editor/components/EditorMenuBar/components/fileMenu.actions";
 import type { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
-import { availablePipelineName } from "@/services/localPipelines/localPipelinesService";
 import type {
   Project,
   ProjectResourceSummary,
@@ -31,10 +30,6 @@ vi.mock("@/services/pipelineStorage/PipelineStorageProvider", () => ({
 
 vi.mock("@/routes/v2/shared/store/SharedStoreContext", () => ({
   useSharedStores: () => ({ windows }),
-}));
-
-vi.mock("@/services/localPipelines/localPipelinesService", () => ({
-  availablePipelineName: vi.fn(),
 }));
 
 vi.mock(
@@ -119,7 +114,6 @@ describe("usePrepareEmptyProject", () => {
   beforeEach(() => {
     given();
     windows.getWindowById.mockReturnValue({ minimize });
-    vi.mocked(availablePipelineName).mockResolvedValue("Churn model");
     vi.mocked(createNewPipeline).mockResolvedValue({
       id: "file-1",
       storageKey: "Churn model",
@@ -167,14 +161,13 @@ describe("usePrepareEmptyProject", () => {
     expect(store.startSession).toHaveBeenCalledWith(undefined);
   });
 
-  it("creates a pipeline named after the project and attaches it", async () => {
+  it("creates a pipeline the ordinary way and attaches it", async () => {
     const store = makeStore();
 
     prepare(store);
 
     await waitFor(() => expect(createNewPipeline).toHaveBeenCalled());
-    expect(availablePipelineName).toHaveBeenCalledWith("Churn model");
-    expect(createNewPipeline).toHaveBeenCalledWith(storage, "Churn model");
+    expect(createNewPipeline).toHaveBeenCalledWith(storage);
     expect(createResource).toHaveBeenCalledWith(
       expect.objectContaining({ entity: "document", name: "Churn model" }),
     );
@@ -309,7 +302,6 @@ describe("usePrepareEmptyProject", () => {
     await waitFor(() =>
       expect(store.startSession).toHaveBeenCalledWith({
         prompt: "Fix run 7",
-        name: "Debug session",
       }),
     );
     await waitFor(() =>
