@@ -1,31 +1,20 @@
 import { autorun, reaction } from "mobx";
 import type { UndoStore as MobxUndoStore } from "mobx-keystone";
-import { isRootStore, unregisterRootStore } from "mobx-keystone";
+import {
+  isRootStore,
+  readonlyMiddleware,
+  unregisterRootStore,
+} from "mobx-keystone";
 import { useEffect, useRef } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
-import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
-import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
-import type { PipelineRef } from "@/services/pipelineStorage/types";
-
-/**
- * todo: make public and export to re-use
- */
-async function resolvePipelineFile(
-  ref: PipelineRef,
-  storage: PipelineStorageService,
-) {
-  if (ref.fileId) {
-    return storage.findPipelineById(ref.fileId);
-  }
-  return storage.resolvePipelineByName(ref.name);
-}
+import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 
 export function useSpecLifecycle(
   rootSpec: ComponentSpec,
-  pipelineRef: PipelineRef,
+  file: PipelineFile,
   restoredUndoStore?: MobxUndoStore,
 ) {
   const { editor, navigation, windows: windowStore } = useSharedStores();
@@ -34,7 +23,6 @@ export function useSpecLifecycle(
     autoSave,
     pipelineFile: pipelineFileStore,
   } = useEditorSession();
-  const storage = usePipelineStorage();
   const prevTaskEntityIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -42,17 +30,12 @@ export function useSpecLifecycle(
 
     editor.resetState();
     navigation.initNavigation(rootSpec);
-    undo.init(rootSpec, restoredUndoStore);
-
-    const saveName = pipelineRef.name ?? rootSpec.name;
-
-    void (async () => {
-      if (saveName) {
-        const file = await resolvePipelineFile(pipelineRef, storage);
-        pipelineFileStore.init(file ?? null);
-        autoSave.init(rootSpec, saveName);
-      }
-    })();
+    pipelineFileStore.init(file);
+    if (file.canEdit) {
+      undo.init(rootSpec, restoredUndoStore);
+      autoSave.init(rootSpec);
+    }
+    const readOnly = file.canEdit ? undefined : readonlyMiddleware(rootSpec);
 
     prevTaskEntityIdsRef.current = new Set(rootSpec.tasks.map((t) => t.$id));
 
@@ -84,6 +67,7 @@ export function useSpecLifecycle(
       disposeTaskWatcher();
       disposeNavGuard();
       autoSave.dispose();
+      readOnly?.dispose();
       pipelineFileStore.dispose();
       editor.clearSelection();
       navigation.clearNavigation();
@@ -94,7 +78,7 @@ export function useSpecLifecycle(
     };
   }, [
     rootSpec,
-    pipelineRef,
+    file,
     restoredUndoStore,
     editor,
     navigation,
@@ -102,6 +86,5 @@ export function useSpecLifecycle(
     undo,
     autoSave,
     pipelineFileStore,
-    storage,
   ]);
 }

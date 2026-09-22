@@ -1,22 +1,29 @@
 import "@xyflow/react/dist/style.css";
 import "@/styles/editor.css";
 
-import { useParams, useSearch } from "@tanstack/react-router";
+import {
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearch,
+} from "@tanstack/react-router";
 import { ReactFlowProvider } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 import { ComponentEditorProvider } from "@/components/shared/ComponentEditor/ComponentEditorProvider";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { InlineStack } from "@/components/ui/layout";
+import { addRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import { ComponentLibraryProvider } from "@/providers/ComponentLibraryProvider";
 import { ForcedSearchProvider } from "@/providers/ComponentLibraryProvider/ForcedSearchProvider";
 import { DialogProvider } from "@/providers/DialogProvider/DialogProvider";
 import { useTourMode } from "@/providers/TourProvider/TourModeContext";
 import { TourSaveExploreDialog } from "@/providers/TourProvider/TourSaveExploreDialog";
 import { TourSecretsDialog } from "@/providers/TourProvider/TourSecretsDialog";
+import { getEditorLocation } from "@/routes/editorRoutes";
 import { AiChatStoreProvider } from "@/routes/v2/shared/components/AiChat/AiChatStoreContext";
 import { useCanvasControlsWindow } from "@/routes/v2/shared/components/MiniMap/useCanvasControlsWindow";
 import { useDockAreaAccordion } from "@/routes/v2/shared/hooks/useDockAreaAccordion";
@@ -34,6 +41,7 @@ import {
   TOUR_WINDOW_LAYOUT_ID,
   useWindowPersistence,
 } from "@/routes/v2/shared/windows/windowPersistence";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import type { PipelineRef } from "@/services/pipelineStorage/types";
 
 import { createEditorAgentWorker } from "./components/AiChat/editorAgentWorker";
@@ -61,10 +69,25 @@ import { useSpecLifecycle } from "./hooks/useSpecLifecycle";
 import { useTipOfTheDayWindow } from "./hooks/useTipOfTheDayWindow";
 import { useUndoRedoKeyboard } from "./hooks/useUndoRedoKeyboard";
 import { editorRegistry } from "./nodes";
-import { EditorSessionProvider } from "./store/EditorSessionContext";
+import { readOnlyEditorRegistry } from "./nodes/readOnlyEditorRegistry";
+import {
+  EditorSessionProvider,
+  useEditorSession,
+} from "./store/EditorSessionContext";
 
 interface PipelineEditorProps {
   pipelineRef: PipelineRef;
+  routeRef: PipelineRef;
+}
+
+declare module "@tanstack/history" {
+  interface HistoryState {
+    editorPipelineSession?: {
+      scope: string;
+      pipelineName: string;
+      pipelineRef: PipelineRef;
+    };
+  }
 }
 
 const PipelineEditorSkeleton = () => (
@@ -72,39 +95,84 @@ const PipelineEditorSkeleton = () => (
 );
 
 const PipelineEditor = withSuspenseWrapper(
-  observer(({ pipelineRef }: PipelineEditorProps) => {
+  observer(({ pipelineRef, routeRef }: PipelineEditorProps) => {
+    const session = useEditorSession();
+    const storage = usePipelineStorage();
     const {
-      data: { spec: rootSpec, restoredUndoStore },
-    } = useLoadSpec(pipelineRef);
+      data: { spec: rootSpec, file, restoredUndoStore },
+    } = useLoadSpec(pipelineRef, session.id);
     const { navigation } = useSharedStores();
+    const navigate = useNavigate();
     const tourMode = useTourMode();
+    const referenceId = file.referenceId;
+    const displayName = file.displayName;
+    const storageKind = file.storageKind;
+
+    useEffect(() => {
+      if (tourMode) return;
+      addRecentlyViewed({
+        type: "pipeline",
+        id: referenceId,
+        name: displayName,
+      });
+    }, [referenceId, displayName, tourMode]);
+
+    useEffect(() => {
+      if (tourMode || storageKind !== "remote") return;
+      const location = getEditorLocation(file);
+      if (routeRef.name === location.params.pipelineName && !routeRef.fileId)
+        return;
+      void navigate({
+        ...location,
+        replace: true,
+        resetScroll: false,
+        // A new address for this document must not recreate its model or undo history.
+        state: {
+          editorPipelineSession: {
+            scope: storage.scope,
+            pipelineName: location.params.pipelineName,
+            pipelineRef,
+          },
+        },
+      });
+    }, [
+      navigate,
+      file,
+      pipelineRef,
+      routeRef.name,
+      routeRef.fileId,
+      referenceId,
+      storageKind,
+      storage.scope,
+      tourMode,
+    ]);
 
     useWindowPersistence(tourMode ? TOUR_WINDOW_LAYOUT_ID : "editor");
     useDockAreaAccordion();
-    useSpecLifecycle(rootSpec, pipelineRef, restoredUndoStore);
+    useSpecLifecycle(rootSpec, file, restoredUndoStore);
     useSelectionWindowSync();
     usePropertiesWindowPositioning();
     useLinkedWindowCleanup();
 
     const componentSearchV2Enabled = useFlagValue("component-search-v2");
-    useComponentLibraryWindow(!componentSearchV2Enabled);
+    useComponentLibraryWindow(file.canEdit && !componentSearchV2Enabled);
     usePipelineDetailsWindow();
     usePipelineTreeWindow();
-    useHistoryWindow();
+    useHistoryWindow(file.canEdit);
     useCanvasControlsWindow("v2.pipeline_canvas");
     useRecentRunsWindow();
     useRunsAndSubmissionWindow();
-    useUndoRedoKeyboard();
+    useUndoRedoKeyboard(file.canEdit);
     useFocusMode();
     useShortcutListener();
     useEditorEscapeShortcut();
-    useDebugPanelWindow();
+    useDebugPanelWindow(file.canEdit);
     useTipOfTheDayWindow();
 
     const aiEnabled = useFlagValue("ai-assistant");
-    useAiChatWindow(aiEnabled);
+    useAiChatWindow(aiEnabled && file.canEdit);
 
-    useComponentSearchV2Window(componentSearchV2Enabled);
+    useComponentSearchV2Window(componentSearchV2Enabled && file.canEdit);
     useSeedInitialDockLayoutFromPreset(componentSearchV2Enabled);
 
     const activeSpec = navigation.activeSpec;
@@ -112,7 +180,10 @@ const PipelineEditor = withSuspenseWrapper(
     if (!activeSpec) return null;
 
     return (
-      <NodeRegistryProvider registry={editorRegistry}>
+      <NodeRegistryProvider
+        key={file.canEdit ? "editable" : "readonly"}
+        registry={file.canEdit ? editorRegistry : readOnlyEditorRegistry}
+      >
         <SpecProvider spec={activeSpec}>
           <InlineStack
             className="flex-1 min-h-0 w-full"
@@ -142,7 +213,13 @@ const PipelineEditor = withSuspenseWrapper(
   PipelineEditorSkeleton,
 );
 
-function EditorV2Content({ pipelineRef }: { pipelineRef: PipelineRef | null }) {
+function EditorV2Content({
+  pipelineRef,
+  routeRef,
+}: {
+  pipelineRef: PipelineRef | null;
+  routeRef: PipelineRef | null;
+}) {
   const { navigation } = useSharedStores();
   const tourMode = useTourMode();
 
@@ -154,7 +231,10 @@ function EditorV2Content({ pipelineRef }: { pipelineRef: PipelineRef | null }) {
   if (pipelineRef) {
     body = (
       <DriverPermissionGate pipelineRef={pipelineRef}>
-        <PipelineEditor pipelineRef={pipelineRef} />
+        <PipelineEditor
+          pipelineRef={pipelineRef}
+          routeRef={routeRef ?? pipelineRef}
+        />
       </DriverPermissionGate>
     );
   } else if (tourMode) {
@@ -186,6 +266,8 @@ export function EditorV2({
   pipelineRef?: PipelineRef | null;
 } = {}) {
   const params = useParams({ strict: false });
+  const storage = usePipelineStorage();
+  const locationState = useLocation({ select: (location) => location.state });
   const search = useSearch({ strict: false });
   const fileId =
     "fileId" in search && typeof search.fileId === "string"
@@ -197,23 +279,49 @@ export function EditorV2({
       ? params.pipelineName
       : null;
 
-  const pipelineRef: PipelineRef | null =
+  const routeRef: PipelineRef | null =
     pipelineRefProp !== undefined
       ? pipelineRefProp
       : pipelineName
         ? { name: pipelineName, fileId }
         : null;
+  const [activePipeline, setActivePipeline] = useState({
+    scope: storage.scope,
+    pipelineRef: routeRef,
+  });
+  const preservedSession = locationState.editorPipelineSession;
+  const pipelineRef =
+    pipelineRefProp === undefined &&
+    preservedSession?.scope === storage.scope &&
+    activePipeline.scope === storage.scope &&
+    activePipeline.pipelineRef?.name === preservedSession.pipelineRef.name &&
+    activePipeline.pipelineRef?.fileId ===
+      preservedSession.pipelineRef.fileId &&
+    preservedSession.pipelineName === routeRef?.name &&
+    !routeRef?.fileId
+      ? preservedSession.pipelineRef
+      : routeRef;
+  // History aliases only preserve the currently mounted document, never a later reopening.
+  if (
+    activePipeline.scope !== storage.scope ||
+    activePipeline.pipelineRef?.name !== pipelineRef?.name ||
+    activePipeline.pipelineRef?.fileId !== pipelineRef?.fileId
+  ) {
+    setActivePipeline({ scope: storage.scope, pipelineRef });
+  }
 
   return (
     <div className="h-full w-full flex flex-col bg-slate-100 dark:bg-background select-none">
-      <SharedStoreProvider>
+      <SharedStoreProvider
+        key={`${storage.scope}:${pipelineRef?.fileId ?? pipelineRef?.name ?? "empty"}`}
+      >
         <EditorSessionProvider>
           <AiChatStoreProvider
             createWorker={createEditorAgentWorker}
             context={{ mode: "editor" }}
           >
             <DialogProvider>
-              <EditorV2Content pipelineRef={pipelineRef} />
+              <EditorV2Content pipelineRef={pipelineRef} routeRef={routeRef} />
             </DialogProvider>
           </AiChatStoreProvider>
         </EditorSessionProvider>

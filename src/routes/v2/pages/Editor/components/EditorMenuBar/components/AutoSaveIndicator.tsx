@@ -1,83 +1,98 @@
 import { observer } from "mobx-react-lite";
-import type { ReactNode } from "react";
 
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
+import { InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
-import { cn } from "@/lib/utils";
+import { Text } from "@/components/ui/typography";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import { tracking } from "@/utils/tracking";
 
-const LAYER_BASE_CLASS =
-  "absolute inset-0 inline-flex will-change-[opacity] [transform:translateZ(0)]";
-
-function SavingLayer({ children }: { children: ReactNode }) {
-  return (
-    <span
-      className={cn(
-        LAYER_BASE_CLASS,
-        "opacity-0 transition-opacity duration-150 ease-out delay-[600ms]",
-        "group-data-[saving=true]:opacity-100 group-data-[saving=true]:delay-0",
-      )}
-    >
-      {children}
-    </span>
-  );
-}
-
-function IdleLayer({ children }: { children: ReactNode }) {
-  return (
-    <span
-      className={cn(
-        LAYER_BASE_CLASS,
-        "opacity-100 hover:text-white",
-        "[transition:opacity_150ms_ease-out_600ms,color_1000ms_ease-out_750ms]",
-        "group-data-[saving=true]:text-green-500 group-data-[saving=true]:opacity-0",
-        "group-data-[saving=true]:[transition:opacity_150ms_ease-out,color_0ms]",
-      )}
-    >
-      {children}
-    </span>
-  );
-}
-
-function getTooltipText(isSaving: boolean, lastSavedAt: Date | null): string {
-  if (isSaving) return "Saving...";
-  if (lastSavedAt) {
-    return `Last saved at ${lastSavedAt.toLocaleTimeString()}`;
-  }
-  return "Auto-save enabled";
-}
-
 export const AutoSaveIndicator = observer(function AutoSaveIndicator() {
-  const { autoSave } = useEditorSession();
-  const { isSaving, lastSavedAt } = autoSave;
-  const tooltipText = getTooltipText(isSaving, lastSavedAt);
+  const { autoSave, pipelineFile } = useEditorSession();
+  const storage = usePipelineStorage();
+  const file = pipelineFile.activePipelineFile;
+  if (!file) return null;
 
-  const handleClick = () => {
-    void autoSave.save();
-  };
+  const isSaving = autoSave.isSaving || file.isSaving;
+  const error =
+    autoSave.error ??
+    (autoSave.hasUnsavedChanges || isSaving ? undefined : file.saveError);
+  const canPublish = storage.canMigrate(file);
+  const isRemote = file.storageKind !== "local";
+  const status =
+    file.storageKind === "pending"
+      ? "Pending upload"
+      : error
+        ? isRemote
+          ? "Not saved to server"
+          : "Not saved"
+        : isSaving
+          ? "Saving..."
+          : autoSave.hasUnsavedChanges
+            ? "Unsaved changes"
+            : null;
+  const tooltip =
+    error ??
+    (file.canEdit
+      ? canPublish
+        ? "Save to server"
+        : autoSave.lastSavedAt
+          ? `Last saved at ${autoSave.lastSavedAt.toLocaleTimeString()}`
+          : isRemote
+            ? "Autosaves to server"
+            : "Autosaves locally"
+      : "View only. Clone to my pipelines to edit.");
 
   return (
-    <TooltipButton
-      tooltip={tooltipText}
-      variant="header"
-      disabled={isSaving}
-      onClick={handleClick}
-      data-testid="auto-save-button"
-      {...tracking("v2.pipeline_editor.auto_save_indicator")}
-    >
-      <div
-        data-saving={isSaving ? "true" : "false"}
-        className="group relative isolate size-4"
-      >
-        <SavingLayer>
-          <Spinner size={16} />
-        </SavingLayer>
-        <IdleLayer>
-          <Icon name="CloudCheck" />
-        </IdleLayer>
-      </div>
-    </TooltipButton>
+    <InlineStack gap="1" wrap="nowrap" blockAlign="center" aria-live="polite">
+      {status && (
+        <Text
+          size="xs"
+          className={
+            error ? "text-amber-300 max-w-36" : "text-stone-300 max-w-36"
+          }
+        >
+          {status}
+        </Text>
+      )}
+      {error && file.canEdit ? (
+        <Button
+          size="sm"
+          variant="ghost"
+          className="text-amber-300 hover:text-white"
+          disabled={isSaving}
+          onClick={() => void autoSave.save()}
+          title={error}
+        >
+          <Icon name="RotateCw" size="sm" />
+          Retry
+        </Button>
+      ) : (
+        <TooltipButton
+          tooltip={tooltip}
+          variant="header"
+          disabled={isSaving || !file.canEdit}
+          onClick={() => void autoSave.save()}
+          aria-label={
+            !file.canEdit
+              ? "View-only pipeline"
+              : canPublish
+                ? "Save to server"
+                : "Save pipeline"
+          }
+          data-testid="auto-save-button"
+          {...tracking("v2.pipeline_editor.auto_save_indicator")}
+        >
+          {isSaving ? (
+            <Spinner size={16} />
+          ) : (
+            <Icon name={isRemote ? "Cloud" : "HardDrive"} />
+          )}
+        </TooltipButton>
+      )}
+    </InlineStack>
   );
 });
