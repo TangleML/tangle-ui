@@ -26,7 +26,7 @@ export function usePipelineList() {
     () =>
       subscribeUserPipelineWritten(() => {
         void queryClient.invalidateQueries({
-          queryKey: [...FoldersQueryKeys.All(), "flat-list", storage.scope],
+          queryKey: FoldersQueryKeys.All(),
         });
       }),
     [queryClient, storage.scope],
@@ -57,17 +57,11 @@ export function usePipelineList() {
         }
       }
 
-      const remoteFiles = (await storage.remote?.list()) ?? [];
+      const pendingFiles = (await storage.remote?.listPending()) ?? [];
       const errors = new Set<string>();
-      if (storage.remoteListError)
-        errors.add(
-          `Could not load remote pipelines: ${storage.remoteListError}`,
-        );
-
-      // Full definitions preserve the existing metadata and component search.
-      for (let offset = 0; offset < remoteFiles.length; offset += 5) {
+      for (let offset = 0; offset < pendingFiles.length; offset += 5) {
         await Promise.all(
-          remoteFiles.slice(offset, offset + 5).map(async (file) => {
+          pendingFiles.slice(offset, offset + 5).map(async (file) => {
             const entry: PipelineListEntry = {
               name: file.displayName,
               modificationTime: file.modifiedAt,
