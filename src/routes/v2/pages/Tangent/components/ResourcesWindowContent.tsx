@@ -9,9 +9,16 @@ import { useDialog } from "@/providers/DialogProvider/hooks/useDialog";
 import { convertCancelErrorTo } from "@/providers/DialogProvider/utils";
 import { AddResourceButton } from "@/routes/v2/pages/Tangent/components/AddResourceButton";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
-import { describeResource } from "@/services/projects/resourceDescriptor";
+import {
+  describeResource,
+  DOCUMENT,
+} from "@/services/projects/resourceDescriptor";
 import type { WorkareaTarget } from "@/services/projects/resourceTarget";
-import { formatWorkareaTarget } from "@/services/projects/resourceTarget";
+import {
+  formatWorkareaTarget,
+  idIdentity,
+} from "@/services/projects/resourceTarget";
+import type { ProjectResourceSummary } from "@/services/projects/types";
 import {
   useDeleteProjectResource,
   useProjectResources,
@@ -37,7 +44,23 @@ interface ResourceTypeMeta {
 const RESOURCE_TYPE_META: Record<string, ResourceTypeMeta> = {
   local_pipeline: { icon: "Workflow", description: "Pipeline" },
   pipeline_run: { icon: "Play", description: "Pipeline run" },
+  [DOCUMENT]: { icon: "FileText", description: "Document" },
 };
+
+/**
+ * A document carries its own body, so it records no identity — the row is the
+ * document, and the row's own id is what addresses it.
+ */
+function targetOf(
+  resource: ProjectResourceSummary,
+  type: string,
+  recorded: WorkareaTarget | undefined,
+): WorkareaTarget | undefined {
+  if (type === DOCUMENT) {
+    return { type: "document", identity: idIdentity(resource.id) };
+  }
+  return recorded;
+}
 
 export function ResourcesWindowContent() {
   const store = useTangentProject();
@@ -52,12 +75,16 @@ export function ResourcesWindowContent() {
     (resource) => {
       const described = describeResource(resource);
       const meta = described && RESOURCE_TYPE_META[described.type];
-      if (!described?.target || !meta) return [];
+      const target =
+        described && meta
+          ? targetOf(resource, described.type, described.target)
+          : undefined;
+      if (!target || !meta) return [];
       return [
         {
           id: resource.id,
-          name: resource.name ?? formatWorkareaTarget(described.target),
-          target: described.target,
+          name: resource.name ?? formatWorkareaTarget(target),
+          target,
           icon: meta.icon,
           description: meta.description,
         },

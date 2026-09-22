@@ -12,6 +12,7 @@ import type { CreateResourceInput, ProjectResourceSummary } from "./types";
 
 export const LOCAL_PIPELINE = "local_pipeline";
 export const PIPELINE_RUN = "pipeline_run";
+export const DOCUMENT = "document";
 
 const BROWSER = "browser";
 
@@ -145,6 +146,26 @@ export function localPipelineResourceInput(
       },
       pointer.localName,
     ),
+  };
+}
+
+/**
+ * A document carries its own body, so there is nothing to point at and no
+ * identity to record: the row is the document. `type` is written all the same,
+ * so listing by kind is one rule for every row rather than a rule plus the
+ * rows that predate it.
+ */
+export function documentResourceInput(
+  title: string,
+  content: string,
+): CreateResourceInput {
+  return {
+    entity: "document",
+    name: title,
+    // The backend requires a payload for a document and validates nothing
+    // inside it; `content` is this app's convention for the whole body.
+    payload: { content },
+    extraData: { type: DOCUMENT },
   };
 }
 

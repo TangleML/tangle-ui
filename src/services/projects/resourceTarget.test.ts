@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type {
   ArtifactTarget,
+  DocumentTarget,
   PipelineTarget,
   RunTarget,
   WorkareaTarget,
@@ -62,6 +63,16 @@ describe("workareaTarget", () => {
     expect(() => parseWorkareaTarget("artifact://name/foo")).toThrow(
       /identity/,
     );
+    expect(() => parseWorkareaTarget("document://name/foo")).toThrow(
+      /identity/,
+    );
+  });
+
+  it("addresses a document by the row that is the document", () => {
+    expect(parseWorkareaTarget("document://id/resource-7")).toEqual({
+      type: "document",
+      identity: "id/resource-7",
+    });
   });
 
   it("compares targets by type and identity", () => {
@@ -110,6 +121,8 @@ describe("workareaTarget", () => {
       "run://name/x",
       "artifact://id/a.txt",
       "artifact://name/a.txt",
+      "document://id/r1",
+      "document://name/r1",
       "bogus://id/x",
       "run://run-123",
     ];
@@ -140,8 +153,13 @@ describe("workareaTarget", () => {
       identity: nameIdentity("Draft"),
     };
     const run: RunTarget = { type: "run", identity: idIdentity("1") };
+    const document: DocumentTarget = {
+      type: "document",
+      identity: idIdentity("r1"),
+    };
 
     expect(formatWorkareaTarget(artifact)).toBe("artifact://id/a.txt");
+    expect(formatWorkareaTarget(document)).toBe("document://id/r1");
     expect(formatWorkareaTarget(pipelineByName)).toBe("pipeline://name/Draft");
     expect(sameTarget(pipelineById, run)).toBe(false);
   });
