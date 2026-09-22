@@ -22,6 +22,7 @@ import { formatDate, formatRelativeTime } from "@/utils/date";
 import { tracking } from "@/utils/tracking";
 
 import { formatResourceCounts } from "./formatResourceCounts";
+import { useProjectPin } from "./useProjectPin";
 
 interface ProjectCardProps {
   project: ProjectSummary;
@@ -36,6 +37,8 @@ export function ProjectCard({ project }: ProjectCardProps) {
     { onDeleted: () => {} },
   );
   const share = useShareProjectAction(project.id);
+
+  const { pinned, togglePin } = useProjectPin(project);
 
   const openDetails = () => {
     void navigate({
@@ -114,6 +117,13 @@ export function ProjectCard({ project }: ProjectCardProps) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          <DropdownMenuItem
+            onSelect={togglePin}
+            {...tracking("projects.pin_project", { new_value: !pinned })}
+          >
+            <Icon name={pinned ? "PinOff" : "Pin"} size="sm" />
+            {pinned ? "Unpin project" : "Pin project"}
+          </DropdownMenuItem>
           <DropdownMenuItem
             onSelect={openDetails}
             {...tracking("projects.open_project_details")}

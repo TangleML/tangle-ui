@@ -1,8 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 
+import { PinProjectButton } from "@/components/Home/ProjectsSection/PinProjectButton";
 import { RenameProjectDialog } from "@/components/Project/RenameProjectDialog";
-import { FavoriteToggle } from "@/components/shared/FavoriteToggle";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
@@ -32,6 +32,18 @@ export function ProjectHeader() {
         wrap="nowrap"
         className="min-w-0"
       >
+        {/* The only way out of a project was the logo, which leaves Tangent
+            altogether rather than going back up one level. */}
+        <Link
+          to={APP_ROUTES.PROJECTS}
+          aria-label="Back to projects"
+          title="Back to projects"
+          className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+          {...tracking("tangent.back_to_projects")}
+        >
+          <Icon name="ArrowLeft" size="sm" />
+        </Link>
+
         <Link
           to={APP_ROUTES.PROJECT_DETAIL}
           params={{ projectId: project.id }}
@@ -64,12 +76,7 @@ export function ProjectHeader() {
           <Icon name="Pencil" size="sm" />
         </Button>
 
-        <FavoriteToggle
-          type="project"
-          id={project.id}
-          name={project.name}
-          analyticsActionType="tangent.favorite_project"
-        />
+        <PinProjectButton project={project} className="size-7" />
       </InlineStack>
 
       <RenameProjectDialog

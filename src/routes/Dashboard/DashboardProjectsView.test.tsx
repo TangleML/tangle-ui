@@ -13,8 +13,8 @@ vi.mock("@/components/Home/ProjectsSection/StartSessionPrompt", () => ({
   StartSessionPrompt: () => <input aria-label="Start a new session" />,
 }));
 
-vi.mock("@/components/Home/ProjectsSection/SharedProjectsSection", () => ({
-  SharedProjectsSection: () => <div data-testid="shared-projects" />,
+vi.mock("@/components/Home/ProjectsSection/PinnedProjectsSection", () => ({
+  PinnedProjectsSection: () => <div data-testid="pinned-projects" />,
 }));
 
 describe("DashboardProjectsView", () => {
@@ -45,15 +45,15 @@ describe("DashboardProjectsView", () => {
     ).toBeTruthy();
   });
 
-  /** Your own work comes first; what you were invited into follows it. */
-  it("puts the projects shared with you after your own", () => {
+  /** Pinning is a request to have it to hand, so it goes above the list. */
+  it("puts the pinned projects above the full list", () => {
     render(<DashboardProjectsView />);
 
+    const pinnedSection = screen.getByTestId("pinned-projects");
     const projects = screen.getByRole("heading", { name: "My Projects" });
-    const shared = screen.getByTestId("shared-projects");
 
     expect(
-      projects.compareDocumentPosition(shared) &
+      pinnedSection.compareDocumentPosition(projects) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
   });
