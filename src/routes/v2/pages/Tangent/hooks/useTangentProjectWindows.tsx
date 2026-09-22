@@ -6,6 +6,7 @@ import { AgentsWindowContent } from "@/routes/v2/pages/Tangent/components/Agents
 import { AssetsWindowContent } from "@/routes/v2/pages/Tangent/components/AssetsWindowContent";
 import { ProjectWindowContent } from "@/routes/v2/pages/Tangent/components/ProjectWindowContent";
 import { ResourcesWindowContent } from "@/routes/v2/pages/Tangent/components/ResourcesWindowContent";
+import { RunsWindowContent } from "@/routes/v2/pages/Tangent/components/RunsWindowContent";
 import { SessionsWindowContent } from "@/routes/v2/pages/Tangent/components/SessionsWindowContent";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { WindowMiniButton } from "@/routes/v2/shared/windows/WindowMiniButton";
@@ -53,6 +54,12 @@ const PROJECT_DOCK_WINDOWS: ProjectDockWindow[] = [
     title: "Resources",
     icon: "Folder",
     content: <ResourcesWindowContent />,
+  },
+  {
+    id: "tangent-project-runs",
+    title: "Runs",
+    icon: "Play",
+    content: <RunsWindowContent />,
   },
 ];
 
