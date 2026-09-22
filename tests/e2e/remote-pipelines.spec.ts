@@ -482,9 +482,9 @@ test("the first local edit publishes in place and preserves undo and remote auto
     "Edited before publishing",
   );
 
-  await page.keyboard.press("ControlOrMeta+z");
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
   await expect(page.getByTestId("pipeline-description-input")).toHaveValue("");
-  await page.keyboard.press("ControlOrMeta+Shift+z");
+  await page.getByRole("button", { name: "Redo", exact: true }).click();
   await expect(page.getByTestId("pipeline-description-input")).toHaveValue(
     "Edited before publishing",
   );
@@ -515,7 +515,8 @@ for (const { name, retry, description } of [
   },
   {
     name: "undoing back to the original pipeline",
-    retry: (page: Page) => page.keyboard.press("ControlOrMeta+z"),
+    retry: (page: Page) =>
+      page.getByRole("button", { name: "Undo", exact: true }).click(),
     description: undefined,
   },
 ]) {
@@ -543,6 +544,9 @@ for (const { name, retry, description } of [
 
     state.failWrites = false;
     await retry(page);
+    await expect(page.getByTestId("pipeline-description-input")).toHaveValue(
+      description ?? "",
+    );
     await expectStorageIcon(page, "remote");
     await expect(page).toHaveURL(editorUrl(state.pipelines[0].id));
     expect(state.writes).toHaveLength(2);
