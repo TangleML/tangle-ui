@@ -10,6 +10,7 @@ import { InlineStack } from "@/components/ui/layout";
 import { useDialog } from "@/providers/DialogProvider/hooks/useDialog";
 import type { DialogConfig } from "@/providers/DialogProvider/types";
 import { convertCancelErrorTo } from "@/providers/DialogProvider/utils";
+import { AddDocumentDialog } from "@/routes/v2/pages/Tangent/components/AddDocumentDialog";
 import { AddPipelineDialog } from "@/routes/v2/pages/Tangent/components/AddPipelineDialog";
 import { AddPipelineRunDialog } from "@/routes/v2/pages/Tangent/components/AddPipelineRunDialog";
 import type { CreateResourceInput } from "@/services/projects/types";
@@ -29,11 +30,12 @@ export function AddResourceButton({ projectId }: AddResourceButtonProps) {
   async function openResourceDialog(
     component: ResourceDialogComponent,
     routeKey: string,
+    size: DialogConfig<CreateResourceInput>["size"] = "full",
   ) {
     const result = await open<CreateResourceInput>({
       component,
       routeKey,
-      size: "full",
+      size,
     }).catch(convertCancelErrorTo(undefined));
 
     if (!result) return;
@@ -46,6 +48,12 @@ export function AddResourceButton({ projectId }: AddResourceButtonProps) {
 
   function handleAddPipelineRun() {
     void openResourceDialog(AddPipelineRunDialog, "add-pipeline-run");
+  }
+
+  // The pipeline and run pickers are browsers and want the room; two fields
+  // and a pair of buttons do not.
+  function handleAddDocument() {
+    void openResourceDialog(AddDocumentDialog, "add-document", "md");
   }
 
   return (
@@ -78,6 +86,10 @@ export function AddResourceButton({ projectId }: AddResourceButtonProps) {
           <DropdownMenuItem onClick={handleAddPipelineRun}>
             <Icon name="Play" size="sm" />
             Add pipeline run
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleAddDocument}>
+            <Icon name="FileText" size="sm" />
+            Add a document
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

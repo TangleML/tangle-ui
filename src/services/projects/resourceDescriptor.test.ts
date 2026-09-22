@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   describeResource,
   DescriptorTooLargeError,
+  documentResourceInput,
   localPipelinePointerOf,
   localPipelineResourceInput,
   namesLocalPipeline,
@@ -178,5 +179,25 @@ describe("localPipelineResourceInput", () => {
     expect(() =>
       localPipelineResourceInput({ localName: "p".repeat(2000) }),
     ).toThrow(DescriptorTooLargeError);
+  });
+});
+
+describe("documentResourceInput", () => {
+  it("files the body as the payload and says what the row is", () => {
+    expect(documentResourceInput("Model card", "Trained on Q3")).toEqual({
+      entity: "document",
+      name: "Model card",
+      payload: { content: "Trained on Q3" },
+      extraData: { type: "document" },
+    });
+  });
+
+  /** Both pages filter on `type`, so a document has to answer that question. */
+  it("reads back as a document", () => {
+    const input = documentResourceInput("Model card", "Body");
+
+    expect(describeResource({ extraData: input.extraData ?? null })).toEqual({
+      type: "document",
+    });
   });
 });
