@@ -20,6 +20,15 @@ vi.mock("@/hooks/useToastNotification", () => ({
   default: () => vi.fn(),
 }));
 
+vi.mock("@/services/projects/useProjectInstructions", () => ({
+  useProjectInstructions: () => ({
+    instructions: "Retrain weekly",
+    isPending: false,
+    isSaving: false,
+    save: vi.fn(),
+  }),
+}));
+
 vi.mock("@/providers/AnalyticsProvider", () => ({
   useAnalytics: () => ({ track: vi.fn() }),
 }));
@@ -51,13 +60,13 @@ describe("ProjectSidebar", () => {
     ).toBeInTheDocument();
   });
 
-  it("holds the editable description and notes", () => {
+  it("holds the editable description and instructions", () => {
     renderSidebar();
 
     expect(screen.getByLabelText("Description")).toHaveValue(
       "Weekly churn scoring",
     );
-    expect(screen.getByLabelText("Notes")).toHaveValue("Retrain weekly");
+    expect(screen.getByLabelText("Instructions")).toHaveValue("Retrain weekly");
   });
 
   it("says who made the project and when", () => {

@@ -39,10 +39,9 @@ export function ProjectWindowContent() {
 
   return (
     <BlockStack gap="4" align="stretch" className="p-2">
-      {/* A project's notes are the agent's instructions here, edited as such
-          from the Resources window. A second box calling them Notes would be
-          two names for one field. */}
-      <ProjectAbout project={project} showNotes={false} />
+      {/* Instructions are edited from the Resources window here, where they sit
+          with the other things the agents are given. */}
+      <ProjectAbout project={project} showInstructions={false} />
 
       <Separator />
 
