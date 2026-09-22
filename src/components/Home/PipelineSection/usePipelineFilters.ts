@@ -22,7 +22,7 @@ interface PipelineMatchMetadata {
 export type PipelineFilterEntry = Pick<ComponentFileEntry, "name"> &
   Partial<Pick<ComponentFileEntry, "componentRef" | "modificationTime">>;
 
-type PipelineEntry<T> = [string, T, PipelineMatchMetadata];
+export type PipelineEntry<T> = [string, T, PipelineMatchMetadata];
 
 export interface FilterBarProps {
   searchQuery: string;
@@ -148,28 +148,24 @@ function matchesDateRange(
   return true;
 }
 
-export function usePipelineFilters<T extends PipelineFilterEntry>(
+export function filterPipelineEntries<T extends PipelineFilterEntry>(
   pipelines: Map<string, T>,
-) {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
-  const [sortField, setSortField] = useState<PipelineSortField>("modified_at");
-  const [sortDirection, setSortDirection] =
-    useState<PipelineSortDirection>("desc");
-  const [componentQuery, setComponentQuery] = useState("");
-
-  const hasActiveFilters = !!searchQuery || !!dateRange || !!componentQuery;
-  const activeFilterCount = [searchQuery, dateRange, componentQuery].filter(
-    Boolean,
-  ).length;
-
-  const clearFilters = () => {
-    setSearchQuery("");
-    setDateRange(undefined);
-    setComponentQuery("");
-  };
-
-  const filteredPipelines: PipelineEntry<T>[] = Array.from(pipelines.entries())
+  {
+    searchQuery,
+    dateRange,
+    sortField,
+    sortDirection,
+    componentQuery,
+  }: Pick<
+    FilterBarProps,
+    | "searchQuery"
+    | "dateRange"
+    | "sortField"
+    | "sortDirection"
+    | "componentQuery"
+  >,
+): PipelineEntry<T>[] {
+  return Array.from(pipelines.entries())
     .filter(
       ([, fileEntry]) =>
         matchesSearch(fileEntry.name, fileEntry, searchQuery) &&
@@ -191,6 +187,36 @@ export function usePipelineFilters<T extends PipelineFilterEntry>(
       fileEntry,
       getMatchMetadata(fileEntry, searchQuery, componentQuery),
     ]);
+}
+
+export function usePipelineFilters<T extends PipelineFilterEntry>(
+  pipelines: Map<string, T>,
+) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [sortField, setSortField] = useState<PipelineSortField>("modified_at");
+  const [sortDirection, setSortDirection] =
+    useState<PipelineSortDirection>("desc");
+  const [componentQuery, setComponentQuery] = useState("");
+
+  const hasActiveFilters = !!searchQuery || !!dateRange || !!componentQuery;
+  const activeFilterCount = [searchQuery, dateRange, componentQuery].filter(
+    Boolean,
+  ).length;
+
+  const clearFilters = () => {
+    setSearchQuery("");
+    setDateRange(undefined);
+    setComponentQuery("");
+  };
+
+  const filteredPipelines = filterPipelineEntries(pipelines, {
+    searchQuery,
+    dateRange,
+    sortField,
+    sortDirection,
+    componentQuery,
+  });
 
   const filterKey = [
     searchQuery,

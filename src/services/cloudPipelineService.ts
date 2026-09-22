@@ -36,6 +36,7 @@ const pipelineSchema = pipelineSummarySchema.extend({
 const pipelineListSchema = z.object({
   pipelines: z.array(pipelineSummarySchema),
   next_page_token: z.string().min(1).nullable(),
+  total_count: z.number().int().nonnegative().optional(),
 });
 
 export interface CloudConnection {
@@ -52,6 +53,17 @@ export interface CloudPipelineSummary extends z.infer<
 > {}
 
 export interface CloudPipeline extends z.infer<typeof pipelineSchema> {}
+
+export interface CloudPipelinePageOptions {
+  pageSize?: number;
+  pageToken?: string;
+}
+
+export interface CloudPipelinePage {
+  pipelines: CloudPipelineSummary[];
+  nextPageToken?: string;
+  totalCount?: number;
+}
 
 interface WriteCloudPipelineOptions {
   filePath: string;
@@ -98,6 +110,24 @@ export async function getCloudPipelineAccount(
   return account.data;
 }
 
+export async function listCloudPipelinePage(
+  connection: CloudConnection,
+  { pageSize = 10, pageToken }: CloudPipelinePageOptions = {},
+): Promise<CloudPipelinePage> {
+  const result = await client.get<unknown>({
+    ...requestOptions(connection),
+    url: `${USER_PIPELINES_PATH}/all`,
+    query: { page_size: pageSize, page_token: pageToken },
+  });
+  requireSuccessfulResponse(result);
+  const page = pipelineListSchema.parse(result.data);
+  return {
+    pipelines: page.pipelines,
+    nextPageToken: page.next_page_token ?? undefined,
+    totalCount: page.total_count,
+  };
+}
+
 export async function listCloudPipelines(
   connection: CloudConnection,
 ): Promise<CloudPipelineSummary[]> {
@@ -106,18 +136,15 @@ export async function listCloudPipelines(
   let pageToken: string | undefined;
 
   do {
-    const result = await client.get<unknown>({
-      ...requestOptions(connection),
-      url: `${USER_PIPELINES_PATH}/all`,
-      query: { page_size: 100, page_token: pageToken },
+    const page = await listCloudPipelinePage(connection, {
+      pageSize: 100,
+      pageToken,
     });
-    requireSuccessfulResponse(result);
-    const page = pipelineListSchema.parse(result.data);
     for (const pipeline of page.pipelines) {
       // A concurrent save can move a row between cursor pages.
       if (!pipelines.has(pipeline.id)) pipelines.set(pipeline.id, pipeline);
     }
-    pageToken = page.next_page_token ?? undefined;
+    pageToken = page.nextPageToken;
     if (pageToken) {
       if (pageTokens.has(pageToken)) {
         throw new Error("The backend repeated a pipeline list page.");
