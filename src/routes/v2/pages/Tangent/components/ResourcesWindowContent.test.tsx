@@ -43,6 +43,7 @@ function resource(
   id: string,
   name: string,
   extraData: Record<string, unknown> | null,
+  overrides: Partial<ProjectResourceSummary> = {},
 ): ProjectResourceSummary {
   return {
     id,
@@ -54,8 +55,12 @@ function resource(
     createdBy: null,
     createdAt: new Date("2026-09-21T10:00:00Z"),
     updatedAt: new Date("2026-09-21T10:00:00Z"),
+    ...overrides,
   };
 }
+
+const backendPipeline = (id: string, name: string) =>
+  resource(id, name, null, { entity: "pipeline", entityId: "uuid-1" });
 
 function given(...resources: ProjectResourceSummary[]) {
   vi.mocked(useProjectResources).mockReturnValue({
@@ -111,5 +116,42 @@ describe("ResourcesWindowContent", () => {
     render(<ResourcesWindowContent />);
 
     expect(screen.queryByText("Broken")).toBeNull();
+  });
+
+  /**
+   * A project holding a backend pipeline read as though it held nothing, and
+   * the fetch that would open one is coming from elsewhere.
+   */
+  it("lists a pipeline the backend holds, saying it cannot be opened yet", () => {
+    given(backendPipeline("r-5", "Hello World"));
+
+    render(<ResourcesWindowContent />);
+
+    expect(screen.getByText("Hello World")).toBeInTheDocument();
+    expect(
+      screen.getByText("Backend pipeline — not supported yet"),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("open-resource-r-5")).toBeDisabled();
+  });
+
+  /** Unopenable is not unremovable — it can still be taken out of the project. */
+  it("still lets one be removed", async () => {
+    given(backendPipeline("r-5", "Hello World"));
+    const user = userEvent.setup();
+
+    render(<ResourcesWindowContent />);
+    await user.click(
+      screen.getByRole("button", { name: "Remove Hello World" }),
+    );
+
+    expect(deleteResource).toHaveBeenCalledWith("r-5");
+  });
+
+  it("asks for both the documents and the pipelines a project holds", () => {
+    render(<ResourcesWindowContent />);
+
+    expect(useProjectResources).toHaveBeenCalledWith("project-1", {
+      entity: ["document", "pipeline"],
+    });
   });
 });
