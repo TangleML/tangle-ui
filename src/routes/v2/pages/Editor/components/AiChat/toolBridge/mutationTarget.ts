@@ -206,11 +206,6 @@ export function resolveStickyNote(
   return { ok: true, location };
 }
 
-/**
- * Anything with a place on the canvas, which cuts across the entity model and
- * the sticky-note list: tasks, ports and notes all move the same way, so
- * `move_node` resolves them together rather than as three tools.
- */
 export function resolveMovable(
   root: ComponentSpec,
   nodeId: string,

@@ -87,14 +87,9 @@ import {
 } from "./mutationTarget";
 
 /**
- * CSOM handlers need the Editor's undo store to make the agent's spec
- * edits user-visible and undoable as a single step, and a way to run the
- * editor's own auto-layout — dagre needs React Flow's measured node
- * dimensions, which only the mounted canvas knows, so it cannot be computed
- * from the spec. Both live here (not in the shared `BridgeDeps`) because only
- * the Editor's mutating bridge depends on them. `invokeAutoLayout` is optional
- * for the same reason `getBackendUrl` is: without a mounted canvas the tool
- * reports that there is nothing to lay out rather than throwing.
+ * `invokeAutoLayout` is injected because dagre needs React Flow's measured node
+ * dimensions, which only the mounted canvas knows — it cannot be computed from
+ * the spec. Optional, so the tool can say there is no canvas rather than throw.
  */
 export type CsomBridgeDeps = BridgeDeps & {
   undo: UndoGroupable;
