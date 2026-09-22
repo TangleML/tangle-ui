@@ -12,38 +12,34 @@ import { FoldersQueryKeys } from "@/services/pipelineStorage/types";
 import { ONE_MINUTE_IN_MS } from "@/utils/constants";
 import { subscribeUserPipelineWritten } from "@/utils/userPipelineWriteEvents";
 
-import {
-  filterPipelineEntries,
-  usePipelineFilters,
-} from "./usePipelineFilters";
+import type { PipelineEntry } from "./usePipelineFilters";
 import type { PipelineListEntry } from "./usePipelineList";
 
 const PAGE_SIZE = 10;
-const EMPTY_PIPELINES = new Map<string, PipelineListEntry>();
 
-function toEntries(files: PipelineFile[] = []) {
-  return new Map<string, PipelineListEntry>(
-    files.map((file) => [
-      file.referenceId,
-      {
-        name: file.displayName,
-        modificationTime: file.modifiedAt,
-        file,
-      },
-    ]),
-  );
+function toRows(
+  files: PipelineFile[] = [],
+): PipelineEntry<PipelineListEntry>[] {
+  return files.map((file) => [
+    file.referenceId,
+    {
+      name: file.displayName,
+      modificationTime: file.modifiedAt,
+      file,
+    },
+    {
+      searchQuery: "",
+      matchedFields: [],
+      componentQuery: "",
+      matchedComponentNames: [],
+    },
+  ]);
 }
 
 export function useRemotePipelineList() {
   const storage = usePipelineStorage();
   const queryClient = useQueryClient();
   const [pageIndex, setPageIndex] = useState(0);
-  const { filterBarProps: filters, filterKey } =
-    usePipelineFilters(EMPTY_PIPELINES);
-  const needsSummaryIndex =
-    filters.hasActiveFilters ||
-    filters.sortField !== "modified_at" ||
-    filters.sortDirection !== "desc";
   const queryKey = [...FoldersQueryKeys.All(), "remote-list", storage.scope];
   const pages = useInfiniteQuery({
     queryKey: [...queryKey, "pages"],
@@ -62,22 +58,11 @@ export function useRemotePipelineList() {
         ? next
         : undefined;
     },
-    enabled: storage.remoteEnabled && !needsSummaryIndex,
+    enabled: storage.remoteEnabled,
     staleTime: 5 * ONE_MINUTE_IN_MS,
     refetchOnWindowFocus: false,
   });
-  const index = useQuery({
-    queryKey: [...queryKey, "summaries"],
-    queryFn: () => {
-      if (!storage.remote) throw new Error("Remote pipelines are not enabled.");
-      return storage.remote.listSummaries();
-    },
-    enabled: storage.remoteEnabled && needsSummaryIndex,
-    staleTime: 5 * ONE_MINUTE_IN_MS,
-    refetchOnWindowFocus: false,
-  });
-  const query = needsSummaryIndex ? index : pages;
-  const showingCached = !!query.error && !query.data;
+  const showingCached = !!pages.error && !pages.data;
   const cached = useQuery({
     queryKey: [...queryKey, "cached"],
     queryFn: () => storage.remote?.listCached() ?? Promise.resolve([]),
@@ -89,30 +74,19 @@ export function useRemotePipelineList() {
     Math.max(0, (pages.data?.pages.length ?? 1) - 1),
   );
   const page = pages.data?.pages[safePageIndex];
-  const pipelines = toEntries(
-    showingCached ? cached.data : needsSummaryIndex ? index.data : page?.files,
-  );
-  const filteredPipelines = filterPipelineEntries(pipelines, filters);
-  const filteredPagination = usePagination(
-    filteredPipelines,
-    PAGE_SIZE,
-    filterKey,
-  );
+  const cachedRows = toRows(cached.data);
+  const cachedPagination = usePagination(cachedRows, PAGE_SIZE, storage.scope);
   const totalCount = showingCached
     ? (cached.data?.length ?? 0)
-    : needsSummaryIndex
-      ? (index.data?.length ?? 0)
-      : (pages.data?.pages[0]?.totalCount ??
-        pages.data?.pages.flatMap((page) => page.files).length ??
-        0);
+    : (pages.data?.pages[0]?.totalCount ??
+      pages.data?.pages.flatMap((page) => page.files).length ??
+      0);
   const loadedPageCount = pages.data?.pages.length ?? 0;
   const hasRemotePipelines = pages.data
     ? !!(
         pages.data.pages[0]?.files.length || pages.data.pages[0]?.nextPageToken
       )
-    : index.data
-      ? index.data.length > 0
-      : undefined;
+    : undefined;
   const cursorPagination = {
     currentPage: safePageIndex + 1,
     totalPages: Math.max(
@@ -136,29 +110,18 @@ export function useRemotePipelineList() {
     goToPreviousPage: () => setPageIndex(Math.max(0, safePageIndex - 1)),
     resetPage: () => setPageIndex(0),
   };
-  const pagination =
-    needsSummaryIndex || showingCached ? filteredPagination : cursorPagination;
+  const pagination = showingCached ? cachedPagination : cursorPagination;
   const refresh = async () => {
     setPageIndex(0);
-    filteredPagination.resetPage();
+    cachedPagination.resetPage();
     await queryClient.resetQueries({ queryKey });
   };
   return {
-    pipelines,
-    rows:
-      needsSummaryIndex || showingCached
-        ? filteredPagination.paginatedItems
-        : filteredPipelines,
-    filterBarProps: {
-      ...filters,
-      totalCount,
-      filteredCount: filteredPipelines.length,
-    },
-    filterKey,
+    rows: showingCached ? cachedPagination.paginatedItems : toRows(page?.files),
     pagination,
-    isPending: query.isPending || (showingCached && cached.isPending),
-    isFetching: query.isFetching,
-    error: query.error?.message,
+    isPending: pages.isPending || (showingCached && cached.isPending),
+    isFetching: pages.isFetching,
+    error: pages.error?.message,
     showingCached,
     hasRemotePipelines,
     totalCount,
