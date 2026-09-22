@@ -1,23 +1,32 @@
 import { type ComponentPropsWithoutRef, useEffect, useState } from "react";
 
-import { CodeViewer } from "@/components/shared/CodeViewer";
+import {
+  CodeViewer,
+  type CodeViewerHeaderActions,
+  CodeViewerHeaderButton,
+} from "@/components/shared/CodeViewer";
 import { InfoBox } from "@/components/shared/InfoBox";
+import { InlineStack } from "@/components/ui/layout";
 import { Link } from "@/components/ui/link";
 import { Spinner } from "@/components/ui/spinner";
+import { Text } from "@/components/ui/typography";
 import { useContainerLog } from "@/hooks/useContainerLog";
 import { useBackend } from "@/providers/BackendProvider";
 import { getBackendStatusString } from "@/utils/backend";
 import { shouldStatusHaveLogs } from "@/utils/executionStatus";
+import { getExecutionLogsUrl } from "@/utils/URL";
 
 const LogDisplay = ({
   logs,
   allowFullscreen,
+  headerActions,
 }: {
   logs: {
     log_text?: string;
     system_error_exception_full?: string;
   };
   allowFullscreen?: boolean;
+  headerActions?: CodeViewerHeaderActions;
 }) => {
   if (!logs.log_text && !logs.system_error_exception_full) {
     return <div>No logs available</div>;
@@ -39,6 +48,7 @@ const LogDisplay = ({
             filename="Execution Logs"
             scrollToBottom
             allowFullscreen={allowFullscreen}
+            headerActions={headerActions}
           />
         </div>
       )}
@@ -50,6 +60,7 @@ const LogDisplay = ({
             filename="System Error Logs"
             scrollToBottom
             allowFullscreen={allowFullscreen}
+            headerActions={hasLogs ? undefined : headerActions}
           />
         </div>
       )}
@@ -61,10 +72,12 @@ const Logs = ({
   executionId,
   status,
   allowFullscreen = true,
+  headerActions,
 }: {
   executionId?: string | number;
   status?: string;
   allowFullscreen?: boolean;
+  headerActions?: CodeViewerHeaderActions;
 }) => {
   const { backendUrl, configured, available } = useBackend();
 
@@ -101,7 +114,7 @@ const Logs = ({
 
   if (!configured) {
     return (
-      <InfoBox title="Backend not configured" variant="warning">
+      <InfoBox title="Backend not configured" variant="warning" width="fit">
         Configure a backend to view execution logs.
       </InfoBox>
     );
@@ -109,7 +122,7 @@ const Logs = ({
 
   if (!shouldFetch && !logs) {
     return (
-      <InfoBox title="No logs available" variant="info">
+      <InfoBox title="No logs available" variant="info" width="fit">
         Logs are available only for active, queued and completed executions.
       </InfoBox>
     );
@@ -117,16 +130,17 @@ const Logs = ({
 
   if (isLoading) {
     return (
-      <div className="flex gap-2 items-center">
-        <Spinner /> Loading Logs...
-      </div>
+      <InlineStack gap="2">
+        <Spinner />
+        <Text>Loading logs…</Text>
+      </InlineStack>
     );
   }
 
   if (error) {
     const backendStatusString = getBackendStatusString(configured, available);
     return (
-      <InfoBox title="Error loading logs" variant="error">
+      <InfoBox title="Error loading logs" variant="error" width="fit">
         <div className="mb-2">{error.message}</div>
         <div className="text-muted-foreground italic">
           {backendStatusString}
@@ -137,8 +151,14 @@ const Logs = ({
 
   return (
     <div className="space-y-4 h-full">
-      <div className="font-mono text-sm whitespace-pre-wrap bg-gray-50 dark:bg-muted p-4 rounded-lg h-full min-h-0 flex-1">
-        {logs && <LogDisplay logs={logs} allowFullscreen={allowFullscreen} />}
+      <div className="font-mono text-sm whitespace-pre-wrap bg-muted p-4 rounded-lg h-full min-h-0 flex-1">
+        {logs && (
+          <LogDisplay
+            logs={logs}
+            allowFullscreen={allowFullscreen}
+            headerActions={headerActions}
+          />
+        )}
       </div>
     </div>
   );
@@ -147,6 +167,7 @@ const Logs = ({
 type OpenLogsInNewWindowLinkProps = {
   executionId: string;
   status?: string;
+  iconOnly?: boolean;
 } & Omit<
   ComponentPropsWithoutRef<typeof Link>,
   "href" | "children" | "external" | "variant" | "size" | "aria-label"
@@ -155,13 +176,40 @@ type OpenLogsInNewWindowLinkProps = {
 export const OpenLogsInNewWindowLink = ({
   executionId,
   status,
+  iconOnly,
   ...linkRest
 }: OpenLogsInNewWindowLinkProps) => {
-  const { backendUrl, available } = useBackend();
-  const logsUrl = `${backendUrl}/api/executions/${executionId}/stream_container_log`;
+  const { available } = useBackend();
 
   if (!executionId || !shouldStatusHaveLogs(status)) {
     return null;
+  }
+
+  const logsUrl = getExecutionLogsUrl(executionId);
+  const label = available
+    ? "Open logs in a new tab"
+    : "Can't open logs — backend not available";
+
+  if (iconOnly) {
+    const iconLink = (
+      <CodeViewerHeaderButton asChild>
+        <Link
+          href={logsUrl}
+          external
+          variant={available ? "block" : "disabled"}
+          size="sm"
+          title={available ? label : undefined}
+          aria-label={label}
+          {...linkRest}
+        />
+      </CodeViewerHeaderButton>
+    );
+
+    if (available) return iconLink;
+
+    // The disabled link variant sets pointer-events-none, so its own title never
+    // fires. The wrapper still receives hover, leaving the icon explainable.
+    return <span title={label}>{iconLink}</span>;
   }
 
   return (
@@ -170,11 +218,7 @@ export const OpenLogsInNewWindowLink = ({
       external
       variant={available ? "primary" : "disabled"}
       size="sm"
-      aria-label={
-        available
-          ? "Open logs in a new tab"
-          : "Cant open logs: Backend not available"
-      }
+      aria-label={label}
       {...linkRest}
     >
       Open in new tab

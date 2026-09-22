@@ -8,23 +8,34 @@ import {
 
 import { MultilineTextInputDialog } from "@/components/shared/Dialogs/MultilineTextInputDialog";
 import { Button } from "@/components/ui/button";
+import { FieldMessage } from "@/components/ui/field-message";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
-import { InlineStack } from "@/components/ui/layout";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Paragraph } from "@/components/ui/typography";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Paragraph, Text } from "@/components/ui/typography";
 import { useCallbackOnUnmount } from "@/hooks/useCallbackOnUnmount";
 import { cn } from "@/lib/utils";
-import type { AnnotationConfig, Annotations } from "@/types/annotations";
+import type {
+  AnnotationConfig,
+  AnnotationOption,
+  Annotations,
+} from "@/types/annotations";
 import { getAnnotationValue as getAnnotationString } from "@/utils/annotations";
 import { clamp } from "@/utils/math";
+
+import { listedOptions } from "./utils";
 
 interface AnnotationsInputProps {
   value: string;
@@ -325,12 +336,15 @@ export const AnnotationsInput = ({
         ? getKeyFromInputValue(inputValue)
         : inputValue;
 
+      const listed = listedOptions(config.options, currentValue);
+
       const selectOptions = config.allowCustomValue
-        ? [
-            ...config.options,
-            { value: CUSTOM_OPTION_SENTINEL, name: "Custom..." },
-          ]
-        : config.options;
+        ? [...listed, { value: CUSTOM_OPTION_SENTINEL, name: "Custom..." }]
+        : listed;
+
+      const selectedOption = selectOptions.find(
+        (opt) => opt.value === currentValue,
+      );
 
       inputElement = (
         <Select
@@ -344,25 +358,51 @@ export const AnnotationsInput = ({
           }
           required={config?.required}
         >
-          <div className="relative group grow min-w-24">
-            <SelectTrigger className={cn("w-full", className)}>
-              <SelectValue placeholder={"Select " + placeholder} />
-            </SelectTrigger>
-            {!!currentValue && (
-              <Button
-                variant="ghost"
-                size="min"
-                className="absolute right-8 top-1/2 -translate-y-1/2 hidden group-hover:block"
-                onClick={handleClearSelection}
-              >
-                <Icon name="X" className="size-3 text-muted-foreground" />
-              </Button>
+          <BlockStack gap="1" className="min-w-24 grow">
+            <div className="relative group">
+              <SelectTrigger className={cn("w-full", className)}>
+                {selectedOption ? (
+                  <Text as="span" size="sm" className="truncate">
+                    {selectedOption.name}
+                  </Text>
+                ) : currentValue ? (
+                  <Text as="span" size="sm" className="truncate">
+                    {currentValue}
+                  </Text>
+                ) : (
+                  <Text as="span" size="sm" tone="subdued">
+                    {"Select " + placeholder}
+                  </Text>
+                )}
+              </SelectTrigger>
+              {!!currentValue && (
+                <Button
+                  variant="ghost"
+                  size="min"
+                  className="absolute right-8 top-1/2 -translate-y-1/2 hidden group-hover:block"
+                  onClick={handleClearSelection}
+                >
+                  <Icon name="X" className="size-3 text-muted-foreground" />
+                </Button>
+              )}
+            </div>
+            {!!selectedOption?.caption && (
+              <FieldMessage truncate>{selectedOption.caption}</FieldMessage>
             )}
-          </div>
+            {selectedOption?.deprecated && (
+              <FieldMessage tone="warning" icon="TriangleAlert">
+                {selectedOption.deprecationMessage ?? "No longer available"}
+              </FieldMessage>
+            )}
+          </BlockStack>
           <SelectContent>
             {selectOptions.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.name}
+              <SelectItem
+                key={opt.value}
+                value={opt.value}
+                disabled={opt.deprecated}
+              >
+                <AnnotationOptionLabel option={opt} />
               </SelectItem>
             ))}
           </SelectContent>
@@ -576,4 +616,26 @@ function getKeyFromInputValue(inputValue: string): string {
 
 function getValueFromInputValue(inputValue: string): string {
   return parseJsonAndGetProperty(inputValue, false);
+}
+
+function AnnotationOptionLabel({ option }: { option: AnnotationOption }) {
+  return (
+    <>
+      <Text as="span" size="sm" className="truncate" title={option.name}>
+        {option.name}
+      </Text>
+      {option.deprecated && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="pointer-events-auto inline-flex">
+              <Icon name="TriangleAlert" size="sm" className="text-warning" />
+            </span>
+          </TooltipTrigger>
+          <TooltipContent className="z-9999">
+            {option.deprecationMessage ?? "Deprecated"}
+          </TooltipContent>
+        </Tooltip>
+      )}
+    </>
+  );
 }

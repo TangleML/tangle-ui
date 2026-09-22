@@ -1,11 +1,19 @@
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
-import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
+import { InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 
 import { FullscreenElement } from "../FullscreenElement";
 import CodeSyntaxHighlighter from "./CodeSyntaxHighlighter";
+import { CodeViewerHeaderButton } from "./CodeViewerHeaderButton";
+
+interface CodeViewerHeaderControls {
+  exitFullscreen: () => void;
+}
+
+export type CodeViewerHeaderActions =
+  ReactNode | ((controls: CodeViewerHeaderControls) => ReactNode);
 
 interface CodeViewerProps {
   code: string;
@@ -14,6 +22,7 @@ interface CodeViewerProps {
   fullscreen?: boolean;
   scrollToBottom?: boolean;
   allowFullscreen?: boolean;
+  headerActions?: CodeViewerHeaderActions;
   onClose?: () => void;
 }
 
@@ -26,9 +35,16 @@ const CodeViewer = ({
   fullscreen = false,
   scrollToBottom = false,
   allowFullscreen = true,
+  headerActions,
   onClose,
 }: CodeViewerProps) => {
   const [isFullscreen, setIsFullscreen] = useState(fullscreen);
+
+  const exitFullscreen = () => {
+    if (!isFullscreen) return;
+    setIsFullscreen(false);
+    onClose?.();
+  };
 
   const handleToggleFullscreen = () => {
     if (isFullscreen && onClose) {
@@ -58,28 +74,36 @@ const CodeViewer = ({
   return (
     <FullscreenElement fullscreen={isFullscreen}>
       <div className="flex flex-col transition-shadow duration-150 bg-card h-full rounded-md">
-        <div className="flex items-center justify-between gap-2 bg-muted sticky top-0 z-10 rounded-t-md px-3 py-2.5">
-          <div className="flex items-baseline gap-2">
-            <span className="font-semibold text-base text-foreground">
+        <div className="@container flex items-center justify-between gap-2 bg-muted sticky top-0 z-10 rounded-t-md px-3 py-2.5">
+          <div className="flex items-baseline gap-2 min-w-0">
+            <Text weight="semibold" className="truncate min-w-0">
               {filename}
-            </span>
-            <Text size="sm" tone="subdued">
+            </Text>
+            <Text
+              size="sm"
+              tone="subdued"
+              className="hidden @[22rem]:inline whitespace-nowrap"
+            >
               (Read Only)
             </Text>
           </div>
-          {allowFullscreen && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={handleToggleFullscreen}
-              className="text-muted-foreground hover:text-foreground"
-              title={isFullscreen ? "Exit fullscreen" : "View fullscreen"}
-              aria-label={isFullscreen ? "Exit fullscreen" : "View fullscreen"}
-            >
-              {isFullscreen ? <Icon name="X" /> : <Icon name="Maximize2" />}
-            </Button>
-          )}
+          <InlineStack gap="1" className="shrink-0">
+            {typeof headerActions === "function"
+              ? headerActions({ exitFullscreen })
+              : headerActions}
+            {allowFullscreen && (
+              <CodeViewerHeaderButton
+                type="button"
+                onClick={handleToggleFullscreen}
+                title={isFullscreen ? "Exit fullscreen" : "View fullscreen"}
+                aria-label={
+                  isFullscreen ? "Exit fullscreen" : "View fullscreen"
+                }
+              >
+                {isFullscreen ? <Icon name="X" /> : <Icon name="Maximize2" />}
+              </CodeViewerHeaderButton>
+            )}
+          </InlineStack>
         </div>
         <div className="flex-1 relative">
           <div
