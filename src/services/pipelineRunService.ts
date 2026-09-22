@@ -43,7 +43,7 @@ export const createPipelineRun = async (
   });
 
   if (!response.ok) {
-    throw new Error("Failed to create pipeline run");
+    throw new Error(await createPipelineRunErrorMessage(response));
   }
 
   return response.json();
@@ -244,4 +244,24 @@ export const updateRunAnnotation = async (
   await fetchWithErrorHandling(url.toString(), {
     method: "PUT",
   });
+};
+
+const createPipelineRunErrorMessage = async (
+  response: Response,
+): Promise<string> => {
+  const fallback = `Failed to create pipeline run (HTTP ${response.status})`;
+
+  if (!response.headers.get("content-type")?.includes("application/json")) {
+    return fallback;
+  }
+
+  try {
+    const body: unknown = await response.json();
+    const { detail, message } =
+      (body as { detail?: unknown; message?: unknown } | null) ?? {};
+    const reason = detail ?? message;
+    return typeof reason === "string" && reason.length > 0 ? reason : fallback;
+  } catch {
+    return fallback;
+  }
 };

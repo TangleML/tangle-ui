@@ -20,6 +20,7 @@ interface ComputeResourcesEditorProps {
   resources: AnnotationConfig[];
   cloudProviderConfig: AnnotationConfig | null;
   onSave: (key: string, value: string) => void;
+  providerValue?: string;
 }
 
 export const ComputeResourcesEditor = ({
@@ -27,6 +28,7 @@ export const ComputeResourcesEditor = ({
   resources,
   cloudProviderConfig,
   onSave,
+  providerValue,
 }: ComputeResourcesEditorProps) => {
   return (
     <BlockStack gap="2">
@@ -43,7 +45,16 @@ export const ComputeResourcesEditor = ({
           <ComputeResourceField
             key={cloudProviderConfig.annotation}
             resource={cloudProviderConfig}
-            annotations={annotations}
+            annotations={{
+              ...annotations,
+              [cloudProviderConfig.annotation]:
+                providerValue ??
+                getAnnotationValue(
+                  annotations,
+                  cloudProviderConfig.annotation,
+                  "",
+                ),
+            }}
             onSave={onSave}
           />
         )}
