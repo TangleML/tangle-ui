@@ -19,6 +19,7 @@ import type {
   ComponentReference,
   ComponentSpec,
 } from "./componentSpec";
+import { deepClone } from "./deepClone";
 import { runPreSubmitHooks } from "./runPreSubmitHooks";
 import { componentSpecFromYaml } from "./yaml";
 
@@ -48,7 +49,12 @@ export async function submitPipelineRun(
   }
 
   try {
-    const specCopy = structuredClone(componentSpec);
+    // The spec is copied so loading each task's component cannot mutate what
+    // the caller handed over. It goes through `deepClone` because an agent
+    // submits a spec straight off the editor's store, where `serializeComponentSpec`
+    // passes each `componentRef` through by reference — leaving live observables
+    // inside an otherwise plain object, which `structuredClone` refuses.
+    const specCopy = deepClone(componentSpec);
     const componentCache = new Map<string, ComponentSpec>();
     const fullyLoadedSpec = await processComponentSpec(
       specCopy,
