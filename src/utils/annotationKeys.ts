@@ -22,3 +22,7 @@ export const TASK_COLOR_ANNOTATION = "tangleml.com/editor/task-color";
 export const EDGE_CONDUITS_ANNOTATION = "tangleml.com/editor/edge-conduits";
 export const PROJECT_ID_ANNOTATION_PREFIX = "tangleml.com/project/project-id/";
 export const BACKEND_ANNOTATION_PREFIX = "system/";
+
+export const WEB_APP_RUN_SOURCE = "web-app";
+/** Not `tangent`, which submitters outside this app already use. */
+export const TANGENT_UI_RUN_SOURCE = "tangent-ui";

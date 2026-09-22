@@ -12,7 +12,7 @@ import {
 import type { PipelineRun } from "@/types/pipelineRun";
 
 import { transformAggregatorComponentSpec } from "./aggregatorTransform";
-import { RUN_SOURCE_ANNOTATION } from "./annotationKeys";
+import { RUN_SOURCE_ANNOTATION, WEB_APP_RUN_SOURCE } from "./annotationKeys";
 import { buildAnnotationsWithCanonicalName } from "./canonicalPipelineName";
 import type {
   ArgumentType,
@@ -31,6 +31,7 @@ export async function submitPipelineRun(
     authorizationToken?: string;
     canonicalName?: string;
     runAnnotations?: Record<string, string>;
+    runSource?: string;
     onSuccess?: (data: PipelineRun) => void;
     onError?: (error: Error) => void;
   },
@@ -96,7 +97,7 @@ export async function submitPipelineRun(
     const payload = {
       annotations: {
         ...(options?.runAnnotations ?? {}),
-        [RUN_SOURCE_ANNOTATION]: "web-app",
+        [RUN_SOURCE_ANNOTATION]: options?.runSource ?? WEB_APP_RUN_SOURCE,
       },
       root_task: {
         componentRef: {
