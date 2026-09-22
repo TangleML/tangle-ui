@@ -52,6 +52,7 @@ interface PipelineRowProps {
   file?: PipelineFile;
   url?: string;
   componentRef?: ComponentReferenceWithSpec;
+  showLocalColumns?: boolean;
   name?: string;
   modificationTime?: Date;
   onDelete?: () => void;
@@ -75,6 +76,7 @@ const PipelineRow = withSuspenseWrapper(
       file,
       name,
       componentRef,
+      showLocalColumns = true,
       modificationTime,
       onDelete,
       isSelected = false,
@@ -264,14 +266,20 @@ const PipelineRow = withSuspenseWrapper(
               {formattedDate}
             </Text>
           </TableCell>
-          <TableCell className="max-w-64">
-            {tags && tags.length > 0 && <TagList tags={tags} />}
-          </TableCell>
+          {showLocalColumns && (
+            <TableCell className="max-w-64">
+              {tags && tags.length > 0 && <TagList tags={tags} />}
+            </TableCell>
+          )}
+          {showLocalColumns && (
+            <TableCell>
+              {name && <PipelineRecentRunInfo pipelineName={name} />}
+            </TableCell>
+          )}
           <TableCell>
-            {name && <PipelineRecentRunInfo pipelineName={name} />}
-          </TableCell>
-          <TableCell>
-            {name && <PipelineRunsButton pipelineName={name} />}
+            {showLocalColumns && name && (
+              <PipelineRunsButton pipelineName={name} />
+            )}
           </TableCell>
           <TableCell className="w-px">
             <div className="grid w-max grid-cols-3 gap-1">
@@ -333,12 +341,16 @@ const PipelineRow = withSuspenseWrapper(
             {formattedDate}
           </Paragraph>
         </TableCell>
-        <TableCell>
-          <Skeleton size="lg" />
-        </TableCell>
-        <TableCell>
-          <Skeleton size="lg" />
-        </TableCell>
+        {props.showLocalColumns !== false && (
+          <TableCell>
+            <Skeleton size="lg" />
+          </TableCell>
+        )}
+        {props.showLocalColumns !== false && (
+          <TableCell>
+            <Skeleton size="lg" />
+          </TableCell>
+        )}
         <TableCell className="w-0">
           <Skeleton size="lg" />
         </TableCell>
