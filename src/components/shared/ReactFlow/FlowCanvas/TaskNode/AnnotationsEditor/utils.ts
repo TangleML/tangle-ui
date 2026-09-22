@@ -38,6 +38,7 @@ interface JSONSchemaObject {
   "x-provider"?: string;
   "x-project"?: string;
   "x-aliases"?: string[];
+  "x-alias-of"?: string;
 }
 
 interface CloudProviderSchema extends JSONSchemaProperty {
@@ -253,16 +254,17 @@ export function getCloudProviderConfig(
         return !flagKey || isFlagEnabled(flagKey);
       })
       .map(([key, launcherSchema]) => {
-        const name =
-          launcherSchema["x-label"] ||
-          launcherSchema.title ||
-          key.charAt(0).toUpperCase() + key.slice(1);
-        const provider = launcherSchema["x-provider"];
         const option: AnnotationOption = {
           value: key,
-          name: provider ? `${provider}: ${name}` : name,
+          name: launcherOptionName(key, launcherSchema),
         };
-        if (launcherSchema["x-project"]) {
+        const aliasOf = launcherSchema["x-alias-of"];
+        if (aliasOf) {
+          const target = schema.launcher_annotation_schemas?.[aliasOf];
+          option.caption = `Currently ${
+            target ? launcherOptionName(aliasOf, target) : aliasOf
+          }`;
+        } else if (launcherSchema["x-project"]) {
           option.caption = `Project: ${launcherSchema["x-project"]}`;
         }
         if (launcherSchema["x-deprecated"]) {
@@ -611,6 +613,26 @@ export function buildLauncherSchemaFromCapabilities(
     launcherSchemas[cluster.key] = object;
   }
 
+  for (const [alias, clusterKey] of Object.entries(config.aliases ?? {})) {
+    const target = launcherSchemas[clusterKey];
+    if (!target || launcherSchemas[alias]) continue;
+
+    const object: JSONSchemaObject = {
+      type: "object",
+      title: alias,
+      properties: { ...target.properties },
+      "x-label": `${capitalize(alias)} default`,
+      "x-alias-of": clusterKey,
+    };
+    if (target["x-deprecated"]) {
+      object["x-deprecated"] = true;
+      const message = target["x-deprecated-message"];
+      if (message) object["x-deprecated-message"] = message;
+    }
+
+    launcherSchemas[alias] = object;
+  }
+
   const built: LauncherAnnotationSchema = {
     launcher_annotation_schemas: launcherSchemas,
     cloud_provider: {
@@ -775,6 +797,16 @@ function flatCluster(
         ? `${cluster.label || key} is not enabled for this deployment`
         : undefined,
   };
+}
+
+function launcherOptionName(key: string, object: JSONSchemaObject): string {
+  const name = object["x-label"] || object.title || capitalize(key);
+  const provider = object["x-provider"];
+  return provider ? `${provider}: ${name}` : name;
+}
+
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 // Which options a dropdown lists. A deprecated one is left out, because nothing
