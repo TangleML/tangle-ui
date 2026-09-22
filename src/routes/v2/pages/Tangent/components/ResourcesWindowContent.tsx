@@ -6,11 +6,9 @@ import { useDialog } from "@/providers/DialogProvider/hooks/useDialog";
 import { convertCancelErrorTo } from "@/providers/DialogProvider/utils";
 import { AddResourceButton } from "@/routes/v2/pages/Tangent/components/AddResourceButton";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
-import { pointerKey } from "@/services/localPipelines/types";
 import {
   describeResource,
   DOCUMENT,
-  localPipelinePointerOf,
 } from "@/services/projects/resourceDescriptor";
 import type { WorkareaTarget } from "@/services/projects/resourceTarget";
 import {
@@ -26,7 +24,7 @@ import {
 import { getErrorMessage } from "@/utils/string";
 
 import { EditInstructionsDialog } from "./EditInstructionsDialog";
-import { useAbsentLocalPipelines } from "./useAbsentLocalPipelines";
+import { useUnavailablePipelines } from "./useUnavailablePipelines";
 import { WindowListRow } from "./WindowListRow";
 
 interface ProjectResourceItem {
@@ -82,7 +80,7 @@ function targetOf(
  */
 function toResourceItem(
   resource: ProjectResourceSummary,
-  absentPipelines: ReadonlySet<string>,
+  unavailable: ReadonlySet<string>,
 ): ProjectResourceItem | undefined {
   if (resource.entity === "pipeline") {
     return resource.entityId
@@ -103,9 +101,8 @@ function toResourceItem(
   if (!target || !meta) return undefined;
 
   const name = resource.name ?? formatWorkareaTarget(target);
-  const pointer = localPipelinePointerOf(resource);
 
-  if (pointer && absentPipelines.has(pointerKey(pointer))) {
+  if (unavailable.has(resource.id)) {
     return { id: resource.id, name, ...ABSENT_PIPELINE_META };
   }
 
@@ -128,10 +125,10 @@ export function ResourcesWindowContent() {
     useDeleteProjectResource(store.projectId);
 
   const items = resourcesPage?.items ?? [];
-  const absentPipelines = useAbsentLocalPipelines(items);
+  const unavailable = useUnavailablePipelines(items);
 
   const resources: ProjectResourceItem[] = items.flatMap(
-    (resource) => toResourceItem(resource, absentPipelines) ?? [],
+    (resource) => toResourceItem(resource, unavailable) ?? [],
   );
 
   async function handleOpenResource(resource: ProjectResourceItem) {

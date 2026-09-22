@@ -43,6 +43,11 @@ vi.mock("@/services/localPipelines/useLocalPipelines", () => ({
   useResolvedPointers: vi.fn(),
 }));
 
+vi.mock("@tanstack/react-query", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@tanstack/react-query")>()),
+  useQuery: () => ({ data: { id: "ada@example.com", permissions: [] } }),
+}));
+
 // The add button reaches the runs list, and through it the whole editor tree,
 // which does not survive being imported on its own.
 vi.mock("@/routes/v2/pages/Tangent/components/AddResourceButton", () => ({
@@ -72,13 +77,22 @@ function resource(
 const backendPipeline = (id: string, name: string) =>
   resource(id, name, null, { entity: "pipeline", entityId: "uuid-1" });
 
-const localPipeline = (id: string, name: string) =>
-  resource(id, name, {
-    type: "local_pipeline",
-    storage: "browser",
-    identity: `pipeline://name/${name}`,
-    fallbackName: name,
-  });
+const localPipeline = (
+  id: string,
+  name: string,
+  overrides: Partial<ProjectResourceSummary> = {},
+) =>
+  resource(
+    id,
+    name,
+    {
+      type: "local_pipeline",
+      storage: "browser",
+      identity: `pipeline://name/${name}`,
+      fallbackName: name,
+    },
+    overrides,
+  );
 
 function given(...resources: ProjectResourceSummary[]) {
   vi.mocked(useProjectResources).mockReturnValue({
@@ -219,6 +233,34 @@ describe("ResourcesWindowContent", () => {
     );
 
     expect(deleteResource).toHaveBeenCalledWith("r-6");
+  });
+
+  /**
+   * A pointer that recorded no id has only a name to go on, and a name is
+   * this browser's to recognise only if this browser wrote it. Someone else's
+   * "Churn model" is not the "Churn model" sitting here.
+   */
+  it("does not trust a bare name that someone else recorded", () => {
+    given(localPipeline("r-8", "Churn model", { createdBy: "bo@example.com" }));
+    browserHolds({ "Churn model|": "Churn model" });
+
+    render(<ResourcesWindowContent />);
+
+    expect(
+      screen.getByText("Pipeline — not in this browser"),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("open-resource-r-8")).toBeDisabled();
+  });
+
+  it("trusts a bare name this browser recorded itself", () => {
+    given(
+      localPipeline("r-9", "Churn model", { createdBy: "ada@example.com" }),
+    );
+    browserHolds({ "Churn model|": "Churn model" });
+
+    render(<ResourcesWindowContent />);
+
+    expect(screen.getByTestId("open-resource-r-9")).toBeEnabled();
   });
 
   /** A local read, so a moment of "unavailable" on every row would just flicker. */
