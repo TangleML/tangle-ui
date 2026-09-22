@@ -12,6 +12,7 @@ import { CreateProjectDialog } from "./CreateProjectDialog";
 import { NewProjectCard } from "./NewProjectCard";
 import { ProjectCard } from "./ProjectCard";
 import { useMyProjects } from "./useMyProjects";
+import { usePinnedProjectIds } from "./usePinnedProjects";
 
 const LoadingProjects = () => (
   <InlineStack gap="2" blockAlign="center">
@@ -47,7 +48,7 @@ export function ProjectsSection() {
 
 function ProjectsGrid() {
   const {
-    projects,
+    projects: allProjects,
     totalCount,
     isPending,
     error,
@@ -56,6 +57,12 @@ function ProjectsGrid() {
     loadMore,
   } = useMyProjects();
   const { data: workspaces } = useWorkspaces();
+  const pinnedIds = usePinnedProjectIds();
+
+  // Pinned projects are shown above this list rather than in it, so a pinned
+  // project of the caller's own is moved rather than repeated.
+  const projects = allProjects.filter((project) => !pinnedIds.has(project.id));
+  const hoisted = allProjects.length - projects.length;
 
   if (isPending) {
     return <LoadingProjects />;
@@ -100,7 +107,7 @@ function ProjectsGrid() {
             {isLoadingMore ? "Loading..." : "Load more projects"}
           </Button>
           <Text size="sm" tone="subdued">
-            {`Showing ${projects.length} of ${totalCount}.`}
+            {`Showing ${projects.length} of ${totalCount - hoisted}.`}
           </Text>
         </InlineStack>
       )}
