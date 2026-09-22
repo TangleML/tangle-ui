@@ -9,6 +9,8 @@ Set `VITE_REMOTE_PIPELINES_ENABLED=true` at build time to enable remote pipeline
 - Confirmed migrations hide the local entry, keep its recovery copy, and redirect local favorites and recent-history references. Favorites and history are not synchronized across computers.
 - The list marks browser-local pipelines with a subtle **Local** badge; saved remote pipelines are unbadged. Failed initial uploads remain **Pending upload**. Only the current user's remote collection is listed.
 - Remote editor URLs use `/editor-v2/<pipeline-id>` against the configured backend. Local URLs keep the pipeline name. Old backend-scoped URLs still open and are shortened in place.
+- A remote pipeline's Runs link opens the existing run list filtered by its stable ID, including associated editor and backend-created runs. Run details link back to the current source pipeline in the same tab without reloading the page. Clones have independent histories; reruns retain their source association.
+- Editor submissions wait for a browser-local or pending pipeline's first upload and stop if it fails. Once the pipeline has a remote ID, submissions execute the editor snapshot without waiting for autosave. The source ID is attached to the run, not to the pipeline definition, and does not claim a saved version.
 - Other authorized viewers can open a remote URL read-only and clone it into their own collection. Backend ownership and write permissions remain authoritative.
 - Edits autosave, but opening a pipeline does not save it. The last successful save wins across sessions; there is no conflict dialog, locking between computers, or live collaboration.
 - Remote autosave batches position-only edits for three seconds from the first move and waits for a one-second pause in other edits. The earlier deadline uploads the latest complete pipeline, including positions. Local recovery is staged before these delays, including before the first local-to-remote upload. Slow uploads retain only the latest pending snapshot; explicit Save and editor navigation flush without waiting for the timers. Local-only and connected-folder autosave timing is unchanged.
@@ -16,6 +18,7 @@ Set `VITE_REMOTE_PIPELINES_ENABLED=true` at build time to enable remote pipeline
 
 ## Limits
 
+- Old runs without a source-pipeline annotation are not backfilled or matched by name. Source links open the current definition, which may differ from the executed snapshot; deleted pipelines can no longer be opened. Clone ancestry is not tracked.
 - Recovery and pending drafts live in this browser, scoped to its account and backend. Clearing site data removes them. Hidden backups are not exposed through a restore UI yet.
 - Reopening a remote pipeline needs a working backend unless this browser has an unsaved recovery draft. The remote list can show cached entries and pending drafts when the server is unavailable, with an error banner.
 - Saving validates the pipeline's schema, not whether it can run successfully. Invalid definitions stay recoverable locally until corrected.

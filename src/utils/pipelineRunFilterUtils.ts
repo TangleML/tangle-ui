@@ -5,6 +5,11 @@ import type {
   SortField,
 } from "@/types/pipelineRunFilters";
 import { isValidExecutionStatus } from "@/utils/executionStatus";
+import {
+  isPipelineId,
+  SAVED_PIPELINE_ID_ANNOTATION,
+  SOURCE_PIPELINE_ID_ANNOTATION,
+} from "@/utils/pipelineRunSource";
 import { isRecord } from "@/utils/typeGuards";
 
 const VALID_SORT_FIELDS = new Set<string>(["created_at", "pipeline_name"]);
@@ -53,6 +58,9 @@ export function validateFilters(parsed: unknown): PipelineRunFilters {
   if (typeof parsed.pipeline_name === "string") {
     filters.pipeline_name = parsed.pipeline_name;
   }
+  if (isPipelineId(parsed.saved_pipeline_id)) {
+    filters.saved_pipeline_id = parsed.saved_pipeline_id;
+  }
   if (Array.isArray(parsed.annotations)) {
     const validAnnotations = parsed.annotations.filter(isValidAnnotationFilter);
     if (validAnnotations.length > 0) {
@@ -77,6 +85,7 @@ export function validateFilters(parsed: unknown): PipelineRunFilters {
 
 /** Predicate types for the filter_query JSON format */
 type FilterQueryPredicate =
+  | { or: FilterQueryPredicate[] }
   | { key_exists: { key: string } }
   | { value_equals: { key: string; value: string } }
   | { value_contains: { key: string; value_substring: string } }
@@ -122,6 +131,17 @@ export function filtersToFilterQuery(
         key: "system/pipeline_run.name",
         value_substring: filters.pipeline_name,
       },
+    });
+  }
+
+  const savedPipelineId = filters.saved_pipeline_id;
+  if (isPipelineId(savedPipelineId)) {
+    predicates.push({
+      or: [SAVED_PIPELINE_ID_ANNOTATION, SOURCE_PIPELINE_ID_ANNOTATION].map(
+        (key) => ({
+          value_equals: { key, value: savedPipelineId },
+        }),
+      ),
     });
   }
 

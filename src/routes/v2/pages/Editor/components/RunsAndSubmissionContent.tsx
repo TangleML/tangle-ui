@@ -7,6 +7,7 @@ import TangleSubmitter from "@/components/shared/Submitters/Tangle/TangleSubmitt
 import { EmptyState } from "@/components/ui/empty-state";
 import { BlockStack } from "@/components/ui/layout";
 import { serializeComponentSpec } from "@/models/componentSpec";
+import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { ENABLE_GOOGLE_CLOUD_SUBMITTER } from "@/utils/constants";
 import { deepClone } from "@/utils/deepClone";
@@ -14,6 +15,7 @@ import { deepClone } from "@/utils/deepClone";
 export const RunsAndSubmissionContent = observer(() => {
   const { isAuthorized } = useAwaitAuthorization();
   const { navigation } = useSharedStores();
+  const { autoSave } = useEditorSession();
   const rootSpec = navigation.rootSpec;
   const allIssues = rootSpec?.allValidationIssues ?? [];
   const errorCount = allIssues.filter((i) => i.severity === "error").length;
@@ -46,6 +48,9 @@ export const RunsAndSubmissionContent = observer(() => {
         {isAuthorized ? (
           <TangleSubmitter
             componentSpec={serializedRootPipelineSpec}
+            prepareSourcePipeline={(backendUrl) =>
+              autoSave.prepareRunSource(backendUrl)
+            }
             isComponentTreeValid={rootSpec?.isValid}
             onlyFixableIssues={!hasErrors && allIssues.length > 0}
           />

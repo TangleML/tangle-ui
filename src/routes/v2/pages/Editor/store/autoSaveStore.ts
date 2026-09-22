@@ -14,7 +14,9 @@ import {
 import { saveUndoHistory } from "@/routes/v2/pages/Editor/utils/undoHistoryStorage";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
+import { parseRemotePipelineReference } from "@/services/pipelineStorage/remotePipelineRecovery";
 import { AUTOSAVE_DEBOUNCE_TIME_MS } from "@/utils/constants";
+import { isPipelineId } from "@/utils/pipelineRunSource";
 
 import { type AutoSaveSnapshot, getAutoSaveSnapshot } from "./autoSaveSnapshot";
 import type { PipelineFileStore } from "./pipelineFileStore";
@@ -162,6 +164,35 @@ export class AutoSaveStore {
     this.session = null;
     this.isSaving = false;
     return session?.pending ?? Promise.resolve(true);
+  }
+
+  async prepareRunSource(backendUrl: string): Promise<string | undefined> {
+    const file = this.pipelineFileStore.activePipelineFile;
+    if (!file) throw new Error("The pipeline is no longer open.");
+    const needsUpload =
+      file.storageKind === "pending" || this.storage?.canMigrate(file);
+    if (needsUpload) {
+      if (!(await this.save())) {
+        throw new Error(
+          this.error ?? "Save the pipeline to the server before running it.",
+        );
+      }
+    }
+    if (this.pipelineFileStore.activePipelineFile !== file) {
+      throw new Error("The open pipeline changed before submission.");
+    }
+    if (file.storageKind === "local" && !needsUpload) return undefined;
+    const source = parseRemotePipelineReference(file.referenceId);
+    if (
+      !source ||
+      !isPipelineId(source.pipelineId) ||
+      source.backendUrl !== backendUrl.replace(/\/+$/, "")
+    ) {
+      throw new Error(
+        "The pipeline must be saved on the run's backend before submission.",
+      );
+    }
+    return source.pipelineId;
   }
 
   async save(): Promise<boolean> {

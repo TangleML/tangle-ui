@@ -30,6 +30,7 @@ export interface BridgeDeps {
   getActiveSubgraphTaskId: () => string | undefined;
   getBackendUrl?: () => string;
   getAuthToken?: () => string | undefined;
+  prepareSourcePipeline?: (backendUrl: string) => Promise<string | undefined>;
   queryClient?: QueryClient;
 }
 

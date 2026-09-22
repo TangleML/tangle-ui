@@ -1,4 +1,4 @@
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { observer } from "mobx-react-lite";
 import { type DragEvent, type MouseEvent } from "react";
 
@@ -32,12 +32,15 @@ import { Paragraph, Text } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
+import { useBackend } from "@/providers/BackendProvider";
 import { getDefaultEditorPath } from "@/routes/editorRoutes";
 import { deletePipeline } from "@/services/pipelineService";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
+import { parseRemotePipelineReference } from "@/services/pipelineStorage/remotePipelineRecovery";
 import { getPipelineTagsFromSpec } from "@/utils/annotations";
 import type { ComponentReferenceWithSpec } from "@/utils/componentStore";
 import { formatDate } from "@/utils/date";
+import { isPipelineId } from "@/utils/pipelineRunSource";
 import { tracking } from "@/utils/tracking";
 
 import { SavePipelineToCloudButton } from "./SavePipelineToCloudButton";
@@ -92,8 +95,19 @@ const PipelineRow = withSuspenseWrapper(
     }: PipelineRowProps) => {
       const navigate = useNavigate();
       const { track } = useAnalytics();
+      const { backendUrl } = useBackend();
       const notify = useToastNotification();
       const referenceId = file?.referenceId ?? name;
+      const remoteReference = referenceId
+        ? parseRemotePipelineReference(referenceId)
+        : undefined;
+      const isRemote = file ? file.storageKind === "remote" : !!remoteReference;
+      const savedPipelineId =
+        isRemote &&
+        remoteReference?.backendUrl === backendUrl.replace(/\/+$/, "") &&
+        isPipelineId(remoteReference.pipelineId)
+          ? remoteReference.pipelineId
+          : undefined;
 
       const rowTrack = (suffix: string, metadata?: Record<string, unknown>) => {
         track(`${analyticsTrackingPrefix}.${suffix}`, metadata);
@@ -268,10 +282,35 @@ const PipelineRow = withSuspenseWrapper(
             {tags && tags.length > 0 && <TagList tags={tags} />}
           </TableCell>
           <TableCell>
-            {name && <PipelineRecentRunInfo pipelineName={name} />}
+            {!isRemote && name && <PipelineRecentRunInfo pipelineName={name} />}
           </TableCell>
           <TableCell>
-            {name && <PipelineRunsButton pipelineName={name} />}
+            {savedPipelineId ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="min"
+                    className="text-muted-foreground"
+                  >
+                    <Link
+                      to="/runs"
+                      search={{
+                        filter: { saved_pipeline_id: savedPipelineId },
+                      }}
+                      onClick={(event) => event.stopPropagation()}
+                      aria-label={`View runs for ${name ?? "pipeline"}`}
+                    >
+                      <Icon name="List" />
+                    </Link>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>View pipeline runs</TooltipContent>
+              </Tooltip>
+            ) : (
+              !isRemote && name && <PipelineRunsButton pipelineName={name} />
+            )}
           </TableCell>
           <TableCell className="w-px">
             <div className="grid w-max grid-cols-3 gap-1">

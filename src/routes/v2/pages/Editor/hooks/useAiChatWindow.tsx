@@ -33,7 +33,12 @@ export function useAiChatWindow(enabled: boolean) {
     windows.openWindow(
       <AiChatContent
         createBridge={(deps) =>
-          createEditorToolBridge({ ...deps, undo: editorSession.undo })
+          createEditorToolBridge({
+            ...deps,
+            undo: editorSession.undo,
+            prepareSourcePipeline: (backendUrl) =>
+              editorSession.autoSave.prepareRunSource(backendUrl),
+          })
         }
         suggestedPrompts={SUGGESTED_PROMPTS_EDITOR}
       />,

@@ -13,6 +13,7 @@ import * as pipelineRunService from "@/services/pipelineRunService";
 import type { PipelineRun } from "@/types/pipelineRun";
 
 import { type ComponentSpec, isGraphImplementation } from "./componentSpec";
+import { SOURCE_PIPELINE_ID_ANNOTATION } from "./pipelineRunSource";
 import { submitPipelineRun } from "./submitPipeline";
 
 // Mock dependencies
@@ -118,6 +119,84 @@ describe("submitPipelineRun", () => {
         componentSpec,
         taskArguments: { param1: "value1" },
       });
+    });
+  });
+
+  describe("source pipeline association", () => {
+    const sourcePipelineId = "00000000-0000-4000-8000-000000000002";
+    const spec: ComponentSpec = {
+      name: "Copy of original",
+      metadata: { annotations: { cloned_from_run_id: "123" } },
+      implementation: { container: { image: "test:latest" } },
+    };
+
+    it("attaches the active copy's ID only to the run, without saved-version claims", async () => {
+      const before = structuredClone(spec);
+      await submitPipelineRun(spec, mockBackendUrl, { sourcePipelineId });
+      const [payload] = vi.mocked(pipelineRunService.createPipelineRun).mock
+        .calls[0];
+      expect(payload.annotations).toEqual({
+        source: "web-app",
+        [SOURCE_PIPELINE_ID_ANNOTATION]: sourcePipelineId,
+      });
+      expect(
+        payload.root_task.componentRef.spec?.metadata?.annotations,
+      ).toEqual(spec.metadata?.annotations);
+      expect(spec).toEqual(before);
+    });
+
+    it("waits for the initial upload before creating a run", async () => {
+      let finishUpload!: (id: string) => void;
+      const prepareSourcePipeline = vi.fn(
+        () =>
+          new Promise<string>((resolve) => {
+            finishUpload = resolve;
+          }),
+      );
+      const submitted = submitPipelineRun(spec, mockBackendUrl, {
+        prepareSourcePipeline,
+      });
+      await vi.waitFor(() =>
+        expect(prepareSourcePipeline).toHaveBeenCalledWith(mockBackendUrl),
+      );
+      expect(pipelineRunService.createPipelineRun).not.toHaveBeenCalled();
+      finishUpload(sourcePipelineId);
+      await submitted;
+      expect(
+        vi.mocked(pipelineRunService.createPipelineRun).mock.calls[0][0]
+          .annotations,
+      ).toHaveProperty(SOURCE_PIPELINE_ID_ANNOTATION, sourcePipelineId);
+    });
+
+    it("does not submit after a failed first upload", async () => {
+      const onError = vi.fn();
+      const failure = new Error("Upload failed");
+      await submitPipelineRun(spec, mockBackendUrl, {
+        prepareSourcePipeline: vi.fn().mockRejectedValue(failure),
+        onError,
+      });
+      expect(pipelineRunService.createPipelineRun).not.toHaveBeenCalled();
+      expect(onError).toHaveBeenCalledWith(failure);
+    });
+
+    it("keeps local submissions unassociated and rejects invalid source IDs", async () => {
+      await submitPipelineRun(spec, mockBackendUrl, {
+        prepareSourcePipeline: async () => undefined,
+      });
+      expect(
+        vi.mocked(pipelineRunService.createPipelineRun).mock.calls[0][0]
+          .annotations,
+      ).toEqual({ source: "web-app" });
+      vi.mocked(pipelineRunService.createPipelineRun).mockClear();
+      const onError = vi.fn();
+      await submitPipelineRun(spec, mockBackendUrl, {
+        sourcePipelineId: "pipeline-name",
+        onError,
+      });
+      expect(pipelineRunService.createPipelineRun).not.toHaveBeenCalled();
+      expect(onError).toHaveBeenCalledWith(
+        new Error("The source pipeline ID is invalid."),
+      );
     });
   });
 
