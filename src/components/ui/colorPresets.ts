@@ -1,8 +1,4 @@
-/**
- * The swatches `ColorPicker` offers, kept in a module with no imports of its
- * own so the agent worker can offer the model the same palette the user sees
- * without pulling React into the worker bundle.
- */
+/** Keep this module import-free: the agent worker loads it and must not pull in React. */
 export const PRESET_COLORS = [
   "#FFF9C4",
   "#C8E6C9",

@@ -20,13 +20,7 @@ export function findFlexNode(
   return getFlexNodes(spec).find((n) => n.id === id);
 }
 
-/**
- * Finds which spec in the tree owns a flex node, mirroring `locateEntity` for
- * the entity model. Flex nodes are not entities — each spec keeps its own list
- * in the `flex-nodes` annotation — so they need their own descent, but their
- * ids come from the same `IncrementingIdGenerator` and are unique document-wide,
- * so a match at any depth is unambiguous.
- */
+/** Flex node ids are unique document-wide, so a match at any depth is unambiguous. */
 export function locateFlexNode(
   spec: ComponentSpec,
   id: string,

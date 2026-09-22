@@ -67,9 +67,6 @@ export const EntityChip = observer(function EntityChip({
  * just their `$id` — `navigateToPath` expects the root pipeline name followed by
  * the chain of subgraph task names. Bindings have no node to focus, so they are
  * not navigable.
- *
- * Sticky notes are annotation data rather than entities, so `locateEntity`
- * cannot see them and they need the separate descent.
  */
 function resolveNavigableEntity(
   rootSpec: ComponentSpec | null,

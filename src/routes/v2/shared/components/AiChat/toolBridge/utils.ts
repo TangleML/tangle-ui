@@ -117,13 +117,6 @@ export interface NoteAnchor {
   position: { x: number; y: number };
 }
 
-/**
- * Places a sticky note above the entity it annotates, in whichever graph that
- * entity lives in. The model cannot read entity coordinates, so it names what
- * the note is about and both the position and the destination graph are derived
- * from that — a note annotating a task belongs beside that task, not wherever
- * the user happens to be looking.
- */
 export function resolveNoteAnchor(
   root: ComponentSpec,
   anchorEntityId: string,

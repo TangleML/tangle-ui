@@ -14,9 +14,6 @@
  * `activeSubgraphTaskId` accompanies it because the breadcrumb is made of
  * display names, which are unique only within one graph — the model cannot
  * turn a name in it back into the `$id` that `inSubgraphTaskId` needs.
- *
- * Flex nodes are serialized as `stickyNotes` — the term the product shows the
- * user everywhere — because the model quotes these names back to them.
  */
 import type { FlexNodeData } from "@/components/shared/ReactFlow/FlowCanvas/FlexNode/types";
 import type {
@@ -182,16 +179,9 @@ function serializeComponentRef(ref: ComponentReference): AiComponentRef {
 }
 
 /**
- * The bridge hands this result to the agent worker over Comlink, so every value
- * in it has to survive `postMessage`'s structured clone. Anything read straight
- * off a keystone model is a MobX observable and throws `DataCloneError` there,
- * killing the whole `get_pipeline_state` call — and the fields that can carry
- * one are not obvious: a `dynamicData` argument value, a structured
- * `TypeSpecType`, a string array out of an annotation codec. `toJS` does not
- * help, because the object being returned is a plain one and MobX only
- * recurses into observable containers. A round-trip is lossless for this
- * shape: `AiSpec` is declared plain JSON and `pickDefined` has already
- * dropped every `undefined`.
+ * This crosses a Comlink `postMessage`, and any MobX observable left in it
+ * throws `DataCloneError` and kills the whole call. `toJS` does not help: the
+ * returned object is plain, and MobX only recurses into observable containers.
  */
 const toPlainJson = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 

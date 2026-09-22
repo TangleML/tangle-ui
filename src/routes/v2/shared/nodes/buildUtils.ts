@@ -33,12 +33,9 @@ export function taskDefaultPosition(index: number): { x: number; y: number } {
 }
 
 /**
- * Where every entity in a spec actually sits on the canvas — the stored
- * position where there is one, the same index-based default the node manifests
- * fall back to where there is not. Callers that read the position annotation
- * directly get `{x:0,y:0}` from the codec for an entity that was never placed,
- * and so disagree with what the user is looking at on a pipeline imported from
- * YAML or built by the SDK.
+ * Reading the position annotation directly is not equivalent: the codec returns
+ * `{x:0,y:0}` for an entity that was never placed, where the canvas draws it on
+ * an index-based default.
  */
 export function resolveEntityPositions(
   spec: ComponentSpec,

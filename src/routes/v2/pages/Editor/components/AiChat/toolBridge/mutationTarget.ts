@@ -188,10 +188,9 @@ export function explainNameCollision(
 }
 
 /**
- * Sticky notes are annotation data rather than entities, so they need their own
- * resolution. The existence check is not optional: `updateFlexNode` and
- * `removeFlexNode` both filter or map over the list, so an unknown id is a
- * silent no-op that the model would otherwise read back as success.
+ * The existence check is not optional: `updateFlexNode` and `removeFlexNode`
+ * both map or filter over the list, so an unknown id is a silent no-op that the
+ * model would otherwise read back as success.
  */
 export function resolveStickyNote(
   root: ComponentSpec,
@@ -218,11 +217,7 @@ export function describeStickyNoteLocation(location: FlexNodeLocation): string {
   return `${note} inside subgraph "${location.subgraphTaskNames.join(" > ")}"`;
 }
 
-/**
- * The picker only ever produces a hex literal or `transparent`, so anything
- * else is a colour the user could not have chosen — and a CSS value the canvas
- * silently renders as nothing rather than reporting.
- */
+/** An unpickable colour is one the canvas renders as nothing, silently. */
 export function explainUnpickableColor(
   color: string,
   field: string,
