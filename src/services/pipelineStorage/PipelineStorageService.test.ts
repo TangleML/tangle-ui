@@ -215,6 +215,45 @@ describe("stable pipeline identity", () => {
     expect(getCloudPipeline).toHaveBeenCalledTimes(1);
   });
 
+  it.each(["registered", "legacy"])(
+    "opens an existing %s local pipeline whose name is a UUID",
+    async (kind) => {
+      const service = remoteService();
+      if (kind === "registered")
+        await pipelineStorageDb.pipeline_registry.put({
+          id: LOCAL_ID,
+          storageKey: CLOUD_ID,
+          folderId: ROOT_FOLDER_ID,
+        });
+      vi.spyOn(service.rootFolder.driver, "hasKey").mockResolvedValue(true);
+
+      const file = await service.resolvePipelineByName(CLOUD_ID);
+
+      expect(file?.storageKind).toBe("local");
+      expect(file?.referenceId).toBe(CLOUD_ID);
+      if (kind === "registered") expect(file?.id).toBe(LOCAL_ID);
+      expect(getCloudPipeline).not.toHaveBeenCalled();
+    },
+  );
+
+  it("redirects a migrated UUID-shaped local name to its actual remote identity", async () => {
+    const service = remoteService();
+    await pipelineStorageDb.pipeline_registry.put({
+      id: LOCAL_ID,
+      storageKey: LOCAL_ID,
+      folderId: ROOT_FOLDER_ID,
+    });
+    await remotePipelineRecoveryDb.copies.put({
+      ...recovery(),
+      localStorageKey: LOCAL_ID,
+    });
+
+    const file = await service.resolvePipelineByName(LOCAL_ID);
+
+    expect(file?.referenceId).toBe(remotePipelineReference(BACKEND, CLOUD_ID));
+    expect(getCloudPipeline).not.toHaveBeenCalled();
+  });
+
   it("does not reinterpret local registry UUIDs as remote identities", async () => {
     const service = remoteService();
     await pipelineStorageDb.pipeline_registry.put({

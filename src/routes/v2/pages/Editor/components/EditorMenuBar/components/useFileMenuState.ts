@@ -125,8 +125,7 @@ export function useFileMenuState(): FileMenuState {
       await file.deleteFile();
       void navigate({ to: APP_ROUTES.HOME });
     } catch (error) {
-      if (navigation.rootSpec)
-        autoSave.init(navigation.rootSpec, file.referenceId);
+      if (navigation.rootSpec) autoSave.init(navigation.rootSpec);
       notify(`Could not delete pipeline: ${error}`, "error");
     }
   };

@@ -26,10 +26,10 @@ const REMOTE_MOVEMENT_SAVE_DELAY_MS = 3000;
 interface SaveSession {
   spec: ComponentSpec;
   file: PipelineFile;
-  pipelineName: string;
   savedYaml: string;
   queuedYaml: string;
   snapshot: AutoSaveSnapshot;
+  hasPendingRecovery: boolean;
   pending: Promise<boolean>;
   saving: boolean;
   saveRequested: boolean;
@@ -59,7 +59,7 @@ export class AutoSaveStore {
     makeObservable(this);
   }
 
-  @action init(spec: ComponentSpec, pipelineName: string) {
+  @action init(spec: ComponentSpec) {
     this.dispose();
     const file = this.pipelineFileStore.activePipelineFile;
     if (!file?.canEdit) return;
@@ -67,10 +67,10 @@ export class AutoSaveStore {
     const session: SaveSession = {
       spec,
       file,
-      pipelineName,
       savedYaml: snapshot.yaml,
       queuedYaml: snapshot.yaml,
       snapshot,
+      hasPendingRecovery: false,
       pending: Promise.resolve(true),
       saving: false,
       saveRequested: false,
@@ -86,9 +86,13 @@ export class AutoSaveStore {
         if (next.yaml === session.snapshot.yaml) return;
         const contentChanged = next.contentKey !== session.snapshot.contentKey;
         session.snapshot = next;
+        const remote =
+          file.storageKind !== "local" || this.storage?.canMigrate(file);
+        session.hasPendingRecovery ||= Boolean(remote);
         runInAction(() => {
           this.hasUnsavedChanges =
             next.yaml !== session.savedYaml ||
+            session.hasPendingRecovery ||
             (session.saving && next.yaml !== session.writingYaml);
         });
         void file.persistRecovery(next.yaml).catch((error: unknown) => {
@@ -101,14 +105,13 @@ export class AutoSaveStore {
         if (
           next.yaml === session.savedYaml &&
           !session.saving &&
+          !session.hasPendingRecovery &&
           !this.error &&
           !file.saveError
         ) {
           this.cancelScheduledSave(session);
           return;
         }
-        const remote =
-          file.storageKind !== "local" || this.storage?.canMigrate(file);
         if (!remote) {
           session.contentDeadline = Date.now() + AUTOSAVE_DEBOUNCE_TIME_MS;
         } else if (contentChanged) {
@@ -150,7 +153,10 @@ export class AutoSaveStore {
     if (session) {
       this.cancelScheduledSave(session);
       session.snapshot = getAutoSaveSnapshot(session.spec);
-      if (session.snapshot.yaml !== session.queuedYaml)
+      if (
+        session.snapshot.yaml !== session.queuedYaml ||
+        session.hasPendingRecovery
+      )
         void this.performSave(session);
     }
     this.session = null;
@@ -164,11 +170,16 @@ export class AutoSaveStore {
     this.cancelScheduledSave(session);
     session.snapshot = getAutoSaveSnapshot(session.spec);
     const content = session.snapshot.yaml;
-    if (session.saving && content === session.queuedYaml)
+    if (
+      session.saving &&
+      content === session.queuedYaml &&
+      !session.hasPendingRecovery
+    )
       return session.pending;
     if (
       !session.saving &&
       content === session.savedYaml &&
+      !session.hasPendingRecovery &&
       !this.error &&
       !session.file.saveError &&
       session.file.storageKind !== "pending" &&
@@ -182,7 +193,11 @@ export class AutoSaveStore {
     this.cancelScheduledSave(session);
     session.queuedYaml = session.snapshot.yaml;
     session.saveRequested =
-      !session.saving || session.snapshot.yaml !== session.writingYaml;
+      !session.saving ||
+      session.snapshot.yaml !== session.writingYaml ||
+      session.hasPendingRecovery;
+    // Even reverted edits stage dirty recovery; only a queued flush can clear it.
+    session.hasPendingRecovery = false;
     if (session.saving) return session.pending;
     session.saving = true;
     if (session === this.session)
@@ -200,6 +215,7 @@ export class AutoSaveStore {
         session.saveRequested = false;
         this.cancelScheduledSave(session);
         const yamlText = session.snapshot.yaml;
+        session.hasPendingRecovery = false;
         session.writingYaml = yamlText;
         session.queuedYaml = yamlText;
         try {
@@ -213,7 +229,8 @@ export class AutoSaveStore {
               this.error = null;
               this.lastSavedAt = new Date();
               this.hasUnsavedChanges =
-                serializeComponentSpecToText(session.spec) !== yamlText;
+                serializeComponentSpecToText(session.spec) !== yamlText ||
+                session.hasPendingRecovery;
             });
           saved = true;
         } catch (error) {
@@ -243,7 +260,7 @@ export class AutoSaveStore {
     if (!manager) return;
     try {
       await saveUndoHistory(
-        session.pipelineName,
+        session.file.referenceId,
         collectIdStack(session.spec),
         manager,
       );

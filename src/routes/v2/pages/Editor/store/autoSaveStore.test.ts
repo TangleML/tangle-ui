@@ -6,6 +6,7 @@ import {
   Input,
   serializeComponentSpecToText,
 } from "@/models/componentSpec";
+import { saveUndoHistory } from "@/routes/v2/pages/Editor/utils/undoHistoryStorage";
 import { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import { PipelineFolder } from "@/services/pipelineStorage/PipelineFolder";
 import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
@@ -19,6 +20,12 @@ vi.mock("@/services/pipelineStorage/createDriver", () => ({
   createDriver: vi.fn(),
 }));
 vi.mock("@/services/pipelineStorage/db", () => ({ pipelineStorageDb: {} }));
+vi.mock("@/services/pipelineStorage/pipelineRegistry", () => ({
+  updateEntry: vi.fn(),
+}));
+vi.mock("@/routes/v2/pages/Editor/utils/undoHistoryStorage", () => ({
+  saveUndoHistory: vi.fn(),
+}));
 
 function createFile(name = "Pipeline") {
   const folder = new PipelineFolder({
@@ -57,9 +64,10 @@ function setup(
   const spec = new ComponentSpec({ $id: "spec", name: "Pipeline" });
   const files = new PipelineFileStore();
   files.init(file);
-  const store = new AutoSaveStore(new UndoStore(), files, storage);
-  store.init(spec, file.referenceId);
-  return { file, write, spec, files, store };
+  const undo = new UndoStore();
+  const store = new AutoSaveStore(undo, files, storage);
+  store.init(spec);
+  return { file, write, spec, files, store, undo };
 }
 
 function setupRemote() {
@@ -88,7 +96,7 @@ function setupRemoteEditor() {
   vi.spyOn(context.file, "storageKind", "get").mockReturnValue("remote");
   const input = new Input({ $id: "input", name: "Value" });
   context.spec.addInput(input);
-  context.store.init(context.spec, context.file.referenceId);
+  context.store.init(context.spec);
   const move = (x: number) =>
     context.spec.updateNodePosition(input.$id, { x, y: 0 });
   return { ...context, input, move };
@@ -108,6 +116,88 @@ describe("AutoSaveStore", () => {
     store.dispose();
     await Promise.resolve();
     expect(write).not.toHaveBeenCalled();
+  });
+
+  it.each(["autosave", "save", "dispose"] as const)(
+    "flushes delayed recovery after an immediate remote edit and revert on %s",
+    async (trigger) => {
+      const { store, file, spec, write } = setup();
+      vi.spyOn(file, "storageKind", "get").mockReturnValue("remote");
+      const original = serializeComponentSpecToText(spec);
+      const recovery = createPendingWrite();
+      let dirty = false;
+      vi.mocked(file.persistRecovery).mockImplementation(async () => {
+        await recovery.promise;
+        dirty = true;
+      });
+      vi.spyOn(file, "saveError", "get").mockImplementation(() =>
+        dirty ? "Not saved to server" : undefined,
+      );
+      write.mockImplementation(async () => {
+        await recovery.promise;
+        dirty = false;
+      });
+
+      spec.setDescription("Temporary edit");
+      spec.setDescription(undefined);
+      expect(store.hasUnsavedChanges).toBe(true);
+      if (trigger === "autosave") {
+        await vi.advanceTimersByTimeAsync(1000);
+        expect(write).toHaveBeenCalledExactlyOnceWith(original);
+      }
+      const saving = trigger === "dispose" ? store.dispose() : store.save();
+      await Promise.resolve();
+      expect(write).toHaveBeenCalledExactlyOnceWith(original);
+
+      recovery.resolve();
+      expect(await saving).toBe(true);
+      expect(dirty).toBe(false);
+      if (trigger !== "dispose") expect(store.hasUnsavedChanges).toBe(false);
+      await store.dispose();
+      expect(write).toHaveBeenCalledOnce();
+    },
+  );
+
+  it("keeps newer recovery pending when an earlier save finishes", async () => {
+    const { store, file, spec, write } = setup();
+    vi.spyOn(file, "storageKind", "get").mockReturnValue("remote");
+    const pendingWrite = createPendingWrite();
+    write.mockReturnValueOnce(pendingWrite.promise);
+    spec.setDescription("First edit");
+    const saving = store.save();
+    await Promise.resolve();
+
+    spec.setDescription("Temporary edit");
+    spec.setDescription("First edit");
+    pendingWrite.resolve();
+    expect(await saving).toBe(true);
+    expect(store.hasUnsavedChanges).toBe(true);
+    await store.dispose();
+    expect(write).toHaveBeenCalledTimes(2);
+    expect(write).toHaveBeenLastCalledWith(serializeComponentSpecToText(spec));
+  });
+
+  it("persists undo history under the current local name after a stable-file rename", async () => {
+    const { store, file, spec, undo } = setup();
+    undo.init(spec);
+    await file.rename("Renamed pipeline");
+    spec.setName("Renamed pipeline");
+    await store.save();
+    spec.setDescription("An edit after renaming");
+    await store.save();
+
+    expect(saveUndoHistory).toHaveBeenLastCalledWith(
+      "Renamed pipeline",
+      expect.any(Array),
+      undo.undoManager,
+    );
+    expect(saveUndoHistory).not.toHaveBeenCalledWith(
+      "Pipeline",
+      expect.anything(),
+      expect.anything(),
+    );
+    await store.dispose();
+    undo.dispose();
   });
 
   it("serializes overlapping autosaves so the newer edit is written last", async () => {
@@ -153,10 +243,7 @@ describe("AutoSaveStore", () => {
     const next = createFile("Other pipeline");
     const nextWrite = vi.spyOn(next, "write").mockResolvedValue();
     files.init(next);
-    store.init(
-      new ComponentSpec({ $id: "other", name: "Other" }),
-      next.referenceId,
-    );
+    store.init(new ComponentSpec({ $id: "other", name: "Other" }));
     firstWrite.resolve();
     await vi.advanceTimersByTimeAsync(0);
     expect(write).toHaveBeenCalledWith(serializeComponentSpecToText(spec));
@@ -170,7 +257,7 @@ describe("AutoSaveStore", () => {
     const { store, file, spec, write } = setup();
     store.dispose();
     vi.spyOn(file, "canEdit", "get").mockReturnValue(false);
-    store.init(spec, file.referenceId);
+    store.init(spec);
     spec.setDescription("No write allowed");
     await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_TIME_MS);
     expect(await store.save()).toBe(false);
@@ -202,7 +289,7 @@ describe("AutoSaveStore", () => {
     store.dispose();
     vi.spyOn(file, "storageKind", "get").mockReturnValue("remote");
     vi.spyOn(file, "saveError", "get").mockReturnValue("Not saved to server");
-    store.init(spec, file.referenceId);
+    store.init(spec);
     await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_TIME_MS);
     expect(write).not.toHaveBeenCalled();
     expect(await store.save()).toBe(true);
@@ -324,6 +411,42 @@ describe("AutoSaveStore", () => {
     expect(store.hasUnsavedChanges).toBe(false);
     store.dispose();
   });
+
+  it.each(["autosave", "dispose"] as const)(
+    "flushes recovery reverted to the first upload's content on %s",
+    async (trigger) => {
+      const { store, storage, spec, file, remote, remoteWrite } = setupRemote();
+      const upload = createPendingWrite();
+      storage.migratePipeline.mockImplementationOnce(async () => {
+        await upload.promise;
+        runInAction(() => {
+          file.redirectedFile = remote;
+        });
+        return remote;
+      });
+      spec.setDescription("Uploading edit");
+      await vi.advanceTimersByTimeAsync(1000);
+      const saving = store.save();
+      expect(storage.migratePipeline).toHaveBeenCalledOnce();
+
+      spec.setDescription("Temporary edit during upload");
+      spec.setDescription("Uploading edit");
+      if (trigger === "autosave") await vi.advanceTimersByTimeAsync(1000);
+      expect(remoteWrite).not.toHaveBeenCalled();
+
+      upload.resolve();
+      expect(await saving).toBe(true);
+      try {
+        if (trigger === "dispose") await store.dispose();
+        expect(remoteWrite).toHaveBeenCalledExactlyOnceWith(
+          serializeComponentSpecToText(spec),
+        );
+        expect(storage.migratePipeline).toHaveBeenCalledOnce();
+      } finally {
+        await store.dispose();
+      }
+    },
+  );
 
   it("persists and uploads a revert to the original after the first upload fails", async () => {
     const { store, storage, spec, file, write } = setupRemote();
@@ -500,6 +623,39 @@ describe("AutoSaveStore", () => {
     await store.dispose();
   });
 
+  it.each(["autosave", "save", "dispose"] as const)(
+    "flushes recovery staged back to in-flight content on %s",
+    async (trigger) => {
+      const { store, spec, input, write } = setupRemoteEditor();
+      const first = createPendingWrite();
+      write.mockImplementationOnce(() => first.promise);
+      input.setValue("Uploading");
+      await vi.advanceTimersByTimeAsync(1000);
+      input.setValue("Temporary");
+      input.setValue("Uploading");
+      if (trigger === "autosave") await vi.advanceTimersByTimeAsync(1000);
+      const saving =
+        trigger === "autosave"
+          ? undefined
+          : trigger === "dispose"
+            ? store.dispose()
+            : store.save();
+      expect(write).toHaveBeenCalledTimes(1);
+
+      first.resolve();
+      if (saving) expect(await saving).toBe(true);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(write).toHaveBeenCalledTimes(2);
+      expect(write).toHaveBeenLastCalledWith(
+        serializeComponentSpecToText(spec),
+      );
+      if (trigger !== "dispose") expect(store.hasUnsavedChanges).toBe(false);
+      await store.dispose();
+      await vi.advanceTimersByTimeAsync(4000);
+      expect(write).toHaveBeenCalledTimes(2);
+    },
+  );
+
   it("saves a revert while different content is in flight", async () => {
     const { store, spec, input, write } = setupRemoteEditor();
     const original = serializeComponentSpecToText(spec);
@@ -518,12 +674,13 @@ describe("AutoSaveStore", () => {
     await store.dispose();
   });
 
-  it("does not send an edit undone before its timer expires", async () => {
-    const { store, input, write } = setupRemoteEditor();
+  it("flushes the original snapshot when an edit is undone before its timer expires", async () => {
+    const { store, spec, input, write } = setupRemoteEditor();
+    const original = serializeComponentSpecToText(spec);
     input.setValue("Temporary");
     input.setValue(undefined);
     await vi.advanceTimersByTimeAsync(4000);
-    expect(write).not.toHaveBeenCalled();
+    expect(write).toHaveBeenCalledExactlyOnceWith(original);
     expect(store.hasUnsavedChanges).toBe(false);
     await store.dispose();
   });
@@ -535,7 +692,7 @@ describe("AutoSaveStore", () => {
     const next = createFile("Next");
     const nextWrite = vi.spyOn(next, "write").mockResolvedValue();
     files.init(next);
-    store.init(new ComponentSpec({ name: "Next" }), next.referenceId);
+    store.init(new ComponentSpec({ name: "Next" }));
     await finishing;
     await vi.advanceTimersByTimeAsync(4000);
     expect(write).toHaveBeenCalledExactlyOnceWith(

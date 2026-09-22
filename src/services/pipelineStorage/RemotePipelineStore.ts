@@ -102,7 +102,8 @@ export class RemotePipelineStore {
         const record = records.find(
           (item) => item.filePath === summary.file_path,
         );
-        if (record?.localFileId && !record.migrated) continue;
+        if (record?.deleted || (record?.localFileId && !record.migrated))
+          continue;
         result.set(summary.file_path, this.fromSummary(summary, record));
       }
       // Clean recovery copies are not a second remote catalog after server-side deletion.
@@ -482,17 +483,15 @@ export class RemotePipelineStore {
       const pipeline = record.pipeline ?? file.summary;
       if (pipeline)
         await deleteCloudPipeline(pipeline, await this.connection());
-      // Retain the hidden migration marker and original backup after deleting its remote entry.
-      if (record.localFileId) {
-        await remotePipelineRecoveryDb.copies.put({
-          ...record,
-          deleted: true,
-          dirty: false,
-          error: undefined,
-        });
-      } else {
-        await remotePipelineRecoveryDb.copies.delete(file.recovery.key);
-      }
+      // Stale editors and queued retries must not recreate a deleted pipeline.
+      const deleted = {
+        ...record,
+        deleted: true,
+        dirty: false,
+        error: undefined,
+      };
+      await remotePipelineRecoveryDb.copies.put(deleted);
+      file.setRecovery(deleted);
       emitUserPipelineWritten();
     });
   }
