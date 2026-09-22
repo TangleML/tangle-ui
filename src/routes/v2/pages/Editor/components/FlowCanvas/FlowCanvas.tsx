@@ -15,6 +15,7 @@ import { SubgraphBreadcrumbs } from "@/routes/v2/shared/components/SubgraphBread
 import { FLOW_CANVAS_DEFAULT_PROPS } from "@/routes/v2/shared/flowCanvasDefaults";
 import { useDoubleClickBehavior } from "@/routes/v2/shared/hooks/useDoubleClickBehavior";
 import { useFitViewOnFocus } from "@/routes/v2/shared/hooks/useFitViewOnFocus";
+import { useFitViewOnRequest } from "@/routes/v2/shared/hooks/useFitViewOnRequest";
 import { useFlowCanvasState } from "@/routes/v2/shared/hooks/useFlowCanvasState";
 import { focusModeStore } from "@/routes/v2/shared/hooks/useFocusMode";
 import { useIsDetailedView } from "@/routes/v2/shared/hooks/useIsDetailedView";
@@ -68,6 +69,7 @@ export const FlowCanvas = observer(function FlowCanvas({
   const onBeforeDelete = useFlowCanvasOnBeforeDelete(spec);
 
   useFitViewOnFocus();
+  useFitViewOnRequest();
   useAutoLayout(spec);
   useClipboardShortcuts(spec, containerRef, reactFlowInstance);
 
