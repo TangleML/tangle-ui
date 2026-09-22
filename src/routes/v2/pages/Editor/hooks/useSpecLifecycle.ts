@@ -33,7 +33,7 @@ export function useSpecLifecycle(
     pipelineFileStore.init(file);
     if (file.canEdit) {
       undo.init(rootSpec, restoredUndoStore);
-      autoSave.init(rootSpec, file.referenceId);
+      autoSave.init(rootSpec);
     }
     const readOnly = file.canEdit ? undefined : readonlyMiddleware(rootSpec);
 
