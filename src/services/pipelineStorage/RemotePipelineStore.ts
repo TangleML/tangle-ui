@@ -270,6 +270,8 @@ export class RemotePipelineStore {
           const record = previous
             ? {
                 ...previous,
+                // A confirmed upload may still need reference migration after interruption.
+                dirty: true,
                 displayName: file.displayName,
                 localStorageKey: file.storageKey,
               }

@@ -208,6 +208,51 @@ describe("local pipeline migration", () => {
     expect(await store.records()).toHaveLength(1);
   });
 
+  it("finishes an interrupted migration using its confirmed server identity and latest recovery", async () => {
+    const { store, local, driver } = setup();
+    await store.stageLocal(local, UPDATED_CONTENT);
+    const [recovery] = await store.records();
+    const published = pipeline({
+      root_pipeline_task: {
+        componentRef: { spec: { ...SPEC, description: "Unsaved work" } },
+      },
+    });
+    await remotePipelineRecoveryDb.copies.put({
+      ...recovery,
+      pipeline: published,
+      ownerId: ACCOUNT,
+      dirty: false,
+    });
+
+    const remote = await store.migrate(local);
+
+    expect(driver.read).toHaveBeenCalledExactlyOnceWith(NAME);
+    expect(writeCloudPipeline).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        filePath: published.file_path,
+        componentSpec: { ...SPEC, description: "Unsaved work" },
+        existingPipeline: published,
+      }),
+      expect.anything(),
+    );
+    expect(migratePipelineReferences).toHaveBeenCalledExactlyOnceWith(
+      NAME,
+      remotePipelineReference(BACKEND, CLOUD_ID),
+      NAME,
+    );
+    expect(local.redirectedFile).toBe(remote);
+    expect(await store.records()).toEqual([
+      expect.objectContaining({
+        content: UPDATED_CONTENT,
+        revision: recovery.revision,
+        pipeline: expect.objectContaining({ id: CLOUD_ID }),
+        migrated: true,
+        dirty: false,
+      }),
+    ]);
+    expect(driver.write).not.toHaveBeenCalled();
+  });
+
   it("migrates the latest staged draft instead of an older local read", async () => {
     const { store, local, driver } = setup();
     let finishRead!: (content: string) => void;
