@@ -36,13 +36,11 @@ function isValidSortField(value: string): value is PipelineSortField {
 interface PipelineFiltersBarProps {
   filters: FilterBarProps;
   actions?: ReactNode;
-  remote?: boolean;
 }
 
 export function PipelineFiltersBar({
   filters,
   actions,
-  remote = false,
 }: PipelineFiltersBarProps) {
   const {
     searchQuery,
@@ -116,12 +114,8 @@ export function PipelineFiltersBar({
               className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
             />
             <Input
-              placeholder={remote ? "Search names..." : "Search..."}
-              aria-label={
-                remote
-                  ? "Search remote pipeline names"
-                  : "Search local pipelines"
-              }
+              placeholder="Search..."
+              aria-label="Search local pipelines"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9 pr-8 w-full"
@@ -169,65 +163,58 @@ export function PipelineFiltersBar({
             </Button>
           </InlineStack>
 
-          {!remote && (
-            <CollapsibleTrigger asChild>
-              <Button
-                variant={componentQuery ? "secondary" : "outline"}
-                size="sm"
-                className="shrink-0"
-              >
-                Advanced
-                {componentQuery && (
-                  <Badge
-                    variant="secondary"
-                    className="ml-1.5 h-5 min-w-5 px-1"
-                  >
-                    1
-                  </Badge>
-                )}
-                {isAdvancedOpen ? (
-                  <Icon name="ChevronUp" className="ml-1" />
-                ) : (
-                  <Icon name="ChevronDown" className="ml-1" />
-                )}
-              </Button>
-            </CollapsibleTrigger>
-          )}
+          <CollapsibleTrigger asChild>
+            <Button
+              variant={componentQuery ? "secondary" : "outline"}
+              size="sm"
+              className="shrink-0"
+            >
+              Advanced
+              {componentQuery && (
+                <Badge variant="secondary" className="ml-1.5 h-5 min-w-5 px-1">
+                  1
+                </Badge>
+              )}
+              {isAdvancedOpen ? (
+                <Icon name="ChevronUp" className="ml-1" />
+              ) : (
+                <Icon name="ChevronDown" className="ml-1" />
+              )}
+            </Button>
+          </CollapsibleTrigger>
 
           {actions}
         </InlineStack>
 
-        {!remote && (
-          <CollapsibleContent>
-            <BlockStack
-              gap="2"
-              className="rounded-md border bg-muted/30 px-4 py-3"
-            >
-              <Text size="sm" weight="semibold">
-                Contains component
-              </Text>
-              <InlineStack align="start">
-                <Input
-                  placeholder="Component name..."
-                  value={componentQuery}
-                  onChange={(e) => setComponentQuery(e.target.value)}
-                  className="pr-8 w-xs"
-                />
-                {componentQuery && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setComponentQuery("")}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 size-6 text-muted-foreground hover:text-foreground"
-                    aria-label="Clear component filter"
-                  >
-                    <Icon name="X" size="sm" />
-                  </Button>
-                )}
-              </InlineStack>
-            </BlockStack>
-          </CollapsibleContent>
-        )}
+        <CollapsibleContent>
+          <BlockStack
+            gap="2"
+            className="rounded-md border bg-muted/30 px-4 py-3"
+          >
+            <Text size="sm" weight="semibold">
+              Contains component
+            </Text>
+            <InlineStack align="start">
+              <Input
+                placeholder="Component name..."
+                value={componentQuery}
+                onChange={(e) => setComponentQuery(e.target.value)}
+                className="pr-8 w-xs"
+              />
+              {componentQuery && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setComponentQuery("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 size-6 text-muted-foreground hover:text-foreground"
+                  aria-label="Clear component filter"
+                >
+                  <Icon name="X" size="sm" />
+                </Button>
+              )}
+            </InlineStack>
+          </BlockStack>
+        </CollapsibleContent>
 
         {(hasActiveFilters || totalCount > 0) && (
           <InlineStack gap="2" align="center" blockAlign="center">
