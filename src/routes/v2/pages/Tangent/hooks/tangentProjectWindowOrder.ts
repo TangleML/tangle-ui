@@ -1,7 +1,9 @@
 import type { WindowStoreImpl } from "@/routes/v2/shared/windows/windowStore";
 
+export const PROJECT_DETAILS_WINDOW_ID = "tangent-project-details";
+
 export const PROJECT_DOCK_WINDOW_IDS = [
-  "tangent-project-details",
+  PROJECT_DETAILS_WINDOW_ID,
   "tangent-project-sessions",
   "tangent-project-agents",
   "tangent-project-assets",
