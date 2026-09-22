@@ -58,7 +58,7 @@ describe("DashboardLayout", () => {
 
     render(<DashboardLayout />);
 
-    expect(screen.getByRole("link", { name: "Projects" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /^Tangent/ })).toHaveAttribute(
       "href",
       "/projects",
     );
@@ -69,6 +69,29 @@ describe("DashboardLayout", () => {
 
     render(<DashboardLayout />);
 
-    expect(screen.queryByRole("link", { name: "Projects" })).toBeNull();
+    expect(screen.queryByRole("link", { name: /^Tangent/ })).toBeNull();
+  });
+
+  /** The agent is the point of the product, so it is not filed behind the nouns. */
+  it("leads the nav with Tangent", () => {
+    mockFlags({ projects: true });
+
+    render(<DashboardLayout />);
+
+    expect(screen.getAllByRole("link")[0]).toHaveAccessibleName(/^Tangent/);
+  });
+
+  it("marks it out from everything else in the nav", () => {
+    mockFlags({ projects: true });
+
+    render(<DashboardLayout />);
+
+    const highlight = "ring-brand-accent/60";
+    expect(
+      screen.getByRole("link", { name: /^Tangent/ }).firstElementChild,
+    ).toHaveClass(highlight);
+    expect(
+      screen.getByRole("link", { name: "My Dashboard" }).firstElementChild,
+    ).not.toHaveClass(highlight);
   });
 });

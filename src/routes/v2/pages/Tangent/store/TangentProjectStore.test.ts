@@ -469,12 +469,12 @@ describe("TangentProjectStore.startSession", () => {
 
     await store.startSession({
       prompt: "Fix the failed run",
-      name: "Debug session",
+      name: "Repair run 7",
     });
 
     const [prompt, , options] = io.newSession.mock.calls[0];
     expect(prompt).toBe("Fix the failed run");
-    expect(options.name).toBe("Debug session");
+    expect(options.name).toBe("Repair run 7");
   });
 
   it("keeps a prompted session out of auto-discard", async () => {

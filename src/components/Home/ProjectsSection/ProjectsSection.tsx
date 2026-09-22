@@ -1,23 +1,17 @@
-import { useQuery } from "@tanstack/react-query";
-
 import { InfoBox } from "@/components/shared/InfoBox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
-import { userQueryOptions } from "@/hooks/useUserDetails";
 import { useBackend } from "@/providers/BackendProvider";
-import { useProjects } from "@/services/projects/useProjects";
 import { useWorkspaces } from "@/services/projects/useWorkspaces";
 
 import { CreateProjectDialog } from "./CreateProjectDialog";
 import { NewProjectCard } from "./NewProjectCard";
 import { ProjectCard } from "./ProjectCard";
-
-const UNRESOLVED_USER_ID = "Unknown";
-
-const PAGE_SIZE = 100;
+import { useMyProjects } from "./useMyProjects";
 
 const LoadingProjects = () => (
   <InlineStack gap="2" blockAlign="center">
@@ -27,9 +21,8 @@ const LoadingProjects = () => (
 
 export function ProjectsSection() {
   const { configured, available, ready } = useBackend();
-  const { data: user, isPending: isUserPending } = useQuery(userQueryOptions);
 
-  if (!ready || isUserPending) {
+  if (!ready) {
     return <LoadingProjects />;
   }
 
@@ -49,18 +42,19 @@ export function ProjectsSection() {
     );
   }
 
-  return (
-    <ProjectsGrid
-      createdBy={user?.id === UNRESOLVED_USER_ID ? undefined : user?.id}
-    />
-  );
+  return <ProjectsGrid />;
 }
 
-function ProjectsGrid({ createdBy }: { createdBy: string | undefined }) {
-  const { data, isPending, error } = useProjects({
-    createdBy,
-    pageSize: PAGE_SIZE,
-  });
+function ProjectsGrid() {
+  const {
+    projects,
+    totalCount,
+    isPending,
+    error,
+    hasMore,
+    isLoadingMore,
+    loadMore,
+  } = useMyProjects();
   const { data: workspaces } = useWorkspaces();
 
   if (isPending) {
@@ -96,14 +90,19 @@ function ProjectsGrid({ createdBy }: { createdBy: string | undefined }) {
             trigger={<NewProjectCard />}
           />
         )}
-        {data.items.map((project) => (
+        {projects.map((project) => (
           <ProjectCard key={project.id} project={project} />
         ))}
       </div>
-      {data.nextPageToken && (
-        <Text size="sm" tone="subdued">
-          {`Showing the first ${data.items.length} of ${data.totalCount} projects.`}
-        </Text>
+      {hasMore && (
+        <InlineStack gap="3" blockAlign="center">
+          <Button variant="outline" disabled={isLoadingMore} onClick={loadMore}>
+            {isLoadingMore ? "Loading..." : "Load more projects"}
+          </Button>
+          <Text size="sm" tone="subdued">
+            {`Showing ${projects.length} of ${totalCount}.`}
+          </Text>
+        </InlineStack>
       )}
     </BlockStack>
   );
