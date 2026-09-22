@@ -5,21 +5,23 @@ import { BlockStack } from "@/components/ui/layout";
 import { Textarea } from "@/components/ui/textarea";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import type { Project, UpdateProjectInput } from "@/services/projects/types";
+import { useProjectInstructions } from "@/services/projects/useProjectInstructions";
 import { useUpdateProject } from "@/services/projects/useProjects";
 
 interface ProjectAboutProps {
   project: Project;
-  showNotes?: boolean;
+  showInstructions?: boolean;
 }
 
-export function ProjectAbout({ project, showNotes = true }: ProjectAboutProps) {
+export function ProjectAbout({
+  project,
+  showInstructions = true,
+}: ProjectAboutProps) {
   const updateProject = useUpdateProject();
+  const { instructions, save } = useProjectInstructions(project.id);
   const { track } = useAnalytics();
 
-  const commit = (
-    field: "description" | "notes",
-    input: UpdateProjectInput,
-  ) => {
+  const commit = (field: "description", input: UpdateProjectInput) => {
     updateProject.mutate(
       { id: project.id, input },
       {
@@ -28,6 +30,11 @@ export function ProjectAbout({ project, showNotes = true }: ProjectAboutProps) {
         },
       },
     );
+  };
+
+  const commitInstructions = (value: string | null) => {
+    save(value ?? "");
+    track("projects.update_project_completed", { field: "instructions" });
   };
 
   return (
@@ -39,13 +46,13 @@ export function ProjectAbout({ project, showNotes = true }: ProjectAboutProps) {
         placeholder="What this project is for"
         onCommit={(value) => commit("description", { description: value })}
       />
-      {showNotes && (
+      {showInstructions && (
         <EditableText
-          id="project-notes"
-          label="Notes"
-          value={project.notes}
-          placeholder="Anything worth knowing about this project"
-          onCommit={(value) => commit("notes", { notes: value })}
+          id="project-instructions"
+          label="Instructions"
+          value={instructions}
+          placeholder="Standing context for agents working on this project"
+          onCommit={commitInstructions}
         />
       )}
     </BlockStack>

@@ -67,7 +67,7 @@ export interface TangentSessionIo {
   attachSession: (sessionId: string) => Promise<{ id: string }>;
   detachSession: (resourceId: string) => Promise<void>;
   notify: (message: string, type: "error") => void;
-  projectNotes?: string | null;
+  projectInstructions?: string | null;
 }
 
 export interface StartSessionOptions {
@@ -209,11 +209,11 @@ export class TangentProjectStore {
       // so the agent starts working. `name` labels the session in Tangent's own
       // session list.
       const prompt = options?.prompt ?? "";
-      const notes = io.projectNotes?.trim();
+      const instructions = io.projectInstructions?.trim();
       const { sessionId } = await io.newSession(prompt, TANGENT_BUNDLE_ID, {
         name: options?.name ?? "New Tangent session",
-        resources: notes
-          ? [{ kind: "memory", scope: "session", content: notes }]
+        resources: instructions
+          ? [{ kind: "memory", scope: "session", content: instructions }]
           : undefined,
       });
       const resource = await io.attachSession(sessionId);

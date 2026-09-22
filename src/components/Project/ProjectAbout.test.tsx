@@ -9,6 +9,8 @@ import { ProjectAbout } from "./ProjectAbout";
 
 const mutate = vi.fn();
 const track = vi.fn();
+const saveInstructions = vi.fn();
+let savedInstructions = "Retrain weekly";
 
 vi.mock("@/services/projects/useProjects", () => ({
   useUpdateProject: vi.fn(),
@@ -16,6 +18,15 @@ vi.mock("@/services/projects/useProjects", () => ({
 
 vi.mock("@/providers/AnalyticsProvider", () => ({
   useAnalytics: () => ({ track }),
+}));
+
+vi.mock("@/services/projects/useProjectInstructions", () => ({
+  useProjectInstructions: () => ({
+    instructions: savedInstructions,
+    isPending: false,
+    isSaving: false,
+    save: saveInstructions,
+  }),
 }));
 
 const project: Project = {
@@ -44,10 +55,11 @@ function renderAbout(overrides: Partial<Project> = {}) {
 }
 
 const description = () => screen.getByLabelText("Description");
-const notes = () => screen.getByLabelText("Notes");
+const instructions = () => screen.getByLabelText("Instructions");
 
 describe("ProjectAbout", () => {
   beforeEach(() => {
+    savedInstructions = "Retrain weekly";
     mockUpdate();
   });
 
@@ -59,14 +71,15 @@ describe("ProjectAbout", () => {
     renderAbout();
 
     expect(description()).toHaveValue("Weekly churn scoring");
-    expect(notes()).toHaveValue("Retrain weekly");
+    expect(instructions()).toHaveValue("Retrain weekly");
   });
 
   it("starts empty when a project says nothing", () => {
-    renderAbout({ description: null, notes: null });
+    savedInstructions = "";
+    renderAbout({ description: null });
 
     expect(description()).toHaveValue("");
-    expect(notes()).toHaveValue("");
+    expect(instructions()).toHaveValue("");
   });
 
   it("saves a changed description when the field is left", async () => {
@@ -83,18 +96,17 @@ describe("ProjectAbout", () => {
     );
   });
 
-  it("saves changed notes independently of the description", async () => {
+  /** Instructions are a document the project holds, not a field on it. */
+  it("saves changed instructions to the document that holds them", async () => {
     const user = userEvent.setup();
     renderAbout();
 
-    await user.clear(notes());
-    await user.type(notes(), "Owner is the growth team");
+    await user.clear(instructions());
+    await user.type(instructions(), "Owner is the growth team");
     await user.tab();
 
-    expect(mutate).toHaveBeenCalledWith(
-      { id: "project-1", input: { notes: "Owner is the growth team" } },
-      expect.anything(),
-    );
+    expect(saveInstructions).toHaveBeenCalledWith("Owner is the growth team");
+    expect(mutate).not.toHaveBeenCalled();
   });
 
   it("does not save when nothing was changed", async () => {
@@ -147,15 +159,12 @@ describe("ProjectAbout", () => {
     const user = userEvent.setup();
     renderAbout();
 
-    await user.clear(notes());
-    await user.type(notes(), "Something new");
+    await user.clear(instructions());
+    await user.type(instructions(), "Something new");
     await user.tab();
 
-    const [, options] = mutate.mock.calls[0];
-    options.onSuccess();
-
     expect(track).toHaveBeenCalledWith("projects.update_project_completed", {
-      field: "notes",
+      field: "instructions",
     });
   });
 
@@ -164,7 +173,7 @@ describe("ProjectAbout", () => {
     renderAbout();
 
     expect(description()).toBeEnabled();
-    expect(notes()).toBeEnabled();
+    expect(instructions()).toBeEnabled();
   });
 
   it("keeps an edit to one field while the other is saving", async () => {
@@ -173,21 +182,16 @@ describe("ProjectAbout", () => {
 
     await user.clear(description());
     await user.type(description(), "Monthly churn scoring");
-    await user.click(notes());
-    await user.clear(notes());
-    await user.type(notes(), "Owner is the growth team");
+    await user.click(instructions());
+    await user.clear(instructions());
+    await user.type(instructions(), "Owner is the growth team");
     await user.tab();
 
-    expect(mutate).toHaveBeenNthCalledWith(
-      1,
+    expect(mutate).toHaveBeenCalledWith(
       { id: "project-1", input: { description: "Monthly churn scoring" } },
       expect.anything(),
     );
-    expect(mutate).toHaveBeenNthCalledWith(
-      2,
-      { id: "project-1", input: { notes: "Owner is the growth team" } },
-      expect.anything(),
-    );
+    expect(saveInstructions).toHaveBeenCalledWith("Owner is the growth team");
   });
 
   it("takes up a value that changed elsewhere", () => {

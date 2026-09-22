@@ -27,6 +27,15 @@ const deleteProject = vi.fn();
 const navigate = vi.fn();
 const notify = vi.fn();
 
+vi.mock("@/services/projects/useProjectInstructions", () => ({
+  useProjectInstructions: () => ({
+    instructions: "",
+    isPending: false,
+    isSaving: false,
+    save: vi.fn(),
+  }),
+}));
+
 vi.mock("@/utils/string", () => ({
   copyToClipboard: vi.fn(),
 }));
@@ -74,16 +83,12 @@ describe("ProjectWindowContent", () => {
     expect(screen.getByDisplayValue("Q3 churn work")).toBeInTheDocument();
   });
 
-  /**
-   * Notes are the agent's instructions here, edited under that name from the
-   * Resources window, so a box calling them Notes would be a second name for
-   * one field.
-   */
-  it("leaves the notes to the instructions that own them", () => {
+  /** Instructions are edited from the Resources window, not from here twice. */
+  it("leaves the instructions to the row that owns them", () => {
     render(<ProjectWindowContent />);
 
+    expect(screen.queryByText("Instructions")).toBeNull();
     expect(screen.queryByText("Notes")).toBeNull();
-    expect(screen.queryByDisplayValue("Watch the drift")).toBeNull();
   });
 
   it("shows who made it and when", () => {

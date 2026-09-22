@@ -13,6 +13,7 @@ import type { CreateResourceInput, ProjectResourceSummary } from "./types";
 export const LOCAL_PIPELINE = "local_pipeline";
 export const PIPELINE_RUN = "pipeline_run";
 export const DOCUMENT = "document";
+export const INSTRUCTIONS = "instructions";
 
 const BROWSER = "browser";
 
@@ -166,6 +167,29 @@ export function documentResourceInput(
     // inside it; `content` is this app's convention for the whole body.
     payload: { content },
     extraData: { type: DOCUMENT },
+  };
+}
+
+const INSTRUCTIONS_NAME = "Instructions";
+
+/**
+ * Standing context for the agents working on a project — the same thing both
+ * pages used to call by two names, Notes on one and Instructions on the other,
+ * while writing one field.
+ *
+ * It is a document because that is what it is: a body of text the project
+ * carries. Filing it as one means it is listed, previewed and read back by
+ * everything that already handles documents, rather than being a field on the
+ * project that only two screens know to look at.
+ */
+export function instructionsResourceInput(
+  content: string,
+): CreateResourceInput {
+  return {
+    entity: "document",
+    name: INSTRUCTIONS_NAME,
+    payload: { content },
+    extraData: { type: INSTRUCTIONS },
   };
 }
 
