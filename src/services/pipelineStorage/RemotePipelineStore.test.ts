@@ -10,6 +10,7 @@ import {
   deleteCloudPipeline,
   getCloudPipeline,
   getCloudPipelineAccount,
+  listCloudPipelinePage,
   listCloudPipelines,
   writeCloudPipeline,
 } from "@/services/cloudPipelineService";
@@ -18,6 +19,7 @@ import { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import { PipelineFolder } from "@/services/pipelineStorage/PipelineFolder";
 import { RemotePipelineFile } from "@/services/pipelineStorage/RemotePipelineFile";
 import {
+  type RemotePipelineRecovery,
   remotePipelineRecoveryDb,
   remotePipelineReference,
 } from "@/services/pipelineStorage/remotePipelineRecovery";
@@ -30,6 +32,7 @@ vi.mock("@/services/cloudPipelineService", () => ({
   deleteCloudPipeline: vi.fn(),
   getCloudPipeline: vi.fn(),
   getCloudPipelineAccount: vi.fn(),
+  listCloudPipelinePage: vi.fn(),
   listCloudPipelines: vi.fn(),
   writeCloudPipeline: vi.fn(),
 }));
@@ -75,6 +78,23 @@ function pipeline(overrides: Partial<CloudPipeline> = {}): CloudPipeline {
   };
 }
 
+function recovery(
+  overrides: Partial<RemotePipelineRecovery> = {},
+): RemotePipelineRecovery {
+  const saved = pipeline();
+  return {
+    key: `pending:${encodeURIComponent(SCOPE)}:${encodeURIComponent(saved.file_path)}`,
+    scope: SCOPE,
+    filePath: saved.file_path,
+    displayName: NAME,
+    content: CONTENT,
+    dirty: false,
+    modifiedAt: Date.parse(saved.updated_at),
+    pipeline: saved,
+    ...overrides,
+  };
+}
+
 function setup(scope = SCOPE) {
   const driver: PipelineStorageDriver = {
     type: "root-indexdb",
@@ -112,6 +132,7 @@ beforeEach(async () => {
     permissions: ["read", "write"],
   });
   vi.mocked(listCloudPipelines).mockResolvedValue([]);
+  vi.mocked(listCloudPipelinePage).mockResolvedValue({ pipelines: [] });
   vi.mocked(getCloudPipeline).mockResolvedValue(pipeline());
   vi.mocked(cloudPipelineToComponentSpec).mockReturnValue(SPEC);
   vi.mocked(migratePipelineReferences).mockResolvedValue(undefined);
@@ -124,6 +145,254 @@ beforeEach(async () => {
       }),
   );
   vi.mocked(deleteCloudPipeline).mockResolvedValue(undefined);
+});
+
+describe("remote pipeline listing", () => {
+  it("loads one summary page with matching dirty recovery and no detail requests", async () => {
+    const { store } = setup();
+    const signal = new AbortController().signal;
+    const draft = recovery({
+      dirty: true,
+      displayName: "Unsaved rename",
+      content: UPDATED_CONTENT,
+      modifiedAt: Date.parse("2026-09-20T12:00:00Z"),
+    });
+    await remotePipelineRecoveryDb.copies.put(draft);
+    vi.mocked(listCloudPipelinePage).mockResolvedValue({
+      pipelines: [pipeline(), pipeline({ user_id: "other@example.com" })],
+      nextPageToken: "next-page",
+      totalCount: 42,
+    });
+
+    const page = await store.listPage({
+      pageSize: 10,
+      pageToken: "current-page",
+      signal,
+    });
+
+    expect(page).toMatchObject({
+      files: [{ displayName: "Unsaved rename", recovery: draft }],
+      nextPageToken: "next-page",
+      totalCount: 42,
+    });
+    expect(page.files).toHaveLength(1);
+    expect(listCloudPipelinePage).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        backendUrl: BACKEND,
+        authorizationToken: "token",
+        account: { id: ACCOUNT, permissions: ["read", "write"] },
+        signal,
+      }),
+      { pageSize: 10, pageToken: "current-page" },
+    );
+    expect(listCloudPipelines).not.toHaveBeenCalled();
+    expect(getCloudPipeline).not.toHaveBeenCalled();
+    expect(writeCloudPipeline).not.toHaveBeenCalled();
+  });
+
+  it("does not remove earlier recovery copies when loading another page", async () => {
+    const { store } = setup();
+    const first = recovery();
+    const second = pipeline({
+      id: "20000000-0000-4000-8000-000000000002",
+      file_path: "pipeline-studio/second.yaml",
+    });
+    await remotePipelineRecoveryDb.copies.put(first);
+    vi.mocked(listCloudPipelinePage)
+      .mockResolvedValueOnce({
+        pipelines: [pipeline()],
+        nextPageToken: "second-page",
+      })
+      .mockResolvedValueOnce({ pipelines: [second] });
+
+    await store.listPage();
+    const page = await store.listPage({ pageToken: "second-page" });
+
+    expect(page.files.map((file) => file.referenceId)).toEqual([
+      remotePipelineReference(BACKEND, second.id),
+    ]);
+    expect(await store.records()).toEqual([first]);
+    expect(getCloudPipeline).not.toHaveBeenCalled();
+  });
+
+  it.each(["scope", "identity"])(
+    "does not attach a draft with a different %s to a matching file path",
+    async (mismatch) => {
+      const { store } = setup();
+      await remotePipelineRecoveryDb.copies.put(
+        recovery({
+          dirty: true,
+          displayName: "Unrelated draft",
+          ...(mismatch === "scope"
+            ? { scope: "another-account" }
+            : {
+                pipeline: pipeline({
+                  id: "20000000-0000-4000-8000-000000000002",
+                }),
+              }),
+        }),
+      );
+      vi.mocked(listCloudPipelinePage).mockResolvedValue({
+        pipelines: [pipeline()],
+      });
+
+      const { files } = await store.listPage();
+
+      expect(files).toHaveLength(1);
+      expect(files[0]).toMatchObject({
+        displayName: NAME,
+        recovery: { dirty: false, content: "" },
+      });
+    },
+  );
+
+  it("groups only unsaved creations for this account into the pending list", async () => {
+    const { store } = setup();
+    const pending = recovery({
+      key: "new-pipeline",
+      filePath: "pipeline-studio/new.yaml",
+      pipeline: undefined,
+      dirty: true,
+    });
+    await remotePipelineRecoveryDb.copies.bulkPut([
+      pending,
+      recovery(),
+      recovery({ key: "local", pipeline: undefined, localFileId: LOCAL_ID }),
+      recovery({ key: "deleted", pipeline: undefined, deleted: true }),
+      recovery({ key: "other", pipeline: undefined, scope: "other-account" }),
+    ]);
+
+    const files = await store.listPending();
+
+    expect(files).toHaveLength(1);
+    expect(files[0].recovery).toEqual(pending);
+    expect(files[0].storageKind).toBe("pending");
+    expect(getCloudPipelineAccount).not.toHaveBeenCalled();
+    expect(listCloudPipelinePage).not.toHaveBeenCalled();
+    expect(listCloudPipelines).not.toHaveBeenCalled();
+    expect(getCloudPipeline).not.toHaveBeenCalled();
+  });
+
+  it.each(["page", "summaries"])(
+    "keeps a creation with a lost response only in the pending tab during %s listing",
+    async (listing) => {
+      const { store } = setup();
+      const pending = recovery({
+        pipeline: undefined,
+        dirty: true,
+        content: UPDATED_CONTENT,
+      });
+      await remotePipelineRecoveryDb.copies.put(pending);
+      vi.mocked(listCloudPipelinePage).mockResolvedValue({
+        pipelines: [pipeline()],
+      });
+      vi.mocked(listCloudPipelines).mockResolvedValue([pipeline()]);
+
+      const remoteFiles =
+        listing === "page"
+          ? (await store.listPage()).files
+          : await store.listSummaries();
+      const pendingFiles = await store.listPending();
+
+      expect(remoteFiles).toEqual([]);
+      expect(pendingFiles).toHaveLength(1);
+      expect(pendingFiles[0].recovery).toEqual(pending);
+      expect(getCloudPipeline).not.toHaveBeenCalled();
+      expect(writeCloudPipeline).not.toHaveBeenCalled();
+    },
+  );
+
+  it("lists the complete summary catalog without pending or unfinished local migrations", async () => {
+    const { store } = setup();
+    const draft = recovery({ dirty: true, displayName: "Unsaved rename" });
+    const migration = pipeline({
+      id: "20000000-0000-4000-8000-000000000002",
+      file_path: "pipeline-studio/local.yaml",
+    });
+    const deleted = pipeline({
+      id: "20000000-0000-4000-8000-000000000003",
+      file_path: "pipeline-studio/deleted.yaml",
+    });
+    await remotePipelineRecoveryDb.copies.bulkPut([
+      draft,
+      recovery({
+        key: "local",
+        filePath: migration.file_path,
+        pipeline: migration,
+        localFileId: LOCAL_ID,
+      }),
+      recovery({
+        key: "deleted",
+        filePath: deleted.file_path,
+        pipeline: deleted,
+        deleted: true,
+      }),
+      recovery({
+        key: "pending",
+        filePath: "pipeline-studio/pending.yaml",
+        pipeline: undefined,
+        dirty: true,
+      }),
+    ]);
+    vi.mocked(listCloudPipelines).mockResolvedValue([
+      pipeline(),
+      migration,
+      deleted,
+      pipeline({ user_id: "other@example.com" }),
+    ]);
+
+    const files = await store.listSummaries();
+
+    expect(files).toHaveLength(1);
+    expect(files[0].recovery).toEqual(draft);
+    expect(listCloudPipelines).toHaveBeenCalledTimes(1);
+    expect(listCloudPipelinePage).not.toHaveBeenCalled();
+    expect(getCloudPipeline).not.toHaveBeenCalled();
+  });
+
+  it("lists cached remote copies for this scope while retaining dirty recovery", async () => {
+    const { store } = setup();
+    const draft = recovery({
+      dirty: true,
+      displayName: "Unsaved rename",
+      content: UPDATED_CONTENT,
+    });
+    const migrated = recovery({
+      key: "migrated",
+      localFileId: LOCAL_ID,
+      migrated: true,
+    });
+    await remotePipelineRecoveryDb.copies.bulkPut([
+      draft,
+      migrated,
+      recovery({ key: "unfinished", localFileId: LOCAL_ID }),
+      recovery({ key: "pending", pipeline: undefined }),
+      recovery({ key: "deleted", deleted: true }),
+      recovery({ key: "other", scope: "another-account" }),
+    ]);
+
+    const files = await store.listCached();
+
+    expect(files).toHaveLength(2);
+    expect(files.map((file) => file.recovery)).toEqual(
+      expect.arrayContaining([migrated, draft]),
+    );
+    expect(files.every((file) => file.storageKind === "remote")).toBe(true);
+    expect(files[1].createdAt).toEqual(new Date(pipeline().created_at));
+    expect(getCloudPipelineAccount).not.toHaveBeenCalled();
+    expect(listCloudPipelinePage).not.toHaveBeenCalled();
+    expect(listCloudPipelines).not.toHaveBeenCalled();
+    expect(getCloudPipeline).not.toHaveBeenCalled();
+  });
+
+  it("propagates list failures for query error handling", async () => {
+    const { store } = setup();
+    vi.mocked(listCloudPipelinePage).mockRejectedValue(new Error("Offline"));
+    vi.mocked(listCloudPipelines).mockRejectedValue(new Error("Offline"));
+
+    await expect(store.listPage()).rejects.toThrow("Offline");
+    await expect(store.listSummaries()).rejects.toThrow("Offline");
+  });
 });
 
 describe("local pipeline migration", () => {
