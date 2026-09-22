@@ -15,19 +15,28 @@ import { saveUndoHistory } from "@/routes/v2/pages/Editor/utils/undoHistoryStora
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
 import { AUTOSAVE_DEBOUNCE_TIME_MS } from "@/utils/constants";
-import { debounce } from "@/utils/debounce";
 
+import { type AutoSaveSnapshot, getAutoSaveSnapshot } from "./autoSaveSnapshot";
 import type { PipelineFileStore } from "./pipelineFileStore";
 import type { UndoStore } from "./undoStore";
+
+const REMOTE_CONTENT_SAVE_DELAY_MS = 1000;
+const REMOTE_MOVEMENT_SAVE_DELAY_MS = 3000;
 
 interface SaveSession {
   spec: ComponentSpec;
   file: PipelineFile;
   savedYaml: string;
   queuedYaml: string;
+  snapshot: AutoSaveSnapshot;
   hasPendingRecovery: boolean;
   pending: Promise<boolean>;
-  pendingCount: number;
+  saving: boolean;
+  saveRequested: boolean;
+  writingYaml?: string;
+  contentDeadline?: number;
+  movementDeadline?: number;
+  timer?: ReturnType<typeof setTimeout>;
 }
 
 interface AutoSaveInitOptions {
@@ -43,9 +52,6 @@ export class AutoSaveStore {
 
   private session: SaveSession | null = null;
   private disposeReaction: (() => void) | null = null;
-  private debouncedSave = debounce((session: SaveSession, yamlText: string) => {
-    void this.performSave(session, yamlText);
-  }, AUTOSAVE_DEBOUNCE_TIME_MS);
 
   constructor(
     private undoStore: UndoStore,
@@ -62,17 +68,19 @@ export class AutoSaveStore {
     this.dispose();
     const file = this.pipelineFileStore.activePipelineFile;
     if (!file?.canEdit) return;
-    const yamlText = serializeComponentSpecToText(spec);
-    const savedYaml = options.savedYaml ?? yamlText;
-    const needsSave = options.forceSave || yamlText !== savedYaml;
+    const snapshot = getAutoSaveSnapshot(spec);
+    const savedYaml = options.savedYaml ?? snapshot.yaml;
+    const needsSave = Boolean(options.forceSave || snapshot.yaml !== savedYaml);
     const session: SaveSession = {
       spec,
       file,
       savedYaml,
       queuedYaml: savedYaml,
+      snapshot,
       hasPendingRecovery: options.forceSave ?? false,
       pending: Promise.resolve(true),
-      pendingCount: 0,
+      saving: false,
+      saveRequested: false,
     };
     this.session = session;
     this.isSaving = false;
@@ -80,14 +88,21 @@ export class AutoSaveStore {
     this.error = null;
     this.hasUnsavedChanges = needsSave;
     this.disposeReaction = reaction(
-      () => serializeComponentSpecToText(spec),
-      (content) => {
-        session.hasPendingRecovery ||= file.storageKind !== "local";
+      () => getAutoSaveSnapshot(spec),
+      (next) => {
+        if (next.yaml === session.snapshot.yaml) return;
+        const contentChanged = next.contentKey !== session.snapshot.contentKey;
+        session.snapshot = next;
+        const remote =
+          file.storageKind !== "local" || this.storage?.canMigrate(file);
+        session.hasPendingRecovery ||= Boolean(remote);
         runInAction(() => {
           this.hasUnsavedChanges =
-            content !== session.savedYaml || session.hasPendingRecovery;
+            next.yaml !== session.savedYaml ||
+            session.hasPendingRecovery ||
+            (session.saving && next.yaml !== session.writingYaml);
         });
-        void file.persistRecovery(content).catch((error: unknown) => {
+        void file.persistRecovery(next.yaml).catch((error: unknown) => {
           if (session !== this.session) return;
           runInAction(() => {
             this.error = error instanceof Error ? error.message : String(error);
@@ -95,40 +110,77 @@ export class AutoSaveStore {
           });
         });
         if (
-          content === session.savedYaml &&
-          session.pendingCount === 0 &&
+          next.yaml === session.savedYaml &&
+          !session.saving &&
           !session.hasPendingRecovery &&
           !this.error &&
           !file.saveError
         ) {
-          this.debouncedSave.cancel();
+          this.cancelScheduledSave(session);
           return;
         }
-        this.debouncedSave(session, content);
+        if (!remote) {
+          session.contentDeadline = Date.now() + AUTOSAVE_DEBOUNCE_TIME_MS;
+        } else if (contentChanged) {
+          session.contentDeadline = Date.now() + REMOTE_CONTENT_SAVE_DELAY_MS;
+        } else {
+          session.movementDeadline ??=
+            Date.now() + REMOTE_MOVEMENT_SAVE_DELAY_MS;
+        }
+        this.scheduleSave(session);
       },
     );
     if (needsSave) {
-      session.hasPendingRecovery ||= file.storageKind !== "local";
-      void file.persistRecovery(yamlText).catch((error: unknown) => {
+      const remote =
+        file.storageKind !== "local" || this.storage?.canMigrate(file);
+      session.hasPendingRecovery ||= Boolean(remote);
+      void file.persistRecovery(snapshot.yaml).catch((error: unknown) => {
         if (session !== this.session) return;
         runInAction(() => {
           this.error = error instanceof Error ? error.message : String(error);
           this.hasUnsavedChanges = true;
         });
       });
-      this.debouncedSave(session, yamlText);
+      session.contentDeadline =
+        Date.now() +
+        (remote ? REMOTE_CONTENT_SAVE_DELAY_MS : AUTOSAVE_DEBOUNCE_TIME_MS);
+      this.scheduleSave(session);
     }
   }
 
+  private scheduleSave(session: SaveSession) {
+    clearTimeout(session.timer);
+    const deadline = Math.min(
+      session.contentDeadline ?? Infinity,
+      session.movementDeadline ?? Infinity,
+    );
+    session.timer = setTimeout(
+      () => {
+        void this.performSave(session);
+      },
+      Math.max(0, deadline - Date.now()),
+    );
+  }
+
+  private cancelScheduledSave(session: SaveSession) {
+    clearTimeout(session.timer);
+    session.timer = undefined;
+    session.contentDeadline = undefined;
+    session.movementDeadline = undefined;
+  }
+
   @action dispose(): Promise<boolean> {
-    this.debouncedSave.cancel();
     this.disposeReaction?.();
     this.disposeReaction = null;
     const session = this.session;
     if (session) {
-      const content = serializeComponentSpecToText(session.spec);
-      if (content !== session.queuedYaml || session.hasPendingRecovery)
-        void this.performSave(session, content);
+      this.cancelScheduledSave(session);
+      session.snapshot = getAutoSaveSnapshot(session.spec);
+      if (
+        session.snapshot.yaml !== session.queuedYaml ||
+        session.hasPendingRecovery
+      )
+        void this.performSave(session);
     }
     this.session = null;
     this.isSaving = false;
@@ -136,17 +188,19 @@ export class AutoSaveStore {
   }
 
   async save(): Promise<boolean> {
-    this.debouncedSave.cancel();
     const session = this.session;
     if (!session) return false;
-    const content = serializeComponentSpecToText(session.spec);
+    this.cancelScheduledSave(session);
+    session.snapshot = getAutoSaveSnapshot(session.spec);
+    const content = session.snapshot.yaml;
     if (
-      session.pendingCount > 0 &&
+      session.saving &&
       content === session.queuedYaml &&
       !session.hasPendingRecovery
     )
       return session.pending;
     if (
+      !session.saving &&
       content === session.savedYaml &&
       !session.hasPendingRecovery &&
       !this.error &&
@@ -155,57 +209,72 @@ export class AutoSaveStore {
       !this.storage?.canMigrate(session.file)
     )
       return true;
-    return this.performSave(session, content);
+    return this.performSave(session);
   }
 
-  private performSave(
-    session: SaveSession,
-    yamlText: string,
-  ): Promise<boolean> {
-    session.queuedYaml = yamlText;
+  private performSave(session: SaveSession): Promise<boolean> {
+    this.cancelScheduledSave(session);
+    session.queuedYaml = session.snapshot.yaml;
+    session.saveRequested =
+      !session.saving ||
+      session.snapshot.yaml !== session.writingYaml ||
+      session.hasPendingRecovery;
     // Even reverted edits stage dirty recovery; only a queued flush can clear it.
     session.hasPendingRecovery = false;
-    session.pendingCount++;
+    if (session.saving) return session.pending;
+    session.saving = true;
     if (session === this.session)
       runInAction(() => {
         this.isSaving = true;
       });
-    const previousWrite =
-      session.file.storageKind === "local"
-        ? session.pending
-        : Promise.resolve(true);
-    session.pending = previousWrite.then(async () => {
-      try {
-        await session.file.write(yamlText);
-        if (session === this.session) await this.persistUndoHistory(session);
-        if (this.storage?.canMigrate(session.file))
-          await this.storage.migratePipeline(session.file);
-        session.savedYaml = yamlText;
-        if (session === this.session)
-          runInAction(() => {
-            this.error = null;
-            this.lastSavedAt = new Date();
-            this.hasUnsavedChanges =
-              serializeComponentSpecToText(session.spec) !== yamlText ||
-              session.hasPendingRecovery;
-          });
-        return true;
-      } catch (error) {
-        if (session === this.session)
-          runInAction(() => {
-            this.error = error instanceof Error ? error.message : String(error);
-            this.hasUnsavedChanges = true;
-          });
-        return false;
-      } finally {
-        session.pendingCount--;
-        if (session === this.session)
-          runInAction(() => {
-            this.isSaving = session.pendingCount > 0;
-          });
-      }
-    });
+    session.pending = Promise.resolve().then(() => this.drainSaves(session));
     return session.pending;
+  }
+
+  private async drainSaves(session: SaveSession): Promise<boolean> {
+    let saved = false;
+    try {
+      while (session.saveRequested) {
+        session.saveRequested = false;
+        this.cancelScheduledSave(session);
+        const yamlText = session.snapshot.yaml;
+        session.hasPendingRecovery = false;
+        session.writingYaml = yamlText;
+        session.queuedYaml = yamlText;
+        try {
+          await session.file.write(yamlText);
+          if (session === this.session) await this.persistUndoHistory(session);
+          if (this.storage?.canMigrate(session.file))
+            await this.storage.migratePipeline(session.file);
+          session.savedYaml = yamlText;
+          if (session === this.session)
+            runInAction(() => {
+              this.error = null;
+              this.lastSavedAt = new Date();
+              this.hasUnsavedChanges =
+                serializeComponentSpecToText(session.spec) !== yamlText ||
+                session.hasPendingRecovery;
+            });
+          saved = true;
+        } catch (error) {
+          if (session === this.session)
+            runInAction(() => {
+              this.error =
+                error instanceof Error ? error.message : String(error);
+              this.hasUnsavedChanges = true;
+            });
+          saved = false;
+        }
+      }
+      return saved;
+    } finally {
+      session.saving = false;
+      session.writingYaml = undefined;
+      if (session === this.session)
+        runInAction(() => {
+          this.isSaving = false;
+        });
+    }
   }
 
   private async persistUndoHistory(session: SaveSession) {

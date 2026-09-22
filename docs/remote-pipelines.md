@@ -14,6 +14,7 @@ Set `VITE_REMOTE_PIPELINES_ENABLED=true` at build time to enable remote pipeline
 - Remote editor URLs use `/editor-v2/<pipeline-id>` against the configured backend. Local URLs keep the pipeline name. Old backend-scoped URLs still open and are shortened in place.
 - Other authorized viewers can open a remote URL read-only and clone it into their own collection. Backend ownership and write permissions remain authoritative.
 - Edits autosave, but opening a pipeline does not save it. The last successful save wins across sessions; there is no conflict dialog, locking between computers, or live collaboration.
+- Remote autosave batches position-only edits for three seconds from the first move and waits for a one-second pause in other edits. The earlier deadline uploads the latest complete pipeline, including positions. Local recovery is staged before these delays, including before the first local-to-remote upload. Slow uploads retain only the latest pending snapshot; explicit Save and editor navigation flush without waiting for the timers. Local-only and connected-folder autosave timing is unchanged.
 - Failed uploads retain the draft in IndexedDB and show **Not saved to server** with **Retry**. Initial failures remain **Pending upload**. Opening a recoverable draft never automatically retries an upload.
 
 ## Limits

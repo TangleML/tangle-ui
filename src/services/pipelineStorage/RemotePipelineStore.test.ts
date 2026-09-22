@@ -511,6 +511,77 @@ describe("local pipeline migration", () => {
     expect(await store.records()).toHaveLength(1);
   });
 
+  it("finishes an interrupted migration using its confirmed server identity and latest recovery", async () => {
+    const { store, local, driver } = setup();
+    await store.stageLocal(local, UPDATED_CONTENT);
+    const [recovery] = await store.records();
+    const published = pipeline({
+      root_pipeline_task: {
+        componentRef: { spec: { ...SPEC, description: "Unsaved work" } },
+      },
+    });
+    await remotePipelineRecoveryDb.copies.put({
+      ...recovery,
+      pipeline: published,
+      ownerId: ACCOUNT,
+      dirty: false,
+    });
+
+    const remote = await store.migrate(local);
+
+    expect(driver.read).toHaveBeenCalledExactlyOnceWith(NAME);
+    expect(writeCloudPipeline).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        filePath: published.file_path,
+        componentSpec: { ...SPEC, description: "Unsaved work" },
+        existingPipeline: published,
+      }),
+      expect.anything(),
+    );
+    expect(migratePipelineReferences).toHaveBeenCalledExactlyOnceWith(
+      NAME,
+      remotePipelineReference(BACKEND, CLOUD_ID),
+      NAME,
+    );
+    expect(local.redirectedFile).toBe(remote);
+    expect(await store.records()).toEqual([
+      expect.objectContaining({
+        content: UPDATED_CONTENT,
+        revision: recovery.revision,
+        pipeline: expect.objectContaining({ id: CLOUD_ID }),
+        migrated: true,
+        dirty: false,
+      }),
+    ]);
+    expect(driver.write).not.toHaveBeenCalled();
+  });
+
+  it("migrates the latest staged draft instead of an older local read", async () => {
+    const { store, local, driver } = setup();
+    let finishRead!: (content: string) => void;
+    vi.mocked(driver.read).mockReturnValueOnce(
+      new Promise((resolve) => {
+        finishRead = resolve;
+      }),
+    );
+
+    const migration = store.migrate(local);
+    await waitFor(() => expect(driver.read).toHaveBeenCalledTimes(1));
+    await store.stageLocal(local, UPDATED_CONTENT);
+    finishRead(CONTENT);
+    await migration;
+
+    expect(vi.mocked(writeCloudPipeline).mock.calls[0][0]).toMatchObject({
+      componentSpec: { description: "Unsaved work" },
+    });
+    expect((await store.records())[0]).toMatchObject({
+      content: UPDATED_CONTENT,
+      migrated: true,
+      dirty: false,
+    });
+    expect(driver.write).not.toHaveBeenCalled();
+  });
+
   it("preserves remote settings when cloning immediately after publication", async () => {
     const { store, local } = setup();
     const published = pipeline({
@@ -765,6 +836,26 @@ describe("pending pipelines and recovery", () => {
 });
 
 describe("remote ownership and deletion", () => {
+  it("still rejects remote recovery and uploads for an owner without write permission", async () => {
+    const { store } = setup();
+    vi.mocked(getCloudPipelineAccount).mockResolvedValue({
+      id: ACCOUNT,
+      permissions: ["read"],
+    });
+    const file = await store.resolve(
+      remotePipelineReference(BACKEND, CLOUD_ID),
+    );
+    if (!file) throw new Error("Missing remote file");
+
+    expect(file.canEdit).toBe(false);
+    await expect(file.persistRecovery(UPDATED_CONTENT)).rejects.toThrow(
+      "Only the owner",
+    );
+    await expect(file.retry()).rejects.toThrow("Only the owner");
+    expect(writeCloudPipeline).not.toHaveBeenCalled();
+    expect(await store.records()).toEqual([]);
+  });
+
   it("allows another owner's pipeline to be read and cloned, but prevents edits and deletion", async () => {
     const { store } = setup();
     const source = pipeline({ user_id: "other@example.com" });
