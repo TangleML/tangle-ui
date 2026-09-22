@@ -55,6 +55,7 @@ interface PipelineRowProps {
   file?: PipelineFile;
   url?: string;
   componentRef?: ComponentReferenceWithSpec;
+  showLocalColumns?: boolean;
   name?: string;
   modificationTime?: Date;
   onDelete?: () => void;
@@ -78,6 +79,7 @@ const PipelineRow = withSuspenseWrapper(
       file,
       name,
       componentRef,
+      showLocalColumns = true,
       modificationTime,
       onDelete,
       isSelected = false,
@@ -278,12 +280,18 @@ const PipelineRow = withSuspenseWrapper(
               {formattedDate}
             </Text>
           </TableCell>
-          <TableCell className="max-w-64">
-            {tags && tags.length > 0 && <TagList tags={tags} />}
-          </TableCell>
-          <TableCell>
-            {!isRemote && name && <PipelineRecentRunInfo pipelineName={name} />}
-          </TableCell>
+          {showLocalColumns && (
+            <TableCell className="max-w-64">
+              {tags && tags.length > 0 && <TagList tags={tags} />}
+            </TableCell>
+          )}
+          {showLocalColumns && (
+            <TableCell>
+              {!isRemote && name && (
+                <PipelineRecentRunInfo pipelineName={name} />
+              )}
+            </TableCell>
+          )}
           <TableCell>
             {savedPipelineId ? (
               <Tooltip>
@@ -372,12 +380,16 @@ const PipelineRow = withSuspenseWrapper(
             {formattedDate}
           </Paragraph>
         </TableCell>
-        <TableCell>
-          <Skeleton size="lg" />
-        </TableCell>
-        <TableCell>
-          <Skeleton size="lg" />
-        </TableCell>
+        {props.showLocalColumns !== false && (
+          <TableCell>
+            <Skeleton size="lg" />
+          </TableCell>
+        )}
+        {props.showLocalColumns !== false && (
+          <TableCell>
+            <Skeleton size="lg" />
+          </TableCell>
+        )}
         <TableCell className="w-0">
           <Skeleton size="lg" />
         </TableCell>

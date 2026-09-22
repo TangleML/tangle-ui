@@ -7,7 +7,10 @@ Set `VITE_REMOTE_PIPELINES_ENABLED=true` at build time to enable remote pipeline
 - New, imported, and cloned pipelines are uploaded to the signed-in user's pipeline collection. Remote mode uses the V2 editor.
 - Existing browser-local pipelines upload automatically on the next edit and autosave, or immediately with **Save to server**. Merely opening an unchanged pipeline does not upload it. Publishing switches the open editor to remote autosave without reloading its model or undo history. Connected filesystem and Google Drive files are not migrated.
 - Confirmed migrations hide the local entry, keep its recovery copy, and redirect local favorites and recent-history references. Favorites and history are not synchronized across computers.
-- The list marks browser-local pipelines with a subtle **Local** badge; saved remote pipelines are unbadged. Failed initial uploads remain **Pending upload**. Only the current user's remote collection is listed.
+- The Pipelines page separates **Remote pipelines** and **Local pipelines** into tabs. It defaults to Remote when remote pipelines exist, or Local when only local pipelines exist. Selecting a tab keeps it selected through refreshes and uploads. With remote storage disabled, the existing local list has no storage tabs.
+- Both tabs show ten pipelines per page. Remote browsing requests one page of summaries at a time and caches visited pages; it does not download pipeline definitions. Only the current user's remote collection is listed. Local pipelines retain their tags, metadata search, and component search.
+- Remote search matches names. Searching, filtering by date, or changing the default newest-first sort loads the complete summary catalog and applies those filters across it. The backend currently has no title-search or alternate-sort parameters. Full definitions are loaded when opening pipelines; remote list rows omit tags and the local Last run column.
+- The Local tab includes browser-local pipelines and failed first uploads marked **Pending upload**. Confirmed uploads move to the Remote tab; recovery drafts for existing remote pipelines stay attached to their remote entries. Browser-local pipelines retain their subtle **Local** badge.
 - Remote editor URLs use `/editor-v2/<pipeline-id>` against the configured backend. Local URLs keep the pipeline name. Old backend-scoped URLs still open and are shortened in place.
 - A remote pipeline's Runs link opens the existing run list filtered by its stable ID, including associated editor and backend-created runs. Run details link back to the current source pipeline in the same tab without reloading the page. Clones have independent histories; reruns retain their source association.
 - Editor submissions wait for a browser-local or pending pipeline's first upload and stop if it fails. Once the pipeline has a remote ID, submissions execute the editor snapshot without waiting for autosave. The source ID is attached to the run, not to the pipeline definition, and does not claim a saved version.
@@ -20,11 +23,18 @@ Set `VITE_REMOTE_PIPELINES_ENABLED=true` at build time to enable remote pipeline
 
 - Old runs without a source-pipeline annotation are not backfilled or matched by name. Source links open the current definition, which may differ from the executed snapshot; deleted pipelines can no longer be opened. Clone ancestry is not tracked.
 - Recovery and pending drafts live in this browser, scoped to its account and backend. Clearing site data removes them. Hidden backups are not exposed through a restore UI yet.
-- Reopening a remote pipeline needs a working backend unless this browser has an unsaved recovery draft. The remote list can show cached entries and pending drafts when the server is unavailable, with an error banner.
+- Reopening a remote pipeline needs a working backend unless this browser has an unsaved recovery draft. When the server list is unavailable, the Remote tab retains loaded rows or displays this browser's cached remote entries with an error and a notice that the list may be incomplete. Pending first uploads remain available in Local.
 - Saving validates the pipeline's schema, not whether it can run successfully. Invalid definitions stay recoverable locally until corrected.
 - Root definitions must include an inline component specification to open in the editor. URL-only root definitions are not supported yet.
 - Renaming changes the displayed component name, not the stable server storage path. Remote pipelines currently appear at the top level, not in local folders.
 - Disabling the deployment flag does not delete remote data or local recovery data. Confirmed migration backups remain hidden in the pipeline list; re-enable the flag to work with their remote entries.
+
+## Follow-ups
+
+- Add tags and component-name summaries to the list API. Derive them on save and store them in the existing version `extra_data`; backfill older versions and populate missing metadata when unchanged or historical versions are reused.
+- Add a batched latest/recent-run summary for the visible pipeline IDs, including run ID, time, and status. Refresh run summaries independently of pipeline summaries and associate runs by stable pipeline ID, including editor and backend-created runs.
+- Add backend filtering for metadata, names, and dates, plus alternate sorting, so large collections do not require downloading the complete summary catalog.
+- Defer automatic definition or run-status requests for each row: request volume grows with the number of pipelines and can cause HTTP 429 responses. Acceptance: displaying pipeline metadata and run summaries requires no per-row definition or status requests.
 
 ## Verification
 
