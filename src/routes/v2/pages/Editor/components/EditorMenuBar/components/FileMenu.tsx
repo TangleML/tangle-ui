@@ -23,6 +23,7 @@ import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionCo
 import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButton";
 import { MovePipelineDialog } from "@/routes/v2/shared/components/MovePipelineDialog";
 import { ShortcutBadge } from "@/routes/v2/shared/components/ShortcutBadge";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import { tracking } from "@/utils/tracking";
 
 import { OpenPipelineDialog } from "./OpenPipelineDialog";
@@ -30,6 +31,7 @@ import { useFileMenuState } from "./useFileMenuState";
 
 export const FileMenu = observer(function FileMenu() {
   const { track } = useAnalytics();
+  const storage = usePipelineStorage();
   const {
     importTriggerRef,
     openDialogOpen,
@@ -40,6 +42,7 @@ export const FileMenu = observer(function FileMenu() {
     setRenameDialogOpen,
     deleteDialogOpen,
     setDeleteDialogOpen,
+    deletePending,
     renamePipeline,
     getRenameInitialName,
     setImportOpen,
@@ -191,6 +194,7 @@ export const FileMenu = observer(function FileMenu() {
         initialName={getSaveAsInitialName()}
         onSubmit={handleSavePipelineAs}
         submitButtonText="Save"
+        validateLocalPipelineName={!storage.remoteEnabled}
       />
 
       <PipelineNameDialog
@@ -202,6 +206,7 @@ export const FileMenu = observer(function FileMenu() {
         submitButtonText="Rename"
         isSubmitDisabled={(name) => name === getRenameInitialName()}
         excludeNames={[getRenameInitialName()]}
+        validateLocalPipelineName={activePipeline?.storageKind === "local"}
       />
 
       {canMove && activePipeline && (
@@ -219,10 +224,12 @@ export const FileMenu = observer(function FileMenu() {
         title="Delete pipeline?"
         description={`"${activePipeline?.displayName ?? "This pipeline"}" will be permanently deleted. This action cannot be undone.`}
         onConfirm={() => {
-          void handleDeletePipeline();
-          setDeleteDialogOpen(false);
+          void handleDeletePipeline().then((deleted) => {
+            if (deleted) setDeleteDialogOpen(false);
+          });
         }}
         onCancel={() => setDeleteDialogOpen(false)}
+        pending={deletePending}
       />
 
       <ImportPipeline

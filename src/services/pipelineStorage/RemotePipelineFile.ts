@@ -1,8 +1,11 @@
 import yaml from "js-yaml";
 import { action, observable, runInAction } from "mobx";
 
-import type { CloudPipelineSummary } from "@/services/cloudPipelineService";
-import { isValidComponentSpec } from "@/utils/componentSpec";
+import {
+  type CloudPipelineSummary,
+  getCloudPipelineSavedTaskArguments,
+} from "@/services/cloudPipelineService";
+import { type ArgumentType, isValidComponentSpec } from "@/utils/componentSpec";
 import { emitUserPipelineWritten } from "@/utils/userPipelineWriteEvents";
 import { PIPELINE_YAML_LOAD_OPTIONS } from "@/utils/yaml";
 
@@ -68,6 +71,11 @@ export class RemotePipelineFile extends PipelineFile {
   }
   override get isSaving(): boolean {
     return this.pendingWrites.get() > 0;
+  }
+  override get savedTaskArguments(): Record<string, ArgumentType> {
+    return this.recovery.pipeline
+      ? getCloudPipelineSavedTaskArguments(this.recovery.pipeline)
+      : {};
   }
 
   @action setRecovery(recovery: RemotePipelineRecovery) {
