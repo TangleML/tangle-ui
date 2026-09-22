@@ -587,7 +587,7 @@ test("Quick Run does not create a run when the first local upload fails", async 
   await expect(page.getByText("Not saved", { exact: true })).toBeVisible();
 });
 
-test("remote and local tabs keep their own filters and toolbar", async ({
+test("remote omits filters while local keeps its filters and toolbar", async ({
   page,
 }) => {
   await mockBackend(page, [pipeline(pipelineId, ownerId, "Alpha report")]);
@@ -601,7 +601,6 @@ test("remote and local tabs keep their own filters and toolbar", async ({
   await expect(remoteTab).toHaveAttribute("aria-selected", "true");
   await expect(remoteRow).toBeVisible();
   await expect(localRow).toBeHidden();
-  await expect(page.getByText("Showing 1 of 1 pipelines")).toBeVisible();
   await expect(
     page.getByRole("link", { name: "Example Pipelines" }),
   ).toBeVisible();
@@ -610,8 +609,13 @@ test("remote and local tabs keep their own filters and toolbar", async ({
   ).toBeHidden();
   await expect(page.getByRole("button", { name: "New Folder" })).toBeHidden();
 
-  await page.getByPlaceholder("Search names...", { exact: true }).fill("Alpha");
-  await expect(remoteRow).toBeVisible();
+  await expect(
+    page.getByPlaceholder("Search...", { exact: true }),
+  ).toBeHidden();
+  await expect(
+    page.getByRole("button", { name: "Last edited range" }),
+  ).toBeHidden();
+  await expect(page.getByRole("combobox")).toBeHidden();
   await expect(
     page.getByRole("button", { name: "Advanced", exact: true }),
   ).toBeHidden();
@@ -649,8 +653,8 @@ test("remote and local tabs keep their own filters and toolbar", async ({
 
   await remoteTab.click();
   await expect(
-    page.getByPlaceholder("Search names...", { exact: true }),
-  ).toHaveValue("Alpha");
+    page.getByPlaceholder("Search...", { exact: true }),
+  ).toBeHidden();
   await expect(remoteRow).toBeVisible();
   await expect(localRow).toBeHidden();
 });
@@ -760,39 +764,6 @@ test("remote pages load ten summaries at a time and stay separate from local pip
   await expect(page.locator("[data-editor-ready]")).toBeVisible();
   expect(state.reads).toContain(`/api/pipelines/${state.pipelines[0].id}`);
   expect(state.writes).toEqual([]);
-});
-
-test("remote name search finds pipelines beyond the first page without fetching definitions", async ({
-  page,
-}) => {
-  const state = await mockBackend(page, remotePipelineLibrary(125));
-  await page.goto("/pipelines");
-  const rows = page.getByRole("row");
-  const targetRow = rows.filter({ hasText: "Remote pipeline 125" });
-  await expect(rows.filter({ hasText: "Remote pipeline 01" })).toBeVisible();
-  await expect(targetRow).toBeHidden();
-  expect(state.listRequests).toHaveLength(1);
-  expect(state.reads).toEqual([]);
-
-  await page
-    .getByPlaceholder("Search names...", { exact: true })
-    .fill("pipeline 125");
-  await expect(targetRow).toBeVisible();
-  await expect(rows).toHaveCount(2);
-  await expect(page.getByText("Showing 1 of 125 pipelines")).toBeVisible();
-  expect(state.listRequests.some((request) => request.pageToken !== null)).toBe(
-    true,
-  );
-  expect(state.reads).toEqual([]);
-
-  const listRequestsAfterSearch = state.listRequests.length;
-  await page
-    .getByPlaceholder("Search names...", { exact: true })
-    .fill("pipeline 124");
-  await expect(rows.filter({ hasText: "Remote pipeline 124" })).toBeVisible();
-  await expect(targetRow).toBeHidden();
-  expect(state.listRequests).toHaveLength(listRequestsAfterSearch);
-  expect(state.reads).toEqual([]);
 });
 
 test("canceling row deletion neither opens nor deletes the pipeline", async ({
