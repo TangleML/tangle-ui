@@ -1026,6 +1026,32 @@ describe("createEditorToolBridge", () => {
       expect(note?.position).toEqual({ x: 300, y: 260 });
     });
 
+    it("anchors above where an unplaced entity actually renders", async () => {
+      const { bridge, inner } = makeNestedBridge();
+
+      const result = await bridge.addStickyNote({
+        content: "Drops rows with any null",
+        anchorEntityId: taskId(inner, "DropNulls"),
+      });
+
+      expect(result.success).toBe(true);
+      expect(getFlexNodes(inner)[0]?.position).toEqual({ x: 200, y: -140 });
+    });
+
+    it("lets an explicit position override the anchor's graph", async () => {
+      const { bridge, spec, inner } = makeNestedBridge();
+
+      const result = await bridge.addStickyNote({
+        content: "everything here is legacy",
+        anchorEntityId: taskId(inner, "DropNulls"),
+        position: { x: -500, y: 120 },
+      });
+
+      expect(result.success).toBe(true);
+      expect(getFlexNodes(inner)).toHaveLength(0);
+      expect(getFlexNodes(spec)[0]?.position).toEqual({ x: -500, y: 120 });
+    });
+
     it("refuses an anchor that contradicts inSubgraphTaskId", async () => {
       const { bridge, spec, inner } = makeNestedBridge();
 

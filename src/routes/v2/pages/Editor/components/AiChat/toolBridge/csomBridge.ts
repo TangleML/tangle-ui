@@ -528,7 +528,10 @@ export function createCsomBridgeHandlers(deps: CsomBridgeDeps): CsomHandlers {
 
       const { anchorEntityId, inSubgraphTaskId } = args;
       let anchor: NoteAnchor | undefined;
-      if (anchorEntityId) {
+      // `position` is documented as taking precedence, so an anchor passed
+      // alongside it must not still drag the note into the anchor's subgraph,
+      // where the user is not looking.
+      if (anchorEntityId && !args.position) {
         const resolved = resolveNoteAnchor(root, anchorEntityId);
         if (!resolved.ok) {
           return { success: false, error: resolved.error };
