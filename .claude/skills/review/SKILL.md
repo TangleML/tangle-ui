@@ -2,13 +2,13 @@
 name: review
 description: Code review of current PR/commit changes against project coding standards. Use when the user asks for a code review or mentions reviewing changes.
 disable-model-invocation: true
-allowed-tools: Bash(git *), Bash(gt *), Bash(gh *), Read, Grep, Glob, Agent
+allowed-tools: Bash(git *), Bash(gh *), Read, Grep, Glob, Agent
 argument-hint: [PR number]
 ---
 
 # Code Review
 
-Review code changes against project coding standards. This team uses **Graphite** for stacked PRs — each commit is a PR in a stack.
+Review code changes against project coding standards. This project uses **GitHub stacks** via `gh stack` — each branch is a PR in a stack and may contain multiple commits. Use only Git and the GitHub CLI for repository and stack operations.
 
 `disable-model-invocation` is deliberate: a review only happens when a human asks for one. The single
 exception is the `gardening` skill, whose E8 self-review **reads this file** and applies Step 1 and the
@@ -33,13 +33,13 @@ gh pr view --json number,title,url,headRefOid,baseRefName --jq '{number, title, 
 gh pr diff
 ```
 
-Note the **base branch**. In a Graphite stack the base is usually the _parent PR's_ branch (not `main`), and `gh pr diff` is already scoped to that base — so the diff it returns contains **only this PR's own changes**. Trust that scope (see "Stack Awareness" below); don't widen it with `git diff main...HEAD`.
+Note the **base branch**. In a GitHub stack the base is usually the _parent PR's_ branch (not `main`), and `gh pr diff` is already scoped to that base — so the diff it returns contains **only this PR's own changes**. Trust that scope (see "Stack Awareness" below); don't widen it with `git diff main...HEAD`.
 
 **If no PR exists for the current branch**, fall back to local commit review:
 
 - Use `git show HEAD` as the diff source (existing behavior)
 - Skip all comment posting steps later — just output the review to chat
-- Note: each commit = one Graphite PR, so this reviews a single commit
+- This fallback reviews only the current commit, not the entire branch or stack.
 
 Store the **PR number** and **head commit SHA** for comment posting later.
 
@@ -52,7 +52,7 @@ Store the **PR number** and **head commit SHA** for comment posting later.
 3. **Read files**: Always read the full files being reviewed to understand context, not just the diff.
 4. **Track locations**: For each finding, record the exact file path and line number from the diff — these are needed for posting inline comments.
 
-## Stack Awareness (Graphite)
+## Stack Awareness (GitHub)
 
 PRs in this repo are **stacked** — each PR builds on the one below it, and they're reviewed (and merged) bottom-to-top. A finding only belongs on the PR that _introduced_ it.
 

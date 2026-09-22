@@ -3,6 +3,9 @@ export type Annotations = Record<string, unknown>;
 export type AnnotationOption = {
   value: string;
   name: string;
+  caption?: string;
+  deprecated?: boolean;
+  deprecationMessage?: string;
 };
 
 export type AnnotationConfig = {
