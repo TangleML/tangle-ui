@@ -4,11 +4,13 @@ import { observable, runInAction } from "mobx";
 import {
   type CloudConnection,
   type CloudPipelineAccount,
+  type CloudPipelinePageOptions,
   type CloudPipelineSummary,
   cloudPipelineToComponentSpec,
   deleteCloudPipeline,
   getCloudPipeline,
   getCloudPipelineAccount,
+  listCloudPipelinePage,
   listCloudPipelines,
   writeCloudPipeline,
 } from "@/services/cloudPipelineService";
@@ -32,6 +34,16 @@ import {
 export interface RemotePipelineOptions {
   connection: CloudConnection;
   scope: string;
+}
+
+export interface RemotePipelinePageOptions extends CloudPipelinePageOptions {
+  signal?: AbortSignal;
+}
+
+export interface RemotePipelinePage {
+  files: RemotePipelineFile[];
+  nextPageToken?: string;
+  totalCount?: number;
 }
 
 export class RemotePipelineStore {
@@ -79,6 +91,81 @@ export class RemotePipelineStore {
       .where("scope")
       .equals(this.scope)
       .toArray();
+  }
+
+  async listPage({
+    signal,
+    ...options
+  }: RemotePipelinePageOptions = {}): Promise<RemotePipelinePage> {
+    const [connection, records] = await Promise.all([
+      this.connection(),
+      this.records(),
+    ]);
+    const page = await listCloudPipelinePage(
+      { ...connection, signal: signal ?? connection.signal },
+      options,
+    );
+    return {
+      files: this.filesFromSummaries(page.pipelines, records),
+      nextPageToken: page.nextPageToken,
+      totalCount: page.totalCount,
+    };
+  }
+
+  async listPending(): Promise<RemotePipelineFile[]> {
+    return (await this.records())
+      .filter(
+        (record) => !record.pipeline && !record.localFileId && !record.deleted,
+      )
+      .map((record) => new RemotePipelineFile(this, this.folder, record));
+  }
+
+  async listCached(): Promise<RemotePipelineFile[]> {
+    return (await this.records())
+      .filter(
+        (record) =>
+          record.pipeline?.id &&
+          !record.deleted &&
+          (!record.localFileId || record.migrated),
+      )
+      .map(
+        (record) =>
+          new RemotePipelineFile(this, this.folder, record, record.pipeline),
+      );
+  }
+
+  async listSummaries(): Promise<RemotePipelineFile[]> {
+    const [connection, records] = await Promise.all([
+      this.connection(),
+      this.records(),
+    ]);
+    const summaries = await listCloudPipelines(connection);
+    return this.filesFromSummaries(summaries, records);
+  }
+
+  private filesFromSummaries(
+    summaries: CloudPipelineSummary[],
+    records: RemotePipelineRecovery[],
+  ): RemotePipelineFile[] {
+    const recordsByPath = new Map(
+      records.map((record) => [record.filePath, record]),
+    );
+    return summaries.flatMap((summary) => {
+      if (summary.user_id !== this.account?.id) return [];
+      const candidate = recordsByPath.get(summary.file_path);
+      const record =
+        !candidate?.pipeline || candidate.pipeline.id === summary.id
+          ? candidate
+          : undefined;
+      if (
+        record &&
+        (!record.pipeline ||
+          record.deleted ||
+          (record.localFileId && !record.migrated))
+      )
+        return [];
+      return [this.fromSummary(summary, record)];
+    });
   }
 
   async list(): Promise<RemotePipelineFile[]> {
