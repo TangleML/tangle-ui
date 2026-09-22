@@ -1,4 +1,4 @@
-export type WorkareaViewKindName = "artifact" | "pipeline" | "run";
+export type WorkareaViewKindName = "artifact" | "document" | "pipeline" | "run";
 
 type IdentityKey = "id" | "name";
 
@@ -9,18 +9,28 @@ export type WorkareaIdentity = `${IdentityKey}/${string}`;
  * `identity` is sub-key prefixed (`id/<value>` or `name/<value>`). The pair is
  * two-way convertible with its `type://identity` string form.
  *
- * Only a pipeline can be addressed by `name/`; a run and an artifact are always
- * `id/`, so the union rejects `run://name/…` and `artifact://name/…` at compile
- * time as well as in `parseWorkareaTarget`.
+ * Only a pipeline can be addressed by `name/`; everything else is always `id/`,
+ * so the union rejects `run://name/…` and its like at compile time as well as in
+ * `parseWorkareaTarget`.
  *
  * This lives beside the projects service rather than with the Tangent workarea
  * that dispatches on it, because a project's resource rows record these strings
  * and the project page has to read them too.
  */
-export type WorkareaTarget = ArtifactTarget | PipelineTarget | RunTarget;
+export type WorkareaTarget =
+  ArtifactTarget | DocumentTarget | PipelineTarget | RunTarget;
 
 export interface ArtifactTarget {
   type: "artifact";
+  identity: `id/${string}`;
+}
+
+/**
+ * A document is the resource row, so it is addressed by that row's id rather
+ * than by anything recorded inside it: the id does not exist until the row does.
+ */
+export interface DocumentTarget {
+  type: "document";
   identity: `id/${string}`;
 }
 
@@ -39,6 +49,7 @@ export type WorkareaTargetString =
 
 const WORKAREA_VIEW_KIND_NAMES: readonly WorkareaViewKindName[] = [
   "artifact",
+  "document",
   "pipeline",
   "run",
 ];
@@ -48,6 +59,7 @@ const IDENTITY_KEYS_BY_TYPE: Record<
   readonly IdentityKey[]
 > = {
   artifact: ["id"],
+  document: ["id"],
   pipeline: ["id", "name"],
   run: ["id"],
 };
