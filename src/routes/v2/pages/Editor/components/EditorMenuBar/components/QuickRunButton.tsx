@@ -7,6 +7,7 @@ import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import TangleSubmitter from "@/components/shared/Submitters/Tangle/TangleSubmitter";
 import { Icon } from "@/components/ui/icon";
 import { serializeComponentSpec } from "@/models/componentSpec";
+import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { deepClone } from "@/utils/deepClone";
 import { tracking } from "@/utils/tracking";
@@ -60,6 +61,7 @@ export const QuickRunButton = observer(function QuickRunButton({
 }: QuickRunButtonProps &
   Omit<ComponentProps<typeof TooltipButton>, "tooltip" | "variant" | "size">) {
   const { navigation } = useSharedStores();
+  const { pipelineFile } = useEditorSession();
   const { isAuthorized } = useAwaitAuthorization();
   const rootSpec = navigation.rootSpec;
   const allIssues = rootSpec?.allValidationIssues ?? [];
@@ -140,6 +142,9 @@ export const QuickRunButton = observer(function QuickRunButton({
             componentSpec={serializedPipelineSpec}
             isComponentTreeValid={rootSpec?.isValid}
             onlyFixableIssues={!hasErrors && allIssues.length > 0}
+            savedTaskArguments={
+              pipelineFile.activePipelineFile?.savedTaskArguments
+            }
           />
         </div>
       )}
