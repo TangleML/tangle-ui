@@ -7,6 +7,7 @@ import {
   deleteCloudPipeline,
   getCloudPipeline,
   getCloudPipelineAccount,
+  listCloudPipelinePage,
   listCloudPipelines,
   writeCloudPipeline,
 } from "@/services/cloudPipelineService";
@@ -120,6 +121,64 @@ describe("remote pipeline reads", () => {
       "could not identify your account",
     );
   });
+
+  it("loads one page of ten summaries without following its next cursor", async () => {
+    const summary = pipelineSummary();
+    fetchMock.mockResolvedValueOnce(
+      Response.json({
+        pipelines: [summary],
+        next_page_token: "next-page",
+        total_count: 42,
+      }),
+    );
+
+    await expect(listCloudPipelinePage(connection)).resolves.toEqual({
+      pipelines: [summary],
+      nextPageToken: "next-page",
+      totalCount: 42,
+    });
+
+    const url = new URL(requestAt(0).url);
+    expect(url.pathname).toBe("/api/users/me/pipelines/all");
+    expect(url.searchParams.get("page_size")).toBe("10");
+    expect(url.searchParams.has("page_token")).toBe(false);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("accepts an explicit page size and cursor when totals are unavailable", async () => {
+    const cursor = `2026-09-18T12:00:00+00:00~${CLOUD_ID}`;
+    fetchMock.mockResolvedValueOnce(
+      Response.json({ pipelines: [], next_page_token: null }),
+    );
+
+    await expect(
+      listCloudPipelinePage(connection, { pageSize: 25, pageToken: cursor }),
+    ).resolves.toEqual({
+      pipelines: [],
+      nextPageToken: undefined,
+      totalCount: undefined,
+    });
+
+    const url = new URL(requestAt(0).url);
+    expect(url.searchParams.get("page_size")).toBe("25");
+    expect(url.searchParams.get("page_token")).toBe(cursor);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([-1, 1.5, "42", null])(
+    "rejects an invalid total count of %s",
+    async (totalCount) => {
+      fetchMock.mockResolvedValueOnce(
+        Response.json({
+          pipelines: [],
+          next_page_token: null,
+          total_count: totalCount,
+        }),
+      );
+
+      await expect(listCloudPipelinePage(connection)).rejects.toThrow();
+    },
+  );
 
   it("lists only the current user's pipelines across every cursor page", async () => {
     const first = pipelineSummary();
