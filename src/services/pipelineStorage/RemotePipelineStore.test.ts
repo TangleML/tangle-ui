@@ -10,6 +10,7 @@ import {
   deleteCloudPipeline,
   getCloudPipeline,
   getCloudPipelineAccount,
+  getCloudPipelineSavedTaskArguments,
   listCloudPipelinePage,
   listCloudPipelines,
   writeCloudPipeline,
@@ -30,6 +31,7 @@ import type { ComponentSpec } from "@/utils/componentSpec";
 vi.mock("@/services/cloudPipelineService", () => ({
   cloudPipelineToComponentSpec: vi.fn(),
   deleteCloudPipeline: vi.fn(),
+  getCloudPipelineSavedTaskArguments: vi.fn(),
   getCloudPipeline: vi.fn(),
   getCloudPipelineAccount: vi.fn(),
   listCloudPipelinePage: vi.fn(),
@@ -135,6 +137,7 @@ beforeEach(async () => {
   vi.mocked(listCloudPipelinePage).mockResolvedValue({ pipelines: [] });
   vi.mocked(getCloudPipeline).mockResolvedValue(pipeline());
   vi.mocked(cloudPipelineToComponentSpec).mockReturnValue(SPEC);
+  vi.mocked(getCloudPipelineSavedTaskArguments).mockReturnValue({});
   vi.mocked(migratePipelineReferences).mockResolvedValue(undefined);
   vi.mocked(writeCloudPipeline).mockImplementation(
     async ({ filePath, componentSpec }) =>
@@ -148,6 +151,37 @@ beforeEach(async () => {
 });
 
 describe("remote pipeline listing", () => {
+  it("exposes saved task arguments through remote and redirected files", () => {
+    const { store, folder, local } = setup();
+    const savedArguments = {
+      token: { dynamicData: { secret: { name: "source-token" } } },
+    };
+    vi.mocked(getCloudPipelineSavedTaskArguments).mockReturnValue(
+      savedArguments,
+    );
+    const remote = new RemotePipelineFile(store, folder, recovery());
+
+    expect(remote.savedTaskArguments).toEqual(savedArguments);
+    expect(getCloudPipelineSavedTaskArguments).toHaveBeenCalledExactlyOnceWith(
+      remote.recovery.pipeline,
+    );
+
+    local.redirectedFile = remote;
+    expect(local.savedTaskArguments).toEqual(savedArguments);
+  });
+
+  it("has no saved task arguments before a pending pipeline reaches the server", () => {
+    const { store, folder } = setup();
+    const pending = new RemotePipelineFile(
+      store,
+      folder,
+      recovery({ pipeline: undefined }),
+    );
+
+    expect(pending.savedTaskArguments).toEqual({});
+    expect(getCloudPipelineSavedTaskArguments).not.toHaveBeenCalled();
+  });
+
   it("loads one summary page with matching dirty recovery and no detail requests", async () => {
     const { store } = setup();
     const signal = new AbortController().signal;
