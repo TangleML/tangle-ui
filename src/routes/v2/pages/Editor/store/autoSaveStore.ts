@@ -30,6 +30,11 @@ interface SaveSession {
   pendingCount: number;
 }
 
+interface AutoSaveInitOptions {
+  savedYaml?: string;
+  forceSave?: boolean;
+}
+
 export class AutoSaveStore {
   @observable accessor isSaving = false;
   @observable accessor lastSavedAt: Date | null = null;
@@ -53,17 +58,19 @@ export class AutoSaveStore {
     makeObservable(this);
   }
 
-  @action init(spec: ComponentSpec) {
+  @action init(spec: ComponentSpec, options: AutoSaveInitOptions = {}) {
     this.dispose();
     const file = this.pipelineFileStore.activePipelineFile;
     if (!file?.canEdit) return;
     const yamlText = serializeComponentSpecToText(spec);
+    const savedYaml = options.savedYaml ?? yamlText;
+    const needsSave = options.forceSave || yamlText !== savedYaml;
     const session: SaveSession = {
       spec,
       file,
-      savedYaml: yamlText,
-      queuedYaml: yamlText,
-      hasPendingRecovery: false,
+      savedYaml,
+      queuedYaml: savedYaml,
+      hasPendingRecovery: options.forceSave ?? false,
       pending: Promise.resolve(true),
       pendingCount: 0,
     };
@@ -71,7 +78,7 @@ export class AutoSaveStore {
     this.isSaving = false;
     this.lastSavedAt = null;
     this.error = null;
-    this.hasUnsavedChanges = false;
+    this.hasUnsavedChanges = needsSave;
     this.disposeReaction = reaction(
       () => serializeComponentSpecToText(spec),
       (content) => {
@@ -100,6 +107,17 @@ export class AutoSaveStore {
         this.debouncedSave(session, content);
       },
     );
+    if (needsSave) {
+      session.hasPendingRecovery ||= file.storageKind !== "local";
+      void file.persistRecovery(yamlText).catch((error: unknown) => {
+        if (session !== this.session) return;
+        runInAction(() => {
+          this.error = error instanceof Error ? error.message : String(error);
+          this.hasUnsavedChanges = true;
+        });
+      });
+      this.debouncedSave(session, yamlText);
+    }
   }
 
   @action dispose(): Promise<boolean> {

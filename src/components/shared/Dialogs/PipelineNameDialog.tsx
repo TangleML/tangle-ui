@@ -31,6 +31,7 @@ interface PipelineNameDialogProps {
   // callers' equality checks stay aligned with the duplicate-name guard.
   isSubmitDisabled?: (name: string, error: string | null) => boolean;
   onOpenChange?: (open: boolean) => void;
+  validateLocalPipelineName?: boolean;
 }
 
 const PipelineNameDialog = ({
@@ -45,6 +46,7 @@ const PipelineNameDialog = ({
   onSubmit,
   isSubmitDisabled,
   onOpenChange,
+  validateLocalPipelineName = true,
 }: PipelineNameDialogProps) => {
   const [name, setName] = useState(initialName);
   const [touched, setTouched] = useState(false);
@@ -59,13 +61,16 @@ const PipelineNameDialog = ({
   const excluded = new Set(
     (excludeNames ?? []).map((n) => n.trim().toLowerCase()),
   );
-  const nameIsTaken = Array.from(userPipelines.keys()).some((n) => {
-    const lower = n.toLowerCase();
-    return lower === normalized && !excluded.has(lower);
-  });
+  const nameIsTaken =
+    validateLocalPipelineName &&
+    Array.from(userPipelines.keys()).some((n) => {
+      const lower = n.toLowerCase();
+      return lower === normalized && !excluded.has(lower);
+    });
+  const isLoadingNames = validateLocalPipelineName && isLoadingUserPipelines;
 
   let error: string | null = null;
-  if (!isLoadingUserPipelines) {
+  if (!isLoadingNames) {
     if (normalized === "") {
       error = "Name cannot be empty";
     } else if (nameIsTaken) {
@@ -82,7 +87,7 @@ const PipelineNameDialog = ({
     if (open) {
       setName(initialName);
       setTouched(false);
-      refetchUserPipelines();
+      if (validateLocalPipelineName) refetchUserPipelines();
     }
     onOpenChange?.(open);
   };
@@ -94,7 +99,7 @@ const PipelineNameDialog = ({
   };
 
   const isDisabled =
-    isLoadingUserPipelines ||
+    isLoadingNames ||
     !!error ||
     !trimmedName ||
     !!isSubmitDisabled?.(trimmedName, error);

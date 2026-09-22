@@ -1,5 +1,6 @@
 import { action, makeObservable, observable, runInAction } from "mobx";
 
+import type { ArgumentType } from "@/utils/componentSpec";
 import { emitUserPipelineWritten } from "@/utils/userPipelineWriteEvents";
 
 import { emitPipelineFileChanged } from "./pipelineFileEvents";
@@ -42,6 +43,9 @@ export class PipelineFile {
   }
   get isSaving(): boolean {
     return this.redirectedFile?.isSaving ?? false;
+  }
+  get savedTaskArguments(): Record<string, ArgumentType> {
+    return this.redirectedFile?.savedTaskArguments ?? {};
   }
 
   async retry(): Promise<void> {
