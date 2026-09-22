@@ -53,6 +53,15 @@ vi.mock("@/hooks/useToastNotification", () => ({
   default: () => vi.fn(),
 }));
 
+vi.mock("@/services/projects/useProjectInstructions", () => ({
+  useProjectInstructions: () => ({
+    instructions: "",
+    isPending: false,
+    isSaving: false,
+    save: vi.fn(),
+  }),
+}));
+
 vi.mock("@/providers/AnalyticsProvider", () => ({
   useAnalytics: () => ({ track: vi.fn() }),
 }));
