@@ -31,9 +31,9 @@ import { EditInstructionsDialog } from "./EditInstructionsDialog";
 interface ProjectResourceItem {
   id: string;
   name: string;
-  target: WorkareaTarget;
   icon: IconName;
   description: string;
+  target?: WorkareaTarget;
 }
 
 interface ResourceTypeMeta {
@@ -45,6 +45,11 @@ const RESOURCE_TYPE_META: Record<string, ResourceTypeMeta> = {
   local_pipeline: { icon: "Workflow", description: "Pipeline" },
   pipeline_run: { icon: "Play", description: "Pipeline run" },
   [DOCUMENT]: { icon: "FileText", description: "Document" },
+};
+
+const BACKEND_PIPELINE_META: ResourceTypeMeta = {
+  icon: "Workflow",
+  description: "Backend pipeline — not supported yet",
 };
 
 /**
@@ -62,37 +67,58 @@ function targetOf(
   return recorded;
 }
 
+/**
+ * A row with no target is listed but cannot be opened. A pipeline the backend
+ * holds is the only one: it belongs to the project and saying nothing about it
+ * makes the list look wrong, but nothing here can open one — the editor reads
+ * browser storage, and fetching a pipeline from the backend is being brought in
+ * separately rather than written twice.
+ */
+function toResourceItem(
+  resource: ProjectResourceSummary,
+): ProjectResourceItem | undefined {
+  if (resource.entity === "pipeline") {
+    return resource.entityId
+      ? {
+          id: resource.id,
+          name: resource.name ?? resource.entityId,
+          ...BACKEND_PIPELINE_META,
+        }
+      : undefined;
+  }
+
+  const described = describeResource(resource);
+  const meta = described && RESOURCE_TYPE_META[described.type];
+  const target =
+    described && meta
+      ? targetOf(resource, described.type, described.target)
+      : undefined;
+  if (!target || !meta) return undefined;
+
+  return {
+    id: resource.id,
+    name: resource.name ?? formatWorkareaTarget(target),
+    target,
+    icon: meta.icon,
+    description: meta.description,
+  };
+}
+
 export function ResourcesWindowContent() {
   const store = useTangentProject();
   const notify = useToastNotification();
   const { data: resourcesPage } = useProjectResources(store.projectId, {
-    entity: ["document"],
+    entity: ["document", "pipeline"],
   });
   const { mutate: deleteResource, isPending: isDetachingResource } =
     useDeleteProjectResource(store.projectId);
 
   const resources: ProjectResourceItem[] = (resourcesPage?.items ?? []).flatMap(
-    (resource) => {
-      const described = describeResource(resource);
-      const meta = described && RESOURCE_TYPE_META[described.type];
-      const target =
-        described && meta
-          ? targetOf(resource, described.type, described.target)
-          : undefined;
-      if (!target || !meta) return [];
-      return [
-        {
-          id: resource.id,
-          name: resource.name ?? formatWorkareaTarget(target),
-          target,
-          icon: meta.icon,
-          description: meta.description,
-        },
-      ];
-    },
+    (resource) => toResourceItem(resource) ?? [],
   );
 
   async function handleOpenResource(resource: ProjectResourceItem) {
+    if (!resource.target) return;
     try {
       await store.openWorkareaTarget(resource.target, resource.name);
     } catch (error) {
@@ -110,6 +136,7 @@ export function ResourcesWindowContent() {
             icon={resource.icon}
             title={resource.name}
             description={resource.description}
+            disabled={!resource.target}
             testId={`open-resource-${resource.id}`}
             onOpen={() => void handleOpenResource(resource)}
             action={
