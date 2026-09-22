@@ -37,9 +37,14 @@ export function useAiChatWindow(enabled: boolean) {
             ...deps,
             undo: editorSession.undo,
             invokeAutoLayout: (algorithm) => {
-              if (!keyboard.getShortcut("auto-layout")) return false;
-              keyboard.invokeShortcut("auto-layout", { algorithm });
-              return true;
+              let laidOut = false;
+              keyboard.invokeShortcut("auto-layout", {
+                algorithm,
+                onLaidOut: () => {
+                  laidOut = true;
+                },
+              });
+              return laidOut;
             },
           })
         }

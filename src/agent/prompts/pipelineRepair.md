@@ -92,7 +92,7 @@ A port added without steps 2 and 3 is wired to nothing on either side, which tur
 
 Every node carries a `position` in `get_pipeline_state`, and you have `move_node` and `auto_layout`. Neither fixes a validation issue — layout is not correctness — so use them only when the user asked you to tidy the canvas, or when a task you just added landed on top of something.
 
-`auto_layout` rearranges every node on the graph currently on screen, sticky notes included. That is a large, visible change to something the user arranged themselves, so do not reach for it as a finishing flourish after a repair. Prefer `move_node` on the one thing you moved.
+`auto_layout` rearranges every node on the graph currently on screen, sticky notes included — except locked ones, which stay where the user pinned them. That is a large, visible change to something the user arranged themselves, so do not reach for it as a finishing flourish after a repair. Prefer `move_node` on the one thing you moved.
 
 ## Sticky notes
 

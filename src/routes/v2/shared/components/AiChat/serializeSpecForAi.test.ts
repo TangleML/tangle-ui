@@ -120,11 +120,13 @@ describe("serializeSpecForAi", () => {
       description: "Path to the raw file",
       default: "data.csv",
       optional: false,
+      position: { x: -200, y: 0 },
     });
     expect(ai.inputs[1]).toEqual({
       $id: "in_2",
       name: "rows",
       type: "Integer",
+      position: { x: -200, y: 150 },
     });
   });
 
@@ -138,6 +140,7 @@ describe("serializeSpecForAi", () => {
         name: "result",
         type: "String",
         description: "Final artifact path",
+        position: { x: 800, y: 0 },
       },
     ]);
   });
@@ -173,6 +176,7 @@ describe("serializeSpecForAi", () => {
         },
       },
       arguments: [{ name: "path", value: "data.csv" }],
+      position: { x: 200, y: 0 },
     });
     expect(ai.tasks[1].isSubgraph).toBe(true);
   });
@@ -208,7 +212,7 @@ describe("serializeSpecForAi", () => {
     expect(ai.activeSubgraphPath).toBeUndefined();
   });
 
-  it("serializes canvas positions, omitting them for nodes never placed", () => {
+  it("serializes the stored position of a node the user has placed", () => {
     const spec = buildBasicSpec();
     spec.tasks[0]?.annotations.set(EDITOR_POSITION_ANNOTATION, {
       x: 120,
@@ -218,8 +222,15 @@ describe("serializeSpecForAi", () => {
     const ai = serializeSpecForAi(spec);
 
     expect(ai.tasks[0]?.position).toEqual({ x: 120, y: 340 });
-    expect(ai.inputs[0]?.position).toBeUndefined();
-    expect(ai.outputs[0]?.position).toBeUndefined();
+  });
+
+  it("reports where an unplaced node renders rather than nothing at all", () => {
+    const ai = serializeSpecForAi(buildBasicSpec());
+
+    expect(ai.tasks[0]?.position).toEqual({ x: 200, y: 0 });
+    expect(ai.inputs[0]?.position).toEqual({ x: -200, y: 0 });
+    expect(ai.inputs[1]?.position).toEqual({ x: -200, y: 150 });
+    expect(ai.outputs[0]?.position).toEqual({ x: 800, y: 0 });
   });
 
   it("omits stickyNotes when the canvas has none", () => {

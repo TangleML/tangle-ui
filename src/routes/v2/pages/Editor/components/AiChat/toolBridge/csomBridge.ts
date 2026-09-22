@@ -23,7 +23,6 @@ import {
   findBindingEndpointProblems,
 } from "@/models/componentSpec/queries/bindingEndpoints";
 import type { EntityLocationOf } from "@/models/componentSpec/queries/locateEntity";
-import { editorRegistry } from "@/routes/v2/pages/Editor/nodes";
 import {
   addFlexNode,
   removeFlexNode,
@@ -54,6 +53,7 @@ import {
 import {
   addTask,
   deleteTask,
+  moveNodeToPosition,
   renameTask,
   unpackSubgraphTask,
 } from "@/routes/v2/pages/Editor/store/actions/task.actions";
@@ -673,18 +673,18 @@ export function createCsomBridgeHandlers(deps: CsomBridgeDeps): CsomHandlers {
         return { success: false, error: target.error };
       }
 
-      // The manifests own how each node type stores its position — a task keeps
-      // it in an annotation, a sticky note in the flex-nodes list — so the
-      // registry is what keeps one tool working across all of them.
-      const manifest = editorRegistry.getByNodeId(target.spec, entityId);
-      if (!manifest) {
+      const moved = moveNodeToPosition(
+        deps.undo,
+        target.spec,
+        entityId,
+        position,
+      );
+      if (!moved) {
         return {
           success: false,
           error: `${target.description} cannot be moved — the editor has no node type registered for it.`,
         };
       }
-
-      manifest.updatePosition(deps.undo, target.spec, entityId, position);
       return { success: true };
     },
 

@@ -1283,6 +1283,24 @@ describe("createEditorToolBridge", () => {
       expect(getFlexNodes(spec)[0]?.position).not.toEqual({ x: 1, y: 2 });
     });
 
+    it("moves a node to the origin, which is a coordinate like any other", async () => {
+      const { bridge } = makeBridge();
+
+      const result = await bridge.moveNode("task_1", { x: 0, y: 0 });
+
+      expect(result).toEqual({ success: true });
+      const state = await bridge.getPipelineState();
+      expect(state.tasks[0]?.position).toEqual({ x: 0, y: 0 });
+    });
+
+    it("moveNode lands as one named undo step", async () => {
+      const { bridge, undo } = makeBridge();
+
+      await bridge.moveNode("task_1", { x: 600, y: 120 });
+
+      expect(undo.labels).toContain("Move node");
+    });
+
     it("explains that a connection has no position of its own", async () => {
       const { bridge, spec } = makeBridge();
       spec.addBinding(
@@ -1327,6 +1345,23 @@ describe("createEditorToolBridge", () => {
 
       expect(await bridge.autoLayout("dwyer")).toEqual({ success: true });
       expect(invokeAutoLayout).toHaveBeenCalledWith("dwyer");
+    });
+
+    it("autoLayout reports failure when the canvas handler laid nothing out", async () => {
+      const spec = buildSpec();
+      const undo = new RecordingUndo();
+      const bridge = createEditorToolBridge({
+        getSpec: () => spec,
+        getActiveSubgraphPath: () => [],
+        getActiveSubgraphTaskId: () => undefined,
+        undo,
+        invokeAutoLayout: () => false,
+      });
+
+      const result = await bridge.autoLayout();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("no pipeline canvas is open");
     });
 
     it("autoLayout reports when no canvas is mounted to lay out", async () => {

@@ -136,6 +136,21 @@ export function batchSetTaskColor(
   });
 }
 
+export function moveNodeToPosition(
+  undo: UndoGroupable,
+  spec: ComponentSpec,
+  nodeId: string,
+  position: XYPosition,
+): boolean {
+  const manifest = editorRegistry.getByNodeId(spec, nodeId);
+  if (!manifest) return false;
+
+  undo.withGroup("Move node", () => {
+    manifest.updatePosition(undo, spec, nodeId, position);
+  });
+  return true;
+}
+
 export function applyAutoLayoutPositions(
   undo: UndoGroupable,
   spec: ComponentSpec,

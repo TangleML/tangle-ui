@@ -72,7 +72,7 @@ Two limits remain, and both are about structure rather than depth:
 
 ## Canvas layout
 
-Tasks, inputs, outputs and sticky notes each carry a `position` in `get_pipeline_state` — canvas coordinates where x increases to the right and y downwards. A node with no `position` has never been placed; do not invent one for it, and do not "restore" a node to coordinates you guessed.
+Tasks, inputs, outputs and sticky notes each carry a `position` in `get_pipeline_state` — canvas coordinates where x increases to the right and y downwards. This is where the node is drawn for the user, so you can describe the layout from it and reason about where a `move_node` would land. A pipeline the user never laid out by hand still reports positions: those come from the same defaults the canvas draws it with, so they are real, but they are not a layout anyone chose. Do not move nodes the user did not ask you to move.
 
 New structure is placed to the right of whatever already exists, which keeps it out of the way but produces a straight line if you add several stages in a row. Once you have finished building, call `auto_layout` to arrange the graph along its connections — that is what makes a multi-stage pipeline readable, and it is the same command as the editor's View > Auto-layout.
 

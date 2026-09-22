@@ -26,7 +26,7 @@ import type {
   TypeSpecType,
 } from "@/models/componentSpec";
 import { getFlexNodes } from "@/models/componentSpec/queries/flexNodes";
-import { EDITOR_POSITION_ANNOTATION } from "@/utils/annotationKeys";
+import { resolveEntityPositions } from "@/routes/v2/shared/nodes/buildUtils";
 import { isGraphImplementation } from "@/utils/componentSpec";
 
 interface CanvasPosition {
@@ -109,26 +109,10 @@ function pickDefined<T extends object>(obj: T): T {
   return out;
 }
 
-/**
- * A node that has never been placed is not the same as one sitting at the
- * origin, and omitting the field keeps the model from "restoring" a node to
- * coordinates it made up. `has` is what separates the two cases: the position
- * codec defaults to `{ x: 0, y: 0 }`, so `get` alone cannot.
- */
-const canvasPosition = (entity: {
-  annotations: {
-    has(key: string): boolean;
-    get(key: string): unknown;
-  };
-}): CanvasPosition | undefined => {
-  if (!entity.annotations.has(EDITOR_POSITION_ANNOTATION)) return undefined;
-  const pos = entity.annotations.get(
-    EDITOR_POSITION_ANNOTATION,
-  ) as CanvasPosition;
-  return { x: pos.x, y: pos.y };
-};
-
-const serializeInput = (input: Input): AiInputSpec =>
+const serializeInput = (
+  input: Input,
+  position: CanvasPosition | undefined,
+): AiInputSpec =>
   pickDefined({
     $id: input.$id,
     name: input.name,
@@ -136,16 +120,19 @@ const serializeInput = (input: Input): AiInputSpec =>
     description: input.description || undefined,
     default: input.defaultValue || undefined,
     optional: input.optional,
-    position: canvasPosition(input),
+    position,
   });
 
-const serializeOutput = (output: Output): AiOutputSpec =>
+const serializeOutput = (
+  output: Output,
+  position: CanvasPosition | undefined,
+): AiOutputSpec =>
   pickDefined({
     $id: output.$id,
     name: output.name,
     type: output.type,
     description: output.description || undefined,
-    position: canvasPosition(output),
+    position,
   });
 
 const serializeArgument = (arg: {
@@ -154,7 +141,10 @@ const serializeArgument = (arg: {
 }): { name: string; value?: unknown } =>
   pickDefined({ name: arg.name, value: arg.value });
 
-const serializeTask = (task: Task): AiTaskSpec =>
+const serializeTask = (
+  task: Task,
+  position: CanvasPosition | undefined,
+): AiTaskSpec =>
   pickDefined({
     $id: task.$id,
     name: task.name,
@@ -165,7 +155,7 @@ const serializeTask = (task: Task): AiTaskSpec =>
     )
       ? true
       : undefined,
-    position: canvasPosition(task),
+    position,
   });
 
 const serializeStickyNote = (note: FlexNodeData): AiStickyNoteSpec =>
@@ -222,13 +212,20 @@ export function serializeSpecForAi(
 ): AiSpec {
   const insideSubgraph = activeSubgraphPath.length > 0;
   const stickyNotes = getFlexNodes(spec).map(serializeStickyNote);
+  const positions = resolveEntityPositions(spec);
   return toPlainJson(
     pickDefined({
       name: spec.name,
       description: spec.description || undefined,
-      inputs: spec.inputs.map(serializeInput),
-      outputs: spec.outputs.map(serializeOutput),
-      tasks: spec.tasks.map(serializeTask),
+      inputs: spec.inputs.map((input) =>
+        serializeInput(input, positions.get(input.$id)),
+      ),
+      outputs: spec.outputs.map((output) =>
+        serializeOutput(output, positions.get(output.$id)),
+      ),
+      tasks: spec.tasks.map((task) =>
+        serializeTask(task, positions.get(task.$id)),
+      ),
       bindings: spec.bindings.map(serializeBinding),
       stickyNotes: stickyNotes.length > 0 ? stickyNotes : undefined,
       activeSubgraphPath: insideSubgraph ? activeSubgraphPath : undefined,
