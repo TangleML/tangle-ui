@@ -11,6 +11,7 @@ import { getUserDetails } from "@/utils/user";
 
 import { ProjectsSection } from "./ProjectsSection";
 import { useMyProjects } from "./useMyProjects";
+import { usePinnedProjectIds } from "./usePinnedProjects";
 
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@tanstack/react-router")>()),
@@ -26,6 +27,8 @@ vi.mock("@/services/projects/useProjects", () => ({
 }));
 
 vi.mock("./useMyProjects", () => ({ useMyProjects: vi.fn() }));
+
+vi.mock("./usePinnedProjects", () => ({ usePinnedProjectIds: vi.fn() }));
 
 vi.mock("@/hooks/useToastNotification", () => ({
   default: () => vi.fn(),
@@ -129,6 +132,7 @@ describe("ProjectsSection", () => {
     } as ReturnType<typeof useWorkspaces>);
     mockBackend();
     mockProjects();
+    vi.mocked(usePinnedProjectIds).mockReturnValue(new Set());
   });
 
   afterEach(() => {
@@ -266,6 +270,32 @@ describe("ProjectsSection", () => {
     expect(
       await screen.findByText("Failed to list projects"),
     ).toBeInTheDocument();
+  });
+
+  /**
+   * A pinned project is shown above this list, so repeating it here would put
+   * the same card on screen twice.
+   */
+  it("leaves out a project that has been pinned above it", async () => {
+    vi.mocked(usePinnedProjectIds).mockReturnValue(new Set(["project-1"]));
+
+    renderSection();
+
+    expect(await screen.findByTestId("create-project")).toBeInTheDocument();
+    expect(screen.queryByText("Churn model")).toBeNull();
+  });
+
+  it("counts only what it is actually showing", async () => {
+    mockProjects({
+      projects: [project, { ...project, id: "project-2", name: "Fraud model" }],
+      totalCount: 9,
+      hasMore: true,
+    });
+    vi.mocked(usePinnedProjectIds).mockReturnValue(new Set(["project-1"]));
+
+    renderSection();
+
+    expect(await screen.findByText("Showing 1 of 8.")).toBeInTheDocument();
   });
 
   it("asks the user to configure a backend before querying", async () => {

@@ -1,7 +1,7 @@
-import { BlockStack } from "@/components/ui/layout";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Heading } from "@/components/ui/typography";
 
-import { ProjectCard } from "./ProjectCard";
+import { PinnedProjectChip } from "./PinnedProjectChip";
 import { usePinnedProjects } from "./usePinnedProjects";
 
 export function PinnedProjectsSection() {
@@ -12,13 +12,15 @@ export function PinnedProjectsSection() {
   if (projects.length === 0) return null;
 
   return (
-    <BlockStack gap="4">
-      <Heading level={2}>Pinned</Heading>
-      <div className="grid w-full grid-cols-[repeat(auto-fill,minmax(13rem,15rem))] gap-4">
+    <BlockStack gap="2">
+      <Heading level={2} size="sm">
+        Pinned
+      </Heading>
+      <InlineStack gap="2" className="w-full">
         {projects.map((project) => (
-          <ProjectCard key={project.id} project={project} />
+          <PinnedProjectChip key={project.id} project={project} />
         ))}
-      </div>
+      </InlineStack>
     </BlockStack>
   );
 }
