@@ -775,17 +775,17 @@ describe("resolveSelectedClusterKey", () => {
     ).toBe("eo9");
   });
 
-  it("resolves an alias to its cluster key", () => {
+  it("keeps a persisted alias, which is a target of its own", () => {
     expect(
       resolveSelectedClusterKey(schema, {
         [CLOUD_PROVIDER_ANNOTATION]: "google",
       }),
-    ).toBe("lt3");
+    ).toBe("google");
     expect(
       resolveSelectedClusterKey(schema, {
         [CLOUD_PROVIDER_ANNOTATION]: "nebius",
       }),
-    ).toBe("h200");
+    ).toBe("nebius");
   });
 
   it("returns undefined when no selection is persisted", () => {
@@ -820,5 +820,120 @@ describe("listedOptions", () => {
 
   it("keeps a deprecated option that is the current value", () => {
     expect(listedOptions([live, retiring], "lt3")).toEqual([live, retiring]);
+  });
+});
+
+describe("aliases as picker entries", () => {
+  const config: LauncherConfig = {
+    gke: gke("lt3", "eo9"),
+    nebius: nebius({ b300: { accelerators: [B300] } }),
+    aliases: { google: "lt3", nebius: "b300" },
+  };
+  const schema = buildLauncherSchemaFromCapabilities(config);
+  const options = getCloudProviderConfig(schema)?.options ?? [];
+
+  it("offers one entry per alias, keyed by the alias, after the clusters", () => {
+    expect(options.map((option) => option.value)).toEqual([
+      "lt3",
+      "eo9",
+      "b300",
+      "google",
+      "nebius",
+    ]);
+  });
+
+  it("names an alias as a default and captions the cluster it points at", () => {
+    expect(options.find((option) => option.value === "google")).toEqual({
+      value: "google",
+      name: "Google default",
+      caption: "Currently GKE: lt3",
+    });
+    expect(options.find((option) => option.value === "nebius")).toEqual({
+      value: "nebius",
+      name: "Nebius default",
+      caption: "Currently Nebius: b300 cluster",
+    });
+  });
+
+  it("lends the target's fields, so the same inputs render either way", () => {
+    expect(
+      parseSchemaToAnnotationConfig(getProviderSchema(schema, "nebius")!),
+    ).toEqual(
+      parseSchemaToAnnotationConfig(getProviderSchema(schema, "b300")!),
+    );
+  });
+
+  it("persists the alias when chosen, and carries the GPU across", () => {
+    const existing = JSON.stringify({ "NVIDIA-B300-SXM6-PC": "4" });
+
+    expect(resolveClusterSelection(schema, "nebius", existing, "b300")).toEqual(
+      {
+        cloudProviderValue: "nebius",
+        acceleratorAnnotation: ACCELERATORS_ANNOTATION,
+        acceleratorValue: existing,
+      },
+    );
+    expect(resolveClusterSelection(schema, "b300", existing, "nebius")).toEqual(
+      {
+        cloudProviderValue: "b300",
+        acceleratorAnnotation: ACCELERATORS_ANNOTATION,
+        acceleratorValue: existing,
+      },
+    );
+  });
+
+  it("clears nothing when pinning an alias or releasing a cluster to one", () => {
+    expect(clusterAnnotationDiff(schema, "nebius", "b300")).toEqual([]);
+    expect(clusterAnnotationDiff(schema, "b300", "nebius")).toEqual([]);
+  });
+
+  it("inherits the target's deprecation, so it is left out of a fresh list", () => {
+    const retired = buildLauncherSchemaFromCapabilities({
+      gke: gke("eo9"),
+      nebius: {
+        clusters: {
+          h200: {
+            label: "H200 cluster",
+            valid_until: "2020-01-01T00:00:00Z",
+            succeeded_by: { cluster: "eo9" },
+          },
+        },
+      },
+      aliases: { nebius: "h200" },
+    });
+    const entry = retired.launcher_annotation_schemas?.nebius;
+
+    expect(entry?.["x-deprecated"]).toBe(true);
+    expect(entry?.["x-deprecated-message"]).toBe(
+      "H200 cluster is no longer available as of 2020-01-01. Use eo9 instead.",
+    );
+
+    const retiredOptions = getCloudProviderConfig(retired)?.options ?? [];
+    expect(
+      listedOptions(retiredOptions, undefined).map((o) => o.value),
+    ).toEqual(["eo9"]);
+    expect(listedOptions(retiredOptions, "nebius").map((o) => o.value)).toEqual(
+      ["eo9", "nebius"],
+    );
+  });
+
+  it("skips an alias whose target is not offered", () => {
+    const built = buildLauncherSchemaFromCapabilities({
+      gke: gke("eo9"),
+      aliases: { ghost: "gone" },
+    });
+
+    expect(built.launcher_annotation_schemas).not.toHaveProperty("ghost");
+  });
+
+  it("never displaces a cluster that shares the alias name", () => {
+    const built = buildLauncherSchemaFromCapabilities({
+      gke: gke("lt3", "eo9"),
+      aliases: { lt3: "eo9" },
+    });
+    const lt3 = built.launcher_annotation_schemas?.lt3;
+
+    expect(lt3?.["x-alias-of"]).toBeUndefined();
+    expect(lt3?.["x-provider"]).toBe("GKE");
   });
 });
