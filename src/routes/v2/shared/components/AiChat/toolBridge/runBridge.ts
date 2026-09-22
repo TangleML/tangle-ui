@@ -34,11 +34,13 @@ import {
   fetchExecutionState,
   fetchPipelineRun,
 } from "@/services/executionService";
+import { ProjectRunsQueryKeys } from "@/services/projects/types";
 import type { PipelineRun } from "@/types/pipelineRun";
 import {
   flattenExecutionStatusStats,
   getOverallExecutionStatusFromStats,
 } from "@/utils/executionStatus";
+import { projectIdsFromAnnotations } from "@/utils/projectRunAnnotation";
 import { submitPipelineRun as submitPipelineRunHelper } from "@/utils/submitPipeline";
 
 import type { BridgeDeps } from "./utils";
@@ -66,13 +68,14 @@ export function createRunBridgeHandlers(deps: BridgeDeps): RunHandlers {
       }
       const wireSpec = serializeComponentSpec(spec);
       const authorizationToken = deps.getAuthToken?.();
+      const runAnnotations = deps.getRunAnnotations?.();
       const submission = await new Promise<{
         run: PipelineRun | null;
         error: string | null;
       }>((resolve) => {
         submitPipelineRunHelper(wireSpec, backendUrl, {
           authorizationToken,
-          runAnnotations: deps.getRunAnnotations?.(),
+          runAnnotations,
           onSuccess: (data) => resolve({ run: data, error: null }),
           onError: (err) => resolve({ run: null, error: errorMessage(err) }),
         });
@@ -92,6 +95,14 @@ export function createRunBridgeHandlers(deps: BridgeDeps): RunHandlers {
       deps.queryClient?.invalidateQueries({
         queryKey: ONBOARDING_MY_RUN_COUNT_KEY,
       });
+      // A project's run feed is otherwise stale for five minutes and does not
+      // refetch on focus, so a run the agent started would not show up on the
+      // project it was started in.
+      for (const projectId of projectIdsFromAnnotations(runAnnotations)) {
+        deps.queryClient?.invalidateQueries({
+          queryKey: ProjectRunsQueryKeys.All(projectId),
+        });
+      }
       return {
         success: true,
         runId: String(submission.run.id),
