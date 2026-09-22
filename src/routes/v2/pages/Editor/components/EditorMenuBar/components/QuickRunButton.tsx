@@ -61,7 +61,7 @@ export const QuickRunButton = observer(function QuickRunButton({
 }: QuickRunButtonProps &
   Omit<ComponentProps<typeof TooltipButton>, "tooltip" | "variant" | "size">) {
   const { navigation } = useSharedStores();
-  const { autoSave } = useEditorSession();
+  const { autoSave, pipelineFile } = useEditorSession();
   const { isAuthorized } = useAwaitAuthorization();
   const rootSpec = navigation.rootSpec;
   const allIssues = rootSpec?.allValidationIssues ?? [];
@@ -145,6 +145,9 @@ export const QuickRunButton = observer(function QuickRunButton({
             }
             isComponentTreeValid={rootSpec?.isValid}
             onlyFixableIssues={!hasErrors && allIssues.length > 0}
+            savedTaskArguments={
+              pipelineFile.activePipelineFile?.savedTaskArguments
+            }
           />
         </div>
       )}

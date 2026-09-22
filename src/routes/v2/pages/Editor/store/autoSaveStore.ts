@@ -41,6 +41,11 @@ interface SaveSession {
   timer?: ReturnType<typeof setTimeout>;
 }
 
+interface AutoSaveInitOptions {
+  savedYaml?: string;
+  forceSave?: boolean;
+}
+
 export class AutoSaveStore {
   @observable accessor isSaving = false;
   @observable accessor lastSavedAt: Date | null = null;
@@ -61,18 +66,20 @@ export class AutoSaveStore {
     makeObservable(this);
   }
 
-  @action init(spec: ComponentSpec) {
+  @action init(spec: ComponentSpec, options: AutoSaveInitOptions = {}) {
     this.dispose();
     const file = this.pipelineFileStore.activePipelineFile;
     if (!file?.canEdit) return;
     const snapshot = getAutoSaveSnapshot(spec);
+    const savedYaml = options.savedYaml ?? snapshot.yaml;
+    const needsSave = Boolean(options.forceSave || snapshot.yaml !== savedYaml);
     const session: SaveSession = {
       spec,
       file,
-      savedYaml: snapshot.yaml,
-      queuedYaml: snapshot.yaml,
+      savedYaml,
+      queuedYaml: savedYaml,
       snapshot,
-      hasPendingRecovery: false,
+      hasPendingRecovery: options.forceSave ?? false,
       pending: Promise.resolve(true),
       saving: false,
       saveRequested: false,
@@ -81,7 +88,7 @@ export class AutoSaveStore {
     this.isSaving = false;
     this.lastSavedAt = null;
     this.error = null;
-    this.hasUnsavedChanges = false;
+    this.hasUnsavedChanges = needsSave;
     this.disposeReaction = reaction(
       () => getAutoSaveSnapshot(spec),
       (next) => {
@@ -125,6 +132,22 @@ export class AutoSaveStore {
         this.scheduleSave(session);
       },
     );
+    if (needsSave) {
+      const remote =
+        file.storageKind !== "local" || this.storage?.canMigrate(file);
+      session.hasPendingRecovery ||= Boolean(remote);
+      void file.persistRecovery(snapshot.yaml).catch((error: unknown) => {
+        if (session !== this.session) return;
+        runInAction(() => {
+          this.error = error instanceof Error ? error.message : String(error);
+          this.hasUnsavedChanges = true;
+        });
+      });
+      session.contentDeadline =
+        Date.now() +
+        (remote ? REMOTE_CONTENT_SAVE_DELAY_MS : AUTOSAVE_DEBOUNCE_TIME_MS);
+      this.scheduleSave(session);
+    }
   }
 
   private scheduleSave(session: SaveSession) {

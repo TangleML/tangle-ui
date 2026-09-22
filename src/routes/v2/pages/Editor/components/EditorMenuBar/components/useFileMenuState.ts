@@ -2,6 +2,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { type RefObject, useEffect, useRef, useState } from "react";
 
 import useToastNotification from "@/hooks/useToastNotification";
+import { serializeComponentSpecToText } from "@/models/componentSpec";
 import { useTourMode } from "@/providers/TourProvider/TourModeContext";
 import { getEditorLocation } from "@/routes/editorRoutes";
 import { APP_ROUTES } from "@/routes/router";
@@ -28,6 +29,7 @@ interface FileMenuState {
   setRenameDialogOpen: (open: boolean) => void;
   deleteDialogOpen: boolean;
   setDeleteDialogOpen: (open: boolean) => void;
+  deletePending: boolean;
   renamePipeline: (name: string) => void;
   getRenameInitialName: () => string;
   setImportOpen: (open: boolean) => void;
@@ -37,7 +39,7 @@ interface FileMenuState {
   handleSavePipelineAs: (name: string) => void;
   handleExport: () => void;
   getSaveAsInitialName: () => string;
-  handleDeletePipeline: () => void;
+  handleDeletePipeline: () => Promise<boolean>;
 }
 
 export function useFileMenuState(): FileMenuState {
@@ -53,6 +55,7 @@ export function useFileMenuState(): FileMenuState {
   const [saveAsDialogOpen, setSaveAsDialogOpen] = useState(false);
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletePending, setDeletePending] = useState(false);
   const importTriggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -119,14 +122,25 @@ export function useFileMenuState(): FileMenuState {
 
   const handleDeletePipeline = async () => {
     const file = pipelineFileStore.activePipelineFile;
-    if (!file?.canEdit) return;
-    await autoSave.dispose();
+    if (!file?.canEdit || deletePending) return false;
+    const spec = navigation.rootSpec;
+    const savedYaml = spec ? serializeComponentSpecToText(spec) : undefined;
+    setDeletePending(true);
+    const saveSucceeded = await autoSave.dispose();
     try {
       await file.deleteFile();
       void navigate({ to: APP_ROUTES.HOME });
+      return true;
     } catch (error) {
-      if (navigation.rootSpec) autoSave.init(navigation.rootSpec);
+      if (spec)
+        autoSave.init(spec, {
+          savedYaml,
+          forceSave: !saveSucceeded,
+        });
       notify(`Could not delete pipeline: ${error}`, "error");
+      return false;
+    } finally {
+      setDeletePending(false);
     }
   };
 
@@ -147,6 +161,7 @@ export function useFileMenuState(): FileMenuState {
     setRenameDialogOpen,
     deleteDialogOpen,
     setDeleteDialogOpen,
+    deletePending,
     renamePipeline,
     getRenameInitialName,
     setImportOpen,

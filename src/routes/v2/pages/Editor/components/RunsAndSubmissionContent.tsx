@@ -15,7 +15,7 @@ import { deepClone } from "@/utils/deepClone";
 export const RunsAndSubmissionContent = observer(() => {
   const { isAuthorized } = useAwaitAuthorization();
   const { navigation } = useSharedStores();
-  const { autoSave } = useEditorSession();
+  const { autoSave, pipelineFile } = useEditorSession();
   const rootSpec = navigation.rootSpec;
   const allIssues = rootSpec?.allValidationIssues ?? [];
   const errorCount = allIssues.filter((i) => i.severity === "error").length;
@@ -53,6 +53,9 @@ export const RunsAndSubmissionContent = observer(() => {
             }
             isComponentTreeValid={rootSpec?.isValid}
             onlyFixableIssues={!hasErrors && allIssues.length > 0}
+            savedTaskArguments={
+              pipelineFile.activePipelineFile?.savedTaskArguments
+            }
           />
         ) : (
           <HuggingFaceAuthButton

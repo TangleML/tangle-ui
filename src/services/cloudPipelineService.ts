@@ -5,7 +5,9 @@ import { getCurrentUserApiUsersMeGet } from "@/api/sdk.gen";
 import { getArgumentsFromInputs } from "@/components/shared/ReactFlow/FlowCanvas/utils/getArgumentsFromInputs";
 import { coerceMetadataAnnotations } from "@/utils/coerceMetadataAnnotations";
 import {
+  type ArgumentType,
   type ComponentSpec,
+  type DynamicDataArgument,
   isValidComponentSpec,
 } from "@/utils/componentSpec";
 import { isRecord } from "@/utils/typeGuards";
@@ -258,6 +260,48 @@ export function cloudPipelineToComponentSpec(
     if (typeof argument === "string") input.value = argument;
   }
   return componentSpec;
+}
+
+/**
+ * Returns dynamic root arguments that the string-only pipeline editor cannot
+ * represent. These values need to be supplied again when the pipeline runs.
+ */
+export function getCloudPipelineSavedTaskArguments(
+  pipeline: CloudPipeline,
+): Record<string, ArgumentType> {
+  const root = pipeline.root_pipeline_task;
+  const ref = root.componentRef;
+  if (
+    !isRecord(ref) ||
+    !isValidComponentSpec(ref.spec) ||
+    !isRecord(root.arguments)
+  ) {
+    return {};
+  }
+
+  const argumentsByName: Record<string, ArgumentType> = {};
+  for (const input of ref.spec.inputs ?? []) {
+    const argument = root.arguments[input.name];
+    if (isSavedDynamicArgument(argument)) {
+      argumentsByName[input.name] = structuredClone(argument);
+    }
+  }
+  return argumentsByName;
+}
+
+function isSavedDynamicArgument(
+  argument: unknown,
+): argument is DynamicDataArgument {
+  if (!isRecord(argument) || !isRecord(argument.dynamicData)) return false;
+
+  const values = Object.values(argument.dynamicData);
+  if (values.length === 0 || !values.every(isRecord)) return false;
+
+  const secret = argument.dynamicData.secret;
+  return (
+    secret === undefined ||
+    (isRecord(secret) && typeof secret.name === "string")
+  );
 }
 
 function componentSpecToCloudTask(

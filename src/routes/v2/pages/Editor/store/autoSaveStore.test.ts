@@ -562,6 +562,23 @@ describe("AutoSaveStore", () => {
     expect(finished).toHaveBeenCalledOnce();
   });
 
+  it("saves edits made while deletion is pending when autosave resumes", async () => {
+    const { store, spec, write } = setup();
+    const savedYaml = serializeComponentSpecToText(spec);
+    await store.dispose();
+
+    spec.setDescription("Edit made while deletion was pending");
+    store.init(spec, { savedYaml });
+
+    expect(store.hasUnsavedChanges).toBe(true);
+    await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_TIME_MS);
+    expect(write).toHaveBeenCalledExactlyOnceWith(
+      serializeComponentSpecToText(spec),
+    );
+    expect(store.hasUnsavedChanges).toBe(false);
+    await store.dispose();
+  });
+
   it("keeps autosaves local when the storage service cannot migrate the file", async () => {
     const storage = {
       canMigrate: vi.fn().mockReturnValue(false),
