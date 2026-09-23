@@ -52,13 +52,13 @@ const PROJECT_DOCK_WINDOWS: ProjectDockWindow[] = [
   {
     id: "tangent-project-resources",
     title: "Resources",
-    icon: "Folder",
+    icon: "FileText",
     content: <ResourcesWindowContent />,
   },
   {
     id: "tangent-project-runs",
     title: "Runs",
-    icon: "Play",
+    icon: "ListChecks",
     content: <RunsWindowContent />,
   },
 ];
