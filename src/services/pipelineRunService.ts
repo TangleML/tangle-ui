@@ -24,6 +24,8 @@ import {
 import { fetchWithErrorHandling } from "@/utils/fetchWithErrorHandling";
 import { componentSpecToYaml } from "@/utils/yaml";
 
+import { requestFailureMessage } from "./requestFailureMessage";
+
 export const createPipelineRun = async (
   payload: BodyCreateApiPipelineRunsPost,
   backendUrl: string,
@@ -43,7 +45,9 @@ export const createPipelineRun = async (
   });
 
   if (!response.ok) {
-    throw new Error("Failed to create pipeline run");
+    throw new Error(
+      await requestFailureMessage(response, "Failed to create pipeline run"),
+    );
   }
 
   return response.json();
