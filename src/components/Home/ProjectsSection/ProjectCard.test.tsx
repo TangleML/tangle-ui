@@ -8,8 +8,10 @@ import { useDeleteProject } from "@/services/projects/useProjects";
 import { copyToClipboard } from "@/utils/string";
 
 import { ProjectCard } from "./ProjectCard";
+import { useProjectPin } from "./useProjectPin";
 
 const mutate = vi.fn();
+const togglePin = vi.fn();
 const notify = vi.fn();
 const track = vi.fn();
 const navigate = vi.fn();
@@ -44,6 +46,8 @@ vi.mock("@/utils/string", () => ({
   copyToClipboard: vi.fn(),
 }));
 
+vi.mock("./useProjectPin", () => ({ useProjectPin: vi.fn() }));
+
 vi.mock("@/utils/URL", () => ({
   getProjectUrl: (id: string) => `https://tangle.example/projects/${id}`,
 }));
@@ -65,6 +69,10 @@ function mockDeleteProject({ isPending = false } = {}) {
     mutate,
     isPending,
   } as unknown as ReturnType<typeof useDeleteProject>);
+}
+
+function mockPin({ pinned = false } = {}) {
+  vi.mocked(useProjectPin).mockReturnValue({ pinned, togglePin });
 }
 
 function renderCard(overrides: Partial<ProjectSummary> = {}) {
@@ -89,6 +97,7 @@ describe("ProjectCard", () => {
     Element.prototype.scrollIntoView = vi.fn();
     Element.prototype.hasPointerCapture = vi.fn();
     mockDeleteProject();
+    mockPin();
   });
 
   afterEach(() => {
@@ -189,6 +198,32 @@ describe("ProjectCard", () => {
 
     expect(mutate).not.toHaveBeenCalled();
     expect(screen.queryByRole("alertdialog")).toBeNull();
+  });
+
+  /** A pinned project leads the grid, and has to say why it is out in front. */
+  it("marks a pinned project on the card itself", () => {
+    mockPin({ pinned: true });
+    renderCard();
+
+    expect(screen.getByLabelText("Pinned")).toBeInTheDocument();
+  });
+
+  it("leaves an unpinned project unmarked", () => {
+    renderCard();
+
+    expect(screen.queryByLabelText("Pinned")).toBeNull();
+  });
+
+  it("pins the project from its own menu", async () => {
+    const user = userEvent.setup();
+    renderCard();
+
+    await user.click(
+      screen.getByRole("button", { name: "Project actions: Churn model" }),
+    );
+    await user.click(await screen.findByRole("menuitem", { name: /Pin/ }));
+
+    expect(togglePin).toHaveBeenCalled();
   });
 
   it("says nothing about the workspace a project lives in", () => {
