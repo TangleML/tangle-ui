@@ -3,8 +3,9 @@
  * session's default environment.
  *
  * This one environment does two jobs on a single socket:
- * - Hosts the workarea RPC **tools** (open / list / read / close tabs, plus
- *   run inspect) so an agent can arrange and read the Dynamic Workarea.
+ * - Hosts the workarea RPC **tools** (open / list / read / close tabs, run
+ *   inspect, and naming the project and session) so an agent can arrange and
+ *   read the Dynamic Workarea, and say what the work it is doing is called.
  * - Hosts an editor sub-agent **runtime** (spawn / message / kill) bound to a
  *   routing bridge that drives whichever pipeline tab is active. This catches
  *   editor spawns that Prime does not bind to a specific tab's environment; per
@@ -29,6 +30,7 @@ import { useRemoteEnvAuthToken } from "@/routes/v2/pages/Tangent/hooks/useRemote
 import { useTangentBaseUrl } from "@/routes/v2/pages/Tangent/hooks/useTangentBaseUrl";
 import { connectRemoteEnvWithRefresh } from "@/routes/v2/pages/Tangent/services/connectRemoteEnvWithRefresh";
 import { createActiveTabRoutingBridge } from "@/routes/v2/pages/Tangent/services/createActiveTabRoutingBridge";
+import { createNamingHandlers } from "@/routes/v2/pages/Tangent/services/createNamingHandlers";
 import {
   createWorkareaRemoteTools,
   type RunInspectDeps,
@@ -173,6 +175,14 @@ export function TangentProjectAgentProvider({
     ]);
   };
 
+  const [naming] = useState(() =>
+    createNamingHandlers({
+      projectId: store.projectId,
+      getActiveSessionId: () => store.activeSessionId,
+      onRenamed: () => refreshProjectResources(),
+    }),
+  );
+
   const [tools] = useState(() =>
     createWorkareaRemoteTools(() => ({
       openTarget: (target, title) => store.openWorkareaTarget(target, title),
@@ -207,6 +217,8 @@ export function TangentProjectAgentProvider({
         return { pipelineName };
       },
       refreshResources: refreshProjectResources,
+      renameProject: naming.renameProject,
+      nameSession: naming.nameSession,
     })),
   );
   const [routingBridge] = useState(() =>

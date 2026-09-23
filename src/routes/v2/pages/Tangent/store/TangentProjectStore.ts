@@ -15,6 +15,7 @@ import {
 import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import { TANGENT_BUNDLE_ID } from "@/routes/v2/pages/Tangent/constants";
 import { resolveWorkareaTarget } from "@/routes/v2/pages/Tangent/services/resolveWorkareaTarget";
+import { sessionMemorySeed } from "@/routes/v2/pages/Tangent/services/sessionMemory";
 import type {
   ResolvedWorkareaView,
   WorkareaTab,
@@ -70,8 +71,9 @@ export interface TangentSessionIo {
       thinkingDepth?: ThinkingLevel;
     },
   ) => Promise<{ sessionId: string }>;
-  attachSession: (sessionId: string) => Promise<{ id: string }>;
+  attachSession: (sessionId: string, name?: string) => Promise<{ id: string }>;
   detachSession: (resourceId: string) => Promise<void>;
+  nameSessionIfUnnamed: (sessionId: string, prompt: string) => Promise<void>;
   notify: (message: string, type: "error") => void;
   projectInstructions?: string | null;
 }
@@ -201,6 +203,10 @@ export class TangentProjectStore {
     if (!sessionId) return;
     if (!content.trim()) return;
     this.#sessionsWithPrompt.add(sessionId);
+    // A session started inside a project has no opening prompt to be named
+    // from, so its first message is the first chance to call it anything. The
+    // agent replaces this with a better title once it has read the message.
+    void this.#io?.nameSessionIfUnnamed(sessionId, content);
   }
 
   async startSession(options?: StartSessionOptions): Promise<boolean> {
@@ -214,19 +220,22 @@ export class TangentProjectStore {
     try {
       // An empty prompt makes the embed skip the opening turn so the human types
       // the first message; a non-empty prompt runs the opening turn immediately
-      // so the agent starts working. `name` labels the session in Tangent's own
-      // session list.
+      // so the agent starts working. `name` labels the session in both lists:
+      // the shell's own, and the project resource row Tangle reads.
       const prompt = options?.prompt ?? "";
-      const instructions = io.projectInstructions?.trim();
       const { sessionId } = await io.newSession(prompt, TANGENT_BUNDLE_ID, {
         name: options?.name ?? "New Tangent session",
-        resources: instructions
-          ? [{ kind: "memory", scope: "session", content: instructions }]
-          : undefined,
+        resources: [
+          {
+            kind: "memory",
+            scope: "session",
+            content: sessionMemorySeed(io.projectInstructions),
+          },
+        ],
         model: options?.model,
         thinkingDepth: options?.thinkingDepth,
       });
-      const resource = await io.attachSession(sessionId);
+      const resource = await io.attachSession(sessionId, options?.name);
       runInAction(() => {
         this.#freshSessions.set(sessionId, resource.id);
         this.selectedSessionId = sessionId;

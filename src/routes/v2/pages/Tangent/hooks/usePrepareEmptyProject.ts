@@ -4,7 +4,9 @@ import { useEffect, useRef } from "react";
 import { createNewPipeline } from "@/routes/v2/pages/Editor/components/EditorMenuBar/components/fileMenu.actions";
 import type { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { availablePipelineName } from "@/services/localPipelines/localPipelinesService";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
+import { nameFromPrompt } from "@/services/projects/nameFromPrompt";
 import {
   describeResource,
   LOCAL_PIPELINE,
@@ -69,10 +71,13 @@ export function usePrepareEmptyProject(
   const prepared = useRef(false);
 
   const starting = readStartingSession(project?.extraData);
+  const askedFor = starting ? nameFromPrompt(starting.prompt) : undefined;
 
   const { mutate, isIdle } = useMutation({
     mutationFn: async () => {
-      const started = await store.startSession(starting);
+      const started = await store.startSession(
+        starting && { ...starting, name: askedFor },
+      );
       if (!started) return;
 
       // Nothing has been written about a project nobody has worked in yet, so
@@ -104,10 +109,14 @@ export function usePrepareEmptyProject(
         return;
       }
 
-      // Unnamed, so it gets the same random name every other new pipeline
-      // gets. Naming it after the project made every pipeline in a project
-      // started from a prompt carry the whole prompt as its name.
-      const file = await createNewPipeline(storage);
+      // Named after the ask, which is also what the project is called, so the
+      // two agree until the agent renames one. It reads as a repetition; four
+      // random words read as a mistake. Nothing asked for, nothing to name it
+      // after, so it keeps the random words.
+      const file = await createNewPipeline(
+        storage,
+        askedFor ? await availablePipelineName(askedFor) : undefined,
+      );
       await createResource(
         localPipelineResourceInput({
           localName: file.storageKey,

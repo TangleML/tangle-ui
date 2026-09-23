@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
+import { withoutProvisionalName } from "@/services/projects/provisionalName";
 import type { Project } from "@/services/projects/types";
 import { useUpdateProject } from "@/services/projects/useProjects";
 import { tracking } from "@/utils/tracking";
@@ -63,8 +64,16 @@ export function RenameProjectDialog({
       return;
     }
 
+    // A name someone typed is a deliberate one, so the agent stops offering to
+    // replace it.
     updateProject.mutate(
-      { id: project.id, input: { name: trimmedName } },
+      {
+        id: project.id,
+        input: {
+          name: trimmedName,
+          extraData: withoutProvisionalName(project.extraData),
+        },
+      },
       {
         onSuccess: () => {
           track("projects.rename_project_completed");
