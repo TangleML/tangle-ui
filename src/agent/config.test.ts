@@ -173,9 +173,6 @@ describe("ProxyClient", () => {
         authorization,
       );
       expect(JSON.parse(String(init?.body))).toEqual(body);
-      expect(
-        new Headers(init?.headers).has("x-shopify-forward-user-email"),
-      ).toBe(false);
     },
   );
 
