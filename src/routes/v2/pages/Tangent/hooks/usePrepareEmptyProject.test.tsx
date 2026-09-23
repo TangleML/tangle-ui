@@ -167,7 +167,9 @@ describe("usePrepareEmptyProject", () => {
     prepare(store);
 
     await waitFor(() => expect(createNewPipeline).toHaveBeenCalled());
-    expect(createNewPipeline).toHaveBeenCalledWith(storage);
+    expect(createNewPipeline).toHaveBeenCalledWith(storage, undefined, {
+      provisionalName: true,
+    });
     expect(createResource).toHaveBeenCalledWith(
       expect.objectContaining({ entity: "document", name: "Churn model" }),
     );
@@ -302,6 +304,7 @@ describe("usePrepareEmptyProject", () => {
     await waitFor(() =>
       expect(store.startSession).toHaveBeenCalledWith({
         prompt: "Fix run 7",
+        name: "Fix run 7",
       }),
     );
     await waitFor(() =>
@@ -309,6 +312,31 @@ describe("usePrepareEmptyProject", () => {
         id: "project-1",
         input: { extraData: {} },
       }),
+    );
+  });
+
+  /** All three are what the prompt asked for, so all three say so. */
+  it("names the session and the pipeline it opens after the prompt", async () => {
+    given({
+      projectOverrides: {
+        extraData: { startingPrompt: "Can you build a churn model for Q3" },
+      },
+    });
+    const store = makeStore();
+
+    prepare(store);
+
+    await waitFor(() =>
+      expect(store.startSession).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "Build a churn model for Q3" }),
+      ),
+    );
+    await waitFor(() =>
+      expect(createNewPipeline).toHaveBeenCalledWith(
+        storage,
+        "Build a churn model for Q3",
+        { provisionalName: true },
+      ),
     );
   });
 
