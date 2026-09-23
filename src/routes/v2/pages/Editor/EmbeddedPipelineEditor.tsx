@@ -44,6 +44,7 @@ import { EditorSessionProvider } from "./store/EditorSessionContext";
 
 interface EmbeddedPipelineEditorProps {
   pipelineRef: PipelineRef;
+  isActive: boolean;
   onStoreReady?: (store: SharedUIStore) => void;
   onStoreClosed?: () => void;
 }
@@ -53,68 +54,76 @@ const EmbeddedPipelineEditorSkeleton = () => (
 );
 
 const EmbeddedPipelineEditorCanvas = withSuspenseWrapper(
-  observer(({ pipelineRef }: { pipelineRef: PipelineRef }) => {
-    const {
-      data: { spec: rootSpec, restoredUndoStore },
-    } = useLoadSpec(pipelineRef);
-    const { navigation } = useSharedStores();
-    const canvasRef = useRef<HTMLDivElement | null>(null);
+  observer(
+    ({
+      pipelineRef,
+      isActive,
+    }: {
+      pipelineRef: PipelineRef;
+      isActive: boolean;
+    }) => {
+      const {
+        data: { spec: rootSpec, restoredUndoStore },
+      } = useLoadSpec(pipelineRef);
+      const { navigation } = useSharedStores();
+      const canvasRef = useRef<HTMLDivElement | null>(null);
 
-    useSpecLifecycle(rootSpec, pipelineRef, restoredUndoStore);
-    useSelectionWindowSync({
-      contextPanel: {
-        defaultDockState: undefined,
-        getInitialPosition: () => {
-          const rect = canvasRef.current?.getBoundingClientRect();
-          if (!rect) return { x: window.innerWidth - 340, y: 80 };
-          return { x: rect.right - 300 - 12, y: rect.top + 12 };
+      useSpecLifecycle(rootSpec, pipelineRef, restoredUndoStore);
+      useSelectionWindowSync({
+        contextPanel: {
+          defaultDockState: undefined,
+          getInitialPosition: () => {
+            const rect = canvasRef.current?.getBoundingClientRect();
+            if (!rect) return { x: window.innerWidth - 340, y: 80 };
+            return { x: rect.right - 300 - 12, y: rect.top + 12 };
+          },
         },
-      },
-    });
-    useLinkedWindowCleanup();
+      });
+      useLinkedWindowCleanup();
 
-    const componentSearchV2Enabled = useFlagValue("component-search-v2");
-    useComponentLibraryWindow(!componentSearchV2Enabled);
-    usePipelineDetailsWindow();
-    useHistoryWindow();
+      const componentSearchV2Enabled = useFlagValue("component-search-v2");
+      useComponentLibraryWindow(!componentSearchV2Enabled);
+      usePipelineDetailsWindow();
+      useHistoryWindow();
 
-    useRecentRunsWindow();
-    useRunsAndSubmissionWindow();
-    useUndoRedoKeyboard();
-    useShortcutListener();
-    useEditorEscapeShortcut();
+      useRecentRunsWindow();
+      useRunsAndSubmissionWindow();
+      useUndoRedoKeyboard();
+      useShortcutListener(isActive);
+      useEditorEscapeShortcut();
 
-    useComponentSearchV2Window(componentSearchV2Enabled);
-    useEmbeddedInitialDockLayout(componentSearchV2Enabled);
+      useComponentSearchV2Window(componentSearchV2Enabled);
+      useEmbeddedInitialDockLayout(componentSearchV2Enabled);
 
-    const activeSpec = navigation.activeSpec;
+      const activeSpec = navigation.activeSpec;
 
-    if (!activeSpec) return null;
+      if (!activeSpec) return null;
 
-    return (
-      <NodeRegistryProvider registry={editorRegistry}>
-        <SpecProvider spec={activeSpec}>
-          <InlineStack
-            className="flex-1 min-h-0 w-full"
-            blockAlign="stretch"
-            wrap="nowrap"
-            data-testid="editor-v2"
-            data-editor-ready="true"
-          >
-            <div ref={canvasRef} className="relative flex-1 min-w-0 h-full">
-              <FlowCanvas
-                key={activeSpec?.$id ?? "root"}
-                spec={activeSpec}
-                className="h-full"
-              />
-              <WindowContainer />
-            </div>
-            <DockArea side="right" />
-          </InlineStack>
-        </SpecProvider>
-      </NodeRegistryProvider>
-    );
-  }),
+      return (
+        <NodeRegistryProvider registry={editorRegistry}>
+          <SpecProvider spec={activeSpec}>
+            <InlineStack
+              className="flex-1 min-h-0 w-full"
+              blockAlign="stretch"
+              wrap="nowrap"
+              data-testid="editor-v2"
+              data-editor-ready="true"
+            >
+              <div ref={canvasRef} className="relative flex-1 min-w-0 h-full">
+                <FlowCanvas
+                  key={activeSpec?.$id ?? "root"}
+                  spec={activeSpec}
+                  className="h-full"
+                />
+                <WindowContainer />
+              </div>
+              <DockArea side="right" />
+            </InlineStack>
+          </SpecProvider>
+        </NodeRegistryProvider>
+      );
+    },
+  ),
   EmbeddedPipelineEditorSkeleton,
 );
 
@@ -146,6 +155,7 @@ function SharedStoreRegistrar({
 
 export function EmbeddedPipelineEditor({
   pipelineRef,
+  isActive,
   onStoreReady,
   onStoreClosed,
 }: EmbeddedPipelineEditorProps) {
@@ -159,7 +169,10 @@ export function EmbeddedPipelineEditor({
               <ReactFlowProvider>
                 <ForcedSearchProvider>
                   <DriverPermissionGate pipelineRef={pipelineRef}>
-                    <EmbeddedPipelineEditorCanvas pipelineRef={pipelineRef} />
+                    <EmbeddedPipelineEditorCanvas
+                      pipelineRef={pipelineRef}
+                      isActive={isActive}
+                    />
                   </DriverPermissionGate>
                 </ForcedSearchProvider>
               </ReactFlowProvider>

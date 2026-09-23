@@ -39,11 +39,14 @@ export function DynamicWorkarea() {
     setWidth(Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, attemptedWidth)));
   }
 
-  const hostProps: WorkareaHostProps = {
-    sessionId: activeSessionId,
-    registerTabStore: registerWorkareaTabStore,
-    unregisterTabStore: unregisterWorkareaTabStore,
-  };
+  function hostPropsFor(tabId: string): WorkareaHostProps {
+    return {
+      isActive: tabId === activeWorkareaTabId,
+      sessionId: activeSessionId,
+      registerTabStore: registerWorkareaTabStore,
+      unregisterTabStore: unregisterWorkareaTabStore,
+    };
+  }
 
   return (
     <div
@@ -76,7 +79,7 @@ export function DynamicWorkarea() {
           {workareaTabs.map((tab) => {
             const viewKind = getWorkareaKind(tab.kind);
             if (!viewKind) return null;
-            const content = viewKind.render(tab, hostProps);
+            const content = viewKind.render(tab, hostPropsFor(tab.id));
             if (viewKind.keepMounted) {
               return (
                 <TabsContent
