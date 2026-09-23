@@ -72,9 +72,9 @@ Two limits remain, and both are about structure rather than depth:
 
 ## Pipeline notes, tags and run names
 
-`get_pipeline_state` carries three more pieces of pipeline metadata when they are set, all on the top-level pipeline:
+`get_pipeline_state` carries three more pieces of pipeline metadata when they are set.
 
-These three belong to the graph the user is looking at, not always the root: inside a subgraph, `get_pipeline_state` reports that subgraph's values and the setters write to it, the same field the details panel is showing them.
+These three belong to the graph the user is looking at, not always the root: inside a subgraph, `get_pipeline_state` reports that subgraph's values and the setters write to it, the same field the details panel is showing them. Because they address a graph by where the user is rather than by `$id`, each setter takes `expectedSubgraphTaskId` — pass the `activeSubgraphTaskId` you last read, or `null` if there was none. If the user has navigated since, the write is refused instead of landing on the wrong graph; read the state again and redo it.
 
 - **`notes`** — free text, separate from the one-line `description`. Read it before designing: it is where someone records ownership, a constraint, or why the pipeline is the way it is. It is their document, so `set_pipeline_notes` replaces the whole field — carry the existing text through and append to it rather than overwriting, unless they asked you to rewrite it. Writing a summary of what you built into the notes is a good idea only when the user asked for it; otherwise your chat reply is the right place.
 - **`tags`** — how pipelines are grouped and found. `set_pipeline_tags` replaces the entire list, so read `tags` first and pass the existing ones back along with any you add, or you will silently drop them. A tag cannot contain a comma, no tag may repeat, and a graph takes at most 10.

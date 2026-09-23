@@ -51,6 +51,28 @@ export function requireActiveSpec(deps: BridgeDeps): ComponentSpec {
   return deps.getActiveSpec?.() ?? requireSpec(deps);
 }
 
+/**
+ * Guard for writes addressed by "the graph the user is looking at" rather than
+ * by `$id`. A turn can span a navigation, so the caller states which graph it
+ * read and the write is refused if that is no longer the open one — otherwise a
+ * read-modify-write like appending to notes pastes one graph's text over
+ * another's.
+ */
+export function resolveExpectedGraph(
+  deps: BridgeDeps,
+  expectedSubgraphTaskId: string | null,
+): { ok: true; spec: ComponentSpec } | { ok: false; error: string } {
+  const openSubgraphTaskId = deps.getActiveSubgraphTaskId() ?? null;
+  if (openSubgraphTaskId !== expectedSubgraphTaskId) {
+    const spec = requireActiveSpec(deps);
+    return {
+      ok: false,
+      error: `Nothing was changed — the user has moved to a different graph since you read the pipeline state, and this edit would have landed on "${spec.name}". Call get_pipeline_state again and redo it against the graph that is open now.`,
+    };
+  }
+  return { ok: true, spec: requireActiveSpec(deps) };
+}
+
 export function requireBackendUrl(deps: BridgeDeps): string {
   const url = deps.getBackendUrl?.();
   if (!url) {

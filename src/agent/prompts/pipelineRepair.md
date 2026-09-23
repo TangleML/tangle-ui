@@ -92,7 +92,7 @@ A port added without steps 2 and 3 is wired to nothing on either side, which tur
 
 `get_pipeline_state` includes `notes`, `tags` and `runNameTemplate` when set. None of them affect whether a pipeline validates or runs, so none of them is ever a repair — but `notes` is worth reading, because it is where someone explains why part of the pipeline looks wrong on purpose.
 
-`set_pipeline_notes` and `set_pipeline_tags` each replace the whole value, so if the user does ask you to add to either, read the current value first and pass it back with your addition. Do not touch them otherwise.
+`set_pipeline_notes` and `set_pipeline_tags` each replace the whole value, so if the user does ask you to add to either, read the current value first and pass it back with your addition, along with the `activeSubgraphTaskId` you read it from as `expectedSubgraphTaskId` (`null` if there was none) so the write cannot land on a graph the user has moved to since. Do not touch them otherwise.
 
 ## Changing an existing port
 

@@ -94,6 +94,9 @@ const COLOR_GUIDANCE = `Hex value or "transparent". The swatches the UI offers a
 
 const SIZE_GUIDANCE = `No smaller than ${MIN_FLEX_NODE_SIZE.width}x${MIN_FLEX_NODE_SIZE.height} — a note below that is too small to read or select, and is refused.`;
 
+const EXPECTED_GRAPH_GUIDANCE =
+  "Which graph you mean this edit for: the `activeSubgraphTaskId` from your last `get_pipeline_state`, or null if it reported none. This field addresses the graph the user is viewing rather than an `$id`, so the edit is refused if they have moved elsewhere since — read the state again and redo it, never guess.";
+
 const positionSchema = z.object({ x: z.number(), y: z.number() });
 const sizeSchema = z.object({ width: z.number(), height: z.number() });
 
@@ -144,8 +147,13 @@ export function createCsomTools(bridge: ToolBridgeApi) {
       "Set the notes on the graph the user is currently viewing — a free-text field for whatever someone needs to know about it, separate from the one-line description. Notes belong to a graph, so this writes the subgraph's notes while the user is inside one, matching what the details panel shows them; `get_pipeline_state` reports that same field. It is the user's own document: read `notes` and preserve what is there, appending rather than replacing, unless they asked you to rewrite it. Pass an empty string to clear it.",
     parameters: z.object({
       notes: z.string().describe("Full new notes text; replaces the existing"),
+      expectedSubgraphTaskId: z
+        .string()
+        .nullable()
+        .describe(EXPECTED_GRAPH_GUIDANCE),
     }),
-    execute: async ({ notes }) => asJson(await bridge.setPipelineNotes(notes)),
+    execute: async ({ notes, expectedSubgraphTaskId }) =>
+      asJson(await bridge.setPipelineNotes(notes, expectedSubgraphTaskId)),
   });
 
   const setPipelineTags = tool({
@@ -156,8 +164,13 @@ export function createCsomTools(bridge: ToolBridgeApi) {
       tags: z
         .array(z.string())
         .describe("The complete tag list; commas are not allowed in a tag"),
+      expectedSubgraphTaskId: z
+        .string()
+        .nullable()
+        .describe(EXPECTED_GRAPH_GUIDANCE),
     }),
-    execute: async ({ tags }) => asJson(await bridge.setPipelineTags(tags)),
+    execute: async ({ tags, expectedSubgraphTaskId }) =>
+      asJson(await bridge.setPipelineTags(tags, expectedSubgraphTaskId)),
   });
 
   const setRunNameTemplate = tool({
@@ -170,9 +183,13 @@ export function createCsomTools(bridge: ToolBridgeApi) {
         .describe(
           'Template string, e.g. "nightly ${arguments.dataset} ${date.short}"',
         ),
+      expectedSubgraphTaskId: z
+        .string()
+        .nullable()
+        .describe(EXPECTED_GRAPH_GUIDANCE),
     }),
-    execute: async ({ template }) =>
-      asJson(await bridge.setRunNameTemplate(template)),
+    execute: async ({ template, expectedSubgraphTaskId }) =>
+      asJson(await bridge.setRunNameTemplate(template, expectedSubgraphTaskId)),
   });
 
   const addTask = tool({

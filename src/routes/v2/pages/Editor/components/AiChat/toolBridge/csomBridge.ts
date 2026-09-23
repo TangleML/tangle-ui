@@ -72,6 +72,7 @@ import {
   computeNextPosition,
   requireActiveSpec,
   requireSpec,
+  resolveExpectedGraph,
   resolveNoteAnchor,
   toValidationResult,
 } from "@/routes/v2/shared/components/AiChat/toolBridge/utils";
@@ -212,30 +213,34 @@ export function createCsomBridgeHandlers(deps: CsomBridgeDeps): CsomHandlers {
       return { success: true };
     },
 
-    async setPipelineNotes(notes) {
-      updatePipelineNotes(
-        deps.undo,
-        requireActiveSpec(deps),
-        notes || undefined,
-      );
+    async setPipelineNotes(notes, expectedSubgraphTaskId) {
+      const graph = resolveExpectedGraph(deps, expectedSubgraphTaskId);
+      if (!graph.ok) {
+        return { success: false, error: graph.error };
+      }
+      updatePipelineNotes(deps.undo, graph.spec, notes || undefined);
       return { success: true };
     },
 
-    async setPipelineTags(tags) {
+    async setPipelineTags(tags, expectedSubgraphTaskId) {
       const problem = explainTagProblem(tags);
       if (problem) {
         return { success: false, error: `Nothing was changed. ${problem}` };
       }
-      updatePipelineTags(deps.undo, requireActiveSpec(deps), tags);
+      const graph = resolveExpectedGraph(deps, expectedSubgraphTaskId);
+      if (!graph.ok) {
+        return { success: false, error: graph.error };
+      }
+      updatePipelineTags(deps.undo, graph.spec, tags);
       return { success: true };
     },
 
-    async setRunNameTemplate(template) {
-      updateRunNameTemplate(
-        deps.undo,
-        requireActiveSpec(deps),
-        template || undefined,
-      );
+    async setRunNameTemplate(template, expectedSubgraphTaskId) {
+      const graph = resolveExpectedGraph(deps, expectedSubgraphTaskId);
+      if (!graph.ok) {
+        return { success: false, error: graph.error };
+      }
+      updateRunNameTemplate(deps.undo, graph.spec, template || undefined);
       return { success: true };
     },
 
