@@ -34,23 +34,26 @@ import { runViewRegistry } from "./nodes";
 
 interface EmbeddedRunViewProps {
   runId: string;
+  isActive: boolean;
   onStoreReady?: (store: SharedUIStore) => void;
   onStoreClosed?: () => void;
 }
 
 interface EmbeddedRunViewLayoutProps {
   spec: ComponentSpec;
+  isActive: boolean;
   onSubgraphExecutionIdChange: (executionId: string | undefined) => void;
 }
 
 const EmbeddedRunViewLayout = observer(function EmbeddedRunViewLayout({
   spec,
+  isActive,
   onSubgraphExecutionIdChange,
 }: EmbeddedRunViewLayoutProps) {
   const canvasRef = useRef<HTMLDivElement | null>(null);
 
   useRunViewSpecLifecycle(spec);
-  useShortcutListener();
+  useShortcutListener(isActive);
   useRunViewWindows();
   useEmbeddedRunViewInitialDockLayout();
   useRunViewSelectionSync({
@@ -96,11 +99,13 @@ const EmbeddedRunViewLayout = observer(function EmbeddedRunViewLayout({
 
 interface EmbeddedRunViewContentProps {
   runId: string;
+  isActive: boolean;
   onSubgraphExecutionIdChange: (executionId: string | undefined) => void;
 }
 
 const EmbeddedRunViewContent = observer(function EmbeddedRunViewContent({
   runId,
+  isActive,
   onSubgraphExecutionIdChange,
 }: EmbeddedRunViewContentProps) {
   const loadState = useRunViewLoadState(runId);
@@ -109,6 +114,7 @@ const EmbeddedRunViewContent = observer(function EmbeddedRunViewContent({
     return (
       <EmbeddedRunViewLayout
         spec={loadState.spec}
+        isActive={isActive}
         onSubgraphExecutionIdChange={onSubgraphExecutionIdChange}
       />
     );
@@ -132,6 +138,7 @@ const EmbeddedRunViewContent = observer(function EmbeddedRunViewContent({
  */
 export function EmbeddedRunView({
   runId,
+  isActive,
   onStoreReady,
   onStoreClosed,
 }: EmbeddedRunViewProps) {
@@ -153,6 +160,7 @@ export function EmbeddedRunView({
                 <ComponentLibraryProvider>
                   <EmbeddedRunViewContent
                     runId={runId}
+                    isActive={isActive}
                     onSubgraphExecutionIdChange={setSubgraphExecutionId}
                   />
                 </ComponentLibraryProvider>

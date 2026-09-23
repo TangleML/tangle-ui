@@ -11,6 +11,7 @@ registerWorkareaKind({
     return (
       <EmbeddedRunView
         runId={tab.runId}
+        isActive={hostProps.isActive}
         onStoreReady={(store) => hostProps.registerTabStore(tab.id, store)}
         onStoreClosed={() => hostProps.unregisterTabStore(tab.id)}
       />
