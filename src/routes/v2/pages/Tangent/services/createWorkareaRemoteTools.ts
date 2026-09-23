@@ -53,6 +53,7 @@ export interface WorkareaToolDeps {
   refreshResources: () => Promise<void>;
   renameProject: (name: string) => Promise<{ renamed: boolean }>;
   nameSession: (name: string) => Promise<void>;
+  namePipeline: (name: string) => Promise<{ renamed: boolean }>;
 }
 
 interface WorkareaTabSummary {
@@ -404,6 +405,27 @@ export function createWorkareaRemoteTools(
         await getDeps().nameSession(requireName(args));
         return { ok: true };
       },
+    },
+    name_pipeline: {
+      description:
+        "Name the pipeline open on the canvas, at the same time you name the " +
+        "session — the opening message says what it is for, so there is " +
+        "nothing to wait for. Only a provisional name may be replaced: a " +
+        "pipeline someone named is left alone and the call returns " +
+        "`{ renamed: false }`, which is a final answer, not something to " +
+        "retry. Keep it short: a title for what the pipeline does, not a " +
+        "restatement of the request.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          name: {
+            type: "string",
+            description: `A short title for the pipeline, at most ${NAME_LIMIT} characters.`,
+          },
+        },
+        required: ["name"],
+      },
+      execute: async (args) => getDeps().namePipeline(requireName(args)),
     },
     refresh_project_resources: {
       description:

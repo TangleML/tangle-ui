@@ -24,6 +24,7 @@ import type {
   Task,
   TypeSpecType,
 } from "@/models/componentSpec";
+import { specNameIsProvisional } from "@/services/localPipelines/provisionalPipelineName";
 import { isGraphImplementation } from "@/utils/componentSpec";
 
 type AiInputSpec = Pick<Input, "$id" | "name" | "type"> & {
@@ -63,6 +64,7 @@ type AiBindingSpec = Pick<
 
 export interface AiSpec {
   name: string;
+  nameIsProvisional?: boolean;
   description?: string;
   inputs: AiInputSpec[];
   outputs: AiOutputSpec[];
@@ -157,6 +159,7 @@ export function serializeSpecForAi(
   const insideSubgraph = activeSubgraphPath.length > 0;
   return pickDefined({
     name: spec.name,
+    nameIsProvisional: specNameIsProvisional(spec) || undefined,
     description: spec.description || undefined,
     inputs: spec.inputs.map(serializeInput),
     outputs: spec.outputs.map(serializeOutput),

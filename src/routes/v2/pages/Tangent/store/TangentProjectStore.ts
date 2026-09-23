@@ -312,6 +312,20 @@ export class TangentProjectStore {
     return tab;
   }
 
+  /**
+   * A tab's title is resolved once, when it opens, so a pipeline renamed while
+   * its tab is open keeps announcing the name it had. The rename is what tells
+   * us; nothing else would.
+   */
+  @action retitleWorkareaTarget(target: WorkareaTarget, title: string) {
+    const tabs = this.workareaTabs;
+    const index = tabs.findIndex((tab) => sameTarget(tab.target, target));
+    if (index < 0 || tabs[index].title === title) return;
+    const next = [...tabs];
+    next[index] = { ...next[index], title };
+    this.#putSlice(next, this.activeWorkareaTabId);
+  }
+
   @action selectWorkareaTab(id: string) {
     const tabs = this.workareaTabs;
     if (!tabs.some((tab) => tab.id === id)) return;

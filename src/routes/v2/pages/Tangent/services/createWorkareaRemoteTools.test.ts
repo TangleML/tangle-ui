@@ -65,6 +65,7 @@ function makeDeps(overrides: Partial<WorkareaToolDeps> = {}): WorkareaToolDeps {
     refreshResources: vi.fn().mockResolvedValue(undefined),
     renameProject: vi.fn().mockResolvedValue({ renamed: true }),
     nameSession: vi.fn().mockResolvedValue(undefined),
+    namePipeline: vi.fn().mockResolvedValue({ renamed: true }),
     ...overrides,
   };
 }

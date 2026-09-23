@@ -7,6 +7,7 @@ import {
   Output,
   Task,
 } from "@/models/componentSpec";
+import { PROVISIONAL_NAME_ANNOTATION } from "@/utils/annotationKeys";
 
 import { serializeSpecForAi } from "./serializeSpecForAi";
 
@@ -185,5 +186,19 @@ describe("serializeSpecForAi", () => {
     const ai = serializeSpecForAi(spec, { activeSubgraphPath: [] });
 
     expect(ai.activeSubgraphPath).toBeUndefined();
+  });
+
+  /** The editor agent renames a placeholder and leaves a chosen name alone. */
+  it("tells the agent when the name is a placeholder nobody chose", () => {
+    const spec = buildBasicSpec();
+    spec.annotations.set(PROVISIONAL_NAME_ANNOTATION, "true");
+
+    expect(serializeSpecForAi(spec).nameIsProvisional).toBe(true);
+  });
+
+  it("says nothing about a name someone chose", () => {
+    expect(
+      serializeSpecForAi(buildBasicSpec()).nameIsProvisional,
+    ).toBeUndefined();
   });
 });

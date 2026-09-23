@@ -23,13 +23,17 @@ vi.mock("@/services/projects/projectResourcesService", () => ({
 }));
 
 const onRenamed = vi.fn().mockResolvedValue(undefined);
+const getPipelineState = vi.fn();
+const setPipelineName = vi.fn().mockResolvedValue({ success: true });
 
 // `null` rather than `undefined` for "no session": passing undefined to an
 // optional parameter takes its default, which is the session.
-function handlers(sessionId: string | null = "sess-1") {
+function handlers(sessionId: string | null = "sess-1", { canvas = true } = {}) {
   return createNamingHandlers({
     projectId: "project-1",
     getActiveSessionId: () => sessionId ?? undefined,
+    getPipelineBridge: () =>
+      canvas ? { getPipelineState, setPipelineName } : undefined,
     onRenamed,
   });
 }
@@ -170,5 +174,34 @@ describe("nameSession", () => {
       "This session is not attached to the project yet.",
     );
     expect(listProjectResources).not.toHaveBeenCalled();
+  });
+
+  describe("namePipeline", () => {
+    /** One call has to move the spec, the file and the row together. */
+    it("renames a pipeline nobody has named through the open canvas", async () => {
+      getPipelineState.mockResolvedValue({ nameIsProvisional: true });
+
+      await expect(handlers().namePipeline("Churn model")).resolves.toEqual({
+        renamed: true,
+      });
+      expect(setPipelineName).toHaveBeenCalledWith("Churn model");
+      expect(onRenamed).toHaveBeenCalled();
+    });
+
+    it("leaves a pipeline someone named alone", async () => {
+      getPipelineState.mockResolvedValue({ nameIsProvisional: undefined });
+
+      await expect(handlers().namePipeline("Churn model")).resolves.toEqual({
+        renamed: false,
+      });
+      expect(setPipelineName).not.toHaveBeenCalled();
+    });
+
+    it("answers rather than throwing when no pipeline is open", async () => {
+      await expect(
+        handlers("sess-1", { canvas: false }).namePipeline("Churn model"),
+      ).resolves.toEqual({ renamed: false });
+      expect(getPipelineState).not.toHaveBeenCalled();
+    });
   });
 });

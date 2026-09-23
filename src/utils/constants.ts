@@ -1,3 +1,5 @@
+import { PROVISIONAL_NAME_ANNOTATION } from "./annotationKeys";
+
 /* Environment Config */
 export const TANGLE_WEBSITE_URL = "https://tangleml.com/";
 
@@ -34,12 +36,17 @@ export const ENABLE_GOOGLE_CLOUD_SUBMITTER =
 
 export const USER_PIPELINES_LIST_NAME = "user_pipelines";
 
-export const defaultPipelineYamlWithName = (name: string) => `
+export const defaultPipelineYamlWithName = (
+  name: string,
+  { provisionalName = false } = {},
+) => `
 name: ${JSON.stringify(name)}
 metadata:
   annotations:
     sdk: https://cloud-pipelines.net/pipeline-editor/
-    editor.flow-direction: left-to-right
+    editor.flow-direction: left-to-right${
+      provisionalName ? `\n    ${PROVISIONAL_NAME_ANNOTATION}: "true"` : ""
+    }
 implementation:
   graph:
     tasks: {}

@@ -2,6 +2,7 @@ import { useReactFlow } from "@xyflow/react";
 import { useEffect } from "react";
 
 import { createEditorToolBridge } from "@/routes/v2/pages/Editor/components/AiChat/toolBridge";
+import { renamePipelineFileFor } from "@/routes/v2/pages/Editor/hooks/renamePipelineFileFor";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { AiChatContent } from "@/routes/v2/shared/components/AiChat/AiChatContent";
 import type { SuggestedPrompt } from "@/routes/v2/shared/components/AiChat/types";
@@ -40,6 +41,9 @@ export function useAiChatWindow(enabled: boolean) {
             getNodes,
             getEdges,
             undo: editorSession.undo,
+            renamePipelineFile: renamePipelineFileFor(
+              editorSession.pipelineFile,
+            ),
           })
         }
         suggestedPrompts={SUGGESTED_PROMPTS_EDITOR}

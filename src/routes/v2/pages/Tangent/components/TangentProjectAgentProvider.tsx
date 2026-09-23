@@ -179,6 +179,7 @@ export function TangentProjectAgentProvider({
     createNamingHandlers({
       projectId: store.projectId,
       getActiveSessionId: () => store.activeSessionId,
+      getPipelineBridge: () => store.getActiveTabBridge(),
       onRenamed: () => refreshProjectResources(),
     }),
   );
@@ -219,6 +220,7 @@ export function TangentProjectAgentProvider({
       refreshResources: refreshProjectResources,
       renameProject: naming.renameProject,
       nameSession: naming.nameSession,
+      namePipeline: naming.namePipeline,
     })),
   );
   const [routingBridge] = useState(() =>

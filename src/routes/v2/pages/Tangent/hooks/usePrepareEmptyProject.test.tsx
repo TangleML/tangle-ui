@@ -167,7 +167,9 @@ describe("usePrepareEmptyProject", () => {
     prepare(store);
 
     await waitFor(() => expect(createNewPipeline).toHaveBeenCalled());
-    expect(createNewPipeline).toHaveBeenCalledWith(storage, undefined);
+    expect(createNewPipeline).toHaveBeenCalledWith(storage, undefined, {
+      provisionalName: true,
+    });
     expect(createResource).toHaveBeenCalledWith(
       expect.objectContaining({ entity: "document", name: "Churn model" }),
     );
@@ -333,6 +335,7 @@ describe("usePrepareEmptyProject", () => {
       expect(createNewPipeline).toHaveBeenCalledWith(
         storage,
         "Build a churn model for Q3",
+        { provisionalName: true },
       ),
     );
   });

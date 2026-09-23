@@ -112,10 +112,11 @@ export function usePrepareEmptyProject(
       // Named after the ask, which is also what the project is called, so the
       // two agree until the agent renames one. It reads as a repetition; four
       // random words read as a mistake. Nothing asked for, nothing to name it
-      // after, so it keeps the random words.
+      // after, so it keeps the random words — which nobody chose either.
       const file = await createNewPipeline(
         storage,
         askedFor ? await availablePipelineName(askedFor) : undefined,
+        { provisionalName: true },
       );
       await createResource(
         localPipelineResourceInput({

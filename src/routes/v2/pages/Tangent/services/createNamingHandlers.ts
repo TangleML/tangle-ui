@@ -1,3 +1,4 @@
+import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import {
   listProjectResources,
   updateProjectResource,
@@ -11,12 +12,19 @@ import {
 interface NamingDeps {
   projectId: string;
   getActiveSessionId: () => string | undefined;
+  getPipelineBridge: () => PipelineNaming | undefined;
   onRenamed: () => Promise<void>;
 }
+
+type PipelineNaming = Pick<
+  ToolBridgeApi,
+  "getPipelineState" | "setPipelineName"
+>;
 
 export interface NamingHandlers {
   renameProject: (name: string) => Promise<{ renamed: boolean }>;
   nameSession: (name: string) => Promise<void>;
+  namePipeline: (name: string) => Promise<{ renamed: boolean }>;
 }
 
 /**
@@ -27,6 +35,7 @@ export interface NamingHandlers {
 export function createNamingHandlers({
   projectId,
   getActiveSessionId,
+  getPipelineBridge,
   onRenamed,
 }: NamingDeps): NamingHandlers {
   return {
@@ -56,6 +65,21 @@ export function createNamingHandlers({
 
       await updateProjectResource(projectId, row.id, { name });
       await onRenamed();
+    },
+
+    async namePipeline(name) {
+      // Driven through the open tab's bridge rather than the resource row: the
+      // canvas holds the spec, and only the bridge moves the spec, the file and
+      // the row together. A row renamed on its own disagrees with the pipeline.
+      const bridge = getPipelineBridge();
+      if (!bridge) return { renamed: false };
+
+      const state = await bridge.getPipelineState();
+      if (!state.nameIsProvisional) return { renamed: false };
+
+      await bridge.setPipelineName(name);
+      await onRenamed();
+      return { renamed: true };
     },
   };
 }

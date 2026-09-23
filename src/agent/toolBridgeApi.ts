@@ -39,6 +39,7 @@ export interface ValidationResult {
 interface BridgeResult {
   success: boolean;
   error?: string;
+  message?: string;
 }
 
 export interface ConnectArgs {
