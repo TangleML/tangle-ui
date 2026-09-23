@@ -55,7 +55,9 @@ export function useSpecLifecycle(
         autoSave.init(rootSpec, saveName);
         // Persist the id ordering up front so a reload replays the same `$id`s
         // even if the user never edits — keeps chat entity links resolvable.
-        await saveIdStack(saveName, collectIdStack(rootSpec)).catch(() => {});
+        await saveIdStack(saveName, collectIdStack(rootSpec)).catch((error) =>
+          console.warn("Failed to persist pipeline id stack", error),
+        );
       }
     })();
 
