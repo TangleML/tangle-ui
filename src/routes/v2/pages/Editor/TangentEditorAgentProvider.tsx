@@ -11,7 +11,7 @@
  * so `useSharedStores` / `useEditorSession` resolve this tab's live stores.
  */
 import { useReactFlow } from "@xyflow/react";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import { useRunSubmissionAnnotations } from "@/providers/RunSubmissionScopeProvider";
@@ -46,6 +46,11 @@ export function TangentEditorAgentProvider({
   const { getBackendUrl, getAuthToken, queryClient } = useLazyBridgeAuth();
   const { getNodes, getEdges } = useReactFlow();
   const runAnnotations = useRunSubmissionAnnotations();
+  const runAnnotationsRef = useRef(runAnnotations);
+
+  useEffect(() => {
+    runAnnotationsRef.current = runAnnotations;
+  }, [runAnnotations]);
 
   // A single bridge instance per mount: every method re-reads the live spec,
   // active subgraph, and backend/auth values lazily, so navigation and config
@@ -60,7 +65,7 @@ export function TangentEditorAgentProvider({
       getEdges,
       getBackendUrl,
       getAuthToken,
-      getRunAnnotations: () => runAnnotations,
+      getRunAnnotations: () => runAnnotationsRef.current,
       queryClient,
       undo: editorSession.undo,
     }),

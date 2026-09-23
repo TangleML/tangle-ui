@@ -11,7 +11,7 @@
  * Must render inside the embed's `SharedStoreProvider` so `useSharedStores`
  * resolves this run tab's live navigation store.
  */
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import { useRunSubmissionAnnotations } from "@/providers/RunSubmissionScopeProvider";
@@ -47,6 +47,11 @@ export function TangentRunAgentProvider({
   const { navigation } = useSharedStores();
   const { getBackendUrl, getAuthToken, queryClient } = useLazyBridgeAuth();
   const runAnnotations = useRunSubmissionAnnotations();
+  const runAnnotationsRef = useRef(runAnnotations);
+
+  useEffect(() => {
+    runAnnotationsRef.current = runAnnotations;
+  }, [runAnnotations]);
 
   const [bridge] = useState<ToolBridgeApi>(() =>
     createRunViewToolBridge({
@@ -56,7 +61,7 @@ export function TangentRunAgentProvider({
       getActiveSubgraphTaskId: () => navigation.parentContext?.taskId,
       getBackendUrl,
       getAuthToken,
-      getRunAnnotations: () => runAnnotations,
+      getRunAnnotations: () => runAnnotationsRef.current,
       queryClient,
     }),
   );
