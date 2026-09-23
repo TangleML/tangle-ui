@@ -143,7 +143,10 @@ export function useSelectionWindowSync(options?: {
   const deselectAll = useDeselectAll();
   const placement = options?.contextPanel ?? DEFAULT_CONTEXT_PANEL_PLACEMENT;
   const placementRef = useRef(placement);
-  placementRef.current = placement;
+
+  useEffect(() => {
+    placementRef.current = placement;
+  }, [placement]);
 
   useEffect(() => {
     const disposeSelectionWatcher = reaction(
