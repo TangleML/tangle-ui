@@ -95,15 +95,15 @@ function ProjectsGrid() {
         </Alert>
       )}
       <div className="grid w-full grid-cols-[repeat(auto-fill,minmax(13rem,15rem))] gap-4">
-        {pinned.map((project) => (
-          <ProjectCard key={project.id} project={project} />
-        ))}
         {targetWorkspaceId && (
           <CreateProjectDialog
             workspaceId={targetWorkspaceId}
             trigger={<NewProjectCard />}
           />
         )}
+        {pinned.map((project) => (
+          <ProjectCard key={project.id} project={project} />
+        ))}
         {rest.map((project) => (
           <ProjectCard key={project.id} project={project} />
         ))}
