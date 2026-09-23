@@ -96,15 +96,15 @@ function ProjectsGrid() {
         </Alert>
       )}
       <div className={PROJECT_GRID}>
-        {pinned.map((project) => (
-          <ProjectCard key={project.id} project={project} />
-        ))}
         {targetWorkspaceId && (
           <CreateProjectDialog
             workspaceId={targetWorkspaceId}
             trigger={<NewProjectCard />}
           />
         )}
+        {pinned.map((project) => (
+          <ProjectCard key={project.id} project={project} />
+        ))}
         {rest.map((project) => (
           <ProjectCard key={project.id} project={project} />
         ))}
