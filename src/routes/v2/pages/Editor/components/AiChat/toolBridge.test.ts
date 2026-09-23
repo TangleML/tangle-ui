@@ -362,6 +362,45 @@ describe("createEditorToolBridge", () => {
       expect(spec.annotations.has(RUN_NAME_TEMPLATE_ANNOTATION)).toBe(false);
     });
 
+    it("refuses a run name template naming an input the graph does not have", async () => {
+      const { bridge, spec } = makeBridge();
+
+      const result = await bridge.setRunNameTemplate(
+        "run ${arguments.nope}",
+        null,
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("nope");
+      expect(result.error).toContain("data");
+      expect(spec.annotations.has(RUN_NAME_TEMPLATE_ANNOTATION)).toBe(false);
+
+      expect(
+        await bridge.setRunNameTemplate("run ${arguments.data}", null),
+      ).toEqual({ success: true });
+    });
+
+    it("validates the run name template against the subgraph's own inputs", async () => {
+      const { bridge, inner, activeSubgraphTaskId } = makeInnerActiveBridge();
+
+      const rootInput = await bridge.setRunNameTemplate(
+        "${arguments.raw_path}",
+        activeSubgraphTaskId,
+      );
+      expect(rootInput.success).toBe(false);
+      expect(inner.annotations.has(RUN_NAME_TEMPLATE_ANNOTATION)).toBe(false);
+
+      expect(
+        await bridge.setRunNameTemplate(
+          "${arguments.path}",
+          activeSubgraphTaskId,
+        ),
+      ).toEqual({ success: true });
+      expect(inner.annotations.get(RUN_NAME_TEMPLATE_ANNOTATION)).toBe(
+        "${arguments.path}",
+      );
+    });
+
     it("getPipelineState surfaces notes, tags and the run name template", async () => {
       const { bridge } = makeBridge();
       await bridge.setPipelineNotes("read me", null);

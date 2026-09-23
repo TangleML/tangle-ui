@@ -7,6 +7,7 @@
  * that the model gets the same bare `{ success: false }` for "no such entity" as
  * for "that entity is a task, not an input", and cannot tell the user which.
  */
+import { argumentPlaceholderNames } from "@/components/shared/PipelineRunNameTemplate/processTemplate";
 import { isPickableColor, PRESET_COLORS } from "@/components/ui/colorPresets";
 import type { ArgumentType, ComponentSpec } from "@/models/componentSpec";
 import type { FlexNodeLocation } from "@/models/componentSpec/queries/flexNodes";
@@ -288,6 +289,22 @@ export function explainTagProblem(tags: string[]): string | undefined {
   }
 
   return undefined;
+}
+
+export function explainRunNameTemplateProblem(
+  template: string,
+  spec: ComponentSpec,
+): string | undefined {
+  const declared = new Set(spec.inputs.map((input) => input.name));
+  const unknown = argumentPlaceholderNames(template).find(
+    (name) => !declared.has(name),
+  );
+  if (!unknown) return undefined;
+
+  const available = spec.inputs.length
+    ? `The inputs on this graph are: ${spec.inputs.map((input) => input.name).join(", ")}.`
+    : "This graph has no inputs.";
+  return `This graph has no input named "${unknown}", so \${arguments.${unknown}} would be left in every run name verbatim, braces and all. ${available}`;
 }
 
 export function explainNotASubgraph(

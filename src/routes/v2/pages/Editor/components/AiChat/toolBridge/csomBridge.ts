@@ -85,6 +85,7 @@ import {
   describeStickyNoteLocation,
   explainNameCollision,
   explainNotASubgraph,
+  explainRunNameTemplateProblem,
   explainTagProblem,
   explainUnpickableColor,
   resolveArgumentValue,
@@ -239,6 +240,10 @@ export function createCsomBridgeHandlers(deps: CsomBridgeDeps): CsomHandlers {
       const graph = resolveExpectedGraph(deps, expectedSubgraphTaskId);
       if (!graph.ok) {
         return { success: false, error: graph.error };
+      }
+      const problem = explainRunNameTemplateProblem(template, graph.spec);
+      if (problem) {
+        return { success: false, error: `Nothing was changed. ${problem}` };
       }
       updateRunNameTemplate(deps.undo, graph.spec, template || undefined);
       return { success: true };

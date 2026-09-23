@@ -176,7 +176,7 @@ export function createCsomTools(bridge: ToolBridgeApi) {
   const setRunNameTemplate = tool({
     name: "set_run_name_template",
     description:
-      "Set the template that names each run, so runs are identifiable in the run list instead of all sharing the pipeline's name. Applies to the graph the user is currently viewing, like the details panel it mirrors. Placeholders are `${arguments.<input name>}` for a pipeline input's value and `${date.timestamp}` / `${date.short}` / `${date.long}`. An input name must match a real pipeline input exactly — anything that cannot be resolved is left in the run name verbatim, braces and all, so check `inputs` before writing one. Pass an empty string to clear the template.",
+      "Set the template that names each run, so runs are identifiable in the run list instead of all sharing the pipeline's name. Applies to the graph the user is currently viewing, like the details panel it mirrors. Placeholders are `${arguments.<input name>}` for a pipeline input's value and `${date.timestamp}` / `${date.short}` / `${date.long}`. An input name must match an input on the graph you are setting this on, or the placeholder is left in the run name verbatim, braces and all — note that `inputs` in `get_pipeline_state` is the top-level pipeline's, so inside a subgraph read that graph's own inputs from `get_subgraph_state` first. A template naming an input the graph does not have is refused. Pass an empty string to clear the template.",
     parameters: z.object({
       template: z
         .string()
