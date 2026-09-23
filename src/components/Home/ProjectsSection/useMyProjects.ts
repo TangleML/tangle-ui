@@ -13,6 +13,7 @@ const PAGE_SIZE = 24;
 
 interface MyProjects {
   projects: ProjectSummary[];
+  createdBy: string | undefined;
   totalCount: number;
   isPending: boolean;
   error: Error | null;
@@ -53,6 +54,7 @@ export function useMyProjects(): MyProjects {
 
   return {
     projects: data?.pages.flatMap((page) => page.items) ?? [],
+    createdBy,
     totalCount: data?.pages[0]?.totalCount ?? 0,
     isPending: isUserPending || isPending,
     error,

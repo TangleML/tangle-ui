@@ -48,6 +48,7 @@ function project(id: string): ProjectSummary {
 function given(...projects: ProjectSummary[]) {
   vi.mocked(useMyProjects).mockReturnValue({
     projects,
+    createdBy: "ada@example.com",
     totalCount: projects.length,
     isPending: false,
     error: null,

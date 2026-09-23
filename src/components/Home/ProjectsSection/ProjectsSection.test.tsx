@@ -103,6 +103,7 @@ function mockProjects(
 ): void {
   vi.mocked(useMyProjects).mockReturnValue({
     projects: [project],
+    createdBy: "someone@example.com",
     totalCount: 1,
     isPending: false,
     error: null,
@@ -318,11 +319,26 @@ describe("ProjectsSection", () => {
       totalCount: 9,
       hasMore: true,
     });
-    mockPinned(project, { ...project, id: "project-9", name: "Shared work" });
+    mockPinned(project, {
+      ...project,
+      id: "project-9",
+      name: "Shared work",
+      createdBy: "someone-else@example.com",
+    });
 
     renderSection();
 
     expect(await screen.findByText("Showing 3 of 10.")).toBeInTheDocument();
+  });
+
+  /** Its page may not have been fetched, but it is still one of the user's own. */
+  it("does not double-count a pinned project from a later page", async () => {
+    mockProjects({ projects: [project], totalCount: 40, hasMore: true });
+    mockPinned({ ...project, id: "project-40", name: "Deep in the list" });
+
+    renderSection();
+
+    expect(await screen.findByText("Showing 2 of 40.")).toBeInTheDocument();
   });
 
   it("asks the user to configure a backend before querying", async () => {
