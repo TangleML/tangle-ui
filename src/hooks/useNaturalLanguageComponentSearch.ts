@@ -39,6 +39,7 @@ export function useNaturalLanguageComponentRerank() {
         candidates,
         {
           model: config.model,
+          reasoningEffort: config.reasoningEffort,
           apiBase: config.apiBase,
           apiKey: config.apiKey,
         },
@@ -78,10 +79,15 @@ export function useComponentAiDescription({
   const digest = reference?.digest;
   const hasSpec = Boolean(reference?.spec);
 
-  // Key includes apiBase + model so changing provider invalidates cached
-  // descriptions (a different model would have written a different answer).
+  // Provider and thinking changes must not reuse a differently configured response.
   const query = useQuery<ComponentDescriptionResult, Error>({
-    queryKey: ["componentAiDescription", digest, config.apiBase, config.model],
+    queryKey: [
+      "componentAiDescription",
+      digest,
+      config.apiBase,
+      config.model,
+      config.reasoningEffort,
+    ],
     queryFn: async ({ signal }) => {
       // queryFn is only called when `enabled` is true (guarded below),
       // which itself requires digest + hasSpec, so reference is defined here.
@@ -90,6 +96,7 @@ export function useComponentAiDescription({
       }
       return generateComponentAiDescription(reference, {
         model: config.model,
+        reasoningEffort: config.reasoningEffort,
         apiBase: config.apiBase,
         apiKey: config.apiKey,
         signal,

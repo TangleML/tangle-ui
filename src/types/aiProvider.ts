@@ -1,3 +1,5 @@
+import type { AiReasoningEffort } from "@/config/aiModels";
+
 export interface AiProviderConfig {
   // OpenAI-compatible API base URL, with no endpoint path such as `/responses`.
   apiBase: string;
@@ -5,4 +7,5 @@ export interface AiProviderConfig {
   apiKey: string;
   // Leave blank when the provider owns model selection.
   model: string;
+  reasoningEffort?: AiReasoningEffort;
 }

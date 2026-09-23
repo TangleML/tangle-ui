@@ -28,7 +28,14 @@ describe("AgentSettings", () => {
     window.localStorage.clear();
     window.localStorage.setItem(MANUAL_CONFIGURATION_STORAGE_KEY, "true");
     backend.url = "";
-    delete window.__TANGLE_AI_MODELS__;
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
     mockNotify.mockClear();
     mockFetch.mockReset();
     vi.stubGlobal("fetch", mockFetch);
@@ -37,7 +44,6 @@ describe("AgentSettings", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     window.localStorage.clear();
-    delete window.__TANGLE_AI_MODELS__;
   });
 
   it("shows inline feedback instead of saving when API base URL is blank", () => {
@@ -103,30 +109,19 @@ describe("AgentSettings", () => {
     expect(JSON.stringify(init)).toContain("Bearer sk-test");
   });
 
-  it("renders injectable model suggestions for the freeform model input", () => {
-    window.__TANGLE_AI_MODELS__ = {
-      defaultModel: "proxy-frontier",
-      models: [
-        {
-          id: "proxy-frontier",
-          label: "Proxy frontier",
-          description: "Default proxy model",
-        },
-      ],
-    };
-
+  it("offers only the GPT-6 models beside the freeform model input", () => {
     render(<AgentSettings />);
 
     expect(screen.getByLabelText("Model id")).toHaveAttribute(
       "placeholder",
-      "e.g. proxy-frontier",
+      "e.g. gpt-6-sol",
     );
 
-    fireEvent.click(screen.getByRole("combobox", { name: "Select a model" }));
-
+    fireEvent.click(screen.getByRole("button", { name: "Select a model" }));
+    fireEvent.click(screen.getByRole("combobox", { name: "Choose model" }));
     expect(
-      screen.getByRole("option", { name: "Proxy frontier" }),
-    ).toBeInTheDocument();
+      screen.getAllByRole("option").map((option) => option.textContent),
+    ).toEqual(["DefaultGPT-6 Sol", "GPT-6 Astra", "GPT-6 Sol", "GPT-6 Luna"]);
   });
 
   it("updates the model from the picker without submitting the provider form", () => {
@@ -138,7 +133,8 @@ describe("AgentSettings", () => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
     render(<AgentSettings />);
 
-    fireEvent.click(screen.getByRole("combobox", { name: "Select a model" }));
+    fireEvent.click(screen.getByRole("button", { name: "Select a model" }));
+    fireEvent.click(screen.getByRole("combobox", { name: "Choose model" }));
     expect(mockFetch).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("option", { name: "GPT-6 Astra" }));
 
@@ -146,29 +142,73 @@ describe("AgentSettings", () => {
     expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "")).toEqual({
       ...config,
       model: "gpt-6-astra",
+      reasoningEffort: "high",
     });
     expect(mockFetch).not.toHaveBeenCalled();
     expect(mockNotify).not.toHaveBeenCalled();
   });
 
-  it("clears only the model when choosing the provider default", () => {
+  it("selects Sol for Default while preserving thinking", () => {
     const config = {
       apiBase: "https://api.example.com/v1",
       apiKey: "saved-key",
-      model: "gpt-6-sol",
+      model: "gpt-6-astra",
+      reasoningEffort: "max",
     };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
     render(<AgentSettings />);
 
-    fireEvent.click(screen.getByRole("combobox", { name: "Select a model" }));
-    fireEvent.click(screen.getByRole("option", { name: "Provider default" }));
+    fireEvent.click(screen.getByRole("button", { name: "Select a model" }));
+    fireEvent.click(screen.getByRole("combobox", { name: "Choose model" }));
+    fireEvent.click(screen.getByRole("option", { name: "Default" }));
 
-    expect(screen.getByLabelText("Model id")).toHaveValue("");
+    expect(screen.getByLabelText("Model id")).toHaveValue("gpt-6-sol");
     expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "")).toEqual({
       ...config,
-      model: "",
+      model: "gpt-6-sol",
     });
     expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("persists slider changes and tests the selected reasoning effort without submitting from the popup", async () => {
+    mockFetch.mockResolvedValue(Response.json({ ok: true }));
+    const config = {
+      apiBase: "https://api.example.com/v1",
+      apiKey: "",
+      model: "gpt-6-luna",
+    };
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+    render(<AgentSettings />);
+    fireEvent.click(screen.getByRole("button", { name: "Select a model" }));
+    fireEvent.keyDown(screen.getByRole("slider"), { key: "End" });
+    expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "")).toEqual({
+      ...config,
+      reasoningEffort: "max",
+    });
+    expect(mockFetch).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Select a model" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save and test AI" }));
+    await waitFor(() =>
+      expect(mockNotify).toHaveBeenCalledWith(
+        expect.stringContaining("settings saved"),
+        "success",
+      ),
+    );
+    expect(
+      JSON.parse(String(mockFetch.mock.calls[0]?.[1]?.body)),
+    ).toMatchObject({ model: "gpt-6-luna", reasoning: { effort: "max" } });
+    fireEvent.click(screen.getByRole("button", { name: "Select a model" }));
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Reset to GPT-6 Sol and High thinking",
+      }),
+    );
+    expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "")).toEqual({
+      ...config,
+      model: "gpt-6-sol",
+      reasoningEffort: "high",
+    });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 
   it("updates saved model settings as the model field changes", () => {
@@ -285,6 +325,7 @@ describe("AgentSettings", () => {
     const init = mockFetch.mock.calls[0]?.[1];
     expect(new Headers(init?.headers).has("authorization")).toBe(false);
     expect(init?.credentials).toBeUndefined();
+    expect(JSON.parse(String(init?.body))).not.toHaveProperty("reasoning");
   });
 
   it("allows clearing partially configured settings", () => {

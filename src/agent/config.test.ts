@@ -1,6 +1,8 @@
 import type OpenAI from "openai";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { AI_REASONING_EFFORTS } from "@/config/aiModels";
+
 const { setDefaultOpenAIClient, setOpenAIAPI, setTracingDisabled } = vi.hoisted(
   () => ({
     setDefaultOpenAIClient: vi.fn(),
@@ -33,7 +35,7 @@ describe("getAgentModelConfig", () => {
     });
   });
 
-  it.each(["gpt-5.5", "gpt-5.6-sol", "gpt-6-sol", "gpt-6-astra"])(
+  it.each(["gpt-5.5", "gpt-5.6-sol", "custom-model"])(
     "uses %s with Responses reasoning continuity",
     (model) => {
       expect(getAgentModelConfig({ ...BASE_CONFIG, model })).toEqual({
@@ -44,6 +46,40 @@ describe("getAgentModelConfig", () => {
       });
     },
   );
+
+  it.each(["gpt-6-luna", "gpt-6-sol", "gpt-6-astra"])(
+    "defaults %s to High thinking and preserves the selected effort",
+    (model) => {
+      expect(
+        getAgentModelConfig({ ...BASE_CONFIG, model }).modelSettings.reasoning,
+      ).toEqual({ effort: "high" });
+      for (const { value } of AI_REASONING_EFFORTS) {
+        expect(
+          getAgentModelConfig({
+            ...BASE_CONFIG,
+            model,
+            reasoningEffort: value,
+          }),
+        ).toEqual({
+          model,
+          modelSettings: {
+            reasoning: { effort: value },
+            providerData: { include: ["reasoning.encrypted_content"] },
+          },
+        });
+      }
+    },
+  );
+
+  it("does not apply saved reasoning to a custom model", () => {
+    expect(
+      getAgentModelConfig({
+        ...BASE_CONFIG,
+        model: "custom-model",
+        reasoningEffort: "max",
+      }).modelSettings.reasoning,
+    ).toBeUndefined();
+  });
 });
 
 describe("ProxyClient", () => {
@@ -101,10 +137,12 @@ describe("ProxyClient", () => {
       client.ensureConfigured({
         apiBase: apiBase + "/",
         apiKey,
-        model: "gpt-5.5",
+        model: "gpt-6-sol",
+        reasoningEffort: "max",
       });
       const body: OpenAI.Responses.ResponseCreateParamsNonStreaming = {
-        model: "gpt-5.5",
+        model: "gpt-6-sol",
+        reasoning: { effort: "max" },
         input: [{ role: "user", content: "Hello" }],
         instructions: "Keep it brief.",
         include: ["reasoning.encrypted_content"],

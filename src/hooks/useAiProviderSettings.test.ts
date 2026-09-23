@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   AI_PROVIDER_BACKEND_MODEL_STORAGE_KEY,
+  AI_PROVIDER_BACKEND_REASONING_STORAGE_KEY,
   AI_PROVIDER_MANUAL_CONFIG_STORAGE_KEY,
   AI_PROVIDER_STORAGE_KEY,
   useAiProviderSettings,
@@ -19,12 +20,10 @@ describe("useAiProviderSettings", () => {
   beforeEach(() => {
     window.localStorage.clear();
     backend.url = "";
-    delete window.__TANGLE_AI_MODELS__;
   });
 
   afterEach(() => {
     window.localStorage.clear();
-    delete window.__TANGLE_AI_MODELS__;
   });
 
   it("returns defaults when nothing is stored", () => {
@@ -34,6 +33,7 @@ describe("useAiProviderSettings", () => {
       apiBase: "",
       apiKey: "",
       model: "gpt-6-sol",
+      reasoningEffort: "high",
     });
     expect(result.current.isManuallyConfigured).toBe(false);
     expect(result.current.isConfigured).toBe(false);
@@ -48,6 +48,7 @@ describe("useAiProviderSettings", () => {
       apiBase: "https://backend.example.com/api/experimental/ai/v1",
       apiKey: "",
       model: "gpt-6-sol",
+      reasoningEffort: "high",
     });
     expect(result.current.isManuallyConfigured).toBe(false);
     expect(result.current.isConfigured).toBe(true);
@@ -87,6 +88,7 @@ describe("useAiProviderSettings", () => {
       apiBase: "https://backend.example.com/api/experimental/ai/v1",
       apiKey: "",
       model: "gpt-4.1",
+      reasoningEffort: "high",
     });
     expect(result.current.manualConfig).toEqual({
       apiBase: "",
@@ -230,14 +232,14 @@ describe("useAiProviderSettings", () => {
       apiBase: "",
       apiKey: "",
       model: "gpt-6-sol",
+      reasoningEffort: "high",
     });
   });
 
-  it("uses the host default without saving a user configuration", () => {
+  it("uses the central Sol default without saving a user configuration", () => {
     backend.url = "https://backend.example.com";
-    window.__TANGLE_AI_MODELS__ = { defaultModel: "team-default" };
     const { result } = renderHook(() => useAiProviderSettings());
-    expect(result.current.config.model).toBe("team-default");
+    expect(result.current.config.model).toBe("gpt-6-sol");
     expect(result.current.manualConfig).toEqual({
       apiBase: "",
       apiKey: "",
@@ -256,7 +258,7 @@ describe("useAiProviderSettings", () => {
     );
   });
 
-  it("preserves independent backend and manual models across reloads", () => {
+  it("preserves independent backend and manual models and thinking across reloads", () => {
     backend.url = "https://backend.example.com";
     window.localStorage.setItem(
       AI_PROVIDER_STORAGE_KEY,
@@ -264,6 +266,7 @@ describe("useAiProviderSettings", () => {
         apiBase: "https://custom.example.com/v1",
         apiKey: "custom-secret",
         model: "gpt-4.1",
+        reasoningEffort: "low",
       }),
     );
     const { result, unmount } = renderHook(() => useAiProviderSettings());
@@ -272,19 +275,27 @@ describe("useAiProviderSettings", () => {
       apiBase: "https://backend.example.com/api/experimental/ai/v1",
       apiKey: "",
       model: "gpt-6-sol",
+      reasoningEffort: "high",
     });
-    act(() => result.current.setBackendModel("gpt-6-astra"));
+    act(() => {
+      result.current.setBackendModel("gpt-6-astra");
+      result.current.setBackendReasoningEffort("max");
+    });
     expect(result.current.config.model).toBe("gpt-6-astra");
+    expect(result.current.config.reasoningEffort).toBe("max");
     expect(result.current.manualConfig.model).toBe("gpt-4.1");
+    expect(result.current.manualConfig.reasoningEffort).toBe("low");
     unmount();
     const { result: reloaded } = renderHook(() => useAiProviderSettings());
     expect(reloaded.current.isManuallyConfigured).toBe(false);
     expect(reloaded.current.config.model).toBe("gpt-6-astra");
+    expect(reloaded.current.config.reasoningEffort).toBe("max");
     act(() => reloaded.current.setManuallyConfigured(true));
     expect(reloaded.current.config).toEqual({
       apiBase: "https://custom.example.com/v1",
       apiKey: "custom-secret",
       model: "gpt-4.1",
+      reasoningEffort: "low",
     });
   });
 
@@ -306,6 +317,21 @@ describe("useAiProviderSettings", () => {
     const second = renderHook(() => useAiProviderSettings());
     act(() => first.result.current.setBackendModel("gpt-4.1"));
     expect(second.result.current.config.model).toBe("gpt-4.1");
+    act(() => first.result.current.setBackendReasoningEffort("xhigh"));
+    expect(second.result.current.config.reasoningEffort).toBe("xhigh");
+    act(() => {
+      window.localStorage.setItem(
+        AI_PROVIDER_BACKEND_REASONING_STORAGE_KEY,
+        JSON.stringify("max"),
+      );
+      window.dispatchEvent(
+        new StorageEvent("storage", {
+          key: AI_PROVIDER_BACKEND_REASONING_STORAGE_KEY,
+        }),
+      );
+    });
+    expect(first.result.current.config.reasoningEffort).toBe("max");
+    expect(second.result.current.config.reasoningEffort).toBe("max");
     act(() => {
       window.localStorage.setItem(
         AI_PROVIDER_MANUAL_CONFIG_STORAGE_KEY,
@@ -319,5 +345,24 @@ describe("useAiProviderSettings", () => {
     });
     expect(second.result.current.isManuallyConfigured).toBe(true);
     expect(first.result.current.isConfigured).toBe(false);
+  });
+
+  it("ignores invalid stored thinking levels", () => {
+    window.localStorage.setItem(
+      AI_PROVIDER_BACKEND_REASONING_STORAGE_KEY,
+      JSON.stringify("ultra"),
+    );
+    window.localStorage.setItem(
+      AI_PROVIDER_STORAGE_KEY,
+      JSON.stringify({
+        apiBase: "https://custom.example/v1",
+        model: "gpt-6-sol",
+        reasoningEffort: "ultra",
+      }),
+    );
+    window.localStorage.setItem(AI_PROVIDER_MANUAL_CONFIG_STORAGE_KEY, "false");
+    const { result } = renderHook(() => useAiProviderSettings());
+    expect(result.current.config.reasoningEffort).toBe("high");
+    expect(result.current.manualConfig.reasoningEffort).toBeUndefined();
   });
 });

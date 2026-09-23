@@ -1,5 +1,6 @@
 import { AiModelSelect } from "@/components/shared/AiModelSelect/AiModelSelect";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
+import type { AiModelSelection } from "@/config/aiModels";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 
 export function AiModelQuickSelect() {
@@ -9,14 +10,16 @@ export function AiModelQuickSelect() {
     config,
     updateManualConfig,
     setBackendModel,
+    setBackendReasoningEffort,
     isConfigured,
     isManuallyConfigured,
   } = useAiProviderSettings();
-  const handleValueChange = (value: string) => {
+  const handleSelectionChange = (selection: AiModelSelection) => {
     if (isManuallyConfigured) {
-      updateManualConfig({ model: value });
+      updateManualConfig(selection);
     } else {
-      setBackendModel(value);
+      setBackendModel(selection.model);
+      setBackendReasoningEffort(selection.reasoningEffort);
     }
   };
 
@@ -26,9 +29,9 @@ export function AiModelQuickSelect() {
 
   return (
     <AiModelSelect
-      value={config.model}
-      onValueChange={handleValueChange}
-      allowProviderDefault={isManuallyConfigured}
+      model={config.model}
+      reasoningEffort={config.reasoningEffort}
+      onChange={handleSelectionChange}
       appearance="header"
     />
   );

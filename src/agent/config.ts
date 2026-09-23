@@ -1,10 +1,12 @@
 import {
+  type ModelSettings,
   setDefaultOpenAIClient,
   setOpenAIAPI,
   setTracingDisabled,
 } from "@openai/agents";
 import OpenAI from "openai";
 
+import { getAiReasoningConfig } from "@/config/aiModels";
 import type { AiProviderConfig } from "@/types/aiProvider";
 import { isTangleAiProxyBaseUrl } from "@/utils/aiProxy";
 import { BASE_URL } from "@/utils/constants";
@@ -16,12 +18,13 @@ const RESPONSES_REASONING_INCLUDE = ["reasoning.encrypted_content"];
 
 export function getAgentModelConfig(config: AiProviderConfig): {
   model?: string;
-  modelSettings: { providerData: { include: string[] } };
+  modelSettings: ModelSettings;
 } {
   const model = config.model.trim();
   return {
     ...(model ? { model } : {}),
     modelSettings: {
+      reasoning: getAiReasoningConfig(model, config.reasoningEffort),
       providerData: {
         include: RESPONSES_REASONING_INCLUDE,
       },

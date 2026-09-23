@@ -11,6 +11,8 @@
  * judgment over a small, well-defined list when literal matching is not enough.
  */
 
+import { getAiReasoningConfig } from "@/config/aiModels";
+import type { AiProviderConfig } from "@/types/aiProvider";
 import { isTangleAiProxyBaseUrl } from "@/utils/aiProxy";
 import type {
   ComponentReference,
@@ -76,14 +78,8 @@ export class NaturalLanguageSearchConfigError extends Error {
   }
 }
 
-interface LlmOptions {
+interface LlmOptions extends AiProviderConfig {
   signal?: AbortSignal;
-  // OpenAI-compatible model id. Leave blank when the proxy owns model selection.
-  model: string;
-  // Base URL of an OpenAI-compatible API.
-  apiBase: string;
-  // Bearer token. Leave blank when the proxy owns authentication.
-  apiKey: string;
 }
 
 /**
@@ -308,6 +304,7 @@ async function callLlmResponse(
     },
     body: JSON.stringify({
       ...(model ? { model } : {}),
+      reasoning: getAiReasoningConfig(model, options.reasoningEffort),
       // Deterministic ordering for non-reasoning models; omitted when the proxy
       // owns model selection (blank model) or for reasoning models that reject
       // an explicit temperature.

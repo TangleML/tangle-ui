@@ -1,6 +1,11 @@
 import { useSyncExternalStore } from "react";
 
-import { getDefaultAiModelId } from "@/config/aiModels";
+import {
+  type AiReasoningEffort,
+  DEFAULT_AI_REASONING_EFFORT,
+  getDefaultAiModelId,
+  isAiReasoningEffort,
+} from "@/config/aiModels";
 import { useBackend } from "@/providers/BackendProvider";
 import type { AiProviderConfig } from "@/types/aiProvider";
 import { buildTangleAiProxyBaseUrl } from "@/utils/aiProxy";
@@ -16,12 +21,15 @@ export const AI_PROVIDER_MANUAL_CONFIG_STORAGE_KEY =
   "tangle.aiProvider.manuallyConfigured";
 export const AI_PROVIDER_BACKEND_MODEL_STORAGE_KEY =
   "tangle.aiProvider.backendModel";
+export const AI_PROVIDER_BACKEND_REASONING_STORAGE_KEY =
+  "tangle.aiProvider.backendReasoningEffort";
 const LEGACY_COMPONENT_SEARCH_STORAGE_KEY = "tangle.componentSearchV2.config";
 
 type StorageKey =
   | typeof AI_PROVIDER_STORAGE_KEY
   | typeof AI_PROVIDER_MANUAL_CONFIG_STORAGE_KEY
   | typeof AI_PROVIDER_BACKEND_MODEL_STORAGE_KEY
+  | typeof AI_PROVIDER_BACKEND_REASONING_STORAGE_KEY
   | typeof LEGACY_COMPONENT_SEARCH_STORAGE_KEY;
 
 type AiProviderSettingsStorage = Record<StorageKey, unknown>;
@@ -55,6 +63,9 @@ function parseStoredConfig(value: unknown): AiProviderConfig | null {
       readTrimmedString(value, "model") ||
       readTrimmedString(value, "thinkingModel") ||
       DEFAULTS.model,
+    ...(isAiReasoningEffort(value.reasoningEffort)
+      ? { reasoningEffort: value.reasoningEffort }
+      : {}),
   };
 }
 
@@ -83,12 +94,14 @@ function readStoredConfig(): AiProviderConfig {
 interface StoredSettings {
   manualConfig: AiProviderConfig;
   backendModel: string;
+  backendReasoningEffort: AiReasoningEffort;
   isManuallyConfigured: boolean;
 }
 
 const SERVER_SETTINGS: StoredSettings = {
   manualConfig: DEFAULTS,
   backendModel: "",
+  backendReasoningEffort: DEFAULT_AI_REASONING_EFFORT,
   isManuallyConfigured: false,
 };
 
@@ -99,11 +112,17 @@ function readStoredSettings(): StoredSettings {
   const storedBackendModel = storage.getItem(
     AI_PROVIDER_BACKEND_MODEL_STORAGE_KEY,
   );
+  const storedBackendReasoning = storage.getItem(
+    AI_PROVIDER_BACKEND_REASONING_STORAGE_KEY,
+  );
 
   return {
     manualConfig,
     backendModel:
       typeof storedBackendModel === "string" ? storedBackendModel.trim() : "",
+    backendReasoningEffort: isAiReasoningEffort(storedBackendReasoning)
+      ? storedBackendReasoning
+      : DEFAULT_AI_REASONING_EFFORT,
     // Preserve existing custom providers until the user switches them off.
     isManuallyConfigured:
       typeof manualFlag === "boolean"
@@ -119,6 +138,7 @@ function subscribe(callback: () => void): () => void {
       event.key === AI_PROVIDER_STORAGE_KEY ||
       event.key === AI_PROVIDER_MANUAL_CONFIG_STORAGE_KEY ||
       event.key === AI_PROVIDER_BACKEND_MODEL_STORAGE_KEY ||
+      event.key === AI_PROVIDER_BACKEND_REASONING_STORAGE_KEY ||
       event.key === LEGACY_COMPONENT_SEARCH_STORAGE_KEY ||
       event.key === null
     ) {
@@ -147,14 +167,19 @@ function getServerSnapshot(): StoredSettings {
 
 export function useAiProviderSettings() {
   const { backendUrl } = useBackend();
-  const { manualConfig, backendModel, isManuallyConfigured } =
-    useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const {
+    manualConfig,
+    backendModel,
+    backendReasoningEffort,
+    isManuallyConfigured,
+  } = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const config: AiProviderConfig = isManuallyConfigured
     ? manualConfig
     : {
         apiBase: buildTangleAiProxyBaseUrl(backendUrl),
         apiKey: "",
         model: backendModel || getDefaultAiModelId(),
+        reasoningEffort: backendReasoningEffort,
       };
 
   // Read fresh from storage instead of merging onto the render-time `config`
@@ -171,6 +196,11 @@ export function useAiProviderSettings() {
   const setBackendModel = (model: string) => {
     if (typeof window === "undefined") return;
     storage.setItem(AI_PROVIDER_BACKEND_MODEL_STORAGE_KEY, model.trim());
+  };
+
+  const setBackendReasoningEffort = (effort: AiReasoningEffort) => {
+    if (typeof window === "undefined") return;
+    storage.setItem(AI_PROVIDER_BACKEND_REASONING_STORAGE_KEY, effort);
   };
 
   const setManuallyConfigured = (enabled: boolean) => {
@@ -192,6 +222,7 @@ export function useAiProviderSettings() {
     manualConfig,
     updateManualConfig,
     setBackendModel,
+    setBackendReasoningEffort,
     clear,
     isConfigured,
     isManuallyConfigured,

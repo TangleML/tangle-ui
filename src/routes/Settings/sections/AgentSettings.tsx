@@ -9,7 +9,11 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
-import { getDefaultAiModelId } from "@/config/aiModels";
+import {
+  type AiModelSelection,
+  getAiReasoningConfig,
+  getDefaultAiModelId,
+} from "@/config/aiModels";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
 import { isTangleAiProxyBaseUrl } from "@/utils/aiProxy";
@@ -42,12 +46,21 @@ export function AgentSettings() {
     apiBase: apiBase.trim().replace(/\/+$/, ""),
     apiKey: apiKey.trim(),
     model: model.trim(),
+    ...(config.reasoningEffort
+      ? { reasoningEffort: config.reasoningEffort }
+      : {}),
   });
 
   const handleModelChange = (nextModel: string) => {
     setModel(nextModel);
     setValidationError(null);
     updateManualConfig({ model: nextModel.trim() });
+  };
+
+  const handleModelSelection = (selection: AiModelSelection) => {
+    setModel(selection.model);
+    setValidationError(null);
+    updateManualConfig(selection);
   };
 
   const validateRequiredFields = () => {
@@ -86,6 +99,10 @@ export function AgentSettings() {
         },
         body: JSON.stringify({
           ...(trimmed.model ? { model: trimmed.model } : {}),
+          reasoning: getAiReasoningConfig(
+            trimmed.model,
+            trimmed.reasoningEffort,
+          ),
           max_output_tokens: 32,
           instructions:
             "You are testing provider compatibility. Return only JSON.",
@@ -255,9 +272,9 @@ export function AgentSettings() {
             <Label htmlFor="agent-settings-model">Model</Label>
             <InlineStack gap="2" className="w-full">
               <AiModelSelect
-                value={model}
-                onValueChange={handleModelChange}
-                allowProviderDefault
+                model={model}
+                reasoningEffort={config.reasoningEffort}
+                onChange={handleModelSelection}
                 ariaLabel="Select a model"
               />
               <Input

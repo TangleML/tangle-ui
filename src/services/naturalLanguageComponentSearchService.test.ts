@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { AI_REASONING_EFFORTS } from "@/config/aiModels";
 import type { ComponentReference } from "@/utils/componentSpec";
 import { isRecord } from "@/utils/typeGuards";
 
@@ -196,6 +197,7 @@ describe("rerankComponentsByNaturalLanguage", () => {
     const init = call?.[1];
     const body = parseFetchBody(call);
     expect(body.model).toBeUndefined();
+    expect(body).not.toHaveProperty("reasoning");
     expect(body.max_output_tokens).toBeDefined();
     expect(JSON.stringify(init)).not.toContain("authorization");
   });
@@ -365,6 +367,43 @@ describe("rerankComponentsByNaturalLanguage", () => {
     expect(body.instructions).not.toContain("Score EVERY candidate");
   });
 
+  it.each(AI_REASONING_EFFORTS)(
+    "sends $value thinking to the Responses API",
+    async ({ value }) => {
+      vi.mocked(fetch).mockResolvedValue(
+        mockResponsesResponse({ matches: [] }),
+      );
+      await rerankComponentsByNaturalLanguage(
+        "train",
+        [{ id: "a", name: "a", description: "" }],
+        {
+          ...VALID_OPTIONS,
+          model: "gpt-6-sol",
+          reasoningEffort: value,
+        },
+      );
+      expect(parseFetchBody(vi.mocked(fetch).mock.calls[0]).reasoning).toEqual({
+        effort: value,
+      });
+    },
+  );
+
+  it("omits saved reasoning for a custom model", async () => {
+    vi.mocked(fetch).mockResolvedValue(mockResponsesResponse({ matches: [] }));
+    await rerankComponentsByNaturalLanguage(
+      "train",
+      [{ id: "a", name: "a", description: "" }],
+      {
+        ...VALID_OPTIONS,
+        model: "custom-model",
+        reasoningEffort: "max",
+      },
+    );
+    expect(parseFetchBody(vi.mocked(fetch).mock.calls[0])).not.toHaveProperty(
+      "reasoning",
+    );
+  });
+
   it("scores every candidate and scales the token budget when asked", async () => {
     vi.mocked(global.fetch).mockResolvedValue(
       mockResponsesResponse({ matches: [] }),
@@ -484,6 +523,21 @@ describe("generateComponentAiDescription", () => {
       generateComponentAiDescription({ digest: "abc" }, VALID_OPTIONS),
     ).rejects.toThrow("Component details are not loaded yet");
     expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it("uses the selected model and thinking for descriptions", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      mockResponsesResponse({ description: "Trains a model." }),
+    );
+    await generateComponentAiDescription(reference, {
+      ...VALID_OPTIONS,
+      model: "gpt-6-luna",
+      reasoningEffort: "xhigh",
+    });
+    expect(parseFetchBody(vi.mocked(fetch).mock.calls[0])).toMatchObject({
+      model: "gpt-6-luna",
+      reasoning: { effort: "xhigh" },
+    });
   });
 
   it("throws when the model returns an empty description", async () => {

@@ -1,22 +1,28 @@
-import { isRecord } from "@/utils/typeGuards";
+export const AI_REASONING_EFFORTS = [
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "High" },
+  { value: "xhigh", label: "Extra High" },
+  { value: "max", label: "Max" },
+] as const;
 
-export interface AiModelOption {
-  id: string;
-  label?: string;
-  description?: string;
+export type AiReasoningEffort = (typeof AI_REASONING_EFFORTS)[number]["value"];
+
+export interface AiModelSelection {
+  model: string;
+  reasoningEffort: AiReasoningEffort;
 }
 
-interface AiModelOptionsConfig {
-  // Replaces the built-in suggestions when the host page provides it.
-  models?: AiModelOption[];
-  // Shown first in blank model inputs.
-  defaultModel?: string;
-}
+export const DEFAULT_AI_REASONING_EFFORT: AiReasoningEffort = "high";
+
+const AI_MODEL_OPTIONS = [
+  { id: "gpt-6-astra", label: "GPT-6 Astra" },
+  { id: "gpt-6-sol", label: "GPT-6 Sol" },
+  { id: "gpt-6-luna", label: "GPT-6 Luna" },
+];
 
 const KNOWN_AI_MODEL_LABELS: Record<string, string> = {
   "gpt-5.6-sol": "GPT-5.6 Sol",
-  "gpt-6-astra": "GPT-6 Astra",
-  "gpt-6-sol": "GPT-6 Sol",
   "gpt-5.5": "GPT-5.5",
   "gpt-5": "GPT-5",
   "gpt-5-mini": "GPT-5 mini",
@@ -26,69 +32,28 @@ const KNOWN_AI_MODEL_LABELS: Record<string, string> = {
   "gpt-4o-mini": "GPT-4o mini",
 };
 
-const BUILT_IN_AI_MODEL_OPTIONS: AiModelOption[] = [
-  {
-    id: "gpt-6-sol",
-    label: "GPT-6 Sol",
-    description: "For everyday work and coding.",
-  },
-  {
-    id: "gpt-6-astra",
-    label: "GPT-6 Astra",
-    description: "For complex, multi-step tasks.",
-  },
-];
-
-const BUILT_IN_DEFAULT_MODEL = "gpt-6-sol";
-
-declare global {
-  interface Window {
-    __TANGLE_AI_MODELS__?: AiModelOptionsConfig;
-  }
-}
-
-function readModelOption(value: unknown): AiModelOption | null {
-  if (!isRecord(value) || typeof value.id !== "string") return null;
-
-  const id = value.id.trim();
-  if (!id) return null;
-
-  return {
-    id,
-    ...(typeof value.label === "string" && value.label.trim()
-      ? { label: value.label.trim() }
-      : {}),
-    ...(typeof value.description === "string" && value.description.trim()
-      ? { description: value.description.trim() }
-      : {}),
-  };
-}
-
-function readInjectedModelOptions(): AiModelOptionsConfig | null {
-  if (typeof window === "undefined") return null;
-  const config = window.__TANGLE_AI_MODELS__;
-  if (!isRecord(config)) return null;
-
-  return {
-    ...(Array.isArray(config.models)
-      ? { models: config.models.map(readModelOption).filter((v) => v !== null) }
-      : {}),
-    ...(typeof config.defaultModel === "string" && config.defaultModel.trim()
-      ? { defaultModel: config.defaultModel.trim() }
-      : {}),
-  };
-}
-
-export function getAiModelOptions(): AiModelOption[] {
-  const injected = readInjectedModelOptions();
-  return injected?.models && injected.models.length > 0
-    ? injected.models
-    : BUILT_IN_AI_MODEL_OPTIONS;
+export function getAiModelOptions() {
+  return AI_MODEL_OPTIONS;
 }
 
 export function getDefaultAiModelId(): string {
-  const injected = readInjectedModelOptions();
-  return injected?.defaultModel ?? BUILT_IN_DEFAULT_MODEL;
+  return "gpt-6-sol";
+}
+
+export function isAiReasoningEffort(
+  value: unknown,
+): value is AiReasoningEffort {
+  return AI_REASONING_EFFORTS.some((option) => option.value === value);
+}
+
+export function getAiReasoningConfig(
+  model: string,
+  effort = DEFAULT_AI_REASONING_EFFORT,
+): { effort: AiReasoningEffort } | undefined {
+  // Do not send OpenAI-specific settings to an unknown manual model/provider.
+  return AI_MODEL_OPTIONS.some((option) => option.id === model.trim())
+    ? { effort }
+    : undefined;
 }
 
 export function getAiModelLabel(modelId: string): string {

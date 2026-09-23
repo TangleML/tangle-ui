@@ -5,6 +5,8 @@ import { AiModelQuickSelect } from "./AiModelQuickSelect";
 
 const STORAGE_KEY = "tangle.aiProvider.config";
 const BACKEND_MODEL_STORAGE_KEY = "tangle.aiProvider.backendModel";
+const BACKEND_REASONING_STORAGE_KEY =
+  "tangle.aiProvider.backendReasoningEffort";
 const FLAGS_STORAGE_KEY = "betaFlags";
 const backend = vi.hoisted(() => ({ url: "" }));
 
@@ -20,12 +22,19 @@ describe("AiModelQuickSelect", () => {
   beforeEach(() => {
     window.localStorage.clear();
     backend.url = "";
-    delete window.__TANGLE_AI_MODELS__;
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
   });
 
   afterEach(() => {
     window.localStorage.clear();
-    delete window.__TANGLE_AI_MODELS__;
+    vi.unstubAllGlobals();
   });
 
   it("does not render until AI provider settings are configured", () => {
@@ -33,7 +42,7 @@ describe("AiModelQuickSelect", () => {
 
     render(<AiModelQuickSelect />);
 
-    expect(screen.queryByRole("combobox", { name: "AI model" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "AI model" })).toBeNull();
   });
 
   it("does not render when both AI features are disabled", () => {
@@ -49,7 +58,7 @@ describe("AiModelQuickSelect", () => {
 
     render(<AiModelQuickSelect />);
 
-    expect(screen.queryByRole("combobox", { name: "AI model" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "AI model" })).toBeNull();
   });
 
   it("shows configured model choices when component search is enabled", () => {
@@ -65,11 +74,10 @@ describe("AiModelQuickSelect", () => {
 
     render(<AiModelQuickSelect />);
 
-    fireEvent.click(screen.getByRole("combobox", { name: "AI model" }));
+    fireEvent.click(screen.getByRole("button", { name: "AI model" }));
+    fireEvent.click(screen.getByRole("combobox", { name: "Choose model" }));
 
-    expect(
-      screen.getByRole("option", { name: "Provider default" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Default" })).toBeInTheDocument();
     expect(
       screen.getByRole("option", { name: "GPT-6 Sol" }),
     ).toBeInTheDocument();
@@ -77,8 +85,9 @@ describe("AiModelQuickSelect", () => {
       screen.getByRole("option", { name: "GPT-6 Astra" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("option", { name: "GPT-4.1 mini" }),
+      screen.getByRole("option", { name: "GPT-6 Luna" }),
     ).toBeInTheDocument();
+    expect(screen.getAllByRole("option")).toHaveLength(4);
   });
 
   it("shows configured model choices when the AI assistant is enabled", () => {
@@ -95,7 +104,7 @@ describe("AiModelQuickSelect", () => {
     render(<AiModelQuickSelect />);
 
     expect(
-      screen.getByRole("combobox", { name: "AI model" }),
+      screen.getByRole("button", { name: "AI model" }),
     ).toBeInTheDocument();
   });
 
@@ -112,7 +121,7 @@ describe("AiModelQuickSelect", () => {
 
     render(<AiModelQuickSelect />);
 
-    const selector = screen.getByRole("combobox", { name: "AI model" });
+    const selector = screen.getByRole("button", { name: "AI model" });
     expect(selector).toHaveTextContent("Provider default");
     expect(selector).toHaveAttribute("title", "AI model: Provider default");
   });
@@ -121,15 +130,33 @@ describe("AiModelQuickSelect", () => {
     backend.url = "https://backend.example.com";
     enableFlags({ "ai-assistant": true });
     render(<AiModelQuickSelect />);
-    const selector = screen.getByRole("combobox", { name: "AI model" });
-    expect(selector).toHaveTextContent("GPT-6 Sol");
-    expect(selector).toHaveAttribute("title", "AI model: GPT-6 Sol");
+    const selector = screen.getByRole("button", { name: "AI model" });
+    expect(selector).toHaveTextContent("gpt-6-sol");
+    expect(selector).toHaveAttribute("title", "AI model: GPT-6 Sol · High");
     fireEvent.click(selector);
+    fireEvent.click(screen.getByRole("combobox", { name: "Choose model" }));
     fireEvent.click(screen.getByRole("option", { name: "GPT-6 Astra" }));
-    expect(selector).toHaveTextContent("GPT-6 Astra");
+    expect(selector).toHaveTextContent("gpt-6-astra");
+    fireEvent.keyDown(screen.getByRole("slider"), { key: "End" });
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
     expect(
       JSON.parse(window.localStorage.getItem(BACKEND_MODEL_STORAGE_KEY) ?? ""),
     ).toBe("gpt-6-astra");
+    expect(
+      JSON.parse(
+        window.localStorage.getItem(BACKEND_REASONING_STORAGE_KEY) ?? "",
+      ),
+    ).toBe("max");
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Reset to GPT-6 Sol and High thinking",
+      }),
+    );
+    expect(selector).toHaveTextContent("gpt-6-sol");
+    expect(
+      JSON.parse(
+        window.localStorage.getItem(BACKEND_REASONING_STORAGE_KEY) ?? "",
+      ),
+    ).toBe("high");
   });
 });
