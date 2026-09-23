@@ -71,7 +71,7 @@ describe("AiModelQuickSelect", () => {
       screen.getByRole("option", { name: "Provider default" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("option", { name: "GPT-5.6 Sol" }),
+      screen.getByRole("option", { name: "GPT-6 Sol" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("option", { name: "GPT-6 Astra" }),
@@ -122,8 +122,8 @@ describe("AiModelQuickSelect", () => {
     enableFlags({ "ai-assistant": true });
     render(<AiModelQuickSelect />);
     const selector = screen.getByRole("combobox", { name: "AI model" });
-    expect(selector).toHaveTextContent("GPT-5.6 Sol");
-    expect(selector).toHaveAttribute("title", "AI model: GPT-5.6 Sol");
+    expect(selector).toHaveTextContent("GPT-6 Sol");
+    expect(selector).toHaveAttribute("title", "AI model: GPT-6 Sol");
     fireEvent.click(selector);
     fireEvent.click(screen.getByRole("option", { name: "GPT-6 Astra" }));
     expect(selector).toHaveTextContent("GPT-6 Astra");

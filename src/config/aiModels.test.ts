@@ -13,13 +13,14 @@ describe("aiModels", () => {
 
   it("uses built-in model suggestions by default", () => {
     expect(getAiModelOptions()).toEqual([
-      { id: "gpt-5.6-sol", label: "GPT-5.6 Sol" },
+      { id: "gpt-6-sol", label: "GPT-6 Sol" },
       { id: "gpt-6-astra", label: "GPT-6 Astra" },
     ]);
-    expect(getDefaultAiModelId()).toBe("gpt-5.6-sol");
+    expect(getDefaultAiModelId()).toBe("gpt-6-sol");
   });
 
   it("keeps friendly labels for saved models outside the current suggestions", () => {
+    expect(getAiModelLabel("gpt-5.6-sol")).toBe("GPT-5.6 Sol");
     expect(getAiModelLabel("gpt-4o-mini")).toBe("GPT-4o mini");
     expect(getAiModelLabel("custom-model")).toBe("custom-model");
   });

@@ -16,6 +16,7 @@ interface AiModelOptionsConfig {
 const KNOWN_AI_MODEL_LABELS: Record<string, string> = {
   "gpt-5.6-sol": "GPT-5.6 Sol",
   "gpt-6-astra": "GPT-6 Astra",
+  "gpt-6-sol": "GPT-6 Sol",
   "gpt-5.5": "GPT-5.5",
   "gpt-5": "GPT-5",
   "gpt-5-mini": "GPT-5 mini",
@@ -27,8 +28,8 @@ const KNOWN_AI_MODEL_LABELS: Record<string, string> = {
 
 const BUILT_IN_AI_MODEL_OPTIONS: AiModelOption[] = [
   {
-    id: "gpt-5.6-sol",
-    label: "GPT-5.6 Sol",
+    id: "gpt-6-sol",
+    label: "GPT-6 Sol",
   },
   {
     id: "gpt-6-astra",
@@ -36,7 +37,7 @@ const BUILT_IN_AI_MODEL_OPTIONS: AiModelOption[] = [
   },
 ];
 
-const BUILT_IN_DEFAULT_MODEL = "gpt-5.6-sol";
+const BUILT_IN_DEFAULT_MODEL = "gpt-6-sol";
 
 declare global {
   interface Window {

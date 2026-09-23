@@ -33,7 +33,7 @@ describe("useAiProviderSettings", () => {
     expect(result.current.config).toEqual({
       apiBase: "",
       apiKey: "",
-      model: "gpt-5.6-sol",
+      model: "gpt-6-sol",
     });
     expect(result.current.isManuallyConfigured).toBe(false);
     expect(result.current.isConfigured).toBe(false);
@@ -47,7 +47,7 @@ describe("useAiProviderSettings", () => {
     expect(result.current.config).toEqual({
       apiBase: "https://backend.example.com/api/experimental/ai/v1",
       apiKey: "",
-      model: "gpt-5.6-sol",
+      model: "gpt-6-sol",
     });
     expect(result.current.isManuallyConfigured).toBe(false);
     expect(result.current.isConfigured).toBe(true);
@@ -229,7 +229,7 @@ describe("useAiProviderSettings", () => {
     expect(result.current.config).toEqual({
       apiBase: "",
       apiKey: "",
-      model: "gpt-5.6-sol",
+      model: "gpt-6-sol",
     });
   });
 
@@ -271,7 +271,7 @@ describe("useAiProviderSettings", () => {
     expect(result.current.config).toEqual({
       apiBase: "https://backend.example.com/api/experimental/ai/v1",
       apiKey: "",
-      model: "gpt-5.6-sol",
+      model: "gpt-6-sol",
     });
     act(() => result.current.setBackendModel("gpt-6-astra"));
     expect(result.current.config.model).toBe("gpt-6-astra");
