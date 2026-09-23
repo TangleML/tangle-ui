@@ -11,12 +11,15 @@ import { useProject } from "@/services/projects/useProjects";
 export function useTrackRecentlyViewedProject(
   projectId: string | null | undefined,
 ) {
-  const { data: project } = useProject(projectId ?? undefined);
+  const { data: project, error } = useProject(projectId ?? undefined);
   const name = project?.name;
 
   useEffect(() => {
-    if (!projectId || !name) return;
+    // A project that has been deleted still has its last-known name in the
+    // cache, so recording on the name alone would put a dead link straight
+    // back on the list the moment someone followed it.
+    if (!projectId || !name || error) return;
 
     addRecentlyViewed({ type: "project", id: projectId, name });
-  }, [projectId, name]);
+  }, [projectId, name, error]);
 }

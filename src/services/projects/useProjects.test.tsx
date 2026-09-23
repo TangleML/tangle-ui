@@ -6,10 +6,21 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("./projectsService");
 vi.mock("./workspacesService");
 
+const removeFavorite = vi.fn().mockResolvedValue(undefined);
+vi.mock("@/hooks/useFavorites", () => ({
+  useFavorites: () => ({ removeFavorite }),
+}));
+
+vi.mock("@/hooks/useRecentlyViewed", () => ({
+  removeRecentlyViewed: vi.fn(),
+}));
+
 let backend = { configured: true, available: true };
 vi.mock("@/providers/BackendProvider", () => ({
   useBackend: () => backend,
 }));
+
+import { removeRecentlyViewed } from "@/hooks/useRecentlyViewed";
 
 import { ProjectsApiError } from "./errors";
 import * as projectsService from "./projectsService";
@@ -227,24 +238,68 @@ describe("project mutation hooks", () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["projects", "p1"] });
   });
 
-  it("useDeleteProject invalidates list and detail", async () => {
-    vi.mocked(projectsService.deleteProject).mockResolvedValue({
-      id: "p1",
-      deletedResourceCounts: {},
-      deletedResourceTotal: 0,
-    });
-    const client = makeClient();
-    const invalidate = vi.spyOn(client, "invalidateQueries");
-
-    const { result } = renderHook(() => useDeleteProject(), {
-      wrapper: wrapperFor(client),
+  describe("useDeleteProject", () => {
+    beforeEach(() => {
+      vi.mocked(projectsService.deleteProject).mockResolvedValue({
+        id: "p1",
+        deletedResourceCounts: {},
+        deletedResourceTotal: 0,
+      });
     });
 
-    await act(async () => {
-      await result.current.mutateAsync("p1");
+    async function deleteProject(client: QueryClient) {
+      const { result } = renderHook(() => useDeleteProject(), {
+        wrapper: wrapperFor(client),
+      });
+      await act(async () => {
+        await result.current.mutateAsync("p1");
+      });
+    }
+
+    it("invalidates the list", async () => {
+      const client = makeClient();
+      const invalidate = vi.spyOn(client, "invalidateQueries");
+
+      await deleteProject(client);
+
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: ["projects"] });
     });
 
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["projects"] });
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["projects", "p1"] });
+    /**
+     * Invalidating leaves the data in place, so the project's own page would
+     * mount, render the cached project in full, and only then refetch its way
+     * to an error — a deleted project, on screen, complete.
+     */
+    it("drops the project from the cache rather than marking it stale", async () => {
+      const client = makeClient();
+      client.setQueryData(["projects", "p1"], project);
+
+      await deleteProject(client);
+
+      expect(client.getQueryData(["projects", "p1"])).toBeUndefined();
+    });
+
+    it("forgets the links left pointing at it", async () => {
+      await deleteProject(makeClient());
+
+      expect(removeRecentlyViewed).toHaveBeenCalledWith("project", "p1");
+      expect(removeFavorite).toHaveBeenCalledWith("project", "p1");
+    });
+
+    it("leaves the lists alone when the delete fails", async () => {
+      vi.mocked(projectsService.deleteProject).mockRejectedValue(
+        new Error("nope"),
+      );
+      const { result } = renderHook(() => useDeleteProject(), {
+        wrapper: wrapperFor(makeClient()),
+      });
+
+      await act(async () => {
+        await result.current.mutateAsync("p1").catch(() => undefined);
+      });
+
+      expect(removeRecentlyViewed).not.toHaveBeenCalled();
+      expect(removeFavorite).not.toHaveBeenCalled();
+    });
   });
 });

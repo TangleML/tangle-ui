@@ -9,9 +9,10 @@ import { useTrackRecentlyViewedProject } from "./useTrackRecentlyViewedProject";
 vi.mock("@/hooks/useRecentlyViewed", () => ({ addRecentlyViewed: vi.fn() }));
 vi.mock("@/services/projects/useProjects", () => ({ useProject: vi.fn() }));
 
-function projectResolvesTo(name: string | undefined) {
+function projectResolvesTo(name: string | undefined, error?: Error) {
   vi.mocked(useProject).mockReturnValue({
     data: name === undefined ? undefined : { name },
+    error,
   } as unknown as ReturnType<typeof useProject>);
 }
 
@@ -32,6 +33,18 @@ describe("useTrackRecentlyViewedProject", () => {
   /** A half-loaded visit recorded as an empty row is worse than no row. */
   it("records nothing before the name arrives", () => {
     projectResolvesTo(undefined);
+
+    renderHook(() => useTrackRecentlyViewedProject("p-1"));
+
+    expect(addRecentlyViewed).not.toHaveBeenCalled();
+  });
+
+  /**
+   * A deleted project keeps its last-known name in the cache, so following a
+   * dead link would put it straight back on the list it was just removed from.
+   */
+  it("records nothing for a project the backend has stopped serving", () => {
+    projectResolvesTo("Churn model", new Error("Not found"));
 
     renderHook(() => useTrackRecentlyViewedProject("p-1"));
 
