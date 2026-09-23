@@ -48,7 +48,6 @@ describe("useAiProviderSettings", () => {
       apiBase: "https://backend.example.com/api/experimental/ai/v1",
       apiKey: "",
       model: "gpt-6-sol",
-      backendAuth: { token: "" },
     });
     expect(result.current.isManuallyConfigured).toBe(false);
     expect(result.current.isConfigured).toBe(true);
@@ -76,80 +75,6 @@ describe("useAiProviderSettings", () => {
     expect(result.current.isConfigured).toBe(true);
   });
 
-  it.each([AI_PROVIDER_STORAGE_KEY, LEGACY_STORAGE_KEY])(
-    "keeps key-only settings in %s out of backend mode",
-    (key) => {
-      backend.url = "https://backend.example.com";
-      window.localStorage.setItem(
-        key,
-        JSON.stringify({ apiKey: "custom-key", model: "custom-model" }),
-      );
-      const { result } = renderHook(() => useAiProviderSettings());
-      expect(result.current.isManuallyConfigured).toBe(true);
-      expect(result.current.isConfigured).toBe(false);
-      expect(result.current.config).toEqual({
-        apiBase: "",
-        apiKey: "custom-key",
-        model: "custom-model",
-      });
-    },
-  );
-
-  it("derives backend credentials at runtime and follows token changes and clearing", () => {
-    backend.url = "https://backend.example.com";
-    window.localStorage.setItem(
-      "jwtToken",
-      JSON.stringify({ original_token: "first-token" }),
-    );
-    const { result } = renderHook(() => useAiProviderSettings());
-    expect(result.current.config.backendAuth).toEqual({ token: "first-token" });
-    expect(window.localStorage.getItem(AI_PROVIDER_STORAGE_KEY)).toBeNull();
-    act(() => {
-      window.localStorage.setItem(
-        "jwtToken",
-        JSON.stringify({ original_token: "next-token" }),
-      );
-      window.dispatchEvent(new StorageEvent("storage", { key: "jwtToken" }));
-    });
-    expect(result.current.config.backendAuth).toEqual({ token: "next-token" });
-    act(() => {
-      window.localStorage.clear();
-      window.dispatchEvent(new StorageEvent("storage", { key: null }));
-    });
-    expect(result.current.config.backendAuth).toEqual({ token: "" });
-  });
-
-  it("never reads or persists backend auth as manual provider configuration", () => {
-    backend.url = "https://backend.example.com";
-    window.localStorage.setItem(
-      "jwtToken",
-      JSON.stringify({ original_token: "login-token" }),
-    );
-    window.localStorage.setItem(
-      AI_PROVIDER_STORAGE_KEY,
-      JSON.stringify({
-        apiBase: "https://custom.example.com/api/experimental/ai/v1",
-        apiKey: "custom-key",
-        model: "custom-model",
-        backendAuth: { token: "stale-token" },
-      }),
-    );
-    const { result } = renderHook(() => useAiProviderSettings());
-    expect(result.current.config.backendAuth).toBeUndefined();
-    act(() => result.current.updateManualConfig({ model: "new-model" }));
-    expect(
-      JSON.parse(window.localStorage.getItem(AI_PROVIDER_STORAGE_KEY) ?? ""),
-    ).toEqual({
-      apiBase: "https://custom.example.com/api/experimental/ai/v1",
-      apiKey: "custom-key",
-      model: "new-model",
-    });
-    act(() => result.current.clear());
-    expect(result.current.config.apiKey).toBe("");
-    expect(result.current.config.backendAuth).toEqual({ token: "login-token" });
-    expect(window.localStorage.getItem(AI_PROVIDER_STORAGE_KEY)).toBeNull();
-  });
-
   it("stores the Tangle backend model separately from manual settings", () => {
     backend.url = "https://backend.example.com";
     const { result } = renderHook(() => useAiProviderSettings());
@@ -162,7 +87,6 @@ describe("useAiProviderSettings", () => {
       apiBase: "https://backend.example.com/api/experimental/ai/v1",
       apiKey: "",
       model: "gpt-4.1",
-      backendAuth: { token: "" },
     });
     expect(result.current.manualConfig).toEqual({
       apiBase: "",
@@ -330,11 +254,6 @@ describe("useAiProviderSettings", () => {
     expect(result.current.config.apiBase).toBe(
       "https://second.example.com/prefix/api/experimental/ai/v1",
     );
-    expect(window.localStorage.getItem(AI_PROVIDER_STORAGE_KEY)).toBeNull();
-    backend.url = "";
-    rerender();
-    expect(result.current.isConfigured).toBe(false);
-    expect(result.current.config.backendAuth).toBeUndefined();
   });
 
   it("preserves independent backend and manual models across reloads", () => {
@@ -353,7 +272,6 @@ describe("useAiProviderSettings", () => {
       apiBase: "https://backend.example.com/api/experimental/ai/v1",
       apiKey: "",
       model: "gpt-6-sol",
-      backendAuth: { token: "" },
     });
     act(() => result.current.setBackendModel("gpt-6-astra"));
     expect(result.current.config.model).toBe("gpt-6-astra");

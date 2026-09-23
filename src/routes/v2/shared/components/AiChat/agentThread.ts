@@ -3,7 +3,7 @@ import { action, makeObservable, observable, runInAction } from "mobx";
 import type { RecentPipelineRun } from "@/agent/session";
 import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import type { AgentContext } from "@/agent/types";
-import type { AiProviderRuntimeConfig } from "@/types/aiProvider";
+import type { AiProviderConfig } from "@/types/aiProvider";
 import { getErrorMessage } from "@/utils/string";
 
 import { AgentClient } from "./agentClient";
@@ -36,7 +36,7 @@ function isProviderConversationStateError(message: string): boolean {
 
 interface SendMessageOptions {
   bridge: ToolBridgeApi;
-  aiConfig: AiProviderRuntimeConfig;
+  aiConfig: AiProviderConfig;
   recentRuns?: RecentPipelineRun[];
 }
 

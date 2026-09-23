@@ -20,7 +20,7 @@ import type {
   AgentResponse,
   StatusCallback,
 } from "@/agent/types";
-import type { AiProviderRuntimeConfig } from "@/types/aiProvider";
+import type { AiProviderConfig } from "@/types/aiProvider";
 
 interface InitDeps {
   bridge: ToolBridgeApi;
@@ -30,7 +30,7 @@ interface InitDeps {
 interface AskOptions {
   message: string;
   recentRuns?: RecentPipelineRun[];
-  aiConfig: AiProviderRuntimeConfig;
+  aiConfig: AiProviderConfig;
 }
 
 export class AgentClient {

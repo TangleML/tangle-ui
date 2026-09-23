@@ -20,13 +20,10 @@ import { Heading, Paragraph, Text } from "@/components/ui/typography";
 import { getAiModelOptions, getDefaultAiModelId } from "@/config/aiModels";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
-import type { AiProviderRuntimeConfig } from "@/types/aiProvider";
-import { getAiRequestOptions } from "@/utils/aiProxy";
-import { throwIfIncompleteAiResponse } from "@/utils/aiResponse";
+import { isTangleAiProxyBaseUrl } from "@/utils/aiProxy";
 
 export function AgentSettings() {
   const {
-    config: runtimeConfig,
     manualConfig: config,
     updateManualConfig,
     clear,
@@ -43,27 +40,12 @@ export function AgentSettings() {
   const [showKey, setShowKey] = useState(false);
   const [testing, setTesting] = useState(false);
   const testRunIdRef = useRef(0);
-  const testAbortRef = useRef<AbortController | null>(null);
   const modelOptions = getAiModelOptions();
   const defaultModelId = getDefaultAiModelId();
 
   useEffect(() => {
     setModel(config.model);
   }, [config.model]);
-
-  useEffect(() => {
-    setTesting(false);
-    return () => {
-      testRunIdRef.current += 1;
-      testAbortRef.current?.abort();
-    };
-  }, [
-    isManuallyConfigured,
-    runtimeConfig.apiBase,
-    runtimeConfig.apiKey,
-    runtimeConfig.model,
-    runtimeConfig.backendAuth?.token,
-  ]);
 
   const getTrimmedConfig = () => ({
     apiBase: apiBase.trim().replace(/\/+$/, ""),
@@ -87,26 +69,33 @@ export function AgentSettings() {
     return trimmed;
   };
 
-  const testProvider = async (
-    trimmed: AiProviderRuntimeConfig,
-    save: boolean,
-  ) => {
+  const handleSave = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     if (testing) return;
+
+    const trimmed = validateRequiredFields();
+    if (!trimmed) return;
 
     const testRunId = testRunIdRef.current + 1;
     testRunIdRef.current = testRunId;
     const isCurrentTest = () => testRunIdRef.current === testRunId;
-    const abortController = new AbortController();
-    testAbortRef.current = abortController;
 
     setTesting(true);
     try {
       const response = await fetch(`${trimmed.apiBase}/responses`, {
         method: "POST",
-        signal: abortController.signal,
-        ...getAiRequestOptions(trimmed),
+        ...(isTangleAiProxyBaseUrl(trimmed.apiBase)
+          ? { credentials: "include" }
+          : {}),
+        headers: {
+          "content-type": "application/json",
+          ...(trimmed.apiKey
+            ? { authorization: `Bearer ${trimmed.apiKey}` }
+            : {}),
+        },
         body: JSON.stringify({
           ...(trimmed.model ? { model: trimmed.model } : {}),
+          max_output_tokens: 32,
           instructions:
             "You are testing provider compatibility. Return only JSON.",
           input: 'Return the JSON object {"ok": true}.',
@@ -126,15 +115,6 @@ export function AgentSettings() {
           `AI test failed: ${response.status} ${response.statusText}${detail ? ` — ${detail.slice(0, 200)}` : ""}`,
           "error",
         );
-        return;
-      }
-
-      const payload: unknown = await response.json();
-      if (!isCurrentTest()) return;
-      throwIfIncompleteAiResponse(payload);
-
-      if (!save) {
-        notify("The Tangle backend works with the Responses API.", "success");
         return;
       }
 
@@ -161,15 +141,8 @@ export function AgentSettings() {
     }
   };
 
-  const handleSave = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const trimmed = validateRequiredFields();
-    if (trimmed) void testProvider(trimmed, true);
-  };
-
   const handleClear = () => {
     testRunIdRef.current += 1;
-    testAbortRef.current?.abort();
     clear();
     setApiBase("");
     setApiKey("");
@@ -182,7 +155,6 @@ export function AgentSettings() {
 
   const handleManualConfigurationChange = (enabled: boolean) => {
     testRunIdRef.current += 1;
-    testAbortRef.current?.abort();
     setTesting(false);
     setValidationError(null);
     setManuallyConfigured(enabled);
@@ -230,16 +202,6 @@ export function AgentSettings() {
           API key, or model setup is needed.
         </Text>
       </BlockStack>
-
-      {!isManuallyConfigured && (
-        <Button
-          className="self-start"
-          disabled={testing || !isConfigured}
-          onClick={() => void testProvider(runtimeConfig, false)}
-        >
-          {testing ? "Testing…" : "Test backend AI"}
-        </Button>
-      )}
 
       <form onSubmit={handleSave} hidden={!isManuallyConfigured}>
         <BlockStack gap="4">

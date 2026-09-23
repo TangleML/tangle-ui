@@ -5,11 +5,8 @@ import {
 } from "@openai/agents";
 import OpenAI from "openai";
 
-import type {
-  AiProviderConfig,
-  AiProviderRuntimeConfig,
-} from "@/types/aiProvider";
-import { getAiRequestOptions } from "@/utils/aiProxy";
+import type { AiProviderConfig } from "@/types/aiProvider";
+import { isTangleAiProxyBaseUrl } from "@/utils/aiProxy";
 import { BASE_URL } from "@/utils/constants";
 
 const AI_ASSISTANT_EMBEDDING_MODEL = "text-embedding-3-small";
@@ -40,6 +37,15 @@ export function requireSkillsBaseUrl(): string {
   return `${BASE_URL.replace(/\/$/, "")}/agent-skills`;
 }
 
+function stripAuthorizationFetch(
+  input: Parameters<typeof fetch>[0],
+  init?: Parameters<typeof fetch>[1],
+): ReturnType<typeof fetch> {
+  const headers = new Headers(init?.headers);
+  headers.delete("authorization");
+  return fetch(input, { ...init, headers });
+}
+
 /**
  * Read-only seam used by tools (e.g. `searchDocs`) that need the
  * configured `OpenAI` client. `ProxyClient` implements this; tests can
@@ -58,36 +64,28 @@ export class ProxyClient implements OpenAIProvider {
   #client: OpenAI | null = null;
   #lastConfigKey: string | null = null;
 
-  ensureConfigured(config: AiProviderRuntimeConfig): void {
+  ensureConfigured(config: AiProviderConfig): void {
     const baseURL = config.apiBase.trim().replace(/\/+$/, "");
-    const requestOptions = getAiRequestOptions(config);
+    const apiKey = config.apiKey.trim();
     if (!baseURL) {
       throw new Error(
         "AI assistant: missing API base URL. Configure it in Settings → AI Configuration.",
       );
     }
 
-    const configKey = JSON.stringify({ baseURL, ...requestOptions });
+    const configKey = JSON.stringify({ baseURL, apiKey });
     if (this.#lastConfigKey === configKey && this.#client) return;
 
     this.#client = new OpenAI({
-      // The SDK requires a key; the transport replaces its placeholder with
-      // credentials for the explicitly selected provider on every request.
-      apiKey: "proxy-auth-disabled",
+      // The OpenAI SDK requires a credential even when a proxy owns auth. Use a
+      // placeholder and strip the Authorization header when the user left it blank.
+      apiKey: apiKey || "proxy-auth-disabled",
       baseURL,
       dangerouslyAllowBrowser: true,
-      fetch: (input, init) => {
-        const headers = new Headers(init?.headers);
-        headers.delete("authorization");
-        new Headers(requestOptions.headers).forEach((value, name) => {
-          headers.set(name, value);
-        });
-        return fetch(input, {
-          ...init,
-          credentials: requestOptions.credentials,
-          headers,
-        });
-      },
+      ...(apiKey ? {} : { fetch: stripAuthorizationFetch }),
+      ...(isTangleAiProxyBaseUrl(baseURL)
+        ? { fetchOptions: { credentials: "include" } }
+        : {}),
     });
     setDefaultOpenAIClient(this.#client);
     setOpenAIAPI(SIDEKICK_OPENAI_API);

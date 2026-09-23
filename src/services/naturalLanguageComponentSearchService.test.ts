@@ -196,7 +196,7 @@ describe("rerankComponentsByNaturalLanguage", () => {
     const init = call?.[1];
     const body = parseFetchBody(call);
     expect(body.model).toBeUndefined();
-    expect(body).not.toHaveProperty("max_output_tokens");
+    expect(body.max_output_tokens).toBeDefined();
     expect(JSON.stringify(init)).not.toContain("authorization");
   });
 
@@ -212,7 +212,6 @@ describe("rerankComponentsByNaturalLanguage", () => {
         ...VALID_OPTIONS,
         apiBase: "https://backend.example.com/api/experimental/ai/v1",
         apiKey: "",
-        backendAuth: { token: "backend-token" },
       },
     );
 
@@ -221,8 +220,8 @@ describe("rerankComponentsByNaturalLanguage", () => {
       expect.objectContaining({ credentials: "include" }),
     );
     const backendCall = vi.mocked(fetch).mock.calls[0];
-    expect(new Headers(backendCall?.[1]?.headers).get("authorization")).toBe(
-      "Bearer backend-token",
+    expect(new Headers(backendCall?.[1]?.headers).has("authorization")).toBe(
+      false,
     );
 
     vi.mocked(fetch).mockResolvedValue(mockResponsesResponse({ matches: [] }));
@@ -233,7 +232,7 @@ describe("rerankComponentsByNaturalLanguage", () => {
     );
     const manualCall = vi.mocked(fetch).mock.calls[1];
     expect(manualCall?.[1]?.body).toBe(backendCall?.[1]?.body);
-    expect(manualCall?.[1]?.credentials).toBe("omit");
+    expect(manualCall?.[1]?.credentials).toBeUndefined();
     expect(new Headers(manualCall?.[1]?.headers).get("authorization")).toBe(
       "Bearer sk-test",
     );
@@ -256,48 +255,6 @@ describe("rerankComponentsByNaturalLanguage", () => {
     );
     expect(result.matches.map((m) => m.id)).toEqual(["a"]);
   });
-
-  it.each([401, 403, 404, 502])(
-    "surfaces backend status %s without falling back",
-    async (status) => {
-      vi.mocked(fetch).mockResolvedValue(
-        new Response("AI unavailable", { status }),
-      );
-      await expect(
-        rerankComponentsByNaturalLanguage(
-          "train",
-          [{ id: "a", name: "a", description: "" }],
-          {
-            ...VALID_OPTIONS,
-            backendAuth: { token: "login-token" },
-            apiBase: "https://backend.example.com/api/experimental/ai/v1",
-          },
-        ),
-      ).rejects.toThrow(`LLM proxy returned ${status}`);
-      expect(fetch).toHaveBeenCalledTimes(1);
-    },
-  );
-
-  it.each(["", '{"matches":[{"id":"a","score":1,"reason":"partial"}]}'])(
-    "rejects incomplete output: %s",
-    async (output_text) => {
-      vi.mocked(fetch).mockResolvedValue(
-        Response.json({
-          status: "incomplete",
-          incomplete_details: { reason: "max_output_tokens" },
-          output_text,
-        }),
-      );
-      await expect(
-        rerankComponentsByNaturalLanguage(
-          "train",
-          [{ id: "a", name: "a", description: "" }],
-          VALID_OPTIONS,
-        ),
-      ).rejects.toThrow("AI response reached the provider's output limit");
-      expect(fetch).toHaveBeenCalledTimes(1);
-    },
-  );
 
   it("recovers matches from malformed JSON regardless of field order", async () => {
     // `output_text` is not valid JSON, so the service falls back to partial
@@ -385,7 +342,7 @@ describe("rerankComponentsByNaturalLanguage", () => {
     expect(body.instructions).toContain("reranker");
     expect(body.input).toContain("Query: train");
     expect(body.text).toEqual({ format: { type: "json_object" } });
-    expect(body).not.toHaveProperty("max_output_tokens");
+    expect(body.max_output_tokens).toBeDefined();
     expect(body.max_tokens).toBeUndefined();
     expect(body.max_completion_tokens).toBeUndefined();
     // Non-reasoning model: temperature pinned for deterministic ordering.
@@ -408,7 +365,7 @@ describe("rerankComponentsByNaturalLanguage", () => {
     expect(body.instructions).not.toContain("Score EVERY candidate");
   });
 
-  it("scores every candidate without imposing a frontend token cap", async () => {
+  it("scores every candidate and scales the token budget when asked", async () => {
     vi.mocked(global.fetch).mockResolvedValue(
       mockResponsesResponse({ matches: [] }),
     );
@@ -430,7 +387,8 @@ describe("rerankComponentsByNaturalLanguage", () => {
     const body = parseFetchBody(vi.mocked(global.fetch).mock.calls[0]);
     expect(body.instructions).toContain("Score EVERY candidate");
     expect(body.instructions).not.toContain("at most the 20 strongest");
-    expect(body).not.toHaveProperty("max_output_tokens");
+    // Token budget scales past the 1500 default for larger pools.
+    expect(body.max_output_tokens).toBe(4000);
   });
 
   it.each([
@@ -455,7 +413,7 @@ describe("rerankComponentsByNaturalLanguage", () => {
     expect(body.temperature).toBeUndefined();
   });
 
-  it("leaves output limits to the provider when model is blank", async () => {
+  it("still bounds Responses output when model is blank", async () => {
     vi.mocked(global.fetch).mockResolvedValue(
       mockResponsesResponse({ matches: [] }),
     );
@@ -469,7 +427,7 @@ describe("rerankComponentsByNaturalLanguage", () => {
     const call = vi.mocked(global.fetch).mock.calls[0];
     const body = parseFetchBody(call);
     expect(body.model).toBeUndefined();
-    expect(body).not.toHaveProperty("max_output_tokens");
+    expect(body.max_output_tokens).toBeDefined();
     // Blank model: proxy owns selection, so we send no temperature.
     expect(body.temperature).toBeUndefined();
   });
@@ -536,29 +494,5 @@ describe("generateComponentAiDescription", () => {
     await expect(
       generateComponentAiDescription(reference, VALID_OPTIONS),
     ).rejects.toThrow("empty description");
-  });
-
-  it("uses backend auth for descriptions and preserves cancellation", async () => {
-    const controller = new AbortController();
-    vi.mocked(fetch).mockImplementation((_input, init) => {
-      expect(init?.signal).toBe(controller.signal);
-      expect(init?.credentials).toBe("include");
-      expect(new Headers(init?.headers).get("authorization")).toBe(
-        "Bearer login-token",
-      );
-      return new Promise((_resolve, reject) => {
-        controller.signal.addEventListener("abort", () =>
-          reject(controller.signal.reason),
-        );
-      });
-    });
-    const pending = generateComponentAiDescription(reference, {
-      ...VALID_OPTIONS,
-      backendAuth: { token: "login-token" },
-      signal: controller.signal,
-    });
-    controller.abort();
-    await expect(pending).rejects.toMatchObject({ name: "AbortError" });
-    expect(fetch).toHaveBeenCalledTimes(1);
   });
 });

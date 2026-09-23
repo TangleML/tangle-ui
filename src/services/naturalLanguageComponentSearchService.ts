@@ -11,9 +11,7 @@
  * judgment over a small, well-defined list when literal matching is not enough.
  */
 
-import type { AiProviderRuntimeConfig } from "@/types/aiProvider";
-import { getAiRequestOptions } from "@/utils/aiProxy";
-import { throwIfIncompleteAiResponse } from "@/utils/aiResponse";
+import { isTangleAiProxyBaseUrl } from "@/utils/aiProxy";
 import type {
   ComponentReference,
   InputSpec,
@@ -78,8 +76,14 @@ export class NaturalLanguageSearchConfigError extends Error {
   }
 }
 
-interface LlmOptions extends AiProviderRuntimeConfig {
+interface LlmOptions {
   signal?: AbortSignal;
+  // OpenAI-compatible model id. Leave blank when the proxy owns model selection.
+  model: string;
+  // Base URL of an OpenAI-compatible API.
+  apiBase: string;
+  // Bearer token. Leave blank when the proxy owns authentication.
+  apiKey: string;
 }
 
 /**
@@ -268,39 +272,47 @@ function buildRerankUserPrompt(
 
 function validateConfig(options: LlmOptions): {
   base: string;
+  key: string;
   model: string;
 } {
   const base = options.apiBase.trim();
+  const key = options.apiKey.trim();
   const model = options.model.trim();
   if (!base) {
     throw new NaturalLanguageSearchConfigError(
       "Configure your API base URL in Settings → AI Configuration to use AI features.",
     );
   }
-  return { base: base.replace(/\/+$/, ""), model };
+  return { base: base.replace(/\/+$/, ""), key, model };
 }
 
 interface ResponsesCallConfig {
   systemPrompt: string;
   userPrompt: string;
+  maxTokens: number;
 }
 
 async function callLlmResponse(
   options: LlmOptions,
   config: ResponsesCallConfig,
 ): Promise<string> {
-  const { base, model } = validateConfig(options);
+  const { base, key, model } = validateConfig(options);
 
   const response = await fetch(`${base}/responses`, {
     method: "POST",
     signal: options.signal,
-    ...getAiRequestOptions(options),
+    ...(isTangleAiProxyBaseUrl(base) ? { credentials: "include" } : {}),
+    headers: {
+      "content-type": "application/json",
+      ...(key ? { authorization: `Bearer ${key}` } : {}),
+    },
     body: JSON.stringify({
       ...(model ? { model } : {}),
       // Deterministic ordering for non-reasoning models; omitted when the proxy
       // owns model selection (blank model) or for reasoning models that reject
       // an explicit temperature.
       ...(model && !isReasoningModel(model) ? { temperature: 0 } : {}),
+      max_output_tokens: config.maxTokens,
       instructions: config.systemPrompt,
       input: `Return JSON.\n\n${config.userPrompt}`,
       text: { format: { type: "json_object" } },
@@ -320,7 +332,6 @@ async function callLlmResponse(
   } catch {
     throw new Error("LLM proxy returned a non-JSON response");
   }
-  throwIfIncompleteAiResponse(payload);
   const rawContent = readResponsesContent(payload);
   if (!rawContent) {
     throw new Error("LLM proxy returned an empty response");
@@ -343,9 +354,17 @@ export async function rerankComponentsByNaturalLanguage(
   if (trimmed.length === 0) return { matches: [] };
   if (candidates.length === 0) return { matches: [] };
 
+  // Output sizing: each match is roughly {digest id + short reason + JSON
+  // structure} ≈ 90 tokens. The default (strongest-20) fits in ~1500; when
+  // scoring every candidate we scale to the candidate count so the response is
+  // not truncated for larger pools.
+  const maxTokens = scoreAllCandidates
+    ? Math.max(1500, candidates.length * 100)
+    : 1500;
   const rawContent = await callLlmResponse(options, {
     systemPrompt: buildRerankSystemPrompt(scoreAllCandidates),
     userPrompt: buildRerankUserPrompt(trimmed, candidates),
+    maxTokens,
   });
 
   let matchesValue: RerankedMatch[] = [];
@@ -469,6 +488,7 @@ export async function generateComponentAiDescription(
   const rawContent = await callLlmResponse(options, {
     systemPrompt: buildDescriptionSystemPrompt(),
     userPrompt: buildDescriptionUserPrompt(input),
+    maxTokens: 900,
   });
 
   const description = readDescription(rawContent);

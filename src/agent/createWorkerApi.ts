@@ -7,7 +7,7 @@
  * dispatcher (and its sub-agents) are immediately aware of where they run
  * and which run they inspect.
  */
-import type { AiProviderRuntimeConfig } from "@/types/aiProvider";
+import type { AiProviderConfig } from "@/types/aiProvider";
 
 import type { TangleDispatcher } from "./agents/dispatcherRuntime";
 import { ProxyClient } from "./config";
@@ -20,7 +20,7 @@ interface AskParams {
   message: string;
   threadId?: string;
   recentRuns?: RecentPipelineRun[];
-  aiConfig: AiProviderRuntimeConfig;
+  aiConfig: AiProviderConfig;
 }
 
 export interface AgentWorkerApi {
