@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { useFavorites } from "@/hooks/useFavorites";
+import { removeRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
 import { MINUTES } from "@/utils/constants";
@@ -109,6 +111,7 @@ export function useUpdateProject() {
 export function useDeleteProject() {
   const queryClient = useQueryClient();
   const notify = useToastNotification();
+  const { removeFavorite } = useFavorites();
 
   return useMutation({
     mutationFn: (id: string) => deleteProject(id),
@@ -116,9 +119,15 @@ export function useDeleteProject() {
       void queryClient.invalidateQueries({
         queryKey: ProjectsQueryKeys.All(),
       });
-      void queryClient.invalidateQueries({
-        queryKey: ProjectsQueryKeys.Id(id),
-      });
+      // Removed rather than invalidated: an invalidated query keeps its data
+      // and serves it to the next page that mounts it, so the project's own
+      // page would come up fully furnished from the cache of a project that no
+      // longer exists, and only then refetch its way to an error.
+      queryClient.removeQueries({ queryKey: ProjectsQueryKeys.Id(id) });
+
+      // The link outlives the project everywhere it was recorded.
+      removeRecentlyViewed("project", id);
+      void removeFavorite("project", id);
     },
     onError: () => {
       notify("Failed to delete project", "error");

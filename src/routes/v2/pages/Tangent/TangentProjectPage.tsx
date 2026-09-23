@@ -1,16 +1,18 @@
 import "@/routes/v2/pages/Tangent/workarea/registerKinds";
 
 import { TangentProvider } from "@tangent/embed-react";
-import { useParams } from "@tanstack/react-router";
+import { Link, useParams } from "@tanstack/react-router";
 
 import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { useTrackRecentlyViewedProject } from "@/hooks/useTrackRecentlyViewedProject";
 import { DialogProvider } from "@/providers/DialogProvider/DialogProvider";
 import { useTheme } from "@/providers/ThemeProvider";
+import { APP_ROUTES } from "@/routes/appRoutes";
 import { getTangentSocketConfig } from "@/routes/v2/pages/Tangent/services/socketConfig";
 import { chatAnchorProtocols } from "@/routes/v2/shared/components/AiChat/components/chatAnchorProtocols";
 import { SharedStoreProvider } from "@/routes/v2/shared/store/SharedStoreContext";
+import { useProject } from "@/services/projects/useProjects";
 import { TOP_NAV_HEIGHT } from "@/utils/constants";
 
 import { TangentProjectWorkspace } from "./components/TangentProjectWorkspace";
@@ -21,6 +23,22 @@ import {
   tangentChannelUrl,
   useTangentRuntime,
 } from "./hooks/useTangentRuntime";
+
+function ProjectGone() {
+  return (
+    <BlockStack fill align="center" gap="2" className="p-10">
+      <Text size="sm" weight="semibold">
+        Project not found
+      </Text>
+      <Text size="sm" tone="subdued">
+        It has been deleted, or you do not have access to it.
+      </Text>
+      <Link to={APP_ROUTES.PROJECTS} className="text-sm underline">
+        Back to projects
+      </Link>
+    </BlockStack>
+  );
+}
 
 export function TangentProjectPage() {
   const params = useParams({ strict: false });
@@ -44,10 +62,17 @@ export function TangentProjectPage() {
 
 function TangentProjectPageContent({ projectId }: { projectId: string }) {
   const { resolvedTheme } = useTheme();
+  const { error: projectError } = useProject(projectId);
   const { baseUrl, isLoading } = useTangentBaseUrl(projectId);
   useTrackRecentlyViewedProject(projectId);
   const channelUrl = tangentChannelUrl(baseUrl);
   const runtime = useTangentRuntime(channelUrl);
+
+  // Before the loading branch: a project that is gone never resolves a
+  // workspace to take a Tangent url from, so waiting on one waits forever.
+  if (projectError) {
+    return <ProjectGone />;
+  }
 
   if (isLoading || runtime === "loading") {
     return (
