@@ -24,6 +24,8 @@ import {
 import { fetchWithErrorHandling } from "@/utils/fetchWithErrorHandling";
 import { componentSpecToYaml } from "@/utils/yaml";
 
+import { requestFailureMessage } from "./requestFailureMessage";
+
 export const createPipelineRun = async (
   payload: BodyCreateApiPipelineRunsPost,
   backendUrl: string,
@@ -43,7 +45,9 @@ export const createPipelineRun = async (
   });
 
   if (!response.ok) {
-    throw new Error(await createPipelineRunErrorMessage(response));
+    throw new Error(
+      await requestFailureMessage(response, "Failed to create pipeline run"),
+    );
   }
 
   return response.json();
@@ -244,24 +248,4 @@ export const updateRunAnnotation = async (
   await fetchWithErrorHandling(url.toString(), {
     method: "PUT",
   });
-};
-
-const createPipelineRunErrorMessage = async (
-  response: Response,
-): Promise<string> => {
-  const fallback = `Failed to create pipeline run (HTTP ${response.status})`;
-
-  if (!response.headers.get("content-type")?.includes("application/json")) {
-    return fallback;
-  }
-
-  try {
-    const body: unknown = await response.json();
-    const { detail, message } =
-      (body as { detail?: unknown; message?: unknown } | null) ?? {};
-    const reason = detail ?? message;
-    return typeof reason === "string" && reason.length > 0 ? reason : fallback;
-  } catch {
-    return fallback;
-  }
 };

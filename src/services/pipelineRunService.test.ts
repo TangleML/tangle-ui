@@ -66,17 +66,18 @@ describe("createPipelineRun", () => {
     );
   });
 
-  it("names the status when the body carries no reason", async () => {
+  /** An unreadable `detail` is still the server's own words: hand them over. */
+  it("passes on a body it cannot read as a reason", async () => {
     mockFetch.mockResolvedValue(
       jsonResponse(500, { detail: { loc: ["body"] } }),
     );
 
     await expect(createPipelineRun(PAYLOAD, BACKEND_URL)).rejects.toThrow(
-      "Failed to create pipeline run (HTTP 500)",
+      'Failed to create pipeline run (500): {"detail":{"loc":["body"]}}',
     );
   });
 
-  it("names the status when the body is not JSON", async () => {
+  it("keeps a body that is not JSON", async () => {
     mockFetch.mockResolvedValue(
       new Response("<html>502 Bad Gateway</html>", {
         status: 502,
@@ -85,7 +86,7 @@ describe("createPipelineRun", () => {
     );
 
     await expect(createPipelineRun(PAYLOAD, BACKEND_URL)).rejects.toThrow(
-      "Failed to create pipeline run (HTTP 502)",
+      "<html>502 Bad Gateway</html>",
     );
   });
 });
