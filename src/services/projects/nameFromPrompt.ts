@@ -66,12 +66,16 @@ const JOINERS = new Set([
 ]);
 
 const MIN_TRIMMED_LENGTH = 15;
+const TAIL_STARTS_AT = 0.6;
 
 /**
  * Cutting at a word boundary still leaves a sentence that stops mid-thought —
  * "Build a churn model for Q3 using the new". Dropping the last phrase along
- * with the word that introduced it gives a title rather than a fragment, but
- * only while enough of the ask survives to still say what it was.
+ * with the word that introduced it gives a title rather than a fragment.
+ *
+ * Only a phrase in the tail, though. "Build a pipeline that scrapes wikipedia"
+ * joins at its fifth character-fifth, and cutting there leaves "Build a
+ * pipeline" — every word that said what the pipeline was for, gone.
  */
 function withoutDanglingPhrase(text: string): string {
   const words = text.split(" ");
@@ -81,7 +85,8 @@ function withoutDanglingPhrase(text: string): string {
   if (joinerAt <= 0) return text;
 
   const trimmed = words.slice(0, joinerAt).join(" ");
-  return trimmed.length >= MIN_TRIMMED_LENGTH ? trimmed : text;
+  const isTail = trimmed.length >= text.length * TAIL_STARTS_AT;
+  return isTail && trimmed.length >= MIN_TRIMMED_LENGTH ? trimmed : text;
 }
 
 function clamp(text: string): string {

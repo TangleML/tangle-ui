@@ -49,6 +49,15 @@ describe("nameFromPrompt", () => {
     ).toBe("Build a churn model for Q3");
   });
 
+  /** Cutting at "that" left "Build a pipeline" — the whole ask thrown away. */
+  it("keeps a phrase that starts too early to be a tail", () => {
+    expect(
+      nameFromPrompt(
+        "build a pipeline that scrapes wikipedia and converts articles into a pokemon",
+      ),
+    ).toBe("Build a pipeline that scrapes wikipedia");
+  });
+
   it("keeps the fragment when dropping the phrase would say nothing", () => {
     expect(
       nameFromPrompt("Retrain with the enormous new feature set we discussed"),
