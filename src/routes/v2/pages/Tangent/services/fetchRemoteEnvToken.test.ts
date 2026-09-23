@@ -25,9 +25,6 @@ describe("fetchRemoteEnvToken", () => {
   });
 
   it("returns the minted token on a well-formed response", async () => {
-    // The repo's `.env` sets the dev fallback token; clear it so the network
-    // path runs.
-    vi.stubEnv("VITE_TANGENT_REMOTE_ENV_TOKEN", "");
     mockFetch({
       ok: true,
       json: async () => ({
@@ -50,7 +47,6 @@ describe("fetchRemoteEnvToken", () => {
   });
 
   it("throws on a malformed response body", async () => {
-    vi.stubEnv("VITE_TANGENT_REMOTE_ENV_TOKEN", "");
     mockFetch({ ok: true, json: async () => ({ token: "only-token" }) });
 
     await expect(
@@ -59,7 +55,6 @@ describe("fetchRemoteEnvToken", () => {
   });
 
   it("throws on a non-ok response", async () => {
-    vi.stubEnv("VITE_TANGENT_REMOTE_ENV_TOKEN", "");
     mockFetch({ ok: false, status: 401, statusText: "Unauthorized" });
 
     await expect(
@@ -67,17 +62,52 @@ describe("fetchRemoteEnvToken", () => {
     ).rejects.toThrow(/401/);
   });
 
-  it("uses the dev fallback token without calling the network", async () => {
+  it.each([404, 501])(
+    "falls back to the dev token when the endpoint reports %i",
+    async (status) => {
+      vi.stubEnv("VITE_TANGENT_REMOTE_ENV_TOKEN", "dev-secret");
+      const fetchMock = mockFetch({ ok: false, status });
+
+      const result = await fetchRemoteEnvToken({
+        baseUrl: "http://tangent",
+        sessionId: "s1",
+      });
+
+      expect(fetchMock).toHaveBeenCalled();
+      expect(result.token).toBe("dev-secret");
+      expect(result.environmentId).toMatch(/^tangle-ui-/);
+    },
+  );
+
+  it("pins the caller's environmentId when falling back", async () => {
     vi.stubEnv("VITE_TANGENT_REMOTE_ENV_TOKEN", "dev-secret");
-    const fetchMock = mockFetch({ ok: true });
+    mockFetch({ ok: false, status: 404 });
 
     const result = await fetchRemoteEnvToken({
       baseUrl: "http://tangent",
       sessionId: "s1",
+      environmentId: "pinned-env",
     });
 
-    expect(fetchMock).not.toHaveBeenCalled();
-    expect(result.token).toBe("dev-secret");
-    expect(result.environmentId).toMatch(/^tangle-ui-/);
+    expect(result.environmentId).toBe("pinned-env");
+  });
+
+  it("does not fall back when the endpoint rejects the caller", async () => {
+    vi.stubEnv("VITE_TANGENT_REMOTE_ENV_TOKEN", "dev-secret");
+    mockFetch({ ok: false, status: 403, statusText: "Forbidden" });
+
+    await expect(
+      fetchRemoteEnvToken({ baseUrl: "http://tangent", sessionId: "s1" }),
+    ).rejects.toThrow(/403/);
+  });
+
+  it("does not read the fallback outside a dev build", async () => {
+    vi.stubEnv("DEV", false);
+    vi.stubEnv("VITE_TANGENT_REMOTE_ENV_TOKEN", "dev-secret");
+    mockFetch({ ok: false, status: 404, statusText: "Not Found" });
+
+    await expect(
+      fetchRemoteEnvToken({ baseUrl: "http://tangent", sessionId: "s1" }),
+    ).rejects.toThrow(/404/);
   });
 });
