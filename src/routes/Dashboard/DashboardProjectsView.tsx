@@ -1,4 +1,3 @@
-import { PinnedProjectsSection } from "@/components/Home/ProjectsSection/PinnedProjectsSection";
 import { ProjectsSection } from "@/components/Home/ProjectsSection/ProjectsSection";
 import { StartSessionPrompt } from "@/components/Home/ProjectsSection/StartSessionPrompt";
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -24,10 +23,8 @@ export function DashboardProjectsView() {
         <StartSessionPrompt />
       </BlockStack>
 
-      <PinnedProjectsSection />
-
       <BlockStack gap="4">
-        <Heading level={2}>My Projects</Heading>
+        <Heading level={2}>Projects</Heading>
         <ProjectsSection />
       </BlockStack>
     </BlockStack>

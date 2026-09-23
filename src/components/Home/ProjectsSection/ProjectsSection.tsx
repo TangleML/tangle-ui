@@ -12,7 +12,7 @@ import { CreateProjectDialog } from "./CreateProjectDialog";
 import { NewProjectCard } from "./NewProjectCard";
 import { ProjectCard } from "./ProjectCard";
 import { useMyProjects } from "./useMyProjects";
-import { usePinnedProjectIds } from "./usePinnedProjects";
+import { usePinnedProjects } from "./usePinnedProjects";
 
 const LoadingProjects = () => (
   <InlineStack gap="2" blockAlign="center">
@@ -57,12 +57,16 @@ function ProjectsGrid() {
     loadMore,
   } = useMyProjects();
   const { data: workspaces } = useWorkspaces();
-  const pinnedIds = usePinnedProjectIds();
+  const { projects: pinned } = usePinnedProjects();
 
-  // Pinned projects are shown above this list rather than in it, so a pinned
-  // project of the caller's own is moved rather than repeated.
-  const projects = allProjects.filter((project) => !pinnedIds.has(project.id));
-  const hoisted = allProjects.length - projects.length;
+  // Pinned projects lead the grid, and are dropped from the tail so a pinned
+  // project of the caller's own moves rather than appearing twice. A pinned
+  // project someone else made was never in this list to be dropped from.
+  const pinnedIds = new Set(pinned.map((project) => project.id));
+  const rest = allProjects.filter((project) => !pinnedIds.has(project.id));
+  const shown = pinned.length + rest.length;
+  const available =
+    totalCount - (allProjects.length - rest.length) + pinned.length;
 
   if (isPending) {
     return <LoadingProjects />;
@@ -91,13 +95,16 @@ function ProjectsGrid() {
         </Alert>
       )}
       <div className="grid w-full grid-cols-[repeat(auto-fill,minmax(13rem,15rem))] gap-4">
+        {pinned.map((project) => (
+          <ProjectCard key={project.id} project={project} />
+        ))}
         {targetWorkspaceId && (
           <CreateProjectDialog
             workspaceId={targetWorkspaceId}
             trigger={<NewProjectCard />}
           />
         )}
-        {projects.map((project) => (
+        {rest.map((project) => (
           <ProjectCard key={project.id} project={project} />
         ))}
       </div>
@@ -107,7 +114,7 @@ function ProjectsGrid() {
             {isLoadingMore ? "Loading..." : "Load more projects"}
           </Button>
           <Text size="sm" tone="subdued">
-            {`Showing ${projects.length} of ${totalCount - hoisted}.`}
+            {`Showing ${shown} of ${available}.`}
           </Text>
         </InlineStack>
       )}

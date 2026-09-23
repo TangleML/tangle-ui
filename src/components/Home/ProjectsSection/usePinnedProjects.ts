@@ -13,18 +13,6 @@ interface PinnedProjects {
 }
 
 /**
- * Just the ids, for the list that has to leave them out. Reading the projects
- * themselves would make that list wait on a fetch it does not need.
- */
-export function usePinnedProjectIds(): ReadonlySet<string> {
-  const { favorites } = useFavorites();
-
-  return new Set(
-    favorites.filter((item) => item.type === "project").map((item) => item.id),
-  );
-}
-
-/**
  * The projects this browser has pinned, in the order they were pinned.
  *
  * Pinning is the only way to keep hold of a project someone shared: the
