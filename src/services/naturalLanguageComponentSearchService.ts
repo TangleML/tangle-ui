@@ -14,6 +14,7 @@
 import { getAiReasoningConfig } from "@/config/aiModels";
 import type { AiProviderConfig } from "@/types/aiProvider";
 import { isTangleAiProxyBaseUrl } from "@/utils/aiProxy";
+import { throwIfIncompleteAiResponse } from "@/utils/aiResponse";
 import type {
   ComponentReference,
   InputSpec,
@@ -285,7 +286,6 @@ function validateConfig(options: LlmOptions): {
 interface ResponsesCallConfig {
   systemPrompt: string;
   userPrompt: string;
-  maxTokens: number;
 }
 
 async function callLlmResponse(
@@ -309,7 +309,6 @@ async function callLlmResponse(
       // owns model selection (blank model) or for reasoning models that reject
       // an explicit temperature.
       ...(model && !isReasoningModel(model) ? { temperature: 0 } : {}),
-      max_output_tokens: config.maxTokens,
       instructions: config.systemPrompt,
       input: `Return JSON.\n\n${config.userPrompt}`,
       text: { format: { type: "json_object" } },
@@ -329,6 +328,7 @@ async function callLlmResponse(
   } catch {
     throw new Error("LLM proxy returned a non-JSON response");
   }
+  throwIfIncompleteAiResponse(payload);
   const rawContent = readResponsesContent(payload);
   if (!rawContent) {
     throw new Error("LLM proxy returned an empty response");
@@ -351,17 +351,9 @@ export async function rerankComponentsByNaturalLanguage(
   if (trimmed.length === 0) return { matches: [] };
   if (candidates.length === 0) return { matches: [] };
 
-  // Output sizing: each match is roughly {digest id + short reason + JSON
-  // structure} ≈ 90 tokens. The default (strongest-20) fits in ~1500; when
-  // scoring every candidate we scale to the candidate count so the response is
-  // not truncated for larger pools.
-  const maxTokens = scoreAllCandidates
-    ? Math.max(1500, candidates.length * 100)
-    : 1500;
   const rawContent = await callLlmResponse(options, {
     systemPrompt: buildRerankSystemPrompt(scoreAllCandidates),
     userPrompt: buildRerankUserPrompt(trimmed, candidates),
-    maxTokens,
   });
 
   let matchesValue: RerankedMatch[] = [];
@@ -485,7 +477,6 @@ export async function generateComponentAiDescription(
   const rawContent = await callLlmResponse(options, {
     systemPrompt: buildDescriptionSystemPrompt(),
     userPrompt: buildDescriptionUserPrompt(input),
-    maxTokens: 900,
   });
 
   const description = readDescription(rawContent);

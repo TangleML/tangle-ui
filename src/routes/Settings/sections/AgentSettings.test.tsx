@@ -103,9 +103,11 @@ describe("AgentSettings", () => {
     }
     expect(JSON.parse(String(init.body))).toMatchObject({
       model: "gpt-4o-mini",
-      max_output_tokens: 32,
       text: { format: { type: "json_object" } },
     });
+    expect(JSON.parse(String(init.body))).not.toHaveProperty(
+      "max_output_tokens",
+    );
     expect(JSON.stringify(init)).toContain("Bearer sk-test");
   });
 
@@ -197,6 +199,9 @@ describe("AgentSettings", () => {
     expect(
       JSON.parse(String(mockFetch.mock.calls[0]?.[1]?.body)),
     ).toMatchObject({ model: "gpt-6-luna", reasoning: { effort: "max" } });
+    expect(
+      JSON.parse(String(mockFetch.mock.calls[0]?.[1]?.body)),
+    ).not.toHaveProperty("max_output_tokens");
     fireEvent.click(screen.getByRole("button", { name: "Select a model" }));
     fireEvent.click(
       screen.getByRole("button", {
@@ -295,6 +300,53 @@ describe("AgentSettings", () => {
       model: "claude-opus",
     });
   });
+
+  it.each([
+    {
+      reason: "max_output_tokens",
+      message:
+        "AI response reached the provider's output limit before finishing. Check the provider's token limit and try again.",
+    },
+    {
+      reason: "content_filter",
+      message: "AI provider returned an incomplete response. Please try again.",
+    },
+  ])(
+    "does not save an incomplete $reason response as a successful test",
+    async ({ reason, message }) => {
+      const savedConfig = {
+        apiBase: "https://saved.example.com/v1",
+        apiKey: "saved-key",
+        model: "gpt-6-sol",
+        reasoningEffort: "max",
+      };
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(savedConfig));
+      mockFetch.mockResolvedValue(
+        Response.json({
+          status: "incomplete",
+          incomplete_details: { reason },
+          output_text: '{"ok": true}',
+        }),
+      );
+      render(<AgentSettings />);
+      fireEvent.change(screen.getByLabelText("API base URL"), {
+        target: { value: "https://new.example.com/v1" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Save and test AI" }));
+
+      await waitFor(() => {
+        expect(mockNotify).toHaveBeenCalledWith(
+          `AI test failed: ${message}`,
+          "error",
+        );
+      });
+      expect(
+        JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? ""),
+      ).toEqual(savedConfig);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(mockNotify).not.toHaveBeenCalledWith(expect.anything(), "success");
+    },
+  );
 
   it("saves a manual proxy without an API key", async () => {
     mockFetch.mockResolvedValue(new Response(JSON.stringify({ ok: true })));

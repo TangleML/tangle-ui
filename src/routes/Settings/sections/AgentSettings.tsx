@@ -17,6 +17,7 @@ import {
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
 import { isTangleAiProxyBaseUrl } from "@/utils/aiProxy";
+import { throwIfIncompleteAiResponse } from "@/utils/aiResponse";
 
 export function AgentSettings() {
   const {
@@ -103,7 +104,6 @@ export function AgentSettings() {
             trimmed.model,
             trimmed.reasoningEffort,
           ),
-          max_output_tokens: 32,
           instructions:
             "You are testing provider compatibility. Return only JSON.",
           input: 'Return the JSON object {"ok": true}.',
@@ -125,6 +125,10 @@ export function AgentSettings() {
         );
         return;
       }
+
+      const payload: unknown = await response.json();
+      if (!isCurrentTest()) return;
+      throwIfIncompleteAiResponse(payload);
 
       setApiBase(trimmed.apiBase);
       setApiKey(trimmed.apiKey);
