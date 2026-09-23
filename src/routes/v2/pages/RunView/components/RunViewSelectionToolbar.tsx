@@ -5,7 +5,9 @@ import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
+import useToastNotification from "@/hooks/useToastNotification";
 import type { ComponentSpec } from "@/models/componentSpec";
+import { CLIPBOARD_COPY_FAILED_MESSAGE } from "@/routes/v2/shared/clipboard/clipboardMessages";
 import { copyNodesToClipboard } from "@/routes/v2/shared/clipboard/copyNodesToClipboard";
 import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
@@ -16,6 +18,7 @@ export const RunViewSelectionToolbar = observer(
     const registry = useNodeRegistry();
     const { editor } = useSharedStores();
     const { multiSelection } = editor;
+    const notify = useToastNotification();
 
     if (multiSelection.length <= 1) return null;
 
@@ -23,7 +26,9 @@ export const RunViewSelectionToolbar = observer(
 
     const handleCopy = () => {
       if (!spec) return;
-      copyNodesToClipboard(registry, spec, multiSelection);
+      copyNodesToClipboard(registry, spec, multiSelection).catch(() =>
+        notify(CLIPBOARD_COPY_FAILED_MESSAGE, "error"),
+      );
     };
 
     return (
