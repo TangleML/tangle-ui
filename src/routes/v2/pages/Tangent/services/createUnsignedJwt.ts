@@ -1,5 +1,5 @@
 function base64UrlEncode(value: string): string {
-  return btoa(unescape(encodeURIComponent(value)))
+  return btoa(String.fromCharCode(...new TextEncoder().encode(value)))
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
     .replace(/=+$/, "");
