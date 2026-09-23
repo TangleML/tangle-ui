@@ -1,5 +1,0 @@
-# Vite inlines every VITE_* value into the bundle at build time, so a local
-# .env reaching the build context would be published in the JS it produces.
-.env
-.env.*
-!.env.example
