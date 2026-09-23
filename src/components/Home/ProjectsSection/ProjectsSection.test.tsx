@@ -285,7 +285,7 @@ describe("ProjectsSection", () => {
     expect(await screen.findAllByText("Churn model")).toHaveLength(1);
   });
 
-  it("puts a pinned project ahead of everything else", async () => {
+  it("puts a pinned project ahead of the rest, behind the new project card", async () => {
     const fraud = { ...project, id: "project-2", name: "Fraud model" };
     mockProjects({ projects: [fraud, project], totalCount: 2 });
     mockPinned(project);
@@ -295,7 +295,11 @@ describe("ProjectsSection", () => {
     const tiles = screen.getAllByRole("button", {
       name: /New project|Project actions/,
     });
-    expect(tiles[0]).toHaveAccessibleName("Project actions: Churn model");
+    expect(tiles.map((tile) => tile.getAttribute("aria-label"))).toEqual([
+      null,
+      "Project actions: Churn model",
+      "Project actions: Fraud model",
+    ]);
   });
 
   /** A project someone else shared is pinned but was never in the user's own list. */
