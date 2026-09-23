@@ -31,6 +31,7 @@ import type { AgentContext, StatusCallback } from "./types";
 
 interface RemoteSpawnAgentParams {
   agentId: string;
+  bridge?: ToolBridgeApi;
   tools: string[];
   systemPrompt: string;
   model?: string;
@@ -64,6 +65,7 @@ export interface RemoteEnvWorkerApi {
 interface HostedAgent {
   spec: RemoteAgentSpec;
   memory: MemorySession;
+  bridge?: ToolBridgeApi;
 }
 
 export function createRemoteEnvWorkerApi(): RemoteEnvWorkerApi {
@@ -98,7 +100,14 @@ export function createRemoteEnvWorkerApi(): RemoteEnvWorkerApi {
       return "pong";
     },
 
-    spawnAgent({ agentId, tools, systemPrompt, model, thinkingDepth }) {
+    spawnAgent({
+      agentId,
+      bridge: agentBridge,
+      tools,
+      systemPrompt,
+      model,
+      thinkingDepth,
+    }) {
       abortControllers.get(agentId)?.abort();
       abortControllers.delete(agentId);
       agents.set(agentId, {
@@ -109,6 +118,7 @@ export function createRemoteEnvWorkerApi(): RemoteEnvWorkerApi {
           ...(thinkingDepth ? { thinkingDepth } : {}),
         },
         memory: new MemorySession({ sessionId: agentId }),
+        ...(agentBridge ? { bridge: agentBridge } : {}),
       });
     },
 
@@ -140,7 +150,7 @@ export function createRemoteEnvWorkerApi(): RemoteEnvWorkerApi {
         threadId: agentId,
         emitStatus: onStatus,
         proxyClient,
-        bridge,
+        bridge: hosted.bridge ?? bridge,
         skillsLoader,
         aiConfig,
         recentRuns,

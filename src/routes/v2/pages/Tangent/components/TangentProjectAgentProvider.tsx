@@ -26,7 +26,10 @@ import { useBackend } from "@/providers/BackendProvider";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { useTangentBaseUrl } from "@/routes/v2/pages/Tangent/hooks/useTangentBaseUrl";
 import { connectRemoteEnvWithRefresh } from "@/routes/v2/pages/Tangent/services/connectRemoteEnvWithRefresh";
-import { createActiveTabRoutingBridge } from "@/routes/v2/pages/Tangent/services/createActiveTabRoutingBridge";
+import {
+  createActiveTabRoutingBridge,
+  createAgentTargetRouter,
+} from "@/routes/v2/pages/Tangent/services/createActiveTabRoutingBridge";
 import {
   createWorkareaRemoteTools,
   type RunInspectDeps,
@@ -152,6 +155,9 @@ export function TangentProjectAgentProvider({
   const [routingBridge] = useState(() =>
     createActiveTabRoutingBridge(() => getActiveTabBridgeRef.current()),
   );
+  const [agentTargets] = useState(() =>
+    createAgentTargetRouter(() => getActiveTabBridgeRef.current()),
+  );
 
   useEffect(() => {
     if (!sessionId || !baseUrl) return;
@@ -172,6 +178,7 @@ export function TangentProjectAgentProvider({
       onError,
       tools,
       sessionId: activeSessionId,
+      agentTargets,
     });
 
     const stop = connectRemoteEnvWithRefresh({
@@ -188,7 +195,7 @@ export function TangentProjectAgentProvider({
       worker.terminate();
       workerRef.current = null;
     };
-  }, [sessionId, tools, routingBridge, baseUrl]);
+  }, [sessionId, tools, routingBridge, agentTargets, baseUrl]);
 
   return <>{children}</>;
 }

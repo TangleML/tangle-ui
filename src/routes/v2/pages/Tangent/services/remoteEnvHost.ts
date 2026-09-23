@@ -31,6 +31,7 @@ import type { Remote } from "comlink";
 import { proxy } from "comlink";
 
 import type { RemoteEnvWorkerApi } from "@/agent/createRemoteEnvWorkerApi";
+import type { AgentTargetRouter } from "@/routes/v2/pages/Tangent/services/createActiveTabRoutingBridge";
 import { getTangentSocketConfig } from "@/routes/v2/pages/Tangent/services/socketConfig";
 
 const THINKING_STATUS_LABELS = new Set([
@@ -56,6 +57,7 @@ interface RemoteEnvHostBaseOptions {
   url: string;
   worker: Remote<RemoteEnvWorkerApi>;
   onError?: (message: string) => void;
+  agentTargets?: AgentTargetRouter;
 }
 
 interface RemoteEnvToolHostOptions {
@@ -85,7 +87,7 @@ interface AgentLifecycle {
 export function createRemoteEnvHost(
   options: RemoteEnvHostOptions,
 ): RemoteEnvHost {
-  const { url, worker, onError, tools, sessionId } = options;
+  const { url, worker, onError, tools, sessionId, agentTargets } = options;
 
   let client: RemoteEnvironmentClient | null = null;
   const agentLifecycles = new Map<string, AgentLifecycle>();
@@ -141,6 +143,7 @@ export function createRemoteEnvHost(
       const onStatus = proxy((status: { text: string }) =>
         emitActivity(command, lifecycle, status.text),
       );
+      agentTargets?.pinTurn(agentId);
       const { answer } = await worker.runTurn(
         { agentId, message: text },
         onStatus,
@@ -206,6 +209,9 @@ export function createRemoteEnvHost(
           if (!isCurrent(command.agentId, lifecycle)) return;
           await worker.spawnAgent({
             agentId: command.agentId,
+            ...(agentTargets
+              ? { bridge: proxy(agentTargets.bridgeFor(command.agentId)) }
+              : {}),
             tools: command.tools,
             systemPrompt: command.systemPrompt,
             ...(command.model ? { model: command.model } : {}),
@@ -245,6 +251,7 @@ export function createRemoteEnvHost(
         lifecycle.cancelled = true;
         agentLifecycles.delete(command.agentId);
       }
+      agentTargets?.forget(command.agentId);
       try {
         await worker.killAgent(command.agentId);
         client?.subagentUpdate(
