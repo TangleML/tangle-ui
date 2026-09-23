@@ -6,3 +6,7 @@ export interface AiProviderConfig {
   // Leave blank when the provider owns model selection.
   model: string;
 }
+
+export interface AiProviderRuntimeConfig extends AiProviderConfig {
+  backendAuth?: { token: string };
+}

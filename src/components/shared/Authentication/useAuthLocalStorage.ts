@@ -22,7 +22,7 @@ export function useAuthLocalStorage() {
      */
     subscribe: (listener: () => void) => {
       function handleStorageChange(event: StorageEvent) {
-        if (event.key === "jwtToken") {
+        if (event.key === "jwtToken" || event.key === null) {
           listener();
         }
       }

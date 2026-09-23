@@ -6,6 +6,7 @@ import { listApiPublishedComponentsGet } from "@/api/sdk.gen";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import { getComponentQueryKey } from "@/hooks/useHydrateComponentReference";
 import { useNaturalLanguageComponentRerank } from "@/hooks/useNaturalLanguageComponentSearch";
+import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
 import {
   fetchUserComponents,
@@ -61,6 +62,7 @@ export function useComponentSearchV2State(
   const queryClient = useQueryClient();
   const { backendUrl, configured, available } = useBackend();
   const { config: aiConfig } = useAiProviderSettings();
+  const notify = useToastNotification();
 
   const { data: standardLibrary, isLoading: isLoadingStandardLibrary } =
     useQuery({
@@ -273,13 +275,18 @@ export function useComponentSearchV2State(
         sourceIndex,
         searchableQuery,
         {
-          apiBase: aiConfig.apiBase,
-          apiKey: aiConfig.apiKey,
+          ...aiConfig,
           signal: abortController.signal,
         },
         { limit },
       );
-    } catch {
+    } catch (error) {
+      if (!abortController.signal.aborted) {
+        notify(
+          error instanceof Error ? error.message : "AI embeddings failed",
+          "error",
+        );
+      }
       return [];
     } finally {
       if (embeddingAbortControllerRef.current === abortController) {
@@ -336,7 +343,13 @@ export function useComponentSearchV2State(
     resetRerank();
     setRerankBaseMatches(rerankMatches);
     setRerankedFor(searchableQuery);
-    mutate({ query: searchableQuery, candidates, scoreAllCandidates });
+    mutate(
+      { query: searchableQuery, candidates, scoreAllCandidates },
+      {
+        onError: (error) =>
+          notify(`AI search failed: ${error.message}`, "error"),
+      },
+    );
   };
 
   const rerank = () => {

@@ -5,7 +5,8 @@ import {
   indexEntryToLexicalMatch,
   type LexicalMatch,
 } from "@/services/componentSearchIndex";
-import { isTangleAiProxyBaseUrl } from "@/utils/aiProxy";
+import type { AiProviderRuntimeConfig } from "@/types/aiProvider";
+import { getAiRequestOptions } from "@/utils/aiProxy";
 import { isRecord } from "@/utils/typeGuards";
 
 const COMPONENT_SEARCH_EMBEDDING_MODEL = "text-embedding-3-small";
@@ -37,9 +38,10 @@ componentSearchEmbeddingDb.version(1).stores({
   embeddings: "cacheKey, embeddingModel, textHash, updatedAt",
 });
 
-interface EmbeddingOptions {
-  apiBase: string;
-  apiKey: string;
+interface EmbeddingOptions extends Pick<
+  AiProviderRuntimeConfig,
+  "apiBase" | "apiKey" | "backendAuth"
+> {
   signal?: AbortSignal;
 }
 
@@ -107,13 +109,7 @@ async function fetchEmbeddings(
   const response = await fetch(`${base}/embeddings`, {
     method: "POST",
     signal: options.signal,
-    ...(isTangleAiProxyBaseUrl(base) ? { credentials: "include" } : {}),
-    headers: {
-      "content-type": "application/json",
-      ...(options.apiKey.trim()
-        ? { authorization: `Bearer ${options.apiKey.trim()}` }
-        : {}),
-    },
+    ...getAiRequestOptions(options),
     body: JSON.stringify({
       model: COMPONENT_SEARCH_EMBEDDING_MODEL,
       input: texts,

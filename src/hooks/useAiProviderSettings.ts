@@ -1,8 +1,12 @@
 import { useSyncExternalStore } from "react";
 
+import { useAuthLocalStorage } from "@/components/shared/Authentication/useAuthLocalStorage";
 import { getDefaultAiModelId } from "@/config/aiModels";
 import { useBackend } from "@/providers/BackendProvider";
-import type { AiProviderConfig } from "@/types/aiProvider";
+import type {
+  AiProviderConfig,
+  AiProviderRuntimeConfig,
+} from "@/types/aiProvider";
 import { buildTangleAiProxyBaseUrl } from "@/utils/aiProxy";
 import { getStorage } from "@/utils/typedStorage";
 import { isRecord } from "@/utils/typeGuards";
@@ -108,7 +112,7 @@ function readStoredSettings(): StoredSettings {
     isManuallyConfigured:
       typeof manualFlag === "boolean"
         ? manualFlag
-        : manualConfig.apiBase.length > 0,
+        : manualConfig.apiBase.length > 0 || manualConfig.apiKey.length > 0,
   };
 }
 
@@ -147,14 +151,21 @@ function getServerSnapshot(): StoredSettings {
 
 export function useAiProviderSettings() {
   const { backendUrl } = useBackend();
+  const authStorage = useAuthLocalStorage();
+  const token = useSyncExternalStore(
+    authStorage.subscribe,
+    authStorage.getToken,
+    () => undefined,
+  );
   const { manualConfig, backendModel, isManuallyConfigured } =
     useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  const config: AiProviderConfig = isManuallyConfigured
+  const config: AiProviderRuntimeConfig = isManuallyConfigured
     ? manualConfig
     : {
         apiBase: buildTangleAiProxyBaseUrl(backendUrl),
         apiKey: "",
         model: backendModel || getDefaultAiModelId(),
+        ...(backendUrl.trim() ? { backendAuth: { token: token ?? "" } } : {}),
       };
 
   // Read fresh from storage instead of merging onto the render-time `config`
@@ -164,7 +175,11 @@ export function useAiProviderSettings() {
   const updateManualConfig = (partial: Partial<AiProviderConfig>) => {
     if (typeof window === "undefined") return;
     const current = readStoredConfig();
-    const next: AiProviderConfig = { ...current, ...partial };
+    const next: AiProviderConfig = {
+      apiBase: partial.apiBase ?? current.apiBase,
+      apiKey: partial.apiKey ?? current.apiKey,
+      model: partial.model ?? current.model,
+    };
     storage.setItem(AI_PROVIDER_STORAGE_KEY, next);
   };
 

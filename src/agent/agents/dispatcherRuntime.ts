@@ -9,14 +9,14 @@
  */
 import { type Agent, MemorySession, run } from "@openai/agents";
 
-import type { AiProviderConfig } from "@/types/aiProvider";
+import type { AiProviderRuntimeConfig } from "@/types/aiProvider";
 
 import type { AgentSession } from "../session";
 
 interface DispatcherInvokeParams {
   message: string;
   threadId: string;
-  aiConfig: AiProviderConfig;
+  aiConfig: AiProviderRuntimeConfig;
   session: AgentSession;
 }
 

@@ -1,3 +1,5 @@
+import type { AiProviderRuntimeConfig } from "@/types/aiProvider";
+
 const TANGLE_AI_PROXY_PATH = "/api/experimental/ai/v1";
 
 export function buildTangleAiProxyBaseUrl(backendUrl: string): string {
@@ -7,6 +9,17 @@ export function buildTangleAiProxyBaseUrl(backendUrl: string): string {
     : "";
 }
 
-export function isTangleAiProxyBaseUrl(apiBase: string): boolean {
-  return apiBase.trim().replace(/\/+$/, "").endsWith(TANGLE_AI_PROXY_PATH);
+export function getAiRequestOptions(
+  config: Pick<AiProviderRuntimeConfig, "apiKey" | "backendAuth">,
+): Pick<RequestInit, "credentials" | "headers"> {
+  const token = (
+    config.backendAuth ? config.backendAuth.token : config.apiKey
+  ).trim();
+  return {
+    credentials: config.backendAuth ? "include" : "omit",
+    headers: {
+      "content-type": "application/json",
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+    },
+  };
 }

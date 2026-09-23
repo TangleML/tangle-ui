@@ -180,6 +180,7 @@ describe("component search embeddings", () => {
       {
         apiBase: "https://backend.example.com/api/experimental/ai/v1",
         apiKey: "",
+        backendAuth: { token: "backend-token" },
       },
       { limit: 1 },
     );
@@ -189,7 +190,9 @@ describe("component search embeddings", () => {
       expect.objectContaining({ credentials: "include" }),
     );
     const backendInit = vi.mocked(fetch).mock.calls[0]?.[1];
-    expect(new Headers(backendInit?.headers).has("authorization")).toBe(false);
+    expect(new Headers(backendInit?.headers).get("authorization")).toBe(
+      "Bearer backend-token",
+    );
     expect(JSON.parse(String(backendInit?.body))).toEqual({
       model: "text-embedding-3-small",
       input: ["open a spreadsheet", buildComponentEmbeddingText(index[0])],
@@ -204,7 +207,7 @@ describe("component search embeddings", () => {
     );
     const manualInit = vi.mocked(fetch).mock.calls[1]?.[1];
     expect(manualInit?.body).toBe(backendInit?.body);
-    expect(manualInit?.credentials).toBeUndefined();
+    expect(manualInit?.credentials).toBe("omit");
     expect(new Headers(manualInit?.headers).get("authorization")).toBe(
       "Bearer sk-test",
     );

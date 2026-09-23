@@ -97,10 +97,13 @@ describe("AgentSettings", () => {
     }
     expect(JSON.parse(String(init.body))).toMatchObject({
       model: "gpt-4o-mini",
-      max_output_tokens: 32,
       text: { format: { type: "json_object" } },
     });
     expect(JSON.stringify(init)).toContain("Bearer sk-test");
+    expect(JSON.parse(String(init.body))).not.toHaveProperty(
+      "max_output_tokens",
+    );
+    expect(init.credentials).toBe("omit");
   });
 
   it("renders injectable model suggestions for the freeform model input", () => {
@@ -242,7 +245,135 @@ describe("AgentSettings", () => {
     );
     const init = mockFetch.mock.calls[0]?.[1];
     expect(new Headers(init?.headers).has("authorization")).toBe(false);
-    expect(init?.credentials).toBeUndefined();
+    expect(init?.credentials).toBe("omit");
+  });
+
+  it("tests backend AI with login credentials without saving fallback settings", async () => {
+    window.localStorage.removeItem(MANUAL_CONFIGURATION_STORAGE_KEY);
+    backend.url = "https://backend.example.com";
+    window.localStorage.setItem(
+      "jwtToken",
+      JSON.stringify({ original_token: "login-token" }),
+    );
+    mockFetch.mockResolvedValue(Response.json({ output_text: '{"ok": true}' }));
+    render(<AgentSettings />);
+    fireEvent.click(screen.getByRole("button", { name: "Test backend AI" }));
+    await waitFor(() =>
+      expect(mockNotify).toHaveBeenCalledWith(
+        "The Tangle backend works with the Responses API.",
+        "success",
+      ),
+    );
+    const [url, init] = mockFetch.mock.calls[0];
+    expect(url).toBe(
+      "https://backend.example.com/api/experimental/ai/v1/responses",
+    );
+    expect(init?.credentials).toBe("include");
+    expect(new Headers(init?.headers).get("authorization")).toBe(
+      "Bearer login-token",
+    );
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it.each([401, 403, 404, 502])(
+    "surfaces backend HTTP %s without switching providers",
+    async (status) => {
+      window.localStorage.removeItem(MANUAL_CONFIGURATION_STORAGE_KEY);
+      backend.url = "https://backend.example.com";
+      mockFetch.mockResolvedValue(new Response("AI unavailable", { status }));
+      render(<AgentSettings />);
+      fireEvent.click(screen.getByRole("button", { name: "Test backend AI" }));
+      await waitFor(() =>
+        expect(mockNotify).toHaveBeenCalledWith(
+          expect.stringContaining(`AI test failed: ${status}`),
+          "error",
+        ),
+      );
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
+      expect(screen.getByRole("switch")).not.toBeChecked();
+    },
+  );
+
+  it("does not test AI without a backend or custom provider", () => {
+    window.localStorage.removeItem(MANUAL_CONFIGURATION_STORAGE_KEY);
+    render(<AgentSettings />);
+    expect(
+      screen.getByRole("button", { name: "Test backend AI" }),
+    ).toBeDisabled();
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("does not send login credentials to a custom provider with the backend path", async () => {
+    window.localStorage.setItem(
+      "jwtToken",
+      JSON.stringify({ original_token: "login-token" }),
+    );
+    mockFetch.mockResolvedValue(Response.json({ ok: true }));
+    render(<AgentSettings />);
+    fireEvent.change(screen.getByLabelText("API base URL"), {
+      target: { value: "https://custom.example.com/api/experimental/ai/v1" },
+    });
+    fireEvent.change(screen.getByLabelText("API key"), {
+      target: { value: "custom-key" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save and test AI" }));
+    await waitFor(() =>
+      expect(mockNotify).toHaveBeenCalledWith(expect.any(String), "success"),
+    );
+    const init = mockFetch.mock.calls[0]?.[1];
+    expect(init?.credentials).toBe("omit");
+    expect(new Headers(init?.headers).get("authorization")).toBe(
+      "Bearer custom-key",
+    );
+  });
+
+  it.each(["max_output_tokens", "content_filter"])(
+    "rejects incomplete %s test responses",
+    async (reason) => {
+      window.localStorage.removeItem(MANUAL_CONFIGURATION_STORAGE_KEY);
+      backend.url = "https://backend.example.com";
+      mockFetch.mockResolvedValue(
+        Response.json({
+          status: "incomplete",
+          incomplete_details: { reason },
+          output_text: '{"ok": true}',
+        }),
+      );
+      render(<AgentSettings />);
+      fireEvent.click(screen.getByRole("button", { name: "Test backend AI" }));
+      await waitFor(() =>
+        expect(mockNotify).toHaveBeenCalledWith(
+          expect.stringContaining("AI test failed:"),
+          "error",
+        ),
+      );
+      expect(mockNotify).not.toHaveBeenCalledWith(expect.anything(), "success");
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it("cancels a pending test and ignores its result after a backend change", async () => {
+    window.localStorage.removeItem(MANUAL_CONFIGURATION_STORAGE_KEY);
+    backend.url = "https://first.example.com";
+    let finishTest: (response: Response) => void = () => {};
+    mockFetch.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finishTest = resolve;
+        }),
+    );
+    const { rerender } = render(<AgentSettings />);
+    fireEvent.click(screen.getByRole("button", { name: "Test backend AI" }));
+    const signal = mockFetch.mock.calls[0]?.[1]?.signal;
+    backend.url = "https://second.example.com";
+    rerender(<AgentSettings />);
+    expect(signal?.aborted).toBe(true);
+    await act(async () => finishTest(Response.json({ ok: true })));
+    expect(mockNotify).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("button", { name: "Test backend AI" }),
+    ).toBeEnabled();
   });
 
   it("allows clearing partially configured settings", () => {

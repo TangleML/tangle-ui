@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildTangleAiProxyBaseUrl, isTangleAiProxyBaseUrl } from "./aiProxy";
+import { buildTangleAiProxyBaseUrl, getAiRequestOptions } from "./aiProxy";
 
 describe("AI proxy URLs", () => {
   it.each([
@@ -16,12 +16,35 @@ describe("AI proxy URLs", () => {
   });
 
   it.each([
-    ["https://example.com/api/experimental/ai/v1/", true],
-    [" https://example.com/prefix/api/experimental/ai/v1 ", true],
-    ["https://api.openai.com/v1", false],
-    ["https://example.com/api/experimental/ai/v1/responses", false],
-    ["", false],
-  ])("recognizes a backend base URL: %s", (base, expected) => {
-    expect(isTangleAiProxyBaseUrl(base)).toBe(expected);
-  });
+    {
+      apiKey: "custom-key",
+      backendAuth: undefined,
+      credentials: "omit",
+      token: "custom-key",
+    },
+    { apiKey: "", backendAuth: undefined, credentials: "omit", token: "" },
+    {
+      apiKey: "unused-key",
+      backendAuth: { token: "backend-token" },
+      credentials: "include",
+      token: "backend-token",
+    },
+    {
+      apiKey: "unused-key",
+      backendAuth: { token: "" },
+      credentials: "include",
+      token: "",
+    },
+  ])(
+    "isolates credentials for $credentials with token '$token'",
+    ({ apiKey, backendAuth, credentials, token }) => {
+      expect(getAiRequestOptions({ apiKey, backendAuth })).toEqual({
+        credentials,
+        headers: {
+          "content-type": "application/json",
+          ...(token ? { authorization: `Bearer ${token}` } : {}),
+        },
+      });
+    },
+  );
 });

@@ -1141,10 +1141,14 @@ export const DashboardComponentsV2View = () => {
       return await rankComponentMatchesByEmbeddings(
         filteredIndex,
         trimmed,
-        { apiBase: aiConfig.apiBase, apiKey: aiConfig.apiKey },
+        aiConfig,
         { limit },
       );
-    } catch {
+    } catch (error) {
+      notify(
+        error instanceof Error ? error.message : "AI embeddings failed",
+        "error",
+      );
       return [];
     } finally {
       setIsEmbeddingSearchPending(false);
