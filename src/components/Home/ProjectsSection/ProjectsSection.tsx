@@ -49,6 +49,7 @@ export function ProjectsSection() {
 function ProjectsGrid() {
   const {
     projects: allProjects,
+    createdBy,
     totalCount,
     isPending,
     error,
@@ -65,8 +66,15 @@ function ProjectsGrid() {
   const pinnedIds = new Set(pinned.map((project) => project.id));
   const rest = allProjects.filter((project) => !pinnedIds.has(project.id));
   const shown = pinned.length + rest.length;
-  const available =
-    totalCount - (allProjects.length - rest.length) + pinned.length;
+
+  // Counted by authorship rather than by what has been paged in: a pinned
+  // project of the caller's own is inside `totalCount` whether or not its page
+  // has been fetched yet. Without a resolved user the list is everyone's, so
+  // every pinned project is already in there.
+  const sharedPins = createdBy
+    ? pinned.filter((project) => project.createdBy !== createdBy).length
+    : 0;
+  const available = totalCount + sharedPins;
 
   if (isPending) {
     return <LoadingProjects />;
