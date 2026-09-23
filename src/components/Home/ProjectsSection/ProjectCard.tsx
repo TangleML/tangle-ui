@@ -113,9 +113,13 @@ export function ProjectCard({ project }: ProjectCardProps) {
             className="pr-8"
           >
             <Icon
-              name="Folder"
+              name={pinned ? "Pin" : "Folder"}
               size="lg"
-              className="text-muted-foreground shrink-0"
+              aria-label={pinned ? "Pinned" : undefined}
+              className={cn(
+                "shrink-0",
+                pinned ? "text-brand-accent" : "text-muted-foreground",
+              )}
             />
             <Text weight="semibold" className="min-w-0 truncate">
               {project.name}
