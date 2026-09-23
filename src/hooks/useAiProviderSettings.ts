@@ -14,11 +14,14 @@ import { isRecord } from "@/utils/typeGuards";
 export const AI_PROVIDER_STORAGE_KEY = "tangle.aiProvider.config";
 export const AI_PROVIDER_MANUAL_CONFIG_STORAGE_KEY =
   "tangle.aiProvider.manuallyConfigured";
+export const AI_PROVIDER_BACKEND_MODEL_STORAGE_KEY =
+  "tangle.aiProvider.backendModel";
 const LEGACY_COMPONENT_SEARCH_STORAGE_KEY = "tangle.componentSearchV2.config";
 
 type StorageKey =
   | typeof AI_PROVIDER_STORAGE_KEY
   | typeof AI_PROVIDER_MANUAL_CONFIG_STORAGE_KEY
+  | typeof AI_PROVIDER_BACKEND_MODEL_STORAGE_KEY
   | typeof LEGACY_COMPONENT_SEARCH_STORAGE_KEY;
 
 type AiProviderSettingsStorage = Record<StorageKey, unknown>;
@@ -79,11 +82,13 @@ function readStoredConfig(): AiProviderConfig {
 
 interface StoredSettings {
   manualConfig: AiProviderConfig;
+  backendModel: string;
   isManuallyConfigured: boolean;
 }
 
 const SERVER_SETTINGS: StoredSettings = {
   manualConfig: DEFAULTS,
+  backendModel: "",
   isManuallyConfigured: false,
 };
 
@@ -91,9 +96,14 @@ function readStoredSettings(): StoredSettings {
   if (typeof window === "undefined") return SERVER_SETTINGS;
   const manualConfig = readStoredConfig();
   const manualFlag = storage.getItem(AI_PROVIDER_MANUAL_CONFIG_STORAGE_KEY);
+  const storedBackendModel = storage.getItem(
+    AI_PROVIDER_BACKEND_MODEL_STORAGE_KEY,
+  );
 
   return {
     manualConfig,
+    backendModel:
+      typeof storedBackendModel === "string" ? storedBackendModel.trim() : "",
     // Preserve existing custom providers until the user switches them off.
     isManuallyConfigured:
       typeof manualFlag === "boolean"
@@ -108,6 +118,7 @@ function subscribe(callback: () => void): () => void {
     if (
       event.key === AI_PROVIDER_STORAGE_KEY ||
       event.key === AI_PROVIDER_MANUAL_CONFIG_STORAGE_KEY ||
+      event.key === AI_PROVIDER_BACKEND_MODEL_STORAGE_KEY ||
       event.key === LEGACY_COMPONENT_SEARCH_STORAGE_KEY ||
       event.key === null
     ) {
@@ -136,28 +147,30 @@ function getServerSnapshot(): StoredSettings {
 
 export function useAiProviderSettings() {
   const { backendUrl } = useBackend();
-  const { manualConfig, isManuallyConfigured } = useSyncExternalStore(
-    subscribe,
-    getSnapshot,
-    getServerSnapshot,
-  );
+  const { manualConfig, backendModel, isManuallyConfigured } =
+    useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const config: AiProviderConfig = isManuallyConfigured
     ? manualConfig
     : {
         apiBase: buildTangleAiProxyBaseUrl(backendUrl),
         apiKey: "",
-        model: manualConfig.model || getDefaultAiModelId(),
+        model: backendModel || getDefaultAiModelId(),
       };
 
   // Read fresh from storage instead of merging onto the render-time `config`
   // so two updates in the same tick (e.g. two field handlers firing back-to-
   // back, or an update racing a cross-tab storage event) don't both clobber
   // each other with the same stale snapshot.
-  const update = (partial: Partial<AiProviderConfig>) => {
+  const updateManualConfig = (partial: Partial<AiProviderConfig>) => {
     if (typeof window === "undefined") return;
     const current = readStoredConfig();
     const next: AiProviderConfig = { ...current, ...partial };
     storage.setItem(AI_PROVIDER_STORAGE_KEY, next);
+  };
+
+  const setBackendModel = (model: string) => {
+    if (typeof window === "undefined") return;
+    storage.setItem(AI_PROVIDER_BACKEND_MODEL_STORAGE_KEY, model.trim());
   };
 
   const setManuallyConfigured = (enabled: boolean) => {
@@ -172,12 +185,13 @@ export function useAiProviderSettings() {
     storage.setItem(AI_PROVIDER_MANUAL_CONFIG_STORAGE_KEY, false);
   };
 
-  const isConfigured = config.apiBase.length > 0 && config.model.length > 0;
+  const isConfigured = config.apiBase.length > 0;
 
   return {
     config,
     manualConfig,
-    update,
+    updateManualConfig,
+    setBackendModel,
     clear,
     isConfigured,
     isManuallyConfigured,

@@ -19,8 +19,9 @@ describe("aiModels", () => {
     expect(getDefaultAiModelId()).toBe("gpt-5.6-sol");
   });
 
-  it("still displays saved model IDs outside the current suggestions", () => {
-    expect(getAiModelLabel("gpt-5.5")).toBe("gpt-5.5");
+  it("keeps friendly labels for saved models outside the current suggestions", () => {
+    expect(getAiModelLabel("gpt-4o-mini")).toBe("GPT-4o mini");
+    expect(getAiModelLabel("custom-model")).toBe("custom-model");
   });
 
   it("allows host pages to replace model suggestions and the suggested default", () => {

@@ -25,7 +25,7 @@ import { isTangleAiProxyBaseUrl } from "@/utils/aiProxy";
 export function AgentSettings() {
   const {
     manualConfig: config,
-    update,
+    updateManualConfig,
     clear,
     isConfigured,
     isManuallyConfigured,
@@ -56,17 +56,13 @@ export function AgentSettings() {
   const handleModelChange = (nextModel: string) => {
     setModel(nextModel);
     setValidationError(null);
-    update({ model: nextModel.trim() });
+    updateManualConfig({ model: nextModel.trim() });
   };
 
   const validateRequiredFields = () => {
     const trimmed = getTrimmedConfig();
     if (!trimmed.apiBase) {
       setValidationError("Enter an API base URL before continuing.");
-      return null;
-    }
-    if (!trimmed.model) {
-      setValidationError("Select or enter a model before continuing.");
       return null;
     }
     setValidationError(null);
@@ -98,7 +94,7 @@ export function AgentSettings() {
             : {}),
         },
         body: JSON.stringify({
-          model: trimmed.model,
+          ...(trimmed.model ? { model: trimmed.model } : {}),
           max_output_tokens: 32,
           instructions:
             "You are testing provider compatibility. Return only JSON.",
@@ -125,9 +121,11 @@ export function AgentSettings() {
       setApiBase(trimmed.apiBase);
       setApiKey(trimmed.apiKey);
       setModel(trimmed.model);
-      update(trimmed);
+      updateManualConfig(trimmed);
       notify(
-        `AI provider settings saved. Model “${trimmed.model}” works with the Responses API.`,
+        trimmed.model
+          ? `AI provider settings saved. Model “${trimmed.model}” works with the Responses API.`
+          : "AI provider settings saved. The provider works with the Responses API.",
         "success",
       );
     } catch (err) {
@@ -174,7 +172,7 @@ export function AgentSettings() {
           {isManuallyConfigured
             ? isConfigured
               ? "Status: using a manually configured provider."
-              : "Status: enter a proxy URL and select a model."
+              : "Status: enter a proxy URL."
             : isConfigured
               ? "Status: using the Tangle backend."
               : "Status: connect a Tangle backend to use AI."}
@@ -297,8 +295,8 @@ export function AgentSettings() {
               </Select>
             </InlineStack>
             <Text id="agent-settings-model-hint" size="xs" tone="subdued">
-              Required. Select a model or enter a model ID supported by your
-              provider.
+              Optional if your provider selects a model. Otherwise, select or
+              enter a model ID supported by your provider.
             </Text>
           </BlockStack>
 

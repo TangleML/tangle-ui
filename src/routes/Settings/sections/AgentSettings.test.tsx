@@ -299,17 +299,30 @@ describe("AgentSettings", () => {
     );
   });
 
-  it("requires a model before testing or saving a manual proxy", () => {
+  it("allows a manual proxy to own model selection", async () => {
+    mockFetch.mockResolvedValue(new Response(JSON.stringify({ ok: true })));
     render(<AgentSettings />);
     fireEvent.change(screen.getByLabelText("API base URL"), {
       target: { value: "https://custom.example/v1" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Save and test AI" }));
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "Select or enter a model before continuing.",
+
+    await waitFor(() => {
+      expect(
+        JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? ""),
+      ).toEqual({
+        apiBase: "https://custom.example/v1",
+        apiKey: "",
+        model: "",
+      });
+    });
+    expect(
+      JSON.parse(String(mockFetch.mock.calls[0]?.[1]?.body)),
+    ).not.toHaveProperty("model");
+    expect(mockNotify).toHaveBeenCalledWith(
+      "AI provider settings saved. The provider works with the Responses API.",
+      "success",
     );
-    expect(mockFetch).not.toHaveBeenCalled();
-    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
   it("does not save a pending test after switching back to the backend", async () => {

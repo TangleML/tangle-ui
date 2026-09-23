@@ -15,17 +15,37 @@ import {
 } from "@/config/aiModels";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 
+const PROVIDER_DEFAULT_MODEL_VALUE = "__provider_default__";
+
 export function AiModelQuickSelect() {
   const componentSearchEnabled = useFlagValue("component-search-v2");
   const aiAssistantEnabled = useFlagValue("ai-assistant");
-  const { config, update, isConfigured } = useAiProviderSettings();
+  const {
+    config,
+    updateManualConfig,
+    setBackendModel,
+    isConfigured,
+    isManuallyConfigured,
+  } = useAiProviderSettings();
   const configuredModel = config.model.trim();
   const options = getAiModelOptions();
-  const selectedValue = configuredModel || getDefaultAiModelId();
-  const hasCustomModel = options.every((option) => option.id !== selectedValue);
+  const selectedValue =
+    configuredModel ||
+    (isManuallyConfigured
+      ? PROVIDER_DEFAULT_MODEL_VALUE
+      : getDefaultAiModelId());
+  const hasCustomModel =
+    selectedValue !== PROVIDER_DEFAULT_MODEL_VALUE &&
+    options.every((option) => option.id !== selectedValue);
 
   const handleValueChange = (value: string) => {
-    update({ model: value });
+    if (isManuallyConfigured) {
+      updateManualConfig({
+        model: value === PROVIDER_DEFAULT_MODEL_VALUE ? "" : value,
+      });
+    } else {
+      setBackendModel(value);
+    }
   };
 
   if ((!componentSearchEnabled && !aiAssistantEnabled) || !isConfigured) {
@@ -44,8 +64,15 @@ export function AiModelQuickSelect() {
       <SelectContent align="end">
         <SelectGroup>
           <SelectLabel>AI model</SelectLabel>
+          {isManuallyConfigured && (
+            <SelectItem value={PROVIDER_DEFAULT_MODEL_VALUE}>
+              Provider default
+            </SelectItem>
+          )}
           {hasCustomModel && (
-            <SelectItem value={selectedValue}>{selectedValue}</SelectItem>
+            <SelectItem value={selectedValue}>
+              {getAiModelLabel(selectedValue)}
+            </SelectItem>
           )}
           {options.map((option) => (
             <SelectItem key={option.id} value={option.id}>

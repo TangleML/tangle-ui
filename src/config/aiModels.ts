@@ -13,6 +13,18 @@ interface AiModelOptionsConfig {
   defaultModel?: string;
 }
 
+const KNOWN_AI_MODEL_LABELS: Record<string, string> = {
+  "gpt-5.6-sol": "GPT-5.6 Sol",
+  "gpt-6-astra": "GPT-6 Astra",
+  "gpt-5.5": "GPT-5.5",
+  "gpt-5": "GPT-5",
+  "gpt-5-mini": "GPT-5 mini",
+  "gpt-4.1": "GPT-4.1",
+  "gpt-4.1-mini": "GPT-4.1 mini",
+  "gpt-4o": "GPT-4o",
+  "gpt-4o-mini": "GPT-4o mini",
+};
+
 const BUILT_IN_AI_MODEL_OPTIONS: AiModelOption[] = [
   {
     id: "gpt-5.6-sol",
@@ -81,6 +93,7 @@ export function getAiModelLabel(modelId: string): string {
   if (!trimmed) return "Provider default";
   return (
     getAiModelOptions().find((option) => option.id === trimmed)?.label ??
+    KNOWN_AI_MODEL_LABELS[trimmed] ??
     trimmed
   );
 }
