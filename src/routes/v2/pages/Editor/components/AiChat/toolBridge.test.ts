@@ -1080,6 +1080,34 @@ describe("createEditorToolBridge", () => {
       expect(getFlexNodes(spec)).toHaveLength(0);
     });
 
+    it("refuses a note too small to read or select", async () => {
+      const { bridge, spec } = makeBridge();
+
+      const result = await bridge.addStickyNote({
+        content: "note",
+        size: { width: 10, height: 10 },
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("cannot be smaller than");
+      expect(getFlexNodes(spec)).toHaveLength(0);
+    });
+
+    it("refuses to shrink an existing note below the minimum", async () => {
+      const { bridge, spec } = makeBridge();
+      const { stickyNoteId } = await bridge.addStickyNote({
+        content: "note",
+        size: { width: 300, height: 200 },
+      });
+
+      const result = await bridge.updateStickyNote(stickyNoteId!, {
+        size: { width: 300, height: 4 },
+      });
+
+      expect(result.success).toBe(false);
+      expect(getFlexNodes(spec)[0]?.size).toEqual({ width: 300, height: 200 });
+    });
+
     it("updateStickyNote changes only the fields passed, as one undo step", async () => {
       const { bridge, spec, undo } = makeBridge();
       const { stickyNoteId } = await bridge.addStickyNote({

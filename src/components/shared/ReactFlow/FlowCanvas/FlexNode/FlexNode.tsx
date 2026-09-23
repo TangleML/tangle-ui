@@ -17,6 +17,7 @@ import { InlineTextEditor } from "./InlineTextEditor";
 import LockToggle from "./LockToggle";
 import type { FlexNodeData } from "./types";
 import { useFlexNodeUpdate } from "./useFlexNodeUpdate";
+import { MIN_FLEX_NODE_SIZE } from "./utils";
 
 type FlexNodeProps = NodeProps<Node<FlexNodeData>>;
 
@@ -171,8 +172,8 @@ const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
         <NodeResizer
           color="var(--edge-selected)"
           isVisible={selected}
-          minWidth={50}
-          minHeight={50}
+          minWidth={MIN_FLEX_NODE_SIZE.width}
+          minHeight={MIN_FLEX_NODE_SIZE.height}
           onResizeEnd={handleResizeEnd}
         />
       )}

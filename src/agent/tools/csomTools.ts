@@ -16,6 +16,10 @@
 import { tool } from "@openai/agents";
 import { z } from "zod";
 
+import {
+  DEFAULT_FLEX_NODE_SIZE,
+  MIN_FLEX_NODE_SIZE,
+} from "@/components/shared/ReactFlow/FlowCanvas/FlexNode/utils";
 import { PRESET_COLORS } from "@/components/ui/colorPresets";
 import type { ArgumentType, ComponentReference } from "@/models/componentSpec";
 
@@ -87,6 +91,8 @@ function dropNulls<T>(value: T): T {
 }
 
 const COLOR_GUIDANCE = `Hex value or "transparent". The swatches the UI offers are ${PRESET_COLORS.join(", ")} — prefer one of those so the note matches the user's own.`;
+
+const SIZE_GUIDANCE = `No smaller than ${MIN_FLEX_NODE_SIZE.width}x${MIN_FLEX_NODE_SIZE.height} — a note below that is too small to read or select, and is refused.`;
 
 const positionSchema = z.object({ x: z.number(), y: z.number() });
 const sizeSchema = z.object({ width: z.number(), height: z.number() });
@@ -441,7 +447,7 @@ export function createCsomTools(bridge: ToolBridgeApi) {
         .nullable()
         .optional()
         .describe(
-          "Defaults to 150x100, which fits a heading and a few words. Size up for anything longer or the text is clipped.",
+          `Defaults to ${DEFAULT_FLEX_NODE_SIZE.width}x${DEFAULT_FLEX_NODE_SIZE.height}, which fits a heading and a few words. Size up for anything longer or the text is clipped. ${SIZE_GUIDANCE}`,
         ),
       position: positionSchema
         .nullable()
@@ -498,7 +504,7 @@ export function createCsomTools(bridge: ToolBridgeApi) {
       content: z.string().nullable().optional(),
       color: z.string().nullable().optional().describe(COLOR_GUIDANCE),
       borderColor: z.string().nullable().optional().describe(COLOR_GUIDANCE),
-      size: sizeSchema.nullable().optional(),
+      size: sizeSchema.nullable().optional().describe(SIZE_GUIDANCE),
       position: positionSchema.nullable().optional(),
       locked: z
         .boolean()

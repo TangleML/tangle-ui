@@ -16,6 +16,7 @@ import type {
   ValidationResult,
 } from "@/agent/toolBridgeApi";
 import type { FlexNodeData } from "@/components/shared/ReactFlow/FlowCanvas/FlexNode/types";
+import { MIN_FLEX_NODE_SIZE } from "@/components/shared/ReactFlow/FlowCanvas/FlexNode/utils";
 import {
   describeBindingEndpointProblem,
   findBindingEndpointProblems,
@@ -130,6 +131,19 @@ function noteColorProblem({
   }
   if (borderColor !== undefined) {
     return explainUnpickableColor(borderColor, "the border");
+  }
+  return undefined;
+}
+
+function noteSizeProblem({
+  size,
+}: {
+  size?: FlexNodeData["size"];
+}): string | undefined {
+  if (!size) return undefined;
+  const { width, height } = MIN_FLEX_NODE_SIZE;
+  if (size.width < width || size.height < height) {
+    return `A sticky note cannot be smaller than ${width}x${height}, and ${size.width}x${size.height} would leave it too small to read or select.`;
   }
   return undefined;
 }
@@ -521,9 +535,9 @@ export function createCsomBridgeHandlers(deps: CsomBridgeDeps): CsomHandlers {
     async addStickyNote(args: AddStickyNoteArgs) {
       const root = requireSpec(deps);
 
-      const colorProblem = noteColorProblem(args);
-      if (colorProblem) {
-        return { success: false, error: `Nothing was added. ${colorProblem}` };
+      const addProblem = noteColorProblem(args) ?? noteSizeProblem(args);
+      if (addProblem) {
+        return { success: false, error: `Nothing was added. ${addProblem}` };
       }
 
       const { anchorEntityId, inSubgraphTaskId } = args;
@@ -564,11 +578,12 @@ export function createCsomBridgeHandlers(deps: CsomBridgeDeps): CsomHandlers {
     async updateStickyNote(noteId, updates: StickyNoteUpdates) {
       const root = requireSpec(deps);
 
-      const colorProblem = noteColorProblem(updates);
-      if (colorProblem) {
+      const updateProblem =
+        noteColorProblem(updates) ?? noteSizeProblem(updates);
+      if (updateProblem) {
         return {
           success: false,
-          error: `Nothing was changed. ${colorProblem}`,
+          error: `Nothing was changed. ${updateProblem}`,
         };
       }
 
