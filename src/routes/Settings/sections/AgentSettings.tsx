@@ -1,23 +1,15 @@
 import { type FormEvent, useEffect, useRef, useState } from "react";
 
+import { AiModelSelect } from "@/components/shared/AiModelSelect/AiModelSelect";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
-import { getAiModelOptions, getDefaultAiModelId } from "@/config/aiModels";
+import { getDefaultAiModelId } from "@/config/aiModels";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
 import { isTangleAiProxyBaseUrl } from "@/utils/aiProxy";
@@ -40,7 +32,6 @@ export function AgentSettings() {
   const [showKey, setShowKey] = useState(false);
   const [testing, setTesting] = useState(false);
   const testRunIdRef = useRef(0);
-  const modelOptions = getAiModelOptions();
   const defaultModelId = getDefaultAiModelId();
 
   useEffect(() => {
@@ -262,7 +253,13 @@ export function AgentSettings() {
 
           <BlockStack gap="1">
             <Label htmlFor="agent-settings-model">Model</Label>
-            <InlineStack gap="0" wrap="nowrap">
+            <InlineStack gap="2" className="w-full">
+              <AiModelSelect
+                value={model}
+                onValueChange={handleModelChange}
+                allowProviderDefault
+                ariaLabel="Select a model"
+              />
               <Input
                 id="agent-settings-model"
                 type="text"
@@ -273,26 +270,8 @@ export function AgentSettings() {
                 aria-describedby="agent-settings-model-hint"
                 autoComplete="off"
                 spellCheck={false}
-                className="rounded-r-none"
+                className="h-10 min-w-0 flex-1 basis-48"
               />
-              <Select onValueChange={handleModelChange}>
-                <SelectTrigger
-                  aria-label="Select a model"
-                  className="w-11 rounded-l-none border-l-0 px-2 [&_[data-slot=select-value]]:hidden"
-                >
-                  <SelectValue placeholder="Model suggestions" />
-                </SelectTrigger>
-                <SelectContent align="end">
-                  <SelectGroup>
-                    <SelectLabel>Common models</SelectLabel>
-                    {modelOptions.map((option) => (
-                      <SelectItem key={option.id} value={option.id}>
-                        {option.label ?? option.id}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
             </InlineStack>
             <Text id="agent-settings-model-hint" size="xs" tone="subdued">
               Optional if your provider selects a model. Otherwise, select or

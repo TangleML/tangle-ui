@@ -129,6 +129,48 @@ describe("AgentSettings", () => {
     ).toBeInTheDocument();
   });
 
+  it("updates the model from the picker without submitting the provider form", () => {
+    const config = {
+      apiBase: "https://api.example.com/v1",
+      apiKey: "saved-key",
+      model: "gpt-6-sol",
+    };
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+    render(<AgentSettings />);
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Select a model" }));
+    expect(mockFetch).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("option", { name: "GPT-6 Astra" }));
+
+    expect(screen.getByLabelText("Model id")).toHaveValue("gpt-6-astra");
+    expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "")).toEqual({
+      ...config,
+      model: "gpt-6-astra",
+    });
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(mockNotify).not.toHaveBeenCalled();
+  });
+
+  it("clears only the model when choosing the provider default", () => {
+    const config = {
+      apiBase: "https://api.example.com/v1",
+      apiKey: "saved-key",
+      model: "gpt-6-sol",
+    };
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+    render(<AgentSettings />);
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Select a model" }));
+    fireEvent.click(screen.getByRole("option", { name: "Provider default" }));
+
+    expect(screen.getByLabelText("Model id")).toHaveValue("");
+    expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "")).toEqual({
+      ...config,
+      model: "",
+    });
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
   it("updates saved model settings as the model field changes", () => {
     window.localStorage.setItem(
       STORAGE_KEY,

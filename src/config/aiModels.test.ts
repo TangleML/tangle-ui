@@ -13,8 +13,16 @@ describe("aiModels", () => {
 
   it("uses built-in model suggestions by default", () => {
     expect(getAiModelOptions()).toEqual([
-      { id: "gpt-6-sol", label: "GPT-6 Sol" },
-      { id: "gpt-6-astra", label: "GPT-6 Astra" },
+      {
+        id: "gpt-6-sol",
+        label: "GPT-6 Sol",
+        description: "For everyday work and coding.",
+      },
+      {
+        id: "gpt-6-astra",
+        label: "GPT-6 Astra",
+        description: "For complex, multi-step tasks.",
+      },
     ]);
     expect(getDefaultAiModelId()).toBe("gpt-6-sol");
   });

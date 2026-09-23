@@ -10,6 +10,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
 
   // 0 useCallback/useMemo - ready to enable
   "src/components/layout",
+  "src/components/shared/AiModelSelect",
   "src/components/shared/ArtifactsList",
   "src/components/shared/Buttons",
   "src/components/shared/ContextPanel",
