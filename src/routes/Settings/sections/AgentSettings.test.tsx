@@ -10,8 +10,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AgentSettings } from "./AgentSettings";
 
 const STORAGE_KEY = "tangle.aiProvider.config";
+const MANUAL_CONFIGURATION_STORAGE_KEY = "tangle.aiProvider.manuallyConfigured";
+const backend = vi.hoisted(() => ({ url: "" }));
+
+vi.mock("@/providers/BackendProvider", () => ({
+  useBackend: () => ({ backendUrl: backend.url }),
+}));
 const mockNotify = vi.fn();
-const mockFetch = vi.fn();
+const mockFetch = vi.fn<typeof fetch>();
 
 vi.mock("@/hooks/useToastNotification", () => ({
   default: () => mockNotify,
@@ -20,13 +26,16 @@ vi.mock("@/hooks/useToastNotification", () => ({
 describe("AgentSettings", () => {
   beforeEach(() => {
     window.localStorage.clear();
+    window.localStorage.setItem(MANUAL_CONFIGURATION_STORAGE_KEY, "true");
+    backend.url = "";
     delete window.__TANGLE_AI_MODELS__;
     mockNotify.mockClear();
     mockFetch.mockReset();
-    global.fetch = mockFetch;
+    vi.stubGlobal("fetch", mockFetch);
   });
 
   afterEach(() => {
+    vi.unstubAllGlobals();
     window.localStorage.clear();
     delete window.__TANGLE_AI_MODELS__;
   });
@@ -205,7 +214,7 @@ describe("AgentSettings", () => {
     });
   });
 
-  it("saves after a successful provider-default AI test when API key and model are blank", async () => {
+  it("saves a manual proxy without an API key", async () => {
     mockFetch.mockResolvedValue(new Response(JSON.stringify({ ok: true })));
     render(<AgentSettings />);
 
@@ -213,6 +222,9 @@ describe("AgentSettings", () => {
       target: { value: "https://api.example.com/v1" },
     });
 
+    fireEvent.change(screen.getByLabelText("Model id"), {
+      target: { value: "custom-model" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Save and test AI" }));
 
     await waitFor(() => {
@@ -221,13 +233,16 @@ describe("AgentSettings", () => {
       ).toEqual({
         apiBase: "https://api.example.com/v1",
         apiKey: "",
-        model: "",
+        model: "custom-model",
       });
     });
     expect(mockNotify).toHaveBeenCalledWith(
-      "AI provider settings saved. The provider works with the Responses API.",
+      "AI provider settings saved. Model “custom-model” works with the Responses API.",
       "success",
     );
+    const init = mockFetch.mock.calls[0]?.[1];
+    expect(new Headers(init?.headers).has("authorization")).toBe(false);
+    expect(init?.credentials).toBeUndefined();
   });
 
   it("allows clearing partially configured settings", () => {
@@ -248,5 +263,82 @@ describe("AgentSettings", () => {
       "AI provider settings cleared",
       "success",
     );
+  });
+
+  it("uses the backend by default and only shows the manual form when enabled", () => {
+    window.localStorage.removeItem(MANUAL_CONFIGURATION_STORAGE_KEY);
+    backend.url = "https://backend.example.com";
+    render(<AgentSettings />);
+    const toggle = screen.getByRole("switch", { name: "Manually configured" });
+    expect(toggle).not.toBeChecked();
+    expect(screen.getByLabelText("API base URL")).not.toBeVisible();
+    expect(screen.getByText("Status: using the Tangle backend.")).toBeVisible();
+    fireEvent.click(toggle);
+    expect(screen.getByLabelText("API base URL")).toBeVisible();
+    expect(screen.getByLabelText("API base URL")).toHaveValue("");
+    expect(screen.getByLabelText("Model id")).toHaveValue("");
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("keeps manual settings when toggling the backend on and off", () => {
+    const config = {
+      apiBase: "https://custom.example/v1",
+      apiKey: "saved-key",
+      model: "gpt-5.5",
+    };
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+    render(<AgentSettings />);
+    const toggle = screen.getByRole("switch", { name: "Manually configured" });
+    fireEvent.click(toggle);
+    expect(screen.getByLabelText("API base URL")).not.toBeVisible();
+    fireEvent.click(toggle);
+    expect(screen.getByLabelText("API base URL")).toHaveValue(config.apiBase);
+    expect(screen.getByLabelText("API key")).toHaveValue(config.apiKey);
+    expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "")).toEqual(
+      config,
+    );
+  });
+
+  it("requires a model before testing or saving a manual proxy", () => {
+    render(<AgentSettings />);
+    fireEvent.change(screen.getByLabelText("API base URL"), {
+      target: { value: "https://custom.example/v1" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save and test AI" }));
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Select or enter a model before continuing.",
+    );
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it("does not save a pending test after switching back to the backend", async () => {
+    let finishTest: (response: Response) => void = () => {};
+    mockFetch.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finishTest = resolve;
+        }),
+    );
+    render(<AgentSettings />);
+    fireEvent.change(screen.getByLabelText("API base URL"), {
+      target: { value: "https://custom.example/v1" },
+    });
+    fireEvent.change(screen.getByLabelText("Model id"), {
+      target: { value: "gpt-5.5" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save and test AI" }));
+    fireEvent.click(
+      screen.getByRole("switch", { name: "Manually configured" }),
+    );
+    await act(async () => {
+      finishTest(Response.json({ ok: true }));
+    });
+    expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "")).toEqual({
+      apiBase: "",
+      apiKey: "",
+      model: "gpt-5.5",
+    });
+    expect(mockNotify).not.toHaveBeenCalled();
   });
 });

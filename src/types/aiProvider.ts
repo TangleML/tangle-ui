@@ -3,6 +3,6 @@ export interface AiProviderConfig {
   apiBase: string;
   // Leave blank when the proxy owns authentication.
   apiKey: string;
-  // Leave blank to use the provider default.
+  // Blank only while manual configuration is incomplete.
   model: string;
 }

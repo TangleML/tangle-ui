@@ -6,6 +6,7 @@ import {
 import OpenAI from "openai";
 
 import type { AiProviderConfig } from "@/types/aiProvider";
+import { isTangleAiProxyBaseUrl } from "@/utils/aiProxy";
 import { BASE_URL } from "@/utils/constants";
 
 const AI_ASSISTANT_EMBEDDING_MODEL = "text-embedding-3-small";
@@ -82,6 +83,9 @@ export class ProxyClient implements OpenAIProvider {
       baseURL,
       dangerouslyAllowBrowser: true,
       ...(apiKey ? {} : { fetch: stripAuthorizationFetch }),
+      ...(isTangleAiProxyBaseUrl(baseURL)
+        ? { fetchOptions: { credentials: "include" } }
+        : {}),
     });
     setDefaultOpenAIClient(this.#client);
     setOpenAIAPI(SIDEKICK_OPENAI_API);

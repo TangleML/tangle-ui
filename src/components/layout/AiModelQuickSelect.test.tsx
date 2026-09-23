@@ -1,10 +1,15 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AiModelQuickSelect } from "./AiModelQuickSelect";
 
 const STORAGE_KEY = "tangle.aiProvider.config";
 const FLAGS_STORAGE_KEY = "betaFlags";
+const backend = vi.hoisted(() => ({ url: "" }));
+
+vi.mock("@/providers/BackendProvider", () => ({
+  useBackend: () => ({ backendUrl: backend.url }),
+}));
 
 function enableFlags(flags: Record<string, boolean>) {
   window.localStorage.setItem(FLAGS_STORAGE_KEY, JSON.stringify(flags));
@@ -13,6 +18,7 @@ function enableFlags(flags: Record<string, boolean>) {
 describe("AiModelQuickSelect", () => {
   beforeEach(() => {
     window.localStorage.clear();
+    backend.url = "";
     delete window.__TANGLE_AI_MODELS__;
   });
 
@@ -63,9 +69,14 @@ describe("AiModelQuickSelect", () => {
     expect(
       screen.queryByRole("option", { name: "Provider default" }),
     ).toBeNull();
-    expect(screen.getByRole("option", { name: "GPT-5.5" })).toBeInTheDocument();
     expect(
-      screen.getByRole("option", { name: "GPT-4.1 mini" }),
+      screen.getByRole("option", { name: "GPT-5.6 Sol" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "GPT-6 Astra" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "gpt-4.1-mini" }),
     ).toBeInTheDocument();
   });
 
@@ -85,5 +96,22 @@ describe("AiModelQuickSelect", () => {
     expect(
       screen.getByRole("combobox", { name: "AI model" }),
     ).toBeInTheDocument();
+  });
+
+  it("shows the actual backend default and lets the user change it without manual setup", () => {
+    backend.url = "https://backend.example.com";
+    enableFlags({ "ai-assistant": true });
+    render(<AiModelQuickSelect />);
+    const selector = screen.getByRole("combobox", { name: "AI model" });
+    expect(selector).toHaveTextContent("GPT-5.6 Sol");
+    expect(selector).toHaveAttribute("title", "AI model: GPT-5.6 Sol");
+    fireEvent.click(selector);
+    fireEvent.click(screen.getByRole("option", { name: "GPT-6 Astra" }));
+    expect(selector).toHaveTextContent("GPT-6 Astra");
+    expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "")).toEqual({
+      apiBase: "",
+      apiKey: "",
+      model: "gpt-6-astra",
+    });
   });
 });

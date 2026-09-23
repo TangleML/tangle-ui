@@ -15,43 +15,16 @@ interface AiModelOptionsConfig {
 
 const BUILT_IN_AI_MODEL_OPTIONS: AiModelOption[] = [
   {
-    id: "gpt-5.5",
-    label: "GPT-5.5",
-    description: "Latest frontier model",
+    id: "gpt-5.6-sol",
+    label: "GPT-5.6 Sol",
   },
   {
-    id: "gpt-5",
-    label: "GPT-5",
-    description: "Frontier model",
-  },
-  {
-    id: "gpt-5-mini",
-    label: "GPT-5 mini",
-    description: "Fast frontier model",
-  },
-  {
-    id: "gpt-4.1",
-    label: "GPT-4.1",
-    description: "General-purpose model",
-  },
-  {
-    id: "gpt-4.1-mini",
-    label: "GPT-4.1 mini",
-    description: "Fast general-purpose model",
-  },
-  {
-    id: "gpt-4o",
-    label: "GPT-4o",
-    description: "OpenAI-compatible model",
-  },
-  {
-    id: "gpt-4o-mini",
-    label: "GPT-4o mini",
-    description: "Small OpenAI-compatible model",
+    id: "gpt-6-astra",
+    label: "GPT-6 Astra",
   },
 ];
 
-const BUILT_IN_DEFAULT_MODEL = BUILT_IN_AI_MODEL_OPTIONS[0]?.id ?? "gpt-5.5";
+const BUILT_IN_DEFAULT_MODEL = "gpt-5.6-sol";
 
 declare global {
   interface Window {

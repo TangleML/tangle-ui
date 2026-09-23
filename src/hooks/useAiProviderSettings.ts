@@ -1,21 +1,25 @@
 import { useSyncExternalStore } from "react";
 
+import { getDefaultAiModelId } from "@/config/aiModels";
+import { useBackend } from "@/providers/BackendProvider";
 import type { AiProviderConfig } from "@/types/aiProvider";
+import { buildTangleAiProxyBaseUrl } from "@/utils/aiProxy";
 import { getStorage } from "@/utils/typedStorage";
 import { isRecord } from "@/utils/typeGuards";
 
 /**
- * Bring-your-own-provider configuration shared by all AI features.
- *
- * Stored in localStorage so each user owns their credentials. API keys stored
- * in localStorage are readable by JavaScript on this origin; users should use
- * scoped keys and rotate them if needed.
+ * Manual API keys are stored in localStorage and readable by JavaScript on
+ * this origin. Backend mode never uses these keys.
  */
 export const AI_PROVIDER_STORAGE_KEY = "tangle.aiProvider.config";
+export const AI_PROVIDER_MANUAL_CONFIG_STORAGE_KEY =
+  "tangle.aiProvider.manuallyConfigured";
 const LEGACY_COMPONENT_SEARCH_STORAGE_KEY = "tangle.componentSearchV2.config";
 
 type StorageKey =
-  typeof AI_PROVIDER_STORAGE_KEY | typeof LEGACY_COMPONENT_SEARCH_STORAGE_KEY;
+  | typeof AI_PROVIDER_STORAGE_KEY
+  | typeof AI_PROVIDER_MANUAL_CONFIG_STORAGE_KEY
+  | typeof LEGACY_COMPONENT_SEARCH_STORAGE_KEY;
 
 type AiProviderSettingsStorage = Record<StorageKey, unknown>;
 
@@ -73,11 +77,37 @@ function readStoredConfig(): AiProviderConfig {
   );
 }
 
+interface StoredSettings {
+  manualConfig: AiProviderConfig;
+  isManuallyConfigured: boolean;
+}
+
+const SERVER_SETTINGS: StoredSettings = {
+  manualConfig: DEFAULTS,
+  isManuallyConfigured: false,
+};
+
+function readStoredSettings(): StoredSettings {
+  if (typeof window === "undefined") return SERVER_SETTINGS;
+  const manualConfig = readStoredConfig();
+  const manualFlag = storage.getItem(AI_PROVIDER_MANUAL_CONFIG_STORAGE_KEY);
+
+  return {
+    manualConfig,
+    // Preserve existing custom providers until the user switches them off.
+    isManuallyConfigured:
+      typeof manualFlag === "boolean"
+        ? manualFlag
+        : manualConfig.apiBase.length > 0,
+  };
+}
+
 function subscribe(callback: () => void): () => void {
   if (typeof window === "undefined") return () => {};
   const handler = (event: StorageEvent) => {
     if (
       event.key === AI_PROVIDER_STORAGE_KEY ||
+      event.key === AI_PROVIDER_MANUAL_CONFIG_STORAGE_KEY ||
       event.key === LEGACY_COMPONENT_SEARCH_STORAGE_KEY ||
       event.key === null
     ) {
@@ -89,27 +119,35 @@ function subscribe(callback: () => void): () => void {
 }
 
 let cachedJSON = "";
-let cachedConfig: AiProviderConfig | null = null;
-function getSnapshot(): AiProviderConfig {
-  const fresh = readStoredConfig();
+let cachedSettings = SERVER_SETTINGS;
+function getSnapshot(): StoredSettings {
+  const fresh = readStoredSettings();
   const json = JSON.stringify(fresh);
   if (json !== cachedJSON) {
     cachedJSON = json;
-    cachedConfig = fresh;
+    cachedSettings = fresh;
   }
-  return cachedConfig ?? fresh;
+  return cachedSettings;
 }
 
-function getServerSnapshot(): AiProviderConfig {
-  return DEFAULTS;
+function getServerSnapshot(): StoredSettings {
+  return SERVER_SETTINGS;
 }
 
 export function useAiProviderSettings() {
-  const config = useSyncExternalStore(
+  const { backendUrl } = useBackend();
+  const { manualConfig, isManuallyConfigured } = useSyncExternalStore(
     subscribe,
     getSnapshot,
     getServerSnapshot,
   );
+  const config: AiProviderConfig = isManuallyConfigured
+    ? manualConfig
+    : {
+        apiBase: buildTangleAiProxyBaseUrl(backendUrl),
+        apiKey: "",
+        model: manualConfig.model || getDefaultAiModelId(),
+      };
 
   // Read fresh from storage instead of merging onto the render-time `config`
   // so two updates in the same tick (e.g. two field handlers firing back-to-
@@ -122,13 +160,27 @@ export function useAiProviderSettings() {
     storage.setItem(AI_PROVIDER_STORAGE_KEY, next);
   };
 
+  const setManuallyConfigured = (enabled: boolean) => {
+    if (typeof window === "undefined") return;
+    storage.setItem(AI_PROVIDER_MANUAL_CONFIG_STORAGE_KEY, enabled);
+  };
+
   const clear = () => {
     if (typeof window === "undefined") return;
     storage.setItem(AI_PROVIDER_STORAGE_KEY, null);
     storage.setItem(LEGACY_COMPONENT_SEARCH_STORAGE_KEY, null);
+    storage.setItem(AI_PROVIDER_MANUAL_CONFIG_STORAGE_KEY, false);
   };
 
-  const isConfigured = config.apiBase.trim().length > 0;
+  const isConfigured = config.apiBase.length > 0 && config.model.length > 0;
 
-  return { config, update, clear, isConfigured };
+  return {
+    config,
+    manualConfig,
+    update,
+    clear,
+    isConfigured,
+    isManuallyConfigured,
+    setManuallyConfigured,
+  };
 }

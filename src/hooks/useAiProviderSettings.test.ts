@@ -1,20 +1,29 @@
 import { act, renderHook } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  AI_PROVIDER_MANUAL_CONFIG_STORAGE_KEY,
   AI_PROVIDER_STORAGE_KEY,
   useAiProviderSettings,
 } from "./useAiProviderSettings";
 
 const LEGACY_STORAGE_KEY = "tangle.componentSearchV2.config";
+const backend = vi.hoisted(() => ({ url: "" }));
+
+vi.mock("@/providers/BackendProvider", () => ({
+  useBackend: () => ({ backendUrl: backend.url }),
+}));
 
 describe("useAiProviderSettings", () => {
   beforeEach(() => {
     window.localStorage.clear();
+    backend.url = "";
+    delete window.__TANGLE_AI_MODELS__;
   });
 
   afterEach(() => {
     window.localStorage.clear();
+    delete window.__TANGLE_AI_MODELS__;
   });
 
   it("returns defaults when nothing is stored", () => {
@@ -23,12 +32,28 @@ describe("useAiProviderSettings", () => {
     expect(result.current.config).toEqual({
       apiBase: "",
       apiKey: "",
-      model: "",
+      model: "gpt-5.6-sol",
     });
+    expect(result.current.isManuallyConfigured).toBe(false);
     expect(result.current.isConfigured).toBe(false);
   });
 
+  it("uses the Tangle proxy when no provider is stored", () => {
+    backend.url = "https://backend.example.com/";
+
+    const { result } = renderHook(() => useAiProviderSettings());
+
+    expect(result.current.config).toEqual({
+      apiBase: "https://backend.example.com/api/experimental/ai/v1",
+      apiKey: "",
+      model: "gpt-5.6-sol",
+    });
+    expect(result.current.isManuallyConfigured).toBe(false);
+    expect(result.current.isConfigured).toBe(true);
+  });
+
   it("reads stored values from localStorage", () => {
+    backend.url = "https://backend.example.com";
     window.localStorage.setItem(
       AI_PROVIDER_STORAGE_KEY,
       JSON.stringify({
@@ -45,10 +70,30 @@ describe("useAiProviderSettings", () => {
       apiKey: "sk-test",
       model: "gpt-4o-mini",
     });
+    expect(result.current.isManuallyConfigured).toBe(true);
     expect(result.current.isConfigured).toBe(true);
   });
 
-  it("isConfigured only requires apiBase", () => {
+  it("keeps the Tangle fallback when only the model is updated", () => {
+    backend.url = "https://backend.example.com";
+    const { result } = renderHook(() => useAiProviderSettings());
+
+    act(() => {
+      result.current.update({ model: "gpt-4.1" });
+    });
+
+    expect(result.current.config).toEqual({
+      apiBase: "https://backend.example.com/api/experimental/ai/v1",
+      apiKey: "",
+      model: "gpt-4.1",
+    });
+    expect(
+      JSON.parse(window.localStorage.getItem(AI_PROVIDER_STORAGE_KEY) ?? ""),
+    ).toEqual({ apiBase: "", apiKey: "", model: "gpt-4.1" });
+  });
+
+  it("requires a model for a manual provider, without falling back to the backend", () => {
+    backend.url = "https://backend.example.com";
     window.localStorage.setItem(
       AI_PROVIDER_STORAGE_KEY,
       JSON.stringify({
@@ -59,7 +104,9 @@ describe("useAiProviderSettings", () => {
     );
 
     const { result } = renderHook(() => useAiProviderSettings());
-    expect(result.current.isConfigured).toBe(true);
+    expect(result.current.isConfigured).toBe(false);
+    expect(result.current.isManuallyConfigured).toBe(true);
+    expect(result.current.config.apiBase).toBe("https://api.example.com/v1");
   });
 
   it("update() writes to the central storage key and merges partial values", () => {
@@ -111,6 +158,27 @@ describe("useAiProviderSettings", () => {
     expect(result.current.isConfigured).toBe(false);
   });
 
+  it("clear() returns to the Tangle proxy", () => {
+    backend.url = "https://backend.example.com";
+    window.localStorage.setItem(AI_PROVIDER_MANUAL_CONFIG_STORAGE_KEY, "true");
+    window.localStorage.setItem(
+      AI_PROVIDER_STORAGE_KEY,
+      JSON.stringify({ apiBase: "https://api.example.com/v1" }),
+    );
+
+    const { result } = renderHook(() => useAiProviderSettings());
+
+    act(() => {
+      result.current.clear();
+    });
+
+    expect(result.current.config.apiBase).toBe(
+      "https://backend.example.com/api/experimental/ai/v1",
+    );
+    expect(result.current.isConfigured).toBe(true);
+    expect(result.current.isManuallyConfigured).toBe(false);
+  });
+
   it("falls back to legacy Components V2 config", () => {
     window.localStorage.setItem(
       LEGACY_STORAGE_KEY,
@@ -151,7 +219,92 @@ describe("useAiProviderSettings", () => {
     expect(result.current.config).toEqual({
       apiBase: "",
       apiKey: "",
+      model: "gpt-5.6-sol",
+    });
+  });
+
+  it("uses the host default without saving a user configuration", () => {
+    backend.url = "https://backend.example.com";
+    window.__TANGLE_AI_MODELS__ = { defaultModel: "team-default" };
+    const { result } = renderHook(() => useAiProviderSettings());
+    expect(result.current.config.model).toBe("team-default");
+    expect(result.current.manualConfig).toEqual({
+      apiBase: "",
+      apiKey: "",
       model: "",
     });
+    expect(window.localStorage.length).toBe(0);
+  });
+
+  it("follows changes to the connected backend", () => {
+    backend.url = "https://first.example.com";
+    const { result, rerender } = renderHook(() => useAiProviderSettings());
+    backend.url = "https://second.example.com/prefix/";
+    rerender();
+    expect(result.current.config.apiBase).toBe(
+      "https://second.example.com/prefix/api/experimental/ai/v1",
+    );
+  });
+
+  it("preserves the selected mode and saved manual provider across reloads", () => {
+    backend.url = "https://backend.example.com";
+    window.localStorage.setItem(
+      AI_PROVIDER_STORAGE_KEY,
+      JSON.stringify({
+        apiBase: "https://custom.example.com/v1",
+        apiKey: "custom-secret",
+        model: "gpt-4.1",
+      }),
+    );
+    const { result, unmount } = renderHook(() => useAiProviderSettings());
+    act(() => result.current.setManuallyConfigured(false));
+    expect(result.current.config).toEqual({
+      apiBase: "https://backend.example.com/api/experimental/ai/v1",
+      apiKey: "",
+      model: "gpt-4.1",
+    });
+    unmount();
+    const { result: reloaded } = renderHook(() => useAiProviderSettings());
+    expect(reloaded.current.isManuallyConfigured).toBe(false);
+    expect(reloaded.current.config.model).toBe("gpt-4.1");
+    act(() => reloaded.current.setManuallyConfigured(true));
+    expect(reloaded.current.config).toEqual({
+      apiBase: "https://custom.example.com/v1",
+      apiKey: "custom-secret",
+      model: "gpt-4.1",
+    });
+  });
+
+  it("does not use the backend when manual mode is explicitly on but incomplete", () => {
+    backend.url = "https://backend.example.com";
+    window.localStorage.setItem(AI_PROVIDER_MANUAL_CONFIG_STORAGE_KEY, "true");
+    const { result } = renderHook(() => useAiProviderSettings());
+    expect(result.current.isConfigured).toBe(false);
+    expect(result.current.config).toEqual({
+      apiBase: "",
+      apiKey: "",
+      model: "",
+    });
+  });
+
+  it("reflects settings changes across hook instances and browser tabs", () => {
+    backend.url = "https://backend.example.com";
+    const first = renderHook(() => useAiProviderSettings());
+    const second = renderHook(() => useAiProviderSettings());
+    act(() => first.result.current.update({ model: "gpt-4.1" }));
+    expect(second.result.current.config.model).toBe("gpt-4.1");
+    act(() => {
+      window.localStorage.setItem(
+        AI_PROVIDER_MANUAL_CONFIG_STORAGE_KEY,
+        "true",
+      );
+      window.dispatchEvent(
+        new StorageEvent("storage", {
+          key: AI_PROVIDER_MANUAL_CONFIG_STORAGE_KEY,
+        }),
+      );
+    });
+    expect(second.result.current.isManuallyConfigured).toBe(true);
+    expect(first.result.current.isConfigured).toBe(false);
   });
 });

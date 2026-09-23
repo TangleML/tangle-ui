@@ -11,6 +11,7 @@
  * judgment over a small, well-defined list when literal matching is not enough.
  */
 
+import { isTangleAiProxyBaseUrl } from "@/utils/aiProxy";
 import type {
   ComponentReference,
   InputSpec,
@@ -86,13 +87,11 @@ interface LlmOptions {
 }
 
 /**
- * gpt-5 / o-series reasoning models reject an explicit `temperature`. For every
- * other configured model we pin `temperature: 0` so the reranker's ordering is
- * deterministic run-to-run; without it the provider default (often 1.0) makes
- * the same query reorder differently between runs.
+ * GPT-5, GPT-6, and o-series models reject explicit temperature with reasoning.
+ * Other models use zero to reduce variation between rankings.
  */
 function isReasoningModel(model: string): boolean {
-  return /^(openai:)?(gpt-5|o\d)/i.test(model);
+  return /^(openai:)?(gpt-[56]|o\d)/i.test(model);
 }
 
 /** Clamp score to [0, 1] and reject NaN so the UI/sort never sees garbage. */
@@ -302,6 +301,7 @@ async function callLlmResponse(
   const response = await fetch(`${base}/responses`, {
     method: "POST",
     signal: options.signal,
+    ...(isTangleAiProxyBaseUrl(base) ? { credentials: "include" } : {}),
     headers: {
       "content-type": "application/json",
       ...(key ? { authorization: `Bearer ${key}` } : {}),

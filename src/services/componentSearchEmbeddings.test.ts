@@ -160,6 +160,56 @@ describe("component search embeddings", () => {
     expect(global.fetch).toHaveBeenCalledTimes(2);
   });
 
+  it("includes login cookies when using the Tangle proxy", async () => {
+    const index = buildSearchIndex([
+      makeSourced({
+        digest: "tangle-proxy-test",
+        spec: {
+          name: "load_csv_file",
+          description: "Read a CSV file.",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+    ]);
+
+    await rankComponentMatchesByEmbeddings(
+      index,
+      "open a spreadsheet",
+      {
+        apiBase: "https://backend.example.com/api/experimental/ai/v1",
+        apiKey: "",
+      },
+      { limit: 1 },
+    );
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      "https://backend.example.com/api/experimental/ai/v1/embeddings",
+      expect.objectContaining({ credentials: "include" }),
+    );
+    const backendInit = vi.mocked(fetch).mock.calls[0]?.[1];
+    expect(new Headers(backendInit?.headers).has("authorization")).toBe(false);
+    expect(JSON.parse(String(backendInit?.body))).toEqual({
+      model: "text-embedding-3-small",
+      input: ["open a spreadsheet", buildComponentEmbeddingText(index[0])],
+    });
+
+    await clearComponentSearchEmbeddingCache();
+    await rankComponentMatchesByEmbeddings(
+      index,
+      "open a spreadsheet",
+      OPTIONS,
+      { limit: 1 },
+    );
+    const manualInit = vi.mocked(fetch).mock.calls[1]?.[1];
+    expect(manualInit?.body).toBe(backendInit?.body);
+    expect(manualInit?.credentials).toBeUndefined();
+    expect(new Headers(manualInit?.headers).get("authorization")).toBe(
+      "Bearer sk-test",
+    );
+  });
+
   it("invalidates a cached component embedding when its text changes", async () => {
     const initialIndex = buildSearchIndex([
       makeSourced({

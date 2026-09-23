@@ -200,6 +200,44 @@ describe("rerankComponentsByNaturalLanguage", () => {
     expect(JSON.stringify(init)).not.toContain("authorization");
   });
 
+  it("includes login cookies when using the Tangle proxy", async () => {
+    vi.mocked(global.fetch).mockResolvedValue(
+      mockResponsesResponse({ matches: [] }),
+    );
+
+    await rerankComponentsByNaturalLanguage(
+      "train",
+      [{ id: "a", name: "n", description: "d" }],
+      {
+        ...VALID_OPTIONS,
+        apiBase: "https://backend.example.com/api/experimental/ai/v1",
+        apiKey: "",
+      },
+    );
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      "https://backend.example.com/api/experimental/ai/v1/responses",
+      expect.objectContaining({ credentials: "include" }),
+    );
+    const backendCall = vi.mocked(fetch).mock.calls[0];
+    expect(new Headers(backendCall?.[1]?.headers).has("authorization")).toBe(
+      false,
+    );
+
+    vi.mocked(fetch).mockResolvedValue(mockResponsesResponse({ matches: [] }));
+    await rerankComponentsByNaturalLanguage(
+      "train",
+      [{ id: "a", name: "n", description: "d" }],
+      VALID_OPTIONS,
+    );
+    const manualCall = vi.mocked(fetch).mock.calls[1];
+    expect(manualCall?.[1]?.body).toBe(backendCall?.[1]?.body);
+    expect(manualCall?.[1]?.credentials).toBeUndefined();
+    expect(new Headers(manualCall?.[1]?.headers).get("authorization")).toBe(
+      "Bearer sk-test",
+    );
+  });
+
   it("filters out hallucinated ids the model returned", async () => {
     vi.mocked(global.fetch).mockResolvedValue(
       mockResponsesResponse({
@@ -353,20 +391,24 @@ describe("rerankComponentsByNaturalLanguage", () => {
     expect(body.max_output_tokens).toBe(4000);
   });
 
-  it("omits temperature for reasoning models that reject it", async () => {
-    vi.mocked(global.fetch).mockResolvedValue(
-      mockResponsesResponse({ matches: [] }),
-    );
+  it.each(["gpt-5-mini", "gpt-5.6-sol", "gpt-6-astra", "openai:gpt-6-astra"])(
+    "omits temperature for %s",
+    async (model) => {
+      vi.mocked(global.fetch).mockResolvedValue(
+        mockResponsesResponse({ matches: [] }),
+      );
 
-    await rerankComponentsByNaturalLanguage(
-      "train",
-      [{ id: "a", name: "a", description: "" }],
-      { ...VALID_OPTIONS, model: "gpt-5-mini" },
-    );
+      await rerankComponentsByNaturalLanguage(
+        "train",
+        [{ id: "a", name: "a", description: "" }],
+        { ...VALID_OPTIONS, model },
+      );
 
-    const body = parseFetchBody(vi.mocked(global.fetch).mock.calls[0]);
-    expect(body.temperature).toBeUndefined();
-  });
+      const body = parseFetchBody(vi.mocked(global.fetch).mock.calls[0]);
+      expect(body.model).toBe(model);
+      expect(body.temperature).toBeUndefined();
+    },
+  );
 
   it("still bounds Responses output when model is blank", async () => {
     vi.mocked(global.fetch).mockResolvedValue(

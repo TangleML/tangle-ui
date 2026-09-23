@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { getAiModelOptions, getDefaultAiModelId } from "./aiModels";
+import {
+  getAiModelLabel,
+  getAiModelOptions,
+  getDefaultAiModelId,
+} from "./aiModels";
 
 describe("aiModels", () => {
   afterEach(() => {
@@ -8,8 +12,15 @@ describe("aiModels", () => {
   });
 
   it("uses built-in model suggestions by default", () => {
-    expect(getAiModelOptions().map((option) => option.id)).toContain("gpt-5.5");
-    expect(getDefaultAiModelId()).toBe("gpt-5.5");
+    expect(getAiModelOptions()).toEqual([
+      { id: "gpt-5.6-sol", label: "GPT-5.6 Sol" },
+      { id: "gpt-6-astra", label: "GPT-6 Astra" },
+    ]);
+    expect(getDefaultAiModelId()).toBe("gpt-5.6-sol");
+  });
+
+  it("still displays saved model IDs outside the current suggestions", () => {
+    expect(getAiModelLabel("gpt-5.5")).toBe("gpt-5.5");
   });
 
   it("allows host pages to replace model suggestions and the suggested default", () => {

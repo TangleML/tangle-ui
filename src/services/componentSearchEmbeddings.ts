@@ -5,6 +5,7 @@ import {
   indexEntryToLexicalMatch,
   type LexicalMatch,
 } from "@/services/componentSearchIndex";
+import { isTangleAiProxyBaseUrl } from "@/utils/aiProxy";
 import { isRecord } from "@/utils/typeGuards";
 
 const COMPONENT_SEARCH_EMBEDDING_MODEL = "text-embedding-3-small";
@@ -106,6 +107,7 @@ async function fetchEmbeddings(
   const response = await fetch(`${base}/embeddings`, {
     method: "POST",
     signal: options.signal,
+    ...(isTangleAiProxyBaseUrl(base) ? { credentials: "include" } : {}),
     headers: {
       "content-type": "application/json",
       ...(options.apiKey.trim()

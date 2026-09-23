@@ -15,18 +15,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
 import { getAiModelOptions, getDefaultAiModelId } from "@/config/aiModels";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
+import { isTangleAiProxyBaseUrl } from "@/utils/aiProxy";
 
-/**
- * Shared bring-your-own-provider configuration UI for AI features. Credentials
- * live in localStorage on the user's machine — no shared key is bundled into
- * the app.
- */
 export function AgentSettings() {
-  const { config, update, clear, isConfigured } = useAiProviderSettings();
+  const {
+    manualConfig: config,
+    update,
+    clear,
+    isConfigured,
+    isManuallyConfigured,
+    setManuallyConfigured,
+  } = useAiProviderSettings();
   const notify = useToastNotification();
 
   const [apiBase, setApiBase] = useState(config.apiBase);
@@ -61,6 +65,10 @@ export function AgentSettings() {
       setValidationError("Enter an API base URL before continuing.");
       return null;
     }
+    if (!trimmed.model) {
+      setValidationError("Select or enter a model before continuing.");
+      return null;
+    }
     setValidationError(null);
     return trimmed;
   };
@@ -80,6 +88,9 @@ export function AgentSettings() {
     try {
       const response = await fetch(`${trimmed.apiBase}/responses`, {
         method: "POST",
+        ...(isTangleAiProxyBaseUrl(trimmed.apiBase)
+          ? { credentials: "include" }
+          : {}),
         headers: {
           "content-type": "application/json",
           ...(trimmed.apiKey
@@ -87,7 +98,7 @@ export function AgentSettings() {
             : {}),
         },
         body: JSON.stringify({
-          ...(trimmed.model ? { model: trimmed.model } : {}),
+          model: trimmed.model,
           max_output_tokens: 32,
           instructions:
             "You are testing provider compatibility. Return only JSON.",
@@ -116,9 +127,7 @@ export function AgentSettings() {
       setModel(trimmed.model);
       update(trimmed);
       notify(
-        trimmed.model
-          ? `AI provider settings saved. Model “${trimmed.model}” works with the Responses API.`
-          : "AI provider settings saved. The provider works with the Responses API.",
+        `AI provider settings saved. Model “${trimmed.model}” works with the Responses API.`,
         "success",
       );
     } catch (err) {
@@ -146,25 +155,57 @@ export function AgentSettings() {
     notify("AI provider settings cleared", "success");
   };
 
+  const handleManualConfigurationChange = (enabled: boolean) => {
+    testRunIdRef.current += 1;
+    setTesting(false);
+    setValidationError(null);
+    setManuallyConfigured(enabled);
+  };
+
   return (
     <BlockStack gap="6">
       <BlockStack gap="2">
         <Heading level={2}>AI Provider Settings</Heading>
         <Paragraph size="sm" tone="subdued">
-          AI features use an OpenAI-compatible API of your choice. Your key is
-          stored in this browser only and is sent only to the configured
-          provider.
+          AI features use the connected Tangle backend by default. Turn on
+          manual configuration to use another OpenAI-compatible provider.
         </Paragraph>
         <Paragraph size="xs" tone="subdued">
-          {isConfigured
-            ? "Status: configured ✅"
-            : "Status: not configured. AI features are disabled until you save a provider."}
+          {isManuallyConfigured
+            ? isConfigured
+              ? "Status: using a manually configured provider."
+              : "Status: enter a proxy URL and select a model."
+            : isConfigured
+              ? "Status: using the Tangle backend."
+              : "Status: connect a Tangle backend to use AI."}
         </Paragraph>
       </BlockStack>
 
       <Separator />
 
-      <form onSubmit={handleSave}>
+      <BlockStack gap="2">
+        <InlineStack gap="2" blockAlign="center">
+          <Switch
+            id="agent-settings-manual-configuration"
+            checked={isManuallyConfigured}
+            onCheckedChange={handleManualConfigurationChange}
+            aria-describedby="agent-settings-manual-configuration-hint"
+          />
+          <Label htmlFor="agent-settings-manual-configuration">
+            Manually configured
+          </Label>
+        </InlineStack>
+        <Text
+          id="agent-settings-manual-configuration-hint"
+          size="xs"
+          tone="subdued"
+        >
+          When off, AI requests use the connected Tangle backend. No proxy URL,
+          API key, or model setup is needed.
+        </Text>
+      </BlockStack>
+
+      <form onSubmit={handleSave} hidden={!isManuallyConfigured}>
         <BlockStack gap="4">
           <BlockStack gap="1">
             <Label htmlFor="agent-settings-api-base">API base URL</Label>
@@ -256,8 +297,7 @@ export function AgentSettings() {
               </Select>
             </InlineStack>
             <Text id="agent-settings-model-hint" size="xs" tone="subdued">
-              Optional if your proxy selects a model. Choose a common
-              OpenAI-compatible model or enter any model id supported by your
+              Required. Select a model or enter a model ID supported by your
               provider.
             </Text>
           </BlockStack>
