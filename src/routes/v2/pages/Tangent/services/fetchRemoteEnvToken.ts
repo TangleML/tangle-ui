@@ -1,12 +1,12 @@
 /**
- * Mints a scoped token for the Tangent `/remote-env` socket handshake.
+ * Mints (or falls back to) a scoped token for the Tangent `/remote-env`
+ * socket handshake.
  *
- * A `VITE_TANGENT_REMOTE_ENV_TOKEN` shared secret remains as a fallback for
- * developing against a Tangent server that predates the scoped-token endpoint.
- * It connects with a client-generated `environmentId` (the legacy
- * `HandshakeTokenCredential` path), which is only safe once the server routes
- * spawns per session — so it is reached only when the endpoint reports itself
- * absent, and never in a production build.
+ * The scoped-token endpoint is Tangent server work. Until it lands, a
+ * `VITE_TANGENT_REMOTE_ENV_TOKEN` shared secret lets the host connect with a
+ * client-generated `environmentId` (the legacy `HandshakeTokenCredential`
+ * path). That fallback is only safe once the server routes spawns per session;
+ * treat it as dev-only.
  */
 import { nanoid } from "nanoid";
 
@@ -19,9 +19,6 @@ export interface RemoteEnvToken {
 }
 
 const REMOTE_ENV_TOKEN_PATH = "/api/embed/remote-env-token";
-
-// How a Tangent server that predates the mint endpoint reports it is not there.
-const ENDPOINT_ABSENT_STATUSES = new Set([404, 501]);
 
 function parseExpiresAtMs(value: unknown): number | undefined {
   if (typeof value === "number" && Number.isFinite(value)) {
@@ -47,20 +44,8 @@ function parseTokenResponse(value: unknown): RemoteEnvToken | null {
 }
 
 function readFallbackToken(): string | undefined {
-  // Vite inlines every `VITE_*` value into the bundle, so a shared secret read
-  // here would ship to every browser. The guard precedes the read so the
-  // literal is dropped with the dead branch rather than surviving in it.
-  if (!import.meta.env.DEV) return undefined;
   const value = import.meta.env.VITE_TANGENT_REMOTE_ENV_TOKEN;
   return typeof value === "string" && value.length > 0 ? value : undefined;
-}
-
-function fallbackCredential(
-  environmentId: string | undefined,
-): RemoteEnvToken | undefined {
-  const token = readFallbackToken();
-  if (!token) return undefined;
-  return { token, environmentId: environmentId ?? `tangle-ui-${nanoid(8)}` };
 }
 
 /**
@@ -82,6 +67,14 @@ export async function fetchRemoteEnvToken({
   authToken,
   environmentId,
 }: FetchRemoteEnvTokenParams): Promise<RemoteEnvToken> {
+  const fallbackToken = readFallbackToken();
+  if (fallbackToken) {
+    return {
+      token: fallbackToken,
+      environmentId: environmentId ?? `tangle-ui-${nanoid(8)}`,
+    };
+  }
+
   const url = `${baseUrl.replace(/\/$/, "")}${REMOTE_ENV_TOKEN_PATH}`;
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -97,10 +90,6 @@ export async function fetchRemoteEnvToken({
     }),
   });
   if (!response.ok) {
-    if (ENDPOINT_ABSENT_STATUSES.has(response.status)) {
-      const fallback = fallbackCredential(environmentId);
-      if (fallback) return fallback;
-    }
     throw new Error(
       `Failed to mint remote-env token (${response.status} ${response.statusText}).`,
     );
