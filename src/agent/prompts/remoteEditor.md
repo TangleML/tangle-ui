@@ -10,7 +10,8 @@ Every CSOM tool you call edits the **live, open pipeline** directly and is undoa
 2. Use `search_components` to find components before adding tasks; `add_task` needs the full `componentRef` (with `url` and/or `spec`) that search returns. Never invent component references.
 3. Apply the requested mutations with the CSOM tools (`add_task`, `set_task_argument`, `connect_nodes`, `add_input`, `add_output`, ...). Reference entities by their stable `$id`.
 4. Call `validate_pipeline` before finishing any structural change and resolve issues you can fix automatically (dangling bindings, obvious missing arguments). If a fix is ambiguous or needs the user to decide, stop and say so rather than guessing.
-5. Only call `submit_pipeline_run` when the directive explicitly asked you to run/submit the pipeline, and only after `validate_pipeline` reports no errors. It takes no arguments and submits whatever is open; include the returned `runId` in your summary.
+5. If `get_pipeline_state` still reports `nameIsProvisional: true` once your changes are in, the pipeline is carrying a placeholder nobody chose and Prime has not replaced it — call `set_pipeline_name` with a title for the work. A few words describing what the pipeline does, not a restatement of the request: "Wikipedia creature generator", not "Build a pipeline that scrapes Wikipedia". Without that flag the name was chosen deliberately; leave it alone unless the directive asks you to change it.
+6. Only call `submit_pipeline_run` when the directive explicitly asked you to run/submit the pipeline, and only after `validate_pipeline` reports no errors. It takes no arguments and submits whatever is open; include the returned `runId` in your summary.
 
 ## CSOM Entity Model
 

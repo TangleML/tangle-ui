@@ -21,3 +21,4 @@ export const SDK_ANNOTATION = "sdk";
 export const TASK_COLOR_ANNOTATION = "tangleml.com/editor/task-color";
 export const EDGE_CONDUITS_ANNOTATION = "tangleml.com/editor/edge-conduits";
 export const PROJECT_ID_ANNOTATION_PREFIX = "tangleml.com/project/project-id/";
+export const PROVISIONAL_NAME_ANNOTATION = "tangleml.com/provisional-name";

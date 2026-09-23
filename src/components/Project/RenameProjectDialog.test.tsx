@@ -38,14 +38,17 @@ const project: Project = {
   extraData: null,
 };
 
-function renderDialog({ isPending = false } = {}) {
+function renderDialog({
+  isPending = false,
+  project: subject = project,
+}: { isPending?: boolean; project?: Project } = {}) {
   vi.mocked(useUpdateProject).mockReturnValue({
     mutate,
     isPending,
   } as unknown as ReturnType<typeof useUpdateProject>);
 
   return render(
-    <RenameProjectDialog project={project} open onOpenChange={onOpenChange} />,
+    <RenameProjectDialog project={subject} open onOpenChange={onOpenChange} />,
   );
 }
 
@@ -77,7 +80,7 @@ describe("RenameProjectDialog", () => {
     await user.click(renameButton());
 
     expect(mutate).toHaveBeenCalledWith(
-      { id: "project-1", input: { name: "Churn model v2" } },
+      { id: "project-1", input: { name: "Churn model v2", extraData: {} } },
       expect.anything(),
     );
   });
@@ -91,7 +94,33 @@ describe("RenameProjectDialog", () => {
     await user.click(renameButton());
 
     expect(mutate).toHaveBeenCalledWith(
-      { id: "project-1", input: { name: "Spaced out" } },
+      { id: "project-1", input: { name: "Spaced out", extraData: {} } },
+      expect.anything(),
+    );
+  });
+
+  /** A name someone typed is deliberate, so the agent stops offering one. */
+  it("drops the provisional mark, keeping the rest of the project's data", async () => {
+    const user = userEvent.setup();
+    renderDialog({
+      project: {
+        ...project,
+        extraData: { provisionalName: true, startingModel: "openai/gpt-5.6" },
+      },
+    });
+
+    await user.clear(nameField());
+    await user.type(nameField(), "Churn model v2");
+    await user.click(renameButton());
+
+    expect(mutate).toHaveBeenCalledWith(
+      {
+        id: "project-1",
+        input: {
+          name: "Churn model v2",
+          extraData: { startingModel: "openai/gpt-5.6" },
+        },
+      },
       expect.anything(),
     );
   });
