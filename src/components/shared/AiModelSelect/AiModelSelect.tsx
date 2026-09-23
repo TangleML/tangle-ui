@@ -91,13 +91,13 @@ export function AiModelSelect({
       </PopoverTrigger>
       <PopoverContent
         align="end"
-        sideOffset={8}
+        sideOffset={6}
         collisionPadding={12}
         aria-label="AI model and thinking"
         onKeyDown={(event) => event.stopPropagation()}
-        className="w-80 rounded-3xl border-border/80 bg-popover p-5 shadow-xl motion-reduce:animate-none"
+        className="w-68 rounded-2xl border-border/80 bg-popover p-4 shadow-xl motion-reduce:animate-none"
       >
-        <BlockStack gap="5" className="relative">
+        <BlockStack gap="3" className="relative">
           <Select
             value={supportsThinking ? selectedModel : ""}
             onValueChange={(nextModel) => {
@@ -115,12 +115,12 @@ export function AiModelSelect({
             <SelectTrigger
               type="button"
               aria-label="Choose model"
-              className="mx-auto h-auto max-w-52 justify-center rounded-xl border-0 px-3 py-1 text-center shadow-none hover:bg-accent focus-visible:ring-ring/50 [&>svg]:hidden"
+              className="mx-auto h-auto max-w-44 justify-center rounded-lg border-0 px-2 py-0.5 text-center shadow-none hover:bg-accent focus-visible:ring-ring/50 [&>svg]:hidden"
             >
-              <BlockStack as="span" gap="1" align="center" className="min-w-0">
+              <BlockStack as="span" gap="0" align="center" className="min-w-0">
                 <InlineStack as="span" gap="1" wrap="nowrap">
                   <Text
-                    size="xl"
+                    size="lg"
                     weight="medium"
                     className="text-brand dark:text-violet-300"
                   >
@@ -128,31 +128,31 @@ export function AiModelSelect({
                   </Text>
                   <Icon
                     name="ChevronRight"
-                    size="md"
+                    size="sm"
                     className="text-muted-foreground"
                     aria-hidden="true"
                   />
                 </InlineStack>
-                <Text size="sm" tone="subdued" className="max-w-40 truncate">
+                <Text size="xs" tone="subdued" className="max-w-36 truncate">
                   {modelLabel.replace(/^GPT-/, "")}
                 </Text>
               </BlockStack>
             </SelectTrigger>
             <SelectContent
               align="center"
-              sideOffset={8}
+              sideOffset={6}
               collisionPadding={12}
-              className="w-72 max-w-[calc(100vw-1.5rem)] rounded-3xl p-2 shadow-xl motion-reduce:animate-none"
+              className="w-60 max-w-[calc(100vw-1.5rem)] rounded-2xl p-1.5 shadow-xl motion-reduce:animate-none"
             >
               <SelectGroup>
-                <SelectLabel className="px-3 pb-2 font-normal text-muted-foreground">
+                <SelectLabel className="px-2.5 pb-1 text-xs font-normal text-muted-foreground">
                   Select model
                 </SelectLabel>
                 <SelectItem
                   value={DEFAULT_MODEL_VALUE}
                   textValue="Default"
                   aria-labelledby={labelId}
-                  className="rounded-xl py-2.5 pl-3"
+                  className="rounded-lg py-2 pl-2.5"
                 >
                   <BlockStack as="span" gap="0">
                     <Text id={labelId} size="sm">
@@ -167,7 +167,7 @@ export function AiModelSelect({
                   <SelectItem
                     key={option.id}
                     value={option.id}
-                    className="rounded-xl py-2.5 pl-3"
+                    className="rounded-lg py-2 pl-2.5"
                   >
                     {option.label}
                   </SelectItem>
@@ -181,7 +181,7 @@ export function AiModelSelect({
             size="icon"
             aria-label="Reset to GPT-6 Sol and High thinking"
             title="Reset to GPT-6 Sol and High"
-            className="absolute -top-1 -right-2 size-8 rounded-full text-muted-foreground"
+            className="absolute -top-1 -right-1 size-8 rounded-full text-muted-foreground"
             onClick={() => {
               setPreviewIndex(null);
               onChange({
@@ -190,7 +190,7 @@ export function AiModelSelect({
               });
             }}
           >
-            <Icon name="RotateCcw" size="lg" aria-hidden="true" />
+            <Icon name="RotateCcw" size="md" aria-hidden="true" />
           </Button>
           <BlockStack className="relative" gap="2">
             <Slider
@@ -212,8 +212,8 @@ export function AiModelSelect({
                   });
               }}
               className={cn(
-                "h-11 [&_[data-slot=slider-track]]:h-9 [&_[data-slot=slider-track]]:bg-foreground/15 [&_[data-slot=slider-track]]:ring-1 [&_[data-slot=slider-track]]:ring-inset [&_[data-slot=slider-track]]:ring-foreground/10",
-                "[&_[data-slot=slider-range]]:bg-brand [&_[data-slot=slider-thumb]]:relative [&_[data-slot=slider-thumb]]:z-10 [&_[data-slot=slider-thumb]]:size-11 [&_[data-slot=slider-thumb]]:border-0 [&_[data-slot=slider-thumb]]:bg-white [&_[data-slot=slider-thumb]]:shadow-md [&_[data-slot=slider-thumb]]:focus-visible:ring-[3px] [&_[data-slot=slider-thumb]]:focus-visible:ring-ring/50",
+                "h-9 [&_[data-slot=slider-track]]:h-7 [&_[data-slot=slider-track]]:bg-foreground/15 [&_[data-slot=slider-track]]:ring-1 [&_[data-slot=slider-track]]:ring-inset [&_[data-slot=slider-track]]:ring-foreground/10",
+                "[&_[data-slot=slider-range]]:bg-brand [&_[data-slot=slider-thumb]]:relative [&_[data-slot=slider-thumb]]:z-10 [&_[data-slot=slider-thumb]]:size-9 [&_[data-slot=slider-thumb]]:border-0 [&_[data-slot=slider-thumb]]:bg-white [&_[data-slot=slider-thumb]]:shadow-md [&_[data-slot=slider-thumb]]:focus-visible:ring-[3px] [&_[data-slot=slider-thumb]]:focus-visible:ring-ring/50",
                 !supportsThinking && "opacity-40",
                 isMax &&
                   "[&_[data-slot=slider-range]]:bg-linear-to-r [&_[data-slot=slider-range]]:from-indigo-500 [&_[data-slot=slider-range]]:via-violet-400 [&_[data-slot=slider-range]]:to-brand",
@@ -222,12 +222,12 @@ export function AiModelSelect({
             <InlineStack
               aria-hidden="true"
               align="space-between"
-              className="pointer-events-none absolute inset-x-5 top-5"
+              className="pointer-events-none absolute inset-x-4 top-4"
             >
               {AI_REASONING_EFFORTS.map((option) => (
                 <span
                   key={option.value}
-                  className="size-1.5 rounded-full bg-white/35"
+                  className="size-1 rounded-full bg-white/35"
                 />
               ))}
             </InlineStack>
@@ -235,7 +235,7 @@ export function AiModelSelect({
               <svg
                 aria-hidden="true"
                 viewBox="0 0 280 44"
-                className="pointer-events-none absolute inset-0 h-11 w-full fill-white/55"
+                className="pointer-events-none absolute inset-0 h-9 w-full fill-white/55"
               >
                 <circle cx="34" cy="12" r="1.5" />
                 <circle cx="48" cy="30" r="1" />
