@@ -10,6 +10,13 @@
  * runs via `Agent.asTool(...)`, and inside those nested runs only the
  * sub-agent's own hooks fire — without per-agent wiring the status line
  * freezes while a specialist is working.
+ *
+ * The status line is one string that each event overwrites, so it says what
+ * an agent is doing and never what it did. A sub-agent Prime drives has no
+ * other surface at all — its tool calls cross a Comlink bridge that logs
+ * nothing — so a loop, a stale entity id or a tool that never returns are
+ * indistinguishable from working. The trace below is the record the status
+ * line cannot be: filter DevTools on `[agent]`.
  */
 import type { Agent } from "@openai/agents";
 
@@ -60,6 +67,40 @@ const SUB_AGENT_LABELS: Record<string, string> = {
   "general-help": "Looking up information...",
 };
 
+const MAX_TRACED_CHARS = 2000;
+
+function truncate(value: string): string {
+  return value.length > MAX_TRACED_CHARS
+    ? `${value.slice(0, MAX_TRACED_CHARS)}… (${value.length} chars)`
+    : value;
+}
+
+interface TracedToolCall {
+  key: string;
+  args?: string;
+}
+
+/**
+ * `ToolCallItem` is a union whose members carry the call's identity under
+ * different names, and a provider may send a shape the union does not cover
+ * yet. Reading it structurally keeps a trace from throwing inside a lifecycle
+ * hook, where a throw would take the agent's turn down with it.
+ */
+function readToolCall(toolCall: unknown): TracedToolCall {
+  if (typeof toolCall !== "object" || toolCall === null) return { key: "?" };
+  const record = toolCall as Record<string, unknown>;
+  const key =
+    [record.callId, record.id, record.name].find(
+      (candidate): candidate is string => typeof candidate === "string",
+    ) ?? "?";
+  const args = record.arguments;
+  return { key, args: typeof args === "string" ? args : undefined };
+}
+
+function trace(message: string, ...details: unknown[]): void {
+  console.info(`[agent] ${message}`, ...details);
+}
+
 // `Agent<any, any>` matches both the dispatcher (which infers handoff
 // output types) and each sub-agent (default `TextOutput`). The hook
 // payloads are independent of the agent's generic parameters, so the
@@ -68,18 +109,52 @@ export function attachObservabilityHooks(
   agent: Agent<any, any>,
   emitStatus: StatusCallback,
 ): () => void {
+  const inFlight = new Map<string, { name: string; startedAt: number }>();
+
   const onStart = () => {
     emitStatus({ text: "Thinking..." });
+    trace(`${agent.name} turn start`);
   };
 
   const onEnd = () => {
     emitStatus({ text: "Preparing response..." });
+    for (const [key, call] of inFlight) {
+      trace(
+        `${agent.name} tool never returned ${call.name} after ${Date.now() - call.startedAt}ms`,
+        key,
+      );
+    }
+    inFlight.clear();
+    trace(`${agent.name} turn end`);
   };
 
-  const onToolStart = (_ctx: unknown, toolDef: { name: string }) => {
+  const onToolStart = (
+    _ctx: unknown,
+    toolDef: { name: string },
+    details?: { toolCall: unknown },
+  ) => {
     emitStatus({
       text: TOOL_STATUS_LABELS[toolDef.name] ?? "Working...",
     });
+    const { key, args } = readToolCall(details?.toolCall);
+    inFlight.set(key, { name: toolDef.name, startedAt: Date.now() });
+    trace(`${agent.name} tool start ${toolDef.name}`, truncate(args ?? ""));
+  };
+
+  const onToolEnd = (
+    _ctx: unknown,
+    toolDef: { name: string },
+    result: string,
+    details?: { toolCall: unknown },
+  ) => {
+    const { key } = readToolCall(details?.toolCall);
+    const started = inFlight.get(key);
+    inFlight.delete(key);
+    const elapsed = started ? `${Date.now() - started.startedAt}ms` : "?ms";
+    trace(
+      `${agent.name} tool end ${toolDef.name} ${elapsed}`,
+      truncate(result ?? ""),
+    );
   };
 
   const onHandoff = (_ctx: unknown, nextAgent: { name: string }) => {
@@ -88,17 +163,21 @@ export function attachObservabilityHooks(
         SUB_AGENT_LABELS[nextAgent.name] ??
         `Delegating to ${nextAgent.name}...`,
     });
+    trace(`${agent.name} handoff to ${nextAgent.name}`);
   };
 
   agent.on("agent_start", onStart);
   agent.on("agent_end", onEnd);
   agent.on("agent_tool_start", onToolStart);
+  agent.on("agent_tool_end", onToolEnd);
   agent.on("agent_handoff", onHandoff);
 
   return () => {
     agent.off("agent_start", onStart);
     agent.off("agent_end", onEnd);
     agent.off("agent_tool_start", onToolStart);
+    agent.off("agent_tool_end", onToolEnd);
     agent.off("agent_handoff", onHandoff);
+    inFlight.clear();
   };
 }
