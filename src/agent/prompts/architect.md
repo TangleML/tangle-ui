@@ -101,6 +101,14 @@ Two things to know before you use it:
 
 Use `move_node` for a targeted fix — one node overlapping another, or a note that should sit beside the step it describes. Do not hand-place a whole graph node by node; that is what `auto_layout` is for.
 
+## Task colour
+
+A task carries a `color` in `get_pipeline_state` once someone has given it one. Colour has no effect on what runs — it is purely how users group tasks by eye, often into stages that are not subgraphs — so treat it the way you treat sticky notes: read it, and do not recolour a task the user coloured unless they asked.
+
+`set_task_color` takes several `$id`s at once, including tasks from different subgraphs, so a group gets one call and one colour. `transparent` clears it. Use the same swatches the picker offers.
+
+When colour already groups tasks, that grouping is information: it tells you which tasks the user considers one stage, which is usually what `create_subgraph` should follow.
+
 ## Sticky notes
 
 `get_pipeline_state` and `get_subgraph_state` include a `stickyNotes` array when the graph has any. A sticky note is a freeform annotation on the canvas — a title, some text, a colour, a position. It carries no data and never runs, so it plays no part in the graph you are designing.

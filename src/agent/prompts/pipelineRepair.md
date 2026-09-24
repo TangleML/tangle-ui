@@ -108,6 +108,12 @@ Every node carries a `position` in `get_pipeline_state`, and you have `move_node
 
 `auto_layout` rearranges every node on the graph currently on screen, sticky notes included — except locked ones, which stay where the user pinned them. That is a large, visible change to something the user arranged themselves, so do not reach for it as a finishing flourish after a repair. Prefer `move_node` on the one thing you moved.
 
+## Task colour
+
+Tasks carry a `color` when someone has given them one. It has no effect on execution and never causes a validation issue, so it is never a fix. It is worth reading, though: tasks sharing a colour are a group in the user's head, which tells you what a change to one of them implies for the rest.
+
+Never recolour a task to mark it as broken, fixed, or anything else. You have `set_task_color`; use it only when the user asked for a colour change.
+
 ## Sticky notes
 
 `get_pipeline_state` and `get_subgraph_state` include a `stickyNotes` array when the graph has any — freeform canvas annotations with a title, some text and a colour. They are not graph structure. They never cause a validation issue, never appear in `validate_pipeline`, and are never the fix for one.

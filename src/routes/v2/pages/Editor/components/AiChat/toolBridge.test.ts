@@ -19,6 +19,7 @@ import {
   PIPELINE_NOTES_ANNOTATION,
   PIPELINE_TAGS_ANNOTATION,
   RUN_NAME_TEMPLATE_ANNOTATION,
+  TASK_COLOR_ANNOTATION,
 } from "@/utils/annotationKeys";
 
 vi.mock("@/services/componentService", () => ({
@@ -555,6 +556,71 @@ describe("createEditorToolBridge", () => {
       const result = await bridge.renameTask("task_1", "Renamed");
       expect(result.success).toBe(true);
       expect(spec.tasks[0].name).toBe("Renamed");
+    });
+  });
+
+  describe("task colour", () => {
+    it("colours several tasks at once and clears with transparent", async () => {
+      const { bridge, spec, undo } = makeBridge();
+
+      expect(await bridge.setTaskColor(["task_1"], "#C8E6C9")).toEqual({
+        success: true,
+      });
+      expect(spec.tasks[0]?.annotations.get(TASK_COLOR_ANNOTATION)).toBe(
+        "#C8E6C9",
+      );
+      expect(undo.labels).toContain("Batch task color update");
+
+      await bridge.setTaskColor(["task_1"], "transparent");
+      expect(spec.tasks[0]?.annotations.has(TASK_COLOR_ANNOTATION)).toBe(false);
+    });
+
+    it("colours tasks that live in different subgraphs in one call", async () => {
+      const { bridge, spec, inner } = makeNestedBridge();
+
+      const result = await bridge.setTaskColor(
+        [taskId(spec, "Train"), taskId(inner, "DropNulls")],
+        "#BBDEFB",
+      );
+
+      expect(result).toEqual({ success: true });
+      expect(
+        spec.tasks
+          .find((t) => t.name === "Train")
+          ?.annotations.get(TASK_COLOR_ANNOTATION),
+      ).toBe("#BBDEFB");
+      expect(inner.tasks[0]?.annotations.get(TASK_COLOR_ANNOTATION)).toBe(
+        "#BBDEFB",
+      );
+    });
+
+    it("changes nothing when any id or the colour is bad", async () => {
+      const { bridge, spec } = makeBridge();
+
+      const badColor = await bridge.setTaskColor(["task_1"], "chartreuse");
+      expect(badColor.success).toBe(false);
+      expect(badColor.error).toContain("#FFF9C4");
+
+      const badId = await bridge.setTaskColor(["task_1", "nope"], "#C8E6C9");
+      expect(badId.success).toBe(false);
+      expect(badId.error).toBe(
+        'No task with $id "nope" exists in this pipeline.',
+      );
+
+      const empty = await bridge.setTaskColor([], "#C8E6C9");
+      expect(empty.success).toBe(false);
+
+      expect(spec.tasks[0]?.annotations.has(TASK_COLOR_ANNOTATION)).toBe(false);
+    });
+
+    it("serializes a task's colour only once it has one", async () => {
+      const { bridge } = makeBridge();
+
+      expect((await bridge.getPipelineState()).tasks[0]?.color).toBeUndefined();
+
+      await bridge.setTaskColor(["task_1"], "#D1C4E9");
+
+      expect((await bridge.getPipelineState()).tasks[0]?.color).toBe("#D1C4E9");
     });
   });
 

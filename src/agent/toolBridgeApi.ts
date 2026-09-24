@@ -162,6 +162,7 @@ export interface ToolBridgeApi {
   }): Promise<BridgeResult & { taskId?: string; name?: string }>;
   deleteTask(entityId: string): Promise<BridgeResult>;
   renameTask(entityId: string, newName: string): Promise<BridgeResult>;
+  setTaskColor(taskEntityIds: string[], color: string): Promise<BridgeResult>;
 
   addInput(args: {
     name: string;

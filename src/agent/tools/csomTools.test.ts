@@ -74,7 +74,7 @@ function hasAllOf(schema: JsonSchemaNode | undefined): boolean {
 }
 
 describe("createCsomTools", () => {
-  it("exposes the full 29-tool surface", () => {
+  it("exposes the full 30-tool surface", () => {
     const { allTools } = createCsomTools(makeBridge());
     const names = allTools.map((t) => t.name).sort();
     expect(names).toEqual(
@@ -103,6 +103,7 @@ describe("createCsomTools", () => {
         "set_pipeline_tags",
         "set_run_name_template",
         "set_task_argument",
+        "set_task_color",
         "unpack_subgraph",
         "update_input",
         "update_output",
@@ -374,6 +375,18 @@ describe("createCsomTools", () => {
       "flex_1",
       expect.objectContaining({ content: "Revised", locked: false }),
     );
+  });
+
+  it("set_task_color forwards (taskEntityIds, color) in the right order", async () => {
+    const setTaskColor = vi.fn().mockResolvedValue({ success: true });
+    const { allTools } = createCsomTools(makeBridge({ setTaskColor }));
+
+    await invoke(findTool(allTools, "set_task_color"), {
+      taskEntityIds: ["task_1", "task_2"],
+      color: "#C8E6C9",
+    });
+
+    expect(setTaskColor).toHaveBeenCalledWith(["task_1", "task_2"], "#C8E6C9");
   });
 
   it("update_input keeps an explicit empty string as a clear instruction", async () => {
