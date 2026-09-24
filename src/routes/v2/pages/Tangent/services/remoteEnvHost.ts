@@ -233,6 +233,19 @@ export function createRemoteEnvHost(
       runId,
     );
 
+    // Only `end` rewrites the bubble's text: an `error` clears the streaming
+    // flags but leaves the content, and an aborted turn sends no terminal event
+    // at all. Both would strand WORKING_ON_IT_DELTA as the final answer, so
+    // they finalize with empty content, which persists nothing and wakes no one.
+    function discardPlaceholder(): void {
+      client?.agentEvent(
+        turnSessionId,
+        agentId,
+        { type: "end", messageId, content: "", thinking: "" },
+        runId,
+      );
+    }
+
     try {
       const onStatus = proxy((status: { text: string }) =>
         emitActivity(command, lifecycle, status.text),
@@ -262,6 +275,11 @@ export function createRemoteEnvHost(
       );
     } catch (error) {
       if (lifecycle.cancelled || isAbortError(error)) {
+        // Ahead of the staleness guard: a kill or a respawn drops this
+        // lifecycle from the map, and `messageId` belongs to this turn alone,
+        // so finalizing it cannot disturb whichever turn replaced it. The
+        // activity reset below is per agent, so it stays behind the guard.
+        discardPlaceholder();
         if (agentLifecycles.get(agentId) !== lifecycle) return;
         client?.agentEvent(
           turnSessionId,
@@ -272,6 +290,7 @@ export function createRemoteEnvHost(
         return;
       }
       const message = errorMessage(error);
+      discardPlaceholder();
       client?.agentEvent(
         turnSessionId,
         agentId,

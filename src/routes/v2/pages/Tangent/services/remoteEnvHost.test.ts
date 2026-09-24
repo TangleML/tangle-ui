@@ -382,6 +382,59 @@ describe("createRemoteEnvHost", () => {
     expect(onError).toHaveBeenCalledWith("model exploded");
   });
 
+  it("finalizes the placeholder with empty content when a turn fails", async () => {
+    const worker = makeWorker();
+    worker.runTurn.mockRejectedValue(new Error("model exploded"));
+    const { handlers } = connectedHost(worker);
+    await handlers.onSpawn(spawnCommand("a1"));
+
+    await handlers.onMessage(messageCommand("a1", "hello"));
+    await Promise.resolve();
+
+    const events = client.agentEvent.mock.calls;
+    const startCall = events.find((call) => call[2].type === "start");
+    const endCall = events.find((call) => call[2].type === "end");
+    expect(endCall?.[2]).toMatchObject({
+      type: "end",
+      messageId: startCall?.[2].messageId,
+      content: "",
+    });
+    const endIndex = events.findIndex((call) => call[2].type === "end");
+    const errorIndex = events.findIndex((call) => call[2].type === "error");
+    expect(endIndex).toBeLessThan(errorIndex);
+  });
+
+  it("finalizes the placeholder when a kill aborts the turn", async () => {
+    const worker = makeWorker();
+    const turn = defer<{ answer: string }>();
+    worker.runTurn.mockReturnValue(turn.promise);
+    const { handlers } = connectedHost(worker);
+    await handlers.onSpawn(spawnCommand("a1"));
+
+    void handlers.onMessage(messageCommand("a1", "hello"));
+    await Promise.resolve();
+
+    // onKill drops the lifecycle, so this also covers the staleness guard:
+    // the turn's own messageId still has to be finalized.
+    await handlers.onKill(killCommand("a1", false));
+    const abortError = new Error("aborted");
+    abortError.name = "AbortError";
+    turn.reject(abortError);
+    await turn.promise.catch(() => undefined);
+    await Promise.resolve();
+
+    const startCall = client.agentEvent.mock.calls.find(
+      (call) => call[2].type === "start",
+    );
+    const endCall = client.agentEvent.mock.calls.find(
+      (call) => call[2].type === "end",
+    );
+    expect(endCall?.[2]).toMatchObject({
+      messageId: startCall?.[2].messageId,
+      content: "",
+    });
+  });
+
   it("does not toast when an in-flight turn is aborted by disconnect", async () => {
     const worker = makeWorker();
     const turn = defer<{ answer: string }>();
