@@ -132,6 +132,38 @@ describe("component search embeddings", () => {
     expect(results[0]?.digest).toBe("csv");
   });
 
+  it("includes browser authentication without an AI key for the backend proxy", async () => {
+    const index = buildSearchIndex([
+      makeSourced({
+        digest: "csv",
+        spec: {
+          name: "load_csv_file",
+          description: "Read a CSV file.",
+          implementation: { container: { image: "example" } },
+        },
+      }),
+    ]);
+
+    await rankComponentMatchesByEmbeddings(
+      index,
+      "open a spreadsheet",
+      {
+        apiBase: "https://backend.example.com/api/experimental/ai/v1",
+        apiKey: "",
+        credentials: "include",
+      },
+      { limit: 1 },
+    );
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      "https://backend.example.com/api/experimental/ai/v1/embeddings",
+      expect.objectContaining({
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+      }),
+    );
+  });
+
   it("requests cache misses in batches", async () => {
     const index = buildSearchIndex(
       Array.from({ length: 257 }, (_, index) =>
