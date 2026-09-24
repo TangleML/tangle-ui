@@ -34,16 +34,9 @@ export function useNaturalLanguageComponentRerank() {
 
   const mutation = useMutation<RerankResult, Error, RerankVariables>({
     mutationFn: ({ query, candidates, scoreAllCandidates }) =>
-      rerankComponentsByNaturalLanguage(
-        query,
-        candidates,
-        {
-          model: config.model,
-          apiBase: config.apiBase,
-          apiKey: config.apiKey,
-        },
-        { scoreAllCandidates },
-      ),
+      rerankComponentsByNaturalLanguage(query, candidates, config, {
+        scoreAllCandidates,
+      }),
   });
 
   return { ...mutation, isConfigured };
@@ -89,9 +82,7 @@ export function useComponentAiDescription({
         throw new Error("Component reference is required");
       }
       return generateComponentAiDescription(reference, {
-        model: config.model,
-        apiBase: config.apiBase,
-        apiKey: config.apiKey,
+        ...config,
         signal,
       });
     },
