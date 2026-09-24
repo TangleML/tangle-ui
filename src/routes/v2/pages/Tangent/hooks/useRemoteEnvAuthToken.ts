@@ -5,7 +5,7 @@ import { createUnsignedJwt } from "@/routes/v2/pages/Tangent/services/createUnsi
 
 export function useRemoteEnvAuthToken(): string | undefined {
   const { data } = useQuery(userQueryOptions);
-  const email = data?.id;
-  if (!email || email === "Unknown") return undefined;
-  return createUnsignedJwt({ email });
+  const userId = data?.id;
+  if (!userId || userId === "Unknown") return undefined;
+  return createUnsignedJwt({ email: userId });
 }
