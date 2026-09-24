@@ -7,8 +7,18 @@
  * close over the per-turn `AgentSession` (bridge, recent runs, status
  * emitter).
  */
-import { type Agent, MemorySession, run } from "@openai/agents";
+import {
+  type Agent,
+  MemorySession,
+  OpenAIProvider,
+  Runner,
+} from "@openai/agents";
 
+import {
+  getDefaultAiModelId,
+  getEffectiveReasoningEffort,
+} from "@/config/aiModels";
+import { resolveAiResponsesModel } from "@/services/aiModelService";
 import type { AiProviderConfig } from "@/types/aiProvider";
 
 import type { AgentSession } from "../session";
@@ -48,9 +58,34 @@ export function createDispatcherRuntime(
   return {
     async invoke(params) {
       params.session.proxyClient.ensureConfigured(params.aiConfig);
+      const openAIClient = params.session.proxyClient.openai;
+      const selectedModel =
+        params.aiConfig.model.trim() || getDefaultAiModelId();
+      const model = await resolveAiResponsesModel({
+        ...params.aiConfig,
+        model: selectedModel,
+      });
       const sessionMemory = getOrCreateSessionMemory(params.threadId);
-      const agent = await buildAgent(params.session);
-      const result = await run(agent, params.message, {
+      const agent = await buildAgent({
+        ...params.session,
+        aiConfig: {
+          ...params.aiConfig,
+          model,
+          reasoningEffort:
+            params.aiConfig.reasoningEffort ??
+            (params.aiConfig.model.trim()
+              ? undefined
+              : getEffectiveReasoningEffort(selectedModel)),
+        },
+      });
+      const runner = new Runner({
+        modelProvider: new OpenAIProvider({
+          openAIClient,
+          useResponses: true,
+        }),
+        tracingDisabled: true,
+      });
+      const result = await runner.run(agent, params.message, {
         session: sessionMemory,
       });
       const answer =

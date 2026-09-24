@@ -6,6 +6,10 @@ import {
 } from "@openai/agents";
 import OpenAI from "openai";
 
+import {
+  getDefaultAiModelId,
+  getEffectiveReasoningEffort,
+} from "@/config/aiModels";
 import type { AiProviderConfig } from "@/types/aiProvider";
 import { BASE_URL } from "@/utils/constants";
 
@@ -15,17 +19,20 @@ const SIDEKICK_OPENAI_API = "responses";
 const RESPONSES_REASONING_INCLUDE = ["reasoning.encrypted_content"];
 
 export function getAgentModelConfig(config: AiProviderConfig): {
-  model?: string;
+  model: string;
   modelSettings: ModelSettings;
 } {
-  const model = config.model.trim();
+  const selectedModel = config.model.trim();
+  const model = selectedModel || getDefaultAiModelId();
+  const effort =
+    config.reasoningEffort ??
+    (selectedModel ? undefined : getEffectiveReasoningEffort(model));
   return {
-    ...(model ? { model } : {}),
+    model,
     modelSettings: {
+      ...(effort ? { reasoning: { effort } } : {}),
       providerData: {
         include: RESPONSES_REASONING_INCLUDE,
-        // Override the SDK fallback so a blank model lets the proxy choose.
-        ...(model ? {} : { model: undefined }),
       },
     },
   };

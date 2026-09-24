@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { resolveAiResponsesModel } from "@/services/aiModelService";
 import type { ComponentReference } from "@/utils/componentSpec";
 import { isRecord } from "@/utils/typeGuards";
 
@@ -15,6 +16,16 @@ const VALID_OPTIONS = {
   apiKey: "sk-test",
   model: "gpt-4o-mini",
 };
+
+vi.mock("@/services/aiModelService", () => ({
+  resolveAiResponsesModel: vi.fn(),
+}));
+
+beforeEach(() => {
+  vi.mocked(resolveAiResponsesModel)
+    .mockReset()
+    .mockImplementation(async ({ model }) => model);
+});
 
 function mockResponsesResponse(content: unknown, status = 200) {
   return new Response(
@@ -243,6 +254,40 @@ describe("rerankComponentsByNaturalLanguage", () => {
     expect(result.matches.map((m) => m.id)).toEqual(["a"]);
   });
 
+  it("uses the resolved route and preserves thinking and cancellation", async () => {
+    vi.mocked(resolveAiResponsesModel).mockResolvedValue(
+      "responses-provider:deployed-model",
+    );
+    vi.mocked(global.fetch).mockResolvedValue(
+      mockResponsesResponse({ matches: [] }),
+    );
+    const controller = new AbortController();
+    const options = {
+      ...VALID_OPTIONS,
+      model: "gpt-6-sol",
+      reasoningEffort: "max" as const,
+      signal: controller.signal,
+    };
+    await rerankComponentsByNaturalLanguage(
+      "train",
+      [{ id: "a", name: "trainer", description: "" }],
+      options,
+    );
+    expect(resolveAiResponsesModel).toHaveBeenCalledWith(
+      options,
+      controller.signal,
+    );
+    expect(parseFetchBody(vi.mocked(global.fetch).mock.calls[0])).toMatchObject(
+      {
+        model: "responses-provider:deployed-model",
+        reasoning: { effort: "max" },
+      },
+    );
+    expect(vi.mocked(global.fetch).mock.calls[0][1]?.signal).toBe(
+      controller.signal,
+    );
+  });
+
   it("recovers matches from malformed JSON regardless of field order", async () => {
     // `output_text` is not valid JSON, so the service falls back to partial
     // parsing. Fields are deliberately ordered score/reason/id to prove the
@@ -378,7 +423,13 @@ describe("rerankComponentsByNaturalLanguage", () => {
     expect(body.max_output_tokens).toBe(4000);
   });
 
-  it("omits temperature for reasoning models that reject it", async () => {
+  it.each([
+    "gpt-5-mini",
+    "gpt-6-astra",
+    "gpt-6-sol",
+    "gpt-6-luna",
+    "openai:gpt-6-astra",
+  ])("omits temperature for reasoning model %s", async (model) => {
     vi.mocked(global.fetch).mockResolvedValue(
       mockResponsesResponse({ matches: [] }),
     );
@@ -386,10 +437,24 @@ describe("rerankComponentsByNaturalLanguage", () => {
     await rerankComponentsByNaturalLanguage(
       "train",
       [{ id: "a", name: "a", description: "" }],
-      { ...VALID_OPTIONS, model: "gpt-5-mini" },
+      { ...VALID_OPTIONS, model },
     );
 
     const body = parseFetchBody(vi.mocked(global.fetch).mock.calls[0]);
+    expect(body.temperature).toBeUndefined();
+  });
+
+  it("sends the selected thinking effort to the Responses API", async () => {
+    vi.mocked(global.fetch).mockResolvedValue(
+      mockResponsesResponse({ matches: [] }),
+    );
+    await rerankComponentsByNaturalLanguage(
+      "train",
+      [{ id: "a", name: "a", description: "" }],
+      { ...VALID_OPTIONS, model: "gpt-6-sol", reasoningEffort: "xhigh" },
+    );
+    const body = parseFetchBody(vi.mocked(global.fetch).mock.calls[0]);
+    expect(body.reasoning).toEqual({ effort: "xhigh" });
     expect(body.temperature).toBeUndefined();
   });
 

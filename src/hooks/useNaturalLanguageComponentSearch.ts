@@ -71,10 +71,15 @@ export function useComponentAiDescription({
   const digest = reference?.digest;
   const hasSpec = Boolean(reference?.spec);
 
-  // Key includes apiBase + model so changing provider invalidates cached
-  // descriptions (a different model would have written a different answer).
+  // A different model or thinking level can produce a different description.
   const query = useQuery<ComponentDescriptionResult, Error>({
-    queryKey: ["componentAiDescription", digest, config.apiBase, config.model],
+    queryKey: [
+      "componentAiDescription",
+      digest,
+      config.apiBase,
+      config.model,
+      config.reasoningEffort,
+    ],
     queryFn: async ({ signal }) => {
       // queryFn is only called when `enabled` is true (guarded below),
       // which itself requires digest + hasSpec, so reference is defined here.
@@ -89,8 +94,7 @@ export function useComponentAiDescription({
     // Auto-fetch only when the caller opted in AND we have everything we
     // need; the manual "Generate" button calls refetch() directly.
     enabled: enabled && isConfigured && Boolean(digest) && hasSpec,
-    // Descriptions are deterministic given (digest, model). Never go stale
-    // on their own — re-key by changing the queryKey above when needed.
+    // Keep generated descriptions until their component or AI settings change.
     staleTime: Infinity,
     // Billed calls — don't auto-retry on transient failures. The user can
     // hit the "Try again" button in the panel if they want.

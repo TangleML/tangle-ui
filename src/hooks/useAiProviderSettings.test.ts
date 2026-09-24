@@ -30,7 +30,8 @@ describe("useAiProviderSettings", () => {
     expect(result.current.config).toEqual({
       apiBase: "",
       apiKey: "",
-      model: "",
+      model: "gpt-6-sol",
+      reasoningEffort: "high",
     });
     expect(result.current.isConfigured).toBe(false);
     expect(result.current.useOwnKey).toBe(true);
@@ -66,14 +67,15 @@ describe("useAiProviderSettings", () => {
     expect(reloaded.result.current.config).toEqual(customConfig);
   });
 
-  it("lets the backend choose a model without saved provider details", () => {
+  it("uses Sol with High thinking without saved provider details", () => {
     window.localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, "false");
     const { result } = renderHook(() => useAiProviderSettings());
 
     expect(result.current.config).toEqual({
       apiBase: "https://backend.example.com/api/experimental/ai/v1",
       apiKey: "",
-      model: "",
+      model: "gpt-6-sol",
+      reasoningEffort: "high",
       credentials: "include",
     });
     expect(result.current.isConfigured).toBe(true);
@@ -114,16 +116,16 @@ describe("useAiProviderSettings", () => {
     expect(result.current.isConfigured).toBe(true);
   });
 
-  it("preserves a cleared model after reloading proxy settings", () => {
+  it("uses the default for a previously cleared model after reloading", () => {
     window.localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, "false");
     const { result, unmount } = renderHook(() => useAiProviderSettings());
     act(() => result.current.update({ model: "gpt-5-mini" }));
     act(() => result.current.update({ model: "" }));
-    expect(result.current.config.model).toBe("");
+    expect(result.current.config.model).toBe("gpt-6-sol");
     unmount();
 
     const reloaded = renderHook(() => useAiProviderSettings());
-    expect(reloaded.result.current.config.model).toBe("");
+    expect(reloaded.result.current.config.model).toBe("gpt-6-sol");
   });
 
   it("syncs mode changes between mounted consumers and browser tabs", () => {
@@ -265,7 +267,48 @@ describe("useAiProviderSettings", () => {
     expect(result.current.config).toEqual({
       apiBase: "",
       apiKey: "",
-      model: "",
+      model: "gpt-6-sol",
+      reasoningEffort: "high",
     });
+  });
+
+  it("preserves thinking across model switches, consumers, and reloads", () => {
+    const first = renderHook(() => useAiProviderSettings());
+    const second = renderHook(() => useAiProviderSettings());
+    act(() =>
+      first.result.current.update({
+        model: "gpt-6-sol",
+        reasoningEffort: "none",
+      }),
+    );
+    act(() => first.result.current.update({ model: "gpt-6-astra" }));
+    expect(second.result.current.config.reasoningEffort).toBe("low");
+    expect(second.result.current.customConfig.reasoningEffort).toBe("none");
+    first.unmount();
+    second.unmount();
+
+    const reloaded = renderHook(() => useAiProviderSettings());
+    act(() => reloaded.result.current.update({ model: "gpt-6-luna" }));
+    expect(reloaded.result.current.config.reasoningEffort).toBe("none");
+
+    act(() => {
+      window.localStorage.setItem(
+        AI_PROVIDER_STORAGE_KEY,
+        JSON.stringify({ model: "gpt-6-sol", reasoningEffort: "max" }),
+      );
+      window.dispatchEvent(
+        new StorageEvent("storage", { key: AI_PROVIDER_STORAGE_KEY }),
+      );
+    });
+    expect(reloaded.result.current.config.reasoningEffort).toBe("max");
+  });
+
+  it("ignores invalid saved thinking levels", () => {
+    window.localStorage.setItem(
+      AI_PROVIDER_STORAGE_KEY,
+      JSON.stringify({ model: "gpt-6-sol", reasoningEffort: "invalid" }),
+    );
+    const { result } = renderHook(() => useAiProviderSettings());
+    expect(result.current.config.reasoningEffort).toBe("high");
   });
 });
