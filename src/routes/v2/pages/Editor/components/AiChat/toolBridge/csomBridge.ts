@@ -52,6 +52,9 @@ import {
   createSubgraph,
   renamePipeline,
   updatePipelineDescription,
+  updatePipelineNotes,
+  updatePipelineTags,
+  updateRunNameTemplate,
 } from "@/routes/v2/pages/Editor/store/actions/pipeline.actions";
 import {
   addTask,
@@ -67,7 +70,9 @@ import type {
 } from "@/routes/v2/shared/components/AiChat/toolBridge/utils";
 import {
   computeNextPosition,
+  requireActiveSpec,
   requireSpec,
+  resolveExpectedGraph,
   resolveNoteAnchor,
   toValidationResult,
 } from "@/routes/v2/shared/components/AiChat/toolBridge/utils";
@@ -80,6 +85,8 @@ import {
   describeStickyNoteLocation,
   explainNameCollision,
   explainNotASubgraph,
+  explainRunNameTemplateProblem,
+  explainTagProblem,
   explainUnpickableColor,
   resolveArgumentValue,
   resolveConnectable,
@@ -104,6 +111,9 @@ type CsomHandlers = Pick<
   | "getPipelineState"
   | "setPipelineName"
   | "setPipelineDescription"
+  | "setPipelineNotes"
+  | "setPipelineTags"
+  | "setRunNameTemplate"
   | "addTask"
   | "deleteTask"
   | "renameTask"
@@ -188,6 +198,7 @@ export function createCsomBridgeHandlers(deps: CsomBridgeDeps): CsomHandlers {
       return serializeSpecForAi(requireSpec(deps), {
         activeSubgraphPath: deps.getActiveSubgraphPath(),
         activeSubgraphTaskId: deps.getActiveSubgraphTaskId(),
+        activeSpec: requireActiveSpec(deps),
       });
     },
 
@@ -200,6 +211,41 @@ export function createCsomBridgeHandlers(deps: CsomBridgeDeps): CsomHandlers {
     async setPipelineDescription(description) {
       const spec = requireSpec(deps);
       updatePipelineDescription(deps.undo, spec, description);
+      return { success: true };
+    },
+
+    async setPipelineNotes(notes, expectedSubgraphTaskId) {
+      const graph = resolveExpectedGraph(deps, expectedSubgraphTaskId);
+      if (!graph.ok) {
+        return { success: false, error: graph.error };
+      }
+      updatePipelineNotes(deps.undo, graph.spec, notes || undefined);
+      return { success: true };
+    },
+
+    async setPipelineTags(tags, expectedSubgraphTaskId) {
+      const problem = explainTagProblem(tags);
+      if (problem) {
+        return { success: false, error: `Nothing was changed. ${problem}` };
+      }
+      const graph = resolveExpectedGraph(deps, expectedSubgraphTaskId);
+      if (!graph.ok) {
+        return { success: false, error: graph.error };
+      }
+      updatePipelineTags(deps.undo, graph.spec, tags);
+      return { success: true };
+    },
+
+    async setRunNameTemplate(template, expectedSubgraphTaskId) {
+      const graph = resolveExpectedGraph(deps, expectedSubgraphTaskId);
+      if (!graph.ok) {
+        return { success: false, error: graph.error };
+      }
+      const problem = explainRunNameTemplateProblem(template, graph.spec);
+      if (problem) {
+        return { success: false, error: `Nothing was changed. ${problem}` };
+      }
+      updateRunNameTemplate(deps.undo, graph.spec, template || undefined);
       return { success: true };
     },
 

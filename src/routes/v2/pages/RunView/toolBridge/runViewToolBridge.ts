@@ -27,6 +27,9 @@ type ReadOnlyCsomHandlers = Pick<
   | "getPipelineState"
   | "setPipelineName"
   | "setPipelineDescription"
+  | "setPipelineNotes"
+  | "setPipelineTags"
+  | "setRunNameTemplate"
   | "addTask"
   | "deleteTask"
   | "renameTask"
@@ -77,6 +80,15 @@ function createReadOnlyCsomHandlers(deps: BridgeDeps): ReadOnlyCsomHandlers {
       return { success: false, error: READ_ONLY_ERROR };
     },
     async setPipelineDescription() {
+      return { success: false, error: READ_ONLY_ERROR };
+    },
+    async setPipelineNotes() {
+      return { success: false, error: READ_ONLY_ERROR };
+    },
+    async setPipelineTags() {
+      return { success: false, error: READ_ONLY_ERROR };
+    },
+    async setRunNameTemplate() {
       return { success: false, error: READ_ONLY_ERROR };
     },
     async addTask() {

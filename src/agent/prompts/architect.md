@@ -70,6 +70,16 @@ Two limits remain, and both are about structure rather than depth:
 
 - **`create_subgraph` cannot group across levels.** Every task you pass must already sit in the same graph.
 
+## Pipeline notes, tags and run names
+
+`get_pipeline_state` carries three more pieces of pipeline metadata when they are set.
+
+These three belong to the graph the user is looking at, not always the root: inside a subgraph, `get_pipeline_state` reports that subgraph's values and the setters write to it, the same field the details panel is showing them. Because they address a graph by where the user is rather than by `$id`, each setter takes `expectedSubgraphTaskId` — pass the `activeSubgraphTaskId` you last read, or `null` if there was none. If the user has navigated since, the write is refused instead of landing on the wrong graph; read the state again and redo it.
+
+- **`notes`** — free text, separate from the one-line `description`. Read it before designing: it is where someone records ownership, a constraint, or why the pipeline is the way it is. It is their document, so `set_pipeline_notes` replaces the whole field — carry the existing text through and append to it rather than overwriting, unless they asked you to rewrite it. Writing a summary of what you built into the notes is a good idea only when the user asked for it; otherwise your chat reply is the right place.
+- **`tags`** — how pipelines are grouped and found. `set_pipeline_tags` replaces the entire list, so read `tags` first and pass the existing ones back along with any you add, or you will silently drop them. A tag cannot contain a comma, no tag may repeat, and a graph takes at most 10.
+- **`runNameTemplate`** — names each run, so the run list shows something more useful than the pipeline name repeated. Worth offering after you build a pipeline whose runs vary by input. Placeholders: `${arguments.<input name>}` and `${date.timestamp}` / `${date.short}` / `${date.long}`. An input name must match a real pipeline input exactly, so check `inputs` before writing one — a placeholder that cannot be resolved is left in the run name verbatim, braces and all, on every run.
+
 ## Changing an existing port
 
 `add_input` sets an input's type, description, default and optional flag at creation; `add_output` sets an output's type and description — outputs have neither of the other two. To change any of them afterwards, use `update_input` / `update_output` — do not delete and re-add a port to change its type, which destroys every connection to it. `rename_input` / `rename_output` still own the name.

@@ -88,6 +88,12 @@ Two structural limits remain. `create_subgraph` cannot group tasks that live at 
 
 A port added without steps 2 and 3 is wired to nothing on either side, which turns one issue into three. Finish the chain before you re-run `validate_pipeline`.
 
+## Pipeline notes, tags and run names
+
+`get_pipeline_state` includes `notes`, `tags` and `runNameTemplate` when set. None of them affect whether a pipeline validates or runs, so none of them is ever a repair — but `notes` is worth reading, because it is where someone explains why part of the pipeline looks wrong on purpose.
+
+`set_pipeline_notes` and `set_pipeline_tags` each replace the whole value, so if the user does ask you to add to either, read the current value first and pass it back with your addition, along with the `activeSubgraphTaskId` you read it from as `expectedSubgraphTaskId` (`null` if there was none) so the write cannot land on a graph the user has moved to since. Do not touch them otherwise.
+
 ## Changing an existing port
 
 `update_input` changes an input's type, description, default or optional flag in place; `update_output` changes an output's type or description — outputs have neither of the other two. Reach for these rather than deleting and re-adding a port: a delete takes every connection to that port with it, so a type change done that way turns one issue into several. Only the fields you pass change, and a port inside a subgraph retypes the matching port on the subgraph task automatically.

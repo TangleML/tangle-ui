@@ -11,6 +11,7 @@ import {
 import {
   EDITOR_POSITION_ANNOTATION,
   FLEX_NODES_ANNOTATION,
+  PIPELINE_TAGS_ANNOTATION,
 } from "@/utils/annotationKeys";
 
 import { serializeSpecForAi } from "./serializeSpecForAi";
@@ -321,6 +322,7 @@ describe("serializeSpecForAi", () => {
         }),
       );
       spec.annotations.set(FLEX_NODES_ANNOTATION, [stickyNote()]);
+      spec.annotations.set(PIPELINE_TAGS_ANNOTATION, ["nightly", "etl"]);
 
       expect(() => structuredClone(serializeSpecForAi(spec))).not.toThrow();
     });

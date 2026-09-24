@@ -14,7 +14,12 @@ import { YamlDeserializer } from "@/models/componentSpec/serialization/yamlDeser
 import { ONBOARDING_MY_RUN_COUNT_KEY } from "@/providers/OnboardingProvider/onboardingQueryKeys";
 import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
 import { hydrateComponentReference } from "@/services/componentService";
-import { EDITOR_POSITION_ANNOTATION } from "@/utils/annotationKeys";
+import {
+  EDITOR_POSITION_ANNOTATION,
+  PIPELINE_NOTES_ANNOTATION,
+  PIPELINE_TAGS_ANNOTATION,
+  RUN_NAME_TEMPLATE_ANNOTATION,
+} from "@/utils/annotationKeys";
 
 vi.mock("@/services/componentService", () => ({
   hydrateComponentReference: vi.fn(async (ref) => ref),
@@ -186,6 +191,25 @@ function makeNestedBridge(extraInnerTasks?: Record<string, unknown>) {
   return { bridge, spec, undo, inner: preprocess.subgraphSpec };
 }
 
+function makeInnerActiveBridge() {
+  const spec = new YamlDeserializer(new IncrementingIdGenerator()).deserialize(
+    nestedPipelineYaml(),
+  );
+  const preprocess = spec.tasks.find((t) => t.name === "Preprocess");
+  if (!preprocess?.subgraphSpec) {
+    throw new Error("Preprocess did not deserialize as a subgraph");
+  }
+  const inner = preprocess.subgraphSpec;
+  const bridge = createEditorToolBridge({
+    getSpec: () => spec,
+    getActiveSpec: () => inner,
+    getActiveSubgraphPath: () => ["Preprocess"],
+    getActiveSubgraphTaskId: () => preprocess.$id,
+    undo: new RecordingUndo(),
+  });
+  return { bridge, spec, inner, activeSubgraphTaskId: preprocess.$id };
+}
+
 function taskId(spec: ComponentSpec, name: string): string {
   const task = spec.tasks.find((t) => t.name === name);
   if (!task) throw new Error(`No task named ${name}`);
@@ -286,6 +310,177 @@ describe("createEditorToolBridge", () => {
       expect(result).toEqual({ success: true });
       expect(spec.description).toBe("hi");
       expect(undo.labels).toContain("Update pipeline description");
+    });
+
+    it("setPipelineNotes writes and clears the notes annotation", async () => {
+      const { bridge, undo, spec } = makeBridge();
+
+      expect(
+        await bridge.setPipelineNotes("Owned by the ranking team", null),
+      ).toEqual({ success: true });
+      expect(spec.annotations.get(PIPELINE_NOTES_ANNOTATION)).toBe(
+        "Owned by the ranking team",
+      );
+      expect(undo.labels).toContain("Update pipeline notes");
+
+      await bridge.setPipelineNotes("", null);
+      expect(spec.annotations.has(PIPELINE_NOTES_ANNOTATION)).toBe(false);
+    });
+
+    it("setPipelineTags replaces the whole list and clears on empty", async () => {
+      const { bridge, undo, spec } = makeBridge();
+
+      expect(
+        await bridge.setPipelineTags(["ranking", " nightly "], null),
+      ).toEqual({
+        success: true,
+      });
+      expect(spec.annotations.get(PIPELINE_TAGS_ANNOTATION)).toEqual([
+        "ranking",
+        "nightly",
+      ]);
+      expect(undo.labels).toContain("Update pipeline tags");
+
+      await bridge.setPipelineTags([], null);
+      expect(spec.annotations.has(PIPELINE_TAGS_ANNOTATION)).toBe(false);
+    });
+
+    it("setRunNameTemplate writes and clears the template", async () => {
+      const { bridge, undo, spec } = makeBridge();
+
+      expect(
+        await bridge.setRunNameTemplate("nightly ${date.short}", null),
+      ).toEqual({
+        success: true,
+      });
+      expect(spec.annotations.get(RUN_NAME_TEMPLATE_ANNOTATION)).toBe(
+        "nightly ${date.short}",
+      );
+      expect(undo.labels).toContain("Update run name template");
+
+      await bridge.setRunNameTemplate("", null);
+      expect(spec.annotations.has(RUN_NAME_TEMPLATE_ANNOTATION)).toBe(false);
+    });
+
+    it("refuses a run name template naming an input the graph does not have", async () => {
+      const { bridge, spec } = makeBridge();
+
+      const result = await bridge.setRunNameTemplate(
+        "run ${arguments.nope}",
+        null,
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("nope");
+      expect(result.error).toContain("data");
+      expect(spec.annotations.has(RUN_NAME_TEMPLATE_ANNOTATION)).toBe(false);
+
+      expect(
+        await bridge.setRunNameTemplate("run ${arguments.data}", null),
+      ).toEqual({ success: true });
+    });
+
+    it("validates the run name template against the subgraph's own inputs", async () => {
+      const { bridge, inner, activeSubgraphTaskId } = makeInnerActiveBridge();
+
+      const rootInput = await bridge.setRunNameTemplate(
+        "${arguments.raw_path}",
+        activeSubgraphTaskId,
+      );
+      expect(rootInput.success).toBe(false);
+      expect(inner.annotations.has(RUN_NAME_TEMPLATE_ANNOTATION)).toBe(false);
+
+      expect(
+        await bridge.setRunNameTemplate(
+          "${arguments.path}",
+          activeSubgraphTaskId,
+        ),
+      ).toEqual({ success: true });
+      expect(inner.annotations.get(RUN_NAME_TEMPLATE_ANNOTATION)).toBe(
+        "${arguments.path}",
+      );
+    });
+
+    it("getPipelineState surfaces notes, tags and the run name template", async () => {
+      const { bridge } = makeBridge();
+      await bridge.setPipelineNotes("read me", null);
+      await bridge.setPipelineTags(["ranking"], null);
+      await bridge.setRunNameTemplate("${date.short}", null);
+
+      const state = await bridge.getPipelineState();
+
+      expect(state.notes).toBe("read me");
+      expect(state.tags).toEqual(["ranking"]);
+      expect(state.runNameTemplate).toBe("${date.short}");
+    });
+
+    it("reads and writes the notes of the subgraph the user is inside", async () => {
+      const { bridge, spec, inner, activeSubgraphTaskId } =
+        makeInnerActiveBridge();
+      inner.annotations.set(PIPELINE_NOTES_ANNOTATION, "inner notes");
+
+      expect((await bridge.getPipelineState()).notes).toBe("inner notes");
+
+      await bridge.setPipelineNotes(
+        "inner notes, extended",
+        activeSubgraphTaskId,
+      );
+
+      expect(inner.annotations.get(PIPELINE_NOTES_ANNOTATION)).toBe(
+        "inner notes, extended",
+      );
+      expect(spec.annotations.has(PIPELINE_NOTES_ANNOTATION)).toBe(false);
+    });
+
+    it("refuses a metadata write aimed at a graph the user has since left", async () => {
+      const { bridge, inner, activeSubgraphTaskId } = makeInnerActiveBridge();
+      inner.annotations.set(PIPELINE_NOTES_ANNOTATION, "inner notes");
+
+      const staleRoot = await bridge.setPipelineNotes("root notes", null);
+      expect(staleRoot.success).toBe(false);
+      expect(staleRoot.error).toContain("moved to a different graph");
+      expect(inner.annotations.get(PIPELINE_NOTES_ANNOTATION)).toBe(
+        "inner notes",
+      );
+
+      const { bridge: rootBridge, spec } = makeBridge();
+      const staleSubgraph = await bridge.setPipelineTags(
+        ["x"],
+        "task_that_is_not_open",
+      );
+      expect(staleSubgraph.success).toBe(false);
+
+      expect(
+        await rootBridge.setRunNameTemplate("t", activeSubgraphTaskId),
+      ).toMatchObject({ success: false });
+      expect(spec.annotations.has(RUN_NAME_TEMPLATE_ANNOTATION)).toBe(false);
+    });
+
+    it("refuses a tag list the tags UI could not have produced", async () => {
+      const { bridge, spec } = makeBridge();
+      await bridge.setPipelineTags(["ranking"], null);
+
+      const comma = await bridge.setPipelineTags(["ranking", "a,b"], null);
+      expect(comma.success).toBe(false);
+      expect(comma.error).toContain("comma");
+
+      const duplicate = await bridge.setPipelineTags(
+        ["ranking", "ranking"],
+        null,
+      );
+      expect(duplicate.success).toBe(false);
+      expect(duplicate.error).toContain("more than once");
+
+      const tooMany = await bridge.setPipelineTags(
+        Array.from({ length: 11 }, (_, i) => `tag-${i}`),
+        null,
+      );
+      expect(tooMany.success).toBe(false);
+      expect(tooMany.error).toContain("at most 10");
+
+      expect(spec.annotations.get(PIPELINE_TAGS_ANNOTATION)).toEqual([
+        "ranking",
+      ]);
     });
   });
 
