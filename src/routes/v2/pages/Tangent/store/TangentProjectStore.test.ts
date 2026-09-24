@@ -434,7 +434,7 @@ describe("TangentProjectStore.startSession", () => {
           {
             kind: "memory",
             scope: "session",
-            content: sessionMemorySeed("Prefer concise plans."),
+            content: sessionMemorySeed("project-1", "Prefer concise plans."),
           },
         ],
       },
@@ -454,7 +454,11 @@ describe("TangentProjectStore.startSession", () => {
 
     const options = io.newSession.mock.calls[0][2];
     expect(options.resources).toEqual([
-      { kind: "memory", scope: "session", content: sessionMemorySeed(null) },
+      {
+        kind: "memory",
+        scope: "session",
+        content: sessionMemorySeed("project-1", null),
+      },
     ]);
   });
 

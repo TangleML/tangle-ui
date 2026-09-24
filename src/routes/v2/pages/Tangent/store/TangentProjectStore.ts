@@ -229,7 +229,7 @@ export class TangentProjectStore {
           {
             kind: "memory",
             scope: "session",
-            content: sessionMemorySeed(io.projectInstructions),
+            content: sessionMemorySeed(this.projectId, io.projectInstructions),
           },
         ],
         model: options?.model,
