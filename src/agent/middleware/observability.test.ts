@@ -1,8 +1,9 @@
 import { EventEmitter } from "node:events";
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import type { StatusCallback } from "../types";
+import { clearTraceEvents, readTraceEvents } from "./agentTrace";
 import { attachObservabilityHooks } from "./observability";
 
 type Agent = Parameters<typeof attachObservabilityHooks>[0];
@@ -25,29 +26,16 @@ function toolCall(callId: string, args?: string) {
   return { toolCall: { type: "function_call", callId, arguments: args } };
 }
 
-function silenceConsoleInfo() {
-  return vi.spyOn(console, "info").mockImplementation(() => {});
-}
-
 describe("attachObservabilityHooks", () => {
-  let info: ReturnType<typeof silenceConsoleInfo>;
   let emitStatus: StatusCallback;
   let statuses: string[];
 
-  function tracedLines(): string[] {
-    return info.mock.calls.map((call) => String(call[0]));
-  }
-
   beforeEach(() => {
-    info = silenceConsoleInfo();
+    clearTraceEvents();
     statuses = [];
     emitStatus = (status: { text: string }) => {
       statuses.push(status.text);
     };
-  });
-
-  afterEach(() => {
-    info.mockRestore();
   });
 
   it("still drives the status line", () => {
@@ -61,7 +49,7 @@ describe("attachObservabilityHooks", () => {
   });
 
   /** The status line is overwritten by the next event; the trace is the record. */
-  it("traces a tool call's arguments and its result", () => {
+  it("records a tool call's arguments and its result", () => {
     const { agent, emit } = fakeAgent();
     attachObservabilityHooks(agent, emitStatus);
 
@@ -79,11 +67,19 @@ describe("attachObservabilityHooks", () => {
       toolCall("c1"),
     );
 
-    const [start, end] = info.mock.calls;
-    expect(String(start[0])).toContain("tool start add_task");
-    expect(start[1]).toBe('{"name":"Fetch articles"}');
-    expect(String(end[0])).toMatch(/tool end add_task \d+ms/);
-    expect(end[1]).toBe('{"success":true,"taskId":"task-1"}');
+    const [start, end] = readTraceEvents();
+    expect(start).toMatchObject({
+      agent: "tangle-remote-editor",
+      kind: "tool-start",
+      label: "add_task",
+      detail: '{"name":"Fetch articles"}',
+    });
+    expect(end).toMatchObject({
+      kind: "tool-end",
+      label: "add_task",
+      detail: '{"success":true,"taskId":"task-1"}',
+    });
+    expect(end.durationMs).toBeGreaterThanOrEqual(0);
   });
 
   it("truncates a payload too large to read", () => {
@@ -98,13 +94,13 @@ describe("attachObservabilityHooks", () => {
       toolCall("c1"),
     );
 
-    const logged = String(info.mock.calls[0][1]);
-    expect(logged).toContain("(5000 chars)");
-    expect(logged.length).toBeLessThan(2100);
+    const detail = readTraceEvents()[0]?.detail ?? "";
+    expect(detail).toContain("(5000 chars)");
+    expect(detail.length).toBeLessThan(2100);
   });
 
   /** A hung bridge call and a finished turn otherwise look identical. */
-  it("reports a tool that never returned when the turn ends", () => {
+  it("records a tool that never returned when the turn ends", () => {
     const { agent, emit } = fakeAgent();
     attachObservabilityHooks(agent, emitStatus);
 
@@ -112,13 +108,13 @@ describe("attachObservabilityHooks", () => {
     emit("agent_end");
 
     expect(
-      tracedLines().some((line) =>
-        line.includes("tool never returned add_task"),
+      readTraceEvents().some(
+        (event) => event.kind === "tool-hung" && event.label === "add_task",
       ),
     ).toBe(true);
   });
 
-  it("does not report a tool that did return", () => {
+  it("does not record a hang for a tool that did return", () => {
     const { agent, emit } = fakeAgent();
     attachObservabilityHooks(agent, emitStatus);
 
@@ -126,7 +122,7 @@ describe("attachObservabilityHooks", () => {
     emit("agent_tool_end", {}, { name: "add_task" }, "ok", toolCall("c1"));
     emit("agent_end");
 
-    expect(tracedLines().some((line) => line.includes("never returned"))).toBe(
+    expect(readTraceEvents().some((event) => event.kind === "tool-hung")).toBe(
       false,
     );
   });
@@ -153,6 +149,6 @@ describe("attachObservabilityHooks", () => {
     emit("agent_tool_start", {}, { name: "add_task" }, toolCall("c1"));
 
     expect(statuses).toEqual([]);
-    expect(info).not.toHaveBeenCalled();
+    expect(readTraceEvents()).toEqual([]);
   });
 });

@@ -12,6 +12,7 @@ import {
   runInAction,
 } from "mobx";
 
+import type { AgentTraceEvent } from "@/agent/middleware/agentTrace";
 import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import { TANGENT_BUNDLE_ID } from "@/routes/v2/pages/Tangent/constants";
 import { resolveWorkareaTarget } from "@/routes/v2/pages/Tangent/services/resolveWorkareaTarget";
@@ -120,6 +121,7 @@ export class TangentProjectStore {
     Set<(environmentId: string | undefined) => void>
   >();
   #tabBridges = new Map<string, TabBridgeRegistration>();
+  #readAgentTrace: (() => Promise<AgentTraceEvent[]>) | null = null;
   #lastEditorTabId: string | null = null;
 
   #freshSessions = new Map<string, string>();
@@ -491,6 +493,18 @@ export class TangentProjectStore {
 
   unregisterTabBridge(tabId: string) {
     this.#tabBridges.delete(tabId);
+  }
+
+  /**
+   * The agent worker keeps its own trace and is read on demand, so the store
+   * holds the reader rather than a copy of the events.
+   */
+  setAgentTraceReader(read: (() => Promise<AgentTraceEvent[]>) | null) {
+    this.#readAgentTrace = read;
+  }
+
+  readAgentTrace(): Promise<AgentTraceEvent[]> {
+    return this.#readAgentTrace?.() ?? Promise.resolve([]);
   }
 
   getActiveTabBridge(): ToolBridgeApi | undefined {

@@ -242,6 +242,7 @@ export function TangentProjectAgentProvider({
     const worker = createRemoteEnvAgentWorker();
     const remote = Comlink.wrap<RemoteEnvWorkerApi>(worker);
     workerRef.current = remote;
+    store.setAgentTraceReader(() => remote.readTrace());
 
     void remote.init(Comlink.proxy(routingBridge), { mode: "editor" });
     void remote.setAiConfig(aiConfigRef.current);
@@ -271,6 +272,7 @@ export function TangentProjectAgentProvider({
       host.disconnect();
       worker.terminate();
       workerRef.current = null;
+      store.setAgentTraceReader(null);
     };
   }, [sessionId, tools, routingBridge, agentTargets, baseUrl]);
 

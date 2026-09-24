@@ -11,16 +11,17 @@
  * sub-agent's own hooks fire — without per-agent wiring the status line
  * freezes while a specialist is working.
  *
- * The status line is one string that each event overwrites, so it says what
- * an agent is doing and never what it did. A sub-agent Prime drives has no
- * other surface at all — its tool calls cross a Comlink bridge that logs
- * nothing — so a loop, a stale entity id or a tool that never returns are
- * indistinguishable from working. The trace below is the record the status
- * line cannot be: filter DevTools on `[agent]`.
+ * Alongside the status line, every call is written to {@link agentTrace} — the
+ * record the status line cannot be, since each event overwrites the last.
  */
 import type { Agent } from "@openai/agents";
 
 import type { StatusCallback } from "../types";
+import {
+  type AgentTraceEvent,
+  recordTraceEvent,
+  truncateForTrace,
+} from "./agentTrace";
 
 const TOOL_STATUS_LABELS: Record<string, string> = {
   search_components: "Searching component registry...",
@@ -67,14 +68,6 @@ const SUB_AGENT_LABELS: Record<string, string> = {
   "general-help": "Looking up information...",
 };
 
-const MAX_TRACED_CHARS = 2000;
-
-function truncate(value: string): string {
-  return value.length > MAX_TRACED_CHARS
-    ? `${value.slice(0, MAX_TRACED_CHARS)}… (${value.length} chars)`
-    : value;
-}
-
 interface TracedToolCall {
   key: string;
   args?: string;
@@ -97,8 +90,13 @@ function readToolCall(toolCall: unknown): TracedToolCall {
   return { key, args: typeof args === "string" ? args : undefined };
 }
 
-function trace(message: string, ...details: unknown[]): void {
-  console.info(`[agent] ${message}`, ...details);
+function trace(
+  agent: string,
+  kind: AgentTraceEvent["kind"],
+  label: string,
+  extra: { detail?: string; durationMs?: number } = {},
+): void {
+  recordTraceEvent({ at: Date.now(), agent, kind, label, ...extra });
 }
 
 // `Agent<any, any>` matches both the dispatcher (which infers handoff
@@ -113,19 +111,19 @@ export function attachObservabilityHooks(
 
   const onStart = () => {
     emitStatus({ text: "Thinking..." });
-    trace(`${agent.name} turn start`);
+    trace(agent.name, "turn-start", "turn start");
   };
 
   const onEnd = () => {
     emitStatus({ text: "Preparing response..." });
-    for (const [key, call] of inFlight) {
-      trace(
-        `${agent.name} tool never returned ${call.name} after ${Date.now() - call.startedAt}ms`,
-        key,
-      );
+    for (const call of inFlight.values()) {
+      trace(agent.name, "tool-hung", call.name, {
+        detail: "never returned",
+        durationMs: Date.now() - call.startedAt,
+      });
     }
     inFlight.clear();
-    trace(`${agent.name} turn end`);
+    trace(agent.name, "turn-end", "turn end");
   };
 
   const onToolStart = (
@@ -138,7 +136,9 @@ export function attachObservabilityHooks(
     });
     const { key, args } = readToolCall(details?.toolCall);
     inFlight.set(key, { name: toolDef.name, startedAt: Date.now() });
-    trace(`${agent.name} tool start ${toolDef.name}`, truncate(args ?? ""));
+    trace(agent.name, "tool-start", toolDef.name, {
+      detail: args ? truncateForTrace(args) : undefined,
+    });
   };
 
   const onToolEnd = (
@@ -150,11 +150,10 @@ export function attachObservabilityHooks(
     const { key } = readToolCall(details?.toolCall);
     const started = inFlight.get(key);
     inFlight.delete(key);
-    const elapsed = started ? `${Date.now() - started.startedAt}ms` : "?ms";
-    trace(
-      `${agent.name} tool end ${toolDef.name} ${elapsed}`,
-      truncate(result ?? ""),
-    );
+    trace(agent.name, "tool-end", toolDef.name, {
+      detail: result ? truncateForTrace(result) : undefined,
+      durationMs: started ? Date.now() - started.startedAt : undefined,
+    });
   };
 
   const onHandoff = (_ctx: unknown, nextAgent: { name: string }) => {
@@ -163,7 +162,7 @@ export function attachObservabilityHooks(
         SUB_AGENT_LABELS[nextAgent.name] ??
         `Delegating to ${nextAgent.name}...`,
     });
-    trace(`${agent.name} handoff to ${nextAgent.name}`);
+    trace(agent.name, "turn-start", `handoff to ${nextAgent.name}`);
   };
 
   agent.on("agent_start", onStart);
