@@ -14,7 +14,14 @@ const MAX_PAYLOAD_CHARS = 2000;
 export interface AgentTraceEvent {
   at: number;
   agent: string;
-  kind: "turn-start" | "turn-end" | "tool-start" | "tool-end" | "tool-hung";
+  kind:
+    | "turn-start"
+    | "turn-end"
+    | "tool-start"
+    | "tool-end"
+    | "tool-hung"
+    | "thought"
+    | "message";
   label: string;
   detail?: string;
   durationMs?: number;

@@ -26,6 +26,8 @@ const KIND_LABEL: Record<AgentTraceEvent["kind"], string> = {
   "tool-start": "call",
   "tool-end": "done",
   "tool-hung": "hung",
+  thought: "",
+  message: "",
 };
 
 function formatTime(at: number): string {
@@ -137,7 +139,11 @@ function AgentTraceDialog({ open, onOpenChange }: AgentTraceDialogProps) {
                   )}
                 </InlineStack>
                 {event.detail && (
-                  <Text size="xs" tone="subdued" className="break-all">
+                  <Text
+                    size="xs"
+                    tone="subdued"
+                    className="break-words whitespace-pre-wrap"
+                  >
                     {event.detail}
                   </Text>
                 )}
