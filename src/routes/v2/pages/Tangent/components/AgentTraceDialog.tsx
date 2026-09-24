@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import type { AgentTraceEvent } from "@/agent/middleware/agentTrace";
+import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -142,15 +143,18 @@ export function AgentTraceButton() {
 
   return (
     <>
-      <Button
+      <TooltipButton
+        tooltip="View agent log"
+        tooltipSide="bottom"
+        tooltipAlign="end"
+        aria-label="View agent log"
         variant="ghost"
-        size="sm"
-        className="justify-start"
+        size="xs"
+        className="shrink-0"
         onClick={() => setOpen(true)}
       >
-        <Icon name="ScrollText" size="sm" />
-        View agent log
-      </Button>
+        <Icon name="ScrollText" size="xs" />
+      </TooltipButton>
       <AgentTraceDialog open={open} onOpenChange={setOpen} />
     </>
   );

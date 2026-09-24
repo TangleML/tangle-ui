@@ -3,6 +3,7 @@ import { observer } from "mobx-react-lite";
 import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
+import { AgentTraceButton } from "@/routes/v2/pages/Tangent/components/AgentTraceDialog";
 import { TangentChatPane } from "@/routes/v2/pages/Tangent/components/TangentChatPane";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { ChatEntityRevealProvider } from "@/routes/v2/shared/components/AiChat/components/ChatEntityRevealContext";
@@ -46,6 +47,7 @@ export const ProjectChatArea = observer(function ProjectChatArea() {
         onOpenArtifact={(url, title) => store.openArtifactTab(url, title)}
         onSendPrompt={(content) => store.recordSessionPrompt(content)}
         onError={(message) => notify(message, "error")}
+        headerAction={<AgentTraceButton />}
       />
     </ChatEntityRevealProvider>
   );

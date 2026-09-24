@@ -5,8 +5,6 @@ import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 
-import { AgentTraceButton } from "./AgentTraceDialog";
-
 export const AgentsWindowContent = observer(function AgentsWindowContent() {
   const store = useTangentProject();
   const activeSessionId = store.activeSessionId;
@@ -22,14 +20,11 @@ export const AgentsWindowContent = observer(function AgentsWindowContent() {
   }
 
   return (
-    <BlockStack gap="1">
-      <AgentList
-        sessionId={activeSessionId}
-        selectedId={store.selectedAgentId}
-        onOpen={(agent) => store.openAgent(agent)}
-        onRemove={(id) => store.closeChatTab(id)}
-      />
-      <AgentTraceButton />
-    </BlockStack>
+    <AgentList
+      sessionId={activeSessionId}
+      selectedId={store.selectedAgentId}
+      onOpen={(agent) => store.openAgent(agent)}
+      onRemove={(id) => store.closeChatTab(id)}
+    />
   );
 });
