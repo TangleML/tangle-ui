@@ -1,4 +1,5 @@
 import {
+  type ModelSettings,
   setDefaultOpenAIClient,
   setOpenAIAPI,
   setTracingDisabled,
@@ -15,7 +16,7 @@ const RESPONSES_REASONING_INCLUDE = ["reasoning.encrypted_content"];
 
 export function getAgentModelConfig(config: AiProviderConfig): {
   model?: string;
-  modelSettings: { providerData: { include: string[] } };
+  modelSettings: ModelSettings;
 } {
   const model = config.model.trim();
   return {
@@ -23,6 +24,8 @@ export function getAgentModelConfig(config: AiProviderConfig): {
     modelSettings: {
       providerData: {
         include: RESPONSES_REASONING_INCLUDE,
+        // Override the SDK fallback so a blank model lets the proxy choose.
+        ...(model ? {} : { model: undefined }),
       },
     },
   };
@@ -72,7 +75,11 @@ export class ProxyClient implements OpenAIProvider {
       );
     }
 
-    const configKey = JSON.stringify({ baseURL, apiKey });
+    const configKey = JSON.stringify({
+      baseURL,
+      apiKey,
+      credentials: config.credentials,
+    });
     if (this.#lastConfigKey === configKey && this.#client) return;
 
     this.#client = new OpenAI({
@@ -81,6 +88,7 @@ export class ProxyClient implements OpenAIProvider {
       apiKey: apiKey || "proxy-auth-disabled",
       baseURL,
       dangerouslyAllowBrowser: true,
+      fetchOptions: { credentials: config.credentials },
       ...(apiKey ? {} : { fetch: stripAuthorizationFetch }),
     });
     setDefaultOpenAIClient(this.#client);

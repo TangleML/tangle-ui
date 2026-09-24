@@ -200,6 +200,31 @@ describe("rerankComponentsByNaturalLanguage", () => {
     expect(JSON.stringify(init)).not.toContain("authorization");
   });
 
+  it("includes browser authentication for a backend-managed provider", async () => {
+    vi.mocked(global.fetch).mockResolvedValue(
+      mockResponsesResponse({ matches: [] }),
+    );
+
+    await rerankComponentsByNaturalLanguage(
+      "train",
+      [{ id: "a", name: "trainer", description: "" }],
+      {
+        ...VALID_OPTIONS,
+        apiBase: "https://backend.example.com/api/experimental/ai/v1",
+        apiKey: "",
+        credentials: "include",
+      },
+    );
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      "https://backend.example.com/api/experimental/ai/v1/responses",
+      expect.objectContaining({
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+      }),
+    );
+  });
+
   it("filters out hallucinated ids the model returned", async () => {
     vi.mocked(global.fetch).mockResolvedValue(
       mockResponsesResponse({

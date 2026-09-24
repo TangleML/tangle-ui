@@ -39,6 +39,7 @@ componentSearchEmbeddingDb.version(1).stores({
 interface EmbeddingOptions {
   apiBase: string;
   apiKey: string;
+  credentials?: RequestCredentials;
   signal?: AbortSignal;
 }
 
@@ -106,6 +107,7 @@ async function fetchEmbeddings(
   const response = await fetch(`${base}/embeddings`, {
     method: "POST",
     signal: options.signal,
+    credentials: options.credentials,
     headers: {
       "content-type": "application/json",
       ...(options.apiKey.trim()
