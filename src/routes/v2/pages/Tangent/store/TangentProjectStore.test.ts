@@ -176,6 +176,15 @@ describe("TangentProjectStore chat tabs", () => {
 });
 
 describe("TangentProjectStore workarea tabs", () => {
+  it("refuses to open a tab while no session is active", () => {
+    const store = new TangentProjectStore("project-1");
+
+    expect(() =>
+      store.openResolvedView({ title: "P1", target: pipeline("p1") }),
+    ).toThrow(/No active Tangent session/);
+    expect(store.workareaTabs).toEqual([]);
+  });
+
   it("focuses an existing target instead of opening a duplicate", () => {
     const store = activeStore();
 

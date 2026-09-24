@@ -259,6 +259,13 @@ export class TangentProjectStore {
   }
 
   @action openResolvedView(view: ResolvedWorkareaView): WorkareaTab {
+    // Tabs live under the active session, so #putSlice drops them when there
+    // is none. Fail loudly instead of returning a tab that was never stored.
+    if (!this.activeSessionId) {
+      throw new Error(
+        "No active Tangent session. Start a session before opening a workarea tab.",
+      );
+    }
     const tabs = this.workareaTabs;
     const existing = tabs.find((tab) => sameTarget(tab.target, view.target));
     if (existing) {
