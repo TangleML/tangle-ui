@@ -136,6 +136,48 @@ describe("createRemoteEnvHost", () => {
     await expect(connection).resolves.toBeUndefined();
   });
 
+  it("settles a connect that a disconnect superseded", async () => {
+    const worker = makeWorker();
+    const host = createRemoteEnvHost({
+      url: "http://localhost:8000",
+      worker: worker as unknown as Remote<RemoteEnvWorkerApi>,
+    });
+
+    const connection = host.connect("token", "env-1");
+    const connectListener = client.socket.on.mock.calls.find(
+      ([event]) => event === "connect",
+    )?.[1];
+    if (!connectListener)
+      throw new Error("Connect listener was not registered");
+
+    // Teardown drops the client this promise was created for. The caller
+    // awaits it before scheduling the next token refresh, so it has to settle.
+    host.disconnect();
+    connectListener();
+
+    await expect(connection).resolves.toBeUndefined();
+  });
+
+  it("settles a superseded connect that then errors", async () => {
+    const worker = makeWorker();
+    const host = createRemoteEnvHost({
+      url: "http://localhost:8000",
+      worker: worker as unknown as Remote<RemoteEnvWorkerApi>,
+    });
+
+    const connection = host.connect("token", "env-1");
+    const errorListener = client.socket.on.mock.calls.find(
+      ([event]) => event === "connect_error",
+    )?.[1];
+    if (!errorListener)
+      throw new Error("connect_error listener was not registered");
+
+    host.disconnect();
+    errorListener(new Error("boom"));
+
+    await expect(connection).resolves.toBeUndefined();
+  });
+
   it("emits start then a single end (never report) for a completed turn", async () => {
     const worker = makeWorker();
     worker.runTurn.mockResolvedValue({ answer: "done" });

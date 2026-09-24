@@ -285,13 +285,23 @@ export function createRemoteEnvHost(
       return new Promise<void>((resolve, reject) => {
         let connected = nextClient.socket.connected;
 
+        // Settle rather than return when a newer connection (or a disconnect)
+        // has taken over: the caller awaits this before scheduling the next
+        // token refresh, so a pending promise would stop that loop for good.
+        // Being superseded is not a failure, so resolve rather than reject.
         nextClient.socket.on("connect", () => {
-          if (client !== nextClient) return;
+          if (client !== nextClient) {
+            resolve();
+            return;
+          }
           connected = true;
           resolve();
         });
         nextClient.socket.on("connect_error", (error: Error) => {
-          if (client !== nextClient) return;
+          if (client !== nextClient) {
+            resolve();
+            return;
+          }
           if (!connected) {
             reject(
               new Error(
