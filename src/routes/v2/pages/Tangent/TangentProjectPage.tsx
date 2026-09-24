@@ -37,13 +37,27 @@ export function TangentProjectPage() {
 
 function TangentProjectPageContent({ projectId }: { projectId: string }) {
   const { resolvedTheme } = useTheme();
-  const { baseUrl, isLoading } = useTangentBaseUrl(projectId);
+  const { baseUrl, isLoading, isError } = useTangentBaseUrl(projectId);
 
   if (isLoading) {
     return (
       <BlockStack fill align="center" gap="1" className="p-10">
         <Text size="sm" weight="semibold">
           Loading project…
+        </Text>
+      </BlockStack>
+    );
+  }
+
+  if (isError) {
+    return (
+      <BlockStack fill align="center" gap="1" className="p-10">
+        <Text size="sm" weight="semibold">
+          Project unavailable
+        </Text>
+        <Text size="sm" tone="subdued">
+          This project could not be loaded. The projects service may not be
+          available in this environment.
         </Text>
       </BlockStack>
     );
