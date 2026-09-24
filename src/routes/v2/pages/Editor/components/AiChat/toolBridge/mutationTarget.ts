@@ -7,7 +7,10 @@
  * that the model gets the same bare `{ success: false }` for "no such entity" as
  * for "that entity is a task, not an input", and cannot tell the user which.
  */
+import { isPickableColor, PRESET_COLORS } from "@/components/ui/colorPresets";
 import type { ArgumentType, ComponentSpec } from "@/models/componentSpec";
+import type { FlexNodeLocation } from "@/models/componentSpec/queries/flexNodes";
+import { locateFlexNode } from "@/models/componentSpec/queries/flexNodes";
 import type {
   EntityLocation,
   EntityLocationOf,
@@ -182,6 +185,46 @@ export function explainNameCollision(
   if (!taken) return undefined;
 
   return `Cannot rename ${describeEntityLocation(location, entityId)} to "${newName}" — that name is already taken in that graph. Pick a different name.`;
+}
+
+/**
+ * The existence check is not optional: `updateFlexNode` and `removeFlexNode`
+ * both map or filter over the list, so an unknown id is a silent no-op that the
+ * model would otherwise read back as success.
+ */
+export function resolveStickyNote(
+  root: ComponentSpec,
+  noteId: string,
+): { ok: true; location: FlexNodeLocation } | { ok: false; error: string } {
+  const location = locateFlexNode(root, noteId);
+  if (!location) {
+    return {
+      ok: false,
+      error: `No sticky note with id "${noteId}" exists in this pipeline.`,
+    };
+  }
+  return { ok: true, location };
+}
+
+export function describeStickyNoteLocation(location: FlexNodeLocation): string {
+  const { title } = location.node.properties;
+  const note = title
+    ? `sticky note "${title}"`
+    : `sticky note ${location.node.id}`;
+  if (location.subgraphTaskNames.length === 0) {
+    return `${note} in the top-level pipeline`;
+  }
+  return `${note} inside subgraph "${location.subgraphTaskNames.join(" > ")}"`;
+}
+
+/** An unpickable colour is one the canvas renders as nothing, silently. */
+export function explainUnpickableColor(
+  color: string,
+  field: string,
+): string | undefined {
+  if (isPickableColor(color)) return undefined;
+
+  return `"${color}" is not a colour this editor accepts for ${field}. Use a hex value like "#FFF9C4", or "transparent". The swatches offered in the UI are: ${PRESET_COLORS.join(", ")}.`;
 }
 
 export function explainNotASubgraph(

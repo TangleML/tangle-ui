@@ -16,6 +16,11 @@
 import { tool } from "@openai/agents";
 import { z } from "zod";
 
+import {
+  DEFAULT_FLEX_NODE_SIZE,
+  MIN_FLEX_NODE_SIZE,
+} from "@/components/shared/ReactFlow/FlowCanvas/FlexNode/utils";
+import { PRESET_COLORS } from "@/components/ui/colorPresets";
 import type { ArgumentType, ComponentReference } from "@/models/componentSpec";
 
 import type { ToolBridgeApi } from "../toolBridgeApi";
@@ -84,6 +89,13 @@ function dropNulls<T>(value: T): T {
     JSON.stringify(value, (_key, v: unknown) => (v === null ? undefined : v)),
   ) as T;
 }
+
+const COLOR_GUIDANCE = `Hex value or "transparent". The swatches the UI offers are ${PRESET_COLORS.join(", ")} — prefer one of those so the note matches the user's own.`;
+
+const SIZE_GUIDANCE = `No smaller than ${MIN_FLEX_NODE_SIZE.width}x${MIN_FLEX_NODE_SIZE.height} — a note below that is too small to read or select, and is refused.`;
+
+const positionSchema = z.object({ x: z.number(), y: z.number() });
+const sizeSchema = z.object({ width: z.number(), height: z.number() });
 
 export function createCsomTools(bridge: ToolBridgeApi) {
   const getPipelineState = tool({
@@ -416,6 +428,124 @@ export function createCsomTools(bridge: ToolBridgeApi) {
       asJson(await bridge.unpackSubgraph(taskEntityId)),
   });
 
+  const addStickyNote = tool({
+    name: "add_sticky_note",
+    description:
+      "Add a sticky note — a freeform annotation on the canvas that carries no data and never runs. Use it to record something the user asked to be written down, or a decision worth leaving on the canvas. A note can go anywhere and need not be about any one entity: pass `position` (with `inSubgraphTaskId` for a subgraph) to put it exactly where you want, including empty space where it labels a region or the pipeline as a whole. For the narrower case where the note is about one specific task, input or output, `anchorEntityId` is a shortcut that places it just above that entity in that entity's own graph, so you do not have to work out coordinates. Omit all three to drop it clear of the rest of the graph.",
+    parameters: z.object({
+      title: z.string().nullable().optional().describe("Short heading"),
+      content: z.string().nullable().optional().describe("Note body text"),
+      color: z.string().nullable().optional().describe(COLOR_GUIDANCE),
+      borderColor: z
+        .string()
+        .nullable()
+        .optional()
+        .describe(
+          `Only visible when color is "transparent". ${COLOR_GUIDANCE}`,
+        ),
+      size: sizeSchema
+        .nullable()
+        .optional()
+        .describe(
+          `Defaults to ${DEFAULT_FLEX_NODE_SIZE.width}x${DEFAULT_FLEX_NODE_SIZE.height}, which fits a heading and a few words. Size up for anything longer or the text is clipped. ${SIZE_GUIDANCE}`,
+        ),
+      position: positionSchema
+        .nullable()
+        .optional()
+        .describe(
+          "Where to put the note: canvas coordinates, x increasing right and y downwards. Any spot is valid, including empty canvas away from every node. Takes precedence over anchorEntityId.",
+        ),
+      anchorEntityId: z
+        .string()
+        .nullable()
+        .optional()
+        .describe(
+          "Shortcut for a note about one specific entity: the $id of a task, input or output, which places the note just above it in that entity's own graph. Prefer `position` when the note is not about a single entity.",
+        ),
+      inSubgraphTaskId: z
+        .string()
+        .nullable()
+        .optional()
+        .describe(
+          "$id of a subgraph task to add this inside. Omit for the top-level pipeline, and omit entirely when passing anchorEntityId — the anchor already determines the graph.",
+        ),
+    }),
+    execute: async ({
+      title,
+      content,
+      color,
+      borderColor,
+      size,
+      position,
+      anchorEntityId,
+      inSubgraphTaskId,
+    }) =>
+      asJson(
+        await bridge.addStickyNote({
+          title: title ?? undefined,
+          content: content ?? undefined,
+          color: color ?? undefined,
+          borderColor: borderColor ?? undefined,
+          size: size ?? undefined,
+          position: position ?? undefined,
+          anchorEntityId: anchorEntityId ?? undefined,
+          inSubgraphTaskId: inSubgraphTaskId ?? undefined,
+        }),
+      ),
+  });
+
+  const updateStickyNote = tool({
+    name: "update_sticky_note",
+    description:
+      "Change a sticky note's text, colours, size, position or locked state, wherever it lives. Only the fields you pass are changed. A note the user wrote is their content — do not rewrite or recolour one unless they asked. A locked note is refused unless you also pass locked: false.",
+    parameters: z.object({
+      noteId: z.string().describe("The id of the sticky note to change"),
+      title: z.string().nullable().optional(),
+      content: z.string().nullable().optional(),
+      color: z.string().nullable().optional().describe(COLOR_GUIDANCE),
+      borderColor: z.string().nullable().optional().describe(COLOR_GUIDANCE),
+      size: sizeSchema.nullable().optional().describe(SIZE_GUIDANCE),
+      position: positionSchema.nullable().optional(),
+      locked: z
+        .boolean()
+        .nullable()
+        .optional()
+        .describe("Locked notes cannot be selected, moved or edited."),
+    }),
+    execute: async ({
+      noteId,
+      title,
+      content,
+      color,
+      borderColor,
+      size,
+      position,
+      locked,
+    }) =>
+      asJson(
+        await bridge.updateStickyNote(noteId, {
+          title: title ?? undefined,
+          content: content ?? undefined,
+          color: color ?? undefined,
+          borderColor: borderColor ?? undefined,
+          size: size ?? undefined,
+          position: position ?? undefined,
+          locked: locked ?? undefined,
+        }),
+      ),
+  });
+
+  const deleteStickyNote = tool({
+    name: "delete_sticky_note",
+    description:
+      "Delete a sticky note by its id. Notes carry the user's own words, so never delete one they wrote without being asked to.",
+    parameters: z.object({
+      noteId: z.string().describe("The id of the sticky note to delete"),
+    }),
+    execute: async ({ noteId }) =>
+      asJson(await bridge.deleteStickyNote(noteId)),
+  });
+
   const validatePipeline = tool({
     name: "validate_pipeline",
     description:
@@ -446,6 +576,9 @@ export function createCsomTools(bridge: ToolBridgeApi) {
       setTaskArgument,
       createSubgraph,
       unpackSubgraph,
+      addStickyNote,
+      updateStickyNote,
+      deleteStickyNote,
       validatePipeline,
     ],
   };

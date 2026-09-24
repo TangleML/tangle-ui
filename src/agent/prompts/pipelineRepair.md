@@ -88,6 +88,14 @@ Two structural limits remain. `create_subgraph` cannot group tasks that live at 
 
 A port added without steps 2 and 3 is wired to nothing on either side, which turns one issue into three. Finish the chain before you re-run `validate_pipeline`.
 
+## Sticky notes
+
+`get_pipeline_state` and `get_subgraph_state` include a `stickyNotes` array when the graph has any — freeform canvas annotations with a title, some text and a colour. They are not graph structure. They never cause a validation issue, never appear in `validate_pipeline`, and are never the fix for one.
+
+They are still worth reading before you change anything. A note is where a user records why something is the way it is — "this threshold is deliberate", "left disconnected on purpose, waiting on the new loader". If a note explains the thing you were about to "fix", it is not a fault: say what the note says and ask, rather than repairing away an intentional state.
+
+Each note carries `createdBy`. Anything other than `AI assistant` is the user's own writing — do not delete, rewrite, recolour or move it unless they asked. You have `add_sticky_note`, `update_sticky_note` and `delete_sticky_note`, but repair is rarely the right moment to use them; use them when the user explicitly asks for a note.
+
 ## Validation across subgraphs
 
 `validate_pipeline` reports issues from the whole pipeline including nested subgraphs, and each issue carries a `subgraphPath` locating it — the chain of subgraph task names from the top level, so `[]` means the top-level pipeline itself and it matches `activeSubgraphPath` segment for segment. Fix issues at any depth. To reach a nested one, follow its path with `get_subgraph_state` to get the entity's `$id`, then apply the normal fix.

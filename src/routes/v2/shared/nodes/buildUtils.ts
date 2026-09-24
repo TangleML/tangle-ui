@@ -1,4 +1,4 @@
-import type { Edge, Node } from "@xyflow/react";
+import type { Edge, Node, XYPosition } from "@xyflow/react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 import {
@@ -8,8 +8,10 @@ import {
 
 const TASK_OFFSET = 200;
 const IO_OFFSET = 150;
+const INPUT_COLUMN_X = -200;
+const OUTPUT_COLUMN_X = 800;
 
-export function resolvePosition(
+function resolvePosition(
   position: { x: number; y: number },
   fallback: { x: number; y: number },
 ): { x: number; y: number } {
@@ -28,6 +30,45 @@ export function taskDefaultPosition(index: number): { x: number; y: number } {
     x: 200 + (index % 3) * TASK_OFFSET,
     y: Math.floor(index / 3) * TASK_OFFSET,
   };
+}
+
+/**
+ * Reading the position annotation directly is not equivalent: the codec returns
+ * `{x:0,y:0}` for an entity that was never placed, where the canvas draws it on
+ * an index-based default.
+ */
+export function resolveEntityPositions(
+  spec: ComponentSpec,
+): Map<string, XYPosition> {
+  const positions = new Map<string, XYPosition>();
+  for (const [index, input] of [...spec.inputs].entries()) {
+    positions.set(
+      input.$id,
+      resolvePosition(
+        input.annotations.get(EDITOR_POSITION_ANNOTATION),
+        ioDefaultPosition(index, INPUT_COLUMN_X),
+      ),
+    );
+  }
+  for (const [index, output] of [...spec.outputs].entries()) {
+    positions.set(
+      output.$id,
+      resolvePosition(
+        output.annotations.get(EDITOR_POSITION_ANNOTATION),
+        ioDefaultPosition(index, OUTPUT_COLUMN_X),
+      ),
+    );
+  }
+  for (const [index, task] of [...spec.tasks].entries()) {
+    positions.set(
+      task.$id,
+      resolvePosition(
+        task.annotations.get(EDITOR_POSITION_ANNOTATION),
+        taskDefaultPosition(index),
+      ),
+    );
+  }
+  return positions;
 }
 
 function parseZIndex(raw: unknown): number | undefined {

@@ -4,6 +4,10 @@ import {
   getFlexNodeDisplayName,
 } from "@/components/shared/ReactFlow/FlowCanvas/FlexNode/utils";
 import type { ComponentSpec } from "@/models/componentSpec/entities/componentSpec";
+import {
+  findFlexNode,
+  getFlexNodes,
+} from "@/models/componentSpec/queries/flexNodes";
 import type {
   NodeSnapshot,
   NodeTypeManifest,
@@ -14,8 +18,6 @@ import { EditorV2FlexNode } from "./components/FlexNode";
 import { FlexNodeDetails } from "./context/FlexNodeDetails";
 import {
   addFlexNode,
-  findFlexNode,
-  getFlexNodes,
   removeFlexNode,
   setFlexNodes,
   updateFlexNodePosition,

@@ -74,19 +74,21 @@ function hasAllOf(schema: JsonSchemaNode | undefined): boolean {
 }
 
 describe("createCsomTools", () => {
-  it("exposes the full 19-tool surface", () => {
+  it("exposes the full 22-tool surface", () => {
     const { allTools } = createCsomTools(makeBridge());
     const names = allTools.map((t) => t.name).sort();
     expect(names).toEqual(
       [
         "add_input",
         "add_output",
+        "add_sticky_note",
         "add_task",
         "connect_nodes",
         "create_subgraph",
         "delete_edge",
         "delete_input",
         "delete_output",
+        "delete_sticky_note",
         "delete_task",
         "get_pipeline_state",
         "get_subgraph_state",
@@ -97,6 +99,7 @@ describe("createCsomTools", () => {
         "set_pipeline_name",
         "set_task_argument",
         "unpack_subgraph",
+        "update_sticky_note",
         "validate_pipeline",
       ].sort(),
     );
@@ -319,6 +322,62 @@ describe("createCsomTools", () => {
       defaultValue: undefined,
       optional: undefined,
     });
+  });
+
+  it("add_sticky_note normalizes null optional fields to undefined", async () => {
+    const addStickyNote = vi
+      .fn()
+      .mockResolvedValue({ success: true, stickyNoteId: "flex_1" });
+    const { allTools } = createCsomTools(makeBridge({ addStickyNote }));
+
+    await invoke(findTool(allTools, "add_sticky_note"), {
+      title: "Careful",
+      content: null,
+      color: "#FFF9C4",
+      borderColor: null,
+      size: null,
+      position: null,
+      anchorEntityId: "task_1",
+      inSubgraphTaskId: null,
+    });
+
+    expect(addStickyNote).toHaveBeenCalledWith({
+      title: "Careful",
+      content: undefined,
+      color: "#FFF9C4",
+      borderColor: undefined,
+      size: undefined,
+      position: undefined,
+      anchorEntityId: "task_1",
+      inSubgraphTaskId: undefined,
+    });
+  });
+
+  it("update_sticky_note forwards (noteId, updates) in the right order", async () => {
+    const updateStickyNote = vi.fn().mockResolvedValue({ success: true });
+    const { allTools } = createCsomTools(makeBridge({ updateStickyNote }));
+
+    await invoke(findTool(allTools, "update_sticky_note"), {
+      noteId: "flex_1",
+      content: "Revised",
+      locked: false,
+    });
+
+    expect(updateStickyNote).toHaveBeenCalledWith(
+      "flex_1",
+      expect.objectContaining({ content: "Revised", locked: false }),
+    );
+  });
+
+  it("delete_sticky_note forwards the note id", async () => {
+    const deleteStickyNote = vi.fn().mockResolvedValue({ success: true });
+    const { allTools } = createCsomTools(makeBridge({ deleteStickyNote }));
+
+    await invoke(findTool(allTools, "delete_sticky_note"), {
+      noteId: "flex_1",
+    });
+
+    expect(deleteStickyNote).toHaveBeenCalledWith("flex_1");
   });
 
   it("add_output strips null optional fields to undefined", async () => {

@@ -9,10 +9,12 @@ import {
   Task,
 } from "@/models/componentSpec";
 import { IncrementingIdGenerator } from "@/models/componentSpec/factories/idGenerator";
+import { getFlexNodes } from "@/models/componentSpec/queries/flexNodes";
 import { YamlDeserializer } from "@/models/componentSpec/serialization/yamlDeserializer";
 import { ONBOARDING_MY_RUN_COUNT_KEY } from "@/providers/OnboardingProvider/onboardingQueryKeys";
 import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
 import { hydrateComponentReference } from "@/services/componentService";
+import { EDITOR_POSITION_ANNOTATION } from "@/utils/annotationKeys";
 
 vi.mock("@/services/componentService", () => ({
   hydrateComponentReference: vi.fn(async (ref) => ref),
@@ -944,6 +946,296 @@ describe("createEditorToolBridge", () => {
         'No task with $id "nope" exists in this pipeline.',
       );
       expect(spec.outputs).toHaveLength(0);
+    });
+  });
+
+  describe("sticky notes", () => {
+    it("addStickyNote records the assistant as the author", async () => {
+      const { bridge, spec, undo } = makeBridge();
+
+      const result = await bridge.addStickyNote({
+        title: "Careful",
+        content: "Threshold came from the Q3 eval",
+        color: "#C8E6C9",
+      });
+
+      expect(result.success).toBe(true);
+      const notes = getFlexNodes(spec);
+      expect(notes).toHaveLength(1);
+      expect(notes[0]).toMatchObject({
+        id: result.stickyNoteId,
+        properties: {
+          title: "Careful",
+          content: "Threshold came from the Q3 eval",
+          color: "#C8E6C9",
+        },
+        metadata: { createdBy: "AI assistant" },
+      });
+      expect(undo.labels).toContain("Add flex node");
+    });
+
+    it("places a note at arbitrary coordinates with nothing to attach it to", async () => {
+      const spec = new ComponentSpec({ $id: "spec_1", name: "Pipe" });
+      const undo = new RecordingUndo();
+      const bridge = createEditorToolBridge({
+        getSpec: () => spec,
+        getActiveSubgraphPath: () => [],
+        getActiveSubgraphTaskId: () => undefined,
+        undo,
+      });
+
+      const result = await bridge.addStickyNote({
+        title: "Legacy branch",
+        position: { x: -900, y: -400 },
+      });
+
+      expect(result.success).toBe(true);
+      expect(getFlexNodes(spec)[0]?.position).toEqual({ x: -900, y: -400 });
+    });
+
+    it("places a note in empty space inside a subgraph", async () => {
+      const { bridge, spec, inner } = makeNestedBridge();
+
+      const result = await bridge.addStickyNote({
+        content: "everything below here is WIP",
+        position: { x: 2000, y: 2000 },
+        inSubgraphTaskId: taskId(spec, "Preprocess"),
+      });
+
+      expect(result.success).toBe(true);
+      expect(getFlexNodes(spec)).toHaveLength(0);
+      expect(getFlexNodes(inner)[0]?.position).toEqual({ x: 2000, y: 2000 });
+    });
+
+    it("anchors a note above the entity it annotates, in that entity's graph", async () => {
+      const { bridge, spec, inner } = makeNestedBridge();
+      const dropNulls = inner.tasks.find((t) => t.name === "DropNulls");
+      dropNulls?.annotations.set(EDITOR_POSITION_ANNOTATION, {
+        x: 300,
+        y: 400,
+      });
+
+      const result = await bridge.addStickyNote({
+        content: "Drops rows with any null",
+        anchorEntityId: dropNulls?.$id,
+      });
+
+      expect(result.success).toBe(true);
+      expect(getFlexNodes(spec)).toHaveLength(0);
+      const [note] = getFlexNodes(inner);
+      expect(note?.position).toEqual({ x: 300, y: 260 });
+    });
+
+    it("anchors above where an unplaced entity actually renders", async () => {
+      const { bridge, inner } = makeNestedBridge();
+
+      const result = await bridge.addStickyNote({
+        content: "Drops rows with any null",
+        anchorEntityId: taskId(inner, "DropNulls"),
+      });
+
+      expect(result.success).toBe(true);
+      expect(getFlexNodes(inner)[0]?.position).toEqual({ x: 200, y: -140 });
+    });
+
+    it("lets an explicit position override the anchor's graph", async () => {
+      const { bridge, spec, inner } = makeNestedBridge();
+
+      const result = await bridge.addStickyNote({
+        content: "everything here is legacy",
+        anchorEntityId: taskId(inner, "DropNulls"),
+        position: { x: -500, y: 120 },
+      });
+
+      expect(result.success).toBe(true);
+      expect(getFlexNodes(inner)).toHaveLength(0);
+      expect(getFlexNodes(spec)[0]?.position).toEqual({ x: -500, y: 120 });
+    });
+
+    it("refuses an anchor that contradicts inSubgraphTaskId", async () => {
+      const { bridge, spec, inner } = makeNestedBridge();
+
+      const result = await bridge.addStickyNote({
+        content: "anywhere",
+        anchorEntityId: taskId(spec, "Train"),
+        inSubgraphTaskId: taskId(spec, "Preprocess"),
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("does not live in the subgraph");
+      expect(getFlexNodes(spec)).toHaveLength(0);
+      expect(getFlexNodes(inner)).toHaveLength(0);
+    });
+
+    it("refuses a colour the picker could not produce", async () => {
+      const { bridge, spec } = makeBridge();
+
+      const result = await bridge.addStickyNote({
+        content: "note",
+        color: "chartreuse",
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("#FFF9C4");
+      expect(getFlexNodes(spec)).toHaveLength(0);
+    });
+
+    it("refuses a note too small to read or select", async () => {
+      const { bridge, spec } = makeBridge();
+
+      const result = await bridge.addStickyNote({
+        content: "note",
+        size: { width: 10, height: 10 },
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("cannot be smaller than");
+      expect(getFlexNodes(spec)).toHaveLength(0);
+    });
+
+    it("refuses to shrink an existing note below the minimum", async () => {
+      const { bridge, spec } = makeBridge();
+      const { stickyNoteId } = await bridge.addStickyNote({
+        content: "note",
+        size: { width: 300, height: 200 },
+      });
+
+      const result = await bridge.updateStickyNote(stickyNoteId!, {
+        size: { width: 300, height: 4 },
+      });
+
+      expect(result.success).toBe(false);
+      expect(getFlexNodes(spec)[0]?.size).toEqual({ width: 300, height: 200 });
+    });
+
+    it("updateStickyNote changes only the fields passed, as one undo step", async () => {
+      const { bridge, spec, undo } = makeBridge();
+      const { stickyNoteId } = await bridge.addStickyNote({
+        title: "Draft",
+        content: "old",
+        color: "#FFF9C4",
+      });
+      undo.labels.length = 0;
+
+      const result = await bridge.updateStickyNote(stickyNoteId!, {
+        content: "new",
+        size: { width: 300, height: 200 },
+      });
+
+      expect(result).toEqual({ success: true });
+      const [note] = getFlexNodes(spec);
+      expect(note?.properties).toMatchObject({
+        title: "Draft",
+        content: "new",
+        color: "#FFF9C4",
+      });
+      expect(note?.size).toEqual({ width: 300, height: 200 });
+      expect(undo.labels[0]).toBe("Update sticky note");
+    });
+
+    it("resolves a note that lives inside a subgraph", async () => {
+      const { bridge, spec, inner } = makeNestedBridge();
+      const { stickyNoteId } = await bridge.addStickyNote({
+        content: "inner",
+        inSubgraphTaskId: taskId(spec, "Preprocess"),
+      });
+
+      expect(getFlexNodes(inner)).toHaveLength(1);
+      expect(
+        await bridge.updateStickyNote(stickyNoteId!, {
+          content: "inner, revised",
+        }),
+      ).toEqual({ success: true });
+      expect(getFlexNodes(inner)[0]?.properties.content).toBe("inner, revised");
+
+      expect(await bridge.deleteStickyNote(stickyNoteId!)).toEqual({
+        success: true,
+      });
+      expect(getFlexNodes(inner)).toHaveLength(0);
+    });
+
+    it("reports a missing note rather than silently doing nothing", async () => {
+      const { bridge } = makeBridge();
+
+      await expect(
+        bridge.updateStickyNote("flex_nope", { content: "x" }),
+      ).resolves.toEqual({
+        success: false,
+        error: 'No sticky note with id "flex_nope" exists in this pipeline.',
+      });
+      await expect(bridge.deleteStickyNote("flex_nope")).resolves.toEqual({
+        success: false,
+        error: 'No sticky note with id "flex_nope" exists in this pipeline.',
+      });
+    });
+
+    it("refuses an update with no fields to change", async () => {
+      const { bridge } = makeBridge();
+      const { stickyNoteId } = await bridge.addStickyNote({ content: "note" });
+
+      const result = await bridge.updateStickyNote(stickyNoteId!, {});
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("no fields to update");
+    });
+
+    it("refuses to edit or delete a locked note, but can unlock it", async () => {
+      const { bridge, spec } = makeBridge();
+      const { stickyNoteId } = await bridge.addStickyNote({ content: "note" });
+      await bridge.updateStickyNote(stickyNoteId!, { locked: true });
+
+      expect(
+        await bridge.updateStickyNote(stickyNoteId!, { content: "nope" }),
+      ).toMatchObject({
+        success: false,
+        error: expect.stringContaining("locked"),
+      });
+      expect(await bridge.deleteStickyNote(stickyNoteId!)).toMatchObject({
+        success: false,
+        error: expect.stringContaining("locked"),
+      });
+
+      expect(
+        await bridge.updateStickyNote(stickyNoteId!, { locked: false }),
+      ).toEqual({ success: true });
+      expect(getFlexNodes(spec)[0]?.locked).toBe(false);
+    });
+
+    it("deleteStickyNote removes it from the owning spec", async () => {
+      const { bridge, spec, undo } = makeBridge();
+      const { stickyNoteId } = await bridge.addStickyNote({ content: "note" });
+
+      const result = await bridge.deleteStickyNote(stickyNoteId!);
+
+      expect(result).toEqual({ success: true });
+      expect(getFlexNodes(spec)).toHaveLength(0);
+      expect(undo.labels).toContain("Remove flex node");
+    });
+
+    it("keeps a new task clear of an existing note", async () => {
+      const spec = new ComponentSpec({ $id: "spec_1", name: "Pipe" });
+      const undo = new RecordingUndo();
+      const bridge = createEditorToolBridge({
+        getSpec: () => spec,
+        getActiveSubgraphPath: () => [],
+        getActiveSubgraphTaskId: () => undefined,
+        undo,
+      });
+      await bridge.addStickyNote({
+        content: "note",
+        position: { x: 1000, y: 0 },
+        size: { width: 200, height: 100 },
+      });
+
+      await bridge.addTask({
+        name: "Loader",
+        componentRef: containerComponent("Loader", "loader:1", "path", "table"),
+      });
+
+      const position = spec.tasks[0]?.annotations.get(
+        EDITOR_POSITION_ANNOTATION,
+      ) as { x: number } | undefined;
+      expect(position?.x).toBeGreaterThan(1200);
     });
   });
 
