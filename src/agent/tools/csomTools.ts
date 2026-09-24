@@ -195,7 +195,7 @@ export function createCsomTools(bridge: ToolBridgeApi) {
   const addTask = tool({
     name: "add_task",
     description:
-      "Add a new task node. Pass the full componentRef from a search_components result (with `url` and/or `spec`). Adds to the top-level pipeline unless inSubgraphTaskId names a subgraph to add it inside.",
+      "Add a new task node. Prefer the full componentRef from a search_components result (with `url` and/or `spec`). When nothing in the registry does the job you may author the component inline instead, but then `spec.implementation` is required — a spec with ports and no implementation is added without complaint, validates clean, and is refused by the backend at submit with no indication of which task is at fault. Adds to the top-level pipeline unless inSubgraphTaskId names a subgraph to add it inside.",
     parameters: z.object({
       name: z.string().describe("Human-readable task name"),
       componentRef: z
@@ -234,7 +234,12 @@ export function createCsomTools(bridge: ToolBridgeApi) {
               // ever runs). Keep the field opaque; the bridge accepts arbitrary
               // implementation shapes, but force an explicit object type so
               // strict JSON Schema validation does not see typeless `anyOf`.
-              implementation: arbitraryObjectSchema.nullable().optional(),
+              implementation: arbitraryObjectSchema
+                .nullable()
+                .optional()
+                .describe(
+                  'How the task actually runs. Carry it through verbatim from a search_components result. When authoring a component yourself it is required, and takes the form {"container": {"image": "<image>", "command": [...]}} — inputs reach the command as {"inputValue": "<input name>"} entries and outputs as {"outputPath": "<output name>"}.',
+                ),
             })
             .nullable()
             .optional(),
