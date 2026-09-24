@@ -69,6 +69,14 @@ function envLabel(environmentId: string, socketId: string | undefined): string {
   return `${environmentId} (socket ${socketId ?? "?"})`;
 }
 
+// Tool arguments carry pipeline contents, so log their shape rather than the
+// payload: which keys arrived is what the RCA needs, and this ships to users.
+function argShape(args: unknown): string {
+  if (!isRecord(args)) return `<${typeof args}>`;
+  const keys = Object.keys(args);
+  return keys.length > 0 ? keys.join(", ") : "<none>";
+}
+
 function describeToolCall(request: unknown): { name: string; args: unknown } {
   if (!isRecord(request)) return { name: "<unknown>", args: undefined };
   const name = typeof request.name === "string" ? request.name : "<unknown>";
@@ -87,7 +95,7 @@ function wrapToolsWithLogging(
       execute: async (args) => {
         const startedAt = Date.now();
         const label = envLabel(environmentId, getSocketId());
-        logRemoteEnv(`${label} tool start ${name}`, args);
+        logRemoteEnv(`${label} tool start ${name}`, argShape(args));
         try {
           const result = await tool.execute(args);
           logRemoteEnv(`${label} tool ok ${name} ${Date.now() - startedAt}ms`);
@@ -123,7 +131,7 @@ function attachDiagnosticLogging(
     const { name, args } = describeToolCall(request);
     logRemoteEnv(
       `call received ${envLabel(environmentId, socket.id)} ${name}`,
-      args,
+      argShape(args),
     );
   });
 }

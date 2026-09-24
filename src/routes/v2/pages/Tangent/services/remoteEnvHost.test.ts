@@ -179,6 +179,32 @@ describe("createRemoteEnvHost", () => {
     await expect(connection).resolves.toBeUndefined();
   });
 
+  it("logs the shape of tool-call arguments, never the payload", () => {
+    const worker = makeWorker();
+    const host = createRemoteEnvHost({
+      url: "http://localhost:8000",
+      worker: worker as unknown as Remote<RemoteEnvWorkerApi>,
+    });
+
+    void host.connect("token", "env-1");
+    const callListener = client.socket.on.mock.calls.find(
+      ([event]) => event === "remote:tools:call",
+    )?.[1];
+    if (!callListener) throw new Error("Tool-call listener was not registered");
+
+    callListener({
+      name: "set_pipeline",
+      arguments: { pipeline: "secret-pipeline-yaml", nodeId: "n1" },
+    });
+
+    const logged = vi
+      .mocked(console.info)
+      .mock.calls.map((args) => args.join(" "))
+      .join("\n");
+    expect(logged).toContain("pipeline, nodeId");
+    expect(logged).not.toContain("secret-pipeline-yaml");
+  });
+
   it("emits start then a single end (never report) for a completed turn", async () => {
     const worker = makeWorker();
     worker.runTurn.mockResolvedValue({ answer: "done" });
