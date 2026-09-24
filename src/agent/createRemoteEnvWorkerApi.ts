@@ -23,6 +23,10 @@ import {
   buildRemoteEditorAgent,
   type RemoteAgentSpec,
 } from "./agents/remoteEditorAgent";
+import {
+  type ComponentCatalog,
+  createComponentCatalog,
+} from "./componentCatalog";
 import { ProxyClient } from "./config";
 import { recordTurnReasoning } from "./middleware/recordTurnReasoning";
 import { createSession, type RecentPipelineRun } from "./session";
@@ -69,6 +73,10 @@ interface HostedAgent {
   spec: RemoteAgentSpec;
   memory: MemorySession;
   bridge?: ToolBridgeApi;
+  // Outlives the turn, like the conversation it belongs to: an agent is
+  // routinely told to search in one directive and to add what it found in the
+  // next.
+  componentCatalog: ComponentCatalog;
 }
 
 export function createRemoteEnvWorkerApi(): RemoteEnvWorkerApi {
@@ -121,6 +129,7 @@ export function createRemoteEnvWorkerApi(): RemoteEnvWorkerApi {
           ...(thinkingDepth ? { thinkingDepth } : {}),
         },
         memory: new MemorySession({ sessionId: agentId }),
+        componentCatalog: createComponentCatalog(),
         ...(agentBridge ? { bridge: agentBridge } : {}),
       });
     },
@@ -158,6 +167,7 @@ export function createRemoteEnvWorkerApi(): RemoteEnvWorkerApi {
         aiConfig,
         recentRuns,
         context,
+        componentCatalog: hosted.componentCatalog,
       });
 
       const controller = new AbortController();
