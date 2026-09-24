@@ -24,11 +24,6 @@ import {
   type RemoteAgentSpec,
 } from "./agents/remoteEditorAgent";
 import { ProxyClient } from "./config";
-import {
-  type AgentTraceEvent,
-  clearTraceEvents,
-  readTraceEvents,
-} from "./middleware/agentTrace";
 import { createSession, type RecentPipelineRun } from "./session";
 import { SkillsLoader } from "./skills/loader";
 import type { ToolBridgeApi } from "./toolBridgeApi";
@@ -67,8 +62,6 @@ export interface RemoteEnvWorkerApi {
   ): Promise<RemoteRunTurnResult>;
   abortAgent(agentId: string): void;
   killAgent(agentId: string): void;
-  readTrace(): AgentTraceEvent[];
-  clearTrace(): void;
 }
 
 interface HostedAgent {
@@ -196,14 +189,6 @@ export function createRemoteEnvWorkerApi(): RemoteEnvWorkerApi {
       abortControllers.get(agentId)?.abort();
       abortControllers.delete(agentId);
       agents.delete(agentId);
-    },
-
-    readTrace() {
-      return readTraceEvents();
-    },
-
-    clearTrace() {
-      clearTraceEvents();
     },
   };
 }

@@ -1,16 +1,14 @@
 /**
- * A bounded record of what an agent did, kept in the worker that ran it.
+ * The agent's own record of what it did.
  *
- * The status line is one string each event overwrites, so it says what an
- * agent is doing and never what it did — and a sub-agent's tool calls cross a
- * Comlink bridge that keeps nothing. Without this, a loop, a stale entity id
- * and a tool that never returns are indistinguishable from working.
- *
- * It stays in the worker and is read on demand rather than pushed per event:
- * a turn can make hundreds of calls, and the UI needs them only when someone
- * opens the log.
+ * Recording happens inside the agent Web Worker, and there is one worker per
+ * pipeline tab plus one for the project — so a buffer held in the worker is
+ * only ever a fraction of a session, in whichever worker the reader happens to
+ * hold. Events are broadcast instead, and collected on the main thread by
+ * {@link startAgentTraceLog}, which is the only side that can reach
+ * `localStorage`: a worker has no access to it.
  */
-const MAX_EVENTS = 500;
+const CHANNEL = "tangle:agent-trace";
 const MAX_PAYLOAD_CHARS = 2000;
 
 export interface AgentTraceEvent {
@@ -22,7 +20,13 @@ export interface AgentTraceEvent {
   durationMs?: number;
 }
 
-const events: AgentTraceEvent[] = [];
+let channel: BroadcastChannel | undefined;
+
+function getChannel(): BroadcastChannel | undefined {
+  if (typeof BroadcastChannel === "undefined") return undefined;
+  channel ??= new BroadcastChannel(CHANNEL);
+  return channel;
+}
 
 export function truncateForTrace(value: string): string {
   return value.length > MAX_PAYLOAD_CHARS
@@ -31,14 +35,21 @@ export function truncateForTrace(value: string): string {
 }
 
 export function recordTraceEvent(event: AgentTraceEvent): void {
-  events.push(event);
-  if (events.length > MAX_EVENTS) events.splice(0, events.length - MAX_EVENTS);
+  getChannel()?.postMessage(event);
 }
 
-export function readTraceEvents(): AgentTraceEvent[] {
-  return events.slice();
-}
+/**
+ * A `BroadcastChannel` never delivers to the instance that posted, so the
+ * listener owns one of its own — otherwise nothing recorded on this thread
+ * would ever be seen on it.
+ */
+export function subscribeToTraceEvents(
+  onEvent: (event: AgentTraceEvent) => void,
+): () => void {
+  if (typeof BroadcastChannel === "undefined") return () => {};
 
-export function clearTraceEvents(): void {
-  events.length = 0;
+  const listening = new BroadcastChannel(CHANNEL);
+  listening.onmessage = (message: MessageEvent<AgentTraceEvent>) =>
+    onEvent(message.data);
+  return () => listening.close();
 }

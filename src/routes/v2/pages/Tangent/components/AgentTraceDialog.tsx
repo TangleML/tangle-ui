@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 
 import type { AgentTraceEvent } from "@/agent/middleware/agentTrace";
+import {
+  clearAgentTraceLog,
+  readAgentTraceLog,
+} from "@/agent/middleware/agentTraceLog";
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,7 +18,6 @@ import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
-import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { copyToClipboard } from "@/utils/string";
 
 const KIND_LABEL: Record<AgentTraceEvent["kind"], string> = {
@@ -52,17 +55,12 @@ interface AgentTraceDialogProps {
 }
 
 function AgentTraceDialog({ open, onOpenChange }: AgentTraceDialogProps) {
-  const store = useTangentProject();
   const notify = useToastNotification();
   const [events, setEvents] = useState<AgentTraceEvent[]>([]);
 
-  const refresh = () => {
-    void store.readAgentTrace().then(setEvents);
-  };
-
   useEffect(() => {
-    if (open) void store.readAgentTrace().then(setEvents);
-  }, [open, store]);
+    if (open) setEvents(readAgentTraceLog());
+  }, [open]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -70,13 +68,16 @@ function AgentTraceDialog({ open, onOpenChange }: AgentTraceDialogProps) {
         <DialogHeader>
           <DialogTitle>Agent log</DialogTitle>
           <DialogDescription>
-            Every tool an agent called this session, with what it passed and
-            what came back.
+            Every tool an agent called, with what it passed and what came back.
           </DialogDescription>
         </DialogHeader>
 
         <InlineStack gap="2" className="w-full">
-          <Button variant="outline" size="sm" onClick={refresh}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setEvents(readAgentTraceLog())}
+          >
             Refresh
           </Button>
           <Button
@@ -89,6 +90,17 @@ function AgentTraceDialog({ open, onOpenChange }: AgentTraceDialogProps) {
             }}
           >
             Copy
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={events.length === 0}
+            onClick={() => {
+              clearAgentTraceLog();
+              setEvents([]);
+            }}
+          >
+            Clear
           </Button>
         </InlineStack>
 

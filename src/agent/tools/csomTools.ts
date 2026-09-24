@@ -248,6 +248,10 @@ export function createCsomTools(bridge: ToolBridgeApi) {
           (ref) => ref.url != null || ref.spec != null,
           "componentRef must include either a url or an inline spec — name alone is not enough",
         )
+        .refine(
+          (ref) => ref.url != null || ref.spec?.implementation != null,
+          "an inline spec must include `implementation` — a component with ports and nothing that runs them is refused at submit, and the refusal cannot say which task it came from",
+        )
         .describe(
           "Component reference from search_components — must include url and/or spec.",
         ),
