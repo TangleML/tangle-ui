@@ -327,6 +327,8 @@ describe("serializeSpecForAi", () => {
 
       expect(() => structuredClone(serializeSpecForAi(spec))).not.toThrow();
     });
+  });
+
   /** The editor agent renames a placeholder and leaves a chosen name alone. */
   it("tells the agent when the name is a placeholder nobody chose", () => {
     const spec = buildBasicSpec();
