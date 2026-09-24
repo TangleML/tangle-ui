@@ -1,9 +1,9 @@
 import { EventEmitter } from "node:events";
 
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import type { StatusCallback } from "../types";
-import { clearTraceEvents, readTraceEvents } from "./agentTrace";
+import { type AgentTraceEvent, subscribeToTraceEvents } from "./agentTrace";
 import { attachObservabilityHooks } from "./observability";
 
 type Agent = Parameters<typeof attachObservabilityHooks>[0];
@@ -26,17 +26,27 @@ function toolCall(callId: string, args?: string) {
   return { toolCall: { type: "function_call", callId, arguments: args } };
 }
 
+/** Broadcast delivery is a task, so nothing recorded is readable synchronously. */
+function settled(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
 describe("attachObservabilityHooks", () => {
   let emitStatus: StatusCallback;
   let statuses: string[];
+  let recorded: AgentTraceEvent[];
+  let unsubscribe: () => void;
 
   beforeEach(() => {
-    clearTraceEvents();
     statuses = [];
+    recorded = [];
+    unsubscribe = subscribeToTraceEvents((event) => recorded.push(event));
     emitStatus = (status: { text: string }) => {
       statuses.push(status.text);
     };
   });
+
+  afterEach(() => unsubscribe());
 
   it("still drives the status line", () => {
     const { agent, emit } = fakeAgent();
@@ -49,7 +59,7 @@ describe("attachObservabilityHooks", () => {
   });
 
   /** The status line is overwritten by the next event; the trace is the record. */
-  it("records a tool call's arguments and its result", () => {
+  it("records a tool call's arguments and its result", async () => {
     const { agent, emit } = fakeAgent();
     attachObservabilityHooks(agent, emitStatus);
 
@@ -67,7 +77,8 @@ describe("attachObservabilityHooks", () => {
       toolCall("c1"),
     );
 
-    const [start, end] = readTraceEvents();
+    await settled();
+    const [start, end] = recorded;
     expect(start).toMatchObject({
       agent: "tangle-remote-editor",
       kind: "tool-start",
@@ -82,7 +93,7 @@ describe("attachObservabilityHooks", () => {
     expect(end.durationMs).toBeGreaterThanOrEqual(0);
   });
 
-  it("truncates a payload too large to read", () => {
+  it("truncates a payload too large to read", async () => {
     const { agent, emit } = fakeAgent();
     attachObservabilityHooks(agent, emitStatus);
 
@@ -94,27 +105,29 @@ describe("attachObservabilityHooks", () => {
       toolCall("c1"),
     );
 
-    const detail = readTraceEvents()[0]?.detail ?? "";
+    await settled();
+    const detail = recorded[0]?.detail ?? "";
     expect(detail).toContain("(5000 chars)");
     expect(detail.length).toBeLessThan(2100);
   });
 
   /** A hung bridge call and a finished turn otherwise look identical. */
-  it("records a tool that never returned when the turn ends", () => {
+  it("records a tool that never returned when the turn ends", async () => {
     const { agent, emit } = fakeAgent();
     attachObservabilityHooks(agent, emitStatus);
 
     emit("agent_tool_start", {}, { name: "add_task" }, toolCall("c1"));
     emit("agent_end");
 
+    await settled();
     expect(
-      readTraceEvents().some(
+      recorded.some(
         (event) => event.kind === "tool-hung" && event.label === "add_task",
       ),
     ).toBe(true);
   });
 
-  it("does not record a hang for a tool that did return", () => {
+  it("does not record a hang for a tool that did return", async () => {
     const { agent, emit } = fakeAgent();
     attachObservabilityHooks(agent, emitStatus);
 
@@ -122,9 +135,8 @@ describe("attachObservabilityHooks", () => {
     emit("agent_tool_end", {}, { name: "add_task" }, "ok", toolCall("c1"));
     emit("agent_end");
 
-    expect(readTraceEvents().some((event) => event.kind === "tool-hung")).toBe(
-      false,
-    );
+    await settled();
+    expect(recorded.some((event) => event.kind === "tool-hung")).toBe(false);
   });
 
   /** A throw inside a lifecycle hook takes the agent's turn down with it. */
@@ -140,7 +152,7 @@ describe("attachObservabilityHooks", () => {
     }).not.toThrow();
   });
 
-  it("detaches every listener it attached", () => {
+  it("detaches every listener it attached", async () => {
     const { agent, emit } = fakeAgent();
     const dispose = attachObservabilityHooks(agent, emitStatus);
 
@@ -148,7 +160,8 @@ describe("attachObservabilityHooks", () => {
     emit("agent_start");
     emit("agent_tool_start", {}, { name: "add_task" }, toolCall("c1"));
 
+    await settled();
     expect(statuses).toEqual([]);
-    expect(readTraceEvents()).toEqual([]);
+    expect(recorded).toEqual([]);
   });
 });
