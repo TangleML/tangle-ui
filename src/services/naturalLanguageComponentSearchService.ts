@@ -83,6 +83,7 @@ interface LlmOptions {
   apiBase: string;
   // Bearer token. Leave blank when the proxy owns authentication.
   apiKey: string;
+  credentials?: RequestCredentials;
 }
 
 /**
@@ -302,6 +303,7 @@ async function callLlmResponse(
   const response = await fetch(`${base}/responses`, {
     method: "POST",
     signal: options.signal,
+    credentials: options.credentials,
     headers: {
       "content-type": "application/json",
       ...(key ? { authorization: `Bearer ${key}` } : {}),
