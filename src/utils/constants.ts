@@ -22,6 +22,10 @@ export const API_URL = import.meta.env.VITE_BACKEND_API_URL || "";
 export const BASE_URL = import.meta.env.VITE_BASE_URL || "/";
 
 export const USER_SETTINGS_PATH = "/api/users/me/settings";
+
+/** Settings namespace for values owned by the UI rather than by a person. */
+export const SYSTEM_UI_USER_ID = "system:web_ui";
+export const PROTOTYPE_BANNERS_SETTING_NAME = `${SYSTEM_UI_USER_ID}/banners`;
 export const IS_GITHUB_PAGES = import.meta.env.VITE_GITHUB_PAGES === "true";
 
 export const GIT_REPO_URL =

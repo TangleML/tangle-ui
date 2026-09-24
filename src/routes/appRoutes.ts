@@ -36,6 +36,7 @@ export const APP_ROUTES = {
   SETTINGS_SECRETS: `${SETTINGS_PATH}/secrets`,
   SETTINGS_SECRETS_ADD: `${SETTINGS_PATH}/secrets/add`,
   SETTINGS_SECRETS_REPLACE: `${SETTINGS_PATH}/secrets/$secretId/replace`,
+  SETTINGS_PROTOTYPE_BANNER: `${SETTINGS_PATH}/prototype-banner`,
   GITHUB_AUTH_CALLBACK: "/authorize/github",
   HUGGINGFACE_AUTH_CALLBACK: "/authorize/huggingface",
   EDITOR_V2: EDITOR_V2_BASE_PATH,
