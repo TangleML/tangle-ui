@@ -108,7 +108,7 @@ export function updateFlexNodePosition(
 ) {
   undo.withGroup("Update flex node position", () => {
     const flexNode = findFlexNode(spec, nodeId);
-    if (!flexNode) return;
+    if (!flexNode || flexNode.locked) return;
     updateFlexNode(undo, spec, nodeId, { position });
   });
 }

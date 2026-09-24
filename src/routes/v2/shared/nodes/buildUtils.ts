@@ -11,11 +11,19 @@ const IO_OFFSET = 150;
 const INPUT_COLUMN_X = -200;
 const OUTPUT_COLUMN_X = 800;
 
+interface PositionedEntity {
+  annotations: {
+    has(key: string): boolean;
+    get(key: string): unknown;
+  };
+}
+
 function resolvePosition(
-  position: { x: number; y: number },
+  entity: PositionedEntity,
   fallback: { x: number; y: number },
 ): { x: number; y: number } {
-  return position.x === 0 && position.y === 0 ? fallback : position;
+  if (!entity.annotations.has(EDITOR_POSITION_ANNOTATION)) return fallback;
+  return entity.annotations.get(EDITOR_POSITION_ANNOTATION) as XYPosition;
 }
 
 export function ioDefaultPosition(
@@ -44,29 +52,17 @@ export function resolveEntityPositions(
   for (const [index, input] of [...spec.inputs].entries()) {
     positions.set(
       input.$id,
-      resolvePosition(
-        input.annotations.get(EDITOR_POSITION_ANNOTATION),
-        ioDefaultPosition(index, INPUT_COLUMN_X),
-      ),
+      resolvePosition(input, ioDefaultPosition(index, INPUT_COLUMN_X)),
     );
   }
   for (const [index, output] of [...spec.outputs].entries()) {
     positions.set(
       output.$id,
-      resolvePosition(
-        output.annotations.get(EDITOR_POSITION_ANNOTATION),
-        ioDefaultPosition(index, OUTPUT_COLUMN_X),
-      ),
+      resolvePosition(output, ioDefaultPosition(index, OUTPUT_COLUMN_X)),
     );
   }
   for (const [index, task] of [...spec.tasks].entries()) {
-    positions.set(
-      task.$id,
-      resolvePosition(
-        task.annotations.get(EDITOR_POSITION_ANNOTATION),
-        taskDefaultPosition(index),
-      ),
-    );
+    positions.set(task.$id, resolvePosition(task, taskDefaultPosition(index)));
   }
   return positions;
 }
@@ -81,24 +77,17 @@ function parseZIndex(raw: unknown): number | undefined {
 }
 
 export function createEntityNode(
-  entity: {
-    $id: string;
-    annotations: { get(key: string): unknown };
-  },
+  entity: PositionedEntity & { $id: string },
   nodeType: string,
   fallback: { x: number; y: number },
   data: Record<string, unknown>,
   domAttributes?: Record<string, string>,
 ): Node {
-  const position = entity.annotations.get(EDITOR_POSITION_ANNOTATION) as {
-    x: number;
-    y: number;
-  };
   const zIndex = parseZIndex(entity.annotations.get(ZINDEX_ANNOTATION));
   return {
     id: entity.$id,
     type: nodeType,
-    position: resolvePosition(position, fallback),
+    position: resolvePosition(entity, fallback),
     zIndex,
     data,
     domAttributes,

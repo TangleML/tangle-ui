@@ -74,7 +74,7 @@ function hasAllOf(schema: JsonSchemaNode | undefined): boolean {
 }
 
 describe("createCsomTools", () => {
-  it("exposes the full 22-tool surface", () => {
+  it("exposes the full 24-tool surface", () => {
     const { allTools } = createCsomTools(makeBridge());
     const names = allTools.map((t) => t.name).sort();
     expect(names).toEqual(
@@ -83,6 +83,7 @@ describe("createCsomTools", () => {
         "add_output",
         "add_sticky_note",
         "add_task",
+        "auto_layout",
         "connect_nodes",
         "create_subgraph",
         "delete_edge",
@@ -92,6 +93,7 @@ describe("createCsomTools", () => {
         "delete_task",
         "get_pipeline_state",
         "get_subgraph_state",
+        "move_node",
         "rename_input",
         "rename_output",
         "rename_task",
@@ -367,6 +369,27 @@ describe("createCsomTools", () => {
       "flex_1",
       expect.objectContaining({ content: "Revised", locked: false }),
     );
+  });
+
+  it("move_node forwards (entityId, position) in the right order", async () => {
+    const moveNode = vi.fn().mockResolvedValue({ success: true });
+    const { allTools } = createCsomTools(makeBridge({ moveNode }));
+
+    await invoke(findTool(allTools, "move_node"), {
+      entityId: "task_1",
+      position: { x: 10, y: 20 },
+    });
+
+    expect(moveNode).toHaveBeenCalledWith("task_1", { x: 10, y: 20 });
+  });
+
+  it("auto_layout normalizes a null algorithm to undefined", async () => {
+    const autoLayout = vi.fn().mockResolvedValue({ success: true });
+    const { allTools } = createCsomTools(makeBridge({ autoLayout }));
+
+    await invoke(findTool(allTools, "auto_layout"), { algorithm: null });
+
+    expect(autoLayout).toHaveBeenCalledWith(undefined);
   });
 
   it("delete_sticky_note forwards the note id", async () => {

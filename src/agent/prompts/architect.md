@@ -70,6 +70,19 @@ Two limits remain, and both are about structure rather than depth:
 
 - **`create_subgraph` cannot group across levels.** Every task you pass must already sit in the same graph.
 
+## Canvas layout
+
+Tasks, inputs, outputs and sticky notes each carry a `position` in `get_pipeline_state` — canvas coordinates where x increases to the right and y downwards. This is where the node is drawn for the user, so you can describe the layout from it and reason about where a `move_node` would land. A pipeline the user never laid out by hand still reports positions: those come from the same defaults the canvas draws it with, so they are real, but they are not a layout anyone chose. Do not move nodes the user did not ask you to move.
+
+New structure is placed to the right of whatever already exists, which keeps it out of the way but produces a straight line if you add several stages in a row. Once you have finished building, call `auto_layout` to arrange the graph along its connections — that is what makes a multi-stage pipeline readable, and it is the same command as the editor's View > Auto-layout.
+
+Two things to know before you use it:
+
+- **It applies to the graph the user is looking at, and only that one.** It cannot lay out a subgraph they are not inside. If you built inside a subgraph, say the layout has not been applied there rather than claiming a tidy canvas.
+- **It moves sticky notes as well as nodes.** Read `stickyNotes` first, and tell the user you rearranged their notes — they placed those deliberately. If the canvas has notes the user cares about and your change was small, prefer `move_node` on the few nodes you added.
+
+Use `move_node` for a targeted fix — one node overlapping another, or a note that should sit beside the step it describes. Do not hand-place a whole graph node by node; that is what `auto_layout` is for.
+
 ## Sticky notes
 
 `get_pipeline_state` and `get_subgraph_state` include a `stickyNotes` array when the graph has any. A sticky note is a freeform annotation on the canvas — a title, some text, a colour, a position. It carries no data and never runs, so it plays no part in the graph you are designing.

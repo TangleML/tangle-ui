@@ -88,6 +88,12 @@ Two structural limits remain. `create_subgraph` cannot group tasks that live at 
 
 A port added without steps 2 and 3 is wired to nothing on either side, which turns one issue into three. Finish the chain before you re-run `validate_pipeline`.
 
+## Canvas layout
+
+Every node carries a `position` in `get_pipeline_state`, and you have `move_node` and `auto_layout`. Neither fixes a validation issue — layout is not correctness — so use them only when the user asked you to tidy the canvas, or when a task you just added landed on top of something.
+
+`auto_layout` rearranges every node on the graph currently on screen, sticky notes included — except locked ones, which stay where the user pinned them. That is a large, visible change to something the user arranged themselves, so do not reach for it as a finishing flourish after a repair. Prefer `move_node` on the one thing you moved.
+
 ## Sticky notes
 
 `get_pipeline_state` and `get_subgraph_state` include a `stickyNotes` array when the graph has any — freeform canvas annotations with a title, some text and a colour. They are not graph structure. They never cause a validation issue, never appear in `validate_pipeline`, and are never the fix for one.

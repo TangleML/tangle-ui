@@ -17,6 +17,7 @@ import type {
 } from "@/agent/toolBridgeApi";
 import type { FlexNodeData } from "@/components/shared/ReactFlow/FlowCanvas/FlexNode/types";
 import { MIN_FLEX_NODE_SIZE } from "@/components/shared/ReactFlow/FlowCanvas/FlexNode/utils";
+import type { LayoutAlgorithm } from "@/components/shared/ReactFlow/FlowCanvas/utils/autolayout";
 import {
   describeBindingEndpointProblem,
   findBindingEndpointProblems,
@@ -52,6 +53,7 @@ import {
 import {
   addTask,
   deleteTask,
+  moveNodeToPosition,
   renameTask,
   unpackSubgraphTask,
 } from "@/routes/v2/pages/Editor/store/actions/task.actions";
@@ -79,17 +81,20 @@ import {
   resolveArgumentValue,
   resolveConnectable,
   resolveDestination,
+  resolveMovable,
   resolveStickyNote,
   resolveTarget,
 } from "./mutationTarget";
 
 /**
- * CSOM handlers need the Editor's undo store to make the agent's spec
- * edits user-visible and undoable as a single step. `undo` lives here
- * (not in the shared `BridgeDeps`) because only the Editor's mutating
- * bridge depends on it.
+ * `invokeAutoLayout` is injected because dagre needs React Flow's measured node
+ * dimensions, which only the mounted canvas knows — it cannot be computed from
+ * the spec. Optional, so the tool can say there is no canvas rather than throw.
  */
-export type CsomBridgeDeps = BridgeDeps & { undo: UndoGroupable };
+export type CsomBridgeDeps = BridgeDeps & {
+  undo: UndoGroupable;
+  invokeAutoLayout?: (algorithm?: LayoutAlgorithm) => boolean;
+};
 
 type CsomHandlers = Pick<
   ToolBridgeApi,
@@ -113,6 +118,8 @@ type CsomHandlers = Pick<
   | "addStickyNote"
   | "updateStickyNote"
   | "deleteStickyNote"
+  | "moveNode"
+  | "autoLayout"
   | "validatePipeline"
 >;
 
@@ -650,6 +657,40 @@ export function createCsomBridgeHandlers(deps: CsomBridgeDeps): CsomHandlers {
       }
 
       removeFlexNode(deps.undo, location.spec, noteId);
+      return { success: true };
+    },
+
+    async moveNode(entityId, position) {
+      const root = requireSpec(deps);
+
+      const target = resolveMovable(root, entityId);
+      if (!target.ok) {
+        return { success: false, error: target.error };
+      }
+
+      const moved = moveNodeToPosition(
+        deps.undo,
+        target.spec,
+        entityId,
+        position,
+      );
+      if (!moved) {
+        return {
+          success: false,
+          error: `${target.description} cannot be moved — the editor has no node type registered for it.`,
+        };
+      }
+      return { success: true };
+    },
+
+    async autoLayout(algorithm) {
+      if (!deps.invokeAutoLayout?.(algorithm)) {
+        return {
+          success: false,
+          error:
+            "Could not lay out the canvas — no pipeline canvas is open to lay out.",
+        };
+      }
       return { success: true };
     },
 

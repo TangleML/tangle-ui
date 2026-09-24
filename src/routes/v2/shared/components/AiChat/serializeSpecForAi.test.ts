@@ -8,7 +8,10 @@ import {
   Output,
   Task,
 } from "@/models/componentSpec";
-import { FLEX_NODES_ANNOTATION } from "@/utils/annotationKeys";
+import {
+  EDITOR_POSITION_ANNOTATION,
+  FLEX_NODES_ANNOTATION,
+} from "@/utils/annotationKeys";
 
 import { serializeSpecForAi } from "./serializeSpecForAi";
 
@@ -117,11 +120,13 @@ describe("serializeSpecForAi", () => {
       description: "Path to the raw file",
       default: "data.csv",
       optional: false,
+      position: { x: -200, y: 0 },
     });
     expect(ai.inputs[1]).toEqual({
       $id: "in_2",
       name: "rows",
       type: "Integer",
+      position: { x: -200, y: 150 },
     });
   });
 
@@ -135,6 +140,7 @@ describe("serializeSpecForAi", () => {
         name: "result",
         type: "String",
         description: "Final artifact path",
+        position: { x: 800, y: 0 },
       },
     ]);
   });
@@ -170,6 +176,7 @@ describe("serializeSpecForAi", () => {
         },
       },
       arguments: [{ name: "path", value: "data.csv" }],
+      position: { x: 200, y: 0 },
     });
     expect(ai.tasks[1].isSubgraph).toBe(true);
   });
@@ -203,6 +210,27 @@ describe("serializeSpecForAi", () => {
     const ai = serializeSpecForAi(spec, { activeSubgraphPath: [] });
 
     expect(ai.activeSubgraphPath).toBeUndefined();
+  });
+
+  it("serializes the stored position of a node the user has placed", () => {
+    const spec = buildBasicSpec();
+    spec.tasks[0]?.annotations.set(EDITOR_POSITION_ANNOTATION, {
+      x: 120,
+      y: 340,
+    });
+
+    const ai = serializeSpecForAi(spec);
+
+    expect(ai.tasks[0]?.position).toEqual({ x: 120, y: 340 });
+  });
+
+  it("reports where an unplaced node renders rather than nothing at all", () => {
+    const ai = serializeSpecForAi(buildBasicSpec());
+
+    expect(ai.tasks[0]?.position).toEqual({ x: 200, y: 0 });
+    expect(ai.inputs[0]?.position).toEqual({ x: -200, y: 0 });
+    expect(ai.inputs[1]?.position).toEqual({ x: -200, y: 150 });
+    expect(ai.outputs[0]?.position).toEqual({ x: 800, y: 0 });
   });
 
   it("omits stickyNotes when the canvas has none", () => {

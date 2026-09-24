@@ -17,6 +17,7 @@ import type {
   GetGraphExecutionStateResponse,
   PipelineRunResponse,
 } from "@/api/types.gen";
+import type { LayoutAlgorithm } from "@/components/shared/ReactFlow/FlowCanvas/utils/autolayout";
 import type { ArgumentType, ComponentReference } from "@/models/componentSpec";
 import type { AiSpec } from "@/routes/v2/shared/components/AiChat/serializeSpecForAi";
 
@@ -195,6 +196,12 @@ export interface ToolBridgeApi {
     updates: StickyNoteUpdates,
   ): Promise<BridgeResult>;
   deleteStickyNote(noteId: string): Promise<BridgeResult>;
+
+  moveNode(
+    entityId: string,
+    position: { x: number; y: number },
+  ): Promise<BridgeResult>;
+  autoLayout(algorithm?: LayoutAlgorithm): Promise<BridgeResult>;
 
   validatePipeline(): Promise<ValidationResult>;
 

@@ -546,6 +546,37 @@ export function createCsomTools(bridge: ToolBridgeApi) {
       asJson(await bridge.deleteStickyNote(noteId)),
   });
 
+  const moveNode = tool({
+    name: "move_node",
+    description:
+      "Move a task, pipeline input, pipeline output or sticky note to canvas coordinates, wherever it lives. Positions are in `get_pipeline_state`, so read them first — x increases to the right and y downwards, and a node with no position has never been placed. Use this for a targeted tidy-up; for rearranging a whole graph, prefer auto_layout.",
+    parameters: z.object({
+      entityId: z
+        .string()
+        .describe("$id of the task/input/output, or a sticky note's id"),
+      position: positionSchema,
+    }),
+    execute: async ({ entityId, position }) =>
+      asJson(await bridge.moveNode(entityId, position)),
+  });
+
+  const autoLayout = tool({
+    name: "auto_layout",
+    description:
+      "Arrange the graph the user is currently looking at, left to right along its connections — the same command as the editor's View > Auto-layout. It applies to the graph on screen only, so it cannot lay out a subgraph the user is not inside. It moves everything on that canvas, sticky notes included: read `stickyNotes` first and say that you moved them.",
+    parameters: z.object({
+      algorithm: z
+        .enum(["sugiyama", "sugiyama_centered", "digco", "dwyer"])
+        .nullable()
+        .optional()
+        .describe(
+          "Layout style. Omit for the default (sugiyama), which is what the keyboard shortcut uses.",
+        ),
+    }),
+    execute: async ({ algorithm }) =>
+      asJson(await bridge.autoLayout(algorithm ?? undefined)),
+  });
+
   const validatePipeline = tool({
     name: "validate_pipeline",
     description:
@@ -579,6 +610,8 @@ export function createCsomTools(bridge: ToolBridgeApi) {
       addStickyNote,
       updateStickyNote,
       deleteStickyNote,
+      moveNode,
+      autoLayout,
       validatePipeline,
     ],
   };
