@@ -161,6 +161,15 @@ export interface ToolBridgeApi {
   }): Promise<BridgeResult & { inputId?: string; name?: string }>;
   deleteInput(entityId: string): Promise<BridgeResult>;
   renameInput(entityId: string, newName: string): Promise<BridgeResult>;
+  updateInput(
+    entityId: string,
+    updates: {
+      type?: string;
+      description?: string;
+      defaultValue?: string;
+      optional?: boolean;
+    },
+  ): Promise<BridgeResult>;
 
   addOutput(args: {
     name: string;
@@ -170,6 +179,10 @@ export interface ToolBridgeApi {
   }): Promise<BridgeResult & { outputId?: string; name?: string }>;
   deleteOutput(entityId: string): Promise<BridgeResult>;
   renameOutput(entityId: string, newName: string): Promise<BridgeResult>;
+  updateOutput(
+    entityId: string,
+    updates: { type?: string; description?: string },
+  ): Promise<BridgeResult>;
 
   connectNodes(
     args: ConnectArgs,

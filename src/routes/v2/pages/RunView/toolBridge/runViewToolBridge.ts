@@ -33,9 +33,11 @@ type ReadOnlyCsomHandlers = Pick<
   | "addInput"
   | "deleteInput"
   | "renameInput"
+  | "updateInput"
   | "addOutput"
   | "deleteOutput"
   | "renameOutput"
+  | "updateOutput"
   | "connectNodes"
   | "deleteEdge"
   | "setTaskArgument"
@@ -95,6 +97,9 @@ function createReadOnlyCsomHandlers(deps: BridgeDeps): ReadOnlyCsomHandlers {
     async renameInput() {
       return { success: false, error: READ_ONLY_ERROR };
     },
+    async updateInput() {
+      return { success: false, error: READ_ONLY_ERROR };
+    },
     async addOutput() {
       return { success: false, error: READ_ONLY_ERROR };
     },
@@ -102,6 +107,9 @@ function createReadOnlyCsomHandlers(deps: BridgeDeps): ReadOnlyCsomHandlers {
       return { success: false, error: READ_ONLY_ERROR };
     },
     async renameOutput() {
+      return { success: false, error: READ_ONLY_ERROR };
+    },
+    async updateOutput() {
       return { success: false, error: READ_ONLY_ERROR };
     },
     async connectNodes() {

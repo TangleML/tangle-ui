@@ -88,6 +88,14 @@ Two structural limits remain. `create_subgraph` cannot group tasks that live at 
 
 A port added without steps 2 and 3 is wired to nothing on either side, which turns one issue into three. Finish the chain before you re-run `validate_pipeline`.
 
+## Changing an existing port
+
+`update_input` changes an input's type, description, default or optional flag in place; `update_output` changes an output's type or description — outputs have neither of the other two. Reach for these rather than deleting and re-adding a port: a delete takes every connection to that port with it, so a type change done that way turns one issue into several. Only the fields you pass change, and a port inside a subgraph retypes the matching port on the subgraph task automatically.
+
+Type mismatches are the obvious use, but be careful which end you change — retyping a port to match a wrong connection makes the error go away without making the pipeline correct. If it is not clear which end is wrong, ask.
+
+Making a required input optional, or giving it a default, is not a fix for "missing required input": it silences the message and changes what the run does. Ask the user whether the value should be supplied or the input genuinely made optional.
+
 ## Canvas layout
 
 Every node carries a `position` in `get_pipeline_state`, and you have `move_node` and `auto_layout`. Neither fixes a validation issue — layout is not correctness — so use them only when the user asked you to tidy the canvas, or when a task you just added landed on top of something.

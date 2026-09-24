@@ -22,7 +22,10 @@ import {
   describeBindingEndpointProblem,
   findBindingEndpointProblems,
 } from "@/models/componentSpec/queries/bindingEndpoints";
-import type { EntityLocationOf } from "@/models/componentSpec/queries/locateEntity";
+import type {
+  EntityLocation,
+  EntityLocationOf,
+} from "@/models/componentSpec/queries/locateEntity";
 import {
   addFlexNode,
   removeFlexNode,
@@ -40,9 +43,9 @@ import {
   deleteOutput,
   renameInput,
   renameOutput,
-  setInputDefaultValue,
   setInputDescription,
   setInputType,
+  setInputValue,
   setOutputDescription,
 } from "@/routes/v2/pages/Editor/store/actions/io.actions";
 import {
@@ -107,9 +110,11 @@ type CsomHandlers = Pick<
   | "addInput"
   | "deleteInput"
   | "renameInput"
+  | "updateInput"
   | "addOutput"
   | "deleteOutput"
   | "renameOutput"
+  | "updateOutput"
   | "connectNodes"
   | "deleteEdge"
   | "setTaskArgument"
@@ -124,6 +129,14 @@ type CsomHandlers = Pick<
 >;
 
 const AI_NOTE_AUTHOR = "AI assistant";
+
+function noFieldsGiven(updates: object): boolean {
+  return Object.values(updates).every((value) => value === undefined);
+}
+
+function noFieldsError(location: EntityLocation, entityId: string): string {
+  return `Nothing was changed — no fields to update were given for ${describeEntityLocation(location, entityId)}.`;
+}
 
 function noteColorProblem({
   color,
@@ -274,8 +287,7 @@ export function createCsomBridgeHandlers(deps: CsomBridgeDeps): CsomHandlers {
       if (type) setInputType(deps.undo, spec, input.$id, type);
       if (description)
         setInputDescription(deps.undo, spec, input.$id, description);
-      if (defaultValue)
-        setInputDefaultValue(deps.undo, spec, input.$id, defaultValue);
+      if (defaultValue) setInputValue(deps.undo, spec, input.$id, defaultValue);
       if (optional !== undefined) {
         deps.undo.withGroup("Set input optional", () => {
           input.setOptional(optional);
@@ -313,6 +325,31 @@ export function createCsomBridgeHandlers(deps: CsomBridgeDeps): CsomHandlers {
             location,
           ),
       );
+    },
+
+    async updateInput(entityId, updates) {
+      const target = resolveTarget(requireSpec(deps), entityId, "input");
+      if (!target.ok) {
+        return { success: false, error: target.error };
+      }
+      const { location } = target;
+      const { type, description, defaultValue, optional } = updates;
+
+      if (noFieldsGiven(updates)) {
+        return { success: false, error: noFieldsError(location, entityId) };
+      }
+
+      deps.undo.withGroup("Update input", () => {
+        const { spec } = location;
+        if (type !== undefined)
+          setInputType(deps.undo, spec, entityId, type || undefined);
+        if (description !== undefined)
+          setInputDescription(deps.undo, spec, entityId, description);
+        if (defaultValue !== undefined)
+          setInputValue(deps.undo, spec, entityId, defaultValue || undefined);
+        if (optional !== undefined) location.entity.setOptional(optional);
+      });
+      return { success: true };
     },
 
     async addOutput({ name, type, description, inSubgraphTaskId }) {
@@ -373,6 +410,26 @@ export function createCsomBridgeHandlers(deps: CsomBridgeDeps): CsomHandlers {
             location,
           ),
       );
+    },
+
+    async updateOutput(entityId, updates) {
+      const target = resolveTarget(requireSpec(deps), entityId, "output");
+      if (!target.ok) {
+        return { success: false, error: target.error };
+      }
+      const { location } = target;
+      const { type, description } = updates;
+
+      if (noFieldsGiven(updates)) {
+        return { success: false, error: noFieldsError(location, entityId) };
+      }
+
+      deps.undo.withGroup("Update output", () => {
+        if (type !== undefined) location.entity.setType(type || undefined);
+        if (description !== undefined)
+          setOutputDescription(deps.undo, location.spec, entityId, description);
+      });
+      return { success: true };
     },
 
     async connectNodes(args: ConnectArgs) {
