@@ -2608,3 +2608,834 @@ export type QuickStatsApiStatsQuickGetResponses = {
      */
     200: unknown;
 };
+
+/**
+ * CreateProjectRequest
+ *
+ * A new project. `created_by` is stamped from the caller and never accepted here.
+ */
+export type CreateProjectRequest = {
+    /**
+     * Workspace Id
+     */
+    workspace_id: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Description
+     */
+    description?: string | null;
+    /**
+     * Notes
+     */
+    notes?: string | null;
+    /**
+     * Extra Data
+     */
+    extra_data?: {
+        [key: string]: unknown;
+    } | null;
+    origin?: ProjectOrigin;
+};
+
+/**
+ * DeleteProjectResponse
+ *
+ * What the hard delete removed.
+ *
+ * Returned rather than a bare 204 because the operation is irreversible: the UI has to be able
+ * to say "and its 3 documents and 2 sessions" afterwards, which a 204 leaves it guessing from
+ * state it may already have thrown away.
+ */
+export type DeleteProjectResponse = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Deleted Resource Counts
+     */
+    deleted_resource_counts: {
+        [key: string]: number;
+    };
+    /**
+     * Deleted Resource Total
+     */
+    deleted_resource_total: number;
+};
+
+/**
+ * ProjectListResponse
+ */
+export type ProjectListResponse = {
+    /**
+     * Projects
+     */
+    projects: Array<ProjectSummaryResponse>;
+    /**
+     * Total Count
+     */
+    total_count: number;
+    /**
+     * Next Page Token
+     */
+    next_page_token?: string | null;
+};
+
+/**
+ * ProjectOrigin
+ *
+ * Who made a project. Attribution about the *creator's nature*, not the creator.
+ */
+export type ProjectOrigin = 'user' | 'agent';
+
+/**
+ * ProjectResponse
+ */
+export type ProjectResponse = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Workspace Id
+     */
+    workspace_id: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Description
+     */
+    description: string | null;
+    /**
+     * Created By
+     */
+    created_by: string | null;
+    /**
+     * Origin
+     */
+    origin: string;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Updated At
+     */
+    updated_at: string;
+    /**
+     * Resource Counts
+     */
+    resource_counts: {
+        [key: string]: number;
+    };
+    /**
+     * Notes
+     */
+    notes: string | null;
+    /**
+     * Extra Data
+     */
+    extra_data: {
+        [key: string]: unknown;
+    } | null;
+};
+
+/**
+ * ProjectSummaryResponse
+ *
+ * A project as the list returns it.
+ *
+ * `notes` is absent on purpose: unbounded free text, and a page of a hundred projects would
+ * ship a hundred of them to render cards that show none. `GET /{id}` has it.
+ */
+export type ProjectSummaryResponse = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Workspace Id
+     */
+    workspace_id: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Description
+     */
+    description: string | null;
+    /**
+     * Created By
+     */
+    created_by: string | null;
+    /**
+     * Origin
+     */
+    origin: string;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Updated At
+     */
+    updated_at: string;
+    /**
+     * Resource Counts
+     */
+    resource_counts: {
+        [key: string]: number;
+    };
+};
+
+/**
+ * UpdateProjectRequest
+ *
+ * An edit. Every field optional; `workspace_id` is absent on purpose — see the module docstring.
+ */
+export type UpdateProjectRequest = {
+    /**
+     * Name
+     */
+    name?: string | null;
+    /**
+     * Description
+     */
+    description?: string | null;
+    /**
+     * Notes
+     */
+    notes?: string | null;
+    /**
+     * Extra Data
+     */
+    extra_data?: {
+        [key: string]: unknown;
+    } | null;
+};
+
+/**
+ * WorkspaceListResponse
+ *
+ * Not paginated: a seeded list of three rows.
+ *
+ * If a deployment ever has many, this grows a cursor like the other lists here -- additive,
+ * because the response is already a container object rather than a bare array.
+ */
+export type WorkspaceListResponse = {
+    /**
+     * Workspaces
+     */
+    workspaces: Array<WorkspaceResponse>;
+    /**
+     * Total Count
+     */
+    total_count: number;
+};
+
+/**
+ * WorkspaceResponse
+ */
+export type WorkspaceResponse = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Description
+     */
+    description: string | null;
+    /**
+     * Is Active
+     */
+    is_active: boolean;
+    /**
+     * Extra Data
+     */
+    extra_data: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * Created At
+     */
+    created_at: string;
+};
+
+export type ListWorkspacesApiWorkspacesGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/workspaces/';
+};
+
+export type ListWorkspacesApiWorkspacesGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: WorkspaceListResponse;
+};
+
+export type ListWorkspacesApiWorkspacesGetResponse = ListWorkspacesApiWorkspacesGetResponses[keyof ListWorkspacesApiWorkspacesGetResponses];
+
+export type GetWorkspaceApiWorkspacesWorkspaceIdGetData = {
+    body?: never;
+    path: {
+        /**
+         * Workspace Id
+         */
+        workspace_id: string;
+    };
+    query?: never;
+    url: '/api/workspaces/{workspace_id}';
+};
+
+export type GetWorkspaceApiWorkspacesWorkspaceIdGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetWorkspaceApiWorkspacesWorkspaceIdGetError = GetWorkspaceApiWorkspacesWorkspaceIdGetErrors[keyof GetWorkspaceApiWorkspacesWorkspaceIdGetErrors];
+
+export type GetWorkspaceApiWorkspacesWorkspaceIdGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: WorkspaceResponse;
+};
+
+export type GetWorkspaceApiWorkspacesWorkspaceIdGetResponse = GetWorkspaceApiWorkspacesWorkspaceIdGetResponses[keyof GetWorkspaceApiWorkspacesWorkspaceIdGetResponses];
+
+export type ListProjectsApiProjectsGetData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Page Size
+         */
+        page_size?: number;
+        /**
+         * Page Token
+         */
+        page_token?: string | null;
+        /**
+         * Created By
+         */
+        created_by?: string | null;
+        /**
+         * Workspace Id
+         */
+        workspace_id?: string | null;
+    };
+    url: '/api/projects/';
+};
+
+export type ListProjectsApiProjectsGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListProjectsApiProjectsGetError = ListProjectsApiProjectsGetErrors[keyof ListProjectsApiProjectsGetErrors];
+
+export type ListProjectsApiProjectsGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: ProjectListResponse;
+};
+
+export type ListProjectsApiProjectsGetResponse = ListProjectsApiProjectsGetResponses[keyof ListProjectsApiProjectsGetResponses];
+
+export type CreateProjectApiProjectsPostData = {
+    body: CreateProjectRequest;
+    path?: never;
+    query?: never;
+    url: '/api/projects/';
+};
+
+export type CreateProjectApiProjectsPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CreateProjectApiProjectsPostError = CreateProjectApiProjectsPostErrors[keyof CreateProjectApiProjectsPostErrors];
+
+export type CreateProjectApiProjectsPostResponses = {
+    /**
+     * Successful Response
+     */
+    201: ProjectResponse;
+};
+
+export type CreateProjectApiProjectsPostResponse = CreateProjectApiProjectsPostResponses[keyof CreateProjectApiProjectsPostResponses];
+
+export type DeleteProjectApiProjectsProjectIdDeleteData = {
+    body?: never;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: never;
+    url: '/api/projects/{project_id}';
+};
+
+export type DeleteProjectApiProjectsProjectIdDeleteErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DeleteProjectApiProjectsProjectIdDeleteError = DeleteProjectApiProjectsProjectIdDeleteErrors[keyof DeleteProjectApiProjectsProjectIdDeleteErrors];
+
+export type DeleteProjectApiProjectsProjectIdDeleteResponses = {
+    /**
+     * Successful Response
+     */
+    200: DeleteProjectResponse;
+};
+
+export type DeleteProjectApiProjectsProjectIdDeleteResponse = DeleteProjectApiProjectsProjectIdDeleteResponses[keyof DeleteProjectApiProjectsProjectIdDeleteResponses];
+
+export type GetProjectApiProjectsProjectIdGetData = {
+    body?: never;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: never;
+    url: '/api/projects/{project_id}';
+};
+
+export type GetProjectApiProjectsProjectIdGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetProjectApiProjectsProjectIdGetError = GetProjectApiProjectsProjectIdGetErrors[keyof GetProjectApiProjectsProjectIdGetErrors];
+
+export type GetProjectApiProjectsProjectIdGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: ProjectResponse;
+};
+
+export type GetProjectApiProjectsProjectIdGetResponse = GetProjectApiProjectsProjectIdGetResponses[keyof GetProjectApiProjectsProjectIdGetResponses];
+
+export type UpdateProjectApiProjectsProjectIdPatchData = {
+    body: UpdateProjectRequest;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: never;
+    url: '/api/projects/{project_id}';
+};
+
+export type UpdateProjectApiProjectsProjectIdPatchErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UpdateProjectApiProjectsProjectIdPatchError = UpdateProjectApiProjectsProjectIdPatchErrors[keyof UpdateProjectApiProjectsProjectIdPatchErrors];
+
+export type UpdateProjectApiProjectsProjectIdPatchResponses = {
+    /**
+     * Successful Response
+     */
+    200: ProjectResponse;
+};
+
+export type UpdateProjectApiProjectsProjectIdPatchResponse = UpdateProjectApiProjectsProjectIdPatchResponses[keyof UpdateProjectApiProjectsProjectIdPatchResponses];
+
+/**
+ * CreateResourceRequest
+ *
+ * A resource to attach. `project_id` comes from the path; the workspace is the project's.
+ */
+export type CreateResourceRequest = {
+    entity: ProjectResourceEntity;
+    /**
+     * Name
+     */
+    name?: string | null;
+    /**
+     * Entity Id
+     */
+    entity_id?: string | null;
+    /**
+     * Payload
+     */
+    payload?: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * Extra Data
+     */
+    extra_data?: {
+        [key: string]: unknown;
+    } | null;
+};
+
+/**
+ * ProjectResourceEntity
+ *
+ * What a `project_resource` row points at.
+ *
+ * Stored as a plain VARCHAR, never a database enum, and validated against this class in the
+ * application layer: more members are expected later, and with a VARCHAR adding one is a code
+ * change rather than a migration on a table that will by then be large.
+ *
+ * Members are of two kinds, which decides the shape of the row -- see
+ * `_reference_or_payload_constraint`. A *reference* carries `entity_id` and no payload; a
+ * *payload* entity carries its content and no `entity_id`. `PAYLOAD_ENTITIES` is the one place
+ * that division is written down.
+ *
+ * `(str, enum.Enum)` so a member acts as a plain string wherever one is written.
+ */
+export type ProjectResourceEntity = 'pipeline' | 'agent_session' | 'document';
+
+/**
+ * ProjectResourceListResponse
+ */
+export type ProjectResourceListResponse = {
+    /**
+     * Resources
+     */
+    resources: Array<ProjectResourceSummaryResponse>;
+    /**
+     * Total Count
+     */
+    total_count: number;
+    /**
+     * Next Page Token
+     */
+    next_page_token?: string | null;
+};
+
+/**
+ * ProjectResourceResponse
+ */
+export type ProjectResourceResponse = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Project Id
+     */
+    project_id: string;
+    /**
+     * Entity
+     */
+    entity: string;
+    /**
+     * Name
+     */
+    name: string | null;
+    /**
+     * Entity Id
+     */
+    entity_id: string | null;
+    /**
+     * Extra Data
+     */
+    extra_data: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * Created By
+     */
+    created_by: string | null;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Updated At
+     */
+    updated_at: string;
+    /**
+     * Payload
+     */
+    payload: {
+        [key: string]: unknown;
+    } | null;
+};
+
+/**
+ * ProjectResourceSummaryResponse
+ *
+ * A resource as the list returns it.
+ *
+ * `payload` is absent, as `notes` is on `ProjectSummaryResponse` — but enforced a layer
+ * deeper: `service.list_resources` leaves the column out of the SELECT, so a page of documents
+ * does not read megabytes of JSON to serialise none of it. `GET /{resource_id}` has it.
+ */
+export type ProjectResourceSummaryResponse = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Project Id
+     */
+    project_id: string;
+    /**
+     * Entity
+     */
+    entity: string;
+    /**
+     * Name
+     */
+    name: string | null;
+    /**
+     * Entity Id
+     */
+    entity_id: string | null;
+    /**
+     * Extra Data
+     */
+    extra_data: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * Created By
+     */
+    created_by: string | null;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Updated At
+     */
+    updated_at: string;
+};
+
+/**
+ * UpdateResourceRequest
+ *
+ * An edit. `entity`, `entity_id` and `project_id` are absent: a resource pointing somewhere
+ * else is a different resource, and a movable pointer would slide the row out from under the
+ * unique index.
+ */
+export type UpdateResourceRequest = {
+    /**
+     * Name
+     */
+    name?: string | null;
+    /**
+     * Payload
+     */
+    payload?: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * Extra Data
+     */
+    extra_data?: {
+        [key: string]: unknown;
+    } | null;
+};
+
+export type ListResourcesApiProjectsProjectIdResourcesGetData = {
+    body?: never;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: {
+        /**
+         * Page Size
+         */
+        page_size?: number;
+        /**
+         * Page Token
+         */
+        page_token?: string | null;
+        /**
+         * Entity
+         */
+        entity?: Array<ProjectResourceEntity> | null;
+    };
+    url: '/api/projects/{project_id}/resources/';
+};
+
+export type ListResourcesApiProjectsProjectIdResourcesGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListResourcesApiProjectsProjectIdResourcesGetError = ListResourcesApiProjectsProjectIdResourcesGetErrors[keyof ListResourcesApiProjectsProjectIdResourcesGetErrors];
+
+export type ListResourcesApiProjectsProjectIdResourcesGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: ProjectResourceListResponse;
+};
+
+export type ListResourcesApiProjectsProjectIdResourcesGetResponse = ListResourcesApiProjectsProjectIdResourcesGetResponses[keyof ListResourcesApiProjectsProjectIdResourcesGetResponses];
+
+export type CreateResourceApiProjectsProjectIdResourcesPostData = {
+    body: CreateResourceRequest;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: never;
+    url: '/api/projects/{project_id}/resources/';
+};
+
+export type CreateResourceApiProjectsProjectIdResourcesPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CreateResourceApiProjectsProjectIdResourcesPostError = CreateResourceApiProjectsProjectIdResourcesPostErrors[keyof CreateResourceApiProjectsProjectIdResourcesPostErrors];
+
+export type CreateResourceApiProjectsProjectIdResourcesPostResponses = {
+    /**
+     * Successful Response
+     */
+    201: ProjectResourceResponse;
+};
+
+export type CreateResourceApiProjectsProjectIdResourcesPostResponse = CreateResourceApiProjectsProjectIdResourcesPostResponses[keyof CreateResourceApiProjectsProjectIdResourcesPostResponses];
+
+export type DeleteResourceApiProjectsProjectIdResourcesResourceIdDeleteData = {
+    body?: never;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+        /**
+         * Resource Id
+         */
+        resource_id: string;
+    };
+    query?: never;
+    url: '/api/projects/{project_id}/resources/{resource_id}';
+};
+
+export type DeleteResourceApiProjectsProjectIdResourcesResourceIdDeleteErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DeleteResourceApiProjectsProjectIdResourcesResourceIdDeleteError = DeleteResourceApiProjectsProjectIdResourcesResourceIdDeleteErrors[keyof DeleteResourceApiProjectsProjectIdResourcesResourceIdDeleteErrors];
+
+export type DeleteResourceApiProjectsProjectIdResourcesResourceIdDeleteResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type DeleteResourceApiProjectsProjectIdResourcesResourceIdDeleteResponse = DeleteResourceApiProjectsProjectIdResourcesResourceIdDeleteResponses[keyof DeleteResourceApiProjectsProjectIdResourcesResourceIdDeleteResponses];
+
+export type GetResourceApiProjectsProjectIdResourcesResourceIdGetData = {
+    body?: never;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+        /**
+         * Resource Id
+         */
+        resource_id: string;
+    };
+    query?: never;
+    url: '/api/projects/{project_id}/resources/{resource_id}';
+};
+
+export type GetResourceApiProjectsProjectIdResourcesResourceIdGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetResourceApiProjectsProjectIdResourcesResourceIdGetError = GetResourceApiProjectsProjectIdResourcesResourceIdGetErrors[keyof GetResourceApiProjectsProjectIdResourcesResourceIdGetErrors];
+
+export type GetResourceApiProjectsProjectIdResourcesResourceIdGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: ProjectResourceResponse;
+};
+
+export type GetResourceApiProjectsProjectIdResourcesResourceIdGetResponse = GetResourceApiProjectsProjectIdResourcesResourceIdGetResponses[keyof GetResourceApiProjectsProjectIdResourcesResourceIdGetResponses];
+
+export type UpdateResourceApiProjectsProjectIdResourcesResourceIdPatchData = {
+    body: UpdateResourceRequest;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+        /**
+         * Resource Id
+         */
+        resource_id: string;
+    };
+    query?: never;
+    url: '/api/projects/{project_id}/resources/{resource_id}';
+};
+
+export type UpdateResourceApiProjectsProjectIdResourcesResourceIdPatchErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UpdateResourceApiProjectsProjectIdResourcesResourceIdPatchError = UpdateResourceApiProjectsProjectIdResourcesResourceIdPatchErrors[keyof UpdateResourceApiProjectsProjectIdResourcesResourceIdPatchErrors];
+
+export type UpdateResourceApiProjectsProjectIdResourcesResourceIdPatchResponses = {
+    /**
+     * Successful Response
+     */
+    200: ProjectResourceResponse;
+};
+
+export type UpdateResourceApiProjectsProjectIdResourcesResourceIdPatchResponse = UpdateResourceApiProjectsProjectIdResourcesResourceIdPatchResponses[keyof UpdateResourceApiProjectsProjectIdResourcesResourceIdPatchResponses];
