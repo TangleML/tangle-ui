@@ -1,6 +1,9 @@
 import { RunContext } from "@openai/agents-core";
 import { describe, expect, it, vi } from "vitest";
 
+import type { ComponentReference } from "@/utils/componentSpec";
+
+import { createComponentCatalog } from "../componentCatalog";
 import type { ToolBridgeApi } from "../toolBridgeApi";
 import { createCsomTools } from "./csomTools";
 
@@ -47,8 +50,17 @@ async function invoke(tool: FunctionTool, payload: unknown): Promise<unknown> {
   return typeof raw === "string" ? JSON.parse(raw) : raw;
 }
 
+/** An optional field is emitted as an `anyOf` with a null branch beside it. */
+function objectBranchOf(
+  schema: JsonSchemaNode | undefined,
+): JsonSchemaNode | undefined {
+  if (!schema) return undefined;
+  if (schema.properties) return schema;
+  return schema.anyOf?.find((entry) => entry.type === "object");
+}
+
 function getImplementationAnyOf(schema: JsonSchemaNode): JsonSchemaNode[] {
-  const componentRef = schema.properties?.componentRef;
+  const componentRef = objectBranchOf(schema.properties?.componentRef);
   if (!componentRef) return [];
 
   const specAnyOf = componentRef.properties?.spec?.anyOf;
@@ -180,6 +192,62 @@ describe("createCsomTools", () => {
         implementation: { container: { image: "loader:1" } },
       },
     });
+  });
+
+  /**
+   * The point of the id: a registry component reaches the canvas whole, with
+   * no part of it having to survive a round trip through the tool schema.
+   */
+  it("add_task resolves a componentId against what search found", async () => {
+    const addTask = vi.fn().mockResolvedValue({ success: true });
+    const catalog = createComponentCatalog();
+    const reference = {
+      name: "Filter text",
+      spec: {
+        name: "Filter text",
+        inputs: [{ name: "text" }],
+        implementation: {
+          container: { image: "python:3.11", env: { LEVEL: "info" } },
+        },
+      },
+    };
+    catalog.remember("abc123", reference as ComponentReference);
+    const { allTools } = createCsomTools(makeBridge({ addTask }), catalog);
+
+    await invoke(findTool(allTools, "add_task"), {
+      name: "Filter",
+      componentId: "abc123",
+    });
+
+    expect(addTask.mock.calls[0][0].componentRef).toEqual(reference);
+  });
+
+  it("add_task says what to do about an id it has never seen", async () => {
+    const addTask = vi.fn();
+    const { allTools } = createCsomTools(
+      makeBridge({ addTask }),
+      createComponentCatalog(),
+    );
+
+    const result = (await invoke(findTool(allTools, "add_task"), {
+      name: "Filter",
+      componentId: "never-searched",
+    })) as { success: boolean; error: string };
+
+    expect(addTask).not.toHaveBeenCalled();
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("search_components");
+  });
+
+  it("add_task needs either an id or a component to author", async () => {
+    const addTask = vi.fn();
+    const { allTools } = createCsomTools(makeBridge({ addTask }));
+
+    await invoke(findTool(allTools, "add_task"), { name: "Filter" }).catch(
+      () => undefined,
+    );
+
+    expect(addTask).not.toHaveBeenCalled();
   });
 
   it("add_task refuses a component with nothing that runs it", async () => {

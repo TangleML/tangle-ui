@@ -10,6 +10,10 @@
 import type { AiProviderConfig } from "@/types/aiProvider";
 
 import type { TangleDispatcher } from "./agents/dispatcherRuntime";
+import {
+  type ComponentCatalog,
+  createComponentCatalog,
+} from "./componentCatalog";
 import { ProxyClient } from "./config";
 import { createSession, type RecentPipelineRun } from "./session";
 import { SkillsLoader } from "./skills/loader";
@@ -46,6 +50,9 @@ export function createWorkerApi(
   let emitStatus: StatusCallback = () => {};
   const proxyClient = new ProxyClient();
   const skillsLoader = new SkillsLoader();
+  // Keyed by thread so a search in one conversation is not offered to another,
+  // and so an id stays usable in the turn after the one that found it.
+  const componentCatalogs = new Map<string, ComponentCatalog>();
 
   return {
     /**
@@ -75,6 +82,11 @@ export function createWorkerApi(
         );
       }
       const resolvedThreadId = threadId ?? generateThreadId();
+      let componentCatalog = componentCatalogs.get(resolvedThreadId);
+      if (!componentCatalog) {
+        componentCatalog = createComponentCatalog();
+        componentCatalogs.set(resolvedThreadId, componentCatalog);
+      }
       const session = createSession({
         threadId: resolvedThreadId,
         emitStatus,
@@ -84,6 +96,7 @@ export function createWorkerApi(
         aiConfig,
         recentRuns,
         context,
+        componentCatalog,
       });
 
       const result = await dispatcher.invoke({
