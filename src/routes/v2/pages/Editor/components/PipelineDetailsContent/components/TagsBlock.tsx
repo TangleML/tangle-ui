@@ -12,9 +12,8 @@ import type { ComponentSpec } from "@/models/componentSpec";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { usePipelineActions } from "@/routes/v2/pages/Editor/store/actions/usePipelineActions";
 import { PIPELINE_TAGS_ANNOTATION } from "@/utils/annotations";
+import { TAG_LIMIT } from "@/utils/pipelineTags";
 import { tracking } from "@/utils/tracking";
-
-const TAG_LIMIT = 10;
 
 export const TagsBlock = observer(function TagsBlock({
   spec,

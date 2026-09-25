@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import type { FlexNodeData } from "@/components/shared/ReactFlow/FlowCanvas/FlexNode/types";
 import {
   Binding,
   ComponentSpec,
@@ -7,8 +8,29 @@ import {
   Output,
   Task,
 } from "@/models/componentSpec";
+import {
+  EDITOR_POSITION_ANNOTATION,
+  FLEX_NODES_ANNOTATION,
+  PIPELINE_TAGS_ANNOTATION,
+} from "@/utils/annotationKeys";
 
 import { serializeSpecForAi } from "./serializeSpecForAi";
+
+function stickyNote(overrides: Partial<FlexNodeData> = {}): FlexNodeData {
+  return {
+    id: "flex_1",
+    properties: {
+      title: "Careful",
+      content: "Tuned by hand",
+      color: "#FFF9C4",
+    },
+    metadata: { createdAt: "2026-01-01T00:00:00.000Z", createdBy: "user" },
+    size: { width: 150, height: 100 },
+    position: { x: 40, y: 80 },
+    zIndex: 0,
+    ...overrides,
+  };
+}
 
 function buildBasicSpec(): ComponentSpec {
   const spec = new ComponentSpec({ $id: "spec_1", name: "MyPipeline" });
@@ -99,11 +121,13 @@ describe("serializeSpecForAi", () => {
       description: "Path to the raw file",
       default: "data.csv",
       optional: false,
+      position: { x: -200, y: 0 },
     });
     expect(ai.inputs[1]).toEqual({
       $id: "in_2",
       name: "rows",
       type: "Integer",
+      position: { x: -200, y: 150 },
     });
   });
 
@@ -117,6 +141,7 @@ describe("serializeSpecForAi", () => {
         name: "result",
         type: "String",
         description: "Final artifact path",
+        position: { x: 800, y: 0 },
       },
     ]);
   });
@@ -152,6 +177,7 @@ describe("serializeSpecForAi", () => {
         },
       },
       arguments: [{ name: "path", value: "data.csv" }],
+      position: { x: 200, y: 0 },
     });
     expect(ai.tasks[1].isSubgraph).toBe(true);
   });
@@ -185,5 +211,120 @@ describe("serializeSpecForAi", () => {
     const ai = serializeSpecForAi(spec, { activeSubgraphPath: [] });
 
     expect(ai.activeSubgraphPath).toBeUndefined();
+  });
+
+  it("serializes the stored position of a node the user has placed", () => {
+    const spec = buildBasicSpec();
+    spec.tasks[0]?.annotations.set(EDITOR_POSITION_ANNOTATION, {
+      x: 120,
+      y: 340,
+    });
+
+    const ai = serializeSpecForAi(spec);
+
+    expect(ai.tasks[0]?.position).toEqual({ x: 120, y: 340 });
+  });
+
+  it("reports where an unplaced node renders rather than nothing at all", () => {
+    const ai = serializeSpecForAi(buildBasicSpec());
+
+    expect(ai.tasks[0]?.position).toEqual({ x: 200, y: 0 });
+    expect(ai.inputs[0]?.position).toEqual({ x: -200, y: 0 });
+    expect(ai.inputs[1]?.position).toEqual({ x: -200, y: 150 });
+    expect(ai.outputs[0]?.position).toEqual({ x: 800, y: 0 });
+  });
+
+  it("omits stickyNotes when the canvas has none", () => {
+    const ai = serializeSpecForAi(buildBasicSpec());
+
+    expect(ai.stickyNotes).toBeUndefined();
+  });
+
+  it("serializes sticky notes with their content, colours and layout", () => {
+    const spec = buildBasicSpec();
+    spec.annotations.set(FLEX_NODES_ANNOTATION, [
+      stickyNote({
+        properties: {
+          title: "Careful",
+          content: "Tuned by hand",
+          color: "transparent",
+          borderColor: "#BCBCBC",
+        },
+        size: { width: 260, height: 120 },
+        locked: true,
+      }),
+    ]);
+
+    const ai = serializeSpecForAi(spec);
+
+    expect(ai.stickyNotes).toEqual([
+      {
+        id: "flex_1",
+        title: "Careful",
+        content: "Tuned by hand",
+        color: "transparent",
+        borderColor: "#BCBCBC",
+        position: { x: 40, y: 80 },
+        size: { width: 260, height: 120 },
+        locked: true,
+        createdBy: "user",
+      },
+    ]);
+  });
+
+  it("omits empty note text but keeps createdBy so authorship stays visible", () => {
+    const spec = buildBasicSpec();
+    spec.annotations.set(FLEX_NODES_ANNOTATION, [
+      stickyNote({
+        properties: { title: "", content: "", color: "#FFF9C4" },
+        metadata: {
+          createdAt: "2026-01-01T00:00:00.000Z",
+          createdBy: "AI assistant",
+        },
+      }),
+    ]);
+
+    const [note] = serializeSpecForAi(spec).stickyNotes ?? [];
+
+    expect(note?.title).toBeUndefined();
+    expect(note?.content).toBeUndefined();
+    expect(note?.createdBy).toBe("AI assistant");
+  });
+
+  describe("structured-clone safety", () => {
+    it("survives the Comlink hop with observable-backed values throughout", () => {
+      const spec = new ComponentSpec({ $id: "spec_1", name: "Leaky" });
+      spec.addInput(
+        new Input({
+          $id: "in_1",
+          name: "cfg",
+          type: { JsonObject: { schema: "x" } },
+        }),
+      );
+      spec.addTask(
+        new Task({
+          $id: "task_1",
+          name: "Fetch",
+          componentRef: {
+            name: "Fetch",
+            spec: {
+              name: "Fetch",
+              inputs: [{ name: "token", type: { JsonObject: { a: "b" } } }],
+              implementation: { container: { image: "fetch:1" } },
+            },
+          },
+          arguments: [
+            {
+              name: "token",
+              value: { dynamicData: { secret: { name: "k" } } },
+            },
+          ],
+        }),
+      );
+      spec.annotations.set(FLEX_NODES_ANNOTATION, [stickyNote()]);
+      spec.annotations.set(PIPELINE_TAGS_ANNOTATION, ["nightly", "etl"]);
+
+      expect(() => structuredClone(serializeSpecForAi(spec))).not.toThrow();
+    });
   });
 });

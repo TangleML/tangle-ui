@@ -9,15 +9,30 @@
  * Mirrors the worker-side `csomTools.ts` tool surface one-to-one.
  */
 import type {
+  AddStickyNoteArgs,
   ConnectArgs,
+  StickyNoteUpdates,
   ToolBridgeApi,
   ValidationResult,
 } from "@/agent/toolBridgeApi";
+import type { FlexNodeData } from "@/components/shared/ReactFlow/FlowCanvas/FlexNode/types";
+import { MIN_FLEX_NODE_SIZE } from "@/components/shared/ReactFlow/FlowCanvas/FlexNode/utils";
+import type { LayoutAlgorithm } from "@/components/shared/ReactFlow/FlowCanvas/utils/autolayout";
+import type { Task } from "@/models/componentSpec";
 import {
   describeBindingEndpointProblem,
   findBindingEndpointProblems,
 } from "@/models/componentSpec/queries/bindingEndpoints";
-import type { EntityLocationOf } from "@/models/componentSpec/queries/locateEntity";
+import type {
+  EntityLocation,
+  EntityLocationOf,
+} from "@/models/componentSpec/queries/locateEntity";
+import {
+  addFlexNode,
+  removeFlexNode,
+  updateFlexNode,
+  updateFlexNodeProperties,
+} from "@/routes/v2/pages/Editor/nodes/FlexNode/flexNode.actions";
 import {
   connectNodes,
   deleteSelectedEdgesByEdgeIds,
@@ -29,27 +44,38 @@ import {
   deleteOutput,
   renameInput,
   renameOutput,
-  setInputDefaultValue,
   setInputDescription,
   setInputType,
+  setInputValue,
   setOutputDescription,
 } from "@/routes/v2/pages/Editor/store/actions/io.actions";
 import {
   createSubgraph,
   renamePipeline,
   updatePipelineDescription,
+  updatePipelineNotes,
+  updatePipelineTags,
+  updateRunNameTemplate,
 } from "@/routes/v2/pages/Editor/store/actions/pipeline.actions";
 import {
   addTask,
+  batchSetTaskColor,
   deleteTask,
+  moveNodeToPosition,
   renameTask,
   unpackSubgraphTask,
 } from "@/routes/v2/pages/Editor/store/actions/task.actions";
 import { serializeSpecForAi } from "@/routes/v2/shared/components/AiChat/serializeSpecForAi";
-import type { BridgeDeps } from "@/routes/v2/shared/components/AiChat/toolBridge/utils";
+import type {
+  BridgeDeps,
+  NoteAnchor,
+} from "@/routes/v2/shared/components/AiChat/toolBridge/utils";
 import {
   computeNextPosition,
+  requireActiveSpec,
   requireSpec,
+  resolveExpectedGraph,
+  resolveNoteAnchor,
   toValidationResult,
 } from "@/routes/v2/shared/components/AiChat/toolBridge/utils";
 import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
@@ -58,43 +84,116 @@ import { hydrateComponentReference } from "@/services/componentService";
 import {
   applyToTarget,
   describeEntityLocation,
+  describeStickyNoteLocation,
   explainNameCollision,
   explainNotASubgraph,
+  explainRunNameTemplateProblem,
+  explainTagProblem,
+  explainUnpickableColor,
   resolveArgumentValue,
   resolveConnectable,
   resolveDestination,
+  resolveMovable,
+  resolveStickyNote,
   resolveTarget,
 } from "./mutationTarget";
 
 /**
- * CSOM handlers need the Editor's undo store to make the agent's spec
- * edits user-visible and undoable as a single step. `undo` lives here
- * (not in the shared `BridgeDeps`) because only the Editor's mutating
- * bridge depends on it.
+ * `invokeAutoLayout` is injected because dagre needs React Flow's measured node
+ * dimensions, which only the mounted canvas knows — it cannot be computed from
+ * the spec. Optional, so the tool can say there is no canvas rather than throw.
  */
-export type CsomBridgeDeps = BridgeDeps & { undo: UndoGroupable };
+export type CsomBridgeDeps = BridgeDeps & {
+  undo: UndoGroupable;
+  invokeAutoLayout?: (algorithm?: LayoutAlgorithm) => boolean;
+};
 
 type CsomHandlers = Pick<
   ToolBridgeApi,
   | "getPipelineState"
   | "setPipelineName"
   | "setPipelineDescription"
+  | "setPipelineNotes"
+  | "setPipelineTags"
+  | "setRunNameTemplate"
   | "addTask"
   | "deleteTask"
   | "renameTask"
+  | "setTaskColor"
   | "addInput"
   | "deleteInput"
   | "renameInput"
+  | "updateInput"
   | "addOutput"
   | "deleteOutput"
   | "renameOutput"
+  | "updateOutput"
   | "connectNodes"
   | "deleteEdge"
   | "setTaskArgument"
   | "createSubgraph"
   | "unpackSubgraph"
+  | "addStickyNote"
+  | "updateStickyNote"
+  | "deleteStickyNote"
+  | "moveNode"
+  | "autoLayout"
   | "validatePipeline"
 >;
+
+const AI_NOTE_AUTHOR = "AI assistant";
+
+function noFieldsGiven(updates: object): boolean {
+  return Object.values(updates).every((value) => value === undefined);
+}
+
+function noFieldsError(location: EntityLocation, entityId: string): string {
+  return `Nothing was changed — no fields to update were given for ${describeEntityLocation(location, entityId)}.`;
+}
+
+function noteColorProblem({
+  color,
+  borderColor,
+}: {
+  color?: string;
+  borderColor?: string;
+}): string | undefined {
+  if (color !== undefined) {
+    const problem = explainUnpickableColor(color, "the background");
+    if (problem) return problem;
+  }
+  if (borderColor !== undefined) {
+    return explainUnpickableColor(borderColor, "the border");
+  }
+  return undefined;
+}
+
+function noteSizeProblem({
+  size,
+}: {
+  size?: FlexNodeData["size"];
+}): string | undefined {
+  if (!size) return undefined;
+  const { width, height } = MIN_FLEX_NODE_SIZE;
+  if (size.width < width || size.height < height) {
+    return `A sticky note cannot be smaller than ${width}x${height}, and ${size.width}x${size.height} would leave it too small to read or select.`;
+  }
+  return undefined;
+}
+
+function noteProperties({
+  title,
+  content,
+  color,
+  borderColor,
+}: StickyNoteUpdates): Partial<FlexNodeData["properties"]> {
+  const properties: Partial<FlexNodeData["properties"]> = {};
+  if (title !== undefined) properties.title = title;
+  if (content !== undefined) properties.content = content;
+  if (color !== undefined) properties.color = color;
+  if (borderColor !== undefined) properties.borderColor = borderColor;
+  return properties;
+}
 
 export function createCsomBridgeHandlers(deps: CsomBridgeDeps): CsomHandlers {
   return {
@@ -102,6 +201,7 @@ export function createCsomBridgeHandlers(deps: CsomBridgeDeps): CsomHandlers {
       return serializeSpecForAi(requireSpec(deps), {
         activeSubgraphPath: deps.getActiveSubgraphPath(),
         activeSubgraphTaskId: deps.getActiveSubgraphTaskId(),
+        activeSpec: requireActiveSpec(deps),
       });
     },
 
@@ -114,6 +214,41 @@ export function createCsomBridgeHandlers(deps: CsomBridgeDeps): CsomHandlers {
     async setPipelineDescription(description) {
       const spec = requireSpec(deps);
       updatePipelineDescription(deps.undo, spec, description);
+      return { success: true };
+    },
+
+    async setPipelineNotes(notes, expectedSubgraphTaskId) {
+      const graph = resolveExpectedGraph(deps, expectedSubgraphTaskId);
+      if (!graph.ok) {
+        return { success: false, error: graph.error };
+      }
+      updatePipelineNotes(deps.undo, graph.spec, notes || undefined);
+      return { success: true };
+    },
+
+    async setPipelineTags(tags, expectedSubgraphTaskId) {
+      const problem = explainTagProblem(tags);
+      if (problem) {
+        return { success: false, error: `Nothing was changed. ${problem}` };
+      }
+      const graph = resolveExpectedGraph(deps, expectedSubgraphTaskId);
+      if (!graph.ok) {
+        return { success: false, error: graph.error };
+      }
+      updatePipelineTags(deps.undo, graph.spec, tags);
+      return { success: true };
+    },
+
+    async setRunNameTemplate(template, expectedSubgraphTaskId) {
+      const graph = resolveExpectedGraph(deps, expectedSubgraphTaskId);
+      if (!graph.ok) {
+        return { success: false, error: graph.error };
+      }
+      const problem = explainRunNameTemplateProblem(template, graph.spec);
+      if (problem) {
+        return { success: false, error: `Nothing was changed. ${problem}` };
+      }
+      updateRunNameTemplate(deps.undo, graph.spec, template || undefined);
       return { success: true };
     },
 
@@ -180,6 +315,41 @@ export function createCsomBridgeHandlers(deps: CsomBridgeDeps): CsomHandlers {
       );
     },
 
+    async setTaskColor(taskEntityIds, color) {
+      const root = requireSpec(deps);
+
+      const colorProblem = explainUnpickableColor(color, "a task");
+      if (colorProblem) {
+        return {
+          success: false,
+          error: `Nothing was changed. ${colorProblem}`,
+        };
+      }
+
+      const distinctIds = [...new Set(taskEntityIds)];
+      if (distinctIds.length === 0) {
+        return {
+          success: false,
+          error:
+            "Nothing was changed — pass the $id of at least one task to recolour.",
+        };
+      }
+
+      const tasks: Task[] = [];
+      for (const taskEntityId of distinctIds) {
+        const target = resolveTarget(root, taskEntityId, "task");
+        if (!target.ok) {
+          return { success: false, error: target.error };
+        }
+        tasks.push(target.location.entity);
+      }
+
+      // Unlike create_subgraph, tasks from different subgraphs are allowed:
+      // the colour is a per-task annotation that never references its graph.
+      batchSetTaskColor(deps.undo, tasks, color);
+      return { success: true };
+    },
+
     async addInput({
       name,
       type,
@@ -201,8 +371,7 @@ export function createCsomBridgeHandlers(deps: CsomBridgeDeps): CsomHandlers {
       if (type) setInputType(deps.undo, spec, input.$id, type);
       if (description)
         setInputDescription(deps.undo, spec, input.$id, description);
-      if (defaultValue)
-        setInputDefaultValue(deps.undo, spec, input.$id, defaultValue);
+      if (defaultValue) setInputValue(deps.undo, spec, input.$id, defaultValue);
       if (optional !== undefined) {
         deps.undo.withGroup("Set input optional", () => {
           input.setOptional(optional);
@@ -240,6 +409,31 @@ export function createCsomBridgeHandlers(deps: CsomBridgeDeps): CsomHandlers {
             location,
           ),
       );
+    },
+
+    async updateInput(entityId, updates) {
+      const target = resolveTarget(requireSpec(deps), entityId, "input");
+      if (!target.ok) {
+        return { success: false, error: target.error };
+      }
+      const { location } = target;
+      const { type, description, defaultValue, optional } = updates;
+
+      if (noFieldsGiven(updates)) {
+        return { success: false, error: noFieldsError(location, entityId) };
+      }
+
+      deps.undo.withGroup("Update input", () => {
+        const { spec } = location;
+        if (type !== undefined)
+          setInputType(deps.undo, spec, entityId, type || undefined);
+        if (description !== undefined)
+          setInputDescription(deps.undo, spec, entityId, description);
+        if (defaultValue !== undefined)
+          setInputValue(deps.undo, spec, entityId, defaultValue || undefined);
+        if (optional !== undefined) location.entity.setOptional(optional);
+      });
+      return { success: true };
     },
 
     async addOutput({ name, type, description, inSubgraphTaskId }) {
@@ -300,6 +494,26 @@ export function createCsomBridgeHandlers(deps: CsomBridgeDeps): CsomHandlers {
             location,
           ),
       );
+    },
+
+    async updateOutput(entityId, updates) {
+      const target = resolveTarget(requireSpec(deps), entityId, "output");
+      if (!target.ok) {
+        return { success: false, error: target.error };
+      }
+      const { location } = target;
+      const { type, description } = updates;
+
+      if (noFieldsGiven(updates)) {
+        return { success: false, error: noFieldsError(location, entityId) };
+      }
+
+      deps.undo.withGroup("Update output", () => {
+        if (type !== undefined) location.entity.setType(type || undefined);
+        if (description !== undefined)
+          setOutputDescription(deps.undo, location.spec, entityId, description);
+      });
+      return { success: true };
     },
 
     async connectNodes(args: ConnectArgs) {
@@ -464,6 +678,161 @@ export function createCsomBridgeHandlers(deps: CsomBridgeDeps): CsomHandlers {
           unpackSubgraphTask(deps.undo, location.spec, taskEntityId),
         (location) => explainNotASubgraph(location, taskEntityId),
       );
+    },
+
+    async addStickyNote(args: AddStickyNoteArgs) {
+      const root = requireSpec(deps);
+
+      const addProblem = noteColorProblem(args) ?? noteSizeProblem(args);
+      if (addProblem) {
+        return { success: false, error: `Nothing was added. ${addProblem}` };
+      }
+
+      const { anchorEntityId, inSubgraphTaskId } = args;
+      let anchor: NoteAnchor | undefined;
+      if (anchorEntityId && !args.position) {
+        const resolved = resolveNoteAnchor(root, anchorEntityId);
+        if (!resolved.ok) {
+          return { success: false, error: resolved.error };
+        }
+        anchor = resolved;
+      }
+
+      const destination = resolveDestination(root, inSubgraphTaskId);
+      if (!destination.ok) {
+        return { success: false, error: destination.error };
+      }
+
+      if (anchor && inSubgraphTaskId && anchor.spec !== destination.spec) {
+        return {
+          success: false,
+          error:
+            "Nothing was added — the anchor entity does not live in the subgraph named by inSubgraphTaskId. A note is placed in the graph that owns the thing it annotates, so pass only one of the two.",
+        };
+      }
+
+      const spec = anchor?.spec ?? destination.spec;
+      const position =
+        args.position ?? anchor?.position ?? computeNextPosition(spec);
+
+      const note = addFlexNode(deps.undo, spec, position, {
+        properties: noteProperties(args),
+        size: args.size,
+        createdBy: AI_NOTE_AUTHOR,
+      });
+      return { success: true, stickyNoteId: note.id };
+    },
+
+    async updateStickyNote(noteId, updates: StickyNoteUpdates) {
+      const root = requireSpec(deps);
+
+      const updateProblem =
+        noteColorProblem(updates) ?? noteSizeProblem(updates);
+      if (updateProblem) {
+        return {
+          success: false,
+          error: `Nothing was changed. ${updateProblem}`,
+        };
+      }
+
+      const target = resolveStickyNote(root, noteId);
+      if (!target.ok) {
+        return { success: false, error: target.error };
+      }
+      const { location } = target;
+
+      if (location.node.locked && updates.locked !== false) {
+        return {
+          success: false,
+          error: `${describeStickyNoteLocation(location)} is locked, so it cannot be edited. Ask the user to unlock it, or pass locked: false to unlock it as part of this change.`,
+        };
+      }
+
+      const properties = noteProperties(updates);
+      const nodeUpdates: Partial<FlexNodeData> = {};
+      if (updates.position !== undefined)
+        nodeUpdates.position = updates.position;
+      if (updates.size !== undefined) nodeUpdates.size = updates.size;
+      if (updates.locked !== undefined) nodeUpdates.locked = updates.locked;
+
+      if (
+        Object.keys(properties).length === 0 &&
+        Object.keys(nodeUpdates).length === 0
+      ) {
+        return {
+          success: false,
+          error: `Nothing was changed — no fields to update were given for ${describeStickyNoteLocation(location)}.`,
+        };
+      }
+
+      deps.undo.withGroup("Update sticky note", () => {
+        if (Object.keys(properties).length > 0) {
+          updateFlexNodeProperties(
+            deps.undo,
+            location.spec,
+            noteId,
+            properties,
+          );
+        }
+        if (Object.keys(nodeUpdates).length > 0) {
+          updateFlexNode(deps.undo, location.spec, noteId, nodeUpdates);
+        }
+      });
+      return { success: true };
+    },
+
+    async deleteStickyNote(noteId) {
+      const root = requireSpec(deps);
+
+      const target = resolveStickyNote(root, noteId);
+      if (!target.ok) {
+        return { success: false, error: target.error };
+      }
+      const { location } = target;
+
+      if (location.node.locked) {
+        return {
+          success: false,
+          error: `${describeStickyNoteLocation(location)} is locked, so it cannot be deleted. Ask the user to unlock it first.`,
+        };
+      }
+
+      removeFlexNode(deps.undo, location.spec, noteId);
+      return { success: true };
+    },
+
+    async moveNode(entityId, position) {
+      const root = requireSpec(deps);
+
+      const target = resolveMovable(root, entityId);
+      if (!target.ok) {
+        return { success: false, error: target.error };
+      }
+
+      const moved = moveNodeToPosition(
+        deps.undo,
+        target.spec,
+        entityId,
+        position,
+      );
+      if (!moved) {
+        return {
+          success: false,
+          error: `${target.description} cannot be moved — the editor has no node type registered for it.`,
+        };
+      }
+      return { success: true };
+    },
+
+    async autoLayout(algorithm) {
+      if (!deps.invokeAutoLayout?.(algorithm)) {
+        return {
+          success: false,
+          error:
+            "Could not lay out the canvas — no pipeline canvas is open to lay out.",
+        };
+      }
+      return { success: true };
     },
 
     async validatePipeline(): Promise<ValidationResult> {

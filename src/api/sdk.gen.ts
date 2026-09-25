@@ -3,7 +3,7 @@
 import type { Client, Options as Options2, TDataShape } from '@hey-api/client-fetch';
 
 import { client } from './client.gen';
-import type { AdminSetExecutionNodeStatusApiAdminExecutionNodeIdStatusPutData, AdminSetExecutionNodeStatusApiAdminExecutionNodeIdStatusPutErrors, AdminSetExecutionNodeStatusApiAdminExecutionNodeIdStatusPutResponses, AdminSetReadOnlyModelApiAdminSetReadOnlyModelPutData, AdminSetReadOnlyModelApiAdminSetReadOnlyModelPutErrors, AdminSetReadOnlyModelApiAdminSetReadOnlyModelPutResponses, CreateApiComponentLibrariesPostData, CreateApiComponentLibrariesPostErrors, CreateApiComponentLibrariesPostResponses, CreateApiPipelineRunsPostData, CreateApiPipelineRunsPostErrors, CreateApiPipelineRunsPostResponses, CreateSecretApiSecretsPostData, CreateSecretApiSecretsPostErrors, CreateSecretApiSecretsPostResponses, DeleteAnnotationApiPipelineRunsIdAnnotationsKeyDeleteData, DeleteAnnotationApiPipelineRunsIdAnnotationsKeyDeleteErrors, DeleteAnnotationApiPipelineRunsIdAnnotationsKeyDeleteResponses, DeleteSecretApiSecretsSecretNameDeleteData, DeleteSecretApiSecretsSecretNameDeleteErrors, DeleteSecretApiSecretsSecretNameDeleteResponses, GcsReadGcsReadGetData, GcsReadGcsReadGetErrors, GcsReadGcsReadGetResponses, GetApiArtifactsIdGetData, GetApiArtifactsIdGetErrors, GetApiArtifactsIdGetResponses, GetApiComponentLibrariesIdGetData, GetApiComponentLibrariesIdGetErrors, GetApiComponentLibrariesIdGetResponses, GetApiComponentsDigestGetData, GetApiComponentsDigestGetErrors, GetApiComponentsDigestGetResponses, GetApiExecutionsIdDetailsGetData, GetApiExecutionsIdDetailsGetErrors, GetApiExecutionsIdDetailsGetResponses, GetApiPipelineRunsIdGetData, GetApiPipelineRunsIdGetErrors, GetApiPipelineRunsIdGetResponses, GetArtifactsApiExecutionsIdArtifactsGetData, GetArtifactsApiExecutionsIdArtifactsGetErrors, GetArtifactsApiExecutionsIdArtifactsGetResponses, GetComponentLibraryPinsApiComponentLibraryPinsMeGetData, GetComponentLibraryPinsApiComponentLibraryPinsMeGetResponses, GetContainerExecutionStateApiExecutionsIdContainerStateGetData, GetContainerExecutionStateApiExecutionsIdContainerStateGetErrors, GetContainerExecutionStateApiExecutionsIdContainerStateGetResponses, GetContainerLogApiExecutionsIdContainerLogGetData, GetContainerLogApiExecutionsIdContainerLogGetErrors, GetContainerLogApiExecutionsIdContainerLogGetResponses, GetCurrentUserApiUsersMeGetData, GetCurrentUserApiUsersMeGetResponses, GetGraphExecutionStateApiExecutionsIdGraphExecutionStateGetData, GetGraphExecutionStateApiExecutionsIdGraphExecutionStateGetErrors, GetGraphExecutionStateApiExecutionsIdGraphExecutionStateGetResponses, GetGraphExecutionStateApiExecutionsIdStateGetData, GetGraphExecutionStateApiExecutionsIdStateGetErrors, GetGraphExecutionStateApiExecutionsIdStateGetResponses, GetMysqlUrlGetMysqlUrlGetData, GetMysqlUrlGetMysqlUrlGetResponses, GetRequestHeadersApiTestGetRequestHeadersGetData, GetRequestHeadersApiTestGetRequestHeadersGetResponses, GetSignedArtifactUrlApiArtifactsIdSignedArtifactUrlGetData, GetSignedArtifactUrlApiArtifactsIdSignedArtifactUrlGetErrors, GetSignedArtifactUrlApiArtifactsIdSignedArtifactUrlGetResponses, GetSqlEngineConnectionPoolStatusApiAdminSqlEngineConnectionPoolStatusGetData, GetSqlEngineConnectionPoolStatusApiAdminSqlEngineConnectionPoolStatusGetResponses, GetUserNamesGetUserNamesGetData, GetUserNamesGetUserNamesGetResponses, GkeCreateGcsfusePodTestGkeCreateGcsfusePodGetData, GkeCreateGcsfusePodTestGkeCreateGcsfusePodGetErrors, GkeCreateGcsfusePodTestGkeCreateGcsfusePodGetResponses, GkeCreateSimplePodTestGkeCreateSimplePodGetData, GkeCreateSimplePodTestGkeCreateSimplePodGetErrors, GkeCreateSimplePodTestGkeCreateSimplePodGetResponses, GkeGetClusterConfigGkeGetClusterConfigGetData, GkeGetClusterConfigGkeGetClusterConfigGetErrors, GkeGetClusterConfigGkeGetClusterConfigGetResponses, GkeListNamespacesGkeListNamespacesGetData, GkeListNamespacesGkeListNamespacesGetErrors, GkeListNamespacesGkeListNamespacesGetResponses, ListAnnotationsApiPipelineRunsIdAnnotationsGetData, ListAnnotationsApiPipelineRunsIdAnnotationsGetErrors, ListAnnotationsApiPipelineRunsIdAnnotationsGetResponses, ListApiComponentLibrariesGetData, ListApiComponentLibrariesGetErrors, ListApiComponentLibrariesGetResponses, ListApiPipelineRunsGetData, ListApiPipelineRunsGetErrors, ListApiPipelineRunsGetResponses, ListApiPublishedComponentsGetData, ListApiPublishedComponentsGetErrors, ListApiPublishedComponentsGetResponses, ListSecretsApiSecretsGetData, ListSecretsApiSecretsGetResponses, MysqlListTablesMysqlListTablesGetData, MysqlListTablesMysqlListTablesGetErrors, MysqlListTablesMysqlListTablesGetResponses, MysqlRecreateAllTablesDontRunAdminMysqlRecreateAllTablesDontRunPostData, MysqlRecreateAllTablesDontRunAdminMysqlRecreateAllTablesDontRunPostErrors, MysqlRecreateAllTablesDontRunAdminMysqlRecreateAllTablesDontRunPostResponses, PingServicesPingGetData, PingServicesPingGetResponses, PipelineRunCancelApiPipelineRunsIdCancelPostData, PipelineRunCancelApiPipelineRunsIdCancelPostErrors, PipelineRunCancelApiPipelineRunsIdCancelPostResponses, PublishApiPublishedComponentsPostData, PublishApiPublishedComponentsPostErrors, PublishApiPublishedComponentsPostResponses, QuickStatsApiStatsQuickGetData, QuickStatsApiStatsQuickGetErrors, QuickStatsApiStatsQuickGetResponses, ReadUrlTestReadUrlGetData, ReadUrlTestReadUrlGetErrors, ReadUrlTestReadUrlGetResponses, ReplaceApiComponentLibrariesIdPutData, ReplaceApiComponentLibrariesIdPutErrors, ReplaceApiComponentLibrariesIdPutResponses, SetAnnotationApiPipelineRunsIdAnnotationsKeyPutData, SetAnnotationApiPipelineRunsIdAnnotationsKeyPutErrors, SetAnnotationApiPipelineRunsIdAnnotationsKeyPutResponses, SetComponentLibraryPinsApiComponentLibraryPinsMePutData, SetComponentLibraryPinsApiComponentLibraryPinsMePutErrors, SetComponentLibraryPinsApiComponentLibraryPinsMePutResponses, StreamContainerLogApiExecutionsIdStreamContainerLogGetData, StreamContainerLogApiExecutionsIdStreamContainerLogGetErrors, StreamContainerLogApiExecutionsIdStreamContainerLogGetResponses, TestGetUserDetailsApiTestGetUserDetailsGetData, TestGetUserDetailsApiTestGetUserDetailsGetResponses, UpdateApiPublishedComponentsDigestPutData, UpdateApiPublishedComponentsDigestPutErrors, UpdateApiPublishedComponentsDigestPutResponses, UpdateSecretApiSecretsSecretNamePutData, UpdateSecretApiSecretsSecretNamePutErrors, UpdateSecretApiSecretsSecretNamePutResponses, VertexListCustomJobsVertexListCustomJobsGetData, VertexListCustomJobsVertexListCustomJobsGetErrors, VertexListCustomJobsVertexListCustomJobsGetResponses } from './types.gen';
+import type { AdminSetExecutionNodeStatusApiAdminExecutionNodeIdStatusPutData, AdminSetExecutionNodeStatusApiAdminExecutionNodeIdStatusPutErrors, AdminSetExecutionNodeStatusApiAdminExecutionNodeIdStatusPutResponses, AdminSetReadOnlyModelApiAdminSetReadOnlyModelPutData, AdminSetReadOnlyModelApiAdminSetReadOnlyModelPutErrors, AdminSetReadOnlyModelApiAdminSetReadOnlyModelPutResponses, CreateApiComponentLibrariesPostData, CreateApiComponentLibrariesPostErrors, CreateApiComponentLibrariesPostResponses, CreateApiPipelineRunsPostData, CreateApiPipelineRunsPostErrors, CreateApiPipelineRunsPostResponses, CreateProjectApiProjectsPostData, CreateProjectApiProjectsPostErrors, CreateProjectApiProjectsPostResponses, CreateSecretApiSecretsPostData, CreateSecretApiSecretsPostErrors, CreateSecretApiSecretsPostResponses, DeleteAnnotationApiPipelineRunsIdAnnotationsKeyDeleteData, DeleteAnnotationApiPipelineRunsIdAnnotationsKeyDeleteErrors, DeleteAnnotationApiPipelineRunsIdAnnotationsKeyDeleteResponses, DeleteProjectApiProjectsProjectIdDeleteData, DeleteProjectApiProjectsProjectIdDeleteErrors, DeleteProjectApiProjectsProjectIdDeleteResponses, DeleteSecretApiSecretsSecretNameDeleteData, DeleteSecretApiSecretsSecretNameDeleteErrors, DeleteSecretApiSecretsSecretNameDeleteResponses, GcsReadGcsReadGetData, GcsReadGcsReadGetErrors, GcsReadGcsReadGetResponses, GetApiArtifactsIdGetData, GetApiArtifactsIdGetErrors, GetApiArtifactsIdGetResponses, GetApiComponentLibrariesIdGetData, GetApiComponentLibrariesIdGetErrors, GetApiComponentLibrariesIdGetResponses, GetApiComponentsDigestGetData, GetApiComponentsDigestGetErrors, GetApiComponentsDigestGetResponses, GetApiExecutionsIdDetailsGetData, GetApiExecutionsIdDetailsGetErrors, GetApiExecutionsIdDetailsGetResponses, GetApiPipelineRunsIdGetData, GetApiPipelineRunsIdGetErrors, GetApiPipelineRunsIdGetResponses, GetArtifactsApiExecutionsIdArtifactsGetData, GetArtifactsApiExecutionsIdArtifactsGetErrors, GetArtifactsApiExecutionsIdArtifactsGetResponses, GetComponentLibraryPinsApiComponentLibraryPinsMeGetData, GetComponentLibraryPinsApiComponentLibraryPinsMeGetResponses, GetContainerExecutionStateApiExecutionsIdContainerStateGetData, GetContainerExecutionStateApiExecutionsIdContainerStateGetErrors, GetContainerExecutionStateApiExecutionsIdContainerStateGetResponses, GetContainerLogApiExecutionsIdContainerLogGetData, GetContainerLogApiExecutionsIdContainerLogGetErrors, GetContainerLogApiExecutionsIdContainerLogGetResponses, GetCurrentUserApiUsersMeGetData, GetCurrentUserApiUsersMeGetResponses, GetGraphExecutionStateApiExecutionsIdGraphExecutionStateGetData, GetGraphExecutionStateApiExecutionsIdGraphExecutionStateGetErrors, GetGraphExecutionStateApiExecutionsIdGraphExecutionStateGetResponses, GetGraphExecutionStateApiExecutionsIdStateGetData, GetGraphExecutionStateApiExecutionsIdStateGetErrors, GetGraphExecutionStateApiExecutionsIdStateGetResponses, GetMysqlUrlGetMysqlUrlGetData, GetMysqlUrlGetMysqlUrlGetResponses, GetProjectApiProjectsProjectIdGetData, GetProjectApiProjectsProjectIdGetErrors, GetProjectApiProjectsProjectIdGetResponses, GetRequestHeadersApiTestGetRequestHeadersGetData, GetRequestHeadersApiTestGetRequestHeadersGetResponses, GetSignedArtifactUrlApiArtifactsIdSignedArtifactUrlGetData, GetSignedArtifactUrlApiArtifactsIdSignedArtifactUrlGetErrors, GetSignedArtifactUrlApiArtifactsIdSignedArtifactUrlGetResponses, GetSqlEngineConnectionPoolStatusApiAdminSqlEngineConnectionPoolStatusGetData, GetSqlEngineConnectionPoolStatusApiAdminSqlEngineConnectionPoolStatusGetResponses, GetUserNamesGetUserNamesGetData, GetUserNamesGetUserNamesGetResponses, GetWorkspaceApiWorkspacesWorkspaceIdGetData, GetWorkspaceApiWorkspacesWorkspaceIdGetErrors, GetWorkspaceApiWorkspacesWorkspaceIdGetResponses, GkeCreateGcsfusePodTestGkeCreateGcsfusePodGetData, GkeCreateGcsfusePodTestGkeCreateGcsfusePodGetErrors, GkeCreateGcsfusePodTestGkeCreateGcsfusePodGetResponses, GkeCreateSimplePodTestGkeCreateSimplePodGetData, GkeCreateSimplePodTestGkeCreateSimplePodGetErrors, GkeCreateSimplePodTestGkeCreateSimplePodGetResponses, GkeGetClusterConfigGkeGetClusterConfigGetData, GkeGetClusterConfigGkeGetClusterConfigGetErrors, GkeGetClusterConfigGkeGetClusterConfigGetResponses, GkeListNamespacesGkeListNamespacesGetData, GkeListNamespacesGkeListNamespacesGetErrors, GkeListNamespacesGkeListNamespacesGetResponses, ListAnnotationsApiPipelineRunsIdAnnotationsGetData, ListAnnotationsApiPipelineRunsIdAnnotationsGetErrors, ListAnnotationsApiPipelineRunsIdAnnotationsGetResponses, ListApiComponentLibrariesGetData, ListApiComponentLibrariesGetErrors, ListApiComponentLibrariesGetResponses, ListApiPipelineRunsGetData, ListApiPipelineRunsGetErrors, ListApiPipelineRunsGetResponses, ListApiPublishedComponentsGetData, ListApiPublishedComponentsGetErrors, ListApiPublishedComponentsGetResponses, ListProjectsApiProjectsGetData, ListProjectsApiProjectsGetErrors, ListProjectsApiProjectsGetResponses, ListSecretsApiSecretsGetData, ListSecretsApiSecretsGetResponses, ListWorkspacesApiWorkspacesGetData, ListWorkspacesApiWorkspacesGetResponses, MysqlListTablesMysqlListTablesGetData, MysqlListTablesMysqlListTablesGetErrors, MysqlListTablesMysqlListTablesGetResponses, MysqlRecreateAllTablesDontRunAdminMysqlRecreateAllTablesDontRunPostData, MysqlRecreateAllTablesDontRunAdminMysqlRecreateAllTablesDontRunPostErrors, MysqlRecreateAllTablesDontRunAdminMysqlRecreateAllTablesDontRunPostResponses, PingServicesPingGetData, PingServicesPingGetResponses, PipelineRunCancelApiPipelineRunsIdCancelPostData, PipelineRunCancelApiPipelineRunsIdCancelPostErrors, PipelineRunCancelApiPipelineRunsIdCancelPostResponses, PublishApiPublishedComponentsPostData, PublishApiPublishedComponentsPostErrors, PublishApiPublishedComponentsPostResponses, QuickStatsApiStatsQuickGetData, QuickStatsApiStatsQuickGetErrors, QuickStatsApiStatsQuickGetResponses, ReadUrlTestReadUrlGetData, ReadUrlTestReadUrlGetErrors, ReadUrlTestReadUrlGetResponses, ReplaceApiComponentLibrariesIdPutData, ReplaceApiComponentLibrariesIdPutErrors, ReplaceApiComponentLibrariesIdPutResponses, SetAnnotationApiPipelineRunsIdAnnotationsKeyPutData, SetAnnotationApiPipelineRunsIdAnnotationsKeyPutErrors, SetAnnotationApiPipelineRunsIdAnnotationsKeyPutResponses, SetComponentLibraryPinsApiComponentLibraryPinsMePutData, SetComponentLibraryPinsApiComponentLibraryPinsMePutErrors, SetComponentLibraryPinsApiComponentLibraryPinsMePutResponses, StreamContainerLogApiExecutionsIdStreamContainerLogGetData, StreamContainerLogApiExecutionsIdStreamContainerLogGetErrors, StreamContainerLogApiExecutionsIdStreamContainerLogGetResponses, TestGetUserDetailsApiTestGetUserDetailsGetData, TestGetUserDetailsApiTestGetUserDetailsGetResponses, UpdateApiPublishedComponentsDigestPutData, UpdateApiPublishedComponentsDigestPutErrors, UpdateApiPublishedComponentsDigestPutResponses, UpdateProjectApiProjectsProjectIdPatchData, UpdateProjectApiProjectsProjectIdPatchErrors, UpdateProjectApiProjectsProjectIdPatchResponses, UpdateSecretApiSecretsSecretNamePutData, UpdateSecretApiSecretsSecretNamePutErrors, UpdateSecretApiSecretsSecretNamePutResponses, VertexListCustomJobsVertexListCustomJobsGetData, VertexListCustomJobsVertexListCustomJobsGetErrors, VertexListCustomJobsVertexListCustomJobsGetResponses, CreateResourceApiProjectsProjectIdResourcesPostData, CreateResourceApiProjectsProjectIdResourcesPostErrors, CreateResourceApiProjectsProjectIdResourcesPostResponses, DeleteResourceApiProjectsProjectIdResourcesResourceIdDeleteData, DeleteResourceApiProjectsProjectIdResourcesResourceIdDeleteErrors, DeleteResourceApiProjectsProjectIdResourcesResourceIdDeleteResponses, GetResourceApiProjectsProjectIdResourcesResourceIdGetData, GetResourceApiProjectsProjectIdResourcesResourceIdGetErrors, GetResourceApiProjectsProjectIdResourcesResourceIdGetResponses, ListResourcesApiProjectsProjectIdResourcesGetData, ListResourcesApiProjectsProjectIdResourcesGetErrors, ListResourcesApiProjectsProjectIdResourcesGetResponses, UpdateResourceApiProjectsProjectIdResourcesResourceIdPatchData, UpdateResourceApiProjectsProjectIdResourcesResourceIdPatchErrors, UpdateResourceApiProjectsProjectIdResourcesResourceIdPatchResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -324,3 +324,116 @@ export const gkeCreateGcsfusePodTestGkeCreateGcsfusePodGet = <ThrowOnError exten
  * Requires user authentication. Data is cached for 15 minutes to improve performance.
  */
 export const quickStatsApiStatsQuickGet = <ThrowOnError extends boolean = false>(options?: Options<QuickStatsApiStatsQuickGetData, ThrowOnError>) => (options?.client ?? client).get<QuickStatsApiStatsQuickGetResponses, QuickStatsApiStatsQuickGetErrors, ThrowOnError>({ url: '/api/stats/quick', ...options });
+
+/**
+ * List Workspaces
+ *
+ * The workspaces available on this deployment.
+ *
+ * Not "all workspaces" -- the same list today, but the wording keeps the contract honest
+ * when they stop being.
+ */
+export const listWorkspacesApiWorkspacesGet = <ThrowOnError extends boolean = false>(options?: Options<ListWorkspacesApiWorkspacesGetData, ThrowOnError>) => (options?.client ?? client).get<ListWorkspacesApiWorkspacesGetResponses, unknown, ThrowOnError>({ url: '/api/workspaces/', ...options });
+
+/**
+ * Get Workspace
+ */
+export const getWorkspaceApiWorkspacesWorkspaceIdGet = <ThrowOnError extends boolean = false>(options: Options<GetWorkspaceApiWorkspacesWorkspaceIdGetData, ThrowOnError>) => (options.client ?? client).get<GetWorkspaceApiWorkspacesWorkspaceIdGetResponses, GetWorkspaceApiWorkspacesWorkspaceIdGetErrors, ThrowOnError>({ url: '/api/workspaces/{workspace_id}', ...options });
+
+/**
+ * List Projects
+ *
+ * Projects, notes and resource payloads are public to authenticated readers with read permission. `created_by` is attribution and is never access control. Secret values must be stored in the secrets service and referenced; this resource is not a secret store.
+ */
+export const listProjectsApiProjectsGet = <ThrowOnError extends boolean = false>(options?: Options<ListProjectsApiProjectsGetData, ThrowOnError>) => (options?.client ?? client).get<ListProjectsApiProjectsGetResponses, ListProjectsApiProjectsGetErrors, ThrowOnError>({ url: '/api/projects/', ...options });
+
+/**
+ * Create Project
+ *
+ * Projects, notes and resource payloads are public to authenticated readers with read permission. `created_by` is attribution and is never access control. Secret values must be stored in the secrets service and referenced; this resource is not a secret store.
+ */
+export const createProjectApiProjectsPost = <ThrowOnError extends boolean = false>(options: Options<CreateProjectApiProjectsPostData, ThrowOnError>) => (options.client ?? client).post<CreateProjectApiProjectsPostResponses, CreateProjectApiProjectsPostErrors, ThrowOnError>({
+    url: '/api/projects/',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete Project
+ *
+ * Hard delete. The project and every resource on it are gone, with no undo.
+ */
+export const deleteProjectApiProjectsProjectIdDelete = <ThrowOnError extends boolean = false>(options: Options<DeleteProjectApiProjectsProjectIdDeleteData, ThrowOnError>) => (options.client ?? client).delete<DeleteProjectApiProjectsProjectIdDeleteResponses, DeleteProjectApiProjectsProjectIdDeleteErrors, ThrowOnError>({ url: '/api/projects/{project_id}', ...options });
+
+/**
+ * Get Project
+ *
+ * Projects, notes and resource payloads are public to authenticated readers with read permission. `created_by` is attribution and is never access control. Secret values must be stored in the secrets service and referenced; this resource is not a secret store.
+ */
+export const getProjectApiProjectsProjectIdGet = <ThrowOnError extends boolean = false>(options: Options<GetProjectApiProjectsProjectIdGetData, ThrowOnError>) => (options.client ?? client).get<GetProjectApiProjectsProjectIdGetResponses, GetProjectApiProjectsProjectIdGetErrors, ThrowOnError>({ url: '/api/projects/{project_id}', ...options });
+
+/**
+ * Update Project
+ *
+ * Projects, notes and resource payloads are public to authenticated readers with read permission. `created_by` is attribution and is never access control. Secret values must be stored in the secrets service and referenced; this resource is not a secret store.
+ */
+export const updateProjectApiProjectsProjectIdPatch = <ThrowOnError extends boolean = false>(options: Options<UpdateProjectApiProjectsProjectIdPatchData, ThrowOnError>) => (options.client ?? client).patch<UpdateProjectApiProjectsProjectIdPatchResponses, UpdateProjectApiProjectsProjectIdPatchErrors, ThrowOnError>({
+    url: '/api/projects/{project_id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List Resources
+ *
+ * Projects, notes and resource payloads are public to authenticated readers with read permission. `created_by` is attribution and is never access control. Secret values must be stored in the secrets service and referenced; this resource is not a secret store.
+ */
+export const listResourcesApiProjectsProjectIdResourcesGet = <ThrowOnError extends boolean = false>(options: Options<ListResourcesApiProjectsProjectIdResourcesGetData, ThrowOnError>) => (options.client ?? client).get<ListResourcesApiProjectsProjectIdResourcesGetResponses, ListResourcesApiProjectsProjectIdResourcesGetErrors, ThrowOnError>({ url: '/api/projects/{project_id}/resources/', ...options });
+
+/**
+ * Create Resource
+ *
+ * Projects, notes and resource payloads are public to authenticated readers with read permission. `created_by` is attribution and is never access control. Secret values must be stored in the secrets service and referenced; this resource is not a secret store.
+ */
+export const createResourceApiProjectsProjectIdResourcesPost = <ThrowOnError extends boolean = false>(options: Options<CreateResourceApiProjectsProjectIdResourcesPostData, ThrowOnError>) => (options.client ?? client).post<CreateResourceApiProjectsProjectIdResourcesPostResponses, CreateResourceApiProjectsProjectIdResourcesPostErrors, ThrowOnError>({
+    url: '/api/projects/{project_id}/resources/',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete Resource
+ *
+ * Hard delete. 204 rather than a body: unlike a project, a resource takes nothing with it.
+ */
+export const deleteResourceApiProjectsProjectIdResourcesResourceIdDelete = <ThrowOnError extends boolean = false>(options: Options<DeleteResourceApiProjectsProjectIdResourcesResourceIdDeleteData, ThrowOnError>) => (options.client ?? client).delete<DeleteResourceApiProjectsProjectIdResourcesResourceIdDeleteResponses, DeleteResourceApiProjectsProjectIdResourcesResourceIdDeleteErrors, ThrowOnError>({ url: '/api/projects/{project_id}/resources/{resource_id}', ...options });
+
+/**
+ * Get Resource
+ *
+ * Projects, notes and resource payloads are public to authenticated readers with read permission. `created_by` is attribution and is never access control. Secret values must be stored in the secrets service and referenced; this resource is not a secret store.
+ */
+export const getResourceApiProjectsProjectIdResourcesResourceIdGet = <ThrowOnError extends boolean = false>(options: Options<GetResourceApiProjectsProjectIdResourcesResourceIdGetData, ThrowOnError>) => (options.client ?? client).get<GetResourceApiProjectsProjectIdResourcesResourceIdGetResponses, GetResourceApiProjectsProjectIdResourcesResourceIdGetErrors, ThrowOnError>({ url: '/api/projects/{project_id}/resources/{resource_id}', ...options });
+
+/**
+ * Update Resource
+ *
+ * Projects, notes and resource payloads are public to authenticated readers with read permission. `created_by` is attribution and is never access control. Secret values must be stored in the secrets service and referenced; this resource is not a secret store.
+ */
+export const updateResourceApiProjectsProjectIdResourcesResourceIdPatch = <ThrowOnError extends boolean = false>(options: Options<UpdateResourceApiProjectsProjectIdResourcesResourceIdPatchData, ThrowOnError>) => (options.client ?? client).patch<UpdateResourceApiProjectsProjectIdResourcesResourceIdPatchResponses, UpdateResourceApiProjectsProjectIdResourcesResourceIdPatchErrors, ThrowOnError>({
+    url: '/api/projects/{project_id}/resources/{resource_id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});

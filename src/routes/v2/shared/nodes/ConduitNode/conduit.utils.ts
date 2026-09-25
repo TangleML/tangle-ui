@@ -2,14 +2,13 @@ import type { Edge, Node, XYPosition } from "@xyflow/react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 import type { EdgeConduit } from "@/models/componentSpec/annotations";
+import { resolveEntityPositions } from "@/routes/v2/shared/nodes/buildUtils";
 import type {
   ConduitEdgeData,
   ConduitNodeData,
   GuidelineInfo,
 } from "@/routes/v2/shared/nodes/types";
 import { EDGE_CONDUITS_ANNOTATION } from "@/utils/annotations";
-
-import { buildEntityPositionMap } from "./build.utils";
 
 export function getConduits(spec: ComponentSpec): EdgeConduit[] {
   return spec.annotations.get(EDGE_CONDUITS_ANNOTATION);
@@ -90,11 +89,7 @@ export function augmentEdgesWithGuidelines(
   edges: Edge[],
   conduits: EdgeConduit[],
 ): Edge[] {
-  const entityPositions = buildEntityPositionMap(
-    [...spec.inputs],
-    [...spec.outputs],
-    [...spec.tasks],
-  );
+  const entityPositions = resolveEntityPositions(spec);
 
   const edgeConduitMap = buildEdgeConduitMap(conduits, (bindingId) => {
     const binding = [...spec.bindings].find((b) => b.$id === bindingId);
