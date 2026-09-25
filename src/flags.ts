@@ -71,6 +71,15 @@ export const ExistingFlags: ConfigFlags = {
     default: false,
     category: "beta",
     canEnable: isTangentEnabled,
+    dependsOn: "projects",
+  },
+
+  ["projects"]: {
+    name: "Projects",
+    description:
+      "Enable the Projects dashboard for grouping pipelines, documents and runs.",
+    default: false,
+    category: "beta",
   },
 
   ["component-search-v2"]: {
