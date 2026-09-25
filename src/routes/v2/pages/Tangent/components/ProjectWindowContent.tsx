@@ -1,11 +1,17 @@
 import { ProjectAbout } from "@/components/Project/ProjectAbout";
+import { useDeleteProjectAction } from "@/components/Project/useDeleteProjectAction";
+import ConfirmationDialog from "@/components/shared/Dialogs/ConfirmationDialog";
+import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
+import type { Project } from "@/services/projects/types";
 import { useProject } from "@/services/projects/useProjects";
 import { formatDate, formatRelativeTime } from "@/utils/date";
+import { tracking } from "@/utils/tracking";
 
 export function ProjectWindowContent() {
   const store = useTangentProject();
@@ -47,7 +53,34 @@ export function ProjectWindowContent() {
           value={formatRelativeTime(project.updatedAt) ?? "Unknown"}
         />
       </BlockStack>
+
+      <Separator />
+
+      <DeleteProject project={project} />
     </BlockStack>
+  );
+}
+
+function DeleteProject({ project }: { project: Project }) {
+  const { confirmAndDelete, isDeleting, confirmation } =
+    useDeleteProjectAction(project);
+
+  return (
+    <>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="w-full justify-start text-destructive hover:text-destructive"
+        disabled={isDeleting}
+        onClick={() => void confirmAndDelete()}
+        {...tracking("projects.delete_project_open")}
+      >
+        <Icon name="Trash2" size="sm" />
+        Delete project
+      </Button>
+
+      <ConfirmationDialog {...confirmation} />
+    </>
   );
 }
 
