@@ -4,8 +4,10 @@ import type { ComponentProps } from "react";
 import {
   formatResourceCounts,
   totalResourceCount,
+  visibleResourceCounts,
 } from "@/components/Home/ProjectsSection/formatResourceCounts";
 import ConfirmationDialog from "@/components/shared/Dialogs/ConfirmationDialog";
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Text } from "@/components/ui/typography";
 import useConfirmationDialog from "@/hooks/useConfirmationDialog";
 import useToastNotification from "@/hooks/useToastNotification";
@@ -34,7 +36,12 @@ export function useDeleteProjectAction(project: Project): DeleteProjectAction {
   const { handlers, triggerDialog, ...confirmationProps } =
     useConfirmationDialog();
 
-  const resourceTotal = totalResourceCount(project.resourceCounts);
+  const tangentEnabled = useFlagValue("tangent-shell");
+  const resourceCounts = visibleResourceCounts(
+    project.resourceCounts,
+    tangentEnabled,
+  );
+  const resourceTotal = totalResourceCount(resourceCounts);
 
   const confirmAndDelete = async () => {
     const confirmed = await triggerDialog({
@@ -45,7 +52,7 @@ export function useDeleteProjectAction(project: Project): DeleteProjectAction {
         <Text tone="subdued">
           {resourceTotal === 0
             ? "This project is empty."
-            : `This will also delete ${formatResourceCounts(project.resourceCounts)}.`}
+            : `This will also delete ${formatResourceCounts(resourceCounts)}.`}
         </Text>
       ),
     });

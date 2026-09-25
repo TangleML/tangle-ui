@@ -2,16 +2,26 @@ import { observer } from "mobx-react-lite";
 
 import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
+import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
 import { AgentTraceButton } from "@/routes/v2/pages/Tangent/components/AgentTraceDialog";
 import { TangentChatPane } from "@/routes/v2/pages/Tangent/components/TangentChatPane";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
+import { AiProviderSetup } from "@/routes/v2/shared/components/AiChat/components/AiProviderSetup";
+import { TANGENT_AI_SETUP } from "@/routes/v2/shared/components/AiChat/components/aiSetupCopy";
 import { ChatEntityRevealProvider } from "@/routes/v2/shared/components/AiChat/components/ChatEntityRevealContext";
 
 export const ProjectChatArea = observer(function ProjectChatArea() {
   const store = useTangentProject();
   const notify = useToastNotification();
+  const { isConfigured } = useAiProviderSettings();
   const activeSessionId = store.activeSessionId;
+
+  // Ahead of the session states: without a provider there is nothing to say to
+  // a session, so offering to start one would only make a dead thread.
+  if (!isConfigured) {
+    return <AiProviderSetup {...TANGENT_AI_SETUP} />;
+  }
 
   if (!activeSessionId) {
     return (

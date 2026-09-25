@@ -6,6 +6,7 @@ import {
 } from "@/components/Home/ProjectsSection/formatResourceCounts";
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
 import { InfoBox } from "@/components/shared/InfoBox";
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { IconName } from "@/components/ui/icon";
@@ -20,6 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Heading, Text } from "@/components/ui/typography";
+import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useConfirmationDialog from "@/hooks/useConfirmationDialog";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
@@ -28,7 +30,9 @@ import {
   newTangentSessionSearch,
   tangentSessionSearch,
 } from "@/routes/tangentSearch";
+import { TANGENT_AI_REQUIRED } from "@/routes/v2/shared/components/AiChat/components/aiSetupCopy";
 import {
+  AGENT_SESSION,
   describeResource,
   INSTRUCTIONS,
   namesLocalPipeline,
@@ -50,8 +54,6 @@ import { ResourceRow, UNTITLED } from "./ResourceRow";
 const PAGE_SIZE = 100;
 
 const COLUMN_COUNT = 3;
-
-const AGENT_SESSION = "agent_session";
 
 // A group names the kind of thing it holds, so it stays plural whatever the count.
 const PLURAL = 2;
@@ -144,6 +146,8 @@ export function ProjectResources({
   const notify = useToastNotification();
   const { track } = useAnalytics();
   const navigate = useNavigate();
+  const tangentEnabled = useFlagValue("tangent-shell");
+  const { isConfigured: isAiConfigured } = useAiProviderSettings();
   const {
     handlers: confirmationHandlers,
     triggerDialog: triggerConfirmation,
@@ -179,10 +183,13 @@ export function ProjectResources({
 
   // Instructions have their own box in the sidebar, so listing the document
   // they live in as well would offer two ways to write one thing and a Remove
-  // that silently wipes it.
-  const resources = (data?.items ?? []).filter(
-    (resource) => describeResource(resource)?.type !== INSTRUCTIONS,
-  );
+  // that silently wipes it. Sessions belong to Tangent and go with it.
+  const allResources = data?.items ?? [];
+  const resources = allResources.filter((resource) => {
+    if (describeResource(resource)?.type === INSTRUCTIONS) return false;
+    return tangentEnabled || resource.entity !== AGENT_SESSION;
+  });
+  const hiddenCount = allResources.length - resources.length;
 
   // A session is the one resource that is not a thing to look at here: it is a
   // conversation that lives in Tangent, so its row goes there. It is also not a
@@ -213,21 +220,25 @@ export function ProjectResources({
       <ColumnHeadingRow>
         <Heading level={2}>Resources</Heading>
         <AddResourceMenu projectId={projectId} resources={resources} />
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() =>
-            void navigate({
-              to: APP_ROUTES.TANGENT_PROJECT,
-              params: { projectId },
-              search: newTangentSessionSearch,
-            })
-          }
-          {...tracking("projects.start_session")}
-        >
-          <Icon name="MessagesSquare" size="sm" />
-          New session
-        </Button>
+        {tangentEnabled && (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!isAiConfigured}
+            title={isAiConfigured ? undefined : TANGENT_AI_REQUIRED}
+            onClick={() =>
+              void navigate({
+                to: APP_ROUTES.TANGENT_PROJECT,
+                params: { projectId },
+                search: newTangentSessionSearch,
+              })
+            }
+            {...tracking("projects.start_session")}
+          >
+            <Icon name="MessagesSquare" size="sm" />
+            New session
+          </Button>
+        )}
       </ColumnHeadingRow>
 
       {isPending && (
@@ -311,7 +322,7 @@ export function ProjectResources({
 
       {data?.nextPageToken && (
         <Text size="sm" tone="subdued">
-          {`Showing the first ${resources.length} of ${data.totalCount} items.`}
+          {`Showing the first ${resources.length} of ${data.totalCount - hiddenCount} items.`}
         </Text>
       )}
 

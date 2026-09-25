@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -18,6 +19,7 @@ import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { APP_ROUTES } from "@/routes/appRoutes";
+import { projectHomeRoute } from "@/routes/projectRoutes";
 import type { ProjectSummary } from "@/services/projects/types";
 import { useDeleteProject } from "@/services/projects/useProjects";
 import { formatDate, formatRelativeTime } from "@/utils/date";
@@ -28,6 +30,7 @@ import { getProjectUrl } from "@/utils/URL";
 import {
   formatResourceCounts,
   totalResourceCount,
+  visibleResourceCounts,
 } from "./formatResourceCounts";
 import { useProjectPin } from "./useProjectPin";
 
@@ -47,7 +50,12 @@ export function ProjectCard({ project }: ProjectCardProps) {
   } = useConfirmationDialog();
 
   const { pinned, togglePin } = useProjectPin(project);
-  const resourceTotal = totalResourceCount(project.resourceCounts);
+  const tangentEnabled = useFlagValue("tangent-shell");
+  const resourceCounts = visibleResourceCounts(
+    project.resourceCounts,
+    tangentEnabled,
+  );
+  const resourceTotal = totalResourceCount(resourceCounts);
 
   const openDetails = () => {
     void navigate({
@@ -70,7 +78,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
         <Text tone="subdued">
           {resourceTotal === 0
             ? "This project is empty."
-            : `This will also delete ${formatResourceCounts(project.resourceCounts)}.`}
+            : `This will also delete ${formatResourceCounts(resourceCounts)}.`}
         </Text>
       ),
     });
@@ -100,7 +108,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
       )}
     >
       <Link
-        to={APP_ROUTES.TANGENT_PROJECT}
+        to={projectHomeRoute(tangentEnabled)}
         params={{ projectId: project.id }}
         className="flex h-full flex-col justify-between gap-2 p-4"
         {...tracking("projects.project_card")}
@@ -139,7 +147,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
         <BlockStack gap="2" align="stretch">
           <Text size="xs" weight="medium" className="truncate">
-            {formatResourceCounts(project.resourceCounts)}
+            {formatResourceCounts(resourceCounts)}
           </Text>
           <Separator />
           <BlockStack gap="1" align="stretch">
@@ -173,13 +181,15 @@ export function ProjectCard({ project }: ProjectCardProps) {
             <Icon name={pinned ? "PinOff" : "Pin"} size="sm" />
             {pinned ? "Unpin project" : "Pin project"}
           </DropdownMenuItem>
-          <DropdownMenuItem
-            onSelect={openDetails}
-            {...tracking("projects.open_project_details")}
-          >
-            <Icon name="Info" size="sm" />
-            Details
-          </DropdownMenuItem>
+          {tangentEnabled && (
+            <DropdownMenuItem
+              onSelect={openDetails}
+              {...tracking("projects.open_project_details")}
+            >
+              <Icon name="Info" size="sm" />
+              Details
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem
             onSelect={handleShare}
             {...tracking("projects.share_project")}

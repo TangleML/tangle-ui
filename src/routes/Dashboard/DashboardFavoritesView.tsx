@@ -9,6 +9,7 @@ import { Heading, Paragraph, Text } from "@/components/ui/typography";
 import { type FavoriteItem, useFavorites } from "@/hooks/useFavorites";
 
 import { getFavoriteUrl, TypePill } from "./TypePill";
+import { useListedItems } from "./useListedItems";
 
 const PAGE_SIZE = 20;
 
@@ -85,17 +86,18 @@ const FavoritesSearchBar = ({
 
 export function DashboardFavoritesView() {
   const { favorites, removeFavorite } = useFavorites();
+  const listed = useListedItems(favorites);
   const [page, setPage] = useState(0);
   const [query, setQuery] = useState("");
 
   const normalizedQuery = query.trim().toLowerCase();
   const filtered = normalizedQuery
-    ? favorites.filter(
+    ? listed.filter(
         (favorite) =>
           favorite.id.toLowerCase().includes(normalizedQuery) ||
           favorite.name.toLowerCase().includes(normalizedQuery),
       )
-    : favorites;
+    : listed;
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const safePage = Math.min(page, Math.max(0, totalPages - 1));

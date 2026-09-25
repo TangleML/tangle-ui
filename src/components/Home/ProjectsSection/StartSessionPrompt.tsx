@@ -6,7 +6,7 @@ import {
   THINKING_LEVELS,
 } from "@tangent/shared/contracts.ts";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -21,9 +21,11 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Text } from "@/components/ui/typography";
+import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { APP_ROUTES } from "@/routes/appRoutes";
+import { TANGENT_AI_REQUIRED } from "@/routes/v2/shared/components/AiChat/components/aiSetupCopy";
 import { nameFromPrompt } from "@/services/projects/nameFromPrompt";
 import { createProject } from "@/services/projects/projectsService";
 import { provisionalNameExtraData } from "@/services/projects/provisionalName";
@@ -57,6 +59,7 @@ export function StartSessionPrompt() {
   const { track } = useAnalytics();
   const { data: workspaces, isPending: isFindingWorkspace } = useWorkspaces();
   const { projects } = useMyProjects();
+  const { isConfigured: isAiConfigured } = useAiProviderSettings();
 
   const workspace = workspaces?.find((w) => w.isActive) ?? workspaces?.[0];
 
@@ -102,10 +105,10 @@ export function StartSessionPrompt() {
   });
 
   const isEmpty = prompt.trim() === "";
-  // The box is the point of the page, so a backend that cannot say where a
-  // project would go leaves it standing and unusable rather than taking it
-  // away. What is wrong is said below it, where the projects would be.
-  const isUnavailable = isFindingWorkspace || !workspace;
+  // The box is the point of the page, so anything that stops it working leaves
+  // it standing and unusable rather than taking it away. What is wrong is said
+  // below it, where the projects would be.
+  const isUnavailable = isFindingWorkspace || !workspace || !isAiConfigured;
   const isBusy = isPending || isUnavailable;
   // Only once the lookup has settled: said while it is still running, this
   // would accuse a backend that is about to answer.
@@ -208,10 +211,23 @@ export function StartSessionPrompt() {
         </InlineStack>
       </div>
 
-      {hasNoBackend && (
-        <Text size="sm" tone="subdued">
-          Connect a backend to enable agentic features in Tangle
-        </Text>
+      {/* The AI provider comes first: it is a setting the user can change
+          here and now, where a missing backend may not be theirs to fix. */}
+      {!isAiConfigured ? (
+        <InlineStack gap="2" blockAlign="center">
+          <Text size="sm" tone="subdued">
+            {TANGENT_AI_REQUIRED}
+          </Text>
+          <Link to={APP_ROUTES.SETTINGS_AGENT} className="text-sm underline">
+            Open AI settings
+          </Link>
+        </InlineStack>
+      ) : (
+        hasNoBackend && (
+          <Text size="sm" tone="subdued">
+            Connect a backend to enable agentic features in Tangle
+          </Text>
+        )
       )}
     </BlockStack>
   );

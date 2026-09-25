@@ -25,11 +25,13 @@ import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Paragraph, Text } from "@/components/ui/typography";
+import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import { useUserDetails } from "@/hooks/useUserDetails";
 import type { ComponentSpec } from "@/models/componentSpec";
 import { useBackend } from "@/providers/BackendProvider";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
 import { useDebugInTangent } from "@/routes/v2/pages/RunView/hooks/useDebugInTangent";
+import { TANGENT_AI_REQUIRED } from "@/routes/v2/shared/components/AiChat/components/aiSetupCopy";
 import { PipelineDetailsCollapsibleSection } from "@/routes/v2/shared/components/PipelineDetailsCollapsibleSection";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { runAnnotationsQueryOptions } from "@/services/runAnnotations";
@@ -223,13 +225,15 @@ function DebugInTangentButton({
   pipelineName,
 }: DebugInTangentButtonProps) {
   const { debug, isPending } = useDebugInTangent();
+  const { isConfigured: isAiConfigured } = useAiProviderSettings();
 
   return (
     <Button
       variant="outline"
       size="sm"
       className="w-full"
-      disabled={isPending}
+      disabled={isPending || !isAiConfigured}
+      title={isAiConfigured ? undefined : TANGENT_AI_REQUIRED}
       onClick={() => debug({ runId, pipelineName })}
       {...tracking("v2.run_view.debug_in_tangent")}
     >

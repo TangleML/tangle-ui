@@ -1,10 +1,26 @@
 import { ProjectsSection } from "@/components/Home/ProjectsSection/ProjectsSection";
 import { StartSessionPrompt } from "@/components/Home/ProjectsSection/StartSessionPrompt";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { BlockStack } from "@/components/ui/layout";
 import { Heading } from "@/components/ui/typography";
 
 export function DashboardProjectsView() {
+  const tangentEnabled = useFlagValue("tangent-shell");
+
+  if (!tangentEnabled) {
+    return (
+      <BlockStack gap="6">
+        <PageHeader
+          title="Projects"
+          description="Group the pipelines, documents and runs that belong to a piece of work."
+          icon="Folder"
+        />
+        <ProjectsSection />
+      </BlockStack>
+    );
+  }
+
   return (
     <BlockStack gap="6">
       <PageHeader
