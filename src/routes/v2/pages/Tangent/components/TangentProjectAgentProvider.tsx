@@ -19,12 +19,12 @@ import * as Comlink from "comlink";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import type { RemoteEnvWorkerApi } from "@/agent/createRemoteEnvWorkerApi";
-import { useAuthLocalStorage } from "@/components/shared/Authentication/useAuthLocalStorage";
 import { buildTaskSpecShape } from "@/components/shared/PipelineRunNameTemplate/types";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
+import { useRemoteEnvAuthToken } from "@/routes/v2/pages/Tangent/hooks/useRemoteEnvAuthToken";
 import { useTangentBaseUrl } from "@/routes/v2/pages/Tangent/hooks/useTangentBaseUrl";
 import { connectRemoteEnvWithRefresh } from "@/routes/v2/pages/Tangent/services/connectRemoteEnvWithRefresh";
 import {
@@ -104,14 +104,13 @@ export function TangentProjectAgentProvider({
   children,
 }: TangentProjectAgentProviderProps) {
   const notify = useToastNotification();
-  const authStorage = useAuthLocalStorage();
   const { config: aiConfig } = useAiProviderSettings();
   const { backendUrl } = useBackend();
   const queryClient = useQueryClient();
   const store = useTangentProject();
   const { baseUrl } = useTangentBaseUrl(store.projectId);
 
-  const authToken = authStorage.getToken();
+  const authToken = useRemoteEnvAuthToken();
   const authTokenRef = useRef(authToken);
   const backendUrlRef = useRef(backendUrl);
   const notifyRef = useRef(notify);
@@ -227,6 +226,9 @@ export function TangentProjectAgentProvider({
       host,
       baseUrl,
       sessionId: activeSessionId,
+      // A stable id so this project-level workarea host keeps its place across
+      // token refreshes, mirroring the per-tab `${sessionId}:${tabId}` ids.
+      initialEnvironmentId: `${activeSessionId}:workarea`,
       getAuthToken: () => authTokenRef.current,
       onError,
     });

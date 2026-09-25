@@ -22,7 +22,7 @@ interface FakeClient {
   subagentUpdate: ReturnType<typeof vi.fn>;
   report: ReturnType<typeof vi.fn>;
   disconnect: ReturnType<typeof vi.fn>;
-  socket: { connected: boolean; on: ReturnType<typeof vi.fn> };
+  socket: { id: string; connected: boolean; on: ReturnType<typeof vi.fn> };
 }
 
 function createFakeClient(): FakeClient {
@@ -31,7 +31,7 @@ function createFakeClient(): FakeClient {
     subagentUpdate: vi.fn(),
     report: vi.fn(),
     disconnect: vi.fn(),
-    socket: { connected: false, on: vi.fn() },
+    socket: { id: "sock-1", connected: false, on: vi.fn() },
   };
 }
 
@@ -95,6 +95,7 @@ describe("createRemoteEnvHost", () => {
     client = createFakeClient();
     connectRemoteEnvironment.mockReset();
     connectRemoteEnvironment.mockReturnValue(client);
+    vi.spyOn(console, "info").mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -176,6 +177,32 @@ describe("createRemoteEnvHost", () => {
     errorListener(new Error("boom"));
 
     await expect(connection).resolves.toBeUndefined();
+  });
+
+  it("logs the shape of tool-call arguments, never the payload", () => {
+    const worker = makeWorker();
+    const host = createRemoteEnvHost({
+      url: "http://localhost:8000",
+      worker: worker as unknown as Remote<RemoteEnvWorkerApi>,
+    });
+
+    void host.connect("token", "env-1");
+    const callListener = client.socket.on.mock.calls.find(
+      ([event]) => event === "remote:tools:call",
+    )?.[1];
+    if (!callListener) throw new Error("Tool-call listener was not registered");
+
+    callListener({
+      name: "set_pipeline",
+      arguments: { pipeline: "secret-pipeline-yaml", nodeId: "n1" },
+    });
+
+    const logged = vi
+      .mocked(console.info)
+      .mock.calls.map((args) => args.join(" "))
+      .join("\n");
+    expect(logged).toContain("pipeline, nodeId");
+    expect(logged).not.toContain("secret-pipeline-yaml");
   });
 
   it("emits start then a single end (never report) for a completed turn", async () => {
@@ -363,13 +390,14 @@ describe("createRemoteEnvHost", () => {
     expect(client.subagentUpdate).toHaveBeenCalledWith("s1", "a1", "completed");
   });
 
-  it("forwards the token, environmentId, sessionId, and tools to the SDK", () => {
+  it("forwards the token, environmentId, and sessionId and wraps tools without changing the catalog", async () => {
     const worker = makeWorker();
+    const echo = vi.fn().mockResolvedValue("echoed");
     const tools = {
       echo: {
         description: "echo",
         inputSchema: { type: "object", properties: {} },
-        execute: vi.fn(),
+        execute: echo,
       },
     };
     const host = createRemoteEnvHost({
@@ -386,8 +414,57 @@ describe("createRemoteEnvHost", () => {
       token: "token",
       environmentId: "env-1",
       sessionId: "s1",
-      tools,
     });
+    expect(Object.keys(options.tools)).toEqual(["echo"]);
+    expect(options.tools.echo).toMatchObject({
+      description: "echo",
+      inputSchema: tools.echo.inputSchema,
+    });
+
+    await expect(options.tools.echo.execute({ n: 1 })).resolves.toBe("echoed");
+    expect(echo).toHaveBeenCalledWith({ n: 1 });
+  });
+
+  it("logs the socket name used for a remote tool call", async () => {
+    const worker = makeWorker();
+    const tools = {
+      echo: {
+        description: "echo",
+        inputSchema: { type: "object", properties: {} },
+        execute: vi.fn().mockResolvedValue("echoed"),
+      },
+    };
+    const host = createRemoteEnvHost({
+      url: "http://localhost:8000",
+      worker: worker as unknown as Remote<RemoteEnvWorkerApi>,
+      tools,
+      sessionId: "s1",
+    });
+
+    void host.connect("token", "env-1");
+    const options = connectRemoteEnvironment.mock.calls.at(-1)?.[0];
+    await options.tools.echo.execute({ n: 1 });
+
+    const logged = vi.mocked(console.info).mock.calls.map(([line]) => line);
+    expect(
+      logged.some(
+        (line) =>
+          typeof line === "string" &&
+          line.includes("socket sock-1") &&
+          line.includes("tool start echo"),
+      ),
+    ).toBe(true);
+  });
+
+  it("registers diagnostic listeners for disconnect and remote tool calls", () => {
+    const worker = makeWorker();
+    connectedHost(worker);
+
+    const registeredEvents = client.socket.on.mock.calls.map(
+      ([event]) => event,
+    );
+    expect(registeredEvents).toContain("disconnect");
+    expect(registeredEvents).toContain("remote:tools:call");
   });
 
   it("surfaces spawn and kill worker failures", async () => {
