@@ -2,7 +2,7 @@ import { Icon, type IconName } from "@/components/ui/icon";
 import type { FavoriteItem } from "@/hooks/useFavorites";
 import type { RecentItem } from "@/hooks/useRecentlyViewed";
 import { cn } from "@/lib/utils";
-import { getDefaultEditorPath } from "@/routes/editorRoutes";
+import { getDefaultEditorHref } from "@/routes/editorRoutes";
 import { APP_ROUTES } from "@/routes/router";
 import { getDefaultRunPath } from "@/routes/runRoutes";
 
@@ -59,12 +59,12 @@ export const TypePill = ({
 };
 
 export function getFavoriteUrl(item: FavoriteItem): string {
-  if (item.type === "pipeline") return getDefaultEditorPath(item.id);
+  if (item.type === "pipeline") return getDefaultEditorHref({ name: item.id });
   return getDefaultRunPath(item.id);
 }
 
 export function getRecentlyViewedUrl(item: RecentItem): string {
-  if (item.type === "pipeline") return getDefaultEditorPath(item.id);
+  if (item.type === "pipeline") return getDefaultEditorHref({ name: item.id });
   if (item.type === "run") return getDefaultRunPath(item.id);
   if (item.type === "tour") return `${APP_ROUTES.TOUR}/${item.id}`;
   return APP_ROUTES.DASHBOARD_COMPONENTS;

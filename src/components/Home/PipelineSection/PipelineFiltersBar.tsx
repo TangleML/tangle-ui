@@ -58,6 +58,7 @@ export function PipelineFiltersBar({
     clearFilters,
     totalCount,
     filteredCount,
+    pendingCount,
   } = filters;
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
 
@@ -226,6 +227,8 @@ export function PipelineFiltersBar({
           <InlineStack gap="2" align="center" blockAlign="center">
             <Text size="sm" tone="subdued">
               Showing {filteredCount} of {totalCount} pipelines
+              {pendingCount > 0 &&
+                ` — still reading ${pendingCount}, so search results may grow`}
             </Text>
 
             <div className="flex-1" />

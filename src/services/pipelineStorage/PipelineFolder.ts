@@ -3,15 +3,19 @@ import { action, makeObservable, observable } from "mobx";
 import { createDriver } from "./createDriver";
 import { pipelineStorageDb } from "./db";
 import { PipelineFile } from "./PipelineFile";
+import { emitPipelineFileChanged } from "./pipelineFileEvents";
 import {
-  addEntry,
   assertStorageKeyUnique,
+  claimEntry,
+  deleteEntry,
   deleteFoldersAndDetachEntries,
-  findByStorageKey,
+  getAllByFolderId,
+  updateEntry,
 } from "./pipelineRegistry";
 import {
   type DriverConfig,
   type FolderEntry,
+  type PipelineFileDescriptor,
   type PipelineStorageDriver,
   ROOT_FOLDER_ID,
 } from "./types";
@@ -23,6 +27,7 @@ interface PipelineFolderInit {
   driver: PipelineStorageDriver;
   favorite?: boolean;
   createdAt?: number;
+  isFlat?: boolean;
 }
 
 class FolderNotFoundError extends Error {
@@ -55,6 +60,7 @@ export class PipelineFolder {
 
   readonly id: string;
   readonly isRoot: boolean;
+  readonly isFlat: boolean;
   readonly parentId: string | null;
   readonly driver: PipelineStorageDriver;
   readonly createdAt: number;
@@ -76,6 +82,7 @@ export class PipelineFolder {
 
   constructor(options: PipelineFolderInit) {
     this.isRoot = options.id === ROOT_FOLDER_ID;
+    this.isFlat = options.isFlat ?? false;
     this.id = options.id;
 
     this.name = options.name;
@@ -90,38 +97,54 @@ export class PipelineFolder {
   async listPipelines(): Promise<PipelineFile[]> {
     const descriptors = await this.driver.list();
 
+    if (this.driver.listingIsAuthoritative) {
+      await reconcileRegistryToListing(this.id, descriptors);
+    }
+
     return Promise.all(
-      descriptors.map((d) =>
-        resolveOrCreateRegistryEntry(d.storageKey, this, {
-          createdAt: d.createdAt,
-          modifiedAt: d.modifiedAt,
-        }),
+      descriptors.map((descriptor) =>
+        resolveOrCreateRegistryEntry(descriptor, this),
       ),
     );
   }
 
   async findFile(storageKey: string): Promise<PipelineFile | undefined> {
-    const hasKey = await this.driver.hasKey(storageKey);
-    if (!hasKey) return undefined;
+    const descriptor = await this.describeKey(storageKey);
+    if (!descriptor) return undefined;
 
-    return resolveOrCreateRegistryEntry(storageKey, this);
+    return resolveOrCreateRegistryEntry(descriptor, this);
+  }
+
+  private async describeKey(
+    storageKey: string,
+  ): Promise<PipelineFileDescriptor | undefined> {
+    if (this.driver.describe) return this.driver.describe(storageKey);
+
+    return (await this.driver.hasKey(storageKey)) ? { storageKey } : undefined;
   }
 
   async assignFile(storageKey: string): Promise<PipelineFile> {
-    return resolveOrCreateRegistryEntry(storageKey, this);
+    return resolveOrCreateRegistryEntry({ storageKey }, this);
   }
 
   async addFile(storageKey: string, content: string): Promise<PipelineFile> {
-    await assertStorageKeyUnique(storageKey);
+    /**
+     * A flat store hands back its own key, so the caller's is a suggestion the
+     * write upserts on — there is nothing to collide with, and asking would
+     * cost a round trip to learn that.
+     */
+    if (!this.isFlat) await assertStorageKeyUnique(storageKey);
 
-    const id = crypto.randomUUID();
-    await addEntry({ id, storageKey, folderId: this.id });
-    await this.driver.write(storageKey, content);
+    // Writing before registering means a rejected write leaves no registry row
+    // pointing at a file that was never created.
+    const descriptor = await this.driver.write(storageKey, content);
 
-    return new PipelineFile({ id, storageKey, folder: this });
+    return resolveOrCreateRegistryEntry(descriptor, this);
   }
 
   async listSubfolders(): Promise<PipelineFolder[]> {
+    if (this.isFlat) return [];
+
     const entries = await queryChildFolders(this.id);
 
     return sortByName(entries).map((entry) => PipelineFolder.fromEntry(entry));
@@ -131,6 +154,10 @@ export class PipelineFolder {
     name: string;
     driverConfig?: DriverConfig;
   }): Promise<PipelineFolder> {
+    if (this.isFlat) {
+      throw new Error(`"${this.name}" does not support folders`);
+    }
+
     const id = crypto.randomUUID();
     const driverConfig: DriverConfig = options.driverConfig ?? {
       driverType: "folder-indexdb",
@@ -233,28 +260,51 @@ async function collectDescendantIds(parentId: string): Promise<string[]> {
   return ids;
 }
 
-interface FileMetadata {
-  createdAt?: Date;
-  modifiedAt?: Date;
+async function resolveOrCreateRegistryEntry(
+  descriptor: PipelineFileDescriptor,
+  folder: PipelineFolder,
+): Promise<PipelineFile> {
+  const claimed = await claimEntry({
+    id: descriptor.externalId ?? crypto.randomUUID(),
+    storageKey: descriptor.storageKey,
+    folderId: folder.id,
+    contentVersion: descriptor.contentVersion,
+  });
+
+  return new PipelineFile({ id: claimed.id, folder, ...descriptor });
 }
 
-async function resolveOrCreateRegistryEntry(
-  storageKey: string,
-  folder: PipelineFolder,
-  metadata?: FileMetadata,
-): Promise<PipelineFile> {
-  const existing = await findByStorageKey(storageKey);
+/**
+ * Aligns the registry with a store that owns its own listing: rows the store no
+ * longer reports are dropped, and a moved `contentVersion` is announced so an
+ * editor holding the file reloads it.
+ */
+async function reconcileRegistryToListing(
+  folderId: string,
+  descriptors: PipelineFileDescriptor[],
+): Promise<void> {
+  const known = await getAllByFolderId(folderId);
+  const listed = new Map(descriptors.map((d) => [d.storageKey, d]));
 
-  if (existing) {
-    return new PipelineFile({
-      id: existing.id,
-      storageKey: existing.storageKey,
-      folder,
-      ...metadata,
+  for (const entry of known) {
+    const descriptor = listed.get(entry.storageKey);
+
+    if (!descriptor) {
+      await deleteEntry(entry.id);
+      continue;
+    }
+
+    if (
+      descriptor.contentVersion === undefined ||
+      descriptor.contentVersion === entry.contentVersion
+    ) {
+      continue;
+    }
+
+    await updateEntry(entry.id, { contentVersion: descriptor.contentVersion });
+    emitPipelineFileChanged({
+      storageKey: entry.storageKey,
+      source: "remote",
     });
   }
-
-  const id = crypto.randomUUID();
-  await addEntry({ id, storageKey, folderId: folder.id });
-  return new PipelineFile({ id, storageKey, folder, ...metadata });
 }

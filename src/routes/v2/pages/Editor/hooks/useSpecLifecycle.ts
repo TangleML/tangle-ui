@@ -6,26 +6,13 @@ import { useEffect, useRef } from "react";
 import type { ComponentSpec } from "@/models/componentSpec";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
-import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
-import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
+import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import type { PipelineRef } from "@/services/pipelineStorage/types";
-
-/**
- * todo: make public and export to re-use
- */
-async function resolvePipelineFile(
-  ref: PipelineRef,
-  storage: PipelineStorageService,
-) {
-  if (ref.fileId) {
-    return storage.findPipelineById(ref.fileId);
-  }
-  return storage.resolvePipelineByName(ref.name);
-}
 
 export function useSpecLifecycle(
   rootSpec: ComponentSpec,
   pipelineRef: PipelineRef,
+  pipelineFile: PipelineFile,
   restoredUndoStore?: MobxUndoStore,
 ) {
   const { editor, navigation, windows: windowStore } = useSharedStores();
@@ -34,7 +21,6 @@ export function useSpecLifecycle(
     autoSave,
     pipelineFile: pipelineFileStore,
   } = useEditorSession();
-  const storage = usePipelineStorage();
   const prevTaskEntityIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -46,13 +32,10 @@ export function useSpecLifecycle(
 
     const saveName = pipelineRef.name ?? rootSpec.name;
 
-    void (async () => {
-      if (saveName) {
-        const file = await resolvePipelineFile(pipelineRef, storage);
-        pipelineFileStore.init(file ?? null);
-        autoSave.init(rootSpec, saveName);
-      }
-    })();
+    if (saveName) {
+      pipelineFileStore.init(pipelineFile);
+      autoSave.init(rootSpec, saveName);
+    }
 
     prevTaskEntityIdsRef.current = new Set(rootSpec.tasks.map((t) => t.$id));
 
@@ -95,6 +78,7 @@ export function useSpecLifecycle(
   }, [
     rootSpec,
     pipelineRef,
+    pipelineFile,
     restoredUndoStore,
     editor,
     navigation,
@@ -102,6 +86,5 @@ export function useSpecLifecycle(
     undo,
     autoSave,
     pipelineFileStore,
-    storage,
   ]);
 }

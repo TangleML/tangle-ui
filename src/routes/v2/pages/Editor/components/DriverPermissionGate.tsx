@@ -19,15 +19,16 @@ interface DriverPermissionGateProps {
   children: ReactNode;
 }
 
+/**
+ * A folder that cannot be resolved is not a permission problem, so the gate
+ * opens and lets whatever loads the pipeline report the real failure.
+ */
 async function resolveFolder(
   ref: PipelineRef,
   storage: PipelineStorageService,
 ): Promise<PipelineFolder | null> {
   try {
-    const file = ref.fileId
-      ? await storage.findPipelineById(ref.fileId)
-      : undefined;
-    return file?.folder ?? null;
+    return (await storage.resolve(ref)).folder;
   } catch {
     return null;
   }

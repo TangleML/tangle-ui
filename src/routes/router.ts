@@ -264,10 +264,6 @@ const editorRoute = createRoute({
   getParentRoute: () => mainLayout,
   path: APP_ROUTES.PIPELINE_EDITOR,
   component: Editor,
-  beforeLoad: ({ search }: { search: { name?: string } }) => {
-    const name = search.name || "";
-    return { name };
-  },
 });
 
 const githubAuthCallbackRoute = createRoute({
@@ -329,6 +325,7 @@ const editorV2PipelineRoute = createRoute({
       throw redirect({
         to: APP_ROUTES.PIPELINE_EDITOR,
         params: { name: params.pipelineName },
+        search: (previous) => previous,
       });
     }
   },

@@ -28,13 +28,18 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Paragraph, Text } from "@/components/ui/typography";
+import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
-import { getDefaultEditorPath } from "@/routes/editorRoutes";
-import { deletePipeline } from "@/services/pipelineService";
+import {
+  getDefaultEditorHref,
+  getDefaultEditorTarget,
+} from "@/routes/editorRoutes";
+import { deletePipelineByName } from "@/services/pipelineStorage/pipelineOperations";
 import { getPipelineTagsFromSpec } from "@/utils/annotations";
-import type { ComponentReferenceWithSpec } from "@/utils/componentStore";
+import type { ComponentSpec } from "@/utils/componentSpec";
 import { formatDate } from "@/utils/date";
+import { getErrorMessage } from "@/utils/string";
 import { tracking } from "@/utils/tracking";
 
 import type { MatchedField } from "./usePipelineFilters";
@@ -46,8 +51,9 @@ const DEFAULT_PIPELINE_ROW_ANALYTICS_PREFIX = "pipeline_home.table";
 
 interface PipelineRowProps {
   url?: string;
-  componentRef?: ComponentReferenceWithSpec;
+  spec?: ComponentSpec;
   name?: string;
+  fileId?: string;
   modificationTime?: Date;
   onDelete?: () => void;
   isSelected?: boolean;
@@ -68,7 +74,8 @@ interface PipelineRowProps {
 const PipelineRow = withSuspenseWrapper(
   ({
     name,
-    componentRef,
+    fileId,
+    spec,
     modificationTime,
     onDelete,
     isSelected = false,
@@ -86,15 +93,14 @@ const PipelineRow = withSuspenseWrapper(
     analyticsTrackingPrefix = DEFAULT_PIPELINE_ROW_ANALYTICS_PREFIX,
   }: PipelineRowProps) => {
     const navigate = useNavigate();
+    const notify = useToastNotification();
     const { track } = useAnalytics();
 
     const rowTrack = (suffix: string, metadata?: Record<string, unknown>) => {
       track(`${analyticsTrackingPrefix}.${suffix}`, metadata);
     };
 
-    const componentSpec = componentRef?.spec;
-
-    const tags = getPipelineTagsFromSpec(componentSpec);
+    const tags = getPipelineTagsFromSpec(spec);
 
     const handleRowClick = (e: MouseEvent) => {
       if ((e.target as HTMLElement).closest("[data-popover-trigger]")) {
@@ -111,11 +117,11 @@ const PipelineRow = withSuspenseWrapper(
 
       if (e.ctrlKey || e.metaKey) {
         rowTrack("pipeline_opened", { open_mode: "editor_new_tab" });
-        window.open(getDefaultEditorPath(name), "_blank");
+        window.open(getDefaultEditorHref({ name, fileId }), "_blank");
         return;
       }
       rowTrack("pipeline_opened", { open_mode: "editor_same_tab" });
-      navigate({ to: getDefaultEditorPath(name) });
+      navigate(getDefaultEditorTarget({ name, fileId }));
     };
 
     const handleCheckboxChange = (checked: boolean | "indeterminate") => {
@@ -127,11 +133,15 @@ const PipelineRow = withSuspenseWrapper(
     const confirmPipelineDelete = async () => {
       if (!name) return;
 
-      const deleteCallback = () => {
+      try {
+        await deletePipelineByName(name);
         onDelete?.();
-      };
-
-      await deletePipeline(name, deleteCallback);
+      } catch (error) {
+        notify(
+          `Failed to delete "${name}": ${getErrorMessage(error)}`,
+          "error",
+        );
+      }
     };
 
     const handleClick = (e: MouseEvent) => {

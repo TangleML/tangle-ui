@@ -1,6 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 
-import { APP_ROUTES } from "@/routes/router";
+import { getDefaultEditorTarget } from "@/routes/editorRoutes";
 import { usePipelineActions } from "@/routes/v2/pages/Editor/store/actions/usePipelineActions";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
@@ -17,10 +17,11 @@ export function usePipelineRename() {
     await pipelineFileStore.activePipelineFile?.rename(newName);
     renamePipeline(spec, newName);
     await autoSave.save();
-    await navigate({
-      to: APP_ROUTES.EDITOR_V2_PIPELINE,
-      params: { pipelineName: newName },
-      search: { fileId: pipelineFileStore.activePipelineFile?.id },
-    });
+    await navigate(
+      getDefaultEditorTarget({
+        name: newName,
+        fileId: pipelineFileStore.activePipelineFile?.id,
+      }),
+    );
   };
 }

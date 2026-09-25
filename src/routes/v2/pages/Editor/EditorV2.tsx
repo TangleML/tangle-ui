@@ -8,6 +8,7 @@ import { type ReactNode, useEffect } from "react";
 
 import { ComponentEditorProvider } from "@/components/shared/ComponentEditor/ComponentEditorProvider";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
+import { PipelineStorageError } from "@/components/shared/PipelineStorageError";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { InlineStack } from "@/components/ui/layout";
@@ -42,7 +43,9 @@ import { DriverPermissionGate } from "./components/DriverPermissionGate";
 import { EditorMenuBar } from "./components/EditorMenuBar/EditorMenuBar";
 import { EditorTourBridge } from "./components/EditorTourBridge/EditorTourBridge";
 import { EmptyEditorState } from "./components/EmptyEditorState";
+import { ExpiredSessionDialog } from "./components/ExpiredSessionDialog";
 import { FlowCanvas } from "./components/FlowCanvas/FlowCanvas";
+import { UnsavedWorkBanner } from "./components/UnsavedWorkBanner";
 import { useAiChatWindow } from "./hooks/useAiChatWindow";
 import { useComponentLibraryWindow } from "./hooks/useComponentLibraryWindow";
 import { useComponentSearchV2Window } from "./hooks/useComponentSearchV2Window";
@@ -74,14 +77,14 @@ const PipelineEditorSkeleton = () => (
 const PipelineEditor = withSuspenseWrapper(
   observer(({ pipelineRef }: PipelineEditorProps) => {
     const {
-      data: { spec: rootSpec, restoredUndoStore },
+      data: { spec: rootSpec, file: pipelineFile, restoredUndoStore },
     } = useLoadSpec(pipelineRef);
     const { navigation } = useSharedStores();
     const tourMode = useTourMode();
 
     useWindowPersistence(tourMode ? TOUR_WINDOW_LAYOUT_ID : "editor");
     useDockAreaAccordion();
-    useSpecLifecycle(rootSpec, pipelineRef, restoredUndoStore);
+    useSpecLifecycle(rootSpec, pipelineRef, pipelineFile, restoredUndoStore);
     useSelectionWindowSync();
     usePropertiesWindowPositioning();
     useLinkedWindowCleanup();
@@ -140,6 +143,15 @@ const PipelineEditor = withSuspenseWrapper(
     );
   }),
   PipelineEditorSkeleton,
+  /**
+   * A pipeline that cannot be read is not a component that failed to render,
+   * and the generic retry icon says neither which pipeline nor why. It matters
+   * most for a link written against a store the app is no longer using, which
+   * is a miss rather than a fault.
+   */
+  ({ error, resetErrorBoundary }) => (
+    <PipelineStorageError error={error} onRetry={resetErrorBoundary} />
+  ),
 );
 
 function EditorV2Content({ pipelineRef }: { pipelineRef: PipelineRef | null }) {
@@ -168,6 +180,8 @@ function EditorV2Content({ pipelineRef }: { pipelineRef: PipelineRef | null }) {
       <ComponentEditorProvider>
         <ReactFlowProvider>
           <EditorMenuBar />
+          <UnsavedWorkBanner />
+          <ExpiredSessionDialog />
           <EditorTourBridge />
           <TourSaveExploreDialog />
           <TourSecretsDialog />
@@ -201,7 +215,7 @@ export function EditorV2({
     pipelineRefProp !== undefined
       ? pipelineRefProp
       : pipelineName
-        ? { name: pipelineName, fileId }
+        ? { name: pipelineName, fileId: fileId ?? pipelineName }
         : null;
 
   return (

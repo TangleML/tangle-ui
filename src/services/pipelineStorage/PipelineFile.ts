@@ -2,7 +2,10 @@ import { action, makeObservable, observable, runInAction } from "mobx";
 
 import { emitUserPipelineWritten } from "@/utils/userPipelineWriteEvents";
 
-import { emitPipelineFileChanged } from "./pipelineFileEvents";
+import {
+  emitPipelineFileChanged,
+  type PipelineFileSource,
+} from "./pipelineFileEvents";
 import type { PipelineFolder } from "./PipelineFolder";
 import { deleteEntry, updateEntry } from "./pipelineRegistry";
 
@@ -10,22 +13,33 @@ interface PipelineFileInit {
   id: string;
   storageKey: string;
   folder: PipelineFolder;
+  displayName?: string;
+  contentVersion?: string;
   createdAt?: Date;
   modifiedAt?: Date;
 }
 
 export class PipelineFile {
   readonly id: string;
+  readonly contentVersion?: string;
   readonly createdAt?: Date;
   readonly modifiedAt?: Date;
 
   @observable accessor storageKey: string;
   @observable accessor folder: PipelineFolder;
 
+  private readonly assignedDisplayName?: string;
+
+  get displayName(): string {
+    return this.assignedDisplayName ?? this.storageKey;
+  }
+
   constructor(options: PipelineFileInit) {
     this.id = options.id;
     this.storageKey = options.storageKey;
     this.folder = options.folder;
+    this.assignedDisplayName = options.displayName;
+    this.contentVersion = options.contentVersion;
     this.createdAt = options.createdAt;
     this.modifiedAt = options.modifiedAt;
 
@@ -36,14 +50,31 @@ export class PipelineFile {
     return this.folder.driver.read(this.storageKey);
   }
 
-  async write(content: string): Promise<void> {
-    await this.folder.driver.write(this.storageKey, content);
-    emitPipelineFileChanged({ storageKey: this.storageKey, source: "v2" });
+  async write(
+    content: string,
+    source: PipelineFileSource = "v2",
+  ): Promise<void> {
+    const descriptor = await this.folder.driver.write(this.storageKey, content);
+
+    if (descriptor.contentVersion !== undefined) {
+      await updateEntry(this.id, {
+        contentVersion: descriptor.contentVersion,
+      });
+    }
+
+    emitPipelineFileChanged({ storageKey: this.storageKey, source });
     emitUserPipelineWritten();
   }
 
+  /**
+   * A store that keys pipelines by their name has to move the key. One that
+   * keys them opaquely takes the displayed name from the next spec written to
+   * the same key, so there is nothing here to move.
+   */
   @action
   async rename(newName: string): Promise<void> {
+    if (!this.folder.driver.rename) return;
+
     await this.folder.driver.rename(this.storageKey, newName);
     await updateEntry(this.id, { storageKey: newName });
 

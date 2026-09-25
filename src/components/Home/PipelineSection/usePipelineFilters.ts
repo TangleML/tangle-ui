@@ -1,8 +1,12 @@
 import { useState } from "react";
 import type { DateRange } from "react-day-picker";
 
-import { isGraphImplementation } from "@/utils/componentSpec";
-import type { ComponentFileEntry } from "@/utils/componentStore";
+import {
+  type ComponentSpec,
+  isGraphImplementation,
+} from "@/utils/componentSpec";
+
+import type { PipelineListEntry } from "./usePipelineListEntries";
 
 export type PipelineSortField = "modified_at" | "name";
 type PipelineSortDirection = "asc" | "desc";
@@ -19,7 +23,10 @@ interface PipelineMatchMetadata {
   matchedComponentNames: string[];
 }
 
-type PipelineEntry = [string, ComponentFileEntry, PipelineMatchMetadata];
+interface FilteredPipeline {
+  entry: PipelineListEntry;
+  match: PipelineMatchMetadata;
+}
 
 export interface FilterBarProps {
   searchQuery: string;
@@ -37,15 +44,16 @@ export interface FilterBarProps {
   clearFilters: () => void;
   totalCount: number;
   filteredCount: number;
+  pendingCount: number;
 }
 
 function matchesComponentQuery(
-  fileEntry: ComponentFileEntry,
+  spec: ComponentSpec | undefined,
   query: string,
 ): boolean {
   if (!query) return true;
-  const impl = fileEntry.componentRef.spec.implementation;
-  if (!isGraphImplementation(impl)) return false;
+  const impl = spec?.implementation;
+  if (!impl || !isGraphImplementation(impl)) return false;
   const normalizedQuery = query.toLowerCase();
   return Object.values(impl.graph.tasks).some((task) => {
     const refName = task.componentRef.name?.toLowerCase() ?? "";
@@ -58,15 +66,14 @@ function matchesComponentQuery(
 
 function matchesSearch(
   name: string,
-  fileEntry: ComponentFileEntry,
+  spec: ComponentSpec | undefined,
   query: string,
 ): boolean {
   if (!query) return true;
   const normalizedQuery = query.toLowerCase();
-  const spec = fileEntry.componentRef.spec;
-  const description = spec.description?.toLowerCase() ?? "";
-  const author = spec.metadata?.annotations?.author?.toLowerCase() ?? "";
-  const rawNotes = spec.metadata?.annotations?.["notes"];
+  const description = spec?.description?.toLowerCase() ?? "";
+  const author = spec?.metadata?.annotations?.author?.toLowerCase() ?? "";
+  const rawNotes = spec?.metadata?.annotations?.["notes"];
   const notes = typeof rawNotes === "string" ? rawNotes.toLowerCase() : "";
   return (
     name.toLowerCase().includes(normalizedQuery) ||
@@ -77,23 +84,22 @@ function matchesSearch(
 }
 
 function getMatchMetadata(
-  fileEntry: ComponentFileEntry,
+  spec: ComponentSpec | undefined,
   searchQuery: string,
   componentQuery: string,
 ): PipelineMatchMetadata {
   const matchedFields: MatchedField[] = [];
   if (searchQuery) {
     const q = searchQuery.toLowerCase();
-    const spec = fileEntry.componentRef.spec;
-    const desc = spec.description ?? "";
+    const desc = spec?.description ?? "";
     if (desc.toLowerCase().includes(q)) {
       matchedFields.push({ label: "Description", value: desc });
     }
-    const author = spec.metadata?.annotations?.author ?? "";
+    const author = spec?.metadata?.annotations?.author ?? "";
     if (author.toLowerCase().includes(q)) {
       matchedFields.push({ label: "Author", value: author });
     }
-    const rawNotes = spec.metadata?.annotations?.["notes"];
+    const rawNotes = spec?.metadata?.annotations?.["notes"];
     const notes = typeof rawNotes === "string" ? rawNotes : "";
     if (notes.toLowerCase().includes(q)) {
       matchedFields.push({ label: "Note", value: notes });
@@ -101,8 +107,8 @@ function getMatchMetadata(
   }
 
   const matchedComponentNames: string[] = [];
-  const impl = fileEntry.componentRef.spec.implementation;
-  if (componentQuery && isGraphImplementation(impl)) {
+  const impl = spec?.implementation;
+  if (componentQuery && impl && isGraphImplementation(impl)) {
     const normalizedQuery = componentQuery.toLowerCase();
     const seen = new Set<string>();
     for (const task of Object.values(impl.graph.tasks)) {
@@ -126,25 +132,27 @@ function getMatchMetadata(
 }
 
 function matchesDateRange(
-  fileEntry: ComponentFileEntry,
+  modifiedAt: Date | undefined,
   dateRange: DateRange | undefined,
 ): boolean {
   if (!dateRange) return true;
+  if (!modifiedAt) return false;
 
-  const modificationTime = new Date(fileEntry.modificationTime);
-
-  if (dateRange.from && modificationTime < dateRange.from) return false;
+  if (dateRange.from && modifiedAt < dateRange.from) return false;
 
   if (dateRange.to) {
     const endOfRange = new Date(dateRange.to);
     endOfRange.setDate(endOfRange.getDate() + 1);
-    if (modificationTime > endOfRange) return false;
+    if (modifiedAt > endOfRange) return false;
   }
 
   return true;
 }
 
-export function usePipelineFilters(pipelines: Map<string, ComponentFileEntry>) {
+export function usePipelineFilters(
+  entries: PipelineListEntry[],
+  pendingCount: number,
+) {
   const [searchQuery, setSearchQuery] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [sortField, setSortField] = useState<PipelineSortField>("modified_at");
@@ -163,27 +171,28 @@ export function usePipelineFilters(pipelines: Map<string, ComponentFileEntry>) {
     setComponentQuery("");
   };
 
-  const filteredPipelines: PipelineEntry[] = Array.from(pipelines.entries())
+  const filteredPipelines: FilteredPipeline[] = entries
     .filter(
-      ([name, fileEntry]) =>
-        matchesSearch(name, fileEntry, searchQuery) &&
-        matchesDateRange(fileEntry, dateRange) &&
-        matchesComponentQuery(fileEntry, componentQuery),
+      ({ file, spec }) =>
+        matchesSearch(file.displayName, spec, searchQuery) &&
+        matchesDateRange(file.modifiedAt, dateRange) &&
+        matchesComponentQuery(spec, componentQuery),
     )
-    .sort(([nameA, entryA], [nameB, entryB]) => {
+    .sort((a, b) => {
       const dir = sortDirection === "asc" ? 1 : -1;
-      if (sortField === "name") return dir * nameA.localeCompare(nameB);
+      if (sortField === "name") {
+        return dir * a.file.displayName.localeCompare(b.file.displayName);
+      }
       return (
         dir *
-        (new Date(entryA.modificationTime).getTime() -
-          new Date(entryB.modificationTime).getTime())
+        ((a.file.modifiedAt?.getTime() ?? 0) -
+          (b.file.modifiedAt?.getTime() ?? 0))
       );
     })
-    .map(([name, fileEntry]): PipelineEntry => [
-      name,
-      fileEntry,
-      getMatchMetadata(fileEntry, searchQuery, componentQuery),
-    ]);
+    .map((entry) => ({
+      entry,
+      match: getMatchMetadata(entry.spec, searchQuery, componentQuery),
+    }));
 
   const filterKey = [
     searchQuery,
@@ -208,8 +217,9 @@ export function usePipelineFilters(pipelines: Map<string, ComponentFileEntry>) {
     hasActiveFilters,
     activeFilterCount,
     clearFilters,
-    totalCount: pipelines.size,
+    totalCount: entries.length,
     filteredCount: filteredPipelines.length,
+    pendingCount,
   };
 
   return { filteredPipelines, filterBarProps, filterKey };
