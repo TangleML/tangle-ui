@@ -8,17 +8,24 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
+import type { ProjectResourceSummary } from "@/services/projects/types";
 import { tracking } from "@/utils/tracking";
 
 import { AddDocumentDialog } from "./AddDocumentDialog";
+import { AddPipelineDialog } from "./AddPipelineDialog";
 import { entityIcon } from "./resourceEntities";
 
 interface AddResourceMenuProps {
   projectId: string;
+  resources: ProjectResourceSummary[];
 }
 
-export function AddResourceMenu({ projectId }: AddResourceMenuProps) {
+export function AddResourceMenu({
+  projectId,
+  resources,
+}: AddResourceMenuProps) {
   const [documentOpen, setDocumentOpen] = useState(false);
+  const [pipelineOpen, setPipelineOpen] = useState(false);
 
   return (
     <>
@@ -43,7 +50,10 @@ export function AddResourceMenu({ projectId }: AddResourceMenuProps) {
             Document
           </DropdownMenuItem>
 
-          <DropdownMenuItem disabled>
+          <DropdownMenuItem
+            onSelect={() => setPipelineOpen(true)}
+            {...tracking("projects.add_pipeline_open")}
+          >
             <Icon name={entityIcon("pipeline")} size="sm" />
             Pipeline
           </DropdownMenuItem>
@@ -59,6 +69,17 @@ export function AddResourceMenu({ projectId }: AddResourceMenuProps) {
         open={documentOpen}
         onOpenChange={setDocumentOpen}
       />
+
+      {/* Mounted only while open so the project page does not read browser
+          storage for a picker nobody has asked for. */}
+      {pipelineOpen && (
+        <AddPipelineDialog
+          projectId={projectId}
+          resources={resources}
+          open
+          onOpenChange={setPipelineOpen}
+        />
+      )}
     </>
   );
 }
