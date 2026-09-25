@@ -394,7 +394,9 @@ interface StartSessionIoMock extends TangentSessionIo {
   notify: Mock<TangentSessionIo["notify"]>;
 }
 
-function makeSessionIo(projectNotes?: string | null): StartSessionIoMock {
+function makeSessionIo(
+  projectInstructions?: string | null,
+): StartSessionIoMock {
   return {
     newSession: vi
       .fn<TangentSessionIo["newSession"]>()
@@ -406,12 +408,12 @@ function makeSessionIo(projectNotes?: string | null): StartSessionIoMock {
       .fn<TangentSessionIo["detachSession"]>()
       .mockResolvedValue(undefined),
     notify: vi.fn<TangentSessionIo["notify"]>(),
-    projectNotes,
+    projectInstructions,
   };
 }
 
 describe("TangentProjectStore.startSession", () => {
-  it("seeds project notes as a session-scoped memory resource", async () => {
+  it("seeds the project instructions as a session-scoped memory resource", async () => {
     const store = new TangentProjectStore("project-1");
     const io = makeSessionIo("Prefer concise plans.");
     store.setSessionIo(io);
@@ -434,7 +436,7 @@ describe("TangentProjectStore.startSession", () => {
     );
   });
 
-  it("omits resources when notes are null", async () => {
+  it("omits resources when there are no instructions", async () => {
     const store = new TangentProjectStore("project-1");
     const io = makeSessionIo(null);
     store.setSessionIo(io);
@@ -445,7 +447,7 @@ describe("TangentProjectStore.startSession", () => {
     expect(options.resources).toBeUndefined();
   });
 
-  it("omits resources when notes are only whitespace", async () => {
+  it("omits resources when the instructions are only whitespace", async () => {
     const store = new TangentProjectStore("project-1");
     const io = makeSessionIo("   \n  ");
     store.setSessionIo(io);
@@ -458,7 +460,7 @@ describe("TangentProjectStore.startSession", () => {
 
   it("attaches the session after creating it", async () => {
     const store = new TangentProjectStore("project-1");
-    const io = makeSessionIo("Notes");
+    const io = makeSessionIo("Standing context");
     store.setSessionIo(io);
 
     await store.startSession();
