@@ -108,6 +108,7 @@ describe("useProjectSessions", () => {
     expect(result.current.sessions[0]).toEqual({
       resourceId: "r-new",
       sessionId: "sess-new",
+      name: null,
       createdAt: new Date("2024-02-01T00:00:00Z"),
     });
   });

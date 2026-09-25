@@ -16,6 +16,8 @@ import {
   idIdentity,
 } from "@/services/projects/resourceTarget";
 import type { ProjectResourceSummary } from "@/services/projects/types";
+import type { LocalPipelineStatus } from "@/services/projects/useLocalPipelineStatus";
+import { useLocalPipelineStatus } from "@/services/projects/useLocalPipelineStatus";
 import { useProjectInstructions } from "@/services/projects/useProjectInstructions";
 import {
   useDeleteProjectResource,
@@ -24,7 +26,6 @@ import {
 import { getErrorMessage } from "@/utils/string";
 
 import { EditInstructionsDialog } from "./EditInstructionsDialog";
-import { useUnavailablePipelines } from "./useUnavailablePipelines";
 import { WindowListRow } from "./WindowListRow";
 
 interface ProjectResourceItem {
@@ -80,7 +81,7 @@ function targetOf(
  */
 function toResourceItem(
   resource: ProjectResourceSummary,
-  unavailable: ReadonlySet<string>,
+  { unavailable, currentNames }: LocalPipelineStatus,
 ): ProjectResourceItem | undefined {
   if (resource.entity === "pipeline") {
     return resource.entityId
@@ -100,7 +101,12 @@ function toResourceItem(
       : undefined;
   if (!target || !meta) return undefined;
 
-  const name = resource.name ?? formatWorkareaTarget(target);
+  // What the pipeline is called now, falling back to the name the row recorded
+  // when it was added — which is all there is to go on once it is out of reach.
+  const name =
+    currentNames.get(resource.id) ??
+    resource.name ??
+    formatWorkareaTarget(target);
 
   if (unavailable.has(resource.id)) {
     return { id: resource.id, name, ...ABSENT_PIPELINE_META };
@@ -125,10 +131,10 @@ export function ResourcesWindowContent() {
     useDeleteProjectResource(store.projectId);
 
   const items = resourcesPage?.items ?? [];
-  const unavailable = useUnavailablePipelines(items);
+  const localPipelines = useLocalPipelineStatus(items);
 
   const resources: ProjectResourceItem[] = items.flatMap(
-    (resource) => toResourceItem(resource, unavailable) ?? [],
+    (resource) => toResourceItem(resource, localPipelines) ?? [],
   );
 
   async function handleOpenResource(resource: ProjectResourceItem) {

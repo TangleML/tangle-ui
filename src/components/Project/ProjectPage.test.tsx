@@ -49,6 +49,13 @@ vi.mock("@/services/projects/useProjectRuns", () => ({
   }),
 }));
 
+vi.mock("@/services/projects/useLocalPipelineStatus", () => ({
+  useLocalPipelineStatus: () => ({
+    unavailable: new Set(),
+    currentNames: new Map(),
+  }),
+}));
+
 vi.mock("@/hooks/useToastNotification", () => ({
   default: () => vi.fn(),
 }));

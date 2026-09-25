@@ -78,14 +78,37 @@ describe("StartSessionPrompt", () => {
 
     expect(createProject).toHaveBeenCalledWith({
       workspaceId: "ws-1",
-      name: "Project 2",
+      name: "Build a churn model",
       origin: "agent",
-      extraData: startingSessionExtraData({
-        prompt: "Build a churn model",
-        model: DEFAULT_MODEL_ID,
-        thinkingDepth: DEFAULT_THINKING_LEVEL,
-      }),
+      extraData: {
+        ...startingSessionExtraData({
+          prompt: "Build a churn model",
+          model: DEFAULT_MODEL_ID,
+          thinkingDepth: DEFAULT_THINKING_LEVEL,
+        }),
+        provisionalName: true,
+      },
     });
+  });
+
+  /** The agent replaces this name later; the mark is what lets it. */
+  it("marks the name it derived as nobody's choice", async () => {
+    renderPrompt();
+
+    await type("Build a churn model{Enter}");
+
+    const { extraData } = vi.mocked(createProject).mock.calls[0][0];
+    expect(extraData).toMatchObject({ provisionalName: true });
+  });
+
+  it("falls back to a numbered name when the prompt is no title", async () => {
+    renderPrompt();
+
+    await type("hi{Enter}");
+
+    expect(createProject).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "Project 2" }),
+    );
   });
 
   it("opens the project it made", async () => {

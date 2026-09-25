@@ -24,7 +24,9 @@ import { Text } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { APP_ROUTES } from "@/routes/appRoutes";
+import { nameFromPrompt } from "@/services/projects/nameFromPrompt";
 import { createProject } from "@/services/projects/projectsService";
+import { provisionalNameExtraData } from "@/services/projects/provisionalName";
 import { startingSessionExtraData } from "@/services/projects/startingSession";
 import { ProjectsQueryKeys } from "@/services/projects/types";
 import { useWorkspaces } from "@/services/projects/useWorkspaces";
@@ -67,15 +69,22 @@ export function StartSessionPrompt() {
       // project with no sessions, Tangent starts one and runs the prompt as
       // the opening turn, so the agent is working before anyone reaches for
       // the composer.
+      //
+      // Named after the ask, and marked as nobody's choice, so the agent may
+      // replace it with a real title once it knows what it is building.
       return createProject({
         workspaceId: workspace.id,
-        name: nextProjectName(projects.map((p) => p.name)),
+        name:
+          nameFromPrompt(startingPrompt) ??
+          nextProjectName(projects.map((p) => p.name)),
         origin: "agent",
-        extraData: startingSessionExtraData({
-          prompt: startingPrompt,
-          model,
-          thinkingDepth,
-        }),
+        extraData: provisionalNameExtraData(
+          startingSessionExtraData({
+            prompt: startingPrompt,
+            model,
+            thinkingDepth,
+          }),
+        ),
       });
     },
     onSuccess: (project) => {

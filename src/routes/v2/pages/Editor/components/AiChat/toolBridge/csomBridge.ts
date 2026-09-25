@@ -80,6 +80,8 @@ import {
 } from "@/routes/v2/shared/components/AiChat/toolBridge/utils";
 import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
 import { hydrateComponentReference } from "@/services/componentService";
+import { clearProvisionalName } from "@/services/localPipelines/provisionalPipelineName";
+import { LocalPipelinesQueryKeys } from "@/services/localPipelines/types";
 
 import {
   applyToTarget,
@@ -106,6 +108,7 @@ import {
 export type CsomBridgeDeps = BridgeDeps & {
   undo: UndoGroupable;
   invokeAutoLayout?: (algorithm?: LayoutAlgorithm) => boolean;
+  renamePipelineFile?: (name: string) => Promise<string>;
 };
 
 type CsomHandlers = Pick<
@@ -207,8 +210,25 @@ export function createCsomBridgeHandlers(deps: CsomBridgeDeps): CsomHandlers {
 
     async setPipelineName(name) {
       const spec = requireSpec(deps);
-      renamePipeline(deps.undo, spec, name);
-      return { success: true };
+      // The file the pipeline is saved as is renamed first, and its answer is
+      // what the spec is called: a name already taken comes back adjusted, and
+      // a spec disagreeing with its own file is how a rename half-happens.
+      const applied = (await deps.renamePipelineFile?.(name)) ?? name;
+      renamePipeline(deps.undo, spec, applied);
+      clearProvisionalName(spec);
+      // Browser storage fires no event a rename in this tab would reach, and
+      // the query that answers "what is this pipeline called now" is keyed on
+      // the pointer, which a rename does not change. Left alone it serves the
+      // old name to every resource list until it goes stale a minute later.
+      void deps.queryClient?.invalidateQueries({
+        queryKey: LocalPipelinesQueryKeys.All(),
+      });
+      return applied === name
+        ? { success: true }
+        : {
+            success: true,
+            message: `Renamed to "${applied}" — "${name}" was already taken.`,
+          };
     },
 
     async setPipelineDescription(description) {
