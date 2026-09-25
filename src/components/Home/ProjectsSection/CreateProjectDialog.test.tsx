@@ -27,6 +27,10 @@ vi.mock("@/providers/AnalyticsProvider", () => ({
   useAnalytics: () => ({ track }),
 }));
 
+function enableFlags(flags: Record<string, boolean>) {
+  localStorage.setItem("betaFlags", JSON.stringify(flags));
+}
+
 function mockCreateProject({ isPending = false } = {}) {
   vi.mocked(useCreateProject).mockReturnValue({
     mutate,
@@ -54,10 +58,12 @@ describe("CreateProjectDialog", () => {
     Element.prototype.scrollIntoView = vi.fn();
     Element.prototype.hasPointerCapture = vi.fn();
     mockCreateProject();
+    enableFlags({ projects: true, "tangent-shell": true });
   });
 
   afterEach(() => {
     vi.resetAllMocks();
+    localStorage.clear();
   });
 
   it("records that the dialog was seen", async () => {
@@ -152,6 +158,22 @@ describe("CreateProjectDialog", () => {
 
     expect(navigate).toHaveBeenCalledWith({
       to: "/tangent/$projectId",
+      params: { projectId: "project-9" },
+    });
+  });
+
+  it("opens the project's own page when Tangent is off", async () => {
+    enableFlags({ projects: true, "tangent-shell": false });
+    const user = await openDialog();
+
+    await user.type(screen.getByLabelText("Name"), "Churn model");
+    await user.click(submitButton());
+
+    const [, options] = mutate.mock.calls[0];
+    options.onSuccess({ id: "project-9" });
+
+    expect(navigate).toHaveBeenCalledWith({
+      to: "/projects/$projectId",
       params: { projectId: "project-9" },
     });
   });

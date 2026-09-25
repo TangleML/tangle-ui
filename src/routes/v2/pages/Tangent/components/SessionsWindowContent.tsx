@@ -4,14 +4,17 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
+import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import { cn } from "@/lib/utils";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { useProjectSessions } from "@/routes/v2/pages/Tangent/hooks/useProjectSessions";
+import { TANGENT_AI_REQUIRED } from "@/routes/v2/shared/components/AiChat/components/aiSetupCopy";
 import { sessionLabelsById } from "@/services/projects/sessionLabel";
 import { formatRelativeTime } from "@/utils/date";
 
 export const SessionsWindowContent = observer(function SessionsWindowContent() {
   const store = useTangentProject();
+  const { isConfigured: isAiConfigured } = useAiProviderSettings();
   const { sessions } = useProjectSessions(store.projectId);
   const activeSessionId = store.activeSessionId;
   const labels = sessionLabelsById(
@@ -57,9 +60,9 @@ export const SessionsWindowContent = observer(function SessionsWindowContent() {
       <Button
         variant="outline"
         aria-label="New session"
-        title="New session"
+        title={isAiConfigured ? "New session" : TANGENT_AI_REQUIRED}
         onClick={() => void store.startSession()}
-        disabled={store.isStartingSession}
+        disabled={store.isStartingSession || !isAiConfigured}
         className="w-full"
       >
         <Icon name={store.isStartingSession ? "Loader" : "Plus"} size="xs" />

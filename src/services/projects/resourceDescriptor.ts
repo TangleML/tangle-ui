@@ -14,6 +14,7 @@ export const LOCAL_PIPELINE = "local_pipeline";
 export const PIPELINE_RUN = "pipeline_run";
 export const DOCUMENT = "document";
 export const INSTRUCTIONS = "instructions";
+export const AGENT_SESSION = "agent_session";
 
 const BROWSER = "browser";
 

@@ -18,7 +18,7 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Textarea } from "@/components/ui/textarea";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
-import { APP_ROUTES } from "@/routes/appRoutes";
+import { getProjectHomeRoute } from "@/routes/projectRoutes";
 import { useCreateProject } from "@/services/projects/useProjects";
 import { tracking } from "@/utils/tracking";
 
@@ -88,7 +88,7 @@ export function CreateProjectDialog({
           resetForm();
           setOpen(false);
           void navigate({
-            to: APP_ROUTES.TANGENT_PROJECT,
+            to: getProjectHomeRoute(),
             params: { projectId: project.id },
           });
         },

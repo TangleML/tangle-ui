@@ -44,6 +44,17 @@ vi.mock("@/providers/AnalyticsProvider", () => ({
   useAnalytics: () => ({ track }),
 }));
 
+function enableFlags(flags: Record<string, boolean>) {
+  localStorage.setItem("betaFlags", JSON.stringify(flags));
+}
+
+function configureAi() {
+  localStorage.setItem(
+    "tangle.aiProvider.config",
+    JSON.stringify({ apiBase: "https://proxy.example/v1" }),
+  );
+}
+
 function resource(
   overrides: Partial<ProjectResourceSummary> = {},
 ): ProjectResourceSummary {
@@ -100,10 +111,13 @@ describe("ProjectResources", () => {
       isPending: false,
     } as unknown as ReturnType<typeof useDeleteProjectResource>);
     mockResources();
+    enableFlags({ projects: true, "tangent-shell": true });
+    configureAi();
   });
 
   afterEach(() => {
     vi.resetAllMocks();
+    localStorage.clear();
   });
 
   describe("agent sessions", () => {
@@ -195,6 +209,66 @@ describe("ProjectResources", () => {
         to: "/tangent/$projectId",
         params: { projectId: "project-1" },
         search: { session: "new" },
+      });
+    });
+
+    /** A session nobody can answer is not worth starting. */
+    it("cannot start one without an AI provider", () => {
+      localStorage.removeItem("tangle.aiProvider.config");
+      renderResources();
+
+      expect(
+        screen.getByRole("button", { name: /New session/ }),
+      ).toBeDisabled();
+    });
+
+    /**
+     * A session is Tangent's, and Tangent is where it can be read. With it off
+     * the rows would be links to a page that is not there, and the page would
+     * be naming a feature the user has not got.
+     */
+    describe("without Tangent", () => {
+      beforeEach(() => {
+        enableFlags({ projects: true, "tangent-shell": false });
+      });
+
+      it("lists no sessions, and keeps everything else", () => {
+        mockResources({
+          items: [
+            session("a", "sess-a", "2026-09-16T10:00:00Z"),
+            resource({ id: "doc", name: "Model card" }),
+          ],
+          totalCount: 2,
+        });
+        renderResources();
+
+        expect(screen.queryByText("Session 1")).toBeNull();
+        expect(screen.queryByText(/Agent sessions/)).toBeNull();
+        expect(screen.getByText("Model card")).toBeInTheDocument();
+      });
+
+      it("offers no way to start one", () => {
+        renderResources();
+
+        expect(
+          screen.queryByRole("button", { name: /New session/ }),
+        ).toBeNull();
+      });
+
+      it("leaves the sessions it hid out of the item count", () => {
+        mockResources({
+          items: [
+            session("a", "sess-a", "2026-09-16T10:00:00Z"),
+            resource({ id: "doc", name: "Model card" }),
+          ],
+          totalCount: 2,
+          nextPageToken: "next",
+        });
+        renderResources();
+
+        expect(
+          screen.getByText("Showing the first 1 of 1 items."),
+        ).toBeInTheDocument();
       });
     });
   });

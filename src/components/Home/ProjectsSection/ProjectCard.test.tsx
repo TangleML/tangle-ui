@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import type { ProjectSummary } from "@/services/projects/types";
 import { useDeleteProject } from "@/services/projects/useProjects";
 import { copyToClipboard } from "@/utils/string";
@@ -48,6 +49,10 @@ vi.mock("@/utils/string", () => ({
 
 vi.mock("./useProjectPin", () => ({ useProjectPin: vi.fn() }));
 
+vi.mock("@/components/shared/Settings/useFlags", () => ({
+  useFlagValue: vi.fn(),
+}));
+
 vi.mock("@/utils/URL", () => ({
   getProjectUrl: (id: string) => `https://tangle.example/projects/${id}`,
 }));
@@ -75,6 +80,10 @@ function mockPin({ pinned = false } = {}) {
   vi.mocked(useProjectPin).mockReturnValue({ pinned, togglePin });
 }
 
+function mockFlags(flags: Record<string, boolean>) {
+  vi.mocked(useFlagValue).mockImplementation((flag) => flags[flag] ?? false);
+}
+
 function renderCard(overrides: Partial<ProjectSummary> = {}) {
   return render(<ProjectCard project={{ ...project, ...overrides }} />);
 }
@@ -98,6 +107,7 @@ describe("ProjectCard", () => {
     Element.prototype.hasPointerCapture = vi.fn();
     mockDeleteProject();
     mockPin();
+    mockFlags({ "tangent-shell": true });
   });
 
   afterEach(() => {
@@ -167,6 +177,55 @@ describe("ProjectCard", () => {
       to: "/projects/$projectId",
       params: { projectId: "project-1" },
     });
+  });
+
+  /**
+   * Tangent is what turns a project into somewhere to work. Without it the
+   * project's own page is the only page, so the card goes straight there and
+   * the menu stops offering a second way to the same place.
+   */
+  describe("without Tangent", () => {
+    beforeEach(() => {
+      mockFlags({ "tangent-shell": false });
+    });
+
+    it("opens the project's own page", () => {
+      renderCard();
+
+      expect(screen.getByRole("link")).toHaveAttribute(
+        "href",
+        "/projects/project-1",
+      );
+    });
+
+    it("drops the details item, which now goes where the card goes", async () => {
+      const user = userEvent.setup();
+      renderCard();
+
+      await user.click(
+        screen.getByRole("button", { name: "Project actions: Churn model" }),
+      );
+
+      expect(screen.queryByRole("menuitem", { name: /Details/ })).toBeNull();
+    });
+
+    it("does not count sessions the user cannot see", () => {
+      renderCard({
+        resourceCounts: { pipeline: 3, agent_session: 2, document: 1 },
+      });
+
+      expect(screen.getByText("3 pipelines · 1 document")).toBeInTheDocument();
+    });
+  });
+
+  it("counts sessions among a project's contents when Tangent is on", () => {
+    renderCard({
+      resourceCounts: { pipeline: 3, agent_session: 2, document: 1 },
+    });
+
+    expect(
+      screen.getByText("3 pipelines · 2 agent sessions · 1 document"),
+    ).toBeInTheDocument();
   });
 
   it("copies the project's own url when sharing", async () => {

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AiProviderConfig } from "@/types/aiProvider";
 
 import { buildRemoteEditorAgent } from "./agents/remoteEditorAgent";
+import { MISSING_AI_PROVIDER } from "./config";
 import { createRemoteEnvWorkerApi } from "./createRemoteEnvWorkerApi";
 import { createSession } from "./session";
 import type { ToolBridgeApi } from "./toolBridgeApi";
@@ -18,6 +19,7 @@ vi.mock("@openai/agents", () => ({
 }));
 
 vi.mock("./config", () => ({
+  MISSING_AI_PROVIDER: "No AI provider is configured.",
   ProxyClient: class {
     ensureConfigured = vi.fn();
   },
@@ -83,7 +85,7 @@ describe("createRemoteEnvWorkerApi", () => {
 
     await expect(
       api.runTurn({ agentId: "a1", message: "hi" }, onStatus),
-    ).rejects.toThrow(/not configured/);
+    ).rejects.toThrow(MISSING_AI_PROVIDER);
   });
 
   it("builds the turn session with the latest context set after init", async () => {

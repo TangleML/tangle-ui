@@ -27,7 +27,7 @@ import {
   type ComponentCatalog,
   createComponentCatalog,
 } from "./componentCatalog";
-import { ProxyClient } from "./config";
+import { MISSING_AI_PROVIDER, ProxyClient } from "./config";
 import { recordTurnReasoning } from "./middleware/recordTurnReasoning";
 import { createSession, type RecentPipelineRun } from "./session";
 import { SkillsLoader } from "./skills/loader";
@@ -147,9 +147,7 @@ export function createRemoteEnvWorkerApi(): RemoteEnvWorkerApi {
         );
       }
       if (!aiConfig) {
-        throw new Error(
-          "AI assistant is not configured. Set it in Settings -> AI Configuration before using Tangent editor control.",
-        );
+        throw new Error(MISSING_AI_PROVIDER);
       }
       if (abortControllers.has(agentId)) {
         throw new Error(

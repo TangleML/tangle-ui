@@ -35,6 +35,8 @@ interface SidebarItem {
   dividerAfter?: boolean;
 }
 
+const ALL_RUNS_PATH = "/runs";
+
 const BASE_SIDEBAR_ITEMS: SidebarItem[] = [
   {
     to: APP_ROUTES.DASHBOARD,
@@ -43,7 +45,7 @@ const BASE_SIDEBAR_ITEMS: SidebarItem[] = [
     exact: true,
   },
   { to: "/pipelines", label: "My Pipelines", icon: "GitBranch" },
-  { to: "/runs", label: "All Runs", icon: "Play" },
+  { to: ALL_RUNS_PATH, label: "All Runs", icon: "Play" },
   { to: "/components", label: "Components", icon: "Package" },
   { to: "/favorites", label: "Favorites", icon: "Star" },
   { to: "/recently-viewed", label: "Recently Viewed", icon: "Clock" },
@@ -65,6 +67,37 @@ const TANGENT_ITEM: SidebarItem = {
   dividerAfter: true,
 };
 
+const PROJECTS_ITEM: SidebarItem = {
+  to: APP_ROUTES.PROJECTS,
+  label: "Projects",
+  icon: "Folder",
+  badge: "Beta",
+};
+
+interface ProjectsNavState {
+  projectsEnabled: boolean;
+  tangentEnabled: boolean;
+}
+
+/**
+ * Tangent leads the sidebar because it is the way in to the whole product;
+ * Projects on its own is one place among the others, so it sits with them.
+ */
+function withProjectsItem(
+  items: SidebarItem[],
+  { projectsEnabled, tangentEnabled }: ProjectsNavState,
+): SidebarItem[] {
+  if (!projectsEnabled) return items;
+  if (tangentEnabled) return [TANGENT_ITEM, ...items];
+
+  const afterAllRuns = items.findIndex((item) => item.to === ALL_RUNS_PATH) + 1;
+  return [
+    ...items.slice(0, afterAllRuns),
+    PROJECTS_ITEM,
+    ...items.slice(afterAllRuns),
+  ];
+}
+
 const navItemClass = (isActive: boolean, highlighted?: boolean) =>
   cn(
     "w-full px-3 py-2 rounded-md text-sm cursor-pointer hover:bg-accent",
@@ -78,6 +111,7 @@ export function DashboardLayout() {
   const requiresAuthorization = isAuthorizationRequired();
   const isComponentSearchEnabled = useFlagValue("component-search-v2");
   const isProjectsEnabled = useFlagValue("projects");
+  const isTangentEnabled = useFlagValue("tangent-shell");
 
   const { shouldShowOnboarding } = useOnboarding();
 
@@ -89,9 +123,10 @@ export function DashboardLayout() {
       )
     : BASE_SIDEBAR_ITEMS;
 
-  const baseItems = isProjectsEnabled
-    ? [TANGENT_ITEM, ...componentItems]
-    : componentItems;
+  const baseItems = withProjectsItem(componentItems, {
+    projectsEnabled: isProjectsEnabled,
+    tangentEnabled: isTangentEnabled,
+  });
 
   const sidebarItems: SidebarItem[] = shouldShowOnboarding
     ? [

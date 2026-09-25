@@ -20,6 +20,7 @@ const SINGLE_ROW =
 
 export function ProjectsPreview() {
   const isProjectsEnabled = useFlagValue("projects");
+  const tangentEnabled = useFlagValue("tangent-shell");
   const { configured, available } = useBackend();
   const { projects: all, isPending } = useMyProjects();
 
@@ -38,7 +39,9 @@ export function ProjectsPreview() {
       />
       {!isPending && projects.length === 0 ? (
         <Text size="sm" tone="subdued">
-          No projects yet — start a session to make one.
+          {tangentEnabled
+            ? "No projects yet — start a session to make one."
+            : "No projects yet."}
         </Text>
       ) : (
         <div className={SINGLE_ROW}>

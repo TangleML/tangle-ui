@@ -10,6 +10,7 @@ import { APP_ROUTES } from "@/routes/router";
 import { formatRelativeTime } from "@/utils/date";
 
 import { getRecentlyViewedUrl, TypePill } from "./TypePill";
+import { useListedItems } from "./useListedItems";
 
 const PAGE_SIZE = 20;
 
@@ -60,11 +61,12 @@ const RecentlyViewedCard = ({ item }: { item: RecentItem }) => {
 
 export function DashboardRecentlyViewedView() {
   const { recentlyViewed } = useRecentlyViewed();
+  const listed = useListedItems(recentlyViewed);
   const [page, setPage] = useState(0);
 
-  const totalPages = Math.ceil(recentlyViewed.length / PAGE_SIZE);
+  const totalPages = Math.ceil(listed.length / PAGE_SIZE);
   const safePage = Math.min(page, Math.max(0, totalPages - 1));
-  const paginated = recentlyViewed.slice(
+  const paginated = listed.slice(
     safePage * PAGE_SIZE,
     (safePage + 1) * PAGE_SIZE,
   );
@@ -73,7 +75,7 @@ export function DashboardRecentlyViewedView() {
     <BlockStack gap="4">
       <Heading level={2}>Recently Viewed</Heading>
 
-      {recentlyViewed.length === 0 ? (
+      {listed.length === 0 ? (
         <Paragraph tone="subdued" size="sm">
           Nothing viewed yet. Open a pipeline, run, component, or tour to see it
           here.
