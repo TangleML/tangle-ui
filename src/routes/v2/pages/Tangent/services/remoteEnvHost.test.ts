@@ -223,6 +223,33 @@ describe("createRemoteEnvHost", () => {
     expect(client.subagentUpdate).not.toHaveBeenCalledWith("s1", "a1", "error");
   });
 
+  it("emits an immediate placeholder delta after start and before end", async () => {
+    const worker = makeWorker();
+    worker.runTurn.mockResolvedValue({ answer: "done" });
+    const { handlers } = connectedHost(worker);
+    await handlers.onSpawn(spawnCommand("a1"));
+
+    await handlers.onMessage(messageCommand("a1", "hello"));
+
+    const events = client.agentEvent.mock.calls;
+    const startIndex = events.findIndex((call) => call[2].type === "start");
+    const deltaIndex = events.findIndex((call) => call[2].type === "delta");
+    const endIndex = events.findIndex((call) => call[2].type === "end");
+
+    expect(startIndex).toBeGreaterThanOrEqual(0);
+    expect(deltaIndex).toBeGreaterThan(startIndex);
+    expect(deltaIndex).toBeLessThan(endIndex);
+
+    const startCall = events[startIndex];
+    const deltaCall = events[deltaIndex];
+    expect(deltaCall[2]).toMatchObject({
+      type: "delta",
+      messageId: startCall[2].messageId,
+      delta: expect.stringContaining("Working on it"),
+    });
+    expect(deltaCall[3]).toBe("r1");
+  });
+
   it("serializes turns per agentId", async () => {
     const worker = makeWorker();
     const first = defer<{ answer: string }>();
@@ -353,6 +380,59 @@ describe("createRemoteEnvHost", () => {
     expect(errorEvent?.[2]).toMatchObject({ message: "model exploded" });
     expect(client.subagentUpdate).toHaveBeenCalledWith("s1", "a1", "error");
     expect(onError).toHaveBeenCalledWith("model exploded");
+  });
+
+  it("finalizes the placeholder with empty content when a turn fails", async () => {
+    const worker = makeWorker();
+    worker.runTurn.mockRejectedValue(new Error("model exploded"));
+    const { handlers } = connectedHost(worker);
+    await handlers.onSpawn(spawnCommand("a1"));
+
+    await handlers.onMessage(messageCommand("a1", "hello"));
+    await Promise.resolve();
+
+    const events = client.agentEvent.mock.calls;
+    const startCall = events.find((call) => call[2].type === "start");
+    const endCall = events.find((call) => call[2].type === "end");
+    expect(endCall?.[2]).toMatchObject({
+      type: "end",
+      messageId: startCall?.[2].messageId,
+      content: "",
+    });
+    const endIndex = events.findIndex((call) => call[2].type === "end");
+    const errorIndex = events.findIndex((call) => call[2].type === "error");
+    expect(endIndex).toBeLessThan(errorIndex);
+  });
+
+  it("finalizes the placeholder when a kill aborts the turn", async () => {
+    const worker = makeWorker();
+    const turn = defer<{ answer: string }>();
+    worker.runTurn.mockReturnValue(turn.promise);
+    const { handlers } = connectedHost(worker);
+    await handlers.onSpawn(spawnCommand("a1"));
+
+    void handlers.onMessage(messageCommand("a1", "hello"));
+    await Promise.resolve();
+
+    // onKill drops the lifecycle, so this also covers the staleness guard:
+    // the turn's own messageId still has to be finalized.
+    await handlers.onKill(killCommand("a1", false));
+    const abortError = new Error("aborted");
+    abortError.name = "AbortError";
+    turn.reject(abortError);
+    await turn.promise.catch(() => undefined);
+    await Promise.resolve();
+
+    const startCall = client.agentEvent.mock.calls.find(
+      (call) => call[2].type === "start",
+    );
+    const endCall = client.agentEvent.mock.calls.find(
+      (call) => call[2].type === "end",
+    );
+    expect(endCall?.[2]).toMatchObject({
+      messageId: startCall?.[2].messageId,
+      content: "",
+    });
   });
 
   it("does not toast when an in-flight turn is aborted by disconnect", async () => {
