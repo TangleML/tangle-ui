@@ -1,5 +1,15 @@
 import type { ConfigFlags } from "@/types/configuration";
 
+// Vite inlines `import.meta.env.VITE_*` only at a literal access like this one,
+// and every value arrives as a string — so compare against "true" rather than
+// testing truthiness, under which "false" would enable the flag. The guard is
+// for Playwright, which loads this module through its own transform rather
+// than Vite, leaving `import.meta.env` undefined and the literal access a
+// TypeError that takes down the whole e2e run at collection time.
+const isTangentEnabled =
+  typeof import.meta.env !== "undefined" &&
+  import.meta.env.VITE_ENABLE_TANGENT === "true";
+
 export const ExistingFlags: ConfigFlags = {
   ["remote-component-library-search"]: {
     name: "Published Components Library",
@@ -53,6 +63,14 @@ export const ExistingFlags: ConfigFlags = {
       "Enable the AI Assistant panel in the V2 editor. Lets you chat with an assistant about your pipeline.",
     default: false,
     category: "beta",
+  },
+
+  ["tangent-shell"]: {
+    name: "Tangent",
+    description: "Agentic Tangle - coming soon!",
+    default: false,
+    category: "beta",
+    canEnable: isTangentEnabled,
   },
 
   ["component-search-v2"]: {
