@@ -11,6 +11,7 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
 import { Heading, Text } from "@/components/ui/typography";
 import { getDefaultEditorPath } from "@/routes/editorRoutes";
+import { PROJECT_ID_SEARCH_PARAM } from "@/routes/projectRunSearch";
 import type { LocalPipelinePointer } from "@/services/localPipelines/types";
 import { useLocalPipeline } from "@/services/localPipelines/useLocalPipelines";
 import type { ProjectResource } from "@/services/projects/types";
@@ -23,6 +24,7 @@ import { ColumnHeadingRow } from "./ColumnHeadingRow";
 import { pointerOf } from "./localPipelinePointer";
 import { type PipelineValidity, pipelineValidity } from "./pipelineValidity";
 import { UNTITLED } from "./ResourceRow";
+import { RunPipelineButton } from "./RunPipelineButton";
 
 const PLAIN_TEXT = "plaintext";
 
@@ -140,12 +142,22 @@ function SelectedResource({ projectId, resourceId }: SelectedResourceProps) {
 
   const pointer = pointerOf(resource);
   if (pointer) {
-    return <LocalPipelinePreview resource={resource} pointer={pointer} />;
+    return (
+      <LocalPipelinePreview
+        projectId={projectId}
+        resource={resource}
+        pointer={pointer}
+      />
+    );
   }
 
   if (resource.entity === "pipeline" && resource.entityId) {
     return (
-      <PipelinePreview resource={resource} pipelineId={resource.entityId} />
+      <PipelinePreview
+        projectId={projectId}
+        resource={resource}
+        pipelineId={resource.entityId}
+      />
     );
   }
 
@@ -153,11 +165,13 @@ function SelectedResource({ projectId, resourceId }: SelectedResourceProps) {
 }
 
 interface LocalPipelinePreviewProps {
+  projectId: string;
   resource: ProjectResource;
   pointer: LocalPipelinePointer;
 }
 
 function LocalPipelinePreview({
+  projectId,
   resource,
   pointer,
 }: LocalPipelinePreviewProps) {
@@ -183,9 +197,15 @@ function LocalPipelinePreview({
     <BlockStack gap="2">
       <Code code={pipeline.yaml} language="yaml" filename={pipeline.name} />
       <InlineStack gap="3" blockAlign="center" className="w-full">
+        <RunPipelineButton
+          projectId={projectId}
+          spec={pipeline.spec}
+          heldInThisBrowser
+        />
         <Button variant="outline" size="sm" asChild>
           <Link
             to={getDefaultEditorPath(pipeline.name)}
+            search={{ [PROJECT_ID_SEARCH_PARAM]: projectId }}
             {...tracking("projects.open_local_pipeline")}
           >
             <Icon name="PencilRuler" size="xs" />
@@ -199,11 +219,16 @@ function LocalPipelinePreview({
 }
 
 interface PipelinePreviewProps {
+  projectId: string;
   resource: ProjectResource;
   pipelineId: string;
 }
 
-function PipelinePreview({ resource, pipelineId }: PipelinePreviewProps) {
+function PipelinePreview({
+  projectId,
+  resource,
+  pipelineId,
+}: PipelinePreviewProps) {
   const { data: pipeline, isPending, error } = usePipelineSpec(pipelineId);
 
   if (isPending) {
@@ -226,6 +251,7 @@ function PipelinePreview({ resource, pipelineId }: PipelinePreviewProps) {
         filename={resource.name ?? UNTITLED}
       />
       <InlineStack gap="3" blockAlign="center" className="w-full">
+        <RunPipelineButton projectId={projectId} spec={pipeline.spec} />
         {/* The editor opens a pipeline by name out of browser storage, so it
             cannot reach one held on the backend, and a local pipeline that
             merely shares the name is a different pipeline. */}

@@ -8,6 +8,7 @@ import { useAwaitAuthorization } from "@/components/shared/Authentication/useAwa
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { buildTaskSpecShape } from "@/components/shared/PipelineRunNameTemplate/types";
 import { Icon } from "@/components/ui/icon";
+import { useRerunProjectIds } from "@/hooks/useRerunProjectIds";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
 import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
@@ -16,10 +17,12 @@ import { getDefaultRunPath } from "@/routes/runRoutes";
 import type { PipelineRun } from "@/types/pipelineRun";
 import { extractCanonicalName } from "@/utils/canonicalPipelineName";
 import type { ArgumentType, ComponentSpec } from "@/utils/componentSpec";
+import { projectRunAnnotations } from "@/utils/projectRunAnnotation";
 import { submitPipelineRun } from "@/utils/submitPipeline";
 
 type RerunPipelineButtonProps = {
   componentSpec: ComponentSpec;
+  runId?: string | null;
   showLabel?: boolean;
   displayLabel?: string;
   showTooltip?: boolean;
@@ -30,6 +33,7 @@ type RerunPipelineButtonProps = {
 
 export const RerunPipelineButton = ({
   componentSpec,
+  runId,
   showLabel,
   displayLabel,
   showTooltip = true,
@@ -40,6 +44,7 @@ export const RerunPipelineButton = ({
   const notify = useToastNotification();
   const executionData = useExecutionDataOptional();
   const runAnnotations = useRunSubmissionAnnotations();
+  const rerunProjectIds = useRerunProjectIds();
 
   const { awaitAuthorization, isAuthorized } = useAwaitAuthorization();
   const { getToken } = useAuthLocalStorage();
@@ -72,6 +77,7 @@ export const RerunPipelineButton = ({
   const { mutate, isPending } = useMutation({
     mutationFn: async () => {
       const authorizationToken = await getAuthToken();
+      const projectIds = await rerunProjectIds(runId);
 
       return new Promise<PipelineRun>((resolve, reject) => {
         submitPipelineRun(componentSpec, backendUrl, {
@@ -85,7 +91,10 @@ export const RerunPipelineButton = ({
           taskArguments: executionData?.rootDetails?.task_spec
             .arguments as Record<string, ArgumentType>,
           authorizationToken,
-          runAnnotations,
+          runAnnotations: {
+            ...runAnnotations,
+            ...projectRunAnnotations(projectIds),
+          },
           onSuccess: resolve,
           onError: reject,
         });

@@ -32,7 +32,7 @@ import { useExecutionData } from "@/providers/ExecutionDataProvider";
 import { useDebugInTangent } from "@/routes/v2/pages/RunView/hooks/useDebugInTangent";
 import { PipelineDetailsCollapsibleSection } from "@/routes/v2/shared/components/PipelineDetailsCollapsibleSection";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
-import { fetchRunAnnotations } from "@/services/pipelineRunService";
+import { runAnnotationsQueryOptions } from "@/services/runAnnotations";
 import {
   getAnnotationValue,
   PIPELINE_NOTES_ANNOTATION,
@@ -40,7 +40,6 @@ import {
   RUN_SOURCE_ANNOTATION,
   SYSTEM_ANNOTATIONS,
 } from "@/utils/annotations";
-import { TWENTY_FOUR_HOURS_IN_MS } from "@/utils/constants";
 import {
   flattenExecutionStatusStats,
   getExecutionStatusLabel,
@@ -245,11 +244,7 @@ function RunInfoSection({ metadata }: { metadata: PipelineRunResponse }) {
   const runId = metadata.id;
 
   const { data: runAnnotations } = useQuery({
-    queryKey: ["pipeline-run-annotations", backendUrl, runId],
-    queryFn: () => fetchRunAnnotations(runId, backendUrl),
-    enabled: !!runId,
-    refetchOnWindowFocus: false,
-    staleTime: TWENTY_FOUR_HOURS_IN_MS,
+    ...runAnnotationsQueryOptions(runId, backendUrl),
   });
 
   const runSource = getAnnotationValue(runAnnotations, RUN_SOURCE_ANNOTATION);
