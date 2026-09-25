@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import type { IconName } from "@/components/ui/icon";
+import type { SharedUIStore } from "@/routes/v2/shared/store/SharedStoreContext";
 import type { PipelineRef } from "@/services/pipelineStorage/types";
 
 /**
@@ -16,11 +17,16 @@ export type ResolvedWorkareaView =
 export type WorkareaTab = ResolvedWorkareaView & { id: string };
 
 /**
- * Props the workarea shell passes to every view kind's `render`. Starts with
- * the active Tangent session; later PRs extend this bag rather than the shell.
+ * Props the workarea shell passes to every view kind's `render`. Carries the
+ * active Tangent session plus the per-tab store registry embeddable kinds use
+ * to surface their live `SharedUIStore`; later PRs extend this bag rather than
+ * the shell.
  */
 export interface WorkareaHostProps {
+  isActive: boolean;
   sessionId?: string;
+  registerTabStore: (tabId: string, store: SharedUIStore) => void;
+  unregisterTabStore: (tabId: string) => void;
 }
 
 /**

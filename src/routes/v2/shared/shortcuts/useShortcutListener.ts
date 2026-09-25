@@ -12,11 +12,17 @@ import { isEditableTarget } from "./shortcutUtils";
  * Single keydown/keyup/blur listener that tracks pressed keys in
  * `keyboard.pressed` and dispatches registered shortcuts.
  * Call once at the root layout level (Editor, RunView, etc.).
+ *
+ * The workarea mounts one editor per tab, each with its own store, so several
+ * of these can exist at once and a keystroke would reach every one. Pass
+ * `enabled` to let only the tab the person is looking at dispatch.
  */
-export function useShortcutListener(): void {
+export function useShortcutListener(enabled = true): void {
   const { keyboard } = useSharedStores();
 
   useEffect(() => {
+    if (!enabled) return;
+
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.repeat && event.metaKey) return;
 
@@ -73,5 +79,5 @@ export function useShortcutListener(): void {
       window.removeEventListener("blur", handleBlur);
       keyboard.clearPressed();
     };
-  }, [keyboard]);
+  }, [keyboard, enabled]);
 }
