@@ -60,6 +60,7 @@ interface AiComponentRef {
     name?: string;
     inputs?: Array<{ name: string; type?: TypeSpecType }>;
     outputs?: Array<{ name: string; type?: TypeSpecType }>;
+    implementation: "container" | "graph" | "missing";
   };
 }
 
@@ -201,16 +202,32 @@ const serializePort = (port: {
 }): { name: string; type?: TypeSpecType } =>
   pickDefined({ name: port.name, type: port.type });
 
+/**
+ * The implementation is reported by kind, not in full: a container spec is
+ * long and a graph is the whole subgraph again, but a reader that cannot see
+ * whether a task runs at all has no way to tell a component it just authored
+ * from one that never landed.
+ */
+function implementationKind(
+  spec: NonNullable<ComponentReference["spec"]>,
+): "container" | "graph" | "missing" {
+  if (isGraphImplementation(spec.implementation)) return "graph";
+  return spec.implementation ? "container" : "missing";
+}
+
 function serializeComponentRef(ref: ComponentReference): AiComponentRef {
   return pickDefined({
     name: ref.name,
     url: ref.url,
     spec: ref.spec
-      ? pickDefined({
-          name: ref.spec.name,
-          inputs: ref.spec.inputs?.map(serializePort),
-          outputs: ref.spec.outputs?.map(serializePort),
-        })
+      ? {
+          ...pickDefined({
+            name: ref.spec.name,
+            inputs: ref.spec.inputs?.map(serializePort),
+            outputs: ref.spec.outputs?.map(serializePort),
+          }),
+          implementation: implementationKind(ref.spec),
+        }
       : undefined,
   });
 }

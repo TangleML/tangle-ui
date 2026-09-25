@@ -182,6 +182,27 @@ describe("createCsomTools", () => {
     });
   });
 
+  it("add_task refuses a component with nothing that runs it", async () => {
+    const addTask = vi.fn();
+    const { allTools } = createCsomTools(makeBridge({ addTask }));
+
+    await invoke(findTool(allTools, "add_task"), {
+      name: "greet",
+      componentRef: {
+        name: "Hello greeting",
+        url: null,
+        spec: {
+          name: "Hello greeting",
+          inputs: [{ name: "name", type: "String" }],
+          outputs: [{ name: "greeting", type: "String" }],
+          implementation: {},
+        },
+      },
+    }).catch(() => undefined);
+
+    expect(addTask).not.toHaveBeenCalled();
+  });
+
   it("add_task implementation schema has typed anyOf branches", () => {
     // Regression guard for OpenAI structured-outputs strict mode: every
     // `anyOf` branch must declare a concrete `type` (or `$ref`), or tool
@@ -202,23 +223,27 @@ describe("createCsomTools", () => {
     expect(
       implementationAnyOf.every((entry) => typeof entry.type === "string"),
     ).toBe(true);
+  });
 
-    const objectBranch = implementationAnyOf.find(
-      (entry) => entry.type === "object",
+  /**
+   * Strict mode rewrites every object to `additionalProperties: false`, so a
+   * field whose content lives only in `additionalProperties` can hold nothing
+   * but `{}` — which is what `implementation` was, and why the editor agent
+   * added and deleted the same task until its turn ran out. Every key an agent
+   * has to fill must be a named property.
+   */
+  it("add_task implementation keys survive strict mode", () => {
+    const { allTools } = createCsomTools(makeBridge());
+    const addTaskTool = findTool(allTools, "add_task");
+
+    const objectBranch = getImplementationAnyOf(
+      addTaskTool.parameters as JsonSchemaNode,
+    ).find((entry) => entry.type === "object");
+
+    const container = objectBranch?.properties?.container;
+    expect(Object.keys(container?.properties ?? {})).toEqual(
+      expect.arrayContaining(["image", "command"]),
     );
-    expect(objectBranch).toBeDefined();
-    const additionalProperties = objectBranch?.additionalProperties;
-    expect(additionalProperties).not.toEqual({});
-    if (
-      additionalProperties &&
-      typeof additionalProperties === "object" &&
-      !Array.isArray(additionalProperties)
-    ) {
-      expect(
-        typeof additionalProperties.type === "string" ||
-          typeof additionalProperties.$ref === "string",
-      ).toBe(true);
-    }
   });
 
   it("rename_task forwards (entityId, newName) in the right order", async () => {

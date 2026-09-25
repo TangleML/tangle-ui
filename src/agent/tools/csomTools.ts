@@ -45,6 +45,37 @@ const jsonValueSchema: z.ZodType<JsonValue> = z.lazy(() =>
 
 const arbitraryObjectSchema = z.object({}).catchall(jsonValueSchema);
 
+/**
+ * `implementation` cannot be an open object. OpenAI's strict mode rewrites
+ * every `type: "object"` to `additionalProperties: false`, so a catchall
+ * permits exactly one value — `{}` — and the model cannot say what runs no
+ * matter how it is prompted. Every key has to be spelled out to be reachable.
+ */
+const commandArgumentSchema = z.union([
+  z.string(),
+  z.object({ inputValue: z.string() }),
+  z.object({ inputPath: z.string() }),
+  z.object({ outputPath: z.string() }),
+]);
+
+const containerImplementationSchema = z.object({
+  container: z.object({
+    image: z
+      .string()
+      .describe(
+        "Container image to run, e.g. `python:3.11-slim`. Pick one that already has what the command needs.",
+      ),
+    command: z
+      .array(commandArgumentSchema)
+      .nullable()
+      .optional()
+      .describe(
+        'Executable and its arguments, run without a shell; null falls back to the image\'s own ENTRYPOINT. An input reaches it as {"inputValue": "<input name>"} for the value itself or {"inputPath": "<input name>"} for a file holding it; an output is a file the command must write at {"outputPath": "<output name>"}, creating parent directories first.',
+      ),
+    args: z.array(commandArgumentSchema).nullable().optional(),
+  }),
+});
+
 const argumentValueSchema = z.union([
   z.string(),
   z.object({
@@ -195,7 +226,7 @@ export function createCsomTools(bridge: ToolBridgeApi) {
   const addTask = tool({
     name: "add_task",
     description:
-      "Add a new task node. Pass the full componentRef from a search_components result (with `url` and/or `spec`). Adds to the top-level pipeline unless inSubgraphTaskId names a subgraph to add it inside.",
+      "Add a new task node. Prefer the full componentRef from a search_components result (with `url` and/or `spec`). When nothing in the registry does the job you may author the component inline instead, but then `spec.implementation` is required — a spec with ports and no implementation is added without complaint, validates clean, and is refused by the backend at submit with no indication of which task is at fault. Adds to the top-level pipeline unless inSubgraphTaskId names a subgraph to add it inside.",
     parameters: z.object({
       name: z.string().describe("Human-readable task name"),
       componentRef: z
@@ -228,13 +259,12 @@ export function createCsomTools(bridge: ToolBridgeApi) {
                 )
                 .nullable()
                 .optional(),
-              // `z.record(z.string(), …)` emits `propertyNames` in its JSON
-              // Schema, which OpenAI's strict mode rejects at tool registration
-              // (failing every request routed to this agent before the model
-              // ever runs). Keep the field opaque; the bridge accepts arbitrary
-              // implementation shapes, but force an explicit object type so
-              // strict JSON Schema validation does not see typeless `anyOf`.
-              implementation: arbitraryObjectSchema.nullable().optional(),
+              implementation: containerImplementationSchema
+                .nullable()
+                .optional()
+                .describe(
+                  "How the task actually runs. Required unless `url` is given — a component with ports and nothing to run them is refused at submit. Carry it through verbatim from a search_components result, or write one: an image, and a command that reads each input and writes each output.",
+                ),
             })
             .nullable()
             .optional(),
@@ -242,6 +272,10 @@ export function createCsomTools(bridge: ToolBridgeApi) {
         .refine(
           (ref) => ref.url != null || ref.spec != null,
           "componentRef must include either a url or an inline spec — name alone is not enough",
+        )
+        .refine(
+          (ref) => ref.url != null || ref.spec?.implementation != null,
+          "an inline spec must include `implementation` — a component with ports and nothing that runs them is refused at submit, and the refusal cannot say which task it came from",
         )
         .describe(
           "Component reference from search_components — must include url and/or spec.",

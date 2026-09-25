@@ -177,6 +177,10 @@ const RESOLUTION_MAP: Record<ValidationIssueCode, ResolutionResolver> = {
     renderInfoResolution(
       "The component could not be loaded from its source. Check the component URL or your connection, then reload the pipeline.",
     ),
+  MISSING_IMPLEMENTATION: () =>
+    renderInfoResolution(
+      "This task's component declares inputs and outputs but nothing that runs them. Replace it with a component from the library, or give it a container implementation.",
+    ),
   BAD_INPUT_REFERENCE: renderBadRefResolution,
   BAD_TASK_REFERENCE: renderBadRefResolution,
   BAD_OUTPUT_REFERENCE: renderBadRefResolution,
