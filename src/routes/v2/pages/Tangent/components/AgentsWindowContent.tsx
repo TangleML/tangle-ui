@@ -1,11 +1,13 @@
 import { AgentList } from "@tangent/embed-react";
+import { observer } from "mobx-react-lite";
 
 import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 
-export function AgentsWindowContent() {
-  const { activeSessionId, tabs } = useTangentProject();
+export const AgentsWindowContent = observer(function AgentsWindowContent() {
+  const store = useTangentProject();
+  const activeSessionId = store.activeSessionId;
 
   if (!activeSessionId) {
     return (
@@ -20,9 +22,9 @@ export function AgentsWindowContent() {
   return (
     <AgentList
       sessionId={activeSessionId}
-      selectedId={tabs.selectedAgentId}
-      onOpen={tabs.openAgent}
-      onRemove={tabs.closeTab}
+      selectedId={store.selectedAgentId}
+      onOpen={(agent) => store.openAgent(agent)}
+      onRemove={(id) => store.closeChatTab(id)}
     />
   );
-}
+});

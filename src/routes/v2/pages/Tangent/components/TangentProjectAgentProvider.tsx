@@ -33,7 +33,6 @@ import {
 import {
   createWorkareaRemoteTools,
   type RunInspectDeps,
-  type WorkareaToolDeps,
 } from "@/routes/v2/pages/Tangent/services/createWorkareaRemoteTools";
 import { createRemoteEnvAgentWorker } from "@/routes/v2/pages/Tangent/services/remoteEnvAgentWorker";
 import { createRemoteEnvHost } from "@/routes/v2/pages/Tangent/services/remoteEnvHost";
@@ -55,17 +54,8 @@ export function TangentProjectAgentProvider({
   const { config: aiConfig } = useAiProviderSettings();
   const { backendUrl } = useBackend();
   const queryClient = useQueryClient();
-  const {
-    projectId,
-    openWorkareaTarget,
-    getWorkareaTabs,
-    getActiveWorkareaTabId,
-    closeWorkareaTab,
-    getTabEnvironmentId,
-    waitForTabEnvironment,
-    getActiveTabBridge,
-  } = useTangentProject();
-  const { baseUrl } = useTangentBaseUrl(projectId);
+  const store = useTangentProject();
+  const { baseUrl } = useTangentBaseUrl(store.projectId);
 
   const authToken = authStorage.getToken();
   const authTokenRef = useRef(authToken);
@@ -73,9 +63,6 @@ export function TangentProjectAgentProvider({
   const notifyRef = useRef(notify);
   const aiConfigRef = useRef(aiConfig);
   const workerRef = useRef<Comlink.Remote<RemoteEnvWorkerApi> | null>(null);
-  // The routing bridge reads the active tab's bridge via this ref, so a single
-  // bridge instance always targets the current pipeline as tabs change.
-  const getActiveTabBridgeRef = useRef(getActiveTabBridge);
 
   // A project-level backend bridge for the run inspect tools: read-only run and
   // execution fetches that don't need any one tab's canvas spec, so Prime can
@@ -102,22 +89,6 @@ export function TangentProjectAgentProvider({
     };
   });
 
-  function buildDeps(): WorkareaToolDeps {
-    return {
-      openTarget: openWorkareaTarget,
-      getTabs: getWorkareaTabs,
-      getActiveTabId: getActiveWorkareaTabId,
-      closeTab: closeWorkareaTab,
-      getEnvironmentId: getTabEnvironmentId,
-      waitForEnvironment: waitForTabEnvironment,
-      runInspect,
-    };
-  }
-
-  // The tools read deps via this ref so a single catalog instance always acts
-  // on the current workarea state without rebuilding the socket connection.
-  const depsRef = useRef<WorkareaToolDeps>(buildDeps());
-
   useEffect(() => {
     authTokenRef.current = authToken;
   }, [authToken]);
@@ -127,20 +98,6 @@ export function TangentProjectAgentProvider({
   useEffect(() => {
     notifyRef.current = notify;
   }, [notify]);
-  useEffect(() => {
-    getActiveTabBridgeRef.current = getActiveTabBridge;
-  }, [getActiveTabBridge]);
-  useEffect(() => {
-    depsRef.current = buildDeps();
-  }, [
-    openWorkareaTarget,
-    getWorkareaTabs,
-    getActiveWorkareaTabId,
-    closeWorkareaTab,
-    getTabEnvironmentId,
-    waitForTabEnvironment,
-    runInspect,
-  ]);
 
   // Push AI config into the worker whenever the user changes it, so a turn
   // uses the latest provider settings without rebuilding the connection.
@@ -150,13 +107,21 @@ export function TangentProjectAgentProvider({
   }, [aiConfig]);
 
   const [tools] = useState(() =>
-    createWorkareaRemoteTools(() => depsRef.current),
+    createWorkareaRemoteTools(() => ({
+      openTarget: (target, title) => store.openWorkareaTarget(target, title),
+      getTabs: () => store.workareaTabs,
+      getActiveTabId: () => store.activeWorkareaTabId ?? undefined,
+      closeTab: (id) => store.closeWorkareaTab(id),
+      getEnvironmentId: (id) => store.getTabEnvironmentId(id),
+      waitForEnvironment: (id) => store.waitForTabEnvironment(id),
+      runInspect,
+    })),
   );
   const [routingBridge] = useState(() =>
-    createActiveTabRoutingBridge(() => getActiveTabBridgeRef.current()),
+    createActiveTabRoutingBridge(() => store.getActiveTabBridge()),
   );
   const [agentTargets] = useState(() =>
-    createAgentTargetRouter(() => getActiveTabBridgeRef.current()),
+    createAgentTargetRouter(() => store.getActiveTabBridge()),
   );
 
   useEffect(() => {

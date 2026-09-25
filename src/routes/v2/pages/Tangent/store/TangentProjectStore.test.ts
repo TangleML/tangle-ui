@@ -1,0 +1,338 @@
+import type { EmbedAgent, EmbedAsset } from "@tangent/embed-react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
+import type { WorkareaTarget } from "@/routes/v2/pages/Tangent/workarea/types";
+import { idIdentity } from "@/routes/v2/pages/Tangent/workarea/workareaTarget";
+
+import {
+  CHAT_TAB_VALUE,
+  PRIME_AGENT_ID,
+  TangentProjectStore,
+} from "./TangentProjectStore";
+
+const SESSION_A = "session-a";
+const SESSION_B = "session-b";
+
+const prime: EmbedAgent = {
+  id: PRIME_AGENT_ID,
+  name: "Prime",
+  kind: "prime",
+  status: "active",
+  conversationId: "conv-prime",
+};
+
+const researcher: EmbedAgent = {
+  id: "agent-1",
+  name: "Researcher",
+  kind: "subagent",
+  status: "active",
+  conversationId: "conv-1",
+};
+
+const builder: EmbedAgent = {
+  id: "agent-2",
+  name: "Builder",
+  kind: "subagent",
+  status: "active",
+  conversationId: "conv-2",
+};
+
+function asset(id: string): EmbedAsset {
+  return { id, url: `https://x/${id}`, title: id, kind: "file" } as EmbedAsset;
+}
+
+function pipeline(id: string): WorkareaTarget {
+  return { type: "pipeline", identity: idIdentity(id) };
+}
+
+function run(id: string): WorkareaTarget {
+  return { type: "run", identity: idIdentity(id) };
+}
+
+function artifact(url: string): WorkareaTarget {
+  return { type: "artifact", identity: idIdentity(url) };
+}
+
+function makeBridge(id: string): ToolBridgeApi {
+  return { __id: id } as unknown as ToolBridgeApi;
+}
+
+function activeStore(sessionId = SESSION_A): TangentProjectStore {
+  const store = new TangentProjectStore("project-1");
+  store.setDefaultSessionId(sessionId);
+  return store;
+}
+
+describe("TangentProjectStore chat tabs", () => {
+  it("starts on the Chat tab with Prime selected and no agent tabs", () => {
+    const store = activeStore();
+
+    expect(store.chatTabs).toEqual([]);
+    expect(store.chatActiveTab).toBe(CHAT_TAB_VALUE);
+    expect(store.selectedAgentId).toBe(PRIME_AGENT_ID);
+  });
+
+  it("focuses Chat and does not add a tab when Prime is opened", () => {
+    const store = activeStore();
+
+    store.openAgent(researcher);
+    store.openAgent(prime);
+
+    expect(store.chatTabs).toEqual([
+      { id: researcher.id, title: researcher.name },
+    ]);
+    expect(store.chatActiveTab).toBe(CHAT_TAB_VALUE);
+    expect(store.selectedAgentId).toBe(PRIME_AGENT_ID);
+  });
+
+  it("adds a tab and focuses it when a sub-agent is opened", () => {
+    const store = activeStore();
+
+    store.openAgent(researcher);
+
+    expect(store.chatTabs).toEqual([
+      { id: researcher.id, title: researcher.name },
+    ]);
+    expect(store.chatActiveTab).toBe(researcher.id);
+    expect(store.selectedAgentId).toBe(researcher.id);
+  });
+
+  it("focuses an existing tab without duplicating it", () => {
+    const store = activeStore();
+
+    store.openAgent(researcher);
+    store.openAgent(builder);
+    store.openAgent(researcher);
+
+    expect(store.chatTabs).toEqual([
+      { id: researcher.id, title: researcher.name },
+      { id: builder.id, title: builder.name },
+    ]);
+    expect(store.chatActiveTab).toBe(researcher.id);
+  });
+
+  it("falls back to Chat when the active tab is closed", () => {
+    const store = activeStore();
+
+    store.openAgent(researcher);
+    store.closeChatTab(researcher.id);
+
+    expect(store.chatTabs).toEqual([]);
+    expect(store.chatActiveTab).toBe(CHAT_TAB_VALUE);
+    expect(store.selectedAgentId).toBe(PRIME_AGENT_ID);
+  });
+
+  it("leaves the active tab unchanged when an inactive tab is closed", () => {
+    const store = activeStore();
+
+    store.openAgent(researcher);
+    store.openAgent(builder);
+    store.closeChatTab(researcher.id);
+
+    expect(store.chatTabs).toEqual([{ id: builder.id, title: builder.name }]);
+    expect(store.chatActiveTab).toBe(builder.id);
+  });
+
+  it("records the selected asset id", () => {
+    const store = activeStore();
+
+    store.selectAsset(asset("a1"));
+
+    expect(store.selectedAssetId).toBe("a1");
+  });
+
+  it("keeps each session's chat independent and restores it on switch", () => {
+    const store = activeStore(SESSION_A);
+
+    store.openAgent(researcher);
+    expect(store.chatTabs).toEqual([
+      { id: researcher.id, title: researcher.name },
+    ]);
+
+    store.selectSession(SESSION_B);
+    expect(store.chatTabs).toEqual([]);
+    expect(store.chatActiveTab).toBe(CHAT_TAB_VALUE);
+
+    store.openAgent(builder);
+    expect(store.chatTabs).toEqual([{ id: builder.id, title: builder.name }]);
+
+    store.selectSession(SESSION_A);
+    expect(store.chatTabs).toEqual([
+      { id: researcher.id, title: researcher.name },
+    ]);
+    expect(store.chatActiveTab).toBe(researcher.id);
+  });
+
+  it("no-ops when there is no active session", () => {
+    const store = new TangentProjectStore("project-1");
+
+    store.openAgent(researcher);
+
+    expect(store.chatTabs).toEqual([]);
+    expect(store.chatActiveTab).toBe(CHAT_TAB_VALUE);
+    expect(store.selectedAgentId).toBe(PRIME_AGENT_ID);
+  });
+});
+
+describe("TangentProjectStore workarea tabs", () => {
+  it("refuses to open a tab while no session is active", () => {
+    const store = new TangentProjectStore("project-1");
+
+    expect(() =>
+      store.openResolvedView({ title: "P1", target: pipeline("p1") }),
+    ).toThrow(/No active Tangent session/);
+    expect(store.workareaTabs).toEqual([]);
+  });
+
+  it("focuses an existing target instead of opening a duplicate", () => {
+    const store = activeStore();
+
+    const first = store.openResolvedView({
+      title: "P1",
+      target: pipeline("p1"),
+    });
+    store.openResolvedView({ title: "P2", target: pipeline("p2") });
+    const again = store.openResolvedView({
+      title: "P1",
+      target: pipeline("p1"),
+    });
+
+    expect(again.id).toBe(first.id);
+    expect(store.workareaTabs).toHaveLength(2);
+    expect(store.activeWorkareaTabId).toBe(first.id);
+  });
+
+  it("selects the last remaining tab when the active tab is closed", () => {
+    const store = activeStore();
+
+    const p1 = store.openResolvedView({ title: "P1", target: pipeline("p1") });
+    const p2 = store.openResolvedView({ title: "P2", target: pipeline("p2") });
+
+    store.closeWorkareaTab(p2.id);
+
+    expect(store.workareaTabs.map((tab) => tab.id)).toEqual([p1.id]);
+    expect(store.activeWorkareaTabId).toBe(p1.id);
+  });
+
+  it("leaves the active tab unchanged when an inactive tab is closed", () => {
+    const store = activeStore();
+
+    const p1 = store.openResolvedView({ title: "P1", target: pipeline("p1") });
+    const p2 = store.openResolvedView({ title: "P2", target: pipeline("p2") });
+
+    store.closeWorkareaTab(p1.id);
+
+    expect(store.workareaTabs.map((tab) => tab.id)).toEqual([p2.id]);
+    expect(store.activeWorkareaTabId).toBe(p2.id);
+  });
+
+  it("keeps each session's workarea independent and restores it on switch", () => {
+    const store = activeStore(SESSION_A);
+
+    const a = store.openResolvedView({ title: "P1", target: pipeline("p1") });
+    expect(store.workareaTabs.map((tab) => tab.id)).toEqual([a.id]);
+
+    store.selectSession(SESSION_B);
+    expect(store.workareaTabs).toEqual([]);
+
+    const b = store.openResolvedView({ title: "P2", target: pipeline("p2") });
+    expect(store.workareaTabs.map((tab) => tab.id)).toEqual([b.id]);
+
+    store.selectSession(SESSION_A);
+    expect(store.workareaTabs.map((tab) => tab.id)).toEqual([a.id]);
+    expect(store.activeWorkareaTabId).toBe(a.id);
+  });
+
+  it("drops a session's workarea and chat on dropSession", () => {
+    const store = activeStore(SESSION_A);
+    store.openResolvedView({ title: "P1", target: pipeline("p1") });
+    store.openAgent(researcher);
+
+    store.dropSession(SESSION_A);
+
+    expect(store.workareaTabs).toEqual([]);
+    expect(store.chatTabs).toEqual([]);
+  });
+});
+
+describe("TangentProjectStore.getActiveTabBridge", () => {
+  it("returns the active pipeline tab's bridge", () => {
+    const store = activeStore();
+    const p1 = store.openResolvedView({ title: "P1", target: pipeline("p1") });
+    const bridge = makeBridge("p1");
+    store.registerTabBridge(p1.id, "pipeline", bridge);
+
+    expect(store.getActiveTabBridge()).toBe(bridge);
+  });
+
+  it("falls back to the last editor tab when an artifact is focused", () => {
+    const store = activeStore();
+    const p1 = store.openResolvedView({ title: "P1", target: pipeline("p1") });
+    const bridge = makeBridge("p1");
+    store.registerTabBridge(p1.id, "pipeline", bridge);
+    store.openResolvedView({ title: "A", target: artifact("http://a") });
+
+    expect(store.activeWorkareaTabId).not.toBe(p1.id);
+    expect(store.getActiveTabBridge()).toBe(bridge);
+  });
+
+  it("returns undefined while a run tab is focused", () => {
+    const store = activeStore();
+    const p1 = store.openResolvedView({ title: "P1", target: pipeline("p1") });
+    store.registerTabBridge(p1.id, "pipeline", makeBridge("p1"));
+    const r1 = store.openResolvedView({ title: "R1", target: run("r1") });
+    store.registerTabBridge(r1.id, "run", makeBridge("r1"));
+
+    expect(store.getActiveTabBridge()).toBeUndefined();
+  });
+
+  it("falls back to the newest remaining pipeline when the last editor closes", () => {
+    const store = activeStore();
+    const p1 = store.openResolvedView({ title: "P1", target: pipeline("p1") });
+    const bridgeP1 = makeBridge("p1");
+    store.registerTabBridge(p1.id, "pipeline", bridgeP1);
+    const p2 = store.openResolvedView({ title: "P2", target: pipeline("p2") });
+    store.registerTabBridge(p2.id, "pipeline", makeBridge("p2"));
+    store.openResolvedView({ title: "A", target: artifact("http://a") });
+
+    store.closeWorkareaTab(p2.id);
+
+    expect(store.getActiveTabBridge()).toBe(bridgeP1);
+  });
+});
+
+describe("TangentProjectStore.waitForTabEnvironment", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("resolves immediately when the environment is already registered", async () => {
+    const store = activeStore();
+    store.registerTabEnvironment("tab-1", "env-1");
+
+    await expect(store.waitForTabEnvironment("tab-1")).resolves.toBe("env-1");
+  });
+
+  it("resolves when the environment is registered later", async () => {
+    const store = activeStore();
+    const pending = store.waitForTabEnvironment("tab-1");
+
+    store.registerTabEnvironment("tab-1", "env-1");
+
+    await expect(pending).resolves.toBe("env-1");
+  });
+
+  it("resolves undefined after the timeout", async () => {
+    const store = activeStore();
+    const pending = store.waitForTabEnvironment("tab-1", 1000);
+
+    vi.advanceTimersByTime(1000);
+
+    await expect(pending).resolves.toBeUndefined();
+  });
+});
