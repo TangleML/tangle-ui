@@ -7,6 +7,7 @@ import type {
   PipelineRunResponse,
 } from "@/api/types.gen";
 import { RunNotesEditor } from "@/components/PipelineRun/RunNotesEditor";
+import { AnnotationList } from "@/components/shared/ContextPanel/Blocks/AnnotationList";
 import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlock";
 import { KeyValueList } from "@/components/shared/ContextPanel/Blocks/KeyValueList";
 import { TextBlock } from "@/components/shared/ContextPanel/Blocks/TextBlock";
@@ -35,6 +36,7 @@ import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { fetchRunAnnotations } from "@/services/pipelineRunService";
 import {
   getAnnotationValue,
+  isSystemRunAnnotation,
   PIPELINE_NOTES_ANNOTATION,
   PIPELINE_TAGS_ANNOTATION,
   RUN_SOURCE_ANNOTATION,
@@ -185,6 +187,7 @@ function RunDetailsContentLoaded({
               metadata={metadata}
               currentUserId={currentUserId}
             />
+            <RunAnnotationsSection runId={metadata?.id} />
           </BlockStack>
         </PipelineDetailsCollapsibleSection>
 
@@ -240,17 +243,20 @@ function DebugInTangentButton({
   );
 }
 
-function RunInfoSection({ metadata }: { metadata: PipelineRunResponse }) {
+function useRunAnnotations(runId: string | undefined) {
   const { backendUrl } = useBackend();
-  const runId = metadata.id;
 
-  const { data: runAnnotations } = useQuery({
+  return useQuery({
     queryKey: ["pipeline-run-annotations", backendUrl, runId],
-    queryFn: () => fetchRunAnnotations(runId, backendUrl),
+    queryFn: () => fetchRunAnnotations(runId!, backendUrl),
     enabled: !!runId,
     refetchOnWindowFocus: false,
     staleTime: TWENTY_FOUR_HOURS_IN_MS,
   });
+}
+
+function RunInfoSection({ metadata }: { metadata: PipelineRunResponse }) {
+  const { data: runAnnotations } = useRunAnnotations(metadata.id);
 
   const runSource = getAnnotationValue(runAnnotations, RUN_SOURCE_ANNOTATION);
   const hasKnownSource = getRunSourceBucket(runSource) !== "unknown";
@@ -303,7 +309,7 @@ function DetailsSection({
       </ContentBlock>
 
       {annotations.length > 0 && (
-        <KeyValueList title="Annotations" items={annotations} />
+        <KeyValueList title="Pipeline Annotations" items={annotations} />
       )}
     </BlockStack>
   );
@@ -338,5 +344,23 @@ function NotesSection({
         </BlockStack>
       )}
     </BlockStack>
+  );
+}
+
+function RunAnnotationsSection({ runId }: { runId: string | undefined }) {
+  const { data: runAnnotations } = useRunAnnotations(runId);
+
+  const annotations = Object.entries(runAnnotations ?? {})
+    .filter(([key]) => !isSystemRunAnnotation(key))
+    .map(([key, value]) => ({ key, value }));
+
+  if (annotations.length === 0) {
+    return null;
+  }
+
+  return (
+    <ContentBlock title="Run Annotations">
+      <AnnotationList annotations={annotations} />
+    </ContentBlock>
   );
 }
