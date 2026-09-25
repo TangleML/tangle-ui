@@ -1,9 +1,12 @@
+import { useNavigate } from "@tanstack/react-router";
+
 import {
   ENTITY_ORDER,
   pluralize,
 } from "@/components/Home/ProjectsSection/formatResourceCounts";
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
 import { InfoBox } from "@/components/shared/InfoBox";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { IconName } from "@/components/ui/icon";
 import { Icon } from "@/components/ui/icon";
@@ -20,11 +23,18 @@ import { Heading, Text } from "@/components/ui/typography";
 import useConfirmationDialog from "@/hooks/useConfirmationDialog";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
+import { APP_ROUTES } from "@/routes/appRoutes";
+import {
+  newTangentSessionSearch,
+  tangentSessionSearch,
+} from "@/routes/tangentSearch";
+import { sessionLabelsById } from "@/services/projects/sessionLabel";
 import type { ProjectResourceSummary } from "@/services/projects/types";
 import {
   useDeleteProjectResource,
   useProjectResources,
 } from "@/services/projects/useProjectResources";
+import { tracking } from "@/utils/tracking";
 
 import { AddResourceMenu } from "./AddResourceMenu";
 import { ColumnHeadingRow } from "./ColumnHeadingRow";
@@ -35,6 +45,8 @@ import { ResourceRow, UNTITLED } from "./ResourceRow";
 const PAGE_SIZE = 100;
 
 const COLUMN_COUNT = 3;
+
+const AGENT_SESSION = "agent_session";
 
 // A group names the kind of thing it holds, so it stays plural whatever the count.
 const PLURAL = 2;
@@ -126,6 +138,7 @@ export function ProjectResources({
   const removeResource = useDeleteProjectResource(projectId);
   const notify = useToastNotification();
   const { track } = useAnalytics();
+  const navigate = useNavigate();
   const {
     handlers: confirmationHandlers,
     triggerDialog: triggerConfirmation,
@@ -161,11 +174,47 @@ export function ProjectResources({
 
   const resources = data?.items ?? [];
 
+  // A session is the one resource that is not a thing to look at here: it is a
+  // conversation that lives in Tangent, so its row goes there. It is also not a
+  // thing to take back out — like a run, a session that happened belongs to the
+  // project it happened in — so its row is not offered a way to.
+  const sessionLabels = sessionLabelsById(
+    resources
+      .filter(
+        (resource) => resource.entity === AGENT_SESSION && resource.entityId,
+      )
+      .map((resource) => [resource.id, resource]),
+  );
+
+  const openSession = (resource: ProjectResourceSummary) => {
+    if (!resource.entityId) return;
+    void navigate({
+      to: APP_ROUTES.TANGENT_PROJECT,
+      params: { projectId },
+      search: tangentSessionSearch(resource.entityId),
+    });
+  };
+
   return (
     <BlockStack gap="4">
       <ColumnHeadingRow>
         <Heading level={2}>Resources</Heading>
         <AddResourceMenu projectId={projectId} resources={resources} />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() =>
+            void navigate({
+              to: APP_ROUTES.TANGENT_PROJECT,
+              params: { projectId },
+              search: newTangentSessionSearch,
+            })
+          }
+          {...tracking("projects.start_session")}
+        >
+          <Icon name="MessagesSquare" size="sm" />
+          New session
+        </Button>
       </ColumnHeadingRow>
 
       {isPending && (
@@ -216,19 +265,28 @@ export function ProjectResources({
                 label={groupHeading(entity, items.length)}
               />
 
-              {items.map((resource) => (
-                <ResourceRow
-                  key={resource.id}
-                  resource={resource}
-                  selected={resource.id === selectedResourceId}
-                  onSelect={(picked) =>
-                    onSelect(
-                      picked.id === selectedResourceId ? null : picked.id,
-                    )
-                  }
-                  onRemove={handleRemove}
-                />
-              ))}
+              {items.map((resource) => {
+                const label = sessionLabels.get(resource.id);
+                return (
+                  <ResourceRow
+                    key={resource.id}
+                    resource={resource}
+                    label={label}
+                    opensElsewhere={label !== undefined}
+                    selected={resource.id === selectedResourceId}
+                    onSelect={(picked) => {
+                      if (label) {
+                        openSession(picked);
+                        return;
+                      }
+                      onSelect(
+                        picked.id === selectedResourceId ? null : picked.id,
+                      );
+                    }}
+                    onRemove={label ? undefined : handleRemove}
+                  />
+                );
+              })}
             </TableBody>
           ))}
         </Table>
