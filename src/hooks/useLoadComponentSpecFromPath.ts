@@ -57,6 +57,11 @@ export const useLoadComponentSpecFromPath = () => {
         // load by title
         if (title && !isRunPath) {
           const result = await loadPipelineByName(title);
+          if (result.error) {
+            setError(result.error);
+            clearComponentSpec();
+            return;
+          }
 
           if (result.experiment?.componentRef?.spec) {
             const preparedComponentRef = await prepareComponentRefForEditor(
