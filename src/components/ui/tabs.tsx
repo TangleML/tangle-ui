@@ -16,6 +16,14 @@ function Tabs({
   );
 }
 
+/**
+ * For a tab strip that scrolls sideways when its tabs outgrow it. `overflow-x`
+ * alone computes `overflow-y` to `auto` as well, and the horizontal scrollbar
+ * then eats into the strip's fixed height, leaving the tabs scrollable up and
+ * down inside a bar one tab tall.
+ */
+export const SCROLLING_TAB_STRIP = "overflow-x-auto overflow-y-hidden";
+
 function TabsList({
   className,
   ...props
