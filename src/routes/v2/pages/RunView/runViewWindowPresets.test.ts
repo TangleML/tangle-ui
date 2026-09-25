@@ -7,6 +7,7 @@ import {
   RUN_AI_ASSISTANT_WINDOW_ID,
   RUN_DEFAULT_VIEW_PRESET,
   RUN_DETAILS_WINDOW_ID,
+  RUN_EMBEDDED_VIEW_PRESET,
   RUN_TOOLS_WINDOW_ID,
   RUN_VIEW_PRESETS,
 } from "./runViewWindowPresets";
@@ -42,6 +43,18 @@ describe("run view window presets", () => {
     expect(store.getDockAreaWindowIds("right")).toEqual([
       RUN_DETAILS_WINDOW_ID,
     ]);
+  });
+
+  it("docks Run Details then Run Tools on the right for the embedded preset", () => {
+    const store = createRunWindowStore();
+
+    store.seedInitialDockLayoutFromPreset(RUN_EMBEDDED_VIEW_PRESET);
+
+    expect(store.getDockAreaWindowIds("right")).toEqual([
+      RUN_DETAILS_WINDOW_ID,
+      RUN_TOOLS_WINDOW_ID,
+    ]);
+    expect(store.getDockAreaWindowIds("left")).toEqual([]);
   });
 
   it("hides all run windows with the minimal preset", () => {

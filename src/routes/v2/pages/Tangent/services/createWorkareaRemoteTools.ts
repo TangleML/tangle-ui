@@ -21,6 +21,7 @@ interface WorkareaTabSummary {
 
 function tabTarget(tab: WorkareaTab): string {
   if (tab.kind === "artifact") return tab.url;
+  if (tab.kind === "run") return `run:${tab.runId}`;
   return tab.pipelineRef.fileId
     ? `pipeline://${tab.pipelineRef.fileId}`
     : tab.pipelineRef.name;
@@ -55,16 +56,17 @@ export function createWorkareaRemoteTools(
     open_workarea_target: {
       description:
         "Open a target in the Dynamic Workarea and return the resulting tab. " +
-        "The target is a `pipeline://<fileId>` URI, an artifact URL, or a " +
-        "pipeline name. Returns the tab summary `{ id, kind, title, target, " +
-        "active }`.",
+        "The target is a `pipeline://<fileId>` URI, a `run:<id>` URI or run " +
+        "URL, an artifact URL, or a pipeline name. Returns the tab summary " +
+        "`{ id, kind, title, target, active }`.",
       inputSchema: {
         type: "object",
         properties: {
           target: {
             type: "string",
             description:
-              "A `pipeline://<fileId>` URI, an artifact URL, or a pipeline name.",
+              "A `pipeline://<fileId>` URI, a `run:<id>` URI or run URL, an " +
+              "artifact URL, or a pipeline name.",
           },
           title: {
             type: "string",

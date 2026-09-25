@@ -41,6 +41,54 @@ describe("resolveWorkareaTarget", () => {
     });
   });
 
+  it("resolves a run:<id> target to a run view", async () => {
+    const view = await resolveWorkareaTarget("run:run-123", options);
+
+    expect(view).toEqual({
+      kind: "run",
+      title: "Run run-123",
+      runId: "run-123",
+    });
+  });
+
+  it("resolves a /runs-v2/<id> URL to a run view", async () => {
+    const view = await resolveWorkareaTarget(
+      "https://host/runs-v2/run-abc",
+      options,
+    );
+
+    expect(view).toEqual({
+      kind: "run",
+      title: "Run run-abc",
+      runId: "run-abc",
+    });
+  });
+
+  it("resolves a /runs/<id> URL (with a trailing segment) to a run view", async () => {
+    const view = await resolveWorkareaTarget(
+      "https://host/runs/run-xyz/exec-1",
+      options,
+    );
+
+    expect(view).toEqual({
+      kind: "run",
+      title: "Run run-xyz",
+      runId: "run-xyz",
+    });
+  });
+
+  it("prefers an explicit title for a run view", async () => {
+    const view = await resolveWorkareaTarget("run:run-123", {
+      title: "My Run",
+    });
+
+    expect(view).toEqual({
+      kind: "run",
+      title: "My Run",
+      runId: "run-123",
+    });
+  });
+
   it("resolves an http URL to an artifact view", async () => {
     const view = await resolveWorkareaTarget(
       "https://host/artifact.txt",
