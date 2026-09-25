@@ -32,6 +32,10 @@ export function DynamicWorkarea() {
     closeWorkareaTab,
     registerWorkareaTabStore,
     unregisterWorkareaTabStore,
+    registerTabEnvironment,
+    unregisterTabEnvironment,
+    registerTabBridge,
+    unregisterTabBridge,
   } = useTangentProject();
   const [width, setWidth] = useState(DEFAULT_WIDTH);
 
@@ -45,6 +49,13 @@ export function DynamicWorkarea() {
       sessionId: activeSessionId,
       registerTabStore: registerWorkareaTabStore,
       unregisterTabStore: unregisterWorkareaTabStore,
+      // A stable per-tab remote-env id so the server can route spawns to this tab.
+      tabEnvironmentId: (id) =>
+        activeSessionId ? `${activeSessionId}:${id}` : undefined,
+      registerTabEnvironment,
+      unregisterTabEnvironment,
+      registerTabBridge,
+      unregisterTabBridge,
     };
   }
 
