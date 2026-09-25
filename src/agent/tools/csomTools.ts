@@ -23,6 +23,10 @@ import {
 import { PRESET_COLORS } from "@/components/ui/colorPresets";
 import type { ArgumentType, ComponentReference } from "@/models/componentSpec";
 
+import {
+  type ComponentCatalog,
+  createComponentCatalog,
+} from "../componentCatalog";
 import type { ToolBridgeApi } from "../toolBridgeApi";
 
 type JsonValue =
@@ -131,7 +135,10 @@ const EXPECTED_GRAPH_GUIDANCE =
 const positionSchema = z.object({ x: z.number(), y: z.number() });
 const sizeSchema = z.object({ width: z.number(), height: z.number() });
 
-export function createCsomTools(bridge: ToolBridgeApi) {
+export function createCsomTools(
+  bridge: ToolBridgeApi,
+  catalog: ComponentCatalog = createComponentCatalog(),
+) {
   const getPipelineState = tool({
     name: "get_pipeline_state",
     description:
@@ -226,76 +233,105 @@ export function createCsomTools(bridge: ToolBridgeApi) {
   const addTask = tool({
     name: "add_task",
     description:
-      "Add a new task node. Prefer the full componentRef from a search_components result (with `url` and/or `spec`). When nothing in the registry does the job you may author the component inline instead, but then `spec.implementation` is required — a spec with ports and no implementation is added without complaint, validates clean, and is refused by the backend at submit with no indication of which task is at fault. Adds to the top-level pipeline unless inSubgraphTaskId names a subgraph to add it inside.",
-    parameters: z.object({
-      name: z.string().describe("Human-readable task name"),
-      componentRef: z
-        .object({
-          name: z.string(),
-          url: z.string().nullable().optional(),
-          spec: z
-            .object({
-              name: z.string(),
-              description: z.string().nullable().optional(),
-              inputs: z
-                .array(
-                  z.object({
-                    name: z.string(),
-                    type: z.string().nullable().optional(),
-                    description: z.string().nullable().optional(),
-                    default: z.string().nullable().optional(),
-                    optional: z.boolean().nullable().optional(),
-                  }),
-                )
-                .nullable()
-                .optional(),
-              outputs: z
-                .array(
-                  z.object({
-                    name: z.string(),
-                    type: z.string().nullable().optional(),
-                    description: z.string().nullable().optional(),
-                  }),
-                )
-                .nullable()
-                .optional(),
-              implementation: containerImplementationSchema
-                .nullable()
-                .optional()
-                .describe(
-                  "How the task actually runs. Required unless `url` is given — a component with ports and nothing to run them is refused at submit. Carry it through verbatim from a search_components result, or write one: an image, and a command that reads each input and writes each output.",
-                ),
-            })
-            .nullable()
-            .optional(),
-        })
-        .refine(
-          (ref) => ref.url != null || ref.spec != null,
-          "componentRef must include either a url or an inline spec — name alone is not enough",
-        )
-        .refine(
-          (ref) => ref.url != null || ref.spec?.implementation != null,
-          "an inline spec must include `implementation` — a component with ports and nothing that runs them is refused at submit, and the refusal cannot say which task it came from",
-        )
-        .describe(
-          "Component reference from search_components — must include url and/or spec.",
-        ),
-      inSubgraphTaskId: z
-        .string()
-        .nullable()
-        .optional()
-        .describe(
-          "$id of a subgraph task to add this inside. Omit for the top-level pipeline. When the user means the subgraph they are viewing, pass activeSubgraphTaskId from get_pipeline_state verbatim — a name from activeSubgraphPath is not an $id.",
-        ),
-    }),
-    execute: async ({ name, componentRef, inSubgraphTaskId }) =>
-      asJson(
+      "Add a new task node. For anything `search_components` found, pass its result `id` as `componentId` — the component is already held, and repeating its spec back loses whatever part of it this schema does not name. Use `componentRef` only to author a component the registry does not have, and then `spec.implementation` is required: a component with ports and nothing that runs them is refused at submit. Adds to the top-level pipeline unless inSubgraphTaskId names a subgraph to add it inside.",
+    parameters: z
+      .object({
+        name: z.string().describe("Human-readable task name"),
+        componentId: z
+          .string()
+          .nullable()
+          .optional()
+          .describe(
+            "The `id` of a search_components result, which is how you add anything the registry already has. Pass this or componentRef, not both.",
+          ),
+        componentRef: z
+          .object({
+            name: z.string(),
+            url: z.string().nullable().optional(),
+            spec: z
+              .object({
+                name: z.string(),
+                description: z.string().nullable().optional(),
+                inputs: z
+                  .array(
+                    z.object({
+                      name: z.string(),
+                      type: z.string().nullable().optional(),
+                      description: z.string().nullable().optional(),
+                      default: z.string().nullable().optional(),
+                      optional: z.boolean().nullable().optional(),
+                    }),
+                  )
+                  .nullable()
+                  .optional(),
+                outputs: z
+                  .array(
+                    z.object({
+                      name: z.string(),
+                      type: z.string().nullable().optional(),
+                      description: z.string().nullable().optional(),
+                    }),
+                  )
+                  .nullable()
+                  .optional(),
+                implementation: containerImplementationSchema
+                  .nullable()
+                  .optional()
+                  .describe(
+                    "How the task actually runs. Required unless `url` is given — a component with ports and nothing to run them is refused at submit. Carry it through verbatim from a search_components result, or write one: an image, and a command that reads each input and writes each output.",
+                  ),
+              })
+              .nullable()
+              .optional(),
+          })
+          .nullable()
+          .optional()
+          .refine(
+            (ref) => ref == null || ref.url != null || ref.spec != null,
+            "componentRef must include either a url or an inline spec — name alone is not enough",
+          )
+          .refine(
+            (ref) =>
+              ref == null ||
+              ref.url != null ||
+              ref.spec?.implementation != null,
+            "an inline spec must include `implementation` — a component with ports and nothing that runs them is refused at submit, and the refusal cannot say which task it came from",
+          )
+          .describe(
+            "A component you are authoring yourself. For a component search_components found, pass componentId instead.",
+          ),
+        inSubgraphTaskId: z
+          .string()
+          .nullable()
+          .optional()
+          .describe(
+            "$id of a subgraph task to add this inside. Omit for the top-level pipeline. When the user means the subgraph they are viewing, pass activeSubgraphTaskId from get_pipeline_state verbatim — a name from activeSubgraphPath is not an $id.",
+          ),
+      })
+      .refine(
+        (args) => args.componentId != null || args.componentRef != null,
+        "pass componentId (from a search_components result) or componentRef (a component you are authoring) — one of the two is required",
+      ),
+    execute: async ({ name, componentId, componentRef, inSubgraphTaskId }) => {
+      const resolved = componentId
+        ? catalog.lookup(componentId)
+        : (dropNulls(componentRef) as ComponentReference);
+
+      if (!resolved) {
+        return asJson({
+          success: false,
+          error: `No component with id "${componentId}" has been searched for in this session. Call search_components first and use an id from its results, or pass componentRef to author a component yourself.`,
+        });
+      }
+
+      return asJson(
         await bridge.addTask({
           name,
-          componentRef: dropNulls(componentRef) as ComponentReference,
+          componentRef: resolved,
           inSubgraphTaskId: inSubgraphTaskId ?? undefined,
         }),
-      ),
+      );
+    },
   });
 
   const deleteTask = tool({

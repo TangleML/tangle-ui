@@ -3,6 +3,8 @@
  */
 import type { AiProviderConfig } from "@/types/aiProvider";
 
+import type { ComponentCatalog } from "./componentCatalog";
+import { createComponentCatalog } from "./componentCatalog";
 import type { ProxyClient } from "./config";
 import type { SkillsLoader } from "./skills/loader";
 import type { ToolBridgeApi } from "./toolBridgeApi";
@@ -26,6 +28,7 @@ export interface AgentSession {
   recentRuns: RecentPipelineRun[];
   context: AgentContext;
   componentReferences: AgentResponse["componentReferences"];
+  componentCatalog: ComponentCatalog;
 }
 
 export function createSession(params: {
@@ -37,6 +40,7 @@ export function createSession(params: {
   aiConfig: AiProviderConfig;
   emitStatus?: StatusCallback;
   recentRuns?: RecentPipelineRun[];
+  componentCatalog?: ComponentCatalog;
 }): AgentSession {
   return {
     threadId: params.threadId,
@@ -48,5 +52,6 @@ export function createSession(params: {
     recentRuns: params.recentRuns ?? [],
     context: params.context,
     componentReferences: {},
+    componentCatalog: params.componentCatalog ?? createComponentCatalog(),
   };
 }

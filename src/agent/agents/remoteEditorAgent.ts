@@ -48,7 +48,7 @@ export type RemoteEditorTool = ReturnType<
  *   mutations, no `search_components`, and no `submit_pipeline_run`.
  */
 function buildToolRegistry(session: AgentSession): RemoteEditorTool[] {
-  const csom = createCsomTools(session.bridge);
+  const csom = createCsomTools(session.bridge, session.componentCatalog);
   const componentSearch = createComponentSearchTools(session);
   const runTools = createRunTools(session.bridge);
   const debugTools = createDebugTools(session.bridge);

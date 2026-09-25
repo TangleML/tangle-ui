@@ -36,7 +36,7 @@ async function buildInstructions(session: AgentSession): Promise<string> {
 export async function createPipelineArchitectAgent(
   session: AgentSession,
 ): Promise<Agent> {
-  const csom = createCsomTools(session.bridge);
+  const csom = createCsomTools(session.bridge, session.componentCatalog);
   const componentSearch = createComponentSearchTools(session);
   const runTools = createRunTools(session.bridge);
   const agent = new Agent({
