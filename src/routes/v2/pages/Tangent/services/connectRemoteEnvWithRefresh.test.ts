@@ -85,6 +85,56 @@ describe("connectRemoteEnvWithRefresh", () => {
     await vi.waitFor(() => expect(onConnected).toHaveBeenCalledWith("env-1"));
   });
 
+  it("pins the minted environmentId across a scheduled refresh", async () => {
+    const host = makeHost();
+    vi.mocked(fetchRemoteEnvToken).mockResolvedValue({
+      token: "token",
+      environmentId: "env-1",
+      expiresAtMs: Date.now() + 60_000,
+    });
+
+    connectRemoteEnvWithRefresh({
+      host,
+      baseUrl: "https://tangent.example",
+      sessionId: "session-1",
+      getAuthToken: () => "auth",
+      onError: vi.fn(),
+    });
+    await vi.waitFor(() => expect(fetchRemoteEnvToken).toHaveBeenCalledOnce());
+
+    await vi.advanceTimersByTimeAsync(30_000);
+
+    await vi.waitFor(() =>
+      expect(fetchRemoteEnvToken).toHaveBeenCalledTimes(2),
+    );
+    expect(fetchRemoteEnvToken).toHaveBeenLastCalledWith(
+      expect.objectContaining({ environmentId: "env-1" }),
+    );
+  });
+
+  it("passes the initial environmentId on the first mint", async () => {
+    const host = makeHost();
+    vi.mocked(fetchRemoteEnvToken).mockResolvedValue({
+      token: "token",
+      environmentId: "session-1:workarea",
+    });
+
+    connectRemoteEnvWithRefresh({
+      host,
+      baseUrl: "https://tangent.example",
+      sessionId: "session-1",
+      initialEnvironmentId: "session-1:workarea",
+      getAuthToken: () => "auth",
+      onError: vi.fn(),
+    });
+
+    await vi.waitFor(() =>
+      expect(fetchRemoteEnvToken).toHaveBeenCalledWith(
+        expect.objectContaining({ environmentId: "session-1:workarea" }),
+      ),
+    );
+  });
+
   it("does not retry after it is stopped", async () => {
     const host = makeHost();
     vi.mocked(fetchRemoteEnvToken).mockRejectedValue(new Error("temporary"));

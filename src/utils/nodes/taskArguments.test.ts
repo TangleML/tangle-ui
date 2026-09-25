@@ -1,9 +1,17 @@
 import { describe, expect, it } from "vitest";
 
-import type { GraphInputArgument, TaskOutputArgument } from "@/api/types.gen";
+import type {
+  DynamicDataArgument,
+  GraphInputArgument,
+  TaskOutputArgument,
+} from "@/api/types.gen";
 import type { ComponentSpec } from "@/utils/componentSpec";
 
-import { extractTaskArguments, getArgumentValue } from "./taskArguments";
+import {
+  extractCloneableTaskArguments,
+  extractTaskArguments,
+  getArgumentValue,
+} from "./taskArguments";
 
 describe("taskArguments", () => {
   describe("getArgumentValue", () => {
@@ -254,6 +262,35 @@ describe("taskArguments", () => {
         expect(extractTaskArguments(taskArguments, componentSpec)).toEqual({
           input1: "value1",
         });
+      });
+    });
+  });
+
+  describe("extractCloneableTaskArguments", () => {
+    const secretArgument: DynamicDataArgument = {
+      dynamicData: { secret: { name: "MY_SECRET" } },
+    };
+
+    it("keeps plain string arguments", () => {
+      const taskArguments = {
+        input1: "value1",
+        input2: "value2",
+      };
+
+      expect(extractCloneableTaskArguments(taskArguments)).toEqual({
+        input1: "value1",
+        input2: "value2",
+      });
+    });
+
+    it("drops secret arguments so they are not seeded as masked strings", () => {
+      const taskArguments = {
+        input1: "value1",
+        token: secretArgument,
+      };
+
+      expect(extractCloneableTaskArguments(taskArguments)).toEqual({
+        input1: "value1",
       });
     });
   });
