@@ -47,10 +47,13 @@ const TangleSubmitter = ({
   const mockBackend = useTourMockBackend();
   const { mutate: submit, isPending: isSubmitting } = useSubmitPipeline();
   const isAutoRedirect = useFlagValue("redirect-on-new-pipeline-run");
-  const { projectIds } = useRunProjectContext();
+  const { projectId: contextProjectId, projectIds } = useRunProjectContext();
 
   const [submitSuccess, setSubmitSuccess] = useState<boolean | null>(null);
   const [isArgumentsDialogOpen, setIsArgumentsDialogOpen] = useState(false);
+  const [runProjectId, setRunProjectId] = useState<string | undefined>(
+    contextProjectId,
+  );
   const { cooldownTime, setCooldownTime } = useCooldownTimer(0);
   const notify = useToastNotification();
   const navigate = useNavigate();
@@ -119,7 +122,15 @@ const TangleSubmitter = ({
     setCooldownTime(3);
   };
 
-  const handleSubmit = async (taskArguments?: Record<string, ArgumentType>) => {
+  const openArgumentsDialog = () => {
+    setRunProjectId(contextProjectId);
+    setIsArgumentsDialogOpen(true);
+  };
+
+  const handleSubmit = async (
+    taskArguments?: Record<string, ArgumentType>,
+    runProjectIds: string[] = projectIds,
+  ) => {
     if (!componentSpec) {
       handleError("No pipeline to submit");
       return;
@@ -136,7 +147,7 @@ const TangleSubmitter = ({
       onlyFixableIssues &&
       !validateArguments(componentSpec.inputs ?? [], taskArguments ?? {})
     ) {
-      setIsArgumentsDialogOpen(true);
+      openArgumentsDialog();
       return;
     }
 
@@ -144,7 +155,7 @@ const TangleSubmitter = ({
     submit({
       componentSpec,
       taskArguments,
-      projectIds,
+      projectIds: runProjectIds,
       onSuccess,
       onError,
     });
@@ -156,7 +167,7 @@ const TangleSubmitter = ({
   ) => {
     runNotes.current = notes;
     setIsArgumentsDialogOpen(false);
-    handleSubmit(args);
+    handleSubmit(args, runProjectId ? [runProjectId] : []);
   };
 
   const hasConfigurableInputs = (componentSpec?.inputs?.length ?? 0) > 0;
@@ -239,7 +250,7 @@ const TangleSubmitter = ({
             variant="ghost"
             size="icon"
             data-testid="run-with-arguments-button"
-            onClick={() => setIsArgumentsDialogOpen(true)}
+            onClick={openArgumentsDialog}
             disabled={!available && !mockBackend}
           >
             <Icon name="Split" className="rotate-90" />
@@ -253,7 +264,13 @@ const TangleSubmitter = ({
           onCancel={() => setIsArgumentsDialogOpen(false)}
           onConfirm={handleSubmitWithArguments}
           componentSpec={componentSpec}
-          projectField={<RunProjectField pipelineName={componentSpec.name} />}
+          projectField={
+            <RunProjectField
+              pipelineName={componentSpec.name}
+              value={runProjectId}
+              onChange={setRunProjectId}
+            />
+          }
         />
       )}
     </>

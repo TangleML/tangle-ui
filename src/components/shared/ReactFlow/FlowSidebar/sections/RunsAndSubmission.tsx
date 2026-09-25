@@ -1,4 +1,4 @@
-import { ProjectRunContextChip } from "@/components/Project/ProjectRunContextChip";
+import { ProjectPicker } from "@/components/Project/ProjectPicker";
 import { useAwaitAuthorization } from "@/components/shared/Authentication/useAwaitAuthorization";
 import { HuggingFaceAuthButton } from "@/components/shared/HuggingFaceAuth/HuggingFaceAuthButton";
 import GoogleCloudSubmissionDialog from "@/components/shared/Submitters/GoogleCloud/GoogleCloudSubmissionDialog";
@@ -30,7 +30,7 @@ const RunsAndSubmission = () => {
     <SidebarSection title="Runs & Submissions" headerAction={showMoreButton}>
       <BlockStack as="ul" gap="1">
         <li className="w-full px-2.5">
-          <ProjectRunContextChip />
+          <ProjectPicker pipelineName={componentSpec?.name} />
         </li>
         <li className="w-full">
           {isAuthorized ? (

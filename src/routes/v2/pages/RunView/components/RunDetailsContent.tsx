@@ -7,6 +7,7 @@ import type {
   PipelineRunResponse,
 } from "@/api/types.gen";
 import { RunNotesEditor } from "@/components/PipelineRun/RunNotesEditor";
+import { ProjectDetailsSection } from "@/components/Project/ProjectDetailsSection";
 import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlock";
 import { KeyValueList } from "@/components/shared/ContextPanel/Blocks/KeyValueList";
 import { TextBlock } from "@/components/shared/ContextPanel/Blocks/TextBlock";
@@ -21,6 +22,13 @@ import {
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { TagList } from "@/components/shared/Tags/TagList";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
@@ -34,6 +42,7 @@ import { useDebugInTangent } from "@/routes/v2/pages/RunView/hooks/useDebugInTan
 import { TANGENT_AI_REQUIRED } from "@/routes/v2/shared/components/AiChat/components/aiSetupCopy";
 import { PipelineDetailsCollapsibleSection } from "@/routes/v2/shared/components/PipelineDetailsCollapsibleSection";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
+import { useProjectsById } from "@/services/projects/useProjects";
 import { runAnnotationsQueryOptions } from "@/services/runAnnotations";
 import {
   getAnnotationValue,
@@ -47,6 +56,7 @@ import {
   getExecutionStatusLabel,
   getOverallExecutionStatusFromStats,
 } from "@/utils/executionStatus";
+import { projectIdsFromAnnotations } from "@/utils/projectRunAnnotation";
 import { tracking } from "@/utils/tracking";
 
 import { RunDetailsHeader } from "./RunDetailsHeader";
@@ -136,6 +146,8 @@ function RunDetailsContentLoaded({
     .filter((a) => !SYSTEM_ANNOTATIONS.includes(a.key))
     .map((a) => ({ label: a.key, value: String(a.value) }));
 
+  const projectIds = useRunProjectIds(metadata?.id);
+
   return (
     <BlockStack className="h-full min-h-0 w-full">
       <RunDetailsHeader
@@ -169,6 +181,8 @@ function RunDetailsContentLoaded({
             </Paragraph>
           )}
         </PipelineDetailsCollapsibleSection>
+
+        <ProjectDetailsSection projectIds={projectIds} />
 
         <PipelineDetailsCollapsibleSection
           title="Details"
@@ -215,6 +229,21 @@ function RunDetailsContentLoaded({
   );
 }
 
+/**
+ * Which projects a run was attributed to, as written when it was created.
+ * Attribution cannot be revised, so this only ever reads.
+ */
+function useRunProjectIds(runId: string | undefined) {
+  const { backendUrl } = useBackend();
+  const projectsEnabled = useFlagValue("projects");
+
+  const { data: runAnnotations } = useQuery({
+    ...runAnnotationsQueryOptions(runId, backendUrl),
+  });
+
+  return projectsEnabled ? projectIdsFromAnnotations(runAnnotations) : [];
+}
+
 interface DebugInTangentButtonProps {
   runId: string;
   pipelineName: string;
@@ -226,20 +255,52 @@ function DebugInTangentButton({
 }: DebugInTangentButtonProps) {
   const { debug, isPending } = useDebugInTangent();
   const { isConfigured: isAiConfigured } = useAiProviderSettings();
+  // Only the projects still there: one that has been deleted since is not a
+  // place anything can be debugged, and picking it would just make a project.
+  const projects = useProjectsById(useRunProjectIds(runId));
 
-  return (
+  const label = isPending ? "Starting…" : "Debug in Tangent";
+  const button = (
     <Button
       variant="outline"
       size="sm"
       className="w-full"
       disabled={isPending || !isAiConfigured}
       title={isAiConfigured ? undefined : TANGENT_AI_REQUIRED}
-      onClick={() => debug({ runId, pipelineName })}
+      onClick={
+        projects.length > 1 ? undefined : () => debug({ runId, pipelineName })
+      }
       {...tracking("v2.run_view.debug_in_tangent")}
     >
       <Icon name="Bug" size="sm" />
-      {isPending ? "Starting…" : "Debug in Tangent"}
+      {label}
     </Button>
+  );
+
+  // Attribution is written once and never revised, so a run in two projects
+  // cannot be asked which one it meant — only the reader can say.
+  if (projects.length <= 1) {
+    return button;
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>{button}</DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="max-w-72 min-w-56">
+        <DropdownMenuLabel>Debug in which project?</DropdownMenuLabel>
+        {projects.map((project) => (
+          <DropdownMenuItem
+            key={project.id}
+            onSelect={() =>
+              debug({ runId, pipelineName, projectId: project.id })
+            }
+          >
+            <Icon name="Folder" size="sm" />
+            <span className="truncate">{project.name}</span>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

@@ -28,7 +28,7 @@ import { useProject, useUpdateProject } from "@/services/projects/useProjects";
 
 import { PROJECT_DETAILS_WINDOW_ID } from "./tangentProjectWindowOrder";
 
-interface PrepareEmptyProjectOptions {
+interface PrepareProjectArrivalOptions {
   projectId: string;
   sessionCount: number;
   isSessionsLoading: boolean;
@@ -41,11 +41,16 @@ function oldestFirst(resources: readonly ProjectResourceSummary[]) {
 }
 
 /**
- * A project with no sessions gets one started on arrival, a pipeline opened
- * beside it to work in — created and attached to the project first if it has
- * none — and the project window folded away. All of it asks only whether the
- * project has nothing, so a project someone has already worked in comes up as
- * they left it, project window included.
+ * What arriving at a project does. A project carrying a session someone asked
+ * for elsewhere — the dashboard's prompt box, Debug in Tangent — starts it,
+ * however many sessions the project already holds; the ask was made once and
+ * would otherwise be dropped on every project but an empty one.
+ *
+ * A project with no sessions gets the rest as well: a pipeline opened beside
+ * the session to work in — created and attached to the project first if it has
+ * none — and the project window folded away. Those ask only whether the project
+ * has nothing, so a project someone has already worked in comes up as they left
+ * it, project window included.
  *
  * A session nobody typed into is detached again on unmount, so an untouched new
  * project arrives session-less a second time and is set up again. Finding the
@@ -57,9 +62,9 @@ function oldestFirst(resources: readonly ProjectResourceSummary[]) {
  * `isIdle` cannot — StrictMode replays this effect inside one commit, where the
  * closure's `isIdle` has not yet seen the first `mutate`.
  */
-export function usePrepareEmptyProject(
+export function usePrepareProjectArrival(
   store: TangentProjectStore,
-  { projectId, sessionCount, isSessionsLoading }: PrepareEmptyProjectOptions,
+  { projectId, sessionCount, isSessionsLoading }: PrepareProjectArrivalOptions,
 ) {
   const storage = usePipelineStorage();
   const { windows } = useSharedStores();
@@ -74,6 +79,7 @@ export function usePrepareEmptyProject(
 
   const starting = readStartingSession(project?.extraData);
   const askedFor = starting ? nameFromPrompt(starting.prompt) : undefined;
+  const isEmpty = sessionCount === 0;
 
   const { mutate, isIdle } = useMutation({
     mutationFn: async () => {
@@ -82,17 +88,19 @@ export function usePrepareEmptyProject(
       );
       if (!started) return;
 
-      // Nothing has been written about a project nobody has worked in yet, so
-      // its window is a tall empty form sitting above the sessions and
-      // resources someone arriving actually came for.
-      windows.getWindowById(PROJECT_DETAILS_WINDOW_ID)?.minimize();
-
       if (starting) {
         await updateProject({
           id: projectId,
           input: { extraData: withoutStartingSession(project?.extraData) },
         });
       }
+
+      if (!isEmpty) return;
+
+      // Nothing has been written about a project nobody has worked in yet, so
+      // its window is a tall empty form sitting above the sessions and
+      // resources someone arriving actually came for.
+      windows.getWindowById(PROJECT_DETAILS_WINDOW_ID)?.minimize();
 
       const attached = oldestFirst(documents?.items ?? []).flatMap(
         (resource) => {
@@ -138,17 +146,17 @@ export function usePrepareEmptyProject(
   // A session started without a provider cannot be spoken to, and the opening
   // prompt would be spent on it. Leave the project as it is, so setting a
   // provider up and coming back still gets the arrival it was meant to have.
-  const isEmptyProject =
+  const hasArrival =
     !isSessionsLoading &&
-    sessionCount === 0 &&
+    (isEmpty || starting !== undefined) &&
     isAiConfigured &&
     project !== undefined &&
     documents !== undefined;
 
   useEffect(() => {
-    if (!isEmptyProject || prepared.current) return;
+    if (!hasArrival || prepared.current) return;
     if (!isIdle || store.isStartingSession) return;
     prepared.current = true;
     mutate();
-  }, [isEmptyProject, isIdle, store]);
+  }, [hasArrival, isIdle, store]);
 }

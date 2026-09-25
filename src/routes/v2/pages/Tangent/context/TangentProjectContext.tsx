@@ -6,7 +6,7 @@ import {
   useRequiredContext,
 } from "@/hooks/useRequiredContext";
 import useToastNotification from "@/hooks/useToastNotification";
-import { usePrepareEmptyProject } from "@/routes/v2/pages/Tangent/hooks/usePrepareEmptyProject";
+import { usePrepareProjectArrival } from "@/routes/v2/pages/Tangent/hooks/usePrepareProjectArrival";
 import { useProjectSessions } from "@/routes/v2/pages/Tangent/hooks/useProjectSessions";
 import { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
 import { nameFromPrompt } from "@/services/projects/nameFromPrompt";
@@ -67,7 +67,7 @@ export function TangentProjectProvider({
     store.setDefaultSessionId(defaultSessionId);
   }, [store, defaultSessionId]);
 
-  usePrepareEmptyProject(store, {
+  usePrepareProjectArrival(store, {
     projectId,
     sessionCount: sessions.length,
     isSessionsLoading,
