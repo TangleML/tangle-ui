@@ -6,10 +6,19 @@ import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 const RUNS_AND_SUBMISSION_WINDOW_ID = "runs-and-submission";
 
-export function useRunsAndSubmissionWindow() {
+interface UseRunsAndSubmissionWindowOptions {
+  renderSubmitter?: boolean;
+}
+
+export function useRunsAndSubmissionWindow({
+  renderSubmitter = false,
+}: UseRunsAndSubmissionWindowOptions = {}) {
   const { windows } = useSharedStores();
   useEffect(() => {
     if (windows.getWindowById(RUNS_AND_SUBMISSION_WINDOW_ID)) return;
+    // `miniContent` is captured at registration and the store cannot replace
+    // it, so `renderSubmitter` applies only to the call that creates the
+    // window — once per editor, each mounting its own SharedStoreProvider.
     windows.openWindow(<RunsAndSubmissionContent />, {
       id: RUNS_AND_SUBMISSION_WINDOW_ID,
       title: "Runs & Submissions",
@@ -22,7 +31,9 @@ export function useRunsAndSubmissionWindow() {
       disabledActions: ["close"],
       persisted: true,
       defaultDockState: "left",
-      miniContent: <RunsAndSubmissionWindowMiniContent />,
+      miniContent: (
+        <RunsAndSubmissionWindowMiniContent renderSubmitter={renderSubmitter} />
+      ),
     });
-  }, [windows]);
+  }, [windows, renderSubmitter]);
 }

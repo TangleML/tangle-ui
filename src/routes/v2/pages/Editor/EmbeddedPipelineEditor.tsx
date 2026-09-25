@@ -10,6 +10,7 @@ import { ComponentEditorProvider } from "@/components/shared/ComponentEditor/Com
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
+import { QuickRunSubmitterProvider } from "@/routes/v2/pages/Editor/components/QuickRunSubmitterContext";
 import { InlineStack } from "@/components/ui/layout";
 import { ComponentLibraryProvider } from "@/providers/ComponentLibraryProvider";
 import { ForcedSearchProvider } from "@/providers/ComponentLibraryProvider/ForcedSearchProvider";
@@ -121,7 +122,7 @@ const EmbeddedPipelineEditorCanvas = withSuspenseWrapper(
       useHistoryWindow();
 
       useRecentRunsWindow();
-      useRunsAndSubmissionWindow();
+      useRunsAndSubmissionWindow({ renderSubmitter: true });
       useUndoRedoKeyboard();
       useShortcutListener(isActive);
       useEditorEscapeShortcut();
@@ -180,28 +181,30 @@ export function EmbeddedPipelineEditor({
     <div className="h-full w-full flex flex-col bg-slate-100 dark:bg-background select-none">
       <SharedStoreProvider>
         <SharedStoreRegistrar onReady={onStoreReady} onClosed={onStoreClosed} />
-        <EditorSessionProvider>
-          <ComponentLibraryProvider>
-            <ComponentEditorProvider>
-              <ReactFlowProvider>
-                <ForcedSearchProvider>
-                  <DriverPermissionGate pipelineRef={pipelineRef}>
-                    <EmbeddedPipelineEditorCanvas
-                      pipelineRef={pipelineRef}
-                      isActive={isActive}
-                      sessionId={sessionId}
-                      environmentId={environmentId}
-                      onEnvironmentReady={onEnvironmentReady}
-                      onEnvironmentClosed={onEnvironmentClosed}
-                      onBridgeReady={onBridgeReady}
-                      onBridgeClosed={onBridgeClosed}
-                    />
-                  </DriverPermissionGate>
-                </ForcedSearchProvider>
-              </ReactFlowProvider>
-            </ComponentEditorProvider>
-          </ComponentLibraryProvider>
-        </EditorSessionProvider>
+        <QuickRunSubmitterProvider>
+          <EditorSessionProvider>
+            <ComponentLibraryProvider>
+              <ComponentEditorProvider>
+                <ReactFlowProvider>
+                  <ForcedSearchProvider>
+                    <DriverPermissionGate pipelineRef={pipelineRef}>
+                      <EmbeddedPipelineEditorCanvas
+                        pipelineRef={pipelineRef}
+                        isActive={isActive}
+                        sessionId={sessionId}
+                        environmentId={environmentId}
+                        onEnvironmentReady={onEnvironmentReady}
+                        onEnvironmentClosed={onEnvironmentClosed}
+                        onBridgeReady={onBridgeReady}
+                        onBridgeClosed={onBridgeClosed}
+                      />
+                    </DriverPermissionGate>
+                  </ForcedSearchProvider>
+                </ReactFlowProvider>
+              </ComponentEditorProvider>
+            </ComponentLibraryProvider>
+          </EditorSessionProvider>
+        </QuickRunSubmitterProvider>
       </SharedStoreProvider>
     </div>
   );

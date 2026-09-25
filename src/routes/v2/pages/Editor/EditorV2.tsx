@@ -23,6 +23,7 @@ import { useDockAreaAccordion } from "@/routes/v2/shared/hooks/useDockAreaAccord
 import { useFocusMode } from "@/routes/v2/shared/hooks/useFocusMode";
 import { NodeRegistryProvider } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { SpecProvider } from "@/routes/v2/shared/providers/SpecContext";
+import { QuickRunSubmitterProvider } from "@/routes/v2/pages/Editor/components/QuickRunSubmitterContext";
 import { useShortcutListener } from "@/routes/v2/shared/shortcuts/useShortcutListener";
 import {
   SharedStoreProvider,
@@ -167,11 +168,13 @@ function EditorV2Content({ pipelineRef }: { pipelineRef: PipelineRef | null }) {
     <ComponentLibraryProvider>
       <ComponentEditorProvider>
         <ReactFlowProvider>
-          <EditorMenuBar />
-          <EditorTourBridge />
-          <TourSaveExploreDialog />
-          <TourSecretsDialog />
-          <ForcedSearchProvider>{body}</ForcedSearchProvider>
+          <QuickRunSubmitterProvider>
+            <EditorMenuBar />
+            <EditorTourBridge />
+            <TourSaveExploreDialog />
+            <TourSecretsDialog />
+            <ForcedSearchProvider>{body}</ForcedSearchProvider>
+          </QuickRunSubmitterProvider>
         </ReactFlowProvider>
       </ComponentEditorProvider>
     </ComponentLibraryProvider>
