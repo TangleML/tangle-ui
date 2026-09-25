@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import yaml from "js-yaml";
 import type { ReactNode } from "react";
 
-import { CodeViewer } from "@/components/shared/CodeViewer";
+import { CodeViewer, languageFor } from "@/components/shared/CodeViewer";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -29,26 +29,6 @@ import { ColumnHeadingRow } from "./ColumnHeadingRow";
 import { type PipelineValidity, pipelineValidity } from "./pipelineValidity";
 import { UNTITLED } from "./ResourceRow";
 import { RunPipelineButton } from "./RunPipelineButton";
-
-const PLAIN_TEXT = "plaintext";
-
-const LANGUAGE_BY_EXTENSION: Record<string, string> = {
-  md: "markdown",
-  markdown: "markdown",
-  json: "json",
-  yaml: "yaml",
-  yml: "yaml",
-  py: "python",
-  sh: "shell",
-  sql: "sql",
-  ts: "typescript",
-  js: "javascript",
-};
-
-function languageFor(name: string | null) {
-  const extension = name?.split(".").pop()?.toLowerCase() ?? "";
-  return LANGUAGE_BY_EXTENSION[extension] ?? PLAIN_TEXT;
-}
 
 const CONTENT_KEY = "content";
 
