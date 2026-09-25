@@ -1,4 +1,5 @@
-import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlock";
+import type { ReactNode } from "react";
+
 import { Button } from "@/components/ui/button";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -6,19 +7,15 @@ import { Text } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useDialog } from "@/providers/DialogProvider/hooks/useDialog";
 import { convertCancelErrorTo } from "@/providers/DialogProvider/utils";
-import {
-  AddPipelineDialog,
-  type AttachResourceInput,
-  type ProjectResourceKind,
-} from "@/routes/v2/pages/Tangent/components/AddPipelineDialog";
+import { AddResourceButton } from "@/routes/v2/pages/Tangent/components/AddResourceButton";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
+import { parseResourceExtraData } from "@/routes/v2/pages/Tangent/workarea/resourceExtraData";
 import type { WorkareaTarget } from "@/routes/v2/pages/Tangent/workarea/types";
 import {
   formatWorkareaTarget,
-  idIdentity,
+  parseWorkareaTarget,
 } from "@/routes/v2/pages/Tangent/workarea/workareaTarget";
 import {
-  useCreateProjectResource,
   useDeleteProjectResource,
   useProjectResources,
 } from "@/services/projects/useProjectResources";
@@ -30,53 +27,47 @@ import { EditInstructionsDialog } from "./EditInstructionsDialog";
 interface ProjectResourceItem {
   id: string;
   name: string;
-  entity: ProjectResourceKind;
   target: WorkareaTarget;
+  icon: IconName;
+  description: string;
 }
 
-const RESOURCE_ICONS: Record<ProjectResourceKind, IconName> = {
-  pipeline: "Workflow",
+interface ResourceTypeMeta {
+  icon: IconName;
+  description: string;
+}
+
+const RESOURCE_TYPE_META: Record<string, ResourceTypeMeta> = {
+  local_pipeline: { icon: "Workflow", description: "Pipeline" },
+  pipeline_run: { icon: "Play", description: "Pipeline run" },
 };
 
 export function ResourcesWindowContent() {
   const store = useTangentProject();
   const notify = useToastNotification();
-  const { data: resourcesPage } = useProjectResources(store.projectId);
-  const { mutate: createResource, isPending: isAttachingResource } =
-    useCreateProjectResource(store.projectId);
+  const { data: resourcesPage } = useProjectResources(store.projectId, {
+    entity: ["document"],
+  });
   const { mutate: deleteResource, isPending: isDetachingResource } =
     useDeleteProjectResource(store.projectId);
-  const { open } = useDialog();
 
   const resources: ProjectResourceItem[] = (resourcesPage?.items ?? []).flatMap(
     (resource) => {
-      if (resource.entity !== "pipeline") return [];
-      if (!resource.entityId) return [];
-      const target: WorkareaTarget = {
-        type: "pipeline",
-        identity: idIdentity(resource.entityId),
-      };
+      const extra = parseResourceExtraData(resource.extraData);
+      const meta = extra ? RESOURCE_TYPE_META[extra.type] : undefined;
+      if (!extra || !meta || !extra.identity) return [];
+      const target = parseWorkareaTarget(extra.identity);
       return [
         {
           id: resource.id,
           name: resource.name ?? formatWorkareaTarget(target),
-          entity: resource.entity,
           target,
+          icon: meta.icon,
+          description: meta.description,
         },
       ];
     },
   );
-
-  async function handleAddPipeline() {
-    const result = await open<AttachResourceInput>({
-      component: AddPipelineDialog,
-      routeKey: "add-pipeline",
-      size: "full",
-    }).catch(convertCancelErrorTo(undefined));
-
-    if (!result) return;
-    createResource(result);
-  }
 
   async function handleOpenResource(resource: ProjectResourceItem) {
     try {
@@ -89,71 +80,99 @@ export function ResourcesWindowContent() {
   return (
     <BlockStack gap="4" className="p-2">
       <BlockStack className="border rounded-md divide-y overflow-auto hide-scrollbar">
-        <ContentBlock
-          title="Pipelines"
-          collapsible
-          defaultOpen
-          className="px-2 py-1"
-        >
-          {resources.length === 0 ? (
-            <Text size="xs" tone="subdued">
-              No pipelines attached yet.
-            </Text>
-          ) : (
-            <BlockStack gap="2">
-              {resources.map((resource) => (
-                <InlineStack
-                  key={resource.id}
-                  gap="1"
-                  blockAlign="center"
-                  wrap="nowrap"
-                  className="truncate rounded-md hover:bg-accent w-full"
-                >
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    data-testid={`open-resource-${resource.id}`}
-                    className="h-auto min-w-0 flex-1 justify-start gap-2 px-2 py-1.5 truncate"
-                    title={`Open ${resource.name}`}
-                    onClick={() => void handleOpenResource(resource)}
-                  >
-                    <Icon name={RESOURCE_ICONS[resource.entity]} size="xs" />
-                    <Text size="sm" className="truncate">
-                      {resource.name}
-                    </Text>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="min"
-                    aria-label={`Remove ${resource.name}`}
-                    title="Remove"
-                    disabled={isDetachingResource}
-                    onClick={() => deleteResource(resource.id)}
-                  >
-                    <Icon name="X" size="xs" />
-                  </Button>
-                </InlineStack>
-              ))}
-            </BlockStack>
-          )}
-          <Button
-            variant="outline"
-            className="w-full"
-            disabled={isAttachingResource}
-            onClick={() => void handleAddPipeline()}
-          >
-            <Icon name="Plus" size="xs" />
-            Add a pipeline
-          </Button>
-        </ContentBlock>
-
-        <InstructionsBlock projectId={store.projectId} />
+        <InstructionsRow projectId={store.projectId} />
+        {resources.map((resource) => (
+          <ResourceRow
+            key={resource.id}
+            icon={resource.icon}
+            title={resource.name}
+            description={resource.description}
+            testId={`open-resource-${resource.id}`}
+            onOpen={() => void handleOpenResource(resource)}
+            action={
+              <Button
+                variant="ghost"
+                size="min"
+                className="mr-1 mt-2 shrink-0"
+                aria-label={`Remove ${resource.name}`}
+                title="Remove"
+                disabled={isDetachingResource}
+                onClick={() => deleteResource(resource.id)}
+              >
+                <Icon name="X" size="xs" />
+              </Button>
+            }
+          />
+        ))}
       </BlockStack>
+
+      <AddResourceButton projectId={store.projectId} />
     </BlockStack>
   );
 }
 
-function InstructionsBlock({ projectId }: { projectId: string }) {
+interface ResourceRowProps {
+  icon: IconName;
+  title: string;
+  description: string;
+  titleSubdued?: boolean;
+  disabled?: boolean;
+  testId?: string;
+  onOpen: () => void;
+  action?: ReactNode;
+}
+
+function ResourceRow({
+  icon,
+  title,
+  description,
+  titleSubdued,
+  disabled,
+  testId,
+  onOpen,
+  action,
+}: ResourceRowProps) {
+  return (
+    <InlineStack
+      blockAlign="start"
+      wrap="nowrap"
+      className="w-full hover:bg-accent"
+    >
+      <Button
+        variant="ghost"
+        disabled={disabled}
+        data-testid={testId}
+        title={title}
+        onClick={onOpen}
+        className="h-auto min-w-0 flex-1 items-start justify-start gap-3 px-2 py-2"
+      >
+        <InlineStack
+          align="center"
+          blockAlign="center"
+          className="size-9 shrink-0 rounded-md bg-muted text-muted-foreground"
+        >
+          <Icon name={icon} size="lg" />
+        </InlineStack>
+        <BlockStack align="start" className="min-w-0 text-left">
+          <Text
+            size="sm"
+            weight="medium"
+            tone={titleSubdued ? "subdued" : "inherit"}
+            className="max-w-full truncate"
+          >
+            {title}
+          </Text>
+          <Text size="xs" tone="subdued" className="max-w-full truncate">
+            {description}
+          </Text>
+        </BlockStack>
+      </Button>
+      {action}
+    </InlineStack>
+  );
+}
+
+function InstructionsRow({ projectId }: { projectId: string }) {
   const { data: project } = useProject(projectId);
   const { mutate: updateProject, isPending: isSavingInstructions } =
     useUpdateProject();
@@ -173,21 +192,14 @@ function InstructionsBlock({ projectId }: { projectId: string }) {
   }
 
   return (
-    <ContentBlock
-      title="Instructions"
-      collapsible
-      defaultOpen
-      className="px-2 py-1"
-    >
-      <Button
-        variant="outline"
-        className="w-full"
-        disabled={isSavingInstructions}
-        onClick={() => void handleEditInstructions()}
-      >
-        <Icon name="Pencil" size="xs" />
-        Edit instructions
-      </Button>
-    </ContentBlock>
+    <ResourceRow
+      icon="FileText"
+      title={instructions ? "Instructions" : "No instructions yet"}
+      titleSubdued={!instructions}
+      description="Standing context for agents"
+      disabled={isSavingInstructions}
+      testId="edit-instructions"
+      onOpen={() => void handleEditInstructions()}
+    />
   );
 }
