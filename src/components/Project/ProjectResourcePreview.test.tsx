@@ -313,9 +313,10 @@ describe("ProjectResourcePreview", () => {
       entityId: null,
       payload: {},
       extraData: {
-        kind: "pipeline",
+        type: "local_pipeline",
         storage: "browser",
-        localName: "Churn model",
+        identity: "pipeline://name/Churn model",
+        fallbackName: "Churn model",
       },
     } satisfies Partial<ProjectResource>;
 
@@ -394,11 +395,17 @@ describe("ProjectResourcePreview", () => {
       expect(document.body.textContent).not.toContain("{}");
     });
 
-    it("leaves an ordinary empty document rendering as it did", () => {
+    /**
+     * Every row that points at something elsewhere is sent with an empty
+     * payload, because the api insists on one, so "{}" was the preview for a
+     * whole class of rows rather than a quirk of pipelines.
+     */
+    it("says an empty payload holds nothing, whatever kind of row it is", () => {
       mockResource({ name: "empty.yaml", payload: {} });
       renderPreview("resource-1");
 
-      expect(viewer()).toHaveTextContent("{}");
+      expect(screen.getByText("Nothing to preview")).toBeInTheDocument();
+      expect(document.body.textContent).not.toContain("{}");
     });
   });
 
@@ -413,6 +420,46 @@ describe("ProjectResourcePreview", () => {
 
     expect(screen.getByText("Cannot show this pipeline")).toBeInTheDocument();
     expect(screen.getByText("Pipeline is gone")).toBeInTheDocument();
+  });
+
+  describe("a pipeline run", () => {
+    const runRow = {
+      entity: "document",
+      name: "churn-training",
+      entityId: null,
+      payload: {},
+      extraData: {
+        type: "pipeline_run",
+        identity: "run://id/42",
+        url: "http://localhost/runs/42",
+      },
+    } satisfies Partial<ProjectResource>;
+
+    /** The other half of the "{}" preview: a run row carries no content either. */
+    it("says what it is instead of rendering its empty payload", () => {
+      mockResource(runRow);
+      renderPreview("resource-1");
+
+      expect(screen.getByText("Pipeline run")).toBeInTheDocument();
+      expect(document.body.textContent).not.toContain("{}");
+    });
+
+    it("offers the run's own page, where there is something to see", () => {
+      mockResource(runRow);
+      renderPreview("resource-1");
+
+      expect(
+        screen.getByRole("link", { name: /Open the run/ }),
+      ).toHaveAttribute("href", "http://localhost/runs/42");
+    });
+
+    it("says what it is even without a url to offer", () => {
+      mockResource({ ...runRow, extraData: { type: "pipeline_run" } });
+      renderPreview("resource-1");
+
+      expect(screen.getByText("Pipeline run")).toBeInTheDocument();
+      expect(screen.queryByRole("link", { name: /Open the run/ })).toBeNull();
+    });
   });
 
   it("dumps an unfamiliar payload as yaml rather than nothing", () => {

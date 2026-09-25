@@ -37,12 +37,12 @@ import {
 } from "@/routes/v2/pages/Tangent/services/createWorkareaRemoteTools";
 import { createRemoteEnvAgentWorker } from "@/routes/v2/pages/Tangent/services/remoteEnvAgentWorker";
 import { createRemoteEnvHost } from "@/routes/v2/pages/Tangent/services/remoteEnvHost";
-import { localPipelineByNameResourceExtraData } from "@/routes/v2/pages/Tangent/workarea/resourceExtraData";
 import { createDebugBridgeHandlers } from "@/routes/v2/shared/components/AiChat/toolBridge/debugBridge";
 import { createRunBridgeHandlers } from "@/routes/v2/shared/components/AiChat/toolBridge/runBridge";
 import type { BridgeDeps } from "@/routes/v2/shared/components/AiChat/toolBridge/utils";
 import { copyRunToPipeline } from "@/services/pipelineRunService";
 import { createProjectResource } from "@/services/projects/projectResourcesService";
+import { localPipelineResourceInput } from "@/services/projects/resourceDescriptor";
 import {
   ProjectResourcesQueryKeys,
   ProjectsQueryKeys,
@@ -181,12 +181,10 @@ export function TangentProjectAgentProvider({
       runInspect,
       clonePipeline: async (runId) => {
         const { pipelineName } = await clonePipelineFromRun(runInspect, runId);
-        await createProjectResource(store.projectId, {
-          entity: "document",
-          name: pipelineName,
-          extraData: localPipelineByNameResourceExtraData(pipelineName),
-          payload: {},
-        });
+        await createProjectResource(
+          store.projectId,
+          localPipelineResourceInput({ localName: pipelineName }),
+        );
         await refreshProjectResources();
         return { pipelineName };
       },

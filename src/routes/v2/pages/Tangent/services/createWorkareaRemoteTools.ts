@@ -16,7 +16,7 @@ import {
   nameIdentity,
   parseIdentity,
   parseWorkareaTarget,
-} from "@/routes/v2/pages/Tangent/workarea/workareaTarget";
+} from "@/services/projects/resourceTarget";
 import { getOverallExecutionStatusFromStats } from "@/utils/executionStatus";
 import { isRecord } from "@/utils/typeGuards";
 

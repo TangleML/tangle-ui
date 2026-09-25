@@ -5,7 +5,7 @@ import type {
   PipelineTarget,
   RunTarget,
   WorkareaTarget,
-} from "./types";
+} from "./resourceTarget";
 import {
   formatWorkareaTarget,
   idIdentity,
@@ -14,7 +14,7 @@ import {
   parseIdentity,
   parseWorkareaTarget,
   sameTarget,
-} from "./workareaTarget";
+} from "./resourceTarget";
 
 describe("workareaTarget", () => {
   it("round-trips between object and string form", () => {
@@ -91,6 +91,39 @@ describe("workareaTarget", () => {
     expect(isWorkareaTargetString("no-separator")).toBe(false);
     expect(isWorkareaTargetString("bogus://id/x")).toBe(false);
     expect(isWorkareaTargetString("run://run-123")).toBe(false);
+  });
+
+  /**
+   * Only a pipeline can be addressed by name. Passing this guard has to mean
+   * the parse will succeed, or a caller told the string was fine crashes on it.
+   */
+  it("rejects a kind addressed by an identity it cannot take", () => {
+    expect(isWorkareaTargetString("run://name/x")).toBe(false);
+    expect(isWorkareaTargetString("artifact://name/x")).toBe(false);
+  });
+
+  it("agrees with the parser on everything it accepts", () => {
+    const candidates = [
+      "pipeline://id/p1",
+      "pipeline://name/Draft",
+      "run://id/1",
+      "run://name/x",
+      "artifact://id/a.txt",
+      "artifact://name/a.txt",
+      "bogus://id/x",
+      "run://run-123",
+    ];
+
+    for (const raw of candidates) {
+      const accepted = isWorkareaTargetString(raw);
+      let parses = true;
+      try {
+        parseWorkareaTarget(raw);
+      } catch {
+        parses = false;
+      }
+      expect(accepted, `guard and parser disagree about ${raw}`).toBe(parses);
+    }
   });
 
   it("builds each target kind from its concrete type", () => {

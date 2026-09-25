@@ -3,21 +3,21 @@ import { useEffect, useRef } from "react";
 
 import { createNewPipeline } from "@/routes/v2/pages/Editor/components/EditorMenuBar/components/fileMenu.actions";
 import type { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
-import type { WorkareaTarget } from "@/routes/v2/pages/Tangent/workarea/types";
-import { idIdentity } from "@/routes/v2/pages/Tangent/workarea/workareaTarget";
 import { availablePipelineName } from "@/services/localPipelines/localPipelinesService";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
+import {
+  describeResource,
+  LOCAL_PIPELINE,
+  localPipelineResourceInput,
+} from "@/services/projects/resourceDescriptor";
+import type { WorkareaTarget } from "@/services/projects/resourceTarget";
+import { idIdentity } from "@/services/projects/resourceTarget";
 import type { ProjectResourceSummary } from "@/services/projects/types";
 import {
   useCreateProjectResource,
   useProjectResources,
 } from "@/services/projects/useProjectResources";
 import { useProject, useUpdateProject } from "@/services/projects/useProjects";
-
-import {
-  browserPipelineTarget,
-  starterPipelineResourceInput,
-} from "./starterPipelineResource";
 
 const DEBUG_SESSION_NAME = "Debug session";
 
@@ -93,8 +93,10 @@ export function usePrepareEmptyProject(
 
       const attached = oldestFirst(documents?.items ?? []).flatMap(
         (resource) => {
-          const target = browserPipelineTarget(resource);
-          return target ? [{ resource, target }] : [];
+          const described = describeResource(resource);
+          return described?.type === LOCAL_PIPELINE && described.target
+            ? [{ resource, target: described.target }]
+            : [];
         },
       )[0];
 
@@ -110,7 +112,12 @@ export function usePrepareEmptyProject(
         project?.name ?? "Untitled pipeline",
       );
       const file = await createNewPipeline(storage, name);
-      await createResource(starterPipelineResourceInput(file));
+      await createResource(
+        localPipelineResourceInput({
+          localName: file.storageKey,
+          localId: file.id,
+        }),
+      );
 
       const target: WorkareaTarget = {
         type: "pipeline",

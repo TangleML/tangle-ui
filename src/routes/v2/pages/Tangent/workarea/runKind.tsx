@@ -1,7 +1,7 @@
 import { EmbeddedRunView } from "@/routes/v2/pages/RunView/EmbeddedRunView";
+import { parseIdentity } from "@/services/projects/resourceTarget";
 
 import { registerWorkareaKind } from "./registry";
-import { parseIdentity } from "./workareaTarget";
 
 registerWorkareaKind({
   type: "run",

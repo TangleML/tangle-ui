@@ -1,7 +1,6 @@
 import type { IconName } from "@/components/ui/icon";
+import { namesLocalPipeline } from "@/services/projects/resourceDescriptor";
 import type { ProjectResourceSummary } from "@/services/projects/types";
-
-import { claimsLocalPipeline } from "./localPipelinePointer";
 
 type ResourceRowShape = Pick<
   ProjectResourceSummary,
@@ -44,16 +43,16 @@ const sameAs = (label: string, entity: string) =>
 export function resourceKindLabel(
   resource: ResourceRowShape,
 ): string | undefined {
-  if (claimsLocalPipeline(resource)) {
+  if (namesLocalPipeline(resource)) {
     return LOCAL_PIPELINE_LABEL;
   }
 
-  const kind = resource.extraData?.kind;
-  if (typeof kind !== "string") {
+  const type = resource.extraData?.type;
+  if (typeof type !== "string") {
     return undefined;
   }
 
-  const label = humanize(kind);
+  const label = humanize(type);
   return label && !sameAs(label, resource.entity) ? label : undefined;
 }
 
@@ -69,4 +68,4 @@ export function resourceKindLabel(
  * own, so removing it cannot destroy one.
  */
 export const removingDestroys = (resource: ResourceRowShape) =>
-  resource.entityId === null && !claimsLocalPipeline(resource);
+  resource.entityId === null && !namesLocalPipeline(resource);
