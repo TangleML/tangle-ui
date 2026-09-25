@@ -1,15 +1,16 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useBackend } from "@/providers/BackendProvider";
 import type { ProjectSummary, Workspace } from "@/services/projects/types";
-import { useProjects } from "@/services/projects/useProjects";
 import { useWorkspaces } from "@/services/projects/useWorkspaces";
 import { getUserDetails } from "@/utils/user";
 
 import { ProjectsSection } from "./ProjectsSection";
+import { useMyProjects } from "./useMyProjects";
 
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@tanstack/react-router")>()),
@@ -21,9 +22,10 @@ vi.mock("@/providers/BackendProvider", () => ({
 }));
 
 vi.mock("@/services/projects/useProjects", () => ({
-  useProjects: vi.fn(),
   useDeleteProject: () => ({ mutate: vi.fn(), isPending: false }),
 }));
+
+vi.mock("./useMyProjects", () => ({ useMyProjects: vi.fn() }));
 
 vi.mock("@/hooks/useToastNotification", () => ({
   default: () => vi.fn(),
@@ -87,15 +89,21 @@ function mockBackend(
   } as ReturnType<typeof useBackend>);
 }
 
+const loadMore = vi.fn();
+
 function mockProjects(
-  overrides: Partial<ReturnType<typeof useProjects>> = {},
+  overrides: Partial<ReturnType<typeof useMyProjects>> = {},
 ): void {
-  vi.mocked(useProjects).mockReturnValue({
-    data: { items: [project], nextPageToken: null, totalCount: 1 },
+  vi.mocked(useMyProjects).mockReturnValue({
+    projects: [project],
+    totalCount: 1,
     isPending: false,
     error: null,
+    hasMore: false,
+    isLoadingMore: false,
+    loadMore,
     ...overrides,
-  } as ReturnType<typeof useProjects>);
+  });
 }
 
 function renderSection() {
@@ -127,32 +135,8 @@ describe("ProjectsSection", () => {
     vi.resetAllMocks();
   });
 
-  it("asks the backend only for the current user's projects", async () => {
-    renderSection();
-
-    await waitFor(() => {
-      expect(useProjects).toHaveBeenCalledWith({
-        createdBy: "someone@example.com",
-        pageSize: 100,
-      });
-    });
-  });
-
-  it("lists every project when the user cannot be identified", async () => {
-    vi.mocked(getUserDetails).mockResolvedValue({
-      id: "Unknown",
-      permissions: [],
-    });
-
-    renderSection();
-
-    await waitFor(() => {
-      expect(useProjects).toHaveBeenCalledWith({
-        createdBy: undefined,
-        pageSize: 100,
-      });
-    });
-  });
+  // Which projects count as the user's own is `useMyProjects`'s job and is
+  // covered by its own tests.
 
   it("renders a project with its resource counts", async () => {
     renderSection();
@@ -222,9 +206,7 @@ describe("ProjectsSection", () => {
   });
 
   it("offers a new project card when the user has none", async () => {
-    mockProjects({
-      data: { items: [], nextPageToken: null, totalCount: 0 },
-    } as Partial<ReturnType<typeof useProjects>>);
+    mockProjects({ projects: [], totalCount: 0 });
 
     renderSection();
 
@@ -243,22 +225,41 @@ describe("ProjectsSection", () => {
   });
 
   it("says how much of a truncated list is shown", async () => {
-    mockProjects({
-      data: { items: [project], nextPageToken: "next", totalCount: 140 },
-    } as Partial<ReturnType<typeof useProjects>>);
+    mockProjects({ hasMore: true, totalCount: 140 });
 
     renderSection();
 
+    expect(await screen.findByText("Showing 1 of 140.")).toBeInTheDocument();
+  });
+
+  /** A long list was capped with no way past it, not paged. */
+  it("fetches the next page rather than stopping at the first", async () => {
+    mockProjects({ hasMore: true, totalCount: 140 });
+    const user = userEvent.setup();
+
+    renderSection();
+    await user.click(
+      await screen.findByRole("button", { name: "Load more projects" }),
+    );
+
+    expect(loadMore).toHaveBeenCalled();
+  });
+
+  it("offers nothing more to load once the list is complete", async () => {
+    renderSection();
+
+    await screen.findByText("Churn model");
+
     expect(
-      await screen.findByText("Showing the first 1 of 140 projects."),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: "Load more projects" }),
+    ).toBeNull();
   });
 
   it("surfaces a failure to load the list", async () => {
     mockProjects({
-      data: undefined,
+      projects: [],
       error: new Error("Failed to list projects"),
-    } as Partial<ReturnType<typeof useProjects>>);
+    });
 
     renderSection();
 
@@ -275,7 +276,7 @@ describe("ProjectsSection", () => {
     expect(
       await screen.findByText("Backend not configured"),
     ).toBeInTheDocument();
-    expect(useProjects).not.toHaveBeenCalled();
+    expect(useMyProjects).not.toHaveBeenCalled();
   });
 
   it("reports a configured backend that is unreachable", async () => {
@@ -286,7 +287,7 @@ describe("ProjectsSection", () => {
     expect(
       await screen.findByText("Backend not available"),
     ).toBeInTheDocument();
-    expect(useProjects).not.toHaveBeenCalled();
+    expect(useMyProjects).not.toHaveBeenCalled();
   });
 
   it("waits for the backend probe to settle before deciding", () => {

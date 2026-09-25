@@ -4,7 +4,6 @@ import { useEffect, useRef } from "react";
 import { createNewPipeline } from "@/routes/v2/pages/Editor/components/EditorMenuBar/components/fileMenu.actions";
 import type { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
-import { availablePipelineName } from "@/services/localPipelines/localPipelinesService";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import {
   describeResource,
@@ -13,6 +12,10 @@ import {
 } from "@/services/projects/resourceDescriptor";
 import type { WorkareaTarget } from "@/services/projects/resourceTarget";
 import { idIdentity } from "@/services/projects/resourceTarget";
+import {
+  readStartingSession,
+  withoutStartingSession,
+} from "@/services/projects/startingSession";
 import type { ProjectResourceSummary } from "@/services/projects/types";
 import {
   useCreateProjectResource,
@@ -22,21 +25,10 @@ import { useProject, useUpdateProject } from "@/services/projects/useProjects";
 
 import { PROJECT_DETAILS_WINDOW_ID } from "./tangentProjectWindowOrder";
 
-const DEBUG_SESSION_NAME = "Debug session";
-
 interface PrepareEmptyProjectOptions {
   projectId: string;
   sessionCount: number;
   isSessionsLoading: boolean;
-}
-
-function readStartingPrompt(
-  extraData: Record<string, unknown> | null | undefined,
-): string | undefined {
-  const value = extraData?.startingPrompt;
-  return typeof value === "string" && value.trim().length > 0
-    ? value
-    : undefined;
 }
 
 function oldestFirst(resources: readonly ProjectResourceSummary[]) {
@@ -76,15 +68,11 @@ export function usePrepareEmptyProject(
   const { mutateAsync: updateProject } = useUpdateProject();
   const prepared = useRef(false);
 
-  const startingPrompt = readStartingPrompt(project?.extraData);
+  const starting = readStartingSession(project?.extraData);
 
   const { mutate, isIdle } = useMutation({
     mutationFn: async () => {
-      const started = await store.startSession(
-        startingPrompt
-          ? { prompt: startingPrompt, name: DEBUG_SESSION_NAME }
-          : undefined,
-      );
+      const started = await store.startSession(starting);
       if (!started) return;
 
       // Nothing has been written about a project nobody has worked in yet, so
@@ -92,12 +80,10 @@ export function usePrepareEmptyProject(
       // resources someone arriving actually came for.
       windows.getWindowById(PROJECT_DETAILS_WINDOW_ID)?.minimize();
 
-      if (startingPrompt) {
-        const nextExtraData = { ...(project?.extraData ?? {}) };
-        delete nextExtraData.startingPrompt;
+      if (starting) {
         await updateProject({
           id: projectId,
-          input: { extraData: nextExtraData },
+          input: { extraData: withoutStartingSession(project?.extraData) },
         });
       }
 
@@ -118,10 +104,10 @@ export function usePrepareEmptyProject(
         return;
       }
 
-      const name = await availablePipelineName(
-        project?.name ?? "Untitled pipeline",
-      );
-      const file = await createNewPipeline(storage, name);
+      // Unnamed, so it gets the same random name every other new pipeline
+      // gets. Naming it after the project made every pipeline in a project
+      // started from a prompt carry the whole prompt as its name.
+      const file = await createNewPipeline(storage);
       await createResource(
         localPipelineResourceInput({
           localName: file.storageKey,
