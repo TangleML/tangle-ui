@@ -36,11 +36,11 @@ import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { fetchRunAnnotations } from "@/services/pipelineRunService";
 import {
   getAnnotationValue,
+  isSystemRunAnnotation,
   PIPELINE_NOTES_ANNOTATION,
   PIPELINE_TAGS_ANNOTATION,
   RUN_SOURCE_ANNOTATION,
   SYSTEM_ANNOTATIONS,
-  SYSTEM_RUN_ANNOTATIONS,
 } from "@/utils/annotations";
 import { TWENTY_FOUR_HOURS_IN_MS } from "@/utils/constants";
 import {
@@ -351,7 +351,7 @@ function RunAnnotationsSection({ runId }: { runId: string | undefined }) {
   const { data: runAnnotations } = useRunAnnotations(runId);
 
   const annotations = Object.entries(runAnnotations ?? {})
-    .filter(([key]) => !SYSTEM_RUN_ANNOTATIONS.includes(key))
+    .filter(([key]) => !isSystemRunAnnotation(key))
     .map(([key, value]) => ({ key, value }));
 
   if (annotations.length === 0) {

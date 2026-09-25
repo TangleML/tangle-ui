@@ -4,6 +4,7 @@ import { getNodeTypeZIndexDefault } from "@/components/shared/ReactFlow/FlowCanv
 import type { AnnotationConfig, Annotations } from "@/types/annotations";
 
 import {
+  BACKEND_ANNOTATION_PREFIX,
   EDGE_CONDUITS_ANNOTATION,
   EDITOR_COLLAPSED_ANNOTATION,
   EDITOR_FLOW_DIRECTION_ANNOTATION,
@@ -40,11 +41,23 @@ export const SYSTEM_ANNOTATIONS = [
   EDGE_CONDUITS_ANNOTATION,
 ];
 
-export const SYSTEM_RUN_ANNOTATIONS = [
+const SYSTEM_RUN_ANNOTATIONS = [
   PIPELINE_RUN_NOTES_ANNOTATION,
   PIPELINE_TAGS_ANNOTATION,
   RUN_SOURCE_ANNOTATION,
 ];
+
+const SYSTEM_RUN_ANNOTATION_PREFIXES = [
+  BACKEND_ANNOTATION_PREFIX,
+  PROJECT_ID_ANNOTATION_PREFIX,
+];
+
+export function isSystemRunAnnotation(key: string): boolean {
+  return (
+    SYSTEM_RUN_ANNOTATIONS.includes(key) ||
+    SYSTEM_RUN_ANNOTATION_PREFIXES.some((prefix) => key.startsWith(prefix))
+  );
+}
 
 export const DEFAULT_COMMON_ANNOTATIONS: AnnotationConfig[] = [
   {

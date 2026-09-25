@@ -101,11 +101,14 @@ describe("<RunDetailsContent/>", () => {
     expect(screen.getByText("research")).toBeInTheDocument();
   });
 
-  it("hides run annotations that are surfaced elsewhere in the panel", async () => {
+  it("hides run annotations that are internal or surfaced elsewhere in the panel", async () => {
     fetchRunAnnotations.mockResolvedValue({
       notes: "Run notes",
       tags: "Demo,Secrets",
       source: "web-app",
+      "system/pipeline_run.name": "Giphy",
+      "system/pipeline_run.created_by": "user-1",
+      "tangleml.com/project/project-id/project-1": "true",
     });
 
     renderPanel(<RunDetailsContent />);
