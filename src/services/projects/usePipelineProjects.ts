@@ -5,11 +5,24 @@ import { pointerTo } from "@/services/localPipelines/localPipelinesService";
 import { LocalPipelinesQueryKeys } from "@/services/localPipelines/types";
 import { MINUTES } from "@/utils/constants";
 
-import { holdsPipeline, PIPELINE_RESOURCE_PARAMS } from "./pipelineProjects";
+import {
+  PIPELINE_RESOURCE_PARAMS,
+  pipelineResourceIn,
+} from "./pipelineProjects";
 import { listProjectResources } from "./projectResourcesService";
-import type { ProjectSummary } from "./types";
+import type { ProjectResourceSummary, ProjectSummary } from "./types";
 import { ProjectResourcesQueryKeys } from "./types";
 import { useProjects } from "./useProjects";
+
+export interface PipelineProjectMembership {
+  project: ProjectSummary;
+  resource: ProjectResourceSummary;
+}
+
+export interface PipelineProjects {
+  memberships: PipelineProjectMembership[];
+  isPending: boolean;
+}
 
 /**
  * Which of the reader's projects hold a given pipeline. There is no asking the
@@ -20,10 +33,16 @@ import { useProjects } from "./useProjects";
  *
  * Only the first page of projects, and of each project's resources, is
  * consulted.
+ *
+ * One listing per project is dear enough that callers which only need the
+ * answer on demand should pass `enabled: false` until then.
  */
-export function usePipelineProjects(pipelineName: string | undefined) {
+export function usePipelineProjects(
+  pipelineName: string | undefined,
+  { enabled: wanted = true }: { enabled?: boolean } = {},
+): PipelineProjects {
   const { configured, available } = useBackend();
-  const enabled = configured && available && Boolean(pipelineName);
+  const enabled = wanted && configured && available && Boolean(pipelineName);
 
   const { data: pointer } = useQuery({
     queryKey: LocalPipelinesQueryKeys.Pointer({
@@ -34,7 +53,7 @@ export function usePipelineProjects(pipelineName: string | undefined) {
     staleTime: 1 * MINUTES,
   });
 
-  const { data: projects } = useProjects({});
+  const { data: projects, isPending: isListPending } = useProjects({});
 
   const candidates: ProjectSummary[] = enabled ? (projects?.items ?? []) : [];
 
@@ -50,12 +69,19 @@ export function usePipelineProjects(pipelineName: string | undefined) {
     })),
   });
 
+  const isPending =
+    enabled &&
+    (isListPending || !pointer || resources.some((query) => query.isPending));
+
   if (!pointer) {
-    return [];
+    return { memberships: [], isPending };
   }
 
-  return candidates.filter((_project, index) => {
+  const memberships = candidates.flatMap((project, index) => {
     const items = resources[index]?.data?.items;
-    return items !== undefined && holdsPipeline(items, pointer);
+    const resource = items && pipelineResourceIn(items, pointer);
+    return resource ? [{ project, resource }] : [];
   });
+
+  return { memberships, isPending };
 }
