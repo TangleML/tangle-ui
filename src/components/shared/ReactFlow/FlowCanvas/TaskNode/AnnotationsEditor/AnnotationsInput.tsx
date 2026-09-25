@@ -3,6 +3,7 @@ import {
   type KeyboardEvent,
   useCallback,
   useEffect,
+  useMemo,
   useState,
 } from "react";
 
@@ -25,6 +26,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Paragraph, Text } from "@/components/ui/typography";
+import { useAnnotationOptions } from "@/hooks/useAnnotationOptions";
 import { useCallbackOnUnmount } from "@/hooks/useCallbackOnUnmount";
 import { cn } from "@/lib/utils";
 import type {
@@ -55,7 +57,7 @@ const CUSTOM_OPTION_SENTINEL = "__custom__";
 // is not handled in the quantity path.
 export const AnnotationsInput = ({
   value = "",
-  config,
+  config: staticConfig,
   annotations,
   deletable = false,
   autoFocus = false,
@@ -63,6 +65,18 @@ export const AnnotationsInput = ({
   onBlur,
   onDelete,
 }: AnnotationsInputProps) => {
+  const remoteOptions = useAnnotationOptions(
+    staticConfig?.optionsUrl,
+    annotations,
+  );
+  const config = useMemo(() => {
+    if (!staticConfig?.optionsUrl) return staticConfig;
+    return {
+      ...staticConfig,
+      options: remoteOptions.data?.length ? remoteOptions.data : undefined,
+    };
+  }, [staticConfig, remoteOptions.data]);
+
   const [inputValue, setInputValue] = useState(value);
   const [isInvalid, setIsInvalid] = useState(false);
   const [lastSavedValue, setLastSavedValue] = useState(value);
