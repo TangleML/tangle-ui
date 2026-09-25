@@ -11,6 +11,7 @@ import { getUserDetails } from "@/utils/user";
 
 import { ProjectsSection } from "./ProjectsSection";
 import { useMyProjects } from "./useMyProjects";
+import { usePinnedProjects } from "./usePinnedProjects";
 
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@tanstack/react-router")>()),
@@ -26,6 +27,8 @@ vi.mock("@/services/projects/useProjects", () => ({
 }));
 
 vi.mock("./useMyProjects", () => ({ useMyProjects: vi.fn() }));
+
+vi.mock("./usePinnedProjects", () => ({ usePinnedProjects: vi.fn() }));
 
 vi.mock("@/hooks/useToastNotification", () => ({
   default: () => vi.fn(),
@@ -91,11 +94,16 @@ function mockBackend(
 
 const loadMore = vi.fn();
 
+function mockPinned(...projects: ProjectSummary[]): void {
+  vi.mocked(usePinnedProjects).mockReturnValue({ projects, isPending: false });
+}
+
 function mockProjects(
   overrides: Partial<ReturnType<typeof useMyProjects>> = {},
 ): void {
   vi.mocked(useMyProjects).mockReturnValue({
     projects: [project],
+    createdBy: "someone@example.com",
     totalCount: 1,
     isPending: false,
     error: null,
@@ -129,6 +137,7 @@ describe("ProjectsSection", () => {
     } as ReturnType<typeof useWorkspaces>);
     mockBackend();
     mockProjects();
+    mockPinned();
   });
 
   afterEach(() => {
@@ -266,6 +275,70 @@ describe("ProjectsSection", () => {
     expect(
       await screen.findByText("Failed to list projects"),
     ).toBeInTheDocument();
+  });
+
+  /** Pinning moves a project to the front; it does not clone it. */
+  it("shows a pinned project of the user's own exactly once", async () => {
+    mockPinned(project);
+
+    renderSection();
+
+    expect(await screen.findAllByText("Churn model")).toHaveLength(1);
+  });
+
+  it("puts a pinned project ahead of the rest, behind the new project card", async () => {
+    const fraud = { ...project, id: "project-2", name: "Fraud model" };
+    mockProjects({ projects: [fraud, project], totalCount: 2 });
+    mockPinned(project);
+
+    renderSection();
+
+    const tiles = screen.getAllByRole("button", {
+      name: /New project|Project actions/,
+    });
+    expect(tiles.map((tile) => tile.getAttribute("aria-label"))).toEqual([
+      null,
+      "Project actions: Churn model",
+      "Project actions: Fraud model",
+    ]);
+  });
+
+  /** A project someone else shared is pinned but was never in the user's own list. */
+  it("shows a pinned project the backend never listed", async () => {
+    mockPinned({ ...project, id: "project-9", name: "Shared work" });
+
+    renderSection();
+
+    expect(await screen.findByText("Shared work")).toBeInTheDocument();
+    expect(screen.getByText("Churn model")).toBeInTheDocument();
+  });
+
+  it("counts a pinned project once, whoever owns it", async () => {
+    mockProjects({
+      projects: [project, { ...project, id: "project-2", name: "Fraud model" }],
+      totalCount: 9,
+      hasMore: true,
+    });
+    mockPinned(project, {
+      ...project,
+      id: "project-9",
+      name: "Shared work",
+      createdBy: "someone-else@example.com",
+    });
+
+    renderSection();
+
+    expect(await screen.findByText("Showing 3 of 10.")).toBeInTheDocument();
+  });
+
+  /** Its page may not have been fetched, but it is still one of the user's own. */
+  it("does not double-count a pinned project from a later page", async () => {
+    mockProjects({ projects: [project], totalCount: 40, hasMore: true });
+    mockPinned({ ...project, id: "project-40", name: "Deep in the list" });
+
+    renderSection();
+
+    expect(await screen.findByText("Showing 2 of 40.")).toBeInTheDocument();
   });
 
   it("asks the user to configure a backend before querying", async () => {

@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 
+import { PinProjectButton } from "@/components/Home/ProjectsSection/PinProjectButton";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Heading, Text } from "@/components/ui/typography";
@@ -35,6 +36,7 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
         <Heading level={1} className="truncate">
           {project.name}
         </Heading>
+        <PinProjectButton project={project} />
       </InlineStack>
     </BlockStack>
   );

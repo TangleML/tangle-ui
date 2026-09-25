@@ -24,6 +24,7 @@ import {
 import { getErrorMessage } from "@/utils/string";
 
 import { EditInstructionsDialog } from "./EditInstructionsDialog";
+import { useUnavailablePipelines } from "./useUnavailablePipelines";
 import { WindowListRow } from "./WindowListRow";
 
 interface ProjectResourceItem {
@@ -50,6 +51,11 @@ const BACKEND_PIPELINE_META: ResourceTypeMeta = {
   description: "Backend pipeline — not supported yet",
 };
 
+const ABSENT_PIPELINE_META: ResourceTypeMeta = {
+  icon: "Workflow",
+  description: "Pipeline — not in this browser",
+};
+
 /**
  * A document carries its own body, so it records no identity — the row is the
  * document, and the row's own id is what addresses it.
@@ -66,14 +72,15 @@ function targetOf(
 }
 
 /**
- * A row with no target is listed but cannot be opened. A pipeline the backend
- * holds is the only one: it belongs to the project and saying nothing about it
- * makes the list look wrong, but nothing here can open one — the editor reads
- * browser storage, and fetching a pipeline from the backend is being brought in
- * separately rather than written twice.
+ * A row with no target is listed but cannot be opened. Two kinds land there: a
+ * pipeline the backend holds, which nothing here can open because the editor
+ * reads browser storage; and a pipeline held in a browser that is not this one,
+ * which is the ordinary case in a project someone shared. Both belong to the
+ * project, so leaving them out would make the list look wrong.
  */
 function toResourceItem(
   resource: ProjectResourceSummary,
+  unavailable: ReadonlySet<string>,
 ): ProjectResourceItem | undefined {
   if (resource.entity === "pipeline") {
     return resource.entityId
@@ -93,9 +100,15 @@ function toResourceItem(
       : undefined;
   if (!target || !meta) return undefined;
 
+  const name = resource.name ?? formatWorkareaTarget(target);
+
+  if (unavailable.has(resource.id)) {
+    return { id: resource.id, name, ...ABSENT_PIPELINE_META };
+  }
+
   return {
     id: resource.id,
-    name: resource.name ?? formatWorkareaTarget(target),
+    name,
     target,
     icon: meta.icon,
     description: meta.description,
@@ -111,8 +124,11 @@ export function ResourcesWindowContent() {
   const { mutate: deleteResource, isPending: isDetachingResource } =
     useDeleteProjectResource(store.projectId);
 
-  const resources: ProjectResourceItem[] = (resourcesPage?.items ?? []).flatMap(
-    (resource) => toResourceItem(resource) ?? [],
+  const items = resourcesPage?.items ?? [];
+  const unavailable = useUnavailablePipelines(items);
+
+  const resources: ProjectResourceItem[] = items.flatMap(
+    (resource) => toResourceItem(resource, unavailable) ?? [],
   );
 
   async function handleOpenResource(resource: ProjectResourceItem) {

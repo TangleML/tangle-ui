@@ -29,6 +29,7 @@ import {
   formatResourceCounts,
   totalResourceCount,
 } from "./formatResourceCounts";
+import { useProjectPin } from "./useProjectPin";
 
 interface ProjectCardProps {
   project: ProjectSummary;
@@ -45,6 +46,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
     ...confirmationProps
   } = useConfirmationDialog();
 
+  const { pinned, togglePin } = useProjectPin(project);
   const resourceTotal = totalResourceCount(project.resourceCounts);
 
   const openDetails = () => {
@@ -111,9 +113,13 @@ export function ProjectCard({ project }: ProjectCardProps) {
             className="pr-8"
           >
             <Icon
-              name="Folder"
+              name={pinned ? "Pin" : "Folder"}
               size="lg"
-              className="text-muted-foreground shrink-0"
+              aria-label={pinned ? "Pinned" : undefined}
+              className={cn(
+                "shrink-0",
+                pinned ? "text-brand-accent" : "text-muted-foreground",
+              )}
             />
             <Text weight="semibold" className="min-w-0 truncate">
               {project.name}
@@ -160,6 +166,13 @@ export function ProjectCard({ project }: ProjectCardProps) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          <DropdownMenuItem
+            onSelect={togglePin}
+            {...tracking("projects.pin_project", { new_value: !pinned })}
+          >
+            <Icon name={pinned ? "PinOff" : "Pin"} size="sm" />
+            {pinned ? "Unpin project" : "Pin project"}
+          </DropdownMenuItem>
           <DropdownMenuItem
             onSelect={openDetails}
             {...tracking("projects.open_project_details")}

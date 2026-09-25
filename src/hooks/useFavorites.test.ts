@@ -74,6 +74,26 @@ describe("useFavorites", () => {
     });
   });
 
+  /**
+   * A project reached by a shared link is on no server-side list of the
+   * caller's, so starring it is the only thing that keeps it findable.
+   */
+  it("keeps a project, which no list would otherwise hold", async () => {
+    const project: FavoriteItem = {
+      type: "project",
+      id: "proj-1",
+      name: "Ada's churn model",
+    };
+    const { result } = renderHook(() => useFavorites());
+
+    await result.current.addFavorite(project);
+
+    await waitFor(() => {
+      expect(result.current.favorites).toEqual([project]);
+      expect(result.current.isFavorite("project", "proj-1")).toBe(true);
+    });
+  });
+
   it("does not confuse items of different types with the same id", async () => {
     const pipelineItem: FavoriteItem = {
       type: "pipeline",

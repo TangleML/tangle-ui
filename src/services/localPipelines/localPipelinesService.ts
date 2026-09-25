@@ -43,11 +43,17 @@ export async function availablePipelineName(base: string): Promise<string> {
 }
 
 /**
- * The id is tried before the name because a name can be recycled: rename a
+ * A recorded id is the whole answer, because a name can be recycled: rename a
  * pipeline, call the next one by the old name, and resolving by name finds the
  * wrong pipeline while looking perfectly successful. Registry ids are never
- * reused, so an id that still resolves names the pipeline that was added. The
- * name is the fallback, because most pipelines have no registry row at all.
+ * reused, so an id that still resolves names the pipeline that was added — and
+ * an id that does not resolve means the pipeline is not here, which falling
+ * back to the name would paper over with whatever happens to share it. That
+ * matters across browsers: projects are shared, so a pointer routinely arrives
+ * at a browser holding an unrelated pipeline of the same name.
+ *
+ * Only a pointer that recorded no id at all is resolved by name, because for
+ * those the name is the only handle there has ever been.
  */
 async function resolvePointer(
   pointer: LocalPipelinePointer,
@@ -55,9 +61,9 @@ async function resolvePointer(
 ): Promise<string | undefined> {
   if (pointer.localId) {
     const registered = await findById(pointer.localId);
-    if (registered && names.has(registered.storageKey)) {
-      return registered.storageKey;
-    }
+    return registered && names.has(registered.storageKey)
+      ? registered.storageKey
+      : undefined;
   }
 
   return names.has(pointer.localName) ? pointer.localName : undefined;

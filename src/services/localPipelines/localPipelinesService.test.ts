@@ -80,7 +80,13 @@ describe("readLocalPipeline", () => {
     expect(found?.name).toBe("Churn model v2");
   });
 
-  it("falls back to the name when the id no longer resolves", async () => {
+  /**
+   * The case that matters now projects are shared: the pointer was written in
+   * someone else's browser, and this one happens to hold an unrelated pipeline
+   * of the same name. Falling back to the name would open that one and look
+   * entirely successful.
+   */
+  it("reports nothing when the id is unknown here, whatever shares the name", async () => {
     held("Churn model");
     rows.findById.mockResolvedValue(undefined);
 
@@ -89,11 +95,11 @@ describe("readLocalPipeline", () => {
       localId: "id-9",
     });
 
-    expect(found?.name).toBe("Churn model");
+    expect(found).toBeUndefined();
   });
 
-  /** A rename through the older editor leaves the registry row behind. */
-  it("falls back to the name when the id resolves to a pipeline that is gone", async () => {
+  /** A stale registry row is not evidence that a same-named pipeline is the one. */
+  it("reports nothing when the id resolves to a pipeline that is gone", async () => {
     held("Churn model");
     rows.findById.mockResolvedValue({
       id: "id-9",
@@ -106,7 +112,7 @@ describe("readLocalPipeline", () => {
       localId: "id-9",
     });
 
-    expect(found?.name).toBe("Churn model");
+    expect(found).toBeUndefined();
   });
 
   it("resolves a pipeline that was never entered in the registry", async () => {
@@ -147,6 +153,21 @@ describe("resolvePointers", () => {
     await expect(
       resolvePointers([{ localName: "Churn model" }, { localName: "Gone" }]),
     ).resolves.toEqual({ "Churn model|": "Churn model", "Gone|": null });
+  });
+
+  /**
+   * Two browsers, one project, and a pipeline name common enough to collide.
+   * Saying "held" here would grey in a row that opens somebody else's work.
+   */
+  it("does not count a same-named pipeline as the one an id names", async () => {
+    held("Churn model");
+    rows.findById.mockResolvedValue(undefined);
+
+    await expect(
+      resolvePointers([
+        { localName: "Churn model", localId: "made-elsewhere" },
+      ]),
+    ).resolves.toEqual({ "Churn model|made-elsewhere": null });
   });
 
   /** Deserializing every pipeline to answer a yes/no per row is the cost to avoid. */

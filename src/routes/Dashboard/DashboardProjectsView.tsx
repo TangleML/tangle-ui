@@ -24,7 +24,7 @@ export function DashboardProjectsView() {
       </BlockStack>
 
       <BlockStack gap="4">
-        <Heading level={2}>My Projects</Heading>
+        <Heading level={2}>Projects</Heading>
         <ProjectsSection />
       </BlockStack>
     </BlockStack>

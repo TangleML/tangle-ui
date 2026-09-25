@@ -6,6 +6,7 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
+import { useTrackRecentlyViewedProject } from "@/hooks/useTrackRecentlyViewedProject";
 import { useBackend } from "@/providers/BackendProvider";
 import { APP_ROUTES } from "@/routes/appRoutes";
 import { ProjectsApiError } from "@/services/projects/errors";
@@ -61,6 +62,7 @@ function ProjectDetail({ projectId }: { projectId: string | undefined }) {
     null,
   );
   const { data: project, isPending, error } = useProject(projectId);
+  useTrackRecentlyViewedProject(projectId);
 
   if (isPending) {
     return <LoadingProject />;
