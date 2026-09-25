@@ -62,6 +62,7 @@ export type WorkareaTab = ResolvedWorkareaView & { id: string };
  */
 export interface WorkareaHostProps {
   isActive: boolean;
+  projectId: string;
   sessionId?: string;
   registerTabStore: (tabId: string, store: SharedUIStore) => void;
   unregisterTabStore: (tabId: string) => void;

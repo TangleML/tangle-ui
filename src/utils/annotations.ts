@@ -11,6 +11,7 @@ import {
   FLEX_NODES_ANNOTATION,
   PIPELINE_NOTES_ANNOTATION,
   PIPELINE_TAGS_ANNOTATION,
+  PROJECT_ID_ANNOTATION_PREFIX,
   RUN_NAME_TEMPLATE_ANNOTATION,
   SDK_ANNOTATION,
   TASK_COLOR_ANNOTATION,
@@ -326,3 +327,7 @@ export const isPipelineAggregator = (annotations?: Annotations): boolean => {
     getAnnotationValue(annotations, PIPELINE_AGGREGATOR_ANNOTATION) === "true"
   );
 };
+
+export function buildProjectRunAnnotationKey(projectId: string): string {
+  return `${PROJECT_ID_ANNOTATION_PREFIX}${projectId}`;
+}

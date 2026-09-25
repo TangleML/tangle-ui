@@ -8,6 +8,7 @@ import { buildTaskSpecShape } from "@/components/shared/PipelineRunNameTemplate/
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
+import { useRunSubmissionAnnotations } from "@/providers/RunSubmissionScopeProvider";
 import { APP_ROUTES } from "@/routes/router";
 import type { PipelineRun } from "@/types/pipelineRun";
 import { extractCanonicalName } from "@/utils/canonicalPipelineName";
@@ -27,6 +28,7 @@ export function useRerunPipelineRun(componentSpec?: ComponentSpec) {
   const { awaitAuthorization, isAuthorized } = useAwaitAuthorization();
   const { getToken } = useAuthLocalStorage();
   const { rootDetails } = useExecutionData();
+  const runAnnotations = useRunSubmissionAnnotations();
 
   const getAuthToken = async (): Promise<string | undefined> => {
     if (isAuthorizationRequired() && !isAuthorized) {
@@ -50,6 +52,7 @@ export function useRerunPipelineRun(componentSpec?: ComponentSpec) {
           canonicalName,
           taskArguments,
           authorizationToken,
+          runAnnotations,
           onSuccess: resolve,
           onError: reject,
         });
