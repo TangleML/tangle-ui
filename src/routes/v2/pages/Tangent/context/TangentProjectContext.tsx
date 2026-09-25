@@ -133,10 +133,13 @@ export function TangentProjectProvider({
     useDeleteProjectResource(projectId);
   const { mutate: updateProject, isPending: isSavingInstructions } =
     useUpdateProject();
-  const tabs = useTangentSessionTabs();
   const [selectedSessionId, setSelectedSessionId] = useState<
     string | undefined
   >();
+  // The selected session wins while it exists; otherwise fall back to the most
+  // recent attached session (the list is newest-first).
+  const activeSessionId = selectedSessionId ?? sessions[0]?.sessionId;
+  const tabs = useTangentSessionTabs(activeSessionId);
   const [isStartingSession, setIsStartingSession] = useState(false);
   const [workareaTabs, setWorkareaTabs] = useState<WorkareaTab[]>([]);
   const [activeWorkareaTabId, setActiveWorkareaTabId] = useState<string | null>(
@@ -144,6 +147,12 @@ export function TangentProjectProvider({
   );
   const workareaTabsRef = useRef<WorkareaTab[]>([]);
   const activeWorkareaTabIdRef = useRef<string | null>(null);
+
+  // Workarea tabs are per-session (PR 9): switching sessions restores the
+  // incoming session's tabs instead of resetting. These maps are the
+  // per-session source of truth; the state/refs above mirror the active one.
+  const workareaTabsBySessionRef = useRef(new Map<string, WorkareaTab[]>());
+  const workareaActiveBySessionRef = useRef(new Map<string, string | null>());
 
   // Each embeddable workarea tab (pipeline today, run later) surfaces its live
   // SharedUIStore here on mount and drops it on unmount, so chat chips (PR 10)
@@ -165,10 +174,6 @@ export function TangentProjectProvider({
   const activeWorkareaTabTypeRef = useRef<WorkareaViewKindName | null>(null);
   const lastEditorTabIdRef = useRef<string | null>(null);
 
-  // The selected session wins while it exists; otherwise fall back to the most
-  // recent attached session (the list is newest-first).
-  const activeSessionId = selectedSessionId ?? sessions[0]?.sessionId;
-
   // Sessions started this mount, mapped to their resource id, so a never-used
   // one can be detached + deleted on switch/unmount. Only sessions started here
   // are eligible — pre-existing attached sessions are never auto-discarded.
@@ -179,33 +184,43 @@ export function TangentProjectProvider({
     activeSessionIdRef.current = activeSessionId;
   }, [activeSessionId]);
 
-  useEffect(() => {
-    activeWorkareaTabIdRef.current = activeWorkareaTabId;
-    const activeTab = workareaTabs.find(
-      (tab) => tab.id === activeWorkareaTabId,
-    );
+  // Derive the out-of-render tab refs from a tab set and its active id. The
+  // editor-bridge fallback keeps the active pipeline tab when one is focused,
+  // otherwise the still-open last editor tab, otherwise the newest pipeline.
+  function syncActiveTabRefs(tabs: WorkareaTab[], activeId: string | null) {
+    activeWorkareaTabIdRef.current = activeId;
+    const activeTab = tabs.find((tab) => tab.id === activeId);
     activeWorkareaTabTypeRef.current = activeTab?.target.type ?? null;
     if (activeTab?.target.type === "pipeline") {
-      lastEditorTabIdRef.current = activeWorkareaTabId;
+      lastEditorTabIdRef.current = activeTab.id;
+      return;
     }
+    if (tabs.some((tab) => tab.id === lastEditorTabIdRef.current)) return;
+    const lastPipelineTab = [...tabs]
+      .reverse()
+      .find((tab) => tab.target.type === "pipeline");
+    lastEditorTabIdRef.current = lastPipelineTab?.id ?? null;
+  }
+
+  useEffect(() => {
+    syncActiveTabRefs(workareaTabs, activeWorkareaTabId);
   }, [activeWorkareaTabId, workareaTabs]);
 
-  const { resetTabs } = tabs;
+  // Restore the incoming session's workarea tabs on switch (PR 9). Backgrounded
+  // sessions' tabs unmount, so their env/bridge/store registrations clean up on
+  // their own; here we only swap the visible active-session mirror.
   useEffect(() => {
-    resetTabs();
-    workareaTabsRef.current = [];
-    activeWorkareaTabIdRef.current = null;
-    setWorkareaTabs([]);
-    setActiveWorkareaTabId(null);
-    tabEnvironmentsRef.current.clear();
-    for (const waiters of tabEnvironmentWaitersRef.current.values()) {
-      for (const resolve of waiters) resolve(undefined);
-    }
-    tabEnvironmentWaitersRef.current.clear();
-    tabBridgesRef.current.clear();
-    activeWorkareaTabTypeRef.current = null;
-    lastEditorTabIdRef.current = null;
-  }, [activeSessionId, resetTabs]);
+    const restoredTabs = activeSessionId
+      ? (workareaTabsBySessionRef.current.get(activeSessionId) ?? [])
+      : [];
+    const restoredActiveId = activeSessionId
+      ? (workareaActiveBySessionRef.current.get(activeSessionId) ?? null)
+      : null;
+    workareaTabsRef.current = restoredTabs;
+    setWorkareaTabs(restoredTabs);
+    setActiveWorkareaTabId(restoredActiveId);
+    syncActiveTabRefs(restoredTabs, restoredActiveId);
+  }, [activeSessionId]);
 
   async function discardEmptySession(sessionId: string | undefined) {
     if (!sessionId) return;
@@ -213,6 +228,9 @@ export function TangentProjectProvider({
     if (!resourceId) return;
     if (sessionsWithPromptRef.current.has(sessionId)) return;
     freshSessionsRef.current.delete(sessionId);
+    workareaTabsBySessionRef.current.delete(sessionId);
+    workareaActiveBySessionRef.current.delete(sessionId);
+    tabs.dropSession(sessionId);
     try {
       await detachSession(resourceId);
     } catch (error) {
@@ -279,14 +297,30 @@ export function TangentProjectProvider({
     );
   }
 
+  // Persist the active session's tabs and mirror them to the state/refs the
+  // shell and the out-of-render tool reads consume.
+  function setSessionTabs(sessionTabs: WorkareaTab[]) {
+    const sessionId = activeSessionIdRef.current;
+    if (!sessionId) return;
+    workareaTabsBySessionRef.current.set(sessionId, sessionTabs);
+    workareaTabsRef.current = sessionTabs;
+    setWorkareaTabs(sessionTabs);
+  }
+
+  function setSessionActiveTabId(id: string | null) {
+    const sessionId = activeSessionIdRef.current;
+    if (!sessionId) return;
+    workareaActiveBySessionRef.current.set(sessionId, id);
+    activeWorkareaTabIdRef.current = id;
+    setActiveWorkareaTabId(id);
+  }
+
   function activateWorkareaTab(tab: WorkareaTab | undefined) {
-    const tabId = tab?.id ?? null;
-    activeWorkareaTabIdRef.current = tabId;
     activeWorkareaTabTypeRef.current = tab?.target.type ?? null;
     if (tab?.target.type === "pipeline") {
       lastEditorTabIdRef.current = tab.id;
     }
-    setActiveWorkareaTabId(tabId);
+    setSessionActiveTabId(tab?.id ?? null);
   }
 
   function openResolvedView(view: ResolvedWorkareaView): WorkareaTab {
@@ -297,8 +331,7 @@ export function TangentProjectProvider({
     }
     const tab: WorkareaTab = { ...view, id: crypto.randomUUID() };
     const nextTabs = [...workareaTabsRef.current, tab];
-    workareaTabsRef.current = nextTabs;
-    setWorkareaTabs(nextTabs);
+    setSessionTabs(nextTabs);
     activateWorkareaTab(tab);
     return tab;
   }
@@ -335,8 +368,7 @@ export function TangentProjectProvider({
       lastEditorTabIdRef.current = null;
     }
     const next = workareaTabsRef.current.filter((tab) => tab.id !== id);
-    workareaTabsRef.current = next;
-    setWorkareaTabs(next);
+    setSessionTabs(next);
     if (activeWorkareaTabIdRef.current === id) {
       activateWorkareaTab(next.at(-1));
     }
