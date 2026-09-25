@@ -3,6 +3,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import { createNewPipeline } from "@/routes/v2/pages/Editor/components/EditorMenuBar/components/fileMenu.actions";
 import type { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
 import type {
@@ -13,6 +14,10 @@ import { useProjectResources } from "@/services/projects/useProjectResources";
 import { useProject } from "@/services/projects/useProjects";
 
 import { usePrepareEmptyProject } from "./usePrepareEmptyProject";
+
+vi.mock("@/hooks/useAiProviderSettings", () => ({
+  useAiProviderSettings: vi.fn(),
+}));
 
 vi.mock("@/services/projects/useProjects", () => ({
   useProject: vi.fn(),
@@ -110,9 +115,16 @@ function prepare(store: TangentProjectStore, sessionCount = 0) {
   );
 }
 
+function mockAiConfigured(isConfigured: boolean) {
+  vi.mocked(useAiProviderSettings).mockReturnValue({
+    isConfigured,
+  } as unknown as ReturnType<typeof useAiProviderSettings>);
+}
+
 describe("usePrepareEmptyProject", () => {
   beforeEach(() => {
     given();
+    mockAiConfigured(true);
     windows.getWindowById.mockReturnValue({ minimize });
     vi.mocked(createNewPipeline).mockResolvedValue({
       id: "file-1",
@@ -159,6 +171,21 @@ describe("usePrepareEmptyProject", () => {
 
     await waitFor(() => expect(store.startSession).toHaveBeenCalledTimes(1));
     expect(store.startSession).toHaveBeenCalledWith(undefined);
+  });
+
+  /**
+   * The opening prompt is spent on the session it starts, so starting one
+   * nobody can answer would burn it and leave a dead thread behind.
+   */
+  it("starts nothing without an AI provider", async () => {
+    mockAiConfigured(false);
+    const store = makeStore();
+
+    prepare(store);
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(store.startSession).not.toHaveBeenCalled();
+    expect(createNewPipeline).not.toHaveBeenCalled();
   });
 
   it("creates a pipeline the ordinary way and attaches it", async () => {

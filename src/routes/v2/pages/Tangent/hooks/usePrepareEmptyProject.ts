@@ -1,6 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 
+import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import { createNewPipeline } from "@/routes/v2/pages/Editor/components/EditorMenuBar/components/fileMenu.actions";
 import type { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
@@ -68,6 +69,7 @@ export function usePrepareEmptyProject(
   });
   const { mutateAsync: createResource } = useCreateProjectResource(projectId);
   const { mutateAsync: updateProject } = useUpdateProject();
+  const { isConfigured: isAiConfigured } = useAiProviderSettings();
   const prepared = useRef(false);
 
   const starting = readStartingSession(project?.extraData);
@@ -133,9 +135,13 @@ export function usePrepareEmptyProject(
     },
   });
 
+  // A session started without a provider cannot be spoken to, and the opening
+  // prompt would be spent on it. Leave the project as it is, so setting a
+  // provider up and coming back still gets the arrival it was meant to have.
   const isEmptyProject =
     !isSessionsLoading &&
     sessionCount === 0 &&
+    isAiConfigured &&
     project !== undefined &&
     documents !== undefined;
 

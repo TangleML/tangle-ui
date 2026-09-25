@@ -1,4 +1,20 @@
-export const ENTITY_ORDER = ["pipeline", "agent_session", "document"];
+import { AGENT_SESSION } from "@/services/projects/resourceDescriptor";
+
+export const ENTITY_ORDER = ["pipeline", AGENT_SESSION, "document"];
+
+/**
+ * Sessions belong to Tangent. With it off they cannot be seen or started, so
+ * counting them would name a feature that is not there.
+ */
+export const visibleResourceCounts = (
+  counts: Record<string, number>,
+  tangentEnabled: boolean,
+): Record<string, number> => {
+  if (tangentEnabled) return counts;
+
+  const { [AGENT_SESSION]: _sessions, ...rest } = counts;
+  return rest;
+};
 
 const EMPTY_LABEL = "Empty";
 

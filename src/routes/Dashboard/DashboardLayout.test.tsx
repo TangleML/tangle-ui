@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 
@@ -53,45 +53,88 @@ describe("DashboardLayout", () => {
     vi.resetAllMocks();
   });
 
-  it("links to the projects dashboard when the projects flag is enabled", () => {
-    mockFlags({ projects: true });
-
-    render(<DashboardLayout />);
-
-    expect(screen.getByRole("link", { name: /^Tangent/ })).toHaveAttribute(
-      "href",
-      "/projects",
-    );
-  });
+  const HIGHLIGHT = "ring-brand-accent/60";
 
   it("omits the projects nav item when the projects flag is disabled", () => {
-    mockFlags({ projects: false });
+    mockFlags({ projects: false, "tangent-shell": false });
 
     render(<DashboardLayout />);
 
     expect(screen.queryByRole("link", { name: /^Tangent/ })).toBeNull();
+    expect(screen.queryByRole("link", { name: /^Projects/ })).toBeNull();
   });
 
-  /** The agent is the point of the product, so it is not filed behind the nouns. */
-  it("leads the nav with Tangent", () => {
-    mockFlags({ projects: true });
+  describe("with Tangent", () => {
+    beforeEach(() => {
+      mockFlags({ projects: true, "tangent-shell": true });
+    });
 
-    render(<DashboardLayout />);
+    it("links to the projects dashboard", () => {
+      render(<DashboardLayout />);
 
-    expect(screen.getAllByRole("link")[0]).toHaveAccessibleName(/^Tangent/);
+      expect(screen.getByRole("link", { name: /^Tangent/ })).toHaveAttribute(
+        "href",
+        "/projects",
+      );
+    });
+
+    /** The agent is the point of the product, so it is not filed behind the nouns. */
+    it("leads the nav with Tangent", () => {
+      render(<DashboardLayout />);
+
+      expect(screen.getAllByRole("link")[0]).toHaveAccessibleName(/^Tangent/);
+    });
+
+    it("marks it out from everything else in the nav", () => {
+      render(<DashboardLayout />);
+
+      expect(
+        screen.getByRole("link", { name: /^Tangent/ }).firstElementChild,
+      ).toHaveClass(HIGHLIGHT);
+      expect(
+        screen.getByRole("link", { name: "My Dashboard" }).firstElementChild,
+      ).not.toHaveClass(HIGHLIGHT);
+    });
   });
 
-  it("marks it out from everything else in the nav", () => {
-    mockFlags({ projects: true });
+  /**
+   * Projects is a Tangle feature in its own right; Tangent is what turns it
+   * into the agent. With Tangent off nothing should name it.
+   */
+  describe("without Tangent", () => {
+    beforeEach(() => {
+      mockFlags({ projects: true, "tangent-shell": false });
+    });
 
-    render(<DashboardLayout />);
+    it("names the item Projects, pointing at the same page", () => {
+      render(<DashboardLayout />);
 
-    const highlight = "ring-brand-accent/60";
-    expect(
-      screen.getByRole("link", { name: /^Tangent/ }).firstElementChild,
-    ).toHaveClass(highlight);
-    expect(
-      screen.getByRole("link", { name: "My Dashboard" }).firstElementChild,
-    ).not.toHaveClass(highlight);
+      expect(screen.queryByRole("link", { name: /^Tangent/ })).toBeNull();
+      expect(screen.getByRole("link", { name: /^Projects/ })).toHaveAttribute(
+        "href",
+        "/projects",
+      );
+    });
+
+    it("files it with the other nav items rather than leading with it", () => {
+      render(<DashboardLayout />);
+
+      const labels = screen
+        .getAllByRole("link")
+        .map((link) => link.textContent ?? "");
+      const projects = labels.findIndex((label) =>
+        label.startsWith("Projects"),
+      );
+
+      expect(labels[projects - 1]).toMatch(/^All Runs/);
+    });
+
+    it("does not single it out", () => {
+      render(<DashboardLayout />);
+
+      expect(
+        screen.getByRole("link", { name: /^Projects/ }).firstElementChild,
+      ).not.toHaveClass(HIGHLIGHT);
+    });
   });
 });

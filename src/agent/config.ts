@@ -13,6 +13,9 @@ const SIDEKICK_OPENAI_API = "responses";
 
 const RESPONSES_REASONING_INCLUDE = ["reasoning.encrypted_content"];
 
+export const MISSING_AI_PROVIDER =
+  "No AI provider is configured. Set one up in Settings → AI Configuration.";
+
 export function getAgentModelConfig(config: AiProviderConfig): {
   model?: string;
   modelSettings: { providerData: { include: string[] } };
@@ -67,9 +70,7 @@ export class ProxyClient implements OpenAIProvider {
     const baseURL = config.apiBase.trim().replace(/\/+$/, "");
     const apiKey = config.apiKey.trim();
     if (!baseURL) {
-      throw new Error(
-        "AI assistant: missing API base URL. Configure it in Settings → AI Configuration.",
-      );
+      throw new Error(MISSING_AI_PROVIDER);
     }
 
     const configKey = JSON.stringify({ baseURL, apiKey });

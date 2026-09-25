@@ -67,7 +67,8 @@ export const ExistingFlags: ConfigFlags = {
 
   ["tangent-shell"]: {
     name: "Tangent",
-    description: "Agentic Tangle - coming soon!",
+    description:
+      "Turn Projects into Tangent. Each session chats with an agent that can build, run and debug the pipelines in a project. Needs an AI provider set in AI Configuration.",
     default: false,
     category: "beta",
     canEnable: isTangentEnabled,

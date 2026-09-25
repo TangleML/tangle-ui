@@ -3,19 +3,48 @@ import { useSyncExternalStore } from "react";
 import { ExistingFlags } from "@/flags";
 import { getStorage } from "@/utils/typedStorage";
 
+import { hasSatisfiedDependencies } from "./flagDependencies";
 import type { BetaFlagsStorage } from "./types";
 
 const storage = getStorage<keyof BetaFlagsStorage, BetaFlagsStorage>();
 
-/**
- * Non-hook flag check for use outside React (e.g., route beforeLoad).
- */
-export function isFlagEnabled(flagName: keyof typeof ExistingFlags): boolean {
+function storedFlagValue(flagName: string): boolean {
   return (
     storage.getItem("betaFlags")?.[flagName] ??
     ExistingFlags[flagName]?.default ??
     false
   );
+}
+
+/**
+ * What a feature should ask: the stored value, and only if every flag in its
+ * `dependsOn` chain is on too. Turning off a dependency therefore turns off
+ * everything built on it without rewriting storage, so turning it back on
+ * restores what the user had.
+ *
+ * `useFlagsReducer` deliberately reads {@link useFlags}.getFlag instead, so the
+ * Settings switches keep showing what the user chose rather than what their
+ * dependencies currently allow.
+ *
+ * Only knows `ExistingFlags`, not the `__TANGLE_EXTRA_FLAGS__` that
+ * `SettingsFlagsProvider` merges in — an injected flag declaring `dependsOn`
+ * would not resolve here. None does today.
+ */
+function resolveFlag(flagName: string): boolean {
+  if (!storedFlagValue(flagName)) return false;
+
+  return hasSatisfiedDependencies(flagName, (key) => {
+    const flag = ExistingFlags[key];
+    if (!flag) return undefined;
+    return { enabled: storedFlagValue(key), dependsOn: flag.dependsOn };
+  });
+}
+
+/**
+ * Non-hook flag check for use outside React (e.g., route beforeLoad).
+ */
+export function isFlagEnabled(flagName: keyof typeof ExistingFlags): boolean {
+  return resolveFlag(flagName);
 }
 
 export function useFlags() {
@@ -61,9 +90,7 @@ export function useFlags() {
 }
 
 export function useFlagValue(flagName: keyof typeof ExistingFlags) {
-  const { getFlag, subscribe } = useFlags();
+  const { subscribe } = useFlags();
 
-  return useSyncExternalStore(subscribe, () =>
-    getFlag(flagName, ExistingFlags[flagName]?.default ?? false),
-  );
+  return useSyncExternalStore(subscribe, () => resolveFlag(flagName));
 }

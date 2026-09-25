@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Heading, Text } from "@/components/ui/typography";
@@ -17,6 +18,8 @@ interface ProjectSidebarProps {
 }
 
 export function ProjectSidebar({ project }: ProjectSidebarProps) {
+  const tangentEnabled = useFlagValue("tangent-shell");
+
   return (
     <aside
       aria-labelledby={HEADING_ID}
@@ -33,7 +36,9 @@ export function ProjectSidebar({ project }: ProjectSidebarProps) {
           gap="4"
           className="rounded-lg border border-border bg-card p-4"
         >
-          <ProjectAbout project={project} />
+          {/* Instructions are standing context for agents, so they have
+              nothing to say until Tangent is on. */}
+          <ProjectAbout project={project} showInstructions={tangentEnabled} />
 
           <Separator />
 
