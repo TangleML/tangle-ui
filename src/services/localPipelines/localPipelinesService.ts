@@ -16,6 +16,32 @@ export async function listLocalPipelineNames(): Promise<string[]> {
   return names.sort((left, right) => left.localeCompare(right));
 }
 
+const NAME_LENGTH_LIMIT = 120;
+const SUFFIX_ATTEMPTS = 100;
+
+/**
+ * A name nothing is stored under yet, so writing it cannot overwrite anything.
+ *
+ * `PipelineFolder.addFile` asks the *registry* whether a name is free, while
+ * the driver it writes through keys off the stored-file list, which also holds
+ * pipelines that never got a registry row. A name that passes that check can
+ * therefore still land on top of one of those, so the list is what gets asked
+ * here. The length cap keeps a derived name short enough to record in a
+ * project's `extra_data`.
+ */
+export async function availablePipelineName(base: string): Promise<string> {
+  const trimmed = base.trim().slice(0, NAME_LENGTH_LIMIT).trim();
+  const taken = new Set(await listLocalPipelineNames());
+  if (!taken.has(trimmed)) return trimmed;
+
+  for (let ordinal = 2; ordinal <= SUFFIX_ATTEMPTS; ordinal++) {
+    const candidate = `${trimmed} ${ordinal}`;
+    if (!taken.has(candidate)) return candidate;
+  }
+
+  return `${trimmed} ${crypto.randomUUID().slice(0, 8)}`;
+}
+
 /**
  * The id is tried before the name because a name can be recycled: rename a
  * pipeline, call the next one by the old name, and resolving by name finds the
