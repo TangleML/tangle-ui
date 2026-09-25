@@ -12,6 +12,7 @@
  * IO don't pile up at the origin.
  */
 import type { QueryClient } from "@tanstack/react-query";
+import type { Edge, Node } from "@xyflow/react";
 
 import type { ValidationResult } from "@/agent/toolBridgeApi";
 import type { ComponentSpec } from "@/models/componentSpec";
@@ -32,6 +33,8 @@ export interface BridgeDeps {
   getActiveSpec?: () => ComponentSpec | null;
   getActiveSubgraphPath: () => string[];
   getActiveSubgraphTaskId: () => string | undefined;
+  getNodes?: () => Node[];
+  getEdges?: () => Edge[];
   getBackendUrl?: () => string;
   getAuthToken?: () => string | undefined;
   queryClient?: QueryClient;
