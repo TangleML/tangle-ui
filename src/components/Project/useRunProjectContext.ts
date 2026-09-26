@@ -5,10 +5,8 @@ import {
   PROJECT_ID_SEARCH_PARAM,
   readProjectIdParam,
 } from "@/routes/projectRunSearch";
-import { ProjectsApiError } from "@/services/projects/errors";
+import { isProjectGone } from "@/services/projects/errors";
 import { useProject } from "@/services/projects/useProjects";
-
-const NOT_FOUND = 404;
 
 /**
  * Which project the runs started from this tab belong to, held in the URL so a
@@ -27,8 +25,7 @@ export function useRunProjectContext() {
   const claimedId = enabled ? readProjectIdParam(search) : undefined;
   const { data: project, error } = useProject(claimedId);
 
-  const gone = error instanceof ProjectsApiError && error.status === NOT_FOUND;
-  const projectId = gone ? undefined : claimedId;
+  const projectId = isProjectGone(error) ? undefined : claimedId;
 
   const setProjectId = (next: string | undefined) => {
     void navigate({

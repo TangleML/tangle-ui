@@ -72,7 +72,6 @@ export function AddResourceMenu({
         <AddPipelineDialog
           projectId={projectId}
           resources={resources}
-          open
           onOpenChange={setPipelineOpen}
         />
       )}

@@ -9,9 +9,7 @@ import { useFavorites } from "@/hooks/useFavorites";
 import { removeRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
-import { MINUTES } from "@/utils/constants";
 
-import { ProjectsApiError } from "./errors";
 import {
   createProject,
   deleteProject,
@@ -19,30 +17,13 @@ import {
   listProjects,
   updateProject,
 } from "./projectsService";
+import { projectQueryDefaults } from "./queryDefaults";
 import type {
   CreateProjectInput,
   ListProjectsParams,
   UpdateProjectInput,
 } from "./types";
 import { ProjectsQueryKeys } from "./types";
-
-const MAX_RETRIES = 3;
-
-/**
- * A 4xx is the backend's settled answer, so retrying only delays it: without
- * this, a deleted project's url sits on a spinner for the length of three
- * backoffs before it can say the project is gone.
- */
-function retryUnlessRefused(failureCount: number, error: Error) {
-  if (
-    error instanceof ProjectsApiError &&
-    error.status >= 400 &&
-    error.status < 500
-  ) {
-    return false;
-  }
-  return failureCount < MAX_RETRIES;
-}
 
 export function useProjects(params: ListProjectsParams = {}) {
   const { configured, available } = useBackend();
@@ -51,9 +32,7 @@ export function useProjects(params: ListProjectsParams = {}) {
     queryKey: ProjectsQueryKeys.List(params),
     queryFn: () => listProjects(params),
     enabled: configured && available,
-    retry: retryUnlessRefused,
-    staleTime: 5 * MINUTES,
-    refetchOnWindowFocus: false,
+    ...projectQueryDefaults,
   });
 }
 
@@ -69,9 +48,7 @@ export function useProject(id: string | undefined) {
       return getProject(id);
     },
     enabled: configured && available && Boolean(id),
-    retry: retryUnlessRefused,
-    staleTime: 5 * MINUTES,
-    refetchOnWindowFocus: false,
+    ...projectQueryDefaults,
   });
 }
 
@@ -89,9 +66,7 @@ export function useProjectsById(ids: readonly string[]) {
       queryKey: ProjectsQueryKeys.Id(id),
       queryFn: () => getProject(id),
       enabled: configured && available,
-      retry: retryUnlessRefused,
-      staleTime: 5 * MINUTES,
-      refetchOnWindowFocus: false,
+      ...projectQueryDefaults,
     })),
   });
 
