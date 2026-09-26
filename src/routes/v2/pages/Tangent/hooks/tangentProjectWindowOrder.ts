@@ -16,18 +16,17 @@ export const rememberedDockWindows = (
 ): ReadonlySet<string> => new Set(store.dockAreas.left.windowOrder);
 
 /**
- * A saved layout has nothing to say about a window added after it was written,
- * so opening that window appends it to the dock — the project window turned up
+ * A saved layout says nothing about a window added after it was written, so
+ * opening that window appends it to the dock — which put the project window
  * underneath everything rather than above the sessions.
  *
- * `remembered` is the dock order as it stood before this mount opened anything,
- * which is the only way to tell a genuine newcomer from a window the layout
- * placed: opening either one leaves it sitting in `windowOrder` all the same.
- * Newcomers are moved in front of the first window they are meant to precede,
- * and everything the layout knew about stays where the layout put it, so a
- * stack someone rearranged stays rearranged. Ordering goes through
- * `restoreDockArea` rather than `dockWindow` because that one quietly does
- * nothing until the side's `DockArea` has mounted and enabled it.
+ * `remembered` is the dock order before this mount opened anything, the only
+ * way to tell a genuine newcomer from a window the layout placed: opening
+ * either leaves it in `windowOrder` all the same. Only newcomers are moved, so
+ * a stack someone rearranged stays rearranged.
+ *
+ * Ordering goes through `restoreDockArea` rather than `dockWindow`, which
+ * quietly does nothing until the side's `DockArea` has mounted and enabled it.
  */
 export function placeProjectDockWindows(
   store: WindowStoreImpl,

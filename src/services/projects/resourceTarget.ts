@@ -5,17 +5,13 @@ type IdentityKey = "id" | "name";
 export type WorkareaIdentity = `${IdentityKey}/${string}`;
 
 /**
- * A workarea target: its `type` is both the view kind and the scheme, and its
- * `identity` is sub-key prefixed (`id/<value>` or `name/<value>`). The pair is
- * two-way convertible with its `type://identity` string form.
+ * Two-way convertible with its `type://identity` string form. The union is
+ * spelled out per kind so that `run://name/…` and its like are rejected at
+ * compile time, not only by `parseWorkareaTarget`.
  *
- * Only a pipeline can be addressed by `name/`; everything else is always `id/`,
- * so the union rejects `run://name/…` and its like at compile time as well as in
- * `parseWorkareaTarget`.
- *
- * This lives beside the projects service rather than with the Tangent workarea
- * that dispatches on it, because a project's resource rows record these strings
- * and the project page has to read them too.
+ * It lives beside the projects service rather than with the Tangent workarea
+ * that dispatches on it, because resource rows record these strings and the
+ * project page has to read them too.
  */
 export type WorkareaTarget =
   ArtifactTarget | DocumentTarget | PipelineTarget | RunTarget;
@@ -25,10 +21,7 @@ export interface ArtifactTarget {
   identity: `id/${string}`;
 }
 
-/**
- * A document is the resource row, so it is addressed by that row's id rather
- * than by anything recorded inside it: the id does not exist until the row does.
- */
+/** A document is the resource row, so nothing inside it exists to address. */
 export interface DocumentTarget {
   type: "document";
   identity: `id/${string}`;
@@ -139,10 +132,9 @@ export function parseWorkareaTarget(raw: string): WorkareaTarget {
 }
 
 /**
- * The identity key is checked against the kind, not just the shape, so this
- * guard passing means `parseWorkareaTarget` will succeed. Without that, a
- * well-shaped `run://name/x` satisfied the guard and then threw on parse, which
- * is a crash in whatever had just been told the string was fine.
+ * Checks the identity key against the kind, not just the shape, so that this
+ * passing guarantees `parseWorkareaTarget` will succeed. A shape-only guard let
+ * `run://name/x` through and then threw on parse.
  */
 export function isWorkareaTargetString(
   raw: string,

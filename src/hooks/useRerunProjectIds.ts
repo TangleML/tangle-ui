@@ -7,13 +7,10 @@ import { runAnnotationsQueryOptions } from "@/services/runAnnotations";
 import { projectIdsFromAnnotations } from "@/utils/projectRunAnnotation";
 
 /**
- * Which projects a rerun belongs to is read from the run being rerun, at the
- * moment it is rerun rather than on render: a click that beat the read would
- * submit the copy into no project, and a run's projects cannot be set
- * afterwards.
- *
- * The read is allowed to fail the rerun. Losing the attribution is permanent,
- * where a refused rerun is something the reader can simply do again.
+ * Read at the moment of rerun rather than on render: a click that beat the read
+ * would submit the copy into no project, and a run's projects cannot be set
+ * afterwards. For the same reason the read is allowed to fail the rerun —
+ * losing attribution is permanent, where a refused rerun can be done again.
  */
 export function useRerunProjectIds() {
   const queryClient = useQueryClient();

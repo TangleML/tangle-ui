@@ -33,12 +33,10 @@ const sameAs = (label: string, entity: string) =>
   label.toLowerCase() === humanize(entity).toLowerCase();
 
 /**
- * A group is headed by the entity the API files its rows under, which leaves a
- * group holding rows that are not all the same thing — a browser-held pipeline
- * is filed as a document. Whatever a row's `extra_data` calls itself is
- * therefore said on the row, and a row calling itself what its group already
- * says stays quiet. The text is the backend's, and anyone may PATCH it, so it
- * is cut to a length a badge can hold.
+ * Groups are headed by the API's `entity`, which puts unlike rows together — a
+ * browser-held pipeline is filed as a document. So each row says what its
+ * `extra_data` calls itself, unless the group already says it. The text is the
+ * backend's and PATCHable, so it is cut to what a badge can hold.
  */
 export function resourceKindLabel(
   resource: ResourceRowShape,
@@ -57,15 +55,11 @@ export function resourceKindLabel(
 }
 
 /**
- * A resource that points at something — a pipeline on the backend, an agent
- * session, a pipeline in this browser — only borrows it, so taking it out of
- * the project leaves it where it lives. A resource that carries its own
- * content, like a document, is the only copy there is, and taking it out
- * destroys it.
- *
- * A row that names a browser-held pipeline is asked about in its weaker form:
- * however unusable its pointer has become, it has never held a pipeline of its
- * own, so removing it cannot destroy one.
+ * A resource that points at something only borrows it, so removing the row
+ * leaves it where it lives. A resource carrying its own content, like a
+ * document, is the only copy there is. A row naming a browser-held pipeline
+ * counts as a pointer however broken it has become: it never held a pipeline of
+ * its own, so removing it cannot destroy one.
  */
 export const removingDestroys = (resource: ResourceRowShape) =>
   resource.entityId === null && !namesLocalPipeline(resource);

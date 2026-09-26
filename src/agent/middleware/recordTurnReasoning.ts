@@ -1,15 +1,3 @@
-/**
- * Adds the agent's own account of a turn to the trace.
- *
- * Lifecycle hooks report the calls but never the reasoning between them, which
- * is the half that says why a turn went the way it did. The run result carries
- * both as items, so they are read once the turn ends — there is no lifecycle
- * event for either, and streaming the turn would mean rebuilding how every
- * agent here is run.
- *
- * A model that returns no reasoning (or a provider that withholds it) simply
- * contributes nothing.
- */
 import { recordTraceEvent, truncateForTrace } from "./agentTrace";
 
 interface TextPart {
@@ -25,6 +13,12 @@ function textOf(parts: unknown): string {
     .trim();
 }
 
+/**
+ * Lifecycle hooks report the calls but never the reasoning between them, which
+ * is the half that says why a turn went the way it did. Both arrive as items on
+ * the run result, so they are read once the turn ends: there is no lifecycle
+ * event for either, and streaming would mean rebuilding how every agent is run.
+ */
 export function recordTurnReasoning(
   agentName: string,
   items: readonly unknown[] | undefined,

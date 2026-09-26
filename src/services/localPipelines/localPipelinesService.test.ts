@@ -60,9 +60,8 @@ describe("readLocalPipeline", () => {
   });
 
   /**
-   * The case that makes the id worth storing: renaming a pipeline frees its
-   * name, and the next pipeline to take that name is a different pipeline.
-   * Resolving by name would find it and look entirely successful.
+   * What makes the id worth storing: renaming frees the name, and resolving by
+   * name would find whatever took it and look entirely successful.
    */
   it("follows a renamed pipeline rather than whatever took its old name", async () => {
     held("Churn model", "Churn model v2");
@@ -81,10 +80,8 @@ describe("readLocalPipeline", () => {
   });
 
   /**
-   * The case that matters now projects are shared: the pointer was written in
-   * someone else's browser, and this one happens to hold an unrelated pipeline
-   * of the same name. Falling back to the name would open that one and look
-   * entirely successful.
+   * What matters now projects are shared: the pointer came from someone else's
+   * browser, and falling back to the name would open an unrelated pipeline.
    */
   it("reports nothing when the id is unknown here, whatever shares the name", async () => {
     held("Churn model");

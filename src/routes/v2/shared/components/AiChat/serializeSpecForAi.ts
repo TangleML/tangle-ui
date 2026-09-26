@@ -1,20 +1,3 @@
-/**
- * Serializes the live MobX `ComponentSpec` into a stable plain-JSON shape
- * the in-browser agent's CSOM tools can reason about.
- *
- * The shape is intentionally narrower than the wire format: optional
- * properties are omitted when empty (so the LLM sees a smaller blob),
- * subgraph tasks are flagged with `isSubgraph: true`, and the active
- * subgraph breadcrumb (`activeSubgraphPath`) is surfaced so the model
- * can disambiguate "fix the pipeline" vs "fix this subgraph" without a
- * separate bridge call. Edits land in whichever spec owns the `$id` they
- * name, so the breadcrumb tells the model where the user is looking
- * rather than where an edit will go.
- *
- * `activeSubgraphTaskId` accompanies it because the breadcrumb is made of
- * display names, which are unique only within one graph — the model cannot
- * turn a name in it back into the `$id` that `inSubgraphTaskId` needs.
- */
 import type { FlexNodeData } from "@/components/shared/ReactFlow/FlowCanvas/FlexNode/types";
 import type {
   Binding,
@@ -239,6 +222,15 @@ function serializeComponentRef(ref: ComponentReference): AiComponentRef {
  */
 const toPlainJson = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
+/**
+ * Narrower than the wire format: empty optional properties are dropped so the
+ * blob stays small, and `activeSubgraphPath` says where the user is looking —
+ * not where an edit lands, since an edit follows the `$id` it names.
+ *
+ * `activeSubgraphTaskId` accompanies it because that path is display names,
+ * which are unique only within one graph, so the model cannot turn a name in it
+ * back into the `$id` that `inSubgraphTaskId` needs.
+ */
 export function serializeSpecForAi(
   spec: ComponentSpec,
   {

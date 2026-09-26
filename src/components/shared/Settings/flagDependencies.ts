@@ -4,8 +4,6 @@ export interface FlagDependencyNode {
 }
 
 /**
- * Walks a flag's `dependsOn` chain, satisfied only when every link is enabled.
- *
  * Fails closed: a chain pointing at a missing flag, or one that cycles,
  * resolves to false rather than granting a feature nothing can support.
  */

@@ -56,13 +56,9 @@ function ProjectEntry({ project }: { project: Project }) {
 }
 
 /**
- * Where the work being looked at belongs. An editor shows the project its runs
- * are going to; a run shows the projects it was attributed to when it was
- * created, which is the only time that could be said.
- *
- * A project that has been deleted since takes its heading with it: attribution
- * is permanent and the reader cannot act on a project that is not there, so
- * naming one would only be something else to read past.
+ * A project deleted since takes the heading with it: attribution is permanent
+ * and the reader cannot act on a project that is not there, so naming one would
+ * only be something else to read past.
  */
 export function ProjectDetailsSection({
   projectIds,

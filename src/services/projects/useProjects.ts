@@ -53,10 +53,9 @@ export function useProject(id: string | undefined) {
 }
 
 /**
- * The projects among these ids that still exist, in the order they were asked
- * for. A run's attribution outlives the project it names, so the ones that
- * have gone are simply absent rather than reported — there is nothing the
- * reader can do about a project that is not there.
+ * Only the ids that still exist, in the order asked for. A run's attribution
+ * outlives the project it names, and there is nothing a reader can do about a
+ * project that is gone, so those are absent rather than reported.
  */
 export function useProjectsById(ids: readonly string[]) {
   const { configured, available } = useBackend();
@@ -122,10 +121,9 @@ export function useDeleteProject() {
       void queryClient.invalidateQueries({
         queryKey: ProjectsQueryKeys.All(),
       });
-      // Removed rather than invalidated: an invalidated query keeps its data
-      // and serves it to the next page that mounts it, so the project's own
-      // page would come up fully furnished from the cache of a project that no
-      // longer exists, and only then refetch its way to an error.
+      // Removed rather than invalidated: an invalidated query keeps its data,
+      // so the project's page would come up fully furnished from the cache of a
+      // project that is gone, and only then refetch its way to an error.
       queryClient.removeQueries({ queryKey: ProjectsQueryKeys.Id(id) });
 
       // The link outlives the project everywhere it was recorded.

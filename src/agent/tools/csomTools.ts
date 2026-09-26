@@ -1,18 +1,6 @@
-/**
- * CSOM tools for the in-browser agent.
- *
- * Each tool is a thin OpenAI Agents `tool()` wrapper around a method on
- * the Comlink-proxied `ToolBridgeApi`. The bridge runs on the main
- * thread and mutates the live MobX `ComponentSpec` inside an undo
- * group, so the agent's edits are immediately reflected in the editor
- * and undoable as a single user action.
- *
- * Schema note: OpenAI's structured-outputs strict mode requires every
- * Zod field to be required or `.nullable().optional()` — `.optional()`
- * alone is rejected. The model passes `null` for fields it wants to
- * omit; the execute functions normalize `null` to `undefined` before
- * handing data to the bridge, since the bridge contract uses `T?`.
- */
+// Strict mode rejects a bare `.optional()`, so every omittable field is
+// `.nullable().optional()` and the model passes `null` to omit it. The bridge
+// contract uses `T?`, so each execute normalizes those back to `undefined`.
 import { tool } from "@openai/agents";
 import { z } from "zod";
 
@@ -50,10 +38,10 @@ const jsonValueSchema: z.ZodType<JsonValue> = z.lazy(() =>
 const arbitraryObjectSchema = z.object({}).catchall(jsonValueSchema);
 
 /**
- * `implementation` cannot be an open object. OpenAI's strict mode rewrites
- * every `type: "object"` to `additionalProperties: false`, so a catchall
- * permits exactly one value — `{}` — and the model cannot say what runs no
- * matter how it is prompted. Every key has to be spelled out to be reachable.
+ * `implementation` cannot be an open object: strict mode rewrites every
+ * `type: "object"` to `additionalProperties: false`, so a catchall permits
+ * exactly one value — `{}` — and the model cannot say what runs, however it is
+ * prompted. Every key has to be spelled out to be reachable.
  */
 const commandArgumentSchema = z.union([
   z.string(),
@@ -113,12 +101,7 @@ const argumentValueSchema = z.union([
   }),
 ]);
 
-/**
- * Recursively strips `null` values from an object so the bridge contract
- * (which uses `T?` for optional fields) sees missing keys instead of
- * explicit nulls. Used for the nested `componentRef` payload in
- * `add_task`.
- */
+/** For a nested payload, where the per-field normalizing cannot reach. */
 function dropNulls<T>(value: T): T {
   return JSON.parse(
     JSON.stringify(value, (_key, v: unknown) => (v === null ? undefined : v)),

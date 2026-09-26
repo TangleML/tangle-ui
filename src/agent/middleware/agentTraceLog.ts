@@ -1,9 +1,3 @@
-/**
- * Collects broadcast agent events (see {@link agentTrace}) into `localStorage`,
- * so the log outlives the worker that produced it and covers every worker at
- * once. Started from the app entry point, because events arrive long before
- * anyone opens the log to read it.
- */
 import {
   type AgentTraceEvent,
   subscribeToTraceEvents,
@@ -43,6 +37,11 @@ export function clearAgentTraceLog(): void {
   }
 }
 
+/**
+ * Collects the broadcast events into `localStorage` so the log outlives the
+ * worker that produced it and covers every worker at once. Started from the app
+ * entry point, because events arrive long before anyone opens the log.
+ */
 export function startAgentTraceLog(): () => void {
   return subscribeToTraceEvents((event) => {
     const events = read();

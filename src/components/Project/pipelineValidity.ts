@@ -21,15 +21,12 @@ function everyTaskCarriesItsComponent(spec: ComponentSpec) {
 }
 
 /**
- * The validator reads each task's embedded component spec and never fetches
- * one, so a task whose component was not saved alongside it reads as a
- * hydration failure — indistinguishable from a real error. A saved pipeline
- * always embeds them, so rather than fetch the components to find out, an
- * unembedded one is reported as unknown and shows no verdict at all.
- *
- * The same answer covers a spec too malformed to have an implementation at
- * all: a pipeline read from browser storage is whatever yaml is there, and
- * refusing to judge it beats failing the panel it is previewed in.
+ * The validator reads embedded component specs and never fetches one, so a task
+ * whose component was not saved alongside it reads as a real error. Rather than
+ * fetch the components to find out, such a spec is reported as unknown and
+ * shows no verdict — as is one too malformed to have an implementation at all,
+ * since browser storage holds whatever yaml is there and refusing to judge it
+ * beats failing the panel it is previewed in.
  */
 export function pipelineValidity(spec: ComponentSpec): PipelineValidity {
   if (!everyTaskCarriesItsComponent(spec)) {

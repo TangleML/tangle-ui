@@ -17,18 +17,13 @@ function storedFlagValue(flagName: string): boolean {
 }
 
 /**
- * What a feature should ask: the stored value, and only if every flag in its
- * `dependsOn` chain is on too. Turning off a dependency therefore turns off
- * everything built on it without rewriting storage, so turning it back on
- * restores what the user had.
+ * Resolving the `dependsOn` chain at read time rather than rewriting storage is
+ * what lets turning a dependency back on restore what the user had. The
+ * Settings switches deliberately read {@link useFlags}.getFlag instead, so they
+ * keep showing what the user chose rather than what dependencies now allow.
  *
- * `useFlagsReducer` deliberately reads {@link useFlags}.getFlag instead, so the
- * Settings switches keep showing what the user chose rather than what their
- * dependencies currently allow.
- *
- * Only knows `ExistingFlags`, not the `__TANGLE_EXTRA_FLAGS__` that
- * `SettingsFlagsProvider` merges in — an injected flag declaring `dependsOn`
- * would not resolve here. None does today.
+ * Only knows `ExistingFlags`, so a `__TANGLE_EXTRA_FLAGS__` flag declaring
+ * `dependsOn` would not resolve here. None does today.
  */
 function resolveFlag(flagName: string): boolean {
   if (!storedFlagValue(flagName)) return false;
@@ -40,9 +35,7 @@ function resolveFlag(flagName: string): boolean {
   });
 }
 
-/**
- * Non-hook flag check for use outside React (e.g., route beforeLoad).
- */
+/** For callers outside React, such as a route's `beforeLoad`. */
 export function isFlagEnabled(flagName: keyof typeof ExistingFlags): boolean {
   return resolveFlag(flagName);
 }
@@ -72,11 +65,6 @@ export function useFlags() {
       storage.setItem("betaFlags", undefined);
     },
 
-    /**
-     * Subscribe to changes in the local storage
-     * @param listener - callback from useSyncExternalStore
-     * @returns A function to unsubscribe from the storage changes
-     */
     subscribe: (listener: () => void) => {
       function handleStorageChange(event: StorageEvent) {
         if (event.key === "betaFlags") {

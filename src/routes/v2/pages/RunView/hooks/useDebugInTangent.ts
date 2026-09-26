@@ -63,12 +63,8 @@ export function useDebugInTangent() {
   const { data: workspaces } = useWorkspaces();
   const rerunProjectIds = useRerunProjectIds();
 
-  /**
-   * A project the run already belongs to is worked in rather than copied: its
-   * instructions are someone else's and there is only ever one document
-   * holding them, so the brief rides in on the session's opening prompt
-   * instead. Only a run attributed to nothing gets a project of its own.
-   */
+  // The project's instructions are someone else's, and there is only ever one
+  // document holding them, so the brief rides in on the opening prompt instead.
   const debugExisting = async (
     project: Project,
     { runId, pipelineName }: DebugInTangentVariables,

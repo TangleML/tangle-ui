@@ -41,25 +41,20 @@ function oldestFirst(resources: readonly ProjectResourceSummary[]) {
 }
 
 /**
- * What arriving at a project does. A project carrying a session someone asked
- * for elsewhere — the dashboard's prompt box, Debug in Tangent — starts it,
- * however many sessions the project already holds; the ask was made once and
- * would otherwise be dropped on every project but an empty one.
- *
- * A project with no sessions gets the rest as well: a pipeline opened beside
- * the session to work in — created and attached to the project first if it has
- * none — and the project window folded away. Those ask only whether the project
- * has nothing, so a project someone has already worked in comes up as they left
- * it, project window included.
+ * A session someone asked for elsewhere — the dashboard's prompt box, Debug in
+ * Tangent — is started however many sessions the project already holds: the ask
+ * was made once, and would otherwise be dropped on every project but an empty
+ * one. Only the rest of the arrival is gated on emptiness, so a project someone
+ * has worked in comes up as they left it.
  *
  * A session nobody typed into is detached again on unmount, so an untouched new
- * project arrives session-less a second time and is set up again. Finding the
- * pipeline it attached last time is what stops that adding another.
+ * project arrives session-less a second time. Reusing the pipeline attached
+ * last time is what stops that adding another.
  *
- * The whole sequence is one mutation so `isIdle` guards all of it, and the
- * pipeline opens only after `startSession` resolves: the workarea is keyed by
- * session, and a tab opened before there is one is dropped. The ref guards what
- * `isIdle` cannot — StrictMode replays this effect inside one commit, where the
+ * The sequence is one mutation so `isIdle` guards all of it, and the pipeline
+ * opens only after `startSession` resolves, because the workarea is keyed by
+ * session and a tab opened before there is one is dropped. The ref guards what
+ * `isIdle` cannot: StrictMode replays this effect inside one commit, where the
  * closure's `isIdle` has not yet seen the first `mutate`.
  */
 export function usePrepareProjectArrival(
@@ -97,9 +92,8 @@ export function usePrepareProjectArrival(
 
       if (!isEmpty) return;
 
-      // Nothing has been written about a project nobody has worked in yet, so
-      // its window is a tall empty form sitting above the sessions and
-      // resources someone arriving actually came for.
+      // Nothing has been written about a project nobody has worked in, so its
+      // window is a tall empty form sitting above what someone came for.
       windows.getWindowById(PROJECT_DETAILS_WINDOW_ID)?.minimize();
 
       const attached = oldestFirst(documents?.items ?? []).flatMap(
@@ -119,10 +113,9 @@ export function usePrepareProjectArrival(
         return;
       }
 
-      // Named after the ask, which is also what the project is called, so the
-      // two agree until the agent renames one. It reads as a repetition; four
-      // random words read as a mistake. Nothing asked for, nothing to name it
-      // after, so it keeps the random words — which nobody chose either.
+      // Named after the ask, as the project is, so the two agree until the
+      // agent renames one. Reading as a repetition beats four random words
+      // reading as a mistake — which is what an unasked-for project keeps.
       const file = await createNewPipeline(
         storage,
         askedFor ? await availablePipelineName(askedFor) : undefined,
