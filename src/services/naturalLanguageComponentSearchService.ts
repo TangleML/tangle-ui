@@ -11,6 +11,8 @@
  * judgment over a small, well-defined list when literal matching is not enough.
  */
 
+import { resolveAiResponsesModel } from "@/services/aiModelService";
+import type { AiReasoningEffort } from "@/types/aiProvider";
 import type {
   ComponentReference,
   InputSpec,
@@ -79,6 +81,7 @@ interface LlmOptions {
   signal?: AbortSignal;
   // OpenAI-compatible model id. Leave blank when the proxy owns model selection.
   model: string;
+  reasoningEffort?: AiReasoningEffort;
   // Base URL of an OpenAI-compatible API.
   apiBase: string;
   // Bearer token. Leave blank when the proxy owns authentication.
@@ -87,13 +90,13 @@ interface LlmOptions {
 }
 
 /**
- * gpt-5 / o-series reasoning models reject an explicit `temperature`. For every
- * other configured model we pin `temperature: 0` so the reranker's ordering is
+ * GPT-5, GPT-6, and o-series models can reject `temperature` when reasoning.
+ * For other configured models we pin `temperature: 0` so the reranker's ordering is
  * deterministic run-to-run; without it the provider default (often 1.0) makes
  * the same query reorder differently between runs.
  */
 function isReasoningModel(model: string): boolean {
-  return /^(openai:)?(gpt-5|o\d)/i.test(model);
+  return /^(openai:)?(gpt-[56]|o\d)/i.test(model);
 }
 
 /** Clamp score to [0, 1] and reject NaN so the UI/sort never sees garbage. */
@@ -299,6 +302,7 @@ async function callLlmResponse(
   config: ResponsesCallConfig,
 ): Promise<string> {
   const { base, key, model } = validateConfig(options);
+  const requestModel = await resolveAiResponsesModel(options, options.signal);
 
   const response = await fetch(`${base}/responses`, {
     method: "POST",
@@ -309,11 +313,16 @@ async function callLlmResponse(
       ...(key ? { authorization: `Bearer ${key}` } : {}),
     },
     body: JSON.stringify({
-      ...(model ? { model } : {}),
+      ...(requestModel ? { model: requestModel } : {}),
+      ...(options.reasoningEffort
+        ? { reasoning: { effort: options.reasoningEffort } }
+        : {}),
       // Deterministic ordering for non-reasoning models; omitted when the proxy
       // owns model selection (blank model) or for reasoning models that reject
       // an explicit temperature.
-      ...(model && !isReasoningModel(model) ? { temperature: 0 } : {}),
+      ...(model && !options.reasoningEffort && !isReasoningModel(model)
+        ? { temperature: 0 }
+        : {}),
       max_output_tokens: config.maxTokens,
       instructions: config.systemPrompt,
       input: `Return JSON.\n\n${config.userPrompt}`,

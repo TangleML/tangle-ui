@@ -1,5 +1,11 @@
 import { useSyncExternalStore } from "react";
 
+import {
+  DEFAULT_AI_REASONING_EFFORT,
+  getDefaultAiModelId,
+  getEffectiveReasoningEffort,
+  isAiReasoningEffort,
+} from "@/config/aiModels";
 import { useBackend } from "@/providers/BackendProvider";
 import type { AiProviderConfig } from "@/types/aiProvider";
 import { getStorage } from "@/utils/typedStorage";
@@ -53,6 +59,9 @@ function parseStoredConfig(value: unknown): AiProviderConfig | null {
       readTrimmedString(value, "model") ||
       readTrimmedString(value, "thinkingModel") ||
       DEFAULTS.model,
+    ...(isAiReasoningEffort(value.reasoningEffort)
+      ? { reasoningEffort: value.reasoningEffort }
+      : {}),
   };
 }
 
@@ -60,7 +69,8 @@ function isAllEmpty(config: AiProviderConfig): boolean {
   return (
     config.apiBase.length === 0 &&
     config.apiKey.length === 0 &&
-    config.model.length === 0
+    config.model.length === 0 &&
+    config.reasoningEffort === undefined
   );
 }
 
@@ -123,14 +133,22 @@ export function useAiProviderSettings() {
     () => storage.getItem(AI_USE_OWN_KEY_STORAGE_KEY) !== false,
     () => true,
   );
-  const config: AiProviderConfig = useOwnKey
-    ? customConfig
-    : {
-        apiBase: backendBase ? `${backendBase}/api/experimental/ai/v1` : "",
-        apiKey: "",
-        model: customConfig.model,
-        credentials: "include",
-      };
+  const model = customConfig.model || getDefaultAiModelId();
+  const reasoningEffort = getEffectiveReasoningEffort(
+    model,
+    customConfig.reasoningEffort ?? DEFAULT_AI_REASONING_EFFORT,
+  );
+  const config: AiProviderConfig = {
+    apiBase: useOwnKey
+      ? customConfig.apiBase
+      : backendBase
+        ? `${backendBase}/api/experimental/ai/v1`
+        : "",
+    apiKey: useOwnKey ? customConfig.apiKey : "",
+    model,
+    ...(reasoningEffort ? { reasoningEffort } : {}),
+    ...(useOwnKey ? {} : { credentials: "include" }),
+  };
 
   const setUseOwnKey = (enabled: boolean) => {
     storage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, enabled);
