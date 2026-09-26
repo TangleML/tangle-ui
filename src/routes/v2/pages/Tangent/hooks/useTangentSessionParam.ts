@@ -8,19 +8,16 @@ import {
 import type { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
 
 /**
- * A link from the project page says which session to open, or asks for a new
- * one, because a session can only be started from inside Tangent's provider.
+ * A link asks for a session by url because one can only be started from inside
+ * Tangent's provider. The ask is then taken back out: left there, a reload
+ * would start a second session, and returning to a session the user has since
+ * left would fight them for the selection.
  *
- * The ask is acted on once and then taken out of the url: left there, a reload
- * would start a second session, and going back to a session the user has since
- * navigated away from would fight them for the selection.
- *
- * A new session has to wait for the store to be able to start one. This hook
- * runs in a child of the provider that wires the store up, and a child's effects
- * run before its parent's, so on the first commit the store has no way to reach
- * Tangent yet and `startSession` refuses. Consuming the ask there left the
- * caller on whichever session was already selected. Reading `canStartSession`
- * needs an observer for the flip to re-run this, which is what the workspace is.
+ * A new session waits for the store to be able to start one. This hook runs in
+ * a child of the provider that wires the store up, and a child's effects run
+ * first, so on the first commit `startSession` refuses. Reading
+ * `canStartSession` needs an observer for the flip to re-run this, which is
+ * what the workspace is.
  */
 export function useTangentSessionParam(store: TangentProjectStore) {
   const search = useSearch({ strict: false });

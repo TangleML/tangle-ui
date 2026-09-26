@@ -7,16 +7,15 @@ export function tangentChannelUrl(baseUrl: string): string {
 }
 
 /**
- * Tangent's UI is a bundle fetched from its own origin at runtime, and
- * `TangentProvider` waits on that import without watching for it to fail — a
- * Tangent that is not running leaves the page blank forever. Importing it here
- * too is what makes the failure visible: module imports are cached per URL, so
- * the provider's own import resolves against this one rather than fetching
- * twice. Pass the same url to the provider so the two cannot disagree about
- * what was tried.
+ * `TangentProvider` awaits its runtime bundle without watching for the import
+ * to fail, so a runtime that is not there leaves the page blank forever.
+ * Importing it here as well is what makes the failure visible: imports are
+ * cached per URL, so the provider resolves against this one rather than
+ * fetching twice. Pass it the same url, or the two disagree about what was
+ * tried.
  *
- * A failed import stays failed for the life of the document, so recovering
- * means reloading the page rather than calling this again.
+ * A failed import stays failed for the life of the document, so recovery is a
+ * page reload rather than another call.
  */
 export function useTangentRuntime(channelUrl: string): TangentRuntimeStatus {
   const [status, setStatus] = useState<TangentRuntimeStatus>("loading");

@@ -123,11 +123,10 @@ describe("ProjectCard", () => {
   });
 
   /**
-   * A tile sits in a fixed-width grid track, and its stacks lay children out
-   * at their content width unless told otherwise — so without these a long
-   * name or a long list of counts runs out over the tile beside it. jsdom
-   * computes no layout, so the classes that do the containing are what can be
-   * pinned here; the rendering itself was checked in a browser.
+   * A tile sits in a fixed grid track, and its stacks lay children out at
+   * content width unless told otherwise, so a long name ran out over the tile
+   * beside it. jsdom computes no layout, so the containing classes are what can
+   * be pinned; the rendering itself was checked in a browser.
    */
   it("keeps a name too long for the tile inside it", () => {
     renderCard({ name: "Supercalifragilisticexpialidocious_Churn_Model_V4" });

@@ -9,13 +9,12 @@ import { isProjectGone } from "@/services/projects/errors";
 import { useProject } from "@/services/projects/useProjects";
 
 /**
- * Which project the runs started from this tab belong to, held in the URL so a
- * reload keeps it and a duplicated tab carries it — and so the chip that names
- * it and the submitter that acts on it read one value rather than two copies.
+ * Held in the URL so a reload keeps it, a duplicated tab carries it, and the
+ * picker and the submitter read one value rather than two copies.
  *
- * The id arrives from a link or a bookmark, so it is only used once a project
- * answers to it: an id that names nothing would otherwise attribute the run to
- * a project nobody can see, permanently.
+ * The id arrives from a link or a bookmark, so it is used only once a project
+ * answers to it: an id naming nothing would otherwise attribute the run to a
+ * project nobody can see, permanently.
  */
 export function useRunProjectContext() {
   const enabled = useFlagValue("projects");

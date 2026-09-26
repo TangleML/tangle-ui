@@ -1,19 +1,3 @@
-/**
- * Observability hooks for the in-browser agent.
- *
- * `@openai/agents` exposes lifecycle events on every `Agent` instance
- * via its inherited `EventEmitter`. We attach listeners that translate
- * the raw events into short status strings and forward them to the
- * main thread through the Comlink-proxied status callback.
- *
- * Wire this on EVERY agent. Specialist sub-agents are invoked as nested
- * runs via `Agent.asTool(...)`, and inside those nested runs only the
- * sub-agent's own hooks fire — without per-agent wiring the status line
- * freezes while a specialist is working.
- *
- * Alongside the status line, every call is written to {@link agentTrace} — the
- * record the status line cannot be, since each event overwrites the last.
- */
 import type { Agent } from "@openai/agents";
 
 import type { StatusCallback } from "../types";
@@ -74,10 +58,10 @@ interface TracedToolCall {
 }
 
 /**
- * `ToolCallItem` is a union whose members carry the call's identity under
- * different names, and a provider may send a shape the union does not cover
- * yet. Reading it structurally keeps a trace from throwing inside a lifecycle
- * hook, where a throw would take the agent's turn down with it.
+ * Read structurally because `ToolCallItem`'s members carry the call's identity
+ * under different names and a provider may send a shape the union does not
+ * cover. A throw here would happen inside a lifecycle hook and take the agent's
+ * turn down with it.
  */
 function readToolCall(toolCall: unknown): TracedToolCall {
   if (typeof toolCall !== "object" || toolCall === null) return { key: "?" };
@@ -99,10 +83,17 @@ function trace(
   recordTraceEvent({ at: Date.now(), agent, kind, label, ...extra });
 }
 
-// `Agent<any, any>` matches both the dispatcher (which infers handoff
-// output types) and each sub-agent (default `TextOutput`). The hook
-// payloads are independent of the agent's generic parameters, so the
-// looser type here is intentional.
+/**
+ * Wire this on EVERY agent. Specialist sub-agents run nested via
+ * `Agent.asTool(...)`, and inside a nested run only that sub-agent's own hooks
+ * fire — without per-agent wiring the status line freezes while a specialist
+ * works. Every call also goes to {@link agentTrace}, which is the record the
+ * status line cannot be, since each event overwrites the last.
+ *
+ * `Agent<any, any>` matches both the dispatcher, which infers handoff output
+ * types, and each sub-agent on the default `TextOutput`. The hook payloads are
+ * independent of those generics.
+ */
 export function attachObservabilityHooks(
   agent: Agent<any, any>,
   emitStatus: StatusCallback,

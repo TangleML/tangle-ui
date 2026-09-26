@@ -93,11 +93,9 @@ function GroupHeading({ icon, label }: GroupHeadingProps) {
 }
 
 /**
- * Grouped by what the API calls each thing, not by what it is, so the counts
- * here agree with the counts on the project's tile — which are read straight
- * off the API and cannot be worked out per-kind without reading every
- * project's resources. A browser-held pipeline is therefore filed with the
- * documents, and says what it is for itself on its own row.
+ * Grouped by the API's `entity`, not by what each row is, so these counts agree
+ * with the project tile's — which are read off the API and cannot be worked out
+ * per-kind without reading every project's resources.
  */
 function groupByEntity(resources: ProjectResourceSummary[]) {
   const grouped = new Map<string, ProjectResourceSummary[]>();
@@ -175,8 +173,8 @@ export function ProjectResources({
   };
 
   // Instructions have their own box in the sidebar, so listing the document
-  // they live in as well would offer two ways to write one thing and a Remove
-  // that silently wipes it. Sessions belong to Tangent and go with it.
+  // they live in would offer a second way to write one thing and a Remove that
+  // silently wipes it.
   const allResources = data?.items ?? [];
   const resources = allResources.filter((resource) => {
     if (describeResource(resource)?.type === INSTRUCTIONS) return false;
@@ -184,10 +182,6 @@ export function ProjectResources({
   });
   const hiddenCount = allResources.length - resources.length;
 
-  // A session is the one resource that is not a thing to look at here: it is a
-  // conversation that lives in Tangent, so its row goes there. It is also not a
-  // thing to take back out — like a run, a session that happened belongs to the
-  // project it happened in — so its row is not offered a way to.
   const { currentNames: currentPipelineNames } =
     useLocalPipelineStatus(resources);
 
@@ -283,8 +277,8 @@ export function ProjectResources({
               />
 
               {items.map((resource) => {
-                // Only a session is a conversation that lives elsewhere; a
-                // renamed pipeline is still a row on this page.
+                // A session is a conversation that lives in Tangent, so its row
+                // opens there; a renamed pipeline is still a row on this page.
                 const sessionLabel = sessionLabels.get(resource.id);
                 return (
                   <ResourceRow
@@ -304,6 +298,8 @@ export function ProjectResources({
                         picked.id === selectedResourceId ? null : picked.id,
                       );
                     }}
+                    // Like a run, a session that happened belongs to the
+                    // project it happened in.
                     onRemove={sessionLabel ? undefined : handleRemove}
                   />
                 );

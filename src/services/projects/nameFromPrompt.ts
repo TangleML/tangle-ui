@@ -69,13 +69,13 @@ const MIN_TRIMMED_LENGTH = 15;
 const TAIL_STARTS_AT = 0.6;
 
 /**
- * Cutting at a word boundary still leaves a sentence that stops mid-thought —
- * "Build a churn model for Q3 using the new". Dropping the last phrase along
- * with the word that introduced it gives a title rather than a fragment.
+ * Cutting at a word boundary still stops mid-thought — "Build a churn model
+ * for Q3 using the new". Dropping the trailing phrase with the word that
+ * introduced it gives a title rather than a fragment.
  *
- * Only a phrase in the tail, though. "Build a pipeline that scrapes wikipedia"
- * joins at its fifth character-fifth, and cutting there leaves "Build a
- * pipeline" — every word that said what the pipeline was for, gone.
+ * Only a phrase in the tail: "Build a pipeline that scrapes wikipedia" joins
+ * early, and cutting there leaves "Build a pipeline", losing every word that
+ * said what the pipeline was for.
  */
 function withoutDanglingPhrase(text: string): string {
   const words = text.split(" ");
@@ -103,14 +103,10 @@ function clamp(text: string): string {
 }
 
 /**
- * A title for whatever a prompt asks for, used to name the project, session and
- * pipeline that prompt brings into being. The agent renames these once it knows
- * what it is actually building; this is what they are called until then, and
- * what they keep if it never gets round to it.
- *
- * The whole prompt is not a name — it is a paragraph, and reads as a mistake in
- * every list it appears in. So this takes the opening clause, drops the address
- * to the agent in front of it, and cuts to a length a tile can show.
+ * Names the project, session and pipeline a prompt brings into being, until
+ * the agent renames them — and for good if it never does. The whole prompt is
+ * a paragraph and reads as a mistake in a list, so this keeps the opening
+ * clause, drops the address to the agent, and cuts to what a tile can show.
  */
 export function nameFromPrompt(prompt: string): string | undefined {
   const opening = withoutLeadIn(firstSentence(prompt))

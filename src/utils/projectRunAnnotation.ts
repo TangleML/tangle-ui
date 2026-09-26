@@ -1,20 +1,18 @@
 import { PROJECT_ID_ANNOTATION_PREFIX } from "./annotationKeys";
 
-/**
- * A run says which projects it belongs to by carrying one annotation per
- * project, the id in the key and a constant value. So these are a set of
- * memberships rather than a single field, and a run may sit in several
- * projects at once.
- *
- * The key cannot be written after the fact: the endpoint that sets a single
- * annotation takes the key as a path segment and rejects this one for its
- * slashes. Attribution therefore has to be right when the run is created.
- */
 const MEMBER = "true";
 
 export const projectRunAnnotationKey = (projectId: string) =>
   `${PROJECT_ID_ANNOTATION_PREFIX}${projectId}`;
 
+/**
+ * Membership is one annotation per project, the id in the key, so a run may sit
+ * in several at once.
+ *
+ * These cannot be written after the fact: the endpoint that sets a single
+ * annotation takes the key as a path segment and rejects this one for its
+ * slashes. Attribution has to be right when the run is created.
+ */
 export function projectRunAnnotations(
   projectIds: readonly string[],
 ): Record<string, string> {

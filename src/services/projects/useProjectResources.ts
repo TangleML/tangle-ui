@@ -144,11 +144,8 @@ export function useDeleteProjectResource(projectId: string) {
   return useMutation({
     mutationFn: (resourceId: string) =>
       deleteProjectResource(projectId, resourceId),
-    /**
-     * The row goes as soon as it is asked for. Waiting for the delete and then
-     * a re-read of the whole list means two round trips of nothing happening,
-     * which reads as a click that did not land.
-     */
+    // Waiting for the delete and then a re-read of the whole list is two round
+    // trips of nothing happening, which reads as a click that did not land.
     onMutate: async (resourceId: string) => {
       const listsKey = ProjectResourcesQueryKeys.Lists(projectId);
       await queryClient.cancelQueries({ queryKey: listsKey });

@@ -2,14 +2,12 @@ import type { PipelineFileStore } from "@/routes/v2/pages/Editor/store/pipelineF
 import { availablePipelineName } from "@/services/localPipelines/localPipelinesService";
 
 /**
- * Renames the file the open pipeline is saved as, and answers with the name it
- * actually took. An agent naming a pipeline picks a name without knowing what
- * else this browser holds, so a collision adjusts rather than overwriting the
- * other pipeline — the same rule `create_pipeline` already follows.
+ * Answers with the name the file actually took: an agent picks one without
+ * knowing what else this browser holds, so a collision adjusts rather than
+ * overwriting, as `create_pipeline` already does.
  *
- * Everything an agent renames goes through here rather than through the hook
- * the menu bar uses: that one also navigates, which is meaningless for a
- * pipeline open in a workarea tab rather than at a url of its own.
+ * Agent renames come here rather than through the hook the menu bar uses, which
+ * also navigates — meaningless for a pipeline open in a workarea tab.
  */
 export function renamePipelineFileFor(
   pipelineFile: PipelineFileStore,

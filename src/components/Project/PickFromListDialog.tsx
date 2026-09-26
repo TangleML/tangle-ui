@@ -18,7 +18,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
 import { tracking } from "@/utils/tracking";
 
-export interface PickableItem {
+interface PickableItem {
   id: string;
   label: string;
   alreadyAdded: boolean;
@@ -41,11 +41,7 @@ interface PickFromListDialogProps {
   onClose: () => void;
 }
 
-/**
- * The shell shared by the two "pick one thing to file against another" dialogs
- * — a pipeline for a project, and a project for a pipeline. Only the items,
- * the wording and what picking does differ between them.
- */
+/** Shared by "pick a pipeline for a project" and its inverse. */
 export function PickFromListDialog({
   title,
   helpText,

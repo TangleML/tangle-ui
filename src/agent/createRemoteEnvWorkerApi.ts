@@ -73,9 +73,6 @@ interface HostedAgent {
   spec: RemoteAgentSpec;
   memory: MemorySession;
   bridge?: ToolBridgeApi;
-  // Outlives the turn, like the conversation it belongs to: an agent is
-  // routinely told to search in one directive and to add what it found in the
-  // next.
   componentCatalog: ComponentCatalog;
 }
 

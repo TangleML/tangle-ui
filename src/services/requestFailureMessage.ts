@@ -55,14 +55,11 @@ function describeDetail(detail: unknown): string | undefined {
 }
 
 /**
- * What the server said, added to what we were doing.
- *
  * A rejected request usually explains itself — a 422 names the field it would
- * not accept and the value it was given — and that explanation was being
- * dropped for a fixed sentence. What reads the message may be an agent about to
- * decide whether to correct the request or give up on it, so the difference
- * between "Failed to create pipeline run" and the field that was wrong is the
- * difference between a fix and a dead end.
+ * not accept — and that explanation was being dropped for a fixed sentence.
+ * What reads this may be an agent deciding whether to correct the request or
+ * give up, so naming the bad field is the difference between a fix and a dead
+ * end.
  */
 export async function requestFailureMessage(
   response: Response,

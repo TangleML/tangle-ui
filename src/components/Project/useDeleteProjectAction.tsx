@@ -23,10 +23,10 @@ interface DeleteProjectAction {
 }
 
 /**
- * Deleting a project is offered from the project's own page and from Tangent,
- * and both have to say the same thing about what is about to be destroyed and
- * leave for the same place afterwards. The caller renders
- * `<ConfirmationDialog {...confirmation} />` wherever suits its layout.
+ * Delete is offered from the project's page and from Tangent, and both have to
+ * say the same thing about what is destroyed and leave for the same place. The
+ * caller renders `<ConfirmationDialog {...confirmation} />` where its layout
+ * suits.
  */
 export function useDeleteProjectAction(project: Project): DeleteProjectAction {
   const navigate = useNavigate();
