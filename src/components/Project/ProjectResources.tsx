@@ -35,7 +35,6 @@ import {
   AGENT_SESSION,
   describeResource,
   INSTRUCTIONS,
-  namesLocalPipeline,
 } from "@/services/projects/resourceDescriptor";
 import { sessionLabelsById } from "@/services/projects/sessionLabel";
 import type { ProjectResourceSummary } from "@/services/projects/types";
@@ -48,7 +47,11 @@ import { tracking } from "@/utils/tracking";
 
 import { AddResourceMenu } from "./AddResourceMenu";
 import { ColumnHeadingRow } from "./ColumnHeadingRow";
-import { entityIcon, removingDestroys } from "./resourceEntities";
+import {
+  entityIcon,
+  removalConsequence,
+  removingDestroys,
+} from "./resourceEntities";
 import { ResourceRow, UNTITLED } from "./ResourceRow";
 
 const PAGE_SIZE = 100;
@@ -87,16 +90,6 @@ function GroupHeading({ icon, label }: GroupHeadingProps) {
       </TableHead>
     </TableRow>
   );
-}
-
-function removalConsequence(resource: ProjectResourceSummary) {
-  if (namesLocalPipeline(resource)) {
-    return "This only takes it out of this project. The pipeline itself is not deleted and stays in the browser that holds it.";
-  }
-  if (removingDestroys(resource)) {
-    return "This is the only copy, so deleting it here deletes it for good.";
-  }
-  return "This only takes it out of this project. The item itself is not deleted and stays wherever it lives.";
 }
 
 /**

@@ -4,7 +4,7 @@ import { observer } from "mobx-react-lite";
 import { useState } from "react";
 
 import logo from "/Tangle_Icon_White.png";
-import { ProjectRunContextChip } from "@/components/Project/ProjectRunContextChip";
+import { ProjectPicker } from "@/components/Project/ProjectPicker";
 import { PipelineNameDialog } from "@/components/shared/Dialogs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -168,7 +168,9 @@ export const EditorMenuBar = observer(function EditorMenuBar() {
         >
           {displayMenu && (
             <>
-              <ProjectRunContextChip />
+              <ProjectPicker
+                pipelineName={pipelineFile.activePipelineFile?.storageKey}
+              />
               <QuickRunButton />
               <AutoSaveIndicator />
               <div className="w-px h-5 bg-stone-700" />

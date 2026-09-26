@@ -31,9 +31,16 @@ function pointsAt(
   return pointer.localName === pipeline.localName;
 }
 
+export function pipelineResourceIn(
+  resources: readonly ProjectResourceSummary[],
+  pipeline: LocalPipelinePointer,
+) {
+  return resources.find((resource) => pointsAt(resource, pipeline));
+}
+
 export function holdsPipeline(
   resources: readonly ProjectResourceSummary[],
   pipeline: LocalPipelinePointer,
 ) {
-  return resources.some((resource) => pointsAt(resource, pipeline));
+  return pipelineResourceIn(resources, pipeline) !== undefined;
 }

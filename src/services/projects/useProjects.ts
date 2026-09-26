@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import { useFavorites } from "@/hooks/useFavorites";
 import { removeRecentlyViewed } from "@/hooks/useRecentlyViewed";
@@ -68,6 +73,29 @@ export function useProject(id: string | undefined) {
     staleTime: 5 * MINUTES,
     refetchOnWindowFocus: false,
   });
+}
+
+/**
+ * The projects among these ids that still exist, in the order they were asked
+ * for. A run's attribution outlives the project it names, so the ones that
+ * have gone are simply absent rather than reported — there is nothing the
+ * reader can do about a project that is not there.
+ */
+export function useProjectsById(ids: readonly string[]) {
+  const { configured, available } = useBackend();
+
+  const results = useQueries({
+    queries: ids.map((id) => ({
+      queryKey: ProjectsQueryKeys.Id(id),
+      queryFn: () => getProject(id),
+      enabled: configured && available,
+      retry: retryUnlessRefused,
+      staleTime: 5 * MINUTES,
+      refetchOnWindowFocus: false,
+    })),
+  });
+
+  return results.flatMap((result) => (result.data ? [result.data] : []));
 }
 
 export function useCreateProject() {

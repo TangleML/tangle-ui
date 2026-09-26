@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { holdsPipeline } from "./pipelineProjects";
+import { holdsPipeline, pipelineResourceIn } from "./pipelineProjects";
 import { localPipelineResourceInput } from "./resourceDescriptor";
 import type { ProjectResourceSummary } from "./types";
 
@@ -82,5 +82,26 @@ describe("holdsPipeline", () => {
 
   it("holds nothing when the project holds nothing", () => {
     expect(holdsPipeline([], { localName: "Churn model" })).toBe(false);
+  });
+});
+
+/** Taking a pipeline back out of a project is a delete by resource id. */
+describe("pipelineResourceIn", () => {
+  it("hands back the row that points at the pipeline", () => {
+    const wanted = { ...pointerRow("Churn model"), id: "resource-7" };
+
+    expect(
+      pipelineResourceIn([row({ id: "resource-1" }), wanted], {
+        localName: "Churn model",
+      }),
+    ).toBe(wanted);
+  });
+
+  it("hands back nothing when no row points at it", () => {
+    expect(
+      pipelineResourceIn([pointerRow("Something else")], {
+        localName: "Churn model",
+      }),
+    ).toBeUndefined();
   });
 });

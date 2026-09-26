@@ -96,6 +96,31 @@ export function useCreateProjectResource(projectId: string) {
   });
 }
 
+/**
+ * For the callers that only learn which project they are adding to when the
+ * add happens, and so cannot bind one at hook-call time.
+ */
+export function useAddResourceToProject() {
+  const queryClient = useQueryClient();
+  const notify = useToastNotification();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      input,
+    }: {
+      projectId: string;
+      input: CreateResourceInput;
+    }) => createProjectResource(projectId, input),
+    onSuccess: (_resource, { projectId }) => {
+      invalidateProjectResources(queryClient, projectId);
+    },
+    onError: () => {
+      notify("Failed to create resource", "error");
+    },
+  });
+}
+
 export function useUpdateProjectResource(projectId: string) {
   const queryClient = useQueryClient();
   const notify = useToastNotification();
