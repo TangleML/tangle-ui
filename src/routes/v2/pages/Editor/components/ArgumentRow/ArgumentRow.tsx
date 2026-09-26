@@ -34,7 +34,7 @@ const nameVariants = cva("shrink-0", {
   variants: {
     unset: {
       true: "text-gray-400 dark:text-muted-foreground",
-      false: "text-gray-900 dark:text-foreground",
+      false: "text-foreground",
     },
   },
   defaultVariants: { unset: false },

@@ -193,7 +193,7 @@ export const InputHandle = ({
                   "hover:bg-gray-300 dark:hover:bg-accent",
                 selected || active
                   ? "bg-blue-200 dark:bg-blue-900"
-                  : "bg-gray-200 dark:bg-muted",
+                  : "bg-muted",
                 highlight && "bg-green-200 dark:bg-green-900",
                 !hasValue && hasDefault && "opacity-50 italic",
               )}
@@ -371,9 +371,7 @@ export const OutputHandle = ({
                 !selected &&
                 !highlight &&
                 "hover:bg-gray-300 dark:hover:bg-accent",
-              selected || active
-                ? "bg-blue-200 dark:bg-blue-900"
-                : "bg-gray-200 dark:bg-muted",
+              selected || active ? "bg-blue-200 dark:bg-blue-900" : "bg-muted",
               highlight && "bg-green-200 dark:bg-green-900",
             )}
             onClick={handleLabelClick}

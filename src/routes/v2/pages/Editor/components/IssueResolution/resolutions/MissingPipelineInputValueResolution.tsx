@@ -49,11 +49,7 @@ export const MissingPipelineInputValueResolution = observer(
 
     return (
       <BlockStack gap="2">
-        <Text
-          size="xs"
-          weight="semibold"
-          className="text-gray-700 dark:text-foreground"
-        >
+        <Text size="xs" weight="semibold" className="text-foreground">
           Set a value for pipeline input &ldquo;{input.name}&rdquo;
         </Text>
         <BlockStack gap="2">
