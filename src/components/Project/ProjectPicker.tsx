@@ -24,10 +24,9 @@ import { useDeleteProjectResource } from "@/services/projects/useProjectResource
 import { tracking } from "@/utils/tracking";
 
 import { AddToProjectDialog } from "./AddToProjectDialog";
+import { NO_PROJECT, projectOptions } from "./projectOptions";
 import { removalConsequence } from "./resourceEntities";
 import { useRunProjectContext } from "./useRunProjectContext";
-
-const NO_PROJECT = "none";
 
 interface ProjectPickerProps {
   pipelineName: string | undefined;
@@ -58,19 +57,7 @@ export function ProjectPicker({ pipelineName }: ProjectPickerProps) {
     (membership) => membership.project.id === projectId,
   );
 
-  /**
-   * A project can be the run context without holding the pipeline — the id
-   * arrives in the URL and membership is never checked — so the chosen one is
-   * listed whether or not it is a member, or the picker would read as though
-   * nothing were chosen.
-   */
-  const listed = memberships.map(({ project }) => ({
-    id: project.id,
-    name: project.name,
-  }));
-  if (projectId && !current) {
-    listed.unshift({ id: projectId, name: projectName ?? "Current project" });
-  }
+  const listed = projectOptions(memberships, projectId, projectName);
 
   const label = projectName ?? (projectId ? "Project" : "No project");
 
@@ -178,7 +165,6 @@ export function ProjectPicker({ pipelineName }: ProjectPickerProps) {
           memberProjectIds={memberships.map(
             (membership) => membership.project.id,
           )}
-          open
           onOpenChange={setAddOpen}
           onAdded={setProjectId}
         />
