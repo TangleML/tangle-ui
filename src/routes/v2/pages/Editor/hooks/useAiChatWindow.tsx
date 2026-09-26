@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 
 import { createEditorToolBridge } from "@/routes/v2/pages/Editor/components/AiChat/toolBridge";
+import { invokeAutoLayoutVia } from "@/routes/v2/pages/Editor/components/AiChat/toolBridge/invokeAutoLayoutVia";
 import { renamePipelineFileFor } from "@/routes/v2/pages/Editor/hooks/renamePipelineFileFor";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { AiChatContent } from "@/routes/v2/shared/components/AiChat/AiChatContent";
@@ -37,16 +38,7 @@ export function useAiChatWindow(enabled: boolean) {
           createEditorToolBridge({
             ...deps,
             undo: editorSession.undo,
-            invokeAutoLayout: (algorithm) => {
-              let laidOut = false;
-              keyboard.invokeShortcut("auto-layout", {
-                algorithm,
-                onLaidOut: () => {
-                  laidOut = true;
-                },
-              });
-              return laidOut;
-            },
+            invokeAutoLayout: invokeAutoLayoutVia(keyboard),
             renamePipelineFile: renamePipelineFileFor(
               editorSession.pipelineFile,
             ),
