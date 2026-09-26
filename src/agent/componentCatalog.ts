@@ -1,21 +1,20 @@
+import type { ComponentReference } from "@/utils/componentSpec";
+
+const MAX_ENTRIES = 200;
+
 /**
- * What `search_components` found, kept so `add_task` can be given an id
+ * Holds what `search_components` found so `add_task` can be given an id
  * instead of a component.
  *
- * A component reference the model has to repeat back cannot survive the round
- * trip: OpenAI's strict mode closes every object in a tool schema, so any part
- * of a spec the schema does not name is unsendable — and a registry component
- * is exactly the case where the shape is not ours to enumerate. Holding the
- * reference here and passing its id keeps it whole, and keeps a spec that can
+ * A reference the model has to repeat back cannot survive the round trip:
+ * strict tool schemas close every object, so any part of a spec the schema does
+ * not name is unsendable — and a registry component is exactly the case where
+ * the shape is not ours to enumerate. Passing an id also keeps a spec that can
  * run to tens of thousands of characters out of the conversation.
  *
  * It outlives a turn: a search and the task it leads to are often two
  * directives apart.
  */
-import type { ComponentReference } from "@/utils/componentSpec";
-
-const MAX_ENTRIES = 200;
-
 export interface ComponentCatalog {
   remember(id: string, reference: ComponentReference): void;
   lookup(id: string): ComponentReference | undefined;

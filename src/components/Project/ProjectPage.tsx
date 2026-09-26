@@ -9,7 +9,7 @@ import { Text } from "@/components/ui/typography";
 import { useTrackRecentlyViewedProject } from "@/hooks/useTrackRecentlyViewedProject";
 import { useBackend } from "@/providers/BackendProvider";
 import { APP_ROUTES } from "@/routes/appRoutes";
-import { ProjectsApiError } from "@/services/projects/errors";
+import { isProjectGone } from "@/services/projects/errors";
 import { useProject } from "@/services/projects/useProjects";
 
 import { ProjectHeader } from "./ProjectHeader";
@@ -69,7 +69,7 @@ function ProjectDetail({ projectId }: { projectId: string | undefined }) {
   }
 
   if (error) {
-    const isMissing = error instanceof ProjectsApiError && error.status === 404;
+    const isMissing = isProjectGone(error);
 
     return (
       <BlockStack gap="3" inlineAlign="start">

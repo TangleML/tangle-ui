@@ -1,20 +1,3 @@
-/**
- * Connects the Tangent project workspace to the `/remote-env` gateway as the
- * session's default environment.
- *
- * This one environment does two jobs on a single socket:
- * - Hosts the workarea RPC **tools** (open / list / read / close tabs, run
- *   inspect, and naming the project and session) so an agent can arrange and
- *   read the Dynamic Workarea, and say what the work it is doing is called.
- * - Hosts an editor sub-agent **runtime** (spawn / message / kill) bound to a
- *   routing bridge that drives whichever pipeline tab is active. This catches
- *   editor spawns that Prime does not bind to a specific tab's environment; per
- *   tab, the embedded views still host their own environment for spawns
- *   explicitly bound to that tab.
- *
- * It mints a scoped token, boots the agent worker, connects, and re-registers
- * the tool catalog on reconnect. It renders `children` unchanged.
- */
 import { useQueryClient } from "@tanstack/react-query";
 import * as Comlink from "comlink";
 import { type ReactNode, useEffect, useRef, useState } from "react";
@@ -106,6 +89,13 @@ async function clonePipelineFromRun(
   return { pipelineName: result.name };
 }
 
+/**
+ * One environment does two jobs on a single socket: it hosts the workarea tools
+ * an agent arranges the workarea with, and an editor sub-agent runtime bound to
+ * a bridge that routes to whichever pipeline tab is active. That second job
+ * catches editor spawns not bound to a specific tab's environment; a spawn that
+ * names a tab is still hosted by that tab's own embedded view.
+ */
 export function TangentProjectAgentProvider({
   sessionId,
   children,

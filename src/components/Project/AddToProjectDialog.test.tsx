@@ -45,7 +45,6 @@ const dialog = (memberProjectIds: string[] = []) =>
     <AddToProjectDialog
       pipelineName="Churn model"
       memberProjectIds={memberProjectIds}
-      open
       onOpenChange={onOpenChange}
       onAdded={onAdded}
     />,

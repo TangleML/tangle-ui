@@ -9,9 +9,8 @@ import {
 import { Paragraph } from "@/components/ui/typography";
 import { usePipelineProjects } from "@/services/projects/usePipelineProjects";
 
+import { NO_PROJECT, projectOptions } from "./projectOptions";
 import { useRunProjectContext } from "./useRunProjectContext";
-
-const NO_PROJECT = "none";
 
 interface RunProjectFieldProps {
   pipelineName: string | undefined;
@@ -34,13 +33,7 @@ export function RunProjectField({
     enabled ? pipelineName : undefined,
   );
 
-  const options = memberships.map(({ project }) => ({
-    id: project.id,
-    name: project.name,
-  }));
-  if (value && !options.some((option) => option.id === value)) {
-    options.unshift({ id: value, name: projectName ?? "Current project" });
-  }
+  const options = projectOptions(memberships, value, projectName);
 
   if (!enabled || options.length === 0) {
     return null;

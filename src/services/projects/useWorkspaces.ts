@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { useBackend } from "@/providers/BackendProvider";
-import { MINUTES } from "@/utils/constants";
 
+import { projectQueryDefaults } from "./queryDefaults";
 import { WorkspacesQueryKeys } from "./types";
 import { getWorkspace, listWorkspaces } from "./workspacesService";
 
@@ -13,8 +13,7 @@ export function useWorkspaces() {
     queryKey: WorkspacesQueryKeys.All(),
     queryFn: listWorkspaces,
     enabled: configured && available,
-    staleTime: 5 * MINUTES,
-    refetchOnWindowFocus: false,
+    ...projectQueryDefaults,
   });
 }
 
@@ -30,7 +29,6 @@ export function useWorkspace(id: string | undefined) {
       return getWorkspace(id);
     },
     enabled: configured && available && Boolean(id),
-    staleTime: 5 * MINUTES,
-    refetchOnWindowFocus: false,
+    ...projectQueryDefaults,
   });
 }

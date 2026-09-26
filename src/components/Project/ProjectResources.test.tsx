@@ -223,9 +223,8 @@ describe("ProjectResources", () => {
     });
 
     /**
-     * A session is Tangent's, and Tangent is where it can be read. With it off
-     * the rows would be links to a page that is not there, and the page would
-     * be naming a feature the user has not got.
+     * A session can only be read in Tangent, so with it off the rows would link
+     * to a page that is not there and name a feature the user has not got.
      */
     describe("without Tangent", () => {
       beforeEach(() => {

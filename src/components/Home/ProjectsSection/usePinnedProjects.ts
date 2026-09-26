@@ -13,13 +13,11 @@ interface PinnedProjects {
 }
 
 /**
- * The projects this browser has pinned, in the order they were pinned.
- *
  * Pinning is the only way to keep hold of a project someone shared: the
  * projects list asks the backend for the ones the caller created, and the
- * backend has no notion of who a project was shared with. So the record is
- * local, and this is the one seam to replace if it ever grows a server side —
- * nothing above it knows where the list came from.
+ * backend has no notion of who a project was shared with. The record is
+ * therefore local, and this is the one seam to replace should it ever grow a
+ * server side.
  */
 export function usePinnedProjects(): PinnedProjects {
   const { configured, available } = useBackend();

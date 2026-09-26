@@ -190,9 +190,9 @@ describe("ResourcesWindowContent", () => {
   });
 
   /**
-   * A project is shareable but the pipelines inside it are not: one lives in
-   * the browser it was made in. Everyone else needs telling, rather than a row
-   * that opens a tab and collapses into an error icon.
+   * A project is shareable but a pipeline inside it lives in the browser it was
+   * made in. Everyone else needs telling, rather than a row that opens a tab
+   * and collapses into an error icon.
    */
   it("greys out a pipeline held in some other browser", () => {
     given(localPipeline("r-6", "Ada's preprocessing"));
@@ -236,9 +236,8 @@ describe("ResourcesWindowContent", () => {
   });
 
   /**
-   * A pointer that recorded no id has only a name to go on, and a name is
-   * this browser's to recognise only if this browser wrote it. Someone else's
-   * "Churn model" is not the "Churn model" sitting here.
+   * A name is this browser's to recognise only if this browser wrote it:
+   * someone else's "Churn model" is not the one sitting here.
    */
   it("does not trust a bare name that someone else recorded", () => {
     given(localPipeline("r-8", "Churn model", { createdBy: "bo@example.com" }));

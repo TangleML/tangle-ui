@@ -4,16 +4,15 @@ import { useEffect, useRef } from "react";
 
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
-/**
- * Frames the whole graph whenever something outside the canvas rebuilds it —
- * today, an agent editing the pipeline the user is watching. Without this the
- * agent's work lands wherever the graph grew, which is routinely off screen.
- *
- * One tool call can open several undo groups, so the requests are coalesced;
- * the wait is short enough that each call still reads as its own step.
- */
+// One tool call can open several undo groups, so requests are coalesced. Short
+// enough that each call still reads as its own step.
 const SETTLE_MS = 250;
 
+/**
+ * Frames the graph when something outside the canvas rebuilds it — today, an
+ * agent editing the pipeline the user is watching. Without this the agent's
+ * work lands wherever the graph grew, which is routinely off screen.
+ */
 export function useFitViewOnRequest(): void {
   const { editor } = useSharedStores();
   const { fitView } = useReactFlow();

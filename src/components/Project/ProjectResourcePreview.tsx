@@ -154,9 +154,8 @@ function SelectedResource({ projectId, resourceId }: SelectedResourceProps) {
 }
 
 /**
- * A run row carries no content of its own — it points at a run whose own page
- * shows the graph, logs and artifacts. Dumping its empty payload as yaml, which
- * is what an unrecognised row used to fall through to, said nothing at all.
+ * A run row carries no content of its own, so as an unrecognised row it used to
+ * fall through to a yaml dump of its empty payload.
  */
 function RunPreview({ url }: { url: string | undefined }) {
   return (

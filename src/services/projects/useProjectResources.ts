@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
-import { MINUTES } from "@/utils/constants";
 
 import {
   createProjectResource,
@@ -12,6 +11,7 @@ import {
   listProjectResources,
   updateProjectResource,
 } from "./projectResourcesService";
+import { projectQueryDefaults } from "./queryDefaults";
 import type {
   CreateResourceInput,
   ListProjectResourcesParams,
@@ -54,8 +54,7 @@ export function useProjectResources(
       return listProjectResources(projectId, params);
     },
     enabled: configured && available && Boolean(projectId),
-    staleTime: 5 * MINUTES,
-    refetchOnWindowFocus: false,
+    ...projectQueryDefaults,
   });
 }
 
@@ -75,8 +74,7 @@ export function useProjectResource(
     },
     enabled:
       configured && available && Boolean(projectId) && Boolean(resourceId),
-    staleTime: 5 * MINUTES,
-    refetchOnWindowFocus: false,
+    ...projectQueryDefaults,
   });
 }
 
@@ -96,10 +94,7 @@ export function useCreateProjectResource(projectId: string) {
   });
 }
 
-/**
- * For the callers that only learn which project they are adding to when the
- * add happens, and so cannot bind one at hook-call time.
- */
+/** For a caller that only learns the project as it adds — a "which project?" dialog. */
 export function useAddResourceToProject() {
   const queryClient = useQueryClient();
   const notify = useToastNotification();
@@ -149,11 +144,8 @@ export function useDeleteProjectResource(projectId: string) {
   return useMutation({
     mutationFn: (resourceId: string) =>
       deleteProjectResource(projectId, resourceId),
-    /**
-     * The row goes as soon as it is asked for. Waiting for the delete and then
-     * a re-read of the whole list means two round trips of nothing happening,
-     * which reads as a click that did not land.
-     */
+    // Waiting for the delete and then a re-read of the whole list is two round
+    // trips of nothing happening, which reads as a click that did not land.
     onMutate: async (resourceId: string) => {
       const listsKey = ProjectResourcesQueryKeys.Lists(projectId);
       await queryClient.cancelQueries({ queryKey: listsKey });

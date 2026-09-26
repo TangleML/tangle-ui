@@ -38,16 +38,12 @@ export class DescriptorTooLargeError extends Error {
 }
 
 /**
- * What a resource row says it is, in the one vocabulary both pages read.
+ * `type` and `target` are separate axes: two row kinds can share a view kind,
+ * and a row kind can have no view at all.
  *
- * `type` is the row kind, which is what a badge says and what a list filters
- * on. `target` is where the row points, in the grammar the Tangent workarea
- * dispatches views from. They are separate axes: two row kinds can share a view
- * kind, and a row kind can have no view at all.
- *
- * An unrecognised `type` is returned as-is rather than rejected. The backend
- * stores `extra_data` free-form and anyone may PATCH it, so a row this build
- * does not know about still has to render as something.
+ * An unrecognised `type` is returned as-is rather than rejected, because
+ * `extra_data` is free-form and anyone may PATCH it — a row this build does not
+ * know about still has to render as something.
  */
 export function describeResource(
   resource: ResourceRow,
@@ -75,13 +71,12 @@ export const namesLocalPipeline = (resource: ResourceRow): boolean =>
   describeResource(resource)?.type === LOCAL_PIPELINE;
 
 /**
- * How to find a browser-held pipeline again. The id is tried first because a
- * name can be recycled, and the name is the fallback because most pipelines in
- * a browser have no registry row to be addressed by.
+ * The id is tried first because a name can be recycled; the name is the
+ * fallback because most pipelines in a browser have no registry row.
  *
- * The name comes from `fallbackName` rather than the row's `name`, which is a
- * label anyone may PATCH: this records what the pipeline was called when it was
- * attached, which is what makes it findable after the label has moved on.
+ * That name comes from `fallbackName`, not the row's `name`: the row's label is
+ * PATCHable, while `fallbackName` records what the pipeline was called when it
+ * was attached, which is what still finds it after the label has moved on.
  */
 export function localPipelinePointerOf(
   resource: ResourceRow,
@@ -117,16 +112,14 @@ function withinLimit(
 }
 
 /**
- * A browser-held pipeline is filed as the only thing it honestly is — a
- * resource carrying its own payload — because the resources API accepts only
- * `pipeline | agent_session | document` and a `pipeline` must name a backend
- * pipeline by uuid. Inventing one would leave a row in a shared table that
- * every other client reads as a backend pipeline and fails to fetch.
+ * Filed as `document` rather than `pipeline`: the API accepts only
+ * `pipeline | agent_session | document`, and a `pipeline` must name a backend
+ * pipeline by uuid. Inventing one would leave a row every other client reads
+ * as a backend pipeline and fails to fetch.
  *
- * The descriptor lives in `extra_data` rather than `payload` because the list
- * endpoint omits payloads, so a list that had to know what each row held would
- * cost one request per row. It also means `?entity=` cannot select these: any
- * filtering by kind happens on the client.
+ * The descriptor goes in `extra_data`, not `payload`, because the list endpoint
+ * omits payloads. The cost is that `?entity=` cannot select these, so filtering
+ * by kind happens on the client.
  */
 export function localPipelineResourceInput(
   pointer: LocalPipelinePointer,
@@ -151,12 +144,7 @@ export function localPipelineResourceInput(
   };
 }
 
-/**
- * A document carries its own body, so there is nothing to point at and no
- * identity to record: the row is the document. `type` is written all the same,
- * so listing by kind is one rule for every row rather than a rule plus the
- * rows that predate it.
- */
+/** No identity to record: the row is the document. */
 export function documentResourceInput(
   title: string,
   content: string,
@@ -164,8 +152,8 @@ export function documentResourceInput(
   return {
     entity: "document",
     name: title,
-    // The backend requires a payload for a document and validates nothing
-    // inside it; `content` is this app's convention for the whole body.
+    // The backend validates nothing inside a document payload; `content` is
+    // this app's convention for the whole body.
     payload: { content },
     extraData: { type: DOCUMENT },
   };
@@ -174,14 +162,9 @@ export function documentResourceInput(
 const INSTRUCTIONS_NAME = "Instructions";
 
 /**
- * Standing context for the agents working on a project — the same thing both
- * pages used to call by two names, Notes on one and Instructions on the other,
- * while writing one field.
- *
- * It is a document because that is what it is: a body of text the project
- * carries. Filing it as one means it is listed, previewed and read back by
- * everything that already handles documents, rather than being a field on the
- * project that only two screens know to look at.
+ * Standing context for the agents working on a project. Filed as a document
+ * rather than a field on the project so that listing, preview and read-back
+ * come from the code that already handles documents.
  */
 export function instructionsResourceInput(
   content: string,

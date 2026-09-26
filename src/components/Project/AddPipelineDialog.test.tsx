@@ -83,7 +83,6 @@ function renderDialog(resources: ProjectResourceSummary[] = []) {
     <AddPipelineDialog
       projectId="project-1"
       resources={resources}
-      open
       onOpenChange={onOpenChange}
     />,
   );

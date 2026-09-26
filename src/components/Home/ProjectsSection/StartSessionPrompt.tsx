@@ -68,13 +68,9 @@ export function StartSessionPrompt() {
       if (!workspace) {
         throw new Error("No workspace is available to create a project.");
       }
-      // What to run rides on the project rather than the url: arriving at a
-      // project with no sessions, Tangent starts one and runs the prompt as
-      // the opening turn, so the agent is working before anyone reaches for
-      // the composer.
-      //
-      // Named after the ask, and marked as nobody's choice, so the agent may
-      // replace it with a real title once it knows what it is building.
+      // The prompt rides on the project rather than the url, so arriving at
+      // Tangent starts a session and runs it as the opening turn. The name is
+      // marked as nobody's choice, so the agent may replace it with a real one.
       return createProject({
         workspaceId: workspace.id,
         name:
@@ -105,19 +101,16 @@ export function StartSessionPrompt() {
   });
 
   const isEmpty = prompt.trim() === "";
-  // The box is the point of the page, so anything that stops it working leaves
-  // it standing and unusable rather than taking it away. What is wrong is said
-  // below it, where the projects would be.
+  // The box is the point of the page, so what stops it working leaves it
+  // standing and disabled rather than taking it away.
   const isUnavailable = isFindingWorkspace || !workspace || !isAiConfigured;
   const isBusy = isPending || isUnavailable;
-  // Only once the lookup has settled: said while it is still running, this
-  // would accuse a backend that is about to answer.
+  // Said while the lookup runs, this would accuse a backend about to answer.
   const hasNoBackend = !isFindingWorkspace && !workspace;
 
   // Once, as soon as it can take input: arriving here is the act of wanting to
   // type, but the box is disabled until the backend says where a project would
-  // go, and focusing again later would take the caret off whatever the user
-  // moved to.
+  // go, and focusing again later would move the caret off whatever came next.
   useEffect(() => {
     if (hasFocused.current || isUnavailable) return;
     hasFocused.current = true;

@@ -86,14 +86,12 @@ export interface StartSessionOptions {
 }
 
 /**
- * Single source of truth for the Tangent project shell UI: which session is
- * active, and each session's chat + workarea tabs. Server data (sessions,
- * project, resources) stays in TanStack Query; this store only owns UI state
- * that the workarea shell, the chat panels, and the out-of-render agent tools
- * all read from the same place.
+ * Owns only UI state, so that the workarea shell, the chat panels and the
+ * out-of-render agent tools read it from one place. Sessions, project and
+ * resources stay in TanStack Query.
  *
- * Per-session chat/workarea are keyed by session id and restored on switch. The
- * live tab wiring (stores, environments, bridges) is keyed by globally-unique
+ * Chat and workarea are keyed by session id and restored on switch, but the
+ * live tab wiring — stores, environments, bridges — is keyed by globally unique
  * tab id, so backgrounded tabs clean up on unmount without a session-scoped
  * reset.
  */
@@ -218,10 +216,8 @@ export class TangentProjectStore {
       this.isStartingSession = true;
     });
     try {
-      // An empty prompt makes the embed skip the opening turn so the human types
-      // the first message; a non-empty prompt runs the opening turn immediately
-      // so the agent starts working. `name` labels the session in both lists:
-      // the shell's own, and the project resource row Tangle reads.
+      // An empty prompt makes the embed skip the opening turn, so the human
+      // types the first message; a non-empty one runs it immediately.
       const prompt = options?.prompt ?? "";
       const { sessionId } = await io.newSession(prompt, TANGENT_BUNDLE_ID, {
         name: options?.name ?? "New Tangent session",
@@ -319,11 +315,8 @@ export class TangentProjectStore {
     return tab;
   }
 
-  /**
-   * A tab's title is resolved once, when it opens, so a pipeline renamed while
-   * its tab is open keeps announcing the name it had. The rename is what tells
-   * us; nothing else would.
-   */
+  // A tab's title is resolved once, when it opens, so a rename is the only
+  // thing that can tell a tab the name it announces has changed.
   @action retitleWorkareaTarget(target: WorkareaTarget, title: string) {
     const tabs = this.workareaTabs;
     const index = tabs.findIndex((tab) => sameTarget(tab.target, target));
