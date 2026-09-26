@@ -23,6 +23,7 @@ import { idIdentity } from "@/services/projects/resourceTarget";
 
 import { createEditorToolBridge } from "./components/AiChat/toolBridge";
 import { fitViewAfterEdits } from "./components/AiChat/toolBridge/fitViewAfterEdits";
+import { invokeAutoLayoutVia } from "./components/AiChat/toolBridge/invokeAutoLayoutVia";
 import { renamePipelineFileFor } from "./hooks/renamePipelineFileFor";
 import { useEditorSession } from "./store/EditorSessionContext";
 
@@ -45,7 +46,7 @@ export function TangentEditorAgentProvider({
   onBridgeClosed,
   children,
 }: TangentEditorAgentProviderProps) {
-  const { navigation, editor } = useSharedStores();
+  const { navigation, editor, keyboard } = useSharedStores();
   const editorSession = useEditorSession();
   const project = useTangentProject();
   const { getBackendUrl, getAuthToken, queryClient } = useLazyBridgeAuth();
@@ -73,6 +74,7 @@ export function TangentEditorAgentProvider({
       getRunAnnotations: () => runAnnotationsRef.current,
       queryClient,
       undo: fitViewAfterEdits(editorSession.undo, editor),
+      invokeAutoLayout: invokeAutoLayoutVia(keyboard),
       renamePipelineFile: renamePipelineFileFor(
         editorSession.pipelineFile,
         (fileId, title) =>
