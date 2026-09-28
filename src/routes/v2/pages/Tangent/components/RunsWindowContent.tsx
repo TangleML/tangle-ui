@@ -5,14 +5,14 @@ import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
+import { UNNAMED_PIPELINE } from "@/services/projects/placeholderNames";
 import { idIdentity } from "@/services/projects/resourceTarget";
 import type { ProjectRun } from "@/services/projects/types";
 import { useProjectRuns } from "@/services/projects/useProjectRuns";
 import { getErrorMessage } from "@/utils/string";
+import { tracking } from "@/utils/tracking";
 
 import { WindowListRow } from "./WindowListRow";
-
-const UNNAMED_PIPELINE = "Unnamed pipeline";
 
 export function RunsWindowContent() {
   const store = useTangentProject();
@@ -63,6 +63,7 @@ export function RunsWindowContent() {
               description={<ProjectRunStatus runId={run.id} />}
               testId={`open-run-${run.id}`}
               onOpen={() => void handleOpenRun(run)}
+              {...tracking("projects.project_runs.open_run")}
             />
           ))}
         </BlockStack>

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Icon, type IconName } from "@/components/ui/icon";
@@ -25,7 +25,8 @@ export function WindowListRow({
   testId,
   onOpen,
   action,
-}: WindowListRowProps) {
+  ...rest
+}: WindowListRowProps & ComponentProps<typeof Button>) {
   return (
     <InlineStack
       blockAlign="start"
@@ -38,6 +39,7 @@ export function WindowListRow({
         data-testid={testId}
         title={title}
         onClick={onOpen}
+        {...rest}
         className="h-auto min-w-0 flex-1 items-start justify-start gap-3 px-2 py-2"
       >
         <InlineStack
