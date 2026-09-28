@@ -11,6 +11,7 @@ import { useWorkspaces } from "@/services/projects/useWorkspaces";
 import { CreateProjectDialog } from "./CreateProjectDialog";
 import { NewProjectCard } from "./NewProjectCard";
 import { ProjectCard } from "./ProjectCard";
+import { PROJECT_GRID } from "./projectGrid";
 import { useMyProjects } from "./useMyProjects";
 
 const LoadingProjects = () => (
@@ -83,7 +84,7 @@ function ProjectsGrid() {
           </AlertDescription>
         </Alert>
       )}
-      <div className="grid w-full grid-cols-[repeat(auto-fill,minmax(13rem,15rem))] gap-4">
+      <div className={PROJECT_GRID}>
         {targetWorkspaceId && (
           <CreateProjectDialog
             workspaceId={targetWorkspaceId}
