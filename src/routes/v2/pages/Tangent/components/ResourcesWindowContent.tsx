@@ -13,6 +13,10 @@ import {
   describeResource,
   DOCUMENT,
 } from "@/services/projects/resourceDescriptor";
+import {
+  conceptForDescriptorType,
+  resourceMeta,
+} from "@/services/projects/resourceMeta";
 import type { WorkareaTarget } from "@/services/projects/resourceTarget";
 import {
   formatWorkareaTarget,
@@ -36,19 +40,8 @@ interface ProjectResourceItem {
   target?: WorkareaTarget;
 }
 
-interface ResourceTypeMeta {
-  icon: IconName;
-  description: string;
-}
-
-const RESOURCE_TYPE_META: Record<string, ResourceTypeMeta> = {
-  local_pipeline: { icon: "Workflow", description: "Pipeline" },
-  pipeline_run: { icon: "Play", description: "Pipeline run" },
-  [DOCUMENT]: { icon: "FileText", description: "Document" },
-};
-
-const BACKEND_PIPELINE_META: ResourceTypeMeta = {
-  icon: "Workflow",
+const BACKEND_PIPELINE_META = {
+  icon: resourceMeta("pipeline").icon,
   description: "Backend pipeline — not supported yet",
 };
 
@@ -88,19 +81,20 @@ function toResourceItem(
   }
 
   const described = describeResource(resource);
-  const meta = described && RESOURCE_TYPE_META[described.type];
+  const concept = described && conceptForDescriptorType(described.type);
   const target =
-    described && meta
+    described && concept
       ? targetOf(resource, described.type, described.target)
       : undefined;
-  if (!target || !meta) return undefined;
+  if (!target || !concept) return undefined;
 
+  const meta = resourceMeta(concept);
   return {
     id: resource.id,
     name: resource.name ?? formatWorkareaTarget(target),
     target,
     icon: meta.icon,
-    description: meta.description,
+    description: meta.label,
   };
 }
 
