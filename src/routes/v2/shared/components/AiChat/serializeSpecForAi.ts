@@ -15,6 +15,7 @@
  * display names, which are unique only within one graph — the model cannot
  * turn a name in it back into the `$id` that `inSubgraphTaskId` needs.
  */
+import type { FlexNodeData } from "@/components/shared/ReactFlow/FlowCanvas/FlexNode/types";
 import type {
   Binding,
   ComponentReference,
@@ -24,16 +25,31 @@ import type {
   Task,
   TypeSpecType,
 } from "@/models/componentSpec";
+import { getFlexNodes } from "@/models/componentSpec/queries/flexNodes";
+import { resolveEntityPositions } from "@/routes/v2/shared/nodes/buildUtils";
+import {
+  PIPELINE_NOTES_ANNOTATION,
+  PIPELINE_TAGS_ANNOTATION,
+  RUN_NAME_TEMPLATE_ANNOTATION,
+  TASK_COLOR_ANNOTATION,
+} from "@/utils/annotationKeys";
 import { isGraphImplementation } from "@/utils/componentSpec";
+
+interface CanvasPosition {
+  x: number;
+  y: number;
+}
 
 type AiInputSpec = Pick<Input, "$id" | "name" | "type"> & {
   description?: string;
   default?: string;
   optional?: boolean;
+  position?: CanvasPosition;
 };
 
 type AiOutputSpec = Pick<Output, "$id" | "name" | "type"> & {
   description?: string;
+  position?: CanvasPosition;
 };
 
 interface AiComponentRef {
@@ -50,6 +66,8 @@ type AiTaskSpec = Pick<Task, "$id" | "name"> & {
   componentRef: AiComponentRef;
   arguments: Array<{ name: string; value?: unknown }>;
   isSubgraph?: boolean;
+  position?: CanvasPosition;
+  color?: string;
 };
 
 type AiBindingSpec = Pick<
@@ -61,13 +79,29 @@ type AiBindingSpec = Pick<
   | "targetPortName"
 >;
 
+interface AiStickyNoteSpec {
+  id: string;
+  title?: string;
+  content?: string;
+  color: string;
+  borderColor?: string;
+  position: { x: number; y: number };
+  size: { width: number; height: number };
+  locked?: boolean;
+  createdBy: string;
+}
+
 export interface AiSpec {
   name: string;
   description?: string;
+  notes?: string;
+  tags?: string[];
+  runNameTemplate?: string;
   inputs: AiInputSpec[];
   outputs: AiOutputSpec[];
   tasks: AiTaskSpec[];
   bindings: AiBindingSpec[];
+  stickyNotes?: AiStickyNoteSpec[];
   activeSubgraphPath?: string[];
   activeSubgraphTaskId?: string;
 }
@@ -75,6 +109,7 @@ export interface AiSpec {
 export interface SerializeSpecOptions {
   activeSubgraphPath?: string[];
   activeSubgraphTaskId?: string;
+  activeSpec?: ComponentSpec;
 }
 
 function pickDefined<T extends object>(obj: T): T {
@@ -85,22 +120,30 @@ function pickDefined<T extends object>(obj: T): T {
   return out;
 }
 
-const serializeInput = (input: Input): AiInputSpec =>
+const serializeInput = (
+  input: Input,
+  position: CanvasPosition | undefined,
+): AiInputSpec =>
   pickDefined({
     $id: input.$id,
     name: input.name,
     type: input.type,
     description: input.description || undefined,
-    default: input.defaultValue || undefined,
+    default: input.value || input.defaultValue || undefined,
     optional: input.optional,
+    position,
   });
 
-const serializeOutput = (output: Output): AiOutputSpec =>
+const serializeOutput = (
+  output: Output,
+  position: CanvasPosition | undefined,
+): AiOutputSpec =>
   pickDefined({
     $id: output.$id,
     name: output.name,
     type: output.type,
     description: output.description || undefined,
+    position,
   });
 
 const serializeArgument = (arg: {
@@ -109,8 +152,12 @@ const serializeArgument = (arg: {
 }): { name: string; value?: unknown } =>
   pickDefined({ name: arg.name, value: arg.value });
 
-const serializeTask = (task: Task): AiTaskSpec =>
-  pickDefined({
+const serializeTask = (
+  task: Task,
+  position: CanvasPosition | undefined,
+): AiTaskSpec => {
+  const color = task.annotations.get(TASK_COLOR_ANNOTATION);
+  return pickDefined({
     $id: task.$id,
     name: task.name,
     componentRef: serializeComponentRef(task.resolvedComponentRef),
@@ -120,6 +167,22 @@ const serializeTask = (task: Task): AiTaskSpec =>
     )
       ? true
       : undefined,
+    position,
+    color: color === "transparent" ? undefined : color,
+  });
+};
+
+const serializeStickyNote = (note: FlexNodeData): AiStickyNoteSpec =>
+  pickDefined({
+    id: note.id,
+    title: note.properties.title || undefined,
+    content: note.properties.content || undefined,
+    color: note.properties.color,
+    borderColor: note.properties.borderColor,
+    position: { x: note.position.x, y: note.position.y },
+    size: { width: note.size.width, height: note.size.height },
+    locked: note.locked,
+    createdBy: note.metadata.createdBy,
   });
 
 const serializeBinding = (binding: Binding): AiBindingSpec => ({
@@ -150,19 +213,46 @@ function serializeComponentRef(ref: ComponentReference): AiComponentRef {
   });
 }
 
+/**
+ * This crosses a Comlink `postMessage`, and any MobX observable left in it
+ * throws `DataCloneError` and kills the whole call. `toJS` does not help: the
+ * returned object is plain, and MobX only recurses into observable containers.
+ */
+const toPlainJson = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+
 export function serializeSpecForAi(
   spec: ComponentSpec,
-  { activeSubgraphPath = [], activeSubgraphTaskId }: SerializeSpecOptions = {},
+  {
+    activeSubgraphPath = [],
+    activeSubgraphTaskId,
+    activeSpec = spec,
+  }: SerializeSpecOptions = {},
 ): AiSpec {
   const insideSubgraph = activeSubgraphPath.length > 0;
-  return pickDefined({
-    name: spec.name,
-    description: spec.description || undefined,
-    inputs: spec.inputs.map(serializeInput),
-    outputs: spec.outputs.map(serializeOutput),
-    tasks: spec.tasks.map(serializeTask),
-    bindings: spec.bindings.map(serializeBinding),
-    activeSubgraphPath: insideSubgraph ? activeSubgraphPath : undefined,
-    activeSubgraphTaskId: insideSubgraph ? activeSubgraphTaskId : undefined,
-  });
+  const stickyNotes = getFlexNodes(spec).map(serializeStickyNote);
+  const positions = resolveEntityPositions(spec);
+  const tags = activeSpec.annotations.get(PIPELINE_TAGS_ANNOTATION);
+  return toPlainJson(
+    pickDefined({
+      name: spec.name,
+      description: spec.description || undefined,
+      notes: activeSpec.annotations.get(PIPELINE_NOTES_ANNOTATION) || undefined,
+      tags: tags.length > 0 ? tags : undefined,
+      runNameTemplate:
+        activeSpec.annotations.get(RUN_NAME_TEMPLATE_ANNOTATION) || undefined,
+      inputs: spec.inputs.map((input) =>
+        serializeInput(input, positions.get(input.$id)),
+      ),
+      outputs: spec.outputs.map((output) =>
+        serializeOutput(output, positions.get(output.$id)),
+      ),
+      tasks: spec.tasks.map((task) =>
+        serializeTask(task, positions.get(task.$id)),
+      ),
+      bindings: spec.bindings.map(serializeBinding),
+      stickyNotes: stickyNotes.length > 0 ? stickyNotes : undefined,
+      activeSubgraphPath: insideSubgraph ? activeSubgraphPath : undefined,
+      activeSubgraphTaskId: insideSubgraph ? activeSubgraphTaskId : undefined,
+    }),
+  );
 }
