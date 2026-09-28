@@ -8,7 +8,9 @@ import {
 import { useEffect, useRef } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
+import { collectIdStack } from "@/models/componentSpec";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
+import { saveIdStack } from "@/routes/v2/pages/Editor/utils/undoHistoryStorage";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 
@@ -36,6 +38,12 @@ export function useSpecLifecycle(
       autoSave.init(rootSpec);
     }
     const readOnly = file.canEdit ? undefined : readonlyMiddleware(rootSpec);
+    if (file.storageKind === "local") {
+      // Preserve entity links across reloads even before the first edit.
+      void saveIdStack(file.referenceId, collectIdStack(rootSpec)).catch(
+        (error) => console.warn("Failed to persist pipeline id stack", error),
+      );
+    }
 
     prevTaskEntityIdsRef.current = new Set(rootSpec.tasks.map((t) => t.$id));
 

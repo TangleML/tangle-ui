@@ -4,12 +4,19 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { XIcon } from "lucide-react";
 import * as React from "react";
 
+import { useModalClipboardGuard } from "@/hooks/useModalClipboardGuard";
 import { cn } from "@/lib/utils";
+import { ModalSurfaceProvider } from "@/providers/ModalSurfaceProvider";
 
 function Dialog({
+  modal = true,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Root>) {
-  return <DialogPrimitive.Root data-slot="dialog" {...props} />;
+  return (
+    <ModalSurfaceProvider modal={modal}>
+      <DialogPrimitive.Root data-slot="dialog" modal={modal} {...props} />
+    </ModalSurfaceProvider>
+  );
 }
 
 function DialogTrigger({
@@ -56,6 +63,8 @@ function DialogContent({
   showCloseButton?: boolean;
   preventKeyboardPropagation?: boolean;
 }) {
+  const guardRef = useModalClipboardGuard<HTMLDivElement>();
+
   const handleKeyDown = React.useCallback(
     (e: React.KeyboardEvent) => {
       if (!preventKeyboardPropagation) return;
@@ -80,6 +89,7 @@ function DialogContent({
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
       <DialogPrimitive.Content
+        ref={guardRef}
         data-slot="dialog-content"
         className={cn(
           "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200 sm:max-w-lg",

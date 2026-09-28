@@ -11,11 +11,10 @@ import {
   PIPELINE_TAGS_ANNOTATION,
   setComponentSpecAnnotation,
 } from "@/utils/annotations";
+import { TAG_LIMIT } from "@/utils/pipelineTags";
 
 import { Tag } from "./Tag";
 import { TagEditor } from "./TagEditor";
-
-const TAG_LIMIT = 10;
 
 export const PipelineTags = () => {
   const { componentSpec, setComponentSpec } = useComponentSpec();

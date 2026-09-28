@@ -7,6 +7,7 @@ import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import TangleSubmitter from "@/components/shared/Submitters/Tangle/TangleSubmitter";
 import { Icon } from "@/components/ui/icon";
 import { serializeComponentSpec } from "@/models/componentSpec";
+import { useQuickRunSubmitter } from "@/routes/v2/pages/Editor/components/QuickRunSubmitterContext";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { deepClone } from "@/utils/deepClone";
@@ -63,6 +64,8 @@ export const QuickRunButton = observer(function QuickRunButton({
   const { navigation } = useSharedStores();
   const { pipelineFile } = useEditorSession();
   const { isAuthorized } = useAwaitAuthorization();
+  const { registerSubmitter, submitRun, submitWithArguments } =
+    useQuickRunSubmitter();
   const rootSpec = navigation.rootSpec;
   const allIssues = rootSpec?.allValidationIssues ?? [];
   const errorCount = allIssues.filter((i) => i.severity === "error").length;
@@ -85,14 +88,14 @@ export const QuickRunButton = observer(function QuickRunButton({
 
   const handleClick = (event: MouseEvent<HTMLButtonElement>) => {
     if (isMini) event.stopPropagation();
-    triggerSubmitRun();
+    submitRun();
   };
 
   const handleSubmitWithArgumentsClick = (
     event: MouseEvent<HTMLButtonElement>,
   ) => {
     event.stopPropagation();
-    triggerSubmitWithArguments();
+    submitWithArguments();
   };
 
   const showMiniArgumentsButton = isMini && hasConfigurableInputs && !hasErrors;
@@ -137,7 +140,7 @@ export const QuickRunButton = observer(function QuickRunButton({
         </TooltipButton>
       )}
       {renderSubmitter && serializedPipelineSpec && isAuthorized && (
-        <div data-quick-run className="sr-only">
+        <div ref={registerSubmitter} className="sr-only">
           <TangleSubmitter
             componentSpec={serializedPipelineSpec}
             isComponentTreeValid={rootSpec?.isValid}
@@ -151,17 +154,3 @@ export const QuickRunButton = observer(function QuickRunButton({
     </>
   );
 });
-
-export function triggerSubmitRun() {
-  const btn = document.querySelector<HTMLButtonElement>(
-    "[data-quick-run] button:first-of-type",
-  );
-  btn?.click();
-}
-
-export function triggerSubmitWithArguments() {
-  const btn = document.querySelector<HTMLButtonElement>(
-    '[data-quick-run] [data-testid="run-with-arguments-button"]',
-  );
-  btn?.click();
-}
