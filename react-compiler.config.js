@@ -48,6 +48,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/components/shared/FloatingSelectionBar.tsx",
   "src/components/shared/ComponentLifecycleBadges.tsx",
   "src/components/shared/ComponentSearchEmptyStateSuggestions.tsx",
+  "src/components/shared/ComponentSearchProgress.tsx",
   "src/components/shared/EditorV2WelcomeSpotlight.tsx",
 
   "src/components/shared/Tags",

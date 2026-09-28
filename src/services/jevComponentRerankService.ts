@@ -2,7 +2,7 @@ import type { ComponentMatchStrength } from "@/services/componentSearchRelevance
 import { requestJevSystemOne } from "@/services/jevService";
 import type {
   RerankCandidate,
-  RerankedMatch,
+  RerankProgress,
   RerankResult,
 } from "@/services/naturalLanguageComponentSearchService";
 import type { ComponentRerankConfig } from "@/types/aiProvider";
@@ -16,6 +16,7 @@ const RELEVANCE_CRITERIA = [
 ];
 
 const MAX_CANDIDATES_PER_REQUEST = 20;
+const MAX_CONCURRENT_REQUESTS = 3;
 
 function isBoundedNumber(value: unknown, maximum: number): value is number {
   return (
@@ -114,7 +115,10 @@ async function scoreCandidates(
 export async function rerankComponentsWithJev(
   query: string,
   candidates: RerankCandidate[],
-  options: ComponentRerankConfig & { signal?: AbortSignal },
+  options: ComponentRerankConfig & {
+    signal?: AbortSignal;
+    onProgress?: (progress: RerankProgress) => void;
+  },
 ): Promise<RerankResult> {
   const trimmed = query.trim();
   if (!trimmed || candidates.length === 0) return { matches: [] };
@@ -122,26 +126,55 @@ export async function rerankComponentsWithJev(
   const uniqueCandidates = [
     ...new Map(candidates.map((c) => [c.id, c])).values(),
   ];
-  const matches: RerankedMatch[] = [];
-  const providerResponses: Record<string, unknown>[] = [];
-  // Bound request size and concurrency: each question is evaluated against the
-  // shared state, and large unrelated candidate pools reduce Jev's accuracy.
-  for (
-    let start = 0;
-    start < uniqueCandidates.length;
-    start += MAX_CANDIDATES_PER_REQUEST
-  ) {
-    options.signal?.throwIfAborted();
-    const batch = await scoreCandidates(
-      trimmed,
-      uniqueCandidates.slice(start, start + MAX_CANDIDATES_PER_REQUEST),
-      options,
-    );
-    matches.push(...batch.matches);
-    providerResponses.push(...(batch.providerResponses ?? []));
-  }
+  const controller = new AbortController();
+  const signal = options.signal
+    ? AbortSignal.any([options.signal, controller.signal])
+    : controller.signal;
+  signal.throwIfAborted();
+  const batches = Array.from(
+    { length: Math.ceil(uniqueCandidates.length / MAX_CANDIDATES_PER_REQUEST) },
+    (_, index) =>
+      uniqueCandidates.slice(
+        index * MAX_CANDIDATES_PER_REQUEST,
+        (index + 1) * MAX_CANDIDATES_PER_REQUEST,
+      ),
+  );
+  const results: RerankResult[] = [];
+  let nextBatch = 0;
+  let completed = 0;
+  options.onProgress?.({ completed, total: uniqueCandidates.length });
+  const worker = async () => {
+    while (nextBatch < batches.length) {
+      signal.throwIfAborted();
+      const index = nextBatch++;
+      try {
+        const result = await scoreCandidates(trimmed, batches[index], {
+          ...options,
+          signal,
+        });
+        signal.throwIfAborted();
+        // Retain input order for tied scores and native response metadata.
+        results[index] = result;
+        completed += batches[index].length;
+        options.onProgress?.({ completed, total: uniqueCandidates.length });
+      } catch (error) {
+        controller.abort(error);
+        throw error;
+      }
+    }
+  };
+  await Promise.all(
+    Array.from(
+      { length: Math.min(MAX_CONCURRENT_REQUESTS, batches.length) },
+      worker,
+    ),
+  );
   return {
-    matches: matches.sort((a, b) => b.score - a.score),
-    providerResponses,
+    matches: results
+      .flatMap((result) => result.matches)
+      .sort((a, b) => b.score - a.score),
+    providerResponses: results.flatMap(
+      (result) => result.providerResponses ?? [],
+    ),
   };
 }

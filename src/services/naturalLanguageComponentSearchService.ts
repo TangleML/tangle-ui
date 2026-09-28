@@ -68,6 +68,11 @@ export interface RerankResult {
   rawContent?: string;
 }
 
+export interface RerankProgress {
+  completed: number;
+  total: number;
+}
+
 export interface ComponentDescriptionResult {
   description: string;
   // Raw model response, kept for debugging.

@@ -1,9 +1,8 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLiveQuery } from "dexie-react-hooks";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { listApiPublishedComponentsGet } from "@/api/sdk.gen";
-import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import { getComponentQueryKey } from "@/hooks/useHydrateComponentReference";
 import { useNaturalLanguageComponentRerank } from "@/hooks/useNaturalLanguageComponentSearch";
 import { useBackend } from "@/providers/BackendProvider";
@@ -22,7 +21,6 @@ import {
   filterIndexByDisabledSourceKeys,
 } from "@/routes/Dashboard/DashboardComponentsV2SourceFilter";
 import {
-  buildAiCandidateMatches,
   buildLexicalMatches,
   buildRerankMatchByDigest,
   buildResultFolders,
@@ -34,7 +32,7 @@ import {
   registeredSource,
   rerankedMatches,
 } from "@/routes/v2/pages/Editor/components/componentSearchV2Logic";
-import { rankComponentMatchesByEmbeddings } from "@/services/componentSearchEmbeddings";
+import { buildComponentRerankMatches } from "@/services/componentRerankService";
 import {
   buildSearchIndex,
   type IndexEntry,
@@ -52,15 +50,12 @@ import type { ComponentFolder } from "@/types/componentLibrary";
 import type { ComponentReference } from "@/utils/componentSpec";
 import { HOURS } from "@/utils/constants";
 
-const AI_EMBEDDING_FALLBACK_LIMIT = 20;
-
 export function useComponentSearchV2State(
   query: string,
   { pauseSearch = false }: { pauseSearch?: boolean } = {},
 ): ComponentSearchV2State {
   const queryClient = useQueryClient();
   const { backendUrl, configured, available } = useBackend();
-  const { config: aiConfig } = useAiProviderSettings();
 
   const { data: standardLibrary, isLoading: isLoadingStandardLibrary } =
     useQuery({
@@ -153,7 +148,7 @@ export function useComponentSearchV2State(
   const trimmedQuery = query.trim();
   const searchableQuery = pauseSearch ? "" : trimmedQuery;
 
-  const { data: hydratedIndex = [] } = useQuery({
+  const { data: hydratedIndex = [], isFetching: isHydrating } = useQuery({
     queryKey: ["component-search-v2", "search-index", referencesFingerprint],
     enabled: sourcedReferences.length > 0 && searchableQuery.length > 0,
     staleTime: HOURS,
@@ -204,29 +199,34 @@ export function useComponentSearchV2State(
     (item) => !disabled.has(item.source.kind),
   );
 
-  const canUseEmbeddingSearch = aiConfig.apiBase.trim().length > 0;
   const lexicalMatches = pauseSearch
     ? []
     : buildLexicalMatches(filteredIndex, searchableQuery);
   const {
     mutate,
     reset: resetRerank,
+    cancel: cancelRerank,
+    progress: rerankProgress,
     data: rerankData,
     isPending: isReranking,
     isConfigured,
     error: rerankError,
     modelLabel: rerankModelLabel,
-  } = useNaturalLanguageComponentRerank();
+  } = useNaturalLanguageComponentRerank(
+    JSON.stringify([
+      query,
+      pauseSearch,
+      disabledSourceKeys,
+      referencesFingerprint,
+    ]),
+  );
   const [rerankedFor, setRerankedFor] = useState<string | null>(null);
   const [rerankBaseMatches, setRerankBaseMatches] = useState<LexicalMatch[]>(
     [],
   );
-  const [isEmbeddingSearchPending, setIsEmbeddingSearchPending] =
-    useState(false);
-  const embeddingAbortControllerRef = useRef<AbortController | null>(null);
 
   const clearRerank = () => {
-    resetRerank();
+    cancelRerank();
     setRerankedFor(null);
     setRerankBaseMatches([]);
   };
@@ -235,18 +235,12 @@ export function useComponentSearchV2State(
     resetRerank();
     setRerankedFor(null);
     setRerankBaseMatches([]);
-    embeddingAbortControllerRef.current?.abort();
   }, [query, disabledSourceKeys, resetRerank]);
-
-  useEffect(() => {
-    return () => embeddingAbortControllerRef.current?.abort();
-  }, []);
 
   const isRerankActive =
     rerankedFor === searchableQuery &&
     rerankBaseMatches.length > 0 &&
     !isReranking &&
-    !isEmbeddingSearchPending &&
     (rerankData?.matches.length ?? 0) > 0;
 
   const displayedMatches = isRerankActive
@@ -258,98 +252,38 @@ export function useComponentSearchV2State(
       )
     : lexicalMatches;
 
-  const buildEmbeddingMatches = async ({
-    sourceIndex,
-    limit,
-  }: {
-    sourceIndex: IndexEntry[];
-    limit: number;
-  }): Promise<LexicalMatch[]> => {
-    if (!canUseEmbeddingSearch) return [];
-    embeddingAbortControllerRef.current?.abort();
-    const abortController = new AbortController();
-    embeddingAbortControllerRef.current = abortController;
-    setIsEmbeddingSearchPending(true);
-    try {
-      return await rankComponentMatchesByEmbeddings(
-        sourceIndex,
-        searchableQuery,
-        {
-          ...aiConfig,
-          signal: abortController.signal,
-        },
-        { limit },
-      );
-    } catch {
-      return [];
-    } finally {
-      if (embeddingAbortControllerRef.current === abortController) {
-        embeddingAbortControllerRef.current = null;
-        setIsEmbeddingSearchPending(false);
-      }
-    }
-  };
+  const aiCandidateMatches = buildComponentRerankMatches(
+    filteredIndex,
+    searchableQuery,
+  );
+  const isLoading =
+    isLoadingStandardLibrary ||
+    isLoadingUserComponents ||
+    isLoadingPublished ||
+    registeredLibraries === undefined ||
+    isLoadingRegistered;
+  const canRerank =
+    !pauseSearch &&
+    !isLoading &&
+    !isHydrating &&
+    searchableQuery.length > 0 &&
+    aiCandidateMatches.length > 0 &&
+    isConfigured;
 
-  const startRerank = async (
-    matches: LexicalMatch[],
-    {
-      scoreAllCandidates,
-      useEmbeddings,
-      limit,
-    }: {
-      scoreAllCandidates: boolean;
-      useEmbeddings: boolean;
-      limit: number;
-    },
-  ) => {
-    if (!searchableQuery || !isConfigured) return;
-
-    const canUseEmbeddings = useEmbeddings && canUseEmbeddingSearch;
-    if (matches.length === 0 && !canUseEmbeddings) return;
-
-    const effectiveLimit = limit || AI_EMBEDDING_FALLBACK_LIMIT;
-    const embeddingMatches = canUseEmbeddings
-      ? await buildEmbeddingMatches({
-          sourceIndex: filteredIndex,
-          limit: effectiveLimit,
-        })
-      : [];
-    const lexicalMatchesToKeep = useEmbeddings
-      ? matches.slice(0, Math.min(60, effectiveLimit))
-      : matches;
-    const rerankMatches = mergeUniqueMatches(
-      lexicalMatchesToKeep,
-      embeddingMatches,
-      matches,
-      effectiveLimit,
-    );
-
-    const candidates = rerankMatches
+  const rerank = () => {
+    if (!canRerank || isReranking) return;
+    const candidates = aiCandidateMatches
       .map((match) =>
         componentReferenceToCandidate(match.reference, match.source),
       )
-      .filter((candidate): candidate is NonNullable<typeof candidate> =>
-        Boolean(candidate),
+      .filter(
+        (candidate): candidate is NonNullable<typeof candidate> =>
+          candidate !== null,
       );
-
-    if (candidates.length === 0) return;
-
-    resetRerank();
-    setRerankBaseMatches(rerankMatches);
+    if (!candidates.length) return;
+    setRerankBaseMatches(aiCandidateMatches);
     setRerankedFor(searchableQuery);
-    mutate({ query: searchableQuery, candidates, scoreAllCandidates });
-  };
-
-  const rerank = () => {
-    const aiCandidateMatches = buildAiCandidateMatches(
-      filteredIndex,
-      searchableQuery,
-    );
-    void startRerank(aiCandidateMatches, {
-      scoreAllCandidates: true,
-      useEmbeddings: true,
-      limit: aiCandidateMatches.length || AI_EMBEDDING_FALLBACK_LIMIT,
-    });
+    mutate({ query: searchableQuery, candidates, scoreAllCandidates: true });
   };
 
   const toggleSourceFilter = (sourceKey: string) => {
@@ -391,18 +325,10 @@ export function useComponentSearchV2State(
         : [],
     sourceFilterOptions,
     disabledSourceKeys,
-    isLoading:
-      isLoadingStandardLibrary ||
-      isLoadingUserComponents ||
-      isLoadingPublished ||
-      registeredLibraries === undefined ||
-      isLoadingRegistered,
-    canRerank:
-      !pauseSearch &&
-      searchableQuery.length > 0 &&
-      (lexicalMatches.length > 0 || canUseEmbeddingSearch) &&
-      isConfigured,
-    isReranking: isReranking || isEmbeddingSearchPending,
+    isLoading,
+    canRerank,
+    isReranking,
+    rerankProgress,
     isRerankActive,
     rerankError: rerankError?.message,
     rerankModelLabel,

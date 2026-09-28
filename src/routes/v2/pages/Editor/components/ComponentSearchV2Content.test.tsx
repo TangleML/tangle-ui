@@ -124,36 +124,21 @@ describe("ComponentSearchV2Content", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Jev (jev-latest)");
   });
 
-  it("shows active AI rerank progress below the search box", async () => {
-    mocks.useComponentSearchV2State.mockImplementation(() => ({
-      results: [],
-      browseFolders: [],
-      searchSuggestions: [],
-      isLoading: false,
-      canRerank: true,
+  it("shows completed component counts and lets the user cancel", () => {
+    const clearRerank = vi.fn();
+    const state = mocks.useComponentSearchV2State();
+    mocks.useComponentSearchV2State.mockReturnValue({
+      ...state,
       isReranking: true,
-      isRerankActive: false,
-      rerank: vi.fn(),
-      clearRerank: vi.fn(),
-      sourceFilterOptions: [],
-      disabledSourceKeys: [],
-      toggleSourceFilter: vi.fn(),
-      enableAllSources: vi.fn(),
-    }));
-
-    render(<ComponentSearchV2Content />);
-
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "Scanning component candidates with AI…",
-    );
-
-    await act(async () => {
-      vi.advanceTimersByTime(1200);
+      rerankProgress: { completed: 40, total: 101 },
+      clearRerank,
     });
-
+    render(<ComponentSearchV2Content />);
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Comparing component candidates with AI…",
+      "Scored 40 of 101 components with AI",
     );
+    fireEvent.click(screen.getByRole("button", { name: "Cancel AI search" }));
+    expect(clearRerank).toHaveBeenCalledOnce();
   });
 
   it("shows source filters and toggles them from editor search", () => {

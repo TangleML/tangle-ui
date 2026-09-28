@@ -18,6 +18,7 @@ import {
 import { ComponentLifecycleBadges } from "@/components/shared/ComponentLifecycleBadges";
 import { ComponentSearchEmptyStateSuggestions } from "@/components/shared/ComponentSearchEmptyStateSuggestions";
 import { ComponentSearchMatchBadge } from "@/components/shared/ComponentSearchMatchBadge";
+import { ComponentSearchProgress } from "@/components/shared/ComponentSearchProgress";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { SuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { Badge } from "@/components/ui/badge";
@@ -29,8 +30,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { QuickTooltip } from "@/components/ui/tooltip";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
-import { getAiModelLabel } from "@/config/aiModels";
-import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import { useDebouncedSearchValue } from "@/hooks/useDebouncedSearchValue";
 import { getComponentQueryKey } from "@/hooks/useHydrateComponentReference";
 import {
@@ -53,7 +52,7 @@ import {
   type StoredLibrary,
 } from "@/providers/ComponentLibraryProvider/libraries/storage";
 import { buildCompatibleComponentSuggestions } from "@/services/componentCompatibility";
-import { rankComponentMatchesByEmbeddings } from "@/services/componentSearchEmbeddings";
+import { buildComponentRerankMatches } from "@/services/componentRerankService";
 import {
   formatComponentSearchMatchSummary,
   formatMatchedFieldsExplanation,
@@ -65,7 +64,6 @@ import {
   type LexicalMatch,
   lexicalSearch,
   type MatchField,
-  mergeUniqueMatches,
   type SourcedReference,
 } from "@/services/componentSearchIndex";
 import {
@@ -135,8 +133,6 @@ const SOURCE_ICON_TONE_BY_KIND: Record<ComponentSearchSource["kind"], string> =
 
 /** How many lexical hits to display before the user asks for AI judgment. */
 const LEXICAL_RESULT_LIMIT = 20;
-/** Bounded pool sent to AI search on click. */
-const AI_CANDIDATE_LIMIT = 80;
 const DASHBOARD_SEARCH_RESULT_DEBOUNCE_MS = 500;
 const BROWSE_RESULT_INITIAL_LIMIT = 100;
 const BROWSE_RESULT_INCREMENT = 100;
@@ -635,51 +631,6 @@ const ComponentDescriptionPanel = ({
   );
 };
 
-const AI_SEARCH_PROGRESS_VERBS = [
-  "Scanning",
-  "Comparing",
-  "Scoring",
-  "Ranking",
-];
-
-function AiSearchProgress({
-  mode,
-  modelLabel,
-}: {
-  mode: "embedding" | "smart";
-  modelLabel: string;
-}) {
-  const [verbIndex, setVerbIndex] = useState(0);
-
-  useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      setVerbIndex(
-        (current) => (current + 1) % AI_SEARCH_PROGRESS_VERBS.length,
-      );
-    }, 1200);
-    return () => window.clearInterval(intervalId);
-  }, []);
-
-  const verb = AI_SEARCH_PROGRESS_VERBS[verbIndex];
-  const message =
-    mode === "embedding"
-      ? "Finding semantic matches in local embeddings…"
-      : `${verb} component candidates with ${modelLabel}…`;
-
-  return (
-    <InlineStack
-      gap="2"
-      blockAlign="center"
-      className="rounded-md bg-muted/50 px-3 py-2 text-muted-foreground"
-    >
-      <Spinner size={14} />
-      <Text size="xs" tone="subdued" role="status" aria-live="polite">
-        {message}
-      </Text>
-    </InlineStack>
-  );
-}
-
 function DebouncedComponentSearchInput({
   onCommit,
   disabled,
@@ -765,7 +716,6 @@ export const DashboardComponentsV2View = () => {
   );
   const { track } = useAnalytics();
   const { backendUrl, configured, available } = useBackend();
-  const { config: aiConfig } = useAiProviderSettings();
   const dashboardSearch = useSearch({ strict: false });
   const queryFromUrl = readComponentSearchQuery(dashboardSearch);
   const disabledSourceKeysFromUrl = readDisabledSourceKeys(dashboardSearch);
@@ -1045,40 +995,30 @@ export const DashboardComponentsV2View = () => {
 
   const trimmedQuery = activeQuery.trim();
 
-  // One lexical pass at the wider AI-candidate limit; the display list is the
-  // top slice of that same scored result, so we never score and sort the index
-  // twice per render. `lexicalSearch` already orders by score desc then name
-  // asc, so slicing is equivalent to a separate narrower search.
-  const broadLexicalMatches: LexicalMatch[] =
-    trimmedQuery.length === 0
-      ? []
-      : lexicalSearch(filteredIndex, activeQuery, {
-          limit: AI_CANDIDATE_LIMIT,
-        });
-
-  const lexicalMatches: LexicalMatch[] = broadLexicalMatches.slice(
-    0,
-    LEXICAL_RESULT_LIMIT,
-  );
+  const lexicalMatches: LexicalMatch[] = trimmedQuery
+    ? lexicalSearch(filteredIndex, activeQuery, { limit: LEXICAL_RESULT_LIMIT })
+    : [];
   const collectionMatches = buildComponentCollectionMatches(
     filteredIndex,
     activeQuery,
   );
-  const aiCandidateMatches: LexicalMatch[] = (() => {
-    if (trimmedQuery.length === 0) return [];
-    return broadLexicalMatches;
-  })();
-  const canUseEmbeddingSearch = aiConfig.apiBase.trim().length > 0;
+  const aiCandidateMatches = buildComponentRerankMatches(
+    filteredIndex,
+    trimmedQuery,
+  );
 
   const {
     mutate: rerank,
     data: rerankData,
     isPending: isReranking,
     error: rerankError,
-    reset: resetRerank,
+    cancel: cancelRerank,
+    progress: rerankProgress,
     isConfigured,
     modelLabel: rerankModelLabel,
-  } = useNaturalLanguageComponentRerank();
+  } = useNaturalLanguageComponentRerank(
+    JSON.stringify([query, disabledSourceKeys, referencesFingerprint]),
+  );
 
   // Reranked results are tied to the exact query that triggered them. If the
   // user types more, we drop the rerank rather than show results for an old
@@ -1087,13 +1027,11 @@ export const DashboardComponentsV2View = () => {
   const [rerankBaseMatches, setRerankBaseMatches] = useState<LexicalMatch[]>(
     [],
   );
-  const [isEmbeddingSearchPending, setIsEmbeddingSearchPending] =
-    useState(false);
 
   const clearRerank = () => {
     setRerankedFor(null);
     setRerankBaseMatches([]);
-    resetRerank();
+    cancelRerank();
   };
 
   const handleQueryCommit = (value: string) => {
@@ -1118,65 +1056,24 @@ export const DashboardComponentsV2View = () => {
 
   const handleLocalQueryChange = (value: string) => {
     setIsSearching(value.trim() !== query.trim());
-  };
-
-  const buildEmbeddingMatches = async (
-    trimmed: string,
-    limit: number,
-  ): Promise<LexicalMatch[]> => {
-    if (!canUseEmbeddingSearch) return [];
-    setIsEmbeddingSearchPending(true);
-    try {
-      return await rankComponentMatchesByEmbeddings(
-        filteredIndex,
-        trimmed,
-        aiConfig,
-        { limit },
-      );
-    } catch {
-      return [];
-    } finally {
-      setIsEmbeddingSearchPending(false);
-    }
-  };
-
-  const startAiSearch = async (
-    matches: LexicalMatch[],
-    {
-      scoreAllCandidates,
-      limit,
-    }: { scoreAllCandidates: boolean; limit: number },
-  ) => {
-    const trimmed = trimmedQuery;
-    if (trimmed.length === 0) return;
-    if (matches.length === 0 && !canUseEmbeddingSearch) return;
-
-    const embeddingMatches = canUseEmbeddingSearch
-      ? await buildEmbeddingMatches(trimmed, limit)
-      : [];
-    const rerankMatches = mergeUniqueMatches(
-      matches.slice(0, 60),
-      embeddingMatches,
-      matches,
-      limit,
-    );
-
-    const candidates = rerankMatches
-      .map((m) => componentReferenceToCandidate(m.reference, m.source))
-      .filter((c): c is NonNullable<typeof c> => c !== null);
-
-    if (candidates.length === 0) return;
-
-    setRerankBaseMatches(rerankMatches);
-    setRerankedFor(trimmed);
-    rerank({ query: trimmed, candidates, scoreAllCandidates });
+    if (value.trim() !== query.trim() && rerankedFor !== null) clearRerank();
   };
 
   const handleSmartSearch = () => {
-    void startAiSearch(aiCandidateMatches, {
-      scoreAllCandidates: true,
-      limit: aiCandidateMatches.length || LEXICAL_RESULT_LIMIT,
-    });
+    if (!trimmedQuery || !isConfigured || isReranking) return;
+    const candidates = aiCandidateMatches
+      .map((match) =>
+        componentReferenceToCandidate(match.reference, match.source),
+      )
+      .filter(
+        (candidate): candidate is NonNullable<typeof candidate> =>
+          candidate !== null,
+      );
+    if (!candidates.length) return;
+    setBrowseResultLimit(BROWSE_RESULT_INITIAL_LIMIT);
+    setRerankBaseMatches(aiCandidateMatches);
+    setRerankedFor(trimmedQuery);
+    rerank({ query: trimmedQuery, candidates, scoreAllCandidates: true });
   };
 
   useEffect(() => {
@@ -1234,12 +1131,6 @@ export const DashboardComponentsV2View = () => {
   const noLibraryData = !isLoadingLibrary && totalAcrossSources === 0;
   const isEmpty = trimmedQuery.length === 0;
   const isConfigError = rerankError instanceof NaturalLanguageSearchConfigError;
-  const aiSearchProgressMode = isEmbeddingSearchPending ? "embedding" : "smart";
-  const aiSearchModelLabel =
-    rerankModelLabel ??
-    (aiConfig.model.trim()
-      ? getAiModelLabel(aiConfig.model)
-      : "the configured model");
   // Only treat rerank as "active" when the model actually returned matches.
   // An empty result set (model decided nothing fit, or the response was
   // malformed and the service degraded it to `{ matches: [] }`) means the
@@ -1251,8 +1142,7 @@ export const DashboardComponentsV2View = () => {
     rerankData !== undefined &&
     rerankData.matches.length > 0 &&
     rerankBaseMatches.length > 0 &&
-    !isReranking &&
-    !isEmbeddingSearchPending;
+    !isReranking;
 
   // What we actually render. Rerank wins when active; otherwise lexical.
   const displayedResults: Array<
@@ -1282,6 +1172,7 @@ export const DashboardComponentsV2View = () => {
 
   const trackedSearchResultCount =
     displayedResults.length + collectionMatches.length;
+  const visibleResults = displayedResults.slice(0, browseResultLimit);
 
   useEffect(() => {
     if (isLoadingLibrary || trimmedQuery.length === 0) return;
@@ -1482,7 +1373,7 @@ export const DashboardComponentsV2View = () => {
           <Paragraph size="xs" tone="subdued">
             Try a component name, input/output type, source term, or task
             intent. Suggestions below are based on your loaded component
-            sources. AI search reranks matching local candidates when it is
+            sources. AI search evaluates loaded components when it is
             configured.
           </Paragraph>
           <ComponentSearchEmptyStateSuggestions
@@ -1535,7 +1426,7 @@ export const DashboardComponentsV2View = () => {
               : "grid-cols-[repeat(auto-fit,minmax(420px,1fr))]",
           )}
         >
-          {displayedResults.map((result, idx) => (
+          {visibleResults.map((result, idx) => (
             <ComponentCard
               key={result.digest}
               reference={result.reference}
@@ -1552,6 +1443,20 @@ export const DashboardComponentsV2View = () => {
             />
           ))}
         </div>
+        {visibleResults.length < displayedResults.length && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleShowMoreBrowseResults}
+          >
+            Show{" "}
+            {Math.min(
+              BROWSE_RESULT_INCREMENT,
+              displayedResults.length - visibleResults.length,
+            )}{" "}
+            more
+          </Button>
+        )}
       </BlockStack>
     );
   };
@@ -1578,7 +1483,7 @@ export const DashboardComponentsV2View = () => {
               your published components, registered libraries, and local user
               components. Local results match on name, description,
               inputs/outputs, metadata, and container command. Optional AI
-              search reranks matching local candidates when configured.
+              search evaluates all loaded components in enabled sources.
             </Paragraph>
           </BlockStack>
           <InlineStack gap="3" blockAlign="center" wrap="nowrap">
@@ -1594,17 +1499,13 @@ export const DashboardComponentsV2View = () => {
               onClick={handleSmartSearch}
               disabled={
                 isReranking ||
-                isEmbeddingSearchPending ||
+                isLoadingLibrary ||
                 isEmpty ||
-                (aiCandidateMatches.length === 0 && !canUseEmbeddingSearch) ||
+                aiCandidateMatches.length === 0 ||
                 !isConfigured
               }
-              aria-label={
-                isReranking || isEmbeddingSearchPending
-                  ? "AI search in progress"
-                  : "AI search"
-              }
-              title="AI search — rerank a bounded set of top candidates"
+              aria-label={isReranking ? "AI search in progress" : "AI search"}
+              title="AI search — search all loaded components in enabled sources"
               {...tracking("component_library.search.ai_rerank", {
                 surface: "dashboard_v2",
                 mode: "smart",
@@ -1612,17 +1513,14 @@ export const DashboardComponentsV2View = () => {
                 candidate_count: aiCandidateMatches.length,
               })}
             >
-              {isReranking || isEmbeddingSearchPending ? (
-                <Spinner size={16} />
-              ) : (
-                <Icon name="Sparkles" />
-              )}
+              {isReranking ? <Spinner size={16} /> : <Icon name="Sparkles" />}
             </Button>
           </InlineStack>
-          {(isReranking || isEmbeddingSearchPending) && (
-            <AiSearchProgress
-              mode={aiSearchProgressMode}
-              modelLabel={aiSearchModelLabel}
+          {isReranking && (
+            <ComponentSearchProgress
+              progress={rerankProgress}
+              modelLabel={rerankModelLabel}
+              onCancel={clearRerank}
             />
           )}
           <SourceFilterBar
@@ -1656,7 +1554,7 @@ export const DashboardComponentsV2View = () => {
           {/* AI-search-unavailable banner and rerank error live in the
               results column — they describe what just happened to the
               search the user is looking at. */}
-          {!isConfigured && !isEmpty && aiCandidateMatches.length > 0 && (
+          {!isConfigured && !isEmpty && total > 0 && (
             <BlockStack gap="1" className={cn(PANEL_CLASS, "mb-3")}>
               <Text size="sm" weight="semibold">
                 AI search unavailable

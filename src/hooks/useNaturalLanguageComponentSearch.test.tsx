@@ -170,6 +170,40 @@ it("cancels on a new search and on unmount", async () => {
   expect(getSignal()?.aborted).toBe(true);
 });
 
+it("exposes progress and cancels without displaying a search error", async () => {
+  vi.stubEnv("VITE_OPENAI_API_BASE", "https://proxy.example.com/v1");
+  const getSignal = pendingRequest();
+  const { result } = renderSearch();
+  act(() => result.current.search.mutate(SEARCH));
+  await waitFor(() =>
+    expect(result.current.search.progress).toEqual({ completed: 0, total: 1 }),
+  );
+  act(() => result.current.search.cancel());
+  expect(getSignal()?.aborted).toBe(true);
+  await waitFor(() => expect(result.current.search.isIdle).toBe(true));
+  expect(result.current.search.error).toBeNull();
+  expect(result.current.search.progress).toBeUndefined();
+});
+
+it.each(["download/all", "upload/published"])(
+  "cancels when the query or sources change to %s",
+  async (searchKey) => {
+    vi.stubEnv("VITE_OPENAI_API_BASE", "https://proxy.example.com/v1");
+    const getSignal = pendingRequest();
+    const { result, rerender } = renderHook(
+      ({ searchKey }) => useNaturalLanguageComponentRerank(searchKey),
+      { wrapper, initialProps: { searchKey: "upload/all" } },
+    );
+    act(() => result.current.mutate(SEARCH));
+    await waitFor(() => expect(getSignal()).toBeDefined());
+    rerender({ searchKey });
+    expect(getSignal()?.aborted).toBe(true);
+    await waitFor(() => expect(result.current.isIdle).toBe(true));
+    expect(result.current.error).toBeNull();
+    expect(result.current.progress).toBeUndefined();
+  },
+);
+
 it("clears completed rankings when the shared connection changes", async () => {
   mockFetch.mockResolvedValue(new Response(JSON.stringify(NATIVE_RESPONSE)));
   const { result } = renderSearch();

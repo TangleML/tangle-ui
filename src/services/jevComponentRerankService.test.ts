@@ -32,6 +32,118 @@ const response = (answers: unknown) =>
 afterEach(() => vi.unstubAllGlobals());
 
 describe("Jev component reranking", () => {
+  function controlledBatches() {
+    const requests: {
+      init: RequestInit;
+      resolve: (response: Response) => void;
+    }[] = [];
+    const fetchMock = vi.fn(
+      (_url: unknown, init: RequestInit) =>
+        new Promise<Response>((resolve, reject) => {
+          requests.push({ init, resolve });
+          init.signal?.addEventListener(
+            "abort",
+            () => reject(init.signal?.reason),
+            { once: true },
+          );
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    return {
+      requests,
+      fetchMock,
+      finish(index: number) {
+        const { init, resolve } = requests[index];
+        const payload = JSON.parse(String(init.body));
+        resolve(
+          new Response(
+            JSON.stringify({
+              model: `batch-${index}`,
+              answers: Object.fromEntries(
+                Object.keys(payload.state.candidates).map((key) => [
+                  key,
+                  answer(1),
+                ]),
+              ),
+            }),
+          ),
+        );
+      },
+    };
+  }
+
+  const largeCatalog = Array.from({ length: 101 }, (_, index) => ({
+    id: `catalog-${index}`,
+    name: `Component ${index}`,
+    description: "fixture",
+  }));
+
+  it("scores the entire catalog with at most three concurrent batches, stable ties, and accurate progress", async () => {
+    const { requests, fetchMock, finish } = controlledBatches();
+    const onProgress = vi.fn();
+    const pending = rerankComponentsWithJev(
+      "query",
+      [...largeCatalog, largeCatalog[0]],
+      { ...CONFIG, onProgress },
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    finish(2);
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
+    finish(0);
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(5));
+    finish(1);
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(6));
+    finish(3);
+    finish(4);
+    finish(5);
+    const result = await pending;
+    expect(result.matches.map(({ id }) => id)).toEqual(
+      largeCatalog.map(({ id }) => id),
+    );
+    expect(result.providerResponses?.map(({ model }) => model)).toEqual(
+      Array.from({ length: 6 }, (_, index) => `batch-${index}`),
+    );
+    expect(
+      requests.map(
+        ({ init }) =>
+          Object.keys(JSON.parse(String(init.body)).questions).length,
+      ),
+    ).toEqual([20, 20, 20, 20, 20, 1]);
+    expect(onProgress.mock.calls.map(([progress]) => progress)).toEqual(
+      [0, 20, 40, 60, 80, 100, 101].map((completed) => ({
+        completed,
+        total: 101,
+      })),
+    );
+  });
+
+  it("cancels every active request and leaves queued batches unsent", async () => {
+    const { requests, fetchMock } = controlledBatches();
+    const controller = new AbortController();
+    const onProgress = vi.fn();
+    const pending = rerankComponentsWithJev("query", largeCatalog, {
+      ...CONFIG,
+      signal: controller.signal,
+      onProgress,
+    });
+    controller.abort();
+    await expect(pending).rejects.toThrow();
+    expect(requests.every(({ init }) => init.signal?.aborted)).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(onProgress).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops active and queued batches on a rate limit without retrying", async () => {
+    const { requests, fetchMock } = controlledBatches();
+    const pending = rerankComponentsWithJev("query", largeCatalog, CONFIG);
+    requests[1].resolve(
+      new Response(null, { status: 429, headers: { "retry-after": "30" } }),
+    );
+    await expect(pending).rejects.toThrow("Retry after 30 seconds.");
+    expect(requests.every(({ init }) => init.signal?.aborted)).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
   it("uses native scores for relevance, preserves confidence separately, and binds results to provided candidates", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       response({
