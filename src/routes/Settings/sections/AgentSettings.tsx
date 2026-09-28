@@ -20,6 +20,7 @@ import type { AiProviderConfig } from "@/types/aiProvider";
 export function AgentSettings() {
   const {
     config,
+    rerankConfig,
     customConfig,
     useOwnKey,
     setUseOwnKey,
@@ -181,9 +182,9 @@ export function AgentSettings() {
               : "AI features use the backend AI proxy. No personal API key is required."}
         </Paragraph>
         <Paragraph size="sm" tone="subdued">
-          Component search uses Jev automatically. Chat and generated
-          descriptions use the selected model. Your proxy must support Jev for
-          AI search.
+          {rerankConfig.provider === "jev"
+            ? "Component search uses Jev automatically. Chat and generated descriptions use the selected model. Your proxy must support Jev for AI search."
+            : "Component search, chat, and generated descriptions use the selected model."}
         </Paragraph>
         <Paragraph size="xs" tone="subdued">
           {isConfigured

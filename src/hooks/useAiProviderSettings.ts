@@ -165,7 +165,10 @@ export function useAiProviderSettings() {
     model,
     ...(reasoningEffort ? { reasoningEffort } : {}),
   };
-  const rerankConfig = getComponentSearchConfig(config);
+  const rerankConfig = getComponentSearchConfig(
+    config,
+    isEnvironmentConfigured || !useOwnKey ? "jev" : "responses",
+  );
 
   const setUseOwnKey = (enabled: boolean) => {
     storage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, enabled);

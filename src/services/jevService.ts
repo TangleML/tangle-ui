@@ -55,7 +55,7 @@ async function requestJev(
     signal: options.signal
       ? AbortSignal.any([options.signal, timeout])
       : timeout,
-    credentials: options.credentials ?? "omit",
+    credentials: options.credentials ?? "same-origin",
     headers: {
       ...(body === undefined ? {} : { "content-type": "application/json" }),
       ...(key ? { authorization: `Bearer ${key}` } : {}),

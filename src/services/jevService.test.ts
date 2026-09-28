@@ -108,6 +108,40 @@ it("keeps bearer-token authentication available for a direct provider", async ()
   });
 });
 
+it.each(["models", "systemone"])(
+  "preserves same-origin session authentication for %s when credentials are unspecified",
+  async (endpoint) => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(
+          JSON.stringify(
+            endpoint === "models" ? { models: [] } : nativeResponse,
+          ),
+        ),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const options: ComponentRerankConfig = {
+      provider: "jev",
+      apiBase: `${window.location.origin}/ai/vendors/typesafe/v1`,
+      apiKey: "",
+      model: "jev-1.13.0",
+    };
+    if (endpoint === "models") {
+      await fetchJevModels(options);
+    } else {
+      await requestJevSystemOne(
+        { model: options.model, state: {}, questions: {} },
+        options,
+      );
+    }
+    const [url, init] = fetchMock.mock.calls[0];
+    const request = new Request(url, init);
+    expect(request.credentials).toBe("same-origin");
+    expect(request.headers.has("authorization")).toBe(false);
+  },
+);
+
 it.each([401, 403, 429, 500, 502, 504])(
   "surfaces HTTP %s and Retry-After without retrying or exposing response bodies",
   async (status) => {

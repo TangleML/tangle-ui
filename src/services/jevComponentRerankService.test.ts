@@ -175,7 +175,7 @@ describe("Jev component reranking", () => {
     ]);
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe("https://proxy.example.com/vendors/typesafe/v1/systemone");
-    expect(init.credentials).toBe("omit");
+    expect(init.credentials).toBe("same-origin");
     expect(init.headers).toEqual({
       "content-type": "application/json",
       authorization: "Bearer test-token",

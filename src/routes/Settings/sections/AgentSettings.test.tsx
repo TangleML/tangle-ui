@@ -95,9 +95,17 @@ describe("AgentSettings", () => {
     render(<AgentSettings />);
     const toggle = screen.getByRole("switch", { name: "Bring your own key" });
     expect(toggle).toBeChecked();
+    expect(
+      screen.getByText(
+        "Component search, chat, and generated descriptions use the selected model.",
+      ),
+    ).toBeInTheDocument();
 
     fireEvent.click(toggle);
     expect(toggle).not.toBeChecked();
+    expect(
+      screen.getByText(/Component search uses Jev automatically/),
+    ).toBeInTheDocument();
     expect(screen.queryByLabelText("API key")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("API base URL")).not.toBeInTheDocument();
     expect(

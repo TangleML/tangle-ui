@@ -64,7 +64,7 @@ const baseline: ComponentRerankConfig = {
 const configurations: ComponentRerankConfig[] = [
   baseline,
   {
-    ...getComponentSearchConfig(baseline),
+    ...getComponentSearchConfig(baseline, "jev"),
     model: process.env.RERANK_BENCH_JEV_MODEL ?? "jev-1.13.0",
   },
 ];

@@ -89,23 +89,28 @@ describe("useAiProviderSettings", () => {
     });
   });
 
-  it("shares the saved AI connection with Jev without separate search settings", () => {
-    const { result } = renderHook(() => useAiProviderSettings());
-    expect(result.current.rerankConfig.apiBase).toBe("");
-    act(() =>
-      result.current.update({
-        apiBase: "https://proxy.example.com/v1/",
+  it.each(["https://api.openai.com/v1/", "https://proxy.example.com/v1/"])(
+    "preserves Responses compatibility for the saved provider %s",
+    (apiBase) => {
+      const { result } = renderHook(() => useAiProviderSettings());
+      expect(result.current.rerankConfig.apiBase).toBe("");
+      act(() =>
+        result.current.update({
+          apiBase,
+          apiKey: "shared-key",
+          model: "gpt-6-sol",
+          reasoningEffort: "low",
+        }),
+      );
+      expect(result.current.rerankConfig).toEqual({
+        provider: "responses",
+        apiBase: apiBase.replace(/\/+$/, ""),
         apiKey: "shared-key",
         model: "gpt-6-sol",
-      }),
-    );
-    expect(result.current.rerankConfig).toEqual({
-      provider: "jev",
-      apiBase: "https://proxy.example.com/vendors/typesafe/v1",
-      apiKey: "shared-key",
-      model: "jev-1.13.0",
-    });
-  });
+        reasoningEffort: "low",
+      });
+    },
+  );
 
   it("shares the selected backend connection with Jev and follows backend changes", () => {
     window.localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, "false");
@@ -163,12 +168,17 @@ describe("useAiProviderSettings", () => {
     });
     expect(result.current.isConfigured).toBe(true);
     expect(result.current.customConfig).toEqual(customConfig);
+    expect(result.current.rerankConfig.provider).toBe("jev");
     unmount();
 
     const reloaded = renderHook(() => useAiProviderSettings());
     expect(reloaded.result.current.useOwnKey).toBe(false);
     act(() => reloaded.result.current.setUseOwnKey(true));
     expect(reloaded.result.current.config).toEqual(customConfig);
+    expect(reloaded.result.current.rerankConfig).toEqual({
+      ...customConfig,
+      provider: "responses",
+    });
   });
 
   it("uses Sol with High thinking without saved provider details", () => {

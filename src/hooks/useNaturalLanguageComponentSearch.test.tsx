@@ -61,6 +61,59 @@ const NATIVE_RESPONSE = {
     },
   },
 };
+const RESPONSES_RESPONSE = {
+  output_text: JSON.stringify({
+    matches: [{ id: "upload", score: 1, reason: "Uploads a file" }],
+  }),
+};
+
+it.each([
+  { apiBase: "https://api.openai.com/v1/", apiKey: "personal-key" },
+  { apiBase: "https://provider.example.com/prefix/v1", apiKey: "custom-key" },
+  { apiBase: `${window.location.origin}/ai/v1`, apiKey: "" },
+])(
+  "ranks through the saved provider's Responses endpoint at $apiBase",
+  async ({ apiBase, apiKey }) => {
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify(RESPONSES_RESPONSE)),
+    );
+    const { result } = renderSearch();
+    act(() =>
+      result.current.settings.update({
+        apiBase,
+        apiKey,
+        model: "gpt-6-sol",
+        reasoningEffort: "low",
+      }),
+    );
+    expect(result.current.search.isConfigured).toBe(true);
+    expect(result.current.search.modelLabel).toBe("GPT-6 Sol");
+    await act(async () => {
+      await result.current.search.mutateAsync(SEARCH);
+    });
+    await waitFor(() =>
+      expect(result.current.search.data?.matches).toEqual([
+        { id: "upload", score: 1, reason: "Uploads a file" },
+      ]),
+    );
+    expect(mockFetch).toHaveBeenCalledExactlyOnceWith(
+      `${apiBase.replace(/\/+$/, "")}/responses`,
+      expect.objectContaining({
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}),
+        },
+      }),
+    );
+    const [url, request] = mockFetch.mock.calls[0];
+    expect(new Request(url, request).credentials).toBe("same-origin");
+    expect(JSON.parse(request.body)).toMatchObject({
+      model: "gpt-6-sol",
+      reasoning: { effort: "low" },
+    });
+  },
+);
 
 it.each(["proxy-key", ""])(
   "automatically uses the shared environment proxy for native ranking and models (key: %s)",
@@ -205,7 +258,7 @@ it.each(["download/all", "upload/published"])(
 );
 
 it("clears completed rankings when the shared connection changes", async () => {
-  mockFetch.mockResolvedValue(new Response(JSON.stringify(NATIVE_RESPONSE)));
+  mockFetch.mockResolvedValue(new Response(JSON.stringify(RESPONSES_RESPONSE)));
   const { result } = renderSearch();
   act(() =>
     result.current.settings.update({ apiBase: "https://proxy.example.com/v1" }),
