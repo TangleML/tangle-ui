@@ -39,7 +39,7 @@ export function ProjectHeader() {
           aria-label="Back to projects"
           title="Back to projects"
           className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
-          {...tracking("tangent.back_to_projects")}
+          {...tracking("projects.back_to_projects")}
         >
           <Icon name="ArrowLeft" size="sm" />
         </Link>
