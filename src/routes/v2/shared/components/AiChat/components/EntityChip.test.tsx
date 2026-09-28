@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ComponentSpec } from "@/models/componentSpec";
 import { IncrementingIdGenerator } from "@/models/componentSpec/factories/idGenerator";
 import { YamlDeserializer } from "@/models/componentSpec/serialization/yamlDeserializer";
+import { FLEX_NODES_ANNOTATION } from "@/utils/annotationKeys";
 
 import { EntityChip } from "./EntityChip";
 
@@ -141,6 +142,31 @@ describe("EntityChip", () => {
       ["RootPipeline", "Preprocess", "Normalize"],
       taskId,
       "task",
+    );
+  });
+
+  it("navigates to a sticky note nested inside a subgraph", async () => {
+    const preprocess = spec.tasks.find((t) => t.name === "Preprocess");
+    if (!preprocess?.subgraphSpec) throw new Error("no Preprocess subgraph");
+    preprocess.subgraphSpec.annotations.set(FLEX_NODES_ANNOTATION, [
+      {
+        id: "flex_1",
+        properties: { title: "Careful", content: "", color: "#FFF9C4" },
+        metadata: { createdAt: "2026-01-01T00:00:00.000Z", createdBy: "user" },
+        size: { width: 150, height: 100 },
+        position: { x: 0, y: 0 },
+        zIndex: 0,
+      },
+    ]);
+
+    render(<EntityChip entityId="flex_1" label="Careful" />);
+
+    await userEvent.click(screen.getByRole("button"));
+
+    expect(mocks.navigateToEntity).toHaveBeenCalledWith(
+      ["RootPipeline", "Preprocess"],
+      "flex_1",
+      "flex",
     );
   });
 

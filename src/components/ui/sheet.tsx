@@ -2,10 +2,19 @@ import * as SheetPrimitive from "@radix-ui/react-dialog";
 import { XIcon } from "lucide-react";
 import * as React from "react";
 
+import { useModalClipboardGuard } from "@/hooks/useModalClipboardGuard";
 import { cn } from "@/lib/utils";
+import { ModalSurfaceProvider } from "@/providers/ModalSurfaceProvider";
 
-function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
-  return <SheetPrimitive.Root data-slot="sheet" {...props} />;
+function Sheet({
+  modal = true,
+  ...props
+}: React.ComponentProps<typeof SheetPrimitive.Root>) {
+  return (
+    <ModalSurfaceProvider modal={modal}>
+      <SheetPrimitive.Root data-slot="sheet" modal={modal} {...props} />
+    </ModalSurfaceProvider>
+  );
 }
 
 function SheetTrigger({
@@ -60,6 +69,14 @@ function SheetContent({
   const [size, setSize] = React.useState<number | null>(defaultSize);
   const [isResizing, setIsResizing] = React.useState(false);
   const contentRef = React.useRef<HTMLDivElement>(null);
+  const guardRef = useModalClipboardGuard<HTMLDivElement>();
+  const setContentRef = React.useCallback(
+    (element: HTMLDivElement | null) => {
+      contentRef.current = element;
+      guardRef(element);
+    },
+    [guardRef],
+  );
 
   const handleMouseDown = React.useCallback(
     (e: React.MouseEvent) => {
@@ -141,7 +158,7 @@ function SheetContent({
     <SheetPortal>
       {overlay && <SheetOverlay />}
       <SheetPrimitive.Content
-        ref={contentRef}
+        ref={setContentRef}
         data-slot="sheet-content"
         className={cn(
           "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-50 flex flex-col gap-4 shadow-lg transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
