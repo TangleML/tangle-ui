@@ -11,7 +11,7 @@ import useConfirmationDialog from "@/hooks/useConfirmationDialog";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { APP_ROUTES } from "@/routes/appRoutes";
-import type { Project } from "@/services/projects/types";
+import type { ProjectSummary } from "@/services/projects/types";
 import { useDeleteProject } from "@/services/projects/useProjects";
 
 interface DeleteProjectAction {
@@ -20,13 +20,24 @@ interface DeleteProjectAction {
   confirmation: ComponentProps<typeof ConfirmationDialog>;
 }
 
+interface DeleteProjectOptions {
+  onDeleted?: () => void;
+}
+
 /**
- * Deleting a project is offered from the project's own page and from Tangent,
- * and both have to say the same thing about what is about to be destroyed and
- * leave for the same place afterwards. The caller renders
+ * Deleting a project is offered from the project's own page, from Tangent and
+ * from a tile in the grid, and all three have to say the same thing about what
+ * is about to be destroyed. The caller renders
  * `<ConfirmationDialog {...confirmation} />` wherever suits its layout.
+ *
+ * A page showing the project that just went has to leave, which is what
+ * happens by default; a grid that merely loses a tile passes `onDeleted` and
+ * stays where it is.
  */
-export function useDeleteProjectAction(project: Project): DeleteProjectAction {
+export function useDeleteProjectAction(
+  project: ProjectSummary,
+  { onDeleted }: DeleteProjectOptions = {},
+): DeleteProjectAction {
   const navigate = useNavigate();
   const notify = useToastNotification();
   const { track } = useAnalytics();
@@ -63,6 +74,10 @@ export function useDeleteProjectAction(project: Project): DeleteProjectAction {
             : `Project deleted along with ${result.deletedResourceTotal} resources`,
           "success",
         );
+        if (onDeleted) {
+          onDeleted();
+          return;
+        }
         void navigate({ to: APP_ROUTES.PROJECTS });
       },
     });
