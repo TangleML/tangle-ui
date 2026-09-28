@@ -77,7 +77,7 @@ Compatibility suggestions are best-effort and local. They skip components withou
 
 ## Optional AI search
 
-The dashboard and editor can use AI search to rerank matching local candidates. AI search uses Jev automatically through the shared AI proxy connection. AI search is optional and does not replace local search.
+If an OpenAI-compatible AI provider is configured, the dashboard and editor can use AI search to rerank matching local candidates. AI search is optional and does not replace local search.
 
 AI search is bounded:
 
@@ -86,24 +86,6 @@ AI search is bounded:
 - it sends compact component summaries, not the full component implementation
 
 If AI search is unavailable or not configured, local search still works.
-
-### Jev reranking
-
-There is no separate Jev toggle, key, or endpoint to configure. **AI Search** in the dashboard and editor uses pinned `jev-1.13.0`. Chat and generated component descriptions use the model selected in the shared AI settings.
-
-Set `VITE_OPENAI_API_BASE` to the OpenAI-compatible proxy base, for example `https://proxy.example.com/v1`, and `VITE_OPENAI_API_KEY` to its token. This environment connection takes precedence over browser-saved connections for all AI features. With an empty key, it uses the browser session (`credentials: "include"`) and sends no Authorization header. With a key, it uses Bearer authentication and omits browser credentials. Environment values are frontend configuration, visible to the browser; only use credentials intended for browser clients. Restart the development server after changing environment variables.
-
-Without an environment base URL, the existing AI settings still select either a saved custom connection or the selected backend's session-authenticated AI proxy. Jev shares that connection. Old separate Jev settings are ignored and removed on the next settings save. Chat model and thinking selections are preserved.
-
-For a proxy base of `https://proxy.example.com/prefix/v1`, Tangle sends native Jev requests to `https://proxy.example.com/prefix/vendors/typesafe/v1/systemone`. Chat continues to use `/prefix/v1/responses`. The connection and authentication are shared; the endpoints differ because Jev uses TypeSafe's System One API. The proxy must expose this native vendor route and allow browser requests from the app's origin. Tangle never translates Jev into Chat Completions or Responses and never falls back to a direct TypeSafe connection or a different provider.
-
-The native transport also supports `GET /prefix/vendors/typesafe/v1/models` with the same authentication. Catalog aliases and pinned bare model names are preserved; catalog results do not automatically change the search model. Native batch responses remain available in `RerankResult.providerResponses`, including original answers, scores, confidence, probabilities, model, and usage fields.
-
-Jev evaluates each candidate against a four-level relevance rubric in batches of up to 20 candidates. The normalized rubric score orders every candidate, including weaker and related matches, without flattening their scores to zero. The UI shows **Strong match**, **Partial match**, **Related**, or **Weak match** instead of a percentage. Labels use the strongest rubric level supported by more than half of the returned distribution; confidence is separate. These labels are assessments, not measured probabilities of correctness. When no direct matches are found, the UI explains that it is showing partial or related results. If all results are weak, it says that no clear matches were found. Jev generates no prose explanations, so existing local match explanations remain available.
-
-Requests time out after 20 seconds per batch and are not automatically retried. Authentication failures, rate limits, upstream errors, and valid `Retry-After` values appear in the search error message. A failed or malformed batch rejects the whole ranking; local search remains usable. Changing the shared connection cancels pending requests and clears previous rankings.
-
-See [Component reranking benchmarks](component-reranking-benchmarks.md) for a repeatable comparison with the original reranker.
 
 ## Sharing component links
 
