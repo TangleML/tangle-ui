@@ -255,19 +255,24 @@ describe("ProjectResources", () => {
         ).toBeNull();
       });
 
-      it("leaves the sessions it hid out of the item count", () => {
+      /**
+       * The total counts every page; what this page hid says nothing about the
+       * pages not fetched, so taking it off the total would report a number
+       * that is neither what was counted nor what will be shown.
+       */
+      it("counts the pages it has not fetched at their full total", () => {
         mockResources({
           items: [
             session("a", "sess-a", "2026-09-16T10:00:00Z"),
             resource({ id: "doc", name: "Model card" }),
           ],
-          totalCount: 2,
+          totalCount: 50,
           nextPageToken: "next",
         });
         renderResources();
 
         expect(
-          screen.getByText("Showing the first 1 of 1 items."),
+          screen.getByText("Showing the first 1 of 50 items."),
         ).toBeInTheDocument();
       });
     });

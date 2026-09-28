@@ -7,7 +7,7 @@ import {
   visibleResourceCounts,
 } from "@/components/Home/ProjectsSection/formatResourceCounts";
 import ConfirmationDialog from "@/components/shared/Dialogs/ConfirmationDialog";
-import { useFlagValue } from "@/components/shared/Settings/useFlags";
+import { useTangentEnabled } from "@/components/shared/Settings/useFlags";
 import { Text } from "@/components/ui/typography";
 import useConfirmationDialog from "@/hooks/useConfirmationDialog";
 import useToastNotification from "@/hooks/useToastNotification";
@@ -47,7 +47,7 @@ export function useDeleteProjectAction(
   const { handlers, triggerDialog, ...confirmationProps } =
     useConfirmationDialog();
 
-  const tangentEnabled = useFlagValue("tangent-shell");
+  const tangentEnabled = useTangentEnabled();
   const resourceCounts = visibleResourceCounts(
     project.resourceCounts,
     tangentEnabled,

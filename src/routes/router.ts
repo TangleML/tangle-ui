@@ -16,7 +16,11 @@ import { AuthorizationResultScreen as HuggingFaceAuthorizationResultScreen } fro
 import { AddSecretView } from "@/components/shared/SecretsManagement/components/AddSecretView";
 import { ReplaceSecretView } from "@/components/shared/SecretsManagement/components/ReplaceSecretView";
 import { SecretsListView } from "@/components/shared/SecretsManagement/components/SecretsListView";
-import { isFlagEnabled } from "@/components/shared/Settings/useFlags";
+import {
+  isFlagEnabled,
+  isProjectsEnabled,
+  isTangentEnabled,
+} from "@/components/shared/Settings/useFlags";
 import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
 
 import RootLayout from "../components/layout/RootLayout";
@@ -141,7 +145,7 @@ const dashboardProjectsRoute = createRoute({
   path: APP_ROUTES.PROJECTS,
   component: DashboardProjectsView,
   beforeLoad: () => {
-    if (!isFlagEnabled("projects")) {
+    if (!isProjectsEnabled()) {
       throw redirect({ to: APP_ROUTES.DASHBOARD });
     }
   },
@@ -152,7 +156,7 @@ const dashboardProjectDetailRoute = createRoute({
   path: APP_ROUTES.PROJECT_DETAIL,
   component: DashboardProjectDetailView,
   beforeLoad: () => {
-    if (!isFlagEnabled("projects")) {
+    if (!isProjectsEnabled()) {
       throw redirect({ to: APP_ROUTES.DASHBOARD });
     }
   },
@@ -248,7 +252,7 @@ const settingsAgentRoute = createRoute({
     if (
       !isFlagEnabled("component-search-v2") &&
       !isFlagEnabled("ai-assistant") &&
-      !isFlagEnabled("tangent-shell")
+      !isTangentEnabled()
     ) {
       throw redirect({ to: APP_ROUTES.SETTINGS_BACKEND });
     }
@@ -407,10 +411,20 @@ const tangentProjectRoute = createRoute({
   getParentRoute: () => mainLayout,
   path: APP_ROUTES.TANGENT_PROJECT,
   component: TangentProjectPage,
-  beforeLoad: () => {
-    if (!isFlagEnabled("tangent-shell")) {
-      throw notFound();
+  beforeLoad: ({ params }) => {
+    if (isTangentEnabled()) return;
+
+    // A Tangent link is how a project gets shared, and the recipient's flags
+    // are not the sender's. The project still exists without Tangent, so send
+    // them to the page that can show it rather than claiming it is not there.
+    if (isProjectsEnabled()) {
+      throw redirect({
+        to: APP_ROUTES.PROJECT_DETAIL,
+        params: { projectId: params.projectId },
+      });
     }
+
+    throw notFound();
   },
 });
 

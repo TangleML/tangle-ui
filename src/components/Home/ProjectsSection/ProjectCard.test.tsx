@@ -49,9 +49,14 @@ vi.mock("@/utils/string", () => ({
 
 vi.mock("./useProjectPin", () => ({ useProjectPin: vi.fn() }));
 
-vi.mock("@/components/shared/Settings/useFlags", () => ({
-  useFlagValue: vi.fn(),
-}));
+vi.mock("@/components/shared/Settings/useFlags", () => {
+  const useFlagValue = vi.fn();
+  return {
+    useFlagValue,
+    useProjectsEnabled: () => useFlagValue("projects"),
+    useTangentEnabled: () => useFlagValue("tangent-shell"),
+  };
+});
 
 vi.mock("@/utils/URL", () => ({
   getProjectUrl: (id: string) => `https://tangle.example/projects/${id}`,

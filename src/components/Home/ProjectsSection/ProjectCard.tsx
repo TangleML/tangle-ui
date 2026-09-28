@@ -3,7 +3,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useDeleteProjectAction } from "@/components/Project/useDeleteProjectAction";
 import { useShareProjectAction } from "@/components/Project/useShareProjectAction";
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
-import { useFlagValue } from "@/components/shared/Settings/useFlags";
+import { useTangentEnabled } from "@/components/shared/Settings/useFlags";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -44,7 +44,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
   const share = useShareProjectAction(project.id);
 
   const { pinned, togglePin } = useProjectPin(project);
-  const tangentEnabled = useFlagValue("tangent-shell");
+  const tangentEnabled = useTangentEnabled();
   const resourceCounts = visibleResourceCounts(
     project.resourceCounts,
     tangentEnabled,

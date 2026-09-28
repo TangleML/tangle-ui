@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { useFlagValue } from "@/components/shared/Settings/useFlags";
+import { useTangentEnabled } from "@/components/shared/Settings/useFlags";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Heading, Text } from "@/components/ui/typography";
@@ -18,7 +18,7 @@ interface ProjectSidebarProps {
 }
 
 export function ProjectSidebar({ project }: ProjectSidebarProps) {
-  const tangentEnabled = useFlagValue("tangent-shell");
+  const tangentEnabled = useTangentEnabled();
 
   return (
     <aside

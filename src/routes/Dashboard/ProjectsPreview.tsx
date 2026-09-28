@@ -1,7 +1,10 @@
 import { ProjectCard } from "@/components/Home/ProjectsSection/ProjectCard";
 import { PROJECT_GRID_ONE_ROW } from "@/components/Home/ProjectsSection/projectGrid";
 import { useMyProjects } from "@/components/Home/ProjectsSection/useMyProjects";
-import { useFlagValue } from "@/components/shared/Settings/useFlags";
+import {
+  useProjectsEnabled,
+  useTangentEnabled,
+} from "@/components/shared/Settings/useFlags";
 import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { useBackend } from "@/providers/BackendProvider";
@@ -12,14 +15,14 @@ import { SectionHeader } from "./SectionHeader";
 const PREVIEW_MAX = 8;
 
 export function ProjectsPreview() {
-  const isProjectsEnabled = useFlagValue("projects");
-  const tangentEnabled = useFlagValue("tangent-shell");
+  const projectsEnabled = useProjectsEnabled();
+  const tangentEnabled = useTangentEnabled();
   const { configured, available } = useBackend();
   const { projects: all, isPending } = useMyProjects();
 
   // A preview carries no backend warnings of its own — the runs section below
   // it already says when the backend is the problem.
-  if (!isProjectsEnabled || !configured || !available) return null;
+  if (!projectsEnabled || !configured || !available) return null;
 
   const projects = all.slice(0, PREVIEW_MAX);
 

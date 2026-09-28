@@ -1,4 +1,4 @@
-import { useFlagValue } from "@/components/shared/Settings/useFlags";
+import { useProjectsEnabled } from "@/components/shared/Settings/useFlags";
 
 /**
  * Hides rows for things the user can no longer reach, for the lists that mix
@@ -10,7 +10,7 @@ import { useFlagValue } from "@/components/shared/Settings/useFlags";
  * restores the history instead of making the user rebuild it.
  */
 export function useListedItems<T extends { type: string }>(items: T[]): T[] {
-  const projectsEnabled = useFlagValue("projects");
+  const projectsEnabled = useProjectsEnabled();
 
   return projectsEnabled
     ? items

@@ -1,6 +1,9 @@
 import { Link, Outlet, useRouter } from "@tanstack/react-router";
 
-import { useFlagValue } from "@/components/shared/Settings/useFlags";
+import {
+  useFlagValue,
+  useTangentEnabled,
+} from "@/components/shared/Settings/useFlags";
 import { Button } from "@/components/ui/button";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -54,7 +57,7 @@ export function SettingsLayout() {
   const router = useRouter();
   const componentSearchEnabled = useFlagValue("component-search-v2");
   const aiAssistantEnabled = useFlagValue("ai-assistant");
-  const tangentShellEnabled = useFlagValue("tangent-shell");
+  const tangentShellEnabled = useTangentEnabled();
   const sidebarItems =
     componentSearchEnabled || aiAssistantEnabled || tangentShellEnabled
       ? [...SIDEBAR_ITEMS, AGENT_ITEM]

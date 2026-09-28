@@ -4,7 +4,11 @@ import { Fragment } from "react";
 import { TipOfTheDay } from "@/components/Learn/TipOfTheDay";
 import { isAuthorizationRequired } from "@/components/shared/Authentication/helpers";
 import { TopBarAuthentication } from "@/components/shared/Authentication/TopBarAuthentication";
-import { useFlagValue } from "@/components/shared/Settings/useFlags";
+import {
+  useFlagValue,
+  useProjectsEnabled,
+  useTangentEnabled,
+} from "@/components/shared/Settings/useFlags";
 import { Badge } from "@/components/ui/badge";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -110,8 +114,8 @@ const navItemClass = (isActive: boolean, highlighted?: boolean) =>
 export function DashboardLayout() {
   const requiresAuthorization = isAuthorizationRequired();
   const isComponentSearchEnabled = useFlagValue("component-search-v2");
-  const isProjectsEnabled = useFlagValue("projects");
-  const isTangentEnabled = useFlagValue("tangent-shell");
+  const projectsEnabled = useProjectsEnabled();
+  const tangentEnabled = useTangentEnabled();
 
   const { shouldShowOnboarding } = useOnboarding();
 
@@ -124,8 +128,8 @@ export function DashboardLayout() {
     : BASE_SIDEBAR_ITEMS;
 
   const baseItems = withProjectsItem(componentItems, {
-    projectsEnabled: isProjectsEnabled,
-    tangentEnabled: isTangentEnabled,
+    projectsEnabled,
+    tangentEnabled,
   });
 
   const sidebarItems: SidebarItem[] = shouldShowOnboarding

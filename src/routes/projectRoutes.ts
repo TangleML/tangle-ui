@@ -1,4 +1,4 @@
-import { isFlagEnabled } from "@/components/shared/Settings/useFlags";
+import { isTangentEnabled } from "@/components/shared/Settings/useFlags";
 
 import { APP_ROUTES } from "./appRoutes";
 
@@ -14,7 +14,7 @@ export function projectHomeRoute(tangentEnabled: boolean) {
 }
 
 export function getProjectHomeRoute() {
-  return projectHomeRoute(isFlagEnabled("tangent-shell"));
+  return projectHomeRoute(isTangentEnabled());
 }
 
 export function getProjectHomePath(projectId: string): string {

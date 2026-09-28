@@ -1,6 +1,6 @@
 import { useNavigate, useSearch } from "@tanstack/react-router";
 
-import { useFlagValue } from "@/components/shared/Settings/useFlags";
+import { useProjectsEnabled } from "@/components/shared/Settings/useFlags";
 import {
   PROJECT_ID_SEARCH_PARAM,
   readProjectIdParam,
@@ -20,7 +20,7 @@ const NOT_FOUND = 404;
  * a project nobody can see, permanently.
  */
 export function useRunProjectContext() {
-  const enabled = useFlagValue("projects");
+  const enabled = useProjectsEnabled();
   const search = useSearch({ strict: false });
   const navigate = useNavigate();
 

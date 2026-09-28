@@ -94,3 +94,14 @@ export function useFlagValue(flagName: keyof typeof ExistingFlags) {
 
   return useSyncExternalStore(subscribe, () => resolveFlag(flagName));
 }
+
+/**
+ * The two flags that draw the projects/Tangent boundary are read from twenty
+ * places. Named here so a site says which feature it is gating rather than
+ * repeating a string that nothing checks against the flag list.
+ */
+export const useProjectsEnabled = () => useFlagValue("projects");
+export const useTangentEnabled = () => useFlagValue("tangent-shell");
+
+export const isProjectsEnabled = () => isFlagEnabled("projects");
+export const isTangentEnabled = () => isFlagEnabled("tangent-shell");

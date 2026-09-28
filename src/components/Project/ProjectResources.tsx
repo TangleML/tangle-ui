@@ -6,7 +6,7 @@ import {
 } from "@/components/Home/ProjectsSection/formatResourceCounts";
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
 import { InfoBox } from "@/components/shared/InfoBox";
-import { useFlagValue } from "@/components/shared/Settings/useFlags";
+import { useTangentEnabled } from "@/components/shared/Settings/useFlags";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { IconName } from "@/components/ui/icon";
@@ -21,7 +21,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Heading, Text } from "@/components/ui/typography";
-import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useConfirmationDialog from "@/hooks/useConfirmationDialog";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
@@ -30,7 +29,7 @@ import {
   newTangentSessionSearch,
   tangentSessionSearch,
 } from "@/routes/tangentSearch";
-import { TANGENT_AI_REQUIRED } from "@/routes/v2/shared/components/AiChat/components/aiSetupCopy";
+import { useAiGate } from "@/routes/v2/shared/components/AiChat/components/useAiGate";
 import { UNTITLED } from "@/services/projects/placeholderNames";
 import {
   AGENT_SESSION,
@@ -147,8 +146,8 @@ export function ProjectResources({
   const notify = useToastNotification();
   const { track } = useAnalytics();
   const navigate = useNavigate();
-  const tangentEnabled = useFlagValue("tangent-shell");
-  const { isConfigured: isAiConfigured } = useAiProviderSettings();
+  const tangentEnabled = useTangentEnabled();
+  const aiGate = useAiGate();
   const {
     handlers: confirmationHandlers,
     triggerDialog: triggerConfirmation,
@@ -190,7 +189,6 @@ export function ProjectResources({
     if (describeResource(resource)?.type === INSTRUCTIONS) return false;
     return tangentEnabled || resource.entity !== AGENT_SESSION;
   });
-  const hiddenCount = allResources.length - resources.length;
 
   // A session is the one resource that is not a thing to look at here: it is a
   // conversation that lives in Tangent, so its row goes there. It is also not a
@@ -225,8 +223,8 @@ export function ProjectResources({
           <Button
             variant="outline"
             size="sm"
-            disabled={!isAiConfigured}
-            title={isAiConfigured ? undefined : TANGENT_AI_REQUIRED}
+            disabled={aiGate.disabled}
+            title={aiGate.title}
             onClick={() =>
               void navigate({
                 to: APP_ROUTES.TANGENT_PROJECT,
@@ -323,7 +321,10 @@ export function ProjectResources({
 
       {data?.nextPageToken && (
         <Text size="sm" tone="subdued">
-          {`Showing the first ${resources.length} of ${data.totalCount - hiddenCount} items.`}
+          {/* `totalCount` spans every page; what this page hides says nothing
+              about the pages not fetched, so subtracting it here would take a
+              page's worth off a total counted elsewhere. */}
+          {`Showing the first ${resources.length} of ${data.totalCount} items.`}
         </Text>
       )}
 
