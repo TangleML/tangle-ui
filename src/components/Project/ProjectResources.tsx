@@ -19,6 +19,7 @@ import { Heading, Text } from "@/components/ui/typography";
 import useConfirmationDialog from "@/hooks/useConfirmationDialog";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
+import { UNTITLED } from "@/services/projects/placeholderNames";
 import type { ProjectResourceSummary } from "@/services/projects/types";
 import {
   useDeleteProjectResource,
@@ -28,7 +29,7 @@ import {
 import { AddResourceMenu } from "./AddResourceMenu";
 import { ColumnHeadingRow } from "./ColumnHeadingRow";
 import { entityIcon, removingDestroys } from "./resourceEntities";
-import { ResourceRow, UNTITLED } from "./ResourceRow";
+import { ResourceRow } from "./ResourceRow";
 
 const PAGE_SIZE = 100;
 

@@ -11,6 +11,7 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
 import { Heading, Text } from "@/components/ui/typography";
 import { getDefaultEditorPath } from "@/routes/editorRoutes";
+import { UNTITLED } from "@/services/projects/placeholderNames";
 import type { ProjectResource } from "@/services/projects/types";
 import { useProjectResource } from "@/services/projects/useProjectResources";
 import { usePipelineSpec } from "@/services/usePipelineSpec";
@@ -19,7 +20,6 @@ import { componentSpecToText } from "@/utils/yaml";
 
 import { ColumnHeadingRow } from "./ColumnHeadingRow";
 import { type PipelineValidity, pipelineValidity } from "./pipelineValidity";
-import { UNTITLED } from "./ResourceRow";
 
 const PLAIN_TEXT = "plaintext";
 

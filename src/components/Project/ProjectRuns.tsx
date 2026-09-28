@@ -13,13 +13,12 @@ import {
 } from "@/components/ui/table";
 import { Heading, Text } from "@/components/ui/typography";
 import { getDefaultRunPath } from "@/routes/runRoutes";
+import { UNNAMED_PIPELINE } from "@/services/projects/placeholderNames";
 import { useProjectRuns } from "@/services/projects/useProjectRuns";
 import { formatDate } from "@/utils/date";
 import { tracking } from "@/utils/tracking";
 
 import { ProjectRunStatus } from "./ProjectRunStatus";
-
-const UNNAMED_PIPELINE = "Unnamed pipeline";
 
 interface ProjectRunsProps {
   projectId: string;

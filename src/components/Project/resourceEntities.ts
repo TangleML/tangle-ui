@@ -1,17 +1,17 @@
 import type { IconName } from "@/components/ui/icon";
-
-const ENTITY_ICONS: Record<string, IconName> = {
-  pipeline: "GitBranch",
-  agent_session: "Bot",
-  document: "FileText",
-};
+import {
+  conceptForEntity,
+  resourceMeta,
+} from "@/services/projects/resourceMeta";
 
 // The backend stores `entity` as a plain string and expects more members, so an
 // unrecognised one still needs something to render as.
 const UNKNOWN_ENTITY_ICON: IconName = "Box";
 
-export const entityIcon = (entity: string): IconName =>
-  ENTITY_ICONS[entity] ?? UNKNOWN_ENTITY_ICON;
+export const entityIcon = (entity: string): IconName => {
+  const concept = conceptForEntity(entity);
+  return concept ? resourceMeta(concept).icon : UNKNOWN_ENTITY_ICON;
+};
 
 /**
  * A resource that points at something by id — a pipeline, an agent session —

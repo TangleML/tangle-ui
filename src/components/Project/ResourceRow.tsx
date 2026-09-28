@@ -3,13 +3,12 @@ import { Icon } from "@/components/ui/icon";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
+import { UNTITLED } from "@/services/projects/placeholderNames";
 import type { ProjectResourceSummary } from "@/services/projects/types";
 import { formatDate } from "@/utils/date";
 import { tracking } from "@/utils/tracking";
 
 import { removingDestroys } from "./resourceEntities";
-
-export const UNTITLED = "Untitled";
 
 interface ResourceRowProps {
   resource: ProjectResourceSummary;
