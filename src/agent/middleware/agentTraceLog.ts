@@ -34,10 +34,7 @@ export function readAgentTraceLog(scope?: TraceScope): AgentTraceEvent[] {
   return scope ? events.filter(isIn(scope)) : events;
 }
 
-/**
- * Clearing one session leaves every other session's events, which are somebody
- * else's diagnostic and not this reader's to throw away.
- */
+/** Clears what the reader was shown; without a scope, the whole log. */
 export function clearAgentTraceLog(scope?: TraceScope): void {
   if (scope) {
     write(read().filter((event) => !isIn(scope)(event)));

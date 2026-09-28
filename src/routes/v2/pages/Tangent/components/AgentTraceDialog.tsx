@@ -73,16 +73,8 @@ function AgentTraceDialog({
 }: AgentTraceDialogProps) {
   const notify = useToastNotification();
   const [events, setEvents] = useState<AgentTraceEvent[]>([]);
-  const [elsewhere, setElsewhere] = useState(0);
 
-  // An empty log and a log filtered down to empty are different problems, and
-  // reading "nothing recorded" for the second one sends you looking in the
-  // wrong place.
-  const load = () => {
-    const mine = readAgentTraceLog(scope);
-    setEvents(mine);
-    setElsewhere(readAgentTraceLog().length - mine.length);
-  };
+  const load = () => setEvents(readAgentTraceLog(scope));
 
   useEffect(() => {
     if (open) load();
@@ -124,13 +116,24 @@ function AgentTraceDialog({
           >
             Clear
           </Button>
+          <Button
+            variant="destructiveOutline"
+            size="sm"
+            className="ml-auto"
+            onClick={() => {
+              clearAgentTraceLog();
+              load();
+              notify("Agent log reset", "success");
+            }}
+          >
+            Reset all logs
+          </Button>
         </InlineStack>
 
         {events.length === 0 ? (
           <Text size="sm" tone="subdued">
-            {elsewhere === 0
-              ? "Nothing recorded yet. Ask an agent to change the pipeline, then reopen this."
-              : `Nothing from this session. ${elsewhere} ${elsewhere === 1 ? "event belongs" : "events belong"} to another session, or to a worker that never reported which session it was serving.`}
+            Nothing recorded for this session yet. Ask an agent to change the
+            pipeline, then reopen this.
           </Text>
         ) : (
           <BlockStack

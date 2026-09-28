@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   type AgentTraceEvent,
@@ -21,8 +21,17 @@ function event(overrides: Partial<AgentTraceEvent> = {}): AgentTraceEvent {
   };
 }
 
+/**
+ * Only for asserting nothing arrived. A `BroadcastChannel` takes a macrotask to
+ * deliver with no margin to spare, so waiting a fixed tick for something to
+ * arrive is a coin flip on a loaded machine — wait for the event instead.
+ */
 function settled(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+function waitForLogLength(length: number) {
+  return vi.waitFor(() => expect(readAgentTraceLog()).toHaveLength(length));
 }
 
 describe("agentTraceLog", () => {
@@ -41,7 +50,7 @@ describe("agentTraceLog", () => {
   it("collects what an agent broadcasts", async () => {
     recordTraceEvent(event({ label: "add_task" }));
     recordTraceEvent(event({ label: "connect_nodes" }));
-    await settled();
+    await waitForLogLength(2);
 
     expect(readAgentTraceLog().map((one) => one.label)).toEqual([
       "add_task",
@@ -53,7 +62,7 @@ describe("agentTraceLog", () => {
   it("collects from every source into one log", async () => {
     recordTraceEvent(event({ agent: "prime", label: "spawn_agent" }));
     recordTraceEvent(event({ agent: "tangle-remote-editor" }));
-    await settled();
+    await waitForLogLength(2);
 
     expect(readAgentTraceLog().map((one) => one.agent)).toEqual([
       "prime",
@@ -64,9 +73,8 @@ describe("agentTraceLog", () => {
   it("survives a log that is not readable as events", async () => {
     localStorage.setItem("agent_trace_log", "{not json");
     recordTraceEvent(event());
-    await settled();
 
-    expect(readAgentTraceLog()).toHaveLength(1);
+    await waitForLogLength(1);
   });
 
   it("stops collecting once stopped", async () => {
@@ -85,13 +93,13 @@ describe("agentTraceLog", () => {
       recordTraceEvent(event({ label: "add_task" }));
       setTraceScope(session("s-2"));
       recordTraceEvent(event({ label: "connect_nodes" }));
-      await settled();
+      await waitForLogLength(2);
     }
 
     it("stamps an event with the scope its worker is reporting under", async () => {
       setTraceScope(session("s-1"));
       recordTraceEvent(event());
-      await settled();
+      await waitForLogLength(1);
 
       expect(readAgentTraceLog()[0].scope).toEqual(session("s-1"));
     });
@@ -113,6 +121,15 @@ describe("agentTraceLog", () => {
       expect(readAgentTraceLog().map((one) => one.label)).toEqual([
         "connect_nodes",
       ]);
+    });
+
+    /** What "Reset all logs" is for, including events no session can claim. */
+    it("empties the whole log when cleared without a session", async () => {
+      await recordInBothSessions();
+
+      clearAgentTraceLog();
+
+      expect(readAgentTraceLog()).toEqual([]);
     });
 
     /** A worker that never reported a scope leaves events no session claims. */
