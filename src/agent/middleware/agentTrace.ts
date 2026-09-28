@@ -5,6 +5,11 @@
 const CHANNEL = "tangle:agent-trace";
 const MAX_PAYLOAD_CHARS = 2000;
 
+export interface TraceScope {
+  projectId: string;
+  sessionId: string;
+}
+
 export interface AgentTraceEvent {
   at: number;
   agent: string;
@@ -19,9 +24,11 @@ export interface AgentTraceEvent {
   label: string;
   detail?: string;
   durationMs?: number;
+  scope?: TraceScope;
 }
 
 let channel: BroadcastChannel | undefined;
+let scope: TraceScope | undefined;
 
 function getChannel(): BroadcastChannel | undefined {
   if (typeof BroadcastChannel === "undefined") return undefined;
@@ -35,8 +42,17 @@ export function truncateForTrace(value: string): string {
     : value;
 }
 
+/**
+ * Stamped on every event the caller records from here on. A worker hosts one
+ * session, so this is per-worker state rather than something each record site
+ * has to be handed.
+ */
+export function setTraceScope(next: TraceScope): void {
+  scope = next;
+}
+
 export function recordTraceEvent(event: AgentTraceEvent): void {
-  getChannel()?.postMessage(event);
+  getChannel()?.postMessage(scope ? { ...event, scope } : event);
 }
 
 /**

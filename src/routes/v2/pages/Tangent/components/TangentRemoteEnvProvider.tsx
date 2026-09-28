@@ -16,6 +16,7 @@ import * as Comlink from "comlink";
 import { type ReactNode, useEffect, useRef } from "react";
 
 import type { RemoteEnvWorkerApi } from "@/agent/createRemoteEnvWorkerApi";
+import type { TraceScope } from "@/agent/middleware/agentTrace";
 import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import type { AgentContext } from "@/agent/types";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
@@ -59,6 +60,7 @@ export function TangentRemoteEnvProvider({
   const authTokenRef = useRef(authToken);
   const aiConfigRef = useRef(aiConfig);
   const contextRef = useRef(context);
+  const traceScopeRef = useRef<TraceScope>({ projectId, sessionId });
   const notifyRef = useRef(notify);
   const workerRef = useRef<Comlink.Remote<RemoteEnvWorkerApi> | null>(null);
   const environmentIdRef = useRef(environmentId);
@@ -112,6 +114,11 @@ export function TangentRemoteEnvProvider({
   }, [aiConfig]);
 
   useEffect(() => {
+    traceScopeRef.current = { projectId, sessionId };
+    void workerRef.current?.setTraceScope(traceScopeRef.current);
+  }, [projectId, sessionId]);
+
+  useEffect(() => {
     if (!baseUrl) return;
 
     const onError = (message: string) => notifyRef.current(message, "error");
@@ -122,6 +129,7 @@ export function TangentRemoteEnvProvider({
 
     void remote.init(Comlink.proxy(bridge), contextRef.current);
     void remote.setAiConfig(aiConfigRef.current);
+    void remote.setTraceScope(traceScopeRef.current);
 
     const host = createRemoteEnvHost({
       url: baseUrl,

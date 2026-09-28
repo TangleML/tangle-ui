@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { type AgentTraceEvent, recordTraceEvent } from "./agentTrace";
+import {
+  type AgentTraceEvent,
+  recordTraceEvent,
+  setTraceScope,
+} from "./agentTrace";
 import {
   clearAgentTraceLog,
   readAgentTraceLog,
@@ -71,5 +75,52 @@ describe("agentTraceLog", () => {
     await settled();
 
     expect(readAgentTraceLog()).toEqual([]);
+  });
+
+  describe("scoped to a session", () => {
+    const session = (sessionId: string) => ({ projectId: "p-1", sessionId });
+
+    async function recordInBothSessions() {
+      setTraceScope(session("s-1"));
+      recordTraceEvent(event({ label: "add_task" }));
+      setTraceScope(session("s-2"));
+      recordTraceEvent(event({ label: "connect_nodes" }));
+      await settled();
+    }
+
+    it("stamps an event with the scope its worker is reporting under", async () => {
+      setTraceScope(session("s-1"));
+      recordTraceEvent(event());
+      await settled();
+
+      expect(readAgentTraceLog()[0].scope).toEqual(session("s-1"));
+    });
+
+    /** The bug: one session's log showed what an agent did in another. */
+    it("reads back only the events of the session asked for", async () => {
+      await recordInBothSessions();
+
+      expect(readAgentTraceLog(session("s-1")).map((one) => one.label)).toEqual(
+        ["add_task"],
+      );
+    });
+
+    it("leaves another session's events behind when one is cleared", async () => {
+      await recordInBothSessions();
+
+      clearAgentTraceLog(session("s-1"));
+
+      expect(readAgentTraceLog().map((one) => one.label)).toEqual([
+        "connect_nodes",
+      ]);
+    });
+
+    /** A worker that never reported a scope leaves events no session claims. */
+    it("hands an unscoped event to no session at all", () => {
+      localStorage.setItem("agent_trace_log", JSON.stringify([event()]));
+
+      expect(readAgentTraceLog()).toHaveLength(1);
+      expect(readAgentTraceLog(session("s-1"))).toEqual([]);
+    });
   });
 });

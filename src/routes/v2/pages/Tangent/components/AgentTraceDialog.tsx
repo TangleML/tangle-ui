@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 
-import type { AgentTraceEvent } from "@/agent/middleware/agentTrace";
+import type {
+  AgentTraceEvent,
+  TraceScope,
+} from "@/agent/middleware/agentTrace";
 import {
   clearAgentTraceLog,
   readAgentTraceLog,
@@ -34,35 +37,46 @@ function formatTime(at: number): string {
   return new Date(at).toLocaleTimeString([], { hour12: false });
 }
 
-function asText(events: AgentTraceEvent[]): string {
-  return events
-    .map((event) =>
-      [
-        formatTime(event.at),
-        event.agent,
-        KIND_LABEL[event.kind],
-        event.label,
-        event.durationMs === undefined ? "" : `${event.durationMs}ms`,
-        event.detail ?? "",
-      ]
-        .filter(Boolean)
-        .join("  "),
-    )
-    .join("\n");
+/** A copied log is usually on its way into a bug report, so it says what it is of. */
+function asText(events: AgentTraceEvent[], scope: TraceScope): string {
+  const rows = events.map((event) =>
+    [
+      formatTime(event.at),
+      event.agent,
+      KIND_LABEL[event.kind],
+      event.label,
+      event.durationMs === undefined ? "" : `${event.durationMs}ms`,
+      event.detail ?? "",
+    ]
+      .filter(Boolean)
+      .join("  "),
+  );
+
+  return [
+    `project ${scope.projectId}`,
+    `session ${scope.sessionId}`,
+    "",
+    ...rows,
+  ].join("\n");
 }
 
 interface AgentTraceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  scope: TraceScope;
 }
 
-function AgentTraceDialog({ open, onOpenChange }: AgentTraceDialogProps) {
+function AgentTraceDialog({
+  open,
+  onOpenChange,
+  scope,
+}: AgentTraceDialogProps) {
   const notify = useToastNotification();
   const [events, setEvents] = useState<AgentTraceEvent[]>([]);
 
   useEffect(() => {
-    if (open) setEvents(readAgentTraceLog());
-  }, [open]);
+    if (open) setEvents(readAgentTraceLog(scope));
+  }, [open, scope]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -78,7 +92,7 @@ function AgentTraceDialog({ open, onOpenChange }: AgentTraceDialogProps) {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setEvents(readAgentTraceLog())}
+            onClick={() => setEvents(readAgentTraceLog(scope))}
           >
             Refresh
           </Button>
@@ -87,7 +101,7 @@ function AgentTraceDialog({ open, onOpenChange }: AgentTraceDialogProps) {
             size="sm"
             disabled={events.length === 0}
             onClick={() => {
-              copyToClipboard(asText(events));
+              copyToClipboard(asText(events, scope));
               notify("Agent log copied", "success");
             }}
           >
@@ -98,7 +112,7 @@ function AgentTraceDialog({ open, onOpenChange }: AgentTraceDialogProps) {
             size="sm"
             disabled={events.length === 0}
             onClick={() => {
-              clearAgentTraceLog();
+              clearAgentTraceLog(scope);
               setEvents([]);
             }}
           >
@@ -156,7 +170,7 @@ function AgentTraceDialog({ open, onOpenChange }: AgentTraceDialogProps) {
   );
 }
 
-export function AgentTraceButton() {
+export function AgentTraceButton({ scope }: { scope: TraceScope }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -173,7 +187,7 @@ export function AgentTraceButton() {
       >
         <Icon name="ScrollText" size="xs" />
       </TooltipButton>
-      <AgentTraceDialog open={open} onOpenChange={setOpen} />
+      <AgentTraceDialog open={open} onOpenChange={setOpen} scope={scope} />
     </>
   );
 }
