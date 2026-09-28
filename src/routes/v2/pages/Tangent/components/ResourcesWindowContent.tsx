@@ -44,8 +44,8 @@ const BACKEND_PIPELINE_META = {
   description: "Backend pipeline — not supported yet",
 };
 
-const ABSENT_PIPELINE_META: ResourceTypeMeta = {
-  icon: "Workflow",
+const ABSENT_PIPELINE_META = {
+  icon: resourceMeta("pipeline").icon,
   description: "Pipeline — not in this browser",
 };
 
