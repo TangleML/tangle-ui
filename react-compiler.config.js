@@ -90,6 +90,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/providers/TourProvider",
   "src/providers/OnboardingProvider",
   "src/providers/ThemeProvider.tsx",
+  "src/providers/RunSubmissionScopeProvider.tsx",
   "src/routes/EditorV2",
 
   // 11-20 useCallback/useMemo

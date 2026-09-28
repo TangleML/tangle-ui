@@ -17,6 +17,7 @@ import type {
   GetGraphExecutionStateResponse,
   PipelineRunResponse,
 } from "@/api/types.gen";
+import type { LayoutAlgorithm } from "@/components/shared/ReactFlow/FlowCanvas/utils/autolayout";
 import type { ArgumentType, ComponentReference } from "@/models/componentSpec";
 import type { AiSpec } from "@/routes/v2/shared/components/AiChat/serializeSpecForAi";
 
@@ -46,6 +47,25 @@ export interface ConnectArgs {
   sourcePortName: string;
   targetEntityId: string;
   targetPortName: string;
+}
+
+interface StickyNoteContent {
+  title?: string;
+  content?: string;
+  color?: string;
+  borderColor?: string;
+  size?: { width: number; height: number };
+}
+
+export interface AddStickyNoteArgs extends StickyNoteContent {
+  position?: { x: number; y: number };
+  anchorEntityId?: string;
+  inSubgraphTaskId?: string;
+}
+
+export interface StickyNoteUpdates extends StickyNoteContent {
+  position?: { x: number; y: number };
+  locked?: boolean;
 }
 
 export interface RunSubmissionResult {
@@ -122,6 +142,18 @@ export interface ToolBridgeApi {
 
   setPipelineName(name: string): Promise<BridgeResult>;
   setPipelineDescription(description: string): Promise<BridgeResult>;
+  setPipelineNotes(
+    notes: string,
+    expectedSubgraphTaskId: string | null,
+  ): Promise<BridgeResult>;
+  setPipelineTags(
+    tags: string[],
+    expectedSubgraphTaskId: string | null,
+  ): Promise<BridgeResult>;
+  setRunNameTemplate(
+    template: string,
+    expectedSubgraphTaskId: string | null,
+  ): Promise<BridgeResult>;
 
   addTask(args: {
     name: string;
@@ -130,6 +162,7 @@ export interface ToolBridgeApi {
   }): Promise<BridgeResult & { taskId?: string; name?: string }>;
   deleteTask(entityId: string): Promise<BridgeResult>;
   renameTask(entityId: string, newName: string): Promise<BridgeResult>;
+  setTaskColor(taskEntityIds: string[], color: string): Promise<BridgeResult>;
 
   addInput(args: {
     name: string;
@@ -141,6 +174,15 @@ export interface ToolBridgeApi {
   }): Promise<BridgeResult & { inputId?: string; name?: string }>;
   deleteInput(entityId: string): Promise<BridgeResult>;
   renameInput(entityId: string, newName: string): Promise<BridgeResult>;
+  updateInput(
+    entityId: string,
+    updates: {
+      type?: string;
+      description?: string;
+      defaultValue?: string;
+      optional?: boolean;
+    },
+  ): Promise<BridgeResult>;
 
   addOutput(args: {
     name: string;
@@ -150,6 +192,10 @@ export interface ToolBridgeApi {
   }): Promise<BridgeResult & { outputId?: string; name?: string }>;
   deleteOutput(entityId: string): Promise<BridgeResult>;
   renameOutput(entityId: string, newName: string): Promise<BridgeResult>;
+  updateOutput(
+    entityId: string,
+    updates: { type?: string; description?: string },
+  ): Promise<BridgeResult>;
 
   connectNodes(
     args: ConnectArgs,
@@ -167,6 +213,21 @@ export interface ToolBridgeApi {
     subgraphName: string,
   ): Promise<BridgeResult & { subgraphTaskId?: string }>;
   unpackSubgraph(taskEntityId: string): Promise<BridgeResult>;
+
+  addStickyNote(
+    args: AddStickyNoteArgs,
+  ): Promise<BridgeResult & { stickyNoteId?: string }>;
+  updateStickyNote(
+    noteId: string,
+    updates: StickyNoteUpdates,
+  ): Promise<BridgeResult>;
+  deleteStickyNote(noteId: string): Promise<BridgeResult>;
+
+  moveNode(
+    entityId: string,
+    position: { x: number; y: number },
+  ): Promise<BridgeResult>;
+  autoLayout(algorithm?: LayoutAlgorithm): Promise<BridgeResult>;
 
   validatePipeline(): Promise<ValidationResult>;
 

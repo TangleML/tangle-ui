@@ -13,6 +13,7 @@ import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
 import { useBackend } from "@/providers/BackendProvider";
 import { ONBOARDING_MY_RUN_COUNT_KEY } from "@/providers/OnboardingProvider/onboardingQueryKeys";
+import { useRunSubmissionAnnotations } from "@/providers/RunSubmissionScopeProvider";
 import { useTourMockBackend } from "@/providers/TourProvider/tourMockBackend";
 import { getDefaultRunPath } from "@/routes/runRoutes";
 import { updateRunAnnotation } from "@/services/pipelineRunService";
@@ -48,6 +49,7 @@ function useSubmitPipeline() {
   const { getToken } = useAuthLocalStorage();
 
   const { backendUrl } = useBackend();
+  const runAnnotations = useRunSubmissionAnnotations();
 
   const authorizationToken = useRef<string | undefined>(getToken());
 
@@ -75,6 +77,7 @@ function useSubmitPipeline() {
         submitPipelineRun(componentSpec, backendUrl, {
           authorizationToken: authorizationToken.current,
           taskArguments,
+          runAnnotations,
           onSuccess: (data) => {
             resolve(data);
             onSuccess(data);

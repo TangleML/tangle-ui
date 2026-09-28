@@ -9,10 +9,18 @@ import {
   Task,
 } from "@/models/componentSpec";
 import { IncrementingIdGenerator } from "@/models/componentSpec/factories/idGenerator";
+import { getFlexNodes } from "@/models/componentSpec/queries/flexNodes";
 import { YamlDeserializer } from "@/models/componentSpec/serialization/yamlDeserializer";
 import { ONBOARDING_MY_RUN_COUNT_KEY } from "@/providers/OnboardingProvider/onboardingQueryKeys";
 import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
 import { hydrateComponentReference } from "@/services/componentService";
+import {
+  EDITOR_POSITION_ANNOTATION,
+  PIPELINE_NOTES_ANNOTATION,
+  PIPELINE_TAGS_ANNOTATION,
+  RUN_NAME_TEMPLATE_ANNOTATION,
+  TASK_COLOR_ANNOTATION,
+} from "@/utils/annotationKeys";
 
 vi.mock("@/services/componentService", () => ({
   hydrateComponentReference: vi.fn(async (ref) => ref),
@@ -184,6 +192,25 @@ function makeNestedBridge(extraInnerTasks?: Record<string, unknown>) {
   return { bridge, spec, undo, inner: preprocess.subgraphSpec };
 }
 
+function makeInnerActiveBridge() {
+  const spec = new YamlDeserializer(new IncrementingIdGenerator()).deserialize(
+    nestedPipelineYaml(),
+  );
+  const preprocess = spec.tasks.find((t) => t.name === "Preprocess");
+  if (!preprocess?.subgraphSpec) {
+    throw new Error("Preprocess did not deserialize as a subgraph");
+  }
+  const inner = preprocess.subgraphSpec;
+  const bridge = createEditorToolBridge({
+    getSpec: () => spec,
+    getActiveSpec: () => inner,
+    getActiveSubgraphPath: () => ["Preprocess"],
+    getActiveSubgraphTaskId: () => preprocess.$id,
+    undo: new RecordingUndo(),
+  });
+  return { bridge, spec, inner, activeSubgraphTaskId: preprocess.$id };
+}
+
 function taskId(spec: ComponentSpec, name: string): string {
   const task = spec.tasks.find((t) => t.name === name);
   if (!task) throw new Error(`No task named ${name}`);
@@ -285,6 +312,177 @@ describe("createEditorToolBridge", () => {
       expect(spec.description).toBe("hi");
       expect(undo.labels).toContain("Update pipeline description");
     });
+
+    it("setPipelineNotes writes and clears the notes annotation", async () => {
+      const { bridge, undo, spec } = makeBridge();
+
+      expect(
+        await bridge.setPipelineNotes("Owned by the ranking team", null),
+      ).toEqual({ success: true });
+      expect(spec.annotations.get(PIPELINE_NOTES_ANNOTATION)).toBe(
+        "Owned by the ranking team",
+      );
+      expect(undo.labels).toContain("Update pipeline notes");
+
+      await bridge.setPipelineNotes("", null);
+      expect(spec.annotations.has(PIPELINE_NOTES_ANNOTATION)).toBe(false);
+    });
+
+    it("setPipelineTags replaces the whole list and clears on empty", async () => {
+      const { bridge, undo, spec } = makeBridge();
+
+      expect(
+        await bridge.setPipelineTags(["ranking", " nightly "], null),
+      ).toEqual({
+        success: true,
+      });
+      expect(spec.annotations.get(PIPELINE_TAGS_ANNOTATION)).toEqual([
+        "ranking",
+        "nightly",
+      ]);
+      expect(undo.labels).toContain("Update pipeline tags");
+
+      await bridge.setPipelineTags([], null);
+      expect(spec.annotations.has(PIPELINE_TAGS_ANNOTATION)).toBe(false);
+    });
+
+    it("setRunNameTemplate writes and clears the template", async () => {
+      const { bridge, undo, spec } = makeBridge();
+
+      expect(
+        await bridge.setRunNameTemplate("nightly ${date.short}", null),
+      ).toEqual({
+        success: true,
+      });
+      expect(spec.annotations.get(RUN_NAME_TEMPLATE_ANNOTATION)).toBe(
+        "nightly ${date.short}",
+      );
+      expect(undo.labels).toContain("Update run name template");
+
+      await bridge.setRunNameTemplate("", null);
+      expect(spec.annotations.has(RUN_NAME_TEMPLATE_ANNOTATION)).toBe(false);
+    });
+
+    it("refuses a run name template naming an input the graph does not have", async () => {
+      const { bridge, spec } = makeBridge();
+
+      const result = await bridge.setRunNameTemplate(
+        "run ${arguments.nope}",
+        null,
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("nope");
+      expect(result.error).toContain("data");
+      expect(spec.annotations.has(RUN_NAME_TEMPLATE_ANNOTATION)).toBe(false);
+
+      expect(
+        await bridge.setRunNameTemplate("run ${arguments.data}", null),
+      ).toEqual({ success: true });
+    });
+
+    it("validates the run name template against the subgraph's own inputs", async () => {
+      const { bridge, inner, activeSubgraphTaskId } = makeInnerActiveBridge();
+
+      const rootInput = await bridge.setRunNameTemplate(
+        "${arguments.raw_path}",
+        activeSubgraphTaskId,
+      );
+      expect(rootInput.success).toBe(false);
+      expect(inner.annotations.has(RUN_NAME_TEMPLATE_ANNOTATION)).toBe(false);
+
+      expect(
+        await bridge.setRunNameTemplate(
+          "${arguments.path}",
+          activeSubgraphTaskId,
+        ),
+      ).toEqual({ success: true });
+      expect(inner.annotations.get(RUN_NAME_TEMPLATE_ANNOTATION)).toBe(
+        "${arguments.path}",
+      );
+    });
+
+    it("getPipelineState surfaces notes, tags and the run name template", async () => {
+      const { bridge } = makeBridge();
+      await bridge.setPipelineNotes("read me", null);
+      await bridge.setPipelineTags(["ranking"], null);
+      await bridge.setRunNameTemplate("${date.short}", null);
+
+      const state = await bridge.getPipelineState();
+
+      expect(state.notes).toBe("read me");
+      expect(state.tags).toEqual(["ranking"]);
+      expect(state.runNameTemplate).toBe("${date.short}");
+    });
+
+    it("reads and writes the notes of the subgraph the user is inside", async () => {
+      const { bridge, spec, inner, activeSubgraphTaskId } =
+        makeInnerActiveBridge();
+      inner.annotations.set(PIPELINE_NOTES_ANNOTATION, "inner notes");
+
+      expect((await bridge.getPipelineState()).notes).toBe("inner notes");
+
+      await bridge.setPipelineNotes(
+        "inner notes, extended",
+        activeSubgraphTaskId,
+      );
+
+      expect(inner.annotations.get(PIPELINE_NOTES_ANNOTATION)).toBe(
+        "inner notes, extended",
+      );
+      expect(spec.annotations.has(PIPELINE_NOTES_ANNOTATION)).toBe(false);
+    });
+
+    it("refuses a metadata write aimed at a graph the user has since left", async () => {
+      const { bridge, inner, activeSubgraphTaskId } = makeInnerActiveBridge();
+      inner.annotations.set(PIPELINE_NOTES_ANNOTATION, "inner notes");
+
+      const staleRoot = await bridge.setPipelineNotes("root notes", null);
+      expect(staleRoot.success).toBe(false);
+      expect(staleRoot.error).toContain("moved to a different graph");
+      expect(inner.annotations.get(PIPELINE_NOTES_ANNOTATION)).toBe(
+        "inner notes",
+      );
+
+      const { bridge: rootBridge, spec } = makeBridge();
+      const staleSubgraph = await bridge.setPipelineTags(
+        ["x"],
+        "task_that_is_not_open",
+      );
+      expect(staleSubgraph.success).toBe(false);
+
+      expect(
+        await rootBridge.setRunNameTemplate("t", activeSubgraphTaskId),
+      ).toMatchObject({ success: false });
+      expect(spec.annotations.has(RUN_NAME_TEMPLATE_ANNOTATION)).toBe(false);
+    });
+
+    it("refuses a tag list the tags UI could not have produced", async () => {
+      const { bridge, spec } = makeBridge();
+      await bridge.setPipelineTags(["ranking"], null);
+
+      const comma = await bridge.setPipelineTags(["ranking", "a,b"], null);
+      expect(comma.success).toBe(false);
+      expect(comma.error).toContain("comma");
+
+      const duplicate = await bridge.setPipelineTags(
+        ["ranking", "ranking"],
+        null,
+      );
+      expect(duplicate.success).toBe(false);
+      expect(duplicate.error).toContain("more than once");
+
+      const tooMany = await bridge.setPipelineTags(
+        Array.from({ length: 11 }, (_, i) => `tag-${i}`),
+        null,
+      );
+      expect(tooMany.success).toBe(false);
+      expect(tooMany.error).toContain("at most 10");
+
+      expect(spec.annotations.get(PIPELINE_TAGS_ANNOTATION)).toEqual([
+        "ranking",
+      ]);
+    });
   });
 
   describe("tasks", () => {
@@ -361,6 +559,71 @@ describe("createEditorToolBridge", () => {
     });
   });
 
+  describe("task colour", () => {
+    it("colours several tasks at once and clears with transparent", async () => {
+      const { bridge, spec, undo } = makeBridge();
+
+      expect(await bridge.setTaskColor(["task_1"], "#C8E6C9")).toEqual({
+        success: true,
+      });
+      expect(spec.tasks[0]?.annotations.get(TASK_COLOR_ANNOTATION)).toBe(
+        "#C8E6C9",
+      );
+      expect(undo.labels).toContain("Batch task color update");
+
+      await bridge.setTaskColor(["task_1"], "transparent");
+      expect(spec.tasks[0]?.annotations.has(TASK_COLOR_ANNOTATION)).toBe(false);
+    });
+
+    it("colours tasks that live in different subgraphs in one call", async () => {
+      const { bridge, spec, inner } = makeNestedBridge();
+
+      const result = await bridge.setTaskColor(
+        [taskId(spec, "Train"), taskId(inner, "DropNulls")],
+        "#BBDEFB",
+      );
+
+      expect(result).toEqual({ success: true });
+      expect(
+        spec.tasks
+          .find((t) => t.name === "Train")
+          ?.annotations.get(TASK_COLOR_ANNOTATION),
+      ).toBe("#BBDEFB");
+      expect(inner.tasks[0]?.annotations.get(TASK_COLOR_ANNOTATION)).toBe(
+        "#BBDEFB",
+      );
+    });
+
+    it("changes nothing when any id or the colour is bad", async () => {
+      const { bridge, spec } = makeBridge();
+
+      const badColor = await bridge.setTaskColor(["task_1"], "chartreuse");
+      expect(badColor.success).toBe(false);
+      expect(badColor.error).toContain("#FFF9C4");
+
+      const badId = await bridge.setTaskColor(["task_1", "nope"], "#C8E6C9");
+      expect(badId.success).toBe(false);
+      expect(badId.error).toBe(
+        'No task with $id "nope" exists in this pipeline.',
+      );
+
+      const empty = await bridge.setTaskColor([], "#C8E6C9");
+      expect(empty.success).toBe(false);
+
+      expect(spec.tasks[0]?.annotations.has(TASK_COLOR_ANNOTATION)).toBe(false);
+    });
+
+    it("serializes a task's colour only once it has one", async () => {
+      const { bridge } = makeBridge();
+
+      expect((await bridge.getPipelineState()).tasks[0]?.color).toBeUndefined();
+
+      await bridge.setTaskColor(["task_1"], "#D1C4E9");
+
+      expect((await bridge.getPipelineState()).tasks[0]?.color).toBe("#D1C4E9");
+    });
+  });
+
   describe("inputs", () => {
     it("addInput sets type, description, default, and optional in one chain", async () => {
       const { bridge, undo, spec } = makeBridge();
@@ -393,6 +656,87 @@ describe("createEditorToolBridge", () => {
       expect(result.success).toBe(true);
       expect(spec.inputs[0].name).toBe("renamed_input");
     });
+
+    it("updateInput changes only the fields passed, as one undo step", async () => {
+      const { bridge, spec, undo } = makeBridge();
+      await bridge.updateInput("input_1", {
+        description: "cutoff",
+        defaultValue: "0.5",
+      });
+      undo.labels.length = 0;
+
+      const result = await bridge.updateInput("input_1", {
+        type: "Integer",
+        optional: true,
+      });
+
+      expect(result).toEqual({ success: true });
+      expect(spec.inputs[0].type).toBe("Integer");
+      expect(spec.inputs[0].optional).toBe(true);
+      expect(spec.inputs[0].description).toBe("cutoff");
+      expect(spec.inputs[0].defaultValue).toBe("0.5");
+      expect(undo.labels[0]).toBe("Update input");
+    });
+
+    it("updateInput clears a text field given an empty string", async () => {
+      const { bridge, spec } = makeBridge();
+      await bridge.updateInput("input_1", { description: "cutoff" });
+
+      await bridge.updateInput("input_1", { description: "" });
+
+      expect(spec.inputs[0].description).toBe("");
+    });
+
+    it("updateInput overwrites a value the user typed, not just the default", async () => {
+      const { bridge, spec } = makeBridge();
+      spec.inputs[0]?.setValue("typed-by-hand");
+
+      await bridge.updateInput("input_1", { defaultValue: "0.5" });
+
+      expect(spec.inputs[0]?.value).toBe("0.5");
+      expect(spec.inputs[0]?.defaultValue).toBe("0.5");
+      const state = await bridge.getPipelineState();
+      expect(state.inputs[0]?.default).toBe("0.5");
+    });
+
+    it("updateInput clears the type rather than storing an empty string", async () => {
+      const { bridge, spec } = makeBridge();
+
+      await bridge.updateInput("input_1", { type: "" });
+
+      expect(spec.inputs[0]?.type).toBeUndefined();
+      const state = await bridge.getPipelineState();
+      expect(state.inputs[0]?.type).toBeUndefined();
+    });
+
+    it("updateOutput clears the type rather than storing an empty string", async () => {
+      const { bridge, spec } = makeBridge();
+
+      await bridge.updateOutput("output_1", { type: "" });
+
+      expect(spec.outputs[0]?.type).toBeUndefined();
+    });
+
+    it("updateInput refuses an unknown id and an empty update", async () => {
+      const { bridge } = makeBridge();
+
+      expect(await bridge.updateInput("nope", { type: "Integer" })).toEqual({
+        success: false,
+        error: 'No input with $id "nope" exists in this pipeline.',
+      });
+      const empty = await bridge.updateInput("input_1", {});
+      expect(empty.success).toBe(false);
+      expect(empty.error).toContain("no fields to update");
+    });
+
+    it("updateInput rejects an $id that is not an input", async () => {
+      const { bridge } = makeBridge();
+
+      const result = await bridge.updateInput("task_1", { type: "Integer" });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("not an input");
+    });
   });
 
   describe("outputs", () => {
@@ -422,6 +766,32 @@ describe("createEditorToolBridge", () => {
       const result = await bridge.renameOutput("output_1", "renamed_output");
       expect(result.success).toBe(true);
       expect(spec.outputs[0].name).toBe("renamed_output");
+    });
+
+    it("updateOutput changes type and description as one undo step", async () => {
+      const { bridge, spec, undo } = makeBridge();
+
+      const result = await bridge.updateOutput("output_1", {
+        type: "Json",
+        description: "summary",
+      });
+
+      expect(result).toEqual({ success: true });
+      expect(spec.outputs[0].type).toBe("Json");
+      expect(spec.outputs[0].description).toBe("summary");
+      expect(undo.labels).toContain("Update output");
+    });
+
+    it("updateOutput refuses an unknown id and an empty update", async () => {
+      const { bridge } = makeBridge();
+
+      expect(await bridge.updateOutput("nope", { type: "Json" })).toEqual({
+        success: false,
+        error: 'No output with $id "nope" exists in this pipeline.',
+      });
+      const empty = await bridge.updateOutput("output_1", {});
+      expect(empty.success).toBe(false);
+      expect(empty.error).toContain("no fields to update");
     });
   });
 
@@ -918,6 +1288,25 @@ describe("createEditorToolBridge", () => {
       expect(inner.inputs.map((i) => i.name)).toEqual(["path"]);
     });
 
+    it("updateInput on a subgraph input retypes the port on the subgraph task", async () => {
+      const { bridge, spec, inner } = makeNestedBridge();
+      const preprocessId = taskId(spec, "Preprocess");
+      const innerInput = inner.inputs.find((i) => i.name === "path");
+
+      const result = await bridge.updateInput(innerInput!.$id, {
+        type: "Integer",
+        description: "row count",
+      });
+
+      expect(result).toEqual({ success: true });
+      expect(innerInput?.type).toBe("Integer");
+      expect(
+        spec.tasks
+          .find((t) => t.$id === preprocessId)
+          ?.resolvedComponentSpec?.inputs?.find((i) => i.name === "path")?.type,
+      ).toBe("Integer");
+    });
+
     it("refuses a destination that is not a subgraph", async () => {
       const { bridge, spec } = makeNestedBridge();
 
@@ -944,6 +1333,431 @@ describe("createEditorToolBridge", () => {
         'No task with $id "nope" exists in this pipeline.',
       );
       expect(spec.outputs).toHaveLength(0);
+    });
+  });
+
+  describe("sticky notes", () => {
+    it("addStickyNote records the assistant as the author", async () => {
+      const { bridge, spec, undo } = makeBridge();
+
+      const result = await bridge.addStickyNote({
+        title: "Careful",
+        content: "Threshold came from the Q3 eval",
+        color: "#C8E6C9",
+      });
+
+      expect(result.success).toBe(true);
+      const notes = getFlexNodes(spec);
+      expect(notes).toHaveLength(1);
+      expect(notes[0]).toMatchObject({
+        id: result.stickyNoteId,
+        properties: {
+          title: "Careful",
+          content: "Threshold came from the Q3 eval",
+          color: "#C8E6C9",
+        },
+        metadata: { createdBy: "AI assistant" },
+      });
+      expect(undo.labels).toContain("Add flex node");
+    });
+
+    it("places a note at arbitrary coordinates with nothing to attach it to", async () => {
+      const spec = new ComponentSpec({ $id: "spec_1", name: "Pipe" });
+      const undo = new RecordingUndo();
+      const bridge = createEditorToolBridge({
+        getSpec: () => spec,
+        getActiveSubgraphPath: () => [],
+        getActiveSubgraphTaskId: () => undefined,
+        undo,
+      });
+
+      const result = await bridge.addStickyNote({
+        title: "Legacy branch",
+        position: { x: -900, y: -400 },
+      });
+
+      expect(result.success).toBe(true);
+      expect(getFlexNodes(spec)[0]?.position).toEqual({ x: -900, y: -400 });
+    });
+
+    it("places a note in empty space inside a subgraph", async () => {
+      const { bridge, spec, inner } = makeNestedBridge();
+
+      const result = await bridge.addStickyNote({
+        content: "everything below here is WIP",
+        position: { x: 2000, y: 2000 },
+        inSubgraphTaskId: taskId(spec, "Preprocess"),
+      });
+
+      expect(result.success).toBe(true);
+      expect(getFlexNodes(spec)).toHaveLength(0);
+      expect(getFlexNodes(inner)[0]?.position).toEqual({ x: 2000, y: 2000 });
+    });
+
+    it("anchors a note above the entity it annotates, in that entity's graph", async () => {
+      const { bridge, spec, inner } = makeNestedBridge();
+      const dropNulls = inner.tasks.find((t) => t.name === "DropNulls");
+      dropNulls?.annotations.set(EDITOR_POSITION_ANNOTATION, {
+        x: 300,
+        y: 400,
+      });
+
+      const result = await bridge.addStickyNote({
+        content: "Drops rows with any null",
+        anchorEntityId: dropNulls?.$id,
+      });
+
+      expect(result.success).toBe(true);
+      expect(getFlexNodes(spec)).toHaveLength(0);
+      const [note] = getFlexNodes(inner);
+      expect(note?.position).toEqual({ x: 300, y: 260 });
+    });
+
+    it("anchors above where an unplaced entity actually renders", async () => {
+      const { bridge, inner } = makeNestedBridge();
+
+      const result = await bridge.addStickyNote({
+        content: "Drops rows with any null",
+        anchorEntityId: taskId(inner, "DropNulls"),
+      });
+
+      expect(result.success).toBe(true);
+      expect(getFlexNodes(inner)[0]?.position).toEqual({ x: 200, y: -140 });
+    });
+
+    it("lets an explicit position override the anchor's graph", async () => {
+      const { bridge, spec, inner } = makeNestedBridge();
+
+      const result = await bridge.addStickyNote({
+        content: "everything here is legacy",
+        anchorEntityId: taskId(inner, "DropNulls"),
+        position: { x: -500, y: 120 },
+      });
+
+      expect(result.success).toBe(true);
+      expect(getFlexNodes(inner)).toHaveLength(0);
+      expect(getFlexNodes(spec)[0]?.position).toEqual({ x: -500, y: 120 });
+    });
+
+    it("refuses an anchor that contradicts inSubgraphTaskId", async () => {
+      const { bridge, spec, inner } = makeNestedBridge();
+
+      const result = await bridge.addStickyNote({
+        content: "anywhere",
+        anchorEntityId: taskId(spec, "Train"),
+        inSubgraphTaskId: taskId(spec, "Preprocess"),
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("does not live in the subgraph");
+      expect(getFlexNodes(spec)).toHaveLength(0);
+      expect(getFlexNodes(inner)).toHaveLength(0);
+    });
+
+    it("refuses a colour the picker could not produce", async () => {
+      const { bridge, spec } = makeBridge();
+
+      const result = await bridge.addStickyNote({
+        content: "note",
+        color: "chartreuse",
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("#FFF9C4");
+      expect(getFlexNodes(spec)).toHaveLength(0);
+    });
+
+    it("refuses a note too small to read or select", async () => {
+      const { bridge, spec } = makeBridge();
+
+      const result = await bridge.addStickyNote({
+        content: "note",
+        size: { width: 10, height: 10 },
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("cannot be smaller than");
+      expect(getFlexNodes(spec)).toHaveLength(0);
+    });
+
+    it("refuses to shrink an existing note below the minimum", async () => {
+      const { bridge, spec } = makeBridge();
+      const { stickyNoteId } = await bridge.addStickyNote({
+        content: "note",
+        size: { width: 300, height: 200 },
+      });
+
+      const result = await bridge.updateStickyNote(stickyNoteId!, {
+        size: { width: 300, height: 4 },
+      });
+
+      expect(result.success).toBe(false);
+      expect(getFlexNodes(spec)[0]?.size).toEqual({ width: 300, height: 200 });
+    });
+
+    it("updateStickyNote changes only the fields passed, as one undo step", async () => {
+      const { bridge, spec, undo } = makeBridge();
+      const { stickyNoteId } = await bridge.addStickyNote({
+        title: "Draft",
+        content: "old",
+        color: "#FFF9C4",
+      });
+      undo.labels.length = 0;
+
+      const result = await bridge.updateStickyNote(stickyNoteId!, {
+        content: "new",
+        size: { width: 300, height: 200 },
+      });
+
+      expect(result).toEqual({ success: true });
+      const [note] = getFlexNodes(spec);
+      expect(note?.properties).toMatchObject({
+        title: "Draft",
+        content: "new",
+        color: "#FFF9C4",
+      });
+      expect(note?.size).toEqual({ width: 300, height: 200 });
+      expect(undo.labels[0]).toBe("Update sticky note");
+    });
+
+    it("resolves a note that lives inside a subgraph", async () => {
+      const { bridge, spec, inner } = makeNestedBridge();
+      const { stickyNoteId } = await bridge.addStickyNote({
+        content: "inner",
+        inSubgraphTaskId: taskId(spec, "Preprocess"),
+      });
+
+      expect(getFlexNodes(inner)).toHaveLength(1);
+      expect(
+        await bridge.updateStickyNote(stickyNoteId!, {
+          content: "inner, revised",
+        }),
+      ).toEqual({ success: true });
+      expect(getFlexNodes(inner)[0]?.properties.content).toBe("inner, revised");
+
+      expect(await bridge.deleteStickyNote(stickyNoteId!)).toEqual({
+        success: true,
+      });
+      expect(getFlexNodes(inner)).toHaveLength(0);
+    });
+
+    it("reports a missing note rather than silently doing nothing", async () => {
+      const { bridge } = makeBridge();
+
+      await expect(
+        bridge.updateStickyNote("flex_nope", { content: "x" }),
+      ).resolves.toEqual({
+        success: false,
+        error: 'No sticky note with id "flex_nope" exists in this pipeline.',
+      });
+      await expect(bridge.deleteStickyNote("flex_nope")).resolves.toEqual({
+        success: false,
+        error: 'No sticky note with id "flex_nope" exists in this pipeline.',
+      });
+    });
+
+    it("refuses an update with no fields to change", async () => {
+      const { bridge } = makeBridge();
+      const { stickyNoteId } = await bridge.addStickyNote({ content: "note" });
+
+      const result = await bridge.updateStickyNote(stickyNoteId!, {});
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("no fields to update");
+    });
+
+    it("refuses to edit or delete a locked note, but can unlock it", async () => {
+      const { bridge, spec } = makeBridge();
+      const { stickyNoteId } = await bridge.addStickyNote({ content: "note" });
+      await bridge.updateStickyNote(stickyNoteId!, { locked: true });
+
+      expect(
+        await bridge.updateStickyNote(stickyNoteId!, { content: "nope" }),
+      ).toMatchObject({
+        success: false,
+        error: expect.stringContaining("locked"),
+      });
+      expect(await bridge.deleteStickyNote(stickyNoteId!)).toMatchObject({
+        success: false,
+        error: expect.stringContaining("locked"),
+      });
+
+      expect(
+        await bridge.updateStickyNote(stickyNoteId!, { locked: false }),
+      ).toEqual({ success: true });
+      expect(getFlexNodes(spec)[0]?.locked).toBe(false);
+    });
+
+    it("deleteStickyNote removes it from the owning spec", async () => {
+      const { bridge, spec, undo } = makeBridge();
+      const { stickyNoteId } = await bridge.addStickyNote({ content: "note" });
+
+      const result = await bridge.deleteStickyNote(stickyNoteId!);
+
+      expect(result).toEqual({ success: true });
+      expect(getFlexNodes(spec)).toHaveLength(0);
+      expect(undo.labels).toContain("Remove flex node");
+    });
+
+    it("keeps a new task clear of an existing note", async () => {
+      const spec = new ComponentSpec({ $id: "spec_1", name: "Pipe" });
+      const undo = new RecordingUndo();
+      const bridge = createEditorToolBridge({
+        getSpec: () => spec,
+        getActiveSubgraphPath: () => [],
+        getActiveSubgraphTaskId: () => undefined,
+        undo,
+      });
+      await bridge.addStickyNote({
+        content: "note",
+        position: { x: 1000, y: 0 },
+        size: { width: 200, height: 100 },
+      });
+
+      await bridge.addTask({
+        name: "Loader",
+        componentRef: containerComponent("Loader", "loader:1", "path", "table"),
+      });
+
+      const position = spec.tasks[0]?.annotations.get(
+        EDITOR_POSITION_ANNOTATION,
+      ) as { x: number } | undefined;
+      expect(position?.x).toBeGreaterThan(1200);
+    });
+  });
+
+  describe("layout", () => {
+    it("moveNode writes a task's position through its manifest", async () => {
+      const { bridge, spec } = makeBridge();
+
+      const result = await bridge.moveNode("task_1", { x: 600, y: 120 });
+
+      expect(result).toEqual({ success: true });
+      expect(
+        spec.tasks[0]?.annotations.get(EDITOR_POSITION_ANNOTATION),
+      ).toEqual({ x: 600, y: 120 });
+    });
+
+    it("moves a sticky note and a node nested in a subgraph alike", async () => {
+      const { bridge, spec, inner } = makeNestedBridge();
+      const { stickyNoteId } = await bridge.addStickyNote({
+        content: "inner",
+        inSubgraphTaskId: taskId(spec, "Preprocess"),
+      });
+
+      expect(await bridge.moveNode(stickyNoteId!, { x: 10, y: 20 })).toEqual({
+        success: true,
+      });
+      expect(getFlexNodes(inner)[0]?.position).toEqual({ x: 10, y: 20 });
+
+      expect(
+        await bridge.moveNode(taskId(inner, "DropNulls"), { x: 30, y: 40 }),
+      ).toEqual({ success: true });
+      expect(
+        inner.tasks[0]?.annotations.get(EDITOR_POSITION_ANNOTATION),
+      ).toEqual({ x: 30, y: 40 });
+    });
+
+    it("refuses to move a locked sticky note", async () => {
+      const { bridge, spec } = makeBridge();
+      const { stickyNoteId } = await bridge.addStickyNote({ content: "note" });
+      await bridge.updateStickyNote(stickyNoteId!, { locked: true });
+
+      const result = await bridge.moveNode(stickyNoteId!, { x: 1, y: 2 });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("locked");
+      expect(getFlexNodes(spec)[0]?.position).not.toEqual({ x: 1, y: 2 });
+    });
+
+    it("moves a node to the origin, which is a coordinate like any other", async () => {
+      const { bridge } = makeBridge();
+
+      const result = await bridge.moveNode("task_1", { x: 0, y: 0 });
+
+      expect(result).toEqual({ success: true });
+      const state = await bridge.getPipelineState();
+      expect(state.tasks[0]?.position).toEqual({ x: 0, y: 0 });
+    });
+
+    it("moveNode lands as one named undo step", async () => {
+      const { bridge, undo } = makeBridge();
+
+      await bridge.moveNode("task_1", { x: 600, y: 120 });
+
+      expect(undo.labels).toContain("Move node");
+    });
+
+    it("explains that a connection has no position of its own", async () => {
+      const { bridge, spec } = makeBridge();
+      spec.addBinding(
+        new Binding({
+          $id: "bind_1",
+          sourceEntityId: "input_1",
+          sourcePortName: "data",
+          targetEntityId: "task_1",
+          targetPortName: "input",
+        }),
+      );
+
+      const result = await bridge.moveNode("bind_1", { x: 1, y: 2 });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("refers to a connection");
+    });
+
+    it("reports an unknown node id", async () => {
+      const { bridge } = makeBridge();
+
+      const result = await bridge.moveNode("nope", { x: 1, y: 2 });
+
+      expect(result).toEqual({
+        success: false,
+        error:
+          'No task, input, output or sticky note with id "nope" exists in this pipeline.',
+      });
+    });
+
+    it("autoLayout delegates to the editor's own layout command", async () => {
+      const spec = buildSpec();
+      const undo = new RecordingUndo();
+      const invokeAutoLayout = vi.fn().mockReturnValue(true);
+      const bridge = createEditorToolBridge({
+        getSpec: () => spec,
+        getActiveSubgraphPath: () => [],
+        getActiveSubgraphTaskId: () => undefined,
+        undo,
+        invokeAutoLayout,
+      });
+
+      expect(await bridge.autoLayout("dwyer")).toEqual({ success: true });
+      expect(invokeAutoLayout).toHaveBeenCalledWith("dwyer");
+    });
+
+    it("autoLayout reports failure when the canvas handler laid nothing out", async () => {
+      const spec = buildSpec();
+      const undo = new RecordingUndo();
+      const bridge = createEditorToolBridge({
+        getSpec: () => spec,
+        getActiveSubgraphPath: () => [],
+        getActiveSubgraphTaskId: () => undefined,
+        undo,
+        invokeAutoLayout: () => false,
+      });
+
+      const result = await bridge.autoLayout();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("no pipeline canvas is open");
+    });
+
+    it("autoLayout reports when no canvas is mounted to lay out", async () => {
+      const { bridge } = makeBridge();
+
+      const result = await bridge.autoLayout();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("no pipeline canvas is open");
     });
   });
 
