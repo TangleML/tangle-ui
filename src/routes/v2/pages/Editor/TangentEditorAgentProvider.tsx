@@ -66,6 +66,10 @@ export function TangentEditorAgentProvider({
       getBackendUrl,
       getAuthToken,
       getRunAnnotations: () => runAnnotationsRef.current,
+      getSavedTaskArguments: () =>
+        editorSession.pipelineFile.activePipelineFile?.savedTaskArguments ?? {},
+      prepareSourcePipeline: (backendUrl) =>
+        editorSession.autoSave.prepareRunSource(backendUrl),
       queryClient,
       undo: editorSession.undo,
     }),
