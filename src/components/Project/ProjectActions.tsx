@@ -13,25 +13,36 @@ import { useShareProjectAction } from "./useShareProjectAction";
 
 interface ProjectActionsProps {
   project: Project;
+  showRename?: boolean;
 }
 
-export function ProjectActions({ project }: ProjectActionsProps) {
+/**
+ * Tangent renames from its own header, so it asks for the list without that
+ * entry rather than offering the project two ways to be renamed.
+ */
+export function ProjectActions({
+  project,
+  showRename = true,
+}: ProjectActionsProps) {
   const [renameOpen, setRenameOpen] = useState(false);
-  const { confirmAndDelete, confirmation } = useDeleteProjectAction(project);
+  const { confirmAndDelete, isDeleting, confirmation } =
+    useDeleteProjectAction(project);
   const share = useShareProjectAction(project.id);
 
   return (
     <BlockStack gap="1">
-      <Button
-        variant="ghost"
-        size="sm"
-        className="w-full justify-start"
-        onClick={() => setRenameOpen(true)}
-        {...tracking("projects.rename_project_open")}
-      >
-        <Icon name="Pencil" size="sm" />
-        Rename project
-      </Button>
+      {showRename && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start"
+          onClick={() => setRenameOpen(true)}
+          {...tracking("projects.rename_project_open")}
+        >
+          <Icon name="Pencil" size="sm" />
+          Rename project
+        </Button>
+      )}
       <Button
         variant="ghost"
         size="sm"
@@ -46,6 +57,7 @@ export function ProjectActions({ project }: ProjectActionsProps) {
         variant="ghost"
         size="sm"
         className="w-full justify-start text-destructive hover:text-destructive"
+        disabled={isDeleting}
         onClick={() => void confirmAndDelete()}
         {...tracking("projects.delete_project_open")}
       >
@@ -53,11 +65,13 @@ export function ProjectActions({ project }: ProjectActionsProps) {
         Delete project
       </Button>
 
-      <RenameProjectDialog
-        project={project}
-        open={renameOpen}
-        onOpenChange={setRenameOpen}
-      />
+      {showRename && (
+        <RenameProjectDialog
+          project={project}
+          open={renameOpen}
+          onOpenChange={setRenameOpen}
+        />
+      )}
 
       <ConfirmationDialog {...confirmation} />
     </BlockStack>

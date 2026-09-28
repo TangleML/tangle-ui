@@ -44,6 +44,7 @@ import type { BridgeDeps } from "@/routes/v2/shared/components/AiChat/toolBridge
 import { availablePipelineName } from "@/services/localPipelines/localPipelinesService";
 import { copyRunToPipeline } from "@/services/pipelineRunService";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
+import { UNNAMED_PIPELINE } from "@/services/projects/placeholderNames";
 import { createProjectResource } from "@/services/projects/projectResourcesService";
 import { localPipelineResourceInput } from "@/services/projects/resourceDescriptor";
 import {
@@ -54,8 +55,6 @@ import { extractCanonicalName } from "@/utils/canonicalPipelineName";
 import { isValidComponentSpec } from "@/utils/componentSpec";
 import { getInitialName } from "@/utils/getComponentName";
 import { extractCloneableTaskArguments } from "@/utils/nodes/taskArguments";
-
-const UNTITLED_PIPELINE = "Untitled pipeline";
 
 interface TangentProjectAgentProviderProps {
   sessionId: string | undefined;
@@ -187,7 +186,7 @@ export function TangentProjectAgentProvider({
       runInspect,
       createPipeline: async (name) => {
         const pipelineName = await availablePipelineName(
-          name ?? UNTITLED_PIPELINE,
+          name ?? UNNAMED_PIPELINE,
         );
         const file = await createNewPipeline(storage, pipelineName);
         await createProjectResource(

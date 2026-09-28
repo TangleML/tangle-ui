@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 
 import { useDeleteProjectAction } from "@/components/Project/useDeleteProjectAction";
+import { useShareProjectAction } from "@/components/Project/useShareProjectAction";
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,14 +15,11 @@ import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Paragraph, Text } from "@/components/ui/typography";
-import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
 import { APP_ROUTES } from "@/routes/appRoutes";
 import type { ProjectSummary } from "@/services/projects/types";
 import { formatDate, formatRelativeTime } from "@/utils/date";
-import { copyToClipboard } from "@/utils/string";
 import { tracking } from "@/utils/tracking";
-import { getProjectUrl } from "@/utils/URL";
 
 import { formatResourceCounts } from "./formatResourceCounts";
 
@@ -30,7 +28,6 @@ interface ProjectCardProps {
 }
 
 export function ProjectCard({ project }: ProjectCardProps) {
-  const notify = useToastNotification();
   const navigate = useNavigate();
   // A tile is not the project's page: losing it is the whole of what the
   // delete does here, so nothing navigates away afterwards.
@@ -38,17 +35,13 @@ export function ProjectCard({ project }: ProjectCardProps) {
     project,
     { onDeleted: () => {} },
   );
+  const share = useShareProjectAction(project.id);
 
   const openDetails = () => {
     void navigate({
       to: APP_ROUTES.PROJECT_DETAIL,
       params: { projectId: project.id },
     });
-  };
-
-  const handleShare = () => {
-    copyToClipboard(getProjectUrl(project.id));
-    notify("Project URL copied to clipboard", "success");
   };
 
   return (
@@ -129,7 +122,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
             Details
           </DropdownMenuItem>
           <DropdownMenuItem
-            onSelect={handleShare}
+            onSelect={share}
             {...tracking("projects.share_project")}
           >
             <Icon name="Share2" size="sm" />
