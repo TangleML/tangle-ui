@@ -1,14 +1,32 @@
 import { reaction } from "mobx";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 import { RunViewContextPanel } from "@/routes/v2/pages/RunView/components/RunViewContextPanel";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import type { Position } from "@/routes/v2/shared/windows/types";
 import { WindowMiniButton } from "@/routes/v2/shared/windows/WindowMiniButton";
 
 const CONTEXT_PANEL_WINDOW_ID = "context-panel";
 
-export function useRunViewSelectionSync() {
+interface ContextPanelPlacement {
+  defaultDockState?: "left" | "right";
+  getInitialPosition?: () => Position;
+}
+
+const DEFAULT_CONTEXT_PANEL_PLACEMENT: ContextPanelPlacement = {
+  defaultDockState: "right",
+};
+
+export function useRunViewSelectionSync(options?: {
+  contextPanel?: ContextPanelPlacement;
+}) {
   const { editor, windows } = useSharedStores();
+  const placement = options?.contextPanel ?? DEFAULT_CONTEXT_PANEL_PLACEMENT;
+  const placementRef = useRef(placement);
+
+  useEffect(() => {
+    placementRef.current = placement;
+  });
 
   useEffect(() => {
     const dispose = reaction(
@@ -24,15 +42,19 @@ export function useRunViewSelectionSync() {
               windows.restoreWindow(CONTEXT_PANEL_WINDOW_ID);
             }
           } else {
+            const activePlacement = placementRef.current;
             windows.openWindow(<RunViewContextPanel />, {
               id: CONTEXT_PANEL_WINDOW_ID,
               title: "Properties",
-              position: { x: window.innerWidth - 340, y: 80 },
-              size: { width: 300, height: 400 },
+              position: activePlacement.getInitialPosition?.() ?? {
+                x: window.innerWidth - 340,
+                y: 80,
+              },
+              size: { width: 300, height: 500 },
               startVisible: true,
               persisted: true,
-              fillDockHeight: true,
-              defaultDockState: "right",
+              fillDockHeight: activePlacement.defaultDockState !== undefined,
+              defaultDockState: activePlacement.defaultDockState,
               onClose: () => editor.clearSelection(),
               miniContent: (
                 <WindowMiniButton

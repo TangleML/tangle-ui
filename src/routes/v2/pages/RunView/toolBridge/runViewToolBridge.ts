@@ -27,20 +27,31 @@ type ReadOnlyCsomHandlers = Pick<
   | "getPipelineState"
   | "setPipelineName"
   | "setPipelineDescription"
+  | "setPipelineNotes"
+  | "setPipelineTags"
+  | "setRunNameTemplate"
   | "addTask"
   | "deleteTask"
   | "renameTask"
+  | "setTaskColor"
   | "addInput"
   | "deleteInput"
   | "renameInput"
+  | "updateInput"
   | "addOutput"
   | "deleteOutput"
   | "renameOutput"
+  | "updateOutput"
   | "connectNodes"
   | "deleteEdge"
   | "setTaskArgument"
   | "createSubgraph"
   | "unpackSubgraph"
+  | "addStickyNote"
+  | "updateStickyNote"
+  | "deleteStickyNote"
+  | "moveNode"
+  | "autoLayout"
   | "validatePipeline"
   | "searchComponents"
 >;
@@ -72,6 +83,15 @@ function createReadOnlyCsomHandlers(deps: BridgeDeps): ReadOnlyCsomHandlers {
     async setPipelineDescription() {
       return { success: false, error: READ_ONLY_ERROR };
     },
+    async setPipelineNotes() {
+      return { success: false, error: READ_ONLY_ERROR };
+    },
+    async setPipelineTags() {
+      return { success: false, error: READ_ONLY_ERROR };
+    },
+    async setRunNameTemplate() {
+      return { success: false, error: READ_ONLY_ERROR };
+    },
     async addTask() {
       return { success: false, error: READ_ONLY_ERROR };
     },
@@ -79,6 +99,9 @@ function createReadOnlyCsomHandlers(deps: BridgeDeps): ReadOnlyCsomHandlers {
       return { success: false, error: READ_ONLY_ERROR };
     },
     async renameTask() {
+      return { success: false, error: READ_ONLY_ERROR };
+    },
+    async setTaskColor() {
       return { success: false, error: READ_ONLY_ERROR };
     },
     async addInput() {
@@ -90,6 +113,9 @@ function createReadOnlyCsomHandlers(deps: BridgeDeps): ReadOnlyCsomHandlers {
     async renameInput() {
       return { success: false, error: READ_ONLY_ERROR };
     },
+    async updateInput() {
+      return { success: false, error: READ_ONLY_ERROR };
+    },
     async addOutput() {
       return { success: false, error: READ_ONLY_ERROR };
     },
@@ -97,6 +123,9 @@ function createReadOnlyCsomHandlers(deps: BridgeDeps): ReadOnlyCsomHandlers {
       return { success: false, error: READ_ONLY_ERROR };
     },
     async renameOutput() {
+      return { success: false, error: READ_ONLY_ERROR };
+    },
+    async updateOutput() {
       return { success: false, error: READ_ONLY_ERROR };
     },
     async connectNodes() {
@@ -112,6 +141,21 @@ function createReadOnlyCsomHandlers(deps: BridgeDeps): ReadOnlyCsomHandlers {
       return { success: false, error: READ_ONLY_ERROR };
     },
     async unpackSubgraph() {
+      return { success: false, error: READ_ONLY_ERROR };
+    },
+    async addStickyNote() {
+      return { success: false, error: READ_ONLY_ERROR };
+    },
+    async updateStickyNote() {
+      return { success: false, error: READ_ONLY_ERROR };
+    },
+    async deleteStickyNote() {
+      return { success: false, error: READ_ONLY_ERROR };
+    },
+    async moveNode() {
+      return { success: false, error: READ_ONLY_ERROR };
+    },
+    async autoLayout() {
       return { success: false, error: READ_ONLY_ERROR };
     },
   };

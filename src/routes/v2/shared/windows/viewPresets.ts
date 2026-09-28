@@ -63,6 +63,33 @@ export const DEFAULT_VIEW_PRESET: ViewPreset = {
   dockAreas: DEFAULT_DOCK_AREAS,
 };
 
+const EMBEDDED_DOCK_AREAS: PresetDockAreas = {
+  left: [],
+  right: [
+    "pipeline-details",
+    "runs-and-submission",
+    COMPONENT_SEARCH_WINDOW_ID,
+    COMPONENT_LIBRARY_WINDOW_ID,
+    "history",
+    "recent-runs",
+  ],
+};
+
+export const EMBEDDED_VIEW_PRESET: ViewPreset = {
+  label: "Embedded",
+  description:
+    "Pipeline Details, Runs & Submissions, Components, History, Recent Runs",
+  visible: new Set([
+    "runs-and-submission",
+    "pipeline-details",
+    COMPONENT_SEARCH_WINDOW_ID,
+    COMPONENT_LIBRARY_WINDOW_ID,
+    "history",
+    "recent-runs",
+  ]),
+  dockAreas: EMBEDDED_DOCK_AREAS,
+};
+
 export const VIEW_PRESETS: ViewPreset[] = [
   DEFAULT_VIEW_PRESET,
   {

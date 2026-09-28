@@ -14,11 +14,12 @@ import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButt
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { tracking } from "@/utils/tracking";
 
-import { triggerSubmitRun, triggerSubmitWithArguments } from "./QuickRunButton";
+import { useQuickRunSubmitter } from "@/routes/v2/pages/Editor/components/QuickRunSubmitterContext";
 
 export const RunsMenu = observer(function RunsMenu() {
   const { track } = useAnalytics();
   const { navigation } = useSharedStores();
+  const { submitRun, submitWithArguments } = useQuickRunSubmitter();
   const rootSpec = navigation.rootSpec;
   const allIssues = rootSpec?.allValidationIssues ?? [];
   const errorCount = allIssues.filter((i) => i.severity === "error").length;
@@ -35,7 +36,7 @@ export const RunsMenu = observer(function RunsMenu() {
         <DropdownMenuItem
           onSelect={() => {
             track("v2.pipeline_editor.runs_menu.submit_run.click");
-            triggerSubmitRun();
+            submitRun();
           }}
           disabled={hasErrors}
         >
@@ -45,7 +46,7 @@ export const RunsMenu = observer(function RunsMenu() {
         <DropdownMenuItem
           onSelect={() => {
             track("v2.pipeline_editor.runs_menu.submit_with_arguments.click");
-            triggerSubmitWithArguments();
+            submitWithArguments();
           }}
           disabled={hasErrors}
         >
