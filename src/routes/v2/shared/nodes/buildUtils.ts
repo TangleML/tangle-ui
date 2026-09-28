@@ -1,4 +1,4 @@
-import type { Edge, Node } from "@xyflow/react";
+import type { Edge, Node, XYPosition } from "@xyflow/react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 import {
@@ -8,12 +8,22 @@ import {
 
 const TASK_OFFSET = 200;
 const IO_OFFSET = 150;
+const INPUT_COLUMN_X = -200;
+const OUTPUT_COLUMN_X = 800;
 
-export function resolvePosition(
-  position: { x: number; y: number },
+interface PositionedEntity {
+  annotations: {
+    has(key: string): boolean;
+    get(key: string): unknown;
+  };
+}
+
+function resolvePosition(
+  entity: PositionedEntity,
   fallback: { x: number; y: number },
 ): { x: number; y: number } {
-  return position.x === 0 && position.y === 0 ? fallback : position;
+  if (!entity.annotations.has(EDITOR_POSITION_ANNOTATION)) return fallback;
+  return entity.annotations.get(EDITOR_POSITION_ANNOTATION) as XYPosition;
 }
 
 export function ioDefaultPosition(
@@ -30,6 +40,33 @@ export function taskDefaultPosition(index: number): { x: number; y: number } {
   };
 }
 
+/**
+ * Reading the position annotation directly is not equivalent: the codec returns
+ * `{x:0,y:0}` for an entity that was never placed, where the canvas draws it on
+ * an index-based default.
+ */
+export function resolveEntityPositions(
+  spec: ComponentSpec,
+): Map<string, XYPosition> {
+  const positions = new Map<string, XYPosition>();
+  for (const [index, input] of [...spec.inputs].entries()) {
+    positions.set(
+      input.$id,
+      resolvePosition(input, ioDefaultPosition(index, INPUT_COLUMN_X)),
+    );
+  }
+  for (const [index, output] of [...spec.outputs].entries()) {
+    positions.set(
+      output.$id,
+      resolvePosition(output, ioDefaultPosition(index, OUTPUT_COLUMN_X)),
+    );
+  }
+  for (const [index, task] of [...spec.tasks].entries()) {
+    positions.set(task.$id, resolvePosition(task, taskDefaultPosition(index)));
+  }
+  return positions;
+}
+
 function parseZIndex(raw: unknown): number | undefined {
   if (typeof raw === "number") return Math.round(raw);
   if (typeof raw === "string") {
@@ -40,24 +77,17 @@ function parseZIndex(raw: unknown): number | undefined {
 }
 
 export function createEntityNode(
-  entity: {
-    $id: string;
-    annotations: { get(key: string): unknown };
-  },
+  entity: PositionedEntity & { $id: string },
   nodeType: string,
   fallback: { x: number; y: number },
   data: Record<string, unknown>,
   domAttributes?: Record<string, string>,
 ): Node {
-  const position = entity.annotations.get(EDITOR_POSITION_ANNOTATION) as {
-    x: number;
-    y: number;
-  };
   const zIndex = parseZIndex(entity.annotations.get(ZINDEX_ANNOTATION));
   return {
     id: entity.$id,
     type: nodeType,
-    position: resolvePosition(position, fallback),
+    position: resolvePosition(entity, fallback),
     zIndex,
     data,
     domAttributes,
