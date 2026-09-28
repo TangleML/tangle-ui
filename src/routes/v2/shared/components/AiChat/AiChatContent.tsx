@@ -7,7 +7,7 @@ import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import { useAuthLocalStorage } from "@/components/shared/Authentication/useAuthLocalStorage";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
-import { BlockStack } from "@/components/ui/layout";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
 import {
   Tooltip,
   TooltipContent,
@@ -155,12 +155,12 @@ export const AiChatContent = observer(function AiChatContent({
   return (
     <BlockStack fill>
       {hasMessages && (
-        <WindowStickyHeader className="border-b w-full">
-          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 p-2">
+        <WindowStickyHeader className="border-b w-full shrink-0">
+          <InlineStack gap="2" wrap="nowrap" className="w-full min-w-0 p-2">
             <Text
               size="sm"
               weight="semibold"
-              className="truncate"
+              className="min-w-0 flex-1 truncate"
               title={threadTitle}
             >
               {threadTitle}
@@ -178,7 +178,7 @@ export const AiChatContent = observer(function AiChatContent({
               </TooltipTrigger>
               <TooltipContent side="bottom">New chat</TooltipContent>
             </Tooltip>
-          </div>
+          </InlineStack>
         </WindowStickyHeader>
       )}
       <ChatMessageList

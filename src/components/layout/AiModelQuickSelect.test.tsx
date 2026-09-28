@@ -32,7 +32,9 @@ describe("AiModelQuickSelect", () => {
 
     render(<AiModelQuickSelect />);
 
-    expect(screen.queryByRole("combobox", { name: "AI model" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /^AI model and thinking:/ }),
+    ).toBeNull();
   });
 
   it("does not render when both AI features are disabled", () => {
@@ -48,7 +50,9 @@ describe("AiModelQuickSelect", () => {
 
     render(<AiModelQuickSelect />);
 
-    expect(screen.queryByRole("combobox", { name: "AI model" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /^AI model and thinking:/ }),
+    ).toBeNull();
   });
 
   it("shows configured model choices when component search is enabled", () => {
@@ -64,14 +68,23 @@ describe("AiModelQuickSelect", () => {
 
     render(<AiModelQuickSelect />);
 
-    fireEvent.click(screen.getByRole("combobox", { name: "AI model" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /^AI model and thinking:/ }),
+    );
 
+    fireEvent.click(screen.getByRole("button", { name: "Choose a model" }));
+    expect(screen.queryByText("Provider default")).not.toBeInTheDocument();
     expect(
-      screen.getByRole("option", { name: "Provider default" }),
+      screen.getByRole("button", { name: "GPT-6 Astra" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "GPT-5.5" })).toBeInTheDocument();
     expect(
-      screen.getByRole("option", { name: "GPT-4.1 mini" }),
+      screen.getByRole("button", { name: "GPT-6 Sol" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "GPT-6 Luna" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "gpt-4.1-mini" }),
     ).toBeInTheDocument();
   });
 
@@ -89,27 +102,18 @@ describe("AiModelQuickSelect", () => {
     render(<AiModelQuickSelect />);
 
     expect(
-      screen.getByRole("combobox", { name: "AI model" }),
+      screen.getByRole("button", { name: /^AI model and thinking:/ }),
     ).toBeInTheDocument();
   });
 
-  it("shows the provider default and lets users return to it in proxy mode", () => {
+  it("shows Sol with High thinking in proxy mode", () => {
     enableFlags({ "ai-assistant": true });
     window.localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, "false");
     render(<AiModelQuickSelect />);
-
-    const select = screen.getByRole("combobox", { name: "AI model" });
-    expect(select).toHaveTextContent("Provider default");
-    fireEvent.click(select);
-    fireEvent.click(screen.getByRole("option", { name: "GPT-5.5" }));
-    expect(select).toHaveTextContent("GPT-5.5");
-
-    fireEvent.click(select);
-    fireEvent.click(screen.getByRole("option", { name: "Provider default" }));
-
-    expect(select).toHaveTextContent("Provider default");
     expect(
-      JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "").model,
-    ).toBe("");
+      screen.getByRole("button", {
+        name: "AI model and thinking: GPT-6 Sol, High",
+      }),
+    ).toBeInTheDocument();
   });
 });

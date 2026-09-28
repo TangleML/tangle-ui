@@ -1,4 +1,4 @@
-import { Agent, run } from "@openai/agents";
+import { Agent, OpenAIProvider, run, Runner } from "@openai/agents";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { getAgentModelConfig, ProxyClient } from "./config";
@@ -64,7 +64,7 @@ describe("AI client transport", () => {
     ).toBe("Bearer sk-personal");
   });
 
-  it.each(["", "gpt-5.5"])(
+  it.each(["", "gpt-6-sol", "custom-reasoning-model"])(
     "uses the configured model selection %j in an actual agent request",
     async (model) => {
       const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
@@ -91,6 +91,7 @@ describe("AI client transport", () => {
         apiBase: "https://backend.example.com/api/experimental/ai/v1",
         apiKey: "",
         model,
+        reasoningEffort: "max",
         credentials: "include",
       } satisfies Parameters<ProxyClient["ensureConfigured"]>[0];
       const client = new ProxyClient();
@@ -104,13 +105,72 @@ describe("AI client transport", () => {
       expect(result.finalOutput).toBe("Hello");
       const request = fetchMock.mock.calls[0][1];
       const body = JSON.parse(String(request?.body));
-      if (model) {
-        expect(body.model).toBe(model);
-      } else {
-        expect(body).not.toHaveProperty("model");
-      }
+      expect(body.model).toBe(model || "gpt-6-sol");
+      expect(body.reasoning).toMatchObject({ effort: "max" });
+      expect(fetchMock.mock.calls[0][0]).toBe(
+        "https://backend.example.com/api/experimental/ai/v1/responses",
+      );
       expect(request?.credentials).toBe("include");
       expect(new Headers(request?.headers).has("authorization")).toBe(false);
     },
   );
+
+  it("sends the locally selected model directly through the Responses SDK", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          id: "test-response",
+          output: [
+            {
+              id: "test-message",
+              type: "message",
+              role: "assistant",
+              status: "completed",
+              content: [
+                { type: "output_text", text: "Hello", annotations: [] },
+              ],
+            },
+          ],
+        }),
+        { headers: { "content-type": "application/json" } },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const config = {
+      apiBase: "https://backend.example.com/ai/v1",
+      apiKey: "",
+      model: "custom-reasoning-model",
+      reasoningEffort: "max",
+      credentials: "include",
+    } satisfies Parameters<ProxyClient["ensureConfigured"]>[0];
+    const client = new ProxyClient();
+    client.ensureConfigured(config);
+    const runner = new Runner({
+      modelProvider: new OpenAIProvider({
+        openAIClient: client.openai,
+        useResponses: true,
+      }),
+      tracingDisabled: true,
+    });
+    const result = await runner.run(
+      new Agent({
+        name: "Test agent",
+        ...getAgentModelConfig(config),
+      }),
+      "Hello",
+    );
+
+    expect(result.finalOutput).toBe("Hello");
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      "https://backend.example.com/ai/v1/responses",
+    ]);
+    const request = fetchMock.mock.calls[0][1];
+    const body = JSON.parse(String(request?.body));
+    expect(body).toMatchObject({
+      model: "custom-reasoning-model",
+      reasoning: { effort: "max" },
+    });
+    expect(request?.credentials).toBe("include");
+    expect(new Headers(request?.headers).has("authorization")).toBe(false);
+  });
 });

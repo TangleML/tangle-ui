@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AgentSession } from "../session";
 
@@ -94,6 +94,7 @@ function makeSession(): AgentSession {
 
 describe("createEditorDispatcher", () => {
   beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
     agentCtor.mockClear();
     memorySessionCtor.mockClear();
     runMock.mockReset();
@@ -101,6 +102,8 @@ describe("createEditorDispatcher", () => {
     providerCtor.mockClear();
     runMock.mockResolvedValue({ finalOutput: "Done" });
   });
+
+  afterEach(() => vi.unstubAllGlobals());
 
   it("preserves Responses reasoning continuity for Sidekick runs", async () => {
     const dispatcher = createEditorDispatcher();
@@ -129,5 +132,47 @@ describe("createEditorDispatcher", () => {
     expect(options).toEqual({
       session: expect.any(Object),
     });
+  });
+
+  it("uses the selected model and thinking without a catalog request", async () => {
+    const session = makeSession();
+    session.aiConfig.model = "gpt-6-sol";
+    session.aiConfig.reasoningEffort = "high";
+    const selectedConfig = { ...session.aiConfig };
+
+    await createEditorDispatcher().invoke({
+      message: "Hello",
+      threadId: session.threadId,
+      aiConfig: selectedConfig,
+      session,
+    });
+
+    expect(agentCtor.mock.calls.at(-1)?.[0]).toMatchObject({
+      model: "gpt-6-sol",
+      modelSettings: { reasoning: { effort: "high" } },
+    });
+    expect(session.aiConfig).toEqual(selectedConfig);
+    expect(fetch).not.toHaveBeenCalled();
+    expect(runMock).toHaveBeenCalledOnce();
+    expect(providerCtor).toHaveBeenCalledWith({
+      openAIClient: session.proxyClient.openai,
+      useResponses: true,
+    });
+  });
+
+  it("preserves omitted thinking when the UI disables it for a configured model", async () => {
+    const session = makeSession();
+    session.aiConfig.model = "gpt-6-sol";
+
+    await createEditorDispatcher().invoke({
+      message: "Hello",
+      threadId: session.threadId,
+      aiConfig: session.aiConfig,
+      session,
+    });
+
+    expect(agentCtor.mock.calls.at(-1)?.[0].modelSettings).not.toHaveProperty(
+      "reasoning",
+    );
   });
 });
