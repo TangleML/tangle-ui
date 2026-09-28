@@ -4,6 +4,7 @@ interface ConfigFlag {
   default: boolean;
   category: "beta" | "setting";
   dependsOn?: string;
+  canEnable?: boolean;
 }
 
 export type ConfigFlags = Record<string, ConfigFlag>;

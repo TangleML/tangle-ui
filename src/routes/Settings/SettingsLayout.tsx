@@ -54,8 +54,9 @@ export function SettingsLayout() {
   const router = useRouter();
   const componentSearchEnabled = useFlagValue("component-search-v2");
   const aiAssistantEnabled = useFlagValue("ai-assistant");
+  const tangentShellEnabled = useFlagValue("tangent-shell");
   const sidebarItems =
-    componentSearchEnabled || aiAssistantEnabled
+    componentSearchEnabled || aiAssistantEnabled || tangentShellEnabled
       ? [...SIDEBAR_ITEMS, AGENT_ITEM]
       : SIDEBAR_ITEMS;
 

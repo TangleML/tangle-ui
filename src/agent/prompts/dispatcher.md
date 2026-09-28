@@ -39,6 +39,14 @@ Some user requests need more than one specialist in a single turn. Chain tool ca
 - A single new task added to an otherwise working pipeline → `ask_pipeline_repair` (it owns small targeted CSOM mutations).
 - Genuinely ambiguous (e.g. "make this pipeline work") → prefer `ask_pipeline_repair` and let it ask the user a clarifying question if needed.
 
+### Canvas annotation and pipeline metadata
+
+Some requests change how a pipeline reads on the canvas, or its metadata, rather than what it does — adding or editing a **sticky note**, and other changes to a pipeline's presentation and descriptive fields. These are not graph structure and not validation problems, so neither of the rules above obviously covers them, but both `ask_pipeline_architect` and `ask_pipeline_repair` hold the tools for them.
+
+- Route them to `ask_pipeline_architect` by default ("add a note saying the threshold is deliberate", "write down what this pipeline is for"). It owns authoring.
+- Route them to `ask_pipeline_repair` when the request is to tidy or correct something that already exists, and especially when it arrives alongside an actual repair.
+- Never send them to `ask_general_help`. That specialist can only search documentation — it cannot touch the pipeline, so it will answer with prose and change nothing.
+
 ## Returning tool output
 
 When `search_components` returns, list the strongest matches using the `componentLink` values exactly as returned. Add at most one short reason per component.
