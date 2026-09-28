@@ -1,5 +1,5 @@
 import { reaction } from "mobx";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 import { ContextPanelContent } from "@/routes/v2/pages/Editor/components/ContextPanel/ContextPanel";
 import { PinnedTaskContent } from "@/routes/v2/pages/Editor/components/PinnedTaskContent/PinnedTaskContent";
@@ -7,10 +7,20 @@ import { useDeselectAll } from "@/routes/v2/shared/hooks/useDeselectAll";
 import type { EditorStore } from "@/routes/v2/shared/store/editorStore";
 import type { NavigationStore } from "@/routes/v2/shared/store/navigationStore";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import type { Position } from "@/routes/v2/shared/windows/types";
 import { WindowMiniButton } from "@/routes/v2/shared/windows/WindowMiniButton";
 import type { WindowStoreImpl } from "@/routes/v2/shared/windows/windowStore";
 
 const CONTEXT_PANEL_WINDOW_ID = "context-panel";
+
+interface ContextPanelPlacement {
+  defaultDockState?: "left" | "right";
+  getInitialPosition?: () => Position;
+}
+
+const DEFAULT_CONTEXT_PANEL_PLACEMENT: ContextPanelPlacement = {
+  defaultDockState: "right",
+};
 
 function generatePinnedWindowId(): string {
   return `pinned-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -42,6 +52,9 @@ function handleShiftClickPin(
   }
   editor.selectNode(null, null);
 }
+
+const CONTEXT_WINDOW_HEIGHT = 460;
+const CONTEXT_WINDOW_WIDTH = 310;
 
 function scrollWindowIntoView() {
   // MobX needs a tick to re-render the new docked window into the DOM
@@ -81,6 +94,7 @@ function scrollWindowIntoView() {
 function ensureContextPanelVisible(
   windows: WindowStoreImpl,
   deselectAll: () => void,
+  placement: ContextPanelPlacement,
 ) {
   const existing = windows.getWindowById(CONTEXT_PANEL_WINDOW_ID);
 
@@ -96,11 +110,14 @@ function ensureContextPanelVisible(
   windows.openWindow(<ContextPanelContent />, {
     id: CONTEXT_PANEL_WINDOW_ID,
     title: "Properties",
-    position: { x: window.innerWidth - 340, y: 80 },
-    size: { width: 300, height: 400 },
+    position: placement.getInitialPosition?.() ?? {
+      x: window.innerWidth - CONTEXT_WINDOW_WIDTH - 40,
+      y: 80,
+    },
+    size: { width: CONTEXT_WINDOW_WIDTH, height: CONTEXT_WINDOW_HEIGHT },
     startVisible: true,
     persisted: true,
-    defaultDockState: "right",
+    defaultDockState: placement.defaultDockState,
     disabledActions: ["hide"],
     onClose: deselectAll,
     miniContent: (
@@ -119,9 +136,17 @@ function closeContextPanel(windows: WindowStoreImpl) {
   if (existing) windows.closeWindow(CONTEXT_PANEL_WINDOW_ID);
 }
 
-export function useSelectionWindowSync() {
+export function useSelectionWindowSync(options?: {
+  contextPanel?: ContextPanelPlacement;
+}) {
   const { editor, navigation, windows } = useSharedStores();
   const deselectAll = useDeselectAll();
+  const placement = options?.contextPanel ?? DEFAULT_CONTEXT_PANEL_PLACEMENT;
+  const placementRef = useRef(placement);
+
+  useEffect(() => {
+    placementRef.current = placement;
+  }, [placement]);
 
   useEffect(() => {
     const disposeSelectionWatcher = reaction(
@@ -153,7 +178,7 @@ export function useSelectionWindowSync() {
           multiSelectionLength > 1 || (selectedNodeId && selectedNodeType);
 
         if (shouldShowPanel) {
-          ensureContextPanelVisible(windows, deselectAll);
+          ensureContextPanelVisible(windows, deselectAll, placementRef.current);
         } else {
           closeContextPanel(windows);
         }

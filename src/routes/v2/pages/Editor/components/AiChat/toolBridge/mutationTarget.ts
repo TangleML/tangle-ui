@@ -7,7 +7,11 @@
  * that the model gets the same bare `{ success: false }` for "no such entity" as
  * for "that entity is a task, not an input", and cannot tell the user which.
  */
+import { argumentPlaceholderNames } from "@/components/shared/PipelineRunNameTemplate/processTemplate";
+import { isPickableColor, PRESET_COLORS } from "@/components/ui/colorPresets";
 import type { ArgumentType, ComponentSpec } from "@/models/componentSpec";
+import type { FlexNodeLocation } from "@/models/componentSpec/queries/flexNodes";
+import { locateFlexNode } from "@/models/componentSpec/queries/flexNodes";
 import type {
   EntityLocation,
   EntityLocationOf,
@@ -22,6 +26,7 @@ import {
   isGraphInputArgument,
   isTaskOutputArgument,
 } from "@/utils/componentSpec";
+import { TAG_LIMIT } from "@/utils/pipelineTags";
 
 const EXPECTED_LABEL: Record<LocatedEntityKind, string> = {
   task: "a task",
@@ -182,6 +187,124 @@ export function explainNameCollision(
   if (!taken) return undefined;
 
   return `Cannot rename ${describeEntityLocation(location, entityId)} to "${newName}" — that name is already taken in that graph. Pick a different name.`;
+}
+
+/**
+ * The existence check is not optional: `updateFlexNode` and `removeFlexNode`
+ * both map or filter over the list, so an unknown id is a silent no-op that the
+ * model would otherwise read back as success.
+ */
+export function resolveStickyNote(
+  root: ComponentSpec,
+  noteId: string,
+): { ok: true; location: FlexNodeLocation } | { ok: false; error: string } {
+  const location = locateFlexNode(root, noteId);
+  if (!location) {
+    return {
+      ok: false,
+      error: `No sticky note with id "${noteId}" exists in this pipeline.`,
+    };
+  }
+  return { ok: true, location };
+}
+
+export function resolveMovable(
+  root: ComponentSpec,
+  nodeId: string,
+):
+  | { ok: true; spec: ComponentSpec; description: string }
+  | { ok: false; error: string } {
+  const entity = locateEntity(root, nodeId);
+  if (entity) {
+    if (entity.kind === "binding") {
+      return {
+        ok: false,
+        error: `$id "${nodeId}" refers to a connection, which has no position of its own — it follows the nodes it joins.`,
+      };
+    }
+    return {
+      ok: true,
+      spec: entity.spec,
+      description: describeEntityLocation(entity, nodeId),
+    };
+  }
+
+  const note = locateFlexNode(root, nodeId);
+  if (note) {
+    if (note.node.locked) {
+      return {
+        ok: false,
+        error: `${describeStickyNoteLocation(note)} is locked, so it cannot be moved. Ask the user to unlock it first.`,
+      };
+    }
+    return {
+      ok: true,
+      spec: note.spec,
+      description: describeStickyNoteLocation(note),
+    };
+  }
+
+  return {
+    ok: false,
+    error: `No task, input, output or sticky note with id "${nodeId}" exists in this pipeline.`,
+  };
+}
+
+export function describeStickyNoteLocation(location: FlexNodeLocation): string {
+  const { title } = location.node.properties;
+  const note = title
+    ? `sticky note "${title}"`
+    : `sticky note ${location.node.id}`;
+  if (location.subgraphTaskNames.length === 0) {
+    return `${note} in the top-level pipeline`;
+  }
+  return `${note} inside subgraph "${location.subgraphTaskNames.join(" > ")}"`;
+}
+
+/** An unpickable colour is one the canvas renders as nothing, silently. */
+export function explainUnpickableColor(
+  color: string,
+  field: string,
+): string | undefined {
+  if (isPickableColor(color)) return undefined;
+
+  return `"${color}" is not a colour this editor accepts for ${field}. Use a hex value like "#FFF9C4", or "transparent". The swatches offered in the UI are: ${PRESET_COLORS.join(", ")}.`;
+}
+
+export function explainTagProblem(tags: string[]): string | undefined {
+  const cleaned = tags.map((t) => t.trim()).filter(Boolean);
+
+  const withComma = cleaned.find((t) => t.includes(","));
+  if (withComma) {
+    return `The tag "${withComma}" contains a comma, and tags are stored as a comma-separated list, so it would come back as two tags the next time the pipeline is loaded. Split it yourself or use another separator.`;
+  }
+
+  const duplicate = cleaned.find((t, i) => cleaned.indexOf(t) !== i);
+  if (duplicate) {
+    return `The tag "${duplicate}" appears more than once. Pass each tag once — set_pipeline_tags replaces the whole list.`;
+  }
+
+  if (cleaned.length > TAG_LIMIT) {
+    return `That is ${cleaned.length} tags, and a pipeline takes at most ${TAG_LIMIT}. Going over also disables the editor's own add-tag button until someone deletes enough to get back under it.`;
+  }
+
+  return undefined;
+}
+
+export function explainRunNameTemplateProblem(
+  template: string,
+  spec: ComponentSpec,
+): string | undefined {
+  const declared = new Set(spec.inputs.map((input) => input.name));
+  const unknown = argumentPlaceholderNames(template).find(
+    (name) => !declared.has(name),
+  );
+  if (!unknown) return undefined;
+
+  const available = spec.inputs.length
+    ? `The inputs on this graph are: ${spec.inputs.map((input) => input.name).join(", ")}.`
+    : "This graph has no inputs.";
+  return `This graph has no input named "${unknown}", so \${arguments.${unknown}} would be left in every run name verbatim, braces and all. ${available}`;
 }
 
 export function explainNotASubgraph(

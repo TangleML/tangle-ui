@@ -9,7 +9,7 @@ import type { SelectedNode } from "@/routes/v2/shared/store/editorStore";
 import { writeToSystemClipboard } from "./clipboardEnvelope";
 import { snapshotInternalBindings } from "./snapshotBindings";
 
-export function copyNodesToClipboard(
+export function collectNodeSnapshots(
   registry: NodeTypeRegistry,
   spec: ComponentSpec,
   selectedNodes: SelectedNode[],
@@ -17,15 +17,28 @@ export function copyNodesToClipboard(
   const snapshots: NodeSnapshot[] = [];
   for (const node of selectedNodes) {
     const manifest = registry.get(node.type);
-    const snapshot = manifest?.snapshotHandler?.snapshot(spec, node.id);
+    const snapshot =
+      manifest?.snapshotHandler?.snapshot(spec, node.id) ??
+      manifest?.cloneHandler?.snapshot(spec, node.id);
     if (snapshot) snapshots.push(snapshot);
   }
 
   const selectedIds = new Set(selectedNodes.map((n) => n.id));
-  const bindings = snapshotInternalBindings(spec, selectedIds);
+  return { snapshots, bindings: snapshotInternalBindings(spec, selectedIds) };
+}
 
-  writeToSystemClipboard(snapshots, bindings);
-  return { snapshots, bindings };
+export async function copyNodesToClipboard(
+  registry: NodeTypeRegistry,
+  spec: ComponentSpec,
+  selectedNodes: SelectedNode[],
+): Promise<void> {
+  const { snapshots, bindings } = collectNodeSnapshots(
+    registry,
+    spec,
+    selectedNodes,
+  );
+
+  await writeToSystemClipboard(snapshots, bindings);
 }
 
 export function computeSnapshotBounds(snapshots: NodeSnapshot[]): {

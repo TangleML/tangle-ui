@@ -65,4 +65,32 @@ describe("BetaFeaturesSettings", () => {
       true,
     );
   });
+
+  it("locks a flag this build cannot enable", () => {
+    mocks.betaFlags = [{ ...componentSearchFlag, canEnable: false }];
+
+    render(<BetaFeaturesSettings />);
+    const toggle = screen.getByTestId("component-search-v2-switch");
+
+    expect(toggle).toBeDisabled();
+    fireEvent.click(toggle);
+    expect(mocks.handleSetFlag).not.toHaveBeenCalled();
+  });
+
+  it("still lets an already-enabled flag be turned off", () => {
+    mocks.betaFlags = [
+      { ...componentSearchFlag, canEnable: false, enabled: true },
+    ];
+
+    render(<BetaFeaturesSettings />);
+    const toggle = screen.getByTestId("component-search-v2-switch");
+
+    expect(toggle).toBeEnabled();
+    fireEvent.click(toggle);
+
+    expect(mocks.handleSetFlag).toHaveBeenCalledWith(
+      "component-search-v2",
+      false,
+    );
+  });
 });

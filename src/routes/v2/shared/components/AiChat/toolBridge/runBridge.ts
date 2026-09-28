@@ -72,6 +72,7 @@ export function createRunBridgeHandlers(deps: BridgeDeps): RunHandlers {
       }>((resolve) => {
         submitPipelineRunHelper(wireSpec, backendUrl, {
           authorizationToken,
+          runAnnotations: deps.getRunAnnotations?.(),
           onSuccess: (data) => resolve({ run: data, error: null }),
           onError: (err) => resolve({ run: null, error: errorMessage(err) }),
         });

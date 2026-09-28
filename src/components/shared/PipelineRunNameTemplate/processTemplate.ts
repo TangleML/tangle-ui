@@ -53,6 +53,22 @@ function parsePlaceholder(
 }
 
 /**
+ * The input names a template resolves `${arguments.<name>}` against. Shares the
+ * pattern and parser with `processTemplate` so a caller validating a template
+ * cannot disagree with what substitution actually does at run time.
+ */
+export function argumentPlaceholderNames(template: string): string[] {
+  const names: string[] = [];
+  for (const [, placeholder] of template.matchAll(PLACEHOLDER_PATTERN)) {
+    const parsed = parsePlaceholder(placeholder);
+    if (parsed?.source === "arguments") {
+      names.push(parsed.key);
+    }
+  }
+  return names;
+}
+
+/**
  * Formats the current date according to the specified format key
  * @param formatKey - The date format key (timestamp, short, long)
  * @returns The formatted date string or undefined if invalid key

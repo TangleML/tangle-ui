@@ -30,6 +30,7 @@ export async function submitPipelineRun(
     taskArguments?: Record<string, ArgumentType>;
     authorizationToken?: string;
     canonicalName?: string;
+    runAnnotations?: Record<string, string>;
     onSuccess?: (data: PipelineRun) => void;
     onError?: (error: Error) => void;
   },
@@ -89,6 +90,7 @@ export async function submitPipelineRun(
 
     const payload = {
       annotations: {
+        ...(options?.runAnnotations ?? {}),
         [RUN_SOURCE_ANNOTATION]: "web-app",
       },
       root_task: {
