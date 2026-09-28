@@ -21,13 +21,17 @@ export function useAutoLayoutShortcut(
   const { keyboard } = useSharedStores();
 
   useEffect(() => {
-    const handleAutoLayout = (algorithm?: LayoutAlgorithm) => {
+    const handleAutoLayout = (
+      algorithm?: LayoutAlgorithm,
+      onLaidOut?: () => void,
+    ) => {
       const nodes = getNodes();
       const edges = getEdges();
       if (nodes.length === 0) return;
 
       const layoutedNodes = autoLayoutNodes(nodes, edges, algorithm);
       applyLayout(layoutedNodes);
+      onLaidOut?.();
 
       requestAnimationFrame(() => {
         fitView({ maxZoom: 1, duration: 300 });
@@ -39,7 +43,10 @@ export function useAutoLayoutShortcut(
       keys: [CMDALT, SHIFT, "L"],
       label: "Auto layout",
       action: (_event, params) => {
-        handleAutoLayout(params?.algorithm as LayoutAlgorithm | undefined);
+        handleAutoLayout(
+          params?.algorithm as LayoutAlgorithm | undefined,
+          params?.onLaidOut as (() => void) | undefined,
+        );
       },
     });
 

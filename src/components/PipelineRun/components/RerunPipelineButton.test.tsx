@@ -10,7 +10,9 @@ import {
 import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import { RunSubmissionScopeProvider } from "@/providers/RunSubmissionScopeProvider";
 import { useRerunPipelineRun } from "@/routes/v2/pages/RunView/hooks/useRerunPipelineRun";
+import { buildProjectRunAnnotationKey } from "@/utils/annotations";
 import type { ComponentSpec } from "@/utils/componentSpec";
 import {
   SAVED_PIPELINE_ID_ANNOTATION,
@@ -465,13 +467,15 @@ describe("<RerunPipelineButton/>", () => {
     const otherPipelineId = "550e8400-e29b-41d4-a716-446655440001";
     const taskArguments = { dataset: "original-dataset" };
 
-    function renderRerun() {
+    function renderRerun(projectId?: string) {
       return renderWithProviders(
-        version === "V1" ? (
-          <RerunPipelineButton componentSpec={componentSpec} />
-        ) : (
-          <RerunHookHarness componentSpec={componentSpec} />
-        ),
+        <RunSubmissionScopeProvider projectId={projectId}>
+          {version === "V1" ? (
+            <RerunPipelineButton componentSpec={componentSpec} />
+          ) : (
+            <RerunHookHarness componentSpec={componentSpec} />
+          )}
+        </RunSubmissionScopeProvider>,
       );
     }
 
@@ -485,6 +489,31 @@ describe("<RerunPipelineButton/>", () => {
         (_spec, _backend, { onSuccess }) => onSuccess({ id: "rerun-1" }),
       );
     });
+
+    test.each([true, false])(
+      "retains the active project scope with remote pipelines enabled: %s",
+      async (enabled) => {
+        remotePipelines.enabled = enabled;
+        mockFetchRunAnnotations.mockResolvedValue({
+          [SOURCE_PIPELINE_ID_ANNOTATION]: sourcePipelineId,
+          [buildProjectRunAnnotationKey("previous-project")]: "true",
+        });
+        renderRerun("current-project");
+
+        fireEvent.click(screen.getByTestId("rerun-pipeline-button"));
+
+        await waitFor(() => expect(mockSubmitPipelineRun).toHaveBeenCalled());
+        expect(mockSubmitPipelineRun.mock.calls[0][2]).toMatchObject({
+          sourcePipelineId: enabled ? sourcePipelineId : undefined,
+          runAnnotations: {
+            [buildProjectRunAnnotationKey("current-project")]: "true",
+          },
+        });
+        expect(
+          mockSubmitPipelineRun.mock.calls[0][2].runAnnotations,
+        ).not.toHaveProperty(buildProjectRunAnnotationKey("previous-project"));
+      },
+    );
 
     test.each([SAVED_PIPELINE_ID_ANNOTATION, SOURCE_PIPELINE_ID_ANNOTATION])(
       "preserves the pipeline ID from %s",

@@ -11,6 +11,7 @@ import { Icon } from "@/components/ui/icon";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
 import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
+import { useRunSubmissionAnnotations } from "@/providers/RunSubmissionScopeProvider";
 import { getDefaultRunPath } from "@/routes/runRoutes";
 import { fetchRunAnnotations } from "@/services/pipelineRunService";
 import type { PipelineRun } from "@/types/pipelineRun";
@@ -43,6 +44,7 @@ export const RerunPipelineButton = ({
   const notify = useToastNotification();
   const executionData = useExecutionDataOptional();
   const queryClient = useQueryClient();
+  const runAnnotations = useRunSubmissionAnnotations();
 
   const { awaitAuthorization, isAuthorized } = useAwaitAuthorization();
   const { getToken } = useAuthLocalStorage();
@@ -82,7 +84,7 @@ export const RerunPipelineButton = ({
       const runId = REMOTE_PIPELINES_ENABLED
         ? (executionData?.metadata?.id ?? executionData?.runId)
         : undefined;
-      const runAnnotations = runId
+      const sourceRunAnnotations = runId
         ? await queryClient.fetchQuery({
             queryKey: ["pipeline-run-annotations", backendUrl, runId],
             queryFn: () => fetchRunAnnotations(runId, backendUrl),
@@ -92,7 +94,7 @@ export const RerunPipelineButton = ({
 
       return new Promise<PipelineRun>((resolve, reject) => {
         submitPipelineRun(componentSpec, backendUrl, {
-          sourcePipelineId: getRunSourcePipelineId(runAnnotations),
+          sourcePipelineId: getRunSourcePipelineId(sourceRunAnnotations),
           canonicalName: extractCanonicalName(
             buildTaskSpecShape(
               executionData?.rootDetails?.task_spec,
@@ -103,6 +105,7 @@ export const RerunPipelineButton = ({
           taskArguments: executionData?.rootDetails?.task_spec
             .arguments as Record<string, ArgumentType>,
           authorizationToken,
+          runAnnotations,
           onSuccess: resolve,
           onError: reject,
         });

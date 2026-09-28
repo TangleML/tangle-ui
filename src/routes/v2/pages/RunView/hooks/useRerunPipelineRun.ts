@@ -8,6 +8,7 @@ import { buildTaskSpecShape } from "@/components/shared/PipelineRunNameTemplate/
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
+import { useRunSubmissionAnnotations } from "@/providers/RunSubmissionScopeProvider";
 import { APP_ROUTES } from "@/routes/router";
 import { fetchRunAnnotations } from "@/services/pipelineRunService";
 import type { PipelineRun } from "@/types/pipelineRun";
@@ -32,6 +33,7 @@ export function useRerunPipelineRun(componentSpec?: ComponentSpec) {
   const { getToken } = useAuthLocalStorage();
   const { rootDetails, metadata, runId: executionRunId } = useExecutionData();
   const queryClient = useQueryClient();
+  const runAnnotations = useRunSubmissionAnnotations();
 
   const getAuthToken = async (): Promise<string | undefined> => {
     if (isAuthorizationRequired() && !isAuthorized) {
@@ -53,7 +55,7 @@ export function useRerunPipelineRun(componentSpec?: ComponentSpec) {
       const runId = REMOTE_PIPELINES_ENABLED
         ? (metadata?.id ?? executionRunId)
         : undefined;
-      const runAnnotations = runId
+      const sourceRunAnnotations = runId
         ? await queryClient.fetchQuery({
             queryKey: ["pipeline-run-annotations", backendUrl, runId],
             queryFn: () => fetchRunAnnotations(runId, backendUrl),
@@ -62,10 +64,11 @@ export function useRerunPipelineRun(componentSpec?: ComponentSpec) {
         : undefined;
       return new Promise<PipelineRun>((resolve, reject) => {
         submitPipelineRun(componentSpec, backendUrl, {
-          sourcePipelineId: getRunSourcePipelineId(runAnnotations),
+          sourcePipelineId: getRunSourcePipelineId(sourceRunAnnotations),
           canonicalName,
           taskArguments,
           authorizationToken,
+          runAnnotations,
           onSuccess: resolve,
           onError: reject,
         });

@@ -79,6 +79,7 @@ export function createRunBridgeHandlers(deps: BridgeDeps): RunHandlers {
           authorizationToken,
           taskArguments,
           prepareSourcePipeline: deps.prepareSourcePipeline,
+          runAnnotations: deps.getRunAnnotations?.(),
           onSuccess: (data) => resolve({ run: data, error: null }),
           onError: (err) => resolve({ run: null, error: errorMessage(err) }),
         });

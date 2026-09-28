@@ -36,6 +36,7 @@ export async function submitPipelineRun(
     canonicalName?: string;
     sourcePipelineId?: string;
     prepareSourcePipeline?: (backendUrl: string) => Promise<string | undefined>;
+    runAnnotations?: Record<string, string>;
     onSuccess?: (data: PipelineRun) => void;
     onError?: (error: Error) => void;
   },
@@ -101,6 +102,7 @@ export async function submitPipelineRun(
 
     const payload = {
       annotations: {
+        ...(options?.runAnnotations ?? {}),
         [RUN_SOURCE_ANNOTATION]: "web-app",
         ...(sourcePipelineId && {
           [SOURCE_PIPELINE_ID_ANNOTATION]: sourcePipelineId,

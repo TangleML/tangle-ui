@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -58,6 +58,11 @@ vi.mock("@/utils/remotePipelines", () => ({
 
 vi.mock("@/services/pipelineRunService", () => ({
   fetchRunAnnotations: mocks.fetchRunAnnotations,
+  updateRunAnnotation: vi.fn(),
+}));
+
+vi.mock("@/components/shared/Execution/PipelineIO", () => ({
+  default: () => <div data-testid="pipeline-io" />,
 }));
 
 vi.mock("./RunDetailsHeader", () => ({
@@ -94,6 +99,39 @@ describe("RunDetailsContent source pipeline", () => {
       ),
     });
   }
+
+  test("shows run annotations in the Details section", async () => {
+    mocks.fetchRunAnnotations.mockResolvedValue({
+      experiment: "baseline",
+      "cost-center": "research",
+    });
+
+    renderDetails();
+    fireEvent.click(screen.getByText("Details"));
+
+    expect(await screen.findByText("Run Annotations")).toBeInTheDocument();
+    expect(screen.getByText("experiment")).toBeInTheDocument();
+    expect(screen.getByText("baseline")).toBeInTheDocument();
+    expect(screen.getByText("cost-center")).toBeInTheDocument();
+    expect(screen.getByText("research")).toBeInTheDocument();
+  });
+
+  test("hides annotations surfaced elsewhere in the panel", async () => {
+    mocks.fetchRunAnnotations.mockResolvedValue({
+      notes: "Run notes",
+      tags: "Demo,Secrets",
+      source: "web-app",
+      "system/pipeline_run.name": "Test pipeline",
+      "system/pipeline_run.created_by": "user-1",
+      "tangleml.com/project/project-id/project-1": "true",
+    });
+
+    renderDetails();
+    fireEvent.click(screen.getByText("Details"));
+
+    expect(await screen.findByText("Run Notes")).toBeInTheDocument();
+    expect(screen.queryByText("Run Annotations")).not.toBeInTheDocument();
+  });
 
   test.each([SAVED_PIPELINE_ID_ANNOTATION, SOURCE_PIPELINE_ID_ANNOTATION])(
     "links to the current editor using %s",
