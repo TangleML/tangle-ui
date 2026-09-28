@@ -48,6 +48,42 @@ describe("AgentSettings", () => {
     delete window.__TANGLE_AI_MODELS__;
   });
 
+  it("shows one environment connection with no Jev setup or connection override", async () => {
+    vi.stubEnv("VITE_OPENAI_API_BASE", "https://proxy.example.com/v1");
+    vi.stubEnv("VITE_OPENAI_API_KEY", "proxy-key");
+    window.localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, "false");
+    mockFetch.mockResolvedValue(new Response(JSON.stringify({ ok: true })));
+    render(<AgentSettings />);
+    expect(screen.queryByRole("switch")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("API key")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("API base URL")).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Environment AI proxy: https://proxy.example.com/v1"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Component search uses Jev automatically/),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Test AI" }));
+    await waitFor(() =>
+      expect(mockNotify).toHaveBeenCalledWith(
+        "Environment AI proxy is working.",
+        "success",
+      ),
+    );
+    expect(mockFetch).toHaveBeenCalledWith(
+      "https://proxy.example.com/v1/responses",
+      expect.objectContaining({
+        method: "POST",
+        credentials: "omit",
+        headers: {
+          "content-type": "application/json",
+          authorization: "Bearer proxy-key",
+        },
+      }),
+    );
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
   it("switches to the selected backend proxy and restores the saved provider when switched back", async () => {
     const savedConfig = {
       apiBase: "https://api.example.com/v1",

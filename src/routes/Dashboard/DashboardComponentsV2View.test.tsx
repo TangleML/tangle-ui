@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { StoredLibrary } from "@/providers/ComponentLibraryProvider/libraries/storage";
 import type { IndexEntry } from "@/services/componentSearchIndex";
+import type { RerankResult } from "@/services/naturalLanguageComponentSearchService";
 import type { ComponentReference } from "@/utils/componentSpec";
 
 interface DashboardComponentsV2Search {
@@ -100,6 +101,7 @@ const routeMocks = vi.hoisted(() => {
     aiDescriptionsEnabled: false,
     aiSearchConfigured: false,
     aiRerankPending: false,
+    aiRerankData: undefined as RerankResult | undefined,
     aiApiBase: "",
     aiModel: "",
     search,
@@ -240,7 +242,7 @@ vi.mock("@/hooks/useNaturalLanguageComponentSearch", () => ({
   },
   useNaturalLanguageComponentRerank: () => ({
     mutate: routeMocks.rerank,
-    data: undefined,
+    data: routeMocks.aiRerankData,
     isPending: routeMocks.aiRerankPending,
     error: null,
     reset: routeMocks.resetRerank,
@@ -565,8 +567,56 @@ describe("DashboardComponentsV2View", () => {
     routeMocks.resetRerank.mockClear();
     routeMocks.aiSearchConfigured = false;
     routeMocks.aiRerankPending = false;
+    routeMocks.aiRerankData = undefined;
     routeMocks.aiApiBase = "";
     routeMocks.aiModel = "";
+  });
+
+  it.each([
+    ["related", "Related", "No direct matches—showing related components."],
+    [
+      "weak",
+      "Weak match",
+      "No clear matches—showing the closest available components.",
+    ],
+    ["partial", "Partial match", "No direct matches—showing partial matches."],
+  ] as const)(
+    "explains %s results with qualitative badges instead of percentages",
+    async (matchStrength, label, notice) => {
+      routeMocks.aiSearchConfigured = true;
+      routeMocks.search = { q: "standard" };
+      routeMocks.aiRerankData = {
+        matches: [{ id: "standard-digest", score: 0.1, matchStrength }],
+      };
+      render(<DashboardComponentsV2View />);
+      fireEvent.click(screen.getByRole("button", { name: "AI search" }));
+      await waitFor(() => expect(screen.getByText(notice)).toBeInTheDocument());
+      expect(screen.getByLabelText(label)).toHaveTextContent(label);
+      expect(
+        screen.queryByLabelText(/percent relevance/),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByText(/^AI-ranked/)).not.toBeInTheDocument();
+    },
+  );
+
+  it("labels a direct match and clears the assessment on returning to local search", async () => {
+    routeMocks.aiSearchConfigured = true;
+    routeMocks.search = { q: "standard" };
+    routeMocks.aiRerankData = {
+      matches: [
+        { id: "standard-digest", score: 0.95, matchStrength: "strong" },
+      ],
+    };
+    render(<DashboardComponentsV2View />);
+    fireEvent.click(screen.getByRole("button", { name: "AI search" }));
+    await waitFor(() =>
+      expect(screen.getByLabelText("Strong match")).toBeInTheDocument(),
+    );
+    expect(screen.queryByText(/No direct matches/)).not.toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Use lexical ranking" }),
+    );
+    expect(screen.queryByLabelText("Strong match")).not.toBeInTheDocument();
   });
 
   it("shows active AI search progress below the search box", () => {

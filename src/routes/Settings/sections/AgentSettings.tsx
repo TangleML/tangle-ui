@@ -26,8 +26,10 @@ export function AgentSettings() {
     update,
     clear,
     isConfigured,
+    isEnvironmentConfigured,
   } = useAiProviderSettings();
   const notify = useToastNotification();
+  const canEditConnection = useOwnKey && !isEnvironmentConfigured;
 
   const [apiBase, setApiBase] = useState(customConfig.apiBase);
   const [apiKey, setApiKey] = useState(customConfig.apiKey);
@@ -35,7 +37,7 @@ export function AgentSettings() {
   const [showKey, setShowKey] = useState(false);
   const [testing, setTesting] = useState(false);
   const testRunIdRef = useRef(0);
-  const testConfig: AiProviderConfig = useOwnKey
+  const testConfig: AiProviderConfig = canEditConnection
     ? {
         apiBase: apiBase.trim().replace(/\/+$/, ""),
         apiKey: apiKey.trim(),
@@ -128,17 +130,19 @@ export function AgentSettings() {
         return;
       }
 
-      if (useOwnKey) {
+      if (canEditConnection) {
         setApiBase(trimmed.apiBase);
         setApiKey(trimmed.apiKey);
         update({ apiBase: trimmed.apiBase, apiKey: trimmed.apiKey });
       }
       notify(
-        useOwnKey
+        canEditConnection
           ? trimmed.model
             ? `AI provider settings saved. Model “${trimmed.model}” works with the Responses API.`
             : "AI provider settings saved. The provider works with the Responses API."
-          : "Backend AI proxy is working.",
+          : isEnvironmentConfigured
+            ? "Environment AI proxy is working."
+            : "Backend AI proxy is working.",
         "success",
       );
     } catch (err) {
@@ -170,33 +174,42 @@ export function AgentSettings() {
       <BlockStack gap="2">
         <Heading level={2}>AI Provider Settings</Heading>
         <Paragraph size="sm" tone="subdued">
-          {useOwnKey
-            ? "AI features use an OpenAI-compatible API of your choice. Your key is stored in this browser only and is sent only to the configured provider."
-            : "AI features use the backend AI proxy. No personal API key is required."}
+          {isEnvironmentConfigured
+            ? "AI features use the proxy configured by the environment."
+            : useOwnKey
+              ? "AI features share the configured provider. Your key is stored in this browser only and is sent only to that provider."
+              : "AI features use the backend AI proxy. No personal API key is required."}
+        </Paragraph>
+        <Paragraph size="sm" tone="subdued">
+          Component search uses Jev automatically. Chat and generated
+          descriptions use the selected model. Your proxy must support Jev for
+          AI search.
         </Paragraph>
         <Paragraph size="xs" tone="subdued">
           {isConfigured
             ? "Status: configured ✅"
             : useOwnKey
-              ? "Status: not configured. AI features are disabled until you save a provider."
+              ? "Status: not configured. Save a provider to enable AI features."
               : "Status: not configured. Select a backend in Settings → Backend to use its AI proxy."}
         </Paragraph>
       </BlockStack>
 
       <Separator />
 
-      <InlineStack gap="2" blockAlign="center">
-        <Switch
-          id="agent-settings-use-own-key"
-          checked={useOwnKey}
-          onCheckedChange={handleUseOwnKeyChange}
-        />
-        <Label htmlFor="agent-settings-use-own-key">Bring your own key</Label>
-      </InlineStack>
+      {!isEnvironmentConfigured && (
+        <InlineStack gap="2" blockAlign="center">
+          <Switch
+            id="agent-settings-use-own-key"
+            checked={useOwnKey}
+            onCheckedChange={handleUseOwnKeyChange}
+          />
+          <Label htmlFor="agent-settings-use-own-key">Bring your own key</Label>
+        </InlineStack>
+      )}
 
       <form onSubmit={handleSave}>
         <BlockStack gap="4">
-          {useOwnKey ? (
+          {canEditConnection ? (
             <>
               <BlockStack gap="1">
                 <Label htmlFor="agent-settings-api-base">API base URL</Label>
@@ -260,7 +273,10 @@ export function AgentSettings() {
             </>
           ) : isConfigured ? (
             <Paragraph size="sm" tone="subdued">
-              Backend AI proxy: {config.apiBase}
+              {isEnvironmentConfigured
+                ? "Environment AI proxy"
+                : "Backend AI proxy"}
+              : {config.apiBase}
             </Paragraph>
           ) : null}
 
@@ -281,11 +297,11 @@ export function AgentSettings() {
             <Button type="submit" disabled={testing}>
               {testing
                 ? "Testing…"
-                : useOwnKey
+                : canEditConnection
                   ? "Save and test AI"
                   : "Test AI"}
             </Button>
-            {useOwnKey && (
+            {canEditConnection && (
               <Button type="button" variant="ghost" onClick={handleClear}>
                 Clear
               </Button>

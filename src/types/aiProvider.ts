@@ -11,3 +11,7 @@ export interface AiProviderConfig {
   // Include browser authentication when using a backend-managed provider.
   credentials?: RequestCredentials;
 }
+
+export interface ComponentRerankConfig extends AiProviderConfig {
+  provider: "responses" | "jev";
+}

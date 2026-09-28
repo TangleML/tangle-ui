@@ -13,6 +13,7 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Paragraph, Text } from "@/components/ui/typography";
+import { getComponentSearchRankingNotice } from "@/services/componentSearchRelevance";
 import type { ComponentSearchSuggestion } from "@/services/componentSearchSuggestions";
 import type { UIComponentFolder } from "@/types/componentLibrary";
 import { tracking } from "@/utils/tracking";
@@ -88,6 +89,11 @@ export function ComponentSearchResults({
   onClearRerank,
   onSuggestedSearch,
 }: ComponentSearchResultsProps) {
+  const rankingNotice = isRerankActive
+    ? getComponentSearchRankingNotice(
+        results.map((result) => result.matchStrength),
+      )
+    : undefined;
   const isEmptyQuery = query.trim().length === 0;
   const [visibleResultCount, setVisibleResultCount] = useState(
     INITIAL_VISIBLE_RESULT_COUNT,
@@ -144,7 +150,10 @@ export function ComponentSearchResults({
           aria-live="polite"
           data-testid="search-results-header"
         >
-          {isRerankActive ? "AI-ranked results" : "Search Results"} (
+          {isRerankActive && !rankingNotice
+            ? "AI-ranked results"
+            : "Search Results"}{" "}
+          (
           {remainingResultCount > 0
             ? `${visibleResults.length} of ${results.length}`
             : results.length}
@@ -161,6 +170,11 @@ export function ComponentSearchResults({
           </Button>
         )}
       </InlineStack>
+      {rankingNotice && (
+        <Paragraph size="sm" tone="subdued" role="status">
+          {rankingNotice}
+        </Paragraph>
+      )}
       <Separator />
       <BlockStack
         className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin"
@@ -177,7 +191,7 @@ export function ComponentSearchResults({
                   key={`${result.reference.digest}-${result.reference.name ?? result.reference.url ?? "component"}`}
                   component={result.reference}
                   matchedFields={result.matchedFields}
-                  rerankScore={result.rerankScore}
+                  matchStrength={result.matchStrength}
                   rerankReason={result.rerankReason}
                   showOutdatedBadge={false}
                   source={result.source}

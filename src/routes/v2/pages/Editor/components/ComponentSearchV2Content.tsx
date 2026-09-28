@@ -29,7 +29,7 @@ const AI_SEARCH_PROGRESS_VERBS = [
   "Ranking",
 ];
 
-function AiRerankProgress() {
+function AiRerankProgress({ modelLabel = "AI" }: { modelLabel?: string }) {
   const [verbIndex, setVerbIndex] = useState(0);
 
   useEffect(() => {
@@ -49,7 +49,8 @@ function AiRerankProgress() {
     >
       <Spinner size={14} />
       <Text size="xs" tone="subdued" role="status" aria-live="polite">
-        {AI_SEARCH_PROGRESS_VERBS[verbIndex]} component candidates with AI…
+        {AI_SEARCH_PROGRESS_VERBS[verbIndex]} component candidates with{" "}
+        {modelLabel}…
       </Text>
     </InlineStack>
   );
@@ -103,6 +104,8 @@ export function ComponentSearchV2Content() {
     isLoading,
     canRerank,
     isReranking,
+    rerankError,
+    rerankModelLabel,
     isRerankActive,
     rerank,
     clearRerank,
@@ -220,7 +223,12 @@ export function ComponentSearchV2Content() {
             {isReranking ? <Spinner size={14} /> : <Icon name="Sparkles" />}
           </Button>
         </InlineStack>
-        {isReranking && <AiRerankProgress />}
+        {isReranking && <AiRerankProgress modelLabel={rerankModelLabel} />}
+        {rerankError && !isReranking && (
+          <Text size="xs" tone="critical" role="alert">
+            AI search failed: {rerankError} Local search is still available.
+          </Text>
+        )}
         <SourceFilterBar
           options={sourceFilterOptions}
           disabledSourceKeys={disabledSourceKeys}

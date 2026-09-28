@@ -17,6 +17,7 @@ import {
 } from "@/components/shared/ComponentDetail/ComponentDetail";
 import { ComponentLifecycleBadges } from "@/components/shared/ComponentLifecycleBadges";
 import { ComponentSearchEmptyStateSuggestions } from "@/components/shared/ComponentSearchEmptyStateSuggestions";
+import { ComponentSearchMatchBadge } from "@/components/shared/ComponentSearchMatchBadge";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { SuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { Badge } from "@/components/ui/badge";
@@ -67,6 +68,11 @@ import {
   mergeUniqueMatches,
   type SourcedReference,
 } from "@/services/componentSearchIndex";
+import {
+  type ComponentMatchStrength,
+  getComponentMatchStrength,
+  getComponentSearchRankingNotice,
+} from "@/services/componentSearchRelevance";
 import { buildComponentSearchSuggestions } from "@/services/componentSearchSuggestions";
 import {
   fetchAndStoreComponentLibrary,
@@ -126,14 +132,6 @@ const SOURCE_ICON_TONE_BY_KIND: Record<ComponentSearchSource["kind"], string> =
     registered: "text-violet-500",
     user: "text-amber-500",
   };
-
-function rerankScoreClass(score: number): string {
-  if (score >= 0.9)
-    return "text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-300 dark:bg-emerald-500/15 dark:border-emerald-500/30";
-  if (score >= 0.75)
-    return "text-emerald-600 bg-emerald-50/70 border-emerald-100 dark:text-emerald-300 dark:bg-emerald-500/10 dark:border-emerald-500/25";
-  return "text-emerald-500 bg-white border-emerald-100 dark:bg-emerald-500/15 dark:border-emerald-500/30";
-}
 
 /** How many lexical hits to display before the user asks for AI judgment. */
 const LEXICAL_RESULT_LIMIT = 20;
@@ -252,7 +250,7 @@ interface ComponentCardProps {
   source?: ComponentSearchSource;
   matchedFields?: MatchField[];
   reason?: string;
-  rerankScore?: number;
+  matchStrength?: ComponentMatchStrength;
   isAiRanked?: boolean;
   isSelected?: boolean;
   // Position within the current result list — passed to analytics.
@@ -277,7 +275,7 @@ const ComponentCard = ({
   source,
   matchedFields,
   reason,
-  rerankScore,
+  matchStrength,
   isAiRanked,
   isSelected,
   position,
@@ -365,18 +363,8 @@ const ComponentCard = ({
             {name}
           </Text>
           {!isDetailOpen && <ComponentLifecycleBadges reference={reference} />}
-          {rerankScore !== undefined && !isDetailOpen && (
-            <Badge
-              variant="secondary"
-              className={cn(
-                "shrink-0 whitespace-nowrap rounded-full px-1.5 py-0.5 font-semibold leading-none",
-                rerankScoreClass(rerankScore),
-              )}
-              aria-label={`${Math.round(rerankScore * 100)} percent relevance`}
-              title={`${Math.round(rerankScore * 100)}% relevance`}
-            >
-              {Math.round(rerankScore * 100)}%
-            </Badge>
+          {matchStrength && !isDetailOpen && (
+            <ComponentSearchMatchBadge strength={matchStrength} />
           )}
         </InlineStack>
         {publishedBy && (
@@ -1089,6 +1077,7 @@ export const DashboardComponentsV2View = () => {
     error: rerankError,
     reset: resetRerank,
     isConfigured,
+    modelLabel: rerankModelLabel,
   } = useNaturalLanguageComponentRerank();
 
   // Reranked results are tied to the exact query that triggered them. If the
@@ -1246,9 +1235,11 @@ export const DashboardComponentsV2View = () => {
   const isEmpty = trimmedQuery.length === 0;
   const isConfigError = rerankError instanceof NaturalLanguageSearchConfigError;
   const aiSearchProgressMode = isEmbeddingSearchPending ? "embedding" : "smart";
-  const aiSearchModelLabel = aiConfig.model.trim()
-    ? getAiModelLabel(aiConfig.model)
-    : "the configured model";
+  const aiSearchModelLabel =
+    rerankModelLabel ??
+    (aiConfig.model.trim()
+      ? getAiModelLabel(aiConfig.model)
+      : "the configured model");
   // Only treat rerank as "active" when the model actually returned matches.
   // An empty result set (model decided nothing fit, or the response was
   // malformed and the service degraded it to `{ matches: [] }`) means the
@@ -1265,14 +1256,20 @@ export const DashboardComponentsV2View = () => {
 
   // What we actually render. Rerank wins when active; otherwise lexical.
   const displayedResults: Array<
-    LexicalMatch & { reason?: string; rerankScore?: number }
+    LexicalMatch & { reason?: string; matchStrength?: ComponentMatchStrength }
   > = rerankActive
     ? mergeRerankIntoLexical(rerankData.matches, rerankBaseMatches)
     : lexicalMatches.map((m) => ({
         ...m,
         reason: undefined,
-        rerankScore: undefined,
+        matchStrength: undefined,
       }));
+
+  const rankingNotice = rerankActive
+    ? getComponentSearchRankingNotice(
+        displayedResults.map((result) => result.matchStrength),
+      )
+    : undefined;
 
   const searchSuggestions =
     lexicalMatches.length === 0 &&
@@ -1510,7 +1507,7 @@ export const DashboardComponentsV2View = () => {
         )}
         <InlineStack align="space-between" blockAlign="center" gap="2">
           <Paragraph size="xs" tone="subdued">
-            {rerankActive
+            {rerankActive && !rankingNotice
               ? `AI-ranked ${displayedResults.length} result${displayedResults.length === 1 ? "" : "s"} for “${trimmedQuery}”`
               : `${displayedResults.length} component result${displayedResults.length === 1 ? "" : "s"} for “${trimmedQuery}”`}
           </Paragraph>
@@ -1525,6 +1522,11 @@ export const DashboardComponentsV2View = () => {
             </Button>
           )}
         </InlineStack>
+        {rankingNotice && (
+          <Paragraph size="sm" tone="subdued" role="status">
+            {rankingNotice}
+          </Paragraph>
+        )}
         <div
           className={cn(
             "grid gap-2",
@@ -1540,7 +1542,7 @@ export const DashboardComponentsV2View = () => {
               source={result.source}
               matchedFields={result.matchedFields}
               reason={result.reason}
-              rerankScore={result.rerankScore}
+              matchStrength={result.matchStrength}
               isAiRanked={rerankActive}
               isSelected={result.digest === selectedDigest}
               position={idx}
@@ -1602,7 +1604,7 @@ export const DashboardComponentsV2View = () => {
                   ? "AI search in progress"
                   : "AI search"
               }
-              title="AI search — rerank a bounded set of top candidates with an LLM"
+              title="AI search — rerank a bounded set of top candidates"
               {...tracking("component_library.search.ai_rerank", {
                 surface: "dashboard_v2",
                 mode: "smart",
@@ -1660,8 +1662,8 @@ export const DashboardComponentsV2View = () => {
                 AI search unavailable
               </Text>
               <Paragraph size="sm" tone="subdued">
-                Configure an OpenAI-compatible provider to use AI search. Search
-                results are unaffected.
+                Configure the shared AI connection in AI Configuration to use AI
+                search. Search results are unaffected.
               </Paragraph>
               <ConfigureInSettingsLink />
             </BlockStack>
@@ -1777,15 +1779,22 @@ export const DashboardComponentsV2View = () => {
 function mergeRerankIntoLexical(
   reranked: RerankedMatch[],
   lexical: LexicalMatch[],
-): Array<LexicalMatch & { reason?: string; rerankScore?: number }> {
+): Array<
+  LexicalMatch & { reason?: string; matchStrength?: ComponentMatchStrength }
+> {
   const lexicalByDigest = new Map(lexical.map((m) => [m.digest, m]));
-  const out: Array<LexicalMatch & { reason?: string; rerankScore?: number }> =
-    [];
+  const out: Array<
+    LexicalMatch & { reason?: string; matchStrength?: ComponentMatchStrength }
+  > = [];
 
   for (const r of reranked) {
     const lex = lexicalByDigest.get(r.id);
     if (!lex) continue;
-    out.push({ ...lex, reason: r.reason, rerankScore: r.score });
+    out.push({
+      ...lex,
+      reason: r.reason,
+      matchStrength: getComponentMatchStrength(r.score, r.matchStrength),
+    });
     lexicalByDigest.delete(r.id);
   }
   for (const lex of lexicalByDigest.values()) {

@@ -214,6 +214,8 @@ export function useComponentSearchV2State(
     data: rerankData,
     isPending: isReranking,
     isConfigured,
+    error: rerankError,
+    modelLabel: rerankModelLabel,
   } = useNaturalLanguageComponentRerank();
   const [rerankedFor, setRerankedFor] = useState<string | null>(null);
   const [rerankBaseMatches, setRerankBaseMatches] = useState<LexicalMatch[]>(
@@ -402,6 +404,8 @@ export function useComponentSearchV2State(
       isConfigured,
     isReranking: isReranking || isEmbeddingSearchPending,
     isRerankActive,
+    rerankError: rerankError?.message,
+    rerankModelLabel,
     rerank,
     clearRerank,
     toggleSourceFilter,

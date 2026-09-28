@@ -6,14 +6,17 @@ import {
   getEffectiveReasoningEffort,
   isAiReasoningEffort,
 } from "@/config/aiModels";
+import { getComponentSearchConfig } from "@/config/componentSearch";
 import { useBackend } from "@/providers/BackendProvider";
 import type { AiProviderConfig } from "@/types/aiProvider";
 import { getStorage } from "@/utils/typedStorage";
 import { isRecord } from "@/utils/typeGuards";
 
 /**
- * Provider selection shared by all AI features. Turning off bring-your-own-key
- * mode uses the selected backend without overwriting the saved custom provider.
+ * Provider selection shared by all AI features. An environment-configured proxy
+ * takes precedence over browser connection settings. Otherwise, turning off
+ * bring-your-own-key mode uses the selected backend without overwriting the
+ * saved custom provider.
  *
  * Stored in localStorage so each user owns their credentials. API keys stored
  * in localStorage are readable by JavaScript on this origin; users should use
@@ -138,17 +141,31 @@ export function useAiProviderSettings() {
     model,
     customConfig.reasoningEffort ?? DEFAULT_AI_REASONING_EFFORT,
   );
+  const environmentBase = (import.meta.env.VITE_OPENAI_API_BASE ?? "")
+    .trim()
+    .replace(/\/+$/, "");
+  const environmentKey = (import.meta.env.VITE_OPENAI_API_KEY ?? "").trim();
+  const isEnvironmentConfigured = environmentBase.length > 0;
   const config: AiProviderConfig = {
-    apiBase: useOwnKey
-      ? customConfig.apiBase
-      : backendBase
-        ? `${backendBase}/api/experimental/ai/v1`
-        : "",
-    apiKey: useOwnKey ? customConfig.apiKey : "",
+    ...(isEnvironmentConfigured
+      ? {
+          apiBase: environmentBase,
+          apiKey: environmentKey,
+          credentials: environmentKey
+            ? ("omit" as const)
+            : ("include" as const),
+        }
+      : useOwnKey
+        ? { apiBase: customConfig.apiBase, apiKey: customConfig.apiKey }
+        : {
+            apiBase: backendBase ? `${backendBase}/api/experimental/ai/v1` : "",
+            apiKey: "",
+            credentials: "include" as const,
+          }),
     model,
     ...(reasoningEffort ? { reasoningEffort } : {}),
-    ...(useOwnKey ? {} : { credentials: "include" }),
   };
+  const rerankConfig = getComponentSearchConfig(config);
 
   const setUseOwnKey = (enabled: boolean) => {
     storage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, enabled);
@@ -175,6 +192,8 @@ export function useAiProviderSettings() {
 
   return {
     config,
+    rerankConfig,
+    isEnvironmentConfigured,
     customConfig,
     useOwnKey,
     setUseOwnKey,

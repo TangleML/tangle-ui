@@ -99,6 +99,31 @@ describe("ComponentSearchV2Content", () => {
     expect(anchor).toContainElement(screen.getByLabelText("Search components"));
   });
 
+  it("explains a failed rerank while keeping local search available", () => {
+    const state = mocks.useComponentSearchV2State();
+    mocks.useComponentSearchV2State.mockReturnValue({
+      ...state,
+      rerankError: "Jev reranking failed (HTTP 504).",
+    });
+    render(<ComponentSearchV2Content />);
+    expect(screen.getByRole("alert")).toHaveTextContent("HTTP 504");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Local search is still available",
+    );
+    expect(screen.getByLabelText("Search components")).toBeEnabled();
+  });
+
+  it("names Jev while that search provider is ranking", () => {
+    const state = mocks.useComponentSearchV2State();
+    mocks.useComponentSearchV2State.mockReturnValue({
+      ...state,
+      isReranking: true,
+      rerankModelLabel: "Jev (jev-latest)",
+    });
+    render(<ComponentSearchV2Content />);
+    expect(screen.getByRole("status")).toHaveTextContent("Jev (jev-latest)");
+  });
+
   it("shows active AI rerank progress below the search box", async () => {
     mocks.useComponentSearchV2State.mockImplementation(() => ({
       results: [],

@@ -3,7 +3,7 @@
  *
  * Everything here is deliberately React-free so it can be unit-tested in
  * isolation: source collection + dedup, hydrated-reference mapping, the lexical
- * candidate selection, the rerank merge, and the relevance-badge gating. The
+ * candidate selection, the rerank merge, and the match labels. The
  * React glue lives in `useComponentSearchV2State` and the panel components.
  */
 import { flattenFolders } from "@/providers/ComponentLibraryProvider/componentLibrary";
@@ -17,6 +17,10 @@ import {
   type MatchField,
   type SourcedReference,
 } from "@/services/componentSearchIndex";
+import {
+  type ComponentMatchStrength,
+  getComponentMatchStrength,
+} from "@/services/componentSearchRelevance";
 import type { ComponentSearchSuggestion } from "@/services/componentSearchSuggestions";
 import type { RerankResult } from "@/services/naturalLanguageComponentSearchService";
 import type {
@@ -32,8 +36,7 @@ import type {
 const AI_CANDIDATE_LIMIT = 80;
 const AI_LEXICAL_CANDIDATE_LIMIT = 60;
 const AI_SOURCE_DIVERSITY_CANDIDATES_PER_SOURCE = 8;
-// Scores at or below this are treated as the model excluding a candidate: such
-// items keep their place in the list but are not badged as relevance matches.
+// Scores at or below this stay behind unscored local candidates.
 const RERANK_EXCLUSION_THRESHOLD = 0.01;
 
 const STANDARD_SOURCE: ComponentSearchSource = {
@@ -63,6 +66,7 @@ export interface ComponentSearchV2Result {
   source: ComponentSearchSource;
   matchedFields?: MatchField[];
   rerankScore?: number;
+  matchStrength?: ComponentMatchStrength;
   rerankReason?: string;
 }
 
@@ -81,6 +85,8 @@ export interface ComponentSearchV2State {
   canRerank: boolean;
   isReranking: boolean;
   isRerankActive: boolean;
+  rerankError?: string;
+  rerankModelLabel?: string;
   rerank: () => void;
   clearRerank: () => void;
   toggleSourceFilter: (sourceKey: string) => void;
@@ -434,9 +440,8 @@ export function buildRerankMatchByDigest(
 }
 
 /**
- * Attach a relevance badge only to items the model actually scored above the
- * exclusion threshold. Lexical results carried along after the ranked set, and
- * candidates the model excluded, render without a (misleading) badge.
+ * Attach qualitative labels to scored candidates, including weak matches.
+ * Lexical results the model did not evaluate remain unbadged.
  */
 export function buildResults(
   displayedMatches: LexicalMatch[],
@@ -448,16 +453,19 @@ export function buildResults(
       ? rerankMatchByDigest.get(match.digest)
       : undefined;
     const rerankScore = rerankMatch?.score;
-    const hasRerankMatch =
-      rerankMatch !== undefined &&
-      rerankScore !== undefined &&
-      rerankScore > RERANK_EXCLUSION_THRESHOLD;
     return {
       reference: match.reference,
       source: match.source,
       matchedFields: match.matchedFields,
-      ...(hasRerankMatch
-        ? { rerankScore, rerankReason: rerankMatch.reason }
+      ...(rerankMatch
+        ? {
+            rerankScore,
+            matchStrength: getComponentMatchStrength(
+              rerankMatch.score,
+              rerankMatch.matchStrength,
+            ),
+            rerankReason: rerankMatch.reason,
+          }
         : {}),
     };
   });

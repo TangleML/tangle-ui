@@ -246,7 +246,7 @@ describe("buildResults", () => {
     expect(results[0]?.matchedFields).toEqual(["name", "io"]);
   });
 
-  it("badges only items scored above the exclusion threshold", () => {
+  it("labels weak matches while leaving unscored candidates unbadged", () => {
     const rerankMatches = buildRerankMatchByDigest(
       {
         matches: [
@@ -258,14 +258,15 @@ describe("buildResults", () => {
       true,
     );
     const results = buildResults(displayed, rerankMatches, true);
-    expect(results.map((r) => r.rerankScore)).toEqual([
-      0.9,
-      undefined,
+    expect(results.map((r) => r.rerankScore)).toEqual([0.9, 0, undefined]);
+    expect(results.map((r) => r.matchStrength)).toEqual([
+      "strong",
+      "weak",
       undefined,
     ]);
     expect(results.map((r) => r.rerankReason)).toEqual([
       "Strong match",
-      undefined,
+      "Weak match",
       undefined,
     ]);
   });
