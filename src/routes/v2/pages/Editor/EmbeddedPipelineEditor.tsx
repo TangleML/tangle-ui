@@ -10,11 +10,11 @@ import { ComponentEditorProvider } from "@/components/shared/ComponentEditor/Com
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
-import { QuickRunSubmitterProvider } from "@/routes/v2/pages/Editor/components/QuickRunSubmitterContext";
 import { InlineStack } from "@/components/ui/layout";
 import { ComponentLibraryProvider } from "@/providers/ComponentLibraryProvider";
 import { ForcedSearchProvider } from "@/providers/ComponentLibraryProvider/ForcedSearchProvider";
 import { RunSubmissionScopeProvider } from "@/providers/RunSubmissionScopeProvider";
+import { QuickRunSubmitterProvider } from "@/routes/v2/pages/Editor/components/QuickRunSubmitterContext";
 import { NodeRegistryProvider } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { SpecProvider } from "@/routes/v2/shared/providers/SpecContext";
 import { useShortcutListener } from "@/routes/v2/shared/shortcuts/useShortcutListener";
@@ -26,6 +26,7 @@ import {
 import { SharedStoreRegistrar } from "@/routes/v2/shared/store/SharedStoreRegistrar";
 import { DockArea } from "@/routes/v2/shared/windows/DockArea";
 import { WindowContainer } from "@/routes/v2/shared/windows/WindowContainer";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import type { PipelineRef } from "@/services/pipelineStorage/types";
 
 import { DriverPermissionGate } from "./components/DriverPermissionGate";
@@ -44,7 +45,11 @@ import { useSelectionWindowSync } from "./hooks/useSelectionWindowSync";
 import { useSpecLifecycle } from "./hooks/useSpecLifecycle";
 import { useUndoRedoKeyboard } from "./hooks/useUndoRedoKeyboard";
 import { editorRegistry } from "./nodes";
-import { EditorSessionProvider } from "./store/EditorSessionContext";
+import { readOnlyEditorRegistry } from "./nodes/readOnlyEditorRegistry";
+import {
+  EditorSessionProvider,
+  useEditorSession,
+} from "./store/EditorSessionContext";
 import { TangentEditorAgentProvider } from "./TangentEditorAgentProvider";
 
 interface EmbeddedPipelineEditorProps {
@@ -99,13 +104,14 @@ const EmbeddedPipelineEditorCanvas = withSuspenseWrapper(
       isActive,
       ...agentBoundaryProps
     }: EmbeddedPipelineEditorCanvasProps) => {
+      const session = useEditorSession();
       const {
-        data: { spec: rootSpec, restoredUndoStore },
-      } = useLoadSpec(pipelineRef);
+        data: { spec: rootSpec, file, restoredUndoStore },
+      } = useLoadSpec(pipelineRef, session.id);
       const { navigation } = useSharedStores();
       const canvasRef = useRef<HTMLDivElement | null>(null);
 
-      useSpecLifecycle(rootSpec, pipelineRef, restoredUndoStore);
+      useSpecLifecycle(rootSpec, file, restoredUndoStore);
       useSelectionWindowSync({
         contextPanel: {
           defaultDockState: undefined,
@@ -119,17 +125,17 @@ const EmbeddedPipelineEditorCanvas = withSuspenseWrapper(
       useLinkedWindowCleanup();
 
       const componentSearchV2Enabled = useFlagValue("component-search-v2");
-      useComponentLibraryWindow(!componentSearchV2Enabled);
+      useComponentLibraryWindow(file.canEdit && !componentSearchV2Enabled);
       usePipelineDetailsWindow();
-      useHistoryWindow();
+      useHistoryWindow(file.canEdit);
 
       useRecentRunsWindow();
       useRunsAndSubmissionWindow({ renderSubmitter: true });
-      useUndoRedoKeyboard();
+      useUndoRedoKeyboard(file.canEdit);
       useShortcutListener(isActive);
       useEditorEscapeShortcut();
 
-      useComponentSearchV2Window(componentSearchV2Enabled);
+      useComponentSearchV2Window(file.canEdit && componentSearchV2Enabled);
       useEmbeddedInitialDockLayout(componentSearchV2Enabled);
 
       const activeSpec = navigation.activeSpec;
@@ -138,7 +144,10 @@ const EmbeddedPipelineEditorCanvas = withSuspenseWrapper(
 
       return (
         <>
-          <NodeRegistryProvider registry={editorRegistry}>
+          <NodeRegistryProvider
+            key={file.canEdit ? "editable" : "readonly"}
+            registry={file.canEdit ? editorRegistry : readOnlyEditorRegistry}
+          >
             <SpecProvider spec={activeSpec}>
               <InlineStack
                 className="flex-1 min-h-0 w-full"
@@ -159,7 +168,9 @@ const EmbeddedPipelineEditorCanvas = withSuspenseWrapper(
               </InlineStack>
             </SpecProvider>
           </NodeRegistryProvider>
-          <EmbeddedEditorAgentBoundary {...agentBoundaryProps} />
+          {file.canEdit && (
+            <EmbeddedEditorAgentBoundary {...agentBoundaryProps} />
+          )}
         </>
       );
     },
@@ -180,10 +191,13 @@ export function EmbeddedPipelineEditor({
   onBridgeReady,
   onBridgeClosed,
 }: EmbeddedPipelineEditorProps) {
+  const storage = usePipelineStorage();
   return (
     <RunSubmissionScopeProvider projectId={projectId}>
       <div className="h-full w-full flex flex-col bg-slate-100 dark:bg-background select-none">
-        <SharedStoreProvider>
+        <SharedStoreProvider
+          key={`${storage.scope}:${pipelineRef.fileId ?? pipelineRef.name}`}
+        >
           <SharedStoreRegistrar
             onReady={onStoreReady}
             onClosed={onStoreClosed}
