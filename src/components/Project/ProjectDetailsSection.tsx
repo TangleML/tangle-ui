@@ -4,7 +4,7 @@ import {
   formatResourceCounts,
   visibleResourceCounts,
 } from "@/components/Home/ProjectsSection/formatResourceCounts";
-import { useFlagValue } from "@/components/shared/Settings/useFlags";
+import { useTangentEnabled } from "@/components/shared/Settings/useFlags";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -17,7 +17,7 @@ import { useProjectsById } from "@/services/projects/useProjects";
 import { tracking } from "@/utils/tracking";
 
 function ProjectEntry({ project }: { project: Project }) {
-  const tangentEnabled = useFlagValue("tangent-shell");
+  const tangentEnabled = useTangentEnabled();
 
   const counts = formatResourceCounts(
     visibleResourceCounts(project.resourceCounts, tangentEnabled),

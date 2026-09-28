@@ -21,7 +21,7 @@ import {
   RunSourceIcon,
 } from "@/components/shared/RunSource";
 import {
-  useFlagValue,
+  useProjectsEnabled,
   useTangentEnabled,
 } from "@/components/shared/Settings/useFlags";
 import { TagList } from "@/components/shared/Tags/TagList";
@@ -240,7 +240,7 @@ function RunDetailsContentLoaded({
  */
 function useRunProjectIds(runId: string | undefined) {
   const { backendUrl } = useBackend();
-  const projectsEnabled = useFlagValue("projects");
+  const projectsEnabled = useProjectsEnabled();
 
   const { data: runAnnotations } = useQuery({
     ...runAnnotationsQueryOptions(runId, backendUrl),

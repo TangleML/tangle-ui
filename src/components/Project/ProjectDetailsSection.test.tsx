@@ -7,9 +7,14 @@ import { useProjectsById } from "@/services/projects/useProjects";
 
 import { ProjectDetailsSection } from "./ProjectDetailsSection";
 
-vi.mock("@/components/shared/Settings/useFlags", () => ({
-  useFlagValue: vi.fn(),
-}));
+vi.mock("@/components/shared/Settings/useFlags", () => {
+  const useFlagValue = vi.fn();
+  return {
+    useFlagValue,
+    useProjectsEnabled: () => useFlagValue("projects"),
+    useTangentEnabled: () => useFlagValue("tangent-shell"),
+  };
+});
 
 vi.mock("@/services/projects/useProjects", () => ({
   useProjectsById: vi.fn(),
