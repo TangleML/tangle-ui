@@ -1,19 +1,13 @@
 import { MINUTES } from "@/utils/constants";
 
+import { isSettledRefusal, MAX_QUERY_RETRIES } from "../retryPolicy";
 import { ApiError } from "./errors";
 
-const MAX_RETRIES = 3;
-
-/**
- * A 4xx is the backend's settled answer, so retrying only delays it: without
- * this, a deleted project's url sits on a spinner for the length of three
- * backoffs before it can say the project is gone.
- */
 function retryUnlessRefused(failureCount: number, error: Error) {
-  if (error instanceof ApiError && error.status >= 400 && error.status < 500) {
+  if (error instanceof ApiError && isSettledRefusal(error.status)) {
     return false;
   }
-  return failureCount < MAX_RETRIES;
+  return failureCount < MAX_QUERY_RETRIES;
 }
 
 /**
