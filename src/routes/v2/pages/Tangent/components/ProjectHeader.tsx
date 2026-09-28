@@ -36,7 +36,7 @@ export function ProjectHeader() {
           params={{ projectId: project.id }}
           title="Project details"
           className="min-w-0 rounded-md px-2 py-1 hover:bg-accent"
-          {...tracking("tangent.open_project_details")}
+          {...tracking("projects.open_project_details")}
         >
           <InlineStack gap="2" blockAlign="center" wrap="nowrap">
             <Icon
@@ -58,7 +58,7 @@ export function ProjectHeader() {
           aria-label={`Rename ${project.name}`}
           title="Rename project"
           className="size-7 shrink-0 text-muted-foreground hover:text-foreground"
-          {...tracking("tangent.rename_project_open")}
+          {...tracking("projects.rename_project_open")}
         >
           <Icon name="Pencil" size="sm" />
         </Button>
