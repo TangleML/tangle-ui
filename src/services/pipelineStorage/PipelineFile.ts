@@ -7,13 +7,11 @@ import { emitPipelineFileChanged } from "./pipelineFileEvents";
 import type { PipelineFolder } from "./PipelineFolder";
 import { withPipelineLock } from "./pipelineLock";
 import { deleteEntry, updateEntry } from "./pipelineRegistry";
+import type { PipelineFileDescriptor } from "./types";
 
-interface PipelineFileInit {
+interface PipelineFileInit extends PipelineFileDescriptor {
   id: string;
-  storageKey: string;
   folder: PipelineFolder;
-  createdAt?: Date;
-  modifiedAt?: Date;
 }
 
 export class PipelineFile {
@@ -24,18 +22,24 @@ export class PipelineFile {
   @observable accessor storageKey: string;
   @observable accessor folder: PipelineFolder;
   @observable.ref accessor redirectedFile: PipelineFile | undefined;
+  @observable private accessor fileDisplayName: string | undefined;
+  private readonly editable: boolean;
   resolveRedirect?: () => Promise<PipelineFile | undefined>;
   stageLocalRecovery?: (content: string) => Promise<void>;
   readLocalRecovery?: () => Promise<string | undefined>;
 
   get canEdit(): boolean {
-    return this.redirectedFile?.canEdit ?? true;
+    return this.redirectedFile?.canEdit ?? this.editable;
   }
   get storageKind(): "local" | "remote" | "pending" {
     return this.redirectedFile?.storageKind ?? "local";
   }
   get displayName(): string {
-    return this.redirectedFile?.displayName ?? this.storageKey;
+    return (
+      this.redirectedFile?.displayName ??
+      this.fileDisplayName ??
+      this.storageKey
+    );
   }
   get referenceId(): string {
     return this.redirectedFile?.referenceId ?? this.storageKey;
@@ -74,6 +78,8 @@ export class PipelineFile {
     this.id = options.id;
     this.storageKey = options.storageKey;
     this.folder = options.folder;
+    this.fileDisplayName = options.displayName;
+    this.editable = options.canEdit ?? true;
     this.createdAt = options.createdAt;
     this.modifiedAt = options.modifiedAt;
 
@@ -85,10 +91,12 @@ export class PipelineFile {
     if (redirect) return redirect.read();
     const recovery = await this.readLocalRecovery?.();
     if (recovery !== undefined) return recovery;
-    return this.folder.driver.read(this.storageKey);
+    const result = await this.folder.driver.read(this.storageKey);
+    return typeof result === "string" ? result : result.content;
   }
 
   async write(content: string): Promise<void> {
+    if (!this.canEdit) throw new Error("This pipeline is read-only.");
     if (!this.redirectedFile && this.stageLocalRecovery)
       await this.stageLocalRecovery(content);
     await withPipelineLock(this.id, async () => {
@@ -102,6 +110,7 @@ export class PipelineFile {
 
   @action
   async rename(newName: string): Promise<void> {
+    if (!this.canEdit) throw new Error("This pipeline is read-only.");
     return withPipelineLock(this.id, async () => {
       const redirect = await this.redirect();
       if (redirect) return redirect.rename(newName);
@@ -110,6 +119,7 @@ export class PipelineFile {
 
       runInAction(() => {
         this.storageKey = newName;
+        this.fileDisplayName = newName;
       });
     });
   }
@@ -131,6 +141,7 @@ export class PipelineFile {
 
   @action
   async deleteFile(): Promise<void> {
+    if (!this.canEdit) throw new Error("This pipeline is read-only.");
     return withPipelineLock(this.id, async () => {
       const redirect = await this.redirect();
       if (redirect) return redirect.deleteFile();
