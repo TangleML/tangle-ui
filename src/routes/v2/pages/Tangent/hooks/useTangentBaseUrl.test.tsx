@@ -11,7 +11,6 @@ vi.mock("@/providers/BackendProvider", () => ({
   useBackend: () => backend,
 }));
 
-import { DEFAULT_TANGENT_BASE_URL } from "@/routes/v2/pages/Tangent/constants";
 import {
   ProjectsApiError,
   WorkspacesApiError,
@@ -112,8 +111,27 @@ describe("useTangentBaseUrl", () => {
     });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
-    // baseUrl still resolves to the localhost default, which is exactly why
-    // callers have to gate on isError rather than trusting it.
-    expect(result.current.baseUrl).toBe(DEFAULT_TANGENT_BASE_URL);
+    expect(result.current.baseUrl).toBeNull();
+  });
+
+  // The regression that had Chrome asking to reach the local network: a url
+  // resolved before the workspace arrived fell back to loopback, and the
+  // runtime probe imported it on the very first commit.
+  it("has no url until the workspace arrives", async () => {
+    vi.mocked(projectsService.getProject).mockResolvedValue(project());
+    vi.mocked(workspacesService.getWorkspace).mockReturnValue(
+      new Promise<Workspace>(() => {}),
+    );
+
+    const { result } = renderHook(() => useTangentBaseUrl("p1"), {
+      wrapper: wrapperFor(makeClient()),
+    });
+
+    expect(result.current.baseUrl).toBeNull();
+
+    await waitFor(() =>
+      expect(workspacesService.getWorkspace).toHaveBeenCalled(),
+    );
+    expect(result.current.baseUrl).toBeNull();
   });
 });

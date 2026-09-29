@@ -1,8 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { DEFAULT_TANGENT_BASE_URL } from "@/routes/v2/pages/Tangent/constants";
+import { DEV_TANGENT_BASE_URL } from "@/routes/v2/pages/Tangent/constants";
 
 import { resolveTangentBaseUrl } from "./tangentBaseUrl";
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 describe("resolveTangentBaseUrl", () => {
   it("returns the configured base URL", () => {
@@ -19,26 +23,27 @@ describe("resolveTangentBaseUrl", () => {
     ).toBe("https://tangent.example.com");
   });
 
-  it("falls back to the default when the key is missing", () => {
-    expect(resolveTangentBaseUrl({ other: "value" })).toBe(
-      DEFAULT_TANGENT_BASE_URL,
-    );
-  });
+  describe("without a usable value", () => {
+    const unusable = [
+      ["the key is missing", { other: "value" }],
+      ["the value is blank", { tangentBaseUrl: "   " }],
+      ["the value is not a string", { tangentBaseUrl: 123 }],
+      ["the input is null", null],
+      ["the input is undefined", undefined],
+    ] as const;
 
-  it("falls back to the default when the value is blank", () => {
-    expect(resolveTangentBaseUrl({ tangentBaseUrl: "   " })).toBe(
-      DEFAULT_TANGENT_BASE_URL,
-    );
-  });
+    it.each(unusable)("falls back to localhost in dev when %s", (_, input) => {
+      vi.stubEnv("DEV", true);
 
-  it("falls back to the default when the value is not a string", () => {
-    expect(resolveTangentBaseUrl({ tangentBaseUrl: 123 })).toBe(
-      DEFAULT_TANGENT_BASE_URL,
-    );
-  });
+      expect(resolveTangentBaseUrl(input)).toBe(DEV_TANGENT_BASE_URL);
+    });
 
-  it("falls back to the default for null or non-record input", () => {
-    expect(resolveTangentBaseUrl(null)).toBe(DEFAULT_TANGENT_BASE_URL);
-    expect(resolveTangentBaseUrl(undefined)).toBe(DEFAULT_TANGENT_BASE_URL);
+    // A built app that reached for loopback would make the browser prompt for
+    // local network access, so there it must resolve to no url at all.
+    it.each(unusable)("resolves to no url in a build when %s", (_, input) => {
+      vi.stubEnv("DEV", false);
+
+      expect(resolveTangentBaseUrl(input)).toBeNull();
+    });
   });
 });

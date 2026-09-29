@@ -16,6 +16,17 @@ describe("TangentUnreachable", () => {
     ).toBeInTheDocument();
   });
 
+  it("says the address is missing rather than naming a url it never had", () => {
+    render(<TangentUnreachable baseUrl={null} />);
+
+    expect(screen.getByTestId("info-box-title")).toHaveTextContent(
+      "Tangent isn't configured",
+    );
+    expect(
+      screen.getByText(/does not say where Tangent lives/),
+    ).toBeInTheDocument();
+  });
+
   it("offers a way out rather than leaving the page blank", async () => {
     const onRetry = vi.fn();
     const user = userEvent.setup();
