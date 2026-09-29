@@ -87,7 +87,7 @@ const FavoritesSearchBar = ({
 );
 
 export function DashboardFavoritesView() {
-  const backendUrl = usePipelineStorage().remote?.backendUrl ?? "";
+  const backendUrl = usePipelineStorage().backendUrl;
   const { favorites, removeFavorite } = useFavorites();
   const [page, setPage] = useState(0);
   const [query, setQuery] = useState("");

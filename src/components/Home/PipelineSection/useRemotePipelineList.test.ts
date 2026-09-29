@@ -38,7 +38,10 @@ const {
     storage: {
       scope: "account-a",
       remoteEnabled: true,
-      remote: { listPage, listSummaries, listPending, listCached },
+      listPipelinePage: listPage,
+      listPipelines: listSummaries,
+      listPendingPipelines: listPending,
+      listCachedPipelines: listCached,
       rootFolder: { assignFile: vi.fn() },
       filterVisibleLocalPipelines: vi.fn(),
     },
@@ -128,6 +131,7 @@ describe("useRemotePipelineList", () => {
 
     await waitFor(() => expect(result.current.isPending).toBe(false));
     expect(listPage).toHaveBeenCalledExactlyOnceWith({
+      storageKind: "remote",
       pageSize: 10,
       pageToken: undefined,
       signal: expect.any(AbortSignal),
@@ -148,6 +152,7 @@ describe("useRemotePipelineList", () => {
 
     await waitFor(() => expect(result.current.pagination.currentPage).toBe(2));
     expect(listPage).toHaveBeenLastCalledWith({
+      storageKind: "remote",
       pageSize: 10,
       pageToken: "page-two",
       signal: expect.any(AbortSignal),
@@ -197,6 +202,7 @@ describe("useRemotePipelineList", () => {
     expect(result.current.pagination.currentPage).toBe(1);
     await waitFor(() => expect(listPage).toHaveBeenCalledTimes(3));
     expect(listPage).toHaveBeenLastCalledWith({
+      storageKind: "remote",
       pageSize: 10,
       pageToken: undefined,
       signal: expect.any(AbortSignal),
@@ -238,6 +244,7 @@ describe("useRemotePipelineList", () => {
     expect(result.current.pagination.currentPage).toBe(1);
     expect(result.current.pagination.hasPreviousPage).toBe(false);
     expect(listPage).toHaveBeenLastCalledWith({
+      storageKind: "remote",
       pageSize: 10,
       pageToken: undefined,
       signal: expect.any(AbortSignal),

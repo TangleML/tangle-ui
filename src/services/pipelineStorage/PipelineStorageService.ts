@@ -6,6 +6,7 @@ import { REMOTE_PIPELINES_ENABLED } from "@/utils/remotePipelines";
 import { createDriver } from "./createDriver";
 import { pipelineStorageDb } from "./db";
 import { RootFolderDbStorageDriver } from "./drivers/RootFolderDbStorageDriver";
+import { listStoragePage } from "./listStoragePage";
 import { PipelineFile } from "./PipelineFile";
 import { PipelineFolder } from "./PipelineFolder";
 import { findById, findByStorageKey } from "./pipelineRegistry";
@@ -18,7 +19,17 @@ import {
   type RemotePipelineOptions,
   RemotePipelineStore,
 } from "./RemotePipelineStore";
-import { type PipelineStorageDriver, ROOT_FOLDER_ID } from "./types";
+import {
+  type PipelinePageOptions,
+  type PipelineStorageDriver,
+  type PipelineStoragePage,
+  ROOT_FOLDER_ID,
+} from "./types";
+
+interface PipelinePageRequest extends PipelinePageOptions {
+  storageKind: "local" | "remote";
+  folderId?: string;
+}
 
 const ROOT_DRIVER_CONFIG = {
   driverType: "folder-indexdb",
@@ -27,7 +38,7 @@ const ROOT_DRIVER_CONFIG = {
 
 export class PipelineStorageService {
   @observable accessor rootFolder: PipelineFolder;
-  readonly remote?: RemotePipelineStore;
+  private readonly remote?: RemotePipelineStore;
   readonly scope: string;
 
   get remoteEnabled(): boolean {
@@ -35,6 +46,33 @@ export class PipelineStorageService {
   }
   get remoteListError(): string | undefined {
     return this.remote?.listError;
+  }
+
+  get backendUrl(): string {
+    return this.remote?.backendUrl ?? "";
+  }
+
+  async listPipelinePage({
+    storageKind,
+    folderId,
+    ...options
+  }: PipelinePageRequest): Promise<PipelineStoragePage<PipelineFile>> {
+    if (storageKind === "remote") {
+      if (!this.remote) throw new Error("Remote pipelines are not enabled.");
+      return this.remote.listPage(options);
+    }
+    return listStoragePage(
+      { list: () => this.listLocalPipelines(folderId) },
+      options,
+    );
+  }
+
+  async listPendingPipelines(): Promise<PipelineFile[]> {
+    return this.remote?.listPending() ?? [];
+  }
+
+  async listCachedPipelines(): Promise<PipelineFile[]> {
+    return this.remote?.listCached() ?? [];
   }
 
   constructor(remoteOptions?: RemotePipelineOptions) {
@@ -101,6 +139,15 @@ export class PipelineStorageService {
   }
 
   async listPipelines(folderId = ROOT_FOLDER_ID): Promise<PipelineFile[]> {
+    const locals = await this.listLocalPipelines(folderId);
+    return folderId === ROOT_FOLDER_ID && this.remote
+      ? [...locals, ...(await this.remote.list())]
+      : locals;
+  }
+
+  private async listLocalPipelines(
+    folderId = ROOT_FOLDER_ID,
+  ): Promise<PipelineFile[]> {
     const folder = await this.findFolderById(folderId);
     if (folderId === ROOT_FOLDER_ID) {
       const legacy = await new RootFolderDbStorageDriver().list();
@@ -109,12 +156,7 @@ export class PipelineStorageService {
           await this.rootFolder.assignFile(descriptor.storageKey);
       }
     }
-    const locals = await this.filterVisibleLocalPipelines(
-      await folder.listPipelines(),
-    );
-    return folderId === ROOT_FOLDER_ID && this.remote
-      ? [...locals, ...(await this.remote.list())]
-      : locals;
+    return this.filterVisibleLocalPipelines(await folder.listPipelines());
   }
 
   async findPipelineById(id: string): Promise<PipelineFile> {

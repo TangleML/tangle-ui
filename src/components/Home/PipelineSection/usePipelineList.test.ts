@@ -22,12 +22,8 @@ const { storage, getLocalEntries, listRemote, listPending } = vi.hoisted(
       },
       filterVisibleLocalPipelines:
         vi.fn<(files: PipelineFile[]) => Promise<PipelineFile[]>>(),
-      remote: undefined as
-        | {
-            list: () => Promise<PipelineFile[]>;
-            listPending: () => Promise<PipelineFile[]>;
-          }
-        | undefined,
+      listPendingPipelines: vi.fn<() => Promise<PipelineFile[]>>(),
+      listPipelines: vi.fn<() => Promise<PipelineFile[]>>(),
     },
     getLocalEntries: vi.fn<() => Promise<Map<string, ComponentFileEntry>>>(),
     listRemote: vi.fn<() => Promise<PipelineFile[]>>(),
@@ -90,7 +86,8 @@ beforeEach(() => {
   storage.scope = "account-a";
   storage.remoteEnabled = true;
   storage.remoteListError = undefined;
-  storage.remote = { list: listRemote, listPending };
+  storage.listPendingPipelines.mockImplementation(listPending);
+  storage.listPipelines.mockImplementation(listRemote);
   storage.rootFolder.assignFile.mockImplementation(async (name) => file(name));
   storage.filterVisibleLocalPipelines.mockImplementation(
     async (files) => files,
@@ -118,7 +115,7 @@ function renderList() {
 describe("usePipelineList", () => {
   it("preserves legacy local entries and hides migrated backups", async () => {
     storage.remoteEnabled = false;
-    storage.remote = undefined;
+    storage.listPendingPipelines.mockResolvedValue([]);
     const local = localEntry("Local draft");
     getLocalEntries.mockResolvedValue(
       new Map([

@@ -80,7 +80,7 @@ export const FavoritesPreview = ({
   hideWhenEmpty = false,
   trackingId = "homepage.favorites.item",
 }: FavoritesPreviewProps) => {
-  const backendUrl = usePipelineStorage().remote?.backendUrl ?? "";
+  const backendUrl = usePipelineStorage().backendUrl;
   const { favorites, removeFavorite } = useFavorites();
   const filtered = typeFilter
     ? favorites.filter((f) => f.type === typeFilter)

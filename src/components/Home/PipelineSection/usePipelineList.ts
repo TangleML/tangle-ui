@@ -57,7 +57,7 @@ export function usePipelineList() {
         }
       }
 
-      const pendingFiles = (await storage.remote?.listPending()) ?? [];
+      const pendingFiles = await storage.listPendingPipelines();
       const errors = new Set<string>();
       for (let offset = 0; offset < pendingFiles.length; offset += 5) {
         await Promise.all(

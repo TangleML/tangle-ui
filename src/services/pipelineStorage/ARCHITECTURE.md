@@ -685,3 +685,15 @@ The driver obtains credentials through its supplied `CloudConnection`.
 migration locks, dirty drafts, pending uploads, deletion markers, and reference
 migration after a confirmed upload. `RemotePipelineFile` delegates its operations
 to this coordinator so recovery and retry still wrap storage operations.
+
+### Application access
+
+Application callers use `PipelineStorageService`; its remote coordinator is
+private. `listPipelinePage` selects local or remote storage explicitly and returns
+a common page of `PipelineFile` objects. Local pages hide migrated backups before
+calculating their count or cursor. Remote pages retain the backend's cursor and
+load summaries only.
+
+The service also exposes pending drafts, cached summaries, and its backend URL.
+Creation, imports, and editor autosave continue through the existing service/file
+methods, including progressive migration and save batching.

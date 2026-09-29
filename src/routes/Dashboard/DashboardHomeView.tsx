@@ -77,7 +77,7 @@ const RecentlyViewedPreviewRow = ({
 );
 
 const RecentlyViewedPreview = () => {
-  const backendUrl = usePipelineStorage().remote?.backendUrl ?? "";
+  const backendUrl = usePipelineStorage().backendUrl;
   const { recentlyViewed } = useRecentlyViewed();
   const preview = recentlyViewed.slice(0, PREVIEW_COUNT);
 

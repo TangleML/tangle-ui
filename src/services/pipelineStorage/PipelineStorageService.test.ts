@@ -9,6 +9,7 @@ import {
   cloudPipelineToComponentSpec,
   getCloudPipeline,
   getCloudPipelineAccount,
+  listCloudPipelinePage,
   listCloudPipelines,
   writeCloudPipeline,
 } from "@/services/cloudPipelineService";
@@ -30,6 +31,7 @@ vi.mock("@/services/cloudPipelineService", () => ({
   deleteCloudPipeline: vi.fn(),
   getCloudPipeline: vi.fn(),
   getCloudPipelineAccount: vi.fn(),
+  listCloudPipelinePage: vi.fn(),
   listCloudPipelines: vi.fn(),
   writeCloudPipeline: vi.fn(),
 }));
@@ -329,7 +331,7 @@ describe("local recovery before remote migration", () => {
       id: ACCOUNT,
       permissions: ["read"],
     });
-    await service.remote?.list();
+    await service.listPipelines();
     const original = await service.rootFolder.assignFile(NAME);
     const file = await service.findPipelineById(original.id);
     const localWrite = vi.spyOn(service.rootFolder.driver, "write");
@@ -347,7 +349,14 @@ describe("local recovery before remote migration", () => {
 
     await expect(file.read()).resolves.toBe(content);
     expect(localWrite).toHaveBeenCalledWith(NAME, content);
-    expect((await service.remote?.records())?.[0]).toMatchObject({
+    expect(
+      (
+        await remotePipelineRecoveryDb.copies
+          .where("scope")
+          .equals(SCOPE)
+          .toArray()
+      )[0],
+    ).toMatchObject({
       content,
       dirty: true,
       localFileId: file.id,
@@ -412,7 +421,12 @@ describe("local recovery before remote migration", () => {
     const original = await service.rootFolder.assignFile(NAME);
     const file = await service.findPipelineById(original.id);
     await file.persistRecovery(CONTENT);
-    const firstKey = (await service.remote?.records())?.[0].key;
+    const firstKey = (
+      await remotePipelineRecoveryDb.copies
+        .where("scope")
+        .equals(SCOPE)
+        .toArray()
+    )[0].key;
     const name = "Renamed before uploading";
     const content = yaml.dump({
       ...SPEC,
@@ -427,10 +441,19 @@ describe("local recovery before remote migration", () => {
     expect(reopened.displayName).toBe(name);
     await expect(reopened.read()).resolves.toBe(content);
     await expect(
-      remoteService("another-account").remote?.readLocalRecovery(file),
+      (
+        await remoteService("another-account").findPipelineById(file.id)
+      ).readLocalRecovery?.(),
     ).resolves.toBeUndefined();
     await service.migratePipeline(file);
-    expect((await service.remote?.records())?.[0]).toMatchObject({
+    expect(
+      (
+        await remotePipelineRecoveryDb.copies
+          .where("scope")
+          .equals(SCOPE)
+          .toArray()
+      )[0],
+    ).toMatchObject({
       key: firstKey,
       scope: SCOPE,
       filePath: `pipeline-studio/${original.id}.yaml`,
@@ -462,7 +485,14 @@ describe("local recovery before remote migration", () => {
     await expect(reopened.read()).resolves.toBe(content);
     expect(reopened.storageKind).toBe("local");
     expect(await service.filterVisibleLocalPipelines([file])).toEqual([file]);
-    expect((await service.remote?.records())?.[0]).toMatchObject({
+    expect(
+      (
+        await remotePipelineRecoveryDb.copies
+          .where("scope")
+          .equals(SCOPE)
+          .toArray()
+      )[0],
+    ).toMatchObject({
       content,
       dirty: true,
       localFileId: LOCAL_ID,
@@ -494,13 +524,18 @@ describe("local recovery before remote migration", () => {
     await file.persistRecovery(content);
 
     expect(file.storageKind).toBe("local");
-    expect((await service.remote?.records())?.[0]).toMatchObject({
+    expect(
+      (
+        await remotePipelineRecoveryDb.copies
+          .where("scope")
+          .equals(SCOPE)
+          .toArray()
+      )[0],
+    ).toMatchObject({
       content,
       dirty: true,
     });
-    await expect(service.remote?.readLocalRecovery(file)).resolves.toBe(
-      content,
-    );
+    await expect(file.readLocalRecovery?.()).resolves.toBe(content);
 
     finishSave(pipeline({ file_path: `pipeline-studio/${file.id}.yaml` }));
     await migration;
@@ -548,4 +583,82 @@ describe("local recovery before remote migration", () => {
       await expect(file.read()).resolves.toBe(CONTENT);
     },
   );
+});
+
+describe("storage service pages", () => {
+  it("pages visible local files before counting and slicing, without contacting the backend", async () => {
+    const service = remoteService();
+    const files = ["first", "migrated", "last"].map(
+      (name) =>
+        new PipelineFile({
+          id: name,
+          storageKey: name,
+          folder: service.rootFolder,
+        }),
+    );
+    vi.spyOn(service.rootFolder, "listPipelines").mockResolvedValue(files);
+    await remotePipelineRecoveryDb.copies.put({
+      ...recovery(),
+      localFileId: "migrated",
+    });
+    const first = await service.listPipelinePage({
+      storageKind: "local",
+      pageSize: 1,
+    });
+    expect(first.files.map((file) => file.id)).toEqual(["first"]);
+    expect(first.totalCount).toBe(2);
+    expect(first.nextPageToken).toBe("1");
+    const last = await service.listPipelinePage({
+      storageKind: "local",
+      pageSize: 1,
+      pageToken: first.nextPageToken,
+    });
+    expect(last.files.map((file) => file.id)).toEqual(["last"]);
+    expect(last.nextPageToken).toBeUndefined();
+    expect(getCloudPipelineAccount).not.toHaveBeenCalled();
+    expect(listCloudPipelinePage).not.toHaveBeenCalled();
+  });
+
+  it("returns remote summaries through the common page API without definition reads", async () => {
+    const service = remoteService();
+    const secondId = "20000000-0000-4000-8000-000000000002";
+    vi.mocked(listCloudPipelinePage).mockResolvedValue({
+      pipelines: [
+        pipeline(),
+        pipeline({ id: secondId, file_path: "pipeline-studio/second.yaml" }),
+      ],
+      nextPageToken: "next",
+      totalCount: 12,
+    });
+    const signal = new AbortController().signal;
+    const page = await service.listPipelinePage({
+      storageKind: "remote",
+      pageSize: 2,
+      pageToken: "cursor",
+      signal,
+    });
+    expect(page.files.map((file) => file.referenceId)).toEqual([
+      remotePipelineReference(BACKEND, CLOUD_ID),
+      remotePipelineReference(BACKEND, secondId),
+    ]);
+    expect(page.files.map((file) => file.displayName)).toEqual([NAME, NAME]);
+    expect(page).toMatchObject({ nextPageToken: "next", totalCount: 12 });
+    expect(listCloudPipelinePage).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ backendUrl: BACKEND, signal }),
+      { pageSize: 2, pageToken: "cursor" },
+    );
+    expect(getCloudPipeline).not.toHaveBeenCalled();
+    expect(listCloudPipelines).not.toHaveBeenCalled();
+  });
+
+  it("keeps remote-only requests unavailable when remote storage is disabled", async () => {
+    const service = new PipelineStorageService();
+    expect(service.backendUrl).toBe("");
+    await expect(
+      service.listPipelinePage({ storageKind: "remote" }),
+    ).rejects.toThrow("not enabled");
+    await expect(service.listPendingPipelines()).resolves.toEqual([]);
+    await expect(service.listCachedPipelines()).resolves.toEqual([]);
+    expect(getCloudPipelineAccount).not.toHaveBeenCalled();
+  });
 });
