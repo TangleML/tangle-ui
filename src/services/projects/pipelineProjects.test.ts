@@ -13,7 +13,7 @@ function row(
     entity: "document",
     name: "Churn model",
     entityId: null,
-    extraData: null,
+    metadata: null,
     createdBy: "alice@example.com",
     createdAt: new Date("2026-09-09T10:00:00Z"),
     updatedAt: new Date("2026-09-09T10:00:00Z"),

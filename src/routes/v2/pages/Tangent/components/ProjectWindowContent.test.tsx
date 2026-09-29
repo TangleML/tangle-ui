@@ -60,7 +60,7 @@ const project = {
   workspaceId: "workspace-1",
   createdBy: "alice@example.com",
   origin: "user",
-  extraData: null,
+  metadata: null,
   createdAt: new Date("2026-09-02T10:00:00Z"),
   updatedAt: new Date("2026-09-15T10:00:00Z"),
   resourceCounts: { pipeline: 1 },

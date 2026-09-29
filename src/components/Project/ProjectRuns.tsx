@@ -92,7 +92,7 @@ export function ProjectRuns({ projectId }: ProjectRunsProps) {
                 </TableCell>
                 <TableCell className="text-right">
                   <Text size="xs" tone="subdued">
-                    {formatDate(run.createdAt)}
+                    {run.createdAt ? formatDate(run.createdAt) : "—"}
                   </Text>
                 </TableCell>
               </TableRow>

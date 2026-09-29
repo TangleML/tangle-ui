@@ -2628,13 +2628,9 @@ export type CreateProjectRequest = {
      */
     description?: string | null;
     /**
-     * Notes
+     * Data
      */
-    notes?: string | null;
-    /**
-     * Extra Data
-     */
-    extra_data?: {
+    data?: {
         [key: string]: unknown;
     } | null;
     origin?: ProjectOrigin;
@@ -2693,6 +2689,9 @@ export type ProjectOrigin = 'user' | 'agent';
 
 /**
  * ProjectResponse
+ *
+ * Identical to the summary today. Kept distinct so a field the single read can afford and
+ * the list cannot has somewhere to go.
  */
 export type ProjectResponse = {
     /**
@@ -2720,6 +2719,12 @@ export type ProjectResponse = {
      */
     origin: string;
     /**
+     * Data
+     */
+    data: {
+        [key: string]: unknown;
+    } | null;
+    /**
      * Created At
      */
     created_at: string;
@@ -2733,16 +2738,6 @@ export type ProjectResponse = {
     resource_counts: {
         [key: string]: number;
     };
-    /**
-     * Notes
-     */
-    notes: string | null;
-    /**
-     * Extra Data
-     */
-    extra_data: {
-        [key: string]: unknown;
-    } | null;
 };
 
 /**
@@ -2750,8 +2745,8 @@ export type ProjectResponse = {
  *
  * A project as the list returns it.
  *
- * `notes` is absent on purpose: unbounded free text, and a page of a hundred projects would
- * ship a hundred of them to render cards that show none. `GET /{id}` has it.
+ * `resource_counts` is keyed by entity, an entity with no rows being absent rather than zero.
+ * `origin` is loosely typed for the reason `entity` is below.
  */
 export type ProjectSummaryResponse = {
     /**
@@ -2779,6 +2774,12 @@ export type ProjectSummaryResponse = {
      */
     origin: string;
     /**
+     * Data
+     */
+    data: {
+        [key: string]: unknown;
+    } | null;
+    /**
      * Created At
      */
     created_at: string;
@@ -2797,7 +2798,8 @@ export type ProjectSummaryResponse = {
 /**
  * UpdateProjectRequest
  *
- * An edit. Every field optional; `workspace_id` is absent on purpose — see the module docstring.
+ * An edit. Every field optional; `workspace_id` is absent on purpose — a project's
+ * workspace is fixed at creation. `data` is replaced wholesale, never merged.
  */
 export type UpdateProjectRequest = {
     /**
@@ -2809,13 +2811,9 @@ export type UpdateProjectRequest = {
      */
     description?: string | null;
     /**
-     * Notes
+     * Data
      */
-    notes?: string | null;
-    /**
-     * Extra Data
-     */
-    extra_data?: {
+    data?: {
         [key: string]: unknown;
     } | null;
 };
@@ -2823,10 +2821,7 @@ export type UpdateProjectRequest = {
 /**
  * WorkspaceListResponse
  *
- * Not paginated: a seeded list of three rows.
- *
- * If a deployment ever has many, this grows a cursor like the other lists here -- additive,
- * because the response is already a container object rather than a bare array.
+ * Not paginated -- a deployment is administered into holding a handful of these.
  */
 export type WorkspaceListResponse = {
     /**
@@ -2841,6 +2836,9 @@ export type WorkspaceListResponse = {
 
 /**
  * WorkspaceResponse
+ *
+ * One workspace. `is_active: false` is retired: it still lists and still resolves, so a
+ * picker greys it out rather than hiding it, but it refuses new projects with a 422.
  */
 export type WorkspaceResponse = {
     /**
@@ -2860,15 +2858,23 @@ export type WorkspaceResponse = {
      */
     is_active: boolean;
     /**
-     * Extra Data
+     * Created By
      */
-    extra_data: {
+    created_by: string | null;
+    /**
+     * Data
+     */
+    data: {
         [key: string]: unknown;
     } | null;
     /**
      * Created At
      */
     created_at: string;
+    /**
+     * Updated At
+     */
+    updated_at: string;
 };
 
 export type ListWorkspacesApiWorkspacesGetData = {
@@ -3096,9 +3102,9 @@ export type CreateResourceRequest = {
         [key: string]: unknown;
     } | null;
     /**
-     * Extra Data
+     * Data
      */
-    extra_data?: {
+    data?: {
         [key: string]: unknown;
     } | null;
 };
@@ -3164,9 +3170,9 @@ export type ProjectResourceResponse = {
      */
     entity_id: string | null;
     /**
-     * Extra Data
+     * Data
      */
-    extra_data: {
+    data: {
         [key: string]: unknown;
     } | null;
     /**
@@ -3194,9 +3200,11 @@ export type ProjectResourceResponse = {
  *
  * A resource as the list returns it.
  *
- * `payload` is absent, as `notes` is on `ProjectSummaryResponse` — but enforced a layer
- * deeper: `service.list_resources` leaves the column out of the SELECT, so a page of documents
- * does not read megabytes of JSON to serialise none of it. `GET /{resource_id}` has it.
+ * `payload` is absent, and enforced a layer deeper: `service.list_resources` leaves the column
+ * out of the SELECT. `GET /{resource_id}` has it.
+ *
+ * `entity` is a `str`, not `ProjectResourceEntity`, so reads stay permissive where writes are
+ * strict: a rollback to a deploy predating a new entity returns the row rather than 500ing.
  */
 export type ProjectResourceSummaryResponse = {
     /**
@@ -3220,9 +3228,9 @@ export type ProjectResourceSummaryResponse = {
      */
     entity_id: string | null;
     /**
-     * Extra Data
+     * Data
      */
-    extra_data: {
+    data: {
         [key: string]: unknown;
     } | null;
     /**
@@ -3258,9 +3266,9 @@ export type UpdateResourceRequest = {
         [key: string]: unknown;
     } | null;
     /**
-     * Extra Data
+     * Data
      */
-    extra_data?: {
+    data?: {
         [key: string]: unknown;
     } | null;
 };

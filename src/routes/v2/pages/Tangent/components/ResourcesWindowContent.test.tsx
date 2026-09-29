@@ -57,7 +57,7 @@ vi.mock("@/routes/v2/pages/Tangent/components/AddResourceButton", () => ({
 function resource(
   id: string,
   name: string,
-  extraData: Record<string, unknown> | null,
+  metadata: Record<string, unknown> | null,
   overrides: Partial<ProjectResourceSummary> = {},
 ): ProjectResourceSummary {
   return {
@@ -66,7 +66,7 @@ function resource(
     entity: "document",
     name,
     entityId: null,
-    extraData,
+    metadata,
     createdBy: null,
     createdAt: new Date("2026-09-21T10:00:00Z"),
     updatedAt: new Date("2026-09-21T10:00:00Z"),

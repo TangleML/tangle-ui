@@ -18,7 +18,7 @@ interface ProjectRunDto {
   id: string;
   root_execution_id: string;
   created_by: string | null;
-  created_at: string;
+  created_at: string | null;
   pipeline_name: string | null;
 }
 
@@ -33,7 +33,7 @@ function mapProjectRun(dto: ProjectRunDto): ProjectRun {
     rootExecutionId: dto.root_execution_id,
     pipelineName: dto.pipeline_name,
     createdBy: dto.created_by,
-    createdAt: new Date(dto.created_at),
+    createdAt: dto.created_at ? new Date(dto.created_at) : null,
   };
 }
 

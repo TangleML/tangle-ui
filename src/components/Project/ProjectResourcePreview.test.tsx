@@ -71,7 +71,7 @@ function resource(overrides: Partial<ProjectResource> = {}): ProjectResource {
     entity: "document",
     name: "readme.md",
     entityId: null,
-    extraData: null,
+    metadata: null,
     createdBy: "alice@example.com",
     createdAt: new Date("2026-09-09T10:00:00Z"),
     updatedAt: new Date("2026-09-09T10:00:00Z"),
@@ -313,7 +313,7 @@ describe("ProjectResourcePreview", () => {
       name: "Churn model",
       entityId: null,
       payload: {},
-      extraData: {
+      metadata: {
         type: "local_pipeline",
         storage: "browser",
         identity: "pipeline://name/Churn model",
@@ -429,7 +429,7 @@ describe("ProjectResourcePreview", () => {
       name: "churn-training",
       entityId: null,
       payload: {},
-      extraData: {
+      metadata: {
         type: "pipeline_run",
         identity: "run://id/42",
         url: "http://localhost/runs/42",
@@ -455,7 +455,7 @@ describe("ProjectResourcePreview", () => {
     });
 
     it("says what it is even without a url to offer", () => {
-      mockResource({ ...runRow, extraData: { type: "pipeline_run" } });
+      mockResource({ ...runRow, metadata: { type: "pipeline_run" } });
       renderPreview("resource-1");
 
       expect(screen.getByText("Pipeline run")).toBeInTheDocument();

@@ -68,7 +68,7 @@ export async function createProjectResource(
       name: input.name,
       entity_id: input.entityId,
       payload: input.payload,
-      extra_data: input.extraData,
+      data: input.metadata,
     },
   });
   if (!result.data) {
@@ -91,7 +91,7 @@ export async function updateProjectResource(
       body: {
         name: input.name,
         payload: input.payload,
-        extra_data: input.extraData,
+        data: input.metadata,
       },
     });
   if (!result.data) {

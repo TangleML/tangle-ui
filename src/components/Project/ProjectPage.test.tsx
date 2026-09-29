@@ -91,8 +91,7 @@ const project: Project = {
   createdAt: new Date("2026-09-09T10:00:00Z"),
   updatedAt: new Date("2026-09-15T10:00:00Z"),
   resourceCounts: { pipeline: 1, document: 1 },
-  notes: null,
-  extraData: null,
+  metadata: null,
 };
 
 function mockBackend(

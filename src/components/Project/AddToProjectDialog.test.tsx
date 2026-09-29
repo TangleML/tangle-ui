@@ -72,7 +72,7 @@ describe("AddToProjectDialog", () => {
     await waitFor(() => expect(mutate).toHaveBeenCalled());
     expect(mutate.mock.calls[0][0]).toMatchObject({
       projectId: "project-1",
-      input: { entity: "document", extraData: { type: "local_pipeline" } },
+      input: { entity: "document", metadata: { type: "local_pipeline" } },
     });
   });
 

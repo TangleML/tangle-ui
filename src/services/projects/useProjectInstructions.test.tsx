@@ -31,7 +31,7 @@ function row(
     entity: "document",
     name: "Instructions",
     entityId: null,
-    extraData: { type },
+    metadata: { type },
     createdBy: null,
     createdAt: new Date(createdAt),
     updatedAt: new Date(createdAt),
@@ -89,7 +89,7 @@ describe("useProjectInstructions", () => {
       entity: "document",
       name: "Instructions",
       payload: { content: "Prefer concise plans." },
-      extraData: { type: "instructions" },
+      metadata: { type: "instructions" },
     });
   });
 

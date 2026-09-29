@@ -31,7 +31,7 @@ const resource: ProjectResource = {
   entity: "pipeline",
   name: "Training run",
   entityId: "pipe-9",
-  extraData: null,
+  metadata: null,
   createdBy: null,
   createdAt: new Date("2024-01-02T03:04:05Z"),
   updatedAt: new Date("2024-02-03T04:05:06Z"),

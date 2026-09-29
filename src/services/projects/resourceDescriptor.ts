@@ -18,9 +18,9 @@ export const AGENT_SESSION = "agent_session";
 
 const BROWSER = "browser";
 
-const EXTRA_DATA_LIMIT = 1024;
+const METADATA_LIMIT = 1024;
 
-type ResourceRow = Pick<ProjectResourceSummary, "extraData">;
+type ResourceRow = Pick<ProjectResourceSummary, "metadata">;
 
 export interface ResourceDescriptor {
   type: string;
@@ -41,17 +41,17 @@ export class DescriptorTooLargeError extends Error {
  * `type` and `target` are separate axes: two row kinds can share a view kind,
  * and a row kind can have no view at all.
  *
- * An unrecognised `type` is returned as-is rather than rejected, because
- * `extra_data` is free-form and anyone may PATCH it — a row this build does not
- * know about still has to render as something.
+ * An unrecognised `type` is returned as-is rather than rejected, because `data`
+ * is free-form and anyone may PATCH it — a row this build does not know about
+ * still has to render as something.
  */
 export function describeResource(
   resource: ResourceRow,
 ): ResourceDescriptor | undefined {
-  const extraData = resource.extraData;
-  if (!extraData) return undefined;
+  const metadata = resource.metadata;
+  if (!metadata) return undefined;
 
-  const { type, identity, storage, fallbackName, url } = extraData;
+  const { type, identity, storage, fallbackName, url } = metadata;
   if (typeof type !== "string" || type === "") return undefined;
 
   return {
@@ -102,13 +102,13 @@ function splitIdentity(identity: string): [string, string] {
 }
 
 function withinLimit(
-  extraData: Record<string, unknown>,
+  metadata: Record<string, unknown>,
   name: string,
 ): Record<string, unknown> {
-  if (JSON.stringify(extraData).length > EXTRA_DATA_LIMIT) {
+  if (JSON.stringify(metadata).length > METADATA_LIMIT) {
     throw new DescriptorTooLargeError(name);
   }
-  return extraData;
+  return metadata;
 }
 
 /**
@@ -117,7 +117,7 @@ function withinLimit(
  * pipeline by uuid. Inventing one would leave a row every other client reads
  * as a backend pipeline and fails to fetch.
  *
- * The descriptor goes in `extra_data`, not `payload`, because the list endpoint
+ * The descriptor goes in `data`, not `payload`, because the list endpoint
  * omits payloads. The cost is that `?entity=` cannot select these, so filtering
  * by kind happens on the client.
  */
@@ -132,7 +132,7 @@ export function localPipelineResourceInput(
     entity: "document",
     name: pointer.localName,
     payload: {},
-    extraData: withinLimit(
+    metadata: withinLimit(
       {
         type: LOCAL_PIPELINE,
         storage: BROWSER,
@@ -155,7 +155,7 @@ export function documentResourceInput(
     // The backend validates nothing inside a document payload; `content` is
     // this app's convention for the whole body.
     payload: { content },
-    extraData: { type: DOCUMENT },
+    metadata: { type: DOCUMENT },
   };
 }
 
@@ -173,7 +173,7 @@ export function instructionsResourceInput(
     entity: "document",
     name: INSTRUCTIONS_NAME,
     payload: { content },
-    extraData: { type: INSTRUCTIONS },
+    metadata: { type: INSTRUCTIONS },
   };
 }
 
@@ -186,7 +186,7 @@ export function pipelineRunResourceInput(
     entity: "document",
     name,
     payload: {},
-    extraData: {
+    metadata: {
       type: PIPELINE_RUN,
       identity: formatWorkareaTarget({
         type: "run",

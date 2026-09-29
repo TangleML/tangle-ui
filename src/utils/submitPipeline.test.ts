@@ -227,7 +227,7 @@ describe("submitPipelineRun", () => {
 
       await submitPipelineRun(componentSpec, mockBackendUrl, {
         runAnnotations: {
-          "tangleml.com/project/project-id/project-42": "true",
+          "tangleml.com/project/id/project-42": "true",
         },
       });
 
@@ -235,7 +235,7 @@ describe("submitPipelineRun", () => {
         .calls[0]!;
       expect(payload.annotations).toEqual({
         source: "web-app",
-        "tangleml.com/project/project-id/project-42": "true",
+        "tangleml.com/project/id/project-42": "true",
       });
     });
 
@@ -312,7 +312,7 @@ describe("submitPipelineRun", () => {
 
       expect(submittedPayload().annotations).toEqual({
         source: "web-app",
-        [`tangleml.com/project/project-id/${PROJECT}`]: "true",
+        [`tangleml.com/project/id/${PROJECT}`]: "true",
       });
     });
 
@@ -332,8 +332,8 @@ describe("submitPipelineRun", () => {
       });
 
       expect(Object.keys(submittedPayload().annotations)).toEqual([
-        `tangleml.com/project/project-id/${PROJECT}`,
-        `tangleml.com/project/project-id/${OTHER}`,
+        `tangleml.com/project/id/${PROJECT}`,
+        `tangleml.com/project/id/${OTHER}`,
         "source",
       ]);
     });

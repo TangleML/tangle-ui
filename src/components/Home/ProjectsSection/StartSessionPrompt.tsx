@@ -28,8 +28,8 @@ import { APP_ROUTES } from "@/routes/appRoutes";
 import { TANGENT_AI_REQUIRED } from "@/routes/v2/shared/components/AiChat/components/aiSetupCopy";
 import { nameFromPrompt } from "@/services/projects/nameFromPrompt";
 import { createProject } from "@/services/projects/projectsService";
-import { provisionalNameExtraData } from "@/services/projects/provisionalName";
-import { startingSessionExtraData } from "@/services/projects/startingSession";
+import { provisionalNameMetadata } from "@/services/projects/provisionalName";
+import { startingSessionMetadata } from "@/services/projects/startingSession";
 import { ProjectsQueryKeys } from "@/services/projects/types";
 import { useWorkspaces } from "@/services/projects/useWorkspaces";
 import { getErrorMessage } from "@/utils/string";
@@ -77,8 +77,8 @@ export function StartSessionPrompt() {
           nameFromPrompt(startingPrompt) ??
           nextProjectName(projects.map((p) => p.name)),
         origin: "agent",
-        extraData: provisionalNameExtraData(
-          startingSessionExtraData({
+        metadata: provisionalNameMetadata(
+          startingSessionMetadata({
             prompt: startingPrompt,
             model,
             thinkingDepth,

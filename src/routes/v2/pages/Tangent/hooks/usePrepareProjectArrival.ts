@@ -72,7 +72,7 @@ export function usePrepareProjectArrival(
   const { isConfigured: isAiConfigured } = useAiProviderSettings();
   const prepared = useRef(false);
 
-  const starting = readStartingSession(project?.extraData);
+  const starting = readStartingSession(project?.metadata);
   const askedFor = starting ? nameFromPrompt(starting.prompt) : undefined;
   const isEmpty = sessionCount === 0;
 
@@ -86,7 +86,7 @@ export function usePrepareProjectArrival(
       if (starting) {
         await updateProject({
           id: projectId,
-          input: { extraData: withoutStartingSession(project?.extraData) },
+          input: { metadata: withoutStartingSession(project?.metadata) },
         });
       }
 

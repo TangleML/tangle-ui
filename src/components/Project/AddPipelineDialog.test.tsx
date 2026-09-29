@@ -47,7 +47,7 @@ function pointerResource(
     entity: "document",
     name: localName,
     entityId: null,
-    extraData: {
+    metadata: {
       type: "local_pipeline",
       storage: "browser",
       identity: `pipeline://name/${localName}`,
@@ -164,7 +164,7 @@ describe("AddPipelineDialog", () => {
       entity: "document",
       name: "Churn model",
       payload: {},
-      extraData: {
+      metadata: {
         type: "local_pipeline",
         storage: "browser",
         identity: "pipeline://name/Churn model",
@@ -183,7 +183,7 @@ describe("AddPipelineDialog", () => {
     await user.click(pipeline("Churn model"));
 
     await waitFor(() => expect(mutate).toHaveBeenCalled());
-    expect(mutate.mock.calls[0][0].extraData).toMatchObject({
+    expect(mutate.mock.calls[0][0].metadata).toMatchObject({
       identity: "pipeline://id/id-9",
       fallbackName: "Churn model",
     });
@@ -223,7 +223,7 @@ describe("AddPipelineDialog", () => {
 
   it("ignores documents that are not pipelines when working out what is added", () => {
     renderDialog([
-      pointerResource("Churn model", { extraData: null, name: "Churn model" }),
+      pointerResource("Churn model", { metadata: null, name: "Churn model" }),
     ]);
 
     expect(pipeline("Churn model")).toBeEnabled();

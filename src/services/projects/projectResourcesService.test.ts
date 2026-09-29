@@ -38,7 +38,7 @@ const resourceSummaryDto: ProjectResourceSummaryResponse = {
   entity: "pipeline",
   name: "Training run",
   entity_id: "pipe-9",
-  extra_data: { pinned: true },
+  data: { pinned: true },
   created_by: "user@example.com",
   created_at: "2024-01-02T03:04:05Z",
   updated_at: "2024-02-03T04:05:06Z",
@@ -88,7 +88,7 @@ describe("projectResourcesService", () => {
       entity: "pipeline",
       name: "Training run",
       entityId: "pipe-9",
-      extraData: { pinned: true },
+      metadata: { pinned: true },
       createdBy: "user@example.com",
       createdAt: new Date("2024-01-02T03:04:05Z"),
       updatedAt: new Date("2024-02-03T04:05:06Z"),
@@ -136,7 +136,7 @@ describe("projectResourcesService", () => {
       name: "Training run",
       entityId: "pipe-9",
       payload: { note: "hello" },
-      extraData: { pinned: true },
+      metadata: { pinned: true },
     });
 
     expect(
@@ -148,11 +148,11 @@ describe("projectResourcesService", () => {
         name: "Training run",
         entity_id: "pipe-9",
         payload: { note: "hello" },
-        extra_data: { pinned: true },
+        data: { pinned: true },
       },
     });
     expect(resource.id).toBe("r1");
-    expect(resource.extraData).toEqual({ pinned: true });
+    expect(resource.metadata).toEqual({ pinned: true });
   });
 
   it("updates a resource", async () => {
@@ -168,7 +168,7 @@ describe("projectResourcesService", () => {
       apiSdk.updateResourceApiProjectsProjectIdResourcesResourceIdPatch,
     ).toHaveBeenCalledWith({
       path: { project_id: "p1", resource_id: "r1" },
-      body: { name: "Renamed", payload: undefined, extra_data: undefined },
+      body: { name: "Renamed", payload: undefined, data: undefined },
     });
     expect(resource.id).toBe("r1");
   });

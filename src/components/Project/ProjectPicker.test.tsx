@@ -44,7 +44,7 @@ function membership(id: string, name: string): PipelineProjectMembership {
       name: "Churn model",
       entity: "document",
       entityId: null,
-      extraData: { type: "local_pipeline" },
+      metadata: { type: "local_pipeline" },
     } as unknown as PipelineProjectMembership["resource"],
   };
 }

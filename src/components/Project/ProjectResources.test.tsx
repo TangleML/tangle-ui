@@ -64,7 +64,7 @@ function resource(
     entity: "document",
     name: "Model card",
     entityId: null,
-    extraData: null,
+    metadata: null,
     createdBy: "alice@example.com",
     createdAt: new Date("2026-09-09T10:00:00Z"),
     updatedAt: new Date("2026-09-09T10:00:00Z"),
@@ -351,7 +351,7 @@ describe("ProjectResources", () => {
           entity: "document",
           name: "in this browser",
           entityId: null,
-          extraData: {
+          metadata: {
             type: "local_pipeline",
             storage: "browser",
             identity: "pipeline://name/in this browser",
@@ -375,7 +375,7 @@ describe("ProjectResources", () => {
           entity: "document",
           name: "in this browser",
           entityId: null,
-          extraData: {
+          metadata: {
             type: "local_pipeline",
             storage: "browser",
             identity: "pipeline://name/in this browser",
@@ -401,7 +401,7 @@ describe("ProjectResources", () => {
           entity: "document",
           name: "Churn model",
           entityId: null,
-          extraData: {
+          metadata: {
             type: "local_pipeline",
             storage: "browser",
             identity: "pipeline://name/Churn model",

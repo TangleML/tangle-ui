@@ -65,7 +65,7 @@ const workspace: Workspace = {
   name: "ML Research",
   description: null,
   isActive: true,
-  extraData: null,
+  metadata: null,
   createdAt: new Date("2026-09-01T10:00:00Z"),
 };
 
@@ -76,6 +76,7 @@ const project: ProjectSummary = {
   description: "Q3 churn work",
   createdBy: "someone@example.com",
   origin: "user",
+  metadata: null,
   createdAt: new Date("2026-09-02T10:00:00Z"),
   updatedAt: new Date("2026-09-15T10:00:00Z"),
   resourceCounts: { pipeline: 3, document: 1 },

@@ -264,7 +264,7 @@ describe("availablePipelineName", () => {
   });
 
   /**
-   * The name is recorded in a project's `extra_data`, which the resources API
+   * The name is recorded in a project's `data`, which the resources API
    * caps, so a project titled with an essay cannot be passed on whole.
    */
   it("shortens a name too long to record", async () => {

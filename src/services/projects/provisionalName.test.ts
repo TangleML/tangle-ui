@@ -2,17 +2,17 @@ import { describe, expect, it } from "vitest";
 
 import {
   hasProvisionalName,
-  provisionalNameExtraData,
+  provisionalNameMetadata,
   withoutProvisionalName,
 } from "./provisionalName";
 
 describe("provisional project names", () => {
   it("marks a name nobody chose", () => {
-    expect(hasProvisionalName(provisionalNameExtraData())).toBe(true);
+    expect(hasProvisionalName(provisionalNameMetadata())).toBe(true);
   });
 
   it("keeps whatever else the project was carrying", () => {
-    expect(provisionalNameExtraData({ startingPrompt: "build it" })).toEqual({
+    expect(provisionalNameMetadata({ startingPrompt: "build it" })).toEqual({
       startingPrompt: "build it",
       provisionalName: true,
     });
@@ -31,7 +31,7 @@ describe("provisional project names", () => {
   });
 
   it("drops the mark once a name is chosen", () => {
-    const marked = provisionalNameExtraData({ startingPrompt: "build it" });
+    const marked = provisionalNameMetadata({ startingPrompt: "build it" });
 
     expect(withoutProvisionalName(marked)).toEqual({
       startingPrompt: "build it",

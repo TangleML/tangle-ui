@@ -12,7 +12,7 @@ const OTHER = "a1a58adc-e035-47de-afea-0eef486bb82f";
 describe("projectRunAnnotations", () => {
   it("names the project in the key, the way the backend reads it back", () => {
     expect(projectRunAnnotations([PROJECT])).toEqual({
-      [`tangleml.com/project/project-id/${PROJECT}`]: "true",
+      [`tangleml.com/project/id/${PROJECT}`]: "true",
     });
   });
 
@@ -62,8 +62,8 @@ describe("projectIdsFromAnnotations", () => {
   it("ignores a key that only looks like one", () => {
     expect(
       projectIdsFromAnnotations({
-        "tangleml.com/project/project-id/": "true",
-        "tangleml.com/project/project-idx": "true",
+        "tangleml.com/project/id/": "true",
+        "tangleml.com/project/idx": "true",
         "tangleml.com/project": "true",
       }),
     ).toEqual([]);

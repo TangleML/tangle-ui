@@ -16,7 +16,7 @@ export interface StartingSession {
  * writes what to run onto the project and Tangent picks it up on arrival. Both
  * ends read these keys through here so neither can drift into its own spelling.
  */
-export function startingSessionExtraData(
+export function startingSessionMetadata(
   session: StartingSession,
 ): Record<string, unknown> {
   return {
@@ -36,22 +36,22 @@ const asThinkingLevel = (value: unknown) =>
 
 /** Anyone may PATCH a project, so every key here may be anything at all. */
 export function readStartingSession(
-  extraData: Record<string, unknown> | null | undefined,
+  metadata: Record<string, unknown> | null | undefined,
 ): StartingSession | undefined {
-  const prompt = asText(extraData?.[PROMPT]);
+  const prompt = asText(metadata?.[PROMPT]);
   if (!prompt) return undefined;
 
   return {
     prompt,
-    model: asText(extraData?.[MODEL]),
-    thinkingDepth: asThinkingLevel(extraData?.[THINKING_DEPTH]),
+    model: asText(metadata?.[MODEL]),
+    thinkingDepth: asThinkingLevel(metadata?.[THINKING_DEPTH]),
   };
 }
 
 export function withoutStartingSession(
-  extraData: Record<string, unknown> | null | undefined,
+  metadata: Record<string, unknown> | null | undefined,
 ): Record<string, unknown> {
-  const next = { ...(extraData ?? {}) };
+  const next = { ...(metadata ?? {}) };
   delete next[PROMPT];
   delete next[MODEL];
   delete next[THINKING_DEPTH];

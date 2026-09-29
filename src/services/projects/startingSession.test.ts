@@ -2,13 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import {
   readStartingSession,
-  startingSessionExtraData,
+  startingSessionMetadata,
   withoutStartingSession,
 } from "./startingSession";
 
 describe("startingSession", () => {
   it("round-trips what a session should start on", () => {
-    const written = startingSessionExtraData({
+    const written = startingSessionMetadata({
       prompt: "Build a churn model",
       model: "openai/gpt-5.5",
       thinkingDepth: "high",
@@ -22,7 +22,7 @@ describe("startingSession", () => {
   });
 
   it("writes only what was chosen", () => {
-    expect(startingSessionExtraData({ prompt: "Go" })).toEqual({
+    expect(startingSessionMetadata({ prompt: "Go" })).toEqual({
       startingPrompt: "Go",
     });
   });
@@ -47,7 +47,7 @@ describe("startingSession", () => {
   /** Left behind, the prompt would run again on the next visit. */
   it("clears every key it wrote and nothing else", () => {
     const written = {
-      ...startingSessionExtraData({
+      ...startingSessionMetadata({
         prompt: "Go",
         model: "openai/gpt-5.5",
         thinkingDepth: "low",

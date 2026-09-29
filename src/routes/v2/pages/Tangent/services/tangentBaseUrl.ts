@@ -6,10 +6,10 @@ function normalizeBaseUrl(value: string): string {
 }
 
 export function resolveTangentBaseUrl(
-  extraData: Record<string, unknown> | null | undefined,
+  metadata: Record<string, unknown> | null | undefined,
 ): string {
-  if (!isRecord(extraData)) return DEFAULT_TANGENT_BASE_URL;
-  const { tangentBaseUrl } = extraData;
+  if (!isRecord(metadata)) return DEFAULT_TANGENT_BASE_URL;
+  const { tangentBaseUrl } = metadata;
   if (typeof tangentBaseUrl !== "string") return DEFAULT_TANGENT_BASE_URL;
   const normalized = normalizeBaseUrl(tangentBaseUrl);
   return normalized.length > 0 ? normalized : DEFAULT_TANGENT_BASE_URL;

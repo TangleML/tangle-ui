@@ -8,7 +8,7 @@ import type { ProjectResourceSummary } from "@/services/projects/types";
 
 type ResourceRowShape = Pick<
   ProjectResourceSummary,
-  "entity" | "entityId" | "extraData"
+  "entity" | "entityId" | "metadata"
 >;
 
 // The backend stores `entity` as a plain string and expects more members, so an
@@ -35,7 +35,7 @@ const sameAs = (label: string, entity: string) =>
 /**
  * Groups are headed by the API's `entity`, which puts unlike rows together — a
  * browser-held pipeline is filed as a document. So each row says what its
- * `extra_data` calls itself, unless the group already says it. The text is the
+ * `data` calls itself, unless the group already says it. The text is the
  * backend's and PATCHable, so it is cut to what a badge can hold.
  */
 export function resourceKindLabel(
@@ -45,7 +45,7 @@ export function resourceKindLabel(
     return LOCAL_PIPELINE_LABEL;
   }
 
-  const type = resource.extraData?.type;
+  const type = resource.metadata?.type;
   if (typeof type !== "string") {
     return undefined;
   }
