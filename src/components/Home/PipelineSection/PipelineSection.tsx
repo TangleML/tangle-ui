@@ -87,43 +87,43 @@ function PipelineTabs({
       }}
       className="w-full min-w-0 gap-5"
     >
-      <TabsList aria-label="Pipeline storage">
-        <TabsTrigger
-          value="remote"
-          className="gap-2 px-4"
-          onClick={() => setChosenTab("remote")}
-        >
-          <Icon name="Cloud" />
-          Remote pipelines
-          {remote.hasRemotePipelines !== undefined && (
-            <Text size="xs" tone="subdued" className="tabular-nums">
-              {remote.totalCount}
-            </Text>
-          )}
-        </TabsTrigger>
-        <TabsTrigger
-          value="local"
-          className="gap-2 px-4"
-          onClick={() => setChosenTab("local")}
-        >
-          <Icon name="HardDrive" />
-          Local pipelines
-          {local.data && (
-            <Text size="xs" tone="subdued" className="tabular-nums">
-              {localCount}
-            </Text>
-          )}
-        </TabsTrigger>
-      </TabsList>
+      <InlineStack gap="3">
+        <TabsList aria-label="Pipeline storage">
+          <TabsTrigger
+            value="remote"
+            className="gap-2 px-4"
+            onClick={() => setChosenTab("remote")}
+          >
+            <Icon name="Cloud" />
+            Remote pipelines
+            {remote.hasRemotePipelines !== undefined && (
+              <Text size="xs" tone="subdued" className="tabular-nums">
+                {remote.totalCount}
+              </Text>
+            )}
+          </TabsTrigger>
+          <TabsTrigger
+            value="local"
+            className="gap-2 px-4"
+            onClick={() => setChosenTab("local")}
+          >
+            <Icon name="HardDrive" />
+            Local pipelines
+            {local.data && (
+              <Text size="xs" tone="subdued" className="tabular-nums">
+                {localCount}
+              </Text>
+            )}
+          </TabsTrigger>
+        </TabsList>
+        <ExamplePipelineButton />
+      </InlineStack>
       <TabsContent
         value="remote"
         forceMount
         className="data-[state=inactive]:hidden"
       >
         <BlockStack gap="4">
-          <InlineStack align="end">
-            <ExamplePipelineButton />
-          </InlineStack>
           {remote.error && (
             <Paragraph role="alert" size="sm" className="text-destructive">
               Could not load remote pipelines: {remote.error}
@@ -238,7 +238,7 @@ function LocalPipelineList({
       )}
       <PipelineFiltersBar
         filters={filterBarProps}
-        actions={<ExamplePipelineButton />}
+        actions={!remoteEnabled && <ExamplePipelineButton />}
       />
       <PipelineListTable
         key={`local:${selectionScope}:${filterKey}`}
