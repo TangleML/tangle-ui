@@ -4,45 +4,61 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-
-export type RunSourceBucket = "web-app" | "programmatic" | "unknown";
+import {
+  TANGENT_AGENT_RUN_SOURCE,
+  TANGENT_UI_RUN_SOURCE,
+  TANGLE_CLI_RUN_SOURCE,
+  WEB_APP_RUN_SOURCE,
+} from "@/utils/annotationKeys";
 
 interface SourceConfig {
   icon: IconName;
-  label: string;
-  tooltip: string;
   message: string;
 }
 
-const SOURCE_BUCKETS: Record<RunSourceBucket, SourceConfig> = {
-  "web-app": {
+/**
+ * Most of these are submitted by something other than this app, so the map is
+ * a reader's vocabulary rather than a writer's: a submitter is free to send a
+ * source nobody here has heard of, and gets `UNRECOGNIZED` rather than an
+ * error.
+ */
+const RUN_SOURCES: Record<string, SourceConfig> = {
+  [WEB_APP_RUN_SOURCE]: {
     icon: "AppWindow",
-    label: "Web app",
-    tooltip: "Submitted via the Tangle web app",
     message: "Submitted via the Tangle web app",
   },
-  programmatic: {
+  [TANGENT_UI_RUN_SOURCE]: {
     icon: "Bot",
-    label: "Programmatic",
-    tooltip: "Submitted via AI or CLI",
-    message: "Submitted via AI or CLI",
+    message: "Submitted by an agent in the Tangle web app",
   },
-  unknown: {
-    icon: "CircleQuestionMark",
-    label: "Unknown",
-    tooltip: "Source unknown",
-    message: "Source unknown",
+  [TANGLE_CLI_RUN_SOURCE]: {
+    icon: "Terminal",
+    message: "Submitted via the Tangle CLI",
+  },
+  [TANGENT_AGENT_RUN_SOURCE]: {
+    icon: "Sparkles",
+    message: "Submitted by a Tangent agent",
   },
 };
 
-export const getRunSourceBucket = (source?: string | null): RunSourceBucket => {
-  if (!source) return "unknown";
-  if (source === "web-app") return "web-app";
-  return "programmatic";
+const UNRECOGNIZED: SourceConfig = {
+  icon: "Earth",
+  message: "Submitted by other means",
 };
 
-const getRunSourceConfig = (source?: string | null): SourceConfig =>
-  SOURCE_BUCKETS[getRunSourceBucket(source)];
+const ABSENT: SourceConfig = {
+  icon: "CircleQuestionMark",
+  message: "Source unknown",
+};
+
+const getRunSourceConfig = (source?: string | null): SourceConfig => {
+  if (!source) return ABSENT;
+  return RUN_SOURCES[source] ?? UNRECOGNIZED;
+};
+
+/** Whether the run says where it came from at all. */
+export const hasRunSource = (source?: string | null): boolean =>
+  Boolean(source);
 
 /** Human-readable message describing how a run was submitted. */
 export const getRunSourceMessage = (source?: string | null): string =>
@@ -59,7 +75,7 @@ export const RunSourceIcon = ({
   size = "sm",
   className,
 }: RunSourceIconProps) => {
-  const { icon, tooltip } = getRunSourceConfig(source);
+  const { icon, message } = getRunSourceConfig(source);
 
   return (
     <Tooltip>
@@ -69,7 +85,7 @@ export const RunSourceIcon = ({
         </span>
       </TooltipTrigger>
       <TooltipContent>
-        <span>{tooltip}</span>
+        <span>{message}</span>
       </TooltipContent>
     </Tooltip>
   );
