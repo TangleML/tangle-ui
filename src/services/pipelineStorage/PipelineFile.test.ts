@@ -73,6 +73,25 @@ describe("pipeline file storage contract", () => {
     expect(await file.read()).toBe("name: Updated");
   });
 
+  it("keeps a driver's stable storage key when only its display name changes", async () => {
+    const { folder, driver } = setup();
+    vi.mocked(driver.rename).mockResolvedValue({
+      id: "stable-id",
+      storageKey: "document.yaml",
+      displayName: "Renamed",
+    });
+    const [file] = await folder.listPipelines();
+    await file.rename("Renamed");
+    expect(file.id).toBe("stable-id");
+    expect(file.storageKey).toBe("document.yaml");
+    expect(file.displayName).toBe("Renamed");
+    expect(
+      await pipelineStorageDb.pipeline_registry.get(file.id),
+    ).toMatchObject({
+      storageKey: "document.yaml",
+    });
+  });
+
   it("prevents changes to read-only files", async () => {
     const { folder, driver } = setup();
     vi.mocked(driver.list).mockResolvedValue([
