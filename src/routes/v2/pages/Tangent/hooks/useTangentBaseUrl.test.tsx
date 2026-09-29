@@ -65,6 +65,7 @@ function wrapperFor(client: QueryClient) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.unstubAllEnvs();
   backend = { configured: true, available: true };
 });
 
@@ -131,6 +132,23 @@ describe("useTangentBaseUrl", () => {
 
     await waitFor(() =>
       expect(workspacesService.getWorkspace).toHaveBeenCalled(),
+    );
+    expect(result.current.baseUrl).toBeNull();
+  });
+
+  it("surfaces a local address a build refused instead of using it", async () => {
+    vi.stubEnv("DEV", false);
+    vi.mocked(projectsService.getProject).mockResolvedValue(project());
+    vi.mocked(workspacesService.getWorkspace).mockResolvedValue(
+      workspace({ metadata: { tangentBaseUrl: "http://localhost:5173" } }),
+    );
+
+    const { result } = renderHook(() => useTangentBaseUrl("p1"), {
+      wrapper: wrapperFor(makeClient()),
+    });
+
+    await waitFor(() =>
+      expect(result.current.localAddress).toBe("http://localhost:5173"),
     );
     expect(result.current.baseUrl).toBeNull();
   });

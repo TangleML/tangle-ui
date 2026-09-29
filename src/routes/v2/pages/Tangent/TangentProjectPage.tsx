@@ -73,7 +73,8 @@ export function TangentProjectPage() {
 function TangentProjectPageContent({ projectId }: { projectId: string }) {
   const { resolvedTheme } = useTheme();
   const { error: projectError } = useProject(projectId);
-  const { baseUrl, isLoading, isError } = useTangentBaseUrl(projectId);
+  const { baseUrl, localAddress, isLoading, isError } =
+    useTangentBaseUrl(projectId);
   useTrackRecentlyViewedProject(projectId);
   const channelUrl = tangentChannelUrl(baseUrl);
   const runtime = useTangentRuntime(channelUrl);
@@ -105,7 +106,7 @@ function TangentProjectPageContent({ projectId }: { projectId: string }) {
   // Ahead of the runtime states: with no url there is nothing to import, so
   // `runtime` sits on `loading` forever and the page would never settle.
   if (!baseUrl) {
-    return <TangentUnreachable baseUrl={null} />;
+    return <TangentUnreachable baseUrl={null} localAddress={localAddress} />;
   }
 
   if (runtime === "loading") {
