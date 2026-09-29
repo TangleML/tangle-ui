@@ -148,7 +148,7 @@ function matchesDateRange(
   return true;
 }
 
-export function filterPipelineEntries<T extends PipelineFilterEntry>(
+function filterPipelineEntries<T extends PipelineFilterEntry>(
   pipelines: Map<string, T>,
   {
     searchQuery,

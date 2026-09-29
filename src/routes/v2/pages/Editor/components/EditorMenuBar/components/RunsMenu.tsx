@@ -10,11 +10,10 @@ import {
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/typography";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
+import { useQuickRunSubmitter } from "@/routes/v2/pages/Editor/components/QuickRunSubmitterContext";
 import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButton";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { tracking } from "@/utils/tracking";
-
-import { useQuickRunSubmitter } from "@/routes/v2/pages/Editor/components/QuickRunSubmitterContext";
 
 export const RunsMenu = observer(function RunsMenu() {
   const { track } = useAnalytics();
