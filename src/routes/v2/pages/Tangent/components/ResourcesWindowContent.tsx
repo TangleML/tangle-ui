@@ -23,11 +23,11 @@ import {
   idIdentity,
 } from "@/services/projects/resourceTarget";
 import type { ProjectResourceSummary } from "@/services/projects/types";
+import { useProjectInstructions } from "@/services/projects/useProjectInstructions";
 import {
   useDeleteProjectResource,
   useProjectResources,
 } from "@/services/projects/useProjectResources";
-import { useProject, useUpdateProject } from "@/services/projects/useProjects";
 import { getErrorMessage } from "@/utils/string";
 
 import { EditInstructionsDialog } from "./EditInstructionsDialog";
@@ -217,12 +217,8 @@ function ResourceRow({
 }
 
 function InstructionsRow({ projectId }: { projectId: string }) {
-  const { data: project } = useProject(projectId);
-  const { mutate: updateProject, isPending: isSavingInstructions } =
-    useUpdateProject();
+  const { instructions, isSaving, save } = useProjectInstructions(projectId);
   const { open } = useDialog();
-
-  const instructions = project?.notes ?? "";
 
   async function handleEditInstructions() {
     const result = await open<string, { currentInstructions: string }>({
@@ -232,7 +228,7 @@ function InstructionsRow({ projectId }: { projectId: string }) {
     }).catch(convertCancelErrorTo(undefined));
 
     if (result === undefined) return;
-    updateProject({ id: projectId, input: { notes: result } });
+    save(result);
   }
 
   return (
@@ -241,7 +237,7 @@ function InstructionsRow({ projectId }: { projectId: string }) {
       title={instructions ? "Instructions" : "No instructions yet"}
       titleSubdued={!instructions}
       description="Standing context for agents"
-      disabled={isSavingInstructions}
+      disabled={isSaving}
       testId="edit-instructions"
       onOpen={() => void handleEditInstructions()}
     />

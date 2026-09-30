@@ -9,6 +9,7 @@ import { ResourcesWindowContent } from "./ResourcesWindowContent";
 
 const openWorkareaTarget = vi.fn();
 const deleteResource = vi.fn();
+const saveInstructions = vi.fn();
 
 vi.mock("@/routes/v2/pages/Tangent/context/TangentProjectContext", () => ({
   useTangentProject: () => ({ projectId: "project-1", openWorkareaTarget }),
@@ -22,9 +23,13 @@ vi.mock("@/services/projects/useProjectResources", () => ({
   }),
 }));
 
-vi.mock("@/services/projects/useProjects", () => ({
-  useProject: () => ({ data: { id: "project-1", notes: null } }),
-  useUpdateProject: () => ({ mutate: vi.fn(), isPending: false }),
+vi.mock("@/services/projects/useProjectInstructions", () => ({
+  useProjectInstructions: () => ({
+    instructions: "",
+    isPending: false,
+    isSaving: false,
+    save: saveInstructions,
+  }),
 }));
 
 vi.mock("@/providers/DialogProvider/hooks/useDialog", () => ({
