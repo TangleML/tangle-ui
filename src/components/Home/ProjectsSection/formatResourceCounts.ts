@@ -1,10 +1,10 @@
-const ENTITY_ORDER = ["pipeline", "agent_session", "document"];
+export const ENTITY_ORDER = ["pipeline", "agent_session", "document"];
 
 const EMPTY_LABEL = "Empty";
 
 const humanizeEntity = (entity: string) => entity.replaceAll("_", " ");
 
-const pluralize = (entity: string, count: number) =>
+export const pluralize = (entity: string, count: number) =>
   count === 1 ? humanizeEntity(entity) : `${humanizeEntity(entity)}s`;
 
 const orderedEntities = (counts: Record<string, number>) => {

@@ -87,6 +87,25 @@ export interface ProjectResourcePage {
   totalCount: number;
 }
 
+export interface ProjectRun {
+  id: string;
+  rootExecutionId: string;
+  pipelineName: string | null;
+  createdBy: string | null;
+  createdAt: Date;
+}
+
+export interface ProjectRunPage {
+  items: ProjectRun[];
+  nextPageToken: string | null;
+}
+
+export interface ListProjectRunsParams {
+  pageToken?: string;
+  since?: string;
+  until?: string;
+}
+
 export interface ListProjectResourcesParams {
   entity?: ProjectResourceEntity[];
   pageToken?: string;
@@ -125,4 +144,10 @@ export const ProjectResourcesQueryKeys = {
     ["projects", projectId, "resources", resourceId] as const,
   List: (projectId: string, params: ListProjectResourcesParams = {}) =>
     ["projects", projectId, "resources", "list", params] as const,
+} as const;
+
+export const ProjectRunsQueryKeys = {
+  List: (projectId: string, params: ListProjectRunsParams = {}) =>
+    ["projects", projectId, "runs", "list", params] as const,
+  Stats: (runId: string) => ["pipeline-run-stats", runId] as const,
 } as const;
