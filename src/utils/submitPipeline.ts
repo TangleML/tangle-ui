@@ -14,11 +14,16 @@ import type { PipelineRun } from "@/types/pipelineRun";
 import { transformAggregatorComponentSpec } from "./aggregatorTransform";
 import { RUN_SOURCE_ANNOTATION } from "./annotations";
 import { buildAnnotationsWithCanonicalName } from "./canonicalPipelineName";
+import { coerceMetadataAnnotations } from "./coerceMetadataAnnotations";
 import type {
   ArgumentType,
   ComponentReference,
   ComponentSpec,
 } from "./componentSpec";
+import {
+  isPipelineId,
+  SOURCE_PIPELINE_ID_ANNOTATION,
+} from "./pipelineRunSource";
 import { runPreSubmitHooks } from "./runPreSubmitHooks";
 import { componentSpecFromYaml } from "./yaml";
 
@@ -29,6 +34,8 @@ export async function submitPipelineRun(
     taskArguments?: Record<string, ArgumentType>;
     authorizationToken?: string;
     canonicalName?: string;
+    sourcePipelineId?: string;
+    prepareSourcePipeline?: (backendUrl: string) => Promise<string | undefined>;
     runAnnotations?: Record<string, string>;
     onSuccess?: (data: PipelineRun) => void;
     onError?: (error: Error) => void;
@@ -48,6 +55,12 @@ export async function submitPipelineRun(
   }
 
   try {
+    const sourcePipelineId = options?.prepareSourcePipeline
+      ? await options.prepareSourcePipeline(backendUrl)
+      : options?.sourcePipelineId;
+    if (sourcePipelineId !== undefined && !isPipelineId(sourcePipelineId)) {
+      throw new Error("The source pipeline ID is invalid.");
+    }
     const specCopy = structuredClone(componentSpec);
     const componentCache = new Map<string, ComponentSpec>();
     const fullyLoadedSpec = await processComponentSpec(
@@ -91,6 +104,9 @@ export async function submitPipelineRun(
       annotations: {
         ...(options?.runAnnotations ?? {}),
         [RUN_SOURCE_ANNOTATION]: "web-app",
+        ...(sourcePipelineId && {
+          [SOURCE_PIPELINE_ID_ANNOTATION]: sourcePipelineId,
+        }),
       },
       root_task: {
         componentRef: {
@@ -221,38 +237,6 @@ const parseComponentYaml = (text: string): ComponentSpec => {
   }
 
   return componentSpecFromYaml(text);
-};
-
-/**
- * Coerce every `metadata.annotations` value (root spec + every nested task
- * componentRef.spec) to a string, since the backend's MetadataSpec strictly
- * requires `Record<string, string>`. Strings pass through unchanged; arrays
- * and objects are JSON-stringified; primitives are stringified; null/undefined
- * values are dropped. Mutates in place.
- */
-const coerceMetadataAnnotations = (spec: ComponentSpec): void => {
-  const annotations = spec.metadata?.annotations;
-  if (annotations) {
-    for (const key of Object.keys(annotations)) {
-      const value = annotations[key];
-      if (typeof value === "string") continue;
-      if (value === null || value === undefined) {
-        delete annotations[key];
-        continue;
-      }
-      annotations[key] =
-        typeof value === "object" ? JSON.stringify(value) : String(value);
-    }
-  }
-
-  if (!spec.implementation || !("graph" in spec.implementation)) return;
-  const tasks = spec.implementation.graph?.tasks;
-  if (!tasks) return;
-  for (const task of Object.values(tasks)) {
-    const nestedSpec = (task as { componentRef?: { spec?: ComponentSpec } })
-      ?.componentRef?.spec;
-    if (nestedSpec) coerceMetadataAnnotations(nestedSpec);
-  }
 };
 
 // Fetch component with timeout to avoid hanging on unresponsive URLs

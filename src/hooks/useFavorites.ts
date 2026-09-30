@@ -8,11 +8,31 @@ import {
 
 export type { FavoriteItem, FavoriteType };
 
+function matchesFavorite(
+  favorite: FavoriteItem,
+  type: FavoriteType,
+  id: string,
+  pipelineReferenceId?: string,
+) {
+  return (
+    favorite.type === type &&
+    (favorite.id === id ||
+      (type === "pipeline" &&
+        pipelineReferenceId !== undefined &&
+        favorite.id === pipelineReferenceId &&
+        favorite.pipelineReferenceId === undefined) ||
+      (type === "pipeline" &&
+        pipelineReferenceId === undefined &&
+        !id.startsWith("remote:") &&
+        !id.startsWith("pending:") &&
+        favorite.pipelineReferenceId === id))
+  );
+}
+
 export function useFavorites() {
   const favorites = useLiveQuery(() => LibraryDB.favorites.toArray(), []) ?? [];
 
   const addFavorite = async (item: FavoriteItem) => {
-    // put is an upsert — compound PK [type+id] prevents duplicates
     await LibraryDB.favorites.put(item);
   };
 
@@ -20,12 +40,23 @@ export function useFavorites() {
     await LibraryDB.favorites.delete([type, id]);
   };
 
-  const isFavorite = (type: FavoriteType, id: string) =>
-    favorites.some((f) => f.type === type && f.id === id);
+  const isFavorite = (
+    type: FavoriteType,
+    id: string,
+    pipelineReferenceId?: string,
+  ) =>
+    favorites.some((favorite) =>
+      matchesFavorite(favorite, type, id, pipelineReferenceId),
+    );
 
   const toggleFavorite = async (item: FavoriteItem) => {
-    if (isFavorite(item.type, item.id)) {
-      await removeFavorite(item.type, item.id);
+    const existing = favorites.filter((favorite) =>
+      matchesFavorite(favorite, item.type, item.id, item.pipelineReferenceId),
+    );
+    if (existing.length) {
+      await LibraryDB.favorites.bulkDelete(
+        existing.map((favorite) => [favorite.type, favorite.id]),
+      );
     } else {
       await addFavorite(item);
     }

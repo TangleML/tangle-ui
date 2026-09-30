@@ -83,8 +83,12 @@ const ImportPipeline = ({
       setSuccessMessage(`Pipeline "${result.name}" imported successfully.`);
     }
 
-    const file = await storage.rootFolder.assignFile(result.name);
-    setImportedPipeline({ name: result.name, fileId: file.id });
+    if (result.referenceId) {
+      setImportedPipeline({ name: result.referenceId, fileId: result.fileId });
+    } else {
+      const file = await storage.rootFolder.assignFile(result.name);
+      setImportedPipeline({ name: result.name, fileId: file.id });
+    }
   };
 
   const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -96,7 +100,7 @@ const ImportPipeline = ({
     setSuccessMessage(null);
 
     try {
-      const result = await importPipelineFromFile(files[0]);
+      const result = await importPipelineFromFile(storage, files[0]);
       await handleImportResult(result);
       if (result.successful) {
         track("pipeline_editor.pipeline_actions.import_pipeline_completed", {
@@ -127,7 +131,7 @@ const ImportPipeline = ({
     setSuccessMessage(null);
 
     try {
-      const result = await importPipelineFromYaml(yamlContent);
+      const result = await importPipelineFromYaml(storage, yamlContent);
       await handleImportResult(result);
       if (result.successful) {
         track("pipeline_editor.pipeline_actions.import_pipeline_completed", {

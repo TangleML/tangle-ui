@@ -6,35 +6,18 @@ import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
 import { Heading, Text } from "@/components/ui/typography";
+import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import type { PipelineFolder } from "@/services/pipelineStorage/PipelineFolder";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
-import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
-import type {
-  PermissionStatus,
-  PipelineRef,
-} from "@/services/pipelineStorage/types";
+import type { PermissionStatus } from "@/services/pipelineStorage/types";
 
 interface DriverPermissionGateProps {
-  pipelineRef: PipelineRef;
+  file: PipelineFile;
   children: ReactNode;
 }
 
-async function resolveFolder(
-  ref: PipelineRef,
-  storage: PipelineStorageService,
-): Promise<PipelineFolder | null> {
-  try {
-    const file = ref.fileId
-      ? await storage.findPipelineById(ref.fileId)
-      : undefined;
-    return file?.folder ?? null;
-  } catch {
-    return null;
-  }
-}
-
 export function DriverPermissionGate({
-  pipelineRef,
+  file,
   children,
 }: DriverPermissionGateProps) {
   const storage = usePipelineStorage();
@@ -42,15 +25,12 @@ export function DriverPermissionGate({
   const [isRequesting, setIsRequesting] = useState(false);
 
   const { data, isLoading } = useQuery({
-    queryKey: [
-      "driver-permission-gate",
-      pipelineRef.fileId ?? pipelineRef.name,
-    ],
+    queryKey: ["driver-permission-gate", storage.scope, file.id],
     queryFn: async (): Promise<{
       status: PermissionStatus;
       folder: PipelineFolder | null;
     }> => {
-      const folder = await resolveFolder(pipelineRef, storage);
+      const folder = file.folder;
       if (!folder?.requiresPermission) {
         return { status: "granted", folder };
       }

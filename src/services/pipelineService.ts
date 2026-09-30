@@ -13,7 +13,6 @@ import {
   fullyLoadComponentRefFromUrl,
   getAllComponentFilesFromList,
   getComponentFileFromList,
-  writeComponentToFileListFromText,
 } from "@/utils/componentStore";
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 import { componentSpecToYaml } from "@/utils/yaml";
@@ -23,6 +22,11 @@ import {
   deleteEntry,
   findByStorageKey,
 } from "./pipelineStorage/pipelineRegistry";
+import type { PipelineStorageService } from "./pipelineStorage/PipelineStorageService";
+import {
+  assertLocalPipelineVisible,
+  PipelineMovedToRemoteError,
+} from "./pipelineStorage/remotePipelineRecovery";
 
 export const deletePipeline = async (name: string, onDelete?: () => void) => {
   try {
@@ -35,7 +39,10 @@ export const deletePipeline = async (name: string, onDelete?: () => void) => {
   }
 };
 
-export const useSavePipeline = (componentSpec: ComponentSpec) => {
+export const useSavePipeline = (
+  componentSpec: ComponentSpec,
+  storage: PipelineStorageService,
+) => {
   const savePipeline = async (name?: string) => {
     if (!componentSpec) {
       return;
@@ -48,8 +55,7 @@ export const useSavePipeline = (componentSpec: ComponentSpec) => {
 
     const componentSpecAsYaml = componentSpecToYaml(componentSpecWithNewName);
 
-    await writeComponentToFileListFromText(
-      USER_PIPELINES_LIST_NAME,
+    return storage.createPipeline(
       componentSpecWithNewName.name,
       componentSpecAsYaml,
     );
@@ -83,6 +89,8 @@ export const loadPipelineByName = async (name: string) => {
     // Check if pipeline exists in user pipelines
     const pipeline = userPipelines.get(decodedName);
     if (pipeline) {
+      const entry = await findByStorageKey(decodedName);
+      if (entry) await assertLocalPipelineVisible(entry.id);
       return {
         experiment: pipeline,
         isLoading: false,
@@ -133,13 +141,18 @@ export const loadPipelineByName = async (name: string) => {
     return {
       experiment: null,
       isLoading: false,
-      error: "Error loading pipeline",
+      error:
+        error instanceof PipelineMovedToRemoteError
+          ? error.message
+          : "Error loading pipeline",
     };
   }
 };
 
 export interface ImportResult {
   name: string;
+  referenceId?: string;
+  fileId?: string;
   overwritten: boolean;
   successful: boolean;
   errorMessage?: string;
@@ -181,6 +194,7 @@ async function generateUniquePipelineName(baseName: string): Promise<string> {
  * @returns The result of the import, with the pipeline name and unique flag
  */
 export async function importPipelineFromYaml(
+  storage: PipelineStorageService,
   yamlContent: string,
   overwrite = false,
 ): Promise<ImportResult> {
@@ -208,35 +222,29 @@ export async function importPipelineFromYaml(
     let pipelineName = componentSpec.name || "Imported Pipeline";
     let wasRenamed = false;
 
-    // Check if a pipeline with this name already exists
-    const existingPipeline = await getComponentFileFromList(
-      USER_PIPELINES_LIST_NAME,
-      pipelineName,
-    );
+    // Browser storage is keyed by name; server storage permits duplicate titles.
+    const existingPipeline = storage.remoteEnabled
+      ? null
+      : await getComponentFileFromList(USER_PIPELINES_LIST_NAME, pipelineName);
 
     // If exists and we're not overwriting, generate a unique name
     if (existingPipeline && !overwrite) {
       const originalName = pipelineName;
       pipelineName = await generateUniquePipelineName(pipelineName);
       wasRenamed = pipelineName !== originalName;
-
-      // Update the component spec name to match the new name
-      componentSpec.name = pipelineName;
     }
+    componentSpec.name = pipelineName;
 
     // Standardize the YAML to ensure consistent format
     // This also ensures the ComponentSpec is valid
     const standardizedYaml = componentSpecToYaml(componentSpec);
 
-    // Save the pipeline to IndexedDB
-    await writeComponentToFileListFromText(
-      USER_PIPELINES_LIST_NAME,
-      pipelineName,
-      standardizedYaml,
-    );
+    const file = await storage.createPipeline(pipelineName, standardizedYaml);
 
     return {
       name: pipelineName,
+      referenceId: file.referenceId,
+      fileId: file.id,
       overwritten: Boolean(existingPipeline && overwrite),
       successful: true,
       errorMessage: wasRenamed
@@ -270,12 +278,13 @@ export async function importPipelineFromYaml(
  * @returns The result of the import operation
  */
 export async function importPipelineFromFile(
+  storage: PipelineStorageService,
   file: File,
   overwrite = false,
 ): Promise<ImportResult> {
   try {
     const yamlContent = await file.text();
-    return importPipelineFromYaml(yamlContent, overwrite);
+    return importPipelineFromYaml(storage, yamlContent, overwrite);
   } catch (error) {
     let errorMessage = "Failed to read file.";
     if (error instanceof Error) {

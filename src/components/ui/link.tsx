@@ -63,4 +63,4 @@ function Link({
   );
 }
 
-export { Link };
+export { Link, linkVariants };

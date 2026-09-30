@@ -1,55 +1,63 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import type { ReactElement } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { ComponentProps } from "react";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import { Annotations } from "@/models/componentSpec/annotations";
+import { ComponentSpec } from "@/models/componentSpec";
+import { SpecProvider } from "@/routes/v2/shared/providers/SpecContext";
+import {
+  SAVED_PIPELINE_ID_ANNOTATION,
+  SOURCE_PIPELINE_ID_ANNOTATION,
+} from "@/utils/pipelineRunSource";
 
 import { RunDetailsContent } from "./RunDetailsContent";
 
-const mockSpec = {
-  name: "Giphy",
-  description: undefined,
-  annotations: Annotations.from([]),
-};
+const mocks = vi.hoisted(() => ({
+  backendUrl: "https://backend.example.com",
+  remotePipelinesEnabled: true,
+  fetchRunAnnotations: vi.fn(),
+}));
 
-const mockMetadata = {
-  id: "run-1",
-  root_execution_id: "execution-1",
-  created_by: "user-1",
-  created_at: "2026-09-23T16:31:50.000Z",
-};
+vi.mock("@tanstack/react-router", async (importOriginal) => ({
+  ...(await importOriginal()),
+  Link: ({
+    to,
+    ...props
+  }: Omit<ComponentProps<"a">, "href"> & { to: string }) => (
+    <a href={to} {...props} />
+  ),
+}));
 
-const fetchRunAnnotations = vi.fn();
-
-vi.mock("@/routes/v2/shared/providers/SpecContext", () => ({
-  useSpec: () => mockSpec,
+vi.mock("@/providers/BackendProvider", () => ({
+  useBackend: () => ({ configured: true, backendUrl: mocks.backendUrl }),
 }));
 
 vi.mock("@/providers/ExecutionDataProvider", () => ({
   useExecutionData: () => ({
     rootDetails: { task_spec: { arguments: {} } },
     rootState: { child_execution_status_stats: {} },
-    metadata: mockMetadata,
+    metadata: { id: "run-1", root_execution_id: "execution-1" },
     isLoading: false,
-    error: undefined,
+    error: null,
   }),
-}));
-
-vi.mock("@/providers/BackendProvider", () => ({
-  useBackend: () => ({ backendUrl: "http://backend", configured: true }),
-}));
-
-vi.mock("@/providers/AnalyticsProvider", () => ({
-  useAnalytics: () => ({ track: vi.fn() }),
 }));
 
 vi.mock("@/hooks/useUserDetails", () => ({
   useUserDetails: () => ({ data: { id: "user-1" } }),
 }));
 
+vi.mock("@/providers/AnalyticsProvider", () => ({
+  useAnalytics: () => ({ track: vi.fn() }),
+}));
+
+vi.mock("@/utils/remotePipelines", () => ({
+  get REMOTE_PIPELINES_ENABLED() {
+    return mocks.remotePipelinesEnabled;
+  },
+}));
+
 vi.mock("@/services/pipelineRunService", () => ({
-  fetchRunAnnotations: (...args: unknown[]) => fetchRunAnnotations(...args),
+  fetchRunAnnotations: mocks.fetchRunAnnotations,
   updateRunAnnotation: vi.fn(),
 }));
 
@@ -58,41 +66,48 @@ vi.mock("@/components/shared/Execution/PipelineIO", () => ({
 }));
 
 vi.mock("./RunDetailsHeader", () => ({
-  RunDetailsHeader: ({ pipelineName }: { pipelineName: string }) => (
-    <div>{pipelineName}</div>
-  ),
+  RunDetailsHeader: () => null,
 }));
 
-const queryClient = new QueryClient({
-  defaultOptions: { queries: { retry: false } },
-});
+describe("RunDetailsContent source pipeline", () => {
+  const sourcePipelineId = "550e8400-e29b-41d4-a716-446655440000";
+  const otherPipelineId = "550e8400-e29b-41d4-a716-446655440001";
+  let queryClient: QueryClient;
 
-const renderPanel = (ui: ReactElement) =>
-  render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.backendUrl = "https://backend.example.com";
+    mocks.remotePipelinesEnabled = true;
+    mocks.fetchRunAnnotations.mockResolvedValue({});
+    queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+  });
 
-const openDetailsSection = async () => {
-  fireEvent.click(screen.getByText("Details"));
-  expect(await screen.findByText("Run Notes")).toBeInTheDocument();
-};
+  afterEach(() => {
+    cleanup();
+    queryClient.clear();
+  });
 
-beforeEach(() => {
-  queryClient.clear();
-  vi.clearAllMocks();
-});
+  function renderDetails() {
+    const spec = new ComponentSpec({ name: "Test pipeline" });
+    return render(<RunDetailsContent />, {
+      wrapper: ({ children }) => (
+        <QueryClientProvider client={queryClient}>
+          <SpecProvider spec={spec}>{children}</SpecProvider>
+        </QueryClientProvider>
+      ),
+    });
+  }
 
-afterEach(() => {
-  cleanup();
-});
-
-describe("<RunDetailsContent/>", () => {
-  it("shows run annotations", async () => {
-    fetchRunAnnotations.mockResolvedValue({
+  test("shows run annotations in the Details section", async () => {
+    mocks.fetchRunAnnotations.mockResolvedValue({
       experiment: "baseline",
       "cost-center": "research",
     });
 
-    renderPanel(<RunDetailsContent />);
-    await openDetailsSection();
+    renderDetails();
+    fireEvent.click(screen.getByText("Details"));
 
     expect(await screen.findByText("Run Annotations")).toBeInTheDocument();
     expect(screen.getByText("experiment")).toBeInTheDocument();
@@ -101,19 +116,101 @@ describe("<RunDetailsContent/>", () => {
     expect(screen.getByText("research")).toBeInTheDocument();
   });
 
-  it("hides run annotations that are internal or surfaced elsewhere in the panel", async () => {
-    fetchRunAnnotations.mockResolvedValue({
+  test("hides annotations surfaced elsewhere in the panel", async () => {
+    mocks.fetchRunAnnotations.mockResolvedValue({
       notes: "Run notes",
       tags: "Demo,Secrets",
       source: "web-app",
-      "system/pipeline_run.name": "Giphy",
+      "system/pipeline_run.name": "Test pipeline",
       "system/pipeline_run.created_by": "user-1",
       "tangleml.com/project/project-id/project-1": "true",
     });
 
-    renderPanel(<RunDetailsContent />);
-    await openDetailsSection();
+    renderDetails();
+    fireEvent.click(screen.getByText("Details"));
 
+    expect(await screen.findByText("Run Notes")).toBeInTheDocument();
     expect(screen.queryByText("Run Annotations")).not.toBeInTheDocument();
+  });
+
+  test.each([SAVED_PIPELINE_ID_ANNOTATION, SOURCE_PIPELINE_ID_ANNOTATION])(
+    "links to the current editor using %s",
+    async (annotationKey) => {
+      mocks.fetchRunAnnotations.mockResolvedValue({
+        [annotationKey]: sourcePipelineId,
+      });
+
+      renderDetails();
+
+      const link = await screen.findByRole("link", { name: "Open pipeline" });
+      expect(link).toHaveAttribute("href", `/editor-v2/${sourcePipelineId}`);
+      expect(link).toHaveAttribute("title", sourcePipelineId);
+      expect(link).not.toHaveAttribute("target");
+      expect(screen.queryByText(sourcePipelineId)).not.toBeInTheDocument();
+      expect(screen.getByText("Source pipeline")).toBeInTheDocument();
+      expect(mocks.fetchRunAnnotations).toHaveBeenCalledExactlyOnceWith(
+        "run-1",
+        mocks.backendUrl,
+      );
+    },
+  );
+
+  test.each([undefined, "not-a-pipeline-id", ""])(
+    "omits the backlink for source ID %s",
+    (sourceId) => {
+      queryClient.setQueryData(
+        ["pipeline-run-annotations", mocks.backendUrl, "run-1"],
+        sourceId === undefined
+          ? {}
+          : { [SOURCE_PIPELINE_ID_ANNOTATION]: sourceId },
+      );
+
+      renderDetails();
+
+      expect(screen.getByText("Run Id")).toBeInTheDocument();
+      expect(screen.queryByText("Source pipeline")).not.toBeInTheDocument();
+    },
+  );
+
+  test("hides the backlink when remote pipelines are disabled", () => {
+    mocks.remotePipelinesEnabled = false;
+    queryClient.setQueryData(
+      ["pipeline-run-annotations", mocks.backendUrl, "run-1"],
+      { [SOURCE_PIPELINE_ID_ANNOTATION]: sourcePipelineId },
+    );
+
+    renderDetails();
+
+    expect(screen.queryByText("Source pipeline")).not.toBeInTheDocument();
+  });
+
+  test("uses annotations from the selected backend", () => {
+    queryClient.setQueryData(
+      ["pipeline-run-annotations", mocks.backendUrl, "run-1"],
+      { [SOURCE_PIPELINE_ID_ANNOTATION]: sourcePipelineId },
+    );
+    queryClient.setQueryData(
+      ["pipeline-run-annotations", "https://other.example.com", "run-1"],
+      { [SOURCE_PIPELINE_ID_ANNOTATION]: otherPipelineId },
+    );
+
+    const view = renderDetails();
+    expect(screen.getByRole("link", { name: "Open pipeline" })).toHaveAttribute(
+      "href",
+      `/editor-v2/${sourcePipelineId}`,
+    );
+
+    view.unmount();
+    mocks.backendUrl = "https://other.example.com";
+    renderDetails();
+
+    expect(screen.getByRole("link", { name: "Open pipeline" })).toHaveAttribute(
+      "href",
+      `/editor-v2/${otherPipelineId}`,
+    );
+    expect(screen.getByRole("link", { name: "Open pipeline" })).toHaveAttribute(
+      "title",
+      otherPipelineId,
+    );
   });
 });

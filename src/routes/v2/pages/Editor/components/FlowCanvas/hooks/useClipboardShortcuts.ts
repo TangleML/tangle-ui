@@ -25,6 +25,7 @@ export function useClipboardShortcuts(
   spec: ComponentSpec | null,
   containerRef: RefObject<HTMLDivElement | null>,
   reactFlowInstance: ReactFlowInstance | null,
+  canEdit = true,
 ): void {
   const registry = useNodeRegistry();
   const { editor, keyboard } = useSharedStores();
@@ -38,7 +39,7 @@ export function useClipboardShortcuts(
       label: "Duplicate",
       action: (e) => {
         e.preventDefault();
-        if (!spec) return;
+        if (!spec || !canEdit) return;
         const selection = getEffectiveSelection(registry, spec, editor);
         if (selection.length > 0)
           duplicateSelectedNodes(clipboard, spec, selection);
@@ -82,12 +83,12 @@ export function useClipboardShortcuts(
       unregisterCopy();
       unregisterPaste();
     };
-  }, [clipboard, spec, editor, keyboard, registry, notify]);
+  }, [clipboard, spec, editor, keyboard, registry, notify, canEdit]);
 
   useEffect(() => {
     const handlePaste = (event: ClipboardEvent) => {
       const container = containerRef.current;
-      if (!spec || !container || !reactFlowInstance) return;
+      if (!spec || !container || !reactFlowInstance || !canEdit) return;
       if (isEditableTarget(event.target)) return;
 
       const rect = container.getBoundingClientRect();
@@ -106,5 +107,5 @@ export function useClipboardShortcuts(
 
     window.addEventListener("paste", handlePaste);
     return () => window.removeEventListener("paste", handlePaste);
-  }, [clipboard, spec, containerRef, reactFlowInstance, notify]);
+  }, [clipboard, spec, containerRef, reactFlowInstance, notify, canEdit]);
 }

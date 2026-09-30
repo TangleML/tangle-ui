@@ -1,0 +1,173 @@
+import "fake-indexeddb/auto";
+
+import { waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { pipelineStorageDb } from "./db";
+import { PipelineFolder } from "./PipelineFolder";
+import type { PipelineStorageDriver } from "./types";
+
+vi.mock("@/utils/componentStore", () => ({
+  deleteComponentFileFromList: vi.fn(),
+  getAllComponentFilesFromList: vi.fn(async () => new Map()),
+  getComponentFileFromList: vi.fn(),
+  renameComponentFileInList: vi.fn(),
+  writeComponentToFileListFromText: vi.fn(),
+}));
+
+function setup() {
+  const driver: PipelineStorageDriver = {
+    type: "test",
+    allowsMoveIn: false,
+    allowsMoveOut: false,
+    list: vi.fn().mockResolvedValue([
+      {
+        id: "stable-id",
+        storageKey: "document.yaml",
+        displayName: "Daily report",
+      },
+    ]),
+    read: vi.fn().mockResolvedValue("name: Daily report"),
+    write: vi.fn().mockResolvedValue(undefined),
+    rename: vi.fn().mockResolvedValue(undefined),
+    delete: vi.fn().mockResolvedValue(undefined),
+    hasKey: vi.fn().mockResolvedValue(true),
+  };
+  const folder = new PipelineFolder({
+    id: "folder",
+    name: "Folder",
+    parentId: null,
+    driver,
+  });
+  return { driver, folder };
+}
+
+beforeEach(async () => {
+  await pipelineStorageDb.pipeline_registry.clear();
+});
+
+describe("pipeline file storage contract", () => {
+  it("preserves identity through listing and rename", async () => {
+    const { folder, driver } = setup();
+    const [file] = await folder.listPipelines();
+    expect(file.id).toBe("stable-id");
+    expect(file.displayName).toBe("Daily report");
+    expect(file.storageKey).toBe("document.yaml");
+    await file.rename("Renamed");
+    expect(file.id).toBe("stable-id");
+    expect(file.displayName).toBe("Renamed");
+    expect(driver.rename).toHaveBeenCalledExactlyOnceWith(
+      "document.yaml",
+      "Renamed",
+    );
+    expect(await file.read()).toBe("name: Daily report");
+  });
+
+  it("reads content returned with storage metadata", async () => {
+    const { folder, driver } = setup();
+    vi.mocked(driver.read).mockResolvedValue({
+      content: "name: Updated",
+      descriptor: { storageKey: "document.yaml", id: "stable-id" },
+    });
+    const [file] = await folder.listPipelines();
+    expect(await file.read()).toBe("name: Updated");
+  });
+
+  it("keeps a driver's stable storage key when only its display name changes", async () => {
+    const { folder, driver } = setup();
+    vi.mocked(driver.rename).mockResolvedValue({
+      id: "stable-id",
+      storageKey: "document.yaml",
+      displayName: "Renamed",
+    });
+    const [file] = await folder.listPipelines();
+    await file.rename("Renamed");
+    expect(file.id).toBe("stable-id");
+    expect(file.storageKey).toBe("document.yaml");
+    expect(file.displayName).toBe("Renamed");
+    expect(
+      await pipelineStorageDb.pipeline_registry.get(file.id),
+    ).toMatchObject({
+      storageKey: "document.yaml",
+    });
+  });
+
+  it("applies driver read/write metadata while keeping the application's identity", async () => {
+    const { folder, driver } = setup();
+    const [file] = await folder.listPipelines();
+    const changedAt = new Date("2026-09-30T12:00:00Z");
+    vi.mocked(driver.write).mockResolvedValueOnce({
+      id: "server-id",
+      storageKey: "server-locator",
+      displayName: "Written",
+      modifiedAt: changedAt,
+    });
+    await file.write("name: Written");
+    expect(file.id).toBe("stable-id");
+    expect(file.storageKey).toBe("server-locator");
+    expect(file.displayName).toBe("Written");
+    expect(file.modifiedAt).toEqual(changedAt);
+    vi.mocked(driver.read).mockResolvedValueOnce({
+      content: "name: Read",
+      descriptor: {
+        storageKey: "server-locator",
+        displayName: "Read",
+        canEdit: false,
+      },
+    });
+    expect(await file.read()).toBe("name: Read");
+    expect(file.displayName).toBe("Read");
+    expect(file.canEdit).toBe(false);
+  });
+
+  it("reports an in-flight local driver write until it finishes", async () => {
+    const { folder, driver } = setup();
+    const [file] = await folder.listPipelines();
+    let finish!: () => void;
+    vi.mocked(driver.write).mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+    );
+    const writing = file.write("name: Changed");
+    await waitFor(() => expect(driver.write).toHaveBeenCalled());
+    expect(file.isSaving).toBe(true);
+    expect(file.lastSavedAt).toBeNull();
+    finish();
+    await writing;
+    expect(file.isSaving).toBe(false);
+    expect(file.lastSavedAt).toBeInstanceOf(Date);
+  });
+
+  it("owns local save failure and success status", async () => {
+    const { folder, driver } = setup();
+    const [file] = await folder.listPipelines();
+    vi.mocked(driver.write).mockRejectedValueOnce(
+      new Error("Disk unavailable"),
+    );
+    await expect(file.write("name: Changed")).rejects.toThrow(
+      "Disk unavailable",
+    );
+    expect(file.isSaving).toBe(false);
+    expect(file.lastWriteError).toBe("Disk unavailable");
+    expect(file.lastSavedAt).toBeNull();
+    await file.write("name: Changed");
+    expect(file.lastWriteError).toBeUndefined();
+    expect(file.lastSavedAt).toBeInstanceOf(Date);
+  });
+
+  it("prevents changes to read-only files", async () => {
+    const { folder, driver } = setup();
+    vi.mocked(driver.list).mockResolvedValue([
+      { storageKey: "read-only", canEdit: false },
+    ]);
+    const [file] = await folder.listPipelines();
+    expect(file.canEdit).toBe(false);
+    await expect(file.write("changed")).rejects.toThrow("read-only");
+    await expect(file.rename("changed")).rejects.toThrow("read-only");
+    await expect(file.deleteFile()).rejects.toThrow("read-only");
+    expect(driver.write).not.toHaveBeenCalled();
+    expect(driver.rename).not.toHaveBeenCalled();
+    expect(driver.delete).not.toHaveBeenCalled();
+  });
+});

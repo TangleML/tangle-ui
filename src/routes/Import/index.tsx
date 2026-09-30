@@ -8,6 +8,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Paragraph, Text } from "@/components/ui/typography";
 import { getDefaultEditorPath } from "@/routes/editorRoutes";
 import { importPipelineFromYaml } from "@/services/pipelineService";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 
 /**
  * Import route that fetches a pipeline YAML from a URL and imports it into the editor.
@@ -158,6 +159,7 @@ const ErrorScreen = ({
 type ImportSearch = { url?: string };
 
 export const ImportPage = () => {
+  const storage = usePipelineStorage();
   const search: ImportSearch = useSearch({ strict: false });
   const navigate = useNavigate();
   const router = useRouter();
@@ -195,14 +197,14 @@ export const ImportPage = () => {
       }
 
       setStep(Step.Importing);
-      const result = await importPipelineFromYaml(yamlContent, true);
+      const result = await importPipelineFromYaml(storage, yamlContent, true);
 
       if (result.successful) {
         importedRef.current = true;
         setPipelineName(result.name);
         setStep(Step.Done);
         navigate({
-          to: getDefaultEditorPath(result.name),
+          to: getDefaultEditorPath(result.referenceId ?? result.name),
         });
       } else {
         setError(result.errorMessage || "Failed to import pipeline from URL.");

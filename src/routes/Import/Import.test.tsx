@@ -6,6 +6,11 @@ import { importPipelineFromYaml } from "@/services/pipelineService";
 
 import { ImportPage, isAllowedImportUrl } from "./index";
 
+const storage = {};
+vi.mock("@/services/pipelineStorage/PipelineStorageProvider", () => ({
+  usePipelineStorage: () => storage,
+}));
+
 const mockNavigate = vi.fn();
 const mockRouterNavigate = vi.fn();
 let mockSearchParams: { url?: string } = {
@@ -137,7 +142,11 @@ describe("ImportPage", () => {
     });
 
     await waitFor(() => {
-      expect(importPipelineFromYaml).toHaveBeenCalledWith(yamlContent, true);
+      expect(importPipelineFromYaml).toHaveBeenCalledWith(
+        storage,
+        yamlContent,
+        true,
+      );
     });
 
     await waitFor(() => {

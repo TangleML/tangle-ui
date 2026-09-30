@@ -7,6 +7,7 @@ import { useRunSearchParams } from "./useRunSearchParams";
 
 const mockNavigate = vi.fn();
 let mockSearchParams: Record<string, unknown> = {};
+const PIPELINE_ID = "47a95130-267f-4e41-9469-3a8f935f4ac3";
 
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => mockNavigate,
@@ -80,6 +81,28 @@ describe("useRunSearchParams", () => {
       const { result } = renderHook(() => useRunSearchParams());
       expect(result.current.filters).toEqual({});
     });
+
+    it.each([
+      { saved_pipeline_id: PIPELINE_ID },
+      JSON.stringify({ saved_pipeline_id: PIPELINE_ID }),
+    ])("parses the saved pipeline ID from %j", (filter) => {
+      mockSearchParams = { filter };
+      const { result } = renderHook(() => useRunSearchParams());
+
+      expect(result.current.filters).toEqual({
+        saved_pipeline_id: PIPELINE_ID,
+      });
+      expect(result.current.hasActiveFilters).toBe(true);
+      expect(result.current.activeFilterCount).toBe(1);
+    });
+
+    it("does not treat an invalid saved pipeline ID as an active filter", () => {
+      mockSearchParams = { filter: { saved_pipeline_id: "Daily report" } };
+      const { result } = renderHook(() => useRunSearchParams());
+
+      expect(result.current.filters).toEqual({});
+      expect(result.current.hasActiveFilters).toBe(false);
+    });
   });
 
   describe("setFilter", () => {
@@ -89,6 +112,30 @@ describe("useRunSearchParams", () => {
       act(() => result.current.setFilter("status", "RUNNING"));
 
       expectNavigatedTo({ status: "RUNNING" });
+    });
+
+    it("removes the saved pipeline filter and resets pagination while preserving other filters", () => {
+      mockSearchParams = {
+        filter: { saved_pipeline_id: PIPELINE_ID, created_by: "teammate" },
+        page_token: "next-page",
+      };
+      const { result } = renderHook(() => useRunSearchParams());
+
+      act(() => result.current.setFilter("saved_pipeline_id", undefined));
+
+      expectNavigatedTo({ created_by: "teammate" });
+    });
+
+    it("adds the saved pipeline filter and resets pagination", () => {
+      mockSearchParams = {
+        filter: { status: "FAILED" },
+        page_token: "next-page",
+      };
+      const { result } = renderHook(() => useRunSearchParams());
+
+      act(() => result.current.setFilter("saved_pipeline_id", PIPELINE_ID));
+
+      expectNavigatedTo({ status: "FAILED", saved_pipeline_id: PIPELINE_ID });
     });
 
     it.each([undefined, "", null] as const)(
@@ -154,6 +201,18 @@ describe("useRunSearchParams", () => {
     it("removes all filters from URL", () => {
       mockSearchParams = {
         filter: { status: "FAILED", pipeline_name: "test" },
+      };
+      const { result } = renderHook(() => useRunSearchParams());
+
+      act(() => result.current.clearFilters());
+
+      expectNavigatedTo(undefined);
+    });
+
+    it("clears the saved pipeline filter and pagination together", () => {
+      mockSearchParams = {
+        filter: { saved_pipeline_id: PIPELINE_ID },
+        page_token: "next-page",
       };
       const { result } = renderHook(() => useRunSearchParams());
 

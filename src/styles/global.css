@@ -288,6 +288,20 @@ code {
   /* Custom animations */
   --animate-revert-copied: revert-copied 0.5s ease-in-out forwards;
   --animate-highlight-fade: highlight-fade 2s ease-out forwards;
+  --animate-pipeline-save-success: pipeline-save-success 750ms ease-out forwards;
+
+  @keyframes pipeline-save-success {
+    0% {
+      color: var(--color-yellow-200);
+    }
+    20%,
+    45% {
+      color: var(--color-emerald-300);
+    }
+    100% {
+      color: var(--color-white);
+    }
+  }
 
   @keyframes revert-copied {
     0%,
