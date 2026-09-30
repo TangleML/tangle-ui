@@ -16,6 +16,7 @@ import {
 } from "@/hooks/useRecentlyViewed";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { APP_ROUTES } from "@/routes/router";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import { formatRelativeTime } from "@/utils/date";
 import { tracking } from "@/utils/tracking";
 
@@ -46,10 +47,16 @@ const SectionHeader = ({
   </InlineStack>
 );
 
-const RecentlyViewedPreviewRow = ({ item }: { item: RecentItem }) => (
+const RecentlyViewedPreviewRow = ({
+  item,
+  backendUrl,
+}: {
+  item: RecentItem;
+  backendUrl: string;
+}) => (
   <InlineStack gap="2" className="min-w-0 overflow-hidden">
     <Link
-      to={getRecentlyViewedUrl(item)}
+      to={getRecentlyViewedUrl(item, backendUrl)}
       {...tracking("homepage.recently_viewed_pipelines.item")}
       className="flex w-full items-center gap-3 px-4 py-3 hover:bg-muted/50 no-underline"
     >
@@ -70,6 +77,7 @@ const RecentlyViewedPreviewRow = ({ item }: { item: RecentItem }) => (
 );
 
 const RecentlyViewedPreview = () => {
+  const backendUrl = usePipelineStorage().remote?.backendUrl ?? "";
   const { recentlyViewed } = useRecentlyViewed();
   const preview = recentlyViewed.slice(0, PREVIEW_COUNT);
 
@@ -100,6 +108,7 @@ const RecentlyViewedPreview = () => {
               <RecentlyViewedPreviewRow
                 key={`${item.type}-${item.id}`}
                 item={item}
+                backendUrl={backendUrl}
               />
             ),
           )

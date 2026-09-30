@@ -8,6 +8,16 @@ import { getDefaultRunPath } from "@/routes/runRoutes";
 
 type ItemType = "pipeline" | "run" | "component" | "tour";
 
+export function getItemStorageLabel(item: {
+  type: ItemType;
+  id: string;
+}): string {
+  if (item.type !== "pipeline") return item.id;
+  if (item.id.startsWith("remote:")) return "Remote";
+  if (item.id.startsWith("pending:")) return "Pending upload";
+  return "Local";
+}
+
 const TYPE_CONFIG: Record<
   ItemType,
   { className: string; icon: IconName; label: string }
@@ -58,13 +68,18 @@ export const TypePill = ({
   );
 };
 
-export function getFavoriteUrl(item: FavoriteItem): string {
-  if (item.type === "pipeline") return getDefaultEditorPath(item.id);
+export function getFavoriteUrl(item: FavoriteItem, backendUrl: string): string {
+  if (item.type === "pipeline")
+    return getDefaultEditorPath(item.id, backendUrl);
   return getDefaultRunPath(item.id);
 }
 
-export function getRecentlyViewedUrl(item: RecentItem): string {
-  if (item.type === "pipeline") return getDefaultEditorPath(item.id);
+export function getRecentlyViewedUrl(
+  item: RecentItem,
+  backendUrl: string,
+): string {
+  if (item.type === "pipeline")
+    return getDefaultEditorPath(item.id, backendUrl);
   if (item.type === "run") return getDefaultRunPath(item.id);
   if (item.type === "tour") return `${APP_ROUTES.TOUR}/${item.id}`;
   return APP_ROUTES.DASHBOARD_COMPONENTS;

@@ -7,9 +7,14 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
 import { type RecentItem, useRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import { APP_ROUTES } from "@/routes/router";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import { formatRelativeTime } from "@/utils/date";
 
-import { getRecentlyViewedUrl, TypePill } from "./TypePill";
+import {
+  getItemStorageLabel,
+  getRecentlyViewedUrl,
+  TypePill,
+} from "./TypePill";
 
 const PAGE_SIZE = 20;
 
@@ -33,12 +38,13 @@ const RecentlyViewedCardBody = ({ item }: { item: RecentItem }) => (
       size="xs"
       className="truncate text-muted-foreground font-mono max-w-full"
     >
-      {item.id}
+      {getItemStorageLabel(item)}
     </Text>
   </BlockStack>
 );
 
 const RecentlyViewedCard = ({ item }: { item: RecentItem }) => {
+  const backendUrl = usePipelineStorage().remote?.backendUrl ?? "";
   if (item.type === "component") {
     return (
       <Link
@@ -52,7 +58,10 @@ const RecentlyViewedCard = ({ item }: { item: RecentItem }) => {
   }
 
   return (
-    <Link to={getRecentlyViewedUrl(item)} className="no-underline block">
+    <Link
+      to={getRecentlyViewedUrl(item, backendUrl)}
+      className="no-underline block"
+    >
       <RecentlyViewedCardBody item={item} />
     </Link>
   );
