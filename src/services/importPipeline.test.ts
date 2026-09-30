@@ -6,6 +6,8 @@ import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 
 import { importPipelineFromYaml } from "./pipelineService";
 
+vi.mock("@/utils/remotePipelines", () => ({ REMOTE_PIPELINES_ENABLED: false }));
+
 describe("importPipelineFromYaml", () => {
   const validYamlObject = {
     name: "Test Pipeline",

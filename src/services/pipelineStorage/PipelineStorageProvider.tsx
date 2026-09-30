@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import { useAuthLocalStorage } from "@/components/shared/Authentication/useAuthLocalStorage";
 import {
@@ -9,7 +9,10 @@ import {
 import { useBackend } from "@/providers/BackendProvider";
 import { REMOTE_PIPELINES_ENABLED } from "@/utils/remotePipelines";
 
-import { PipelineStorageService } from "./PipelineStorageService";
+import {
+  PipelineStorageService,
+  setPipelineStorageService,
+} from "./PipelineStorageService";
 
 export const PipelineStorageCtx = createRequiredContext<PipelineStorageService>(
   "PipelineStorageContext",
@@ -25,6 +28,7 @@ export function PipelineStorageProvider({ children }: { children: ReactNode }) {
 
 function LocalStorageProvider({ children }: { children: ReactNode }) {
   const [service] = useState(() => new PipelineStorageService());
+  useEffect(() => setPipelineStorageService(service), [service]);
   return (
     <PipelineStorageCtx.Provider value={service}>
       {children}
@@ -55,6 +59,8 @@ function RemoteStorageProvider({ children }: { children: ReactNode }) {
       }),
     [backendUrl, authorizationToken, accountScope],
   );
+
+  useEffect(() => setPipelineStorageService(service), [service]);
 
   return (
     <PipelineStorageCtx.Provider value={service}>

@@ -12,10 +12,7 @@ import {
   type ComponentSpec,
   isGraphImplementation,
 } from "@/utils/componentSpec";
-import {
-  getComponentFileFromList,
-  writeComponentToFileListFromText,
-} from "@/utils/componentStore";
+import { getComponentFileFromList } from "@/utils/componentStore";
 import {
   DB_NAME,
   PIPELINE_RUNS_STORE_NAME,
@@ -23,6 +20,8 @@ import {
 } from "@/utils/constants";
 import { fetchWithErrorHandling } from "@/utils/fetchWithErrorHandling";
 import { componentSpecToYaml } from "@/utils/yaml";
+
+import { savePipelineText } from "./pipelineService";
 
 export const createPipelineRun = async (
   payload: BodyCreateApiPipelineRunsPost,
@@ -155,14 +154,10 @@ export const copyRunToPipeline = async (
     cleanComponentSpec.name = newName;
 
     const componentText = componentSpecToYaml(cleanComponentSpec);
-    await writeComponentToFileListFromText(
-      USER_PIPELINES_LIST_NAME,
-      newName,
-      componentText,
-    );
+    const file = await savePipelineText(newName, componentText);
 
     return {
-      url: getDefaultEditorPath(newName),
+      url: getDefaultEditorPath(file?.referenceId ?? newName),
       name: newName,
     };
   } catch (error) {

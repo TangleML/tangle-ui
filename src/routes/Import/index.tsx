@@ -202,7 +202,7 @@ export const ImportPage = () => {
         setPipelineName(result.name);
         setStep(Step.Done);
         navigate({
-          to: getDefaultEditorPath(result.name),
+          to: getDefaultEditorPath(result.referenceId ?? result.name),
         });
       } else {
         setError(result.errorMessage || "Failed to import pipeline from URL.");

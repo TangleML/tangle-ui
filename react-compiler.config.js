@@ -46,6 +46,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/hooks/useNoticeInbox.ts",
   "src/hooks/useHiddenNotices.ts",
   "src/components/shared/FavoriteToggle.tsx",
+  "src/components/shared/NewPipelineButton.tsx",
   "src/services/pipelineStorage/PipelineStorageProvider.tsx",
   "src/components/shared/FloatingSelectionBar.tsx",
   "src/components/shared/ComponentLifecycleBadges.tsx",
