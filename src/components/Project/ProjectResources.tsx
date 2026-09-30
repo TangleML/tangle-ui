@@ -29,6 +29,7 @@ import {
   tangentSessionSearch,
 } from "@/routes/tangentSearch";
 import { UNTITLED } from "@/services/projects/placeholderNames";
+import { namesLocalPipeline } from "@/services/projects/resourceDescriptor";
 import { sessionLabelsById } from "@/services/projects/sessionLabel";
 import type { ProjectResourceSummary } from "@/services/projects/types";
 import {
@@ -39,7 +40,6 @@ import { tracking } from "@/utils/tracking";
 
 import { AddResourceMenu } from "./AddResourceMenu";
 import { ColumnHeadingRow } from "./ColumnHeadingRow";
-import { claimsLocalPipeline } from "./localPipelinePointer";
 import { entityIcon, removingDestroys } from "./resourceEntities";
 import { ResourceRow } from "./ResourceRow";
 
@@ -84,7 +84,7 @@ function GroupHeading({ icon, label }: GroupHeadingProps) {
 }
 
 function removalConsequence(resource: ProjectResourceSummary) {
-  if (claimsLocalPipeline(resource)) {
+  if (namesLocalPipeline(resource)) {
     return "This only takes it out of this project. The pipeline itself is not deleted and stays in the browser that holds it.";
   }
   if (removingDestroys(resource)) {

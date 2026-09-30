@@ -1,10 +1,41 @@
-import type {
-  IdentityKey,
-  WorkareaIdentity,
-  WorkareaTarget,
-  WorkareaTargetString,
-  WorkareaViewKindName,
-} from "./types";
+export type WorkareaViewKindName = "artifact" | "pipeline" | "run";
+
+type IdentityKey = "id" | "name";
+
+export type WorkareaIdentity = `${IdentityKey}/${string}`;
+
+/**
+ * A workarea target: its `type` is both the view kind and the scheme, and its
+ * `identity` is sub-key prefixed (`id/<value>` or `name/<value>`). The pair is
+ * two-way convertible with its `type://identity` string form.
+ *
+ * Only a pipeline can be addressed by `name/`; a run and an artifact are always
+ * `id/`, so the union rejects `run://name/…` and `artifact://name/…` at compile
+ * time as well as in `parseWorkareaTarget`.
+ *
+ * This lives beside the projects service rather than with the Tangent workarea
+ * that dispatches on it, because a project's resource rows record these strings
+ * and the project page has to read them too.
+ */
+export type WorkareaTarget = ArtifactTarget | PipelineTarget | RunTarget;
+
+export interface ArtifactTarget {
+  type: "artifact";
+  identity: `id/${string}`;
+}
+
+export interface PipelineTarget {
+  type: "pipeline";
+  identity: WorkareaIdentity;
+}
+
+export interface RunTarget {
+  type: "run";
+  identity: `id/${string}`;
+}
+
+export type WorkareaTargetString =
+  `${WorkareaViewKindName}://${WorkareaIdentity}`;
 
 const WORKAREA_VIEW_KIND_NAMES: readonly WorkareaViewKindName[] = [
   "artifact",
@@ -95,18 +126,27 @@ export function parseWorkareaTarget(raw: string): WorkareaTarget {
   return buildTarget(type, key, value);
 }
 
-function isCanonicalTarget(raw: string): boolean {
-  const separatorIndex = raw.indexOf(TARGET_SEPARATOR);
-  if (separatorIndex === -1) return false;
-  const type = raw.slice(0, separatorIndex);
-  const identity = raw.slice(separatorIndex + TARGET_SEPARATOR.length);
-  return isWorkareaViewKindName(type) && isWorkareaIdentity(identity);
-}
-
+/**
+ * The identity key is checked against the kind, not just the shape, so this
+ * guard passing means `parseWorkareaTarget` will succeed. Without that, a
+ * well-shaped `run://name/x` satisfied the guard and then threw on parse, which
+ * is a crash in whatever had just been told the string was fine.
+ */
 export function isWorkareaTargetString(
   raw: string,
 ): raw is WorkareaTargetString {
-  return isCanonicalTarget(raw);
+  const separatorIndex = raw.indexOf(TARGET_SEPARATOR);
+  if (separatorIndex === -1) return false;
+
+  const type = raw.slice(0, separatorIndex);
+  const identity = raw.slice(separatorIndex + TARGET_SEPARATOR.length);
+  if (!isWorkareaViewKindName(type) || !isWorkareaIdentity(identity)) {
+    return false;
+  }
+
+  const slashIndex = identity.indexOf("/");
+  const key = identity.slice(0, slashIndex);
+  return isIdentityKey(key) && IDENTITY_KEYS_BY_TYPE[type].includes(key);
 }
 
 export function sameTarget(a: WorkareaTarget, b: WorkareaTarget): boolean {

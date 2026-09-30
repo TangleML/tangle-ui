@@ -19,13 +19,10 @@ import type {
   WorkareaTab,
   WorkareaTarget,
 } from "@/routes/v2/pages/Tangent/workarea/types";
-import {
-  idIdentity,
-  sameTarget,
-} from "@/routes/v2/pages/Tangent/workarea/workareaTarget";
 import { resolveChatEntity } from "@/routes/v2/shared/components/AiChat/components/resolveChatEntity";
 import { navigateToEntity } from "@/routes/v2/shared/store/focus.actions";
 import type { SharedUIStore } from "@/routes/v2/shared/store/SharedStoreContext";
+import { idIdentity, sameTarget } from "@/services/projects/resourceTarget";
 import { getErrorMessage } from "@/utils/string";
 
 export const CHAT_TAB_VALUE = "chat";

@@ -9,12 +9,9 @@ import { useDialog } from "@/providers/DialogProvider/hooks/useDialog";
 import { convertCancelErrorTo } from "@/providers/DialogProvider/utils";
 import { AddResourceButton } from "@/routes/v2/pages/Tangent/components/AddResourceButton";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
-import { parseResourceExtraData } from "@/routes/v2/pages/Tangent/workarea/resourceExtraData";
-import type { WorkareaTarget } from "@/routes/v2/pages/Tangent/workarea/types";
-import {
-  formatWorkareaTarget,
-  parseWorkareaTarget,
-} from "@/routes/v2/pages/Tangent/workarea/workareaTarget";
+import { describeResource } from "@/services/projects/resourceDescriptor";
+import type { WorkareaTarget } from "@/services/projects/resourceTarget";
+import { formatWorkareaTarget } from "@/services/projects/resourceTarget";
 import {
   useDeleteProjectResource,
   useProjectResources,
@@ -53,15 +50,14 @@ export function ResourcesWindowContent() {
 
   const resources: ProjectResourceItem[] = (resourcesPage?.items ?? []).flatMap(
     (resource) => {
-      const extra = parseResourceExtraData(resource.extraData);
-      const meta = extra ? RESOURCE_TYPE_META[extra.type] : undefined;
-      if (!extra || !meta || !extra.identity) return [];
-      const target = parseWorkareaTarget(extra.identity);
+      const described = describeResource(resource);
+      const meta = described && RESOURCE_TYPE_META[described.type];
+      if (!described?.target || !meta) return [];
       return [
         {
           id: resource.id,
-          name: resource.name ?? formatWorkareaTarget(target),
-          target,
+          name: resource.name ?? formatWorkareaTarget(described.target),
+          target: described.target,
           icon: meta.icon,
           description: meta.description,
         },
