@@ -16,11 +16,14 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import { useRunSubmissionAnnotations } from "@/providers/RunSubmissionScopeProvider";
 import { TangentRemoteEnvProvider } from "@/routes/v2/pages/Tangent/components/TangentRemoteEnvProvider";
+import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { useLazyBridgeAuth } from "@/routes/v2/shared/components/AiChat/toolBridge/useLazyBridgeAuth";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { idIdentity } from "@/services/projects/resourceTarget";
 
 import { createEditorToolBridge } from "./components/AiChat/toolBridge";
 import { fitViewAfterEdits } from "./components/AiChat/toolBridge/fitViewAfterEdits";
+import { renamePipelineFileFor } from "./hooks/renamePipelineFileFor";
 import { useEditorSession } from "./store/EditorSessionContext";
 
 interface TangentEditorAgentProviderProps {
@@ -44,6 +47,7 @@ export function TangentEditorAgentProvider({
 }: TangentEditorAgentProviderProps) {
   const { navigation, editor } = useSharedStores();
   const editorSession = useEditorSession();
+  const project = useTangentProject();
   const { getBackendUrl, getAuthToken, queryClient } = useLazyBridgeAuth();
   const { getNodes, getEdges } = useReactFlow();
   const runAnnotations = useRunSubmissionAnnotations();
@@ -69,6 +73,14 @@ export function TangentEditorAgentProvider({
       getRunAnnotations: () => runAnnotationsRef.current,
       queryClient,
       undo: fitViewAfterEdits(editorSession.undo, editor),
+      renamePipelineFile: renamePipelineFileFor(
+        editorSession.pipelineFile,
+        (fileId, title) =>
+          project.retitleWorkareaTarget(
+            { type: "pipeline", identity: idIdentity(fileId) },
+            title,
+          ),
+      ),
     }),
   );
 

@@ -27,6 +27,7 @@ import type {
 } from "@/models/componentSpec";
 import { getFlexNodes } from "@/models/componentSpec/queries/flexNodes";
 import { resolveEntityPositions } from "@/routes/v2/shared/nodes/buildUtils";
+import { specNameIsProvisional } from "@/services/localPipelines/provisionalPipelineName";
 import {
   PIPELINE_NOTES_ANNOTATION,
   PIPELINE_TAGS_ANNOTATION,
@@ -93,6 +94,7 @@ interface AiStickyNoteSpec {
 
 export interface AiSpec {
   name: string;
+  nameIsProvisional?: boolean;
   description?: string;
   notes?: string;
   tags?: string[];
@@ -235,6 +237,7 @@ export function serializeSpecForAi(
   return toPlainJson(
     pickDefined({
       name: spec.name,
+      nameIsProvisional: specNameIsProvisional(spec) || undefined,
       description: spec.description || undefined,
       notes: activeSpec.annotations.get(PIPELINE_NOTES_ANNOTATION) || undefined,
       tags: tags.length > 0 ? tags : undefined,

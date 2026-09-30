@@ -51,6 +51,9 @@ export interface WorkareaToolDeps {
   ) => Promise<{ pipelineName: string; fileId: string }>;
   clonePipeline: (runId: string) => Promise<{ pipelineName: string }>;
   refreshResources: () => Promise<void>;
+  renameProject: (name: string) => Promise<{ renamed: boolean }>;
+  nameSession: (name: string) => Promise<void>;
+  namePipeline: (name: string) => Promise<{ renamed: boolean }>;
 }
 
 interface WorkareaTabSummary {
@@ -118,6 +121,19 @@ function optionalName(args: unknown): string | undefined {
     throw new Error("`name` must be a non-empty string when provided.");
   }
   return args.name.trim();
+}
+
+const NAME_LIMIT = 60;
+
+function requireName(args: unknown): string {
+  const name = optionalName(args);
+  if (!name) {
+    throw new Error("`name` is required and must be a non-empty string.");
+  }
+  if (name.length > NAME_LIMIT) {
+    throw new Error(`\`name\` must be at most ${NAME_LIMIT} characters.`);
+  }
+  return name;
 }
 
 function optionalRunId(args: unknown): string | undefined {
@@ -347,6 +363,69 @@ export function createWorkareaRemoteTools(
         getDeps().closeTab(args.tabId);
         return { ok: true };
       },
+    },
+    rename_project: {
+      description:
+        "Rename the project this session belongs to, once you know what the " +
+        "work is actually about. Only a provisional name may be replaced — one " +
+        "derived from the opening prompt, or numbered. A name someone chose is " +
+        "left alone and the call returns `{ renamed: false }`, which is a " +
+        "final answer, not something to retry or work around. Keep the name " +
+        "short: a title for the work, not a description of it.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          name: {
+            type: "string",
+            description: `A short title for the project, at most ${NAME_LIMIT} characters.`,
+          },
+        },
+        required: ["name"],
+      },
+      execute: async (args) => getDeps().renameProject(requireName(args)),
+    },
+    name_session: {
+      description:
+        "Name this session after what the conversation is about, so it can be " +
+        "told apart from the others in the project. Call it once, as soon as " +
+        "the subject is clear. Naming again replaces the previous name, so do " +
+        "not call it repeatedly as the work moves on. Keep it short: a title " +
+        "for the conversation, not a summary of it.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          name: {
+            type: "string",
+            description: `A short title for the session, at most ${NAME_LIMIT} characters.`,
+          },
+        },
+        required: ["name"],
+      },
+      execute: async (args) => {
+        await getDeps().nameSession(requireName(args));
+        return { ok: true };
+      },
+    },
+    name_pipeline: {
+      description:
+        "Name the pipeline open on the canvas, at the same time you name the " +
+        "session — the opening message says what it is for, so there is " +
+        "nothing to wait for. Only a provisional name may be replaced: a " +
+        "pipeline someone named is left alone and the call returns " +
+        "`{ renamed: false }`, which is a final answer, not something to " +
+        "retry. Keep it short: a title for what the pipeline does, not a " +
+        "restatement of the request.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          name: {
+            type: "string",
+            description: `A short title for the pipeline, at most ${NAME_LIMIT} characters.`,
+          },
+        },
+        required: ["name"],
+      },
+      execute: async (args) => getDeps().namePipeline(requireName(args)),
     },
     refresh_project_resources: {
       description:

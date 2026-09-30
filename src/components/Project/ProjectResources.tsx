@@ -36,6 +36,7 @@ import {
 } from "@/services/projects/resourceDescriptor";
 import { sessionLabelsById } from "@/services/projects/sessionLabel";
 import type { ProjectResourceSummary } from "@/services/projects/types";
+import { useLocalPipelineStatus } from "@/services/projects/useLocalPipelineStatus";
 import {
   useDeleteProjectResource,
   useProjectResources,
@@ -188,6 +189,9 @@ export function ProjectResources({
   // conversation that lives in Tangent, so its row goes there. It is also not a
   // thing to take back out — like a run, a session that happened belongs to the
   // project it happened in — so its row is not offered a way to.
+  const { currentNames: currentPipelineNames } =
+    useLocalPipelineStatus(resources);
+
   const sessionLabels = sessionLabelsById(
     resources
       .filter(
@@ -276,16 +280,20 @@ export function ProjectResources({
               />
 
               {items.map((resource) => {
-                const label = sessionLabels.get(resource.id);
+                // Only a session is a conversation that lives elsewhere; a
+                // renamed pipeline is still a row on this page.
+                const sessionLabel = sessionLabels.get(resource.id);
                 return (
                   <ResourceRow
                     key={resource.id}
                     resource={resource}
-                    label={label}
-                    opensElsewhere={label !== undefined}
+                    label={
+                      sessionLabel ?? currentPipelineNames.get(resource.id)
+                    }
+                    opensElsewhere={sessionLabel !== undefined}
                     selected={resource.id === selectedResourceId}
                     onSelect={(picked) => {
-                      if (label) {
+                      if (sessionLabel) {
                         openSession(picked);
                         return;
                       }
@@ -293,7 +301,7 @@ export function ProjectResources({
                         picked.id === selectedResourceId ? null : picked.id,
                       );
                     }}
-                    onRemove={label ? undefined : handleRemove}
+                    onRemove={sessionLabel ? undefined : handleRemove}
                   />
                 );
               })}
