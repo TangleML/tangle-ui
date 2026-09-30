@@ -5,6 +5,7 @@ import { isAuthorizationRequired } from "@/components/shared/Authentication/help
 import { useAuthLocalStorage } from "@/components/shared/Authentication/useAuthLocalStorage";
 import { useAwaitAuthorization } from "@/components/shared/Authentication/useAwaitAuthorization";
 import { buildTaskSpecShape } from "@/components/shared/PipelineRunNameTemplate/types";
+import { useRerunProjectIds } from "@/hooks/useRerunProjectIds";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
@@ -13,6 +14,7 @@ import { APP_ROUTES } from "@/routes/router";
 import type { PipelineRun } from "@/types/pipelineRun";
 import { extractCanonicalName } from "@/utils/canonicalPipelineName";
 import type { ArgumentType, ComponentSpec } from "@/utils/componentSpec";
+import { projectRunAnnotations } from "@/utils/projectRunAnnotation";
 import { submitPipelineRun } from "@/utils/submitPipeline";
 
 interface RerunVariables {
@@ -27,8 +29,9 @@ export function useRerunPipelineRun(componentSpec?: ComponentSpec) {
   const { backendUrl } = useBackend();
   const { awaitAuthorization, isAuthorized } = useAwaitAuthorization();
   const { getToken } = useAuthLocalStorage();
-  const { rootDetails } = useExecutionData();
+  const { rootDetails, metadata } = useExecutionData();
   const runAnnotations = useRunSubmissionAnnotations();
+  const rerunProjectIds = useRerunProjectIds();
 
   const getAuthToken = async (): Promise<string | undefined> => {
     if (isAuthorizationRequired() && !isAuthorized) {
@@ -47,12 +50,16 @@ export function useRerunPipelineRun(componentSpec?: ComponentSpec) {
       taskArguments,
     }: RerunVariables) => {
       const authorizationToken = await getAuthToken();
+      const projectIds = await rerunProjectIds(metadata?.id);
       return new Promise<PipelineRun>((resolve, reject) => {
         submitPipelineRun(componentSpec, backendUrl, {
           canonicalName,
           taskArguments,
           authorizationToken,
-          runAnnotations,
+          runAnnotations: {
+            ...runAnnotations,
+            ...projectRunAnnotations(projectIds),
+          },
           onSuccess: resolve,
           onError: reject,
         });

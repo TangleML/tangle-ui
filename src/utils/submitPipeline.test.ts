@@ -13,6 +13,7 @@ import * as pipelineRunService from "@/services/pipelineRunService";
 import type { PipelineRun } from "@/types/pipelineRun";
 
 import { type ComponentSpec, isGraphImplementation } from "./componentSpec";
+import { projectRunAnnotations } from "./projectRunAnnotation";
 import { submitPipelineRun } from "./submitPipeline";
 
 // Mock dependencies
@@ -265,6 +266,69 @@ describe("submitPipelineRun", () => {
         undefined,
         undefined,
       );
+    });
+  });
+
+  describe("attributing a run to a project", () => {
+    const spec: ComponentSpec = {
+      name: "churn-training",
+      implementation: { container: { image: "test:latest" } },
+    };
+    const PROJECT = "035d6de5-23d6-402b-ad7e-9a7359194caf";
+    const OTHER = "a1a58adc-e035-47de-afea-0eef486bb82f";
+
+    const submittedPayload = () =>
+      vi.mocked(pipelineRunService.createPipelineRun).mock
+        .calls[0][0] as unknown as {
+        annotations: Record<string, string>;
+        root_task: { componentRef: { spec: ComponentSpec } };
+      };
+
+    /**
+     * The project has to be named on the run itself, not inside the spec: the
+     * endpoint that sets one annotation later rejects this key for its
+     * slashes, so submission is the only chance to get attribution right.
+     */
+    it("names the project on the run, beside the source that was always there", async () => {
+      await submitPipelineRun(spec, mockBackendUrl, {
+        runAnnotations: projectRunAnnotations([PROJECT]),
+      });
+
+      expect(submittedPayload().annotations).toEqual({
+        source: "web-app",
+        [`tangleml.com/project/project-id/${PROJECT}`]: "true",
+      });
+    });
+
+    it("leaves the pipeline's own annotations out of it", async () => {
+      await submitPipelineRun(spec, mockBackendUrl, {
+        runAnnotations: projectRunAnnotations([PROJECT]),
+      });
+
+      expect(
+        submittedPayload().root_task.componentRef.spec.metadata?.annotations,
+      ).toBeUndefined();
+    });
+
+    it("keeps every project of a run that belongs to more than one", async () => {
+      await submitPipelineRun(spec, mockBackendUrl, {
+        runAnnotations: projectRunAnnotations([PROJECT, OTHER]),
+      });
+
+      expect(Object.keys(submittedPayload().annotations)).toEqual([
+        `tangleml.com/project/project-id/${PROJECT}`,
+        `tangleml.com/project/project-id/${OTHER}`,
+        "source",
+      ]);
+    });
+
+    /** Every run in the app goes through here, so no project must change nothing. */
+    it("annotates nothing extra when there is no project", async () => {
+      await submitPipelineRun(spec, mockBackendUrl, {
+        runAnnotations: projectRunAnnotations([]),
+      });
+
+      expect(submittedPayload().annotations).toEqual({ source: "web-app" });
     });
   });
 

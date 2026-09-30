@@ -4,18 +4,13 @@ import { useBackend } from "@/providers/BackendProvider";
 import { MINUTES } from "@/utils/constants";
 
 import { getPipelineSpec, PipelineSpecApiError } from "./pipelineSpecService";
-
-const MAX_RETRIES = 3;
+import { isSettledRefusal, MAX_QUERY_RETRIES } from "./retryPolicy";
 
 function retryUnlessRefused(failureCount: number, error: Error) {
-  if (
-    error instanceof PipelineSpecApiError &&
-    error.status >= 400 &&
-    error.status < 500
-  ) {
+  if (error instanceof PipelineSpecApiError && isSettledRefusal(error.status)) {
     return false;
   }
-  return failureCount < MAX_RETRIES;
+  return failureCount < MAX_QUERY_RETRIES;
 }
 
 export function usePipelineSpec(pipelineId: string | undefined | null) {
