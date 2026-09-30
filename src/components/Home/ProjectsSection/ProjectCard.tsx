@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 
+import { useDeleteProjectAction } from "@/components/Project/useDeleteProjectAction";
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,39 +14,30 @@ import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Paragraph, Text } from "@/components/ui/typography";
-import useConfirmationDialog from "@/hooks/useConfirmationDialog";
 import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
-import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { APP_ROUTES } from "@/routes/appRoutes";
 import type { ProjectSummary } from "@/services/projects/types";
-import { useDeleteProject } from "@/services/projects/useProjects";
 import { formatDate, formatRelativeTime } from "@/utils/date";
 import { copyToClipboard } from "@/utils/string";
 import { tracking } from "@/utils/tracking";
 import { getProjectUrl } from "@/utils/URL";
 
-import {
-  formatResourceCounts,
-  totalResourceCount,
-} from "./formatResourceCounts";
+import { formatResourceCounts } from "./formatResourceCounts";
 
 interface ProjectCardProps {
   project: ProjectSummary;
 }
 
 export function ProjectCard({ project }: ProjectCardProps) {
-  const deleteProject = useDeleteProject();
   const notify = useToastNotification();
-  const { track } = useAnalytics();
   const navigate = useNavigate();
-  const {
-    handlers: confirmationHandlers,
-    triggerDialog: triggerConfirmation,
-    ...confirmationProps
-  } = useConfirmationDialog();
-
-  const resourceTotal = totalResourceCount(project.resourceCounts);
+  // A tile is not the project's page: losing it is the whole of what the
+  // delete does here, so nothing navigates away afterwards.
+  const { confirmAndDelete, isDeleting, confirmation } = useDeleteProjectAction(
+    project,
+    { onDeleted: () => {} },
+  );
 
   const openDetails = () => {
     void navigate({
@@ -59,42 +51,11 @@ export function ProjectCard({ project }: ProjectCardProps) {
     notify("Project URL copied to clipboard", "success");
   };
 
-  const handleDelete = async () => {
-    const confirmed = await triggerConfirmation({
-      title: `Delete "${project.name}"?`,
-      description:
-        "This permanently deletes the project and everything in it. This action cannot be undone.",
-      content: (
-        <Text tone="subdued">
-          {resourceTotal === 0
-            ? "This project is empty."
-            : `This will also delete ${formatResourceCounts(project.resourceCounts)}.`}
-        </Text>
-      ),
-    });
-
-    if (!confirmed) return;
-
-    deleteProject.mutate(project.id, {
-      onSuccess: (result) => {
-        track("projects.delete_project_completed", {
-          deleted_resource_total: result.deletedResourceTotal,
-        });
-        notify(
-          result.deletedResourceTotal === 0
-            ? "Project deleted"
-            : `Project deleted along with ${result.deletedResourceTotal} resources`,
-          "success",
-        );
-      },
-    });
-  };
-
   return (
     <div
       className={cn(
         "relative min-h-56 rounded-lg border border-border bg-card transition-colors hover:bg-muted/50",
-        deleteProject.isPending && "pointer-events-none opacity-50",
+        isDeleting && "pointer-events-none opacity-50",
       )}
     >
       <Link
@@ -177,7 +138,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
           <DropdownMenuSeparator />
           <DropdownMenuItem
             className="text-destructive"
-            onSelect={handleDelete}
+            onSelect={() => void confirmAndDelete()}
             {...tracking("projects.delete_project_open")}
           >
             <Icon name="Trash2" size="sm" />
@@ -186,11 +147,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <ConfirmationDialog
-        {...confirmationProps}
-        onConfirm={() => confirmationHandlers?.onConfirm()}
-        onCancel={() => confirmationHandlers?.onCancel()}
-      />
+      <ConfirmationDialog {...confirmation} />
     </div>
   );
 }
