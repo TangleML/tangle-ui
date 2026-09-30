@@ -67,6 +67,7 @@ describe("the Tangent project dock order", () => {
     const rearranged = [
       "tangent-project-resources",
       "tangent-project-details",
+      "tangent-project-runs",
       "tangent-project-sessions",
       "tangent-project-assets",
       "tangent-project-agents",
