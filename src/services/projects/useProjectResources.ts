@@ -1,3 +1,4 @@
+import type { QueryClient } from "@tanstack/react-query";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import useToastNotification from "@/hooks/useToastNotification";
@@ -14,9 +15,29 @@ import {
 import type {
   CreateResourceInput,
   ListProjectResourcesParams,
+  ProjectResourcePage,
   UpdateResourceInput,
 } from "./types";
 import { ProjectResourcesQueryKeys, ProjectsQueryKeys } from "./types";
+
+/**
+ * `ProjectsQueryKeys.Id` is a prefix of the project's resources *and* its runs,
+ * so invalidating it plainly re-reads the resource list a second time and the
+ * run feed for no reason. Only the project row itself needs it, for the
+ * resource counts the dashboard shows.
+ */
+function invalidateProjectResources(
+  queryClient: QueryClient,
+  projectId: string,
+) {
+  void queryClient.invalidateQueries({
+    queryKey: ProjectResourcesQueryKeys.All(projectId),
+  });
+  void queryClient.invalidateQueries({
+    queryKey: ProjectsQueryKeys.Id(projectId),
+    exact: true,
+  });
+}
 
 export function useProjectResources(
   projectId: string | undefined,
@@ -67,12 +88,7 @@ export function useCreateProjectResource(projectId: string) {
     mutationFn: (input: CreateResourceInput) =>
       createProjectResource(projectId, input),
     onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: ProjectResourcesQueryKeys.All(projectId),
-      });
-      void queryClient.invalidateQueries({
-        queryKey: ProjectsQueryKeys.Id(projectId),
-      });
+      invalidateProjectResources(queryClient, projectId);
     },
     onError: () => {
       notify("Failed to create resource", "error");
@@ -92,13 +108,8 @@ export function useUpdateProjectResource(projectId: string) {
       resourceId: string;
       input: UpdateResourceInput;
     }) => updateProjectResource(projectId, resourceId, input),
-    onSuccess: (_resource, { resourceId }) => {
-      void queryClient.invalidateQueries({
-        queryKey: ProjectResourcesQueryKeys.All(projectId),
-      });
-      void queryClient.invalidateQueries({
-        queryKey: ProjectResourcesQueryKeys.Id(projectId, resourceId),
-      });
+    onSuccess: () => {
+      invalidateProjectResources(queryClient, projectId);
     },
     onError: () => {
       notify("Failed to update resource", "error");
@@ -113,19 +124,37 @@ export function useDeleteProjectResource(projectId: string) {
   return useMutation({
     mutationFn: (resourceId: string) =>
       deleteProjectResource(projectId, resourceId),
-    onSuccess: (_result, resourceId) => {
-      void queryClient.invalidateQueries({
-        queryKey: ProjectResourcesQueryKeys.All(projectId),
+    /**
+     * The row goes as soon as it is asked for. Waiting for the delete and then
+     * a re-read of the whole list means two round trips of nothing happening,
+     * which reads as a click that did not land.
+     */
+    onMutate: async (resourceId: string) => {
+      const listsKey = ProjectResourcesQueryKeys.Lists(projectId);
+      await queryClient.cancelQueries({ queryKey: listsKey });
+      const lists = queryClient.getQueriesData<ProjectResourcePage>({
+        queryKey: listsKey,
       });
-      void queryClient.invalidateQueries({
-        queryKey: ProjectResourcesQueryKeys.Id(projectId, resourceId),
-      });
-      void queryClient.invalidateQueries({
-        queryKey: ProjectsQueryKeys.Id(projectId),
-      });
+
+      for (const [key, page] of lists) {
+        if (!page) continue;
+        queryClient.setQueryData<ProjectResourcePage>(key, {
+          ...page,
+          items: page.items.filter((item) => item.id !== resourceId),
+          totalCount: Math.max(0, page.totalCount - 1),
+        });
+      }
+
+      return { lists };
     },
-    onError: () => {
+    onError: (_error, _resourceId, context) => {
+      for (const [key, page] of context?.lists ?? []) {
+        queryClient.setQueryData(key, page);
+      }
       notify("Failed to delete resource", "error");
+    },
+    onSettled: () => {
+      invalidateProjectResources(queryClient, projectId);
     },
   });
 }

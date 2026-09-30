@@ -577,6 +577,21 @@ export const getAllComponentFilesFromList = async (listName: string) => {
   return componentFiles;
 };
 
+/**
+ * Only the keys, because a full listing deserializes every stored pipeline —
+ * spec, text and raw bytes — which is far more than a caller that just needs
+ * the names should pay for.
+ */
+export const getComponentFileNamesFromList = async (listName: string) => {
+  await upgradeSingleComponentListDb(listName);
+  const tableName = FILE_STORE_DB_TABLE_NAME_PREFIX + listName;
+  const componentListDb = localForage.createInstance({
+    name: DB_NAME,
+    storeName: tableName,
+  });
+  return componentListDb.keys();
+};
+
 export const getComponentFileFromList = async (
   listName: string,
   fileName: string,
