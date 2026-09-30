@@ -252,6 +252,21 @@ describe("submitPipelineRun", () => {
       expect(payload.annotations).toEqual({ source: "web-app" });
     });
 
+    it("records the source the caller asked for", async () => {
+      const componentSpec: ComponentSpec = {
+        name: "agent-submitted",
+        implementation: { container: { image: "test:latest" } },
+      };
+
+      await submitPipelineRun(componentSpec, mockBackendUrl, {
+        runSource: "tangent-ui",
+      });
+
+      const [payload] = vi.mocked(pipelineRunService.createPipelineRun).mock
+        .calls[0]!;
+      expect(payload.annotations).toEqual({ source: "tangent-ui" });
+    });
+
     it("should use 'Pipeline' as default name when componentSpec.name is undefined", async () => {
       const componentSpec: ComponentSpec = {
         implementation: { container: { image: "test:latest" } },

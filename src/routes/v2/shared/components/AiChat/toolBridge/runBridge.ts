@@ -3,8 +3,11 @@
  *
  * `submitPipelineRun` wraps the existing `@/utils/submitPipeline` helper
  * (so cache invalidation + IDB persistence + auth-token plumbing match
- * the editor's submitter UI exactly). `getRunDetails` is a thin pass-
- * through to the execution service.
+ * the editor's submitter UI exactly), differing only in the run source it
+ * records: everything reaching this bridge was submitted by an agent, in the
+ * editor's assistant or through the Tangent tab bridge, and a run nobody
+ * clicked Run on should not report that somebody did. `getRunDetails` is a
+ * thin pass-through to the execution service.
  *
  * `debugPipelineRun` is the composite read path used by
  * `debug-assistant`: it fetches the run, the root execution details +
@@ -34,11 +37,14 @@ import {
   fetchExecutionState,
   fetchPipelineRun,
 } from "@/services/executionService";
+import { ProjectRunsQueryKeys } from "@/services/projects/types";
 import type { PipelineRun } from "@/types/pipelineRun";
+import { TANGENT_UI_RUN_SOURCE } from "@/utils/annotationKeys";
 import {
   flattenExecutionStatusStats,
   getOverallExecutionStatusFromStats,
 } from "@/utils/executionStatus";
+import { projectIdsFromAnnotations } from "@/utils/projectRunAnnotation";
 import { submitPipelineRun as submitPipelineRunHelper } from "@/utils/submitPipeline";
 
 import type { BridgeDeps } from "./utils";
@@ -66,13 +72,15 @@ export function createRunBridgeHandlers(deps: BridgeDeps): RunHandlers {
       }
       const wireSpec = serializeComponentSpec(spec);
       const authorizationToken = deps.getAuthToken?.();
+      const runAnnotations = deps.getRunAnnotations?.();
       const submission = await new Promise<{
         run: PipelineRun | null;
         error: string | null;
       }>((resolve) => {
         submitPipelineRunHelper(wireSpec, backendUrl, {
           authorizationToken,
-          runAnnotations: deps.getRunAnnotations?.(),
+          runAnnotations,
+          runSource: TANGENT_UI_RUN_SOURCE,
           onSuccess: (data) => resolve({ run: data, error: null }),
           onError: (err) => resolve({ run: null, error: errorMessage(err) }),
         });
@@ -92,6 +100,14 @@ export function createRunBridgeHandlers(deps: BridgeDeps): RunHandlers {
       deps.queryClient?.invalidateQueries({
         queryKey: ONBOARDING_MY_RUN_COUNT_KEY,
       });
+      // A project's run feed is otherwise stale for five minutes and does not
+      // refetch on focus, so a run the agent started would not show up on the
+      // project it was started in.
+      for (const projectId of projectIdsFromAnnotations(runAnnotations)) {
+        deps.queryClient?.invalidateQueries({
+          queryKey: ProjectRunsQueryKeys.All(projectId),
+        });
+      }
       return {
         success: true,
         runId: String(submission.run.id),
