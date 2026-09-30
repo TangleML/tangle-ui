@@ -7,8 +7,33 @@ export const ROOT_FOLDER_ID = "__root__";
 
 export interface PipelineFileDescriptor {
   storageKey: string;
+  id?: string;
+  displayName?: string;
+  canEdit?: boolean;
   createdAt?: Date;
   modifiedAt?: Date;
+}
+
+export interface PipelinePageOptions {
+  pageSize?: number;
+  pageToken?: string;
+  signal?: AbortSignal;
+}
+
+export interface PipelineStoragePage<T = PipelineFileDescriptor> {
+  files: T[];
+  nextPageToken?: string;
+  totalCount?: number;
+}
+
+interface PipelineReadResult<T = PipelineFileDescriptor> {
+  content: string;
+  descriptor: T;
+}
+
+interface PipelineWriteOptions<T = PipelineFileDescriptor> {
+  existing?: T;
+  source?: T;
 }
 
 export type PermissionStatus = "granted" | "denied" | "prompt";
@@ -18,16 +43,23 @@ export interface DriverPermissions {
   request(): Promise<boolean>;
 }
 
-export interface PipelineStorageDriver {
+export interface PipelineStorageDriver<
+  T extends PipelineFileDescriptor = PipelineFileDescriptor,
+> {
   readonly type: string;
   readonly permissions?: DriverPermissions;
   readonly allowsMoveIn: boolean;
   readonly allowsMoveOut: boolean;
-  list(): Promise<PipelineFileDescriptor[]>;
-  read(storageKey: string): Promise<string>;
-  write(storageKey: string, content: string): Promise<void>;
+  list(): Promise<T[]>;
+  listPage?(options: PipelinePageOptions): Promise<PipelineStoragePage<T>>;
+  read(storageKey: string): Promise<string | PipelineReadResult<T>>;
+  write(
+    storageKey: string,
+    content: string,
+    options?: PipelineWriteOptions<T>,
+  ): Promise<T | void>;
   rename(oldStorageKey: string, newStorageKey: string): Promise<void>;
-  delete(storageKey: string): Promise<void>;
+  delete(storageKey: string, descriptor?: T): Promise<void>;
   hasKey(storageKey: string): Promise<boolean>;
 }
 

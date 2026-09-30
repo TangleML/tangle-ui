@@ -655,3 +655,19 @@ sequenceDiagram
 - v1 migration reads all pipelines from the legacy `RootFolderDbStorageDriver` and seeds the `pipeline_registry` with `ROOT_FOLDER_ID` as their folder.
 - v2 adds the compound index `[folderId+storageKey]` for the `findByFolderAndStorageKey` query used by `FolderIndexDbStorageDriver.hasKey()`.
 - New migrations must follow Dexie's versioning rules: increment the version number and never modify existing version schemas.
+
+### Descriptor metadata and pagination
+
+Storage keys identify documents within a driver. Descriptors may also supply a
+stable `id`, a separate `displayName`, and `canEdit`. Folder-backed files retain
+their registry identity through rename. A read-only descriptor prevents file
+writes, renames, and deletion.
+
+Drivers can return text from `read`, or content together with its descriptor.
+Writes may return the saved descriptor and accept existing/source descriptors to
+preserve backend metadata. Existing text-only drivers remain compatible.
+
+`listStoragePage` delegates opaque cursors to a driver's `listPage` when present.
+For existing unpaginated drivers, it slices their list using an offset cursor.
+`PipelineFolder.listPipelinePage` resolves those descriptors into files using the
+same registry path as an unpaginated listing.

@@ -31,6 +31,7 @@ export class FolderIndexDbStorageDriver extends RootFolderDbStorageDriver {
       if (!file) continue;
 
       descriptors.push({
+        id: entry.id,
         storageKey: entry.storageKey,
         createdAt: file.creationTime,
         modifiedAt: file.modificationTime,

@@ -2,6 +2,7 @@ import { action, makeObservable, observable } from "mobx";
 
 import { createDriver } from "./createDriver";
 import { pipelineStorageDb } from "./db";
+import { listStoragePage } from "./listStoragePage";
 import { PipelineFile } from "./PipelineFile";
 import { withPipelineLock } from "./pipelineLock";
 import {
@@ -13,7 +14,10 @@ import {
 import {
   type DriverConfig,
   type FolderEntry,
+  type PipelineFileDescriptor,
+  type PipelinePageOptions,
   type PipelineStorageDriver,
+  type PipelineStoragePage,
   ROOT_FOLDER_ID,
 } from "./types";
 
@@ -93,10 +97,7 @@ export class PipelineFolder {
 
     return Promise.all(
       descriptors.map((d) =>
-        resolveOrCreateRegistryEntry(d.storageKey, this, {
-          createdAt: d.createdAt,
-          modifiedAt: d.modifiedAt,
-        }),
+        resolveOrCreateRegistryEntry(d.storageKey, this, d),
       ),
     );
   }
@@ -106,6 +107,20 @@ export class PipelineFolder {
     if (!hasKey) return undefined;
 
     return resolveOrCreateRegistryEntry(storageKey, this);
+  }
+
+  async listPipelinePage(
+    options: PipelinePageOptions = {},
+  ): Promise<PipelineStoragePage<PipelineFile>> {
+    const page = await listStoragePage(this.driver, options);
+    return {
+      ...page,
+      files: await Promise.all(
+        page.files.map((file) =>
+          resolveOrCreateRegistryEntry(file.storageKey, this, file),
+        ),
+      ),
+    };
   }
 
   async assignFile(storageKey: string): Promise<PipelineFile> {
@@ -234,30 +249,25 @@ async function collectDescendantIds(parentId: string): Promise<string[]> {
   return ids;
 }
 
-interface FileMetadata {
-  createdAt?: Date;
-  modifiedAt?: Date;
-}
-
 async function resolveOrCreateRegistryEntry(
   storageKey: string,
   folder: PipelineFolder,
-  metadata?: FileMetadata,
+  metadata?: PipelineFileDescriptor,
 ): Promise<PipelineFile> {
   return withPipelineLock(`registry:${storageKey}`, async () => {
     const existing = await findByStorageKey(storageKey);
 
     if (existing) {
       return new PipelineFile({
+        ...metadata,
         id: existing.id,
         storageKey: existing.storageKey,
         folder,
-        ...metadata,
       });
     }
 
-    const id = crypto.randomUUID();
+    const id = metadata?.id ?? crypto.randomUUID();
     await addEntry({ id, storageKey, folderId: folder.id });
-    return new PipelineFile({ id, storageKey, folder, ...metadata });
+    return new PipelineFile({ ...metadata, id, storageKey, folder });
   });
 }
