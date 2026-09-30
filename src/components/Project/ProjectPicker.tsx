@@ -16,16 +16,12 @@ import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
-import useConfirmationDialog from "@/hooks/useConfirmationDialog";
-import useToastNotification from "@/hooks/useToastNotification";
-import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { usePipelineProjects } from "@/services/projects/usePipelineProjects";
-import { useDeleteProjectResource } from "@/services/projects/useProjectResources";
 import { tracking } from "@/utils/tracking";
 
 import { AddToProjectDialog } from "./AddToProjectDialog";
 import { NO_PROJECT, projectOptions } from "./projectOptions";
-import { removalConsequence } from "./resourceEntities";
+import { useConfirmedResourceRemoval } from "./useConfirmedResourceRemoval";
 import { useRunProjectContext } from "./useRunProjectContext";
 
 interface ProjectPickerProps {
@@ -40,14 +36,12 @@ export function ProjectPicker({ pipelineName }: ProjectPickerProps) {
   const { memberships, isPending, error } = usePipelineProjects(pipelineName, {
     enabled: open,
   });
-  const removeResource = useDeleteProjectResource(projectId ?? "");
-  const notify = useToastNotification();
-  const { track } = useAnalytics();
-  const {
-    handlers: confirmationHandlers,
-    triggerDialog: triggerConfirmation,
-    ...confirmationProps
-  } = useConfirmationDialog();
+  const { confirmAndRemove, confirmation: confirmationProps } =
+    useConfirmedResourceRemoval({
+      projectId: projectId ?? "",
+      trackingEvent: "projects.picker_remove_completed",
+      onRemoved: () => setProjectId(undefined),
+    });
 
   if (!enabled) {
     return null;
@@ -60,24 +54,6 @@ export function ProjectPicker({ pipelineName }: ProjectPickerProps) {
   const listed = projectOptions(memberships, projectId, projectName);
 
   const label = projectName ?? (projectId ? "Project" : "No project");
-
-  const handleRemove = async () => {
-    if (!current) return;
-
-    const confirmed = await triggerConfirmation({
-      title: `Remove "${current.resource.name ?? pipelineName}" from "${current.project.name}"?`,
-      description: removalConsequence(current.resource),
-    });
-    if (!confirmed) return;
-
-    removeResource.mutate(current.resource.id, {
-      onSuccess: () => {
-        track("projects.picker_remove_completed");
-        notify("Removed from project", "success");
-        setProjectId(undefined);
-      },
-    });
-  };
 
   return (
     <>
@@ -154,7 +130,9 @@ export function ProjectPicker({ pipelineName }: ProjectPickerProps) {
               </DropdownMenuItem>
               {current && (
                 <DropdownMenuItem
-                  onSelect={() => void handleRemove()}
+                  onSelect={() =>
+                    current && void confirmAndRemove(current.resource)
+                  }
                   {...tracking("projects.picker_remove_open")}
                 >
                   <Icon name="FolderMinus" size="sm" />
@@ -179,11 +157,7 @@ export function ProjectPicker({ pipelineName }: ProjectPickerProps) {
         />
       )}
 
-      <ConfirmationDialog
-        {...confirmationProps}
-        onConfirm={() => confirmationHandlers?.onConfirm()}
-        onCancel={() => confirmationHandlers?.onCancel()}
-      />
+      <ConfirmationDialog {...confirmationProps} />
     </>
   );
 }

@@ -10,10 +10,9 @@ import {
   pipelineResourceIn,
 } from "./pipelineProjects";
 import { listProjectResources } from "./projectResourcesService";
-import { MAX_PAGE_SIZE } from "./queryDefaults";
 import type { ProjectResourceSummary, ProjectSummary } from "./types";
 import { ProjectResourcesQueryKeys } from "./types";
-import { useProjects } from "./useProjects";
+import { useReachableProjects } from "./useReachableProjects";
 
 export interface PipelineProjectMembership {
   project: ProjectSummary;
@@ -56,12 +55,12 @@ export function usePipelineProjects(
   });
 
   const {
-    data: projects,
+    projects,
     isPending: isListPending,
     error: listError,
-  } = useProjects({ pageSize: MAX_PAGE_SIZE });
+  } = useReachableProjects({ enabled });
 
-  const candidates: ProjectSummary[] = enabled ? (projects?.items ?? []) : [];
+  const candidates: ProjectSummary[] = enabled ? projects : [];
 
   const resources = useQueries({
     queries: candidates.map((project) => ({

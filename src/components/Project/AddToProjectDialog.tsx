@@ -3,13 +3,12 @@ import { useEffect } from "react";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { pointerTo } from "@/services/localPipelines/localPipelinesService";
-import { MAX_PAGE_SIZE } from "@/services/projects/queryDefaults";
 import {
   DescriptorTooLargeError,
   localPipelineResourceInput,
 } from "@/services/projects/resourceDescriptor";
 import { useAddResourceToProject } from "@/services/projects/useProjectResources";
-import { useProjects } from "@/services/projects/useProjects";
+import { useReachableProjects } from "@/services/projects/useReachableProjects";
 
 import { PickFromListDialog } from "./PickFromListDialog";
 
@@ -26,9 +25,7 @@ export function AddToProjectDialog({
   onOpenChange,
   onAdded,
 }: AddToProjectDialogProps) {
-  const { data, isPending, error } = useProjects({
-    pageSize: MAX_PAGE_SIZE,
-  });
+  const { projects, isPending, error } = useReachableProjects();
   const addResource = useAddResourceToProject();
   const notify = useToastNotification();
   const { track } = useAnalytics();
@@ -38,7 +35,7 @@ export function AddToProjectDialog({
   }, [track]);
 
   const alreadyIn = new Set(memberProjectIds);
-  const items = data?.items.map((project) => ({
+  const items = projects.map((project) => ({
     id: project.id,
     label: project.name,
     alreadyAdded: alreadyIn.has(project.id),

@@ -1,13 +1,11 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 
-import { userQueryOptions } from "@/hooks/useUserDetails";
 import { useBackend } from "@/providers/BackendProvider";
 import { listProjects } from "@/services/projects/projectsService";
 import type { ProjectSummary } from "@/services/projects/types";
 import { ProjectsQueryKeys } from "@/services/projects/types";
+import { useProjectAuthor } from "@/services/projects/useProjectAuthor";
 import { MINUTES } from "@/utils/constants";
-
-const UNRESOLVED_USER_ID = "Unknown";
 
 const PAGE_SIZE = 24;
 
@@ -30,18 +28,10 @@ interface MyProjects {
 export function useMyProjects(): MyProjects {
   const { configured, available } = useBackend();
   const {
-    data: user,
+    createdBy,
     isPending: isUserPending,
     error: userError,
-  } = useQuery(userQueryOptions);
-
-  // A backend that does not identify anyone answers `Unknown`, and every
-  // reader of this query treats that as nobody to filter by rather than as a
-  // failure — on a single-user backend the unfiltered list is that user's. A
-  // lookup that did not answer at all is the failure, and is reported: there
-  // the list would be everyone's without anything saying so.
-  const createdBy = user && user.id !== UNRESOLVED_USER_ID ? user.id : undefined;
-  const isIdentified = user !== undefined;
+  } = useProjectAuthor();
 
   const {
     data,
@@ -56,7 +46,7 @@ export function useMyProjects(): MyProjects {
       listProjects({ createdBy, pageSize: PAGE_SIZE, pageToken: pageParam }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (page) => page.nextPageToken ?? undefined,
-    enabled: configured && available && isIdentified,
+    enabled: configured && available && !isUserPending && userError === null,
     staleTime: 5 * MINUTES,
     refetchOnWindowFocus: false,
   });

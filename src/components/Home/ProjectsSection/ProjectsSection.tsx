@@ -6,6 +6,7 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
 import { useBackend } from "@/providers/BackendProvider";
+import { usePinnedProjects } from "@/services/projects/usePinnedProjects";
 import { useWorkspaces } from "@/services/projects/useWorkspaces";
 
 import { CreateProjectDialog } from "./CreateProjectDialog";
@@ -13,7 +14,6 @@ import { NewProjectCard } from "./NewProjectCard";
 import { ProjectCard } from "./ProjectCard";
 import { PROJECT_GRID } from "./projectGrid";
 import { useMyProjects } from "./useMyProjects";
-import { usePinnedProjects } from "./usePinnedProjects";
 
 const LoadingProjects = () => (
   <InlineStack gap="2" blockAlign="center">

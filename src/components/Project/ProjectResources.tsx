@@ -21,16 +21,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Heading, Text } from "@/components/ui/typography";
-import useConfirmationDialog from "@/hooks/useConfirmationDialog";
-import useToastNotification from "@/hooks/useToastNotification";
-import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { APP_ROUTES } from "@/routes/appRoutes";
 import {
   newTangentSessionSearch,
   tangentSessionSearch,
 } from "@/routes/tangentSearch";
 import { useAiGate } from "@/routes/v2/shared/components/AiChat/components/useAiGate";
-import { UNTITLED } from "@/services/projects/placeholderNames";
 import {
   AGENT_SESSION,
   describeResource,
@@ -39,20 +35,14 @@ import {
 import { sessionLabelsById } from "@/services/projects/sessionLabel";
 import type { ProjectResourceSummary } from "@/services/projects/types";
 import { useLocalPipelineStatus } from "@/services/projects/useLocalPipelineStatus";
-import {
-  useDeleteProjectResource,
-  useProjectResources,
-} from "@/services/projects/useProjectResources";
+import { useProjectResources } from "@/services/projects/useProjectResources";
 import { tracking } from "@/utils/tracking";
 
 import { AddResourceMenu } from "./AddResourceMenu";
 import { ColumnHeadingRow } from "./ColumnHeadingRow";
-import {
-  entityIcon,
-  removalConsequence,
-  removingDestroys,
-} from "./resourceEntities";
+import { entityIcon } from "./resourceEntities";
 import { ResourceRow } from "./ResourceRow";
+import { useConfirmedResourceRemoval } from "./useConfirmedResourceRemoval";
 
 const PAGE_SIZE = 100;
 
@@ -133,44 +123,19 @@ export function ProjectResources({
   const { data, isPending, error } = useProjectResources(projectId, {
     pageSize: PAGE_SIZE,
   });
-  const removeResource = useDeleteProjectResource(projectId);
-  const notify = useToastNotification();
-  const { track } = useAnalytics();
   const navigate = useNavigate();
   const tangentEnabled = useTangentEnabled();
   const aiGate = useAiGate();
-  const {
-    handlers: confirmationHandlers,
-    triggerDialog: triggerConfirmation,
-    ...confirmationProps
-  } = useConfirmationDialog();
-
-  const handleRemove = async (resource: ProjectResourceSummary) => {
-    const destroys = removingDestroys(resource);
-    const name = resource.name ?? UNTITLED;
-
-    const confirmed = await triggerConfirmation({
-      title: destroys
-        ? `Delete "${name}"?`
-        : `Remove "${name}" from this project?`,
-      description: removalConsequence(resource),
-    });
-
-    if (!confirmed) return;
-
-    removeResource.mutate(resource.id, {
-      onSuccess: () => {
+  const { confirmAndRemove, confirmation: confirmationProps } =
+    useConfirmedResourceRemoval({
+      projectId,
+      trackingEvent: "projects.remove_resource_completed",
+      onRemoved: (resource) => {
         if (resource.id === selectedResourceId) {
           onSelect(null);
         }
-        track("projects.remove_resource_completed", {
-          entity: resource.entity,
-          destroyed: destroys,
-        });
-        notify(destroys ? "Deleted" : "Removed from project", "success");
       },
     });
-  };
 
   // Instructions have their own box in the sidebar, so listing the document
   // they live in would offer a second way to write one thing and a Remove that
@@ -299,7 +264,11 @@ export function ProjectResources({
                     }}
                     // Like a run, a session that happened belongs to the
                     // project it happened in.
-                    onRemove={sessionLabel ? undefined : handleRemove}
+                    onRemove={
+                      sessionLabel
+                        ? undefined
+                        : (picked) => void confirmAndRemove(picked)
+                    }
                   />
                 );
               })}
@@ -317,11 +286,7 @@ export function ProjectResources({
         </Text>
       )}
 
-      <ConfirmationDialog
-        {...confirmationProps}
-        onConfirm={() => confirmationHandlers?.onConfirm()}
-        onCancel={() => confirmationHandlers?.onCancel()}
-      />
+      <ConfirmationDialog {...confirmationProps} />
     </BlockStack>
   );
 }

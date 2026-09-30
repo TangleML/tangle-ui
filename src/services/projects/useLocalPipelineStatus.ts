@@ -5,8 +5,7 @@ import { pointerKey } from "@/services/localPipelines/types";
 import { useResolvedPointers } from "@/services/localPipelines/useLocalPipelines";
 import { localPipelinePointerOf } from "@/services/projects/resourceDescriptor";
 import type { ProjectResourceSummary } from "@/services/projects/types";
-
-const UNRESOLVED_USER_ID = "Unknown";
+import { UNRESOLVED_USER_ID } from "@/services/projects/useProjectAuthor";
 
 /**
  * A name-only pointer is safe only in the browser that wrote it: someone else's
