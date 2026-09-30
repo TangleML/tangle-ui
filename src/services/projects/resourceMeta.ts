@@ -1,5 +1,7 @@
 import type { IconName } from "@/components/ui/icon";
 
+import { DOCUMENT, LOCAL_PIPELINE, PIPELINE_RUN } from "./resourceDescriptor";
+
 export type ResourceConcept = "pipeline" | "run" | "document" | "session";
 
 interface ResourceMeta {
@@ -33,3 +35,13 @@ const ENTITY_CONCEPTS: Record<string, ResourceConcept> = {
 
 export const conceptForEntity = (entity: string): ResourceConcept | undefined =>
   ENTITY_CONCEPTS[entity];
+
+const DESCRIPTOR_CONCEPTS: Record<string, ResourceConcept> = {
+  [LOCAL_PIPELINE]: "pipeline",
+  [PIPELINE_RUN]: "run",
+  [DOCUMENT]: "document",
+};
+
+export const conceptForDescriptorType = (
+  type: string,
+): ResourceConcept | undefined => DESCRIPTOR_CONCEPTS[type];

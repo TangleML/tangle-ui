@@ -23,6 +23,7 @@ import { buildTaskSpecShape } from "@/components/shared/PipelineRunNameTemplate/
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
+import { createNewPipeline } from "@/routes/v2/pages/Editor/components/EditorMenuBar/components/fileMenu.actions";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { useRemoteEnvAuthToken } from "@/routes/v2/pages/Tangent/hooks/useRemoteEnvAuthToken";
 import { useTangentBaseUrl } from "@/routes/v2/pages/Tangent/hooks/useTangentBaseUrl";
@@ -37,18 +38,17 @@ import {
 } from "@/routes/v2/pages/Tangent/services/createWorkareaRemoteTools";
 import { createRemoteEnvAgentWorker } from "@/routes/v2/pages/Tangent/services/remoteEnvAgentWorker";
 import { createRemoteEnvHost } from "@/routes/v2/pages/Tangent/services/remoteEnvHost";
-import {
-  localPipelineByNameResourceExtraData,
-  localPipelineResourceExtraData,
-} from "@/routes/v2/pages/Tangent/workarea/resourceExtraData";
 import { createDebugBridgeHandlers } from "@/routes/v2/shared/components/AiChat/toolBridge/debugBridge";
 import { createRunBridgeHandlers } from "@/routes/v2/shared/components/AiChat/toolBridge/runBridge";
 import type { BridgeDeps } from "@/routes/v2/shared/components/AiChat/toolBridge/utils";
+import { availablePipelineName } from "@/services/localPipelines/localPipelinesService";
 import { copyRunToPipeline } from "@/services/pipelineRunService";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
 import type { PipelineRef } from "@/services/pipelineStorage/types";
+import { UNNAMED_PIPELINE } from "@/services/projects/placeholderNames";
 import { createProjectResource } from "@/services/projects/projectResourcesService";
+import { localPipelineResourceInput } from "@/services/projects/resourceDescriptor";
 import {
   ProjectResourcesQueryKeys,
   ProjectsQueryKeys,
@@ -192,20 +192,34 @@ export function TangentProjectAgentProvider({
       getEnvironmentId: (id) => store.getTabEnvironmentId(id),
       waitForEnvironment: (id) => store.waitForTabEnvironment(id),
       runInspect,
+      createPipeline: async (name) => {
+        const pipelineName = await availablePipelineName(
+          name ?? UNNAMED_PIPELINE,
+        );
+        const file = await createNewPipeline(storageRef.current, pipelineName);
+        await createProjectResource(
+          store.projectId,
+          localPipelineResourceInput({
+            localName: file.displayName,
+            localId: file.id,
+          }),
+        );
+        await refreshProjectResources();
+        return { pipelineName: file.displayName, fileId: file.id };
+      },
       clonePipeline: async (runId) => {
         const ref = await clonePipelineFromRun(
           storageRef.current,
           runInspect,
           runId,
         );
-        await createProjectResource(store.projectId, {
-          entity: "document",
-          name: ref.name,
-          extraData: ref.fileId
-            ? localPipelineResourceExtraData(ref.fileId)
-            : localPipelineByNameResourceExtraData(ref.name),
-          payload: {},
-        });
+        await createProjectResource(
+          store.projectId,
+          localPipelineResourceInput({
+            localName: ref.name,
+            localId: ref.fileId,
+          }),
+        );
         await refreshProjectResources();
         return ref;
       },

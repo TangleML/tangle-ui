@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import yaml from "js-yaml";
 import type { ReactNode } from "react";
 
-import { CodeViewer } from "@/components/shared/CodeViewer";
+import { CodeViewer, languageFor } from "@/components/shared/CodeViewer";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -15,6 +15,11 @@ import { PROJECT_ID_SEARCH_PARAM } from "@/routes/projectRunSearch";
 import type { LocalPipelinePointer } from "@/services/localPipelines/types";
 import { useLocalPipeline } from "@/services/localPipelines/useLocalPipelines";
 import { UNTITLED } from "@/services/projects/placeholderNames";
+import {
+  describeResource,
+  localPipelinePointerOf,
+  PIPELINE_RUN,
+} from "@/services/projects/resourceDescriptor";
 import type { ProjectResource } from "@/services/projects/types";
 import { useProjectResource } from "@/services/projects/useProjectResources";
 import { usePipelineSpec } from "@/services/usePipelineSpec";
@@ -22,29 +27,8 @@ import { tracking } from "@/utils/tracking";
 import { componentSpecToText } from "@/utils/yaml";
 
 import { ColumnHeadingRow } from "./ColumnHeadingRow";
-import { pointerOf } from "./localPipelinePointer";
 import { type PipelineValidity, pipelineValidity } from "./pipelineValidity";
 import { RunPipelineButton } from "./RunPipelineButton";
-
-const PLAIN_TEXT = "plaintext";
-
-const LANGUAGE_BY_EXTENSION: Record<string, string> = {
-  md: "markdown",
-  markdown: "markdown",
-  json: "json",
-  yaml: "yaml",
-  yml: "yaml",
-  py: "python",
-  sh: "shell",
-  sql: "sql",
-  ts: "typescript",
-  js: "javascript",
-};
-
-function languageFor(name: string | null) {
-  const extension = name?.split(".").pop()?.toLowerCase() ?? "";
-  return LANGUAGE_BY_EXTENSION[extension] ?? PLAIN_TEXT;
-}
 
 const CONTENT_KEY = "content";
 
@@ -140,7 +124,7 @@ function SelectedResource({ projectId, resourceId }: SelectedResourceProps) {
     );
   }
 
-  const pointer = pointerOf(resource);
+  const pointer = localPipelinePointerOf(resource);
   if (pointer) {
     return (
       <LocalPipelinePreview
@@ -161,7 +145,39 @@ function SelectedResource({ projectId, resourceId }: SelectedResourceProps) {
     );
   }
 
+  const described = describeResource(resource);
+  if (described?.type === PIPELINE_RUN) {
+    return <RunPreview url={described.url} />;
+  }
+
   return <PayloadPreview resource={resource} />;
+}
+
+/**
+ * A run row carries no content of its own — it points at a run whose own page
+ * shows the graph, logs and artifacts. Dumping its empty payload as yaml, which
+ * is what an unrecognised row used to fall through to, said nothing at all.
+ */
+function RunPreview({ url }: { url: string | undefined }) {
+  return (
+    <Placeholder>
+      <BlockStack gap="3" align="center" inlineAlign="center">
+        <EmptyState
+          icon="Play"
+          title="Pipeline run"
+          description="A run is shown on its own page, with its graph, logs and artifacts."
+        />
+        {url && (
+          <Button variant="outline" size="sm" asChild>
+            <a href={url} {...tracking("projects.open_pipeline_run")}>
+              <Icon name="ExternalLink" size="xs" />
+              Open the run
+            </a>
+          </Button>
+        )}
+      </BlockStack>
+    </Placeholder>
+  );
 }
 
 interface LocalPipelinePreviewProps {
@@ -299,7 +315,9 @@ function PayloadPreview({ resource }: { resource: ProjectResource }) {
     );
   }
 
-  if (!resource.payload) {
+  // A row that points at something elsewhere is sent with an empty payload,
+  // because the api requires one. Dumping that as yaml showed `{}`.
+  if (!resource.payload || Object.keys(resource.payload).length === 0) {
     return (
       <Placeholder>
         <EmptyState

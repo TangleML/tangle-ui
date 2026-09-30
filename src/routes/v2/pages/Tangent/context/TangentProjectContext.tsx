@@ -9,7 +9,7 @@ import useToastNotification from "@/hooks/useToastNotification";
 import { usePrepareEmptyProject } from "@/routes/v2/pages/Tangent/hooks/usePrepareEmptyProject";
 import { useProjectSessions } from "@/routes/v2/pages/Tangent/hooks/useProjectSessions";
 import { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
-import { useProject } from "@/services/projects/useProjects";
+import { useProjectInstructions } from "@/services/projects/useProjectInstructions";
 
 const TangentProjectCtx = createRequiredContext<TangentProjectStore>(
   "TangentProjectContext",
@@ -26,7 +26,7 @@ export function TangentProjectProvider({
 }: TangentProjectProviderProps) {
   const notify = useToastNotification();
   const { newSession } = useTangent();
-  const { data: project } = useProject(projectId);
+  const { instructions } = useProjectInstructions(projectId);
   const {
     sessions,
     isLoading: isSessionsLoading,
@@ -35,16 +35,15 @@ export function TangentProjectProvider({
   } = useProjectSessions(projectId);
   const [store] = useState(() => new TangentProjectStore(projectId));
 
-  const projectNotes = project?.notes ?? null;
   useEffect(() => {
     store.setSessionIo({
       newSession,
       attachSession,
       detachSession,
       notify,
-      projectNotes,
+      projectInstructions: instructions,
     });
-  }, [store, newSession, attachSession, detachSession, notify, projectNotes]);
+  }, [store, newSession, attachSession, detachSession, notify, instructions]);
 
   const defaultSessionId = sessions[0]?.sessionId;
   useEffect(() => {

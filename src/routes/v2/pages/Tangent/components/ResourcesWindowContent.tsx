@@ -9,17 +9,25 @@ import { useDialog } from "@/providers/DialogProvider/hooks/useDialog";
 import { convertCancelErrorTo } from "@/providers/DialogProvider/utils";
 import { AddResourceButton } from "@/routes/v2/pages/Tangent/components/AddResourceButton";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
-import { parseResourceExtraData } from "@/routes/v2/pages/Tangent/workarea/resourceExtraData";
-import type { WorkareaTarget } from "@/routes/v2/pages/Tangent/workarea/types";
+import {
+  describeResource,
+  DOCUMENT,
+} from "@/services/projects/resourceDescriptor";
+import {
+  conceptForDescriptorType,
+  resourceMeta,
+} from "@/services/projects/resourceMeta";
+import type { WorkareaTarget } from "@/services/projects/resourceTarget";
 import {
   formatWorkareaTarget,
-  parseWorkareaTarget,
-} from "@/routes/v2/pages/Tangent/workarea/workareaTarget";
+  idIdentity,
+} from "@/services/projects/resourceTarget";
+import type { ProjectResourceSummary } from "@/services/projects/types";
+import { useProjectInstructions } from "@/services/projects/useProjectInstructions";
 import {
   useDeleteProjectResource,
   useProjectResources,
 } from "@/services/projects/useProjectResources";
-import { useProject, useUpdateProject } from "@/services/projects/useProjects";
 import { getErrorMessage } from "@/utils/string";
 
 import { EditInstructionsDialog } from "./EditInstructionsDialog";
@@ -27,49 +35,84 @@ import { EditInstructionsDialog } from "./EditInstructionsDialog";
 interface ProjectResourceItem {
   id: string;
   name: string;
-  target: WorkareaTarget;
   icon: IconName;
   description: string;
+  target?: WorkareaTarget;
 }
 
-interface ResourceTypeMeta {
-  icon: IconName;
-  description: string;
-}
-
-const RESOURCE_TYPE_META: Record<string, ResourceTypeMeta> = {
-  local_pipeline: { icon: "Workflow", description: "Pipeline" },
-  pipeline_run: { icon: "Play", description: "Pipeline run" },
+const BACKEND_PIPELINE_META = {
+  icon: resourceMeta("pipeline").icon,
+  description: "Backend pipeline — not supported yet",
 };
+
+/**
+ * A document carries its own body, so it records no identity — the row is the
+ * document, and the row's own id is what addresses it.
+ */
+function targetOf(
+  resource: ProjectResourceSummary,
+  type: string,
+  recorded: WorkareaTarget | undefined,
+): WorkareaTarget | undefined {
+  if (type === DOCUMENT) {
+    return { type: "document", identity: idIdentity(resource.id) };
+  }
+  return recorded;
+}
+
+/**
+ * A row with no target is listed but cannot be opened. A pipeline the backend
+ * holds is the only one: it belongs to the project and saying nothing about it
+ * makes the list look wrong, but nothing here can open one — the editor reads
+ * browser storage, and fetching a pipeline from the backend is being brought in
+ * separately rather than written twice.
+ */
+function toResourceItem(
+  resource: ProjectResourceSummary,
+): ProjectResourceItem | undefined {
+  if (resource.entity === "pipeline") {
+    return resource.entityId
+      ? {
+          id: resource.id,
+          name: resource.name ?? resource.entityId,
+          ...BACKEND_PIPELINE_META,
+        }
+      : undefined;
+  }
+
+  const described = describeResource(resource);
+  const concept = described && conceptForDescriptorType(described.type);
+  const target =
+    described && concept
+      ? targetOf(resource, described.type, described.target)
+      : undefined;
+  if (!target || !concept) return undefined;
+
+  const meta = resourceMeta(concept);
+  return {
+    id: resource.id,
+    name: resource.name ?? formatWorkareaTarget(target),
+    target,
+    icon: meta.icon,
+    description: meta.label,
+  };
+}
 
 export function ResourcesWindowContent() {
   const store = useTangentProject();
   const notify = useToastNotification();
   const { data: resourcesPage } = useProjectResources(store.projectId, {
-    entity: ["document"],
+    entity: ["document", "pipeline"],
   });
   const { mutate: deleteResource, isPending: isDetachingResource } =
     useDeleteProjectResource(store.projectId);
 
   const resources: ProjectResourceItem[] = (resourcesPage?.items ?? []).flatMap(
-    (resource) => {
-      const extra = parseResourceExtraData(resource.extraData);
-      const meta = extra ? RESOURCE_TYPE_META[extra.type] : undefined;
-      if (!extra || !meta || !extra.identity) return [];
-      const target = parseWorkareaTarget(extra.identity);
-      return [
-        {
-          id: resource.id,
-          name: resource.name ?? formatWorkareaTarget(target),
-          target,
-          icon: meta.icon,
-          description: meta.description,
-        },
-      ];
-    },
+    (resource) => toResourceItem(resource) ?? [],
   );
 
   async function handleOpenResource(resource: ProjectResourceItem) {
+    if (!resource.target) return;
     try {
       await store.openWorkareaTarget(resource.target, resource.name);
     } catch (error) {
@@ -87,6 +130,7 @@ export function ResourcesWindowContent() {
             icon={resource.icon}
             title={resource.name}
             description={resource.description}
+            disabled={!resource.target}
             testId={`open-resource-${resource.id}`}
             onOpen={() => void handleOpenResource(resource)}
             action={
@@ -173,12 +217,8 @@ function ResourceRow({
 }
 
 function InstructionsRow({ projectId }: { projectId: string }) {
-  const { data: project } = useProject(projectId);
-  const { mutate: updateProject, isPending: isSavingInstructions } =
-    useUpdateProject();
+  const { instructions, isSaving, save } = useProjectInstructions(projectId);
   const { open } = useDialog();
-
-  const instructions = project?.notes ?? "";
 
   async function handleEditInstructions() {
     const result = await open<string, { currentInstructions: string }>({
@@ -188,7 +228,7 @@ function InstructionsRow({ projectId }: { projectId: string }) {
     }).catch(convertCancelErrorTo(undefined));
 
     if (result === undefined) return;
-    updateProject({ id: projectId, input: { notes: result } });
+    save(result);
   }
 
   return (
@@ -197,7 +237,7 @@ function InstructionsRow({ projectId }: { projectId: string }) {
       title={instructions ? "Instructions" : "No instructions yet"}
       titleSubdued={!instructions}
       description="Standing context for agents"
-      disabled={isSavingInstructions}
+      disabled={isSaving}
       testId="edit-instructions"
       onOpen={() => void handleEditInstructions()}
     />

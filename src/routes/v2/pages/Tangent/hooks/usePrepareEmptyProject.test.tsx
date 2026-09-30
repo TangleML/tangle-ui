@@ -29,6 +29,10 @@ vi.mock("@/services/pipelineStorage/PipelineStorageProvider", () => ({
   usePipelineStorage: () => storage,
 }));
 
+vi.mock("@/routes/v2/shared/store/SharedStoreContext", () => ({
+  useSharedStores: () => ({ windows }),
+}));
+
 vi.mock("@/services/localPipelines/localPipelinesService", () => ({
   availablePipelineName: vi.fn(),
 }));
@@ -41,6 +45,8 @@ vi.mock(
 const updateProject = vi.fn();
 const createResource = vi.fn();
 const storage = {};
+const minimize = vi.fn();
+const windows = { getWindowById: vi.fn(() => ({ minimize })) };
 
 const project = {
   id: "project-1",
@@ -112,6 +118,7 @@ function prepare(store: TangentProjectStore, sessionCount = 0) {
 describe("usePrepareEmptyProject", () => {
   beforeEach(() => {
     given();
+    windows.getWindowById.mockReturnValue({ minimize });
     vi.mocked(availablePipelineName).mockResolvedValue("Churn model");
     vi.mocked(createNewPipeline).mockResolvedValue({
       id: "file-1",
@@ -119,6 +126,37 @@ describe("usePrepareEmptyProject", () => {
     } as unknown as Awaited<ReturnType<typeof createNewPipeline>>);
   });
   afterEach(() => vi.resetAllMocks());
+
+  /** An empty project's window is a tall empty form above what someone came for. */
+  it("folds the project window away on a project nobody has worked in", async () => {
+    const store = makeStore();
+
+    prepare(store);
+
+    await waitFor(() => expect(minimize).toHaveBeenCalledTimes(1));
+    expect(windows.getWindowById).toHaveBeenCalledWith(
+      "tangent-project-details",
+    );
+  });
+
+  it("leaves the project window as it was found on a project with a session", async () => {
+    const store = makeStore();
+
+    prepare(store, 1);
+    await settle();
+
+    expect(minimize).not.toHaveBeenCalled();
+  });
+
+  it("does not fold it away when the session could not start", async () => {
+    const store = makeStore();
+    vi.mocked(store.startSession).mockResolvedValue(false);
+
+    prepare(store);
+    await settle();
+
+    expect(minimize).not.toHaveBeenCalled();
+  });
 
   it("starts a session for a project that has none", async () => {
     const store = makeStore();
@@ -203,14 +241,15 @@ describe("usePrepareEmptyProject", () => {
     expect(createResource).not.toHaveBeenCalled();
   });
 
-  /** Added from the project page, which records a pointer rather than a target. */
-  it("recognises a pipeline the project page attached", async () => {
+  /** A pipeline cloned from a run has no registry row, so it is named, not id'd. */
+  it("recognises a pipeline addressed by name rather than by id", async () => {
     given({
       documents: [
         document({
-          kind: "pipeline",
-          localName: "Churn model",
-          localId: "f-7",
+          type: "local_pipeline",
+          storage: "browser",
+          identity: "pipeline://name/Cloned from run 42",
+          fallbackName: "Cloned from run 42",
         }),
       ],
     });
@@ -218,7 +257,12 @@ describe("usePrepareEmptyProject", () => {
 
     prepare(store);
 
-    await waitFor(() => expect(store.openWorkareaTarget).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(store.openWorkareaTarget).toHaveBeenCalledWith(
+        { type: "pipeline", identity: "name/Cloned from run 42" },
+        "Churn model",
+      ),
+    );
     expect(createNewPipeline).not.toHaveBeenCalled();
   });
 

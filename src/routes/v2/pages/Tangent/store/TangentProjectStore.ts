@@ -19,13 +19,10 @@ import type {
   WorkareaTab,
   WorkareaTarget,
 } from "@/routes/v2/pages/Tangent/workarea/types";
-import {
-  idIdentity,
-  sameTarget,
-} from "@/routes/v2/pages/Tangent/workarea/workareaTarget";
 import { resolveChatEntity } from "@/routes/v2/shared/components/AiChat/components/resolveChatEntity";
 import { navigateToEntity } from "@/routes/v2/shared/store/focus.actions";
 import type { SharedUIStore } from "@/routes/v2/shared/store/SharedStoreContext";
+import { idIdentity, sameTarget } from "@/services/projects/resourceTarget";
 import { getErrorMessage } from "@/utils/string";
 
 export const CHAT_TAB_VALUE = "chat";
@@ -70,7 +67,7 @@ export interface TangentSessionIo {
   attachSession: (sessionId: string) => Promise<{ id: string }>;
   detachSession: (resourceId: string) => Promise<void>;
   notify: (message: string, type: "error") => void;
-  projectNotes?: string | null;
+  projectInstructions?: string | null;
 }
 
 export interface StartSessionOptions {
@@ -96,6 +93,7 @@ export class TangentProjectStore {
   @observable accessor selectedSessionId: string | undefined = undefined;
   @observable accessor defaultSessionId: string | undefined = undefined;
   @observable accessor isStartingSession = false;
+  @observable accessor canStartSession = false;
 
   @observable.shallow accessor workareaBySession = new Map<
     string,
@@ -123,8 +121,9 @@ export class TangentProjectStore {
     makeObservable(this);
   }
 
-  setSessionIo(io: TangentSessionIo) {
+  @action setSessionIo(io: TangentSessionIo) {
     this.#io = io;
+    this.canStartSession = true;
   }
 
   // The selected session wins while it exists; otherwise fall back to the most
@@ -210,11 +209,11 @@ export class TangentProjectStore {
       // so the agent starts working. `name` labels the session in Tangent's own
       // session list.
       const prompt = options?.prompt ?? "";
-      const notes = io.projectNotes?.trim();
+      const instructions = io.projectInstructions?.trim();
       const { sessionId } = await io.newSession(prompt, TANGENT_BUNDLE_ID, {
         name: options?.name ?? "New Tangent session",
-        resources: notes
-          ? [{ kind: "memory", scope: "session", content: notes }]
+        resources: instructions
+          ? [{ kind: "memory", scope: "session", content: instructions }]
           : undefined,
       });
       const resource = await io.attachSession(sessionId);

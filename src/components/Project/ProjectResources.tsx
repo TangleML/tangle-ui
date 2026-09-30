@@ -29,6 +29,11 @@ import {
   tangentSessionSearch,
 } from "@/routes/tangentSearch";
 import { UNTITLED } from "@/services/projects/placeholderNames";
+import {
+  describeResource,
+  INSTRUCTIONS,
+  namesLocalPipeline,
+} from "@/services/projects/resourceDescriptor";
 import { sessionLabelsById } from "@/services/projects/sessionLabel";
 import type { ProjectResourceSummary } from "@/services/projects/types";
 import {
@@ -39,7 +44,6 @@ import { tracking } from "@/utils/tracking";
 
 import { AddResourceMenu } from "./AddResourceMenu";
 import { ColumnHeadingRow } from "./ColumnHeadingRow";
-import { claimsLocalPipeline } from "./localPipelinePointer";
 import { entityIcon, removingDestroys } from "./resourceEntities";
 import { ResourceRow } from "./ResourceRow";
 
@@ -84,7 +88,7 @@ function GroupHeading({ icon, label }: GroupHeadingProps) {
 }
 
 function removalConsequence(resource: ProjectResourceSummary) {
-  if (claimsLocalPipeline(resource)) {
+  if (namesLocalPipeline(resource)) {
     return "This only takes it out of this project. The pipeline itself is not deleted and stays in the browser that holds it.";
   }
   if (removingDestroys(resource)) {
@@ -173,7 +177,12 @@ export function ProjectResources({
     });
   };
 
-  const resources = data?.items ?? [];
+  // Instructions have their own box in the sidebar, so listing the document
+  // they live in as well would offer two ways to write one thing and a Remove
+  // that silently wipes it.
+  const resources = (data?.items ?? []).filter(
+    (resource) => describeResource(resource)?.type !== INSTRUCTIONS,
+  );
 
   // A session is the one resource that is not a thing to look at here: it is a
   // conversation that lives in Tangent, so its row goes there. It is also not a
