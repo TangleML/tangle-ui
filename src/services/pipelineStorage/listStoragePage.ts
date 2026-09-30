@@ -6,7 +6,7 @@ import type {
 } from "./types";
 
 export async function listStoragePage<T extends PipelineFileDescriptor>(
-  driver: PipelineStorageDriver<T>,
+  driver: Pick<PipelineStorageDriver<T>, "list" | "listPage">,
   options: PipelinePageOptions = {},
 ): Promise<PipelineStoragePage<T>> {
   options.signal?.throwIfAborted();

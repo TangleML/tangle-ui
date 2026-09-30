@@ -44,14 +44,13 @@ export function useRemotePipelineList() {
   const pages = useInfiniteQuery({
     queryKey: [...queryKey, "pages"],
     initialPageParam: undefined as string | undefined,
-    queryFn: ({ pageParam, signal }) => {
-      if (!storage.remote) throw new Error("Remote pipelines are not enabled.");
-      return storage.remote.listPage({
+    queryFn: ({ pageParam, signal }) =>
+      storage.listPipelinePage({
+        storageKind: "remote",
         pageSize: PAGE_SIZE,
         pageToken: pageParam,
         signal,
-      });
-    },
+      }),
     getNextPageParam: (lastPage, _allPages, lastParam, allParams) => {
       const next = lastPage.nextPageToken;
       return next && next !== lastParam && !allParams.includes(next)
@@ -65,7 +64,7 @@ export function useRemotePipelineList() {
   const showingCached = !!pages.error && !pages.data;
   const cached = useQuery({
     queryKey: [...queryKey, "cached"],
-    queryFn: () => storage.remote?.listCached() ?? Promise.resolve([]),
+    queryFn: () => storage.listCachedPipelines(),
     enabled: storage.remoteEnabled && showingCached,
   });
   useEffect(() => subscribeUserPipelineWritten(() => setPageIndex(0)), []);

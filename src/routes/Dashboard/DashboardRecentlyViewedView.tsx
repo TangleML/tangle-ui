@@ -44,7 +44,7 @@ const RecentlyViewedCardBody = ({ item }: { item: RecentItem }) => (
 );
 
 const RecentlyViewedCard = ({ item }: { item: RecentItem }) => {
-  const backendUrl = usePipelineStorage().remote?.backendUrl ?? "";
+  const backendUrl = usePipelineStorage().backendUrl;
   if (item.type === "component") {
     return (
       <Link
