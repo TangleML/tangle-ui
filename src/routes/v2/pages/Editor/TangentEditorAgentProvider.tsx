@@ -20,6 +20,7 @@ import { useLazyBridgeAuth } from "@/routes/v2/shared/components/AiChat/toolBrid
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 import { createEditorToolBridge } from "./components/AiChat/toolBridge";
+import { fitViewAfterEdits } from "./components/AiChat/toolBridge/fitViewAfterEdits";
 import { useEditorSession } from "./store/EditorSessionContext";
 
 interface TangentEditorAgentProviderProps {
@@ -41,7 +42,7 @@ export function TangentEditorAgentProvider({
   onBridgeClosed,
   children,
 }: TangentEditorAgentProviderProps) {
-  const { navigation } = useSharedStores();
+  const { navigation, editor } = useSharedStores();
   const editorSession = useEditorSession();
   const { getBackendUrl, getAuthToken, queryClient } = useLazyBridgeAuth();
   const { getNodes, getEdges } = useReactFlow();
@@ -67,7 +68,7 @@ export function TangentEditorAgentProvider({
       getAuthToken,
       getRunAnnotations: () => runAnnotationsRef.current,
       queryClient,
-      undo: editorSession.undo,
+      undo: fitViewAfterEdits(editorSession.undo, editor),
     }),
   );
 
