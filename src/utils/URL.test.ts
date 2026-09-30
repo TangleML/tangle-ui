@@ -64,15 +64,16 @@ describe("toAbsoluteHttpUrl", () => {
 });
 
 describe("getProjectUrl", () => {
-  it("builds an absolute url for the project's own page", () => {
+  /** The same place a project card goes, so a project has one link. */
+  it("builds an absolute url for where a project opens", () => {
     expect(getProjectUrl("abc-123")).toBe(
-      `${window.location.origin}/projects/abc-123`,
+      `${window.location.origin}/tangent/abc-123`,
     );
   });
 
   it("escapes an id that would otherwise change the path", () => {
     expect(getProjectUrl("a/b?c")).toBe(
-      `${window.location.origin}/projects/a%2Fb%3Fc`,
+      `${window.location.origin}/tangent/a%2Fb%3Fc`,
     );
   });
 });
