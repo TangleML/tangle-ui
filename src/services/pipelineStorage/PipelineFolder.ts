@@ -2,7 +2,6 @@ import { action, makeObservable, observable } from "mobx";
 
 import { createDriver } from "./createDriver";
 import { pipelineStorageDb } from "./db";
-import { listStoragePage } from "./listStoragePage";
 import { PipelineFile } from "./PipelineFile";
 import { withPipelineLock } from "./pipelineLock";
 import {
@@ -15,9 +14,7 @@ import {
   type DriverConfig,
   type FolderEntry,
   type PipelineFileDescriptor,
-  type PipelinePageOptions,
   type PipelineStorageDriver,
-  type PipelineStoragePage,
   ROOT_FOLDER_ID,
 } from "./types";
 
@@ -107,20 +104,6 @@ export class PipelineFolder {
     if (!hasKey) return undefined;
 
     return resolveOrCreateRegistryEntry(storageKey, this);
-  }
-
-  async listPipelinePage(
-    options: PipelinePageOptions = {},
-  ): Promise<PipelineStoragePage<PipelineFile>> {
-    const page = await listStoragePage(this.driver, options);
-    return {
-      ...page,
-      files: await Promise.all(
-        page.files.map((file) =>
-          resolveOrCreateRegistryEntry(file.storageKey, this, file),
-        ),
-      ),
-    };
   }
 
   async assignFile(storageKey: string): Promise<PipelineFile> {

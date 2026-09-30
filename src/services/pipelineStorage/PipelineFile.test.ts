@@ -46,13 +46,12 @@ beforeEach(async () => {
 });
 
 describe("pipeline file storage contract", () => {
-  it("preserves identity through listing, paging and rename", async () => {
+  it("preserves identity through listing and rename", async () => {
     const { folder, driver } = setup();
     const [file] = await folder.listPipelines();
     expect(file.id).toBe("stable-id");
     expect(file.displayName).toBe("Daily report");
     expect(file.storageKey).toBe("document.yaml");
-    expect((await folder.listPipelinePage()).files[0].id).toBe(file.id);
     await file.rename("Renamed");
     expect(file.id).toBe("stable-id");
     expect(file.displayName).toBe("Renamed");

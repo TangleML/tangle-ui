@@ -4,6 +4,7 @@ import { ActionButton } from "@/components/shared/Buttons/ActionButton";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useSavePipeline } from "@/services/pipelineService";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import { tracking } from "@/utils/tracking";
 
 interface SavePipelineButtonProps {
@@ -14,7 +15,8 @@ export const SavePipelineButton = ({
   onSaveComplete,
 }: SavePipelineButtonProps) => {
   const { componentSpec } = useComponentSpec();
-  const { savePipeline } = useSavePipeline(componentSpec);
+  const storage = usePipelineStorage();
+  const { savePipeline } = useSavePipeline(componentSpec, storage);
   const notify = useToastNotification();
 
   const handleSavePipeline = useCallback(async () => {

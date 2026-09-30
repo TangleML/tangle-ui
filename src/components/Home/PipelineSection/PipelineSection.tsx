@@ -77,7 +77,13 @@ function PipelineTabs({
   const [chosenTab, setChosenTab] = useState<"remote" | "local" | null>(null);
   const localCount = local.data?.pipelines.size ?? 0;
   const defaultTab =
-    remote.hasRemotePipelines === false && localCount > 0 ? "local" : "remote";
+    !remote.hasSearchFilters &&
+    remote.sortField === "updated_at" &&
+    remote.sortDirection === "desc" &&
+    remote.hasRemotePipelines === false &&
+    localCount > 0
+      ? "local"
+      : "remote";
   const activeTab = chosenTab ?? defaultTab;
   return (
     <Tabs
@@ -121,9 +127,12 @@ function PipelineTabs({
       <TabsContent
         value="remote"
         forceMount
+        onClickCapture={() => setChosenTab("remote")}
+        onChangeCapture={() => setChosenTab("remote")}
         className="data-[state=inactive]:hidden"
       >
         <BlockStack gap="4">
+          <PipelineFiltersBar filters={remote} />
           {remote.error && (
             <Paragraph role="alert" size="sm" className="text-destructive">
               Could not load remote pipelines: {remote.error}
@@ -140,14 +149,16 @@ function PipelineTabs({
           ) : (
             <>
               <PipelineListTable
-                key={`remote:${activeTab}:${remote.pagination.currentPage}`}
+                key={`remote:${activeTab}:${remote.filterKey}:${remote.pagination.currentPage}`}
                 rows={remote.rows}
                 selectableRows={remote.rows}
                 remote
                 emptyMessage={
-                  remote.error && remote.totalCount === 0
+                  remote.showingCached && remote.totalCount === 0
                     ? "No cached remote pipelines are available."
-                    : "No remote pipelines yet. Create a pipeline or save one from Local pipelines."
+                    : remote.hasSearchFilters || remote.error
+                      ? "No pipelines found."
+                      : "No remote pipelines yet. Create a pipeline or save one from Local pipelines."
                 }
                 onRefresh={() => void remote.refresh()}
                 onPipelineClick={onPipelineClick}

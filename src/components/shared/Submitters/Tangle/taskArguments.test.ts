@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { ComponentSpec } from "@/utils/componentSpec";
+import type { ComponentSpec, DynamicDataArgument } from "@/utils/componentSpec";
 
 import { selectTaskArgumentsForInputs } from "./taskArguments";
 
@@ -32,5 +32,51 @@ describe("selectTaskArgumentsForInputs", () => {
     expect(
       selectTaskArgumentsForInputs(componentSpec, { token: savedSystem }),
     ).toEqual({ token: savedSystem });
+  });
+
+  it.each<DynamicDataArgument>([
+    { dynamicData: { secret: { name: "saved-token" } } },
+    { dynamicData: { "system/multi_node/node_index": {} } },
+  ])("uses edits made before autosave in place of %j", (savedArgument) => {
+    const editedSpec: ComponentSpec = {
+      ...componentSpec,
+      inputs: [
+        { name: "token", value: "current literal", default: "fallback" },
+        { name: "region", value: "" },
+      ],
+    };
+
+    expect(
+      selectTaskArgumentsForInputs(editedSpec, {
+        token: savedArgument,
+        region: savedArgument,
+      }),
+    ).toEqual({ token: "current literal", region: "" });
+
+    expect(
+      selectTaskArgumentsForInputs(
+        editedSpec,
+        { token: savedArgument },
+        { token: "run override" },
+      ),
+    ).toEqual({ token: "run override", region: "" });
+  });
+
+  it("uses saved dynamic arguments ahead of defaults and drops deleted inputs", () => {
+    const savedSecret = { dynamicData: { secret: { name: "saved-token" } } };
+    const spec: ComponentSpec = {
+      ...componentSpec,
+      inputs: [
+        { name: "token", default: "fallback" },
+        { name: "region", default: "us-east-1" },
+      ],
+    };
+
+    expect(
+      selectTaskArgumentsForInputs(spec, {
+        token: savedSecret,
+        deleted: savedSecret,
+      }),
+    ).toEqual({ token: savedSecret, region: "us-east-1" });
   });
 });

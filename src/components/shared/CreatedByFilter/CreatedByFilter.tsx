@@ -12,6 +12,9 @@ interface CreatedByFilterProps {
   onClear: () => void;
   // Pre-fills the input on mount, and fires onChange when the URL carries no value.
   defaultValue?: string;
+  label?: string;
+  placeholder?: string;
+  clearLabel?: string;
 }
 
 /**
@@ -22,6 +25,9 @@ export function CreatedByFilter({
   onChange,
   onClear,
   defaultValue,
+  label = "Filter by user",
+  placeholder = "Search by user...",
+  clearLabel = "Clear user filter",
 }: CreatedByFilterProps) {
   const [inputValue, setInputValue] = useState(value ?? defaultValue ?? "");
 
@@ -60,7 +66,8 @@ export function CreatedByFilter({
         className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
       />
       <Input
-        placeholder="Search by user..."
+        aria-label={label}
+        placeholder={placeholder}
         value={inputValue}
         onChange={handleChange}
         className="pl-9 pr-10 w-46"
@@ -71,7 +78,7 @@ export function CreatedByFilter({
           size="icon"
           onClick={handleClear}
           className="absolute right-2 top-1/2 -translate-y-1/2 size-6 text-muted-foreground hover:text-foreground"
-          aria-label="Clear user filter"
+          aria-label={clearLabel}
         >
           <Icon name="X" size="sm" />
         </Button>

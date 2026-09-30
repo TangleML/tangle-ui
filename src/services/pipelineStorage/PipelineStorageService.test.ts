@@ -586,66 +586,35 @@ describe("local recovery before remote migration", () => {
 });
 
 describe("storage service pages", () => {
-  it("pages visible local files before counting and slicing, without contacting the backend", async () => {
-    const service = remoteService();
-    const files = ["first", "migrated", "last"].map(
-      (name) =>
-        new PipelineFile({
-          id: name,
-          storageKey: name,
-          folder: service.rootFolder,
-        }),
-    );
-    vi.spyOn(service.rootFolder, "listPipelines").mockResolvedValue(files);
-    await remotePipelineRecoveryDb.copies.put({
-      ...recovery(),
-      localFileId: "migrated",
-    });
-    const first = await service.listPipelinePage({
-      storageKind: "local",
-      pageSize: 1,
-    });
-    expect(first.files.map((file) => file.id)).toEqual(["first"]);
-    expect(first.totalCount).toBe(2);
-    expect(first.nextPageToken).toBe("1");
-    const last = await service.listPipelinePage({
-      storageKind: "local",
-      pageSize: 1,
-      pageToken: first.nextPageToken,
-    });
-    expect(last.files.map((file) => file.id)).toEqual(["last"]);
-    expect(last.nextPageToken).toBeUndefined();
-    expect(getCloudPipelineAccount).not.toHaveBeenCalled();
-    expect(listCloudPipelinePage).not.toHaveBeenCalled();
-  });
-
-  it("returns remote summaries through the common page API without definition reads", async () => {
+  it("returns remote summaries through the service without definition reads", async () => {
     const service = remoteService();
     const secondId = "20000000-0000-4000-8000-000000000002";
     vi.mocked(listCloudPipelinePage).mockResolvedValue({
       pipelines: [
         pipeline(),
-        pipeline({ id: secondId, file_path: "pipeline-studio/second.yaml" }),
+        pipeline({ id: secondId, user_id: "another-owner@example.com" }),
       ],
       nextPageToken: "next",
       totalCount: 12,
     });
     const signal = new AbortController().signal;
-    const page = await service.listPipelinePage({
-      storageKind: "remote",
+    const filters = { searchQuery: "report" };
+    const page = await service.listRemotePipelinePage({
       pageSize: 2,
       pageToken: "cursor",
       signal,
+      filters,
     });
     expect(page.files.map((file) => file.referenceId)).toEqual([
       remotePipelineReference(BACKEND, CLOUD_ID),
       remotePipelineReference(BACKEND, secondId),
     ]);
     expect(page.files.map((file) => file.displayName)).toEqual([NAME, NAME]);
+    expect(page.files.map((file) => file.canEdit)).toEqual([true, false]);
     expect(page).toMatchObject({ nextPageToken: "next", totalCount: 12 });
     expect(listCloudPipelinePage).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({ backendUrl: BACKEND, signal }),
-      { pageSize: 2, pageToken: "cursor" },
+      { pageSize: 2, pageToken: "cursor", filters },
     );
     expect(getCloudPipeline).not.toHaveBeenCalled();
     expect(listCloudPipelines).not.toHaveBeenCalled();
@@ -654,9 +623,9 @@ describe("storage service pages", () => {
   it("keeps remote-only requests unavailable when remote storage is disabled", async () => {
     const service = new PipelineStorageService();
     expect(service.backendUrl).toBe("");
-    await expect(
-      service.listPipelinePage({ storageKind: "remote" }),
-    ).rejects.toThrow("not enabled");
+    await expect(service.listRemotePipelinePage()).rejects.toThrow(
+      "not enabled",
+    );
     await expect(service.listPendingPipelines()).resolves.toEqual([]);
     await expect(service.listCachedPipelines()).resolves.toEqual([]);
     expect(getCloudPipelineAccount).not.toHaveBeenCalled();
