@@ -26,12 +26,12 @@ export interface PipelineStoragePage<T = PipelineFileDescriptor> {
   totalCount?: number;
 }
 
-interface PipelineReadResult<T = PipelineFileDescriptor> {
+export interface PipelineReadResult<T = PipelineFileDescriptor> {
   content: string;
   descriptor: T;
 }
 
-interface PipelineWriteOptions<T = PipelineFileDescriptor> {
+export interface PipelineWriteOptions<T = PipelineFileDescriptor> {
   existing?: T;
   source?: T;
 }
@@ -58,7 +58,7 @@ export interface PipelineStorageDriver<
     content: string,
     options?: PipelineWriteOptions<T>,
   ): Promise<T | void>;
-  rename(oldStorageKey: string, newStorageKey: string): Promise<void>;
+  rename(storageKey: string, newName: string): Promise<T | void>;
   delete(storageKey: string, descriptor?: T): Promise<void>;
   hasKey(storageKey: string): Promise<boolean>;
 }

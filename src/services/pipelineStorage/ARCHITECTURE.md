@@ -671,3 +671,17 @@ preserve backend metadata. Existing text-only drivers remain compatible.
 For existing unpaginated drivers, it slices their list using an offset cursor.
 `PipelineFolder.listPipelinePage` resolves those descriptors into files using the
 same registry path as an unpaginated listing.
+
+### Remote storage and recovery
+
+`RemotePipelineStorageDriver` implements the same storage contract using the
+pipeline API. Its keys are backend-scoped pipeline references; display-name
+changes keep those keys and the backend's saved path intact. Reads and writes
+return descriptors containing server metadata. Passing an existing descriptor
+preserves saved arguments and annotations without an additional detail request.
+The driver obtains credentials through its supplied `CloudConnection`.
+
+`RemotePipelineStore` coordinates that driver with local recovery. It retains
+migration locks, dirty drafts, pending uploads, deletion markers, and reference
+migration after a confirmed upload. `RemotePipelineFile` delegates its operations
+to this coordinator so recovery and retry still wrap storage operations.

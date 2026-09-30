@@ -1,24 +1,14 @@
-import yaml from "js-yaml";
 import { observable, runInAction } from "mobx";
 
-import {
-  type CloudConnection,
-  type CloudPipelineAccount,
-  type CloudPipelinePageOptions,
-  type CloudPipelineSummary,
-  cloudPipelineToComponentSpec,
-  deleteCloudPipeline,
-  getCloudPipeline,
-  getCloudPipelineAccount,
-  listCloudPipelinePage,
-  listCloudPipelines,
-  writeCloudPipeline,
+import type {
+  CloudConnection,
+  CloudPipelineSummary,
 } from "@/services/cloudPipelineService";
-import { isValidComponentSpec } from "@/utils/componentSpec";
 import { getErrorMessage } from "@/utils/string";
 import { emitUserPipelineWritten } from "@/utils/userPipelineWriteEvents";
-import { PIPELINE_YAML_LOAD_OPTIONS } from "@/utils/yaml";
 
+import { RemotePipelineStorageDriver } from "./drivers/RemotePipelineStorageDriver";
+import { listStoragePage } from "./listStoragePage";
 import { migratePipelineReferences } from "./migratePipelineReferences";
 import type { PipelineFile } from "./PipelineFile";
 import type { PipelineFolder } from "./PipelineFolder";
@@ -30,56 +20,33 @@ import {
   remotePipelineRecoveryDb,
   remotePipelineReference,
 } from "./remotePipelineRecovery";
+import type { PipelinePageOptions, PipelineStoragePage } from "./types";
 
 export interface RemotePipelineOptions {
   connection: CloudConnection;
   scope: string;
 }
 
-export interface RemotePipelinePageOptions extends CloudPipelinePageOptions {
-  signal?: AbortSignal;
-}
-
-export interface RemotePipelinePage {
-  files: RemotePipelineFile[];
-  nextPageToken?: string;
-  totalCount?: number;
-}
-
 export class RemotePipelineStore {
-  @observable.ref accessor account: CloudPipelineAccount | undefined;
   @observable accessor listError: string | undefined;
-  private accountRequest?: Promise<CloudPipelineAccount>;
+  readonly driver: RemotePipelineStorageDriver;
 
   constructor(
     readonly options: RemotePipelineOptions,
     readonly folder: PipelineFolder,
-  ) {}
+  ) {
+    this.driver = new RemotePipelineStorageDriver(options.connection);
+  }
+
+  get account() {
+    return this.driver.account;
+  }
 
   get backendUrl(): string {
-    return this.options.connection.backendUrl.replace(/\/+$/, "");
+    return this.driver.backendUrl;
   }
   get scope(): string {
     return this.options.scope;
-  }
-
-  private async connection(): Promise<CloudConnection> {
-    if (!this.backendUrl)
-      throw new Error("Configure a backend before saving remote pipelines.");
-    if (!this.accountRequest) {
-      this.accountRequest = getCloudPipelineAccount(this.options.connection)
-        .then((account) => {
-          runInAction(() => {
-            this.account = account;
-          });
-          return account;
-        })
-        .catch((error) => {
-          this.accountRequest = undefined;
-          throw error;
-        });
-    }
-    return { ...this.options.connection, account: await this.accountRequest };
   }
 
   private recoveryKey(filePath: string): string {
@@ -93,22 +60,19 @@ export class RemotePipelineStore {
       .toArray();
   }
 
-  async listPage({
-    signal,
-    ...options
-  }: RemotePipelinePageOptions = {}): Promise<RemotePipelinePage> {
-    const [connection, records] = await Promise.all([
-      this.connection(),
+  async listPage(
+    options: PipelinePageOptions = {},
+  ): Promise<PipelineStoragePage<RemotePipelineFile>> {
+    const [page, records] = await Promise.all([
+      listStoragePage(this.driver, options),
       this.records(),
     ]);
-    const page = await listCloudPipelinePage(
-      { ...connection, signal: signal ?? connection.signal },
-      options,
-    );
     return {
-      files: this.filesFromSummaries(page.pipelines, records),
-      nextPageToken: page.nextPageToken,
-      totalCount: page.totalCount,
+      ...page,
+      files: this.filesFromSummaries(
+        page.files.map((file) => file.pipeline),
+        records,
+      ),
     };
   }
 
@@ -135,12 +99,14 @@ export class RemotePipelineStore {
   }
 
   async listSummaries(): Promise<RemotePipelineFile[]> {
-    const [connection, records] = await Promise.all([
-      this.connection(),
+    const [files, records] = await Promise.all([
+      this.driver.list(),
       this.records(),
     ]);
-    const summaries = await listCloudPipelines(connection);
-    return this.filesFromSummaries(summaries, records);
+    return this.filesFromSummaries(
+      files.map((file) => file.pipeline),
+      records,
+    );
   }
 
   private filesFromSummaries(
@@ -182,10 +148,9 @@ export class RemotePipelineStore {
         ]),
     );
     try {
-      const connection = await this.connection();
-      const summaries = await listCloudPipelines(connection);
+      const summaries = (await this.driver.list()).map((file) => file.pipeline);
       for (const summary of summaries) {
-        if (summary.user_id !== connection.account?.id) continue;
+        if (summary.user_id !== this.account?.id) continue;
         const record = records.find(
           (item) => item.filePath === summary.file_path,
         );
@@ -251,7 +216,7 @@ export class RemotePipelineStore {
         );
       if (record.deleted)
         throw new Error("This pipeline has been deleted from the server.");
-      await this.connection().catch(() => undefined);
+      await this.driver.connect().catch(() => undefined);
       return new RemotePipelineFile(this, this.folder, record);
     }
     const parsed = parseRemotePipelineReference(reference);
@@ -259,11 +224,11 @@ export class RemotePipelineStore {
     if (parsed.backendUrl !== this.backendUrl)
       throw new Error("This pipeline belongs to a different backend.");
     let pipeline;
+    let content;
     try {
-      pipeline = await getCloudPipeline(
-        parsed.pipelineId,
-        await this.connection(),
-      );
+      const loaded = await this.driver.read(reference);
+      pipeline = loaded.descriptor.pipeline;
+      content = loaded.content;
     } catch (error) {
       const cached = (await this.records()).find(
         (record) =>
@@ -286,7 +251,7 @@ export class RemotePipelineStore {
             scope: this.scope,
             filePath: pipeline.file_path,
             displayName: pipeline.pipeline_name ?? pipeline.file_path,
-            content: yaml.dump(cloudPipelineToComponentSpec(pipeline)),
+            content,
             dirty: false,
             modifiedAt: new Date(pipeline.updated_at).getTime(),
             pipeline,
@@ -307,7 +272,7 @@ export class RemotePipelineStore {
     if (!record?.migrated) return undefined;
     if (record.deleted)
       throw new Error("This pipeline has been deleted from the server.");
-    await this.connection().catch(() => undefined);
+    await this.driver.connect().catch(() => undefined);
     return new RemotePipelineFile(this, this.folder, record);
   }
 
@@ -425,15 +390,15 @@ export class RemotePipelineStore {
       const pipelineId = (file.recovery.pipeline ?? file.summary)?.id;
       if (!pipelineId) return file.recovery.content;
       const snapshot = file.recovery;
-      const pipeline = await getCloudPipeline(
-        pipelineId,
-        await this.connection(),
+      const loaded = await this.driver.read(
+        remotePipelineReference(this.backendUrl, pipelineId),
       );
+      const pipeline = loaded.descriptor.pipeline;
       let record: RemotePipelineRecovery = {
         ...snapshot,
         pipeline,
         displayName: pipeline.pipeline_name ?? pipeline.file_path,
-        content: yaml.dump(cloudPipelineToComponentSpec(pipeline)),
+        content: loaded.content,
         modifiedAt: new Date(pipeline.updated_at).getTime(),
       };
       if (pipeline.user_id === this.account?.id)
@@ -457,19 +422,20 @@ export class RemotePipelineStore {
         return;
       }
       try {
-        const connection = await this.connection();
-        const spec = yaml.load(record.content, PIPELINE_YAML_LOAD_OPTIONS);
-        if (!isValidComponentSpec(spec))
-          throw new Error("The pipeline is not a valid component definition.");
-        const pipeline = await writeCloudPipeline(
+        const existing = record.pipeline
+          ? this.driver.describe(record.pipeline)
+          : undefined;
+        const saved = await this.driver.write(
+          existing?.storageKey ?? record.filePath,
+          record.content,
           {
-            filePath: record.filePath,
-            componentSpec: spec,
-            existingPipeline: record.pipeline,
-            sourcePipeline: record.cloneSource,
+            existing,
+            source: record.cloneSource
+              ? this.driver.describe(record.cloneSource)
+              : undefined,
           },
-          connection,
         );
+        const pipeline = saved.pipeline;
         const referenceId = remotePipelineReference(
           this.backendUrl,
           pipeline.id,
@@ -480,8 +446,7 @@ export class RemotePipelineStore {
           cloneSource: undefined,
           dirty: false,
           error: undefined,
-          displayName:
-            pipeline.pipeline_name ?? spec.name ?? record.displayName,
+          displayName: saved.displayName ?? record.displayName,
           ownerId: pipeline.user_id,
         };
         // Persist the confirmed ID before reference migration so retry never creates a new remote.
@@ -570,8 +535,10 @@ export class RemotePipelineStore {
         (await remotePipelineRecoveryDb.copies.get(file.recovery.key)) ??
         file.recovery;
       const pipeline = record.pipeline ?? file.summary;
-      if (pipeline)
-        await deleteCloudPipeline(pipeline, await this.connection());
+      if (pipeline) {
+        const descriptor = this.driver.describe(pipeline);
+        await this.driver.delete(descriptor.storageKey, descriptor);
+      }
       // Stale editors and queued retries must not recreate a deleted pipeline.
       const deleted = {
         ...record,

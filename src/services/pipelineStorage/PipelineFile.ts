@@ -114,12 +114,13 @@ export class PipelineFile {
     return withPipelineLock(this.id, async () => {
       const redirect = await this.redirect();
       if (redirect) return redirect.rename(newName);
-      await this.folder.driver.rename(this.storageKey, newName);
-      await updateEntry(this.id, { storageKey: newName });
+      const saved = await this.folder.driver.rename(this.storageKey, newName);
+      const storageKey = saved?.storageKey ?? newName;
+      await updateEntry(this.id, { storageKey });
 
       runInAction(() => {
-        this.storageKey = newName;
-        this.fileDisplayName = newName;
+        this.storageKey = storageKey;
+        this.fileDisplayName = saved?.displayName ?? newName;
       });
     });
   }
