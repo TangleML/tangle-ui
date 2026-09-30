@@ -29,6 +29,8 @@ import { SkillsLoader } from "./skills/loader";
 import type { ToolBridgeApi } from "./toolBridgeApi";
 import type { AgentContext, StatusCallback } from "./types";
 
+const REMOTE_EDITOR_MAX_TURNS = 100;
+
 interface RemoteSpawnAgentParams {
   agentId: string;
   bridge?: ToolBridgeApi;
@@ -164,6 +166,7 @@ export function createRemoteEnvWorkerApi(): RemoteEnvWorkerApi {
         const result = await run(agent, message, {
           session: hosted.memory,
           signal: controller.signal,
+          maxTurns: REMOTE_EDITOR_MAX_TURNS,
         });
 
         const answer =
