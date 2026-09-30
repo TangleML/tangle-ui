@@ -59,11 +59,10 @@ describe("AddResourceMenu", () => {
     );
   });
 
-  it("lists what cannot be added here yet as disabled rather than hiding it", async () => {
+  /** A session is started with New session, which opens one in Tangent. */
+  it("does not offer a session as something to add", async () => {
     await openMenu();
 
-    expect(
-      screen.getByRole("menuitem", { name: "Agent session" }),
-    ).toHaveAttribute("aria-disabled", "true");
+    expect(screen.queryByRole("menuitem", { name: /session/i })).toBeNull();
   });
 });

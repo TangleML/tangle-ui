@@ -57,10 +57,6 @@ export function AddResourceMenu({
             <Icon name={entityIcon("pipeline")} size="sm" />
             Pipeline
           </DropdownMenuItem>
-          <DropdownMenuItem disabled>
-            <Icon name={entityIcon("agent_session")} size="sm" />
-            Agent session
-          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
