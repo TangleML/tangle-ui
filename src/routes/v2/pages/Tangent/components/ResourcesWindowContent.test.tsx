@@ -144,12 +144,30 @@ describe("ResourcesWindowContent", () => {
     );
   });
 
-  it("leaves out a row it has no way to open", () => {
+  /** It belongs to the project, so hiding it would make the list look wrong. */
+  it("lists a row it has no way to open, without offering to open it", () => {
     given(resource("r-3", "Mystery", { type: "something_else" }));
 
     render(<ResourcesWindowContent />);
 
-    expect(screen.queryByText("Mystery")).toBeNull();
+    expect(screen.getByText("Mystery")).toBeInTheDocument();
+    expect(screen.getByTestId("open-resource-r-3")).toBeDisabled();
+  });
+
+  /** A document needs no descriptor: the row is the document. */
+  it("lists a document that recorded no descriptor", async () => {
+    given(resource("r-5", "Loose note", null));
+    const user = userEvent.setup();
+
+    render(<ResourcesWindowContent />);
+    expect(screen.getByText("Loose note")).toBeInTheDocument();
+
+    await user.click(screen.getByTestId("open-resource-r-5"));
+
+    expect(openWorkareaTarget).toHaveBeenCalledWith(
+      { type: "document", identity: "id/r-5" },
+      "Loose note",
+    );
   });
 
   it("leaves out a pipeline row whose identity is missing", () => {

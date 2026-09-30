@@ -11,10 +11,7 @@ import {
 import { PRESET_COLORS } from "@/components/ui/colorPresets";
 import type { ArgumentType, ComponentReference } from "@/models/componentSpec";
 
-import {
-  type ComponentCatalog,
-  createComponentCatalog,
-} from "../componentCatalog";
+import type { ComponentCatalog } from "../componentCatalog";
 import type { ToolBridgeApi } from "../toolBridgeApi";
 
 type JsonValue =
@@ -118,9 +115,15 @@ const EXPECTED_GRAPH_GUIDANCE =
 const positionSchema = z.object({ x: z.number(), y: z.number() });
 const sizeSchema = z.object({ width: z.number(), height: z.number() });
 
+/**
+ * The catalog is required rather than defaulted: a host that forgot to pass the
+ * session's own would get a fresh empty one, where every `componentId` misses
+ * and `add_task` answers that the component was never searched for — which
+ * reads in the log exactly like the model misusing the tool.
+ */
 export function createCsomTools(
   bridge: ToolBridgeApi,
-  catalog: ComponentCatalog = createComponentCatalog(),
+  catalog: ComponentCatalog,
 ) {
   const getPipelineState = tool({
     name: "get_pipeline_state",
@@ -222,6 +225,8 @@ export function createCsomTools(
         name: z.string().describe("Human-readable task name"),
         componentId: z
           .string()
+          .trim()
+          .min(1)
           .nullable()
           .optional()
           .describe(
@@ -292,13 +297,14 @@ export function createCsomTools(
           ),
       })
       .refine(
-        (args) => args.componentId != null || args.componentRef != null,
-        "pass componentId (from a search_components result) or componentRef (a component you are authoring) — one of the two is required",
+        (args) => (args.componentId != null) !== (args.componentRef != null),
+        "pass componentId (from a search_components result) or componentRef (a component you are authoring) — exactly one of the two",
       ),
     execute: async ({ name, componentId, componentRef, inSubgraphTaskId }) => {
-      const resolved = componentId
-        ? catalog.lookup(componentId)
-        : (dropNulls(componentRef) as ComponentReference);
+      const resolved =
+        componentId != null
+          ? catalog.lookup(componentId)
+          : (dropNulls(componentRef) as ComponentReference);
 
       if (!resolved) {
         return asJson({

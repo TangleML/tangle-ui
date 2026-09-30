@@ -6,9 +6,11 @@ import { useDialog } from "@/providers/DialogProvider/hooks/useDialog";
 import { convertCancelErrorTo } from "@/providers/DialogProvider/utils";
 import { AddResourceButton } from "@/routes/v2/pages/Tangent/components/AddResourceButton";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
+import { UNTITLED } from "@/services/projects/placeholderNames";
 import {
   describeResource,
   DOCUMENT,
+  INSTRUCTIONS,
 } from "@/services/projects/resourceDescriptor";
 import {
   conceptForDescriptorType,
@@ -51,6 +53,11 @@ const ABSENT_PIPELINE_META = {
   description: "Pipeline — not in this browser",
 };
 
+const OTHER_META = {
+  icon: "Box" as IconName,
+  description: "Not something this version can open",
+};
+
 /**
  * A document carries its own body, so it records no identity — the row is the
  * document, and the row's own id is what addresses it.
@@ -72,6 +79,9 @@ function targetOf(
  * reads browser storage; and a pipeline held in a browser that is not this one,
  * which is the ordinary case in a project someone shared. Both belong to the
  * project, so leaving them out would make the list look wrong.
+ *
+ * Instructions are the one row deliberately left out: they have a box of their
+ * own above this list, and a second way in would offer a Remove that wipes them.
  */
 function toResourceItem(
   resource: ProjectResourceSummary,
@@ -88,12 +98,32 @@ function toResourceItem(
   }
 
   const described = describeResource(resource);
-  const concept = described && conceptForDescriptorType(described.type);
-  const target =
-    described && concept
-      ? targetOf(resource, described.type, described.target)
-      : undefined;
-  if (!target || !concept) return undefined;
+  if (described?.type === INSTRUCTIONS) return undefined;
+
+  // A descriptor is not required of a document, and a document does not need
+  // one: the row is the document, so its own id addresses it either way.
+  if (!described) {
+    const meta = resourceMeta("document");
+    return resource.entity === "document"
+      ? {
+          id: resource.id,
+          name: resource.name ?? UNTITLED,
+          target: { type: "document", identity: idIdentity(resource.id) },
+          icon: meta.icon,
+          description: meta.label,
+        }
+      : { id: resource.id, name: resource.name ?? UNTITLED, ...OTHER_META };
+  }
+
+  // A descriptor naming a type this version does not know describes something
+  // real that it cannot open, so the row is listed rather than opened wrongly.
+  const concept = conceptForDescriptorType(described.type);
+  if (!concept) {
+    return { id: resource.id, name: resource.name ?? UNTITLED, ...OTHER_META };
+  }
+
+  const target = targetOf(resource, described.type, described.target);
+  if (!target) return undefined;
 
   // What the pipeline is called now, falling back to the name the row recorded
   // when it was added — which is all there is to go on once it is out of reach.
@@ -179,7 +209,8 @@ export function ResourcesWindowContent() {
 }
 
 function InstructionsRow({ projectId }: { projectId: string }) {
-  const { instructions, isSaving, save } = useProjectInstructions(projectId);
+  const { instructions, isPending, isSaving, save } =
+    useProjectInstructions(projectId);
   const { open } = useDialog();
 
   async function handleEditInstructions() {
@@ -193,13 +224,18 @@ function InstructionsRow({ projectId }: { projectId: string }) {
     save(result);
   }
 
+  // Until the document has loaded there is nothing to say it is empty, and
+  // opening it would offer an editor whose save replaces instructions the
+  // reader never saw.
+  const knownEmpty = !isPending && instructions === "";
+
   return (
     <WindowListRow
       icon="FileText"
-      title={instructions ? "Instructions" : "No instructions yet"}
-      titleSubdued={!instructions}
+      title={knownEmpty ? "No instructions yet" : "Instructions"}
+      titleSubdued={knownEmpty}
       description="Standing context for agents"
-      disabled={isSaving}
+      disabled={isPending || isSaving}
       testId="edit-instructions"
       onOpen={() => void handleEditInstructions()}
       {...tracking("projects.edit_instructions_open")}

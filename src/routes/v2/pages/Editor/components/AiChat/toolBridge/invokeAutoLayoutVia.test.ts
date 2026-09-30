@@ -4,17 +4,16 @@ import type { KeyboardStore } from "@/routes/v2/shared/store/keyboardStore";
 
 import { invokeAutoLayoutVia } from "./invokeAutoLayoutVia";
 
-function keyboardThat(
-  invokeShortcut: KeyboardStore["invokeShortcut"],
-): KeyboardStore {
-  return { invokeShortcut } as unknown as KeyboardStore;
+function keyboardThat(invokeShortcut: KeyboardStore["invokeShortcut"]) {
+  return { invokeShortcut };
 }
 
 /** The canvas owns the measured node sizes dagre needs, so it does the work. */
 const canvasThatLaysOut = () =>
-  vi.fn((_id: string, params?: Record<string, unknown>) =>
-    (params?.onLaidOut as (() => void) | undefined)?.(),
-  );
+  vi.fn((_id: string, params?: Record<string, unknown>) => {
+    const onLaidOut = params?.onLaidOut;
+    if (typeof onLaidOut === "function") onLaidOut();
+  });
 
 describe("invokeAutoLayoutVia", () => {
   it("asks the canvas to lay itself out", () => {

@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { PinProjectButton } from "@/components/Home/ProjectsSection/PinProjectButton";
+import { PinProjectButton } from "@/components/Project/PinProjectButton";
 import { RenameProjectDialog } from "@/components/Project/RenameProjectDialog";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";

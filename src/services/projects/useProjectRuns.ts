@@ -1,3 +1,4 @@
+import type { QueryClient } from "@tanstack/react-query";
 import { useQuery } from "@tanstack/react-query";
 
 import { useBackend } from "@/providers/BackendProvider";
@@ -5,12 +6,31 @@ import {
   type ExecutionStatusStats,
   isExecutionComplete,
 } from "@/utils/executionStatus";
+import { projectIdsFromAnnotations } from "@/utils/projectRunAnnotation";
 
 import { getRunExecutionStats, listProjectRuns } from "./projectRunsService";
 import { projectQueryDefaults } from "./queryDefaults";
 import { ProjectRunsQueryKeys } from "./types";
 
 const RUN_POLL_MS = 5000;
+
+/**
+ * A project's run feed is stale for five minutes and does not refetch on focus,
+ * so a run has to announce itself to the project it was started in. Both the
+ * submitter and the agent's bridge start runs, and both come through here.
+ */
+export async function invalidateProjectRunQueries(
+  queryClient: QueryClient,
+  annotations: Record<string, unknown> | null | undefined,
+) {
+  await Promise.all(
+    projectIdsFromAnnotations(annotations).map((projectId) =>
+      queryClient.invalidateQueries({
+        queryKey: ProjectRunsQueryKeys.All(projectId),
+      }),
+    ),
+  );
+}
 
 /**
  * A run with no executions yet has not started rather than finished, so it

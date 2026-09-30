@@ -58,19 +58,31 @@ describe("useMyProjects", () => {
     );
   });
 
-  it("lists every project when the user cannot be identified", async () => {
+  /**
+   * Unfiltered, the list is every project in the workspace shown as the
+   * reader's own, so an identity that does not resolve is reported rather than
+   * dropped from the query.
+   */
+  it("reports a failure when the user cannot be identified", async () => {
     vi.mocked(getUserDetails).mockResolvedValue({
       id: "Unknown",
       permissions: [],
     });
 
-    render();
+    const { result } = render();
 
-    await waitFor(() =>
-      expect(listProjects).toHaveBeenCalledWith(
-        expect.objectContaining({ createdBy: undefined }),
-      ),
-    );
+    await waitFor(() => expect(result.current.error).not.toBeNull());
+    expect(result.current.isPending).toBe(false);
+    expect(listProjects).not.toHaveBeenCalled();
+  });
+
+  it("reports a failure when the identity lookup itself fails", async () => {
+    vi.mocked(getUserDetails).mockRejectedValue(new Error("no session"));
+
+    const { result } = render();
+
+    await waitFor(() => expect(result.current.error).not.toBeNull());
+    expect(listProjects).not.toHaveBeenCalled();
   });
 
   /**

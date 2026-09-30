@@ -23,7 +23,28 @@ interface DeleteProjectAction {
 }
 
 interface DeleteProjectOptions {
-  onDeleted?: () => void;
+  navigateAfterDelete: boolean;
+}
+
+function describeWhatIsDestroyed(
+  named: Record<string, number>,
+  namedTotal: number,
+  unnamed: number,
+) {
+  if (namedTotal === 0 && unnamed === 0) {
+    return "This project is empty.";
+  }
+
+  const others = `${unnamed} other ${unnamed === 1 ? "item" : "items"}`;
+
+  if (namedTotal === 0) {
+    return `This will also delete ${others}.`;
+  }
+
+  const listed = formatResourceCounts(named);
+  return unnamed === 0
+    ? `This will also delete ${listed}.`
+    : `This will also delete ${listed} and ${others}.`;
 }
 
 /**
@@ -32,12 +53,12 @@ interface DeleteProjectOptions {
  * The caller renders `<ConfirmationDialog {...confirmation} />` where its
  * layout suits.
  *
- * A page showing the deleted project has to leave, which is the default; a
- * grid that merely loses a tile passes `onDeleted` and stays.
+ * A page showing the deleted project has to leave; a grid that merely loses a
+ * tile stays, so every caller says which it is.
  */
 export function useDeleteProjectAction(
   project: ProjectSummary,
-  { onDeleted }: DeleteProjectOptions = {},
+  { navigateAfterDelete }: DeleteProjectOptions,
 ): DeleteProjectAction {
   const navigate = useNavigate();
   const notify = useToastNotification();
@@ -47,11 +68,11 @@ export function useDeleteProjectAction(
     useConfirmationDialog();
 
   const tangentEnabled = useTangentEnabled();
-  const resourceCounts = visibleResourceCounts(
-    project.resourceCounts,
-    tangentEnabled,
-  );
-  const resourceTotal = totalResourceCount(resourceCounts);
+  const named = visibleResourceCounts(project.resourceCounts, tangentEnabled);
+  const namedTotal = totalResourceCount(named);
+  // Everything is destroyed, including the kinds this reader cannot see, so the
+  // warning counts all of them and names only the ones it can.
+  const unnamed = totalResourceCount(project.resourceCounts) - namedTotal;
 
   const confirmAndDelete = async () => {
     const confirmed = await triggerDialog({
@@ -60,9 +81,7 @@ export function useDeleteProjectAction(
         "This permanently deletes the project and everything in it. This action cannot be undone.",
       content: (
         <Text tone="subdued">
-          {resourceTotal === 0
-            ? "This project is empty."
-            : `This will also delete ${formatResourceCounts(resourceCounts)}.`}
+          {describeWhatIsDestroyed(named, namedTotal, unnamed)}
         </Text>
       ),
     });
@@ -80,11 +99,9 @@ export function useDeleteProjectAction(
             : `Project deleted along with ${result.deletedResourceTotal} resources`,
           "success",
         );
-        if (onDeleted) {
-          onDeleted();
-          return;
+        if (navigateAfterDelete) {
+          void navigate({ to: APP_ROUTES.PROJECTS });
         }
-        void navigate({ to: APP_ROUTES.PROJECTS });
       },
     });
   };

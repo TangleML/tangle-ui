@@ -5,13 +5,10 @@ import { useAwaitAuthorization } from "@/components/shared/Authentication/useAwa
 import { useBackend } from "@/providers/BackendProvider";
 import { ONBOARDING_MY_RUN_COUNT_KEY } from "@/providers/OnboardingProvider/onboardingQueryKeys";
 import { useRunSubmissionAnnotations } from "@/providers/RunSubmissionScopeProvider";
-import { ProjectRunsQueryKeys } from "@/services/projects/types";
+import { invalidateProjectRunQueries } from "@/services/projects/useProjectRuns";
 import type { PipelineRun } from "@/types/pipelineRun";
 import type { ArgumentType, ComponentSpec } from "@/utils/componentSpec";
-import {
-  projectIdsFromAnnotations,
-  projectRunAnnotations,
-} from "@/utils/projectRunAnnotation";
+import { projectRunAnnotations } from "@/utils/projectRunAnnotation";
 import { submitPipelineRun } from "@/utils/submitPipeline";
 
 import { isAuthorizationRequired } from "../../Authentication/helpers";
@@ -81,15 +78,10 @@ export function useSubmitPipeline() {
       await queryClient.invalidateQueries({
         queryKey: ONBOARDING_MY_RUN_COUNT_KEY,
       });
-      // A project's run feed is otherwise stale for five minutes, so a run
-      // started from the project page would not show up on it.
-      for (const projectId of projectIdsFromAnnotations(
+      await invalidateProjectRunQueries(
+        queryClient,
         annotationsFor(projectIds),
-      )) {
-        await queryClient.invalidateQueries({
-          queryKey: ProjectRunsQueryKeys.All(projectId),
-        });
-      }
+      );
     },
   });
 }

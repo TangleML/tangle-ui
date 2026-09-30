@@ -29,7 +29,8 @@ export function AddPipelineDialog({
   onOpenChange,
 }: AddPipelineDialogProps) {
   const { data: names, isPending, error } = useLocalPipelineNames();
-  const createResource = useCreateProjectResource(projectId);
+  const { mutate: createResource, isPending: isCreating } =
+    useCreateProjectResource(projectId);
   const notify = useToastNotification();
   const { track } = useAnalytics();
 
@@ -72,7 +73,7 @@ export function AddPipelineDialog({
       return;
     }
 
-    createResource.mutate(input, {
+    createResource(input, {
       onSuccess: () => {
         track("projects.add_pipeline_completed");
         notify("Pipeline added", "success");
@@ -90,7 +91,7 @@ export function AddPipelineDialog({
       items={items}
       error={error}
       isPending={isPending}
-      isAdding={createResource.isPending}
+      isAdding={isCreating}
       emptyTitle="No pipelines in this browser"
       emptyDescription="Build a pipeline in the editor and it will show up here."
       selectTracking="projects.add_pipeline_select"

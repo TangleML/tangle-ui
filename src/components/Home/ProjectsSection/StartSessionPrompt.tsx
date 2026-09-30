@@ -174,7 +174,12 @@ export function StartSessionPrompt() {
 
           <Select
             value={thinkingDepth}
-            onValueChange={(value) => setThinkingDepth(value as ThinkingLevel)}
+            onValueChange={(value) => {
+              const level = THINKING_LEVELS.find(
+                (candidate) => candidate === value,
+              );
+              if (level) setThinkingDepth(level);
+            }}
             disabled={isBusy}
           >
             <SelectTrigger aria-label="Thinking" className="h-8 w-auto text-xs">

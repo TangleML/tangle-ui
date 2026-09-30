@@ -1,5 +1,4 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useCallback } from "react";
 
 import { isProjectsEnabled } from "@/components/shared/Settings/useFlags";
 import { useBackend } from "@/providers/BackendProvider";
@@ -16,17 +15,14 @@ export function useRerunProjectIds() {
   const queryClient = useQueryClient();
   const { backendUrl } = useBackend();
 
-  return useCallback(
-    async (runId: string | number | null | undefined): Promise<string[]> => {
-      if (runId == null || !isProjectsEnabled()) {
-        return [];
-      }
+  return async (runId: string | number | null | undefined) => {
+    if (runId == null || !isProjectsEnabled()) {
+      return [];
+    }
 
-      const annotations = await queryClient.fetchQuery(
-        runAnnotationsQueryOptions(runId, backendUrl),
-      );
-      return projectIdsFromAnnotations(annotations);
-    },
-    [backendUrl, queryClient],
-  );
+    const annotations = await queryClient.fetchQuery(
+      runAnnotationsQueryOptions(runId, backendUrl),
+    );
+    return projectIdsFromAnnotations(annotations);
+  };
 }

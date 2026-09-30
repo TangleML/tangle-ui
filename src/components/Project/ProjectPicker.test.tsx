@@ -70,7 +70,11 @@ function given({
     setProjectId,
     dismiss: vi.fn(),
   });
-  vi.mocked(usePipelineProjects).mockReturnValue({ memberships, isPending });
+  vi.mocked(usePipelineProjects).mockReturnValue({
+    memberships,
+    isPending,
+    error: null,
+  });
 }
 
 const open = async () => {

@@ -25,8 +25,10 @@ export function ProjectActions({
   showRename = true,
 }: ProjectActionsProps) {
   const [renameOpen, setRenameOpen] = useState(false);
-  const { confirmAndDelete, isDeleting, confirmation } =
-    useDeleteProjectAction(project);
+  const { confirmAndDelete, isDeleting, confirmation } = useDeleteProjectAction(
+    project,
+    { navigateAfterDelete: true },
+  );
   const share = useShareProjectAction(project.id);
 
   return (

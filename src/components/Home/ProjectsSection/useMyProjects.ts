@@ -29,8 +29,17 @@ interface MyProjects {
  */
 export function useMyProjects(): MyProjects {
   const { configured, available } = useBackend();
-  const { data: user, isPending: isUserPending } = useQuery(userQueryOptions);
-  const createdBy = user?.id === UNRESOLVED_USER_ID ? undefined : user?.id;
+  const {
+    data: user,
+    isPending: isUserPending,
+    error: userError,
+  } = useQuery(userQueryOptions);
+
+  // Asking without one would list every project in the workspace as though
+  // they were the reader's own, so an unresolved identity is a failure to
+  // report rather than a filter to drop.
+  const createdBy = user && user.id !== UNRESOLVED_USER_ID ? user.id : undefined;
+  const identityFailed = !isUserPending && createdBy === undefined;
 
   const {
     data,
@@ -45,19 +54,21 @@ export function useMyProjects(): MyProjects {
       listProjects({ createdBy, pageSize: PAGE_SIZE, pageToken: pageParam }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (page) => page.nextPageToken ?? undefined,
-    // Asking before the user resolves would fetch everyone's projects first
-    // and the caller's a moment later, under two different cache keys.
-    enabled: configured && available && !isUserPending,
+    enabled: configured && available && createdBy !== undefined,
     staleTime: 5 * MINUTES,
     refetchOnWindowFocus: false,
   });
+
+  const identityError = identityFailed
+    ? (userError ?? new Error("Could not tell who you are signed in as."))
+    : null;
 
   return {
     projects: data?.pages.flatMap((page) => page.items) ?? [],
     createdBy,
     totalCount: data?.pages[0]?.totalCount ?? 0,
-    isPending: isUserPending || isPending,
-    error,
+    isPending: isUserPending || (!identityFailed && isPending),
+    error: identityError ?? error,
     hasMore: hasNextPage,
     isLoadingMore: isFetchingNextPage,
     loadMore: () => void fetchNextPage(),

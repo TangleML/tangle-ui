@@ -37,14 +37,13 @@ import {
   fetchExecutionState,
   fetchPipelineRun,
 } from "@/services/executionService";
-import { ProjectRunsQueryKeys } from "@/services/projects/types";
+import { invalidateProjectRunQueries } from "@/services/projects/useProjectRuns";
 import type { PipelineRun } from "@/types/pipelineRun";
 import { TANGENT_UI_RUN_SOURCE } from "@/utils/annotationKeys";
 import {
   flattenExecutionStatusStats,
   getOverallExecutionStatusFromStats,
 } from "@/utils/executionStatus";
-import { projectIdsFromAnnotations } from "@/utils/projectRunAnnotation";
 import { submitPipelineRun as submitPipelineRunHelper } from "@/utils/submitPipeline";
 
 import type { BridgeDeps } from "./utils";
@@ -100,13 +99,8 @@ export function createRunBridgeHandlers(deps: BridgeDeps): RunHandlers {
       deps.queryClient?.invalidateQueries({
         queryKey: ONBOARDING_MY_RUN_COUNT_KEY,
       });
-      // A project's run feed is otherwise stale for five minutes and does not
-      // refetch on focus, so a run the agent started would not show up on the
-      // project it was started in.
-      for (const projectId of projectIdsFromAnnotations(runAnnotations)) {
-        deps.queryClient?.invalidateQueries({
-          queryKey: ProjectRunsQueryKeys.All(projectId),
-        });
+      if (deps.queryClient) {
+        void invalidateProjectRunQueries(deps.queryClient, runAnnotations);
       }
       return {
         success: true,

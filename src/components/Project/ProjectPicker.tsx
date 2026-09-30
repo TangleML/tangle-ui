@@ -37,7 +37,7 @@ export function ProjectPicker({ pipelineName }: ProjectPickerProps) {
     useRunProjectContext();
   const [open, setOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
-  const { memberships, isPending } = usePipelineProjects(pipelineName, {
+  const { memberships, isPending, error } = usePipelineProjects(pipelineName, {
     enabled: open,
   });
   const removeResource = useDeleteProjectResource(projectId ?? "");
@@ -129,6 +129,15 @@ export function ProjectPicker({ pipelineName }: ProjectPickerProps) {
               <Spinner />
               <Text size="xs" tone="subdued">
                 Looking for projects...
+              </Text>
+            </InlineStack>
+          )}
+
+          {error && (
+            <InlineStack gap="2" blockAlign="center" className="px-2 py-1.5">
+              <Icon name="CircleAlert" size="xs" aria-hidden="true" />
+              <Text size="xs" tone="critical">
+                {`Could not look up this pipeline's projects.`}
               </Text>
             </InlineStack>
           )}

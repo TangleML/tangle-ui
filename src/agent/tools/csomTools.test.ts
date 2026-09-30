@@ -82,7 +82,10 @@ function hasAllOf(schema: JsonSchemaNode | undefined): boolean {
 
 describe("createCsomTools", () => {
   it("exposes the full 30-tool surface", () => {
-    const { allTools } = createCsomTools(makeBridge());
+    const { allTools } = createCsomTools(
+      makeBridge(),
+      createComponentCatalog(),
+    );
     const names = allTools.map((t) => t.name).sort();
     expect(names).toEqual(
       [
@@ -128,7 +131,10 @@ describe("createCsomTools", () => {
       tasks: [],
       bindings: [],
     });
-    const { allTools } = createCsomTools(makeBridge({ getPipelineState }));
+    const { allTools } = createCsomTools(
+      makeBridge({ getPipelineState }),
+      createComponentCatalog(),
+    );
 
     const result = await invoke(findTool(allTools, "get_pipeline_state"), {});
     expect(result).toEqual({
@@ -147,7 +153,10 @@ describe("createCsomTools", () => {
       issueCount: 0,
       issues: [],
     });
-    const { allTools } = createCsomTools(makeBridge({ validatePipeline }));
+    const { allTools } = createCsomTools(
+      makeBridge({ validatePipeline }),
+      createComponentCatalog(),
+    );
 
     const result = await invoke(findTool(allTools, "validate_pipeline"), {});
     expect(result).toEqual({ valid: true, issueCount: 0, issues: [] });
@@ -159,7 +168,10 @@ describe("createCsomTools", () => {
       taskId: "task_42",
       name: "Loader",
     });
-    const { allTools } = createCsomTools(makeBridge({ addTask }));
+    const { allTools } = createCsomTools(
+      makeBridge({ addTask }),
+      createComponentCatalog(),
+    );
 
     await invoke(findTool(allTools, "add_task"), {
       name: "Loader",
@@ -236,7 +248,10 @@ describe("createCsomTools", () => {
 
   it("add_task needs either an id or a component to author", async () => {
     const addTask = vi.fn();
-    const { allTools } = createCsomTools(makeBridge({ addTask }));
+    const { allTools } = createCsomTools(
+      makeBridge({ addTask }),
+      createComponentCatalog(),
+    );
 
     await invoke(findTool(allTools, "add_task"), { name: "Filter" }).catch(
       () => undefined,
@@ -247,7 +262,10 @@ describe("createCsomTools", () => {
 
   it("add_task refuses a component with nothing that runs it", async () => {
     const addTask = vi.fn();
-    const { allTools } = createCsomTools(makeBridge({ addTask }));
+    const { allTools } = createCsomTools(
+      makeBridge({ addTask }),
+      createComponentCatalog(),
+    );
 
     await invoke(findTool(allTools, "add_task"), {
       name: "greet",
@@ -270,7 +288,10 @@ describe("createCsomTools", () => {
     // Regression guard for OpenAI structured-outputs strict mode: every
     // `anyOf` branch must declare a concrete `type` (or `$ref`), or tool
     // registration fails before the model even runs.
-    const { allTools } = createCsomTools(makeBridge());
+    const { allTools } = createCsomTools(
+      makeBridge(),
+      createComponentCatalog(),
+    );
     const addTaskTool = findTool(allTools, "add_task");
 
     const implementationAnyOf = getImplementationAnyOf(
@@ -296,7 +317,10 @@ describe("createCsomTools", () => {
    * has to fill must be a named property.
    */
   it("add_task implementation keys survive strict mode", () => {
-    const { allTools } = createCsomTools(makeBridge());
+    const { allTools } = createCsomTools(
+      makeBridge(),
+      createComponentCatalog(),
+    );
     const addTaskTool = findTool(allTools, "add_task");
 
     const objectBranch = getImplementationAnyOf(
@@ -313,7 +337,10 @@ describe("createCsomTools", () => {
     // Both args are strings — TypeScript can't catch a swap, so this
     // pin is the only guard against a regression.
     const renameTask = vi.fn().mockResolvedValue({ success: true });
-    const { allTools } = createCsomTools(makeBridge({ renameTask }));
+    const { allTools } = createCsomTools(
+      makeBridge({ renameTask }),
+      createComponentCatalog(),
+    );
 
     await invoke(findTool(allTools, "rename_task"), {
       entityId: "task_1",
@@ -324,7 +351,10 @@ describe("createCsomTools", () => {
 
   it("rename_input forwards (entityId, newName) in the right order", async () => {
     const renameInput = vi.fn().mockResolvedValue({ success: true });
-    const { allTools } = createCsomTools(makeBridge({ renameInput }));
+    const { allTools } = createCsomTools(
+      makeBridge({ renameInput }),
+      createComponentCatalog(),
+    );
 
     await invoke(findTool(allTools, "rename_input"), {
       entityId: "input_1",
@@ -335,7 +365,10 @@ describe("createCsomTools", () => {
 
   it("rename_output forwards (entityId, newName) in the right order", async () => {
     const renameOutput = vi.fn().mockResolvedValue({ success: true });
-    const { allTools } = createCsomTools(makeBridge({ renameOutput }));
+    const { allTools } = createCsomTools(
+      makeBridge({ renameOutput }),
+      createComponentCatalog(),
+    );
 
     await invoke(findTool(allTools, "rename_output"), {
       entityId: "output_1",
@@ -347,7 +380,10 @@ describe("createCsomTools", () => {
   it("set_task_argument forwards (taskEntityId, inputName, value) in the right order", async () => {
     // Three string positional args — TypeScript can't catch a swap.
     const setTaskArgument = vi.fn().mockResolvedValue({ success: true });
-    const { allTools } = createCsomTools(makeBridge({ setTaskArgument }));
+    const { allTools } = createCsomTools(
+      makeBridge({ setTaskArgument }),
+      createComponentCatalog(),
+    );
 
     await invoke(findTool(allTools, "set_task_argument"), {
       taskEntityId: "task_1",
@@ -359,7 +395,10 @@ describe("createCsomTools", () => {
 
   it("set_task_argument accepts graph input and task output argument objects", async () => {
     const setTaskArgument = vi.fn().mockResolvedValue({ success: true });
-    const { allTools } = createCsomTools(makeBridge({ setTaskArgument }));
+    const { allTools } = createCsomTools(
+      makeBridge({ setTaskArgument }),
+      createComponentCatalog(),
+    );
 
     await invoke(findTool(allTools, "set_task_argument"), {
       taskEntityId: "task_1",
@@ -381,7 +420,10 @@ describe("createCsomTools", () => {
   });
 
   it("set_task_argument schema avoids recursive allOf shapes rejected by Responses", () => {
-    const { allTools } = createCsomTools(makeBridge());
+    const { allTools } = createCsomTools(
+      makeBridge(),
+      createComponentCatalog(),
+    );
     const setTaskArgumentTool = findTool(allTools, "set_task_argument");
     const valueSchema = (setTaskArgumentTool.parameters as JsonSchemaNode)
       .properties?.value;
@@ -401,7 +443,10 @@ describe("createCsomTools", () => {
       inputId: "input_42",
       name: "threshold",
     });
-    const { allTools } = createCsomTools(makeBridge({ addInput }));
+    const { allTools } = createCsomTools(
+      makeBridge({ addInput }),
+      createComponentCatalog(),
+    );
 
     await invoke(findTool(allTools, "add_input"), {
       name: "threshold",
@@ -424,7 +469,10 @@ describe("createCsomTools", () => {
     const addStickyNote = vi
       .fn()
       .mockResolvedValue({ success: true, stickyNoteId: "flex_1" });
-    const { allTools } = createCsomTools(makeBridge({ addStickyNote }));
+    const { allTools } = createCsomTools(
+      makeBridge({ addStickyNote }),
+      createComponentCatalog(),
+    );
 
     await invoke(findTool(allTools, "add_sticky_note"), {
       title: "Careful",
@@ -451,7 +499,10 @@ describe("createCsomTools", () => {
 
   it("update_sticky_note forwards (noteId, updates) in the right order", async () => {
     const updateStickyNote = vi.fn().mockResolvedValue({ success: true });
-    const { allTools } = createCsomTools(makeBridge({ updateStickyNote }));
+    const { allTools } = createCsomTools(
+      makeBridge({ updateStickyNote }),
+      createComponentCatalog(),
+    );
 
     await invoke(findTool(allTools, "update_sticky_note"), {
       noteId: "flex_1",
@@ -467,7 +518,10 @@ describe("createCsomTools", () => {
 
   it("set_task_color forwards (taskEntityIds, color) in the right order", async () => {
     const setTaskColor = vi.fn().mockResolvedValue({ success: true });
-    const { allTools } = createCsomTools(makeBridge({ setTaskColor }));
+    const { allTools } = createCsomTools(
+      makeBridge({ setTaskColor }),
+      createComponentCatalog(),
+    );
 
     await invoke(findTool(allTools, "set_task_color"), {
       taskEntityIds: ["task_1", "task_2"],
@@ -479,7 +533,10 @@ describe("createCsomTools", () => {
 
   it("update_input keeps an explicit empty string as a clear instruction", async () => {
     const updateInput = vi.fn().mockResolvedValue({ success: true });
-    const { allTools } = createCsomTools(makeBridge({ updateInput }));
+    const { allTools } = createCsomTools(
+      makeBridge({ updateInput }),
+      createComponentCatalog(),
+    );
 
     await invoke(findTool(allTools, "update_input"), {
       entityId: "input_1",
@@ -499,7 +556,10 @@ describe("createCsomTools", () => {
 
   it("update_output forwards (entityId, updates) in the right order", async () => {
     const updateOutput = vi.fn().mockResolvedValue({ success: true });
-    const { allTools } = createCsomTools(makeBridge({ updateOutput }));
+    const { allTools } = createCsomTools(
+      makeBridge({ updateOutput }),
+      createComponentCatalog(),
+    );
 
     await invoke(findTool(allTools, "update_output"), {
       entityId: "output_1",
@@ -515,7 +575,10 @@ describe("createCsomTools", () => {
 
   it("move_node forwards (entityId, position) in the right order", async () => {
     const moveNode = vi.fn().mockResolvedValue({ success: true });
-    const { allTools } = createCsomTools(makeBridge({ moveNode }));
+    const { allTools } = createCsomTools(
+      makeBridge({ moveNode }),
+      createComponentCatalog(),
+    );
 
     await invoke(findTool(allTools, "move_node"), {
       entityId: "task_1",
@@ -527,7 +590,10 @@ describe("createCsomTools", () => {
 
   it("auto_layout normalizes a null algorithm to undefined", async () => {
     const autoLayout = vi.fn().mockResolvedValue({ success: true });
-    const { allTools } = createCsomTools(makeBridge({ autoLayout }));
+    const { allTools } = createCsomTools(
+      makeBridge({ autoLayout }),
+      createComponentCatalog(),
+    );
 
     await invoke(findTool(allTools, "auto_layout"), { algorithm: null });
 
@@ -536,7 +602,10 @@ describe("createCsomTools", () => {
 
   it("delete_sticky_note forwards the note id", async () => {
     const deleteStickyNote = vi.fn().mockResolvedValue({ success: true });
-    const { allTools } = createCsomTools(makeBridge({ deleteStickyNote }));
+    const { allTools } = createCsomTools(
+      makeBridge({ deleteStickyNote }),
+      createComponentCatalog(),
+    );
 
     await invoke(findTool(allTools, "delete_sticky_note"), {
       noteId: "flex_1",
@@ -551,7 +620,10 @@ describe("createCsomTools", () => {
       outputId: "output_42",
       name: "metrics",
     });
-    const { allTools } = createCsomTools(makeBridge({ addOutput }));
+    const { allTools } = createCsomTools(
+      makeBridge({ addOutput }),
+      createComponentCatalog(),
+    );
 
     await invoke(findTool(allTools, "add_output"), {
       name: "metrics",
