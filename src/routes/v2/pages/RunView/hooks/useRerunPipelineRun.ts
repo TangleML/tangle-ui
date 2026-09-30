@@ -5,17 +5,18 @@ import { isAuthorizationRequired } from "@/components/shared/Authentication/help
 import { useAuthLocalStorage } from "@/components/shared/Authentication/useAuthLocalStorage";
 import { useAwaitAuthorization } from "@/components/shared/Authentication/useAwaitAuthorization";
 import { buildTaskSpecShape } from "@/components/shared/PipelineRunNameTemplate/types";
+import { useRerunProjectIds } from "@/hooks/useRerunProjectIds";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
 import { useRunSubmissionAnnotations } from "@/providers/RunSubmissionScopeProvider";
 import { APP_ROUTES } from "@/routes/router";
-import { fetchRunAnnotations } from "@/services/pipelineRunService";
+import { runAnnotationsQueryOptions } from "@/services/runAnnotations";
 import type { PipelineRun } from "@/types/pipelineRun";
 import { extractCanonicalName } from "@/utils/canonicalPipelineName";
 import type { ArgumentType, ComponentSpec } from "@/utils/componentSpec";
-import { TWENTY_FOUR_HOURS_IN_MS } from "@/utils/constants";
 import { getRunSourcePipelineId } from "@/utils/pipelineRunSource";
+import { projectRunAnnotations } from "@/utils/projectRunAnnotation";
 import { REMOTE_PIPELINES_ENABLED } from "@/utils/remotePipelines";
 import { submitPipelineRun } from "@/utils/submitPipeline";
 
@@ -34,6 +35,7 @@ export function useRerunPipelineRun(componentSpec?: ComponentSpec) {
   const { rootDetails, metadata, runId: executionRunId } = useExecutionData();
   const queryClient = useQueryClient();
   const runAnnotations = useRunSubmissionAnnotations();
+  const rerunProjectIds = useRerunProjectIds();
 
   const getAuthToken = async (): Promise<string | undefined> => {
     if (isAuthorizationRequired() && !isAuthorized) {
@@ -52,23 +54,24 @@ export function useRerunPipelineRun(componentSpec?: ComponentSpec) {
       taskArguments,
     }: RerunVariables) => {
       const authorizationToken = await getAuthToken();
-      const runId = REMOTE_PIPELINES_ENABLED
-        ? (metadata?.id ?? executionRunId)
-        : undefined;
-      const sourceRunAnnotations = runId
-        ? await queryClient.fetchQuery({
-            queryKey: ["pipeline-run-annotations", backendUrl, runId],
-            queryFn: () => fetchRunAnnotations(runId, backendUrl),
-            staleTime: TWENTY_FOUR_HOURS_IN_MS,
-          })
-        : undefined;
+      const originalRunId = metadata?.id ?? executionRunId;
+      const projectIds = await rerunProjectIds(originalRunId);
+      const sourceRunAnnotations =
+        REMOTE_PIPELINES_ENABLED && originalRunId != null
+          ? await queryClient.fetchQuery(
+              runAnnotationsQueryOptions(originalRunId, backendUrl),
+            )
+          : undefined;
       return new Promise<PipelineRun>((resolve, reject) => {
         submitPipelineRun(componentSpec, backendUrl, {
           sourcePipelineId: getRunSourcePipelineId(sourceRunAnnotations),
           canonicalName,
           taskArguments,
           authorizationToken,
-          runAnnotations,
+          runAnnotations: {
+            ...runAnnotations,
+            ...projectRunAnnotations(projectIds),
+          },
           onSuccess: resolve,
           onError: reject,
         });

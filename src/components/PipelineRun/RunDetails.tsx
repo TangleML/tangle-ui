@@ -17,7 +17,7 @@ import { useBackend } from "@/providers/BackendProvider";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
 import { getDefaultEditorPath } from "@/routes/editorRoutes";
-import { fetchRunAnnotations } from "@/services/pipelineRunService";
+import { runAnnotationsQueryOptions } from "@/services/runAnnotations";
 import {
   getAnnotationValue,
   getPipelineTagsFromSpec,
@@ -25,7 +25,6 @@ import {
   RUN_SOURCE_ANNOTATION,
   SYSTEM_ANNOTATIONS,
 } from "@/utils/annotations";
-import { TWENTY_FOUR_HOURS_IN_MS } from "@/utils/constants";
 import {
   flattenExecutionStatusStats,
   getExecutionStatusLabel,
@@ -54,11 +53,7 @@ export const RunDetails = () => {
 
   const runId = metadata?.id;
   const { data: runAnnotations } = useQuery({
-    queryKey: ["pipeline-run-annotations", backendUrl, runId],
-    queryFn: () => fetchRunAnnotations(runId!, backendUrl),
-    enabled: !!runId,
-    refetchOnWindowFocus: false,
-    staleTime: TWENTY_FOUR_HOURS_IN_MS,
+    ...runAnnotationsQueryOptions(runId, backendUrl),
   });
   const runSource = getAnnotationValue(runAnnotations, RUN_SOURCE_ANNOTATION);
   const sourcePipelineId = REMOTE_PIPELINES_ENABLED

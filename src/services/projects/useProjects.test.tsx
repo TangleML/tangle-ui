@@ -11,6 +11,7 @@ vi.mock("@/providers/BackendProvider", () => ({
   useBackend: () => backend,
 }));
 
+import { ProjectsApiError } from "./errors";
 import * as projectsService from "./projectsService";
 import type { Project, ProjectPage, Workspace } from "./types";
 import {
@@ -56,6 +57,15 @@ function makeClient() {
   return new QueryClient({
     defaultOptions: {
       queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
+}
+
+function makeImpatientClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: { retryDelay: 0 },
       mutations: { retry: false },
     },
   });
@@ -141,6 +151,45 @@ describe("project query hooks", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual(project);
+  });
+
+  it("useProject takes a 404 as the answer and does not ask again", async () => {
+    vi.mocked(projectsService.getProject).mockRejectedValue(
+      new ProjectsApiError("not found", 404),
+    );
+
+    const { result } = renderHook(() => useProject("missing"), {
+      wrapper: wrapperFor(makeImpatientClient()),
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(projectsService.getProject).toHaveBeenCalledTimes(1);
+  });
+
+  it("useProject asks again when the backend merely faltered", async () => {
+    vi.mocked(projectsService.getProject).mockRejectedValue(
+      new ProjectsApiError("gateway", 502),
+    );
+
+    const { result } = renderHook(() => useProject("p1"), {
+      wrapper: wrapperFor(makeImpatientClient()),
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(projectsService.getProject).toHaveBeenCalledTimes(4);
+  });
+
+  it("useProjects takes a refused list as the answer", async () => {
+    vi.mocked(projectsService.listProjects).mockRejectedValue(
+      new ProjectsApiError("forbidden", 403),
+    );
+
+    const { result } = renderHook(() => useProjects(), {
+      wrapper: wrapperFor(makeImpatientClient()),
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(projectsService.listProjects).toHaveBeenCalledTimes(1);
   });
 });
 

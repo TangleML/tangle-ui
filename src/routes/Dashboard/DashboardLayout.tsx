@@ -50,6 +50,12 @@ const COMPONENT_SEARCH_ITEM: SidebarItem = {
   icon: "PackageSearch",
 };
 
+const PROJECTS_ITEM: SidebarItem = {
+  to: APP_ROUTES.PROJECTS,
+  label: "Projects",
+  icon: "FolderKanban",
+};
+
 const navItemClass = (isActive: boolean) =>
   cn(
     "w-full px-3 py-2 rounded-md text-sm cursor-pointer hover:bg-accent",
@@ -59,16 +65,23 @@ const navItemClass = (isActive: boolean) =>
 export function DashboardLayout() {
   const requiresAuthorization = isAuthorizationRequired();
   const isComponentSearchEnabled = useFlagValue("component-search-v2");
+  const isProjectsEnabled = useFlagValue("projects");
 
   const { shouldShowOnboarding } = useOnboarding();
 
-  const baseItems = isComponentSearchEnabled
+  const componentItems = isComponentSearchEnabled
     ? BASE_SIDEBAR_ITEMS.map((item) =>
         item.to === APP_ROUTES.DASHBOARD_COMPONENTS
           ? COMPONENT_SEARCH_ITEM
           : item,
       )
     : BASE_SIDEBAR_ITEMS;
+
+  const baseItems = isProjectsEnabled
+    ? componentItems.flatMap((item) =>
+        item.to === APP_ROUTES.DASHBOARD_RUNS ? [item, PROJECTS_ITEM] : [item],
+      )
+    : componentItems;
 
   const sidebarItems: SidebarItem[] = shouldShowOnboarding
     ? [

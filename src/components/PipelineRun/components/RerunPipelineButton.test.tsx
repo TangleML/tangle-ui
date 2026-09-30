@@ -32,6 +32,7 @@ const {
   mockFetch,
   mockUseExecutionDataOptional,
   mockFetchRunAnnotations,
+  projects,
   remotePipelines,
 } = vi.hoisted(() => ({
   navigateMock: vi.fn(),
@@ -44,6 +45,7 @@ const {
   mockFetch: vi.fn(),
   mockUseExecutionDataOptional: vi.fn(),
   mockFetchRunAnnotations: vi.fn(),
+  projects: { enabled: false },
   remotePipelines: { enabled: true },
 }));
 
@@ -95,6 +97,21 @@ vi.mock("@/providers/ExecutionDataProvider", () => ({
 vi.mock("@/services/pipelineRunService", () => ({
   fetchRunAnnotations: mockFetchRunAnnotations,
 }));
+
+vi.mock("@/components/shared/Settings/useFlags", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("@/components/shared/Settings/useFlags")
+    >();
+
+  return {
+    ...actual,
+    isFlagEnabled: (flagName: Parameters<typeof actual.isFlagEnabled>[0]) =>
+      flagName === "projects"
+        ? projects.enabled
+        : actual.isFlagEnabled(flagName),
+  };
+});
 
 vi.mock("@/utils/remotePipelines", () => ({
   get REMOTE_PIPELINES_ENABLED() {
@@ -156,6 +173,7 @@ describe("<RerunPipelineButton/>", () => {
     mockAwaitAuthorization.mockClear();
     mockUseExecutionDataOptional.mockReturnValue(undefined);
     mockFetchRunAnnotations.mockResolvedValue({});
+    projects.enabled = false;
     remotePipelines.enabled = true;
   });
 
@@ -461,6 +479,42 @@ describe("<RerunPipelineButton/>", () => {
     });
   });
 
+  test("preserves source and project attribution from an explicit run ID without execution context", async () => {
+    const sourcePipelineId = "550e8400-e29b-41d4-a716-446655440000";
+    projects.enabled = true;
+    mockFetchRunAnnotations.mockResolvedValue({
+      [SOURCE_PIPELINE_ID_ANNOTATION]: sourcePipelineId,
+      [buildProjectRunAnnotationKey("previous-project")]: "true",
+    });
+    mockSubmitPipelineRun.mockImplementation((_spec, _backend, { onSuccess }) =>
+      onSuccess({ id: "rerun-1" }),
+    );
+
+    renderWithProviders(
+      <RunSubmissionScopeProvider projectId="current-project">
+        <RerunPipelineButton
+          componentSpec={componentSpec}
+          runId="explicit-run"
+        />
+      </RunSubmissionScopeProvider>,
+    );
+
+    fireEvent.click(screen.getByTestId("rerun-pipeline-button"));
+
+    await waitFor(() => expect(mockSubmitPipelineRun).toHaveBeenCalled());
+    expect(mockSubmitPipelineRun.mock.calls[0][2]).toMatchObject({
+      sourcePipelineId,
+      runAnnotations: {
+        [buildProjectRunAnnotationKey("previous-project")]: "true",
+        [buildProjectRunAnnotationKey("current-project")]: "true",
+      },
+    });
+    expect(mockFetchRunAnnotations).toHaveBeenCalledExactlyOnceWith(
+      "explicit-run",
+      "https://backend.example.com",
+    );
+  });
+
   describe.each(["V1", "V2"])("%s source association", (version) => {
     const backendUrl = "https://backend.example.com";
     const sourcePipelineId = "550e8400-e29b-41d4-a716-446655440000";
@@ -491,7 +545,7 @@ describe("<RerunPipelineButton/>", () => {
     });
 
     test.each([true, false])(
-      "retains the active project scope with remote pipelines enabled: %s",
+      "retains the active scope with projects disabled and remote pipelines enabled: %s",
       async (enabled) => {
         remotePipelines.enabled = enabled;
         mockFetchRunAnnotations.mockResolvedValue({
@@ -512,6 +566,34 @@ describe("<RerunPipelineButton/>", () => {
         expect(
           mockSubmitPipelineRun.mock.calls[0][2].runAnnotations,
         ).not.toHaveProperty(buildProjectRunAnnotationKey("previous-project"));
+      },
+    );
+
+    test.each([true, false])(
+      "retains original projects and active scope with projects enabled and remote pipelines enabled: %s",
+      async (enabled) => {
+        projects.enabled = true;
+        remotePipelines.enabled = enabled;
+        mockFetchRunAnnotations.mockResolvedValue({
+          [SOURCE_PIPELINE_ID_ANNOTATION]: sourcePipelineId,
+          [buildProjectRunAnnotationKey("previous-project")]: "true",
+        });
+        renderRerun("current-project");
+
+        fireEvent.click(screen.getByTestId("rerun-pipeline-button"));
+
+        await waitFor(() => expect(mockSubmitPipelineRun).toHaveBeenCalled());
+        expect(mockSubmitPipelineRun.mock.calls[0][2]).toMatchObject({
+          sourcePipelineId: enabled ? sourcePipelineId : undefined,
+          runAnnotations: {
+            [buildProjectRunAnnotationKey("previous-project")]: "true",
+            [buildProjectRunAnnotationKey("current-project")]: "true",
+          },
+        });
+        expect(mockFetchRunAnnotations).toHaveBeenCalledExactlyOnceWith(
+          "run-1",
+          backendUrl,
+        );
       },
     );
 
@@ -618,7 +700,7 @@ describe("<RerunPipelineButton/>", () => {
       expect(screen.getByTestId("rerun-pipeline-button")).toBeEnabled();
     });
 
-    test("does not request annotations when remote pipelines are disabled", async () => {
+    test("does not request annotations when projects and remote pipelines are disabled", async () => {
       remotePipelines.enabled = false;
       renderRerun();
       queryClient.setQueryData(

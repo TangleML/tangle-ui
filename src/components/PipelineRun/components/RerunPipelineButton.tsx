@@ -8,22 +8,24 @@ import { useAwaitAuthorization } from "@/components/shared/Authentication/useAwa
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { buildTaskSpecShape } from "@/components/shared/PipelineRunNameTemplate/types";
 import { Icon } from "@/components/ui/icon";
+import { useRerunProjectIds } from "@/hooks/useRerunProjectIds";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
 import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
 import { useRunSubmissionAnnotations } from "@/providers/RunSubmissionScopeProvider";
 import { getDefaultRunPath } from "@/routes/runRoutes";
-import { fetchRunAnnotations } from "@/services/pipelineRunService";
+import { runAnnotationsQueryOptions } from "@/services/runAnnotations";
 import type { PipelineRun } from "@/types/pipelineRun";
 import { extractCanonicalName } from "@/utils/canonicalPipelineName";
 import type { ArgumentType, ComponentSpec } from "@/utils/componentSpec";
-import { TWENTY_FOUR_HOURS_IN_MS } from "@/utils/constants";
 import { getRunSourcePipelineId } from "@/utils/pipelineRunSource";
+import { projectRunAnnotations } from "@/utils/projectRunAnnotation";
 import { REMOTE_PIPELINES_ENABLED } from "@/utils/remotePipelines";
 import { submitPipelineRun } from "@/utils/submitPipeline";
 
 type RerunPipelineButtonProps = {
   componentSpec: ComponentSpec;
+  runId?: string | null;
   showLabel?: boolean;
   displayLabel?: string;
   showTooltip?: boolean;
@@ -34,6 +36,7 @@ type RerunPipelineButtonProps = {
 
 export const RerunPipelineButton = ({
   componentSpec,
+  runId,
   showLabel,
   displayLabel,
   showTooltip = true,
@@ -45,6 +48,7 @@ export const RerunPipelineButton = ({
   const executionData = useExecutionDataOptional();
   const queryClient = useQueryClient();
   const runAnnotations = useRunSubmissionAnnotations();
+  const rerunProjectIds = useRerunProjectIds();
 
   const { awaitAuthorization, isAuthorized } = useAwaitAuthorization();
   const { getToken } = useAuthLocalStorage();
@@ -81,16 +85,15 @@ export const RerunPipelineButton = ({
   const { mutate, isPending } = useMutation({
     mutationFn: async () => {
       const authorizationToken = await getAuthToken();
-      const runId = REMOTE_PIPELINES_ENABLED
-        ? (executionData?.metadata?.id ?? executionData?.runId)
-        : undefined;
-      const sourceRunAnnotations = runId
-        ? await queryClient.fetchQuery({
-            queryKey: ["pipeline-run-annotations", backendUrl, runId],
-            queryFn: () => fetchRunAnnotations(runId, backendUrl),
-            staleTime: TWENTY_FOUR_HOURS_IN_MS,
-          })
-        : undefined;
+      const originalRunId =
+        runId ?? executionData?.metadata?.id ?? executionData?.runId;
+      const projectIds = await rerunProjectIds(originalRunId);
+      const sourceRunAnnotations =
+        REMOTE_PIPELINES_ENABLED && originalRunId != null
+          ? await queryClient.fetchQuery(
+              runAnnotationsQueryOptions(originalRunId, backendUrl),
+            )
+          : undefined;
 
       return new Promise<PipelineRun>((resolve, reject) => {
         submitPipelineRun(componentSpec, backendUrl, {
@@ -105,7 +108,10 @@ export const RerunPipelineButton = ({
           taskArguments: executionData?.rootDetails?.task_spec
             .arguments as Record<string, ArgumentType>,
           authorizationToken,
-          runAnnotations,
+          runAnnotations: {
+            ...runAnnotations,
+            ...projectRunAnnotations(projectIds),
+          },
           onSuccess: resolve,
           onError: reject,
         });
