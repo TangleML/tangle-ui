@@ -30,12 +30,13 @@ const BASE_CONFIG = {
 };
 
 describe("getAgentModelConfig", () => {
-  it("overrides the SDK model fallback when the configured model is blank", () => {
+  it("defaults blank selections to Sol with High thinking", () => {
     expect(getAgentModelConfig(BASE_CONFIG)).toStrictEqual({
+      model: "gpt-6-sol",
       modelSettings: {
+        reasoning: { effort: "high" },
         providerData: {
           include: ["reasoning.encrypted_content"],
-          model: undefined,
         },
       },
     });
@@ -50,6 +51,12 @@ describe("getAgentModelConfig", () => {
         },
       },
     });
+  });
+
+  it("does not add effort when the caller supplied a model without thinking support", () => {
+    expect(
+      getAgentModelConfig({ ...BASE_CONFIG, model: "gpt-6-sol" }).modelSettings,
+    ).not.toHaveProperty("reasoning");
   });
 });
 

@@ -1,57 +1,60 @@
+import type { AiReasoningEffort } from "@/types/aiProvider";
 import { isRecord } from "@/utils/typeGuards";
 
 export interface AiModelOption {
   id: string;
   label?: string;
   description?: string;
+  reasoningEfforts?: AiReasoningEffort[];
 }
 
 interface AiModelOptionsConfig {
-  // Replaces the built-in suggestions when the host page provides it.
   models?: AiModelOption[];
-  // Shown first in blank model inputs.
   defaultModel?: string;
 }
 
+export const DEFAULT_AI_REASONING_EFFORT: AiReasoningEffort = "high";
+
+const AI_REASONING_LEVELS: {
+  value: AiReasoningEffort;
+  label: string;
+}[] = [
+  { value: "none", label: "None" },
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "High" },
+  { value: "xhigh", label: "Extra high" },
+  { value: "max", label: "Max" },
+];
+
 const BUILT_IN_AI_MODEL_OPTIONS: AiModelOption[] = [
   {
-    id: "gpt-5.5",
-    label: "GPT-5.5",
-    description: "Latest frontier model",
+    id: "gpt-6-astra",
+    label: "GPT-6 Astra",
+    description: "Most capable model for complex reasoning and coding",
+    reasoningEfforts: ["low", "medium", "high", "xhigh", "max"],
   },
   {
-    id: "gpt-5",
-    label: "GPT-5",
-    description: "Frontier model",
+    id: "gpt-6-sol",
+    label: "GPT-6 Sol",
+    description: "Balanced model for coding and agentic workflows",
+    reasoningEfforts: ["none", "low", "medium", "high", "xhigh", "max"],
   },
   {
-    id: "gpt-5-mini",
-    label: "GPT-5 mini",
-    description: "Fast frontier model",
-  },
-  {
-    id: "gpt-4.1",
-    label: "GPT-4.1",
-    description: "General-purpose model",
-  },
-  {
-    id: "gpt-4.1-mini",
-    label: "GPT-4.1 mini",
-    description: "Fast general-purpose model",
-  },
-  {
-    id: "gpt-4o",
-    label: "GPT-4o",
-    description: "OpenAI-compatible model",
-  },
-  {
-    id: "gpt-4o-mini",
-    label: "GPT-4o mini",
-    description: "Small OpenAI-compatible model",
+    id: "gpt-6-luna",
+    label: "GPT-6 Luna",
+    description: "Fast, efficient model for focused tasks",
+    reasoningEfforts: ["none", "low", "medium", "high", "xhigh", "max"],
   },
 ];
 
-const BUILT_IN_DEFAULT_MODEL = BUILT_IN_AI_MODEL_OPTIONS[0]?.id ?? "gpt-5.5";
+const BUILT_IN_DEFAULT_MODEL = "gpt-6-sol";
+
+export function isAiReasoningEffort(
+  value: unknown,
+): value is AiReasoningEffort {
+  return AI_REASONING_LEVELS.some((level) => level.value === value);
+}
 
 declare global {
   interface Window {
@@ -72,6 +75,9 @@ function readModelOption(value: unknown): AiModelOption | null {
       : {}),
     ...(typeof value.description === "string" && value.description.trim()
       ? { description: value.description.trim() }
+      : {}),
+    ...(Array.isArray(value.reasoningEfforts)
+      ? { reasoningEfforts: value.reasoningEfforts.filter(isAiReasoningEffort) }
       : {}),
   };
 }
@@ -104,10 +110,45 @@ export function getDefaultAiModelId(): string {
 }
 
 export function getAiModelLabel(modelId: string): string {
-  const trimmed = modelId.trim();
-  if (!trimmed) return "Provider default";
+  const trimmed = modelId.trim() || getDefaultAiModelId();
   return (
     getAiModelOptions().find((option) => option.id === trimmed)?.label ??
     trimmed
+  );
+}
+
+export function getAiModelReasoningLevels(modelId: string) {
+  const id = modelId.trim() || getDefaultAiModelId();
+  const model = getAiModelOptions().find((option) => option.id === id);
+  return AI_REASONING_LEVELS.filter((level) =>
+    model?.reasoningEfforts?.includes(level.value),
+  );
+}
+
+export function getEffectiveReasoningEffort(
+  modelId: string,
+  preference: AiReasoningEffort = DEFAULT_AI_REASONING_EFFORT,
+): AiReasoningEffort | undefined {
+  const levels = getAiModelReasoningLevels(modelId);
+  const preferredIndex = AI_REASONING_LEVELS.findIndex(
+    (level) => level.value === preference,
+  );
+  let closest = levels[0]?.value;
+  let distance = Infinity;
+  for (const level of levels) {
+    const index = AI_REASONING_LEVELS.findIndex(
+      (candidate) => candidate.value === level.value,
+    );
+    if (Math.abs(index - preferredIndex) < distance) {
+      closest = level.value;
+      distance = Math.abs(index - preferredIndex);
+    }
+  }
+  return closest;
+}
+
+export function getAiReasoningLabel(effort: AiReasoningEffort): string {
+  return (
+    AI_REASONING_LEVELS.find((level) => level.value === effort)?.label ?? effort
   );
 }

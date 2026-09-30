@@ -572,12 +572,12 @@ describe("DashboardComponentsV2View", () => {
   it("shows active AI search progress below the search box", () => {
     routeMocks.aiSearchConfigured = true;
     routeMocks.aiRerankPending = true;
-    routeMocks.aiModel = "gpt-4o-mini";
+    routeMocks.aiModel = "gpt-6-luna";
 
     render(<DashboardComponentsV2View />);
 
     expect(screen.getByRole("status")).toHaveTextContent(
-      "component candidates with GPT-4o mini",
+      "component candidates with GPT-6 Luna",
     );
   });
 

@@ -288,6 +288,29 @@ code {
   /* Custom animations */
   --animate-revert-copied: revert-copied 0.5s ease-in-out forwards;
   --animate-highlight-fade: highlight-fade 2s ease-out forwards;
+  --animate-thinking-nudge: thinking-nudge 420ms ease-out;
+
+  @keyframes thinking-nudge {
+    0%,
+    100% {
+      transform: translateX(0) rotate(0);
+    }
+    18% {
+      transform: translateX(calc(var(--thinking-shift) * -1))
+        rotate(calc(var(--thinking-tilt) * -1));
+    }
+    38% {
+      transform: translateX(var(--thinking-shift)) rotate(var(--thinking-tilt));
+    }
+    58% {
+      transform: translateX(calc(var(--thinking-shift) * -0.6))
+        rotate(calc(var(--thinking-tilt) * -0.6));
+    }
+    78% {
+      transform: translateX(calc(var(--thinking-shift) * 0.3))
+        rotate(calc(var(--thinking-tilt) * 0.3));
+    }
+  }
 
   @keyframes revert-copied {
     0%,
@@ -323,6 +346,75 @@ code {
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  .ai-thinking {
+    --thinking-lightness: 0.57;
+    --thinking-accent: var(--muted-foreground);
+    --thinking-tilt: 0deg;
+    --thinking-shift: 0px;
+    --thinking-ink: color-mix(
+      in srgb,
+      var(--thinking-accent) 65%,
+      var(--foreground)
+    );
+    --thinking-tint: color-mix(
+      in srgb,
+      var(--thinking-accent) 12%,
+      var(--muted)
+    );
+    --thinking-border: color-mix(
+      in oklch,
+      var(--thinking-accent) 20%,
+      transparent
+    );
+    --thinking-glow: color-mix(
+      in oklch,
+      var(--thinking-accent) 20%,
+      transparent
+    );
+  }
+
+  .dark .ai-thinking {
+    --thinking-lightness: 0.7;
+  }
+
+  .ai-thinking[data-effort="none"] {
+    --thinking-accent: oklch(var(--thinking-lightness) 0.08 250);
+    --thinking-tilt: 0.5deg;
+    --thinking-shift: 0.2px;
+  }
+
+  .ai-thinking[data-effort="low"] {
+    --thinking-accent: oklch(var(--thinking-lightness) 0.13 245);
+    --thinking-tilt: 1deg;
+    --thinking-shift: 0.35px;
+  }
+
+  .ai-thinking[data-effort="medium"] {
+    --thinking-accent: oklch(calc(var(--thinking-lightness) + 0.02) 0.11 205);
+    --thinking-tilt: 1.5deg;
+    --thinking-shift: 0.5px;
+  }
+
+  .ai-thinking[data-effort="high"] {
+    --thinking-accent: oklch(calc(var(--thinking-lightness) + 0.06) 0.14 75);
+    --thinking-tilt: 2deg;
+    --thinking-shift: 0.7px;
+  }
+
+  .ai-thinking[data-effort="xhigh"] {
+    --thinking-accent: oklch(calc(var(--thinking-lightness) + 0.03) 0.16 48);
+    --thinking-tilt: 3deg;
+    --thinking-shift: 1px;
+  }
+
+  .ai-thinking[data-effort="max"] {
+    --thinking-accent: oklch(var(--thinking-lightness) 0.17 28);
+    --thinking-tilt: 4deg;
+    --thinking-shift: 1.4px;
   }
 }
 
