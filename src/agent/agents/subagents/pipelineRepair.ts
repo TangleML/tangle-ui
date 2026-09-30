@@ -15,7 +15,7 @@ import { createCsomTools } from "../../tools/csomTools";
 import { createRunTools } from "../../tools/runTools";
 
 export function createPipelineRepairAgent(session: AgentSession): Agent {
-  const csom = createCsomTools(session.bridge);
+  const csom = createCsomTools(session.bridge, session.componentCatalog);
   const componentSearch = createComponentSearchTools(session);
   const runTools = createRunTools(session.bridge);
   const agent = new Agent({

@@ -32,7 +32,7 @@ function formatRecentRunsSection(runs: RecentPipelineRun[]): string {
 }
 
 export function createDebugAssistantAgent(session: AgentSession): Agent {
-  const csom = createCsomTools(session.bridge);
+  const csom = createCsomTools(session.bridge, session.componentCatalog);
   const runTools = createRunTools(session.bridge);
   const debugTools = createDebugTools(session.bridge);
 
