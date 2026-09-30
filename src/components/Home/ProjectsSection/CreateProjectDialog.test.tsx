@@ -9,6 +9,11 @@ import { CreateProjectDialog } from "./CreateProjectDialog";
 const mutate = vi.fn();
 const notify = vi.fn();
 const track = vi.fn();
+const navigate = vi.fn();
+
+vi.mock("@tanstack/react-router", () => ({
+  useNavigate: () => navigate,
+}));
 
 vi.mock("@/services/projects/useProjects", () => ({
   useCreateProject: vi.fn(),
@@ -123,7 +128,7 @@ describe("CreateProjectDialog", () => {
     await user.click(submitButton());
 
     const [, options] = mutate.mock.calls[0];
-    options.onSuccess();
+    options.onSuccess({ id: "project-9" });
 
     expect(notify).toHaveBeenCalledWith("Project created", "success");
     expect(track).toHaveBeenCalledWith("projects.create_project_completed", {
@@ -132,6 +137,30 @@ describe("CreateProjectDialog", () => {
     await waitFor(() => {
       expect(screen.queryByLabelText("Name")).toBeNull();
     });
+  });
+
+  it("opens the project it just created", async () => {
+    const user = await openDialog();
+
+    await user.type(screen.getByLabelText("Name"), "Churn model");
+    await user.click(submitButton());
+
+    const [, options] = mutate.mock.calls[0];
+    options.onSuccess({ id: "project-9" });
+
+    expect(navigate).toHaveBeenCalledWith({
+      to: "/tangent/$projectId",
+      params: { projectId: "project-9" },
+    });
+  });
+
+  it("goes nowhere while the project is still being created", async () => {
+    const user = await openDialog();
+
+    await user.type(screen.getByLabelText("Name"), "Churn model");
+    await user.click(submitButton());
+
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   it("complains about an empty name only once the field has been visited", async () => {

@@ -12,10 +12,20 @@ import { ProjectCard } from "./ProjectCard";
 const mutate = vi.fn();
 const notify = vi.fn();
 const track = vi.fn();
+const navigate = vi.fn();
 
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@tanstack/react-router")>()),
-  Link: ({ children }: { children: ReactNode }) => <a>{children}</a>,
+  Link: ({
+    children,
+    to,
+    params,
+  }: {
+    children: ReactNode;
+    to: string;
+    params: { projectId: string };
+  }) => <a href={to.replace("$projectId", params.projectId)}>{children}</a>,
+  useNavigate: () => navigate,
 }));
 
 vi.mock("@/services/projects/useProjects", () => ({
@@ -91,6 +101,30 @@ describe("ProjectCard", () => {
     expect(screen.getByText("Churn model")).toBeInTheDocument();
     expect(screen.getByText("Q3 churn work")).toBeInTheDocument();
     expect(screen.getByText("3 pipelines · 1 document")).toBeInTheDocument();
+  });
+
+  it("opens the project where the work happens, not its details", () => {
+    renderCard();
+
+    expect(screen.getByRole("link")).toHaveAttribute(
+      "href",
+      "/tangent/project-1",
+    );
+  });
+
+  it("still reaches the details page from the menu", async () => {
+    const user = userEvent.setup();
+    renderCard();
+
+    await user.click(
+      screen.getByRole("button", { name: "Project actions: Churn model" }),
+    );
+    await user.click(await screen.findByRole("menuitem", { name: /Details/ }));
+
+    expect(navigate).toHaveBeenCalledWith({
+      to: "/projects/$projectId",
+      params: { projectId: "project-1" },
+    });
   });
 
   it("copies the project's own url when sharing", async () => {
