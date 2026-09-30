@@ -4,8 +4,8 @@ import { TWENTY_FOUR_HOURS_IN_MS } from "@/utils/constants";
 
 import { fetchRunAnnotations } from "./pipelineRunService";
 
-const runAnnotationsQueryKey = (runId: string) =>
-  ["pipeline-run-annotations", runId] as const;
+const runAnnotationsQueryKey = (runId: string, backendUrl: string) =>
+  ["pipeline-run-annotations", backendUrl, runId] as const;
 
 /**
  * A run's id reaches this from several places as either a string or a number,
@@ -18,7 +18,7 @@ export function runAnnotationsQueryOptions(
   const id = runId === undefined ? "" : String(runId);
 
   return queryOptions({
-    queryKey: runAnnotationsQueryKey(id),
+    queryKey: runAnnotationsQueryKey(id, backendUrl),
     queryFn: () => fetchRunAnnotations(id, backendUrl),
     enabled: id !== "",
     refetchOnWindowFocus: false,

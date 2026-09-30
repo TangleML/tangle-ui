@@ -1,15 +1,25 @@
+import { Link as RouterLink } from "@tanstack/react-router";
+
 import { InlineStack } from "@/components/ui/layout";
-import { Link } from "@/components/ui/link";
+import { Link, linkVariants } from "@/components/ui/link";
 import { Paragraph } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 
 import { CopyText } from "../../CopyText/CopyText";
 
+interface AttributeLink {
+  href: string;
+  text: string;
+  title?: string;
+  internal?: boolean;
+}
+
 export interface AttributeProps {
   label?: string;
-  value?: string | { href: string; text: string };
+  value?: string | AttributeLink;
   critical?: boolean;
   copyable?: boolean;
+  className?: string;
 }
 
 export const Attribute = ({
@@ -17,6 +27,7 @@ export const Attribute = ({
   value,
   critical,
   copyable,
+  className,
 }: AttributeProps) => {
   if (!value) {
     return null;
@@ -39,21 +50,37 @@ export const Attribute = ({
     );
 
   return (
-    <InlineStack gap="2" blockAlign="center" wrap="nowrap">
+    <InlineStack
+      gap="2"
+      blockAlign="center"
+      wrap="nowrap"
+      className={className}
+    >
       {label && labelContent}
 
       <div className="min-w-16 flex-1 overflow-hidden">
         {isLink(value) ? (
-          <Link
-            href={value.href}
-            size="xs"
-            variant="classic"
-            external
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            {value.text}
-          </Link>
+          value.internal ? (
+            <RouterLink
+              to={value.href}
+              title={value.title}
+              className={linkVariants({ size: "xs" })}
+            >
+              {value.text}
+            </RouterLink>
+          ) : (
+            <Link
+              href={value.href}
+              title={value.title}
+              size="xs"
+              variant="classic"
+              external
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {value.text}
+            </Link>
+          )
         ) : copyable ? (
           <CopyText
             size="xs"
@@ -80,8 +107,6 @@ export const Attribute = ({
   );
 };
 
-const isLink = (
-  val: string | { href: string; text: string },
-): val is { href: string; text: string } => {
+const isLink = (val: string | AttributeLink): val is AttributeLink => {
   return typeof val === "object" && val !== null && "href" in val;
 };

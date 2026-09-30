@@ -1,6 +1,87 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
-import { parseRecent, type RecentItem } from "./useRecentlyViewed";
+import {
+  addRecentlyUsed,
+  addRecentlyViewed,
+  parseRecent,
+  type RecentItem,
+} from "./useRecentlyViewed";
+
+afterEach(() => localStorage.clear());
+
+describe.each([
+  ["Home/recently_viewed", addRecentlyViewed],
+  ["Home/recently_used", addRecentlyUsed],
+] as const)("%s pipeline identities", (key, addRecent) => {
+  it.each([
+    "Daily report",
+    "remote:https%3A%2F%2Fbackend.example:pipeline-id",
+    "pending:account-a:draft.yaml",
+  ])("replaces legacy and stable duplicates for %s", (pipelineReferenceId) => {
+    const stable = {
+      type: "pipeline" as const,
+      id: "document-id",
+      name: "Daily report",
+      pipelineReferenceId,
+    };
+    localStorage.setItem(
+      key,
+      JSON.stringify([
+        { ...stable, timestamp: 2 },
+        {
+          type: "pipeline",
+          id: pipelineReferenceId,
+          name: "Old name",
+          timestamp: 1,
+        },
+      ]),
+    );
+
+    addRecent(stable);
+
+    expect(parseRecent(localStorage.getItem(key) ?? "[]")).toEqual([
+      { ...stable, timestamp: expect.any(Number) },
+    ]);
+  });
+
+  it("preserves records of another type, backend, or account", () => {
+    const reference = "pending:account-a:draft.yaml";
+    const unrelated: RecentItem[] = [
+      { type: "run", id: reference, name: "Daily report", timestamp: 4 },
+      {
+        type: "pipeline",
+        id: "pending:account-b:draft.yaml",
+        name: "Daily report",
+        timestamp: 3,
+      },
+      {
+        type: "pipeline",
+        id: reference,
+        pipelineReferenceId: "remote:other-backend:pipeline-id",
+        name: "Daily report",
+        timestamp: 2,
+      },
+      {
+        type: "pipeline",
+        id: "other-document-id",
+        name: "Daily report",
+        timestamp: 1,
+      },
+    ];
+    localStorage.setItem(key, JSON.stringify(unrelated));
+
+    addRecent({
+      type: "pipeline",
+      id: "document-id",
+      name: "Daily report",
+      pipelineReferenceId: reference,
+    });
+
+    const stored = parseRecent(localStorage.getItem(key) ?? "[]");
+    expect(stored).toHaveLength(unrelated.length + 1);
+    expect(stored.slice(1)).toEqual(unrelated);
+  });
+});
 
 describe("parseRecent", () => {
   it("keeps well-formed items", () => {

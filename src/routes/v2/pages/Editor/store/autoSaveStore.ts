@@ -1,4 +1,11 @@
-import { action, makeObservable, observable, reaction } from "mobx";
+import {
+  action,
+  computed,
+  makeObservable,
+  observable,
+  reaction,
+  runInAction,
+} from "mobx";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 import {
@@ -6,139 +13,323 @@ import {
   serializeComponentSpecToText,
 } from "@/models/componentSpec";
 import { saveUndoHistory } from "@/routes/v2/pages/Editor/utils/undoHistoryStorage";
+import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
+import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
 import { AUTOSAVE_DEBOUNCE_TIME_MS } from "@/utils/constants";
-import { debounce } from "@/utils/debounce";
+import { isPipelineId } from "@/utils/pipelineRunSource";
 
+import { type AutoSaveSnapshot, getAutoSaveSnapshot } from "./autoSaveSnapshot";
 import type { PipelineFileStore } from "./pipelineFileStore";
 import type { UndoStore } from "./undoStore";
 
-const AUTOSAVE_MIN_SAVING_INDICATOR_MS = 600;
+const REMOTE_CONTENT_SAVE_DELAY_MS = 1000;
+const REMOTE_MOVEMENT_SAVE_DELAY_MS = 3000;
+
+interface SaveSession {
+  spec: ComponentSpec;
+  file: PipelineFile;
+  savedYaml: string;
+  queuedYaml: string;
+  snapshot: AutoSaveSnapshot;
+  hasPendingRecovery: boolean;
+  pending: Promise<boolean>;
+  saving: boolean;
+  saveRequested: boolean;
+  writingYaml?: string;
+  contentDeadline?: number;
+  movementDeadline?: number;
+  timer?: ReturnType<typeof setTimeout>;
+}
+
+interface AutoSaveInitOptions {
+  savedYaml?: string;
+  forceSave?: boolean;
+}
 
 export class AutoSaveStore {
-  @observable accessor isSaving = false;
-  @observable accessor lastSavedAt: Date | null = null;
+  @observable private accessor serializationError: string | null = null;
+  @observable accessor hasUnsavedChanges = false;
 
-  private spec: ComponentSpec | null = null;
-  private pipelineName: string | null = null;
+  private session: SaveSession | null = null;
   private disposeReaction: (() => void) | null = null;
-  // Last content written to disk; used to skip a redundant flush on dispose.
-  private lastSavedYaml: string | null = null;
-
-  private debouncedSave = debounce((yamlText: string) => {
-    void this.performSave(yamlText);
-  }, AUTOSAVE_DEBOUNCE_TIME_MS);
 
   constructor(
     private undoStore: UndoStore,
     private pipelineFileStore: PipelineFileStore,
+    private storage?: Pick<PipelineStorageService, "canMigrate">,
   ) {
     makeObservable(this);
   }
 
-  @action init(spec: ComponentSpec, pipelineName: string) {
-    this.dispose();
-    this.spec = spec;
-    this.pipelineName = pipelineName;
-    this.isSaving = false;
-    this.lastSavedAt = null;
-    // The freshly-loaded spec matches what's on disk, so seed the baseline to
-    // avoid flushing an unchanged pipeline on dispose.
-    this.lastSavedYaml = this.serializeSpec();
+  @computed get isSaving(): boolean {
+    return this.pipelineFileStore.activePipelineFile?.isSaving ?? false;
+  }
 
-    this.disposeReaction = reaction(
-      () => this.serializeSpec(),
-      (yamlText) => this.scheduleAutoSave(yamlText),
-      { fireImmediately: false },
+  @computed get lastSavedAt(): Date | null {
+    return this.pipelineFileStore.activePipelineFile?.lastSavedAt ?? null;
+  }
+
+  @computed get error(): string | null {
+    return (
+      this.serializationError ??
+      this.pipelineFileStore.activePipelineFile?.lastWriteError ??
+      null
     );
   }
 
-  @action dispose() {
-    const yaml = this.serializeSpec();
+  @action init(spec: ComponentSpec, options: AutoSaveInitOptions = {}) {
+    this.dispose();
     const file = this.pipelineFileStore.activePipelineFile;
-    if (yaml && file && yaml !== this.lastSavedYaml) {
-      void file.write(yaml).catch((error) => {
-        console.error("Auto-save flush on dispose failed:", error);
-      });
+    if (!file?.canEdit) return;
+    const snapshot = getAutoSaveSnapshot(spec);
+    const savedYaml = options.savedYaml ?? snapshot.yaml;
+    const needsSave = Boolean(options.forceSave || snapshot.yaml !== savedYaml);
+    const session: SaveSession = {
+      spec,
+      file,
+      savedYaml,
+      queuedYaml: savedYaml,
+      snapshot,
+      hasPendingRecovery: options.forceSave ?? false,
+      pending: Promise.resolve(true),
+      saving: false,
+      saveRequested: false,
+    };
+    this.session = session;
+    this.serializationError = null;
+    this.hasUnsavedChanges = needsSave;
+    this.disposeReaction = reaction(
+      () => getAutoSaveSnapshot(spec),
+      (next) => {
+        if (next.yaml === session.snapshot.yaml) return;
+        const contentChanged = next.contentKey !== session.snapshot.contentKey;
+        session.snapshot = next;
+        const remote =
+          file.storageKind !== "local" || this.storage?.canMigrate(file);
+        session.hasPendingRecovery ||= Boolean(remote);
+        runInAction(() => {
+          this.hasUnsavedChanges =
+            next.yaml !== session.savedYaml ||
+            session.hasPendingRecovery ||
+            (session.saving && next.yaml !== session.writingYaml);
+        });
+        void file.persistRecovery(next.yaml).catch(() => {});
+        if (
+          next.yaml === session.savedYaml &&
+          !session.saving &&
+          !session.hasPendingRecovery &&
+          !this.error &&
+          !file.saveError
+        ) {
+          this.cancelScheduledSave(session);
+          return;
+        }
+        if (!remote) {
+          session.contentDeadline = Date.now() + AUTOSAVE_DEBOUNCE_TIME_MS;
+        } else if (contentChanged) {
+          session.contentDeadline = Date.now() + REMOTE_CONTENT_SAVE_DELAY_MS;
+        } else {
+          session.movementDeadline ??=
+            Date.now() + REMOTE_MOVEMENT_SAVE_DELAY_MS;
+        }
+        this.scheduleSave(session);
+      },
+    );
+    if (needsSave) {
+      const remote =
+        file.storageKind !== "local" || this.storage?.canMigrate(file);
+      session.hasPendingRecovery ||= Boolean(remote);
+      void file.persistRecovery(snapshot.yaml).catch(() => {});
+      session.contentDeadline =
+        Date.now() +
+        (remote ? REMOTE_CONTENT_SAVE_DELAY_MS : AUTOSAVE_DEBOUNCE_TIME_MS);
+      this.scheduleSave(session);
     }
-    this.debouncedSave.cancel();
+  }
+
+  private scheduleSave(session: SaveSession) {
+    clearTimeout(session.timer);
+    const deadline = Math.min(
+      session.contentDeadline ?? Infinity,
+      session.movementDeadline ?? Infinity,
+    );
+    session.timer = setTimeout(
+      () => {
+        void this.performSave(session);
+      },
+      Math.max(0, deadline - Date.now()),
+    );
+  }
+
+  private cancelScheduledSave(session: SaveSession) {
+    clearTimeout(session.timer);
+    session.timer = undefined;
+    session.contentDeadline = undefined;
+    session.movementDeadline = undefined;
+  }
+
+  @action dispose(): Promise<boolean> {
     this.disposeReaction?.();
     this.disposeReaction = null;
-    this.spec = null;
-    this.pipelineName = null;
+    const pending = this.flushPending();
+    this.session = null;
+    return pending;
   }
 
-  async save() {
-    if (!this.spec || !this.pipelineName) return;
-    const yamlText = this.serializeSpec();
-    if (!yamlText) return;
-    await this.performSave(yamlText);
+  async flushPending(): Promise<boolean> {
+    const session = this.session;
+    if (!session) return true;
+    this.cancelScheduledSave(session);
+    do {
+      if (!this.updateSnapshot(session)) return false;
+      if (
+        !this.hasUnsavedChanges &&
+        !session.hasPendingRecovery &&
+        !session.saving &&
+        session.snapshot.yaml === session.savedYaml
+      )
+        return true;
+      if (!(await this.save())) return false;
+      // Include edits made while the previous write was finishing.
+    } while (session === this.session);
+    return true;
   }
 
-  @action setSaving(value: boolean) {
-    this.isSaving = value;
-  }
-
-  @action setSaved(date: Date) {
-    this.lastSavedAt = date;
-    this.isSaving = false;
-  }
-
-  private serializeSpec(): string | null {
-    if (!this.spec) return null;
-    try {
-      return serializeComponentSpecToText(this.spec);
-    } catch {
-      return null;
-    }
-  }
-
-  private scheduleAutoSave(yamlText: string | null) {
-    if (!yamlText || !this.pipelineName) {
-      this.debouncedSave.cancel();
-      return;
-    }
-    this.debouncedSave(yamlText);
-  }
-
-  private async performSave(yamlText: string) {
-    const pipelineName = this.pipelineName;
-    if (!pipelineName) return;
-
-    this.setSaving(true);
-
-    const savePromise = (async () => {
-      try {
-        await this.pipelineFileStore.activePipelineFile?.write(yamlText);
-        await this.persistUndoHistory();
-        this.lastSavedYaml = yamlText;
-        return new Date();
-      } catch (error) {
-        console.error("Auto-save failed:", error);
-        return null;
+  async prepareRunSource(backendUrl: string): Promise<string | undefined> {
+    const file = this.pipelineFileStore.activePipelineFile;
+    if (!file) throw new Error("The pipeline is no longer open.");
+    const needsUpload =
+      file.storageKind === "pending" || this.storage?.canMigrate(file);
+    if (needsUpload) {
+      if (!(await this.save())) {
+        throw new Error(
+          this.error ?? "Save the pipeline to the server before running it.",
+        );
       }
-    })();
+    }
+    if (this.pipelineFileStore.activePipelineFile !== file) {
+      throw new Error("The open pipeline changed before submission.");
+    }
+    if (file.storageKind === "local" && !needsUpload) return undefined;
+    if (
+      !file.remoteId ||
+      !isPipelineId(file.remoteId) ||
+      file.remoteBackendUrl !== backendUrl.replace(/\/+$/, "")
+    ) {
+      throw new Error(
+        "The pipeline must be saved on the run's backend before submission.",
+      );
+    }
+    return file.remoteId;
+  }
 
-    const minDisplayPromise = new Promise((resolve) =>
-      setTimeout(resolve, AUTOSAVE_MIN_SAVING_INDICATOR_MS),
-    );
+  async save(): Promise<boolean> {
+    const session = this.session;
+    if (!session) return false;
+    this.cancelScheduledSave(session);
+    if (!this.updateSnapshot(session)) return false;
+    const content = session.snapshot.yaml;
+    if (
+      session.saving &&
+      content === session.queuedYaml &&
+      !session.hasPendingRecovery
+    )
+      return session.pending;
+    if (
+      !session.saving &&
+      content === session.savedYaml &&
+      !session.hasPendingRecovery &&
+      !this.error &&
+      !session.file.saveError &&
+      session.file.storageKind !== "pending" &&
+      !this.storage?.canMigrate(session.file)
+    ) {
+      runInAction(() => {
+        this.hasUnsavedChanges = false;
+      });
+      return true;
+    }
+    return this.performSave(session);
+  }
 
-    const [savedAt] = await Promise.all([savePromise, minDisplayPromise]);
+  private updateSnapshot(session: SaveSession): boolean {
+    try {
+      session.snapshot = getAutoSaveSnapshot(session.spec);
+      runInAction(() => {
+        this.serializationError = null;
+      });
+    } catch (error) {
+      runInAction(() => {
+        this.serializationError =
+          error instanceof Error ? error.message : String(error);
+        this.hasUnsavedChanges = true;
+      });
+      return false;
+    }
+    return true;
+  }
 
-    if (savedAt) {
-      this.setSaved(savedAt);
-    } else {
-      this.setSaving(false);
+  private performSave(session: SaveSession): Promise<boolean> {
+    this.cancelScheduledSave(session);
+    session.queuedYaml = session.snapshot.yaml;
+    session.saveRequested =
+      !session.saving ||
+      session.snapshot.yaml !== session.writingYaml ||
+      session.hasPendingRecovery;
+    // Even reverted edits stage dirty recovery; only a queued flush can clear it.
+    session.hasPendingRecovery = false;
+    if (session.saving) return session.pending;
+    session.saving = true;
+    session.pending = Promise.resolve().then(() => this.drainSaves(session));
+    return session.pending;
+  }
+
+  private async drainSaves(session: SaveSession): Promise<boolean> {
+    let saved = false;
+    try {
+      while (session.saveRequested) {
+        session.saveRequested = false;
+        this.cancelScheduledSave(session);
+        const yamlText = session.snapshot.yaml;
+        session.hasPendingRecovery = false;
+        session.writingYaml = yamlText;
+        session.queuedYaml = yamlText;
+        try {
+          await session.file.write(yamlText);
+          if (session === this.session) await this.persistUndoHistory(session);
+          session.savedYaml = yamlText;
+          if (session === this.session)
+            runInAction(() => {
+              this.hasUnsavedChanges =
+                serializeComponentSpecToText(session.spec) !== yamlText ||
+                session.hasPendingRecovery;
+            });
+          saved = true;
+        } catch {
+          if (session === this.session)
+            runInAction(() => {
+              this.hasUnsavedChanges = true;
+            });
+          saved = false;
+        }
+      }
+      return saved;
+    } finally {
+      session.saving = false;
+      session.writingYaml = undefined;
     }
   }
 
-  private async persistUndoHistory() {
-    if (!this.spec || !this.pipelineName) return;
+  private async persistUndoHistory(session: SaveSession) {
+    if (session.file.storageKind !== "local") return;
     const manager = this.undoStore.undoManager;
     if (!manager) return;
-
     try {
-      const idStack = collectIdStack(this.spec);
-      await saveUndoHistory(this.pipelineName, idStack, manager);
+      await saveUndoHistory(
+        session.file.referenceId,
+        collectIdStack(session.spec),
+        manager,
+      );
     } catch (error) {
       console.error("Failed to persist undo history:", error);
     }

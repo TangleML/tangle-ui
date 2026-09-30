@@ -1,4 +1,4 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 
 import { isAuthorizationRequired } from "@/components/shared/Authentication/helpers";
@@ -11,10 +11,13 @@ import { useBackend } from "@/providers/BackendProvider";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
 import { useRunSubmissionAnnotations } from "@/providers/RunSubmissionScopeProvider";
 import { APP_ROUTES } from "@/routes/router";
+import { runAnnotationsQueryOptions } from "@/services/runAnnotations";
 import type { PipelineRun } from "@/types/pipelineRun";
 import { extractCanonicalName } from "@/utils/canonicalPipelineName";
 import type { ArgumentType, ComponentSpec } from "@/utils/componentSpec";
+import { getRunSourcePipelineId } from "@/utils/pipelineRunSource";
 import { projectRunAnnotations } from "@/utils/projectRunAnnotation";
+import { REMOTE_PIPELINES_ENABLED } from "@/utils/remotePipelines";
 import { submitPipelineRun } from "@/utils/submitPipeline";
 
 interface RerunVariables {
@@ -29,7 +32,8 @@ export function useRerunPipelineRun(componentSpec?: ComponentSpec) {
   const { backendUrl } = useBackend();
   const { awaitAuthorization, isAuthorized } = useAwaitAuthorization();
   const { getToken } = useAuthLocalStorage();
-  const { rootDetails, metadata } = useExecutionData();
+  const { rootDetails, metadata, runId: executionRunId } = useExecutionData();
+  const queryClient = useQueryClient();
   const runAnnotations = useRunSubmissionAnnotations();
   const rerunProjectIds = useRerunProjectIds();
 
@@ -50,9 +54,17 @@ export function useRerunPipelineRun(componentSpec?: ComponentSpec) {
       taskArguments,
     }: RerunVariables) => {
       const authorizationToken = await getAuthToken();
-      const projectIds = await rerunProjectIds(metadata?.id);
+      const originalRunId = metadata?.id ?? executionRunId;
+      const projectIds = await rerunProjectIds(originalRunId);
+      const sourceRunAnnotations =
+        REMOTE_PIPELINES_ENABLED && originalRunId != null
+          ? await queryClient.fetchQuery(
+              runAnnotationsQueryOptions(originalRunId, backendUrl),
+            )
+          : undefined;
       return new Promise<PipelineRun>((resolve, reject) => {
         submitPipelineRun(componentSpec, backendUrl, {
+          sourcePipelineId: getRunSourcePipelineId(sourceRunAnnotations),
           canonicalName,
           taskArguments,
           authorizationToken,
@@ -66,6 +78,7 @@ export function useRerunPipelineRun(componentSpec?: ComponentSpec) {
       });
     },
     onSuccess: (response) => {
+      void queryClient.invalidateQueries({ queryKey: ["runs", backendUrl] });
       navigate({ to: `${APP_ROUTES.RUNS}/${response.id}` });
     },
     onError: (error) => {

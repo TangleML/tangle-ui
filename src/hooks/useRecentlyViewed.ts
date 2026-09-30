@@ -13,6 +13,7 @@ const RECENT_ITEM_TYPES = ["pipeline", "run", "component", "tour"] as const;
 type RecentItemType = (typeof RECENT_ITEM_TYPES)[number];
 
 export interface RecentItem {
+  pipelineReferenceId?: string;
   type: RecentItemType;
   id: string;
   name: string;
@@ -33,6 +34,8 @@ function isRecentItem(item: unknown): item is RecentItem {
     RECENT_ITEM_TYPES.includes(candidate.type as RecentItemType) &&
     typeof candidate.id === "string" &&
     typeof candidate.name === "string" &&
+    (candidate.pipelineReferenceId === undefined ||
+      typeof candidate.pipelineReferenceId === "string") &&
     typeof candidate.timestamp === "number" &&
     Number.isFinite(candidate.timestamp)
   );
@@ -55,7 +58,15 @@ function readRecent(key: RecentKey): RecentItem[] {
 function addRecent(key: RecentKey, item: Omit<RecentItem, "timestamp">) {
   const current = readRecent(key);
   const deduped = current.filter(
-    (existing) => !(existing.type === item.type && existing.id === item.id),
+    (existing) =>
+      !(
+        existing.type === item.type &&
+        (existing.id === item.id ||
+          (item.type === "pipeline" &&
+            item.pipelineReferenceId !== undefined &&
+            existing.id === item.pipelineReferenceId &&
+            existing.pipelineReferenceId === undefined))
+      ),
   );
   const updated = [{ ...item, timestamp: Date.now() }, ...deduped].slice(
     0,

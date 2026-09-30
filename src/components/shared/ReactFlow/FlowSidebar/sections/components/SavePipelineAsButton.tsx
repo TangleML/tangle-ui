@@ -6,8 +6,9 @@ import { PipelineNameDialog } from "@/components/shared/Dialogs";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
-import { EDITOR_PATH } from "@/routes/router";
+import { getDefaultEditorPath } from "@/routes/editorRoutes";
 import { useSavePipeline } from "@/services/pipelineService";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import { tracking } from "@/utils/tracking";
 
 interface SavePipelineAsButtonProps {
@@ -18,7 +19,8 @@ export const SavePipelineAsButton = ({
   onSaveComplete,
 }: SavePipelineAsButtonProps) => {
   const { componentSpec } = useComponentSpec();
-  const { savePipeline } = useSavePipeline(componentSpec);
+  const storage = usePipelineStorage();
+  const { savePipeline } = useSavePipeline(componentSpec, storage);
   const notify = useToastNotification();
   const { track } = useAnalytics();
   const navigate = useNavigate();
@@ -31,13 +33,13 @@ export const SavePipelineAsButton = ({
 
   const handleSavePipelineAs = useCallback(
     async (name: string) => {
-      await savePipeline(name);
+      const file = await savePipeline(name);
       track("pipeline_editor.pipeline_actions.save_pipeline_as_completed");
       notify(`Pipeline saved as "${name}"`, "success");
       onSaveComplete?.(name);
 
       navigate({
-        to: `${EDITOR_PATH}/${encodeURIComponent(name)}`,
+        to: getDefaultEditorPath(file?.referenceId ?? name),
       });
     },
     [navigate, savePipeline, notify, onSaveComplete, track],

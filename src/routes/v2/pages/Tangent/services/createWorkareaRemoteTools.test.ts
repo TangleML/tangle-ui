@@ -375,7 +375,7 @@ describe("createWorkareaRemoteTools", () => {
   it("clone_pipeline clones the resolved run tab and returns the new pipeline target", async () => {
     const clonePipeline = vi
       .fn()
-      .mockResolvedValue({ pipelineName: "My Pipeline (Copy)" });
+      .mockResolvedValue({ name: "My Pipeline (Copy)" });
     const tools = createWorkareaRemoteTools(() =>
       makeDeps({
         getTabs: () => [runTab("tab-run", "run-42")],
@@ -394,7 +394,7 @@ describe("createWorkareaRemoteTools", () => {
   });
 
   it("clone_pipeline prefers an explicit runId over the open tabs", async () => {
-    const clonePipeline = vi.fn().mockResolvedValue({ pipelineName: "P" });
+    const clonePipeline = vi.fn().mockResolvedValue({ name: "P" });
     const tools = createWorkareaRemoteTools(() =>
       makeDeps({
         getTabs: () => [runTab("tab-run", "run-open")],
@@ -407,6 +407,25 @@ describe("createWorkareaRemoteTools", () => {
 
     expect(clonePipeline).toHaveBeenCalledWith("run-explicit");
   });
+
+  it.each(["remote:server:clone", "pending:server:clone", "document-id"])(
+    "clone_pipeline opens the stored identity %s instead of its display name",
+    async (fileId) => {
+      const tools = createWorkareaRemoteTools(() =>
+        makeDeps({
+          clonePipeline: vi.fn().mockResolvedValue({
+            name: "My Pipeline (Copy)",
+            fileId,
+          }),
+        }),
+      );
+
+      expect(await tools.clone_pipeline.execute({ runId: "run-42" })).toEqual({
+        name: "My Pipeline (Copy)",
+        target: `pipeline://id/${fileId}`,
+      });
+    },
+  );
 
   describe("run inspect tools", () => {
     it("get_run_status resolves the run from the active run tab and derives the overall status", async () => {

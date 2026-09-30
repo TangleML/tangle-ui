@@ -32,6 +32,7 @@ export interface StoredLibrary extends StoredLibraryFolder {
 export type FavoriteType = "pipeline" | "run";
 
 export interface FavoriteItem {
+  pipelineReferenceId?: string;
   type: FavoriteType;
   id: string;
   name: string;

@@ -8,7 +8,7 @@ export function useFolderPipelines(folderId: string | null) {
   const storage = usePipelineStorage();
 
   return useSuspenseQuery({
-    queryKey: FoldersQueryKeys.Pipelines(folderId),
+    queryKey: [...FoldersQueryKeys.Pipelines(folderId), storage.scope],
     queryFn: async (): Promise<PipelineFile[]> => {
       const folder =
         folderId === null
@@ -20,7 +20,7 @@ export function useFolderPipelines(folderId: string | null) {
         if (status !== "granted") return [];
       }
 
-      return folder.listPipelines();
+      return storage.listPipelines(folderId ?? undefined);
     },
   });
 }

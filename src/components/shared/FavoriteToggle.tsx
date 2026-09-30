@@ -10,6 +10,7 @@ interface FavoriteToggleProps {
   type: FavoriteType;
   id: string;
   name: string;
+  pipelineReferenceId?: string;
   analyticsActionType?: string;
 }
 
@@ -17,20 +18,25 @@ export const FavoriteToggle = ({
   type,
   id,
   name,
+  pipelineReferenceId,
   analyticsActionType,
 }: FavoriteToggleProps) => {
   const { isFavorite, toggleFavorite } = useFavorites();
-  const active = isFavorite(type, id);
+  const active = isFavorite(type, id, pipelineReferenceId);
 
   const handleClick = (e: MouseEvent) => {
     e.stopPropagation();
-    toggleFavorite({ type, id, name });
+    toggleFavorite({ type, id, name, pipelineReferenceId });
   };
 
   return (
     <Button
       onClick={handleClick}
       data-testid="favorite-toggle"
+      aria-label={
+        active ? `Remove ${name} from favorites` : `Add ${name} to favorites`
+      }
+      aria-pressed={active}
       className={cn(
         "w-fit h-fit p-1 hover:text-warning",
         active ? "text-warning" : "text-gray-500/50 dark:text-muted-foreground",

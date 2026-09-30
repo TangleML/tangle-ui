@@ -2,6 +2,8 @@ import { format } from "date-fns";
 import type { ReactNode } from "react";
 import { useState } from "react";
 
+import { AnnotationFilterInput } from "@/components/shared/AnnotationFilterInput/AnnotationFilterInput";
+import { CreatedByFilter } from "@/components/shared/CreatedByFilter/CreatedByFilter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,20 +23,29 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Text } from "@/components/ui/typography";
+import type {
+  PipelineAnnotationFilter,
+  RemotePipelineSortField,
+} from "@/types/pipelineSearch";
 
-import type { FilterBarProps, PipelineSortField } from "./usePipelineFilters";
+import type {
+  FilterBarProps,
+  PipelineFilterControls,
+} from "./usePipelineFilters";
 
-const SORT_FIELD_OPTIONS: { value: PipelineSortField; label: string }[] = [
-  { value: "modified_at", label: "Date" },
-  { value: "name", label: "Name" },
-];
-
-function isValidSortField(value: string): value is PipelineSortField {
-  return SORT_FIELD_OPTIONS.some((opt) => opt.value === value);
+interface RemoteFilterBarProps extends PipelineFilterControls {
+  userId: string;
+  setUserId: (value: string) => void;
+  annotations: PipelineAnnotationFilter[];
+  setAnnotations: (value: PipelineAnnotationFilter[]) => void;
+  sortField: RemotePipelineSortField;
+  setSortField: (value: RemotePipelineSortField) => void;
+  resultCount: number | undefined;
+  hasMoreResults: boolean;
 }
 
 interface PipelineFiltersBarProps {
-  filters: FilterBarProps;
+  filters: FilterBarProps | RemoteFilterBarProps;
   actions?: ReactNode;
 }
 
@@ -48,23 +59,28 @@ export function PipelineFiltersBar({
     dateRange,
     setDateRange,
     sortField,
-    setSortField,
     sortDirection,
     setSortDirection,
-    componentQuery,
-    setComponentQuery,
-    hasActiveFilters,
-    activeFilterCount,
     clearFilters,
     totalCount,
-    filteredCount,
   } = filters;
+  const remote = "userId" in filters ? filters : undefined;
+  const local = "componentQuery" in filters ? filters : undefined;
+  const storageLabel = remote ? "remote" : "local";
+  const filteredCount = remote ? remote.resultCount : local?.filteredCount;
+  const advancedFilterCount = remote
+    ? remote.annotations.length
+    : Number(!!local?.componentQuery);
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
 
   const isSortDescending = sortDirection === "desc";
 
   const handleSortFieldChange = (value: string) => {
-    if (isValidSortField(value)) setSortField(value);
+    if (value === "name") filters.setSortField(value);
+    else if (value === "modified_at") {
+      if (remote) remote.setSortField("updated_at");
+      else local?.setSortField("modified_at");
+    }
   };
 
   const toggleSortDirection = () => {
@@ -91,32 +107,42 @@ export function PipelineFiltersBar({
     const separator = fromStr && toStr ? " – " : "";
     allBadges.push({
       key: "date_range",
-      label: `${fromStr}${separator}${toStr}`,
+      label: `${remote ? "Edited: " : ""}${fromStr}${separator}${toStr}`,
       onRemove: () => setDateRange(undefined),
     });
   }
 
-  if (componentQuery) {
+  if (local?.componentQuery) {
     allBadges.push({
       key: "component",
-      label: `Component: ${componentQuery}`,
-      onRemove: () => setComponentQuery(""),
+      label: `Component: ${local.componentQuery}`,
+      onRemove: () => local.setComponentQuery(""),
     });
   }
+
+  if (remote && remote.userId !== "me") {
+    allBadges.push({
+      key: "owner",
+      label: remote.userId ? `Owner: ${remote.userId}` : "All owners",
+      onRemove: () => remote.setUserId("me"),
+    });
+  }
+  const activeFilterCount =
+    allBadges.length + (remote?.annotations.length ?? 0);
+  const hasActiveFilters = activeFilterCount > 0;
 
   return (
     <Collapsible open={isAdvancedOpen} onOpenChange={setIsAdvancedOpen}>
       <BlockStack gap="3">
-        {/* Row 1: Basic Filters */}
-        <InlineStack gap="3" align="center">
-          {/* Search */}
-          <div className="relative flex-1 min-w-0">
+        <InlineStack gap="3" align="center" wrap="wrap" className="w-full">
+          <div className="relative flex-1 min-w-60">
             <Icon
               name="Search"
               className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
             />
             <Input
-              placeholder="Search..."
+              placeholder={remote ? "Search by name or path..." : "Search..."}
+              aria-label={`Search ${storageLabel} pipelines`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9 pr-8 w-full"
@@ -127,14 +153,26 @@ export function PipelineFiltersBar({
                 size="icon"
                 onClick={() => setSearchQuery("")}
                 className="absolute right-2 top-1/2 -translate-y-1/2 size-6 text-muted-foreground hover:text-foreground"
-                aria-label="Clear search"
+                aria-label={
+                  remote ? "Clear remote pipeline search" : "Clear search"
+                }
               >
                 <Icon name="X" size="sm" />
               </Button>
             )}
           </div>
 
-          {/* Date Range */}
+          {remote && (
+            <CreatedByFilter
+              value={remote.userId}
+              onChange={(value) => remote.setUserId(value ?? "")}
+              onClear={() => remote.setUserId("")}
+              label="Filter remote pipelines by owner"
+              placeholder="All owners"
+              clearLabel="Clear owner filter"
+            />
+          )}
+
           <div className="shrink-0">
             <DatePickerWithRange
               value={dateRange}
@@ -143,21 +181,32 @@ export function PipelineFiltersBar({
             />
           </div>
 
-          {/* Sort Controls */}
           <InlineStack gap="1" align="center" className="shrink-0">
-            <Select value={sortField} onValueChange={handleSortFieldChange}>
-              <SelectTrigger className="w-24">
+            <Select
+              value={sortField === "name" ? "name" : "modified_at"}
+              onValueChange={handleSortFieldChange}
+            >
+              <SelectTrigger
+                className="w-32"
+                aria-label={`Sort ${storageLabel} pipelines by`}
+              >
                 <SelectValue placeholder="Sort" />
               </SelectTrigger>
               <SelectContent>
-                {SORT_FIELD_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
+                <SelectItem value="modified_at">
+                  {remote ? "Last edited" : "Date"}
+                </SelectItem>
+                <SelectItem value="name">Name</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="ghost" size="icon" onClick={toggleSortDirection}>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleSortDirection}
+              aria-label={
+                isSortDescending ? "Sort ascending" : "Sort descending"
+              }
+            >
               {isSortDescending ? (
                 <Icon name="ArrowDownAZ" />
               ) : (
@@ -166,17 +215,16 @@ export function PipelineFiltersBar({
             </Button>
           </InlineStack>
 
-          {/* Advanced Toggle */}
           <CollapsibleTrigger asChild>
             <Button
-              variant={componentQuery ? "secondary" : "outline"}
+              variant={advancedFilterCount > 0 ? "secondary" : "outline"}
               size="sm"
               className="shrink-0"
             >
-              Advanced
-              {componentQuery && (
+              Advanced{" "}
+              {advancedFilterCount > 0 && (
                 <Badge variant="secondary" className="ml-1.5 h-5 min-w-5 px-1">
-                  1
+                  {advancedFilterCount}
                 </Badge>
               )}
               {isAdvancedOpen ? (
@@ -190,48 +238,66 @@ export function PipelineFiltersBar({
           {actions}
         </InlineStack>
 
-        {/* Row 2: Advanced (Collapsible) */}
         <CollapsibleContent>
           <BlockStack
             gap="2"
             className="rounded-md border bg-muted/30 px-4 py-3"
           >
-            <Text size="sm" weight="semibold">
-              Contains component
-            </Text>
-            <InlineStack align="start">
-              <Input
-                placeholder="Component name..."
-                value={componentQuery}
-                onChange={(e) => setComponentQuery(e.target.value)}
-                className="pr-8 w-xs"
+            {remote && (
+              <AnnotationFilterInput
+                filters={remote.annotations}
+                onChange={remote.setAnnotations}
               />
-              {componentQuery && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setComponentQuery("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 size-6 text-muted-foreground hover:text-foreground"
-                  aria-label="Clear component filter"
-                >
-                  <Icon name="X" size="sm" />
-                </Button>
-              )}
-            </InlineStack>
+            )}
+            {local && (
+              <>
+                <Text size="sm" weight="semibold">
+                  Contains component
+                </Text>
+                <InlineStack align="start" className="relative w-xs">
+                  <Input
+                    placeholder="Component name..."
+                    value={local.componentQuery}
+                    onChange={(e) => local.setComponentQuery(e.target.value)}
+                    className="pr-8 w-xs"
+                  />
+                  {local.componentQuery && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => local.setComponentQuery("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 size-6 text-muted-foreground hover:text-foreground"
+                      aria-label="Clear component filter"
+                    >
+                      <Icon name="X" size="sm" />
+                    </Button>
+                  )}
+                </InlineStack>
+              </>
+            )}
           </BlockStack>
         </CollapsibleContent>
 
-        {/* Row 3: Count + Active filter badges */}
-        {(hasActiveFilters || totalCount > 0) && (
-          <InlineStack gap="2" align="center" blockAlign="center">
-            <Text size="sm" tone="subdued">
-              Showing {filteredCount} of {totalCount} pipelines
-            </Text>
+        {(hasActiveFilters ||
+          (remote ? filteredCount !== undefined : totalCount > 0)) && (
+          <InlineStack
+            gap="2"
+            align="center"
+            blockAlign="center"
+            wrap="wrap"
+            className="w-full"
+          >
+            {filteredCount !== undefined && (
+              <Text size="sm" tone="subdued">
+                Showing {filteredCount} of {totalCount}
+                {remote?.hasMoreResults ? "+" : ""} pipelines
+              </Text>
+            )}
 
             <div className="flex-1" />
 
             {hasActiveFilters && (
-              <InlineStack gap="2" align="center">
+              <InlineStack gap="2" align="center" wrap="wrap">
                 {allBadges.map((badge) => (
                   <Badge key={badge.key} variant="outline">
                     {badge.label}

@@ -10,10 +10,12 @@ export const KeyValueList = ({
   title,
   items,
   titleAction,
+  alignValues = false,
 }: {
   title?: string;
   items: AttributeProps[];
   titleAction?: ReactNode;
+  alignValues?: boolean;
 }) => {
   if (items.length === 0) {
     return (
@@ -27,10 +29,25 @@ export const KeyValueList = ({
 
   return (
     <ContentBlock title={title} titleAction={titleAction}>
-      <BlockStack>
-        {items.map((item) => (
-          <Row key={item.label} {...item} />
-        ))}
+      <BlockStack
+        className={
+          alignValues
+            ? "grid grid-cols-[max-content_minmax(0,1fr)] items-center gap-x-2 px-2 text-xs"
+            : undefined
+        }
+      >
+        {items.map((item) =>
+          alignValues ? (
+            <Attribute
+              key={item.label}
+              {...item}
+              className="contents"
+              copyable
+            />
+          ) : (
+            <Row key={item.label} {...item} />
+          ),
+        )}
       </BlockStack>
     </ContentBlock>
   );

@@ -10,7 +10,14 @@ import {
 import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import { BackendProvider } from "@/providers/BackendProvider";
+import { RunSubmissionScopeProvider } from "@/providers/RunSubmissionScopeProvider";
+import { useRerunPipelineRun } from "@/routes/v2/pages/RunView/hooks/useRerunPipelineRun";
+import { buildProjectRunAnnotationKey } from "@/utils/annotations";
+import type { ComponentSpec } from "@/utils/componentSpec";
+import {
+  SAVED_PIPELINE_ID_ANNOTATION,
+  SOURCE_PIPELINE_ID_ANNOTATION,
+} from "@/utils/pipelineRunSource";
 
 import { RerunPipelineButton } from "./RerunPipelineButton";
 
@@ -24,6 +31,9 @@ const {
   mockGetToken,
   mockFetch,
   mockUseExecutionDataOptional,
+  mockFetchRunAnnotations,
+  projects,
+  remotePipelines,
 } = vi.hoisted(() => ({
   navigateMock: vi.fn(),
   notifyMock: vi.fn(),
@@ -34,6 +44,9 @@ const {
   mockGetToken: vi.fn(),
   mockFetch: vi.fn(),
   mockUseExecutionDataOptional: vi.fn(),
+  mockFetchRunAnnotations: vi.fn(),
+  projects: { enabled: false },
+  remotePipelines: { enabled: true },
 }));
 
 // Set up mocks
@@ -47,6 +60,12 @@ vi.mock("@tanstack/react-router", async (importOriginal) => ({
 vi.mock("@/hooks/useToastNotification", () => ({
   default: () => notifyMock,
 }));
+
+vi.mock("@/providers/BackendProvider", () => ({
+  useBackend: () => ({ backendUrl: "https://backend.example.com" }),
+}));
+
+vi.mock("@/routes/router", () => import("@/routes/appRoutes"));
 
 vi.mock("@/components/shared/Authentication/helpers", () => ({
   isAuthorizationRequired: mockIsAuthorizationRequired,
@@ -72,6 +91,32 @@ vi.mock("@/utils/submitPipeline", () => ({
 
 vi.mock("@/providers/ExecutionDataProvider", () => ({
   useExecutionDataOptional: mockUseExecutionDataOptional,
+  useExecutionData: mockUseExecutionDataOptional,
+}));
+
+vi.mock("@/services/pipelineRunService", () => ({
+  fetchRunAnnotations: mockFetchRunAnnotations,
+}));
+
+vi.mock("@/components/shared/Settings/useFlags", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("@/components/shared/Settings/useFlags")
+    >();
+
+  return {
+    ...actual,
+    isFlagEnabled: (flagName: Parameters<typeof actual.isFlagEnabled>[0]) =>
+      flagName === "projects"
+        ? projects.enabled
+        : actual.isFlagEnabled(flagName),
+  };
+});
+
+vi.mock("@/utils/remotePipelines", () => ({
+  get REMOTE_PIPELINES_ENABLED() {
+    return remotePipelines.enabled;
+  },
 }));
 
 const testOrigin = import.meta.env.VITE_BASE_URL || "http://localhost:3000";
@@ -82,6 +127,19 @@ Object.defineProperty(window, "location", {
   },
   writable: true,
 });
+
+function RerunHookHarness({ componentSpec }: { componentSpec: ComponentSpec }) {
+  const { rerun, isRerunning } = useRerunPipelineRun(componentSpec);
+  return (
+    <button
+      data-testid="rerun-pipeline-button"
+      onClick={rerun}
+      disabled={isRerunning}
+    >
+      Rerun
+    </button>
+  );
+}
 
 describe("<RerunPipelineButton/>", () => {
   const componentSpec = { name: "Test Pipeline" } as any;
@@ -96,9 +154,7 @@ describe("<RerunPipelineButton/>", () => {
     });
 
     return render(
-      <QueryClientProvider client={queryClient}>
-        <BackendProvider>{ui}</BackendProvider>
-      </QueryClientProvider>,
+      <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
     );
   };
 
@@ -116,6 +172,9 @@ describe("<RerunPipelineButton/>", () => {
     mockGetToken.mockReturnValue("mock-token");
     mockAwaitAuthorization.mockClear();
     mockUseExecutionDataOptional.mockReturnValue(undefined);
+    mockFetchRunAnnotations.mockResolvedValue({});
+    projects.enabled = false;
+    remotePipelines.enabled = true;
   });
 
   afterEach(async () => {
@@ -417,6 +476,267 @@ describe("<RerunPipelineButton/>", () => {
           onError: expect.any(Function),
         }),
       );
+    });
+  });
+
+  test("preserves source and project attribution from an explicit run ID without execution context", async () => {
+    const sourcePipelineId = "550e8400-e29b-41d4-a716-446655440000";
+    projects.enabled = true;
+    mockFetchRunAnnotations.mockResolvedValue({
+      [SOURCE_PIPELINE_ID_ANNOTATION]: sourcePipelineId,
+      [buildProjectRunAnnotationKey("previous-project")]: "true",
+    });
+    mockSubmitPipelineRun.mockImplementation((_spec, _backend, { onSuccess }) =>
+      onSuccess({ id: "rerun-1" }),
+    );
+
+    renderWithProviders(
+      <RunSubmissionScopeProvider projectId="current-project">
+        <RerunPipelineButton
+          componentSpec={componentSpec}
+          runId="explicit-run"
+        />
+      </RunSubmissionScopeProvider>,
+    );
+
+    fireEvent.click(screen.getByTestId("rerun-pipeline-button"));
+
+    await waitFor(() => expect(mockSubmitPipelineRun).toHaveBeenCalled());
+    expect(mockSubmitPipelineRun.mock.calls[0][2]).toMatchObject({
+      sourcePipelineId,
+      runAnnotations: {
+        [buildProjectRunAnnotationKey("previous-project")]: "true",
+        [buildProjectRunAnnotationKey("current-project")]: "true",
+      },
+    });
+    expect(mockFetchRunAnnotations).toHaveBeenCalledExactlyOnceWith(
+      "explicit-run",
+      "https://backend.example.com",
+    );
+  });
+
+  describe.each(["V1", "V2"])("%s source association", (version) => {
+    const backendUrl = "https://backend.example.com";
+    const sourcePipelineId = "550e8400-e29b-41d4-a716-446655440000";
+    const otherPipelineId = "550e8400-e29b-41d4-a716-446655440001";
+    const taskArguments = { dataset: "original-dataset" };
+
+    function renderRerun(projectId?: string) {
+      return renderWithProviders(
+        <RunSubmissionScopeProvider projectId={projectId}>
+          {version === "V1" ? (
+            <RerunPipelineButton componentSpec={componentSpec} />
+          ) : (
+            <RerunHookHarness componentSpec={componentSpec} />
+          )}
+        </RunSubmissionScopeProvider>,
+      );
+    }
+
+    beforeEach(() => {
+      mockUseExecutionDataOptional.mockReturnValue({
+        runId: "run-1",
+        metadata: { id: "run-1" },
+        rootDetails: { task_spec: { arguments: taskArguments } },
+      });
+      mockSubmitPipelineRun.mockImplementation(
+        (_spec, _backend, { onSuccess }) => onSuccess({ id: "rerun-1" }),
+      );
+    });
+
+    test.each([true, false])(
+      "retains the active scope with projects disabled and remote pipelines enabled: %s",
+      async (enabled) => {
+        remotePipelines.enabled = enabled;
+        mockFetchRunAnnotations.mockResolvedValue({
+          [SOURCE_PIPELINE_ID_ANNOTATION]: sourcePipelineId,
+          [buildProjectRunAnnotationKey("previous-project")]: "true",
+        });
+        renderRerun("current-project");
+
+        fireEvent.click(screen.getByTestId("rerun-pipeline-button"));
+
+        await waitFor(() => expect(mockSubmitPipelineRun).toHaveBeenCalled());
+        expect(mockSubmitPipelineRun.mock.calls[0][2]).toMatchObject({
+          sourcePipelineId: enabled ? sourcePipelineId : undefined,
+          runAnnotations: {
+            [buildProjectRunAnnotationKey("current-project")]: "true",
+          },
+        });
+        expect(
+          mockSubmitPipelineRun.mock.calls[0][2].runAnnotations,
+        ).not.toHaveProperty(buildProjectRunAnnotationKey("previous-project"));
+      },
+    );
+
+    test.each([true, false])(
+      "retains original projects and active scope with projects enabled and remote pipelines enabled: %s",
+      async (enabled) => {
+        projects.enabled = true;
+        remotePipelines.enabled = enabled;
+        mockFetchRunAnnotations.mockResolvedValue({
+          [SOURCE_PIPELINE_ID_ANNOTATION]: sourcePipelineId,
+          [buildProjectRunAnnotationKey("previous-project")]: "true",
+        });
+        renderRerun("current-project");
+
+        fireEvent.click(screen.getByTestId("rerun-pipeline-button"));
+
+        await waitFor(() => expect(mockSubmitPipelineRun).toHaveBeenCalled());
+        expect(mockSubmitPipelineRun.mock.calls[0][2]).toMatchObject({
+          sourcePipelineId: enabled ? sourcePipelineId : undefined,
+          runAnnotations: {
+            [buildProjectRunAnnotationKey("previous-project")]: "true",
+            [buildProjectRunAnnotationKey("current-project")]: "true",
+          },
+        });
+        expect(mockFetchRunAnnotations).toHaveBeenCalledExactlyOnceWith(
+          "run-1",
+          backendUrl,
+        );
+      },
+    );
+
+    test.each([SAVED_PIPELINE_ID_ANNOTATION, SOURCE_PIPELINE_ID_ANNOTATION])(
+      "preserves the pipeline ID from %s",
+      async (annotationKey) => {
+        mockFetchRunAnnotations.mockResolvedValue({
+          [annotationKey]: sourcePipelineId,
+        });
+        renderRerun();
+
+        fireEvent.click(screen.getByTestId("rerun-pipeline-button"));
+
+        await waitFor(() => expect(mockSubmitPipelineRun).toHaveBeenCalled());
+        expect(mockSubmitPipelineRun.mock.calls[0][2].sourcePipelineId).toBe(
+          sourcePipelineId,
+        );
+        expect(mockSubmitPipelineRun.mock.calls[0][0]).toBe(componentSpec);
+        expect(mockSubmitPipelineRun.mock.calls[0][2].taskArguments).toBe(
+          taskArguments,
+        );
+        expect(mockFetchRunAnnotations).toHaveBeenCalledExactlyOnceWith(
+          "run-1",
+          backendUrl,
+        );
+      },
+    );
+
+    test.each([undefined, "not-a-pipeline-id"])(
+      "submits without an association for source ID %s",
+      async (sourceId) => {
+        mockFetchRunAnnotations.mockResolvedValue(
+          sourceId === undefined
+            ? {}
+            : { [SOURCE_PIPELINE_ID_ANNOTATION]: sourceId },
+        );
+        renderRerun();
+
+        fireEvent.click(screen.getByTestId("rerun-pipeline-button"));
+
+        await waitFor(() => expect(mockSubmitPipelineRun).toHaveBeenCalled());
+        expect(
+          mockSubmitPipelineRun.mock.calls[0][2].sourcePipelineId,
+        ).toBeUndefined();
+      },
+    );
+
+    test("does not reuse annotations from another backend or an unscoped cache", async () => {
+      mockFetchRunAnnotations.mockResolvedValue({
+        [SOURCE_PIPELINE_ID_ANNOTATION]: sourcePipelineId,
+      });
+      renderRerun();
+      queryClient.setQueryData(
+        ["pipeline-run-annotations", "https://other.example.com", "run-1"],
+        { [SOURCE_PIPELINE_ID_ANNOTATION]: otherPipelineId },
+      );
+      queryClient.setQueryData(["pipeline-run-annotations", "run-1"], {
+        [SOURCE_PIPELINE_ID_ANNOTATION]: otherPipelineId,
+      });
+
+      fireEvent.click(screen.getByTestId("rerun-pipeline-button"));
+
+      await waitFor(() => expect(mockSubmitPipelineRun).toHaveBeenCalled());
+      expect(mockSubmitPipelineRun.mock.calls[0][2].sourcePipelineId).toBe(
+        sourcePipelineId,
+      );
+      expect(mockFetchRunAnnotations).toHaveBeenCalledWith("run-1", backendUrl);
+    });
+
+    test("reuses the viewer's annotations and prefers the server association", async () => {
+      renderRerun();
+      queryClient.setQueryData(
+        ["pipeline-run-annotations", backendUrl, "run-1"],
+        {
+          [SAVED_PIPELINE_ID_ANNOTATION]: sourcePipelineId,
+          [SOURCE_PIPELINE_ID_ANNOTATION]: otherPipelineId,
+        },
+      );
+
+      fireEvent.click(screen.getByTestId("rerun-pipeline-button"));
+
+      await waitFor(() => expect(mockSubmitPipelineRun).toHaveBeenCalled());
+      expect(mockSubmitPipelineRun.mock.calls[0][2].sourcePipelineId).toBe(
+        sourcePipelineId,
+      );
+      expect(mockFetchRunAnnotations).not.toHaveBeenCalled();
+    });
+
+    test("reports annotation failures before submitting", async () => {
+      mockFetchRunAnnotations.mockRejectedValue(
+        new Error("Annotations unavailable"),
+      );
+      renderRerun();
+
+      fireEvent.click(screen.getByTestId("rerun-pipeline-button"));
+
+      await waitFor(() => {
+        expect(notifyMock).toHaveBeenCalledWith(
+          "Failed to submit pipeline. Annotations unavailable",
+          "error",
+        );
+      });
+      expect(mockSubmitPipelineRun).not.toHaveBeenCalled();
+      expect(screen.getByTestId("rerun-pipeline-button")).toBeEnabled();
+    });
+
+    test("does not request annotations when projects and remote pipelines are disabled", async () => {
+      remotePipelines.enabled = false;
+      renderRerun();
+      queryClient.setQueryData(
+        ["pipeline-run-annotations", backendUrl, "run-1"],
+        { [SOURCE_PIPELINE_ID_ANNOTATION]: sourcePipelineId },
+      );
+
+      fireEvent.click(screen.getByTestId("rerun-pipeline-button"));
+
+      await waitFor(() => expect(mockSubmitPipelineRun).toHaveBeenCalled());
+      expect(mockFetchRunAnnotations).not.toHaveBeenCalled();
+      expect(
+        mockSubmitPipelineRun.mock.calls[0][2].sourcePipelineId,
+      ).toBeUndefined();
+    });
+
+    test("invalidates the current backend's run lists after submission", async () => {
+      renderRerun();
+      const currentRunsKey = ["runs", backendUrl, { sourcePipelineId }];
+      const otherRunsKey = ["runs", "https://other.example.com"];
+      queryClient.setQueryData(currentRunsKey, []);
+      queryClient.setQueryData(otherRunsKey, []);
+
+      fireEvent.click(screen.getByTestId("rerun-pipeline-button"));
+
+      await waitFor(() => {
+        expect(queryClient.getQueryState(currentRunsKey)?.isInvalidated).toBe(
+          true,
+        );
+      });
+      expect(queryClient.getQueryState(otherRunsKey)?.isInvalidated).toBe(
+        false,
+      );
+      expect(navigateMock).toHaveBeenCalledWith({
+        to: version === "V1" ? "/runs-v2/rerun-1" : "/runs/rerun-1",
+      });
     });
   });
 });

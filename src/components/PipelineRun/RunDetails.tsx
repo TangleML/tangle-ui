@@ -16,6 +16,7 @@ import { useUserDetails } from "@/hooks/useUserDetails";
 import { useBackend } from "@/providers/BackendProvider";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
+import { getDefaultEditorPath } from "@/routes/editorRoutes";
 import { runAnnotationsQueryOptions } from "@/services/runAnnotations";
 import {
   getAnnotationValue,
@@ -29,6 +30,8 @@ import {
   getExecutionStatusLabel,
   getOverallExecutionStatusFromStats,
 } from "@/utils/executionStatus";
+import { getRunSourcePipelineId } from "@/utils/pipelineRunSource";
+import { REMOTE_PIPELINES_ENABLED } from "@/utils/remotePipelines";
 import { copyToClipboard } from "@/utils/string";
 
 import { ActionButton } from "../shared/Buttons/ActionButton";
@@ -53,6 +56,9 @@ export const RunDetails = () => {
     ...runAnnotationsQueryOptions(runId, backendUrl),
   });
   const runSource = getAnnotationValue(runAnnotations, RUN_SOURCE_ANNOTATION);
+  const sourcePipelineId = REMOTE_PIPELINES_ENABLED
+    ? getRunSourcePipelineId(runAnnotations)
+    : undefined;
 
   const handleCopyUrl = () => {
     copyToClipboard(window.location.href);
@@ -127,10 +133,22 @@ export const RunDetails = () => {
       {metadata && (
         <KeyValueList
           title="Run Info"
+          alignValues
           titleAction={<RunSourceIcon source={runSource} />}
           items={[
             { label: "Run Id", value: metadata.id },
             { label: "Execution Id", value: metadata.root_execution_id },
+            {
+              label: "Source pipeline",
+              value: sourcePipelineId
+                ? {
+                    href: getDefaultEditorPath(sourcePipelineId, backendUrl),
+                    text: "Open pipeline",
+                    title: sourcePipelineId,
+                    internal: true,
+                  }
+                : undefined,
+            },
             { label: "Created by", value: metadata.created_by ?? undefined },
             {
               label: "Created at",

@@ -7,7 +7,6 @@ import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { PipelineRunsList } from "@/components/shared/PipelineRunDisplay/PipelineRunsList";
 import { DynamicDataArgumentInput } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/ArgumentsEditor/DynamicDataArgumentInput";
 import { typeSpecToString } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/ArgumentsEditor/utils";
-import { getArgumentsFromInputs } from "@/components/shared/ReactFlow/FlowCanvas/utils/getArgumentsFromInputs";
 import { SelectSecretDialog } from "@/components/shared/SecretsManagement/SelectSecretDialog";
 import {
   createSecretArgument,
@@ -53,6 +52,8 @@ import {
 import { extractTaskArguments } from "@/utils/nodes/taskArguments";
 import { validateArguments } from "@/utils/validations";
 
+import { selectTaskArgumentsForInputs } from "../taskArguments";
+
 type TaskArguments = TaskSpecOutput["arguments"];
 
 interface SubmitTaskArgumentsDialogProps {
@@ -60,6 +61,7 @@ interface SubmitTaskArgumentsDialogProps {
   onCancel: () => void;
   onConfirm: (args: Record<string, ArgumentType>, notes: string) => void;
   componentSpec: ComponentSpec;
+  savedTaskArguments?: Record<string, ArgumentType>;
   showCopyFromRun?: boolean;
   projectField?: ReactNode;
 }
@@ -69,13 +71,17 @@ export const SubmitTaskArgumentsDialog = ({
   onCancel,
   onConfirm,
   componentSpec,
+  savedTaskArguments,
   showCopyFromRun = true,
   projectField,
 }: SubmitTaskArgumentsDialogProps) => {
   const notify = useToastNotification();
   const tourMode = useTourMode();
   const mockBackend = useTourMockBackend();
-  const initialArgs = getArgumentsFromInputs(componentSpec);
+  const initialArgs = selectTaskArgumentsForInputs(
+    componentSpec,
+    savedTaskArguments,
+  );
 
   const [runNotes, setRunNotes] = useState<string>("");
   const [taskArguments, setTaskArguments] =
@@ -117,12 +123,15 @@ export const SubmitTaskArgumentsDialog = ({
 
   useEffect(() => {
     if (open) {
-      const freshArgs = getArgumentsFromInputs(componentSpec);
+      const freshArgs = selectTaskArgumentsForInputs(
+        componentSpec,
+        savedTaskArguments,
+      );
       setTaskArguments(freshArgs);
       setRunNotes("");
       setHighlightedArgs(new Map());
     }
-  }, [open, componentSpec]);
+  }, [open, componentSpec, savedTaskArguments]);
 
   useEffect(() => {
     setIsValidToSubmit(validateArguments(inputs, taskArguments));

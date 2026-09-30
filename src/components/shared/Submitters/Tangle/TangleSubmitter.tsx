@@ -27,6 +27,7 @@ import { validateArguments } from "@/utils/validations";
 import TooltipButton from "../../Buttons/TooltipButton";
 import { SubmitTaskArgumentsDialog } from "./components/SubmitTaskArgumentsDialog";
 import { saveRunAnnotations } from "./saveRunAnnotations";
+import { selectTaskArgumentsForInputs } from "./taskArguments";
 import { useSubmitPipeline } from "./useSubmitPipeline";
 
 interface TangleSubmitterProps {
@@ -34,6 +35,8 @@ interface TangleSubmitterProps {
   onSubmitComplete?: () => void;
   isComponentTreeValid?: boolean;
   onlyFixableIssues?: boolean;
+  prepareSourcePipeline?: (backendUrl: string) => Promise<string | undefined>;
+  savedTaskArguments?: Record<string, ArgumentType>;
 }
 
 const TangleSubmitter = ({
@@ -41,6 +44,8 @@ const TangleSubmitter = ({
   onSubmitComplete,
   isComponentTreeValid = true,
   onlyFixableIssues = false,
+  prepareSourcePipeline,
+  savedTaskArguments,
 }: TangleSubmitterProps) => {
   const { isAuthorized } = useAwaitAuthorization();
   const { backendUrl, configured, available } = useBackend();
@@ -132,9 +137,15 @@ const TangleSubmitter = ({
       return;
     }
 
+    const submissionArguments = selectTaskArgumentsForInputs(
+      componentSpec,
+      savedTaskArguments,
+      taskArguments,
+    );
+
     if (
       onlyFixableIssues &&
-      !validateArguments(componentSpec.inputs ?? [], taskArguments ?? {})
+      !validateArguments(componentSpec.inputs ?? [], submissionArguments)
     ) {
       setIsArgumentsDialogOpen(true);
       return;
@@ -143,10 +154,11 @@ const TangleSubmitter = ({
     setSubmitSuccess(null);
     submit({
       componentSpec,
-      taskArguments,
+      taskArguments: submissionArguments,
       projectIds,
       onSuccess,
       onError,
+      prepareSourcePipeline,
     });
   };
 
@@ -253,6 +265,7 @@ const TangleSubmitter = ({
           onCancel={() => setIsArgumentsDialogOpen(false)}
           onConfirm={handleSubmitWithArguments}
           componentSpec={componentSpec}
+          savedTaskArguments={savedTaskArguments}
           projectField={<RunProjectField pipelineName={componentSpec.name} />}
         />
       )}

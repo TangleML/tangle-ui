@@ -12,10 +12,7 @@ import {
   type ComponentSpec,
   isGraphImplementation,
 } from "@/utils/componentSpec";
-import {
-  getComponentFileFromList,
-  writeComponentToFileListFromText,
-} from "@/utils/componentStore";
+import { getComponentFileFromList } from "@/utils/componentStore";
 import {
   DB_NAME,
   PIPELINE_RUNS_STORE_NAME,
@@ -23,6 +20,9 @@ import {
 } from "@/utils/constants";
 import { fetchWithErrorHandling } from "@/utils/fetchWithErrorHandling";
 import { componentSpecToYaml } from "@/utils/yaml";
+
+import type { PipelineStorageService } from "./pipelineStorage/PipelineStorageService";
+import type { PipelineRef } from "./pipelineStorage/types";
 
 export const createPipelineRun = async (
   payload: BodyCreateApiPipelineRunsPost,
@@ -80,6 +80,7 @@ export const savePipelineRun = async (
 };
 
 export const copyRunToPipeline = async (
+  storage: PipelineStorageService,
   componentSpec: ComponentSpec,
   runId?: string | null,
   name?: string,
@@ -155,15 +156,13 @@ export const copyRunToPipeline = async (
     cleanComponentSpec.name = newName;
 
     const componentText = componentSpecToYaml(cleanComponentSpec);
-    await writeComponentToFileListFromText(
-      USER_PIPELINES_LIST_NAME,
-      newName,
-      componentText,
-    );
+    const file = await storage.createPipeline(newName, componentText);
+    const ref: PipelineRef = { name: newName, fileId: file.id };
 
     return {
-      url: getDefaultEditorPath(newName),
+      url: getDefaultEditorPath(file.referenceId),
       name: newName,
+      ref,
     };
   } catch (error) {
     console.error("Error cloning pipeline:", error);

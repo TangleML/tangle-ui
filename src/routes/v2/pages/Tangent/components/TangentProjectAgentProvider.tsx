@@ -44,6 +44,8 @@ import type { BridgeDeps } from "@/routes/v2/shared/components/AiChat/toolBridge
 import { availablePipelineName } from "@/services/localPipelines/localPipelinesService";
 import { copyRunToPipeline } from "@/services/pipelineRunService";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
+import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
+import type { PipelineRef } from "@/services/pipelineStorage/types";
 import { UNNAMED_PIPELINE } from "@/services/projects/placeholderNames";
 import { createProjectResource } from "@/services/projects/projectResourcesService";
 import { localPipelineResourceInput } from "@/services/projects/resourceDescriptor";
@@ -65,9 +67,10 @@ interface TangentProjectAgentProviderProps {
  * @todo: deduplicate with ClonePipelineButton
  */
 async function clonePipelineFromRun(
+  storage: PipelineStorageService,
   runInspect: RunInspectDeps,
   runId: string,
-): Promise<{ pipelineName: string }> {
+): Promise<PipelineRef> {
   const run = await runInspect.getRunDetails(runId);
   const rootExecutionId = run.root_execution_id;
   if (!rootExecutionId) {
@@ -91,16 +94,17 @@ async function clonePipelineFromRun(
 
   const name = getInitialName(componentSpec, canonicalName);
   const result = await copyRunToPipeline(
+    storage,
     componentSpec,
     runId,
     name,
     taskArguments,
   );
 
-  if (!result.name) {
+  if (!result.ref) {
     throw new Error(`Failed to clone the pipeline for run ${runId}.`);
   }
-  return { pipelineName: result.name };
+  return result.ref;
 }
 
 export function TangentProjectAgentProvider({
@@ -111,8 +115,9 @@ export function TangentProjectAgentProvider({
   const { config: aiConfig } = useAiProviderSettings();
   const { backendUrl } = useBackend();
   const queryClient = useQueryClient();
-  const store = useTangentProject();
   const storage = usePipelineStorage();
+  const storageRef = useRef(storage);
+  const store = useTangentProject();
   const { baseUrl } = useTangentBaseUrl(store.projectId);
 
   const authToken = useRemoteEnvAuthToken();
@@ -147,6 +152,9 @@ export function TangentProjectAgentProvider({
     };
   });
 
+  useEffect(() => {
+    storageRef.current = storage;
+  }, [storage]);
   useEffect(() => {
     authTokenRef.current = authToken;
   }, [authToken]);
@@ -188,25 +196,32 @@ export function TangentProjectAgentProvider({
         const pipelineName = await availablePipelineName(
           name ?? UNNAMED_PIPELINE,
         );
-        const file = await createNewPipeline(storage, pipelineName);
+        const file = await createNewPipeline(storageRef.current, pipelineName);
         await createProjectResource(
           store.projectId,
           localPipelineResourceInput({
-            localName: file.storageKey,
+            localName: file.displayName,
             localId: file.id,
           }),
         );
         await refreshProjectResources();
-        return { pipelineName: file.storageKey, fileId: file.id };
+        return { pipelineName: file.displayName, fileId: file.id };
       },
       clonePipeline: async (runId) => {
-        const { pipelineName } = await clonePipelineFromRun(runInspect, runId);
+        const ref = await clonePipelineFromRun(
+          storageRef.current,
+          runInspect,
+          runId,
+        );
         await createProjectResource(
           store.projectId,
-          localPipelineResourceInput({ localName: pipelineName }),
+          localPipelineResourceInput({
+            localName: ref.name,
+            localId: ref.fileId,
+          }),
         );
         await refreshProjectResources();
-        return { pipelineName };
+        return ref;
       },
       refreshResources: refreshProjectResources,
     })),

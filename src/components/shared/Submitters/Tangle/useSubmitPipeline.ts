@@ -21,6 +21,7 @@ interface SubmitPipelineVariables {
   componentSpec: ComponentSpec;
   taskArguments?: Record<string, ArgumentType>;
   projectIds?: readonly string[];
+  prepareSourcePipeline?: (backendUrl: string) => Promise<string | undefined>;
   onSuccess: (data: PipelineRun) => void;
   onError: (error: Error | string) => void;
 }
@@ -45,6 +46,7 @@ export function useSubmitPipeline() {
       componentSpec,
       taskArguments,
       projectIds,
+      prepareSourcePipeline,
       onSuccess,
       onError,
     }: SubmitPipelineVariables) => {
@@ -60,6 +62,7 @@ export function useSubmitPipeline() {
         submitPipelineRun(componentSpec, backendUrl, {
           authorizationToken: authorizationToken.current,
           taskArguments,
+          prepareSourcePipeline,
           runAnnotations: annotationsFor(projectIds),
           onSuccess: (data) => {
             resolve(data);
@@ -76,6 +79,7 @@ export function useSubmitPipeline() {
       await queryClient.invalidateQueries({
         queryKey: ["pipelineRuns"],
       });
+      await queryClient.invalidateQueries({ queryKey: ["runs", backendUrl] });
       // Refresh the onboarding checklist's run-count so a first run flips
       // `execute_run` immediately rather than after the 5-minute stale window.
       await queryClient.invalidateQueries({

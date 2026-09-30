@@ -30,6 +30,7 @@ import { useUserDetails } from "@/hooks/useUserDetails";
 import type { ComponentSpec } from "@/models/componentSpec";
 import { useBackend } from "@/providers/BackendProvider";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
+import { getDefaultEditorPath } from "@/routes/editorRoutes";
 import { useDebugInTangent } from "@/routes/v2/pages/RunView/hooks/useDebugInTangent";
 import { PipelineDetailsCollapsibleSection } from "@/routes/v2/shared/components/PipelineDetailsCollapsibleSection";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
@@ -47,6 +48,8 @@ import {
   getExecutionStatusLabel,
   getOverallExecutionStatusFromStats,
 } from "@/utils/executionStatus";
+import { getRunSourcePipelineId } from "@/utils/pipelineRunSource";
+import { REMOTE_PIPELINES_ENABLED } from "@/utils/remotePipelines";
 import { tracking } from "@/utils/tracking";
 
 import { RunDetailsHeader } from "./RunDetailsHeader";
@@ -251,17 +254,33 @@ function useRunAnnotations(runId: string | undefined) {
 }
 
 function RunInfoSection({ metadata }: { metadata: PipelineRunResponse }) {
+  const { backendUrl } = useBackend();
   const { data: runAnnotations } = useRunAnnotations(metadata.id);
 
   const runSource = getAnnotationValue(runAnnotations, RUN_SOURCE_ANNOTATION);
+  const sourcePipelineId = REMOTE_PIPELINES_ENABLED
+    ? getRunSourcePipelineId(runAnnotations)
+    : undefined;
   const hasKnownSource = getRunSourceBucket(runSource) !== "unknown";
 
   return (
     <BlockStack gap="2">
       <KeyValueList
+        alignValues
         items={[
           { label: "Run Id", value: metadata.id },
           { label: "Execution Id", value: metadata.root_execution_id },
+          {
+            label: "Source pipeline",
+            value: sourcePipelineId
+              ? {
+                  href: getDefaultEditorPath(sourcePipelineId, backendUrl),
+                  text: "Open pipeline",
+                  title: sourcePipelineId,
+                  internal: true,
+                }
+              : undefined,
+          },
           { label: "Created by", value: metadata.created_by ?? undefined },
           {
             label: "Created at",

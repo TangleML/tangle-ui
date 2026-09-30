@@ -1,29 +1,34 @@
 import "@xyflow/react/dist/style.css";
 import "@/styles/editor.css";
 
-import { useParams, useSearch } from "@tanstack/react-router";
+import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { ReactFlowProvider } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useEffect, useId } from "react";
 
 import { ComponentEditorProvider } from "@/components/shared/ComponentEditor/ComponentEditorProvider";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
-import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
+import {
+  SuspenseWrapper,
+  withSuspenseWrapper,
+} from "@/components/shared/SuspenseWrapper";
 import { InlineStack } from "@/components/ui/layout";
+import { addRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import { ComponentLibraryProvider } from "@/providers/ComponentLibraryProvider";
 import { ForcedSearchProvider } from "@/providers/ComponentLibraryProvider/ForcedSearchProvider";
 import { DialogProvider } from "@/providers/DialogProvider/DialogProvider";
 import { useTourMode } from "@/providers/TourProvider/TourModeContext";
 import { TourSaveExploreDialog } from "@/providers/TourProvider/TourSaveExploreDialog";
 import { TourSecretsDialog } from "@/providers/TourProvider/TourSecretsDialog";
+import { getEditorLocation } from "@/routes/editorRoutes";
+import { QuickRunSubmitterProvider } from "@/routes/v2/pages/Editor/components/QuickRunSubmitterContext";
 import { AiChatStoreProvider } from "@/routes/v2/shared/components/AiChat/AiChatStoreContext";
 import { useCanvasControlsWindow } from "@/routes/v2/shared/components/MiniMap/useCanvasControlsWindow";
 import { useDockAreaAccordion } from "@/routes/v2/shared/hooks/useDockAreaAccordion";
 import { useFocusMode } from "@/routes/v2/shared/hooks/useFocusMode";
 import { NodeRegistryProvider } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { SpecProvider } from "@/routes/v2/shared/providers/SpecContext";
-import { QuickRunSubmitterProvider } from "@/routes/v2/pages/Editor/components/QuickRunSubmitterContext";
 import { useShortcutListener } from "@/routes/v2/shared/shortcuts/useShortcutListener";
 import {
   SharedStoreProvider,
@@ -35,6 +40,8 @@ import {
   TOUR_WINDOW_LAYOUT_ID,
   useWindowPersistence,
 } from "@/routes/v2/shared/windows/windowPersistence";
+import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import type { PipelineRef } from "@/services/pipelineStorage/types";
 
 import { createEditorAgentWorker } from "./components/AiChat/editorAgentWorker";
@@ -45,6 +52,7 @@ import { EditorTourBridge } from "./components/EditorTourBridge/EditorTourBridge
 import { EmptyEditorState } from "./components/EmptyEditorState";
 import { FlowCanvas } from "./components/FlowCanvas/FlowCanvas";
 import { useAiChatWindow } from "./hooks/useAiChatWindow";
+import { useAutoSaveOnLeave } from "./hooks/useAutoSaveOnLeave";
 import { useComponentLibraryWindow } from "./hooks/useComponentLibraryWindow";
 import { useComponentSearchV2Window } from "./hooks/useComponentSearchV2Window";
 import { useEditorEscapeShortcut } from "./hooks/useEditorEscapeShortcut";
@@ -52,6 +60,7 @@ import { useHistoryWindow } from "./hooks/useHistoryWindow";
 import { useLinkedWindowCleanup } from "./hooks/useLinkedWindowCleanup";
 import { useLoadSpec } from "./hooks/useLoadSpec";
 import { usePipelineDetailsWindow } from "./hooks/usePipelineDetailsWindow";
+import { usePipelineFile } from "./hooks/usePipelineFile";
 import { usePipelineTreeWindow } from "./hooks/usePipelineTreeWindow";
 import { usePropertiesWindowPositioning } from "./hooks/usePropertiesWindowPositioning";
 import { useRecentRunsWindow } from "./hooks/useRecentRunsWindow";
@@ -62,10 +71,15 @@ import { useSpecLifecycle } from "./hooks/useSpecLifecycle";
 import { useTipOfTheDayWindow } from "./hooks/useTipOfTheDayWindow";
 import { useUndoRedoKeyboard } from "./hooks/useUndoRedoKeyboard";
 import { editorRegistry } from "./nodes";
-import { EditorSessionProvider } from "./store/EditorSessionContext";
+import { readOnlyEditorRegistry } from "./nodes/readOnlyEditorRegistry";
+import {
+  EditorSessionProvider,
+  useEditorSession,
+} from "./store/EditorSessionContext";
 
 interface PipelineEditorProps {
-  pipelineRef: PipelineRef;
+  file: PipelineFile;
+  routeRef: PipelineRef;
 }
 
 const PipelineEditorSkeleton = () => (
@@ -73,39 +87,79 @@ const PipelineEditorSkeleton = () => (
 );
 
 const PipelineEditor = withSuspenseWrapper(
-  observer(({ pipelineRef }: PipelineEditorProps) => {
+  observer(({ file, routeRef }: PipelineEditorProps) => {
+    const session = useEditorSession();
+    const navigationPending = useAutoSaveOnLeave(session.autoSave);
     const {
       data: { spec: rootSpec, restoredUndoStore },
-    } = useLoadSpec(pipelineRef);
+    } = useLoadSpec(file, session.id);
     const { navigation } = useSharedStores();
+    const navigate = useNavigate();
     const tourMode = useTourMode();
+    const referenceId = file.referenceId;
+    const documentId = file.id;
+    const displayName = file.displayName;
+    const storageKind = file.storageKind;
+
+    useEffect(() => {
+      if (tourMode) return;
+      addRecentlyViewed({
+        type: "pipeline",
+        id: documentId,
+        pipelineReferenceId: referenceId,
+        name: displayName,
+      });
+    }, [documentId, referenceId, displayName, tourMode]);
+
+    useEffect(() => {
+      if (tourMode || navigationPending.current || storageKind !== "remote")
+        return;
+      const location = getEditorLocation(file);
+      if (routeRef.name === location.params.pipelineName && !routeRef.fileId)
+        return;
+      void navigate({
+        ...location,
+        replace: true,
+        resetScroll: false,
+        ignoreBlocker: true,
+      });
+    }, [
+      navigate,
+      navigationPending,
+      file,
+      routeRef.name,
+      routeRef.fileId,
+      referenceId,
+      storageKind,
+      tourMode,
+    ]);
 
     useWindowPersistence(tourMode ? TOUR_WINDOW_LAYOUT_ID : "editor");
     useDockAreaAccordion();
-    useSpecLifecycle(rootSpec, pipelineRef, restoredUndoStore);
+    useSpecLifecycle(rootSpec, file, restoredUndoStore);
     useSelectionWindowSync();
     usePropertiesWindowPositioning();
     useLinkedWindowCleanup();
 
     const componentSearchV2Enabled = useFlagValue("component-search-v2");
-    useComponentLibraryWindow(!componentSearchV2Enabled);
+    useComponentLibraryWindow(file.canEdit && !componentSearchV2Enabled);
     usePipelineDetailsWindow();
     usePipelineTreeWindow();
-    useHistoryWindow();
+    useHistoryWindow(file.canEdit);
     useCanvasControlsWindow("v2.pipeline_canvas");
     useRecentRunsWindow();
     useRunsAndSubmissionWindow();
-    useUndoRedoKeyboard();
+    useUndoRedoKeyboard(file.canEdit);
     useFocusMode();
     useShortcutListener();
     useEditorEscapeShortcut();
-    useDebugPanelWindow();
+    useDebugPanelWindow(file.canEdit);
     useTipOfTheDayWindow();
 
     const aiEnabled = useFlagValue("ai-assistant");
-    useAiChatWindow(aiEnabled);
+    useAiChatWindow(aiEnabled && file.canEdit);
 
-    useComponentSearchV2Window(componentSearchV2Enabled);
+    useComponentSearchV2Window(componentSearchV2Enabled && file.canEdit);
     useSeedInitialDockLayoutFromPreset(componentSearchV2Enabled);
 
     const activeSpec = navigation.activeSpec;
@@ -113,7 +167,10 @@ const PipelineEditor = withSuspenseWrapper(
     if (!activeSpec) return null;
 
     return (
-      <NodeRegistryProvider registry={editorRegistry}>
+      <NodeRegistryProvider
+        key={file.canEdit ? "editable" : "readonly"}
+        registry={file.canEdit ? editorRegistry : readOnlyEditorRegistry}
+      >
         <SpecProvider spec={activeSpec}>
           <InlineStack
             className="flex-1 min-h-0 w-full"
@@ -143,7 +200,13 @@ const PipelineEditor = withSuspenseWrapper(
   PipelineEditorSkeleton,
 );
 
-function EditorV2Content({ pipelineRef }: { pipelineRef: PipelineRef | null }) {
+function EditorV2Content({
+  file,
+  pipelineRef,
+}: {
+  file: PipelineFile | null;
+  pipelineRef: PipelineRef | null;
+}) {
   const { navigation } = useSharedStores();
   const tourMode = useTourMode();
 
@@ -152,10 +215,10 @@ function EditorV2Content({ pipelineRef }: { pipelineRef: PipelineRef | null }) {
   }, [navigation, pipelineRef?.name]);
 
   let body: ReactNode;
-  if (pipelineRef) {
+  if (file && pipelineRef) {
     body = (
-      <DriverPermissionGate pipelineRef={pipelineRef}>
-        <PipelineEditor pipelineRef={pipelineRef} />
+      <DriverPermissionGate file={file}>
+        <PipelineEditor file={file} routeRef={pipelineRef} />
       </DriverPermissionGate>
     );
   } else if (tourMode) {
@@ -189,6 +252,8 @@ export function EditorV2({
   pipelineRef?: PipelineRef | null;
 } = {}) {
   const params = useParams({ strict: false });
+  const editorId = useId();
+  const storage = usePipelineStorage();
   const search = useSearch({ strict: false });
   const fileId =
     "fileId" in search && typeof search.fileId === "string"
@@ -206,21 +271,39 @@ export function EditorV2({
       : pipelineName
         ? { name: pipelineName, fileId }
         : null;
-
   return (
     <div className="h-full w-full flex flex-col bg-slate-100 dark:bg-background select-none">
-      <SharedStoreProvider>
-        <EditorSessionProvider>
-          <AiChatStoreProvider
-            createWorker={createEditorAgentWorker}
-            context={{ mode: "editor" }}
-          >
-            <DialogProvider>
-              <EditorV2Content pipelineRef={pipelineRef} />
-            </DialogProvider>
-          </AiChatStoreProvider>
-        </EditorSessionProvider>
-      </SharedStoreProvider>
+      <SuspenseWrapper
+        fallback={<PipelineEditorSkeleton />}
+        resetKeys={[storage.scope, pipelineRef?.fileId, pipelineRef?.name]}
+      >
+        <ResolvedEditor pipelineRef={pipelineRef} editorId={editorId} />
+      </SuspenseWrapper>
     </div>
+  );
+}
+
+function ResolvedEditor({
+  pipelineRef,
+  editorId,
+}: {
+  pipelineRef: PipelineRef | null;
+  editorId: string;
+}) {
+  const storage = usePipelineStorage();
+  const { data: file } = usePipelineFile(pipelineRef, editorId);
+  return (
+    <SharedStoreProvider key={`${storage.scope}:${file?.id ?? "empty"}`}>
+      <EditorSessionProvider>
+        <AiChatStoreProvider
+          createWorker={createEditorAgentWorker}
+          context={{ mode: "editor" }}
+        >
+          <DialogProvider>
+            <EditorV2Content file={file} pipelineRef={pipelineRef} />
+          </DialogProvider>
+        </AiChatStoreProvider>
+      </EditorSessionProvider>
+    </SharedStoreProvider>
   );
 }

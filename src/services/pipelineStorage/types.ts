@@ -1,3 +1,5 @@
+import type { PipelineSearchFilters } from "@/types/pipelineSearch";
+
 import type { GoogleDriveDriverConfig } from "../googleDrive/types"; // google-drive
 import type { FolderIndexDbDriverConfig } from "./drivers/FolderIndexDbStorageDriver";
 import type { LocalFileSystemDriverConfig } from "./drivers/LocalFileSystemDriver";
@@ -7,8 +9,34 @@ export const ROOT_FOLDER_ID = "__root__";
 
 export interface PipelineFileDescriptor {
   storageKey: string;
+  id?: string;
+  displayName?: string;
+  canEdit?: boolean;
   createdAt?: Date;
   modifiedAt?: Date;
+}
+
+export interface PipelinePageOptions {
+  pageSize?: number;
+  pageToken?: string;
+  signal?: AbortSignal;
+  filters?: PipelineSearchFilters;
+}
+
+export interface PipelineStoragePage<T = PipelineFileDescriptor> {
+  files: T[];
+  nextPageToken?: string;
+  totalCount?: number;
+}
+
+export interface PipelineReadResult<T = PipelineFileDescriptor> {
+  content: string;
+  descriptor: T;
+}
+
+export interface PipelineWriteOptions<T = PipelineFileDescriptor> {
+  existing?: T;
+  source?: T;
 }
 
 export type PermissionStatus = "granted" | "denied" | "prompt";
@@ -18,16 +46,22 @@ export interface DriverPermissions {
   request(): Promise<boolean>;
 }
 
-export interface PipelineStorageDriver {
+export interface PipelineStorageDriver<
+  T extends PipelineFileDescriptor = PipelineFileDescriptor,
+> {
   readonly type: string;
   readonly permissions?: DriverPermissions;
   readonly allowsMoveIn: boolean;
   readonly allowsMoveOut: boolean;
-  list(): Promise<PipelineFileDescriptor[]>;
-  read(storageKey: string): Promise<string>;
-  write(storageKey: string, content: string): Promise<void>;
-  rename(oldStorageKey: string, newStorageKey: string): Promise<void>;
-  delete(storageKey: string): Promise<void>;
+  list(): Promise<T[]>;
+  read(storageKey: string): Promise<string | PipelineReadResult<T>>;
+  write(
+    storageKey: string,
+    content: string,
+    options?: PipelineWriteOptions<T>,
+  ): Promise<T | void>;
+  rename(storageKey: string, newName: string): Promise<T | void>;
+  delete(storageKey: string, descriptor?: T): Promise<void>;
   hasKey(storageKey: string): Promise<boolean>;
 }
 

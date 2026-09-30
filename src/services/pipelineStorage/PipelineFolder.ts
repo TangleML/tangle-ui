@@ -12,6 +12,7 @@ import {
 import {
   type DriverConfig,
   type FolderEntry,
+  type PipelineFileDescriptor,
   type PipelineStorageDriver,
   ROOT_FOLDER_ID,
 } from "./types";
@@ -23,6 +24,7 @@ interface PipelineFolderInit {
   driver: PipelineStorageDriver;
   favorite?: boolean;
   createdAt?: number;
+  manageFile?: (file: PipelineFile) => PipelineFile;
 }
 
 class FolderNotFoundError extends Error {
@@ -33,7 +35,10 @@ class FolderNotFoundError extends Error {
 }
 
 export class PipelineFolder {
-  static fromEntry(entry: FolderEntry): PipelineFolder {
+  static fromEntry(
+    entry: FolderEntry,
+    manageFile?: (file: PipelineFile) => PipelineFile,
+  ): PipelineFolder {
     return new PipelineFolder({
       id: entry.id,
       name: entry.name,
@@ -41,16 +46,20 @@ export class PipelineFolder {
       driver: createDriver(entry.driverConfig),
       favorite: entry.favorite,
       createdAt: entry.createdAt,
+      manageFile,
     });
   }
 
-  static async resolveById(id: string): Promise<PipelineFolder> {
+  static async resolveById(
+    id: string,
+    manageFile?: (file: PipelineFile) => PipelineFile,
+  ): Promise<PipelineFolder> {
     const entry = await pipelineStorageDb.folders.get(id);
     if (!entry) {
       throw new FolderNotFoundError(`Folder not found: ${id}`);
     }
 
-    return PipelineFolder.fromEntry(entry);
+    return PipelineFolder.fromEntry(entry, manageFile);
   }
 
   readonly id: string;
@@ -58,6 +67,7 @@ export class PipelineFolder {
   readonly parentId: string | null;
   readonly driver: PipelineStorageDriver;
   readonly createdAt: number;
+  readonly manageFile: (file: PipelineFile) => PipelineFile;
 
   @observable accessor name: string;
   @observable accessor favorite: boolean;
@@ -83,6 +93,7 @@ export class PipelineFolder {
     this.driver = options.driver;
     this.favorite = options.favorite ?? false;
     this.createdAt = options.createdAt ?? 0;
+    this.manageFile = options.manageFile ?? ((file) => file);
 
     makeObservable(this);
   }
@@ -93,8 +104,7 @@ export class PipelineFolder {
     return Promise.all(
       descriptors.map((d) =>
         resolveOrCreateRegistryEntry(d.storageKey, this, {
-          createdAt: d.createdAt,
-          modifiedAt: d.modifiedAt,
+          ...d,
         }),
       ),
     );
@@ -118,13 +128,15 @@ export class PipelineFolder {
     await addEntry({ id, storageKey, folderId: this.id });
     await this.driver.write(storageKey, content);
 
-    return new PipelineFile({ id, storageKey, folder: this });
+    return this.manageFile(new PipelineFile({ id, storageKey, folder: this }));
   }
 
   async listSubfolders(): Promise<PipelineFolder[]> {
     const entries = await queryChildFolders(this.id);
 
-    return sortByName(entries).map((entry) => PipelineFolder.fromEntry(entry));
+    return sortByName(entries).map((entry) =>
+      PipelineFolder.fromEntry(entry, this.manageFile),
+    );
   }
 
   async createSubfolder(options: {
@@ -151,6 +163,7 @@ export class PipelineFolder {
       name: options.name,
       parentId,
       driver: createDriver(driverConfig),
+      manageFile: this.manageFile,
     });
   }
 
@@ -233,28 +246,34 @@ async function collectDescendantIds(parentId: string): Promise<string[]> {
   return ids;
 }
 
-interface FileMetadata {
-  createdAt?: Date;
-  modifiedAt?: Date;
-}
+type FileMetadata = Omit<PipelineFileDescriptor, "storageKey">;
 
 async function resolveOrCreateRegistryEntry(
   storageKey: string,
   folder: PipelineFolder,
   metadata?: FileMetadata,
 ): Promise<PipelineFile> {
-  const existing = await findByStorageKey(storageKey);
-
-  if (existing) {
-    return new PipelineFile({
-      id: existing.id,
-      storageKey: existing.storageKey,
-      folder,
+  const entry = await pipelineStorageDb.transaction(
+    "rw",
+    pipelineStorageDb.pipeline_registry,
+    async () => {
+      const existing = await findByStorageKey(storageKey);
+      if (existing) return existing;
+      const created = {
+        id: metadata?.id ?? crypto.randomUUID(),
+        storageKey,
+        folderId: folder.id,
+      };
+      await addEntry(created);
+      return created;
+    },
+  );
+  return folder.manageFile(
+    new PipelineFile({
       ...metadata,
-    });
-  }
-
-  const id = crypto.randomUUID();
-  await addEntry({ id, storageKey, folderId: folder.id });
-  return new PipelineFile({ id, storageKey, folder, ...metadata });
+      id: entry.id,
+      storageKey: entry.storageKey,
+      folder,
+    }),
+  );
 }
