@@ -17,13 +17,14 @@ export async function createNewPipeline(
   const name = (generate(4) as string[]).join(" ");
   const componentText = defaultPipelineYamlWithName(name);
 
-  return storage.rootFolder.addFile(name, componentText);
+  return storage.createPipeline(name, componentText);
 }
 
 export async function savePipelineAs(
   navigation: NavigationStore,
   newName: string,
   storage: PipelineStorageService,
+  sourceFile?: PipelineFile,
 ): Promise<PipelineFile | undefined> {
   const componentSpec = navigation.rootSpec;
   if (!componentSpec) return undefined;
@@ -34,7 +35,7 @@ export async function savePipelineAs(
   };
   const componentText = componentSpecToYaml(serialized);
 
-  return storage.rootFolder.addFile(newName, componentText);
+  return storage.createPipeline(newName, componentText, sourceFile);
 }
 
 export function exportCurrentPipeline(navigation: NavigationStore): void {

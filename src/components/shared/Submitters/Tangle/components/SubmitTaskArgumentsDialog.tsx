@@ -52,6 +52,8 @@ import {
 import { extractTaskArguments } from "@/utils/nodes/taskArguments";
 import { validateArguments } from "@/utils/validations";
 
+import { selectTaskArgumentsForInputs } from "../taskArguments";
+
 type TaskArguments = TaskSpecOutput["arguments"];
 
 interface SubmitTaskArgumentsDialogProps {
@@ -59,6 +61,7 @@ interface SubmitTaskArgumentsDialogProps {
   onCancel: () => void;
   onConfirm: (args: Record<string, ArgumentType>, notes: string) => void;
   componentSpec: ComponentSpec;
+  savedTaskArguments?: Record<string, ArgumentType>;
 }
 
 export const SubmitTaskArgumentsDialog = ({
@@ -66,11 +69,16 @@ export const SubmitTaskArgumentsDialog = ({
   onCancel,
   onConfirm,
   componentSpec,
+  savedTaskArguments,
 }: SubmitTaskArgumentsDialogProps) => {
   const notify = useToastNotification();
   const tourMode = useTourMode();
   const mockBackend = useTourMockBackend();
-  const initialArgs = getArgumentsFromInputs(componentSpec);
+  const initialArgs = selectTaskArgumentsForInputs(
+    componentSpec,
+    getArgumentsFromInputs(componentSpec),
+    savedTaskArguments,
+  );
 
   const [runNotes, setRunNotes] = useState<string>("");
   const [taskArguments, setTaskArguments] =
@@ -112,12 +120,16 @@ export const SubmitTaskArgumentsDialog = ({
 
   useEffect(() => {
     if (open) {
-      const freshArgs = getArgumentsFromInputs(componentSpec);
+      const freshArgs = selectTaskArgumentsForInputs(
+        componentSpec,
+        getArgumentsFromInputs(componentSpec),
+        savedTaskArguments,
+      );
       setTaskArguments(freshArgs);
       setRunNotes("");
       setHighlightedArgs(new Map());
     }
-  }, [open, componentSpec]);
+  }, [open, componentSpec, savedTaskArguments]);
 
   useEffect(() => {
     setIsValidToSubmit(validateArguments(inputs, taskArguments));

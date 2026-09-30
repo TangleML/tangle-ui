@@ -35,12 +35,14 @@ import { isAuthorizationRequired } from "../../Authentication/helpers";
 import { useAuthLocalStorage } from "../../Authentication/useAuthLocalStorage";
 import TooltipButton from "../../Buttons/TooltipButton";
 import { SubmitTaskArgumentsDialog } from "./components/SubmitTaskArgumentsDialog";
+import { selectTaskArgumentsForInputs } from "./taskArguments";
 
 interface TangleSubmitterProps {
   componentSpec?: ComponentSpec;
   onSubmitComplete?: () => void;
   isComponentTreeValid?: boolean;
   onlyFixableIssues?: boolean;
+  savedTaskArguments?: Record<string, ArgumentType>;
 }
 
 function useSubmitPipeline() {
@@ -107,6 +109,7 @@ const TangleSubmitter = ({
   onSubmitComplete,
   isComponentTreeValid = true,
   onlyFixableIssues = false,
+  savedTaskArguments,
 }: TangleSubmitterProps) => {
   const { isAuthorized } = useAwaitAuthorization();
   const { backendUrl, configured, available } = useBackend();
@@ -212,9 +215,15 @@ const TangleSubmitter = ({
       return;
     }
 
+    const submissionArguments = selectTaskArgumentsForInputs(
+      componentSpec,
+      savedTaskArguments,
+      taskArguments,
+    );
+
     if (
       onlyFixableIssues &&
-      !validateArguments(componentSpec.inputs ?? [], taskArguments ?? {})
+      !validateArguments(componentSpec.inputs ?? [], submissionArguments)
     ) {
       setIsArgumentsDialogOpen(true);
       return;
@@ -223,7 +232,7 @@ const TangleSubmitter = ({
     setSubmitSuccess(null);
     submit({
       componentSpec,
-      taskArguments,
+      taskArguments: submissionArguments,
       onSuccess,
       onError,
     });
@@ -332,6 +341,7 @@ const TangleSubmitter = ({
           onCancel={() => setIsArgumentsDialogOpen(false)}
           onConfirm={handleSubmitWithArguments}
           componentSpec={componentSpec}
+          savedTaskArguments={savedTaskArguments}
         />
       )}
     </>

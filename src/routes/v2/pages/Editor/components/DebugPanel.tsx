@@ -346,9 +346,10 @@ function ClipboardTextPreview({
  * If persisted as hidden, windowStore will auto-hide it.
  * Otherwise it starts visible (first-time default).
  */
-export function useDebugPanelWindow() {
+export function useDebugPanelWindow(enabled = true) {
   const { windows } = useSharedStores();
   useEffect(() => {
+    if (!enabled) return;
     if (!windows.getWindowById(DEBUG_PANEL_WINDOW_ID)) {
       windows.openWindow(<DebugPanelContent />, {
         id: DEBUG_PANEL_WINDOW_ID,
@@ -367,5 +368,5 @@ export function useDebugPanelWindow() {
         ),
       });
     }
-  }, [windows]);
+  }, [windows, enabled]);
 }

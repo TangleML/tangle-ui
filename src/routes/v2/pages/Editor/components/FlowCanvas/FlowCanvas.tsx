@@ -11,6 +11,7 @@ import { BlockStack } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
 import type { ComponentSpec } from "@/models/componentSpec";
 import { useAutoLayout } from "@/routes/v2/pages/Editor/hooks/useAutoLayout";
+import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { SubgraphBreadcrumbs } from "@/routes/v2/shared/components/SubgraphBreadcrumbs";
 import { FLOW_CANVAS_DEFAULT_PROPS } from "@/routes/v2/shared/flowCanvasDefaults";
 import { useDoubleClickBehavior } from "@/routes/v2/shared/hooks/useDoubleClickBehavior";
@@ -43,6 +44,9 @@ export const FlowCanvas = observer(function FlowCanvas({
   className,
 }: FlowCanvasProps) {
   const registry = useNodeRegistry();
+  const { pipelineFile } = useEditorSession();
+  const canEdit = pipelineFile.activePipelineFile?.canEdit ?? false;
+  const editableSpec = canEdit ? spec : null;
   const nodeTypes = registry.getNodeTypes();
   const edgeTypes = registry.getEdgeTypes();
   const { keyboard } = useSharedStores();
@@ -65,21 +69,27 @@ export const FlowCanvas = observer(function FlowCanvas({
     selectionBehavior,
   } = useFlowCanvasState({ spec, metaKeyPressed, isConnecting });
 
-  const onBeforeDelete = useFlowCanvasOnBeforeDelete(spec);
+  const onBeforeDelete = useFlowCanvasOnBeforeDelete(editableSpec);
 
   useFitViewOnFocus();
-  useAutoLayout(spec);
-  useClipboardShortcuts(spec, containerRef, reactFlowInstance);
+  useAutoLayout(editableSpec);
+  useClipboardShortcuts(spec, containerRef, reactFlowInstance, canEdit);
 
   const nodeEdgeBehavior = useNodeEdgeChanges(
-    spec,
+    editableSpec,
     rfOnNodesChange,
     rfOnEdgesChange,
   );
-  const connectionBehavior = useConnectionBehavior(spec, reactFlowInstance);
-  const dropBehavior = useDropBehavior(spec, reactFlowInstance);
+  const connectionBehavior = useConnectionBehavior(
+    editableSpec,
+    reactFlowInstance,
+  );
+  const dropBehavior = useDropBehavior(editableSpec, reactFlowInstance);
   const doubleClickBehavior = useDoubleClickBehavior(spec);
-  const paneClickBehavior = usePaneClickBehavior(spec, reactFlowInstance);
+  const paneClickBehavior = usePaneClickBehavior(
+    editableSpec,
+    reactFlowInstance,
+  );
 
   return (
     <BlockStack
@@ -98,8 +108,9 @@ export const FlowCanvas = observer(function FlowCanvas({
         edgeTypes={edgeTypes}
         nodes={displayNodes}
         edges={displayEdges}
-        nodesConnectable={isDetailedView}
-        edgesReconnectable={isDetailedView}
+        nodesDraggable={canEdit}
+        nodesConnectable={canEdit && isDetailedView}
+        edgesReconnectable={canEdit && isDetailedView}
         {...selectionBehavior}
         {...nodeEdgeBehavior}
         {...connectionBehavior}
@@ -111,16 +122,16 @@ export const FlowCanvas = observer(function FlowCanvas({
         onViewportChange={handleViewportChange}
         onBeforeDelete={onBeforeDelete}
         connectionLineComponent={ConnectionLine}
-        deleteKeyCode={["Delete", "Backspace"]}
+        deleteKeyCode={canEdit ? ["Delete", "Backspace"] : null}
         className={cn(
           shiftKeyPressed && !isConnecting && "cursor-crosshair",
           !isDetailedView && "connections-disabled",
         )}
       >
-        <FloatingSelectionToolbar spec={spec} />
+        {canEdit && <FloatingSelectionToolbar spec={spec} />}
         <Background gap={10} className="bg-canvas!" />
       </ReactFlow>
-      <CanvasUndoRedo />
+      {canEdit && <CanvasUndoRedo />}
     </BlockStack>
   );
 });

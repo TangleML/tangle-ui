@@ -6,6 +6,7 @@ import {
   markEditorV2WelcomeSeen,
 } from "@/components/shared/WelcomeSpotlight";
 import { APP_ROUTES, EDITOR_PATH } from "@/routes/router";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 
 type EditorVersion = "v1" | "v2";
 
@@ -23,6 +24,8 @@ export const EditorVersionToggle = ({
   showWelcomeSpotlight = false,
 }: EditorVersionToggleProps) => {
   const location = useLocation();
+  const storage = usePipelineStorage();
+  if (storage.remoteEnabled) return null;
   const version = detectEditorVersion(location.pathname);
   if (!version) return null;
 

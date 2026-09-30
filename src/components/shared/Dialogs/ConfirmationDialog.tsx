@@ -18,6 +18,7 @@ type ConfirmationDialogProps = {
   content?: ReactNode;
   onConfirm: () => void;
   onCancel?: () => void;
+  pending?: boolean;
 } & (
   | { trigger: ReactNode; isOpen?: boolean }
   | { trigger?: ReactNode; isOpen: boolean }
@@ -34,6 +35,7 @@ const ConfirmationDialog = ({
   isOpen,
   onConfirm,
   onCancel = () => {},
+  pending = false,
 }: ConfirmationDialogProps) => {
   const handleClick = useCallback((e: MouseEvent) => {
     e.stopPropagation();
@@ -66,16 +68,22 @@ const ConfirmationDialog = ({
           {trigger}
         </AlertDialogTrigger>
       )}
-      <AlertDialogContent>
+      <AlertDialogContent aria-busy={pending}>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         {content}
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={handleCancel}>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={handleConfirm} autoFocus>
-            Continue
+          <AlertDialogCancel onClick={handleCancel} disabled={pending}>
+            Cancel
+          </AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleConfirm}
+            autoFocus
+            disabled={pending}
+          >
+            {pending ? "Working..." : "Continue"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

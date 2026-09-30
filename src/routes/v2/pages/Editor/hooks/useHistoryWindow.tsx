@@ -6,9 +6,10 @@ import { WindowMiniButton } from "@/routes/v2/shared/windows/WindowMiniButton";
 
 const HISTORY_WINDOW_ID = "history";
 
-export function useHistoryWindow() {
+export function useHistoryWindow(enabled = true) {
   const { windows } = useSharedStores();
   useEffect(() => {
+    if (!enabled) return;
     if (!windows.getWindowById(HISTORY_WINDOW_ID)) {
       windows.openWindow(<HistoryContent />, {
         id: HISTORY_WINDOW_ID,
@@ -27,5 +28,5 @@ export function useHistoryWindow() {
         ),
       });
     }
-  }, [windows]);
+  }, [windows, enabled]);
 }
