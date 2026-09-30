@@ -1,6 +1,6 @@
 import { EventEmitter } from "node:events";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { StatusCallback } from "../types";
 import { type AgentTraceEvent, subscribeToTraceEvents } from "./agentTrace";
@@ -26,16 +26,25 @@ function toolCall(callId: string, args?: string) {
   return { toolCall: { type: "function_call", callId, arguments: args } };
 }
 
-/** Broadcast delivery is a task, so nothing recorded is readable synchronously. */
-function settled(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 0));
-}
-
 describe("attachObservabilityHooks", () => {
   let emitStatus: StatusCallback;
   let statuses: string[];
   let recorded: AgentTraceEvent[];
   let unsubscribe: () => void;
+
+  /**
+   * Broadcast delivery is a task, and one macrotask is not a guarantee that it
+   * has arrived — awaiting a fixed `setTimeout(0)` flaked about one run in five.
+   * The events come back so an assertion reads what the wait resolved against
+   * rather than a slot `beforeEach` may since have replaced.
+   */
+  const recordedAtLeast = async (count: number) => {
+    await vi.waitUntil(() => recorded.length >= count, { timeout: 1000 });
+    return [...recorded];
+  };
+
+  /** Nothing arrives to be awaited, so this only gives delivery its chance. */
+  const aMoment = () => new Promise((resolve) => setTimeout(resolve, 20));
 
   beforeEach(() => {
     statuses = [];
@@ -77,8 +86,7 @@ describe("attachObservabilityHooks", () => {
       toolCall("c1"),
     );
 
-    await settled();
-    const [start, end] = recorded;
+    const [start, end] = await recordedAtLeast(2);
     expect(start).toMatchObject({
       agent: "tangle-remote-editor",
       kind: "tool-start",
@@ -105,8 +113,8 @@ describe("attachObservabilityHooks", () => {
       toolCall("c1"),
     );
 
-    await settled();
-    const detail = recorded[0]?.detail ?? "";
+    const [first] = await recordedAtLeast(1);
+    const detail = first?.detail ?? "";
     expect(detail).toContain("(5000 chars)");
     expect(detail.length).toBeLessThan(2100);
   });
@@ -119,9 +127,9 @@ describe("attachObservabilityHooks", () => {
     emit("agent_tool_start", {}, { name: "add_task" }, toolCall("c1"));
     emit("agent_end");
 
-    await settled();
+    const events = await recordedAtLeast(2);
     expect(
-      recorded.some(
+      events.some(
         (event) => event.kind === "tool-hung" && event.label === "add_task",
       ),
     ).toBe(true);
@@ -135,8 +143,8 @@ describe("attachObservabilityHooks", () => {
     emit("agent_tool_end", {}, { name: "add_task" }, "ok", toolCall("c1"));
     emit("agent_end");
 
-    await settled();
-    expect(recorded.some((event) => event.kind === "tool-hung")).toBe(false);
+    const events = await recordedAtLeast(2);
+    expect(events.some((event) => event.kind === "tool-hung")).toBe(false);
   });
 
   /** A throw inside a lifecycle hook takes the agent's turn down with it. */
@@ -160,7 +168,7 @@ describe("attachObservabilityHooks", () => {
     emit("agent_start");
     emit("agent_tool_start", {}, { name: "add_task" }, toolCall("c1"));
 
-    await settled();
+    await aMoment();
     expect(statuses).toEqual([]);
     expect(recorded).toEqual([]);
   });
