@@ -47,7 +47,9 @@ vi.mock("@/utils/string", () => ({
   copyToClipboard: vi.fn(),
 }));
 
-vi.mock("@/components/Project/useProjectPin", () => ({ useProjectPin: vi.fn() }));
+vi.mock("@/components/Project/useProjectPin", () => ({
+  useProjectPin: vi.fn(),
+}));
 
 vi.mock("@/components/shared/Settings/useFlags", () => {
   const useFlagValue = vi.fn();
