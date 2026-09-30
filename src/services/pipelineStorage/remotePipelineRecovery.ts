@@ -45,3 +45,22 @@ export async function assertLocalPipelineVisible(id: string): Promise<void> {
     .first();
   if (migrated) throw new PipelineMovedToRemoteError();
 }
+
+export function remotePipelineReference(
+  backendUrl: string,
+  pipelineId: string,
+): string {
+  return `remote:${encodeURIComponent(backendUrl.replace(/\/+$/, ""))}:${pipelineId}`;
+}
+
+export function parseRemotePipelineReference(
+  reference: string,
+): { backendUrl: string; pipelineId: string } | undefined {
+  const match = /^remote:([^:]+):([^:]+)$/.exec(reference);
+  if (!match) return undefined;
+  try {
+    return { backendUrl: decodeURIComponent(match[1]), pipelineId: match[2] };
+  } catch {
+    return undefined;
+  }
+}
