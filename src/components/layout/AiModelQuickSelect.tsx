@@ -1,4 +1,7 @@
-import { useFlagValue } from "@/components/shared/Settings/useFlags";
+import {
+  useFlagValue,
+  useTangentEnabled,
+} from "@/components/shared/Settings/useFlags";
 import {
   Select,
   SelectContent,
@@ -18,6 +21,7 @@ import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 export function AiModelQuickSelect() {
   const componentSearchEnabled = useFlagValue("component-search-v2");
   const aiAssistantEnabled = useFlagValue("ai-assistant");
+  const tangentEnabled = useTangentEnabled();
   const { config, update, isConfigured } = useAiProviderSettings();
   const configuredModel = config.model.trim();
   const options = getAiModelOptions();
@@ -28,7 +32,10 @@ export function AiModelQuickSelect() {
     update({ model: value });
   };
 
-  if ((!componentSearchEnabled && !aiAssistantEnabled) || !isConfigured) {
+  const usesTheModel =
+    componentSearchEnabled || aiAssistantEnabled || tangentEnabled;
+
+  if (!usesTheModel || !isConfigured) {
     return null;
   }
 

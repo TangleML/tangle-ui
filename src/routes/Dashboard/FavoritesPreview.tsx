@@ -19,6 +19,7 @@ import { tracking } from "@/utils/tracking";
 
 import { SectionHeader } from "./SectionHeader";
 import { getFavoriteUrl, TypePill } from "./TypePill";
+import { useListedItems } from "./useListedItems";
 
 const PREVIEW_COUNT = 5;
 
@@ -79,9 +80,10 @@ export const FavoritesPreview = ({
   trackingId = "homepage.favorites.item",
 }: FavoritesPreviewProps) => {
   const { favorites, removeFavorite } = useFavorites();
+  const listed = useListedItems(favorites);
   const filtered = typeFilter
-    ? favorites.filter((f) => f.type === typeFilter)
-    : favorites;
+    ? listed.filter((f) => f.type === typeFilter)
+    : listed;
   const preview = filtered.slice(0, PREVIEW_COUNT);
 
   if (hideWhenEmpty && preview.length === 0) return null;

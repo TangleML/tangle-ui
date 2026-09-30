@@ -19,7 +19,7 @@ import {
   getRunSourceMessage,
   RunSourceIcon,
 } from "@/components/shared/RunSource";
-import { useFlagValue } from "@/components/shared/Settings/useFlags";
+import { useTangentEnabled } from "@/components/shared/Settings/useFlags";
 import { TagList } from "@/components/shared/Tags/TagList";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -31,6 +31,7 @@ import type { ComponentSpec } from "@/models/componentSpec";
 import { useBackend } from "@/providers/BackendProvider";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
 import { useDebugInTangent } from "@/routes/v2/pages/RunView/hooks/useDebugInTangent";
+import { useAiGate } from "@/routes/v2/shared/components/AiChat/components/useAiGate";
 import { PipelineDetailsCollapsibleSection } from "@/routes/v2/shared/components/PipelineDetailsCollapsibleSection";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { runAnnotationsQueryOptions } from "@/services/runAnnotations";
@@ -123,7 +124,7 @@ function RunDetailsContentLoaded({
     getOverallExecutionStatusFromStats(executionStatusStats);
   const statusLabel = getExecutionStatusLabel(overallStatus);
 
-  const tangentShellEnabled = useFlagValue("tangent-shell");
+  const tangentShellEnabled = useTangentEnabled();
   const isFailedRun = FAILURE_STATUSES.includes(overallStatus ?? "");
   const showDebugInTangent =
     tangentShellEnabled && isFailedRun && !!metadata?.id;
@@ -226,13 +227,15 @@ function DebugInTangentButton({
   pipelineName,
 }: DebugInTangentButtonProps) {
   const { debug, isPending } = useDebugInTangent();
+  const aiGate = useAiGate();
 
   return (
     <Button
       variant="outline"
       size="sm"
       className="w-full"
-      disabled={isPending}
+      disabled={isPending || aiGate.disabled}
+      title={aiGate.title}
       onClick={() => debug({ runId, pipelineName })}
       {...tracking("v2.run_view.debug_in_tangent")}
     >

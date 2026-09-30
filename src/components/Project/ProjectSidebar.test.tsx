@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Project } from "@/services/projects/types";
 import { formatDate } from "@/utils/date";
@@ -47,11 +47,23 @@ const project: Project = {
   extraData: null,
 };
 
+function enableFlags(flags: Record<string, boolean>) {
+  localStorage.setItem("betaFlags", JSON.stringify(flags));
+}
+
 function renderSidebar(overrides: Partial<Project> = {}) {
   return render(<ProjectSidebar project={{ ...project, ...overrides }} />);
 }
 
 describe("ProjectSidebar", () => {
+  beforeEach(() => {
+    enableFlags({ projects: true, "tangent-shell": true });
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+  });
+
   it("names itself so its column lines up with the others", () => {
     renderSidebar();
 
@@ -100,5 +112,14 @@ describe("ProjectSidebar", () => {
     renderSidebar();
 
     expect(screen.queryByText(/workspace/i)).toBeNull();
+  });
+
+  /** Instructions are standing context for agents, so they say nothing without one. */
+  it("drops the instructions when Tangent is off", () => {
+    enableFlags({ projects: true, "tangent-shell": false });
+    renderSidebar();
+
+    expect(screen.queryByLabelText("Instructions")).toBeNull();
+    expect(screen.getByLabelText("Description")).toBeInTheDocument();
   });
 });

@@ -8,6 +8,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import { createProject } from "@/services/projects/projectsService";
 import { startingSessionExtraData } from "@/services/projects/startingSession";
 import { useWorkspaces } from "@/services/projects/useWorkspaces";
@@ -17,7 +18,10 @@ import { StartSessionPrompt } from "./StartSessionPrompt";
 const navigate = vi.fn();
 const notify = vi.fn();
 
-vi.mock("@tanstack/react-router", () => ({ useNavigate: () => navigate }));
+vi.mock("@tanstack/react-router", () => ({
+  useNavigate: () => navigate,
+  Link: ({ children }: { children: ReactNode }) => <a href="#">{children}</a>,
+}));
 
 vi.mock("@/hooks/useToastNotification", () => ({ default: () => notify }));
 
@@ -37,6 +41,10 @@ vi.mock("./useMyProjects", () => ({
   useMyProjects: () => ({ projects: [{ name: "Project 1" }] }),
 }));
 
+vi.mock("@/hooks/useAiProviderSettings", () => ({
+  useAiProviderSettings: vi.fn(),
+}));
+
 function wrapper({ children }: { children: ReactNode }) {
   const client = new QueryClient({
     defaultOptions: { mutations: { retry: false } },
@@ -45,6 +53,12 @@ function wrapper({ children }: { children: ReactNode }) {
 }
 
 const renderPrompt = () => render(<StartSessionPrompt />, { wrapper });
+
+function mockAiConfigured(isConfigured: boolean) {
+  vi.mocked(useAiProviderSettings).mockReturnValue({
+    isConfigured,
+  } as unknown as ReturnType<typeof useAiProviderSettings>);
+}
 
 async function type(text: string) {
   const user = userEvent.setup();
@@ -64,6 +78,7 @@ describe("StartSessionPrompt", () => {
     vi.mocked(createProject).mockResolvedValue({
       id: "project-9",
     } as unknown as Awaited<ReturnType<typeof createProject>>);
+    mockAiConfigured(true);
   });
   afterEach(() => vi.resetAllMocks());
 
@@ -219,5 +234,47 @@ describe("StartSessionPrompt", () => {
     renderPrompt();
 
     expect(screen.getByLabelText("Start a new session")).toBeDisabled();
+  });
+
+  describe("without an AI provider", () => {
+    beforeEach(() => mockAiConfigured(false));
+
+    it("stands but cannot be used, and says how to fix it", () => {
+      renderPrompt();
+
+      expect(screen.getByLabelText("Start a new session")).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: "Start session" }),
+      ).toBeDisabled();
+      expect(screen.getByRole("link", { name: /AI settings/ })).toBeVisible();
+    });
+
+    it("makes no project even when the keyboard asks", async () => {
+      renderPrompt();
+
+      const user = userEvent.setup();
+      await user.type(
+        screen.getByLabelText("Start a new session"),
+        "Build a churn model{Enter}",
+      );
+
+      expect(createProject).not.toHaveBeenCalled();
+    });
+
+    /**
+     * A provider is a setting the user can change here and now; a backend may
+     * not be theirs to fix, so the actionable one is the one shown.
+     */
+    it("says so ahead of a missing backend", () => {
+      vi.mocked(useWorkspaces).mockReturnValue({
+        data: [],
+        isPending: false,
+      } as unknown as ReturnType<typeof useWorkspaces>);
+
+      renderPrompt();
+
+      expect(screen.queryByText(/Connect a backend/)).toBeNull();
+      expect(screen.getByRole("link", { name: /AI settings/ })).toBeVisible();
+    });
   });
 });

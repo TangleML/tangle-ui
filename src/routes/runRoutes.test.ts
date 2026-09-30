@@ -4,9 +4,14 @@ import { isFlagEnabled } from "@/components/shared/Settings/useFlags";
 
 import { getDefaultRunPath, getRunPath } from "./runRoutes";
 
-vi.mock("@/components/shared/Settings/useFlags", () => ({
-  isFlagEnabled: vi.fn(),
-}));
+vi.mock("@/components/shared/Settings/useFlags", () => {
+  const isFlagEnabled = vi.fn();
+  return {
+    isFlagEnabled,
+    isProjectsEnabled: () => isFlagEnabled("projects"),
+    isTangentEnabled: () => isFlagEnabled("tangent-shell"),
+  };
+});
 
 describe("run routes", () => {
   beforeEach(() => {

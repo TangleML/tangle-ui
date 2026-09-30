@@ -1,4 +1,4 @@
-import { APP_ROUTES } from "@/routes/appRoutes";
+import { getProjectHomePath } from "@/routes/projectRoutes";
 import { RUNS_BASE_PATH } from "@/routes/router";
 import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
 
@@ -254,17 +254,10 @@ const getRawExecutionLogsUrl = (
 
 /**
  * Where a project card goes, which is where someone following a shared link
- * expects to arrive. Its own page is reachable from there, so linking to the
- * details page instead would leave two links for one project and hand over the
- * one nobody navigates to.
+ * expects to arrive.
  */
 const getProjectUrl = (projectId: string): string =>
-  buildAbsoluteAppUrl(
-    APP_ROUTES.TANGENT_PROJECT.replace(
-      "$projectId",
-      encodeURIComponent(projectId),
-    ),
-  );
+  buildAbsoluteAppUrl(getProjectHomePath(projectId));
 
 export {
   buildComponentSourceUrl,

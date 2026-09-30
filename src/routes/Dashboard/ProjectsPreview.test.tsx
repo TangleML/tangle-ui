@@ -15,9 +15,14 @@ vi.mock("@tanstack/react-router", () => ({
   ),
 }));
 
-vi.mock("@/components/shared/Settings/useFlags", () => ({
-  useFlagValue: vi.fn(),
-}));
+vi.mock("@/components/shared/Settings/useFlags", () => {
+  const useFlagValue = vi.fn();
+  return {
+    useFlagValue,
+    useProjectsEnabled: () => useFlagValue("projects"),
+    useTangentEnabled: () => useFlagValue("tangent-shell"),
+  };
+});
 
 vi.mock("@/providers/BackendProvider", () => ({ useBackend: vi.fn() }));
 

@@ -7,11 +7,13 @@ import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { useProjectSessions } from "@/routes/v2/pages/Tangent/hooks/useProjectSessions";
+import { useAiGate } from "@/routes/v2/shared/components/AiChat/components/useAiGate";
 import { sessionLabelsById } from "@/services/projects/sessionLabel";
 import { formatRelativeTime } from "@/utils/date";
 
 export const SessionsWindowContent = observer(function SessionsWindowContent() {
   const store = useTangentProject();
+  const aiGate = useAiGate("New session");
   const { sessions } = useProjectSessions(store.projectId);
   const activeSessionId = store.activeSessionId;
   const labels = sessionLabelsById(
@@ -57,9 +59,9 @@ export const SessionsWindowContent = observer(function SessionsWindowContent() {
       <Button
         variant="outline"
         aria-label="New session"
-        title="New session"
+        title={aiGate.title}
         onClick={() => void store.startSession()}
-        disabled={store.isStartingSession}
+        disabled={store.isStartingSession || aiGate.disabled}
         className="w-full"
       >
         <Icon name={store.isStartingSession ? "Loader" : "Plus"} size="xs" />

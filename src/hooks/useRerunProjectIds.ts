@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 
-import { isFlagEnabled } from "@/components/shared/Settings/useFlags";
+import { isProjectsEnabled } from "@/components/shared/Settings/useFlags";
 import { useBackend } from "@/providers/BackendProvider";
 import { runAnnotationsQueryOptions } from "@/services/runAnnotations";
 import { projectIdsFromAnnotations } from "@/utils/projectRunAnnotation";
@@ -21,7 +21,7 @@ export function useRerunProjectIds() {
 
   return useCallback(
     async (runId: string | number | null | undefined): Promise<string[]> => {
-      if (runId == null || !isFlagEnabled("projects")) {
+      if (runId == null || !isProjectsEnabled()) {
         return [];
       }
 

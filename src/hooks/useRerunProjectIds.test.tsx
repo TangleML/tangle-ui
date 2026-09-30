@@ -13,9 +13,14 @@ vi.mock("@/services/pipelineRunService", () => ({
   fetchRunAnnotations: vi.fn(),
 }));
 
-vi.mock("@/components/shared/Settings/useFlags", () => ({
-  isFlagEnabled: vi.fn(),
-}));
+vi.mock("@/components/shared/Settings/useFlags", () => {
+  const isFlagEnabled = vi.fn();
+  return {
+    isFlagEnabled,
+    isProjectsEnabled: () => isFlagEnabled("projects"),
+    isTangentEnabled: () => isFlagEnabled("tangent-shell"),
+  };
+});
 
 vi.mock("@/providers/BackendProvider", () => ({
   useBackend: () => ({ backendUrl: "https://backend.test" }),
