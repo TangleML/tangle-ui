@@ -1,3 +1,4 @@
+import { runInAction } from "mobx";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -298,6 +299,62 @@ describe("AutoSaveStore", () => {
     expect(store.isSaving).toBe(false);
     expect(store.hasUnsavedChanges).toBe(false);
     store.dispose();
+  });
+
+  it("flushes edits made during a navigation save before their debounce expires", async () => {
+    const { store, write, spec } = setup();
+    const firstWrite = createPendingWrite();
+    write.mockReturnValueOnce(firstWrite.promise);
+    spec.setDescription("First edit");
+    const flushing = store.flushPending();
+    await vi.advanceTimersByTimeAsync(0);
+
+    spec.setDescription("Edit while leaving");
+    firstWrite.resolve();
+    expect(await flushing).toBe(true);
+
+    expect(write).toHaveBeenCalledTimes(2);
+    expect(write).toHaveBeenLastCalledWith(serializeComponentSpecToText(spec));
+    expect(store.hasUnsavedChanges).toBe(false);
+    await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_TIME_MS);
+    expect(write).toHaveBeenCalledTimes(2);
+    await store.dispose();
+  });
+
+  it.each(["flushPending", "dispose"] as const)(
+    "captures edits before MobX reactions run on %s",
+    async (trigger) => {
+      const { store, write, spec } = setup();
+      let saving: Promise<boolean> | undefined;
+
+      runInAction(() => {
+        spec.setDescription("Final edit before leaving");
+        saving = store[trigger]();
+      });
+
+      expect(await saving).toBe(true);
+      expect(write).toHaveBeenCalledExactlyOnceWith(
+        serializeComponentSpecToText(spec),
+      );
+      await store.dispose();
+    },
+  );
+
+  it("finishes a navigation flush after reverting inside a MobX action", async () => {
+    const { store, write, spec } = setup();
+    spec.setDescription("Edit to undo");
+    const flushing = runInAction(() => {
+      spec.setDescription(undefined);
+      return store.flushPending();
+    });
+
+    try {
+      expect(store.hasUnsavedChanges).toBe(false);
+      expect(await flushing).toBe(true);
+      expect(write).not.toHaveBeenCalled();
+    } finally {
+      await store.dispose();
+    }
   });
 
   it("keeps failed edits pending and retries the current definition", async () => {

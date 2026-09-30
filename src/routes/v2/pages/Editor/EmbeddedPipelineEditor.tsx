@@ -35,6 +35,7 @@ import type { PipelineRef } from "@/services/pipelineStorage/types";
 
 import { DriverPermissionGate } from "./components/DriverPermissionGate";
 import { FlowCanvas } from "./components/FlowCanvas/FlowCanvas";
+import { useAutoSaveOnLeave } from "./hooks/useAutoSaveOnLeave";
 import { useComponentLibraryWindow } from "./hooks/useComponentLibraryWindow";
 import { useComponentSearchV2Window } from "./hooks/useComponentSearchV2Window";
 import { useEditorEscapeShortcut } from "./hooks/useEditorEscapeShortcut";
@@ -117,6 +118,7 @@ const EmbeddedPipelineEditorCanvas = withSuspenseWrapper(
       const canvasRef = useRef<HTMLDivElement | null>(null);
 
       useSpecLifecycle(rootSpec, file, restoredUndoStore);
+      useAutoSaveOnLeave(session.autoSave, isActive);
       useSelectionWindowSync({
         contextPanel: {
           defaultDockState: undefined,

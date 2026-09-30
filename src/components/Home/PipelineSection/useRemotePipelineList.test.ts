@@ -4,6 +4,7 @@ import { createElement, type ReactNode, useSyncExternalStore } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
+import { FoldersQueryKeys } from "@/services/pipelineStorage/types";
 import type { PipelineSearchFilters } from "@/types/pipelineSearch";
 import { emitUserPipelineWritten } from "@/utils/userPipelineWriteEvents";
 
@@ -679,14 +680,17 @@ describe("useRemotePipelineList", () => {
       totalCount: 2,
     });
     listPage.mockResolvedValueOnce({ files: [second], totalCount: 2 });
-    const { result } = renderList(true);
+    const { result, client } = renderList(true);
     await waitFor(() => expect(result.current.isPending).toBe(false));
     await act(async () => result.current.pagination.goToNextPage());
     await waitFor(() => expect(result.current.pagination.currentPage).toBe(2));
     const refreshed = file(2, "Newly uploaded pipeline");
     listPage.mockResolvedValue({ files: [refreshed], totalCount: 1 });
 
-    await act(async () => emitUserPipelineWritten());
+    await act(async () => {
+      emitUserPipelineWritten();
+      await client.invalidateQueries({ queryKey: FoldersQueryKeys.All() });
+    });
 
     await waitFor(() =>
       expect(result.current.rows.map(([id]) => id)).toEqual([

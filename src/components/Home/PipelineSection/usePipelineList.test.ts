@@ -7,7 +7,6 @@ import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import { FoldersQueryKeys } from "@/services/pipelineStorage/types";
 import type { ComponentFileEntry } from "@/utils/componentStore";
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
-import { emitUserPipelineWritten } from "@/utils/userPipelineWriteEvents";
 
 import { usePipelineList } from "./usePipelineList";
 
@@ -226,42 +225,21 @@ describe("usePipelineList", () => {
     expect(listRemote).not.toHaveBeenCalled();
   });
 
-  it.each(["write event", "upload retry"])(
-    "removes a published local row after a %s refresh",
-    async (refresh) => {
-      const name = "Daily report";
-      getLocalEntries.mockResolvedValue(new Map([[name, localEntry(name)]]));
-      const { result, client } = renderList();
-      await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect([...result.current.data!.pipelines.keys()]).toEqual([name]);
-
-      storage.filterVisibleLocalPipelines.mockResolvedValue([]);
-      await act(async () => {
-        if (refresh === "write event") emitUserPipelineWritten();
-        else
-          await client.invalidateQueries({ queryKey: FoldersQueryKeys.All() });
-      });
-
-      await waitFor(() => expect(result.current.data?.pipelines.size).toBe(0));
-      expect(getLocalEntries).toHaveBeenCalledTimes(2);
-      expect(listRemote).not.toHaveBeenCalled();
-    },
-  );
-
-  it("invalidates remote list queries as well as the local list after a write", async () => {
+  it("removes a published local row after cache invalidation", async () => {
+    const name = "Daily report";
+    getLocalEntries.mockResolvedValue(new Map([[name, localEntry(name)]]));
     const { result, client } = renderList();
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    const remoteQueryKey = [
-      ...FoldersQueryKeys.All(),
-      "remote-list",
-      storage.scope,
-    ];
-    client.setQueryData(remoteQueryKey, { files: [] });
+    expect([...result.current.data!.pipelines.keys()]).toEqual([name]);
 
-    await act(async () => emitUserPipelineWritten());
+    storage.filterVisibleLocalPipelines.mockResolvedValue([]);
+    await act(async () => {
+      await client.invalidateQueries({ queryKey: FoldersQueryKeys.All() });
+    });
 
-    expect(client.getQueryState(remoteQueryKey)?.isInvalidated).toBe(true);
-    await waitFor(() => expect(getLocalEntries).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(result.current.data?.pipelines.size).toBe(0));
+    expect(getLocalEntries).toHaveBeenCalledTimes(2);
+    expect(listRemote).not.toHaveBeenCalled();
   });
 
   it("does not expose previous-account drafts while the new scope is loading", async () => {

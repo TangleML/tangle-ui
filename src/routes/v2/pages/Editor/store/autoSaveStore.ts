@@ -171,18 +171,28 @@ export class AutoSaveStore {
   @action dispose(): Promise<boolean> {
     this.disposeReaction?.();
     this.disposeReaction = null;
-    const session = this.session;
-    if (session) {
-      this.cancelScheduledSave(session);
-      session.snapshot = getAutoSaveSnapshot(session.spec);
-      if (
-        session.snapshot.yaml !== session.queuedYaml ||
-        session.hasPendingRecovery
-      )
-        void this.performSave(session);
-    }
+    const pending = this.flushPending();
     this.session = null;
-    return session?.pending ?? Promise.resolve(true);
+    return pending;
+  }
+
+  async flushPending(): Promise<boolean> {
+    const session = this.session;
+    if (!session) return true;
+    this.cancelScheduledSave(session);
+    do {
+      if (!this.updateSnapshot(session)) return false;
+      if (
+        !this.hasUnsavedChanges &&
+        !session.hasPendingRecovery &&
+        !session.saving &&
+        session.snapshot.yaml === session.savedYaml
+      )
+        return true;
+      if (!(await this.save())) return false;
+      // Include edits made while the previous write was finishing.
+    } while (session === this.session);
+    return true;
   }
 
   async prepareRunSource(backendUrl: string): Promise<string | undefined> {
@@ -217,19 +227,7 @@ export class AutoSaveStore {
     const session = this.session;
     if (!session) return false;
     this.cancelScheduledSave(session);
-    try {
-      session.snapshot = getAutoSaveSnapshot(session.spec);
-      runInAction(() => {
-        this.serializationError = null;
-      });
-    } catch (error) {
-      runInAction(() => {
-        this.serializationError =
-          error instanceof Error ? error.message : String(error);
-        this.hasUnsavedChanges = true;
-      });
-      return false;
-    }
+    if (!this.updateSnapshot(session)) return false;
     const content = session.snapshot.yaml;
     if (
       session.saving &&
@@ -245,9 +243,30 @@ export class AutoSaveStore {
       !session.file.saveError &&
       session.file.storageKind !== "pending" &&
       !this.storage?.canMigrate(session.file)
-    )
+    ) {
+      runInAction(() => {
+        this.hasUnsavedChanges = false;
+      });
       return true;
+    }
     return this.performSave(session);
+  }
+
+  private updateSnapshot(session: SaveSession): boolean {
+    try {
+      session.snapshot = getAutoSaveSnapshot(session.spec);
+      runInAction(() => {
+        this.serializationError = null;
+      });
+    } catch (error) {
+      runInAction(() => {
+        this.serializationError =
+          error instanceof Error ? error.message : String(error);
+        this.hasUnsavedChanges = true;
+      });
+      return false;
+    }
+    return true;
   }
 
   private performSave(session: SaveSession): Promise<boolean> {

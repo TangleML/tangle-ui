@@ -1,5 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
@@ -10,7 +9,6 @@ import {
 } from "@/utils/componentStore";
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 import { getErrorMessage } from "@/utils/string";
-import { subscribeUserPipelineWritten } from "@/utils/userPipelineWriteEvents";
 
 import type { PipelineFilterEntry } from "./usePipelineFilters";
 
@@ -20,17 +18,6 @@ export interface PipelineListEntry extends PipelineFilterEntry {
 
 export function usePipelineList() {
   const storage = usePipelineStorage();
-  const queryClient = useQueryClient();
-
-  useEffect(
-    () =>
-      subscribeUserPipelineWritten(() => {
-        void queryClient.invalidateQueries({
-          queryKey: FoldersQueryKeys.All(),
-        });
-      }),
-    [queryClient, storage.scope],
-  );
 
   return useQuery({
     queryKey: [...FoldersQueryKeys.All(), "flat-list", storage.scope],

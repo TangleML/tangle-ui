@@ -52,6 +52,7 @@ import { EditorTourBridge } from "./components/EditorTourBridge/EditorTourBridge
 import { EmptyEditorState } from "./components/EmptyEditorState";
 import { FlowCanvas } from "./components/FlowCanvas/FlowCanvas";
 import { useAiChatWindow } from "./hooks/useAiChatWindow";
+import { useAutoSaveOnLeave } from "./hooks/useAutoSaveOnLeave";
 import { useComponentLibraryWindow } from "./hooks/useComponentLibraryWindow";
 import { useComponentSearchV2Window } from "./hooks/useComponentSearchV2Window";
 import { useEditorEscapeShortcut } from "./hooks/useEditorEscapeShortcut";
@@ -88,6 +89,7 @@ const PipelineEditorSkeleton = () => (
 const PipelineEditor = withSuspenseWrapper(
   observer(({ file, routeRef }: PipelineEditorProps) => {
     const session = useEditorSession();
+    const navigationPending = useAutoSaveOnLeave(session.autoSave);
     const {
       data: { spec: rootSpec, restoredUndoStore },
     } = useLoadSpec(file, session.id);
@@ -110,7 +112,8 @@ const PipelineEditor = withSuspenseWrapper(
     }, [documentId, referenceId, displayName, tourMode]);
 
     useEffect(() => {
-      if (tourMode || storageKind !== "remote") return;
+      if (tourMode || navigationPending.current || storageKind !== "remote")
+        return;
       const location = getEditorLocation(file);
       if (routeRef.name === location.params.pipelineName && !routeRef.fileId)
         return;
@@ -118,9 +121,11 @@ const PipelineEditor = withSuspenseWrapper(
         ...location,
         replace: true,
         resetScroll: false,
+        ignoreBlocker: true,
       });
     }, [
       navigate,
+      navigationPending,
       file,
       routeRef.name,
       routeRef.fileId,

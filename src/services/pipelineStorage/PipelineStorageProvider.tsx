@@ -1,5 +1,6 @@
+import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import { useAuthLocalStorage } from "@/components/shared/Authentication/useAuthLocalStorage";
 import {
@@ -8,14 +9,28 @@ import {
 } from "@/hooks/useRequiredContext";
 import { useBackend } from "@/providers/BackendProvider";
 import { REMOTE_PIPELINES_ENABLED } from "@/utils/remotePipelines";
+import { subscribeUserPipelineWritten } from "@/utils/userPipelineWriteEvents";
 
 import { PipelineStorageService } from "./PipelineStorageService";
+import { FoldersQueryKeys } from "./types";
 
 export const PipelineStorageCtx = createRequiredContext<PipelineStorageService>(
   "PipelineStorageContext",
 );
 
 export function PipelineStorageProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
+
+  useEffect(
+    () =>
+      subscribeUserPipelineWritten(() => {
+        void queryClient.invalidateQueries({
+          queryKey: FoldersQueryKeys.All(),
+        });
+      }),
+    [queryClient],
+  );
+
   return REMOTE_PIPELINES_ENABLED ? (
     <RemoteStorageProvider>{children}</RemoteStorageProvider>
   ) : (
