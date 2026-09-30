@@ -14,7 +14,7 @@ function toPipelineRef(target: WorkareaTarget, title: string): PipelineRef {
 
 registerWorkareaKind({
   type: "pipeline",
-  icon: "Workflow",
+  icon: "GitBranch",
   keepMounted: true,
   resolveTitle: async (target) => {
     const { key, value } = parseIdentity(target.identity);
