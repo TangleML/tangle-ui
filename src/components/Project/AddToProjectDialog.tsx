@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { pointerTo } from "@/services/localPipelines/localPipelinesService";
+import { MAX_PAGE_SIZE } from "@/services/projects/queryDefaults";
 import {
   DescriptorTooLargeError,
   localPipelineResourceInput,
@@ -25,7 +26,9 @@ export function AddToProjectDialog({
   onOpenChange,
   onAdded,
 }: AddToProjectDialogProps) {
-  const { data, isPending, error } = useProjects({});
+  const { data, isPending, error } = useProjects({
+    pageSize: MAX_PAGE_SIZE,
+  });
   const addResource = useAddResourceToProject();
   const notify = useToastNotification();
   const { track } = useAnalytics();

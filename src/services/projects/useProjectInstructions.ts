@@ -1,3 +1,4 @@
+import { MAX_PAGE_SIZE } from "./queryDefaults";
 import {
   describeResource,
   INSTRUCTIONS,
@@ -41,7 +42,7 @@ interface ProjectInstructions {
 export function useProjectInstructions(projectId: string): ProjectInstructions {
   const { data: page, isPending: isListPending } = useProjectResources(
     projectId,
-    { entity: ["document"] },
+    { entity: ["document"], pageSize: MAX_PAGE_SIZE },
   );
   const row = findInstructions(page?.items ?? []);
 

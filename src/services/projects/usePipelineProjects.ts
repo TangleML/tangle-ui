@@ -10,6 +10,7 @@ import {
   pipelineResourceIn,
 } from "./pipelineProjects";
 import { listProjectResources } from "./projectResourcesService";
+import { MAX_PAGE_SIZE } from "./queryDefaults";
 import type { ProjectResourceSummary, ProjectSummary } from "./types";
 import { ProjectResourcesQueryKeys } from "./types";
 import { useProjects } from "./useProjects";
@@ -58,7 +59,7 @@ export function usePipelineProjects(
     data: projects,
     isPending: isListPending,
     error: listError,
-  } = useProjects({});
+  } = useProjects({ pageSize: MAX_PAGE_SIZE });
 
   const candidates: ProjectSummary[] = enabled ? (projects?.items ?? []) : [];
 

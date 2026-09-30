@@ -122,6 +122,9 @@ export function ProjectCard({ project }: ProjectCardProps) {
             variant="ghost"
             size="icon"
             className="absolute right-2 top-2"
+            // The card is dimmed while the delete runs, but dimming stops a
+            // pointer and not a keyboard.
+            disabled={isDeleting}
             aria-label={`Project actions: ${project.name}`}
             {...tracking("projects.project_card_menu")}
           >

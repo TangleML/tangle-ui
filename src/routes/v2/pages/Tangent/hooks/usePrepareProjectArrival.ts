@@ -2,16 +2,15 @@ import { useMutation } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
-import { createNewPipeline } from "@/routes/v2/pages/Editor/components/EditorMenuBar/components/fileMenu.actions";
 import type { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
-import { availablePipelineName } from "@/services/localPipelines/localPipelinesService";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
+import { createAndAttachPipeline } from "@/services/projects/createAndAttachPipeline";
 import { nameFromPrompt } from "@/services/projects/nameFromPrompt";
+import { MAX_PAGE_SIZE } from "@/services/projects/queryDefaults";
 import {
   describeResource,
   LOCAL_PIPELINE,
-  localPipelineResourceInput,
 } from "@/services/projects/resourceDescriptor";
 import type { WorkareaTarget } from "@/services/projects/resourceTarget";
 import { idIdentity } from "@/services/projects/resourceTarget";
@@ -66,6 +65,7 @@ export function usePrepareProjectArrival(
   const { data: project } = useProject(projectId);
   const { data: documents } = useProjectResources(projectId, {
     entity: ["document"],
+    pageSize: MAX_PAGE_SIZE,
   });
   const { mutateAsync: createResource } = useCreateProjectResource(projectId);
   const { mutateAsync: updateProject } = useUpdateProject();
@@ -127,17 +127,12 @@ export function usePrepareProjectArrival(
       // Named after the ask, as the project is, so the two agree until the
       // agent renames one. Reading as a repetition beats four random words
       // reading as a mistake — which is what an unasked-for project keeps.
-      const file = await createNewPipeline(
+      const file = await createAndAttachPipeline({
         storage,
-        askedFor ? await availablePipelineName(askedFor) : undefined,
-        { provisionalName: true },
-      );
-      await createResource(
-        localPipelineResourceInput({
-          localName: file.storageKey,
-          localId: file.id,
-        }),
-      );
+        name: askedFor,
+        provisionalName: true,
+        attach: createResource,
+      });
 
       const target: WorkareaTarget = {
         type: "pipeline",

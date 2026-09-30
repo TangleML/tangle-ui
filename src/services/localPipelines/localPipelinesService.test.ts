@@ -239,6 +239,10 @@ describe("pointerTo", () => {
 });
 
 describe("availablePipelineName", () => {
+  beforeEach(() => {
+    rows.registeredStorageKeys.mockResolvedValue([]);
+  });
+
   it("keeps the name it was given when nothing holds it", async () => {
     held("Fraud model");
 
@@ -276,14 +280,28 @@ describe("availablePipelineName", () => {
   });
 
   /**
-   * The list is the keyspace the driver writes into; the registry is only a
-   * partial view of it, so a name free there can still be occupied.
+   * The driver writes into the file list, which holds pipelines that never got
+   * a registry row — so a name free in the registry can still be occupied.
    */
-  it("asks the stored pipelines, not the registry", async () => {
+  it("avoids a name the stored files hold but the registry does not", async () => {
     held("Churn model");
 
-    await availablePipelineName("Churn model");
+    await expect(availablePipelineName("Churn model")).resolves.toBe(
+      "Churn model 2",
+    );
+  });
 
-    expect(rows.findByStorageKey).not.toHaveBeenCalled();
+  /**
+   * The bug: `addFile` refuses on the registry, and a row outlives its file
+   * whenever a delete gets half way — so a name free in the file list can
+   * still be one the create is about to be refused for.
+   */
+  it("avoids a name the registry holds but the stored files do not", async () => {
+    held();
+    rows.registeredStorageKeys.mockResolvedValue(["Churn model"]);
+
+    await expect(availablePipelineName("Churn model")).resolves.toBe(
+      "Churn model 2",
+    );
   });
 });
