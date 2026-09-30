@@ -1,12 +1,15 @@
 import { Link, Outlet } from "@tanstack/react-router";
+import { Fragment } from "react";
 
 import { TipOfTheDay } from "@/components/Learn/TipOfTheDay";
 import { isAuthorizationRequired } from "@/components/shared/Authentication/helpers";
 import { TopBarAuthentication } from "@/components/shared/Authentication/TopBarAuthentication";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
+import { Badge } from "@/components/ui/badge";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Link as UILink } from "@/components/ui/link";
+import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { useOnboarding } from "@/providers/OnboardingProvider/OnboardingProvider";
@@ -27,6 +30,9 @@ interface SidebarItem {
   label: string;
   icon: IconName;
   exact?: boolean;
+  highlighted?: boolean;
+  badge?: string;
+  dividerAfter?: boolean;
 }
 
 const BASE_SIDEBAR_ITEMS: SidebarItem[] = [
@@ -50,16 +56,22 @@ const COMPONENT_SEARCH_ITEM: SidebarItem = {
   icon: "PackageSearch",
 };
 
-const PROJECTS_ITEM: SidebarItem = {
+const TANGENT_ITEM: SidebarItem = {
   to: APP_ROUTES.PROJECTS,
-  label: "Projects",
-  icon: "FolderKanban",
+  label: "Tangent",
+  icon: "Bot",
+  highlighted: true,
+  badge: "Beta",
+  dividerAfter: true,
 };
 
-const navItemClass = (isActive: boolean) =>
+const navItemClass = (isActive: boolean, highlighted?: boolean) =>
   cn(
     "w-full px-3 py-2 rounded-md text-sm cursor-pointer hover:bg-accent",
     isActive && "bg-accent font-medium",
+    // Inset so the outline costs no layout and the row still lines up with the
+    // items around it.
+    highlighted && "ring-1 ring-inset ring-brand-accent/60",
   );
 
 export function DashboardLayout() {
@@ -78,9 +90,7 @@ export function DashboardLayout() {
     : BASE_SIDEBAR_ITEMS;
 
   const baseItems = isProjectsEnabled
-    ? componentItems.flatMap((item) =>
-        item.to === APP_ROUTES.DASHBOARD_RUNS ? [item, PROJECTS_ITEM] : [item],
-      )
+    ? [TANGENT_ITEM, ...componentItems]
     : componentItems;
 
   const sidebarItems: SidebarItem[] = shouldShowOnboarding
@@ -111,24 +121,35 @@ export function DashboardLayout() {
 
         <BlockStack gap="1" className="px-3">
           {sidebarItems.map((item) => (
-            <Link
-              key={item.to}
-              to={item.to}
-              className="w-full"
-              activeProps={{ className: "is-active" }}
-              activeOptions={item.exact ? { exact: true } : undefined}
-            >
-              {({ isActive }) => (
-                <InlineStack
-                  gap="2"
-                  blockAlign="center"
-                  className={navItemClass(isActive)}
-                >
-                  <Icon name={item.icon} size="sm" />
-                  <Text size="sm">{item.label}</Text>
-                </InlineStack>
-              )}
-            </Link>
+            <Fragment key={item.to}>
+              <Link
+                to={item.to}
+                className="w-full"
+                activeProps={{ className: "is-active" }}
+                activeOptions={item.exact ? { exact: true } : undefined}
+              >
+                {({ isActive }) => (
+                  <InlineStack
+                    gap="2"
+                    blockAlign="center"
+                    className={navItemClass(isActive, item.highlighted)}
+                  >
+                    <Icon
+                      name={item.icon}
+                      size="sm"
+                      className={cn(item.highlighted && "text-brand-accent")}
+                    />
+                    <Text size="sm">{item.label}</Text>
+                    {item.badge && (
+                      <Badge variant="brand" shape="rounded" size="sm">
+                        {item.badge}
+                      </Badge>
+                    )}
+                  </InlineStack>
+                )}
+              </Link>
+              {item.dividerAfter && <Separator className="my-2" />}
+            </Fragment>
           ))}
         </BlockStack>
 

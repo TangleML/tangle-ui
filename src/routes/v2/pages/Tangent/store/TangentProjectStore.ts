@@ -3,6 +3,7 @@ import type {
   EmbedAsset,
   HostResourceInput,
 } from "@tangent/embed-react";
+import type { ThinkingLevel } from "@tangent/shared/contracts.ts";
 import {
   action,
   computed,
@@ -62,7 +63,12 @@ export interface TangentSessionIo {
   newSession: (
     prompt: string,
     bundleId: string,
-    options: { name: string; resources?: HostResourceInput[] },
+    options: {
+      name: string;
+      resources?: HostResourceInput[];
+      model?: string;
+      thinkingDepth?: ThinkingLevel;
+    },
   ) => Promise<{ sessionId: string }>;
   attachSession: (sessionId: string) => Promise<{ id: string }>;
   detachSession: (resourceId: string) => Promise<void>;
@@ -73,6 +79,8 @@ export interface TangentSessionIo {
 export interface StartSessionOptions {
   prompt?: string;
   name?: string;
+  model?: string;
+  thinkingDepth?: ThinkingLevel;
 }
 
 /**
@@ -215,6 +223,8 @@ export class TangentProjectStore {
         resources: instructions
           ? [{ kind: "memory", scope: "session", content: instructions }]
           : undefined,
+        model: options?.model,
+        thinkingDepth: options?.thinkingDepth,
       });
       const resource = await io.attachSession(sessionId);
       runInAction(() => {

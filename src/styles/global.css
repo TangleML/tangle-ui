@@ -63,6 +63,11 @@ code {
   /* Brand accent (the logo purple) — reserved for deliberate brand usage. */
   --brand: #5b2ef4;
 
+  /* The same purple as ink and edges rather than as a fill. `--brand` is dark
+     enough to need white on top of it, which is what makes it disappear when
+     it is the foreground on a dark ground, so this one lightens for dark. */
+  --brand-accent: #5b2ef4;
+
   /* Canvas (ReactFlow pane) — subtly distinct from card so nodes read against it. */
   --canvas: oklch(0.985 0 0);
 
@@ -140,6 +145,7 @@ code {
   --sidebar-border: oklch(0.372 0.014 280);
   --sidebar-ring: oklch(0.62 0.04 280);
   --brand: #5b2ef4;
+  --brand-accent: oklch(0.72 0.17 292);
   --edge-selected: oklch(0.62 0.2 290);
 
   --canvas: oklch(0.245 0.009 280);
@@ -259,6 +265,7 @@ code {
   --color-sidebar-ring: var(--sidebar-ring);
   --color-edge-selected: var(--edge-selected);
   --color-brand: var(--brand);
+  --color-brand-accent: var(--brand-accent);
   --color-canvas: var(--canvas);
   --color-ink-fixed: var(--ink-fixed);
   --color-io-input: var(--io-input);
