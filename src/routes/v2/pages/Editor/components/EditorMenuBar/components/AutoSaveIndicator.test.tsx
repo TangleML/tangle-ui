@@ -1,19 +1,29 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { observable, runInAction } from "mobx";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AutoSaveIndicator } from "./AutoSaveIndicator";
 
-const { autoSave, storage } = vi.hoisted(() => ({
-  autoSave: {
+const { storage } = vi.hoisted(() => ({
+  storage: { canMigrate: vi.fn() },
+}));
+
+const autoSave = observable(
+  {
     error: null as string | null,
     isSaving: false,
     hasUnsavedChanges: false,
-    lastSavedAt: null,
+    lastSavedAt: null as Date | null,
     save: vi.fn(),
   },
-  storage: { canMigrate: vi.fn() },
-}));
+  { save: false },
+);
 
 const file = observable({
   canEdit: true,
@@ -43,7 +53,13 @@ describe("AutoSaveIndicator", () => {
     autoSave.error = null;
     autoSave.isSaving = false;
     autoSave.hasUnsavedChanges = false;
+    autoSave.lastSavedAt = null;
     storage.canMigrate.mockReturnValue(false);
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
   });
 
   it("publishes a local pipeline from the header and switches to cloud status", () => {
@@ -85,19 +101,29 @@ describe("AutoSaveIndicator", () => {
   it.each([
     { saving: true, unsaved: false, status: "Saving..." },
     { saving: false, unsaved: true, status: "Unsaved changes" },
-  ])("retains $status feedback", ({ saving, unsaved, status }) => {
-    autoSave.isSaving = saving;
-    autoSave.hasUnsavedChanges = unsaved;
-    file.saveError = "Not saved to server";
-    render(<AutoSaveIndicator />);
-    expect(screen.getByText(status)).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "Retry" }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByTestId("auto-save-button").hasAttribute("disabled"),
-    ).toBe(saving);
-  });
+  ])(
+    "shows $status through the icon and accessible feedback",
+    ({ saving, unsaved, status }) => {
+      autoSave.isSaving = saving;
+      autoSave.hasUnsavedChanges = unsaved;
+      file.saveError = "Not saved to server";
+      render(<AutoSaveIndicator />);
+      expect(screen.getByText(status)).toHaveClass("sr-only");
+      const button = screen.getByTestId("auto-save-button");
+      expect(button).toHaveAccessibleDescription(status);
+      expect(button).toHaveAttribute("aria-busy", String(saving));
+      expect(button.querySelector(".lucide-cloud")).not.toBeNull();
+      expect(screen.getByTestId("spinner")).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Retry" }),
+      ).not.toBeInTheDocument();
+      expect(button.hasAttribute("disabled")).toBe(saving);
+      if (unsaved) {
+        fireEvent.click(button);
+        expect(autoSave.save).toHaveBeenCalledOnce();
+      }
+    },
+  );
 
   it("retries publication after a failed local-to-server save", () => {
     file.storageKind = "local";
@@ -134,5 +160,89 @@ describe("AutoSaveIndicator", () => {
     expect(
       screen.queryByRole("button", { name: "Retry" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("confirms a completed server save for 750ms and restarts for the next save", () => {
+    vi.useFakeTimers();
+    autoSave.isSaving = true;
+    render(<AutoSaveIndicator />);
+    const cloud = () =>
+      screen.getByTestId("auto-save-button").querySelector(".lucide-cloud");
+
+    act(() => {
+      runInAction(() => {
+        autoSave.lastSavedAt = new Date();
+      });
+    });
+    expect(cloud()).toHaveClass("text-yellow-200");
+    expect(cloud()).not.toHaveClass("animate-pipeline-save-success");
+
+    act(() => {
+      runInAction(() => {
+        autoSave.isSaving = false;
+      });
+    });
+    expect(cloud()).toHaveClass("animate-pipeline-save-success");
+    expect(screen.getByTestId("auto-save-button")).toHaveAccessibleDescription(
+      "Saved",
+    );
+    expect(screen.queryByTestId("spinner")).not.toBeInTheDocument();
+
+    act(() => vi.advanceTimersByTime(500));
+    act(() => {
+      runInAction(() => {
+        autoSave.isSaving = true;
+        autoSave.hasUnsavedChanges = true;
+      });
+    });
+    expect(cloud()).toHaveClass("text-yellow-200");
+    expect(cloud()).not.toHaveClass("animate-pipeline-save-success");
+
+    act(() => {
+      runInAction(() => {
+        autoSave.lastSavedAt = new Date();
+        autoSave.isSaving = false;
+        autoSave.hasUnsavedChanges = false;
+      });
+    });
+    act(() => vi.advanceTimersByTime(749));
+    expect(cloud()).toHaveClass("animate-pipeline-save-success");
+    act(() => vi.advanceTimersByTime(1));
+    expect(cloud()).not.toHaveClass("animate-pipeline-save-success");
+    expect(cloud()).not.toHaveClass("text-yellow-200", "text-emerald-300");
+  });
+
+  it.each(["failed save", "newer edits"])(
+    "does not confirm an older save after %s",
+    (reason) => {
+      autoSave.isSaving = true;
+      render(<AutoSaveIndicator />);
+      act(() => {
+        runInAction(() => {
+          autoSave.lastSavedAt = new Date();
+          autoSave.isSaving = false;
+          autoSave.hasUnsavedChanges = true;
+          if (reason === "failed save") autoSave.error = "Network unavailable";
+        });
+      });
+      expect(screen.queryByText("Saved")).not.toBeInTheDocument();
+      act(() => {
+        runInAction(() => {
+          autoSave.error = null;
+          autoSave.hasUnsavedChanges = false;
+        });
+      });
+      expect(
+        screen.getByTestId("auto-save-button").querySelector(".lucide-cloud"),
+      ).not.toHaveClass("animate-pipeline-save-success");
+    },
+  );
+
+  it("does not replay a previous save when the indicator mounts", () => {
+    autoSave.lastSavedAt = new Date();
+    render(<AutoSaveIndicator />);
+    expect(
+      screen.getByTestId("auto-save-button").querySelector(".lucide-cloud"),
+    ).not.toHaveClass("animate-pipeline-save-success");
   });
 });

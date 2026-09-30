@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   ComponentSpec,
+  Input,
   serializeComponentSpecToText,
 } from "@/models/componentSpec";
 import { saveUndoHistory } from "@/routes/v2/pages/Editor/utils/undoHistoryStorage";
@@ -89,6 +90,18 @@ function setupRemote() {
   return { ...session, storage, remote, remoteWrite };
 }
 
+function setupRemoteEditor() {
+  const context = setup();
+  context.store.dispose();
+  vi.spyOn(context.file, "storageKind", "get").mockReturnValue("remote");
+  const input = new Input({ $id: "input", name: "Value" });
+  context.spec.addInput(input);
+  context.store.init(context.spec);
+  const move = (x: number) =>
+    context.spec.updateNodePosition(input.$id, { x, y: 0 });
+  return { ...context, input, move };
+}
+
 describe("AutoSaveStore", () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => {
@@ -129,7 +142,7 @@ describe("AutoSaveStore", () => {
       spec.setDescription(undefined);
       expect(store.hasUnsavedChanges).toBe(true);
       if (trigger === "autosave") {
-        await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_TIME_MS);
+        await vi.advanceTimersByTimeAsync(1000);
         expect(write).toHaveBeenCalledExactlyOnceWith(original);
       }
       const saving = trigger === "dispose" ? store.dispose() : store.save();
@@ -258,15 +271,16 @@ describe("AutoSaveStore", () => {
     const firstWrite = createPendingWrite();
     write.mockImplementationOnce(() => firstWrite.promise);
     spec.setDescription("First remote edit");
-    await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_TIME_MS);
+    await vi.advanceTimersByTimeAsync(1000);
     spec.setDescription("Newest remote edit");
     expect(file.persistRecovery).toHaveBeenLastCalledWith(
       serializeComponentSpecToText(spec),
     );
-    await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_TIME_MS);
-    expect(write).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(write).toHaveBeenCalledTimes(1);
     firstWrite.resolve();
     await vi.advanceTimersByTimeAsync(0);
+    expect(write).toHaveBeenCalledTimes(2);
     store.dispose();
   });
 
@@ -334,14 +348,14 @@ describe("AutoSaveStore", () => {
   it("automatically publishes the first local edit and autosaves later edits remotely", async () => {
     const { store, storage, spec, file, write, remoteWrite } = setupRemote();
     spec.setDescription("First edit");
-    await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_TIME_MS);
+    await vi.advanceTimersByTimeAsync(1000);
     expect(write).toHaveBeenCalledWith(serializeComponentSpecToText(spec));
     expect(storage.migratePipeline).toHaveBeenCalledExactlyOnceWith(file);
     expect(file.storageKind).toBe("remote");
     expect(store.hasUnsavedChanges).toBe(false);
 
     spec.setDescription("Remote edit");
-    await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_TIME_MS);
+    await vi.advanceTimersByTimeAsync(1000);
     expect(remoteWrite).toHaveBeenCalledExactlyOnceWith(
       serializeComponentSpecToText(spec),
     );
@@ -353,16 +367,16 @@ describe("AutoSaveStore", () => {
     const { store, storage, spec, file, write } = setupRemote();
     storage.migratePipeline.mockRejectedValueOnce(new Error("Offline"));
     spec.setDescription("Recoverable edit");
-    await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_TIME_MS);
+    await vi.advanceTimersByTimeAsync(1000);
     expect(write).toHaveBeenCalledWith(serializeComponentSpecToText(spec));
     expect(file.storageKind).toBe("local");
     expect(store.error).toBe("Offline");
     expect(store.hasUnsavedChanges).toBe(true);
-    await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_TIME_MS * 2);
+    await vi.advanceTimersByTimeAsync(6000);
     expect(storage.migratePipeline).toHaveBeenCalledTimes(1);
 
     spec.setDescription("Latest edit");
-    await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_TIME_MS);
+    await vi.advanceTimersByTimeAsync(1000);
     expect(storage.migratePipeline).toHaveBeenCalledTimes(2);
     expect(file.storageKind).toBe("remote");
     expect(store.error).toBeNull();
@@ -382,9 +396,9 @@ describe("AutoSaveStore", () => {
       return remote;
     });
     spec.setDescription("Uploading edit");
-    await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_TIME_MS);
+    await vi.advanceTimersByTimeAsync(1000);
     spec.setDescription("Edit during upload");
-    await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_TIME_MS);
+    await vi.advanceTimersByTimeAsync(1000);
     expect(write).toHaveBeenCalledTimes(1);
     expect(store.isSaving).toBe(true);
 
@@ -398,16 +412,52 @@ describe("AutoSaveStore", () => {
     store.dispose();
   });
 
+  it.each(["autosave", "dispose"] as const)(
+    "flushes recovery reverted to the first upload's content on %s",
+    async (trigger) => {
+      const { store, storage, spec, file, remote, remoteWrite } = setupRemote();
+      const upload = createPendingWrite();
+      storage.migratePipeline.mockImplementationOnce(async () => {
+        await upload.promise;
+        runInAction(() => {
+          file.redirectedFile = remote;
+        });
+        return remote;
+      });
+      spec.setDescription("Uploading edit");
+      await vi.advanceTimersByTimeAsync(1000);
+      const saving = store.save();
+      expect(storage.migratePipeline).toHaveBeenCalledOnce();
+
+      spec.setDescription("Temporary edit during upload");
+      spec.setDescription("Uploading edit");
+      if (trigger === "autosave") await vi.advanceTimersByTimeAsync(1000);
+      expect(remoteWrite).not.toHaveBeenCalled();
+
+      upload.resolve();
+      expect(await saving).toBe(true);
+      try {
+        if (trigger === "dispose") await store.dispose();
+        expect(remoteWrite).toHaveBeenCalledExactlyOnceWith(
+          serializeComponentSpecToText(spec),
+        );
+        expect(storage.migratePipeline).toHaveBeenCalledOnce();
+      } finally {
+        await store.dispose();
+      }
+    },
+  );
+
   it("persists and uploads a revert to the original after the first upload fails", async () => {
     const { store, storage, spec, file, write } = setupRemote();
     const original = serializeComponentSpecToText(spec);
     storage.migratePipeline.mockRejectedValueOnce(new Error("Offline"));
     spec.setDescription("Failed upload");
-    await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_TIME_MS);
+    await vi.advanceTimersByTimeAsync(1000);
     expect(store.error).toBe("Offline");
 
     spec.setDescription(undefined);
-    await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_TIME_MS);
+    await vi.advanceTimersByTimeAsync(1000);
     expect(write).toHaveBeenLastCalledWith(original);
     expect(storage.migratePipeline).toHaveBeenCalledTimes(2);
     expect(file.storageKind).toBe("remote");
@@ -463,5 +513,210 @@ describe("AutoSaveStore", () => {
     expect(storage.canMigrate).toHaveBeenCalledWith(file);
     expect(storage.migratePipeline).not.toHaveBeenCalled();
     store.dispose();
+  });
+
+  it("batches repeated moves from the first move rather than the last", async () => {
+    const { store, spec, move, write, file } = setupRemoteEditor();
+    move(1);
+    expect(file.persistRecovery).toHaveBeenLastCalledWith(
+      serializeComponentSpecToText(spec),
+    );
+    await vi.advanceTimersByTimeAsync(900);
+    move(2);
+    await vi.advanceTimersByTimeAsync(900);
+    move(3);
+    await vi.advanceTimersByTimeAsync(1100);
+    move(4);
+    expect(write).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(100);
+    expect(write).toHaveBeenCalledExactlyOnceWith(
+      serializeComponentSpecToText(spec),
+    );
+    expect(store.hasUnsavedChanges).toBe(false);
+
+    move(5);
+    await vi.advanceTimersByTimeAsync(2999);
+    expect(write).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(write).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(6000);
+    expect(write).toHaveBeenCalledTimes(2);
+    await store.dispose();
+  });
+
+  it("debounces values for one second without letting movement delay them", async () => {
+    const { store, spec, input, move, write } = setupRemoteEditor();
+    input.setValue("First");
+    await vi.advanceTimersByTimeAsync(600);
+    input.setValue("Latest");
+    await vi.advanceTimersByTimeAsync(900);
+    move(30);
+    expect(write).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(100);
+    expect(write).toHaveBeenCalledExactlyOnceWith(
+      serializeComponentSpecToText(spec),
+    );
+    await vi.advanceTimersByTimeAsync(4000);
+    expect(write).toHaveBeenCalledTimes(1);
+    await store.dispose();
+  });
+
+  it("includes a recent content change in an already scheduled movement save", async () => {
+    const { store, spec, input, move, write } = setupRemoteEditor();
+    move(1);
+    await vi.advanceTimersByTimeAsync(2800);
+    input.setValue("Latest");
+    await vi.advanceTimersByTimeAsync(200);
+    expect(write).toHaveBeenCalledExactlyOnceWith(
+      serializeComponentSpecToText(spec),
+    );
+    await vi.advanceTimersByTimeAsync(4000);
+    expect(write).toHaveBeenCalledTimes(1);
+    await store.dispose();
+  });
+
+  it("saves content earlier than a pending movement upload", async () => {
+    const { store, spec, input, move, write } = setupRemoteEditor();
+    move(1);
+    await vi.advanceTimersByTimeAsync(200);
+    input.setValue("Latest");
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(write).toHaveBeenCalledExactlyOnceWith(
+      serializeComponentSpecToText(spec),
+    );
+    await vi.advanceTimersByTimeAsync(4000);
+    expect(write).toHaveBeenCalledTimes(1);
+    await store.dispose();
+  });
+
+  it("keeps only the newest follow-up behind a slow remote save", async () => {
+    const { store, spec, input, move, file, write } = setupRemoteEditor();
+    const first = createPendingWrite();
+    write.mockImplementationOnce(() => first.promise);
+    input.setValue("Uploading");
+    await vi.advanceTimersByTimeAsync(1000);
+    for (const value of ["Intermediate", "Another", "Latest"]) {
+      input.setValue(value);
+      await vi.advanceTimersByTimeAsync(1000);
+    }
+    move(40);
+    expect(file.persistRecovery).toHaveBeenLastCalledWith(
+      serializeComponentSpecToText(spec),
+    );
+    expect(write).toHaveBeenCalledTimes(1);
+    first.resolve();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(write).toHaveBeenCalledTimes(2);
+    expect(write).toHaveBeenLastCalledWith(serializeComponentSpecToText(spec));
+    expect(store.isSaving).toBe(false);
+    expect(store.hasUnsavedChanges).toBe(false);
+    await vi.advanceTimersByTimeAsync(4000);
+    expect(write).toHaveBeenCalledTimes(2);
+    await store.dispose();
+  });
+
+  it("flushes movement immediately on explicit save without a later duplicate", async () => {
+    const { store, spec, move, write } = setupRemoteEditor();
+    move(20);
+    expect(await store.save()).toBe(true);
+    expect(write).toHaveBeenCalledExactlyOnceWith(
+      serializeComponentSpecToText(spec),
+    );
+    await vi.advanceTimersByTimeAsync(4000);
+    expect(write).toHaveBeenCalledTimes(1);
+    await store.dispose();
+  });
+
+  it("does not duplicate a manual save of identical in-flight content", async () => {
+    const { store, input, write } = setupRemoteEditor();
+    const first = createPendingWrite();
+    write.mockImplementationOnce(() => first.promise);
+    input.setValue("Uploading");
+    await vi.advanceTimersByTimeAsync(1000);
+    const manual = store.save();
+    first.resolve();
+    expect(await manual).toBe(true);
+    expect(write).toHaveBeenCalledTimes(1);
+    await store.dispose();
+  });
+
+  it.each(["autosave", "save", "dispose"] as const)(
+    "flushes recovery staged back to in-flight content on %s",
+    async (trigger) => {
+      const { store, spec, input, write } = setupRemoteEditor();
+      const first = createPendingWrite();
+      write.mockImplementationOnce(() => first.promise);
+      input.setValue("Uploading");
+      await vi.advanceTimersByTimeAsync(1000);
+      input.setValue("Temporary");
+      input.setValue("Uploading");
+      if (trigger === "autosave") await vi.advanceTimersByTimeAsync(1000);
+      const saving =
+        trigger === "autosave"
+          ? undefined
+          : trigger === "dispose"
+            ? store.dispose()
+            : store.save();
+      expect(write).toHaveBeenCalledTimes(1);
+
+      first.resolve();
+      if (saving) expect(await saving).toBe(true);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(write).toHaveBeenCalledTimes(2);
+      expect(write).toHaveBeenLastCalledWith(
+        serializeComponentSpecToText(spec),
+      );
+      if (trigger !== "dispose") expect(store.hasUnsavedChanges).toBe(false);
+      await store.dispose();
+      await vi.advanceTimersByTimeAsync(4000);
+      expect(write).toHaveBeenCalledTimes(2);
+    },
+  );
+
+  it("saves a revert while different content is in flight", async () => {
+    const { store, spec, input, write } = setupRemoteEditor();
+    const original = serializeComponentSpecToText(spec);
+    const first = createPendingWrite();
+    write.mockImplementationOnce(() => first.promise);
+    input.setValue("Uploading");
+    await vi.advanceTimersByTimeAsync(1000);
+    input.setValue(undefined);
+    expect(store.hasUnsavedChanges).toBe(true);
+    const manual = store.save();
+    first.resolve();
+    expect(await manual).toBe(true);
+    expect(write).toHaveBeenCalledTimes(2);
+    expect(write).toHaveBeenLastCalledWith(original);
+    expect(store.hasUnsavedChanges).toBe(false);
+    await store.dispose();
+  });
+
+  it("flushes the original snapshot when an edit is undone before its timer expires", async () => {
+    const { store, spec, input, write } = setupRemoteEditor();
+    const original = serializeComponentSpecToText(spec);
+    input.setValue("Temporary");
+    input.setValue(undefined);
+    await vi.advanceTimersByTimeAsync(4000);
+    expect(write).toHaveBeenCalledExactlyOnceWith(original);
+    expect(store.hasUnsavedChanges).toBe(false);
+    await store.dispose();
+  });
+
+  it("flushes movement on navigation and cancels the old session's timer", async () => {
+    const { store, spec, files, move, write } = setupRemoteEditor();
+    move(20);
+    const finishing = store.dispose();
+    const next = createFile("Next");
+    const nextWrite = vi.spyOn(next, "write").mockResolvedValue();
+    files.init(next);
+    store.init(new ComponentSpec({ name: "Next" }));
+    await finishing;
+    await vi.advanceTimersByTimeAsync(4000);
+    expect(write).toHaveBeenCalledExactlyOnceWith(
+      serializeComponentSpecToText(spec),
+    );
+    expect(nextWrite).not.toHaveBeenCalled();
+    expect(store.lastSavedAt).toBeNull();
+    await store.dispose();
   });
 });
