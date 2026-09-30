@@ -1134,4 +1134,59 @@ describe("validateSpec", () => {
       expect(graphIssues.every((i) => !i.entityId)).toBe(true);
     });
   });
+
+  /**
+   * An agent that cannot find a component in the registry authors one, and a
+   * spec with ports but no implementation used to validate clean — so the
+   * pipeline looked finished and the backend refused the run with nothing
+   * naming the task at fault.
+   */
+  describe("a component with no implementation", () => {
+    it("is an error against the task carrying it", () => {
+      const spec = makeSpec();
+      // The shape an agent authors when it invents a component: ports, no
+      // implementation. `ComponentSpecJson` does not admit it, which is the
+      // point — nothing stopped it reaching the canvas.
+      const portsOnly = { name: "Greet" } as unknown as ComponentSpecJson;
+      spec.addTask(makeTask("t1", "Greet", portsOnly));
+
+      const issue = validateSpec(spec).find(
+        (i) => i.issueCode === "MISSING_IMPLEMENTATION",
+      );
+
+      expect(issue).toBeDefined();
+      expect(issue?.severity).toBe("error");
+      expect(issue?.entityId).toBe("t1");
+      expect(issue?.message).toContain("Greet");
+    });
+
+    it("says nothing when the component has a container", () => {
+      const spec = makeSpec();
+      spec.addTask(makeTask("t1", "Greet", containerComponentSpec));
+
+      expect(
+        validateSpec(spec).some(
+          (i) => i.issueCode === "MISSING_IMPLEMENTATION",
+        ),
+      ).toBe(false);
+    });
+
+    /** A subgraph task's implementation is the graph, held separately. */
+    it("says nothing about a subgraph task", () => {
+      const spec = makeSpec();
+      const task = new Task({
+        $id: "t1",
+        name: "Inner",
+        componentRef: { name: "component-Inner" },
+        subgraphSpec: makeSpec("Inner"),
+      });
+      spec.addTask(task);
+
+      expect(
+        validateSpec(spec).some(
+          (i) => i.issueCode === "MISSING_IMPLEMENTATION",
+        ),
+      ).toBe(false);
+    });
+  });
 });

@@ -24,6 +24,7 @@ import {
   type RemoteAgentSpec,
 } from "./agents/remoteEditorAgent";
 import { ProxyClient } from "./config";
+import { recordTurnReasoning } from "./middleware/recordTurnReasoning";
 import { createSession, type RecentPipelineRun } from "./session";
 import { SkillsLoader } from "./skills/loader";
 import type { ToolBridgeApi } from "./toolBridgeApi";
@@ -168,6 +169,8 @@ export function createRemoteEnvWorkerApi(): RemoteEnvWorkerApi {
           signal: controller.signal,
           maxTurns: REMOTE_EDITOR_MAX_TURNS,
         });
+
+        recordTurnReasoning(agent.name, result.newItems);
 
         const answer =
           typeof result.finalOutput === "string"

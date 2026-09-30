@@ -233,6 +233,23 @@ function validateSingleTask(
       severity: "error",
       issueCode: "COMPONENT_HYDRATION_FAILED",
     });
+  } else if (
+    !task.subgraphSpec &&
+    !task.resolvedComponentSpec?.implementation
+  ) {
+    // A component authored rather than fetched can arrive with ports and no
+    // way to run them. Nothing else here notices, so the pipeline validated
+    // clean and the backend refused the run — a fault with no location on it.
+    issues.push({
+      type: "task",
+      message:
+        'Component "' +
+        (task.resolvedComponentSpec?.name ?? task.name) +
+        '" has no implementation, so this task cannot run. Give it a container implementation (image and command), or replace it with a component from search_components.',
+      entityId: task.$id,
+      severity: "error",
+      issueCode: "MISSING_IMPLEMENTATION",
+    });
   }
 
   issues.push(...validateTaskArguments(task, spec));

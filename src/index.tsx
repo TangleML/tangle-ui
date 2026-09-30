@@ -7,6 +7,7 @@ import { StrictMode } from "react";
 import ReactDOM from "react-dom/client";
 import { scan } from "react-scan";
 
+import { startAgentTraceLog } from "@/agent/middleware/agentTraceLog";
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 
@@ -14,6 +15,7 @@ import { router } from "./routes/router";
 import { initializeBugsnag } from "./services/errorManagement/bugsnag";
 
 initializeBugsnag();
+startAgentTraceLog();
 
 const queryClient = new QueryClient();
 
