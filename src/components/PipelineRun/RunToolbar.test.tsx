@@ -15,6 +15,7 @@ import { usePipelineRunData } from "@/hooks/usePipelineRunData";
 import { useBackend } from "@/providers/BackendProvider";
 import { ComponentSpecProvider } from "@/providers/ComponentSpecProvider";
 import { ExecutionDataProvider } from "@/providers/ExecutionDataProvider";
+import { PipelineStorageProvider } from "@/services/pipelineStorage/PipelineStorageProvider";
 import type { ComponentSpec } from "@/utils/componentSpec";
 
 import { RunToolbar } from "./RunToolbar";
@@ -148,7 +149,9 @@ describe("<RunToolbar/>", () => {
         <ComponentSpecProvider spec={mockComponentSpec}>
           <QueryClientProvider client={queryClient}>
             <ExecutionDataProvider pipelineRunId="123">
-              <ReactFlowProvider>{children}</ReactFlowProvider>
+              <PipelineStorageProvider>
+                <ReactFlowProvider>{children}</ReactFlowProvider>
+              </PipelineStorageProvider>
             </ExecutionDataProvider>
           </QueryClientProvider>
         </ComponentSpecProvider>

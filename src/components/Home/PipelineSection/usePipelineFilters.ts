@@ -24,21 +24,23 @@ export type PipelineFilterEntry = Pick<ComponentFileEntry, "name"> &
 
 export type PipelineEntry<T> = [string, T, PipelineMatchMetadata];
 
-export interface FilterBarProps {
+export interface PipelineFilterControls {
   searchQuery: string;
   setSearchQuery: (v: string) => void;
   dateRange: DateRange | undefined;
   setDateRange: (v: DateRange | undefined) => void;
-  sortField: PipelineSortField;
-  setSortField: (v: PipelineSortField) => void;
   sortDirection: PipelineSortDirection;
   setSortDirection: (v: PipelineSortDirection) => void;
+  clearFilters: () => void;
+  totalCount: number;
+}
+
+export interface FilterBarProps extends PipelineFilterControls {
+  sortField: PipelineSortField;
+  setSortField: (v: PipelineSortField) => void;
   componentQuery: string;
   setComponentQuery: (v: string) => void;
   hasActiveFilters: boolean;
-  activeFilterCount: number;
-  clearFilters: () => void;
-  totalCount: number;
   filteredCount: number;
 }
 
@@ -148,7 +150,7 @@ function matchesDateRange(
   return true;
 }
 
-function filterPipelineEntries<T extends PipelineFilterEntry>(
+export function filterPipelineEntries<T extends PipelineFilterEntry>(
   pipelines: Map<string, T>,
   {
     searchQuery,
@@ -200,10 +202,6 @@ export function usePipelineFilters<T extends PipelineFilterEntry>(
   const [componentQuery, setComponentQuery] = useState("");
 
   const hasActiveFilters = !!searchQuery || !!dateRange || !!componentQuery;
-  const activeFilterCount = [searchQuery, dateRange, componentQuery].filter(
-    Boolean,
-  ).length;
-
   const clearFilters = () => {
     setSearchQuery("");
     setDateRange(undefined);
@@ -239,7 +237,6 @@ export function usePipelineFilters<T extends PipelineFilterEntry>(
     componentQuery,
     setComponentQuery,
     hasActiveFilters,
-    activeFilterCount,
     clearFilters,
     totalCount: pipelines.size,
     filteredCount: filteredPipelines.length,

@@ -16,7 +16,6 @@ import {
   writeComponentToFileListFromText,
 } from "@/utils/componentStore";
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
-import { REMOTE_PIPELINES_ENABLED } from "@/utils/remotePipelines";
 import { componentSpecToYaml } from "@/utils/yaml";
 import { componentSpecFromYaml } from "@/utils/yaml";
 
@@ -24,16 +23,19 @@ import {
   deleteEntry,
   findByStorageKey,
 } from "./pipelineStorage/pipelineRegistry";
+import type { PipelineStorageService } from "./pipelineStorage/PipelineStorageService";
 import {
   assertLocalPipelineVisible,
   PipelineMovedToRemoteError,
 } from "./pipelineStorage/remotePipelineRecovery";
 
-export async function savePipelineText(name: string, content: string) {
-  if (REMOTE_PIPELINES_ENABLED) {
-    const { getPipelineStorageService } =
-      await import("./pipelineStorage/PipelineStorageService");
-    return getPipelineStorageService().createPipeline(name, content);
+export async function savePipelineText(
+  storage: PipelineStorageService,
+  name: string,
+  content: string,
+) {
+  if (storage.remoteEnabled) {
+    return storage.createPipeline(name, content);
   }
   await writeComponentToFileListFromText(
     USER_PIPELINES_LIST_NAME,
@@ -53,7 +55,10 @@ export const deletePipeline = async (name: string, onDelete?: () => void) => {
   }
 };
 
-export const useSavePipeline = (componentSpec: ComponentSpec) => {
+export const useSavePipeline = (
+  componentSpec: ComponentSpec,
+  storage: PipelineStorageService,
+) => {
   const savePipeline = async (name?: string) => {
     if (!componentSpec) {
       return;
@@ -66,7 +71,11 @@ export const useSavePipeline = (componentSpec: ComponentSpec) => {
 
     const componentSpecAsYaml = componentSpecToYaml(componentSpecWithNewName);
 
-    return savePipelineText(componentSpecWithNewName.name, componentSpecAsYaml);
+    return savePipelineText(
+      storage,
+      componentSpecWithNewName.name,
+      componentSpecAsYaml,
+    );
   };
 
   return {
@@ -202,6 +211,7 @@ async function generateUniquePipelineName(baseName: string): Promise<string> {
  * @returns The result of the import, with the pipeline name and unique flag
  */
 export async function importPipelineFromYaml(
+  storage: PipelineStorageService,
   yamlContent: string,
   overwrite = false,
 ): Promise<ImportResult> {
@@ -229,9 +239,10 @@ export async function importPipelineFromYaml(
     let pipelineName = componentSpec.name || "Imported Pipeline";
     let wasRenamed = false;
 
-    if (REMOTE_PIPELINES_ENABLED) {
+    if (storage.remoteEnabled) {
       componentSpec.name = pipelineName;
       const file = await savePipelineText(
+        storage,
         pipelineName,
         componentSpecToYaml(componentSpec),
       );
@@ -306,12 +317,13 @@ export async function importPipelineFromYaml(
  * @returns The result of the import operation
  */
 export async function importPipelineFromFile(
+  storage: PipelineStorageService,
   file: File,
   overwrite = false,
 ): Promise<ImportResult> {
   try {
     const yamlContent = await file.text();
-    return importPipelineFromYaml(yamlContent, overwrite);
+    return importPipelineFromYaml(storage, yamlContent, overwrite);
   } catch (error) {
     let errorMessage = "Failed to read file.";
     if (error instanceof Error) {

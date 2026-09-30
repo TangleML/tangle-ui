@@ -230,7 +230,6 @@ describe("usePipelineFilters", () => {
       totalCount: 5,
       filteredCount: 2,
       hasActiveFilters: true,
-      activeFilterCount: 1,
     });
 
     act(() => result.current.filterBarProps.clearFilters());

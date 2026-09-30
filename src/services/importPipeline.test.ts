@@ -5,6 +5,9 @@ import * as componentStore from "@/utils/componentStore";
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 
 import { importPipelineFromYaml } from "./pipelineService";
+import { PipelineStorageService } from "./pipelineStorage/PipelineStorageService";
+
+const storage = new PipelineStorageService();
 
 vi.mock("@/utils/remotePipelines", () => ({ REMOTE_PIPELINES_ENABLED: false }));
 
@@ -44,7 +47,7 @@ describe("importPipelineFromYaml", () => {
     // Mock no existing pipeline with the same name
     vi.mocked(componentStore.getComponentFileFromList).mockResolvedValue(null);
 
-    const result = await importPipelineFromYaml(validYamlContent);
+    const result = await importPipelineFromYaml(storage, validYamlContent);
 
     // Expect writeComponentToFileListFromText to be called with correct parameters
     expect(componentStore.writeComponentToFileListFromText).toHaveBeenCalled();
@@ -68,7 +71,11 @@ describe("importPipelineFromYaml", () => {
       },
     );
 
-    const result = await importPipelineFromYaml(validYamlContent, false);
+    const result = await importPipelineFromYaml(
+      storage,
+      validYamlContent,
+      false,
+    );
 
     // Since we're now renaming rather than erroring, expect a successful result
     expect(result.successful).toBe(true);
@@ -100,7 +107,11 @@ describe("importPipelineFromYaml", () => {
       },
     );
 
-    const result = await importPipelineFromYaml(validYamlContent, false);
+    const result = await importPipelineFromYaml(
+      storage,
+      validYamlContent,
+      false,
+    );
 
     // Expect a successful result with the name incremented to (3)
     expect(result.successful).toBe(true);
@@ -120,7 +131,10 @@ describe("importPipelineFromYaml", () => {
   });
 
   it("should handle invalid YAML content", async () => {
-    const result = await importPipelineFromYaml("invalid: yaml: content: -");
+    const result = await importPipelineFromYaml(
+      storage,
+      "invalid: yaml: content: -",
+    );
 
     // Expect unsuccessful result
     expect(result.successful).toBe(false);
@@ -140,7 +154,7 @@ describe("importPipelineFromYaml", () => {
     };
     const containerPipeline = yaml.dump(containerPipelineObj);
 
-    const result = await importPipelineFromYaml(containerPipeline);
+    const result = await importPipelineFromYaml(storage, containerPipeline);
 
     // Expect unsuccessful result
     expect(result.successful).toBe(false);
@@ -171,7 +185,7 @@ describe("importPipelineFromYaml", () => {
 
     vi.mocked(componentStore.getComponentFileFromList).mockResolvedValue(null);
 
-    const result = await importPipelineFromYaml(unnamedYaml);
+    const result = await importPipelineFromYaml(storage, unnamedYaml);
 
     // Expect writeComponentToFileListFromText to be called with default name
     expect(

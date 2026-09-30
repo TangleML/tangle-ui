@@ -22,6 +22,8 @@ import { fetchWithErrorHandling } from "@/utils/fetchWithErrorHandling";
 import { componentSpecToYaml } from "@/utils/yaml";
 
 import { savePipelineText } from "./pipelineService";
+import type { PipelineStorageService } from "./pipelineStorage/PipelineStorageService";
+import type { PipelineRef } from "./pipelineStorage/types";
 
 export const createPipelineRun = async (
   payload: BodyCreateApiPipelineRunsPost,
@@ -79,6 +81,7 @@ export const savePipelineRun = async (
 };
 
 export const copyRunToPipeline = async (
+  storage: PipelineStorageService,
   componentSpec: ComponentSpec,
   runId?: string | null,
   name?: string,
@@ -154,11 +157,13 @@ export const copyRunToPipeline = async (
     cleanComponentSpec.name = newName;
 
     const componentText = componentSpecToYaml(cleanComponentSpec);
-    const file = await savePipelineText(newName, componentText);
+    const file = await savePipelineText(storage, newName, componentText);
+    const ref: PipelineRef = { name: newName, fileId: file?.referenceId };
 
     return {
       url: getDefaultEditorPath(file?.referenceId ?? newName),
       name: newName,
+      ref,
     };
   } catch (error) {
     console.error("Error cloning pipeline:", error);

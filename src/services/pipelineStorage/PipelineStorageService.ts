@@ -1,12 +1,9 @@
 import { makeObservable, observable } from "mobx";
 import { z } from "zod";
 
-import { REMOTE_PIPELINES_ENABLED } from "@/utils/remotePipelines";
-
 import { createDriver } from "./createDriver";
 import { pipelineStorageDb } from "./db";
 import { RootFolderDbStorageDriver } from "./drivers/RootFolderDbStorageDriver";
-import { listStoragePage } from "./listStoragePage";
 import { PipelineFile } from "./PipelineFile";
 import { PipelineFolder } from "./PipelineFolder";
 import { findById, findByStorageKey } from "./pipelineRegistry";
@@ -21,15 +18,9 @@ import {
 } from "./RemotePipelineStore";
 import {
   type PipelinePageOptions,
-  type PipelineStorageDriver,
   type PipelineStoragePage,
   ROOT_FOLDER_ID,
 } from "./types";
-
-interface PipelinePageRequest extends PipelinePageOptions {
-  storageKind: "local" | "remote";
-  folderId?: string;
-}
 
 const ROOT_DRIVER_CONFIG = {
   driverType: "folder-indexdb",
@@ -52,19 +43,11 @@ export class PipelineStorageService {
     return this.remote?.backendUrl ?? "";
   }
 
-  async listPipelinePage({
-    storageKind,
-    folderId,
-    ...options
-  }: PipelinePageRequest): Promise<PipelineStoragePage<PipelineFile>> {
-    if (storageKind === "remote") {
-      if (!this.remote) throw new Error("Remote pipelines are not enabled.");
-      return this.remote.listPage(options);
-    }
-    return listStoragePage(
-      { list: () => this.listLocalPipelines(folderId) },
-      options,
-    );
+  async listRemotePipelinePage(
+    options: PipelinePageOptions = {},
+  ): Promise<PipelineStoragePage<PipelineFile>> {
+    if (!this.remote) throw new Error("Remote pipelines are not enabled.");
+    return this.remote.listPage(options);
   }
 
   async listPendingPipelines(): Promise<PipelineFile[]> {
@@ -78,7 +61,10 @@ export class PipelineStorageService {
   }
 
   constructor(remoteOptions?: RemotePipelineOptions) {
-    this.rootFolder = createRoot({
+    this.rootFolder = new PipelineFolder({
+      id: ROOT_FOLDER_ID,
+      name: "Root",
+      parentId: null,
       driver: createDriver(ROOT_DRIVER_CONFIG),
     });
     this.scope = remoteOptions
@@ -241,31 +227,4 @@ export class PipelineStorageService {
         a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
       );
   }
-}
-
-let activeService: PipelineStorageService | undefined;
-
-export function setPipelineStorageService(
-  service: PipelineStorageService,
-): () => void {
-  activeService = service;
-  return () => {
-    if (activeService === service) activeService = undefined;
-  };
-}
-
-export function getPipelineStorageService(): PipelineStorageService {
-  if (activeService) return activeService;
-  if (REMOTE_PIPELINES_ENABLED)
-    throw new Error("Pipeline storage is not ready.");
-  return new PipelineStorageService();
-}
-
-function createRoot(options?: { driver: PipelineStorageDriver }) {
-  return new PipelineFolder({
-    id: ROOT_FOLDER_ID,
-    name: "Root",
-    parentId: null,
-    driver: options?.driver ?? createDriver({ driverType: "root-indexdb" }),
-  });
 }

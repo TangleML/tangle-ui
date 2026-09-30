@@ -1,52 +1,46 @@
-import yaml from "js-yaml";
 import { action, observable, runInAction } from "mobx";
 
-import {
-  type CloudPipelineSummary,
-  getCloudPipelineSavedTaskArguments,
-} from "@/services/cloudPipelineService";
-import { type ArgumentType, isValidComponentSpec } from "@/utils/componentSpec";
+import { getCloudPipelineSavedTaskArguments } from "@/services/cloudPipelineService";
+import type { ArgumentType } from "@/utils/componentSpec";
 import { emitUserPipelineWritten } from "@/utils/userPipelineWriteEvents";
-import { PIPELINE_YAML_LOAD_OPTIONS } from "@/utils/yaml";
+import { componentSpecFromYaml, componentSpecToYaml } from "@/utils/yaml";
 
+import type { RemotePipelineDescriptor } from "./drivers/RemotePipelineStorageDriver";
 import { PipelineFile } from "./PipelineFile";
 import type { PipelineFolder } from "./PipelineFolder";
-import {
-  type RemotePipelineRecovery,
-  remotePipelineReference,
-} from "./remotePipelineRecovery";
+import type { RemotePipelineRecovery } from "./remotePipelineRecovery";
 import type { RemotePipelineStore } from "./RemotePipelineStore";
 
 export class RemotePipelineFile extends PipelineFile {
   @observable.ref accessor recovery: RemotePipelineRecovery;
+  @observable.ref accessor descriptor: RemotePipelineDescriptor | undefined;
   private pendingWrites = observable.box(0);
 
   constructor(
     readonly store: RemotePipelineStore,
     folder: PipelineFolder,
     recovery: RemotePipelineRecovery,
-    readonly summary?: CloudPipelineSummary,
+    descriptor: RemotePipelineDescriptor | undefined = recovery.pipeline
+      ? store.driver.describe(recovery.pipeline)
+      : undefined,
   ) {
-    const pipeline = recovery.pipeline ?? summary;
     super({
-      id: pipeline
-        ? remotePipelineReference(store.backendUrl, pipeline.id)
-        : recovery.key,
-      storageKey: recovery.displayName,
+      ...descriptor,
+      id: descriptor?.id ?? recovery.key,
+      storageKey: descriptor?.storageKey ?? recovery.key,
       folder,
-      createdAt: summary ? new Date(summary.created_at) : undefined,
       modifiedAt: new Date(recovery.modifiedAt),
     });
     this.recovery = recovery;
+    this.descriptor = descriptor;
   }
 
   override get canEdit(): boolean {
-    const pipeline = this.recovery.pipeline ?? this.summary;
+    const pipeline = this.recovery.pipeline ?? this.descriptor?.pipeline;
     const account = this.store.account;
     return pipeline
       ? account
-        ? account.id === pipeline.user_id &&
-          account.permissions.includes("write")
+        ? this.store.driver.describe(pipeline).canEdit
         : this.recovery.ownerId === pipeline.user_id
       : !account || account.permissions.includes("write");
   }
@@ -55,13 +49,10 @@ export class RemotePipelineFile extends PipelineFile {
     return this.recovery.displayName;
   }
   override get referenceId(): string {
-    const pipeline = this.recovery.pipeline ?? this.summary;
-    return pipeline
-      ? remotePipelineReference(this.store.backendUrl, pipeline.id)
-      : this.recovery.key;
+    return this.descriptor?.storageKey ?? this.recovery.key;
   }
   override get storageKind(): "remote" | "pending" {
-    return this.recovery.pipeline || this.summary ? "remote" : "pending";
+    return this.descriptor ? "remote" : "pending";
   }
   override get saveError(): string | undefined {
     return (
@@ -80,7 +71,9 @@ export class RemotePipelineFile extends PipelineFile {
 
   @action setRecovery(recovery: RemotePipelineRecovery) {
     this.recovery = recovery;
-    this.storageKey = recovery.displayName;
+    if (recovery.pipeline)
+      this.descriptor = this.store.driver.describe(recovery.pipeline);
+    this.storageKey = this.referenceId;
   }
 
   override async read(): Promise<string> {
@@ -107,11 +100,9 @@ export class RemotePipelineFile extends PipelineFile {
     }
   }
   override async rename(newName: string): Promise<void> {
-    const content = yaml.load(await this.read(), PIPELINE_YAML_LOAD_OPTIONS);
-    if (!isValidComponentSpec(content))
-      throw new Error("Invalid pipeline definition.");
+    const content = componentSpecFromYaml(await this.read());
     content.name = newName;
-    await this.write(yaml.dump(content));
+    await this.write(componentSpecToYaml(content));
   }
   override async moveTo(): Promise<void> {
     throw new Error("Remote pipelines cannot be moved into local folders.");

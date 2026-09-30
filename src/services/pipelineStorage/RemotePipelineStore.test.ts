@@ -51,6 +51,7 @@ vi.mock("@/utils/componentStore", () => ({
 
 const ACCOUNT = "owner@example.com";
 const CLOUD_ID = "20000000-0000-4000-8000-000000000001";
+const OTHER_CLOUD_ID = "20000000-0000-4000-8000-000000000004";
 const LOCAL_ID = "10000000-0000-4000-8000-000000000001";
 const BACKEND = "https://backend.example.com";
 const SCOPE = JSON.stringify([BACKEND, ACCOUNT]);
@@ -192,8 +193,12 @@ describe("remote pipeline listing", () => {
       modifiedAt: Date.parse("2026-09-20T12:00:00Z"),
     });
     await remotePipelineRecoveryDb.copies.put(draft);
+    const other = pipeline({
+      id: OTHER_CLOUD_ID,
+      user_id: "other@example.com",
+    });
     vi.mocked(listCloudPipelinePage).mockResolvedValue({
-      pipelines: [pipeline(), pipeline({ user_id: "other@example.com" })],
+      pipelines: [pipeline(), other],
       nextPageToken: "next-page",
       totalCount: 42,
     });
@@ -202,14 +207,25 @@ describe("remote pipeline listing", () => {
       pageSize: 10,
       pageToken: "current-page",
       signal,
+      filters: {},
     });
 
     expect(page).toMatchObject({
-      files: [{ displayName: "Unsaved rename", recovery: draft }],
+      files: [
+        { displayName: "Unsaved rename", recovery: draft, canEdit: true },
+        { displayName: NAME, canEdit: false, descriptor: { pipeline: other } },
+      ],
       nextPageToken: "next-page",
       totalCount: 42,
     });
-    expect(page.files).toHaveLength(1);
+    expect(page.files).toHaveLength(2);
+    expect(page.files[0]).toMatchObject({
+      id: remotePipelineReference(BACKEND, CLOUD_ID),
+      storageKey: remotePipelineReference(BACKEND, CLOUD_ID),
+      createdAt: new Date(pipeline().created_at),
+      modifiedAt: new Date(draft.modifiedAt),
+    });
+    expect(page.files[1].recovery.key).not.toBe(draft.key);
     expect(listCloudPipelinePage).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({
         backendUrl: BACKEND,
@@ -217,12 +233,59 @@ describe("remote pipeline listing", () => {
         account: { id: ACCOUNT, permissions: ["read", "write"] },
         signal,
       }),
-      { pageSize: 10, pageToken: "current-page" },
+      { pageSize: 10, pageToken: "current-page", filters: {} },
     );
     expect(listCloudPipelines).not.toHaveBeenCalled();
     expect(getCloudPipeline).not.toHaveBeenCalled();
     expect(writeCloudPipeline).not.toHaveBeenCalled();
   });
+
+  it.each(["pending", "deleted", "migration", "dirty"])(
+    "keeps another owner's matching path separate from our %s recovery",
+    async (state) => {
+      const { store } = setup();
+      const draft = recovery({
+        dirty: true,
+        displayName: "My draft",
+        content: UPDATED_CONTENT,
+        ...(state === "pending" ? { pipeline: undefined } : {}),
+        ...(state === "deleted" ? { deleted: true } : {}),
+        ...(state === "migration" ? { localFileId: LOCAL_ID } : {}),
+      });
+      await remotePipelineRecoveryDb.copies.put(draft);
+      const other = pipeline({
+        id: OTHER_CLOUD_ID,
+        user_id: "other@example.com",
+      });
+      vi.mocked(listCloudPipelinePage).mockResolvedValue({
+        pipelines: [other],
+      });
+      vi.mocked(getCloudPipeline).mockResolvedValue(other);
+
+      const { files } = await store.listPage({ filters: {} });
+
+      expect(files).toHaveLength(1);
+      const [file] = files;
+      expect(file.referenceId).toBe(remotePipelineReference(BACKEND, other.id));
+      expect(file.recovery.key).not.toBe(draft.key);
+      expect(file.canEdit).toBe(false);
+      expect(file.saveError).toBeUndefined();
+      await expect(file.read()).resolves.toBe(CONTENT);
+      await expect(file.write(UPDATED_CONTENT)).rejects.toThrow(
+        "Only the owner",
+      );
+      await expect(file.deleteFile()).rejects.toThrow("Only the owner");
+      expect(await store.records()).toEqual([draft]);
+      expect(writeCloudPipeline).not.toHaveBeenCalled();
+      expect(deleteCloudPipeline).not.toHaveBeenCalled();
+
+      const reopened = await store.resolve(file.referenceId);
+      expect(reopened?.recovery.key).toBe(file.recovery.key);
+      expect(reopened?.canEdit).toBe(false);
+      await expect(reopened?.read()).resolves.toBe(CONTENT);
+      expect(await store.records()).toEqual([draft]);
+    },
+  );
 
   it("does not remove earlier recovery copies when loading another page", async () => {
     const { store } = setup();
@@ -249,9 +312,14 @@ describe("remote pipeline listing", () => {
     expect(getCloudPipeline).not.toHaveBeenCalled();
   });
 
-  it.each(["scope", "identity"])(
-    "does not attach a draft with a different %s to a matching file path",
-    async (mismatch) => {
+  it.each([
+    ["page", "scope"],
+    ["page", "identity"],
+    ["full", "scope"],
+    ["full", "identity"],
+  ])(
+    "during %s listing, ignores a draft with a different %s at the same path",
+    async (listing, mismatch) => {
       const { store } = setup();
       await remotePipelineRecoveryDb.copies.put(
         recovery({
@@ -269,8 +337,12 @@ describe("remote pipeline listing", () => {
       vi.mocked(listCloudPipelinePage).mockResolvedValue({
         pipelines: [pipeline()],
       });
+      vi.mocked(listCloudPipelines).mockResolvedValue([pipeline()]);
 
-      const { files } = await store.listPage();
+      const files =
+        listing === "page"
+          ? (await store.listPage()).files
+          : await store.list();
 
       expect(files).toHaveLength(1);
       expect(files[0]).toMatchObject({
@@ -307,8 +379,8 @@ describe("remote pipeline listing", () => {
     expect(getCloudPipeline).not.toHaveBeenCalled();
   });
 
-  it.each(["page", "summaries"])(
-    "keeps a creation with a lost response only in the pending tab during %s listing",
+  it.each(["page", "full"])(
+    "keeps a creation with a lost response pending during %s listing",
     async (listing) => {
       const { store } = setup();
       const pending = recovery({
@@ -322,13 +394,14 @@ describe("remote pipeline listing", () => {
       });
       vi.mocked(listCloudPipelines).mockResolvedValue([pipeline()]);
 
-      const remoteFiles =
+      const files =
         listing === "page"
           ? (await store.listPage()).files
-          : await store.listSummaries();
+          : await store.list();
       const pendingFiles = await store.listPending();
 
-      expect(remoteFiles).toEqual([]);
+      expect(files.filter((file) => file.storageKind === "remote")).toEqual([]);
+      expect(files).toHaveLength(listing === "page" ? 0 : 1);
       expect(pendingFiles).toHaveLength(1);
       expect(pendingFiles[0].recovery).toEqual(pending);
       expect(getCloudPipeline).not.toHaveBeenCalled();
@@ -336,7 +409,7 @@ describe("remote pipeline listing", () => {
     },
   );
 
-  it("lists the complete summary catalog without pending or unfinished local migrations", async () => {
+  it("lists owned pipelines and pending creations without deleted or unfinished migrations", async () => {
     const { store } = setup();
     const draft = recovery({ dirty: true, displayName: "Unsaved rename" });
     const migration = pipeline({
@@ -372,13 +445,18 @@ describe("remote pipeline listing", () => {
       pipeline(),
       migration,
       deleted,
-      pipeline({ user_id: "other@example.com" }),
+      pipeline({ id: OTHER_CLOUD_ID, user_id: "other@example.com" }),
     ]);
 
-    const files = await store.listSummaries();
+    const files = await store.list();
 
-    expect(files).toHaveLength(1);
-    expect(files[0].recovery).toEqual(draft);
+    expect(files).toHaveLength(2);
+    expect(files.map((file) => file.recovery)).toEqual(
+      expect.arrayContaining([
+        draft,
+        expect.objectContaining({ key: "pending", pipeline: undefined }),
+      ]),
+    );
     expect(listCloudPipelines).toHaveBeenCalledTimes(1);
     expect(listCloudPipelinePage).not.toHaveBeenCalled();
     expect(getCloudPipeline).not.toHaveBeenCalled();
@@ -422,10 +500,35 @@ describe("remote pipeline listing", () => {
   it("propagates list failures for query error handling", async () => {
     const { store } = setup();
     vi.mocked(listCloudPipelinePage).mockRejectedValue(new Error("Offline"));
-    vi.mocked(listCloudPipelines).mockRejectedValue(new Error("Offline"));
 
     await expect(store.listPage()).rejects.toThrow("Offline");
-    await expect(store.listSummaries()).rejects.toThrow("Offline");
+  });
+
+  it("keeps clean cached files offline and removes them after a confirmed remote deletion", async () => {
+    const { store } = setup();
+    const cached = recovery({ ownerId: ACCOUNT });
+    await remotePipelineRecoveryDb.copies.put(cached);
+    vi.mocked(listCloudPipelines).mockRejectedValueOnce(new Error("Offline"));
+
+    const offline = await store.list();
+
+    expect(offline.map((file) => file.recovery)).toEqual([cached]);
+    expect(store.listError).toBe("Offline");
+    expect(await store.list()).toEqual([]);
+    expect(store.listError).toBeUndefined();
+    expect(await store.records()).toEqual([cached]);
+  });
+
+  it("does not start an aborted page request", async () => {
+    const { store } = setup();
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      store.listPage({ signal: controller.signal }),
+    ).rejects.toMatchObject({ name: "AbortError" });
+    expect(getCloudPipelineAccount).not.toHaveBeenCalled();
+    expect(listCloudPipelinePage).not.toHaveBeenCalled();
   });
 });
 
@@ -603,6 +706,26 @@ describe("local pipeline migration", () => {
 });
 
 describe("pending pipelines and recovery", () => {
+  it("preserves remote identity while renaming through the recovery copy", async () => {
+    const { store } = setup();
+    const file = await store.create(NAME, CONTENT);
+    const reference = file.referenceId;
+
+    await file.rename("Renamed pipeline");
+
+    expect(file.displayName).toBe("Renamed pipeline");
+    expect(file.storageKey).toBe(reference);
+    expect(file.referenceId).toBe(reference);
+    expect(file.recovery.dirty).toBe(false);
+    expect(writeCloudPipeline).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        componentSpec: { ...SPEC, name: "Renamed pipeline" },
+        existingPipeline: expect.objectContaining({ id: CLOUD_ID }),
+      }),
+      expect.anything(),
+    );
+  });
+
   it("migrates local references once rather than on every remote autosave", async () => {
     const { store } = setup();
     const file = await store.create(NAME, CONTENT);
@@ -836,6 +959,30 @@ describe("pending pipelines and recovery", () => {
 });
 
 describe("remote ownership and deletion", () => {
+  it.each([
+    { permissions: ["read", "write"], canEdit: true },
+    { permissions: ["read"], canEdit: false },
+  ])(
+    "refreshes cached owner permission after connecting: canEdit=$canEdit",
+    async ({ permissions, canEdit }) => {
+      const { store, folder } = setup();
+      const file = new RemotePipelineFile(
+        store,
+        folder,
+        recovery({ ownerId: ACCOUNT }),
+      );
+      expect(file.canEdit).toBe(true);
+      vi.mocked(getCloudPipelineAccount).mockResolvedValue({
+        id: ACCOUNT,
+        permissions,
+      });
+
+      await store.driver.connect();
+
+      expect(file.canEdit).toBe(canEdit);
+    },
+  );
+
   it("still rejects remote recovery and uploads for an owner without write permission", async () => {
     const { store } = setup();
     vi.mocked(getCloudPipelineAccount).mockResolvedValue({
@@ -907,6 +1054,54 @@ describe("remote ownership and deletion", () => {
     });
   });
 
+  it("deletes a pending upload by its stable path when the successful response was lost", async () => {
+    const { store } = setup();
+    let committed: CloudPipeline | undefined;
+    vi.mocked(writeCloudPipeline).mockImplementationOnce(
+      async ({ filePath }) => {
+        committed = pipeline({ file_path: filePath });
+        throw new Error("Response lost");
+      },
+    );
+    const file = await store.create(NAME, CONTENT);
+    expect(file.storageKind).toBe("pending");
+    vi.mocked(deleteCloudPipeline).mockImplementationOnce(async (target) => {
+      expect(target).toBe(committed?.file_path);
+      committed = undefined;
+    });
+
+    await file.deleteFile();
+
+    expect(deleteCloudPipeline).toHaveBeenCalledExactlyOnceWith(
+      file.recovery.filePath,
+      expect.objectContaining({
+        account: { id: ACCOUNT, permissions: ["read", "write"] },
+      }),
+    );
+    expect(committed).toBeUndefined();
+    expect(file.recovery).toMatchObject({ deleted: true, dirty: false });
+    expect(await store.listPending()).toEqual([]);
+  });
+
+  it("keeps pending deletion retryable when server deletion cannot be confirmed", async () => {
+    const { store } = setup();
+    vi.mocked(writeCloudPipeline).mockRejectedValueOnce(
+      new Error("Response lost"),
+    );
+    const file = await store.create(NAME, CONTENT);
+    vi.mocked(deleteCloudPipeline).mockRejectedValueOnce(new Error("Offline"));
+
+    await expect(file.deleteFile()).rejects.toThrow("Offline");
+
+    expect(file.recovery.deleted).not.toBe(true);
+    expect((await store.listPending()).map((item) => item.referenceId)).toEqual(
+      [file.referenceId],
+    );
+    await file.deleteFile();
+    expect(deleteCloudPipeline).toHaveBeenCalledTimes(2);
+    expect(file.recovery).toMatchObject({ deleted: true, dirty: false });
+  });
+
   it.each(["remote", "pending"])(
     "rejects stale edits and retries after deleting a native %s pipeline",
     async (kind) => {
@@ -929,9 +1124,7 @@ describe("remote ownership and deletion", () => {
       await expect(stale.read()).rejects.toThrow("deleted");
       await expect(store.resolve(file.recovery.key)).rejects.toThrow("deleted");
       expect(writeCloudPipeline).toHaveBeenCalledTimes(1);
-      expect(deleteCloudPipeline).toHaveBeenCalledTimes(
-        kind === "remote" ? 1 : 0,
-      );
+      expect(deleteCloudPipeline).toHaveBeenCalledTimes(1);
       expect(await store.list()).toEqual([]);
     },
   );
@@ -952,7 +1145,7 @@ describe("remote ownership and deletion", () => {
     await retry;
 
     expect(writeCloudPipeline).toHaveBeenCalledTimes(1);
-    expect(deleteCloudPipeline).not.toHaveBeenCalled();
+    expect(deleteCloudPipeline).toHaveBeenCalledTimes(1);
     expect((await store.records())[0]).toMatchObject({
       deleted: true,
       dirty: false,

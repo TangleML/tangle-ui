@@ -140,10 +140,208 @@ describe("remote pipeline reads", () => {
     });
 
     const url = new URL(requestAt(0).url);
-    expect(url.pathname).toBe("/api/users/me/pipelines/all");
+    expect(url.pathname).toBe("/api/pipelines/search");
     expect(url.searchParams.get("page_size")).toBe("10");
     expect(url.searchParams.has("page_token")).toBe(false);
+    expect(url.searchParams.has("sort_field")).toBe(false);
+    expect(url.searchParams.has("sort_direction")).toBe(false);
+    expect(JSON.parse(url.searchParams.get("filter_query")!)).toEqual({
+      and: [{ value_equals: { key: "system/pipeline.user_id", value: "me" } }],
+    });
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ["name", "asc"],
+    ["name", "desc"],
+    ["updated_at", "asc"],
+    ["updated_at", "desc"],
+  ] as const)(
+    "sends %s %s sorting with filters on initial and continuation requests",
+    async (sortField, sortDirection) => {
+      const summary = pipelineSummary();
+      fetchMock.mockImplementation(async () =>
+        Response.json({ pipelines: [summary], next_page_token: "sorted-next" }),
+      );
+      const filters = {
+        searchQuery: "report",
+        userId: "me",
+        sortField,
+        sortDirection,
+      };
+
+      const first = await listCloudPipelinePage(connection, { filters });
+      await listCloudPipelinePage(connection, {
+        filters,
+        pageToken: first.nextPageToken,
+      });
+
+      for (const index of [0, 1]) {
+        const params = new URL(requestAt(index).url).searchParams;
+        expect(params.get("sort_field")).toBe(sortField);
+        expect(params.get("sort_direction")).toBe(sortDirection);
+        expect(JSON.parse(params.get("filter_query")!).and).toHaveLength(2);
+        expect(params.get("page_token")).toBe(
+          index === 0 ? null : "sorted-next",
+        );
+      }
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    },
+  );
+
+  it("combines owner, text, date, and saved annotation filters while preserving literal text", async () => {
+    fetchMock.mockResolvedValueOnce(
+      Response.json({ pipelines: [], next_page_token: null }),
+    );
+
+    await listCloudPipelinePage(connection, {
+      filters: {
+        userId: "  another-owner@example.com ",
+        searchQuery: '  report "Q4" & 50%_  ',
+        modifiedAfter: "2026-09-01T04:00:00.000Z",
+        modifiedBefore: "2026-10-01T04:00:00.000Z",
+        annotations: [
+          { key: 'label/path "Q4" & 50%_', value: '  reviewed "Q4" & 50%_  ' },
+          { key: "team" },
+        ],
+      },
+    });
+
+    const url = new URL(requestAt(0).url);
+    expect(url.pathname).toBe("/api/pipelines/search");
+    expect(JSON.parse(url.searchParams.get("filter_query")!)).toEqual({
+      and: [
+        {
+          value_equals: {
+            key: "system/pipeline.user_id",
+            value: "another-owner@example.com",
+          },
+        },
+        {
+          or: [
+            {
+              value_contains: {
+                key: "system/pipeline.name",
+                value_substring: 'report "Q4" & 50%_',
+              },
+            },
+            {
+              value_contains: {
+                key: "system/pipeline.file_path",
+                value_substring: 'report "Q4" & 50%_',
+              },
+            },
+          ],
+        },
+        {
+          time_range: {
+            key: "system/pipeline.date.updated_at",
+            start_time: "2026-09-01T04:00:00.000Z",
+            end_time: "2026-10-01T04:00:00.000Z",
+          },
+        },
+        {
+          value_contains: {
+            key: 'label/path "Q4" & 50%_',
+            value_substring: '  reviewed "Q4" & 50%_  ',
+          },
+        },
+        { key_exists: { key: "team" } },
+      ],
+    });
+  });
+
+  it.each([undefined, ""])(
+    "uses annotation key existence when the value is %j",
+    async (value) => {
+      fetchMock.mockResolvedValueOnce(
+        Response.json({ pipelines: [], next_page_token: null }),
+      );
+
+      await listCloudPipelinePage(connection, {
+        filters: { annotations: [{ key: "team", value }] },
+      });
+
+      expect(
+        JSON.parse(new URL(requestAt(0).url).searchParams.get("filter_query")!),
+      ).toEqual({ and: [{ key_exists: { key: "team" } }] });
+    },
+  );
+
+  it("rejects reserved annotation keys before sending a search request", async () => {
+    await expect(
+      listCloudPipelinePage(connection, {
+        filters: {
+          annotations: [{ key: "system/pipeline.name", value: "report" }],
+        },
+      }),
+    ).rejects.toThrow('Annotation keys beginning with "system/" are reserved.');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [
+      { modifiedAfter: "2026-09-01T04:00:00.000Z" },
+      { start_time: "2026-09-01T04:00:00.000Z" },
+    ],
+    [
+      { modifiedBefore: "2026-10-01T04:00:00.000Z" },
+      { end_time: "2026-10-01T04:00:00.000Z" },
+    ],
+  ])("supports a one-sided edited date range %j", async (filters, bounds) => {
+    fetchMock.mockResolvedValueOnce(
+      Response.json({ pipelines: [], next_page_token: null }),
+    );
+
+    await listCloudPipelinePage(connection, { filters });
+
+    expect(
+      JSON.parse(new URL(requestAt(0).url).searchParams.get("filter_query")!),
+    ).toEqual({
+      and: [
+        { time_range: { key: "system/pipeline.date.updated_at", ...bounds } },
+      ],
+    });
+  });
+
+  it("can search all owners without adding the default owner filter", async () => {
+    const other = pipelineSummary({ user_id: "another-owner@example.com" });
+    fetchMock.mockResolvedValueOnce(
+      Response.json({ pipelines: [other], next_page_token: null }),
+    );
+
+    const page = await listCloudPipelinePage(connection, {
+      filters: { searchQuery: "report" },
+    });
+
+    expect(page.pipelines).toEqual([other]);
+    const query = JSON.parse(
+      new URL(requestAt(0).url).searchParams.get("filter_query")!,
+    );
+    expect(query.and).toHaveLength(1);
+    expect(query.and[0].or).toHaveLength(2);
+    expect(query.and[0].or[0]).toEqual({
+      value_contains: {
+        key: "system/pipeline.name",
+        value_substring: "report",
+      },
+    });
+  });
+
+  it.each([
+    {},
+    { searchQuery: "   ", userId: "  " },
+    { annotations: [{ key: "" }, { key: "  ", value: "unused" }] },
+  ])("omits filter_query for explicitly empty filters %j", async (filters) => {
+    fetchMock.mockResolvedValueOnce(
+      Response.json({ pipelines: [], next_page_token: null }),
+    );
+
+    await listCloudPipelinePage(connection, { filters });
+
+    expect(new URL(requestAt(0).url).searchParams.has("filter_query")).toBe(
+      false,
+    );
   });
 
   it("accepts an explicit page size and cursor when totals are unavailable", async () => {
@@ -206,12 +404,23 @@ describe("remote pipeline reads", () => {
       second,
     ]);
     const firstUrl = new URL(requestAt(0).url);
-    expect(firstUrl.pathname).toBe("/api/users/me/pipelines/all");
+    expect(firstUrl.pathname).toBe("/api/pipelines/search");
     expect(firstUrl.searchParams.get("page_size")).toBe("100");
     expect(firstUrl.searchParams.has("page_token")).toBe(false);
     expect(new URL(requestAt(1).url).searchParams.get("page_token")).toBe(
       cursor,
     );
+    for (const index of [0, 1]) {
+      expect(
+        JSON.parse(
+          new URL(requestAt(index).url).searchParams.get("filter_query")!,
+        ),
+      ).toEqual({
+        and: [
+          { value_equals: { key: "system/pipeline.user_id", value: "me" } },
+        ],
+      });
+    }
   });
 
   it("stops a malformed repeated cursor instead of looping", async () => {
@@ -766,5 +975,42 @@ describe("remote pipeline deletion", () => {
       ),
     ).rejects.toThrow("Only the owner");
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([204, 404])(
+    "confirms deletion by stable path on HTTP %s",
+    async (status) => {
+      fetchMock
+        .mockResolvedValueOnce(accountResponse())
+        .mockResolvedValueOnce(new Response(null, { status }));
+
+      await expect(
+        deleteCloudPipeline(FILE_PATH, connection),
+      ).resolves.toBeUndefined();
+      expect(requestAt(1).method).toBe("DELETE");
+      expect(new URL(requestAt(1).url).searchParams.get("file_path")).toBe(
+        FILE_PATH,
+      );
+    },
+  );
+
+  it("keeps an uncertain deletion retryable", async () => {
+    fetchMock
+      .mockResolvedValueOnce(accountResponse())
+      .mockResolvedValueOnce(new Response(null, { status: 503 }));
+
+    await expect(deleteCloudPipeline(FILE_PATH, connection)).rejects.toThrow(
+      "503",
+    );
+  });
+
+  it("requires write permission to delete an unconfirmed upload", async () => {
+    await expect(
+      deleteCloudPipeline(FILE_PATH, {
+        ...connection,
+        account: { id: ACCOUNT, permissions: ["read"] },
+      }),
+    ).rejects.toThrow("permission");
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
