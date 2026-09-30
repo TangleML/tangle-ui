@@ -84,6 +84,7 @@ describe("AddDocumentDialog", () => {
         entity: "document",
         name: "Model card",
         payload: { content: "Trained on Q3 data" },
+        extraData: { type: "document" },
       },
       expect.anything(),
     );
@@ -138,6 +139,7 @@ describe("AddDocumentDialog", () => {
         entity: "document",
         name: "Model card",
         payload: { content: "Body" },
+        extraData: { type: "document" },
       },
       expect.anything(),
     );

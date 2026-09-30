@@ -46,7 +46,8 @@ vi.mock("./RunPipelineButton", () => ({
   ),
 }));
 
-vi.mock("@/components/shared/CodeViewer", () => ({
+vi.mock("@/components/shared/CodeViewer", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/components/shared/CodeViewer")>()),
   CodeViewer: ({
     code,
     language,
