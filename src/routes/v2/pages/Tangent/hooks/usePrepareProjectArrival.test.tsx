@@ -380,6 +380,21 @@ describe("usePrepareProjectArrival", () => {
     );
   });
 
+  /**
+   * The session the prompt asked for has already started by then, so a refusal
+   * must not cost the caller the pipeline and the workarea they came for.
+   */
+  it("still opens the workarea when the prompt cannot be cleared", async () => {
+    given({ projectOverrides: { metadata: { startingPrompt: "Fix run 7" } } });
+    updateProject.mockRejectedValueOnce(new Error("conflict"));
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const store = makeStore();
+
+    prepare(store);
+
+    await waitFor(() => expect(store.openWorkareaTarget).toHaveBeenCalled());
+  });
+
   /** All three are what the prompt asked for, so all three say so. */
   it("names the session and the pipeline it opens after the prompt", async () => {
     given({

@@ -83,11 +83,22 @@ export function usePrepareProjectArrival(
       );
       if (!started) return;
 
+      // Taking the ask back off the project is housekeeping that stops the next
+      // arrival repeating it. The session it asked for has already started, so
+      // a refusal here must not cost the caller the pipeline and the workarea
+      // they came for — it is left for the next arrival to try again.
       if (starting) {
-        await updateProject({
-          id: projectId,
-          input: { metadata: withoutStartingSession(project?.metadata) },
-        });
+        try {
+          await updateProject({
+            id: projectId,
+            input: { metadata: withoutStartingSession(project?.metadata) },
+          });
+        } catch (error) {
+          console.error(
+            "Failed to clear the project's starting session",
+            error,
+          );
+        }
       }
 
       if (!isEmpty) return;

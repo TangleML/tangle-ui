@@ -35,11 +35,13 @@ export function useMyProjects(): MyProjects {
     error: userError,
   } = useQuery(userQueryOptions);
 
-  // Asking without one would list every project in the workspace as though
-  // they were the reader's own, so an unresolved identity is a failure to
-  // report rather than a filter to drop.
+  // A backend that does not identify anyone answers `Unknown`, and every
+  // reader of this query treats that as nobody to filter by rather than as a
+  // failure — on a single-user backend the unfiltered list is that user's. A
+  // lookup that did not answer at all is the failure, and is reported: there
+  // the list would be everyone's without anything saying so.
   const createdBy = user && user.id !== UNRESOLVED_USER_ID ? user.id : undefined;
-  const identityFailed = !isUserPending && createdBy === undefined;
+  const isIdentified = user !== undefined;
 
   const {
     data,
@@ -54,21 +56,17 @@ export function useMyProjects(): MyProjects {
       listProjects({ createdBy, pageSize: PAGE_SIZE, pageToken: pageParam }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (page) => page.nextPageToken ?? undefined,
-    enabled: configured && available && createdBy !== undefined,
+    enabled: configured && available && isIdentified,
     staleTime: 5 * MINUTES,
     refetchOnWindowFocus: false,
   });
-
-  const identityError = identityFailed
-    ? (userError ?? new Error("Could not tell who you are signed in as."))
-    : null;
 
   return {
     projects: data?.pages.flatMap((page) => page.items) ?? [],
     createdBy,
     totalCount: data?.pages[0]?.totalCount ?? 0,
-    isPending: isUserPending || (!identityFailed && isPending),
-    error: identityError ?? error,
+    isPending: isUserPending || (userError === null && isPending),
+    error: userError ?? error,
     hasMore: hasNextPage,
     isLoadingMore: isFetchingNextPage,
     loadMore: () => void fetchNextPage(),
