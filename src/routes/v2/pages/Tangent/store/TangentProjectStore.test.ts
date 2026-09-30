@@ -503,6 +503,19 @@ describe("TangentProjectStore.startSession", () => {
     withIo.setSessionIo(makeSessionIo(null));
     await expect(withIo.startSession()).resolves.toBe(true);
   });
+
+  /**
+   * A link asking for a new session arrives before Tangent is reachable, so
+   * whoever acts on it has to be able to see that starting one would refuse.
+   */
+  it("says whether it can start one at all", () => {
+    const store = new TangentProjectStore("project-1");
+    expect(store.canStartSession).toBe(false);
+
+    store.setSessionIo(makeSessionIo(null));
+
+    expect(store.canStartSession).toBe(true);
+  });
 });
 
 describe("TangentProjectStore.waitForTabEnvironment", () => {
