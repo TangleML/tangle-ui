@@ -11,6 +11,7 @@
  * judgment over a small, well-defined list when literal matching is not enough.
  */
 
+import type { ComponentMatchStrength } from "@/services/componentSearchRelevance";
 import type { AiReasoningEffort } from "@/types/aiProvider";
 import type {
   ComponentReference,
@@ -54,13 +55,22 @@ export interface RerankedMatch {
   id: string;
   // Model-provided, clamped to [0, 1].
   score: number;
-  reason: string;
+  matchStrength?: ComponentMatchStrength;
+  reason?: string;
+  confidence?: number;
 }
 
 export interface RerankResult {
   matches: RerankedMatch[];
+  // Unmodified native responses, one per batch, including provider usage metadata.
+  providerResponses?: Record<string, unknown>[];
   // Kept for debugging.
   rawContent?: string;
+}
+
+export interface RerankProgress {
+  completed: number;
+  total: number;
 }
 
 export interface ComponentDescriptionResult {

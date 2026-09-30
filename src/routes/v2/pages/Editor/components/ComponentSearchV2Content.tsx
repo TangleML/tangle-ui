@@ -6,6 +6,7 @@ import {
   useTransition,
 } from "react";
 
+import { ComponentSearchProgress } from "@/components/shared/ComponentSearchProgress";
 import ImportComponent from "@/components/shared/ReactFlow/FlowSidebar/components/ImportComponent";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -22,39 +23,6 @@ import { tracking } from "@/utils/tracking";
 import { ComponentSearchResults } from "./ComponentSearchResults";
 
 const EDITOR_SEARCH_RESULT_DEBOUNCE_MS = 500;
-const AI_SEARCH_PROGRESS_VERBS = [
-  "Scanning",
-  "Comparing",
-  "Scoring",
-  "Ranking",
-];
-
-function AiRerankProgress() {
-  const [verbIndex, setVerbIndex] = useState(0);
-
-  useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      setVerbIndex(
-        (current) => (current + 1) % AI_SEARCH_PROGRESS_VERBS.length,
-      );
-    }, 1200);
-    return () => window.clearInterval(intervalId);
-  }, []);
-
-  return (
-    <InlineStack
-      gap="2"
-      blockAlign="center"
-      className="rounded-md bg-muted/50 px-3 py-2 text-muted-foreground"
-    >
-      <Spinner size={14} />
-      <Text size="xs" tone="subdued" role="status" aria-live="polite">
-        {AI_SEARCH_PROGRESS_VERBS[verbIndex]} component candidates with AI…
-      </Text>
-    </InlineStack>
-  );
-}
-
 function DebouncedComponentSearchInput({
   initialValue,
   onCommit,
@@ -103,6 +71,9 @@ export function ComponentSearchV2Content() {
     isLoading,
     canRerank,
     isReranking,
+    rerankError,
+    rerankModelLabel,
+    rerankProgress,
     isRerankActive,
     rerank,
     clearRerank,
@@ -207,7 +178,7 @@ export function ComponentSearchV2Content() {
             size="icon"
             className="h-8 w-8 p-0 shrink-0"
             aria-label={isReranking ? "AI reranking in progress" : "AI rerank"}
-            title="AI rerank — rerank a bounded set of top candidates"
+            title="AI search — search all loaded components in enabled sources"
             onClick={rerank}
             disabled={!canRerank || isReranking}
             {...tracking("component_library.search.ai_rerank", {
@@ -220,7 +191,18 @@ export function ComponentSearchV2Content() {
             {isReranking ? <Spinner size={14} /> : <Icon name="Sparkles" />}
           </Button>
         </InlineStack>
-        {isReranking && <AiRerankProgress />}
+        {isReranking && (
+          <ComponentSearchProgress
+            progress={rerankProgress}
+            modelLabel={rerankModelLabel}
+            onCancel={clearRerank}
+          />
+        )}
+        {rerankError && !isReranking && (
+          <Text size="xs" tone="critical" role="alert">
+            AI search failed: {rerankError} Local search is still available.
+          </Text>
+        )}
         <SourceFilterBar
           options={sourceFilterOptions}
           disabledSourceKeys={disabledSourceKeys}

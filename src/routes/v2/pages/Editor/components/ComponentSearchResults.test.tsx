@@ -52,6 +52,64 @@ const baseProps = {
 };
 
 describe("ComponentSearchResults", () => {
+  it.each([
+    ["related", "No direct matches—showing related components."],
+    ["weak", "No clear matches—showing the closest available components."],
+    ["partial", "No direct matches—showing partial matches."],
+  ] as const)("explains %s results in the editor", (matchStrength, notice) => {
+    const results: ComponentSearchV2Result[] = [
+      {
+        reference: { digest: "taxi", name: "Taxi trips dataset" },
+        source: { kind: "standard", id: "standard", label: "Standard" },
+        matchStrength,
+      },
+    ];
+    const { rerender } = render(
+      <ComponentSearchResults
+        {...baseProps}
+        isRerankActive
+        query="I want to take a trip"
+        results={results}
+      />,
+    );
+    expect(screen.getByText(notice)).toBeInTheDocument();
+    expect(screen.getByTestId("search-results-header")).toHaveTextContent(
+      "Search Results (1)",
+    );
+    expect(screen.getByText("Taxi trips dataset")).toBeInTheDocument();
+    rerender(
+      <ComponentSearchResults
+        {...baseProps}
+        query="I want to take a trip"
+        results={results}
+      />,
+    );
+    expect(screen.queryByText(notice)).not.toBeInTheDocument();
+  });
+
+  it("includes all results when deciding whether there is a direct match", () => {
+    const results: ComponentSearchV2Result[] = Array.from(
+      { length: 11 },
+      (_, index) => ({
+        reference: { digest: `digest-${index}`, name: `Component ${index}` },
+        source: { kind: "standard", id: "standard", label: "Standard" },
+        matchStrength: index === 10 ? "strong" : "related",
+      }),
+    );
+    render(
+      <ComponentSearchResults
+        {...baseProps}
+        isRerankActive
+        query="component"
+        results={results}
+      />,
+    );
+    expect(screen.queryByText(/No direct matches/)).not.toBeInTheDocument();
+    expect(screen.getByTestId("search-results-header")).toHaveTextContent(
+      "AI-ranked results",
+    );
+  });
+
   it("shows a skeleton while search is pending", () => {
     render(
       <ComponentSearchResults

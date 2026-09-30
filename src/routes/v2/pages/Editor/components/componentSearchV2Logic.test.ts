@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { StoredLibrary } from "@/providers/ComponentLibraryProvider/libraries/storage";
+import { buildComponentRerankMatches } from "@/services/componentRerankService";
 import {
   buildSearchIndex,
   type ComponentSearchSource,
@@ -15,7 +16,6 @@ import type {
 } from "@/utils/componentSpec";
 
 import {
-  buildAiCandidateMatches,
   buildLexicalMatches,
   buildRerankMatchByDigest,
   buildResultFolders,
@@ -246,7 +246,7 @@ describe("buildResults", () => {
     expect(results[0]?.matchedFields).toEqual(["name", "io"]);
   });
 
-  it("badges only items scored above the exclusion threshold", () => {
+  it("labels weak matches while leaving unscored candidates unbadged", () => {
     const rerankMatches = buildRerankMatchByDigest(
       {
         matches: [
@@ -258,14 +258,15 @@ describe("buildResults", () => {
       true,
     );
     const results = buildResults(displayed, rerankMatches, true);
-    expect(results.map((r) => r.rerankScore)).toEqual([
-      0.9,
-      undefined,
+    expect(results.map((r) => r.rerankScore)).toEqual([0.9, 0, undefined]);
+    expect(results.map((r) => r.matchStrength)).toEqual([
+      "strong",
+      "weak",
       undefined,
     ]);
     expect(results.map((r) => r.rerankReason)).toEqual([
       "Strong match",
-      undefined,
+      "Weak match",
       undefined,
     ]);
   });
@@ -312,7 +313,7 @@ describe("buildResultFolders", () => {
   });
 });
 
-describe("buildLexicalMatches / buildAiCandidateMatches", () => {
+describe("buildLexicalMatches / buildComponentRerankMatches", () => {
   const index = buildSearchIndex([
     { reference: ref("zebra"), source: source("standard") },
     { reference: ref("alpha"), source: source("standard") },
@@ -326,10 +327,10 @@ describe("buildLexicalMatches / buildAiCandidateMatches", () => {
   });
 
   it("returns no AI candidates for an empty query", () => {
-    expect(buildAiCandidateMatches(index, "")).toEqual([]);
+    expect(buildComponentRerankMatches(index, "")).toEqual([]);
   });
 
-  it("returns every lexical match while keeping the AI candidate pool bounded", () => {
+  it("includes every loaded candidate beyond the former 80-component limit", () => {
     const broadIndex = buildSearchIndex(
       Array.from({ length: 100 }, (_, i) => ({
         reference: ref(`train-${i}`, `train_${i}`),
@@ -338,30 +339,35 @@ describe("buildLexicalMatches / buildAiCandidateMatches", () => {
     );
 
     expect(buildLexicalMatches(broadIndex, "train")).toHaveLength(100);
-    expect(
-      buildAiCandidateMatches(broadIndex, "train").length,
-    ).toBeLessThanOrEqual(80);
+    expect(buildComponentRerankMatches(broadIndex, "train")).toHaveLength(100);
   });
 
-  it("returns no AI candidates when literal search finds nothing", () => {
-    expect(buildAiCandidateMatches(index, "qqzznomatch")).toEqual([]);
+  it("allows AI to evaluate candidates with no literal matches", () => {
+    expect(buildComponentRerankMatches(index, "qqzznomatch")).toHaveLength(2);
   });
 
-  it("adds source-diverse lexical candidates beyond the top lexical hits", () => {
+  it("includes published and user components with no keyword overlap", () => {
     const broadIndex = buildSearchIndex([
       ...Array.from({ length: 100 }, (_, i) => ({
         reference: ref(`train-${i}`, `train_${i}`),
         source: source("standard"),
       })),
       {
-        reference: ref("user-upload", "train_user_upload"),
+        reference: ref("user-upload", "Prepare dataset"),
         source: USER_SOURCE,
+      },
+      {
+        reference: ref("published", "Fit classifier"),
+        source: PUBLISHED_SOURCE,
       },
     ]);
 
-    const candidates = buildAiCandidateMatches(broadIndex, "train");
+    const candidates = buildComponentRerankMatches(broadIndex, "train");
 
-    expect(candidates.length).toBeLessThanOrEqual(80);
+    expect(candidates).toHaveLength(102);
+    expect(candidates.map((candidate) => candidate.digest)).toContain(
+      "published",
+    );
     expect(candidates.map((candidate) => candidate.digest)).toContain(
       "user-upload",
     );

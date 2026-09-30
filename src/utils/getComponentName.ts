@@ -1,7 +1,4 @@
-import {
-  getAnnotationValue,
-  TASK_DISPLAY_NAME_ANNOTATION,
-} from "./annotations";
+import { TASK_DISPLAY_NAME_ANNOTATION } from "./annotationKeys";
 import type {
   ComponentReference,
   ComponentSpec,
@@ -31,8 +28,9 @@ export function getTaskDisplayName(
   taskId: string,
   taskSpec?: TaskSpec,
 ): string {
+  const displayName = taskSpec?.annotations?.[TASK_DISPLAY_NAME_ANNOTATION];
   return (
-    getAnnotationValue(taskSpec?.annotations, TASK_DISPLAY_NAME_ANNOTATION) ||
+    (typeof displayName === "string" ? displayName : undefined) ||
     taskSpec?.componentRef?.spec?.name ||
     taskId
   );

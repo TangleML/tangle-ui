@@ -3,7 +3,7 @@
  *
  * Everything here is deliberately React-free so it can be unit-tested in
  * isolation: source collection + dedup, hydrated-reference mapping, the lexical
- * candidate selection, the rerank merge, and the relevance-badge gating. The
+ * candidate selection, the rerank merge, and the match labels. The
  * React glue lives in `useComponentSearchV2State` and the panel components.
  */
 import { flattenFolders } from "@/providers/ComponentLibraryProvider/componentLibrary";
@@ -17,8 +17,15 @@ import {
   type MatchField,
   type SourcedReference,
 } from "@/services/componentSearchIndex";
+import {
+  type ComponentMatchStrength,
+  getComponentMatchStrength,
+} from "@/services/componentSearchRelevance";
 import type { ComponentSearchSuggestion } from "@/services/componentSearchSuggestions";
-import type { RerankResult } from "@/services/naturalLanguageComponentSearchService";
+import type {
+  RerankProgress,
+  RerankResult,
+} from "@/services/naturalLanguageComponentSearchService";
 import type {
   ComponentFolder,
   ComponentLibrary,
@@ -29,11 +36,7 @@ import type {
   HydratedComponentReference,
 } from "@/utils/componentSpec";
 
-const AI_CANDIDATE_LIMIT = 80;
-const AI_LEXICAL_CANDIDATE_LIMIT = 60;
-const AI_SOURCE_DIVERSITY_CANDIDATES_PER_SOURCE = 8;
-// Scores at or below this are treated as the model excluding a candidate: such
-// items keep their place in the list but are not badged as relevance matches.
+// Scores at or below this stay behind unscored local candidates.
 const RERANK_EXCLUSION_THRESHOLD = 0.01;
 
 const STANDARD_SOURCE: ComponentSearchSource = {
@@ -63,6 +66,7 @@ export interface ComponentSearchV2Result {
   source: ComponentSearchSource;
   matchedFields?: MatchField[];
   rerankScore?: number;
+  matchStrength?: ComponentMatchStrength;
   rerankReason?: string;
 }
 
@@ -81,6 +85,9 @@ export interface ComponentSearchV2State {
   canRerank: boolean;
   isReranking: boolean;
   isRerankActive: boolean;
+  rerankError?: string;
+  rerankModelLabel?: string;
+  rerankProgress?: RerankProgress;
   rerank: () => void;
   clearRerank: () => void;
   toggleSourceFilter: (sourceKey: string) => void;
@@ -341,87 +348,6 @@ export function buildLexicalMatches(
   });
 }
 
-function sampleEvenly<T>(items: T[], limit: number): T[] {
-  if (items.length <= limit) return items;
-  const step = items.length / limit;
-  return Array.from(
-    { length: limit },
-    (_, index) => items[Math.floor(index * step)],
-  );
-}
-
-function appendUniqueMatches(
-  target: LexicalMatch[],
-  seenDigests: Set<string>,
-  matches: LexicalMatch[],
-  limit: number,
-) {
-  for (const match of matches) {
-    if (seenDigests.has(match.digest)) continue;
-    seenDigests.add(match.digest);
-    target.push(match);
-    if (target.length >= limit) return;
-  }
-}
-
-function buildSourceDiverseLexicalMatches(
-  index: IndexEntry[],
-  trimmedQuery: string,
-): LexicalMatch[] {
-  const lexicalMatches = lexicalSearch(index, trimmedQuery, {
-    limit: index.length,
-    minLength: 1,
-  });
-  const bySource = new Map<string, LexicalMatch[]>();
-  for (const match of lexicalMatches) {
-    const key = `${match.source.kind}:${match.source.id}`;
-    const matches = bySource.get(key) ?? [];
-    matches.push(match);
-    bySource.set(key, matches);
-  }
-
-  return [...bySource.values()].flatMap((matches) =>
-    sampleEvenly(matches, AI_SOURCE_DIVERSITY_CANDIDATES_PER_SOURCE),
-  );
-}
-
-/**
- * Bounded candidate pool for AI rerank. Starts with the strongest lexical hits,
- * then adds a source-diverse lexical sample so AI can rescue plausible matches
- * from lower-ranked sources without falling back to query-independent browse.
- */
-export function buildAiCandidateMatches(
-  index: IndexEntry[],
-  trimmedQuery: string,
-): LexicalMatch[] {
-  if (trimmedQuery.length === 0) return [];
-
-  const lexicalMatches = lexicalSearch(index, trimmedQuery, {
-    limit: AI_LEXICAL_CANDIDATE_LIMIT,
-    minLength: 1,
-  });
-  if (lexicalMatches.length === 0) return [];
-
-  const candidates: LexicalMatch[] = [];
-  const seenDigests = new Set<string>();
-
-  appendUniqueMatches(
-    candidates,
-    seenDigests,
-    lexicalMatches,
-    AI_CANDIDATE_LIMIT,
-  );
-
-  appendUniqueMatches(
-    candidates,
-    seenDigests,
-    buildSourceDiverseLexicalMatches(index, trimmedQuery),
-    AI_CANDIDATE_LIMIT,
-  );
-
-  return candidates;
-}
-
 export function buildRerankMatchByDigest(
   rerankData: RerankResult | undefined,
   isRerankActive: boolean,
@@ -434,9 +360,8 @@ export function buildRerankMatchByDigest(
 }
 
 /**
- * Attach a relevance badge only to items the model actually scored above the
- * exclusion threshold. Lexical results carried along after the ranked set, and
- * candidates the model excluded, render without a (misleading) badge.
+ * Attach qualitative labels to scored candidates, including weak matches.
+ * Lexical results the model did not evaluate remain unbadged.
  */
 export function buildResults(
   displayedMatches: LexicalMatch[],
@@ -448,16 +373,19 @@ export function buildResults(
       ? rerankMatchByDigest.get(match.digest)
       : undefined;
     const rerankScore = rerankMatch?.score;
-    const hasRerankMatch =
-      rerankMatch !== undefined &&
-      rerankScore !== undefined &&
-      rerankScore > RERANK_EXCLUSION_THRESHOLD;
     return {
       reference: match.reference,
       source: match.source,
       matchedFields: match.matchedFields,
-      ...(hasRerankMatch
-        ? { rerankScore, rerankReason: rerankMatch.reason }
+      ...(rerankMatch
+        ? {
+            rerankScore,
+            matchStrength: getComponentMatchStrength(
+              rerankMatch.score,
+              rerankMatch.matchStrength,
+            ),
+            rerankReason: rerankMatch.reason,
+          }
         : {}),
     };
   });

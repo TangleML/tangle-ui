@@ -99,36 +99,46 @@ describe("ComponentSearchV2Content", () => {
     expect(anchor).toContainElement(screen.getByLabelText("Search components"));
   });
 
-  it("shows active AI rerank progress below the search box", async () => {
-    mocks.useComponentSearchV2State.mockImplementation(() => ({
-      results: [],
-      browseFolders: [],
-      searchSuggestions: [],
-      isLoading: false,
-      canRerank: true,
-      isReranking: true,
-      isRerankActive: false,
-      rerank: vi.fn(),
-      clearRerank: vi.fn(),
-      sourceFilterOptions: [],
-      disabledSourceKeys: [],
-      toggleSourceFilter: vi.fn(),
-      enableAllSources: vi.fn(),
-    }));
-
-    render(<ComponentSearchV2Content />);
-
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "Scanning component candidates with AI…",
-    );
-
-    await act(async () => {
-      vi.advanceTimersByTime(1200);
+  it("explains a failed rerank while keeping local search available", () => {
+    const state = mocks.useComponentSearchV2State();
+    mocks.useComponentSearchV2State.mockReturnValue({
+      ...state,
+      rerankError: "Jev reranking failed (HTTP 504).",
     });
-
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "Comparing component candidates with AI…",
+    render(<ComponentSearchV2Content />);
+    expect(screen.getByRole("alert")).toHaveTextContent("HTTP 504");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Local search is still available",
     );
+    expect(screen.getByLabelText("Search components")).toBeEnabled();
+  });
+
+  it("names Jev while that search provider is ranking", () => {
+    const state = mocks.useComponentSearchV2State();
+    mocks.useComponentSearchV2State.mockReturnValue({
+      ...state,
+      isReranking: true,
+      rerankModelLabel: "Jev (jev-latest)",
+    });
+    render(<ComponentSearchV2Content />);
+    expect(screen.getByRole("status")).toHaveTextContent("Jev (jev-latest)");
+  });
+
+  it("shows completed component counts and lets the user cancel", () => {
+    const clearRerank = vi.fn();
+    const state = mocks.useComponentSearchV2State();
+    mocks.useComponentSearchV2State.mockReturnValue({
+      ...state,
+      isReranking: true,
+      rerankProgress: { completed: 40, total: 101 },
+      clearRerank,
+    });
+    render(<ComponentSearchV2Content />);
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Scored 40 of 101 components with AI",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Cancel AI search" }));
+    expect(clearRerank).toHaveBeenCalledOnce();
   });
 
   it("shows source filters and toggles them from editor search", () => {

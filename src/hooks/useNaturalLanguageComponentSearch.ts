@@ -1,11 +1,14 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
 
+import { getAiModelLabel } from "@/config/aiModels";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
+import { rerankComponents } from "@/services/componentRerankService";
 import {
   type ComponentDescriptionResult,
   generateComponentAiDescription,
   type RerankCandidate,
-  rerankComponentsByNaturalLanguage,
+  type RerankProgress,
   type RerankResult,
 } from "@/services/naturalLanguageComponentSearchService";
 import type { ComponentReference } from "@/utils/componentSpec";
@@ -14,32 +17,77 @@ interface RerankVariables {
   query: string;
   candidates: RerankCandidate[];
   // When true, ask the model to score every candidate (not just the strongest)
-  // so every displayed result can show a relevance percentage. Costs more
+  // so every displayed result can receive a match assessment. Costs more
   // tokens; callers opt in per surface.
   scoreAllCandidates?: boolean;
 }
 
-/**
- * Trigger an LLM rerank of pre-filtered candidates. Modeled as a mutation
- * rather than a query because rerank is **explicitly initiated** by the user
- * ("Smart Search" button), not automatic on every keystroke — that would
- * burn tokens and add latency to the typeahead experience.
- *
- * The lexical index (see `componentSearchIndex.ts`) is what powers live
- * search. Rerank is the optional, opt-in step when judgment matters more
- * than literal matching.
- */
-export function useNaturalLanguageComponentRerank() {
-  const { config, isConfigured } = useAiProviderSettings();
+export function useNaturalLanguageComponentRerank(searchKey = "") {
+  const { rerankConfig } = useAiProviderSettings();
+  const activeRequest = useRef<AbortController | null>(null);
+  const [progress, setProgress] = useState<RerankProgress>();
 
   const mutation = useMutation<RerankResult, Error, RerankVariables>({
-    mutationFn: ({ query, candidates, scoreAllCandidates }) =>
-      rerankComponentsByNaturalLanguage(query, candidates, config, {
-        scoreAllCandidates,
-      }),
+    mutationFn: ({ query, candidates, scoreAllCandidates }) => {
+      activeRequest.current?.abort();
+      const controller = new AbortController();
+      activeRequest.current = controller;
+      setProgress(undefined);
+      return rerankComponents(
+        query,
+        candidates,
+        {
+          ...rerankConfig,
+          signal: controller.signal,
+          onProgress: (nextProgress) => {
+            if (
+              activeRequest.current === controller &&
+              !controller.signal.aborted
+            )
+              setProgress(nextProgress);
+          },
+        },
+        {
+          scoreAllCandidates,
+        },
+      );
+    },
+    retry: false,
   });
+  const { reset } = mutation;
+  useEffect(() => {
+    reset();
+    setProgress(undefined);
+    return () => {
+      activeRequest.current?.abort();
+      activeRequest.current = null;
+    };
+  }, [
+    searchKey,
+    rerankConfig.provider,
+    rerankConfig.apiBase,
+    rerankConfig.apiKey,
+    rerankConfig.model,
+    rerankConfig.reasoningEffort,
+    rerankConfig.credentials,
+    reset,
+  ]);
 
-  return { ...mutation, isConfigured };
+  return {
+    ...mutation,
+    progress,
+    cancel: () => {
+      activeRequest.current?.abort();
+      activeRequest.current = null;
+      setProgress(undefined);
+      reset();
+    },
+    isConfigured: rerankConfig.apiBase.trim().length > 0,
+    modelLabel:
+      rerankConfig.provider === "jev"
+        ? `Jev (${rerankConfig.model})`
+        : getAiModelLabel(rerankConfig.model),
+  };
 }
 
 /**

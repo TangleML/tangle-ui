@@ -32,6 +32,7 @@
     "serve": "vite preview",
     "serve:ghpages": "vite preview --config vite.config.ghpages.js",
     "test": "vitest run",
+    "benchmark:component-rerank": "tsx --no-cache scripts/benchmark-component-rerank.ts",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",

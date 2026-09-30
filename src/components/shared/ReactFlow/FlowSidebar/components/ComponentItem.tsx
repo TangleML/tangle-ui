@@ -1,6 +1,7 @@
 import type { ComponentProps, DragEvent } from "react";
 import { useCallback, useMemo, useRef } from "react";
 
+import { ComponentSearchMatchBadge } from "@/components/shared/ComponentSearchMatchBadge";
 import { ComponentDetailsDialog } from "@/components/shared/Dialogs";
 import { ComponentFavoriteToggle } from "@/components/shared/FavoriteComponentToggle";
 import { useOutdatedComponents } from "@/components/shared/ManageComponent/hooks/useOutdatedComponents";
@@ -21,6 +22,7 @@ import type {
   ComponentSearchSource,
   MatchField,
 } from "@/services/componentSearchIndex";
+import type { ComponentMatchStrength } from "@/services/componentSearchRelevance";
 import { type ComponentReference, type TaskSpec } from "@/utils/componentSpec";
 import { getComponentName } from "@/utils/getComponentName";
 import { isSubgraph } from "@/utils/subgraphUtils";
@@ -37,7 +39,7 @@ interface ComponentMarkupProps {
   error?: string | null;
   className?: string;
   matchedFields?: MatchField[];
-  rerankScore?: number;
+  matchStrength?: ComponentMatchStrength;
   rerankReason?: string;
   showOutdatedBadge?: boolean;
   source?: ComponentSearchSource;
@@ -86,21 +88,13 @@ const ComponentIcon = withSuspenseWrapper(
     ),
 );
 
-function rerankScoreClass(score: number): string {
-  if (score >= 0.9)
-    return "text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-300 dark:bg-emerald-500/15 dark:border-emerald-500/30";
-  if (score >= 0.75)
-    return "text-emerald-600 bg-emerald-50/70 border-emerald-100 dark:text-emerald-300 dark:bg-emerald-500/10 dark:border-emerald-500/25";
-  return "text-emerald-500 bg-white border-emerald-100 dark:bg-emerald-500/15 dark:border-emerald-500/30";
-}
-
 const ComponentMarkup = ({
   component,
   isLoading,
   error,
   className,
   matchedFields,
-  rerankScore,
+  matchStrength,
   rerankReason,
   showOutdatedBadge = true,
   source,
@@ -307,19 +301,8 @@ const ComponentMarkup = ({
               wrap="nowrap"
               className="shrink-0 self-center opacity-70 transition-opacity group-hover:opacity-100"
             >
-              {rerankScore !== undefined && (
-                <Text
-                  size="xs"
-                  weight="semibold"
-                  className={cn(
-                    "shrink-0 rounded-full border px-1.5 py-0.5 leading-none",
-                    rerankScoreClass(rerankScore),
-                  )}
-                  title={`${Math.round(rerankScore * 100)}% likely to match your search`}
-                  aria-label={`${Math.round(rerankScore * 100)} percent likely to match your search`}
-                >
-                  {Math.round(rerankScore * 100)}%
-                </Text>
+              {matchStrength && (
+                <ComponentSearchMatchBadge strength={matchStrength} />
               )}
               <ComponentFavoriteToggle component={component} />
 

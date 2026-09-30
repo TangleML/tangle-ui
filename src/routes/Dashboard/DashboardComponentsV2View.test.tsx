@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { StoredLibrary } from "@/providers/ComponentLibraryProvider/libraries/storage";
 import type { IndexEntry } from "@/services/componentSearchIndex";
+import type { RerankResult } from "@/services/naturalLanguageComponentSearchService";
 import type { ComponentReference } from "@/utils/componentSpec";
 
 interface DashboardComponentsV2Search {
@@ -100,6 +101,7 @@ const routeMocks = vi.hoisted(() => {
     aiDescriptionsEnabled: false,
     aiSearchConfigured: false,
     aiRerankPending: false,
+    aiRerankData: undefined as RerankResult | undefined,
     aiApiBase: "",
     aiModel: "",
     search,
@@ -240,10 +242,13 @@ vi.mock("@/hooks/useNaturalLanguageComponentSearch", () => ({
   },
   useNaturalLanguageComponentRerank: () => ({
     mutate: routeMocks.rerank,
-    data: undefined,
+    data: routeMocks.aiRerankData,
     isPending: routeMocks.aiRerankPending,
     error: null,
     reset: routeMocks.resetRerank,
+    cancel: routeMocks.resetRerank,
+    progress: { completed: 20, total: 100 },
+    modelLabel: "Jev (jev-1.13.0)",
     isConfigured: routeMocks.aiSearchConfigured,
   }),
 }));
@@ -565,8 +570,56 @@ describe("DashboardComponentsV2View", () => {
     routeMocks.resetRerank.mockClear();
     routeMocks.aiSearchConfigured = false;
     routeMocks.aiRerankPending = false;
+    routeMocks.aiRerankData = undefined;
     routeMocks.aiApiBase = "";
     routeMocks.aiModel = "";
+  });
+
+  it.each([
+    ["related", "Related", "No direct matches—showing related components."],
+    [
+      "weak",
+      "Weak match",
+      "No clear matches—showing the closest available components.",
+    ],
+    ["partial", "Partial match", "No direct matches—showing partial matches."],
+  ] as const)(
+    "explains %s results with qualitative badges instead of percentages",
+    async (matchStrength, label, notice) => {
+      routeMocks.aiSearchConfigured = true;
+      routeMocks.search = { q: "standard" };
+      routeMocks.aiRerankData = {
+        matches: [{ id: "standard-digest", score: 0.1, matchStrength }],
+      };
+      render(<DashboardComponentsV2View />);
+      fireEvent.click(screen.getByRole("button", { name: "AI search" }));
+      await waitFor(() => expect(screen.getByText(notice)).toBeInTheDocument());
+      expect(screen.getByLabelText(label)).toHaveTextContent(label);
+      expect(
+        screen.queryByLabelText(/percent relevance/),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByText(/^AI-ranked/)).not.toBeInTheDocument();
+    },
+  );
+
+  it("labels a direct match and clears the assessment on returning to local search", async () => {
+    routeMocks.aiSearchConfigured = true;
+    routeMocks.search = { q: "standard" };
+    routeMocks.aiRerankData = {
+      matches: [
+        { id: "standard-digest", score: 0.95, matchStrength: "strong" },
+      ],
+    };
+    render(<DashboardComponentsV2View />);
+    fireEvent.click(screen.getByRole("button", { name: "AI search" }));
+    await waitFor(() =>
+      expect(screen.getByLabelText("Strong match")).toBeInTheDocument(),
+    );
+    expect(screen.queryByText(/No direct matches/)).not.toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Use lexical ranking" }),
+    );
+    expect(screen.queryByLabelText("Strong match")).not.toBeInTheDocument();
   });
 
   it("shows active AI search progress below the search box", () => {
@@ -577,7 +630,59 @@ describe("DashboardComponentsV2View", () => {
     render(<DashboardComponentsV2View />);
 
     expect(screen.getByRole("status")).toHaveTextContent(
-      "component candidates with GPT-6 Luna",
+      "Scored 20 of 100 components with Jev (jev-1.13.0)",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Cancel AI search" }));
+    expect(routeMocks.resetRerank).toHaveBeenCalled();
+  });
+
+  it("scores over 80 components, respects source filters, and renders results incrementally", async () => {
+    routeMocks.aiSearchConfigured = true;
+    routeMocks.search = { q: "no keyword overlap" };
+    routeMocks.extraStandardComponents = Array.from(
+      { length: 105 },
+      (_, index) => ({
+        digest: `extra-${index}`,
+        name: `Extra ${index}`,
+        spec: {
+          name: `Extra ${index}`,
+          implementation: { container: { image: "example" } },
+        },
+      }),
+    );
+    const matches = [
+      routeMocks.standard,
+      ...routeMocks.extraStandardComponents,
+      routeMocks.user,
+      routeMocks.published,
+      routeMocks.registered,
+    ];
+    routeMocks.aiRerankData = {
+      matches: matches.map((reference) => ({
+        id: reference.digest!,
+        score: 1,
+        matchStrength: "strong",
+      })),
+    };
+    render(<DashboardComponentsV2View />);
+    fireEvent.click(screen.getByRole("button", { name: "AI search" }));
+    expect(routeMocks.rerank.mock.calls[0][0].candidates).toHaveLength(109);
+    expect(
+      screen.getAllByRole("button", { name: /^View details for/ }),
+    ).toHaveLength(100);
+    fireEvent.click(screen.getByRole("button", { name: "Show 9 more" }));
+    expect(
+      screen.getAllByRole("button", { name: /^View details for/ }),
+    ).toHaveLength(109);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Published source (1 component)" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "AI search" }));
+    expect(routeMocks.rerank.mock.calls[1][0].candidates).toHaveLength(108);
+    expect(routeMocks.rerank.mock.calls[1][0].candidates).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "published-digest" }),
+      ]),
     );
   });
 
@@ -920,7 +1025,7 @@ describe("DashboardComponentsV2View", () => {
     expect(screen.getByText("Deprecated")).toBeInTheDocument();
   });
 
-  it("does not run AI search when literal search has no matches", async () => {
+  it("does not run AI search automatically while typing", async () => {
     routeMocks.aiSearchConfigured = true;
     render(<DashboardComponentsV2View />);
 
@@ -928,14 +1033,13 @@ describe("DashboardComponentsV2View", () => {
       target: { value: "find something semantically relevant" },
     });
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "AI search" })).toBeDisabled();
+      expect(screen.getByRole("button", { name: "AI search" })).toBeEnabled();
     });
-    fireEvent.click(screen.getByRole("button", { name: "AI search" }));
 
     expect(routeMocks.rerank).not.toHaveBeenCalled();
   });
 
-  it("allows AI search with embeddings when literal search has no matches", async () => {
+  it("sends all loaded sources to Jev when literal search has no matches", async () => {
     routeMocks.aiSearchConfigured = true;
     routeMocks.aiApiBase = "https://api.example.com/v1";
     render(<DashboardComponentsV2View />);
@@ -949,6 +1053,10 @@ describe("DashboardComponentsV2View", () => {
     fireEvent.click(screen.getByRole("button", { name: "AI search" }));
 
     await waitFor(() => expect(routeMocks.rerank).toHaveBeenCalled());
+    const { candidates } = routeMocks.rerank.mock.calls[0][0];
+    expect(candidates.map((candidate: { id: string }) => candidate.id)).toEqual(
+      expect.arrayContaining(["standard-digest", "published-digest"]),
+    );
   });
 
   it("shows a manual generate button when automatic descriptions are disabled", () => {

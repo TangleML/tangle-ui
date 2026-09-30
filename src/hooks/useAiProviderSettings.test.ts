@@ -24,6 +24,115 @@ describe("useAiProviderSettings", () => {
     window.localStorage.clear();
   });
 
+  it.each(["true", "false"])(
+    "uses the environment proxy for all AI features regardless of saved mode %s",
+    (mode) => {
+      vi.stubEnv(
+        "VITE_OPENAI_API_BASE",
+        " https://proxy.example.com/prefix/v1/// ",
+      );
+      vi.stubEnv("VITE_OPENAI_API_KEY", " proxy-key ");
+      window.localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, mode);
+      window.localStorage.setItem(
+        AI_PROVIDER_STORAGE_KEY,
+        JSON.stringify({
+          apiBase: "https://old.example.com/v1",
+          apiKey: "old-key",
+          model: "gpt-6-astra",
+          reasoningEffort: "max",
+          componentSearch: {
+            provider: "jev",
+            apiBase: "https://old-rank.example.com/v1",
+            apiKey: "old-rank-key",
+            model: "jev-preview",
+          },
+        }),
+      );
+      const { result } = renderHook(() => useAiProviderSettings());
+      expect(result.current.isEnvironmentConfigured).toBe(true);
+      expect(result.current.config).toEqual({
+        apiBase: "https://proxy.example.com/prefix/v1",
+        apiKey: "proxy-key",
+        credentials: "omit",
+        model: "gpt-6-astra",
+        reasoningEffort: "max",
+      });
+      expect(result.current.rerankConfig).toEqual({
+        provider: "jev",
+        apiBase: "https://proxy.example.com/prefix/vendors/typesafe/v1",
+        apiKey: "proxy-key",
+        credentials: "omit",
+        model: "jev-1.13.0",
+      });
+      act(() => result.current.update({ model: "gpt-6-sol" }));
+      const saved = window.localStorage.getItem(AI_PROVIDER_STORAGE_KEY) ?? "";
+      expect(saved).not.toContain("componentSearch");
+      expect(saved).not.toContain("proxy-key");
+      expect(result.current.rerankConfig.model).toBe("jev-1.13.0");
+    },
+  );
+
+  it("uses the environment proxy's session with an empty key, ignoring stored keys", () => {
+    vi.stubEnv("VITE_OPENAI_API_BASE", "https://proxy.example.com/v1");
+    window.localStorage.setItem(
+      AI_PROVIDER_STORAGE_KEY,
+      JSON.stringify({ apiKey: "old-key" }),
+    );
+    const { result } = renderHook(() => useAiProviderSettings());
+    expect(result.current.config.apiKey).toBe("");
+    expect(result.current.rerankConfig).toEqual({
+      provider: "jev",
+      apiBase: "https://proxy.example.com/vendors/typesafe/v1",
+      apiKey: "",
+      credentials: "include",
+      model: "jev-1.13.0",
+    });
+  });
+
+  it.each(["https://api.openai.com/v1/", "https://proxy.example.com/v1/"])(
+    "preserves Responses compatibility for the saved provider %s",
+    (apiBase) => {
+      const { result } = renderHook(() => useAiProviderSettings());
+      expect(result.current.rerankConfig.apiBase).toBe("");
+      act(() =>
+        result.current.update({
+          apiBase,
+          apiKey: "shared-key",
+          model: "gpt-6-sol",
+          reasoningEffort: "low",
+        }),
+      );
+      expect(result.current.rerankConfig).toEqual({
+        provider: "responses",
+        apiBase: apiBase.replace(/\/+$/, ""),
+        apiKey: "shared-key",
+        model: "gpt-6-sol",
+        reasoningEffort: "low",
+      });
+    },
+  );
+
+  it("shares the selected backend connection with Jev and follows backend changes", () => {
+    window.localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, "false");
+    const { result, rerender } = renderHook(() => useAiProviderSettings());
+    expect(result.current.rerankConfig).toEqual({
+      provider: "jev",
+      apiBase:
+        "https://backend.example.com/api/experimental/ai/vendors/typesafe/v1",
+      apiKey: "",
+      credentials: "include",
+      model: "jev-1.13.0",
+    });
+    backend.backendUrl = "https://new.example.com/prefix///";
+    rerender();
+    expect(result.current.rerankConfig.apiBase).toBe(
+      "https://new.example.com/prefix/api/experimental/ai/vendors/typesafe/v1",
+    );
+    backend.backendUrl = "";
+    rerender();
+    expect(result.current.rerankConfig.apiBase).toBe("");
+  });
+
   it("returns defaults when nothing is stored", () => {
     const { result } = renderHook(() => useAiProviderSettings());
 
@@ -59,12 +168,17 @@ describe("useAiProviderSettings", () => {
     });
     expect(result.current.isConfigured).toBe(true);
     expect(result.current.customConfig).toEqual(customConfig);
+    expect(result.current.rerankConfig.provider).toBe("jev");
     unmount();
 
     const reloaded = renderHook(() => useAiProviderSettings());
     expect(reloaded.result.current.useOwnKey).toBe(false);
     act(() => reloaded.result.current.setUseOwnKey(true));
     expect(reloaded.result.current.config).toEqual(customConfig);
+    expect(reloaded.result.current.rerankConfig).toEqual({
+      ...customConfig,
+      provider: "responses",
+    });
   });
 
   it("uses Sol with High thinking without saved provider details", () => {
