@@ -1,7 +1,14 @@
 import { Chat } from "@tangent/embed-react";
 
 import { Icon } from "@/components/ui/icon";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  SCROLLING_TAB_STRIP,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 import { CloseableTabTrigger } from "@/routes/v2/pages/Tangent/components/CloseableTabTrigger";
 import {
   type AgentTab,
@@ -44,7 +51,7 @@ export function TangentChatPane({
         onValueChange={onTabChange}
         className="flex h-full min-h-0 flex-col gap-1"
       >
-        <TabsList className="max-w-full shrink-0 overflow-x-auto">
+        <TabsList className={cn("max-w-full shrink-0", SCROLLING_TAB_STRIP)}>
           <TabsTrigger value={CHAT_TAB_VALUE}>
             <Icon name="MessageSquare" size="xs" />
             Chat
