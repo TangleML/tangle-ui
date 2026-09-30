@@ -87,10 +87,12 @@ describe("remote pipeline storage driver", () => {
       totalCount: 30,
     });
     const signal = new AbortController().signal;
+    const filters = { searchQuery: "report" };
     const page = await storage.listPage({
       pageToken: "cursor",
       pageSize: 10,
       signal,
+      filters,
     });
     expect(
       page.files.map(({ id, displayName, canEdit }) => ({
@@ -114,7 +116,7 @@ describe("remote pipeline storage driver", () => {
     expect(page.totalCount).toBe(30);
     expect(listCloudPipelinePage).toHaveBeenCalledExactlyOnceWith(
       { backendUrl: BACKEND, account: ACCOUNT, signal },
-      { pageSize: 10, pageToken: "cursor" },
+      { pageSize: 10, pageToken: "cursor", filters },
     );
     expect(getCloudPipeline).not.toHaveBeenCalled();
   });
@@ -193,6 +195,16 @@ describe("remote pipeline storage driver", () => {
       backendUrl: BACKEND,
       account: ACCOUNT,
     });
+    expect(getCloudPipeline).not.toHaveBeenCalled();
+  });
+
+  it("deletes an unconfirmed upload using its stable path", async () => {
+    const storage = driver();
+    await storage.delete("pipeline-studio/pending.yaml");
+    expect(deleteCloudPipeline).toHaveBeenCalledExactlyOnceWith(
+      "pipeline-studio/pending.yaml",
+      { backendUrl: BACKEND, account: ACCOUNT },
+    );
     expect(getCloudPipeline).not.toHaveBeenCalled();
   });
 

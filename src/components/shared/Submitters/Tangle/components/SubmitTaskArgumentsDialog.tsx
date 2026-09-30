@@ -6,7 +6,6 @@ import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { PipelineRunsList } from "@/components/shared/PipelineRunDisplay/PipelineRunsList";
 import { DynamicDataArgumentInput } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/ArgumentsEditor/DynamicDataArgumentInput";
 import { typeSpecToString } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/ArgumentsEditor/utils";
-import { getArgumentsFromInputs } from "@/components/shared/ReactFlow/FlowCanvas/utils/getArgumentsFromInputs";
 import { SelectSecretDialog } from "@/components/shared/SecretsManagement/SelectSecretDialog";
 import {
   createSecretArgument,
@@ -76,7 +75,6 @@ export const SubmitTaskArgumentsDialog = ({
   const mockBackend = useTourMockBackend();
   const initialArgs = selectTaskArgumentsForInputs(
     componentSpec,
-    getArgumentsFromInputs(componentSpec),
     savedTaskArguments,
   );
 
@@ -122,7 +120,6 @@ export const SubmitTaskArgumentsDialog = ({
     if (open) {
       const freshArgs = selectTaskArgumentsForInputs(
         componentSpec,
-        getArgumentsFromInputs(componentSpec),
         savedTaskArguments,
       );
       setTaskArguments(freshArgs);

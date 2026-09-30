@@ -2,17 +2,18 @@ import type { ArgumentType, ComponentSpec } from "@/utils/componentSpec";
 
 export function selectTaskArgumentsForInputs(
   componentSpec: ComponentSpec,
-  ...sources: Array<Record<string, ArgumentType> | undefined>
+  savedTaskArguments?: Record<string, ArgumentType>,
+  taskArguments?: Record<string, ArgumentType>,
 ): Record<string, ArgumentType> {
-  const inputNames = new Set(
-    (componentSpec.inputs ?? []).map((input) => input.name),
-  );
   const selected: Record<string, ArgumentType> = {};
 
-  for (const source of sources) {
-    for (const [name, value] of Object.entries(source ?? {})) {
-      if (inputNames.has(name)) selected[name] = value;
-    }
+  for (const input of componentSpec.inputs ?? []) {
+    const value =
+      taskArguments?.[input.name] ??
+      input.value ??
+      savedTaskArguments?.[input.name] ??
+      input.default;
+    if (value !== undefined) selected[input.name] = value;
   }
 
   return selected;

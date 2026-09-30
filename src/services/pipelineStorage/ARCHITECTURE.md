@@ -656,7 +656,7 @@ sequenceDiagram
 - v2 adds the compound index `[folderId+storageKey]` for the `findByFolderAndStorageKey` query used by `FolderIndexDbStorageDriver.hasKey()`.
 - New migrations must follow Dexie's versioning rules: increment the version number and never modify existing version schemas.
 
-### Descriptor metadata and pagination
+### Descriptor metadata
 
 Storage keys identify documents within a driver. Descriptors may also supply a
 stable `id`, a separate `displayName`, and `canEdit`. Folder-backed files retain
@@ -666,11 +666,6 @@ writes, renames, and deletion.
 Drivers can return text from `read`, or content together with its descriptor.
 Writes may return the saved descriptor and accept existing/source descriptors to
 preserve backend metadata. Existing text-only drivers remain compatible.
-
-`listStoragePage` delegates opaque cursors to a driver's `listPage` when present.
-For existing unpaginated drivers, it slices their list using an offset cursor.
-`PipelineFolder.listPipelinePage` resolves those descriptors into files using the
-same registry path as an unpaginated listing.
 
 ### Remote storage and recovery
 
@@ -689,11 +684,12 @@ to this coordinator so recovery and retry still wrap storage operations.
 ### Application access
 
 Application callers use `PipelineStorageService`; its remote coordinator is
-private. `listPipelinePage` selects local or remote storage explicitly and returns
-a common page of `PipelineFile` objects. Local pages hide migrated backups before
-calculating their count or cursor. Remote pages retain the backend's cursor and
-load summaries only.
+private. `listRemotePipelinePage` returns `PipelineFile` objects from the remote
+driver's summary pages, retaining the backend cursor. Local lists use the existing
+filtering, sorting, and pagination hooks after hiding migrated backups.
 
 The service also exposes pending drafts, cached summaries, and its backend URL.
 Creation, imports, and editor autosave continue through the existing service/file
 methods, including progressive migration and save batching.
+Import and copy helpers receive the caller's storage service, using the same
+provider as editor file actions.

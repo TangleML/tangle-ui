@@ -2,23 +2,19 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { copyRunToPipeline } from "./pipelineRunService";
 import { importPipelineFromYaml, savePipelineText } from "./pipelineService";
+import { PipelineStorageService } from "./pipelineStorage/PipelineStorageService";
 
 const { createPipeline } = vi.hoisted(() => ({ createPipeline: vi.fn() }));
 
 vi.mock("@/utils/remotePipelines", () => ({ REMOTE_PIPELINES_ENABLED: true }));
-vi.mock(
-  "@/services/pipelineStorage/PipelineStorageService",
-  async (importOriginal) => ({
-    ...(await importOriginal<
-      typeof import("@/services/pipelineStorage/PipelineStorageService")
-    >()),
-    getPipelineStorageService: () => ({ createPipeline }),
-  }),
-);
 vi.mock("@/utils/componentStore", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/utils/componentStore")>()),
   getComponentFileFromList: vi.fn().mockResolvedValue(null),
 }));
+
+const storage = new PipelineStorageService();
+vi.spyOn(storage, "remoteEnabled", "get").mockReturnValue(true);
+vi.spyOn(storage, "createPipeline").mockImplementation(createPipeline);
 
 const yaml =
   "name: Imported pipeline\nimplementation:\n  graph:\n    tasks: {}\n";
@@ -31,7 +27,7 @@ describe("remote pipeline creation", () => {
     async (referenceId) => {
       createPipeline.mockResolvedValue({ referenceId });
 
-      expect(await importPipelineFromYaml(yaml, true)).toEqual({
+      expect(await importPipelineFromYaml(storage, yaml, true)).toEqual({
         name: "Imported pipeline",
         referenceId,
         fileId: referenceId,
@@ -51,11 +47,13 @@ describe("remote pipeline creation", () => {
 
     expect(
       await copyRunToPipeline(
+        storage,
         { name: "A run", implementation: { graph: { tasks: {} } } },
         "run-1",
       ),
     ).toEqual({
       name: "A run",
+      ref: { name: "A run", fileId: referenceId },
       url: "/editor-v2/clone",
     });
     expect(createPipeline).toHaveBeenCalledWith(
@@ -67,8 +65,19 @@ describe("remote pipeline creation", () => {
   it("propagates storage creation failures to the caller", async () => {
     createPipeline.mockRejectedValue(new Error("Storage unavailable"));
 
-    await expect(savePipelineText("Imported pipeline", yaml)).rejects.toThrow(
-      "Storage unavailable",
-    );
+    await expect(
+      savePipelineText(storage, "Imported pipeline", yaml),
+    ).rejects.toThrow("Storage unavailable");
+  });
+
+  it("uses the caller's storage after another storage session is created", async () => {
+    const otherStorage = new PipelineStorageService();
+    const createOtherPipeline = vi.spyOn(otherStorage, "createPipeline");
+    createPipeline.mockResolvedValue({ referenceId: "remote:first:123" });
+
+    const result = await importPipelineFromYaml(storage, yaml);
+
+    expect(result.referenceId).toBe("remote:first:123");
+    expect(createOtherPipeline).not.toHaveBeenCalled();
   });
 });

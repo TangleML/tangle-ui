@@ -7,8 +7,10 @@ import type {
 import { getErrorMessage } from "@/utils/string";
 import { emitUserPipelineWritten } from "@/utils/userPipelineWriteEvents";
 
-import { RemotePipelineStorageDriver } from "./drivers/RemotePipelineStorageDriver";
-import { listStoragePage } from "./listStoragePage";
+import {
+  type RemotePipelineDescriptor,
+  RemotePipelineStorageDriver,
+} from "./drivers/RemotePipelineStorageDriver";
 import { migratePipelineReferences } from "./migratePipelineReferences";
 import type { PipelineFile } from "./PipelineFile";
 import type { PipelineFolder } from "./PipelineFolder";
@@ -53,6 +55,12 @@ export class RemotePipelineStore {
     return `pending:${encodeURIComponent(this.scope)}:${encodeURIComponent(filePath)}`;
   }
 
+  private summaryRecoveryKey(summary: CloudPipelineSummary): string {
+    return summary.user_id === this.account?.id
+      ? this.recoveryKey(summary.file_path)
+      : remotePipelineReference(this.backendUrl, summary.id);
+  }
+
   async records(): Promise<RemotePipelineRecovery[]> {
     return remotePipelineRecoveryDb.copies
       .where("scope")
@@ -63,16 +71,15 @@ export class RemotePipelineStore {
   async listPage(
     options: PipelinePageOptions = {},
   ): Promise<PipelineStoragePage<RemotePipelineFile>> {
+    options.signal?.throwIfAborted();
     const [page, records] = await Promise.all([
-      listStoragePage(this.driver, options),
+      this.driver.listPage(options),
       this.records(),
     ]);
+    options.signal?.throwIfAborted();
     return {
       ...page,
-      files: this.filesFromSummaries(
-        page.files.map((file) => file.pipeline),
-        records,
-      ),
+      files: this.filesFromDescriptors(page.files, records),
     };
   }
 
@@ -92,35 +99,26 @@ export class RemotePipelineStore {
           !record.deleted &&
           (!record.localFileId || record.migrated),
       )
-      .map(
-        (record) =>
-          new RemotePipelineFile(this, this.folder, record, record.pipeline),
-      );
+      .map((record) => new RemotePipelineFile(this, this.folder, record));
   }
 
-  async listSummaries(): Promise<RemotePipelineFile[]> {
-    const [files, records] = await Promise.all([
-      this.driver.list(),
-      this.records(),
-    ]);
-    return this.filesFromSummaries(
-      files.map((file) => file.pipeline),
-      records,
-    );
-  }
-
-  private filesFromSummaries(
-    summaries: CloudPipelineSummary[],
+  private filesFromDescriptors(
+    descriptors: RemotePipelineDescriptor[],
     records: RemotePipelineRecovery[],
   ): RemotePipelineFile[] {
     const recordsByPath = new Map(
       records.map((record) => [record.filePath, record]),
     );
-    return summaries.flatMap((summary) => {
-      if (summary.user_id !== this.account?.id) return [];
-      const candidate = recordsByPath.get(summary.file_path);
+    return descriptors.flatMap((descriptor) => {
+      const summary = descriptor.pipeline;
+      const candidate =
+        summary.user_id === this.account?.id
+          ? recordsByPath.get(summary.file_path)
+          : undefined;
       const record =
-        !candidate?.pipeline || candidate.pipeline.id === summary.id
+        !candidate?.pipeline ||
+        (candidate.pipeline.id === summary.id &&
+          candidate.pipeline.user_id === summary.user_id)
           ? candidate
           : undefined;
       if (
@@ -130,46 +128,32 @@ export class RemotePipelineStore {
           (record.localFileId && !record.migrated))
       )
         return [];
-      return [this.fromSummary(summary, record)];
+      return [this.fromDescriptor(descriptor, record)];
     });
   }
 
   async list(): Promise<RemotePipelineFile[]> {
     const records = await this.records();
-    const result = new Map(
-      records
-        .filter(
-          (record) =>
-            !record.deleted && (!record.localFileId || record.migrated),
-        )
-        .map((record) => [
-          record.filePath,
-          new RemotePipelineFile(this, this.folder, record),
-        ]),
-    );
+    let files = records
+      .filter(
+        (record) => !record.deleted && (!record.localFileId || record.migrated),
+      )
+      .map((record) => new RemotePipelineFile(this, this.folder, record));
     try {
-      const summaries = (await this.driver.list()).map((file) => file.pipeline);
-      for (const summary of summaries) {
-        if (summary.user_id !== this.account?.id) continue;
-        const record = records.find(
-          (item) => item.filePath === summary.file_path,
-        );
-        if (record?.deleted || (record?.localFileId && !record.migrated))
-          continue;
-        result.set(summary.file_path, this.fromSummary(summary, record));
-      }
-      // Clean recovery copies are not a second remote catalog after server-side deletion.
-      const remotePaths = new Set(
-        summaries.map((summary) => summary.file_path),
+      const descriptors = (await this.driver.list()).filter(
+        (file) => file.pipeline.user_id === this.account?.id,
       );
-      for (const [path, file] of result) {
-        if (
-          file.recovery.pipeline &&
-          !file.recovery.dirty &&
-          !remotePaths.has(path)
-        )
-          result.delete(path);
-      }
+      // Clean recovery copies are not a second remote catalog after server-side deletion.
+      files = [
+        ...new Map(
+          [
+            ...files.filter(
+              (file) => !file.recovery.pipeline || file.recovery.dirty,
+            ),
+            ...this.filesFromDescriptors(descriptors, records),
+          ].map((file) => [file.recovery.filePath, file]),
+        ).values(),
+      ];
       runInAction(() => {
         this.listError = undefined;
       });
@@ -178,32 +162,35 @@ export class RemotePipelineStore {
         this.listError = getErrorMessage(error);
       });
     }
-    return [...result.values()];
+    return files;
   }
 
-  private fromSummary(
-    summary: CloudPipelineSummary,
+  private fromDescriptor(
+    descriptor: RemotePipelineDescriptor,
     record?: RemotePipelineRecovery,
   ): RemotePipelineFile {
+    const summary = descriptor.pipeline;
+    const metadata = {
+      displayName: descriptor.displayName,
+      modifiedAt: descriptor.modifiedAt.getTime(),
+    };
     if (record && !record.dirty)
       record = {
         ...record,
-        displayName: summary.pipeline_name ?? summary.file_path,
-        modifiedAt: new Date(summary.updated_at).getTime(),
+        ...metadata,
       };
     return new RemotePipelineFile(
       this,
       this.folder,
       record ?? {
-        key: this.recoveryKey(summary.file_path),
+        key: this.summaryRecoveryKey(summary),
         scope: this.scope,
         filePath: summary.file_path,
-        displayName: summary.pipeline_name ?? summary.file_path,
+        ...metadata,
         content: "",
         dirty: false,
-        modifiedAt: new Date(summary.updated_at).getTime(),
       },
-      summary,
+      descriptor,
     );
   }
 
@@ -223,12 +210,9 @@ export class RemotePipelineStore {
     if (!parsed) return undefined;
     if (parsed.backendUrl !== this.backendUrl)
       throw new Error("This pipeline belongs to a different backend.");
-    let pipeline;
-    let content;
+    let loaded;
     try {
-      const loaded = await this.driver.read(reference);
-      pipeline = loaded.descriptor.pipeline;
-      content = loaded.content;
+      loaded = await this.driver.read(reference);
     } catch (error) {
       const cached = (await this.records()).find(
         (record) =>
@@ -237,29 +221,32 @@ export class RemotePipelineStore {
       if (!cached?.dirty) throw error;
       return new RemotePipelineFile(this, this.folder, cached);
     }
+    const { descriptor, content } = loaded;
+    const pipeline = descriptor.pipeline;
     const record = await remotePipelineRecoveryDb.copies.get(
-      this.recoveryKey(pipeline.file_path),
+      this.summaryRecoveryKey(pipeline),
     );
     // Other owners can use the same file path; never attach our draft to their pipeline.
-    const ownRecord = record?.pipeline?.id === pipeline.id ? record : undefined;
-    return this.fromSummary(
-      pipeline,
+    const ownRecord =
+      pipeline.user_id === this.account?.id &&
+      record?.pipeline?.id === pipeline.id &&
+      record.pipeline.user_id === pipeline.user_id
+        ? record
+        : undefined;
+    return this.fromDescriptor(
+      descriptor,
       ownRecord
         ? { ...ownRecord, pipeline }
         : {
-            key: this.recoveryKey(pipeline.file_path),
+            key: this.summaryRecoveryKey(pipeline),
             scope: this.scope,
             filePath: pipeline.file_path,
-            displayName: pipeline.pipeline_name ?? pipeline.file_path,
+            displayName: descriptor.displayName,
             content,
             dirty: false,
-            modifiedAt: new Date(pipeline.updated_at).getTime(),
+            modifiedAt: descriptor.modifiedAt.getTime(),
             pipeline,
-            ownerId:
-              pipeline.user_id === this.account?.id &&
-              this.account.permissions.includes("write")
-                ? this.account.id
-                : undefined,
+            ownerId: descriptor.canEdit ? pipeline.user_id : undefined,
           },
     );
   }
@@ -380,14 +367,15 @@ export class RemotePipelineStore {
       if (
         persisted &&
         persisted.pipeline?.id ===
-          (file.recovery.pipeline ?? file.summary)?.id &&
+          (file.recovery.pipeline ?? file.descriptor?.pipeline)?.id &&
         file.canEdit
       )
         file.setRecovery(persisted);
       if (file.recovery.deleted)
         throw new Error("This pipeline has been deleted from the server.");
       if (file.recovery.dirty) return file.recovery.content;
-      const pipelineId = (file.recovery.pipeline ?? file.summary)?.id;
+      const pipelineId = (file.recovery.pipeline ?? file.descriptor?.pipeline)
+        ?.id;
       if (!pipelineId) return file.recovery.content;
       const snapshot = file.recovery;
       const loaded = await this.driver.read(
@@ -397,9 +385,9 @@ export class RemotePipelineStore {
       let record: RemotePipelineRecovery = {
         ...snapshot,
         pipeline,
-        displayName: pipeline.pipeline_name ?? pipeline.file_path,
+        displayName: loaded.descriptor.displayName,
         content: loaded.content,
-        modifiedAt: new Date(pipeline.updated_at).getTime(),
+        modifiedAt: loaded.descriptor.modifiedAt.getTime(),
       };
       if (pipeline.user_id === this.account?.id)
         record = await this.mergeCompletion(record);
@@ -436,10 +424,7 @@ export class RemotePipelineStore {
           },
         );
         const pipeline = saved.pipeline;
-        const referenceId = remotePipelineReference(
-          this.backendUrl,
-          pipeline.id,
-        );
+        const referenceId = saved.storageKey;
         record = {
           ...record,
           pipeline,
@@ -534,11 +519,14 @@ export class RemotePipelineStore {
       const record =
         (await remotePipelineRecoveryDb.copies.get(file.recovery.key)) ??
         file.recovery;
-      const pipeline = record.pipeline ?? file.summary;
-      if (pipeline) {
-        const descriptor = this.driver.describe(pipeline);
-        await this.driver.delete(descriptor.storageKey, descriptor);
-      }
+      const descriptor = record.pipeline
+        ? this.driver.describe(record.pipeline)
+        : file.descriptor;
+      // An initial save can reach the server even when its response never arrives.
+      await this.driver.delete(
+        descriptor?.storageKey ?? record.filePath,
+        descriptor,
+      );
       // Stale editors and queued retries must not recreate a deleted pipeline.
       const deleted = {
         ...record,

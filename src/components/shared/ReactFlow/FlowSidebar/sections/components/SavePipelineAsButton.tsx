@@ -8,6 +8,7 @@ import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { getDefaultEditorPath } from "@/routes/editorRoutes";
 import { useSavePipeline } from "@/services/pipelineService";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import { tracking } from "@/utils/tracking";
 
 interface SavePipelineAsButtonProps {
@@ -18,7 +19,8 @@ export const SavePipelineAsButton = ({
   onSaveComplete,
 }: SavePipelineAsButtonProps) => {
   const { componentSpec } = useComponentSpec();
-  const { savePipeline } = useSavePipeline(componentSpec);
+  const storage = usePipelineStorage();
+  const { savePipeline } = useSavePipeline(componentSpec, storage);
   const notify = useToastNotification();
   const { track } = useAnalytics();
   const navigate = useNavigate();

@@ -17,6 +17,64 @@ const pipelineId = "00000000-0000-4000-8000-000000000001";
 const viewerPipelineId = "00000000-0000-4000-8000-000000000002";
 const savedPipelineAnnotation = "tangleml.com/user-pipeline/pipeline-id";
 const sourcePipelineAnnotation = "tangleml.com/source/pipeline-id";
+const meFilter = {
+  and: [{ value_equals: { key: "system/pipeline.user_id", value: "me" } }],
+};
+
+type PipelineSearchPredicate =
+  | { and: PipelineSearchPredicate[] }
+  | { or: PipelineSearchPredicate[] }
+  | { key_exists: { key: string } }
+  | { value_equals: { key: string; value: string } }
+  | { value_contains: { key: string; value_substring: string } }
+  | {
+      time_range: {
+        key: string;
+        start_time?: string;
+        end_time?: string;
+      };
+    };
+
+function matchesPipelineSearch(
+  item: ReturnType<typeof pipeline>,
+  predicate: PipelineSearchPredicate,
+): boolean {
+  if ("and" in predicate)
+    return predicate.and.every((child) => matchesPipelineSearch(item, child));
+  if ("or" in predicate)
+    return predicate.or.some((child) => matchesPipelineSearch(item, child));
+  const annotations =
+    item.root_pipeline_task.componentRef.spec.metadata?.annotations ?? {};
+  if ("key_exists" in predicate) {
+    return Object.hasOwn(annotations, predicate.key_exists.key);
+  }
+  if ("time_range" in predicate) {
+    const { key, start_time, end_time } = predicate.time_range;
+    const updatedAt = Date.parse(item.updated_at);
+    return (
+      key === "system/pipeline.date.updated_at" &&
+      (!start_time || updatedAt >= Date.parse(start_time)) &&
+      (!end_time || updatedAt < Date.parse(end_time))
+    );
+  }
+  if ("value_equals" in predicate) {
+    const { key, value } = predicate.value_equals;
+    return (
+      key === "system/pipeline.user_id" &&
+      item.user_id === (value === "me" ? ownerId : value)
+    );
+  }
+  const { key, value_substring } = predicate.value_contains;
+  const value =
+    key === "system/pipeline.name"
+      ? item.pipeline_name
+      : key === "system/pipeline.file_path"
+        ? item.file_path
+        : Object.hasOwn(annotations, key)
+          ? annotations[key]
+          : undefined;
+  return value?.toLowerCase().includes(value_substring.toLowerCase()) ?? false;
+}
 
 function pipelineRun(
   id: string,
@@ -34,7 +92,12 @@ function pipelineRun(
   };
 }
 
-function pipeline(id = pipelineId, userId = ownerId, name = "Remote report") {
+function pipeline(
+  id = pipelineId,
+  userId = ownerId,
+  name = "Remote report",
+  annotations: Record<string, string> = {},
+) {
   return {
     id,
     user_id: userId,
@@ -51,12 +114,13 @@ function pipeline(id = pipelineId, userId = ownerId, name = "Remote report") {
         spec: {
           name,
           description: "",
+          metadata: { annotations },
           implementation: { graph: { tasks: {} } },
         },
       },
       arguments: {},
     },
-    pipeline_run_annotations: {},
+    pipeline_run_annotations: {} as Record<string, string>,
   };
 }
 
@@ -66,7 +130,7 @@ async function mockBackend(page: Page, initial = [pipeline()]) {
     listRequests: [] as {
       pageSize: number;
       pageToken: string | null;
-      filePath: string | null;
+      filterQuery: PipelineSearchPredicate | null;
     }[],
     reads: [] as string[],
     deletes: [] as string[],
@@ -101,17 +165,17 @@ async function mockBackend(page: Page, initial = [pipeline()]) {
         },
       });
     }
-    if (url.pathname === "/api/users/me/pipelines/all") {
+    if (url.pathname === "/api/pipelines/search") {
       const pageSize = Number(url.searchParams.get("page_size") ?? 10);
       const pageToken = url.searchParams.get("page_token");
-      const filePath = url.searchParams.get("file_path");
-      state.listRequests.push({ pageSize, pageToken, filePath });
+      const filterQuery: PipelineSearchPredicate | null = JSON.parse(
+        url.searchParams.get("filter_query") ?? "null",
+      );
+      state.listRequests.push({ pageSize, pageToken, filterQuery });
       const offset = pageToken ? Number(pageToken.replace("page:", "")) : 0;
       const pipelines = state.pipelines
         .filter(
-          (item) =>
-            item.user_id === ownerId &&
-            (filePath === null || item.file_path.startsWith(filePath)),
+          (item) => !filterQuery || matchesPipelineSearch(item, filterQuery),
         )
         .sort(
           (a, b) =>
@@ -587,7 +651,7 @@ test("Quick Run does not create a run when the first local upload fails", async 
   await expect(page.getByText("Not saved", { exact: true })).toBeVisible();
 });
 
-test("remote omits filters while local keeps its filters and toolbar", async ({
+test("remote shares local filter and sort controls while local keeps component search", async ({
   page,
 }) => {
   await mockBackend(page, [pipeline(pipelineId, ownerId, "Alpha report")]);
@@ -598,6 +662,10 @@ test("remote omits filters while local keeps its filters and toolbar", async ({
   const localRow = page.getByRole("row").filter({ hasText: "Browser report" });
   const remoteTab = page.getByRole("tab", { name: /^Remote pipelines/ });
   const localTab = page.getByRole("tab", { name: /^Local pipelines/ });
+  const remotePanel = page.getByRole("tabpanel", {
+    name: /^Remote pipelines/,
+  });
+  const localPanel = page.getByRole("tabpanel", { name: /^Local pipelines/ });
   await expect(remoteTab).toHaveAttribute("aria-selected", "true");
   await expect(remoteRow).toBeVisible();
   await expect(localRow).toBeHidden();
@@ -613,30 +681,57 @@ test("remote omits filters while local keeps its filters and toolbar", async ({
     page.getByPlaceholder("Search...", { exact: true }),
   ).toBeHidden();
   await expect(
-    page.getByRole("button", { name: "Last edited range" }),
-  ).toBeHidden();
-  await expect(page.getByRole("combobox")).toBeHidden();
+    remotePanel.getByRole("textbox", { name: "Search remote pipelines" }),
+  ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Advanced", exact: true }),
-  ).toBeHidden();
+    remotePanel.getByRole("textbox", {
+      name: "Filter remote pipelines by owner",
+    }),
+  ).toHaveValue("me");
+  await expect(
+    remotePanel.getByRole("button", { name: "Last edited range" }),
+  ).toBeVisible();
+  await remotePanel.getByRole("button", { name: "Last edited range" }).click();
+  await expect(page.getByRole("grid").first()).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(
+    remotePanel.getByRole("combobox", { name: "Sort remote pipelines by" }),
+  ).toHaveText("Last edited");
+  await expect(
+    remotePanel.getByRole("button", { name: "Sort ascending" }),
+  ).toBeVisible();
+  await expect(
+    remotePanel.getByRole("button", { name: "Advanced", exact: true }),
+  ).toBeVisible();
+  await remotePanel
+    .getByRole("button", { name: "Advanced", exact: true })
+    .click();
+  await expect(
+    remotePanel.getByRole("button", { name: "Add filter", exact: true }),
+  ).toBeVisible();
+  await expect(remotePanel.getByPlaceholder("Component name...")).toBeHidden();
 
   await localTab.click();
   await expect(localTab).toHaveAttribute("aria-selected", "true");
   await expect(localRow).toBeVisible();
   await expect(remoteRow).toBeHidden();
-  await expect(page.getByPlaceholder("Search...", { exact: true })).toHaveValue(
-    "",
-  );
+  await expect(
+    localPanel.getByPlaceholder("Search...", { exact: true }),
+  ).toHaveValue("");
   await expect(page.getByText("Showing 2 of 2 pipelines")).toBeVisible();
-  await page.getByPlaceholder("Search...", { exact: true }).fill("Browser");
+  await localPanel
+    .getByPlaceholder("Search...", { exact: true })
+    .fill("Browser");
   await expect(localRow).toBeVisible();
   await expect(page.getByText("Showing 1 of 2 pipelines")).toBeVisible();
-  await page.getByRole("button", { name: "Clear search", exact: true }).click();
+  await localPanel
+    .getByRole("button", { name: "Clear search", exact: true })
+    .click();
 
-  await page.getByRole("button", { name: "Last edited range" }).click();
+  await localPanel.getByRole("button", { name: "Last edited range" }).click();
   await expect(page.getByRole("grid").first()).toBeVisible();
   await page.keyboard.press("Escape");
-  await page.getByRole("combobox").click();
+  await localPanel.getByRole("combobox").click();
   await page.getByRole("option", { name: "Name", exact: true }).click();
   await expect(page.getByRole("row").nth(1)).toContainText("Zebra report");
   await page
@@ -645,10 +740,16 @@ test("remote omits filters while local keeps its filters and toolbar", async ({
     .click();
   await expect(page.getByRole("row").nth(1)).toContainText("Browser report");
 
-  await page.getByRole("button", { name: "Advanced", exact: true }).click();
-  await page.getByPlaceholder("Component name...").fill("Missing component");
+  await localPanel
+    .getByRole("button", { name: "Advanced", exact: true })
+    .click();
+  await localPanel
+    .getByPlaceholder("Component name...")
+    .fill("Missing component");
   await expect(page.getByText("Showing 0 of 2 pipelines")).toBeVisible();
-  await page.getByRole("button", { name: "Clear component filter" }).click();
+  await localPanel
+    .getByRole("button", { name: "Clear component filter" })
+    .click();
   await expect(page.getByText("Showing 2 of 2 pipelines")).toBeVisible();
 
   await remoteTab.click();
@@ -657,6 +758,203 @@ test("remote omits filters while local keeps its filters and toolbar", async ({
   ).toBeHidden();
   await expect(remoteRow).toBeVisible();
   await expect(localRow).toBeHidden();
+});
+
+test("remote date filters reset pagination and include the selected calendar days without definition reads", async ({
+  page,
+}) => {
+  const { currentTime, startTime, lastIncludedTime, endTime } =
+    await page.evaluate(() => ({
+      currentTime: new Date(2026, 8, 30, 12).toISOString(),
+      startTime: new Date(2026, 8, 19).toISOString(),
+      lastIncludedTime: new Date(2026, 8, 20, 23, 59, 59).toISOString(),
+      endTime: new Date(2026, 8, 21).toISOString(),
+    }));
+  await page.clock.setFixedTime(new Date(currentTime));
+  const state = await mockBackend(page, [
+    ...remotePipelineLibrary(25).map((item, index) => ({
+      ...item,
+      updated_at: new Date(
+        Date.parse(startTime) - (index + 1) * 1000,
+      ).toISOString(),
+    })),
+    {
+      ...pipeline(pipelineId, ownerId, "At start of range"),
+      updated_at: startTime,
+    },
+    {
+      ...pipeline(viewerPipelineId, ownerId, "On final selected day"),
+      updated_at: lastIncludedTime,
+    },
+    {
+      ...pipeline(
+        "00000000-0000-4000-8000-000000000003",
+        ownerId,
+        "After selected range",
+      ),
+      updated_at: endTime,
+    },
+  ]);
+  await page.goto("/pipelines");
+  const remotePanel = page.getByRole("tabpanel", {
+    name: /^Remote pipelines/,
+  });
+  await expect(
+    remotePanel.getByText("Page 1 of 3", { exact: true }),
+  ).toBeVisible();
+  await remotePanel.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(
+    remotePanel.getByText("Page 2 of 3", { exact: true }),
+  ).toBeVisible();
+
+  await remotePanel.getByRole("button", { name: "Last edited range" }).click();
+  const calendar = page.getByRole("grid", { name: "September 2026" });
+  await calendar.getByRole("button", { name: /September 19th, 2026/ }).click();
+  await calendar.getByRole("button", { name: /September 20th, 2026/ }).click();
+  await page.keyboard.press("Escape");
+
+  await expect
+    .poll(() => state.listRequests.at(-1))
+    .toEqual({
+      pageSize: 10,
+      pageToken: null,
+      filterQuery: {
+        and: [
+          ...meFilter.and,
+          {
+            time_range: {
+              key: "system/pipeline.date.updated_at",
+              start_time: startTime,
+              end_time: endTime,
+            },
+          },
+        ],
+      },
+    });
+  await expect(remotePanel.getByText("Showing 2 of 2 pipelines")).toBeVisible();
+  await expect(
+    remotePanel.getByRole("row").filter({ hasText: "At start of range" }),
+  ).toBeVisible();
+  await expect(
+    remotePanel.getByRole("row").filter({ hasText: "On final selected day" }),
+  ).toBeVisible();
+  await expect(
+    remotePanel.getByRole("row").filter({ hasText: "After selected range" }),
+  ).toBeHidden();
+  expect(state.reads).toEqual([]);
+});
+
+test("remote annotation filters combine saved pipeline metadata and reset pagination without definition reads", async ({
+  page,
+}) => {
+  const annotationKey = "team.example/name";
+  const annotationValue = "Research_100%";
+  const existenceKey = "reviewed";
+  const state = await mockBackend(page, [
+    ...remotePipelineLibrary(25),
+    {
+      ...pipeline(pipelineId, ownerId, "Reviewed research report", {
+        [annotationKey]: `${annotationValue.toUpperCase()} primary`,
+        [existenceKey]: "",
+      }),
+      pipeline_run_annotations: {
+        [annotationKey]: "Run default differs from saved metadata",
+      },
+    },
+    {
+      ...pipeline(viewerPipelineId, ownerId, "Unreviewed research report", {
+        [annotationKey]: `${annotationValue} secondary`,
+      }),
+      pipeline_run_annotations: {
+        [existenceKey]: "yes",
+      },
+    },
+    {
+      ...pipeline(
+        "00000000-0000-4000-8000-000000000003",
+        ownerId,
+        "Different research report",
+        {
+          [annotationKey]: "ResearchX100X",
+          [existenceKey]: "yes",
+        },
+      ),
+      pipeline_run_annotations: {
+        [annotationKey]: annotationValue,
+        [existenceKey]: "yes",
+      },
+    },
+  ]);
+  await page.goto("/pipelines");
+  const remotePanel = page.getByRole("tabpanel", {
+    name: /^Remote pipelines/,
+  });
+  await expect(
+    remotePanel.getByText("Page 1 of 3", { exact: true }),
+  ).toBeVisible();
+  await remotePanel.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(
+    remotePanel.getByText("Page 2 of 3", { exact: true }),
+  ).toBeVisible();
+
+  await remotePanel
+    .getByRole("button", { name: "Advanced", exact: true })
+    .click();
+  await remotePanel
+    .getByRole("button", { name: "Add filter", exact: true })
+    .click();
+  await remotePanel
+    .getByPlaceholder("Key", { exact: true })
+    .fill(annotationKey);
+  await remotePanel.getByPlaceholder("Value (optional)").fill(annotationValue);
+  await remotePanel.getByRole("button", { name: "Add", exact: true }).click();
+  const valuePredicate = {
+    value_contains: { key: annotationKey, value_substring: annotationValue },
+  };
+  await expect
+    .poll(() => state.listRequests.at(-1))
+    .toEqual({
+      pageSize: 10,
+      pageToken: null,
+      filterQuery: { and: [...meFilter.and, valuePredicate] },
+    });
+  await expect(remotePanel.getByText("Showing 2 of 2 pipelines")).toBeVisible();
+  await expect(
+    remotePanel
+      .getByRole("row")
+      .filter({ hasText: "Different research report" }),
+  ).toBeHidden();
+
+  await remotePanel
+    .getByRole("button", { name: "Add filter", exact: true })
+    .click();
+  await remotePanel.getByPlaceholder("Key", { exact: true }).fill(existenceKey);
+  await remotePanel.getByRole("button", { name: "Add", exact: true }).click();
+  await expect
+    .poll(() => state.listRequests.at(-1))
+    .toEqual({
+      pageSize: 10,
+      pageToken: null,
+      filterQuery: {
+        and: [
+          ...meFilter.and,
+          valuePredicate,
+          { key_exists: { key: existenceKey } },
+        ],
+      },
+    });
+  await expect(remotePanel.getByText("Showing 1 of 1 pipelines")).toBeVisible();
+  await expect(
+    remotePanel
+      .getByRole("row")
+      .filter({ hasText: "Reviewed research report" }),
+  ).toBeVisible();
+  await expect(
+    remotePanel
+      .getByRole("row")
+      .filter({ hasText: "Unreviewed research report" }),
+  ).toBeHidden();
+  expect(state.reads).toEqual([]);
 });
 
 test("bulk deletion is scoped to the selected storage tab", async ({
@@ -730,7 +1028,7 @@ test("remote pages load ten summaries at a time and stay separate from local pip
   await expect(localRow).toBeHidden();
   await expect(page.getByText("Page 1 of 3", { exact: true })).toBeVisible();
   expect(state.listRequests).toEqual([
-    { pageSize: 10, pageToken: null, filePath: null },
+    { pageSize: 10, pageToken: null, filterQuery: meFilter },
   ]);
   expect(state.reads).toEqual([]);
 
@@ -741,8 +1039,8 @@ test("remote pages load ten summaries at a time and stay separate from local pip
   await expect(firstRow).toBeHidden();
   await expect(page.getByText("Page 2 of 3", { exact: true })).toBeVisible();
   expect(state.listRequests).toEqual([
-    { pageSize: 10, pageToken: null, filePath: null },
-    { pageSize: 10, pageToken: "page:10", filePath: null },
+    { pageSize: 10, pageToken: null, filterQuery: meFilter },
+    { pageSize: 10, pageToken: "page:10", filterQuery: meFilter },
   ]);
 
   await page.getByRole("button", { name: "Previous", exact: true }).click();

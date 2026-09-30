@@ -1,3 +1,5 @@
+import type { PipelineSearchFilters } from "@/types/pipelineSearch";
+
 import type { GoogleDriveDriverConfig } from "../googleDrive/types"; // google-drive
 import type { FolderIndexDbDriverConfig } from "./drivers/FolderIndexDbStorageDriver";
 import type { LocalFileSystemDriverConfig } from "./drivers/LocalFileSystemDriver";
@@ -18,6 +20,7 @@ export interface PipelinePageOptions {
   pageSize?: number;
   pageToken?: string;
   signal?: AbortSignal;
+  filters?: PipelineSearchFilters;
 }
 
 export interface PipelineStoragePage<T = PipelineFileDescriptor> {
@@ -51,7 +54,6 @@ export interface PipelineStorageDriver<
   readonly allowsMoveIn: boolean;
   readonly allowsMoveOut: boolean;
   list(): Promise<T[]>;
-  listPage?(options: PipelinePageOptions): Promise<PipelineStoragePage<T>>;
   read(storageKey: string): Promise<string | PipelineReadResult<T>>;
   write(
     storageKey: string,

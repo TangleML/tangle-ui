@@ -3,6 +3,7 @@ import { z } from "zod";
 import { client } from "@/api/client.gen";
 import { getCurrentUserApiUsersMeGet } from "@/api/sdk.gen";
 import { getArgumentsFromInputs } from "@/components/shared/ReactFlow/FlowCanvas/utils/getArgumentsFromInputs";
+import type { PipelineSearchFilters } from "@/types/pipelineSearch";
 import { coerceMetadataAnnotations } from "@/utils/coerceMetadataAnnotations";
 import {
   type ArgumentType,
@@ -13,6 +14,7 @@ import {
 import { isRecord } from "@/utils/typeGuards";
 
 const USER_PIPELINES_PATH = "/api/users/me/pipelines";
+const PIPELINE_SEARCH_PATH = "/api/pipelines/search";
 const PIPELINE_BY_ID_PATH = "/api/pipelines/{pipeline_id}";
 
 const accountSchema = z.object({
@@ -59,6 +61,7 @@ export interface CloudPipeline extends z.infer<typeof pipelineSchema> {}
 export interface CloudPipelinePageOptions {
   pageSize?: number;
   pageToken?: string;
+  filters?: PipelineSearchFilters;
 }
 
 export interface CloudPipelinePage {
@@ -114,12 +117,22 @@ export async function getCloudPipelineAccount(
 
 export async function listCloudPipelinePage(
   connection: CloudConnection,
-  { pageSize = 10, pageToken }: CloudPipelinePageOptions = {},
+  {
+    pageSize = 10,
+    pageToken,
+    filters = { userId: "me" },
+  }: CloudPipelinePageOptions = {},
 ): Promise<CloudPipelinePage> {
   const result = await client.get<unknown>({
     ...requestOptions(connection),
-    url: `${USER_PIPELINES_PATH}/all`,
-    query: { page_size: pageSize, page_token: pageToken },
+    url: PIPELINE_SEARCH_PATH,
+    query: {
+      page_size: pageSize,
+      page_token: pageToken,
+      filter_query: serializePipelineSearchFilters(filters),
+      sort_field: filters.sortField,
+      sort_direction: filters.sortDirection,
+    },
   });
   requireSuccessfulResponse(result);
   const page = pipelineListSchema.parse(result.data);
@@ -128,6 +141,55 @@ export async function listCloudPipelinePage(
     nextPageToken: page.next_page_token ?? undefined,
     totalCount: page.total_count,
   };
+}
+
+function serializePipelineSearchFilters({
+  searchQuery,
+  userId,
+  modifiedAfter,
+  modifiedBefore,
+  annotations,
+}: PipelineSearchFilters): string | undefined {
+  const owner = userId?.trim();
+  const text = searchQuery?.trim();
+  const predicates = [
+    ...(owner
+      ? [{ value_equals: { key: "system/pipeline.user_id", value: owner } }]
+      : []),
+    ...(text
+      ? [
+          {
+            or: ["system/pipeline.name", "system/pipeline.file_path"].map(
+              (key) => ({ value_contains: { key, value_substring: text } }),
+            ),
+          },
+        ]
+      : []),
+    ...(modifiedAfter || modifiedBefore
+      ? [
+          {
+            time_range: {
+              key: "system/pipeline.date.updated_at",
+              ...(modifiedAfter && { start_time: modifiedAfter }),
+              ...(modifiedBefore && { end_time: modifiedBefore }),
+            },
+          },
+        ]
+      : []),
+    ...(annotations ?? [])
+      .filter(({ key }) => key.trim().length > 0)
+      .map(({ key, value }) => {
+        if (key.startsWith("system/")) {
+          throw new Error(
+            'Annotation keys beginning with "system/" are reserved.',
+          );
+        }
+        return value
+          ? { value_contains: { key, value_substring: value } }
+          : { key_exists: { key } };
+      }),
+  ];
+  return predicates.length ? JSON.stringify({ and: predicates }) : undefined;
 }
 
 export async function listCloudPipelines(
@@ -215,17 +277,23 @@ export async function writeCloudPipeline(
 }
 
 export async function deleteCloudPipeline(
-  pipeline: CloudPipelineSummary,
+  pipeline: CloudPipelineSummary | string,
   connection: CloudConnection,
 ): Promise<void> {
   const account =
     connection.account ?? (await getCloudPipelineAccount(connection));
-  requireWritePermission(account, pipeline);
+  requireWritePermission(
+    account,
+    typeof pipeline === "string" ? undefined : pipeline,
+  );
   const result = await client.delete<unknown>({
     ...requestOptions(connection),
     url: USER_PIPELINES_PATH,
-    query: { file_path: pipeline.file_path },
+    query: {
+      file_path: typeof pipeline === "string" ? pipeline : pipeline.file_path,
+    },
   });
+  if (result.response.status === 404) return;
   requireSuccessfulResponse(result);
 }
 

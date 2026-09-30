@@ -1,4 +1,3 @@
-import yaml from "js-yaml";
 import { observable, runInAction } from "mobx";
 
 import {
@@ -14,8 +13,7 @@ import {
   listCloudPipelines,
   writeCloudPipeline,
 } from "@/services/cloudPipelineService";
-import { isValidComponentSpec } from "@/utils/componentSpec";
-import { PIPELINE_YAML_LOAD_OPTIONS } from "@/utils/yaml";
+import { componentSpecFromYaml, componentSpecToYaml } from "@/utils/yaml";
 
 import {
   parseRemotePipelineReference,
@@ -30,9 +28,14 @@ import type {
   PipelineWriteOptions,
 } from "../types";
 
-interface RemotePipelineDescriptor<
+export interface RemotePipelineDescriptor<
   T extends CloudPipelineSummary = CloudPipelineSummary,
 > extends PipelineFileDescriptor {
+  id: string;
+  displayName: string;
+  canEdit: boolean;
+  createdAt: Date;
+  modifiedAt: Date;
   pipeline: T;
 }
 
@@ -116,7 +119,7 @@ export class RemotePipelineStorageDriver implements PipelineStorageDriver<Remote
       await this.connect(),
     );
     return {
-      content: yaml.dump(cloudPipelineToComponentSpec(pipeline)),
+      content: componentSpecToYaml(cloudPipelineToComponentSpec(pipeline)),
       descriptor: this.describe(pipeline),
     };
   }
@@ -127,9 +130,7 @@ export class RemotePipelineStorageDriver implements PipelineStorageDriver<Remote
     options: PipelineWriteOptions<RemotePipelineDescriptor> = {},
   ): Promise<RemotePipelineDescriptor<CloudPipeline>> {
     const connection = await this.connect();
-    const spec = yaml.load(content, PIPELINE_YAML_LOAD_OPTIONS);
-    if (!isValidComponentSpec(spec))
-      throw new Error("The pipeline is not a valid component definition.");
+    const spec = componentSpecFromYaml(content);
     const existing = options.existing
       ? await this.loadTemplate(options.existing)
       : storageKey.startsWith("remote:")
@@ -151,7 +152,7 @@ export class RemotePipelineStorageDriver implements PipelineStorageDriver<Remote
     );
     return {
       ...this.describe(pipeline),
-      displayName: pipeline.pipeline_name ?? spec.name,
+      displayName: pipeline.pipeline_name ?? spec.name ?? pipeline.file_path,
     };
   }
 
@@ -160,17 +161,21 @@ export class RemotePipelineStorageDriver implements PipelineStorageDriver<Remote
     name: string,
   ): Promise<RemotePipelineDescriptor<CloudPipeline>> {
     const { content, descriptor } = await this.read(storageKey);
-    const spec = yaml.load(content, PIPELINE_YAML_LOAD_OPTIONS);
-    if (!isValidComponentSpec(spec))
-      throw new Error("Invalid pipeline definition.");
+    const spec = componentSpecFromYaml(content);
     spec.name = name;
-    return this.write(storageKey, yaml.dump(spec), { existing: descriptor });
+    return this.write(storageKey, componentSpecToYaml(spec), {
+      existing: descriptor,
+    });
   }
 
   async delete(
     storageKey: string,
     descriptor?: RemotePipelineDescriptor,
   ): Promise<void> {
+    if (!descriptor && !storageKey.startsWith("remote:")) {
+      await deleteCloudPipeline(storageKey, await this.connect());
+      return;
+    }
     this.parseReference(storageKey);
     if (
       descriptor &&

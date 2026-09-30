@@ -13,10 +13,12 @@ import type {
 } from "@/routes/v2/pages/Tangent/workarea/types";
 import {
   formatWorkareaTarget,
+  idIdentity,
   nameIdentity,
   parseIdentity,
   parseWorkareaTarget,
 } from "@/routes/v2/pages/Tangent/workarea/workareaTarget";
+import type { PipelineRef } from "@/services/pipelineStorage/types";
 import { getOverallExecutionStatusFromStats } from "@/utils/executionStatus";
 import { isRecord } from "@/utils/typeGuards";
 
@@ -45,7 +47,7 @@ export interface WorkareaToolDeps {
   getEnvironmentId: (tabId: string) => string | undefined;
   waitForEnvironment: (tabId: string) => Promise<string | undefined>;
   runInspect: RunInspectDeps;
-  clonePipeline: (runId: string) => Promise<{ pipelineName: string }>;
+  clonePipeline: (runId: string) => Promise<PipelineRef>;
   refreshResources: () => Promise<void>;
 }
 
@@ -213,23 +215,25 @@ export function createWorkareaRemoteTools(
     },
     clone_pipeline: {
       description:
-        "Clone the pipeline behind a failed run into a new editable local " +
+        "Clone the pipeline behind a failed run into a new editable " +
         "pipeline so it can be fixed without touching the original. `runId` is " +
         "optional and defaults to the active or only open run tab. The clone is " +
         "attached to the project automatically (it shows up in Resources), so " +
         "you do not need to attach or refresh it yourself. Returns the new " +
-        "pipeline `name` and a `pipeline://name/<name>` `target` to open with " +
+        "pipeline `name` and `target` to open with " +
         "open_workarea_target.",
       inputSchema: RUN_ID_SCHEMA,
       execute: async (args) => {
         const deps = getDeps();
         const runId = resolveRunId(deps, optionalRunId(args));
-        const { pipelineName } = await deps.clonePipeline(runId);
+        const ref = await deps.clonePipeline(runId);
         return {
-          name: pipelineName,
+          name: ref.name,
           target: formatWorkareaTarget({
             type: "pipeline",
-            identity: nameIdentity(pipelineName),
+            identity: ref.fileId
+              ? idIdentity(ref.fileId)
+              : nameIdentity(ref.name),
           }),
         };
       },
