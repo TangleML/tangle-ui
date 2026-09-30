@@ -23,6 +23,7 @@ import {
   ROOT_PATH_ID,
 } from "@/models/componentSpec/validation/collectIssues";
 import { resolveEntityPositions } from "@/routes/v2/shared/nodes/buildUtils";
+import type { ArgumentType } from "@/utils/componentSpec";
 
 const DEFAULT_POSITION = { x: 250, y: 250 };
 const POSITION_OFFSET = 200;
@@ -37,6 +38,8 @@ export interface BridgeDeps {
   getEdges?: () => Edge[];
   getBackendUrl?: () => string;
   getAuthToken?: () => string | undefined;
+  getSavedTaskArguments?: () => Record<string, ArgumentType>;
+  prepareSourcePipeline?: (backendUrl: string) => Promise<string | undefined>;
   getRunAnnotations?: () => Record<string, string>;
   queryClient?: QueryClient;
 }

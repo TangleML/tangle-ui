@@ -10,6 +10,7 @@ import { saveUndoHistory } from "@/routes/v2/pages/Editor/utils/undoHistoryStora
 import { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import { PipelineFolder } from "@/services/pipelineStorage/PipelineFolder";
 import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
+import { remotePipelineReference } from "@/services/pipelineStorage/remotePipelineRecovery";
 import { AUTOSAVE_DEBOUNCE_TIME_MS } from "@/utils/constants";
 
 import { AutoSaveStore } from "./autoSaveStore";
@@ -107,6 +108,83 @@ describe("AutoSaveStore", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
+  });
+
+  describe("preparing a run source", () => {
+    const backendUrl = "https://backend.example.com";
+    const id = "00000000-0000-4000-8000-000000000001";
+
+    it("leaves local-only and connected-file submissions unchanged", async () => {
+      const { store, write } = setup();
+      await expect(store.prepareRunSource(backendUrl)).resolves.toBeUndefined();
+      expect(write).not.toHaveBeenCalled();
+    });
+
+    it("finishes a local pipeline's first upload and returns its new ID", async () => {
+      const { store, remote, storage } = setupRemote();
+      vi.spyOn(remote, "referenceId", "get").mockReturnValue(
+        remotePipelineReference(backendUrl, id),
+      );
+      await expect(store.prepareRunSource(`${backendUrl}/`)).resolves.toBe(id);
+      expect(storage.migratePipeline).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not force existing remote drafts to match the saved definition", async () => {
+      const { store, file, write, spec } = setupRemoteEditor();
+      vi.spyOn(file, "referenceId", "get").mockReturnValue(
+        remotePipelineReference(backendUrl, id),
+      );
+      spec.setDescription("Unsaved editor snapshot");
+      await expect(store.prepareRunSource(backendUrl)).resolves.toBe(id);
+      expect(write).not.toHaveBeenCalled();
+    });
+
+    it("retries a pending upload before returning an identity", async () => {
+      const { store, file, write } = setup();
+      const kind = vi
+        .spyOn(file, "storageKind", "get")
+        .mockReturnValue("pending");
+      vi.spyOn(file, "referenceId", "get").mockReturnValue(
+        remotePipelineReference(backendUrl, id),
+      );
+      write.mockImplementation(async () => {
+        kind.mockReturnValue("remote");
+      });
+      await expect(store.prepareRunSource(backendUrl)).resolves.toBe(id);
+      expect(write).toHaveBeenCalledTimes(1);
+    });
+
+    it("rejects failed initial uploads", async () => {
+      const { store, storage } = setupRemote();
+      storage.migratePipeline.mockRejectedValue(new Error("Upload failed"));
+      await expect(store.prepareRunSource(backendUrl)).rejects.toThrow(
+        "Upload failed",
+      );
+    });
+
+    it("rejects a remote identity from another backend", async () => {
+      const { store, file } = setupRemoteEditor();
+      vi.spyOn(file, "referenceId", "get").mockReturnValue(
+        remotePipelineReference("https://other.example.com", id),
+      );
+      await expect(store.prepareRunSource(backendUrl)).rejects.toThrow(
+        "run's backend",
+      );
+    });
+
+    it("does not associate a submission with a pipeline opened during the upload", async () => {
+      const { store, files, storage, remote } = setupRemote();
+      vi.spyOn(remote, "referenceId", "get").mockReturnValue(
+        remotePipelineReference(backendUrl, id),
+      );
+      storage.migratePipeline.mockImplementation(async () => {
+        files.init(createFile("Another pipeline"));
+        return remote;
+      });
+      await expect(store.prepareRunSource(backendUrl)).rejects.toThrow(
+        "open pipeline changed",
+      );
+    });
   });
 
   it("does not overwrite the server when opening or closing an unchanged pipeline", async () => {

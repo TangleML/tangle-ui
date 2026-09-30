@@ -22,7 +22,11 @@ import {
 const MAX_VISIBLE_BADGES = 4;
 
 type FilterBadgeKey =
-  "pipeline_name" | "created_by" | "date_range" | `annotation-${number}`;
+  | "pipeline_name"
+  | "saved_pipeline_id"
+  | "created_by"
+  | "date_range"
+  | `annotation-${number}`;
 
 interface PipelineRunFiltersBarProps {
   totalCount?: number;
@@ -105,6 +109,14 @@ export function PipelineRunFiltersBar({
     label: string;
     onRemove: () => void;
   }> = [];
+
+  if (filters.saved_pipeline_id) {
+    allBadges.push({
+      key: "saved_pipeline_id",
+      label: `Saved pipeline: ${filters.saved_pipeline_id}`,
+      onRemove: () => setFilter("saved_pipeline_id", undefined),
+    });
+  }
 
   if (filters.pipeline_name) {
     allBadges.push({
@@ -205,7 +217,11 @@ export function PipelineRunFiltersBar({
           onChange={(value) => setFilterDebounced("created_by", value)}
           onClear={() => setFilter("created_by", undefined)}
           defaultValue={
-            isCreatedByMeDefault && !filters.created_by ? "me" : undefined
+            isCreatedByMeDefault &&
+            !filters.created_by &&
+            !filters.saved_pipeline_id
+              ? "me"
+              : undefined
           }
         />
 

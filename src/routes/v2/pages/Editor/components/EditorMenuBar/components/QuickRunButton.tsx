@@ -62,7 +62,7 @@ export const QuickRunButton = observer(function QuickRunButton({
 }: QuickRunButtonProps &
   Omit<ComponentProps<typeof TooltipButton>, "tooltip" | "variant" | "size">) {
   const { navigation } = useSharedStores();
-  const { pipelineFile } = useEditorSession();
+  const { autoSave, pipelineFile } = useEditorSession();
   const { isAuthorized } = useAwaitAuthorization();
   const { registerSubmitter, submitRun, submitWithArguments } =
     useQuickRunSubmitter();
@@ -143,6 +143,9 @@ export const QuickRunButton = observer(function QuickRunButton({
         <div ref={registerSubmitter} className="sr-only">
           <TangleSubmitter
             componentSpec={serializedPipelineSpec}
+            prepareSourcePipeline={(backendUrl) =>
+              autoSave.prepareRunSource(backendUrl)
+            }
             isComponentTreeValid={rootSpec?.isValid}
             onlyFixableIssues={!hasErrors && allIssues.length > 0}
             savedTaskArguments={

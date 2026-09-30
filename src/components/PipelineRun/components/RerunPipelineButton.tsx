@@ -1,4 +1,4 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { type ComponentPropsWithoutRef, useCallback } from "react";
 
@@ -13,9 +13,13 @@ import { useBackend } from "@/providers/BackendProvider";
 import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
 import { useRunSubmissionAnnotations } from "@/providers/RunSubmissionScopeProvider";
 import { getDefaultRunPath } from "@/routes/runRoutes";
+import { fetchRunAnnotations } from "@/services/pipelineRunService";
 import type { PipelineRun } from "@/types/pipelineRun";
 import { extractCanonicalName } from "@/utils/canonicalPipelineName";
 import type { ArgumentType, ComponentSpec } from "@/utils/componentSpec";
+import { TWENTY_FOUR_HOURS_IN_MS } from "@/utils/constants";
+import { getRunSourcePipelineId } from "@/utils/pipelineRunSource";
+import { REMOTE_PIPELINES_ENABLED } from "@/utils/remotePipelines";
 import { submitPipelineRun } from "@/utils/submitPipeline";
 
 type RerunPipelineButtonProps = {
@@ -39,14 +43,19 @@ export const RerunPipelineButton = ({
   const navigate = useNavigate();
   const notify = useToastNotification();
   const executionData = useExecutionDataOptional();
+  const queryClient = useQueryClient();
   const runAnnotations = useRunSubmissionAnnotations();
 
   const { awaitAuthorization, isAuthorized } = useAwaitAuthorization();
   const { getToken } = useAuthLocalStorage();
 
-  const onSuccess = useCallback((response: PipelineRun) => {
-    navigate({ to: getDefaultRunPath(response.id) });
-  }, []);
+  const onSuccess = useCallback(
+    (response: PipelineRun) => {
+      void queryClient.invalidateQueries({ queryKey: ["runs", backendUrl] });
+      navigate({ to: getDefaultRunPath(response.id) });
+    },
+    [backendUrl, navigate, queryClient],
+  );
 
   const onError = useCallback(
     (error: Error | string) => {
@@ -72,9 +81,20 @@ export const RerunPipelineButton = ({
   const { mutate, isPending } = useMutation({
     mutationFn: async () => {
       const authorizationToken = await getAuthToken();
+      const runId = REMOTE_PIPELINES_ENABLED
+        ? (executionData?.metadata?.id ?? executionData?.runId)
+        : undefined;
+      const sourceRunAnnotations = runId
+        ? await queryClient.fetchQuery({
+            queryKey: ["pipeline-run-annotations", backendUrl, runId],
+            queryFn: () => fetchRunAnnotations(runId, backendUrl),
+            staleTime: TWENTY_FOUR_HOURS_IN_MS,
+          })
+        : undefined;
 
       return new Promise<PipelineRun>((resolve, reject) => {
         submitPipelineRun(componentSpec, backendUrl, {
+          sourcePipelineId: getRunSourcePipelineId(sourceRunAnnotations),
           canonicalName: extractCanonicalName(
             buildTaskSpecShape(
               executionData?.rootDetails?.task_spec,

@@ -42,6 +42,7 @@ interface TangleSubmitterProps {
   onSubmitComplete?: () => void;
   isComponentTreeValid?: boolean;
   onlyFixableIssues?: boolean;
+  prepareSourcePipeline?: (backendUrl: string) => Promise<string | undefined>;
   savedTaskArguments?: Record<string, ArgumentType>;
 }
 
@@ -61,11 +62,13 @@ function useSubmitPipeline() {
       taskArguments,
       onSuccess,
       onError,
+      prepareSourcePipeline,
     }: {
       componentSpec: ComponentSpec;
       taskArguments?: Record<string, ArgumentType>;
       onSuccess: (data: PipelineRun) => void;
       onError: (error: Error | string) => void;
+      prepareSourcePipeline?: TangleSubmitterProps["prepareSourcePipeline"];
     }) => {
       const authorizationRequired = isAuthorizationRequired();
       if (authorizationRequired && !isAuthorized) {
@@ -79,6 +82,7 @@ function useSubmitPipeline() {
         submitPipelineRun(componentSpec, backendUrl, {
           authorizationToken: authorizationToken.current,
           taskArguments,
+          prepareSourcePipeline,
           runAnnotations,
           onSuccess: (data) => {
             resolve(data);
@@ -95,6 +99,7 @@ function useSubmitPipeline() {
       await queryClient.invalidateQueries({
         queryKey: ["pipelineRuns"],
       });
+      await queryClient.invalidateQueries({ queryKey: ["runs", backendUrl] });
       // Refresh the onboarding checklist's run-count so a first run flips
       // `execute_run` immediately rather than after the 5-minute stale window.
       await queryClient.invalidateQueries({
@@ -109,6 +114,7 @@ const TangleSubmitter = ({
   onSubmitComplete,
   isComponentTreeValid = true,
   onlyFixableIssues = false,
+  prepareSourcePipeline,
   savedTaskArguments,
 }: TangleSubmitterProps) => {
   const { isAuthorized } = useAwaitAuthorization();
@@ -235,6 +241,7 @@ const TangleSubmitter = ({
       taskArguments: submissionArguments,
       onSuccess,
       onError,
+      prepareSourcePipeline,
     });
   };
 
