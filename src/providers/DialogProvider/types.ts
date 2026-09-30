@@ -17,10 +17,8 @@ export interface DialogConfig<T = unknown, TProps = {}> {
 // DialogInstance uses `any` for resolve/reject because the dialog stack is
 // heterogeneous — different dialogs have different T. Using `unknown` here
 // would break variance when constructing instances from Promise callbacks.
-export interface DialogInstance<T = unknown, TProps = {}> extends DialogConfig<
-  T,
-  TProps
-> {
+export interface DialogInstance<T = unknown, TProps = {}>
+  extends DialogConfig<T, TProps> {
   id: string;
 
   resolve: (value: any) => void;

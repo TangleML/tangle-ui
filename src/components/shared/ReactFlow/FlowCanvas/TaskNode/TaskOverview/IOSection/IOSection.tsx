@@ -78,7 +78,9 @@ const IOSection = ({ taskSpec, executionId, readOnly }: IOSectionProps) => {
   const retentionDays = getArtifactRetentionDays();
 
   type StorageStatus =
-    { expired: true } | { expired: false; expiryDate: string } | null;
+    | { expired: true }
+    | { expired: false; expiryDate: string }
+    | null;
 
   let storageStatus: StorageStatus = null;
   if (retentionDays !== null && metadata?.created_at) {

@@ -40,7 +40,8 @@ const blockStackVariants = cva("flex flex-col w-full", {
 });
 
 interface BlockStackProps
-  extends AriaAttributes, VariantProps<typeof blockStackVariants> {
+  extends AriaAttributes,
+    VariantProps<typeof blockStackVariants> {
   /** HTML Element type
    * @default 'div'
    */
@@ -118,7 +119,8 @@ const inlineStackVariants = cva("flex flex-row", {
 });
 
 interface InlineStackProps
-  extends AriaAttributes, VariantProps<typeof inlineStackVariants> {
+  extends AriaAttributes,
+    VariantProps<typeof inlineStackVariants> {
   /** HTML Element type
    * @default 'div'
    */

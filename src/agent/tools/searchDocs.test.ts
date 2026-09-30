@@ -114,8 +114,9 @@ describe("executeSearchDocs", () => {
       data: [{ embedding: [0.9, 0.1, 0, 0, 0, 0] }],
     });
 
-    const { executeSearchDocs, DocsVectorStoreCache } =
-      await import("./searchDocs");
+    const { executeSearchDocs, DocsVectorStoreCache } = await import(
+      "./searchDocs"
+    );
     const raw = await executeSearchDocs(
       { query: "what is a task?", topK: 2 },
       fakeProvider,
@@ -150,8 +151,9 @@ describe("executeSearchDocs", () => {
       data: [{ embedding: [1, 1, 1, 1, 1, 1] }],
     });
 
-    const { executeSearchDocs, DocsVectorStoreCache } =
-      await import("./searchDocs");
+    const { executeSearchDocs, DocsVectorStoreCache } = await import(
+      "./searchDocs"
+    );
     const raw = await executeSearchDocs(
       { query: "anything" },
       fakeProvider,
@@ -165,8 +167,9 @@ describe("executeSearchDocs", () => {
   it("returns the populate-instruction message when the index is empty", async () => {
     fetchMock.mockResolvedValue(jsonResponse(makeEmptyStore()));
 
-    const { executeSearchDocs, DocsVectorStoreCache } =
-      await import("./searchDocs");
+    const { executeSearchDocs, DocsVectorStoreCache } = await import(
+      "./searchDocs"
+    );
     const raw = await executeSearchDocs(
       { query: "anything" },
       fakeProvider,
@@ -191,8 +194,9 @@ describe("executeSearchDocs", () => {
       data: [{ embedding: basisVector(0) }],
     });
 
-    const { executeSearchDocs, DocsVectorStoreCache } =
-      await import("./searchDocs");
+    const { executeSearchDocs, DocsVectorStoreCache } = await import(
+      "./searchDocs"
+    );
 
     await executeSearchDocs(
       { query: "first" },
@@ -220,8 +224,9 @@ describe("executeSearchDocs", () => {
       data: [{ embedding: basisVector(0) }],
     });
 
-    const { executeSearchDocs, DocsVectorStoreCache } =
-      await import("./searchDocs");
+    const { executeSearchDocs, DocsVectorStoreCache } = await import(
+      "./searchDocs"
+    );
     const raw = await executeSearchDocs(
       { query: "hello" },
       fakeProvider,

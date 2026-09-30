@@ -14,7 +14,10 @@ export function asTourStep(step: StepType | undefined): TourStep | undefined {
 }
 
 export type CountInteraction =
-  "add-task" | "add-input" | "add-output" | "connect-edge";
+  | "add-task"
+  | "add-input"
+  | "add-output"
+  | "connect-edge";
 
 export function isCountInteraction(
   interaction: TourStep["interaction"],

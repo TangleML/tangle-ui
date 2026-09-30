@@ -13,7 +13,8 @@ interface CodeViewerHeaderControls {
 }
 
 export type CodeViewerHeaderActions =
-  ReactNode | ((controls: CodeViewerHeaderControls) => ReactNode);
+  | ReactNode
+  | ((controls: CodeViewerHeaderControls) => ReactNode);
 
 interface CodeViewerProps {
   code: string;

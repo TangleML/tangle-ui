@@ -52,7 +52,9 @@ export function useRunComparisonSide(runId: string): RunComparisonSide {
 
   const spec =
     (details?.task_spec.componentRef.spec as
-      ComponentSpec | null | undefined) ?? undefined;
+      | ComponentSpec
+      | null
+      | undefined) ?? undefined;
 
   const taskStatusMap = buildTaskExecutionStatusMap(details, state);
 

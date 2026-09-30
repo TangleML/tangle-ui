@@ -4,7 +4,10 @@ import type { Edge, Node, XYPosition } from "@xyflow/react";
 import { DEFAULT_NODE_DIMENSIONS } from "@/utils/constants";
 
 export type LayoutAlgorithm =
-  "sugiyama" | "sugiyama_centered" | "digco" | "dwyer";
+  | "sugiyama"
+  | "sugiyama_centered"
+  | "digco"
+  | "dwyer";
 
 export const autoLayoutNodes = (
   nodes: Node[],

@@ -74,7 +74,12 @@ interface FileSystemObserverCallback {
 interface FileSystemChangeRecord {
   changedHandle: FileSystemHandle;
   type:
-    "appeared" | "disappeared" | "modified" | "moved" | "errored" | "unknown";
+    | "appeared"
+    | "disappeared"
+    | "modified"
+    | "moved"
+    | "errored"
+    | "unknown";
   relativePathComponents: string[];
   relativePathMovedFrom?: string[];
   root: FileSystemHandle;

@@ -3,7 +3,9 @@
  * is filled in, so views never have to guess it back out of the run data.
  */
 export type CompareMode =
-  { kind: "empty" } | { kind: "single"; side: "a" | "b" } | { kind: "both" };
+  | { kind: "empty" }
+  | { kind: "single"; side: "a" | "b" }
+  | { kind: "both" };
 
 /**
  * The same run in both slots counts as one selection, not a comparison: a run

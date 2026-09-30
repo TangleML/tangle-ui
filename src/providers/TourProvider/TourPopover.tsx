@@ -72,7 +72,12 @@ interface PositionProps {
 }
 
 type ResolvedPosition =
-  "top" | "right" | "bottom" | "left" | "center" | [number, number];
+  | "top"
+  | "right"
+  | "bottom"
+  | "left"
+  | "center"
+  | [number, number];
 
 export function computeDefaultPopoverPosition(
   props: PositionProps,

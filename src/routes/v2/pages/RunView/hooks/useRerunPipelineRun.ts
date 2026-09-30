@@ -78,7 +78,8 @@ export function useRerunPipelineRun(componentSpec?: ComponentSpec) {
       componentSpec,
       canonicalName,
       taskArguments: rootDetails?.task_spec.arguments as
-        Record<string, ArgumentType> | undefined,
+        | Record<string, ArgumentType>
+        | undefined,
     });
   };
 

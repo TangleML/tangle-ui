@@ -70,7 +70,8 @@ interface EmbeddedEditorAgentBoundaryProps {
   onBridgeClosed?: () => void;
 }
 
-interface EmbeddedPipelineEditorCanvasProps extends EmbeddedEditorAgentBoundaryProps {
+interface EmbeddedPipelineEditorCanvasProps
+  extends EmbeddedEditorAgentBoundaryProps {
   pipelineRef: PipelineRef;
   isActive: boolean;
 }

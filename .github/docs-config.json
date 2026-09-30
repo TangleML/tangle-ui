@@ -22,7 +22,13 @@
     {
       "id": "pipeline-management",
       "description": "Creating, organizing, importing, and exporting pipelines — the pipeline library, folders, favorites, and YAML import/export",
-      "routes": ["/pipelines", "/pipeline-folders", "/favorites", "/recently-viewed", "/app/editor/import-pipeline"]
+      "routes": [
+        "/pipelines",
+        "/pipeline-folders",
+        "/favorites",
+        "/recently-viewed",
+        "/app/editor/import-pipeline"
+      ]
     },
     {
       "id": "pipeline-execution-settings",
@@ -31,12 +37,20 @@
     {
       "id": "secrets",
       "description": "Storing, replacing, and managing secrets used by pipeline components",
-      "routes": ["/settings/secrets", "/settings/secrets/add", "/settings/secrets/$secretId/replace"]
+      "routes": [
+        "/settings/secrets",
+        "/settings/secrets/add",
+        "/settings/secrets/$secretId/replace"
+      ]
     },
     {
       "id": "settings",
       "description": "Backend connection configuration, user preferences, and beta feature toggles",
-      "routes": ["/settings/backend", "/settings/preferences", "/settings/beta-features"]
+      "routes": [
+        "/settings/backend",
+        "/settings/preferences",
+        "/settings/beta-features"
+      ]
     },
     {
       "id": "dashboard",

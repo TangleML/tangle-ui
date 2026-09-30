@@ -18,7 +18,11 @@ import { getComponentName } from "@/utils/getComponentName";
 import { expandSynonymTokens } from "./componentSearchSynonyms";
 
 export type MatchField =
-  "name" | "description" | "io" | "implementation" | "metadata";
+  | "name"
+  | "description"
+  | "io"
+  | "implementation"
+  | "metadata";
 
 /**
  * Where a component came from. Threaded through to UI cards as a source badge so users can tell a

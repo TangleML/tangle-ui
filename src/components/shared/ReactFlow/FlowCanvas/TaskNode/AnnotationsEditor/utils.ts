@@ -119,7 +119,8 @@ interface LauncherProvider<Cluster> {
 // A platform section either groups clusters or is one target itself, so it may carry
 // either shape's fields.
 interface LauncherSection
-  extends LauncherProvider<LauncherClusterCommon>, LauncherClusterCommon {}
+  extends LauncherProvider<LauncherClusterCommon>,
+    LauncherClusterCommon {}
 
 export interface LauncherConfig {
   gke?: LauncherProvider<LauncherGkeCluster>;

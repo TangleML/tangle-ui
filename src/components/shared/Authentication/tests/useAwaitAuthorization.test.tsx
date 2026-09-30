@@ -108,7 +108,9 @@ describe("useAwaitAuthorization()", () => {
     // Mock HuggingFace popup hook (called unconditionally due to React rules)
     const mockUseHuggingFaceAuthPopup = vi.mocked(
       (
-        await import("@/components/shared/HuggingFaceAuth/useHuggingFaceAuthPopup")
+        await import(
+          "@/components/shared/HuggingFaceAuth/useHuggingFaceAuthPopup"
+        )
       ).useHuggingFaceAuthPopup,
     );
     mockUseHuggingFaceAuthPopup.mockReturnValue(mockPopupHandlers);

@@ -72,7 +72,8 @@ export const QuickRunButton = observer(function QuickRunButton({
   const hasConfigurableInputs = (rootSpec?.inputs?.length ?? 0) > 0;
 
   let serializedPipelineSpec:
-    ReturnType<typeof serializeComponentSpec> | undefined;
+    | ReturnType<typeof serializeComponentSpec>
+    | undefined;
   try {
     serializedPipelineSpec = rootSpec
       ? deepClone(serializeComponentSpec(rootSpec))

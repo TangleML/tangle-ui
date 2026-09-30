@@ -33,7 +33,8 @@ const messageBubbleVariants = cva(
 );
 
 interface MessageBubbleProps
-  extends PropsWithChildren, VariantProps<typeof messageBubbleVariants> {
+  extends PropsWithChildren,
+    VariantProps<typeof messageBubbleVariants> {
   variant: "user" | "assistant";
   className?: string;
 }

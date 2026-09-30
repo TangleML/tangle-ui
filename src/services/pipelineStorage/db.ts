@@ -22,8 +22,9 @@ pipelineStorageDb.on("ready", async () => {
   const count = await pipelineStorageDb.pipeline_registry.count();
   if (count > 0) return;
 
-  const { getAllComponentFilesFromList } =
-    await import("@/utils/componentStore");
+  const { getAllComponentFilesFromList } = await import(
+    "@/utils/componentStore"
+  );
   const knownPipelines = await getAllComponentFilesFromList(
     USER_PIPELINES_LIST_NAME,
   );

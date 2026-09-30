@@ -41,7 +41,8 @@ export interface MutationResult {
 }
 
 type TargetResolution<K extends LocatedEntityKind> =
-  { ok: true; location: EntityLocationOf<K> } | { ok: false; error: string };
+  | { ok: true; location: EntityLocationOf<K> }
+  | { ok: false; error: string };
 
 function describeEntity(location: EntityLocation, entityId: string): string {
   const name = locatedEntityName(location);

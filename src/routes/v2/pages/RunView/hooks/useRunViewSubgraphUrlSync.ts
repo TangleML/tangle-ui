@@ -13,12 +13,14 @@ import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 interface SubgraphExecutionSource {
   runId: string | null | undefined;
   details:
-    { child_task_execution_ids?: Record<string, string> | null } | undefined;
+    | { child_task_execution_ids?: Record<string, string> | null }
+    | undefined;
   segments: { executionId: string }[];
 }
 
 type ResolvedExecutionId =
-  { skip: true } | { skip: false; executionId: string | undefined };
+  | { skip: true }
+  | { skip: false; executionId: string | undefined };
 
 interface ResolveSubgraphExecutionIdInput {
   path: string[];

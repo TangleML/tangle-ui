@@ -31,10 +31,8 @@ function measureContentHeight(el: HTMLTextAreaElement, formula: string): void {
   el.style.setProperty("--content-h", `${scrollH + borderY}px`);
 }
 
-interface AutoGrowTextareaProps extends Omit<
-  ComponentProps<typeof Textarea>,
-  "onChange" | "value"
-> {
+interface AutoGrowTextareaProps
+  extends Omit<ComponentProps<typeof Textarea>, "onChange" | "value"> {
   maxGrowHeight?: string;
   expandDialogTitle?: ReactNode;
   onChangeComplete?: (value: string) => void;

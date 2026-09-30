@@ -42,17 +42,18 @@ vi.mock("@/services/executionService", () => ({
   fetchContainerLog: (...args: unknown[]) => fetchContainerLogMock(...args),
 }));
 
-const submitPipelineRunHelperMock = vi.fn<
-  (
-    _spec: unknown,
-    _url: string,
-    options: {
-      authorizationToken?: string;
-      onSuccess?: (data: unknown) => void;
-      onError?: (error: Error) => void;
-    },
-  ) => void
->();
+const submitPipelineRunHelperMock =
+  vi.fn<
+    (
+      _spec: unknown,
+      _url: string,
+      options: {
+        authorizationToken?: string;
+        onSuccess?: (data: unknown) => void;
+        onError?: (error: Error) => void;
+      },
+    ) => void
+  >();
 
 vi.mock("@/utils/submitPipeline", () => ({
   submitPipelineRun: (...args: unknown[]) =>
@@ -231,10 +232,7 @@ function makeEmptyBridge() {
 const TEST_BACKEND_URL = "http://backend.test";
 
 function makeBackendBridge(
-  overrides: {
-    authToken?: string;
-    queryClient?: QueryClient;
-  } = {},
+  overrides: { authToken?: string; queryClient?: QueryClient } = {},
 ) {
   const spec = buildSpec();
   const undo = new RecordingUndo();

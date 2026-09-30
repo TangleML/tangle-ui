@@ -26,7 +26,12 @@ import type { ArgumentType, ComponentReference } from "@/models/componentSpec";
 import type { ToolBridgeApi } from "../toolBridgeApi";
 
 type JsonValue =
-  string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+  | string
+  | number
+  | boolean
+  | null
+  | JsonValue[]
+  | { [key: string]: JsonValue };
 
 function asJson(value: unknown): string {
   return JSON.stringify(value);

@@ -2,7 +2,12 @@ import type { ComponentReference } from "./componentSpec";
 import { getComponentName } from "./getComponentName";
 
 type ComponentSource =
-  "user" | "library" | "published" | "url" | "file" | "unknown";
+  | "user"
+  | "library"
+  | "published"
+  | "url"
+  | "file"
+  | "unknown";
 
 export type ComponentLibraryEntryPoint =
   | "favorite_button"

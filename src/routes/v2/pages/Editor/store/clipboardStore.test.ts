@@ -17,8 +17,9 @@ import { ClipboardStore } from "./clipboardStore";
  * against a stand-in that snapshots and clones tasks the same way.
  */
 vi.mock("@/routes/v2/pages/Editor/nodes", async () => {
-  const { Task: TaskModel } =
-    await import("@/models/componentSpec/entities/task");
+  const { Task: TaskModel } = await import(
+    "@/models/componentSpec/entities/task"
+  );
 
   const snapshot = (spec: ComponentSpec, entityId: string) => {
     const task = spec.tasks.find((t) => t.$id === entityId);

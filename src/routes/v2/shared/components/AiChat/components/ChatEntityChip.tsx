@@ -3,10 +3,8 @@ import { type ButtonHTMLAttributes, forwardRef } from "react";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 
-interface ChatEntityChipProps extends Omit<
-  ButtonHTMLAttributes<HTMLButtonElement>,
-  "type"
-> {
+interface ChatEntityChipProps
+  extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "type"> {
   icon: IconName;
   label: string;
 }
