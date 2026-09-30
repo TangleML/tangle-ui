@@ -13,6 +13,7 @@ import { NewProjectCard } from "./NewProjectCard";
 import { ProjectCard } from "./ProjectCard";
 import { PROJECT_GRID } from "./projectGrid";
 import { useMyProjects } from "./useMyProjects";
+import { usePinnedProjects } from "./usePinnedProjects";
 
 const LoadingProjects = () => (
   <InlineStack gap="2" blockAlign="center">
@@ -48,7 +49,8 @@ export function ProjectsSection() {
 
 function ProjectsGrid() {
   const {
-    projects,
+    projects: allProjects,
+    createdBy,
     totalCount,
     isPending,
     error,
@@ -57,6 +59,23 @@ function ProjectsGrid() {
     loadMore,
   } = useMyProjects();
   const { data: workspaces } = useWorkspaces();
+  const { projects: pinned } = usePinnedProjects();
+
+  // Pinned projects lead the grid, and are dropped from the tail so a pinned
+  // project of the caller's own moves rather than appearing twice. A pinned
+  // project someone else made was never in this list to be dropped from.
+  const pinnedIds = new Set(pinned.map((project) => project.id));
+  const rest = allProjects.filter((project) => !pinnedIds.has(project.id));
+  const shown = pinned.length + rest.length;
+
+  // Counted by authorship rather than by what has been paged in: a pinned
+  // project of the caller's own is inside `totalCount` whether or not its page
+  // has been fetched yet. Without a resolved user the list is everyone's, so
+  // every pinned project is already in there.
+  const sharedPins = createdBy
+    ? pinned.filter((project) => project.createdBy !== createdBy).length
+    : 0;
+  const available = totalCount + sharedPins;
 
   if (isPending) {
     return <LoadingProjects />;
@@ -91,7 +110,10 @@ function ProjectsGrid() {
             trigger={<NewProjectCard />}
           />
         )}
-        {projects.map((project) => (
+        {pinned.map((project) => (
+          <ProjectCard key={project.id} project={project} />
+        ))}
+        {rest.map((project) => (
           <ProjectCard key={project.id} project={project} />
         ))}
       </div>
@@ -101,7 +123,7 @@ function ProjectsGrid() {
             {isLoadingMore ? "Loading..." : "Load more projects"}
           </Button>
           <Text size="sm" tone="subdued">
-            {`Showing ${projects.length} of ${totalCount}.`}
+            {`Showing ${shown} of ${available}.`}
           </Text>
         </InlineStack>
       )}

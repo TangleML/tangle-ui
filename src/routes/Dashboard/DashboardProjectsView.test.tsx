@@ -25,7 +25,7 @@ describe("DashboardProjectsView", () => {
       screen.getByRole("heading", { level: 1, name: "Tangent" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { level: 2, name: "My Projects" }),
+      screen.getByRole("heading", { level: 2, name: "Projects" }),
     ).toBeInTheDocument();
   });
 
@@ -33,7 +33,7 @@ describe("DashboardProjectsView", () => {
     render(<DashboardProjectsView />);
 
     const prompt = screen.getByLabelText("Start a new session");
-    const projects = screen.getByRole("heading", { name: "My Projects" });
+    const projects = screen.getByRole("heading", { name: "Projects" });
 
     expect(
       prompt.compareDocumentPosition(projects) &

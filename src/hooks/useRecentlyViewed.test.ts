@@ -1,6 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { act, renderHook } from "@testing-library/react";
+import { beforeEach, describe, expect, it } from "vitest";
 
-import { parseRecent, type RecentItem } from "./useRecentlyViewed";
+import {
+  addRecentlyViewed,
+  parseRecent,
+  type RecentItem,
+  removeRecentlyViewed,
+  useRecentlyViewed,
+} from "./useRecentlyViewed";
 
 describe("parseRecent", () => {
   it("keeps well-formed items", () => {
@@ -44,5 +51,55 @@ describe("parseRecent", () => {
   it("returns an empty array for invalid JSON or non-array data", () => {
     expect(parseRecent("not json")).toEqual([]);
     expect(parseRecent(JSON.stringify({ not: "an array" }))).toEqual([]);
+  });
+});
+
+describe("removeRecentlyViewed", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  /** A link to a deleted project is offered, clicked, and lands nowhere. */
+  it("forgets the entry for something that no longer exists", () => {
+    addRecentlyViewed({ type: "project", id: "p1", name: "Doomed" });
+    addRecentlyViewed({ type: "project", id: "p2", name: "Kept" });
+
+    removeRecentlyViewed("project", "p1");
+
+    const { result } = renderHook(() => useRecentlyViewed());
+    expect(result.current.recentlyViewed.map((item) => item.id)).toEqual([
+      "p2",
+    ]);
+  });
+
+  it("leaves a different type with the same id alone", () => {
+    addRecentlyViewed({ type: "pipeline", id: "shared-id", name: "Pipeline" });
+    addRecentlyViewed({ type: "project", id: "shared-id", name: "Project" });
+
+    removeRecentlyViewed("project", "shared-id");
+
+    const { result } = renderHook(() => useRecentlyViewed());
+    expect(result.current.recentlyViewed).toHaveLength(1);
+    expect(result.current.recentlyViewed[0].type).toBe("pipeline");
+  });
+
+  /** `storage` events reach the other tabs, never the one that wrote. */
+  it("updates a list already on screen in this tab", () => {
+    addRecentlyViewed({ type: "project", id: "p1", name: "Doomed" });
+    const { result } = renderHook(() => useRecentlyViewed());
+    expect(result.current.recentlyViewed).toHaveLength(1);
+
+    act(() => removeRecentlyViewed("project", "p1"));
+
+    expect(result.current.recentlyViewed).toEqual([]);
+  });
+
+  it("says nothing when there was no such entry", () => {
+    addRecentlyViewed({ type: "project", id: "p1", name: "Kept" });
+    const { result } = renderHook(() => useRecentlyViewed());
+
+    act(() => removeRecentlyViewed("project", "absent"));
+
+    expect(result.current.recentlyViewed).toHaveLength(1);
   });
 });

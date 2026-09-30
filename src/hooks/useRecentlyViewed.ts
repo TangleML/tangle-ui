@@ -8,7 +8,13 @@ const MAX_ITEMS = 100;
 
 type RecentKey = typeof RECENTLY_VIEWED_KEY | typeof RECENTLY_USED_KEY;
 
-const RECENT_ITEM_TYPES = ["pipeline", "run", "component", "tour"] as const;
+const RECENT_ITEM_TYPES = [
+  "pipeline",
+  "run",
+  "component",
+  "tour",
+  "project",
+] as const;
 
 type RecentItemType = (typeof RECENT_ITEM_TYPES)[number];
 
@@ -52,29 +58,55 @@ function readRecent(key: RecentKey): RecentItem[] {
   return json ? parseRecent(json) : [];
 }
 
+// `storage` events only reach the other tabs, so a write here tells this one.
+const listeners = new Set<(key: RecentKey) => void>();
+
+function writeRecent(key: RecentKey, items: RecentItem[]) {
+  storage.setItem(key, items);
+  listeners.forEach((listener) => listener(key));
+}
+
+function withoutItem(
+  items: RecentItem[],
+  type: RecentItemType,
+  id: string,
+): RecentItem[] {
+  return items.filter((item) => !(item.type === type && item.id === id));
+}
+
 function addRecent(key: RecentKey, item: Omit<RecentItem, "timestamp">) {
+  const deduped = withoutItem(readRecent(key), item.type, item.id);
+  writeRecent(
+    key,
+    [{ ...item, timestamp: Date.now() }, ...deduped].slice(0, MAX_ITEMS),
+  );
+}
+
+function removeRecent(key: RecentKey, type: RecentItemType, id: string) {
   const current = readRecent(key);
-  const deduped = current.filter(
-    (existing) => !(existing.type === item.type && existing.id === item.id),
-  );
-  const updated = [{ ...item, timestamp: Date.now() }, ...deduped].slice(
-    0,
-    MAX_ITEMS,
-  );
-  storage.setItem(key, updated);
+  const remaining = withoutItem(current, type, id);
+  if (remaining.length === current.length) return;
+  writeRecent(key, remaining);
 }
 
 function useRecent(key: RecentKey): RecentItem[] {
   const [items, setItems] = useState<RecentItem[]>(() => readRecent(key));
 
   useEffect(() => {
+    const reread = () => setItems(readRecent(key));
     const handleStorage = (e: StorageEvent) => {
-      if (e.key === key) {
-        setItems(readRecent(key));
-      }
+      if (e.key === key) reread();
     };
+    const handleLocal = (written: RecentKey) => {
+      if (written === key) reread();
+    };
+
+    listeners.add(handleLocal);
     window.addEventListener("storage", handleStorage);
-    return () => window.removeEventListener("storage", handleStorage);
+    return () => {
+      listeners.delete(handleLocal);
+      window.removeEventListener("storage", handleStorage);
+    };
   }, [key]);
 
   return items;
@@ -86,6 +118,16 @@ export function useRecentlyViewed() {
 
 export function addRecentlyViewed(item: Omit<RecentItem, "timestamp">) {
   addRecent(RECENTLY_VIEWED_KEY, item);
+}
+
+/**
+ * Forgets something that no longer exists. A recent entry is a link, and a link
+ * to a deleted thing is worse than no link: it is offered, clicked, and lands
+ * nowhere.
+ */
+export function removeRecentlyViewed(type: RecentItemType, id: string) {
+  removeRecent(RECENTLY_VIEWED_KEY, type, id);
+  removeRecent(RECENTLY_USED_KEY, type, id);
 }
 
 export function useRecentlyUsed() {
