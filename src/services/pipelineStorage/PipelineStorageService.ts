@@ -68,11 +68,13 @@ export class PipelineStorageService {
   }
 
   async listPendingPipelines(): Promise<PipelineFile[]> {
-    return this.remote?.listPending() ?? [];
+    if (!this.remote) return [];
+    return this.remote.listPending();
   }
 
   async listCachedPipelines(): Promise<PipelineFile[]> {
-    return this.remote?.listCached() ?? [];
+    if (!this.remote) return [];
+    return this.remote.listCached();
   }
 
   constructor(remoteOptions?: RemotePipelineOptions) {

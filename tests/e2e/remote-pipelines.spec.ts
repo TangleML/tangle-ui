@@ -665,8 +665,10 @@ test("bulk deletion is scoped to the selected storage tab", async ({
   const state = await mockBackend(page);
   await addLocalPipeline(page);
   await page.reload();
-  const remoteRow = page.getByRole("row").filter({ hasText: "Remote report" });
-  const localRow = page.getByRole("row").filter({ hasText: "Local report" });
+  // Dialogs temporarily hide the background rows from the accessibility tree.
+  const rows = page.getByRole("row", { includeHidden: true });
+  const remoteRow = rows.filter({ hasText: "Remote report" });
+  const localRow = rows.filter({ hasText: "Local report" });
   await remoteRow.getByRole("checkbox").check();
   await page.getByRole("tab", { name: /^Local pipelines/ }).click();
   await expect(
@@ -680,8 +682,8 @@ test("bulk deletion is scoped to the selected storage tab", async ({
     .getByRole("alertdialog", { name: "Delete 1 pipeline?" })
     .getByRole("button", { name: "Continue", exact: true })
     .click();
-  await expect(localRow).toBeHidden();
-  expect(await readLocalBackup(page)).toBeNull();
+  await expect.poll(() => readLocalBackup(page)).toBeNull();
+  await expect(localRow).toHaveCount(0);
   expect(state.deletes).toEqual([]);
   expect(state.pipelines).toHaveLength(1);
 
@@ -695,8 +697,10 @@ test("bulk deletion is scoped to the selected storage tab", async ({
     .getByRole("alertdialog", { name: "Delete 1 pipeline?" })
     .getByRole("button", { name: "Continue", exact: true })
     .click();
-  await expect(remoteRow).toBeHidden();
-  expect(state.deletes).toEqual([`pipeline-studio/${pipelineId}.yaml`]);
+  await expect
+    .poll(() => state.deletes)
+    .toEqual([`pipeline-studio/${pipelineId}.yaml`]);
+  await expect(remoteRow).toHaveCount(0);
   expect(state.pipelines).toHaveLength(0);
 });
 
