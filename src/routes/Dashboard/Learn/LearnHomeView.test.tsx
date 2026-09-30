@@ -5,6 +5,7 @@ import type { ReactElement, ReactNode } from "react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { OnboardingProvider } from "@/providers/OnboardingProvider/OnboardingProvider";
+import { PipelineStorageProvider } from "@/services/pipelineStorage/PipelineStorageProvider";
 
 import { LearnHomeView } from "./LearnHomeView";
 
@@ -44,7 +45,9 @@ const queryClient = new QueryClient({
 const renderWithClient = (component: ReactElement) =>
   render(
     <QueryClientProvider client={queryClient}>
-      <OnboardingProvider>{component}</OnboardingProvider>
+      <PipelineStorageProvider>
+        <OnboardingProvider>{component}</OnboardingProvider>
+      </PipelineStorageProvider>
     </QueryClientProvider>,
   );
 
