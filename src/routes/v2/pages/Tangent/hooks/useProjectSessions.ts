@@ -14,12 +14,10 @@ interface ProjectSession {
 }
 
 /**
- * Thin `agent_session` wrapper over the generic project-resources client. A
- * Tangent session attaches to a project as a `project_resource` row with
- * `entity = "agent_session"` and `entity_id = <sessionId>`; this hook surfaces
- * those rows as `ProjectSession`s (newest first) and the attach/detach/rename
- * mutations to write them. The row's `name` is the session's display name in
- * Tangle; the shell keeps its own, which nothing here reads.
+ * A session attaches to a project as a resource row carrying its id, so these
+ * are the generic resource reads and writes narrowed to that entity. The row's
+ * `name` is the display name; the shell keeps its own, which nothing here
+ * reads.
  */
 export function useProjectSessions(projectId: string) {
   const query = useProjectResources(projectId, { entity: ["agent_session"] });

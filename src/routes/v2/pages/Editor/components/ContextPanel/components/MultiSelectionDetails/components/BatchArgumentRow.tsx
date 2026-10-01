@@ -192,7 +192,7 @@ export const BatchArgumentRow = observer(function BatchArgumentRow({
           <Text
             size="xs"
             weight="semibold"
-            className="shrink-0 text-gray-700 dark:text-foreground"
+            className="shrink-0 text-foreground"
           >
             {aggArg.name}
           </Text>

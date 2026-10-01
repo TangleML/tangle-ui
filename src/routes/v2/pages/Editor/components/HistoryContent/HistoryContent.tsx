@@ -83,7 +83,7 @@ export const HistoryContent = observer(function HistoryContent() {
                 />
               ))}
             </div>
-            <div className="border-t border-dashed border-slate-300 dark:border-border my-1 mx-2" />
+            <div className="border-t border-dashed border-border my-1 mx-2" />
           </>
         )}
 

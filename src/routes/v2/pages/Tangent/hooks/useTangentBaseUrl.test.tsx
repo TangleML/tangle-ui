@@ -12,7 +12,10 @@ vi.mock("@/providers/BackendProvider", () => ({
 }));
 
 import { DEFAULT_TANGENT_BASE_URL } from "@/routes/v2/pages/Tangent/constants";
-import { ProjectsApiError } from "@/services/projects/errors";
+import {
+  ProjectsApiError,
+  WorkspacesApiError,
+} from "@/services/projects/errors";
 import * as projectsService from "@/services/projects/projectsService";
 import type { Project, Workspace } from "@/services/projects/types";
 import * as workspacesService from "@/services/projects/workspacesService";
@@ -84,8 +87,8 @@ describe("useTangentBaseUrl", () => {
     expect(result.current.isError).toBe(false);
   });
 
-  // A 404 rather than a bare Error: `useProject` retries anything that is not
-  // a 4xx, so a generic failure only reports itself after three backoffs.
+  // A 404 rather than a bare Error: these reads retry anything that is not a
+  // 4xx, so a generic failure only reports itself after three backoffs.
   it("reports an error when the project cannot be loaded", async () => {
     vi.mocked(projectsService.getProject).mockRejectedValue(
       new ProjectsApiError("not found", 404),
@@ -102,7 +105,7 @@ describe("useTangentBaseUrl", () => {
   it("reports an error when the workspace cannot be loaded", async () => {
     vi.mocked(projectsService.getProject).mockResolvedValue(project());
     vi.mocked(workspacesService.getWorkspace).mockRejectedValue(
-      new Error("not found"),
+      new WorkspacesApiError("not found", 404),
     );
 
     const { result } = renderHook(() => useTangentBaseUrl("p1"), {

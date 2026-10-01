@@ -121,9 +121,8 @@ export function addRecentlyViewed(item: Omit<RecentItem, "timestamp">) {
 }
 
 /**
- * Forgets something that no longer exists. A recent entry is a link, and a link
- * to a deleted thing is worse than no link: it is offered, clicked, and lands
- * nowhere.
+ * A recent entry is a link, and a link to a deleted thing is worse than no
+ * link: it is offered, clicked, and lands nowhere.
  */
 export function removeRecentlyViewed(type: RecentItemType, id: string) {
   removeRecent(RECENTLY_VIEWED_KEY, type, id);

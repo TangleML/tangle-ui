@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { useBackend } from "@/providers/BackendProvider";
-import { MINUTES } from "@/utils/constants";
 
 import { getRunExecutionStats, listProjectRuns } from "./projectRunsService";
+import { projectQueryDefaults } from "./queryDefaults";
 import { ProjectRunsQueryKeys } from "./types";
 
 export function useProjectRuns(projectId: string | undefined) {
@@ -18,8 +18,7 @@ export function useProjectRuns(projectId: string | undefined) {
       return listProjectRuns(projectId);
     },
     enabled: configured && available && Boolean(projectId),
-    staleTime: 5 * MINUTES,
-    refetchOnWindowFocus: false,
+    ...projectQueryDefaults,
   });
 }
 
@@ -35,7 +34,6 @@ export function useRunExecutionStats(runId: string | undefined) {
       return getRunExecutionStats(runId);
     },
     enabled: configured && available && Boolean(runId),
-    staleTime: 5 * MINUTES,
-    refetchOnWindowFocus: false,
+    ...projectQueryDefaults,
   });
 }

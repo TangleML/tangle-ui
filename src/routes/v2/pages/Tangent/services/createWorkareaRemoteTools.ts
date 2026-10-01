@@ -22,10 +22,9 @@ import { getOverallExecutionStatusFromStats } from "@/utils/executionStatus";
 import { isRecord } from "@/utils/typeGuards";
 
 /**
- * The read-only run/execution fetches the workarea inspect tools drive. These
- * mirror the same-named `ToolBridgeApi` methods, but are backed by a
- * project-level backend bridge (not any one tab's canvas) so Prime can inspect
- * runs without spawning a sub-agent.
+ * Mirrors the same-named `ToolBridgeApi` methods, but backed by a project-level
+ * bridge rather than any one tab's canvas, so runs can be inspected without
+ * spawning a sub-agent.
  */
 export type RunInspectDeps = Pick<
   ToolBridgeApi,
@@ -88,9 +87,9 @@ function summarize(
 }
 
 /**
- * Opens a target and reports the tab. A pipeline or run tab is held back until
- * its sub-agent host connects or the wait gives up, because the tab is worth
- * little to an agent until it can be spawned into; `ready` says which happened.
+ * A pipeline or run tab is held back until its sub-agent host connects or the
+ * wait gives up, because the tab is worth little to an agent until it can be
+ * spawned into; `ready` says which happened.
  */
 async function openAndSummarize(
   getDeps: () => WorkareaToolDeps,
@@ -157,11 +156,7 @@ function requireExecutionId(args: unknown): string {
   return args.executionId;
 }
 
-/**
- * Resolves which run to inspect: an explicit `runId` wins, else the active run
- * tab, else the only open run tab. Throws a model-friendly error when the
- * choice is ambiguous or there is no run open.
- */
+/** Throws model-readable prose, because the model is what reads the failure. */
 function resolveRunId(deps: WorkareaToolDeps, explicit?: string): string {
   if (explicit) return explicit;
   const runTabs = deps.getTabs().filter((tab) => tab.target.type === "run");
@@ -207,21 +202,17 @@ const EXECUTION_ID_SCHEMA = {
 } as const;
 
 /**
- * The tab-management + run-inspect tools an agent uses to arrange and read the
- * Dynamic Workarea: create a pipeline, open a resource, list open tabs, read
- * the active tab, close a tab, and inspect an open run.
+ * Creating a pipeline belongs here rather than with the canvas tools, which are
+ * a sub-agent's view of an editor already mounted on a loaded pipeline. Nothing
+ * downstream of a tab can bring a pipeline into being, so without this an agent
+ * asked to build one has nowhere to start.
  *
- * Creating one belongs here rather than with the canvas tools, which are a
- * spawned sub-agent's view of an editor that is already mounted on a loaded
- * pipeline. Nothing downstream of a tab can bring a pipeline into being, so
- * without this an agent asked to build one has nowhere to start.
+ * `environmentId` only says whether a tab's sub-agent host is connected: the
+ * server routes spawns to the prompting person's host, so an agent cannot pick
+ * one.
  *
- * Spawnable (pipeline / run) tabs report an `environmentId` that identifies
- * whether that tab's sub-agent host is connected; the server routes spawns to
- * the prompting person's host, so an agent cannot pick one.
- *
- * `getDeps` reads the live handles per call so a single catalog instance always
- * acts on the current tab state without rebuilding the socket connection.
+ * `getDeps` reads the live handles per call so one catalog instance always acts
+ * on the current tab state without rebuilding the socket connection.
  */
 export function createWorkareaRemoteTools(
   getDeps: () => WorkareaToolDeps,

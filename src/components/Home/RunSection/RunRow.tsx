@@ -190,7 +190,7 @@ const RunRow = ({
             onClick={handleShare}
             variant="ghost"
             size="icon"
-            className="w-fit h-fit p-1 text-gray-500/50 dark:text-muted-foreground hover:text-foreground"
+            className="w-fit h-fit p-1 text-muted-foreground hover:text-foreground"
             {...tracking("run_home.table.share_run")}
           >
             <Icon name="Share2" />

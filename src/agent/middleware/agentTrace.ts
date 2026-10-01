@@ -1,13 +1,7 @@
-/**
- * The agent's own record of what it did.
- *
- * Recording happens inside the agent Web Worker, and there is one worker per
- * pipeline tab plus one for the project — so a buffer held in the worker is
- * only ever a fraction of a session, in whichever worker the reader happens to
- * hold. Events are broadcast instead, and collected on the main thread by
- * {@link startAgentTraceLog}, which is the only side that can reach
- * `localStorage`: a worker has no access to it.
- */
+// Recording happens inside the agent Web Worker, one per pipeline tab plus one
+// for the project, so a buffer held there is only ever a fraction of a session.
+// Events are broadcast instead and collected by {@link startAgentTraceLog} on
+// the main thread, the only side that can reach `localStorage`.
 const CHANNEL = "tangle:agent-trace";
 const MAX_PAYLOAD_CHARS = 2000;
 

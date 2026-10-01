@@ -20,14 +20,12 @@ const NAME_LENGTH_LIMIT = 120;
 const SUFFIX_ATTEMPTS = 100;
 
 /**
- * A name nothing is stored under yet, so writing it cannot overwrite anything.
+ * Asks the stored-file list, not the registry. `PipelineFolder.addFile` checks
+ * the registry, but the driver it writes through keys off the file list, which
+ * also holds pipelines that never got a registry row — so a name that passes
+ * that check can still land on top of one of those.
  *
- * `PipelineFolder.addFile` asks the *registry* whether a name is free, while
- * the driver it writes through keys off the stored-file list, which also holds
- * pipelines that never got a registry row. A name that passes that check can
- * therefore still land on top of one of those, so the list is what gets asked
- * here. The length cap keeps a derived name short enough to record in a
- * project's `extra_data`.
+ * The length cap keeps a derived name short enough for a project's `extra_data`.
  */
 export async function availablePipelineName(base: string): Promise<string> {
   const trimmed = base.trim().slice(0, NAME_LENGTH_LIMIT).trim();
@@ -43,17 +41,11 @@ export async function availablePipelineName(base: string): Promise<string> {
 }
 
 /**
- * A recorded id is the whole answer, because a name can be recycled: rename a
- * pipeline, call the next one by the old name, and resolving by name finds the
- * wrong pipeline while looking perfectly successful. Registry ids are never
- * reused, so an id that still resolves names the pipeline that was added — and
- * an id that does not resolve means the pipeline is not here, which falling
- * back to the name would paper over with whatever happens to share it. That
- * matters across browsers: projects are shared, so a pointer routinely arrives
- * at a browser holding an unrelated pipeline of the same name.
- *
- * Only a pointer that recorded no id at all is resolved by name, because for
- * those the name is the only handle there has ever been.
+ * A recorded id is the whole answer, with no fallback to the name. Names are
+ * recycled and projects are shared, so a pointer routinely arrives at a browser
+ * holding an unrelated pipeline of the same name; falling back would open that
+ * one while looking perfectly successful. Only a pointer that recorded no id is
+ * resolved by name, because there the name is the only handle there ever was.
  */
 async function resolvePointer(
   pointer: LocalPipelinePointer,
@@ -94,9 +86,9 @@ export async function readLocalPipeline(
 }
 
 /**
- * Which of these pointers name a pipeline this browser still holds. Nothing is
- * deserialized, so a list of them costs one pass over the stored names plus a
- * key lookup each, rather than decoding every pipeline it asks about.
+ * Nothing is deserialized, so resolving a list costs one pass over the stored
+ * names plus a key lookup each, rather than decoding every pipeline it asks
+ * about.
  */
 export async function resolvePointers(
   pointers: readonly LocalPipelinePointer[],

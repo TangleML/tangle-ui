@@ -437,7 +437,7 @@ const ArgumentField = ({
                   "bg-white! dark:bg-input!",
                 )}
               />
-              <InlineStack className="absolute right-0 top-1/2 -translate-y-1/2 mr-1 px-1 bg-white dark:bg-input">
+              <InlineStack className="absolute right-0 top-1/2 -translate-y-1/2 mr-1 px-1 bg-input">
                 <TooltipButton
                   onClick={() => setIsSelectSecretDialogOpen(true)}
                   className="text-muted-foreground hover:bg-transparent hover:text-blue-500 hidden group-hover:flex"

@@ -2,10 +2,7 @@ import useToastNotification from "@/hooks/useToastNotification";
 import { copyToClipboard } from "@/utils/string";
 import { getProjectUrl } from "@/utils/URL";
 
-/**
- * Sharing a project is offered from the project's own page and from Tangent,
- * and both have to hand over the same link.
- */
+/** Offered from the project's page and from Tangent, which share one link. */
 export function useShareProjectAction(projectId: string): () => void {
   const notify = useToastNotification();
 

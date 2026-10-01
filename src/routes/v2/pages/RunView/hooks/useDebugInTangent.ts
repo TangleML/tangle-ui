@@ -5,7 +5,7 @@ import { useRerunProjectIds } from "@/hooks/useRerunProjectIds";
 import useToastNotification from "@/hooks/useToastNotification";
 import { APP_ROUTES } from "@/routes/appRoutes";
 import { getDefaultRunPath } from "@/routes/runRoutes";
-import { ProjectsApiError } from "@/services/projects/errors";
+import { isProjectGone } from "@/services/projects/errors";
 import { createProjectResource } from "@/services/projects/projectResourcesService";
 import {
   createProject,
@@ -34,23 +34,16 @@ interface DebugInTangentVariables {
   projectId?: string;
 }
 
-const NOT_FOUND = 404;
-
 /**
- * A run's attribution outlives the projects it names, and nothing rewrites it
- * when one is deleted. Debugging therefore has to be ready for every project a
- * run claims to be gone, and fall back to making one. Only a definite "not
- * there" counts: a backend that merely failed to answer would otherwise strand
- * the run in a new project beside the real one it belongs to.
+ * Only a definite "not there" is skipped past: a backend that merely failed to
+ * answer would otherwise strand the run in a new project beside the real one.
  */
 async function firstProjectStillThere(projectIds: readonly string[]) {
   for (const projectId of projectIds) {
     try {
       return await getProject(projectId);
     } catch (error) {
-      const gone =
-        error instanceof ProjectsApiError && error.status === NOT_FOUND;
-      if (!gone) throw error;
+      if (!isProjectGone(error)) throw error;
     }
   }
   return undefined;
@@ -70,12 +63,8 @@ export function useDebugInTangent() {
   const { data: workspaces } = useWorkspaces();
   const rerunProjectIds = useRerunProjectIds();
 
-  /**
-   * A project the run already belongs to is worked in rather than copied: its
-   * instructions are someone else's and there is only ever one document
-   * holding them, so the brief rides in on the session's opening prompt
-   * instead. Only a run attributed to nothing gets a project of its own.
-   */
+  // The project's instructions are someone else's, and there is only ever one
+  // document holding them, so the brief rides in on the opening prompt instead.
   const debugExisting = async (
     project: Project,
     { runId, pipelineName }: DebugInTangentVariables,

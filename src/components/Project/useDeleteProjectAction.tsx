@@ -27,14 +27,13 @@ interface DeleteProjectOptions {
 }
 
 /**
- * Deleting a project is offered from the project's own page, from Tangent and
- * from a tile in the grid, and all three have to say the same thing about what
- * is about to be destroyed. The caller renders
- * `<ConfirmationDialog {...confirmation} />` wherever suits its layout.
+ * Delete is offered from the project's page, from Tangent and from a tile in
+ * the grid, and all three have to say the same thing about what is destroyed.
+ * The caller renders `<ConfirmationDialog {...confirmation} />` where its
+ * layout suits.
  *
- * A page showing the project that just went has to leave, which is what
- * happens by default; a grid that merely loses a tile passes `onDeleted` and
- * stays where it is.
+ * A page showing the deleted project has to leave, which is the default; a
+ * grid that merely loses a tile passes `onDeleted` and stays.
  */
 export function useDeleteProjectAction(
   project: ProjectSummary,

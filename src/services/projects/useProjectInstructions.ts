@@ -14,9 +14,9 @@ import {
 const CONTENT_KEY = "content";
 
 /**
- * A project carries one instructions document. The oldest wins if it somehow
- * holds two — they can only arrive from two clients writing at once, and
- * picking the oldest means every reader picks the same one.
+ * A project carries one instructions document; two can only arrive from two
+ * clients writing at once. Taking the oldest means every reader takes the same
+ * one.
  */
 function findInstructions(
   resources: readonly ProjectResourceSummary[],
@@ -34,13 +34,9 @@ interface ProjectInstructions {
 }
 
 /**
- * The standing context agents are given for a project, read and written the
- * same way wherever it is edited.
- *
- * It takes two reads: the resource list says which row holds the instructions
- * but not what they say, because the list leaves payloads out. Both are already
- * fetched by anything showing a project, so in practice neither is a new
- * request.
+ * Two reads, because the resource list says which row holds the instructions
+ * but not what they say — it leaves payloads out. Both are already fetched by
+ * anything showing a project, so in practice neither is a new request.
  */
 export function useProjectInstructions(projectId: string): ProjectInstructions {
   const { data: page, isPending: isListPending } = useProjectResources(

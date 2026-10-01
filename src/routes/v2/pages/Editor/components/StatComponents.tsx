@@ -14,11 +14,7 @@ export function StatItem({ label, value }: StatItemProps) {
       <Text size="xs" tone="subdued">
         {label}
       </Text>
-      <Text
-        size="xs"
-        weight="semibold"
-        className="font-mono text-gray-700 dark:text-foreground"
-      >
+      <Text size="xs" weight="semibold" className="font-mono text-foreground">
         {value}
       </Text>
     </InlineStack>
@@ -36,7 +32,7 @@ export function StatGroup({ title, children }: StatGroupProps) {
       <Heading level={3} size="xs" weight="semibold" tone="subdued">
         {title}
       </Heading>
-      <BlockStack className="pl-2 border-l-2 border-gray-200 dark:border-border">
+      <BlockStack className="pl-2 border-l-2 border-border">
         {children}
       </BlockStack>
     </BlockStack>

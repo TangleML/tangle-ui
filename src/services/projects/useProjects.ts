@@ -9,9 +9,7 @@ import { useFavorites } from "@/hooks/useFavorites";
 import { removeRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
-import { MINUTES } from "@/utils/constants";
 
-import { ProjectsApiError } from "./errors";
 import {
   createProject,
   deleteProject,
@@ -19,30 +17,13 @@ import {
   listProjects,
   updateProject,
 } from "./projectsService";
+import { projectQueryDefaults } from "./queryDefaults";
 import type {
   CreateProjectInput,
   ListProjectsParams,
   UpdateProjectInput,
 } from "./types";
 import { ProjectsQueryKeys } from "./types";
-
-const MAX_RETRIES = 3;
-
-/**
- * A 4xx is the backend's settled answer, so retrying only delays it: without
- * this, a deleted project's url sits on a spinner for the length of three
- * backoffs before it can say the project is gone.
- */
-function retryUnlessRefused(failureCount: number, error: Error) {
-  if (
-    error instanceof ProjectsApiError &&
-    error.status >= 400 &&
-    error.status < 500
-  ) {
-    return false;
-  }
-  return failureCount < MAX_RETRIES;
-}
 
 export function useProjects(params: ListProjectsParams = {}) {
   const { configured, available } = useBackend();
@@ -51,9 +32,7 @@ export function useProjects(params: ListProjectsParams = {}) {
     queryKey: ProjectsQueryKeys.List(params),
     queryFn: () => listProjects(params),
     enabled: configured && available,
-    retry: retryUnlessRefused,
-    staleTime: 5 * MINUTES,
-    refetchOnWindowFocus: false,
+    ...projectQueryDefaults,
   });
 }
 
@@ -69,17 +48,14 @@ export function useProject(id: string | undefined) {
       return getProject(id);
     },
     enabled: configured && available && Boolean(id),
-    retry: retryUnlessRefused,
-    staleTime: 5 * MINUTES,
-    refetchOnWindowFocus: false,
+    ...projectQueryDefaults,
   });
 }
 
 /**
- * The projects among these ids that still exist, in the order they were asked
- * for. A run's attribution outlives the project it names, so the ones that
- * have gone are simply absent rather than reported — there is nothing the
- * reader can do about a project that is not there.
+ * Only the ids that still exist, in the order asked for. A run's attribution
+ * outlives the project it names, and there is nothing a reader can do about a
+ * project that is gone, so those are absent rather than reported.
  */
 export function useProjectsById(ids: readonly string[]) {
   const { configured, available } = useBackend();
@@ -89,9 +65,7 @@ export function useProjectsById(ids: readonly string[]) {
       queryKey: ProjectsQueryKeys.Id(id),
       queryFn: () => getProject(id),
       enabled: configured && available,
-      retry: retryUnlessRefused,
-      staleTime: 5 * MINUTES,
-      refetchOnWindowFocus: false,
+      ...projectQueryDefaults,
     })),
   });
 
@@ -147,10 +121,9 @@ export function useDeleteProject() {
       void queryClient.invalidateQueries({
         queryKey: ProjectsQueryKeys.All(),
       });
-      // Removed rather than invalidated: an invalidated query keeps its data
-      // and serves it to the next page that mounts it, so the project's own
-      // page would come up fully furnished from the cache of a project that no
-      // longer exists, and only then refetch its way to an error.
+      // Removed rather than invalidated: an invalidated query keeps its data,
+      // so the project's page would come up fully furnished from the cache of a
+      // project that is gone, and only then refetch its way to an error.
       queryClient.removeQueries({ queryKey: ProjectsQueryKeys.Id(id) });
 
       // The link outlives the project everywhere it was recorded.

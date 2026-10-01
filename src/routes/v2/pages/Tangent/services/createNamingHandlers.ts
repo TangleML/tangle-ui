@@ -28,9 +28,9 @@ export interface NamingHandlers {
 }
 
 /**
- * What the agent's naming tools actually do. Called from a tool, not a render,
- * so these go through the services rather than the hooks around them: there is
- * no component mounted at the moment a turn decides what to call something.
+ * Called from a tool rather than a render, so these go through the services
+ * instead of the hooks around them: no component is mounted at the moment a
+ * turn decides what to call something.
  */
 export function createNamingHandlers({
   projectId,

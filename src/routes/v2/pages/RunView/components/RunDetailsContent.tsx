@@ -234,10 +234,7 @@ function RunDetailsContentLoaded({
   );
 }
 
-/**
- * Which projects a run was attributed to, as written when it was created.
- * Attribution cannot be revised, so this only ever reads.
- */
+/** Attribution is written when the run is created and cannot be revised. */
 function useRunProjectIds(runId: string | undefined) {
   const { backendUrl } = useBackend();
   const projectsEnabled = useProjectsEnabled();

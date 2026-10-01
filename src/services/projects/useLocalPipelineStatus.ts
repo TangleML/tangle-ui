@@ -9,14 +9,10 @@ import type { ProjectResourceSummary } from "@/services/projects/types";
 const UNRESOLVED_USER_ID = "Unknown";
 
 /**
- * Whether a name is this browser's to recognise. A pointer that recorded an id
- * is safe anywhere, because ids are never reused; one that recorded only a name
- * is safe only in the browser that wrote it. Someone else's pipeline called
- * "Churn model" is not the "Churn model" this browser happens to hold, and
- * opening it would show the wrong pipeline without saying so.
- *
- * Unknown authorship is trusted: it means nobody has been shown to be someone
- * else, which is every single-user backend.
+ * A name-only pointer is safe only in the browser that wrote it: someone else's
+ * "Churn model" is not the one this browser holds, and opening it would show
+ * the wrong pipeline without saying so. Unknown authorship is trusted, which is
+ * every single-user backend.
  */
 function nameIsTrustworthyHere(
   resource: ProjectResourceSummary,
@@ -37,15 +33,13 @@ const NOTHING_KNOWN_YET: LocalPipelineStatus = {
 };
 
 /**
- * What this browser can tell you about the local pipelines a project lists:
- * which rows it cannot open — the ordinary case in a project someone shared,
- * since a browser-held pipeline does not travel with the project listing it —
- * and what the rest are called now. The name on the row is a copy taken when it
- * was added, and renaming a pipeline, in the editor or by an agent, changes the
- * pipeline rather than the copy.
+ * A browser-held pipeline does not travel with the project listing it, so rows
+ * this browser cannot open are the ordinary case in a shared project. The name
+ * on a row is a copy taken when it was added; renaming the pipeline changes the
+ * pipeline, not the copy, so current names are looked up rather than read off.
  *
- * Says nothing while the lookup is still running: it reads local storage, and
- * marking every row unavailable for that moment would flicker the whole list.
+ * Says nothing while the lookup runs: marking every row unavailable for that
+ * moment would flicker the whole list.
  */
 export function useLocalPipelineStatus(
   resources: readonly ProjectResourceSummary[],

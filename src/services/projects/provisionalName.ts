@@ -1,12 +1,10 @@
 const PROVISIONAL_NAME = "provisionalName";
 
 /**
- * Marks a project name as one nobody chose — derived from the opening prompt,
- * or numbered — so the agent may replace it once it knows what the project is
- * for. A name a human typed carries no mark and is left alone.
- *
- * The mark is dropped by whoever renames next, agent or human: the second name
- * was chosen deliberately by someone, which is the whole of what this asks.
+ * Marks a name as one nobody chose — derived from the opening prompt, or
+ * numbered — so the agent may replace it once it knows what the project is for.
+ * Whoever renames next drops the mark, agent or human: the second name was
+ * chosen by someone, which is the whole of what this asks.
  */
 export function provisionalNameExtraData(
   extraData?: Record<string, unknown> | null,

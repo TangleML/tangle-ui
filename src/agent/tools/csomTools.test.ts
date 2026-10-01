@@ -18,11 +18,6 @@ interface JsonSchemaNode {
   $ref?: string;
 }
 
-/**
- * Lightweight stub bridge: only the methods a test sets via `overrides`
- * are ever called. Anything else returns a vi.fn() so unrelated tools
- * don't blow up if they're inspected through the same factory call.
- */
 function makeBridge(overrides: Partial<ToolBridgeApi> = {}): ToolBridgeApi {
   const stub = vi.fn();
   return new Proxy({} as ToolBridgeApi, {
