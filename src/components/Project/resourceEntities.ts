@@ -69,3 +69,13 @@ export function resourceKindLabel(
  */
 export const removingDestroys = (resource: ResourceRowShape) =>
   resource.entityId === null && !namesLocalPipeline(resource);
+
+export function removalConsequence(resource: ResourceRowShape) {
+  if (namesLocalPipeline(resource)) {
+    return "This only takes it out of this project. The pipeline itself is not deleted and stays in the browser that holds it.";
+  }
+  if (removingDestroys(resource)) {
+    return "This is the only copy, so deleting it here deletes it for good.";
+  }
+  return "This only takes it out of this project. The item itself is not deleted and stays wherever it lives.";
+}

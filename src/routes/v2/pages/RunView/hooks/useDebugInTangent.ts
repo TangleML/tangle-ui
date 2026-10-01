@@ -1,18 +1,24 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 
+import { useRerunProjectIds } from "@/hooks/useRerunProjectIds";
 import useToastNotification from "@/hooks/useToastNotification";
 import { APP_ROUTES } from "@/routes/appRoutes";
 import { getDefaultRunPath } from "@/routes/runRoutes";
+import { ProjectsApiError } from "@/services/projects/errors";
 import { createProjectResource } from "@/services/projects/projectResourcesService";
 import {
   createProject,
   deleteProject,
+  getProject,
+  updateProject,
 } from "@/services/projects/projectsService";
 import {
   instructionsResourceInput,
   pipelineRunResourceInput,
 } from "@/services/projects/resourceDescriptor";
+import { startingSessionExtraData } from "@/services/projects/startingSession";
+import type { Project } from "@/services/projects/types";
 import { ProjectsQueryKeys } from "@/services/projects/types";
 import { useWorkspaces } from "@/services/projects/useWorkspaces";
 import { getErrorMessage } from "@/utils/string";
@@ -25,48 +31,119 @@ import {
 interface DebugInTangentVariables {
   runId: string;
   pipelineName: string;
+  projectId?: string;
 }
+
+const NOT_FOUND = 404;
+
+/**
+ * A run's attribution outlives the projects it names, and nothing rewrites it
+ * when one is deleted. Debugging therefore has to be ready for every project a
+ * run claims to be gone, and fall back to making one. Only a definite "not
+ * there" counts: a backend that merely failed to answer would otherwise strand
+ * the run in a new project beside the real one it belongs to.
+ */
+async function firstProjectStillThere(projectIds: readonly string[]) {
+  for (const projectId of projectIds) {
+    try {
+      return await getProject(projectId);
+    } catch (error) {
+      const gone =
+        error instanceof ProjectsApiError && error.status === NOT_FOUND;
+      if (!gone) throw error;
+    }
+  }
+  return undefined;
+}
+
+const runResourceInput = (runId: string, pipelineName: string) =>
+  pipelineRunResourceInput(
+    runId,
+    new URL(getDefaultRunPath(runId), window.location.origin).href,
+    pipelineName,
+  );
 
 export function useDebugInTangent() {
   const navigate = useNavigate();
   const notify = useToastNotification();
   const queryClient = useQueryClient();
   const { data: workspaces } = useWorkspaces();
+  const rerunProjectIds = useRerunProjectIds();
+
+  /**
+   * A project the run already belongs to is worked in rather than copied: its
+   * instructions are someone else's and there is only ever one document
+   * holding them, so the brief rides in on the session's opening prompt
+   * instead. Only a run attributed to nothing gets a project of its own.
+   */
+  const debugExisting = async (
+    project: Project,
+    { runId, pipelineName }: DebugInTangentVariables,
+  ) => {
+    const projectId = project.id;
+    await createProjectResource(
+      projectId,
+      runResourceInput(runId, pipelineName),
+    );
+    await updateProject(projectId, {
+      extraData: {
+        ...(project.extraData ?? {}),
+        ...startingSessionExtraData({
+          prompt: buildDebugStartingPrompt(runId),
+        }),
+      },
+    });
+    return project;
+  };
+
+  const debugInNewProject = async ({
+    runId,
+    pipelineName,
+  }: DebugInTangentVariables) => {
+    const workspace = workspaces?.find((w) => w.isActive) ?? workspaces?.[0];
+    if (!workspace) {
+      throw new Error("No workspace is available to create a project.");
+    }
+
+    const project = await createProject({
+      workspaceId: workspace.id,
+      name: `Debug: ${pipelineName}`,
+      origin: "agent",
+      extraData: startingSessionExtraData({
+        prompt: buildDebugStartingPrompt(runId),
+      }),
+    });
+
+    try {
+      await createProjectResource(
+        project.id,
+        instructionsResourceInput(buildDebugInstructions(runId, project.id)),
+      );
+      await createProjectResource(
+        project.id,
+        runResourceInput(runId, pipelineName),
+      );
+    } catch (error) {
+      await deleteProject(project.id).catch((rollbackError) =>
+        console.error("Failed to roll back debug project", rollbackError),
+      );
+      throw error;
+    }
+
+    return project;
+  };
 
   const { mutate: debug, isPending } = useMutation({
-    mutationFn: async ({ runId, pipelineName }: DebugInTangentVariables) => {
-      const workspace = workspaces?.find((w) => w.isActive) ?? workspaces?.[0];
-      if (!workspace) {
-        throw new Error("No workspace is available to create a project.");
-      }
+    mutationFn: async (variables: DebugInTangentVariables) => {
+      const attributed = variables.projectId
+        ? [variables.projectId]
+        : await rerunProjectIds(variables.runId);
 
-      const project = await createProject({
-        workspaceId: workspace.id,
-        name: `Debug: ${pipelineName}`,
-        origin: "agent",
-        extraData: { startingPrompt: buildDebugStartingPrompt(runId) },
-      });
+      const existing = await firstProjectStillThere(attributed);
 
-      try {
-        await createProjectResource(
-          project.id,
-          instructionsResourceInput(buildDebugInstructions(runId, project.id)),
-        );
-
-        const url = new URL(getDefaultRunPath(runId), window.location.origin)
-          .href;
-        await createProjectResource(
-          project.id,
-          pipelineRunResourceInput(runId, url, pipelineName),
-        );
-      } catch (error) {
-        await deleteProject(project.id).catch((rollbackError) =>
-          console.error("Failed to roll back debug project", rollbackError),
-        );
-        throw error;
-      }
-
-      return project;
+      return existing
+        ? debugExisting(existing, variables)
+        : debugInNewProject(variables);
     },
     onSuccess: (project) => {
       void queryClient.invalidateQueries({ queryKey: ProjectsQueryKeys.All() });

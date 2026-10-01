@@ -13,7 +13,7 @@ import type {
 import { useProjectResources } from "@/services/projects/useProjectResources";
 import { useProject } from "@/services/projects/useProjects";
 
-import { usePrepareEmptyProject } from "./usePrepareEmptyProject";
+import { usePrepareProjectArrival } from "./usePrepareProjectArrival";
 
 vi.mock("@/hooks/useAiProviderSettings", () => ({
   useAiProviderSettings: vi.fn(),
@@ -106,7 +106,7 @@ const settle = () => act(() => new Promise((resolve) => setTimeout(resolve)));
 function prepare(store: TangentProjectStore, sessionCount = 0) {
   return renderHook(
     () =>
-      usePrepareEmptyProject(store, {
+      usePrepareProjectArrival(store, {
         projectId: "project-1",
         sessionCount,
         isSessionsLoading: false,
@@ -121,7 +121,7 @@ function mockAiConfigured(isConfigured: boolean) {
   } as unknown as ReturnType<typeof useAiProviderSettings>);
 }
 
-describe("usePrepareEmptyProject", () => {
+describe("usePrepareProjectArrival", () => {
   beforeEach(() => {
     given();
     mockAiConfigured(true);
@@ -241,6 +241,44 @@ describe("usePrepareEmptyProject", () => {
 
     expect(store.startSession).not.toHaveBeenCalled();
     expect(createNewPipeline).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Debug in Tangent asks for a session in whichever project the failed run
+   * belongs to, which is usually one somebody has already worked in.
+   */
+  it("still starts the session a busy project was asked for", async () => {
+    given({ projectOverrides: { extraData: { startingPrompt: "Fix run 7" } } });
+    const store = makeStore();
+
+    prepare(store, 2);
+
+    await waitFor(() =>
+      expect(store.startSession).toHaveBeenCalledWith({
+        prompt: "Fix run 7",
+        name: "Fix run 7",
+      }),
+    );
+    await waitFor(() =>
+      expect(updateProject).toHaveBeenCalledWith({
+        id: "project-1",
+        input: { extraData: {} },
+      }),
+    );
+  });
+
+  /** Somebody is working in it: it is not theirs to rearrange. */
+  it("leaves a busy project's window and pipelines as they are", async () => {
+    given({ projectOverrides: { extraData: { startingPrompt: "Fix run 7" } } });
+    const store = makeStore();
+
+    prepare(store, 2);
+    await waitFor(() => expect(store.startSession).toHaveBeenCalled());
+    await settle();
+
+    expect(minimize).not.toHaveBeenCalled();
+    expect(createNewPipeline).not.toHaveBeenCalled();
+    expect(store.openWorkareaTarget).not.toHaveBeenCalled();
   });
 
   it("opens the pipeline a project already has rather than adding another", async () => {
