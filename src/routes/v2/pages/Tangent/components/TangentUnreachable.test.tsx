@@ -16,6 +16,33 @@ describe("TangentUnreachable", () => {
     ).toBeInTheDocument();
   });
 
+  it("says the address is missing rather than naming a url it never had", () => {
+    render(<TangentUnreachable baseUrl={null} />);
+
+    expect(screen.getByTestId("info-box-title")).toHaveTextContent(
+      "Tangent isn't configured",
+    );
+    expect(
+      screen.getByText(/does not say where Tangent lives/),
+    ).toBeInTheDocument();
+  });
+
+  it("names the local address it refused, so the workspace can be corrected", () => {
+    render(
+      <TangentUnreachable
+        baseUrl={null}
+        localAddress="http://localhost:5173"
+      />,
+    );
+
+    expect(screen.getByTestId("info-box-title")).toHaveTextContent(
+      "Tangent is misconfigured",
+    );
+    expect(
+      screen.getByText(/points Tangent at http:\/\/localhost:5173/),
+    ).toBeInTheDocument();
+  });
+
   it("offers a way out rather than leaving the page blank", async () => {
     const onRetry = vi.fn();
     const user = userEvent.setup();

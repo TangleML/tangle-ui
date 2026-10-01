@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 
 export type TangentRuntimeStatus = "loading" | "ready" | "unreachable";
 
-export function tangentChannelUrl(baseUrl: string): string {
+export function tangentChannelUrl(baseUrl: string | null): string | null {
+  if (!baseUrl) return null;
   return `${baseUrl.replace(/\/+$/, "")}/embed/v1/tangent-elements.js`;
 }
 
@@ -16,11 +17,19 @@ export function tangentChannelUrl(baseUrl: string): string {
  *
  * A failed import stays failed for the life of the document, so recovery is a
  * page reload rather than another call.
+ *
+ * A null url means the caller does not know where Tangent is yet, which is not
+ * the same as it being absent: importing a guessed url is what the caller is
+ * avoiding, so this stays on `loading` until it is given one.
  */
-export function useTangentRuntime(channelUrl: string): TangentRuntimeStatus {
+export function useTangentRuntime(
+  channelUrl: string | null,
+): TangentRuntimeStatus {
   const [status, setStatus] = useState<TangentRuntimeStatus>("loading");
 
   useEffect(() => {
+    if (!channelUrl) return;
+
     let active = true;
     setStatus("loading");
 

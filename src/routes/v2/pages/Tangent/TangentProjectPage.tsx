@@ -40,6 +40,16 @@ function ProjectGone() {
   );
 }
 
+function LoadingProject() {
+  return (
+    <BlockStack fill align="center" gap="1" className="p-10">
+      <Text size="sm" weight="semibold">
+        Loading project…
+      </Text>
+    </BlockStack>
+  );
+}
+
 export function TangentProjectPage() {
   const params = useParams({ strict: false });
   const projectId =
@@ -63,7 +73,8 @@ export function TangentProjectPage() {
 function TangentProjectPageContent({ projectId }: { projectId: string }) {
   const { resolvedTheme } = useTheme();
   const { error: projectError } = useProject(projectId);
-  const { baseUrl, isLoading, isError } = useTangentBaseUrl(projectId);
+  const { baseUrl, localAddress, isLoading, isError } =
+    useTangentBaseUrl(projectId);
   useTrackRecentlyViewedProject(projectId);
   const channelUrl = tangentChannelUrl(baseUrl);
   const runtime = useTangentRuntime(channelUrl);
@@ -74,14 +85,8 @@ function TangentProjectPageContent({ projectId }: { projectId: string }) {
     return <ProjectGone />;
   }
 
-  if (isLoading || runtime === "loading") {
-    return (
-      <BlockStack fill align="center" gap="1" className="p-10">
-        <Text size="sm" weight="semibold">
-          Loading project…
-        </Text>
-      </BlockStack>
-    );
+  if (isLoading) {
+    return <LoadingProject />;
   }
 
   if (isError) {
@@ -98,6 +103,16 @@ function TangentProjectPageContent({ projectId }: { projectId: string }) {
     );
   }
 
+  // Ahead of the runtime states: with no url there is nothing to import, so
+  // `runtime` sits on `loading` forever and the page would never settle.
+  if (!baseUrl) {
+    return <TangentUnreachable baseUrl={null} localAddress={localAddress} />;
+  }
+
+  if (runtime === "loading") {
+    return <LoadingProject />;
+  }
+
   if (runtime === "unreachable") {
     return <TangentUnreachable baseUrl={baseUrl} />;
   }
@@ -112,7 +127,7 @@ function TangentProjectPageContent({ projectId }: { projectId: string }) {
       <TangentProvider
         key={baseUrl}
         baseUrl={baseUrl}
-        channelUrl={channelUrl}
+        channelUrl={channelUrl ?? undefined}
         colorScheme={resolvedTheme}
         socketUrl={socketUrl}
         socketPath={socketPath}

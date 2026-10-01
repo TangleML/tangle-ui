@@ -15,6 +15,10 @@ describe("tangentChannelUrl", () => {
       "https://tangent.example/embed/v1/tangent-elements.js",
     );
   });
+
+  it("has no url to offer when there is no origin to hang it off", () => {
+    expect(tangentChannelUrl(null)).toBeNull();
+  });
 });
 
 describe("useTangentRuntime", () => {
@@ -37,5 +41,19 @@ describe("useTangentRuntime", () => {
 
     rerender({ url: "https://two.invalid/b.js" });
     expect(result.current).toBe("loading");
+  });
+
+  // Importing a guessed url is what a null is there to avoid: a page that has
+  // not learned where Tangent lives must not reach for one meanwhile.
+  it("imports nothing while it has no url", async () => {
+    const { result, rerender } = renderHook(
+      ({ url }: { url: string | null }) => useTangentRuntime(url),
+      { initialProps: { url: null as string | null } },
+    );
+
+    expect(result.current).toBe("loading");
+
+    rerender({ url: "https://tangent.invalid/embed/v1/tangent-elements.js" });
+    await waitFor(() => expect(result.current).toBe("unreachable"));
   });
 });
