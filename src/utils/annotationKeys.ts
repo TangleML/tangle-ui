@@ -27,3 +27,6 @@ export const PROVISIONAL_NAME_ANNOTATION = "tangleml.com/provisional-name";
 export const WEB_APP_RUN_SOURCE = "web-app";
 /** Not `tangent`, which submitters outside this app already use. */
 export const TANGENT_UI_RUN_SOURCE = "tangent-ui";
+// Submitted elsewhere and only ever read here: this app writes neither.
+export const TANGLE_CLI_RUN_SOURCE = "tangle-cli";
+export const TANGENT_AGENT_RUN_SOURCE = "tangent";

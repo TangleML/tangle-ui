@@ -16,8 +16,8 @@ import PipelineIO from "@/components/shared/Execution/PipelineIO";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import {
-  getRunSourceBucket,
   getRunSourceMessage,
+  hasRunSource,
   RunSourceIcon,
 } from "@/components/shared/RunSource";
 import {
@@ -318,7 +318,7 @@ function RunInfoSection({ metadata }: { metadata: PipelineRunResponse }) {
   const { data: runAnnotations } = useRunAnnotations(metadata.id);
 
   const runSource = getAnnotationValue(runAnnotations, RUN_SOURCE_ANNOTATION);
-  const hasKnownSource = getRunSourceBucket(runSource) !== "unknown";
+  const hasKnownSource = hasRunSource(runSource);
 
   return (
     <BlockStack gap="2">
