@@ -21,6 +21,15 @@ import { CMDALT } from "@/routes/v2/shared/shortcuts/keys";
 import { isEditableTarget } from "@/routes/v2/shared/shortcuts/shortcutUtils";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
+function hasTextSelection(): boolean {
+  const selection = window.getSelection();
+  return (
+    selection !== null &&
+    !selection.isCollapsed &&
+    selection.toString().length > 0
+  );
+}
+
 export function useClipboardShortcuts(
   spec: ComponentSpec | null,
   containerRef: RefObject<HTMLDivElement | null>,
@@ -30,6 +39,7 @@ export function useClipboardShortcuts(
   const { editor, keyboard } = useSharedStores();
   const { clipboard } = useEditorSession();
   const notify = useToastNotification();
+  const listening = keyboard.listening;
 
   useEffect(() => {
     const unregisterDuplicate = keyboard.registerShortcut({
@@ -50,12 +60,7 @@ export function useClipboardShortcuts(
       keys: [CMDALT, "C"],
       label: "Copy",
       action: (e) => {
-        const textSelection = window.getSelection();
-        if (
-          textSelection &&
-          !textSelection.isCollapsed &&
-          textSelection.toString().length > 0
-        ) {
+        if (isEditableTarget(e) || hasTextSelection()) {
           return false;
         }
         e.preventDefault();
@@ -85,10 +90,12 @@ export function useClipboardShortcuts(
   }, [clipboard, spec, editor, keyboard, registry, notify]);
 
   useEffect(() => {
+    if (!listening) return;
+
     const handlePaste = (event: ClipboardEvent) => {
       const container = containerRef.current;
       if (!spec || !container || !reactFlowInstance) return;
-      if (isEditableTarget(event.target)) return;
+      if (isEditableTarget(event)) return;
 
       const rect = container.getBoundingClientRect();
       const read = readPasteEventClipboardInfo(event);
@@ -106,5 +113,5 @@ export function useClipboardShortcuts(
 
     window.addEventListener("paste", handlePaste);
     return () => window.removeEventListener("paste", handlePaste);
-  }, [clipboard, spec, containerRef, reactFlowInstance, notify]);
+  }, [clipboard, spec, containerRef, reactFlowInstance, notify, listening]);
 }

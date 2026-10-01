@@ -97,6 +97,8 @@ const localPipeline = (
 function given(...resources: ProjectResourceSummary[]) {
   vi.mocked(useProjectResources).mockReturnValue({
     data: { items: resources },
+    isPending: false,
+    error: null,
   } as unknown as ReturnType<typeof useProjectResources>);
 }
 
@@ -113,6 +115,41 @@ describe("ResourcesWindowContent", () => {
     browserHolds({});
   });
   afterEach(() => vi.resetAllMocks());
+
+  it("says it is still reading rather than showing a project as empty", () => {
+    vi.mocked(useProjectResources).mockReturnValue({
+      data: undefined,
+      isPending: true,
+      error: null,
+    } as unknown as ReturnType<typeof useProjectResources>);
+
+    render(<ResourcesWindowContent />);
+
+    expect(screen.getByText("Loading...")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Nothing is attached to this project yet"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("passes on why the resources could not be read", () => {
+    vi.mocked(useProjectResources).mockReturnValue({
+      data: undefined,
+      isPending: false,
+      error: new Error("Backend is unreachable"),
+    } as unknown as ReturnType<typeof useProjectResources>);
+
+    render(<ResourcesWindowContent />);
+
+    expect(screen.getByText("Backend is unreachable")).toBeInTheDocument();
+  });
+
+  it("says a project holds nothing only once it has been read", () => {
+    render(<ResourcesWindowContent />);
+
+    expect(
+      screen.getByText("Nothing is attached to this project yet"),
+    ).toBeInTheDocument();
+  });
 
   it("lists a pipeline the project holds", () => {
     given(

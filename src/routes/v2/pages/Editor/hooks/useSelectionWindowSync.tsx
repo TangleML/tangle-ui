@@ -213,11 +213,14 @@ export function useSelectionWindowSync(options?: {
         const shouldShowPanel =
           multiSelectionLength > 1 || (selectedNodeId && selectedNodeType);
 
-        if (shouldShowPanel) {
-          ensureContextPanelVisible(windows, deselectAll, placementRef.current);
-        } else {
+        if (!shouldShowPanel) {
           closeContextPanel(windows);
+          return;
         }
+
+        if (editor.draggedSincePointerDown) return;
+
+        ensureContextPanelVisible(windows, deselectAll, placementRef.current);
       },
     );
 

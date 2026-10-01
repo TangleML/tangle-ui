@@ -63,6 +63,7 @@ export interface WindowOptions {
   variant?: "window" | "panel";
   fillDockHeight?: boolean;
   minDockedHeight?: number;
+  maxDockedHeight?: number;
   onClose?: () => void;
   // Without miniContent a window is filtered out of the collapsed dock strip, so
   // it is unreachable until the user expands the dock area again.

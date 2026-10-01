@@ -432,7 +432,7 @@ describe("ProjectResourcePreview", () => {
       metadata: {
         type: "pipeline_run",
         identity: "run://id/42",
-        url: "http://localhost/runs/42",
+        url: "https://somewhere-else.example/runs/42",
       },
     } satisfies Partial<ProjectResource>;
 
@@ -445,16 +445,16 @@ describe("ProjectResourcePreview", () => {
       expect(document.body.textContent).not.toContain("{}");
     });
 
-    it("offers the run's own page, where there is something to see", () => {
+    it("offers this app's own page for the run, not the origin it was attached from", () => {
       mockResource(runRow);
       renderPreview("resource-1");
 
       expect(
         screen.getByRole("link", { name: /Open the run/ }),
-      ).toHaveAttribute("href", "http://localhost/runs/42");
+      ).toHaveAttribute("href", expect.stringMatching(/^\/runs(-v2)?\/42$/));
     });
 
-    it("says what it is even without a url to offer", () => {
+    it("says what it is even without a run to offer", () => {
       mockResource({ ...runRow, metadata: { type: "pipeline_run" } });
       renderPreview("resource-1");
 

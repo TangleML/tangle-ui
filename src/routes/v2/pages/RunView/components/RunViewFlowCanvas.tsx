@@ -85,6 +85,8 @@ export const RunViewFlowCanvas = observer(function RunViewFlowCanvas({
         onNodesChange={onNodesChange}
         onPaneClick={onPaneClick}
         onEdgeClick={onEdgeClick}
+        onPointerDownCapture={() => editor.setDraggedSincePointerDown(false)}
+        onNodeDragStart={() => editor.setDraggedSincePointerDown(true)}
         {...selectionBehavior}
         {...doubleClickBehavior}
         onViewportChange={handleViewportChange}

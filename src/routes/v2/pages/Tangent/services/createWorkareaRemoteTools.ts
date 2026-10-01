@@ -6,6 +6,7 @@ import {
   truncateContainerState,
   truncateExecutionDetails,
 } from "@/agent/util/truncate";
+import { coerceWorkareaTarget } from "@/routes/v2/pages/Tangent/services/resolveWorkareaTarget";
 import type {
   WorkareaTab,
   WorkareaTarget,
@@ -16,7 +17,6 @@ import {
   idIdentity,
   nameIdentity,
   parseIdentity,
-  parseWorkareaTarget,
 } from "@/services/projects/resourceTarget";
 import { getOverallExecutionStatusFromStats } from "@/utils/executionStatus";
 import { isRecord } from "@/utils/typeGuards";
@@ -179,8 +179,8 @@ function resolveRunId(deps: WorkareaToolDeps, explicit?: string): string {
 const TARGET_DESCRIPTION =
   "A `type://identity` target: `artifact://id/<url>`, " +
   "`pipeline://id/<fileId>`, `pipeline://name/<name>`, or `run://id/<runId>`. " +
-  "Legacy `pipeline://<fileId>`, `run:<id>`, run URLs, artifact URLs, and bare " +
-  "pipeline names are also accepted.";
+  "A run url is also accepted, from any origin, and names the run this " +
+  "environment holds under that id.";
 
 const RUN_ID_SCHEMA = {
   type: "object",
@@ -246,7 +246,7 @@ export function createWorkareaRemoteTools(
         const title = typeof args.title === "string" ? args.title : undefined;
         return openAndSummarize(
           getDeps,
-          parseWorkareaTarget(args.target),
+          coerceWorkareaTarget(args.target),
           title,
         );
       },

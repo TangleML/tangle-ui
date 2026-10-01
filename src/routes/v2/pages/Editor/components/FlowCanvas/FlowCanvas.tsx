@@ -46,7 +46,7 @@ export const FlowCanvas = observer(function FlowCanvas({
   const registry = useNodeRegistry();
   const nodeTypes = registry.getNodeTypes();
   const edgeTypes = registry.getEdgeTypes();
-  const { keyboard } = useSharedStores();
+  const { keyboard, editor } = useSharedStores();
   const { containerRef, handleViewportChange } = useViewportScaling();
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance | null>(null);
@@ -109,6 +109,8 @@ export const FlowCanvas = observer(function FlowCanvas({
         {...doubleClickBehavior}
         {...paneClickBehavior}
         onEdgeClick={onEdgeClick}
+        onPointerDownCapture={() => editor.setDraggedSincePointerDown(false)}
+        onNodeDragStart={() => editor.setDraggedSincePointerDown(true)}
         onInit={setReactFlowInstance}
         onViewportChange={handleViewportChange}
         onBeforeDelete={onBeforeDelete}

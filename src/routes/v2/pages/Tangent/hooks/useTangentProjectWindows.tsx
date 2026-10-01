@@ -24,6 +24,8 @@ interface ProjectDockWindow {
   content: ReactNode;
 }
 
+const MAX_PROJECT_WINDOW_HEIGHT = 320;
+
 const PROJECT_DOCK_WINDOWS: ProjectDockWindow[] = [
   {
     id: "tangent-project-details",
@@ -77,6 +79,7 @@ export function useTangentProjectWindows() {
         persisted: true,
         defaultDockState: "left",
         startVisible: true,
+        maxDockedHeight: MAX_PROJECT_WINDOW_HEIGHT,
         miniContent: (
           <WindowMiniButton
             tooltip={win.title}

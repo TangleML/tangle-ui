@@ -35,8 +35,14 @@ export class KeyboardStore {
     ShortcutDefinition
   >();
 
+  @observable accessor listening = false;
+
   constructor() {
     makeObservable(this);
+  }
+
+  @action setListening(value: boolean) {
+    this.listening = value;
   }
 
   @action pressKey(key: KeyConstant) {

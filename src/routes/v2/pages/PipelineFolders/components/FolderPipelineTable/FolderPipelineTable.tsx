@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -20,8 +21,10 @@ import {
 import { Text } from "@/components/ui/typography";
 import { usePagination } from "@/hooks/usePagination";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
+import { useFolderNavigation } from "@/routes/v2/pages/PipelineFolders/context/FolderNavigationContext";
 import { useBulkDeleteMutation } from "@/routes/v2/pages/PipelineFolders/hooks/useBulkDeleteMutation";
 import { useDropMutation } from "@/routes/v2/pages/PipelineFolders/hooks/useDropMutation";
+import { useEmptyPipelineIds } from "@/routes/v2/pages/PipelineFolders/hooks/useEmptyPipelineIds";
 import { useFolderBreadcrumbs } from "@/routes/v2/pages/PipelineFolders/hooks/useFolderBreadcrumbs";
 import { useDisconnectFolder } from "@/routes/v2/pages/PipelineFolders/hooks/useFolderMutations";
 import { useFolderPipelines } from "@/routes/v2/pages/PipelineFolders/hooks/useFolderPipelines";
@@ -71,10 +74,12 @@ export const FolderPipelineTable = withSuspenseWrapper(
     const { data: breadcrumbPath } = useFolderBreadcrumbs(folderId);
 
     const { track } = useAnalytics();
+    const folderNav = useFolderNavigation();
     const selection = useSelection();
     const [searchQuery, setSearchQuery] = useState("");
     const [moveDialogOpen, setMoveDialogOpen] = useState(false);
     const [draggingIds, setDraggingIds] = useState<Set<string>>(new Set());
+    const [hideEmptyPipelines, setHideEmptyPipelines] = useState(true);
 
     const { mutate: disconnectFolder, isPending: isDisconnecting } =
       useDisconnectFolder();
@@ -99,7 +104,12 @@ export const FolderPipelineTable = withSuspenseWrapper(
       f.name.toLowerCase().includes(searchQuery.toLowerCase()),
     );
 
+    const isPicker = folderNav?.onPipelineClick !== undefined;
+    const emptyPipelineIds = useEmptyPipelineIds(isPicker ? pipelines : []);
+    const hiddenEmptyCount = hideEmptyPipelines ? emptyPipelineIds.size : 0;
+
     const filteredPipelines = pipelines
+      .filter((p) => !hideEmptyPipelines || !emptyPipelineIds.has(p.id))
       .filter((p) =>
         p.storageKey.toLowerCase().includes(searchQuery.toLowerCase()),
       )
@@ -171,6 +181,27 @@ export const FolderPipelineTable = withSuspenseWrapper(
       <BlockStack gap="4" className="w-full">
         {requiresPermission && (
           <FolderPermissionBanner folder={currentFolder} onGranted={refetch} />
+        )}
+
+        {isPicker && (
+          <InlineStack gap="2" blockAlign="center">
+            <Checkbox
+              id="hide-empty-pipelines"
+              checked={hideEmptyPipelines}
+              onCheckedChange={(checked) => {
+                if (checked === "indeterminate") return;
+                setHideEmptyPipelines(checked);
+                pagination.resetPage();
+              }}
+            />
+            <Label htmlFor="hide-empty-pipelines" className="font-normal">
+              <Text size="sm" tone="subdued">
+                {hiddenEmptyCount > 0
+                  ? `Hide empty pipelines (${hiddenEmptyCount})`
+                  : "Hide empty pipelines"}
+              </Text>
+            </Label>
+          </InlineStack>
         )}
 
         {hasContent ? (

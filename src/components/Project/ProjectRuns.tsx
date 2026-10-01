@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 
 import { InfoBox } from "@/components/shared/InfoBox";
+import { Button } from "@/components/ui/button";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
 import {
@@ -25,12 +26,20 @@ interface ProjectRunsProps {
 }
 
 export function ProjectRuns({ projectId }: ProjectRunsProps) {
-  const { data, isPending, error } = useProjectRuns(projectId);
+  const {
+    data,
+    isPending,
+    error,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  } = useProjectRuns(projectId);
+  const runs = data ?? [];
 
   return (
     <BlockStack gap="2">
       <Heading level={2}>
-        {data && data.items.length > 0 ? `Runs (${data.items.length})` : "Runs"}
+        {runs.length > 0 ? `Runs (${runs.length})` : "Runs"}
       </Heading>
 
       {isPending && (
@@ -45,13 +54,13 @@ export function ProjectRuns({ projectId }: ProjectRunsProps) {
         </InfoBox>
       )}
 
-      {data && data.items.length === 0 && (
+      {data && runs.length === 0 && (
         <Text size="sm" tone="subdued">
           Nothing in this project has been run yet
         </Text>
       )}
 
-      {data && data.items.length > 0 && (
+      {runs.length > 0 && (
         <Table className="table-fixed">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
@@ -73,7 +82,7 @@ export function ProjectRuns({ projectId }: ProjectRunsProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.items.map((run) => (
+            {runs.map((run) => (
               <TableRow key={run.id}>
                 <TableCell className="max-w-0 overflow-hidden">
                   <Link
@@ -101,10 +110,18 @@ export function ProjectRuns({ projectId }: ProjectRunsProps) {
         </Table>
       )}
 
-      {data?.nextPageToken && (
-        <Text size="sm" tone="subdued">
-          {`Showing the ${data.items.length} most recent runs.`}
-        </Text>
+      {hasNextPage && (
+        <InlineStack>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isFetchingNextPage}
+            onClick={() => void fetchNextPage()}
+            {...tracking("projects.project_runs.load_more")}
+          >
+            {isFetchingNextPage ? "Loading..." : "Load more runs"}
+          </Button>
+        </InlineStack>
       )}
     </BlockStack>
   );

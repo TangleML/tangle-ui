@@ -36,6 +36,8 @@ export function useRunViewSelectionSync(options?: {
       }),
       ({ selectedNodeId, selectedNodeType }) => {
         if (selectedNodeId && selectedNodeType) {
+          if (editor.draggedSincePointerDown) return;
+
           const existing = windows.getWindowById(CONTEXT_PANEL_WINDOW_ID);
           if (existing) {
             if (existing.state === "hidden") {

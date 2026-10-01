@@ -9,8 +9,8 @@ import { useTrackRecentlyViewedProject } from "@/hooks/useTrackRecentlyViewedPro
 import { DialogProvider } from "@/providers/DialogProvider/DialogProvider";
 import { useTheme } from "@/providers/ThemeProvider";
 import { APP_ROUTES } from "@/routes/appRoutes";
+import { tangentAnchorProtocols } from "@/routes/v2/pages/Tangent/components/tangentAnchorProtocols";
 import { getTangentSocketConfig } from "@/routes/v2/pages/Tangent/services/socketConfig";
-import { chatAnchorProtocols } from "@/routes/v2/shared/components/AiChat/components/chatAnchorProtocols";
 import { SharedStoreProvider } from "@/routes/v2/shared/store/SharedStoreContext";
 import { useProject } from "@/services/projects/useProjects";
 import { TOP_NAV_HEIGHT } from "@/utils/constants";
@@ -131,7 +131,7 @@ function TangentProjectPageContent({ projectId }: { projectId: string }) {
         colorScheme={resolvedTheme}
         socketUrl={socketUrl}
         socketPath={socketPath}
-        anchorProtocols={chatAnchorProtocols}
+        anchorProtocols={tangentAnchorProtocols}
       >
         <SharedStoreProvider>
           <TangentProjectProvider projectId={projectId}>

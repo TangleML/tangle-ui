@@ -50,11 +50,7 @@ async function firstProjectStillThere(projectIds: readonly string[]) {
 }
 
 const runResourceInput = (runId: string, pipelineName: string) =>
-  pipelineRunResourceInput(
-    runId,
-    new URL(getDefaultRunPath(runId), window.location.origin).href,
-    pipelineName,
-  );
+  pipelineRunResourceInput(runId, getDefaultRunPath(runId), pipelineName);
 
 export function useDebugInTangent() {
   const navigate = useNavigate();

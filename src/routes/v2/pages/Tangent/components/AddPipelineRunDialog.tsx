@@ -17,9 +17,12 @@ export function AddPipelineRunDialog({
 }: DialogProps<CreateResourceInput>) {
   function handleRunClick(run: PipelineRunResponse) {
     const runId = `${run.id}`;
-    const url = new URL(getDefaultRunPath(runId), window.location.origin).href;
     close(
-      pipelineRunResourceInput(runId, url, run.pipeline_name ?? `Run ${runId}`),
+      pipelineRunResourceInput(
+        runId,
+        getDefaultRunPath(runId),
+        run.pipeline_name ?? `Run ${runId}`,
+      ),
     );
   }
 

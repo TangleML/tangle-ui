@@ -35,9 +35,12 @@ function run(id: string, pipelineName: string | null): ProjectRun {
 
 function given(...runs: ProjectRun[]) {
   vi.mocked(useProjectRuns).mockReturnValue({
-    data: { items: runs, nextPageToken: null },
+    data: runs,
     isPending: false,
     error: null,
+    hasNextPage: false,
+    isFetchingNextPage: false,
+    fetchNextPage: vi.fn(),
   } as unknown as ReturnType<typeof useProjectRuns>);
 }
 
@@ -89,6 +92,24 @@ describe("RunsWindowContent", () => {
       { type: "run", identity: "id/run-8" },
       "Unnamed pipeline",
     );
+  });
+
+  it("fetches the next page rather than stopping at the most recent runs", async () => {
+    const fetchNextPage = vi.fn();
+    vi.mocked(useProjectRuns).mockReturnValue({
+      data: [run("run-7", "Churn model")],
+      isPending: false,
+      error: null,
+      hasNextPage: true,
+      isFetchingNextPage: false,
+      fetchNextPage,
+    } as unknown as ReturnType<typeof useProjectRuns>);
+    const user = userEvent.setup();
+
+    render(<RunsWindowContent />);
+    await user.click(screen.getByRole("button", { name: "Load more runs" }));
+
+    expect(fetchNextPage).toHaveBeenCalled();
   });
 
   it("says a project has been run nowhere rather than showing an empty list", () => {

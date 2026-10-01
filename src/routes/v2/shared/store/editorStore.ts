@@ -24,8 +24,14 @@ export class EditorStore {
   @observable.ref accessor selectedValidationIssue: ValidationIssue | null =
     null;
 
+  @observable accessor draggedSincePointerDown = false;
+
   constructor() {
     makeObservable(this);
+  }
+
+  @action setDraggedSincePointerDown(value: boolean) {
+    this.draggedSincePointerDown = value;
   }
 
   @action resetState() {
@@ -40,6 +46,7 @@ export class EditorStore {
     this.fitViewRequestCount = 0;
     this.pendingTaskDetailTab = null;
     this.selectedValidationIssue = null;
+    this.draggedSincePointerDown = false;
   }
 
   @action selectNode(

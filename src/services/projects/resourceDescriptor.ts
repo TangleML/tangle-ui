@@ -179,7 +179,7 @@ export function instructionsResourceInput(
 
 export function pipelineRunResourceInput(
   runId: string,
-  url: string,
+  runPath: string,
   name: string,
 ): CreateResourceInput {
   return {
@@ -192,7 +192,7 @@ export function pipelineRunResourceInput(
         type: "run",
         identity: idIdentity(runId),
       }),
-      url,
+      url: runPath,
     },
   };
 }
