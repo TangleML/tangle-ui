@@ -8,7 +8,9 @@ import type { KeyboardStore } from "@/routes/v2/shared/store/keyboardStore";
  * a canvas that is not mounted — or holds no nodes — returns false rather than
  * silently claiming to have arranged something.
  */
-export function invokeAutoLayoutVia(keyboard: KeyboardStore) {
+export function invokeAutoLayoutVia(
+  keyboard: Pick<KeyboardStore, "invokeShortcut">,
+) {
   return (algorithm?: LayoutAlgorithm) => {
     let laidOut = false;
     keyboard.invokeShortcut("auto-layout", {

@@ -14,14 +14,15 @@ export function PinProjectButton({
   project,
   className,
 }: PinProjectButtonProps) {
-  const { pinned, togglePin } = useProjectPin(project);
+  const { pinned, isPinning, togglePin } = useProjectPin(project);
   const label = pinned ? `Unpin ${project.name}` : `Pin ${project.name}`;
 
   return (
     <Button
       variant="ghost"
       size="icon"
-      onClick={togglePin}
+      disabled={isPinning}
+      onClick={() => void togglePin()}
       aria-label={label}
       aria-pressed={pinned}
       title={label}

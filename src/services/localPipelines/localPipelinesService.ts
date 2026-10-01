@@ -1,6 +1,7 @@
 import {
   findById,
   findByStorageKey,
+  registeredStorageKeys,
 } from "@/services/pipelineStorage/pipelineRegistry";
 import {
   getComponentFileFromList,
@@ -20,16 +21,24 @@ const NAME_LENGTH_LIMIT = 120;
 const SUFFIX_ATTEMPTS = 100;
 
 /**
- * Asks the stored-file list, not the registry. `PipelineFolder.addFile` checks
- * the registry, but the driver it writes through keys off the file list, which
- * also holds pipelines that never got a registry row — so a name that passes
- * that check can still land on top of one of those.
+ * Both stores have to be asked. The driver keys off the stored-file list, which
+ * holds pipelines that never got a registry row, so a name absent from the
+ * registry can still land on top of a file. `PipelineFolder.addFile` refuses on
+ * the registry, and a row outlives its file whenever a delete gets half way, so
+ * a name absent from the file list can still be refused.
  *
  * The length cap keeps a derived name short enough for a project's `data`.
  */
 export async function availablePipelineName(base: string): Promise<string> {
   const trimmed = base.trim().slice(0, NAME_LENGTH_LIMIT).trim();
-  const taken = new Set(await listLocalPipelineNames());
+  const [files, registered] = await Promise.all([
+    listLocalPipelineNames(),
+    // The registry narrows the answer rather than deciding it, so a registry
+    // that cannot be read costs the caller a possible collision and not the
+    // name itself.
+    registeredStorageKeys().catch(() => []),
+  ]);
+  const taken = new Set([...files, ...registered]);
   if (!taken.has(trimmed)) return trimmed;
 
   for (let ordinal = 2; ordinal <= SUFFIX_ATTEMPTS; ordinal++) {

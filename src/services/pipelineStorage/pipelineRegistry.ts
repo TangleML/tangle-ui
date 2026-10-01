@@ -31,6 +31,17 @@ export async function findByStorageKey(
     .first();
 }
 
+/**
+ * What `assertStorageKeyUnique` will refuse. A file and its registry row are
+ * written and deleted one after the other rather than together, so a row can
+ * outlive the file it named — and a caller choosing a free name has to avoid
+ * those as well as the files themselves.
+ */
+export async function registeredStorageKeys(): Promise<string[]> {
+  const entries = await pipelineStorageDb.pipeline_registry.toArray();
+  return entries.map((entry) => entry.storageKey);
+}
+
 export async function getAllByFolderId(
   folderId: string,
 ): Promise<PipelineRegistryEntry[]> {

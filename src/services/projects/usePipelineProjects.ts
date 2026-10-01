@@ -12,7 +12,7 @@ import {
 import { listProjectResources } from "./projectResourcesService";
 import type { ProjectResourceSummary, ProjectSummary } from "./types";
 import { ProjectResourcesQueryKeys } from "./types";
-import { useProjects } from "./useProjects";
+import { useReachableProjects } from "./useReachableProjects";
 
 export interface PipelineProjectMembership {
   project: ProjectSummary;
@@ -22,6 +22,7 @@ export interface PipelineProjectMembership {
 export interface PipelineProjects {
   memberships: PipelineProjectMembership[];
   isPending: boolean;
+  error: Error | null;
 }
 
 /**
@@ -44,7 +45,7 @@ export function usePipelineProjects(
   const { configured, available } = useBackend();
   const enabled = wanted && configured && available && Boolean(pipelineName);
 
-  const { data: pointer } = useQuery({
+  const { data: pointer, error: pointerError } = useQuery({
     queryKey: LocalPipelinesQueryKeys.Pointer({
       localName: pipelineName ?? "",
     }),
@@ -53,9 +54,13 @@ export function usePipelineProjects(
     staleTime: 1 * MINUTES,
   });
 
-  const { data: projects, isPending: isListPending } = useProjects({});
+  const {
+    projects,
+    isPending: isListPending,
+    error: listError,
+  } = useReachableProjects({ enabled });
 
-  const candidates: ProjectSummary[] = enabled ? (projects?.items ?? []) : [];
+  const candidates: ProjectSummary[] = enabled ? projects : [];
 
   const resources = useQueries({
     queries: candidates.map((project) => ({
@@ -69,12 +74,21 @@ export function usePipelineProjects(
     })),
   });
 
+  // A lookup that failed is not one still running: reported as pending, the
+  // picker would sit on its spinner for as long as it stayed open.
+  const error =
+    pointerError ??
+    listError ??
+    resources.find((query) => query.error)?.error ??
+    null;
+
   const isPending =
     enabled &&
+    error === null &&
     (isListPending || !pointer || resources.some((query) => query.isPending));
 
   if (!pointer) {
-    return { memberships: [], isPending };
+    return { memberships: [], isPending, error };
   }
 
   const memberships = candidates.flatMap((project, index) => {
@@ -83,5 +97,5 @@ export function usePipelineProjects(
     return resource ? [{ project, resource }] : [];
   });
 
-  return { memberships, isPending };
+  return { memberships, isPending, error };
 }

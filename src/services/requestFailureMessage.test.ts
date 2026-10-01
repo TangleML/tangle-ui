@@ -75,6 +75,14 @@ describe("requestFailureMessage", () => {
     );
   });
 
+  /** A gateway refuses with an HTML page, and this reaches a toast. */
+  it("cuts down a body it cannot read as an explanation", async () => {
+    const message = await describeIt("<html>".padEnd(5000, "x"));
+
+    expect(message.length).toBeLessThan(400);
+    expect(message).toContain("…");
+  });
+
   /** A 500 with an empty body still has to say something. */
   it("says the status when the server explains nothing", async () => {
     const message = await requestFailureMessage(

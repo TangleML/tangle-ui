@@ -8,7 +8,6 @@ import { buildTaskSpecShape } from "@/components/shared/PipelineRunNameTemplate/
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
-import { createNewPipeline } from "@/routes/v2/pages/Editor/components/EditorMenuBar/components/fileMenu.actions";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { useRemoteEnvAuthToken } from "@/routes/v2/pages/Tangent/hooks/useRemoteEnvAuthToken";
 import { useTangentBaseUrl } from "@/routes/v2/pages/Tangent/hooks/useTangentBaseUrl";
@@ -27,9 +26,9 @@ import { createRemoteEnvHost } from "@/routes/v2/pages/Tangent/services/remoteEn
 import { createDebugBridgeHandlers } from "@/routes/v2/shared/components/AiChat/toolBridge/debugBridge";
 import { createRunBridgeHandlers } from "@/routes/v2/shared/components/AiChat/toolBridge/runBridge";
 import type { BridgeDeps } from "@/routes/v2/shared/components/AiChat/toolBridge/utils";
-import { availablePipelineName } from "@/services/localPipelines/localPipelinesService";
 import { copyRunToPipeline } from "@/services/pipelineRunService";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
+import { createAndAttachPipeline } from "@/services/projects/createAndAttachPipeline";
 import { UNNAMED_PIPELINE } from "@/services/projects/placeholderNames";
 import { createProjectResource } from "@/services/projects/projectResourcesService";
 import { localPipelineResourceInput } from "@/services/projects/resourceDescriptor";
@@ -198,17 +197,11 @@ export function TangentProjectAgentProvider({
       waitForEnvironment: (id) => store.waitForTabEnvironment(id),
       runInspect,
       createPipeline: async (name) => {
-        const pipelineName = await availablePipelineName(
-          name ?? UNNAMED_PIPELINE,
-        );
-        const file = await createNewPipeline(storage, pipelineName);
-        await createProjectResource(
-          store.projectId,
-          localPipelineResourceInput({
-            localName: file.storageKey,
-            localId: file.id,
-          }),
-        );
+        const file = await createAndAttachPipeline({
+          storage,
+          name: name ?? UNNAMED_PIPELINE,
+          attach: (input) => createProjectResource(store.projectId, input),
+        });
         await refreshProjectResources();
         return { pipelineName: file.storageKey, fileId: file.id };
       },

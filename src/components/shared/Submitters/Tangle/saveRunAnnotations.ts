@@ -23,18 +23,25 @@ export async function saveRunAnnotations(
   backendUrl: string,
   { notes, componentSpec }: RunAnnotationsFromSubmission,
 ) {
+  const writes: { key: string; value: string }[] = [];
+
   if (notes !== undefined && notes.trim() !== "") {
-    await updateRunAnnotation(runId, backendUrl, {
-      key: PIPELINE_RUN_NOTES_ANNOTATION,
-      value: notes,
-    });
+    writes.push({ key: PIPELINE_RUN_NOTES_ANNOTATION, value: notes });
   }
 
   const tags = getPipelineTagsFromSpec(componentSpec);
   if (tags.length > 0) {
-    await updateRunAnnotation(runId, backendUrl, {
-      key: PIPELINE_TAGS_ANNOTATION,
-      value: tags.join(","),
-    });
+    writes.push({ key: PIPELINE_TAGS_ANNOTATION, value: tags.join(",") });
+  }
+
+  // Neither annotation depends on the other, so one being refused must not take
+  // the other down with it.
+  const settled = await Promise.allSettled(
+    writes.map((write) => updateRunAnnotation(runId, backendUrl, write)),
+  );
+
+  const failed = settled.filter((result) => result.status === "rejected");
+  if (failed.length > 0) {
+    throw failed[0].reason;
   }
 }

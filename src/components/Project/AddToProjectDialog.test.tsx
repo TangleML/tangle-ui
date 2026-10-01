@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { pointerTo } from "@/services/localPipelines/localPipelinesService";
 import { useAddResourceToProject } from "@/services/projects/useProjectResources";
-import { useProjects } from "@/services/projects/useProjects";
+import { useReachableProjects } from "@/services/projects/useReachableProjects";
 
 import { AddToProjectDialog } from "./AddToProjectDialog";
 
@@ -18,8 +18,8 @@ vi.mock("@/services/projects/useProjectResources", () => ({
   useAddResourceToProject: vi.fn(),
 }));
 
-vi.mock("@/services/projects/useProjects", () => ({
-  useProjects: vi.fn(),
+vi.mock("@/services/projects/useReachableProjects", () => ({
+  useReachableProjects: vi.fn(),
 }));
 
 vi.mock("@/services/localPipelines/localPipelinesService", () => ({
@@ -33,11 +33,11 @@ vi.mock("@/providers/AnalyticsProvider", () => ({
 }));
 
 function mockProjects(items = [{ id: "project-1", name: "Churn work" }]) {
-  vi.mocked(useProjects).mockReturnValue({
-    data: { items },
+  vi.mocked(useReachableProjects).mockReturnValue({
+    projects: items,
     isPending: false,
     error: null,
-  } as unknown as ReturnType<typeof useProjects>);
+  } as unknown as ReturnType<typeof useReachableProjects>);
 }
 
 const dialog = (memberProjectIds: string[] = []) =>

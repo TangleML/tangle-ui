@@ -9,13 +9,18 @@ import { scan } from "react-scan";
 
 import { startAgentTraceLog } from "@/agent/middleware/agentTraceLog";
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
+import { isTangentEnabled } from "@/components/shared/Settings/useFlags";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 
 import { router } from "./routes/router";
 import { initializeBugsnag } from "./services/errorManagement/bugsnag";
 
 initializeBugsnag();
-startAgentTraceLog();
+
+// Only Tangent has anything that broadcasts, and only Tangent can read it back.
+if (isTangentEnabled()) {
+  startAgentTraceLog();
+}
 
 const queryClient = new QueryClient();
 

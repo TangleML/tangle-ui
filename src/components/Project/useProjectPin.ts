@@ -1,9 +1,12 @@
+import { useState } from "react";
+
 import { useFavorites } from "@/hooks/useFavorites";
 import useToastNotification from "@/hooks/useToastNotification";
 
 interface ProjectPin {
   pinned: boolean;
-  togglePin: () => void;
+  isPinning: boolean;
+  togglePin: () => Promise<void>;
 }
 
 /**
@@ -18,18 +21,30 @@ export function useProjectPin(project: {
 }): ProjectPin {
   const { isFavorite, toggleFavorite } = useFavorites();
   const notify = useToastNotification();
+  const [isPinning, setIsPinning] = useState(false);
 
   const pinned = isFavorite("project", project.id);
 
   return {
     pinned,
-    togglePin: () => {
-      void toggleFavorite({
-        type: "project",
-        id: project.id,
-        name: project.name,
-      });
-      notify(pinned ? "Project unpinned" : "Project pinned", "success");
+    isPinning,
+    togglePin: async () => {
+      setIsPinning(true);
+      try {
+        await toggleFavorite({
+          type: "project",
+          id: project.id,
+          name: project.name,
+        });
+        notify(pinned ? "Project unpinned" : "Project pinned", "success");
+      } catch {
+        notify(
+          pinned ? "Could not unpin the project" : "Could not pin the project",
+          "error",
+        );
+      } finally {
+        setIsPinning(false);
+      }
     },
   };
 }

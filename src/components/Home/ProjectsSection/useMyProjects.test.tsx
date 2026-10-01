@@ -58,7 +58,11 @@ describe("useMyProjects", () => {
     );
   });
 
-  it("lists every project when the user cannot be identified", async () => {
+  /**
+   * A backend that identifies nobody answers `Unknown`, which is every
+   * single-user backend: there the unfiltered list is that one user's.
+   */
+  it("lists every project when the backend identifies nobody", async () => {
     vi.mocked(getUserDetails).mockResolvedValue({
       id: "Unknown",
       permissions: [],
@@ -71,6 +75,20 @@ describe("useMyProjects", () => {
         expect.objectContaining({ createdBy: undefined }),
       ),
     );
+  });
+
+  /**
+   * A lookup that did not answer at all is different: the list would be
+   * everyone's with nothing saying so, so it is not asked for.
+   */
+  it("reports a failure when the identity lookup does not answer", async () => {
+    vi.mocked(getUserDetails).mockRejectedValue(new Error("no session"));
+
+    const { result } = render();
+
+    await waitFor(() => expect(result.current.error).not.toBeNull());
+    expect(result.current.isPending).toBe(false);
+    expect(listProjects).not.toHaveBeenCalled();
   });
 
   /**

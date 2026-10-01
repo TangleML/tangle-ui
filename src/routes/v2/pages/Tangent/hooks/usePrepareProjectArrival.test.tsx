@@ -44,6 +44,7 @@ vi.mock(
 
 const updateProject = vi.fn();
 const createResource = vi.fn();
+const deleteFile = vi.fn();
 const storage = {};
 const minimize = vi.fn();
 const windows = { getWindowById: vi.fn(() => ({ minimize })) };
@@ -129,6 +130,7 @@ describe("usePrepareProjectArrival", () => {
     vi.mocked(createNewPipeline).mockResolvedValue({
       id: "file-1",
       storageKey: "Churn model",
+      deleteFile,
     } as unknown as Awaited<ReturnType<typeof createNewPipeline>>);
   });
   afterEach(() => vi.resetAllMocks());
@@ -378,6 +380,35 @@ describe("usePrepareProjectArrival", () => {
         input: { metadata: {} },
       }),
     );
+  });
+
+  /**
+   * The session the prompt asked for has already started by then, so a refusal
+   * must not cost the caller the pipeline and the workarea they came for.
+   */
+  it("still opens the workarea when the prompt cannot be cleared", async () => {
+    given({ projectOverrides: { metadata: { startingPrompt: "Fix run 7" } } });
+    updateProject.mockRejectedValueOnce(new Error("conflict"));
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const store = makeStore();
+
+    prepare(store);
+
+    await waitFor(() => expect(store.openWorkareaTarget).toHaveBeenCalled());
+  });
+
+  /**
+   * Nothing lists a pipeline by the project it is not attached to, so one left
+   * behind here is invisible as well as unasked for.
+   */
+  it("removes the pipeline again when the project refuses it", async () => {
+    createResource.mockRejectedValueOnce(new Error("refused"));
+    const store = makeStore();
+
+    prepare(store);
+
+    await waitFor(() => expect(deleteFile).toHaveBeenCalled());
+    expect(store.openWorkareaTarget).not.toHaveBeenCalled();
   });
 
   /** All three are what the prompt asked for, so all three say so. */

@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 
 import { useDeleteProjectAction } from "@/components/Project/useDeleteProjectAction";
+import { useProjectPin } from "@/components/Project/useProjectPin";
 import { useShareProjectAction } from "@/components/Project/useShareProjectAction";
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
 import { useTangentEnabled } from "@/components/shared/Settings/useFlags";
@@ -27,7 +28,6 @@ import {
   formatResourceCounts,
   visibleResourceCounts,
 } from "./formatResourceCounts";
-import { useProjectPin } from "./useProjectPin";
 
 interface ProjectCardProps {
   project: ProjectSummary;
@@ -35,15 +35,13 @@ interface ProjectCardProps {
 
 export function ProjectCard({ project }: ProjectCardProps) {
   const navigate = useNavigate();
-  // A tile is not the project's page: losing it is the whole of what the
-  // delete does here, so nothing navigates away afterwards.
   const { confirmAndDelete, isDeleting, confirmation } = useDeleteProjectAction(
     project,
-    { onDeleted: () => {} },
+    { navigateAfterDelete: false },
   );
   const share = useShareProjectAction(project.id);
 
-  const { pinned, togglePin } = useProjectPin(project);
+  const { pinned, isPinning, togglePin } = useProjectPin(project);
   const tangentEnabled = useTangentEnabled();
   const resourceCounts = visibleResourceCounts(
     project.resourceCounts,
@@ -124,6 +122,9 @@ export function ProjectCard({ project }: ProjectCardProps) {
             variant="ghost"
             size="icon"
             className="absolute right-2 top-2"
+            // The card is dimmed while the delete runs, but dimming stops a
+            // pointer and not a keyboard.
+            disabled={isDeleting}
             aria-label={`Project actions: ${project.name}`}
             {...tracking("projects.project_card_menu")}
           >
@@ -132,7 +133,8 @@ export function ProjectCard({ project }: ProjectCardProps) {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem
-            onSelect={togglePin}
+            disabled={isPinning}
+            onSelect={() => void togglePin()}
             {...tracking("projects.pin_project", { new_value: !pinned })}
           >
             <Icon name={pinned ? "PinOff" : "Pin"} size="sm" />

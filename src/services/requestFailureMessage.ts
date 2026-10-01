@@ -1,6 +1,16 @@
 const MAX_REASONS = 3;
 const MAX_VALUE_LENGTH = 40;
 
+/**
+ * A body that explains nothing is still passed on verbatim, and a gateway's
+ * refusal is an HTML page of a few kilobytes. This message reaches a toast and
+ * an agent's tool result, so what is unrecognised is cut down to a line.
+ */
+const MAX_BODY_LENGTH = 300;
+
+const truncate = (value: string, limit: number) =>
+  value.length > limit ? `${value.slice(0, limit)}…` : value;
+
 interface ValidationIssue {
   loc?: unknown;
   msg?: unknown;
@@ -24,9 +34,7 @@ function describeValue(input: unknown): string | undefined {
   const rendered =
     typeof input === "string" ? `"${input}"` : JSON.stringify(input);
   if (rendered === undefined) return undefined;
-  return rendered.length > MAX_VALUE_LENGTH
-    ? `${rendered.slice(0, MAX_VALUE_LENGTH)}…`
-    : rendered;
+  return truncate(rendered, MAX_VALUE_LENGTH);
 }
 
 function describeIssue(issue: ValidationIssue): string | undefined {
@@ -76,15 +84,17 @@ async function readServerMessage(
   const body = await response.text().catch(() => "");
   if (!body) return undefined;
 
+  const verbatim = () => truncate(body.trim(), MAX_BODY_LENGTH) || undefined;
+
   try {
     const parsed: unknown = JSON.parse(body);
-    if (!isRecord(parsed)) return body.trim() || undefined;
+    if (!isRecord(parsed)) return verbatim();
     return (
       describeDetail(parsed.detail) ??
       (typeof parsed.message === "string" ? parsed.message : undefined) ??
-      body.trim()
+      verbatim()
     );
   } catch {
-    return body.trim() || undefined;
+    return verbatim();
   }
 }

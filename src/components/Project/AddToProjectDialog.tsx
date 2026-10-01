@@ -8,7 +8,7 @@ import {
   localPipelineResourceInput,
 } from "@/services/projects/resourceDescriptor";
 import { useAddResourceToProject } from "@/services/projects/useProjectResources";
-import { useProjects } from "@/services/projects/useProjects";
+import { useReachableProjects } from "@/services/projects/useReachableProjects";
 
 import { PickFromListDialog } from "./PickFromListDialog";
 
@@ -25,7 +25,7 @@ export function AddToProjectDialog({
   onOpenChange,
   onAdded,
 }: AddToProjectDialogProps) {
-  const { data, isPending, error } = useProjects({});
+  const { projects, isPending, error } = useReachableProjects();
   const addResource = useAddResourceToProject();
   const notify = useToastNotification();
   const { track } = useAnalytics();
@@ -35,7 +35,7 @@ export function AddToProjectDialog({
   }, [track]);
 
   const alreadyIn = new Set(memberProjectIds);
-  const items = data?.items.map((project) => ({
+  const items = projects.map((project) => ({
     id: project.id,
     label: project.name,
     alreadyAdded: alreadyIn.has(project.id),

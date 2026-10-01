@@ -54,6 +54,7 @@ function given({
   vi.mocked(usePipelineProjects).mockReturnValue({
     memberships,
     isPending: false,
+    error: null,
   });
 }
 

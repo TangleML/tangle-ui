@@ -3,13 +3,13 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { useProjectPin } from "@/components/Project/useProjectPin";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import type { ProjectSummary } from "@/services/projects/types";
 import { useDeleteProject } from "@/services/projects/useProjects";
 import { copyToClipboard } from "@/utils/string";
 
 import { ProjectCard } from "./ProjectCard";
-import { useProjectPin } from "./useProjectPin";
 
 const mutate = vi.fn();
 const togglePin = vi.fn();
@@ -47,7 +47,9 @@ vi.mock("@/utils/string", () => ({
   copyToClipboard: vi.fn(),
 }));
 
-vi.mock("./useProjectPin", () => ({ useProjectPin: vi.fn() }));
+vi.mock("@/components/Project/useProjectPin", () => ({
+  useProjectPin: vi.fn(),
+}));
 
 vi.mock("@/components/shared/Settings/useFlags", () => {
   const useFlagValue = vi.fn();
@@ -83,7 +85,11 @@ function mockDeleteProject({ isPending = false } = {}) {
 }
 
 function mockPin({ pinned = false } = {}) {
-  vi.mocked(useProjectPin).mockReturnValue({ pinned, togglePin });
+  vi.mocked(useProjectPin).mockReturnValue({
+    pinned,
+    isPinning: false,
+    togglePin,
+  });
 }
 
 function mockFlags(flags: Record<string, boolean>) {

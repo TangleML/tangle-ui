@@ -25,6 +25,15 @@ function graph(tasks: Record<string, unknown>): ComponentSpec {
 }
 
 describe("pipelineValidity", () => {
+  it("refuses to judge a graph with nothing under it", () => {
+    const spec = {
+      name: "Empty graph",
+      implementation: { graph: null },
+    } as unknown as ComponentSpec;
+
+    expect(pipelineValidity(spec)).toBe("unknown");
+  });
+
   it("passes a pipeline the app ships as an example", () => {
     expect(
       pipelineValidity(

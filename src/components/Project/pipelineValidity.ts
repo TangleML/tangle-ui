@@ -1,6 +1,7 @@
 import { IncrementingIdGenerator } from "@/models/componentSpec/factories/idGenerator";
 import { YamlDeserializer } from "@/models/componentSpec/serialization/yamlDeserializer";
 import type { ComponentSpec } from "@/utils/componentSpec";
+import { isGraphImplementation } from "@/utils/componentSpec";
 
 export type PipelineValidity = "valid" | "invalid" | "unknown";
 
@@ -11,8 +12,15 @@ function everyTaskCarriesItsComponent(spec: ComponentSpec) {
     return false;
   }
 
-  if (!("graph" in implementation)) {
+  if (!isGraphImplementation(implementation)) {
     return true;
+  }
+
+  // Browser storage holds whatever yaml was written, so a `graph:` key with
+  // nothing under it reaches here.
+  const graph: unknown = implementation.graph;
+  if (!graph || typeof graph !== "object") {
+    return false;
   }
 
   return Object.values(implementation.graph.tasks ?? {}).every((task) =>

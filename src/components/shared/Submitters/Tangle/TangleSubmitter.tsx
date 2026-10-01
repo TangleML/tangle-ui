@@ -4,7 +4,6 @@ import { AlertCircle, CheckCircle, Loader2, SendHorizonal } from "lucide-react";
 import { type MouseEvent, useRef, useState } from "react";
 
 import { RunProjectField } from "@/components/Project/RunProjectField";
-import { useRunProjectContext } from "@/components/Project/useRunProjectContext";
 import { useAwaitAuthorization } from "@/components/shared/Authentication/useAwaitAuthorization";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Button } from "@/components/ui/button";
@@ -27,6 +26,7 @@ import { validateArguments } from "@/utils/validations";
 import TooltipButton from "../../Buttons/TooltipButton";
 import { SubmitTaskArgumentsDialog } from "./components/SubmitTaskArgumentsDialog";
 import { saveRunAnnotations } from "./saveRunAnnotations";
+import { useRunAttribution } from "./useRunAttribution";
 import { useSubmitPipeline } from "./useSubmitPipeline";
 
 interface TangleSubmitterProps {
@@ -47,13 +47,10 @@ const TangleSubmitter = ({
   const mockBackend = useTourMockBackend();
   const { mutate: submit, isPending: isSubmitting } = useSubmitPipeline();
   const isAutoRedirect = useFlagValue("redirect-on-new-pipeline-run");
-  const { projectId: contextProjectId, projectIds } = useRunProjectContext();
+  const attribution = useRunAttribution();
 
   const [submitSuccess, setSubmitSuccess] = useState<boolean | null>(null);
   const [isArgumentsDialogOpen, setIsArgumentsDialogOpen] = useState(false);
-  const [runProjectId, setRunProjectId] = useState<string | undefined>(
-    contextProjectId,
-  );
   const { cooldownTime, setCooldownTime } = useCooldownTimer(0);
   const notify = useToastNotification();
   const navigate = useNavigate();
@@ -123,13 +120,13 @@ const TangleSubmitter = ({
   };
 
   const openArgumentsDialog = () => {
-    setRunProjectId(contextProjectId);
+    attribution.resetToContext();
     setIsArgumentsDialogOpen(true);
   };
 
   const handleSubmit = async (
     taskArguments?: Record<string, ArgumentType>,
-    runProjectIds: string[] = projectIds,
+    runProjectIds: string[] = attribution.defaultProjectIds,
   ) => {
     if (!componentSpec) {
       handleError("No pipeline to submit");
@@ -167,7 +164,7 @@ const TangleSubmitter = ({
   ) => {
     runNotes.current = notes;
     setIsArgumentsDialogOpen(false);
-    handleSubmit(args, runProjectId ? [runProjectId] : []);
+    handleSubmit(args, attribution.chosenProjectIds);
   };
 
   const hasConfigurableInputs = (componentSpec?.inputs?.length ?? 0) > 0;
@@ -267,8 +264,8 @@ const TangleSubmitter = ({
           projectField={
             <RunProjectField
               pipelineName={componentSpec.name}
-              value={runProjectId}
-              onChange={setRunProjectId}
+              value={attribution.projectId}
+              onChange={attribution.setProjectId}
             />
           }
         />

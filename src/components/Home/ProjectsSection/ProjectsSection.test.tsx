@@ -6,12 +6,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useBackend } from "@/providers/BackendProvider";
 import type { ProjectSummary, Workspace } from "@/services/projects/types";
+import { usePinnedProjects } from "@/services/projects/usePinnedProjects";
 import { useWorkspaces } from "@/services/projects/useWorkspaces";
 import { getUserDetails } from "@/utils/user";
 
 import { ProjectsSection } from "./ProjectsSection";
 import { useMyProjects } from "./useMyProjects";
-import { usePinnedProjects } from "./usePinnedProjects";
 
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@tanstack/react-router")>()),
@@ -28,7 +28,9 @@ vi.mock("@/services/projects/useProjects", () => ({
 
 vi.mock("./useMyProjects", () => ({ useMyProjects: vi.fn() }));
 
-vi.mock("./usePinnedProjects", () => ({ usePinnedProjects: vi.fn() }));
+vi.mock("@/services/projects/usePinnedProjects", () => ({
+  usePinnedProjects: vi.fn(),
+}));
 
 vi.mock("@/hooks/useToastNotification", () => ({
   default: () => vi.fn(),

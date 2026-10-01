@@ -25,13 +25,16 @@ import type {
 } from "./types";
 import { ProjectsQueryKeys } from "./types";
 
-export function useProjects(params: ListProjectsParams = {}) {
+export function useProjects(
+  params: ListProjectsParams = {},
+  { enabled = true }: { enabled?: boolean } = {},
+) {
   const { configured, available } = useBackend();
 
   return useQuery({
     queryKey: ProjectsQueryKeys.List(params),
     queryFn: () => listProjects(params),
-    enabled: configured && available,
+    enabled: enabled && configured && available,
     ...projectQueryDefaults,
   });
 }

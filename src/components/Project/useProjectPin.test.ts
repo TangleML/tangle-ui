@@ -29,10 +29,10 @@ describe("useProjectPin", () => {
     const { result } = renderHook(() => useProjectPin(project));
     await waitFor(() => expect(result.current.pinned).toBe(false));
 
-    act(() => result.current.togglePin());
+    await act(() => result.current.togglePin());
     await waitFor(() => expect(result.current.pinned).toBe(true));
 
-    act(() => result.current.togglePin());
+    await act(() => result.current.togglePin());
     await waitFor(() => expect(result.current.pinned).toBe(false));
   });
 
@@ -40,9 +40,22 @@ describe("useProjectPin", () => {
     const { result } = renderHook(() => useProjectPin(project));
     await waitFor(() => expect(result.current.pinned).toBe(false));
 
-    act(() => result.current.togglePin());
+    await act(() => result.current.togglePin());
 
     expect(notify).toHaveBeenCalledWith("Project pinned", "success");
+  });
+
+  it("says so when the store refuses the pin", async () => {
+    const put = vi
+      .spyOn(LibraryDB.favorites, "put")
+      .mockRejectedValue(new Error("quota"));
+    const { result } = renderHook(() => useProjectPin(project));
+    await waitFor(() => expect(result.current.pinned).toBe(false));
+
+    await act(() => result.current.togglePin());
+
+    expect(notify).toHaveBeenCalledWith("Could not pin the project", "error");
+    put.mockRestore();
   });
 
   /** The name rides along so the pinned list can be drawn before it loads. */
@@ -50,7 +63,7 @@ describe("useProjectPin", () => {
     const { result } = renderHook(() => useProjectPin(project));
     await waitFor(() => expect(result.current.pinned).toBe(false));
 
-    act(() => result.current.togglePin());
+    await act(() => result.current.togglePin());
     await waitFor(() => expect(result.current.pinned).toBe(true));
 
     await expect(LibraryDB.favorites.toArray()).resolves.toEqual([

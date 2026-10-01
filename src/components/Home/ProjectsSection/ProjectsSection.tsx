@@ -6,6 +6,7 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
 import { useBackend } from "@/providers/BackendProvider";
+import { usePinnedProjects } from "@/services/projects/usePinnedProjects";
 import { useWorkspaces } from "@/services/projects/useWorkspaces";
 
 import { CreateProjectDialog } from "./CreateProjectDialog";
@@ -13,7 +14,6 @@ import { NewProjectCard } from "./NewProjectCard";
 import { ProjectCard } from "./ProjectCard";
 import { PROJECT_GRID } from "./projectGrid";
 import { useMyProjects } from "./useMyProjects";
-import { usePinnedProjects } from "./usePinnedProjects";
 
 const LoadingProjects = () => (
   <InlineStack gap="2" blockAlign="center">
@@ -58,7 +58,11 @@ function ProjectsGrid() {
     isLoadingMore,
     loadMore,
   } = useMyProjects();
-  const { data: workspaces } = useWorkspaces();
+  const {
+    data: workspaces,
+    isPending: isWorkspacesPending,
+    error: workspacesError,
+  } = useWorkspaces();
   const { projects: pinned } = usePinnedProjects();
 
   // Pinned projects lead the grid, so a pinned project of the caller's own is
@@ -91,9 +95,22 @@ function ProjectsGrid() {
   // backend offers, and creation is withdrawn when it offers none.
   const targetWorkspaceId = workspaces?.[0]?.id;
 
+  // A workspace list still on its way says nothing about whether there is one
+  // to create in, and one that failed to arrive is not the same as none.
+  const noWorkspace =
+    !isWorkspacesPending && !workspacesError && !targetWorkspaceId;
+
   return (
     <BlockStack gap="4">
-      {!targetWorkspaceId && (
+      {workspacesError && (
+        <Alert className="w-fit">
+          <Icon name="CircleAlert" />
+          <AlertDescription>
+            {`Could not load workspaces, so a project cannot be created: ${workspacesError.message}`}
+          </AlertDescription>
+        </Alert>
+      )}
+      {noWorkspace && (
         <Alert className="w-fit">
           <Icon name="CircleAlert" />
           <AlertDescription>

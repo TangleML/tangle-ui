@@ -1,5 +1,7 @@
+import { useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 
+import { APP_ROUTES } from "@/routes/router";
 import { createEditorToolBridge } from "@/routes/v2/pages/Editor/components/AiChat/toolBridge";
 import { invokeAutoLayoutVia } from "@/routes/v2/pages/Editor/components/AiChat/toolBridge/invokeAutoLayoutVia";
 import { renamePipelineFileFor } from "@/routes/v2/pages/Editor/hooks/renamePipelineFileFor";
@@ -24,6 +26,7 @@ const SUGGESTED_PROMPTS_EDITOR: SuggestedPrompt[] = [
 export function useAiChatWindow(enabled: boolean) {
   const { windows, keyboard } = useSharedStores();
   const editorSession = useEditorSession();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!enabled) {
@@ -39,8 +42,17 @@ export function useAiChatWindow(enabled: boolean) {
             ...deps,
             undo: editorSession.undo,
             invokeAutoLayout: invokeAutoLayoutVia(keyboard),
+            // This route is keyed by pipeline name, so a rename the agent made
+            // leaves the url pointing at a pipeline that no longer exists.
             renamePipelineFile: renamePipelineFileFor(
               editorSession.pipelineFile,
+              (fileId, name) =>
+                void navigate({
+                  to: APP_ROUTES.EDITOR_V2_PIPELINE,
+                  params: { pipelineName: name },
+                  search: { fileId },
+                  replace: true,
+                }),
             ),
           })
         }
@@ -64,5 +76,5 @@ export function useAiChatWindow(enabled: boolean) {
         ),
       },
     );
-  }, [enabled, windows, editorSession, keyboard]);
+  }, [enabled, windows, editorSession, keyboard, navigate]);
 }
