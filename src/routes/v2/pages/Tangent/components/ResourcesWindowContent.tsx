@@ -28,6 +28,7 @@ import {
   useProjectResources,
 } from "@/services/projects/useProjectResources";
 import { getErrorMessage } from "@/utils/string";
+import { tracking } from "@/utils/tracking";
 
 import { EditInstructionsDialog } from "./EditInstructionsDialog";
 import { WindowListRow } from "./WindowListRow";
@@ -153,6 +154,7 @@ export function ResourcesWindowContent() {
             disabled={!resource.target}
             testId={`open-resource-${resource.id}`}
             onOpen={() => void handleOpenResource(resource)}
+            {...tracking("projects.open_from_details_panel")}
             action={
               <Button
                 variant="ghost"
@@ -162,6 +164,7 @@ export function ResourcesWindowContent() {
                 title="Remove"
                 disabled={isDetachingResource}
                 onClick={() => deleteResource(resource.id)}
+                {...tracking("projects.remove_resource_open")}
               >
                 <Icon name="X" size="xs" />
               </Button>
@@ -199,6 +202,7 @@ function InstructionsRow({ projectId }: { projectId: string }) {
       disabled={isSaving}
       testId="edit-instructions"
       onOpen={() => void handleEditInstructions()}
+      {...tracking("projects.edit_instructions_open")}
     />
   );
 }

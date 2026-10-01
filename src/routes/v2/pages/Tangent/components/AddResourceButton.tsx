@@ -15,6 +15,7 @@ import { AddPipelineDialog } from "@/routes/v2/pages/Tangent/components/AddPipel
 import { AddPipelineRunDialog } from "@/routes/v2/pages/Tangent/components/AddPipelineRunDialog";
 import type { CreateResourceInput } from "@/services/projects/types";
 import { useCreateProjectResource } from "@/services/projects/useProjectResources";
+import { tracking } from "@/utils/tracking";
 
 interface AddResourceButtonProps {
   projectId: string;
@@ -63,6 +64,7 @@ export function AddResourceButton({ projectId }: AddResourceButtonProps) {
         className="flex-1 gap-2 rounded-r-none border-r-0"
         disabled={isPending}
         onClick={handleAddPipeline}
+        {...tracking("projects.add_pipeline_open")}
       >
         <Icon name="Plus" size="xs" />
         Add a pipeline
@@ -74,20 +76,30 @@ export function AddResourceButton({ projectId }: AddResourceButtonProps) {
             className="rounded-l-none px-1.5"
             disabled={isPending}
             aria-label="More resource types"
+            {...tracking("projects.add_resource_menu")}
           >
             <Icon name="ChevronDown" size="sm" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={handleAddPipeline}>
+          <DropdownMenuItem
+            onClick={handleAddPipeline}
+            {...tracking("projects.add_pipeline_open")}
+          >
             <Icon name="Plus" size="sm" />
             Add a pipeline
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleAddPipelineRun}>
+          <DropdownMenuItem
+            onClick={handleAddPipelineRun}
+            {...tracking("projects.add_pipeline_run_open")}
+          >
             <Icon name="Play" size="sm" />
             Add pipeline run
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleAddDocument}>
+          <DropdownMenuItem
+            onClick={handleAddDocument}
+            {...tracking("projects.add_document_open")}
+          >
             <Icon name="FileText" size="sm" />
             Add a document
           </DropdownMenuItem>

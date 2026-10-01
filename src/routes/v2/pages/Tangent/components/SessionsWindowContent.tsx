@@ -10,6 +10,7 @@ import { useProjectSessions } from "@/routes/v2/pages/Tangent/hooks/useProjectSe
 import { useAiGate } from "@/routes/v2/shared/components/AiChat/components/useAiGate";
 import { sessionLabelsById } from "@/services/projects/sessionLabel";
 import { formatRelativeTime } from "@/utils/date";
+import { tracking } from "@/utils/tracking";
 
 export const SessionsWindowContent = observer(function SessionsWindowContent() {
   const store = useTangentProject();
@@ -30,12 +31,13 @@ export const SessionsWindowContent = observer(function SessionsWindowContent() {
         <BlockStack gap="1">
           {sessions.map((session) => {
             const isActive = session.sessionId === activeSessionId;
-            const label = labels.get(session.sessionId) ?? "Session";
+            const label = labels.get(session.sessionId);
             return (
               <button
                 key={session.sessionId}
                 type="button"
                 onClick={() => store.selectSession(session.sessionId)}
+                {...tracking("projects.open_session")}
                 className={cn(
                   "w-full rounded-md px-2 py-1.5 text-left hover:bg-accent",
                   isActive && "bg-accent",
@@ -48,7 +50,7 @@ export const SessionsWindowContent = observer(function SessionsWindowContent() {
                   </Text>
                 </InlineStack>
                 <Text size="xs" tone="subdued">
-                  {formatRelativeTime(session.createdAt) ?? ""}
+                  {formatRelativeTime(session.createdAt)}
                 </Text>
               </button>
             );
@@ -61,6 +63,7 @@ export const SessionsWindowContent = observer(function SessionsWindowContent() {
         aria-label="New session"
         title={aiGate.title}
         onClick={() => void store.startSession()}
+        {...tracking("projects.start_session")}
         disabled={store.isStartingSession || aiGate.disabled}
         className="w-full"
       >

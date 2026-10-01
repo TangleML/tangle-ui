@@ -42,10 +42,7 @@ export function ProjectWindowContent() {
       <BlockStack gap="1" align="stretch">
         <Detail label="Created by" value={project.createdBy ?? "Unknown"} />
         <Detail label="Created" value={formatDate(project.createdAt)} />
-        <Detail
-          label="Updated"
-          value={formatRelativeTime(project.updatedAt) ?? "Unknown"}
-        />
+        <Detail label="Updated" value={formatRelativeTime(project.updatedAt)} />
       </BlockStack>
 
       <Separator />
