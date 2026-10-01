@@ -5,6 +5,7 @@ import type { ToolBridgeApi } from "../toolBridgeApi";
 import type { AgentContext } from "../types";
 import {
   buildRemoteEditorAgent,
+  describeToolGrant,
   selectRemoteEditorTools,
 } from "./remoteEditorAgent";
 
@@ -73,5 +74,54 @@ describe("selectRemoteEditorTools", () => {
       "Do not attempt workflow steps that require a tool outside this list.",
     );
     expect(agent.modelSettings.reasoning).toEqual({ effort: "none" });
+  });
+});
+
+describe("describeToolGrant", () => {
+  it("separates what was granted from what this build has and was not asked for", () => {
+    const grant = describeToolGrant(makeSession(), [
+      "add_task",
+      "get_pipeline_state",
+    ]);
+
+    expect(grant.granted).toEqual(["get_pipeline_state", "add_task"]);
+    expect(grant.withheld).toContain("auto_layout");
+    expect(grant.withheld).not.toContain("add_task");
+    expect(grant.unknown).toEqual([]);
+  });
+
+  /**
+   * The reported case: the canvas tools exist here and the server never asked
+   * for them, so the agent said auto-layout and sticky notes were unavailable.
+   */
+  it("names the canvas tools an allowlist that predates them leaves out", () => {
+    const grant = describeToolGrant(makeSession(), ["add_task"]);
+
+    expect(grant.withheld).toEqual(
+      expect.arrayContaining([
+        "auto_layout",
+        "add_sticky_note",
+        "update_sticky_note",
+        "delete_sticky_note",
+      ]),
+    );
+  });
+
+  /** The mirror failure: asked for something this build cannot supply. */
+  it("reports a requested tool this build does not have", () => {
+    const grant = describeToolGrant(makeSession(), ["teleport_task"]);
+
+    expect(grant.unknown).toEqual(["teleport_task"]);
+    expect(grant.granted).toEqual([]);
+  });
+
+  it("describes the read-only registry when the host is a run view", () => {
+    const grant = describeToolGrant(
+      makeSession({ mode: "runView", runId: "42" }),
+      ["get_run_status"],
+    );
+
+    expect(grant.granted).toEqual(["get_run_status"]);
+    expect(grant.withheld).not.toContain("add_task");
   });
 });

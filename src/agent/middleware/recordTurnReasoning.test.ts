@@ -1,8 +1,13 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { type AgentTraceEvent, subscribeToTraceEvents } from "./agentTrace";
 import { recordTurnReasoning } from "./recordTurnReasoning";
 
+/**
+ * Only for asserting nothing arrived. A `BroadcastChannel` takes a macrotask to
+ * deliver with no margin to spare, so waiting a fixed tick for something to
+ * arrive is a coin flip on a loaded machine — wait for the event instead.
+ */
 function settled(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
 }
@@ -35,12 +40,13 @@ describe("recordTurnReasoning", () => {
         },
       },
     ]);
-    await settled();
 
-    expect(recorded).toMatchObject([
-      { kind: "thought", detail: "The task looks wrong" },
-      { kind: "message", detail: "Added the task." },
-    ]);
+    await vi.waitFor(() =>
+      expect(recorded).toMatchObject([
+        { kind: "thought", detail: "The task looks wrong" },
+        { kind: "message", detail: "Added the task." },
+      ]),
+    );
   });
 
   /** Only some providers return reasoning, and only for some models. */
@@ -61,9 +67,8 @@ describe("recordTurnReasoning", () => {
         rawItem: { content: [{ type: "input_text", text: "A summary" }] },
       },
     ]);
-    await settled();
 
-    expect(recorded[0]?.detail).toBe("A summary");
+    await vi.waitFor(() => expect(recorded[0]?.detail).toBe("A summary"));
   });
 
   it("survives an item shape it does not recognise", async () => {

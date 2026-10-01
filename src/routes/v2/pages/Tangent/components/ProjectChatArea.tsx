@@ -57,7 +57,11 @@ export const ProjectChatArea = observer(function ProjectChatArea() {
         onOpenArtifact={(url, title) => store.openArtifactTab(url, title)}
         onSendPrompt={(content) => store.recordSessionPrompt(content)}
         onError={(message) => notify(message, "error")}
-        headerAction={<AgentTraceButton />}
+        headerAction={
+          <AgentTraceButton
+            scope={{ projectId: store.projectId, sessionId: activeSessionId }}
+          />
+        }
       />
     </ChatEntityRevealProvider>
   );

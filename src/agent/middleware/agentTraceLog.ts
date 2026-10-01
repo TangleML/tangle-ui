@@ -1,6 +1,7 @@
 import {
   type AgentTraceEvent,
   subscribeToTraceEvents,
+  type TraceScope,
 } from "@/agent/middleware/agentTrace";
 
 const STORAGE_KEY = "agent_trace_log";
@@ -25,11 +26,21 @@ function write(events: AgentTraceEvent[]): void {
   }
 }
 
-export function readAgentTraceLog(): AgentTraceEvent[] {
-  return read();
+const isIn = (scope: TraceScope) => (event: AgentTraceEvent) =>
+  event.scope?.sessionId === scope.sessionId;
+
+export function readAgentTraceLog(scope?: TraceScope): AgentTraceEvent[] {
+  const events = read();
+  return scope ? events.filter(isIn(scope)) : events;
 }
 
-export function clearAgentTraceLog(): void {
+/** Clears what the reader was shown; without a scope, the whole log. */
+export function clearAgentTraceLog(scope?: TraceScope): void {
+  if (scope) {
+    write(read().filter((event) => !isIn(scope)(event)));
+    return;
+  }
+
   try {
     localStorage.removeItem(STORAGE_KEY);
   } catch {

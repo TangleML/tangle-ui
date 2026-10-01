@@ -3,6 +3,7 @@ import * as Comlink from "comlink";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import type { RemoteEnvWorkerApi } from "@/agent/createRemoteEnvWorkerApi";
+import type { TraceScope } from "@/agent/middleware/agentTrace";
 import { buildTaskSpecShape } from "@/components/shared/PipelineRunNameTemplate/types";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
@@ -112,6 +113,9 @@ export function TangentProjectAgentProvider({
   const backendUrlRef = useRef(backendUrl);
   const notifyRef = useRef(notify);
   const aiConfigRef = useRef(aiConfig);
+  const traceScopeRef = useRef<TraceScope | undefined>(
+    sessionId ? { projectId: store.projectId, sessionId } : undefined,
+  );
   const workerRef = useRef<Comlink.Remote<RemoteEnvWorkerApi> | null>(null);
 
   // A project-level backend bridge for the run inspect tools: read-only run and
@@ -155,6 +159,14 @@ export function TangentProjectAgentProvider({
     aiConfigRef.current = aiConfig;
     void workerRef.current?.setAiConfig(aiConfig);
   }, [aiConfig]);
+
+  // Nothing to file an event under until a session exists, so the worker's
+  // scope is left unset rather than stamped with a placeholder.
+  useEffect(() => {
+    if (!sessionId) return;
+    traceScopeRef.current = { projectId: store.projectId, sessionId };
+    void workerRef.current?.setTraceScope(traceScopeRef.current);
+  }, [store.projectId, sessionId]);
 
   const refreshProjectResources = async () => {
     await Promise.all([
@@ -234,6 +246,9 @@ export function TangentProjectAgentProvider({
 
     void remote.init(Comlink.proxy(routingBridge), { mode: "editor" });
     void remote.setAiConfig(aiConfigRef.current);
+    if (traceScopeRef.current) {
+      void remote.setTraceScope(traceScopeRef.current);
+    }
 
     const host = createRemoteEnvHost({
       url: baseUrl,

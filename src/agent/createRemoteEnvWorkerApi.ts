@@ -21,13 +21,20 @@ import type { AiProviderConfig } from "@/types/aiProvider";
 
 import {
   buildRemoteEditorAgent,
+  describeToolGrant,
   type RemoteAgentSpec,
+  type ToolGrant,
 } from "./agents/remoteEditorAgent";
 import {
   type ComponentCatalog,
   createComponentCatalog,
 } from "./componentCatalog";
 import { MISSING_AI_PROVIDER, ProxyClient } from "./config";
+import {
+  recordTraceEvent,
+  setTraceScope,
+  type TraceScope,
+} from "./middleware/agentTrace";
 import { recordTurnReasoning } from "./middleware/recordTurnReasoning";
 import { createSession, type RecentPipelineRun } from "./session";
 import { SkillsLoader } from "./skills/loader";
@@ -59,6 +66,7 @@ export interface RemoteEnvWorkerApi {
   init(bridge: ToolBridgeApi, context: AgentContext): void;
   setAiConfig(aiConfig: AiProviderConfig): void;
   setContext(context: AgentContext): void;
+  setTraceScope(scope: TraceScope): void;
   ping(): Promise<"pong">;
   spawnAgent(params: RemoteSpawnAgentParams): void;
   runTurn(
@@ -74,6 +82,20 @@ interface HostedAgent {
   memory: MemorySession;
   bridge?: ToolBridgeApi;
   componentCatalog: ComponentCatalog;
+  hasReportedTools: boolean;
+}
+
+function formatToolGrant({ granted, withheld, unknown }: ToolGrant): string {
+  const line = (label: string, names: string[]) =>
+    names.length === 0 ? "" : `${label} (${names.length}): ${names.join(", ")}`;
+
+  return [
+    line("granted", granted),
+    line("withheld", withheld),
+    line("not in this build", unknown),
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 export function createRemoteEnvWorkerApi(): RemoteEnvWorkerApi {
@@ -104,6 +126,10 @@ export function createRemoteEnvWorkerApi(): RemoteEnvWorkerApi {
       context = agentContext;
     },
 
+    setTraceScope(scope) {
+      setTraceScope(scope);
+    },
+
     async ping() {
       return "pong";
     },
@@ -127,6 +153,7 @@ export function createRemoteEnvWorkerApi(): RemoteEnvWorkerApi {
         },
         memory: new MemorySession({ sessionId: agentId }),
         componentCatalog: createComponentCatalog(),
+        hasReportedTools: false,
         ...(agentBridge ? { bridge: agentBridge } : {}),
       });
     },
@@ -164,6 +191,22 @@ export function createRemoteEnvWorkerApi(): RemoteEnvWorkerApi {
         context,
         componentCatalog: hosted.componentCatalog,
       });
+
+      // Once per spawn, not per turn: the allowlist is fixed when the agent is
+      // spawned, and it is what decides whether a capability the agent reports
+      // as unavailable was ever offered to it.
+      if (!hosted.hasReportedTools) {
+        hosted.hasReportedTools = true;
+        recordTraceEvent({
+          at: Date.now(),
+          agent: "tangle-remote-editor",
+          kind: "message",
+          label: "tools",
+          detail: formatToolGrant(
+            describeToolGrant(session, hosted.spec.tools),
+          ),
+        });
+      }
 
       const controller = new AbortController();
       abortControllers.set(agentId, controller);
