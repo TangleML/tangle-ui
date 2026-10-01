@@ -4,7 +4,10 @@ import { useEffect, useRef } from "react";
 import { ContextPanelContent } from "@/routes/v2/pages/Editor/components/ContextPanel/ContextPanel";
 import { PinnedTaskContent } from "@/routes/v2/pages/Editor/components/PinnedTaskContent/PinnedTaskContent";
 import { useDeselectAll } from "@/routes/v2/shared/hooks/useDeselectAll";
-import type { EditorStore } from "@/routes/v2/shared/store/editorStore";
+import type {
+  EditorStore,
+  NodeEntityType,
+} from "@/routes/v2/shared/store/editorStore";
 import type { NavigationStore } from "@/routes/v2/shared/store/navigationStore";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import type { Position } from "@/routes/v2/shared/windows/types";
@@ -136,6 +139,27 @@ function closeContextPanel(windows: WindowStoreImpl) {
   if (existing) windows.closeWindow(CONTEXT_PANEL_WINDOW_ID);
 }
 
+/**
+ * Conduit and flex nodes are derived rather than stored, so only the three
+ * spec-backed types can be checked here.
+ */
+function isSelectionStale(
+  navigation: NavigationStore,
+  selectedNodeId: string | null,
+  selectedNodeType: NodeEntityType | null,
+): boolean {
+  if (!selectedNodeId) return false;
+  const spec = navigation.activeSpec;
+  if (!spec) return false;
+
+  const byId = (entity: { $id?: string }) => entity.$id === selectedNodeId;
+
+  if (selectedNodeType === "task") return !spec.tasks.some(byId);
+  if (selectedNodeType === "input") return !spec.inputs.some(byId);
+  if (selectedNodeType === "output") return !spec.outputs.some(byId);
+  return false;
+}
+
 export function useSelectionWindowSync(options?: {
   contextPanel?: ContextPanelPlacement;
 }) {
@@ -156,6 +180,11 @@ export function useSelectionWindowSync(options?: {
         lastSelectionWasShiftClick: editor.lastSelectionWasShiftClick,
         lastShiftClickEntityId: editor.lastShiftClickEntityId,
         multiSelectionLength: editor.multiSelection.length,
+        selectionStale: isSelectionStale(
+          navigation,
+          editor.selectedNodeId,
+          editor.selectedNodeType,
+        ),
       }),
       ({
         selectedNodeId,
@@ -163,7 +192,14 @@ export function useSelectionWindowSync(options?: {
         lastSelectionWasShiftClick,
         lastShiftClickEntityId,
         multiSelectionLength,
+        selectionStale,
       }) => {
+        if (selectionStale) {
+          editor.clearSelection();
+          editor.clearMultiSelection();
+          return;
+        }
+
         if (lastSelectionWasShiftClick && lastShiftClickEntityId) {
           handleShiftClickPin(
             navigation,

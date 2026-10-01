@@ -11,7 +11,8 @@ import { CollapsedDockWindowMini } from "./CollapsedDockWindowMini";
 import { registerDockAreaElement } from "./snapUtils";
 import {
   COLLAPSED_DOCK_AREA_WIDTH,
-  DOCK_AREA_RESIZE_SNAP_THRESHOLD,
+  DOCK_AREA_COLLAPSE_SNAP_THRESHOLD,
+  DOCK_AREA_EXPAND_SNAP_THRESHOLD,
   MAX_DOCK_AREA_WIDTH,
   MIN_DOCK_AREA_WIDTH,
 } from "./types";
@@ -95,8 +96,8 @@ export const DockArea = observer(function DockArea({ side }: DockAreaProps) {
 
   const shouldSnap = (attemptedWidth: number) =>
     collapsed
-      ? attemptedWidth >= DOCK_AREA_RESIZE_SNAP_THRESHOLD
-      : attemptedWidth <= DOCK_AREA_RESIZE_SNAP_THRESHOLD;
+      ? attemptedWidth >= DOCK_AREA_EXPAND_SNAP_THRESHOLD
+      : attemptedWidth <= DOCK_AREA_COLLAPSE_SNAP_THRESHOLD;
 
   const handleResize = (attemptedWidth: number) => {
     setSnapPreview(
