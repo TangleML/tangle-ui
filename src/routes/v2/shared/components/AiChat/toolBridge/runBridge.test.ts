@@ -15,7 +15,7 @@ vi.mock("@/models/componentSpec/serialization/serialize", () => ({
   serializeComponentSpec: vi.fn(() => ({ name: "Churn" })),
 }));
 
-const PROJECT_ANNOTATION = "tangleml.com/project/project-id/project-9";
+const PROJECT_ANNOTATION = "tangleml.com/project/id/project-9";
 
 function deps(overrides: Partial<BridgeDeps> = {}): BridgeDeps {
   return {

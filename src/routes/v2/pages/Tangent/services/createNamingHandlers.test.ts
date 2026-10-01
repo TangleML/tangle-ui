@@ -38,11 +38,11 @@ function handlers(sessionId: string | null = "sess-1", { canvas = true } = {}) {
   });
 }
 
-function mockProject(extraData: Record<string, unknown> | null): void {
+function mockProject(metadata: Record<string, unknown> | null): void {
   vi.mocked(getProject).mockResolvedValue({
     id: "project-1",
     name: "Project 3",
-    extraData,
+    metadata,
   } as Project);
 }
 
@@ -55,7 +55,7 @@ function sessionRow(
     entity: "agent_session",
     name: null,
     entityId: "sess-1",
-    extraData: null,
+    metadata: null,
     createdBy: null,
     createdAt: new Date("2026-09-23T10:00:00Z"),
     updatedAt: new Date("2026-09-23T10:00:00Z"),
@@ -85,7 +85,7 @@ describe("renameProject", () => {
     });
     expect(updateProject).toHaveBeenCalledWith("project-1", {
       name: "Churn model",
-      extraData: {},
+      metadata: {},
     });
   });
 
@@ -117,7 +117,7 @@ describe("renameProject", () => {
 
     expect(updateProject).toHaveBeenCalledWith("project-1", {
       name: "Churn model",
-      extraData: { startingModel: "openai/gpt-5.6" },
+      metadata: { startingModel: "openai/gpt-5.6" },
     });
   });
 

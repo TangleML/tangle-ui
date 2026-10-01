@@ -108,7 +108,7 @@ describe("<RunDetailsContent/>", () => {
       source: "web-app",
       "system/pipeline_run.name": "Giphy",
       "system/pipeline_run.created_by": "user-1",
-      "tangleml.com/project/project-id/project-1": "true",
+      "tangleml.com/project/id/project-1": "true",
     });
 
     renderPanel(<RunDetailsContent />);

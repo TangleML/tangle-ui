@@ -40,7 +40,7 @@ const workspace: Workspace = {
   name: "Research",
   description: null,
   isActive: true,
-  extraData: null,
+  metadata: null,
   createdAt: new Date("2024-01-02T03:04:05Z"),
 };
 
@@ -54,8 +54,7 @@ const project: Project = {
   createdAt: new Date("2024-01-02T03:04:05Z"),
   updatedAt: new Date("2024-02-03T04:05:06Z"),
   resourceCounts: {},
-  notes: null,
-  extraData: null,
+  metadata: null,
 };
 
 const projectPage: ProjectPage = {

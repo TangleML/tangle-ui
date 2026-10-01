@@ -71,7 +71,7 @@ export function RenameProjectDialog({
         id: project.id,
         input: {
           name: trimmedName,
-          extraData: withoutProvisionalName(project.extraData),
+          metadata: withoutProvisionalName(project.metadata),
         },
       },
       {

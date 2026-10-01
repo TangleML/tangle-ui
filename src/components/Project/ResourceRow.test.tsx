@@ -14,7 +14,7 @@ const linked: ProjectResourceSummary = {
   entity: "pipeline",
   name: "churn-training",
   entityId: "pipeline-9",
-  extraData: null,
+  metadata: null,
   createdBy: "alice@example.com",
   createdAt: new Date("2026-09-09T10:00:00Z"),
   updatedAt: new Date("2026-09-09T10:00:00Z"),
@@ -104,7 +104,7 @@ describe("ResourceRow", () => {
       entity: "document",
       name: "Churn model",
       entityId: null,
-      extraData: {
+      metadata: {
         type: "local_pipeline",
         storage: "browser",
         identity: "pipeline://name/Churn model",
@@ -122,27 +122,27 @@ describe("ResourceRow", () => {
   });
 
   it("says what kind a document calls itself, whatever that kind is", () => {
-    renderRow({ ...ownContent, extraData: { type: "data_sheet" } });
+    renderRow({ ...ownContent, metadata: { type: "data_sheet" } });
 
     expect(screen.getByText("Data sheet")).toBeInTheDocument();
   });
 
   /** The group heading already said it, so the row saying it again is noise. */
   it("does not repeat back a kind that only names the entity", () => {
-    renderRow({ ...ownContent, extraData: { type: "document" } });
+    renderRow({ ...ownContent, metadata: { type: "document" } });
 
     expect(screen.queryByText("Document")).toBeNull();
   });
 
   it("does not label a pipeline the backend holds", () => {
-    renderRow({ extraData: { type: "local_pipeline" } });
+    renderRow({ metadata: { type: "local_pipeline" } });
 
     expect(screen.queryByText("Pipeline")).toBeNull();
   });
 
-  /** Anyone may PATCH `extra_data`, so the text is the backend's, not ours. */
+  /** Anyone may PATCH `data`, so the text is the backend's, not ours. */
   it("cuts a kind too long to fit a badge", () => {
-    renderRow({ ...ownContent, extraData: { type: "k".repeat(500) } });
+    renderRow({ ...ownContent, metadata: { type: "k".repeat(500) } });
 
     expect(screen.getByText(/^Kk{23}$/)).toBeInTheDocument();
   });
@@ -153,7 +153,7 @@ describe("ResourceRow", () => {
       entity: "document",
       name: "Churn model",
       entityId: null,
-      extraData: {
+      metadata: {
         type: "local_pipeline",
         storage: "browser",
         identity: "pipeline://name/Churn model",
@@ -195,7 +195,7 @@ describe("ResourceRow", () => {
       entity: "document",
       name: "Churn model",
       entityId: null,
-      extraData: {
+      metadata: {
         type: "local_pipeline",
         storage: "browser",
         identity: "pipeline://name/Churn model",
@@ -216,7 +216,7 @@ describe("ResourceRow", () => {
       entity: "document",
       name: "Churn model",
       entityId: null,
-      extraData: { type: "local_pipeline" },
+      metadata: { type: "local_pipeline" },
     });
 
     expect(

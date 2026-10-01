@@ -10,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import { createProject } from "@/services/projects/projectsService";
-import { startingSessionExtraData } from "@/services/projects/startingSession";
+import { startingSessionMetadata } from "@/services/projects/startingSession";
 import { useWorkspaces } from "@/services/projects/useWorkspaces";
 
 import { StartSessionPrompt } from "./StartSessionPrompt";
@@ -95,8 +95,8 @@ describe("StartSessionPrompt", () => {
       workspaceId: "ws-1",
       name: "Build a churn model",
       origin: "agent",
-      extraData: {
-        ...startingSessionExtraData({
+      metadata: {
+        ...startingSessionMetadata({
           prompt: "Build a churn model",
           model: DEFAULT_MODEL_ID,
           thinkingDepth: DEFAULT_THINKING_LEVEL,
@@ -112,8 +112,8 @@ describe("StartSessionPrompt", () => {
 
     await type("Build a churn model{Enter}");
 
-    const { extraData } = vi.mocked(createProject).mock.calls[0][0];
-    expect(extraData).toMatchObject({ provisionalName: true });
+    const { metadata } = vi.mocked(createProject).mock.calls[0][0];
+    expect(metadata).toMatchObject({ provisionalName: true });
   });
 
   it("falls back to a numbered name when the prompt is no title", async () => {
@@ -194,7 +194,7 @@ describe("StartSessionPrompt", () => {
     await user.click(screen.getByRole("option", { name: "High" }));
     await type("Build a churn model{Enter}");
 
-    expect(vi.mocked(createProject).mock.calls[0][0].extraData).toMatchObject({
+    expect(vi.mocked(createProject).mock.calls[0][0].metadata).toMatchObject({
       startingThinkingDepth: "high",
       startingModel: DEFAULT_MODEL_ID,
     });

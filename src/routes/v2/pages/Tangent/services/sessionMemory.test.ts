@@ -67,7 +67,7 @@ describe("sessionMemorySeed", () => {
 
   it("builds the key from the shared helper rather than its own spelling", () => {
     expect(sessionMemorySeed("abc-123")).toContain(
-      "tangleml.com/project/project-id/abc-123",
+      "tangleml.com/project/id/abc-123",
     );
   });
 });

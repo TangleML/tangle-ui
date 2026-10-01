@@ -28,13 +28,12 @@ function project(overrides: Partial<Project> = {}): Project {
     workspaceId: "w1",
     name: "Project",
     description: null,
-    notes: null,
     origin: "user",
     createdBy: null,
     createdAt: new Date("2024-01-01T00:00:00Z"),
     updatedAt: new Date("2024-01-01T00:00:00Z"),
     resourceCounts: {},
-    extraData: null,
+    metadata: null,
     ...overrides,
   };
 }
@@ -46,7 +45,7 @@ function workspace(overrides: Partial<Workspace> = {}): Workspace {
     description: null,
     isActive: true,
     createdAt: new Date("2024-01-01T00:00:00Z"),
-    extraData: null,
+    metadata: null,
     ...overrides,
   };
 }
@@ -74,7 +73,7 @@ describe("useTangentBaseUrl", () => {
   it("reports the workspace's configured base url", async () => {
     vi.mocked(projectsService.getProject).mockResolvedValue(project());
     vi.mocked(workspacesService.getWorkspace).mockResolvedValue(
-      workspace({ extraData: { tangentBaseUrl: "https://tangent.example" } }),
+      workspace({ metadata: { tangentBaseUrl: "https://tangent.example" } }),
     );
 
     const { result } = renderHook(() => useTangentBaseUrl("p1"), {

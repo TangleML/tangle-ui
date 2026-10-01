@@ -35,7 +35,7 @@ function pipelineRow({
     entity: "document",
     name: input.name ?? null,
     entityId: null,
-    extraData: input.extraData ?? null,
+    metadata: input.metadata ?? null,
     createdBy,
     createdAt: new Date("2026-09-23T10:00:00Z"),
     updatedAt: new Date("2026-09-23T10:00:00Z"),
@@ -128,7 +128,7 @@ describe("useLocalPipelineStatus", () => {
       {
         ...pipelineRow({}),
         id: "row-doc",
-        extraData: { type: "document" },
+        metadata: { type: "document" },
       },
     ]);
 

@@ -43,8 +43,7 @@ const project: Project = {
   createdAt: new Date("2026-09-09T10:00:00Z"),
   updatedAt: new Date("2026-09-15T10:00:00Z"),
   resourceCounts: { pipeline: 1 },
-  notes: "Retrain weekly",
-  extraData: null,
+  metadata: null,
 };
 
 function enableFlags(flags: Record<string, boolean>) {

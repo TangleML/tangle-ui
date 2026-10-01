@@ -12,7 +12,7 @@ import {
 import type { ProjectResourceSummary } from "./types";
 
 function row(
-  extraData: Record<string, unknown> | null,
+  metadata: Record<string, unknown> | null,
   overrides: Partial<ProjectResourceSummary> = {},
 ): ProjectResourceSummary {
   return {
@@ -21,7 +21,7 @@ function row(
     entity: "document",
     name: "Churn model",
     entityId: null,
-    extraData,
+    metadata,
     createdBy: null,
     createdAt: new Date("2026-09-21T10:00:00Z"),
     updatedAt: new Date("2026-09-21T10:00:00Z"),
@@ -30,7 +30,7 @@ function row(
 }
 
 const rowFor = (input: ReturnType<typeof localPipelineResourceInput>) =>
-  row(input.extraData ?? null, { name: input.name ?? null });
+  row(input.metadata ?? null, { name: input.name ?? null });
 
 describe("describeResource", () => {
   it("reads back what a browser pipeline was filed as", () => {
@@ -54,7 +54,7 @@ describe("describeResource", () => {
   it("reads back a run, carrying the url it was given", () => {
     const input = pipelineRunResourceInput("42", "https://runs/42", "Run 42");
 
-    expect(describeResource(row(input.extraData ?? null))).toEqual({
+    expect(describeResource(row(input.metadata ?? null))).toEqual({
       type: "pipeline_run",
       target: { type: "run", identity: "id/42" },
       url: "https://runs/42",
@@ -69,7 +69,7 @@ describe("describeResource", () => {
   });
 
   /**
-   * `extra_data` is free-form and anyone may PATCH it, so a build that has
+   * `data` is free-form and anyone may PATCH it, so a build that has
    * never heard of a row kind still has to render it as something.
    */
   it("passes an unfamiliar kind through rather than discarding the row", () => {
@@ -129,7 +129,7 @@ describe("localPipelinePointerOf", () => {
 
     expect(
       localPipelinePointerOf(
-        row(input.extraData ?? null, { name: "Renamed by someone" }),
+        row(input.metadata ?? null, { name: "Renamed by someone" }),
       ),
     ).toEqual({ localName: "Churn model", localId: "file-7" });
   });
@@ -188,7 +188,7 @@ describe("documentResourceInput", () => {
       entity: "document",
       name: "Model card",
       payload: { content: "Trained on Q3" },
-      extraData: { type: "document" },
+      metadata: { type: "document" },
     });
   });
 
@@ -196,7 +196,7 @@ describe("documentResourceInput", () => {
   it("reads back as a document", () => {
     const input = documentResourceInput("Model card", "Body");
 
-    expect(describeResource({ extraData: input.extraData ?? null })).toEqual({
+    expect(describeResource({ metadata: input.metadata ?? null })).toEqual({
       type: "document",
     });
   });

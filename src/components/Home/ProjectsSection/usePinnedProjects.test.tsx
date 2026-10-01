@@ -27,8 +27,7 @@ function project(id: string): Project {
     createdAt: new Date("2026-09-21T10:00:00Z"),
     updatedAt: new Date("2026-09-21T10:00:00Z"),
     resourceCounts: {},
-    notes: null,
-    extraData: null,
+    metadata: null,
   };
 }
 

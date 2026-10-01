@@ -42,11 +42,11 @@ export function createNamingHandlers({
     async renameProject(name) {
       const project = await getProject(projectId);
       // A name someone chose is the answer; the agent is told not to retry.
-      if (!hasProvisionalName(project.extraData)) return { renamed: false };
+      if (!hasProvisionalName(project.metadata)) return { renamed: false };
 
       await updateProject(projectId, {
         name,
-        extraData: withoutProvisionalName(project.extraData),
+        metadata: withoutProvisionalName(project.metadata),
       });
       await onRenamed();
       return { renamed: true };

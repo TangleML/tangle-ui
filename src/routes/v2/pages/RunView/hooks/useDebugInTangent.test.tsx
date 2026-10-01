@@ -77,7 +77,7 @@ describe("useDebugInTangent", () => {
     vi.mocked(getProject).mockResolvedValue({
       id: "project-3",
       name: "Churn model",
-      extraData: { pinned: true },
+      metadata: { pinned: true },
     } as unknown as Awaited<ReturnType<typeof getProject>>);
     vi.mocked(updateProject).mockResolvedValue(
       {} as unknown as Awaited<ReturnType<typeof updateProject>>,
@@ -105,7 +105,7 @@ describe("useDebugInTangent", () => {
       expect(input).toMatchObject({
         entity: "document",
         name: "Instructions",
-        extraData: { type: "instructions" },
+        metadata: { type: "instructions" },
       });
       expect(input.payload?.content).toContain("run-7");
       expect(input.payload?.content).toContain("project-9");
@@ -120,7 +120,7 @@ describe("useDebugInTangent", () => {
       expect(vi.mocked(createProjectResource).mock.calls[1][1]).toMatchObject({
         entity: "document",
         name: "Churn",
-        extraData: { type: "pipeline_run" },
+        metadata: { type: "pipeline_run" },
       });
     });
 
@@ -193,7 +193,7 @@ describe("useDebugInTangent", () => {
       await waitFor(() => expect(createProjectResource).toHaveBeenCalled());
       expect(createProjectResource).toHaveBeenCalledTimes(1);
       expect(vi.mocked(createProjectResource).mock.calls[0][1]).toMatchObject({
-        extraData: { type: "pipeline_run" },
+        metadata: { type: "pipeline_run" },
       });
     });
 
@@ -203,7 +203,7 @@ describe("useDebugInTangent", () => {
       await waitFor(() => expect(updateProject).toHaveBeenCalled());
       const [projectId, input] = vi.mocked(updateProject).mock.calls[0];
       expect(projectId).toBe("project-3");
-      expect(input.extraData?.startingPrompt).toContain("run-7");
+      expect(input.metadata?.startingPrompt).toContain("run-7");
     });
 
     /** Anything else on the project is somebody's, and a PATCH replaces it all. */
@@ -211,9 +211,9 @@ describe("useDebugInTangent", () => {
       debugRun();
 
       await waitFor(() => expect(updateProject).toHaveBeenCalled());
-      expect(vi.mocked(updateProject).mock.calls[0][1].extraData).toMatchObject(
-        { pinned: true },
-      );
+      expect(vi.mocked(updateProject).mock.calls[0][1].metadata).toMatchObject({
+        pinned: true,
+      });
     });
 
     /**

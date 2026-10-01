@@ -44,6 +44,7 @@ function project(id: string): ProjectSummary {
     description: null,
     createdBy: null,
     origin: "user",
+    metadata: null,
     createdAt: new Date("2026-09-22T10:00:00Z"),
     updatedAt: new Date("2026-09-22T10:00:00Z"),
     resourceCounts: {},

@@ -21,7 +21,7 @@ export function useTangentBaseUrl(projectId: string): TangentBaseUrl {
   } = useWorkspace(project?.workspaceId);
 
   return {
-    baseUrl: resolveTangentBaseUrl(workspace?.extraData),
+    baseUrl: resolveTangentBaseUrl(workspace?.metadata),
     isLoading: isProjectLoading || isWorkspaceLoading,
     isError: isProjectError || isWorkspaceError,
   };

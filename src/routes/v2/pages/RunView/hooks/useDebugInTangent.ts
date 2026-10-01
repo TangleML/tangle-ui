@@ -17,7 +17,7 @@ import {
   instructionsResourceInput,
   pipelineRunResourceInput,
 } from "@/services/projects/resourceDescriptor";
-import { startingSessionExtraData } from "@/services/projects/startingSession";
+import { startingSessionMetadata } from "@/services/projects/startingSession";
 import type { Project } from "@/services/projects/types";
 import { ProjectsQueryKeys } from "@/services/projects/types";
 import { useWorkspaces } from "@/services/projects/useWorkspaces";
@@ -75,9 +75,9 @@ export function useDebugInTangent() {
       runResourceInput(runId, pipelineName),
     );
     await updateProject(projectId, {
-      extraData: {
-        ...(project.extraData ?? {}),
-        ...startingSessionExtraData({
+      metadata: {
+        ...(project.metadata ?? {}),
+        ...startingSessionMetadata({
           prompt: buildDebugStartingPrompt(runId),
         }),
       },
@@ -98,7 +98,7 @@ export function useDebugInTangent() {
       workspaceId: workspace.id,
       name: `Debug: ${pipelineName}`,
       origin: "agent",
-      extraData: startingSessionExtraData({
+      metadata: startingSessionMetadata({
         prompt: buildDebugStartingPrompt(runId),
       }),
     });

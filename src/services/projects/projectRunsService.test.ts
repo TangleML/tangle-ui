@@ -82,6 +82,15 @@ describe("listProjectRuns", () => {
     expect(page.nextPageToken).toBeNull();
   });
 
+  /** `created_at` is nullable on the wire, and `new Date(null)` is 1970. */
+  it("leaves a run with no creation time without one", async () => {
+    mockResponse({ runs: [{ ...runDto, created_at: null }] });
+
+    const page = await listProjectRuns("project-1");
+
+    expect(page.items[0].createdAt).toBeNull();
+  });
+
   it("carries a page token onwards when there is one", async () => {
     mockResponse({ runs: [runDto], next_page_token: "token-2" });
 

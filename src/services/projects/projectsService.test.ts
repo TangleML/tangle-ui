@@ -40,8 +40,10 @@ const workspaceDto: WorkspaceResponse = {
   name: "Research",
   description: null,
   is_active: true,
-  extra_data: { seeded: true },
+  created_by: "admin@example.com",
+  data: { seeded: true },
   created_at: "2024-01-02T03:04:05Z",
+  updated_at: "2024-01-02T03:04:05Z",
 };
 
 const projectSummaryDto: ProjectSummaryResponse = {
@@ -51,16 +53,13 @@ const projectSummaryDto: ProjectSummaryResponse = {
   description: "desc",
   created_by: "user@example.com",
   origin: "user",
+  data: { archived: false },
   created_at: "2024-01-02T03:04:05Z",
   updated_at: "2024-02-03T04:05:06Z",
   resource_counts: { pipeline: 2, agent_session: 1 },
 };
 
-const projectDto: ProjectResponse = {
-  ...projectSummaryDto,
-  notes: "some notes",
-  extra_data: { archived: false },
-};
+const projectDto: ProjectResponse = { ...projectSummaryDto };
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -80,7 +79,7 @@ describe("workspacesService", () => {
       name: "Research",
       description: null,
       isActive: true,
-      extraData: { seeded: true },
+      metadata: { seeded: true },
       createdAt: new Date("2024-01-02T03:04:05Z"),
     });
   });
@@ -139,6 +138,7 @@ describe("projectsService", () => {
       description: "desc",
       createdBy: "user@example.com",
       origin: "user",
+      metadata: { archived: false },
       createdAt: new Date("2024-01-02T03:04:05Z"),
       updatedAt: new Date("2024-02-03T04:05:06Z"),
       resourceCounts: { pipeline: 2, agent_session: 1 },
@@ -159,16 +159,15 @@ describe("projectsService", () => {
     expect(page.items).toEqual([]);
   });
 
-  it("fetches a single project including notes", async () => {
+  it("fetches a single project", async () => {
     vi.mocked(apiSdk.getProjectApiProjectsProjectIdGet).mockResolvedValue(
       createMockApiResponse(projectDto),
     );
 
     const project = await getProject("p1");
 
-    expect(project.notes).toBe("some notes");
     expect(project.workspaceId).toBe("w1");
-    expect(project.extraData).toEqual({ archived: false });
+    expect(project.metadata).toEqual({ archived: false });
   });
 
   it("creates a project mapping input to the request body", async () => {
@@ -180,9 +179,8 @@ describe("projectsService", () => {
       workspaceId: "w1",
       name: "My Project",
       description: "desc",
-      notes: "some notes",
       origin: "user",
-      extraData: { archived: false },
+      metadata: { archived: false },
     });
 
     expect(apiSdk.createProjectApiProjectsPost).toHaveBeenCalledWith({
@@ -190,13 +188,12 @@ describe("projectsService", () => {
         workspace_id: "w1",
         name: "My Project",
         description: "desc",
-        notes: "some notes",
         origin: "user",
-        extra_data: { archived: false },
+        data: { archived: false },
       },
     });
     expect(project.id).toBe("p1");
-    expect(project.extraData).toEqual({ archived: false });
+    expect(project.metadata).toEqual({ archived: false });
   });
 
   it("updates a project", async () => {
@@ -211,8 +208,7 @@ describe("projectsService", () => {
       body: {
         name: "Renamed",
         description: undefined,
-        notes: undefined,
-        extra_data: undefined,
+        data: undefined,
       },
     });
     expect(project.id).toBe("p1");

@@ -62,9 +62,8 @@ export async function createProject(
       workspace_id: input.workspaceId,
       name: input.name,
       description: input.description,
-      notes: input.notes,
       origin: input.origin,
-      extra_data: input.extraData,
+      data: input.metadata,
     },
   });
   if (!result.data) {
@@ -85,8 +84,7 @@ export async function updateProject(
     body: {
       name: input.name,
       description: input.description,
-      notes: input.notes,
-      extra_data: input.extraData,
+      data: input.metadata,
     },
   });
   if (!result.data) {

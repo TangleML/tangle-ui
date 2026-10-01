@@ -51,11 +51,11 @@ const windows = { getWindowById: vi.fn(() => ({ minimize })) };
 const project = {
   id: "project-1",
   name: "Churn model",
-  extraData: null,
+  metadata: null,
 } as unknown as Project;
 
 function document(
-  extraData: Record<string, unknown> | null,
+  metadata: Record<string, unknown> | null,
   createdAt = "2026-09-21T10:00:00Z",
 ): ProjectResourceSummary {
   return {
@@ -64,7 +64,7 @@ function document(
     entity: "document",
     name: "Churn model",
     entityId: null,
-    extraData,
+    metadata,
     createdBy: null,
     createdAt: new Date(createdAt),
     updatedAt: new Date(createdAt),
@@ -248,7 +248,7 @@ describe("usePrepareProjectArrival", () => {
    * belongs to, which is usually one somebody has already worked in.
    */
   it("still starts the session a busy project was asked for", async () => {
-    given({ projectOverrides: { extraData: { startingPrompt: "Fix run 7" } } });
+    given({ projectOverrides: { metadata: { startingPrompt: "Fix run 7" } } });
     const store = makeStore();
 
     prepare(store, 2);
@@ -262,14 +262,14 @@ describe("usePrepareProjectArrival", () => {
     await waitFor(() =>
       expect(updateProject).toHaveBeenCalledWith({
         id: "project-1",
-        input: { extraData: {} },
+        input: { metadata: {} },
       }),
     );
   });
 
   /** Somebody is working in it: it is not theirs to rearrange. */
   it("leaves a busy project's window and pipelines as they are", async () => {
-    given({ projectOverrides: { extraData: { startingPrompt: "Fix run 7" } } });
+    given({ projectOverrides: { metadata: { startingPrompt: "Fix run 7" } } });
     const store = makeStore();
 
     prepare(store, 2);
@@ -361,7 +361,7 @@ describe("usePrepareProjectArrival", () => {
   });
 
   it("still opens with the prompt a debug project carries, and clears it", async () => {
-    given({ projectOverrides: { extraData: { startingPrompt: "Fix run 7" } } });
+    given({ projectOverrides: { metadata: { startingPrompt: "Fix run 7" } } });
     const store = makeStore();
 
     prepare(store);
@@ -375,7 +375,7 @@ describe("usePrepareProjectArrival", () => {
     await waitFor(() =>
       expect(updateProject).toHaveBeenCalledWith({
         id: "project-1",
-        input: { extraData: {} },
+        input: { metadata: {} },
       }),
     );
   });
@@ -384,7 +384,7 @@ describe("usePrepareProjectArrival", () => {
   it("names the session and the pipeline it opens after the prompt", async () => {
     given({
       projectOverrides: {
-        extraData: { startingPrompt: "Can you build a churn model for Q3" },
+        metadata: { startingPrompt: "Can you build a churn model for Q3" },
       },
     });
     const store = makeStore();

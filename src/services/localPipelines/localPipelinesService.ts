@@ -25,7 +25,7 @@ const SUFFIX_ATTEMPTS = 100;
  * also holds pipelines that never got a registry row — so a name that passes
  * that check can still land on top of one of those.
  *
- * The length cap keeps a derived name short enough for a project's `extra_data`.
+ * The length cap keeps a derived name short enough for a project's `data`.
  */
 export async function availablePipelineName(base: string): Promise<string> {
   const trimmed = base.trim().slice(0, NAME_LENGTH_LIMIT).trim();

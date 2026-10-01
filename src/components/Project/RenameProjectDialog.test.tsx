@@ -34,8 +34,7 @@ const project: Project = {
   createdAt: new Date("2026-09-09T10:00:00Z"),
   updatedAt: new Date("2026-09-15T10:00:00Z"),
   resourceCounts: {},
-  notes: null,
-  extraData: null,
+  metadata: null,
 };
 
 function renderDialog({
@@ -80,7 +79,7 @@ describe("RenameProjectDialog", () => {
     await user.click(renameButton());
 
     expect(mutate).toHaveBeenCalledWith(
-      { id: "project-1", input: { name: "Churn model v2", extraData: {} } },
+      { id: "project-1", input: { name: "Churn model v2", metadata: {} } },
       expect.anything(),
     );
   });
@@ -94,7 +93,7 @@ describe("RenameProjectDialog", () => {
     await user.click(renameButton());
 
     expect(mutate).toHaveBeenCalledWith(
-      { id: "project-1", input: { name: "Spaced out", extraData: {} } },
+      { id: "project-1", input: { name: "Spaced out", metadata: {} } },
       expect.anything(),
     );
   });
@@ -105,7 +104,7 @@ describe("RenameProjectDialog", () => {
     renderDialog({
       project: {
         ...project,
-        extraData: { provisionalName: true, startingModel: "openai/gpt-5.6" },
+        metadata: { provisionalName: true, startingModel: "openai/gpt-5.6" },
       },
     });
 
@@ -118,7 +117,7 @@ describe("RenameProjectDialog", () => {
         id: "project-1",
         input: {
           name: "Churn model v2",
-          extraData: { startingModel: "openai/gpt-5.6" },
+          metadata: { startingModel: "openai/gpt-5.6" },
         },
       },
       expect.anything(),
