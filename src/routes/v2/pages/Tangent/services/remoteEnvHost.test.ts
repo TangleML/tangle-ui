@@ -3,11 +3,13 @@ import type {
   RemoteMessageCommand,
   RemoteSpawnCommand,
 } from "@tangent/remote-subagent";
-import type { Remote } from "comlink";
+import { proxyMarker, type Remote } from "comlink";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { RemoteEnvWorkerApi } from "@/agent/createRemoteEnvWorkerApi";
+import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 
+import type { AgentTargetRouter } from "./createActiveTabRoutingBridge";
 import { createRemoteEnvHost } from "./remoteEnvHost";
 
 const connectRemoteEnvironment = vi.fn();
@@ -462,12 +464,41 @@ describe("createRemoteEnvHost", () => {
     await handlers.onSpawn(spawnCommand("a1"));
     expect(worker.spawnAgent).toHaveBeenCalledWith(
       expect.objectContaining({ agentId: "a1", tools: [], systemPrompt: "" }),
+      undefined,
     );
     expect(client.subagentUpdate).toHaveBeenCalledWith("s1", "a1", "active");
 
     await handlers.onKill(killCommand("a1", true));
     expect(worker.killAgent).toHaveBeenCalledWith("a1");
     expect(client.subagentUpdate).toHaveBeenCalledWith("s1", "a1", "completed");
+  });
+
+  // Comlink only proxies a top-level argument: a proxy() nested inside the
+  // params object is structured-cloned instead, and the routing bridge's
+  // function members throw "could not be cloned".
+  it("passes the routing bridge as spawnAgent's second, proxied argument", async () => {
+    const worker = makeWorker();
+    const bridge = {} as ToolBridgeApi;
+    const agentTargets: AgentTargetRouter = {
+      bridgeFor: vi.fn(() => bridge),
+      pinTurn: vi.fn(),
+      forget: vi.fn(),
+    };
+    const host = createRemoteEnvHost({
+      url: "http://localhost:8000",
+      worker: worker as unknown as Remote<RemoteEnvWorkerApi>,
+      agentTargets,
+    });
+    void host.connect("token", "env-1");
+    const handlers = captureHandlers();
+
+    await handlers.onSpawn(spawnCommand("a1"));
+
+    expect(agentTargets.bridgeFor).toHaveBeenCalledWith("a1");
+    const [params, proxiedBridge] = worker.spawnAgent.mock.calls[0];
+    expect(params).not.toHaveProperty("bridge");
+    expect(proxiedBridge).toBe(bridge);
+    expect(proxiedBridge[proxyMarker]).toBe(true);
   });
 
   it("forwards the token, environmentId, and sessionId and wraps tools without changing the catalog", async () => {

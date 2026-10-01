@@ -320,18 +320,20 @@ export function createRemoteEnvHost(
         try {
           if (previous) await worker.killAgent(command.agentId);
           if (!isCurrent(command.agentId, lifecycle)) return;
-          await worker.spawnAgent({
-            agentId: command.agentId,
-            ...(agentTargets
-              ? { bridge: proxy(agentTargets.bridgeFor(command.agentId)) }
-              : {}),
-            tools: command.tools,
-            systemPrompt: command.systemPrompt,
-            ...(command.model ? { model: command.model } : {}),
-            ...(command.thinkingDepth
-              ? { thinkingDepth: command.thinkingDepth }
-              : {}),
-          });
+          await worker.spawnAgent(
+            {
+              agentId: command.agentId,
+              tools: command.tools,
+              systemPrompt: command.systemPrompt,
+              ...(command.model ? { model: command.model } : {}),
+              ...(command.thinkingDepth
+                ? { thinkingDepth: command.thinkingDepth }
+                : {}),
+            },
+            agentTargets
+              ? proxy(agentTargets.bridgeFor(command.agentId))
+              : undefined,
+          );
           if (!isCurrent(command.agentId, lifecycle)) {
             await worker.killAgent(command.agentId);
             return;

@@ -45,7 +45,6 @@ const REMOTE_EDITOR_MAX_TURNS = 100;
 
 interface RemoteSpawnAgentParams {
   agentId: string;
-  bridge?: ToolBridgeApi;
   tools: string[];
   systemPrompt: string;
   model?: string;
@@ -68,7 +67,7 @@ export interface RemoteEnvWorkerApi {
   setContext(context: AgentContext): void;
   setTraceScope(scope: TraceScope): void;
   ping(): Promise<"pong">;
-  spawnAgent(params: RemoteSpawnAgentParams): void;
+  spawnAgent(params: RemoteSpawnAgentParams, bridge?: ToolBridgeApi): void;
   runTurn(
     params: RemoteRunTurnParams,
     onStatus: StatusCallback,
@@ -134,14 +133,10 @@ export function createRemoteEnvWorkerApi(): RemoteEnvWorkerApi {
       return "pong";
     },
 
-    spawnAgent({
-      agentId,
-      bridge: agentBridge,
-      tools,
-      systemPrompt,
-      model,
-      thinkingDepth,
-    }) {
+    spawnAgent(
+      { agentId, tools, systemPrompt, model, thinkingDepth },
+      agentBridge,
+    ) {
       abortControllers.get(agentId)?.abort();
       abortControllers.delete(agentId);
       agents.set(agentId, {
