@@ -103,7 +103,8 @@ import {
 /**
  * `invokeAutoLayout` is injected because dagre needs React Flow's measured node
  * dimensions, which only the mounted canvas knows — it cannot be computed from
- * the spec. Optional, so the tool can say there is no canvas rather than throw.
+ * the spec. Optional, so a host with no canvas can leave it out; every host
+ * that has one owes the agent `invokeAutoLayoutVia(keyboard)`.
  */
 export type CsomBridgeDeps = BridgeDeps & {
   undo: UndoGroupable;
@@ -845,11 +846,21 @@ export function createCsomBridgeHandlers(deps: CsomBridgeDeps): CsomHandlers {
     },
 
     async autoLayout(algorithm) {
-      if (!deps.invokeAutoLayout?.(algorithm)) {
+      // Told apart from the canvas declining, because a host that never
+      // injected this reads in the log exactly like an empty canvas — which is
+      // how the Tangent editor went without layout for as long as it did.
+      if (!deps.invokeAutoLayout) {
         return {
           success: false,
           error:
-            "Could not lay out the canvas — no pipeline canvas is open to lay out.",
+            "Auto-layout is not wired up in this editor, so nothing can arrange the canvas here.",
+        };
+      }
+      if (!deps.invokeAutoLayout(algorithm)) {
+        return {
+          success: false,
+          error:
+            "Could not lay out the canvas — no pipeline canvas is open, or it has nothing on it.",
         };
       }
       return { success: true };
