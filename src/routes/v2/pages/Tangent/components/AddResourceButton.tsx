@@ -14,6 +14,8 @@ import { convertCancelErrorTo } from "@/providers/DialogProvider/utils";
 import { AddDocumentDialog } from "@/routes/v2/pages/Tangent/components/AddDocumentDialog";
 import { AddPipelineDialog } from "@/routes/v2/pages/Tangent/components/AddPipelineDialog";
 import { AddPipelineRunDialog } from "@/routes/v2/pages/Tangent/components/AddPipelineRunDialog";
+import type { LocalPipelinePointer } from "@/services/localPipelines/types";
+import { localPipelinePointerOf } from "@/services/projects/resourceDescriptor";
 import type {
   CreateResourceInput,
   ProjectResourceSummary,
@@ -33,6 +35,38 @@ function identityOf(metadata: Record<string, unknown> | null | undefined) {
   return typeof identity === "string" ? identity : undefined;
 }
 
+function samePipeline(a: LocalPipelinePointer, b: LocalPipelinePointer) {
+  return a.localId && b.localId
+    ? a.localId === b.localId
+    : a.localName === b.localName;
+}
+
+/**
+ * A pipeline attached before it had a registry row is recorded by name, so
+ * comparing identity strings alone reads the picker's id as a different
+ * pipeline and attaches the same one a second time.
+ */
+function alreadyHolds(
+  resources: ProjectResourceSummary[],
+  pick: CreateResourceInput,
+): boolean {
+  const metadata = pick.metadata ?? null;
+
+  const pointer = localPipelinePointerOf({ metadata });
+  if (pointer) {
+    return resources.some((resource) => {
+      const attached = localPipelinePointerOf(resource);
+      return attached !== undefined && samePipeline(attached, pointer);
+    });
+  }
+
+  const identity = identityOf(metadata);
+  return (
+    identity !== undefined &&
+    resources.some((resource) => identityOf(resource.metadata) === identity)
+  );
+}
+
 export function AddResourceButton({
   projectId,
   resources,
@@ -41,12 +75,6 @@ export function AddResourceButton({
   const notify = useToastNotification();
   const { mutate: createResource, isPending } =
     useCreateProjectResource(projectId);
-
-  const attached = new Set(
-    resources
-      .map((resource) => identityOf(resource.metadata))
-      .filter((identity) => identity !== undefined),
-  );
 
   async function openResourceDialog(
     component: ResourceDialogComponent,
@@ -61,8 +89,7 @@ export function AddResourceButton({
 
     if (!result) return;
 
-    const identity = identityOf(result.metadata);
-    if (identity && attached.has(identity)) {
+    if (alreadyHolds(resources, result)) {
       notify(`${result.name ?? "That"} is already in this project`, "info");
       return;
     }

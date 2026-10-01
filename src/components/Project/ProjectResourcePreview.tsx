@@ -21,6 +21,7 @@ import {
   localPipelinePointerOf,
   PIPELINE_RUN,
 } from "@/services/projects/resourceDescriptor";
+import { resourceMeta } from "@/services/projects/resourceMeta";
 import { parseIdentity } from "@/services/projects/resourceTarget";
 import type { ProjectResource } from "@/services/projects/types";
 import { useProjectResource } from "@/services/projects/useProjectResources";
@@ -181,7 +182,7 @@ function RunPreview({ runId }: { runId: string | null }) {
               to={getDefaultRunPath(runId)}
               {...tracking("projects.open_pipeline_run")}
             >
-              <Icon name="ExternalLink" size="xs" />
+              <Icon name={resourceMeta("run").icon} size="xs" />
               Open the run
             </Link>
           </Button>

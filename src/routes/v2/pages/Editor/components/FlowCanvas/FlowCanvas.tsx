@@ -111,6 +111,7 @@ export const FlowCanvas = observer(function FlowCanvas({
         onEdgeClick={onEdgeClick}
         onPointerDownCapture={() => editor.setDraggedSincePointerDown(false)}
         onNodeDragStart={() => editor.setDraggedSincePointerDown(true)}
+        onNodeClick={() => editor.requestContextPanelReveal()}
         onInit={setReactFlowInstance}
         onViewportChange={handleViewportChange}
         onBeforeDelete={onBeforeDelete}

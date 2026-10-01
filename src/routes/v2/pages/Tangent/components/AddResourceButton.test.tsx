@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { localPipelineResourceInput } from "@/services/projects/resourceDescriptor";
 import type {
   CreateResourceInput,
   ProjectResourceSummary,
@@ -38,11 +39,10 @@ vi.mock("@/routes/v2/pages/Tangent/components/AddDocumentDialog", () => ({
   AddDocumentDialog: () => null,
 }));
 
-const PICKED_PIPELINE: CreateResourceInput = {
-  entity: "document",
-  name: "Churn model",
-  metadata: { type: "local_pipeline", identity: "pipeline://id/file-1" },
-};
+const PICKED_PIPELINE: CreateResourceInput = localPipelineResourceInput({
+  localName: "Churn model",
+  localId: "file-1",
+});
 
 function attachedRow(identity: string): ProjectResourceSummary {
   return {
@@ -51,7 +51,11 @@ function attachedRow(identity: string): ProjectResourceSummary {
     entity: "document",
     name: "Churn model",
     entityId: null,
-    metadata: { type: "local_pipeline", identity },
+    metadata: {
+      type: "local_pipeline",
+      identity,
+      fallbackName: "Churn model",
+    },
     createdBy: null,
     createdAt: new Date("2026-09-22T10:00:00Z"),
     updatedAt: new Date("2026-09-22T10:00:00Z"),
@@ -89,5 +93,11 @@ describe("AddResourceButton", () => {
     await pickAPipeline([attachedRow("pipeline://id/file-2")]);
 
     expect(createResource).toHaveBeenCalledWith(PICKED_PIPELINE);
+  });
+
+  it("recognises a pipeline attached under its name, before it had an id", async () => {
+    await pickAPipeline([attachedRow("pipeline://name/Churn model")]);
+
+    expect(createResource).not.toHaveBeenCalled();
   });
 });

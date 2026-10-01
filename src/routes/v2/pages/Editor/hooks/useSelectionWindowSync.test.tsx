@@ -131,6 +131,35 @@ describe("useSelectionWindowSync", () => {
     expect(windows.getWindowById(CONTEXT_PANEL_WINDOW_ID)).toBeDefined();
   });
 
+  it("opens the panel for a click on the task just dragged, which selects nothing new", () => {
+    const spec = makeSpec();
+    const { editor, windows } = mountEditor(spec);
+
+    act(() => {
+      editor.setDraggedSincePointerDown(true);
+      editor.selectNode("task_1", "task");
+    });
+    expect(windows.getWindowById(CONTEXT_PANEL_WINDOW_ID)).toBeUndefined();
+
+    act(() => {
+      editor.setDraggedSincePointerDown(false);
+      editor.requestContextPanelReveal();
+    });
+
+    expect(windows.getWindowById(CONTEXT_PANEL_WINDOW_ID)).toBeDefined();
+  });
+
+  it("opens nothing for a click on empty canvas", () => {
+    const spec = makeSpec();
+    const { editor, windows } = mountEditor(spec);
+
+    act(() => {
+      editor.requestContextPanelReveal();
+    });
+
+    expect(windows.getWindowById(CONTEXT_PANEL_WINDOW_ID)).toBeUndefined();
+  });
+
   it("leaves the panel open when an unselected task is deleted", () => {
     const spec = new ComponentSpec({
       $id: "spec_1",

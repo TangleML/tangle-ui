@@ -60,7 +60,7 @@ export function useClipboardShortcuts(
       keys: [CMDALT, "C"],
       label: "Copy",
       action: (e) => {
-        if (isEditableTarget(e) || hasTextSelection()) {
+        if (hasTextSelection()) {
           return false;
         }
         e.preventDefault();

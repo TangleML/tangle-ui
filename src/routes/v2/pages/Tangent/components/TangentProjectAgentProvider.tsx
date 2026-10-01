@@ -26,7 +26,6 @@ import { createRemoteEnvHost } from "@/routes/v2/pages/Tangent/services/remoteEn
 import { createDebugBridgeHandlers } from "@/routes/v2/shared/components/AiChat/toolBridge/debugBridge";
 import { createRunBridgeHandlers } from "@/routes/v2/shared/components/AiChat/toolBridge/runBridge";
 import type { BridgeDeps } from "@/routes/v2/shared/components/AiChat/toolBridge/utils";
-import { pointerTo } from "@/services/localPipelines/localPipelinesService";
 import { copyRunToPipeline } from "@/services/pipelineRunService";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import { createAndAttachPipeline } from "@/services/projects/createAndAttachPipeline";
@@ -208,9 +207,13 @@ export function TangentProjectAgentProvider({
       },
       clonePipeline: async (runId) => {
         const { pipelineName } = await clonePipelineFromRun(runInspect, runId);
+        const registered = await storage.resolvePipelineByName(pipelineName);
         await createProjectResource(
           store.projectId,
-          localPipelineResourceInput(await pointerTo(pipelineName)),
+          localPipelineResourceInput({
+            localName: pipelineName,
+            ...(registered ? { localId: registered.id } : undefined),
+          }),
         );
         await refreshProjectResources();
         return { pipelineName };

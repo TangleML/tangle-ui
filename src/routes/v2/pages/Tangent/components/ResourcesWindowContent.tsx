@@ -154,7 +154,7 @@ export function ResourcesWindowContent() {
   const notify = useToastNotification();
   const {
     data: resourcesPage,
-    isPending,
+    isLoading,
     error,
   } = useProjectResources(store.projectId, {
     entity: ["document", "pipeline"],
@@ -210,7 +210,7 @@ export function ResourcesWindowContent() {
         ))}
       </BlockStack>
 
-      {isPending && (
+      {isLoading && (
         <InlineStack gap="2" blockAlign="center">
           <Spinner /> Loading...
         </InlineStack>

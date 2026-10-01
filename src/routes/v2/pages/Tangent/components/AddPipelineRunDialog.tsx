@@ -8,7 +8,6 @@ import {
 } from "@/components/ui/dialog";
 import { BlockStack } from "@/components/ui/layout";
 import type { DialogProps } from "@/providers/DialogProvider/types";
-import { getDefaultRunPath } from "@/routes/runRoutes";
 import { pipelineRunResourceInput } from "@/services/projects/resourceDescriptor";
 import type { CreateResourceInput } from "@/services/projects/types";
 
@@ -17,13 +16,7 @@ export function AddPipelineRunDialog({
 }: DialogProps<CreateResourceInput>) {
   function handleRunClick(run: PipelineRunResponse) {
     const runId = `${run.id}`;
-    close(
-      pipelineRunResourceInput(
-        runId,
-        getDefaultRunPath(runId),
-        run.pipeline_name ?? `Run ${runId}`,
-      ),
-    );
+    close(pipelineRunResourceInput(runId, run.pipeline_name ?? `Run ${runId}`));
   }
 
   return (

@@ -3,26 +3,36 @@ import yaml from "js-yaml";
 
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import { FoldersQueryKeys } from "@/services/pipelineStorage/types";
-import type { ComponentSpec } from "@/utils/componentSpec";
-import { isGraphImplementation } from "@/utils/componentSpec";
+import { isRecord } from "@/utils/typeGuards";
 
 const NONE: ReadonlySet<string> = new Set();
 
+/**
+ * Every step is checked against the parsed yaml rather than a spec type,
+ * because this reads whatever is in storage: a scalar where an object belongs
+ * made the domain guard throw, and one such pipeline took the whole folder's
+ * reads down with it. Anything unreadable is not empty, so it stays listed.
+ */
 export function pipelineTextHasNoTasks(text: string): boolean {
-  let spec: ComponentSpec;
+  let parsed: unknown;
   try {
-    spec = yaml.load(text) as ComponentSpec;
+    parsed = yaml.load(text);
   } catch {
     return false;
   }
 
-  if (!spec || typeof spec !== "object") return false;
-  if (!isGraphImplementation(spec.implementation)) return false;
+  if (!isRecord(parsed)) return false;
 
-  const graph: unknown = spec.implementation.graph;
-  if (!graph || typeof graph !== "object") return true;
+  const implementation = parsed.implementation;
+  if (!isRecord(implementation) || !("graph" in implementation)) return false;
 
-  return Object.keys(spec.implementation.graph.tasks ?? {}).length === 0;
+  const graph = implementation.graph;
+  if (!isRecord(graph)) return true;
+
+  const tasks = graph.tasks;
+  if (tasks === undefined || tasks === null) return true;
+
+  return isRecord(tasks) && Object.keys(tasks).length === 0;
 }
 
 /**

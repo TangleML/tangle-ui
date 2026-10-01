@@ -25,6 +25,7 @@ export class EditorStore {
     null;
 
   @observable accessor draggedSincePointerDown = false;
+  @observable accessor contextPanelRevealCount = 0;
 
   constructor() {
     makeObservable(this);
@@ -32,6 +33,15 @@ export class EditorStore {
 
   @action setDraggedSincePointerDown(value: boolean) {
     this.draggedSincePointerDown = value;
+  }
+
+  /**
+   * Clicking a node that is already selected changes no selection, so the
+   * panel's selection watcher never hears about it. A counter rather than a
+   * flag, for the same reason as `requestFitView`.
+   */
+  @action requestContextPanelReveal() {
+    this.contextPanelRevealCount += 1;
   }
 
   @action resetState() {
@@ -47,6 +57,7 @@ export class EditorStore {
     this.pendingTaskDetailTab = null;
     this.selectedValidationIssue = null;
     this.draggedSincePointerDown = false;
+    this.contextPanelRevealCount = 0;
   }
 
   @action selectNode(

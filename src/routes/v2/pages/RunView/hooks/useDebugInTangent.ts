@@ -4,7 +4,6 @@ import { useNavigate } from "@tanstack/react-router";
 import { useRerunProjectIds } from "@/hooks/useRerunProjectIds";
 import useToastNotification from "@/hooks/useToastNotification";
 import { APP_ROUTES } from "@/routes/appRoutes";
-import { getDefaultRunPath } from "@/routes/runRoutes";
 import { isProjectGone } from "@/services/projects/errors";
 import { createProjectResource } from "@/services/projects/projectResourcesService";
 import {
@@ -49,9 +48,6 @@ async function firstProjectStillThere(projectIds: readonly string[]) {
   return undefined;
 }
 
-const runResourceInput = (runId: string, pipelineName: string) =>
-  pipelineRunResourceInput(runId, getDefaultRunPath(runId), pipelineName);
-
 export function useDebugInTangent() {
   const navigate = useNavigate();
   const notify = useToastNotification();
@@ -68,7 +64,7 @@ export function useDebugInTangent() {
     const projectId = project.id;
     await createProjectResource(
       projectId,
-      runResourceInput(runId, pipelineName),
+      pipelineRunResourceInput(runId, pipelineName),
     );
     await updateProject(projectId, {
       metadata: {
@@ -106,7 +102,7 @@ export function useDebugInTangent() {
       );
       await createProjectResource(
         project.id,
-        runResourceInput(runId, pipelineName),
+        pipelineRunResourceInput(runId, pipelineName),
       );
     } catch (error) {
       await deleteProject(project.id).catch((rollbackError) =>

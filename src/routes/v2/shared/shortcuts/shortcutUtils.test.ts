@@ -53,4 +53,11 @@ describe("isEditableTarget", () => {
   test("is true for the custom element host itself", () => {
     expect(editableAtWindow(document.createElement("tangent-chat"))).toBe(true);
   });
+
+  test("is false for the editor, which is light-DOM children of a custom element", () => {
+    const provider = document.createElement("tangent-provider");
+    const canvas = provider.appendChild(document.createElement("div"));
+
+    expect(editableAtWindow(provider, canvas)).toBe(false);
+  });
 });

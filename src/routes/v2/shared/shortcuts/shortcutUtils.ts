@@ -8,17 +8,23 @@ function isEditableElement(target: EventTarget | null): boolean {
   );
 }
 
-function crossesCustomElement(path: EventTarget[]): boolean {
-  return path.some(
-    (node) =>
-      node instanceof HTMLElement &&
-      (node.shadowRoot !== null || node.localName.includes("-")),
+function hidesItsTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLElement &&
+    (target.shadowRoot !== null || target.localName.includes("-"))
   );
+}
+
+function crossesShadowBoundary(path: EventTarget[]): boolean {
+  return path.some((node) => node instanceof ShadowRoot);
 }
 
 export function isEditableTarget(event: Event): boolean {
   const path = event.composedPath();
+  const target = path[0] ?? event.target;
   return (
-    isEditableElement(path[0] ?? event.target) || crossesCustomElement(path)
+    isEditableElement(target) ||
+    hidesItsTarget(target) ||
+    crossesShadowBoundary(path)
   );
 }
