@@ -318,6 +318,7 @@ interface FakeSharedStore {
   editor: {
     setPendingFocusNode: ReturnType<typeof vi.fn>;
     selectNode: ReturnType<typeof vi.fn>;
+    setDraggedSincePointerDown: ReturnType<typeof vi.fn>;
   };
   navigation: {
     rootSpec: ComponentSpec | null;
@@ -327,7 +328,11 @@ interface FakeSharedStore {
 
 function makeSharedStore(rootSpec: ComponentSpec | null): SharedUIStore {
   const fake: FakeSharedStore = {
-    editor: { setPendingFocusNode: vi.fn(), selectNode: vi.fn() },
+    editor: {
+      setPendingFocusNode: vi.fn(),
+      selectNode: vi.fn(),
+      setDraggedSincePointerDown: vi.fn(),
+    },
     navigation: { rootSpec, navigateToPath: vi.fn() },
   };
   return fake as unknown as SharedUIStore;

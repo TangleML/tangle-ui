@@ -12,8 +12,9 @@ describe("TangentUnreachable", () => {
       "Tangent isn't reachable",
     );
     expect(
-      screen.getByText(/Nothing answered at http:\/\/localhost:5173/),
+      screen.getByText(/Nothing answered at this address/),
     ).toBeInTheDocument();
+    expect(screen.getByText("http://localhost:5173")).toBeInTheDocument();
   });
 
   it("says the address is missing rather than naming a url it never had", () => {
@@ -39,8 +40,9 @@ describe("TangentUnreachable", () => {
       "Tangent is misconfigured",
     );
     expect(
-      screen.getByText(/points Tangent at http:\/\/localhost:5173/),
+      screen.getByText(/points Tangent at an address on the machine/),
     ).toBeInTheDocument();
+    expect(screen.getByText("http://localhost:5173")).toBeInTheDocument();
   });
 
   it("offers a way out rather than leaving the page blank", async () => {

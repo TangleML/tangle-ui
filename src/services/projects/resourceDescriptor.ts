@@ -27,7 +27,6 @@ export interface ResourceDescriptor {
   storage?: string;
   target?: WorkareaTarget;
   fallbackName?: string;
-  url?: string;
 }
 
 export class DescriptorTooLargeError extends Error {
@@ -51,7 +50,7 @@ export function describeResource(
   const metadata = resource.metadata;
   if (!metadata) return undefined;
 
-  const { type, identity, storage, fallbackName, url } = metadata;
+  const { type, identity, storage, fallbackName } = metadata;
   if (typeof type !== "string" || type === "") return undefined;
 
   return {
@@ -63,7 +62,6 @@ export function describeResource(
     ...(typeof fallbackName === "string" && fallbackName !== ""
       ? { fallbackName }
       : undefined),
-    ...(typeof url === "string" ? { url } : undefined),
   };
 }
 
@@ -179,7 +177,6 @@ export function instructionsResourceInput(
 
 export function pipelineRunResourceInput(
   runId: string,
-  url: string,
   name: string,
 ): CreateResourceInput {
   return {
@@ -192,7 +189,6 @@ export function pipelineRunResourceInput(
         type: "run",
         identity: idIdentity(runId),
       }),
-      url,
     },
   };
 }

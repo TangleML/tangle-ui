@@ -1,5 +1,6 @@
 import { ProjectRunStatus } from "@/components/Project/ProjectRunStatus";
 import { InfoBox } from "@/components/shared/InfoBox";
+import { Button } from "@/components/ui/button";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
@@ -17,7 +18,14 @@ import { WindowListRow } from "./WindowListRow";
 export function RunsWindowContent() {
   const store = useTangentProject();
   const notify = useToastNotification();
-  const { data, isPending, error } = useProjectRuns(store.projectId);
+  const {
+    data,
+    isPending,
+    error,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  } = useProjectRuns(store.projectId);
 
   async function handleOpenRun(run: ProjectRun) {
     const title = run.pipelineName ?? UNNAMED_PIPELINE;
@@ -31,7 +39,7 @@ export function RunsWindowContent() {
     }
   }
 
-  const runs = data?.items ?? [];
+  const runs = data ?? [];
 
   return (
     <BlockStack gap="4" className="p-2">
@@ -54,7 +62,7 @@ export function RunsWindowContent() {
       )}
 
       {runs.length > 0 && (
-        <BlockStack className="border rounded-md divide-y overflow-auto hide-scrollbar">
+        <BlockStack className="border rounded-md divide-y">
           {runs.map((run) => (
             <WindowListRow
               key={run.id}
@@ -69,10 +77,16 @@ export function RunsWindowContent() {
         </BlockStack>
       )}
 
-      {data?.nextPageToken && (
-        <Text size="sm" tone="subdued">
-          {`Showing the ${runs.length} most recent runs.`}
-        </Text>
+      {hasNextPage && (
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={isFetchingNextPage}
+          onClick={() => void fetchNextPage()}
+          {...tracking("projects.project_runs.load_more")}
+        >
+          {isFetchingNextPage ? "Loading..." : "Load more runs"}
+        </Button>
       )}
     </BlockStack>
   );

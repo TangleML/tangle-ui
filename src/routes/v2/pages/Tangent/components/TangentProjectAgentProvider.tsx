@@ -207,9 +207,13 @@ export function TangentProjectAgentProvider({
       },
       clonePipeline: async (runId) => {
         const { pipelineName } = await clonePipelineFromRun(runInspect, runId);
+        const registered = await storage.resolvePipelineByName(pipelineName);
         await createProjectResource(
           store.projectId,
-          localPipelineResourceInput({ localName: pipelineName }),
+          localPipelineResourceInput({
+            localName: pipelineName,
+            ...(registered ? { localId: registered.id } : undefined),
+          }),
         );
         await refreshProjectResources();
         return { pipelineName };

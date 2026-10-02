@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -45,11 +46,14 @@ function mockRuns(
   overrides: Record<string, unknown> = {},
 ) {
   vi.mocked(useProjectRuns).mockReturnValue({
-    data: { items, nextPageToken: null },
+    data: items,
     isPending: false,
     error: null,
+    hasNextPage: false,
+    isFetchingNextPage: false,
+    fetchNextPage: vi.fn(),
     ...overrides,
-  } as ReturnType<typeof useProjectRuns>);
+  } as unknown as ReturnType<typeof useProjectRuns>);
 }
 
 const renderRuns = () => render(<ProjectRuns projectId="project-1" />);
@@ -155,14 +159,23 @@ describe("ProjectRuns", () => {
     expect(screen.getByText("runs exploded")).toBeInTheDocument();
   });
 
-  it("admits when it has only listed the most recent runs", () => {
-    mockRuns([makeRun()], {
-      data: { items: [makeRun()], nextPageToken: "token-2" },
-    });
+  it("fetches the next page rather than stopping at the most recent runs", async () => {
+    const fetchNextPage = vi.fn();
+    mockRuns([makeRun()], { hasNextPage: true, fetchNextPage });
+    const user = userEvent.setup();
+    renderRuns();
+
+    await user.click(screen.getByRole("button", { name: "Load more runs" }));
+
+    expect(fetchNextPage).toHaveBeenCalled();
+  });
+
+  it("offers no more runs once the feed is exhausted", () => {
+    mockRuns([makeRun()], { hasNextPage: false });
     renderRuns();
 
     expect(
-      screen.getByText("Showing the 1 most recent runs."),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: "Load more runs" }),
+    ).not.toBeInTheDocument();
   });
 });

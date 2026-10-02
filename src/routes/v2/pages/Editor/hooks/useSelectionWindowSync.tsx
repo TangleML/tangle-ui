@@ -213,14 +213,31 @@ export function useSelectionWindowSync(options?: {
         const shouldShowPanel =
           multiSelectionLength > 1 || (selectedNodeId && selectedNodeType);
 
-        if (shouldShowPanel) {
-          ensureContextPanelVisible(windows, deselectAll, placementRef.current);
-        } else {
+        if (!shouldShowPanel) {
           closeContextPanel(windows);
+          return;
         }
+
+        if (editor.draggedSincePointerDown) return;
+
+        ensureContextPanelVisible(windows, deselectAll, placementRef.current);
       },
     );
 
-    return disposeSelectionWatcher;
+    const disposeRevealWatcher = reaction(
+      () => editor.contextPanelRevealCount,
+      (count) => {
+        if (count === 0) return;
+        if (!editor.selectedNodeId && editor.multiSelection.length === 0) {
+          return;
+        }
+        ensureContextPanelVisible(windows, deselectAll, placementRef.current);
+      },
+    );
+
+    return () => {
+      disposeSelectionWatcher();
+      disposeRevealWatcher();
+    };
   }, [editor, navigation, windows, deselectAll]);
 }

@@ -1,6 +1,9 @@
+import { InfoBox } from "@/components/shared/InfoBox";
 import { Button } from "@/components/ui/button";
 import { Icon, type IconName } from "@/components/ui/icon";
-import { BlockStack } from "@/components/ui/layout";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { Spinner } from "@/components/ui/spinner";
+import { Text } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useDialog } from "@/providers/DialogProvider/hooks/useDialog";
 import { convertCancelErrorTo } from "@/providers/DialogProvider/utils";
@@ -149,7 +152,11 @@ function toResourceItem(
 export function ResourcesWindowContent() {
   const store = useTangentProject();
   const notify = useToastNotification();
-  const { data: resourcesPage } = useProjectResources(store.projectId, {
+  const {
+    data: resourcesPage,
+    isLoading,
+    error,
+  } = useProjectResources(store.projectId, {
     entity: ["document", "pipeline"],
   });
   const { mutate: deleteResource, isPending: isDetachingResource } =
@@ -173,7 +180,7 @@ export function ResourcesWindowContent() {
 
   return (
     <BlockStack gap="4" className="p-2">
-      <BlockStack className="border rounded-md divide-y overflow-auto hide-scrollbar">
+      <BlockStack className="border rounded-md divide-y">
         <InstructionsRow projectId={store.projectId} />
         {resources.map((resource) => (
           <WindowListRow
@@ -203,7 +210,25 @@ export function ResourcesWindowContent() {
         ))}
       </BlockStack>
 
-      <AddResourceButton projectId={store.projectId} />
+      {isLoading && (
+        <InlineStack gap="2" blockAlign="center">
+          <Spinner /> Loading...
+        </InlineStack>
+      )}
+
+      {error && (
+        <InfoBox title="Error loading resources" variant="error">
+          {error.message}
+        </InfoBox>
+      )}
+
+      {resourcesPage && resources.length === 0 && (
+        <Text size="sm" tone="subdued">
+          Nothing is attached to this project yet
+        </Text>
+      )}
+
+      <AddResourceButton projectId={store.projectId} resources={items} />
     </BlockStack>
   );
 }

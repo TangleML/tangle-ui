@@ -51,13 +51,12 @@ describe("describeResource", () => {
     });
   });
 
-  it("reads back a run, carrying the url it was given", () => {
-    const input = pipelineRunResourceInput("42", "https://runs/42", "Run 42");
+  it("reads back a run as the run it names, and nothing more", () => {
+    const input = pipelineRunResourceInput("42", "Run 42");
 
     expect(describeResource(row(input.metadata ?? null))).toEqual({
       type: "pipeline_run",
       target: { type: "run", identity: "id/42" },
-      url: "https://runs/42",
     });
   });
 

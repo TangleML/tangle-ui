@@ -12,6 +12,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Heading, Text } from "@/components/ui/typography";
 import { getDefaultEditorPath } from "@/routes/editorRoutes";
 import { PROJECT_ID_SEARCH_PARAM } from "@/routes/projectRunSearch";
+import { getDefaultRunPath } from "@/routes/runRoutes";
 import type { LocalPipelinePointer } from "@/services/localPipelines/types";
 import { useLocalPipeline } from "@/services/localPipelines/useLocalPipelines";
 import { UNTITLED } from "@/services/projects/placeholderNames";
@@ -20,6 +21,8 @@ import {
   localPipelinePointerOf,
   PIPELINE_RUN,
 } from "@/services/projects/resourceDescriptor";
+import { resourceMeta } from "@/services/projects/resourceMeta";
+import { parseIdentity } from "@/services/projects/resourceTarget";
 import type { ProjectResource } from "@/services/projects/types";
 import { useProjectResource } from "@/services/projects/useProjectResources";
 import { usePipelineSpec } from "@/services/usePipelineSpec";
@@ -147,7 +150,14 @@ function SelectedResource({ projectId, resourceId }: SelectedResourceProps) {
 
   const described = describeResource(resource);
   if (described?.type === PIPELINE_RUN) {
-    return <RunPreview url={described.url} />;
+    const target = described.target;
+    return (
+      <RunPreview
+        runId={
+          target?.type === "run" ? parseIdentity(target.identity).value : null
+        }
+      />
+    );
   }
 
   return <PayloadPreview resource={resource} />;
@@ -157,7 +167,7 @@ function SelectedResource({ projectId, resourceId }: SelectedResourceProps) {
  * A run row carries no content of its own, so as an unrecognised row it used to
  * fall through to a yaml dump of its empty payload.
  */
-function RunPreview({ url }: { url: string | undefined }) {
+function RunPreview({ runId }: { runId: string | null }) {
   return (
     <Placeholder>
       <BlockStack gap="3" align="center" inlineAlign="center">
@@ -166,12 +176,15 @@ function RunPreview({ url }: { url: string | undefined }) {
           title="Pipeline run"
           description="A run is shown on its own page, with its graph, logs and artifacts."
         />
-        {url && (
+        {runId && (
           <Button variant="outline" size="sm" asChild>
-            <a href={url} {...tracking("projects.open_pipeline_run")}>
-              <Icon name="ExternalLink" size="xs" />
+            <Link
+              to={getDefaultRunPath(runId)}
+              {...tracking("projects.open_pipeline_run")}
+            >
+              <Icon name={resourceMeta("run").icon} size="xs" />
               Open the run
-            </a>
+            </Link>
           </Button>
         )}
       </BlockStack>

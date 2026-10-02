@@ -1,5 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 
 import { useBackend } from "@/providers/BackendProvider";
 import {
@@ -45,14 +45,17 @@ export function runPollInterval(
 export function useProjectRuns(projectId: string | undefined) {
   const { configured, available } = useBackend();
 
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ProjectRunsQueryKeys.List(projectId ?? ""),
-    queryFn: () => {
+    queryFn: ({ pageParam }) => {
       if (!projectId) {
         throw new Error("Project id is required");
       }
-      return listProjectRuns(projectId);
+      return listProjectRuns(projectId, { pageToken: pageParam });
     },
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.nextPageToken ?? undefined,
+    select: (data) => data.pages.flatMap((page) => page.items),
     enabled: configured && available && Boolean(projectId),
     ...projectQueryDefaults,
   });
