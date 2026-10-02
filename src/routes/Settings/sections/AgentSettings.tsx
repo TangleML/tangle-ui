@@ -58,15 +58,6 @@ export function AgentSettings() {
     setValidationError(null);
   }, [config.apiBase, useOwnKey]);
 
-  const getTrimmedConfig = (): AiProviderConfig =>
-    useOwnKey
-      ? {
-          apiBase: apiBase.trim().replace(/\/+$/, ""),
-          apiKey: apiKey.trim(),
-          model: model.trim(),
-        }
-      : config;
-
   const handleUseOwnKeyChange = (enabled: boolean) => {
     testRunIdRef.current += 1;
     setTesting(false);
@@ -81,26 +72,26 @@ export function AgentSettings() {
     update({ model: nextModel.trim() });
   };
 
-  const validateRequiredFields = () => {
-    const trimmed = getTrimmedConfig();
+  const handleSave = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (testing) return;
+
+    const trimmed: AiProviderConfig = useOwnKey
+      ? {
+          apiBase: apiBase.trim().replace(/\/+$/, ""),
+          apiKey: apiKey.trim(),
+          model: model.trim(),
+        }
+      : config;
     if (!trimmed.apiBase) {
       setValidationError(
         useOwnKey
           ? "Enter an API base URL before continuing."
           : "Configure a backend in Settings → Backend before testing AI.",
       );
-      return null;
+      return;
     }
     setValidationError(null);
-    return trimmed;
-  };
-
-  const handleSave = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (testing) return;
-
-    const trimmed = validateRequiredFields();
-    if (!trimmed) return;
 
     const testRunId = testRunIdRef.current + 1;
     testRunIdRef.current = testRunId;
