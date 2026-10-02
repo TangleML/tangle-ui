@@ -30,11 +30,12 @@ const BASE_CONFIG = {
 };
 
 describe("getAgentModelConfig", () => {
-  it("omits the model when the configured model is blank", () => {
-    expect(getAgentModelConfig(BASE_CONFIG)).toEqual({
+  it("overrides the SDK model fallback when the configured model is blank", () => {
+    expect(getAgentModelConfig(BASE_CONFIG)).toStrictEqual({
       modelSettings: {
         providerData: {
           include: ["reasoning.encrypted_content"],
+          model: undefined,
         },
       },
     });
