@@ -56,6 +56,16 @@ describe("sessionMemorySeed", () => {
     expect(seed).toContain("`pipeline_run_annotations`");
   });
 
+  /** TANGLE_ROOT_CONFIG attributes these for the agent; -a would wipe the key. */
+  it("warns off -a/--annotations on the auto-attributed submit commands", () => {
+    const seed = sessionMemorySeed(PROJECT_ID);
+
+    expect(seed).toContain("TANGLE_ROOT_CONFIG");
+    expect(seed).toContain("tangle-deploy pipeline-run submit");
+    expect(seed).toContain("submit-from-python");
+    expect(seed).toContain("--config");
+  });
+
   /** Two projects on one submission is refused, and so is the key on a pipeline. */
   it("states the limits the backend enforces", () => {
     const seed = sessionMemorySeed(PROJECT_ID);

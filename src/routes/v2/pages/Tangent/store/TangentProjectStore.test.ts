@@ -12,6 +12,7 @@ import {
 import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import { ComponentSpec, Input, Output, Task } from "@/models/componentSpec";
 import { sessionMemorySeed } from "@/routes/v2/pages/Tangent/services/sessionMemory";
+import { rootConfigSeed } from "@/routes/v2/pages/Tangent/services/sessionRunConfig";
 import type { WorkareaTarget } from "@/routes/v2/pages/Tangent/workarea/types";
 import type { SharedUIStore } from "@/routes/v2/shared/store/SharedStoreContext";
 import { idIdentity } from "@/services/projects/resourceTarget";
@@ -441,7 +442,11 @@ describe("TangentProjectStore.startSession", () => {
             scope: "session",
             content: sessionMemorySeed("project-1", "Prefer concise plans."),
           },
+          rootConfigSeed("project-1").resource,
         ],
+        env: {
+          TANGLE_ROOT_CONFIG: "{{uploadsPath}}/tangle-deploy-root-config.yaml",
+        },
       },
     );
     expect(io.newSession.mock.calls[0][2].resources?.[0]).toMatchObject({
@@ -458,13 +463,12 @@ describe("TangentProjectStore.startSession", () => {
     await store.startSession();
 
     const options = io.newSession.mock.calls[0][2];
-    expect(options.resources).toEqual([
-      {
-        kind: "memory",
-        scope: "session",
-        content: sessionMemorySeed("project-1", null),
-      },
-    ]);
+    expect(options.resources).toContainEqual({
+      kind: "memory",
+      scope: "session",
+      content: sessionMemorySeed("project-1", null),
+    });
+    expect(options.resources).toHaveLength(2);
   });
 
   /** A second memory seed would be a second write of the same document. */
@@ -475,7 +479,10 @@ describe("TangentProjectStore.startSession", () => {
 
     await store.startSession();
 
-    expect(io.newSession.mock.calls[0][2].resources).toHaveLength(1);
+    const memorySeeds = io.newSession.mock.calls[0][2].resources?.filter(
+      (resource) => resource.kind === "memory",
+    );
+    expect(memorySeeds).toHaveLength(1);
   });
 
   it("attaches the session after creating it", async () => {
