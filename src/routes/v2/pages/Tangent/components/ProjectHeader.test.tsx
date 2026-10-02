@@ -8,6 +8,12 @@ import { useProject } from "@/services/projects/useProjects";
 import { ProjectHeader } from "./ProjectHeader";
 
 const updateProject = vi.fn();
+const share = vi.fn();
+
+/** `useShareProjectAction` reaches the router through `@/utils/URL`. */
+vi.mock("@/components/Project/useShareProjectAction", () => ({
+  useShareProjectAction: () => share,
+}));
 
 vi.mock("@tanstack/react-router", () => ({
   Link: ({
@@ -98,6 +104,16 @@ describe("Tangent ProjectHeader", () => {
     expect(
       screen.getByRole("button", { name: "Pin Churn model" }),
     ).toBeInTheDocument();
+  });
+
+  /** The link was only on the project's own page, two clicks away from here. */
+  it("shares the project without leaving the session", async () => {
+    const user = userEvent.setup();
+    render(<ProjectHeader />);
+
+    await user.click(screen.getByRole("button", { name: "Share Churn model" }));
+
+    expect(share).toHaveBeenCalled();
   });
 
   /** The name used to rename on click, which cost the only way back out. */

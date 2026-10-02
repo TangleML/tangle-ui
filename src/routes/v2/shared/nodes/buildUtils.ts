@@ -18,12 +18,18 @@ interface PositionedEntity {
   };
 }
 
+// Copied, not passed through: React Flow reuses a node's internals while the
+// node object it holds is identical, so sharing the annotation's own position
+// object leaves an in-place write (undo, redo) invisible on screen.
 function resolvePosition(
   entity: PositionedEntity,
   fallback: { x: number; y: number },
 ): { x: number; y: number } {
   if (!entity.annotations.has(EDITOR_POSITION_ANNOTATION)) return fallback;
-  return entity.annotations.get(EDITOR_POSITION_ANNOTATION) as XYPosition;
+  const { x, y } = entity.annotations.get(
+    EDITOR_POSITION_ANNOTATION,
+  ) as XYPosition;
+  return { x, y };
 }
 
 export function ioDefaultPosition(
@@ -38,6 +44,18 @@ export function taskDefaultPosition(index: number): { x: number; y: number } {
     x: 200 + (index % 3) * TASK_OFFSET,
     y: Math.floor(index / 3) * TASK_OFFSET,
   };
+}
+
+function isPlaced(entity: PositionedEntity): boolean {
+  return entity.annotations.has(EDITOR_POSITION_ANNOTATION);
+}
+
+export function hasPlacedEntities(spec: ComponentSpec): boolean {
+  return (
+    spec.tasks.some(isPlaced) ||
+    spec.inputs.some(isPlaced) ||
+    spec.outputs.some(isPlaced)
+  );
 }
 
 /**
