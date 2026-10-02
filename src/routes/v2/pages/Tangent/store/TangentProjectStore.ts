@@ -16,6 +16,7 @@ import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import { TANGENT_BUNDLE_ID } from "@/routes/v2/pages/Tangent/constants";
 import { resolveWorkareaTarget } from "@/routes/v2/pages/Tangent/services/resolveWorkareaTarget";
 import { sessionMemorySeed } from "@/routes/v2/pages/Tangent/services/sessionMemory";
+import { rootConfigSeed } from "@/routes/v2/pages/Tangent/services/sessionRunConfig";
 import type {
   ResolvedWorkareaView,
   WorkareaTab,
@@ -67,6 +68,7 @@ export interface TangentSessionIo {
     options: {
       name: string;
       resources?: HostResourceInput[];
+      env?: Record<string, string>;
       model?: string;
       thinkingDepth?: ThinkingLevel;
     },
@@ -219,6 +221,7 @@ export class TangentProjectStore {
       // An empty prompt makes the embed skip the opening turn, so the human
       // types the first message; a non-empty one runs it immediately.
       const prompt = options?.prompt ?? "";
+      const rootConfig = rootConfigSeed(this.projectId);
       const { sessionId } = await io.newSession(prompt, TANGENT_BUNDLE_ID, {
         name: options?.name ?? "New Tangent session",
         resources: [
@@ -227,7 +230,9 @@ export class TangentProjectStore {
             scope: "session",
             content: sessionMemorySeed(this.projectId, io.projectInstructions),
           },
+          rootConfig.resource,
         ],
+        env: rootConfig.env,
         model: options?.model,
         thinkingDepth: options?.thinkingDepth,
       });
