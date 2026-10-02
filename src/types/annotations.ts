@@ -14,6 +14,7 @@ export type AnnotationConfig = {
   unit?: string;
   append?: string;
   options?: AnnotationOption[];
+  optionsUrl?: string;
   allowCustomValue?: boolean;
   enableQuantity?: boolean;
   type?: "string" | "number" | "integer" | "boolean" | "json";

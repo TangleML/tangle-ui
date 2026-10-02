@@ -936,4 +936,32 @@ describe("aliases as picker entries", () => {
     expect(lt3?.["x-alias-of"]).toBeUndefined();
     expect(lt3?.["x-provider"]).toBe("GKE");
   });
+
+  it("carries a field's options_url through to the annotation config", () => {
+    const built = buildLauncherSchemaFromCapabilities({
+      gke: {
+        resource_fields: [
+          {
+            annotation: "example.com/region",
+            label: "Region",
+            options_url: "/api/regions",
+            allow_custom_value: true,
+          },
+        ],
+        clusters: { eo9: { label: "eo9" } },
+      },
+    });
+    const schema = built.launcher_annotation_schemas?.eo9;
+
+    expect(schema?.properties["example.com/region"]["x-options-url"]).toBe(
+      "/api/regions",
+    );
+    expect(parseSchemaToAnnotationConfig(schema!)).toEqual([
+      expect.objectContaining({
+        annotation: "example.com/region",
+        optionsUrl: "/api/regions",
+        allowCustomValue: true,
+      }),
+    ]);
+  });
 });
