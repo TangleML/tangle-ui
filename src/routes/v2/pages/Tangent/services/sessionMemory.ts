@@ -21,20 +21,24 @@ const NAMING_BRIEF = [
 const runAttributionBrief = (projectId: string) =>
   [
     "Attributing runs to this project:",
-    `- This project's id is ${projectId}.`,
-    "- A run you submit yourself must carry the annotation",
+    `- This project's id is ${projectId}, and membership is the annotation`,
     `  \`${projectRunAnnotationKey(projectId)}: "true"\` — the id is in the key`,
-    '  and the value is always the string "true". Pass it in `annotations` to',
-    "  POST /api/pipeline_runs/, or in `pipeline_run_annotations` to",
-    "  POST /api/pipeline_runs/from_pipeline/{id}.",
-    "- Do this on every submission. A run without the annotation never reaches",
+    '  and the value is always the string "true".',
+    "- `tangle-deploy pipeline-run submit` and `submit-from-python` already carry",
+    "  this annotation: the session sets TANGLE_ROOT_CONFIG so every submit is",
+    "  attributed for you. Do not pass `-a`/`--annotations` to those commands — it",
+    "  replaces the whole annotations field and drops the project key. To add your",
+    "  own annotations there, use `--config`, whose `annotations` block deep-merges",
+    "  over the project key instead of replacing it.",
+    "- A run you submit any other way must carry the annotation yourself. Pass it",
+    "  in `annotations` to POST /api/pipeline_runs/, or in `pipeline_run_annotations`",
+    "  to POST /api/pipeline_runs/from_pipeline/{id}. A run without it never reaches",
     "  the project, and the key cannot be added afterwards.",
     "- Name one project per run. A submission naming two is rejected.",
     "- Never put this key on a pipeline you save. The pipeline write path answers",
     "  422, because stored pipeline annotations decide a pipeline's version",
     "  identity and the same pipeline run from two projects is one pipeline.",
-    "- A run you start through the pipeline canvas is attributed for you, so the",
-    "  above is about runs you submit any other way.",
+    "- A run you start through the pipeline canvas is attributed for you.",
   ].join("\n");
 
 /**
