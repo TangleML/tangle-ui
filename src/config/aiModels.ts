@@ -133,18 +133,14 @@ export function getEffectiveReasoningEffort(
   const preferredIndex = AI_REASONING_LEVELS.findIndex(
     (level) => level.value === preference,
   );
-  let closest = levels[0]?.value;
-  let distance = Infinity;
-  for (const level of levels) {
-    const index = AI_REASONING_LEVELS.findIndex(
-      (candidate) => candidate.value === level.value,
+  const distance = (effort: AiReasoningEffort) =>
+    Math.abs(
+      AI_REASONING_LEVELS.findIndex((level) => level.value === effort) -
+        preferredIndex,
     );
-    if (Math.abs(index - preferredIndex) < distance) {
-      closest = level.value;
-      distance = Math.abs(index - preferredIndex);
-    }
-  }
-  return closest;
+  return levels.sort(
+    (left, right) => distance(left.value) - distance(right.value),
+  )[0]?.value;
 }
 
 export function getAiReasoningLabel(effort: AiReasoningEffort): string {

@@ -28,6 +28,20 @@ function mockResponsesResponse(content: unknown, status = 200) {
   );
 }
 
+const TOKEN_LIMIT_ERROR =
+  "LLM provider reached its token limit before completing the response.";
+
+function mockIncompleteResponse(reason: string | null | undefined, text = "") {
+  return new Response(
+    JSON.stringify({
+      status: "incomplete",
+      incomplete_details: reason ? { reason } : reason,
+      output: [{ type: "reasoning", summary: [] }],
+      ...(text ? { output_text: text } : {}),
+    }),
+  );
+}
+
 function parseFetchBody(call: unknown[] | undefined): Record<string, unknown> {
   const init = call?.[1];
   if (
@@ -144,7 +158,9 @@ describe("componentReferenceToCandidate", () => {
 
 describe("rerankComponentsByNaturalLanguage", () => {
   beforeEach(() => {
-    global.fetch = vi.fn();
+    global.fetch = vi
+      .fn()
+      .mockResolvedValue(mockResponsesResponse({ matches: [] }));
   });
 
   afterEach(() => {
@@ -243,37 +259,6 @@ describe("rerankComponentsByNaturalLanguage", () => {
     expect(result.matches.map((m) => m.id)).toEqual(["a"]);
   });
 
-  it("uses the selected model directly and preserves thinking and cancellation", async () => {
-    vi.mocked(global.fetch).mockResolvedValue(
-      mockResponsesResponse({ matches: [] }),
-    );
-    const controller = new AbortController();
-    const options = {
-      ...VALID_OPTIONS,
-      model: "gpt-6-sol",
-      reasoningEffort: "max" as const,
-      signal: controller.signal,
-    };
-    await rerankComponentsByNaturalLanguage(
-      "train",
-      [{ id: "a", name: "trainer", description: "" }],
-      options,
-    );
-    expect(fetch).toHaveBeenCalledOnce();
-    expect(vi.mocked(fetch).mock.calls[0][0]).toBe(
-      "https://api.example.com/v1/responses",
-    );
-    expect(parseFetchBody(vi.mocked(global.fetch).mock.calls[0])).toMatchObject(
-      {
-        model: "gpt-6-sol",
-        reasoning: { effort: "max" },
-      },
-    );
-    expect(vi.mocked(global.fetch).mock.calls[0][1]?.signal).toBe(
-      controller.signal,
-    );
-  });
-
   it("recovers matches from malformed JSON regardless of field order", async () => {
     // `output_text` is not valid JSON, so the service falls back to partial
     // parsing. Fields are deliberately ordered score/reason/id to prove the
@@ -302,70 +287,6 @@ describe("rerankComponentsByNaturalLanguage", () => {
       { id: "b", score: 0.4, reason: "weaker" },
     ]);
   });
-
-  it.each(["", '{"matches":[{"id":"a","score":0.9,"reason":"strong fit"}]'])(
-    "reports a provider token limit with output %j",
-    async (outputText) => {
-      vi.mocked(global.fetch).mockResolvedValue(
-        new Response(
-          JSON.stringify({
-            status: "incomplete",
-            incomplete_details: { reason: "max_output_tokens" },
-            output: [
-              { type: "reasoning", summary: [] },
-              ...(outputText
-                ? [
-                    {
-                      type: "message",
-                      content: [{ type: "output_text", text: outputText }],
-                    },
-                  ]
-                : []),
-            ],
-          }),
-          { status: 200 },
-        ),
-      );
-
-      await expect(
-        rerankComponentsByNaturalLanguage(
-          "train",
-          [{ id: "a", name: "trainer", description: "" }],
-          { ...VALID_OPTIONS, model: "gpt-6-sol", reasoningEffort: "high" },
-        ),
-      ).rejects.toThrow(
-        "LLM provider reached its token limit before completing the response.",
-      );
-      expect(global.fetch).toHaveBeenCalledOnce();
-    },
-  );
-
-  it.each([
-    [{ reason: "content_filter" }, " (content_filter)"],
-    [null, ""],
-    [undefined, ""],
-  ])(
-    "reports other incomplete responses with details %j",
-    async (details, suffix) => {
-      vi.mocked(global.fetch).mockResolvedValue(
-        new Response(
-          JSON.stringify({
-            status: "incomplete",
-            incomplete_details: details,
-            output: [],
-          }),
-        ),
-      );
-
-      await expect(
-        rerankComponentsByNaturalLanguage(
-          "train",
-          [{ id: "a", name: "trainer", description: "" }],
-          VALID_OPTIONS,
-        ),
-      ).rejects.toThrow(`LLM proxy returned an incomplete response${suffix}`);
-    },
-  );
 
   it("clamps out-of-range score values into [0, 1]", async () => {
     // NaN scores are intentionally not tested here: JSON.stringify({score: NaN})
@@ -496,21 +417,6 @@ describe("rerankComponentsByNaturalLanguage", () => {
     expect(body.temperature).toBeUndefined();
   });
 
-  it("sends the selected thinking effort to the Responses API", async () => {
-    vi.mocked(global.fetch).mockResolvedValue(
-      mockResponsesResponse({ matches: [] }),
-    );
-    await rerankComponentsByNaturalLanguage(
-      "train",
-      [{ id: "a", name: "a", description: "" }],
-      { ...VALID_OPTIONS, model: "gpt-6-sol", reasoningEffort: "xhigh" },
-    );
-    const body = parseFetchBody(vi.mocked(global.fetch).mock.calls[0]);
-    expect(body.reasoning).toEqual({ effort: "xhigh" });
-    expect(body.temperature).toBeUndefined();
-    expect(body.max_output_tokens).toBeUndefined();
-  });
-
   it("leaves the token budget to the provider when model is blank", async () => {
     vi.mocked(global.fetch).mockResolvedValue(
       mockResponsesResponse({ matches: [] }),
@@ -556,59 +462,102 @@ describe("generateComponentAiDescription", () => {
     },
   };
 
-  it.each([undefined, "none", "high", "max"] as const)(
-    "generates a concise description without a token budget for effort %s",
-    async (reasoningEffort) => {
-      vi.mocked(global.fetch).mockResolvedValue(
-        mockResponsesResponse({
-          description:
-            "This component trains a model from the dataset input and writes the trained model output.",
-        }),
-      );
+  type RequestOptions = Parameters<typeof generateComponentAiDescription>[1];
+  const requests = {
+    search: (options: RequestOptions) =>
+      rerankComponentsByNaturalLanguage(
+        "train",
+        [{ id: "a", name: "trainer", description: "" }],
+        options,
+      ),
+    description: (options: RequestOptions) =>
+      generateComponentAiDescription(reference, options),
+  };
 
-      const result = await generateComponentAiDescription(reference, {
+  it("generates a description from a component spec", async () => {
+    vi.mocked(global.fetch).mockResolvedValue(
+      mockResponsesResponse({
+        description:
+          "This component trains a model from the dataset input and writes the trained model output.",
+      }),
+    );
+
+    const result = await generateComponentAiDescription(
+      reference,
+      VALID_OPTIONS,
+    );
+
+    expect(result.description).toContain("trains a model");
+    const call = vi.mocked(global.fetch).mock.calls[0];
+    const body = parseFetchBody(call);
+    expect(call?.[0]).toBe("https://api.example.com/v1/responses");
+    expect(JSON.stringify(body.input)).toContain("train_model");
+    expect(JSON.stringify(body.input)).toContain("dataset");
+    expect(body.instructions).toContain("preferably 2-4 short sentences");
+    expect(body.reasoning).toBeUndefined();
+  });
+
+  it.each([
+    ["search", "max", "gpt-6-sol"],
+    ["search", "xhigh", "gpt-6-sol"],
+    ["description", "none", VALID_OPTIONS.model],
+    ["description", "high", VALID_OPTIONS.model],
+    ["description", "max", VALID_OPTIONS.model],
+  ] as const)(
+    "sends %s reasoning %s without a token cap",
+    async (request, effort, model) => {
+      vi.mocked(fetch).mockResolvedValue(
+        mockResponsesResponse({ matches: [], description: "Trains a model." }),
+      );
+      const signal = new AbortController().signal;
+      await requests[request]({
         ...VALID_OPTIONS,
-        reasoningEffort,
+        model,
+        reasoningEffort: effort,
+        signal,
       });
-
-      expect(result.description).toContain("trains a model");
-      const call = vi.mocked(global.fetch).mock.calls[0];
+      expect(fetch).toHaveBeenCalledOnce();
+      const call = vi.mocked(fetch).mock.calls[0];
+      expect(call[0]).toBe("https://api.example.com/v1/responses");
+      expect(call[1]?.signal).toBe(signal);
       const body = parseFetchBody(call);
-      expect(call?.[0]).toBe("https://api.example.com/v1/responses");
-      expect(JSON.stringify(body.input)).toContain("train_model");
-      expect(JSON.stringify(body.input)).toContain("dataset");
-      expect(body.instructions).toContain("preferably 2-4 short sentences");
+      expect(body.model).toBe(model);
+      expect(body.reasoning).toEqual({ effort });
       expect(body.max_output_tokens).toBeUndefined();
-      expect(body.max_tokens).toBeUndefined();
-      expect(body.max_completion_tokens).toBeUndefined();
-      expect(body.reasoning).toEqual(
-        reasoningEffort ? { effort: reasoningEffort } : undefined,
-      );
     },
   );
 
-  it("reports exhausted reasoning tokens before trying to read a description", async () => {
-    vi.mocked(global.fetch).mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          status: "incomplete",
-          incomplete_details: { reason: "max_output_tokens" },
-          output: [{ type: "reasoning", summary: [] }],
+  it.each([
+    ["search", "max_output_tokens", "", TOKEN_LIMIT_ERROR],
+    [
+      "search",
+      "max_output_tokens",
+      '{"matches":[{"id":"a","score":0.9,"reason":"strong fit"}]',
+      TOKEN_LIMIT_ERROR,
+    ],
+    [
+      "search",
+      "content_filter",
+      "",
+      "LLM proxy returned an incomplete response (content_filter)",
+    ],
+    ["search", null, "", "LLM proxy returned an incomplete response"],
+    ["search", undefined, "", "LLM proxy returned an incomplete response"],
+    ["description", "max_output_tokens", "", TOKEN_LIMIT_ERROR],
+  ] as const)(
+    "rejects incomplete %s responses with reason %s and output %j",
+    async (request, reason, text, message) => {
+      vi.mocked(fetch).mockResolvedValue(mockIncompleteResponse(reason, text));
+      await expect(
+        requests[request]({
+          ...VALID_OPTIONS,
+          model: "gpt-6-sol",
+          reasoningEffort: "high",
         }),
-        { status: 200 },
-      ),
-    );
-
-    await expect(
-      generateComponentAiDescription(reference, {
-        ...VALID_OPTIONS,
-        model: "gpt-6-sol",
-        reasoningEffort: "high",
-      }),
-    ).rejects.toThrow(
-      "LLM provider reached its token limit before completing the response.",
-    );
-  });
+      ).rejects.toThrow(message);
+      expect(fetch).toHaveBeenCalledOnce();
+    },
+  );
 
   it("requires a hydrated component spec", async () => {
     await expect(

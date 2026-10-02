@@ -14,10 +14,6 @@ import {
   Runner,
 } from "@openai/agents";
 
-import {
-  getDefaultAiModelId,
-  getEffectiveReasoningEffort,
-} from "@/config/aiModels";
 import type { AiProviderConfig } from "@/types/aiProvider";
 
 import type { AgentSession } from "../session";
@@ -58,19 +54,10 @@ export function createDispatcherRuntime(
     async invoke(params) {
       params.session.proxyClient.ensureConfigured(params.aiConfig);
       const openAIClient = params.session.proxyClient.openai;
-      const model = params.aiConfig.model.trim() || getDefaultAiModelId();
       const sessionMemory = getOrCreateSessionMemory(params.threadId);
       const agent = await buildAgent({
         ...params.session,
-        aiConfig: {
-          ...params.aiConfig,
-          model,
-          reasoningEffort:
-            params.aiConfig.reasoningEffort ??
-            (params.aiConfig.model.trim()
-              ? undefined
-              : getEffectiveReasoningEffort(model)),
-        },
+        aiConfig: params.aiConfig,
       });
       const runner = new Runner({
         modelProvider: new OpenAIProvider({

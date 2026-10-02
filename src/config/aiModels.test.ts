@@ -53,12 +53,9 @@ describe("aiModels", () => {
 
   it("resolves thinking levels supplied by the host", () => {
     window.__TANGLE_AI_MODELS__ = {
-      models: [
-        { id: "custom-reasoning-model", reasoningEfforts: ["low", "high"] },
-      ],
+      models: [{ id: "custom", reasoningEfforts: ["low", "high"] }],
     };
-    expect(getEffectiveReasoningEffort("custom-reasoning-model", "max")).toBe(
-      "high",
-    );
+    expect(getEffectiveReasoningEffort("custom", "max")).toBe("high");
+    expect(getEffectiveReasoningEffort("custom", "medium")).toBe("low");
   });
 });

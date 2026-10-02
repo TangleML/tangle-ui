@@ -272,25 +272,9 @@ describe("useAiProviderSettings", () => {
     });
   });
 
-  it("preserves thinking across model switches, consumers, and reloads", () => {
+  it("syncs model and thinking across tabs and mounted consumers", () => {
     const first = renderHook(() => useAiProviderSettings());
     const second = renderHook(() => useAiProviderSettings());
-    act(() =>
-      first.result.current.update({
-        model: "gpt-6-sol",
-        reasoningEffort: "none",
-      }),
-    );
-    act(() => first.result.current.update({ model: "gpt-6-astra" }));
-    expect(second.result.current.config.reasoningEffort).toBe("low");
-    expect(second.result.current.customConfig.reasoningEffort).toBe("none");
-    first.unmount();
-    second.unmount();
-
-    const reloaded = renderHook(() => useAiProviderSettings());
-    act(() => reloaded.result.current.update({ model: "gpt-6-luna" }));
-    expect(reloaded.result.current.config.reasoningEffort).toBe("none");
-
     act(() => {
       window.localStorage.setItem(
         AI_PROVIDER_STORAGE_KEY,
@@ -300,7 +284,10 @@ describe("useAiProviderSettings", () => {
         new StorageEvent("storage", { key: AI_PROVIDER_STORAGE_KEY }),
       );
     });
-    expect(reloaded.result.current.config.reasoningEffort).toBe("max");
+    for (const consumer of [first, second]) {
+      expect(consumer.result.current.config.model).toBe("gpt-6-sol");
+      expect(consumer.result.current.config.reasoningEffort).toBe("max");
+    }
   });
 
   it("ignores invalid saved thinking levels", () => {

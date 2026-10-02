@@ -345,13 +345,10 @@ async function callLlmResponse(
     const reason = isRecord(payload.incomplete_details)
       ? payload.incomplete_details.reason
       : undefined;
-    if (reason === "max_output_tokens") {
-      throw new Error(
-        "LLM provider reached its token limit before completing the response.",
-      );
-    }
     throw new Error(
-      `LLM proxy returned an incomplete response${typeof reason === "string" && reason ? ` (${reason})` : ""}`,
+      reason === "max_output_tokens"
+        ? "LLM provider reached its token limit before completing the response."
+        : `LLM proxy returned an incomplete response${typeof reason === "string" && reason ? ` (${reason})` : ""}`,
     );
   }
   const rawContent = readResponsesContent(payload);

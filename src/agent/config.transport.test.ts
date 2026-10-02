@@ -64,9 +64,14 @@ describe("AI client transport", () => {
     ).toBe("Bearer sk-personal");
   });
 
-  it.each(["", "gpt-6-sol", "custom-reasoning-model"])(
-    "uses the configured model selection %j in an actual agent request",
-    async (model) => {
+  it.each([
+    ["", false],
+    ["gpt-6-sol", false],
+    ["custom-reasoning-model", false],
+    ["custom-reasoning-model", true],
+  ] as const)(
+    "uses model %j in an agent request (direct SDK: %s)",
+    async (model, directSdk) => {
       const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
         new Response(
           JSON.stringify({
@@ -88,7 +93,9 @@ describe("AI client transport", () => {
       );
       vi.stubGlobal("fetch", fetchMock);
       const config = {
-        apiBase: "https://backend.example.com/api/experimental/ai/v1",
+        apiBase: directSdk
+          ? "https://backend.example.com/ai/v1"
+          : "https://backend.example.com/api/experimental/ai/v1",
         apiKey: "",
         model,
         reasoningEffort: "max",
@@ -97,7 +104,14 @@ describe("AI client transport", () => {
       const client = new ProxyClient();
       client.ensureConfigured(config);
 
-      const result = await run(
+      const provider = new OpenAIProvider({
+        openAIClient: client.openai,
+        useResponses: true,
+      });
+      const runner = directSdk
+        ? new Runner({ modelProvider: provider, tracingDisabled: true })
+        : { run };
+      const result = await runner.run(
         new Agent({ name: "Test agent", ...getAgentModelConfig(config) }),
         "Hello",
       );
@@ -107,70 +121,11 @@ describe("AI client transport", () => {
       const body = JSON.parse(String(request?.body));
       expect(body.model).toBe(model || "gpt-6-sol");
       expect(body.reasoning).toMatchObject({ effort: "max" });
-      expect(fetchMock.mock.calls[0][0]).toBe(
-        "https://backend.example.com/api/experimental/ai/v1/responses",
-      );
+      expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+        `${config.apiBase}/responses`,
+      ]);
       expect(request?.credentials).toBe("include");
       expect(new Headers(request?.headers).has("authorization")).toBe(false);
     },
   );
-
-  it("sends the locally selected model directly through the Responses SDK", async () => {
-    const fetchMock = vi.fn<typeof fetch>().mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          id: "test-response",
-          output: [
-            {
-              id: "test-message",
-              type: "message",
-              role: "assistant",
-              status: "completed",
-              content: [
-                { type: "output_text", text: "Hello", annotations: [] },
-              ],
-            },
-          ],
-        }),
-        { headers: { "content-type": "application/json" } },
-      ),
-    );
-    vi.stubGlobal("fetch", fetchMock);
-    const config = {
-      apiBase: "https://backend.example.com/ai/v1",
-      apiKey: "",
-      model: "custom-reasoning-model",
-      reasoningEffort: "max",
-      credentials: "include",
-    } satisfies Parameters<ProxyClient["ensureConfigured"]>[0];
-    const client = new ProxyClient();
-    client.ensureConfigured(config);
-    const runner = new Runner({
-      modelProvider: new OpenAIProvider({
-        openAIClient: client.openai,
-        useResponses: true,
-      }),
-      tracingDisabled: true,
-    });
-    const result = await runner.run(
-      new Agent({
-        name: "Test agent",
-        ...getAgentModelConfig(config),
-      }),
-      "Hello",
-    );
-
-    expect(result.finalOutput).toBe("Hello");
-    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
-      "https://backend.example.com/ai/v1/responses",
-    ]);
-    const request = fetchMock.mock.calls[0][1];
-    const body = JSON.parse(String(request?.body));
-    expect(body).toMatchObject({
-      model: "custom-reasoning-model",
-      reasoning: { effort: "max" },
-    });
-    expect(request?.credentials).toBe("include");
-    expect(new Headers(request?.headers).has("authorization")).toBe(false);
-  });
 });

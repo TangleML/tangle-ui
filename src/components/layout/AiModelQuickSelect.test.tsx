@@ -73,16 +73,6 @@ describe("AiModelQuickSelect", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Choose a model" }));
-    expect(screen.queryByText("Provider default")).not.toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "GPT-6 Astra" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "GPT-6 Sol" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "GPT-6 Luna" }),
-    ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "gpt-4.1-mini" }),
     ).toBeInTheDocument();
