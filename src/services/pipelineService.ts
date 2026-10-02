@@ -23,6 +23,10 @@ import {
   deleteEntry,
   findByStorageKey,
 } from "./pipelineStorage/pipelineRegistry";
+import {
+  assertLocalPipelineVisible,
+  PipelineMovedToRemoteError,
+} from "./pipelineStorage/remotePipelineRecovery";
 
 export const deletePipeline = async (name: string, onDelete?: () => void) => {
   try {
@@ -83,6 +87,8 @@ export const loadPipelineByName = async (name: string) => {
     // Check if pipeline exists in user pipelines
     const pipeline = userPipelines.get(decodedName);
     if (pipeline) {
+      const entry = await findByStorageKey(decodedName);
+      if (entry) await assertLocalPipelineVisible(entry.id);
       return {
         experiment: pipeline,
         isLoading: false,
@@ -133,7 +139,10 @@ export const loadPipelineByName = async (name: string) => {
     return {
       experiment: null,
       isLoading: false,
-      error: "Error loading pipeline",
+      error:
+        error instanceof PipelineMovedToRemoteError
+          ? error.message
+          : "Error loading pipeline",
     };
   }
 };

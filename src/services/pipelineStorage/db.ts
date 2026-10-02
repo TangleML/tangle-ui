@@ -18,8 +18,10 @@ pipelineStorageDb.version(1).stores({
   folders: "id, parentId",
 });
 
-pipelineStorageDb.on("ready", async () => {
-  const count = await pipelineStorageDb.pipeline_registry.count();
+pipelineStorageDb.on("ready", async (db) => {
+  // The ready event's VIP handle remains usable after external async work.
+  const registry = db.table<PipelineRegistryEntry>("pipeline_registry");
+  const count = await registry.count();
   if (count > 0) return;
 
   const { getAllComponentFilesFromList } =
@@ -39,12 +41,7 @@ pipelineStorageDb.on("ready", async () => {
   );
 
   try {
-    /**
-     * This code may be revisited to ensure stability and performance.
-     */
-    pipelineForRegistry.forEach(async (row) => {
-      await pipelineStorageDb.pipeline_registry.upsert(row.id, row);
-    });
+    await registry.bulkPut(pipelineForRegistry);
   } catch (e) {
     console.error(e);
     throw e;
