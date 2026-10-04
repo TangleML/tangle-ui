@@ -115,4 +115,12 @@ export const ExistingFlags: ConfigFlags = {
     default: true,
     category: "beta",
   },
+
+  ["collab-poc"]: {
+    name: "Collaboration (proof of concept)",
+    description:
+      "Experimental multi-client editing. With a ?collab=<room> URL param, the V2 editor connects to a sync server and exposes a Collaboration debug window. Autosave and undo are disabled while active.",
+    default: false,
+    category: "beta",
+  },
 };

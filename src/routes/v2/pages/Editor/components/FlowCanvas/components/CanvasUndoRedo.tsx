@@ -12,9 +12,12 @@ import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { ShortcutBadge } from "@/routes/v2/shared/components/ShortcutBadge";
 
+const COLLAB_DISABLED_TOOLTIP = "Undo is disabled in collaboration mode";
+
 export const CanvasUndoRedo = observer(function CanvasUndoRedo() {
   const { track } = useAnalytics();
-  const { undo } = useEditorSession();
+  const { undo, collaboration } = useEditorSession();
+  const collabDisabled = collaboration.enabled;
 
   const handleUndo = () => {
     track("v2.pipeline_canvas.controls.undo.click");
@@ -36,15 +39,24 @@ export const CanvasUndoRedo = observer(function CanvasUndoRedo() {
               size="sm"
               className="p-0"
               onClick={handleUndo}
-              disabled={!undo.canUndo}
+              disabled={collabDisabled || !undo.canUndo}
               aria-label="Undo"
             >
               <Icon name="Undo2" size="sm" />
             </Button>
           </TooltipTrigger>
           <TooltipContent side="top" className="flex items-center gap-1">
-            Undo
-            <ShortcutBadge id="undo" className="text-primary-foreground z-10" />
+            {collabDisabled ? (
+              COLLAB_DISABLED_TOOLTIP
+            ) : (
+              <>
+                Undo
+                <ShortcutBadge
+                  id="undo"
+                  className="text-primary-foreground z-10"
+                />
+              </>
+            )}
           </TooltipContent>
         </Tooltip>
         <Tooltip>
@@ -54,15 +66,24 @@ export const CanvasUndoRedo = observer(function CanvasUndoRedo() {
               size="sm"
               className="p-0"
               onClick={handleRedo}
-              disabled={!undo.canRedo}
+              disabled={collabDisabled || !undo.canRedo}
               aria-label="Redo"
             >
               <Icon name="Redo2" size="sm" />
             </Button>
           </TooltipTrigger>
           <TooltipContent side="top" className="flex items-center gap-1">
-            Redo
-            <ShortcutBadge id="redo" className="text-primary-foreground z-10" />
+            {collabDisabled ? (
+              COLLAB_DISABLED_TOOLTIP
+            ) : (
+              <>
+                Redo
+                <ShortcutBadge
+                  id="redo"
+                  className="text-primary-foreground z-10"
+                />
+              </>
+            )}
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
