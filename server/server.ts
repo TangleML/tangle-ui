@@ -3,18 +3,27 @@ import { randomUUID } from "node:crypto";
 import { type RawData, type WebSocket, WebSocketServer } from "ws";
 
 import {
-  type BroadcastMessage,
   COLLAB_MODEL_VERSION,
   COLLAB_PROTOCOL_VERSION,
   type HelloMessage,
   isCommandMessage,
+  isDragMessage,
   isJoinMessage,
+  isPointerMessage,
+  isPresenceMessage,
   isSnapshotMessage,
+  type JoinMessage,
   type LogEntry,
+  type ParticipantInfo,
+  type ParticipantsMessage,
   type ServerMessage,
   type SnapshotRequestMessage,
 } from "../src/services/collaboration/protocol";
-import { InMemoryRoomStore, type RoomStore } from "./roomStore";
+import { roomStateToPlainSpec, specToCollabSnapshot } from "./csom";
+import { fetchPipeline, writePipeline } from "./pipelineApi";
+import { InMemoryRoomStore, type RoomState, type RoomStore } from "./roomStore";
+
+const PERSIST_DEBOUNCE_MS = 1500;
 
 export interface CollabServerOptions {
   port: number;
@@ -39,6 +48,8 @@ export function createCollabServer(
   const store = options.store ?? new InMemoryRoomStore();
   const connections = new Set<Connection>();
   const pendingFolds = new Map<string, string>();
+  const seedsInFlight = new Map<string, Promise<void>>();
+  const persistTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
   function send(socket: WebSocket, message: ServerMessage): void {
     socket.send(JSON.stringify(message));
@@ -48,10 +59,110 @@ export function createCollabServer(
     send(socket, { type: "reject", seq, reason });
   }
 
-  function broadcastToRoom(roomId: string, message: BroadcastMessage): void {
+  async function persistRoom(roomId: string): Promise<void> {
+    const room = store.get(roomId);
+    if (!room || !room.filePath) return;
+    try {
+      await writePipeline(room.filePath, roomStateToPlainSpec(room));
+      console.log(
+        `flushed room ${roomId} to backend ${room.filePath} (version ${room.version})`,
+      );
+    } catch (error) {
+      console.warn(`failed to persist room ${roomId}`, error);
+    }
+  }
+
+  function schedulePersist(roomId: string): void {
+    const room = store.get(roomId);
+    if (!room?.filePath) return;
+    const existing = persistTimers.get(roomId);
+    if (existing) clearTimeout(existing);
+    persistTimers.set(
+      roomId,
+      setTimeout(() => {
+        persistTimers.delete(roomId);
+        void persistRoom(roomId);
+      }, PERSIST_DEBOUNCE_MS),
+    );
+  }
+
+  function flushPersist(roomId: string): void {
+    const existing = persistTimers.get(roomId);
+    if (existing) {
+      clearTimeout(existing);
+      persistTimers.delete(roomId);
+    }
+    void persistRoom(roomId);
+  }
+
+  function roomHasConnections(roomId: string): boolean {
+    for (const connection of connections) {
+      if (connection.roomId === roomId) return true;
+    }
+    return false;
+  }
+
+  async function seedRoom(
+    roomId: string,
+    clientSnapshot: JoinMessage["snapshot"],
+  ): Promise<RoomState | undefined> {
+    const inFlight = seedsInFlight.get(roomId);
+    if (inFlight) {
+      await inFlight;
+      return store.get(roomId);
+    }
+
+    const task = (async () => {
+      try {
+        const pipeline = await fetchPipeline(roomId);
+        if (pipeline) {
+          store.create(
+            roomId,
+            specToCollabSnapshot(pipeline.spec),
+            pipeline.filePath,
+          );
+          return;
+        }
+      } catch (error) {
+        console.warn(`failed to seed room ${roomId} from backend`, error);
+      }
+      if (clientSnapshot) store.create(roomId, clientSnapshot);
+    })();
+
+    seedsInFlight.set(roomId, task);
+    try {
+      await task;
+    } finally {
+      seedsInFlight.delete(roomId);
+    }
+    return store.get(roomId);
+  }
+
+  function broadcastToRoom(roomId: string, message: ServerMessage): void {
     for (const connection of connections) {
       if (connection.roomId === roomId) send(connection.socket, message);
     }
+  }
+
+  function participantsMessage(room: RoomState): ParticipantsMessage {
+    const actors: ParticipantInfo[] = [];
+    for (const [actorId, participant] of room.participants) {
+      if (participant.color) {
+        actors.push({
+          actorId,
+          color: participant.color,
+          position: participant.position,
+          drags: participant.drags,
+        });
+      }
+    }
+    return { type: "participants", actors };
+  }
+
+  function broadcastParticipants(roomId: string): void {
+    const room = store.get(roomId);
+    if (!room) return;
+    broadcastToRoom(roomId, participantsMessage(room));
   }
 
   function maybeFold(roomId: string): void {
@@ -73,6 +184,49 @@ export function createCollabServer(
     send(willing.socket, request);
   }
 
+  async function handleJoin(
+    connection: Connection,
+    parsed: JoinMessage,
+  ): Promise<void> {
+    if (
+      parsed.protocolVersion !== COLLAB_PROTOCOL_VERSION ||
+      parsed.modelVersion !== COLLAB_MODEL_VERSION
+    ) {
+      reject(
+        connection.socket,
+        null,
+        `version mismatch: server speaks protocol ${COLLAB_PROTOCOL_VERSION} / model ${COLLAB_MODEL_VERSION}`,
+      );
+      connection.socket.close();
+      return;
+    }
+
+    connection.roomId = parsed.room;
+    const room =
+      store.get(parsed.room) ?? (await seedRoom(parsed.room, parsed.snapshot));
+    if (!room) {
+      reject(connection.socket, null, `room ${parsed.room} is unavailable`);
+      connection.socket.close();
+      return;
+    }
+
+    const hello: HelloMessage = {
+      type: "hello",
+      protocolVersion: COLLAB_PROTOCOL_VERSION,
+      modelVersion: COLLAB_MODEL_VERSION,
+      actorId: connection.actorId,
+      version: room.version,
+      snapshot: room.snapshot,
+      log: room.log,
+    };
+    send(connection.socket, hello);
+
+    if (!room.participants.has(connection.actorId)) {
+      room.participants.set(connection.actorId, {});
+    }
+    send(connection.socket, participantsMessage(room));
+  }
+
   function handleMessage(connection: Connection, data: RawData): void {
     let parsed: unknown;
     try {
@@ -83,31 +237,9 @@ export function createCollabServer(
     }
 
     if (isJoinMessage(parsed)) {
-      if (
-        parsed.protocolVersion !== COLLAB_PROTOCOL_VERSION ||
-        parsed.modelVersion !== COLLAB_MODEL_VERSION
-      ) {
-        reject(
-          connection.socket,
-          null,
-          `version mismatch: server speaks protocol ${COLLAB_PROTOCOL_VERSION} / model ${COLLAB_MODEL_VERSION}`,
-        );
-        connection.socket.close();
-        return;
-      }
-      const room =
-        store.get(parsed.room) ?? store.create(parsed.room, parsed.snapshot);
-      connection.roomId = parsed.room;
-      const hello: HelloMessage = {
-        type: "hello",
-        protocolVersion: COLLAB_PROTOCOL_VERSION,
-        modelVersion: COLLAB_MODEL_VERSION,
-        actorId: connection.actorId,
-        version: room.version,
-        snapshot: room.snapshot,
-        log: room.log,
-      };
-      send(connection.socket, hello);
+      void handleJoin(connection, parsed).catch((error) =>
+        console.warn("failed to handle join", error),
+      );
       return;
     }
 
@@ -138,6 +270,7 @@ export function createCollabServer(
         command: entry.command,
       });
       maybeFold(roomId);
+      schedulePersist(roomId);
       return;
     }
 
@@ -160,6 +293,50 @@ export function createCollabServer(
       return;
     }
 
+    if (isPresenceMessage(parsed)) {
+      const roomId = connection.roomId;
+      if (!roomId) return;
+      const room = store.get(roomId);
+      if (!room) return;
+      const participant = room.participants.get(connection.actorId) ?? {};
+      participant.color = parsed.color;
+      room.participants.set(connection.actorId, participant);
+      broadcastParticipants(roomId);
+      return;
+    }
+
+    if (isPointerMessage(parsed)) {
+      const roomId = connection.roomId;
+      if (!roomId) return;
+      const room = store.get(roomId);
+      if (!room) return;
+      const participant = room.participants.get(connection.actorId) ?? {};
+      participant.position = parsed.position;
+      room.participants.set(connection.actorId, participant);
+      broadcastToRoom(roomId, {
+        type: "pointer",
+        actorId: connection.actorId,
+        position: parsed.position,
+      });
+      return;
+    }
+
+    if (isDragMessage(parsed)) {
+      const roomId = connection.roomId;
+      if (!roomId) return;
+      const room = store.get(roomId);
+      if (!room) return;
+      const participant = room.participants.get(connection.actorId) ?? {};
+      participant.drags = parsed.drags;
+      room.participants.set(connection.actorId, participant);
+      broadcastToRoom(roomId, {
+        type: "drag",
+        actorId: connection.actorId,
+        drags: parsed.drags,
+      });
+      return;
+    }
+
     reject(connection.socket, extractSeq(parsed), "malformed message");
   }
 
@@ -169,6 +346,13 @@ export function createCollabServer(
     if (!roomId) return;
     if (pendingFolds.get(roomId) === connection.actorId) {
       pendingFolds.delete(roomId);
+    }
+    const room = store.get(roomId);
+    if (room?.participants.delete(connection.actorId)) {
+      broadcastParticipants(roomId);
+    }
+    if (!roomHasConnections(roomId)) {
+      flushPersist(roomId);
     }
   }
 

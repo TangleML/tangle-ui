@@ -12,6 +12,9 @@ interface SelectionToolbarProps {
   onDelete: () => void;
   onClear: () => void;
   isDeleting?: boolean;
+  canEnableCollaboration?: boolean;
+  onEnableCollaboration?: () => void;
+  isEnablingCollaboration?: boolean;
 }
 
 export function SelectionToolbar({
@@ -21,6 +24,9 @@ export function SelectionToolbar({
   onDelete,
   onClear,
   isDeleting,
+  canEnableCollaboration = false,
+  onEnableCollaboration,
+  isEnablingCollaboration,
 }: SelectionToolbarProps) {
   return (
     <FloatingSelectionBar
@@ -29,6 +35,18 @@ export function SelectionToolbar({
       onClear={onClear}
       clearTrackingId="v2.pipeline_folders.table.selection_clear"
     >
+      {canEnableCollaboration && onEnableCollaboration && (
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={isEnablingCollaboration}
+          onClick={onEnableCollaboration}
+          {...tracking("v2.pipeline_folders.table.enable_collaboration")}
+        >
+          <Icon name="Users" />
+          Enable collaboration
+        </Button>
+      )}
       {canMove && (
         <Button
           variant="outline"

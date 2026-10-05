@@ -3,6 +3,13 @@ import type { EdgeChange, NodeChange, ReactFlowProps } from "@xyflow/react";
 import type { ComponentSpec } from "@/models/componentSpec";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
+import type { CollabDragState } from "@/services/collaboration/protocol";
+
+function isMovableEntity(entityType: string | undefined): boolean {
+  return (
+    entityType === "task" || entityType === "input" || entityType === "output"
+  );
+}
 
 export function useNodeEdgeChanges(
   spec: ComponentSpec | null,
@@ -10,7 +17,7 @@ export function useNodeEdgeChanges(
   rfOnEdgesChange: (changes: EdgeChange[]) => void,
 ): Required<Pick<ReactFlowProps, "onNodesChange" | "onEdgesChange">> {
   const registry = useNodeRegistry();
-  const { undo } = useEditorSession();
+  const { undo, collaboration } = useEditorSession();
 
   const onNodesChange = (changes: NodeChange[]) => {
     const rfChanges = changes.filter((c) => c.type !== "remove");
@@ -24,7 +31,29 @@ export function useNodeEdgeChanges(
       (change) => change.type === "position" && change.dragging === false,
     );
 
+    if (collaboration.enabled) {
+      const activeDrags: CollabDragState[] = [];
+      for (const change of changes) {
+        if (
+          change.type !== "position" ||
+          !change.dragging ||
+          !change.position
+        ) {
+          continue;
+        }
+        const manifest = registry.getByNodeId(spec, change.id);
+        if (!isMovableEntity(manifest?.entityType)) continue;
+        activeDrags.push({
+          taskId: change.id,
+          position: { x: change.position.x, y: change.position.y },
+        });
+      }
+      if (activeDrags.length > 0) collaboration.updateLocalDrag(activeDrags);
+    }
+
     if (positionChanges.length > 0) {
+      // The move runs as a normal action; the collab capture middleware picks it
+      // up. Drag previews stay React-Flow-local and broadcast as presence above.
       // todo: move action to a separate file
       undo.withGroup("Move nodes", () => {
         for (const change of positionChanges) {
@@ -34,6 +63,7 @@ export function useNodeEdgeChanges(
           }
         }
       });
+      if (collaboration.enabled) collaboration.clearLocalDrag();
     }
 
     rfOnNodesChange(rfChanges);

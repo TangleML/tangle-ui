@@ -1,3 +1,4 @@
+import type { SerializedActionCall } from "mobx-keystone";
 import { describe, expect, it } from "vitest";
 
 import type { CollabCommand, CollabSnapshot } from "./protocol";
@@ -19,51 +20,78 @@ const snapshot: CollabSnapshot = {
   spec: { $modelType: "spec/ComponentSpec", $id: "spec_1", name: "P" },
 };
 
+const addTaskCall: SerializedActionCall = {
+  actionName: "addTask",
+  args: [
+    {
+      $mobxKeystoneSerializer: "mobx-keystone/objectSnapshot",
+      value: { $modelType: "spec/Task", $id: "task_1", name: "T" },
+    },
+  ],
+  targetPath: [],
+  targetPathIds: [],
+  serialized: true,
+};
+
 const addTask: CollabCommand = {
-  type: "addTask",
-  task: { $modelType: "spec/Task", $id: "task_1", name: "T" },
+  kind: "action",
+  call: addTaskCall,
+  newModelIds: ["task_1"],
+};
+
+const patchesCommand: CollabCommand = {
+  kind: "patches",
+  label: "removeAllBindingsBy",
+  patches: [{ op: "remove", path: ["bindings", 0] }],
 };
 
 describe("isCollabCommand", () => {
-  it("accepts every verb in the union", () => {
-    const commands: CollabCommand[] = [
-      addTask,
-      { type: "deleteTask", taskId: "task_1" },
-      { type: "renameTask", taskId: "task_1", name: "New" },
-      { type: "setTaskPosition", taskId: "task_1", position: { x: 1, y: 2 } },
-      {
-        type: "setTaskArgument",
-        taskId: "task_1",
-        portName: "path",
-        value: "/data",
-      },
-      {
-        type: "connectNodes",
-        bindingId: "binding_1",
-        source: { entityId: "task_1", portName: "out" },
-        target: { entityId: "task_2", portName: "in" },
-      },
-      { type: "deleteEdge", bindingId: "binding_1" },
-    ];
-    for (const command of commands) {
-      expect(isCollabCommand(command)).toBe(true);
-    }
+  it("accepts a serialized action command", () => {
+    expect(isCollabCommand(addTask)).toBe(true);
   });
 
-  it("rejects unknown verbs and malformed operands", () => {
-    expect(isCollabCommand({ type: "frobnicate" })).toBe(false);
-    expect(isCollabCommand({ type: "deleteTask" })).toBe(false);
-    expect(isCollabCommand({ type: "deleteTask", taskId: 7 })).toBe(false);
+  it("accepts a nested target with generated ids", () => {
+    const command: CollabCommand = {
+      kind: "action",
+      call: {
+        actionName: "connectNodes",
+        args: ["input_2", "task_1"],
+        targetPath: [],
+        targetPathIds: [],
+        serialized: true,
+      },
+      newModelIds: ["binding_1"],
+    };
+    expect(isCollabCommand(command)).toBe(true);
+  });
+
+  it("accepts a patch-fallback command", () => {
+    expect(isCollabCommand(patchesCommand)).toBe(true);
+  });
+
+  it("rejects malformed commands", () => {
+    expect(isCollabCommand({ kind: "frobnicate" })).toBe(false);
+    expect(isCollabCommand({ kind: "action" })).toBe(false);
+    expect(isCollabCommand({ kind: "action", call: addTaskCall })).toBe(false);
     expect(
-      isCollabCommand({ type: "setTaskPosition", taskId: "t", position: {} }),
+      isCollabCommand({
+        kind: "action",
+        call: { ...addTaskCall, serialized: false },
+        newModelIds: [],
+      }),
     ).toBe(false);
     expect(
       isCollabCommand({
-        type: "connectNodes",
-        bindingId: "b",
-        source: { entityId: "t" },
-        target: { entityId: "t2", portName: "in" },
+        kind: "action",
+        call: { ...addTaskCall, targetPathIds: [7] },
+        newModelIds: [],
       }),
+    ).toBe(false);
+    expect(
+      isCollabCommand({ kind: "patches", patches: [{ op: "noop" }] }),
+    ).toBe(false);
+    expect(
+      isCollabCommand({ kind: "patches", label: "x", patches: "nope" }),
     ).toBe(false);
     expect(isCollabCommand(null)).toBe(false);
     expect(isCollabCommand("addTask")).toBe(false);
@@ -92,7 +120,7 @@ describe("client message guards", () => {
 
   it("rejects a command message with a bad command", () => {
     expect(
-      isCommandMessage({ type: "command", seq: 1, command: { type: "nope" } }),
+      isCommandMessage({ type: "command", seq: 1, command: { kind: "nope" } }),
     ).toBe(false);
   });
 });

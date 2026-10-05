@@ -2,6 +2,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { type ChangeEvent, useState } from "react";
 
 import { PaginationControls } from "@/components/shared/PaginationControls";
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -24,6 +25,7 @@ import { useFolderNavigation } from "@/routes/v2/pages/PipelineFolders/context/F
 import { useBulkDeleteMutation } from "@/routes/v2/pages/PipelineFolders/hooks/useBulkDeleteMutation";
 import { useDropMutation } from "@/routes/v2/pages/PipelineFolders/hooks/useDropMutation";
 import { useEmptyPipelineFilter } from "@/routes/v2/pages/PipelineFolders/hooks/useEmptyPipelineFilter";
+import { useEnableCollaboration } from "@/routes/v2/pages/PipelineFolders/hooks/useEnableCollaboration";
 import { useFolderBreadcrumbs } from "@/routes/v2/pages/PipelineFolders/hooks/useFolderBreadcrumbs";
 import { useDisconnectFolder } from "@/routes/v2/pages/PipelineFolders/hooks/useFolderMutations";
 import { useFolderPipelines } from "@/routes/v2/pages/PipelineFolders/hooks/useFolderPipelines";
@@ -94,6 +96,10 @@ export const FolderPipelineTable = withSuspenseWrapper(
           refetch();
         },
       });
+
+    const collabEnabled = useFlagValue("collab-poc");
+    const { mutate: enableCollaboration, isPending: isEnablingCollaboration } =
+      useEnableCollaboration();
 
     const requiresPermission = currentFolder.requiresPermission;
     const canMoveOut = currentFolder.canMoveFilesOut;
@@ -167,6 +173,20 @@ export const FolderPipelineTable = withSuspenseWrapper(
     const handleMoveComplete = () => {
       selection.clearSelection();
       setMoveDialogOpen(false);
+    };
+
+    const onlySelectedPipelineId =
+      selection.selectedPipelines.size === 1 &&
+      selection.selectedFolders.size === 0
+        ? [...selection.selectedPipelines][0]
+        : null;
+
+    const canEnableCollaboration =
+      collabEnabled && onlySelectedPipelineId !== null;
+
+    const handleEnableCollaboration = () => {
+      const file = pipelines.find((p) => p.id === onlySelectedPipelineId);
+      if (file) enableCollaboration(file);
     };
 
     const hasContent = folders.length > 0 || pipelines.length > 0;
@@ -299,6 +319,9 @@ export const FolderPipelineTable = withSuspenseWrapper(
           onDelete={() => bulkDelete(Array.from(selection.selectedPipelines))}
           onClear={selection.clearSelection}
           isDeleting={isBulkDeleting}
+          canEnableCollaboration={canEnableCollaboration}
+          onEnableCollaboration={handleEnableCollaboration}
+          isEnablingCollaboration={isEnablingCollaboration}
         />
 
         <MovePipelineDialog

@@ -1,25 +1,15 @@
 import type { XYPosition } from "@xyflow/react";
 
 import useToastNotification from "@/hooks/useToastNotification";
-import type { ComponentReference, ComponentSpec } from "@/models/componentSpec";
+import type { ComponentSpec } from "@/models/componentSpec";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
 import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskActions";
 import { hydrateComponentReference } from "@/services/componentService";
-import type { HydratedComponentReference } from "@/utils/componentSpec";
 import { componentMetadata } from "@/utils/componentTracking";
 import { readTextFromFile } from "@/utils/dom";
 
-/**
- * Bridge between legacy HydratedComponentReference and models ComponentReference.
- * Both represent the same runtime shape; the TS incompatibility stems from
- * parallel type definitions (utils/componentSpec vs models/componentSpec).
- */
-function toModelComponentRef(
-  ref: HydratedComponentReference,
-): ComponentReference {
-  return ref as ComponentReference;
-}
+import { toModelComponentRef } from "./toModelComponentRef";
 
 export function useFileDropHandler() {
   const { addTask } = useTaskActions();
