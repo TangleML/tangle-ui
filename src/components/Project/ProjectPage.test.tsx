@@ -101,6 +101,7 @@ function mockBackend(
     configured: true,
     available: true,
     ready: true,
+    backendUrl: "https://backend.example.com",
     ...overrides,
   } as ReturnType<typeof useBackend>);
 }

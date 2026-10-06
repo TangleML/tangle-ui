@@ -44,6 +44,10 @@ vi.mock("@/providers/AnalyticsProvider", () => ({
   useAnalytics: () => ({ track }),
 }));
 
+vi.mock("@/providers/BackendProvider", () => ({
+  useBackend: () => ({ backendUrl: "https://backend.example.com" }),
+}));
+
 function enableFlags(flags: Record<string, boolean>) {
   localStorage.setItem("betaFlags", JSON.stringify(flags));
 }
