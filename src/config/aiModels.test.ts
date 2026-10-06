@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  getAiModelLabel,
   getAiModelOptions,
   getDefaultAiModelId,
   getEffectiveReasoningEffort,
@@ -49,6 +50,11 @@ describe("aiModels", () => {
     expect(getEffectiveReasoningEffort("gpt-6-sol", "none")).toBe("none");
     expect(getEffectiveReasoningEffort("gpt-6-luna", "max")).toBe("max");
     expect(getEffectiveReasoningEffort("custom-model", "high")).toBeUndefined();
+  });
+
+  it("leaves model capabilities to the provider default", () => {
+    expect(getAiModelLabel("")).toBe("Provider default");
+    expect(getEffectiveReasoningEffort("", "max")).toBeUndefined();
   });
 
   it("resolves thinking levels supplied by the host", () => {

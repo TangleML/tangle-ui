@@ -9,6 +9,7 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
+import { getAiMaxOutputTokens } from "@/config/aiModels";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
 import type { AiProviderConfig } from "@/types/aiProvider";
@@ -34,6 +35,7 @@ export function AgentSettings() {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [showKey, setShowKey] = useState(false);
   const [testing, setTesting] = useState(false);
+  const testPendingRef = useRef(false);
   const testRunIdRef = useRef(0);
   const testConfig: AiProviderConfig = useOwnKey
     ? {
@@ -46,7 +48,6 @@ export function AgentSettings() {
 
   useEffect(() => {
     testRunIdRef.current += 1;
-    setTesting(false);
     setValidationError(null);
   }, [
     testConfig.apiBase,
@@ -59,7 +60,6 @@ export function AgentSettings() {
 
   const handleUseOwnKeyChange = (enabled: boolean) => {
     testRunIdRef.current += 1;
-    setTesting(false);
     setValidationError(null);
     setShowKey(false);
     setUseOwnKey(enabled);
@@ -81,7 +81,7 @@ export function AgentSettings() {
 
   const handleSave = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (testing) return;
+    if (testPendingRef.current) return;
 
     const trimmed = validateRequiredFields();
     if (!trimmed) return;
@@ -90,6 +90,7 @@ export function AgentSettings() {
     testRunIdRef.current = testRunId;
     const isCurrentTest = () => testRunIdRef.current === testRunId;
 
+    testPendingRef.current = true;
     setTesting(true);
     try {
       const response = await fetch(`${trimmed.apiBase}/responses`, {
@@ -102,13 +103,18 @@ export function AgentSettings() {
             : {}),
         },
         body: JSON.stringify({
-          model: trimmed.model,
+          ...(trimmed.model ? { model: trimmed.model } : {}),
           ...(trimmed.reasoningEffort
             ? { reasoning: { effort: trimmed.reasoningEffort } }
             : {}),
           instructions:
             "You are testing provider compatibility. Return only JSON.",
           input: 'Return the JSON object {"ok": true}.',
+          max_output_tokens: getAiMaxOutputTokens(
+            trimmed.model,
+            trimmed.reasoningEffort,
+            32,
+          ),
           text: { format: { type: "json_object" } },
         }),
       });
@@ -150,7 +156,8 @@ export function AgentSettings() {
         "error",
       );
     } finally {
-      if (isCurrentTest()) setTesting(false);
+      testPendingRef.current = false;
+      setTesting(false);
     }
   };
 
@@ -161,7 +168,6 @@ export function AgentSettings() {
     setApiKey("");
     setValidationError(null);
     setShowKey(false);
-    setTesting(false);
     notify("AI provider settings cleared", "success");
   };
 

@@ -83,7 +83,7 @@ describe("AiModelPicker", () => {
     expect(button("Back to thinking")).toBeInTheDocument();
     screen.getByRole("dialog", { name: "Model and thinking" });
     expect(screen.queryByRole("slider")).not.toBeInTheDocument();
-    expect(screen.queryByText("Provider default")).not.toBeInTheDocument();
+    expect(button("Provider default")).toBeInTheDocument();
     const sol = button("GPT-6 Sol");
     expect(sol).toHaveAttribute("aria-pressed", "true");
     expect(sol).toHaveFocus();
@@ -98,6 +98,23 @@ describe("AiModelPicker", () => {
     fireEvent.pointerDown(trigger());
     fireEvent.click(trigger());
     expectClosed();
+  });
+
+  it("selects and persists the provider default", () => {
+    const { unmount } = renderPicker();
+    selectModel("Provider default");
+    expect(modelTitle()).toHaveTextContent("Provider default");
+    expect(screen.queryByRole("slider")).not.toBeInTheDocument();
+    const saved = window.localStorage.getItem(AI_PROVIDER_STORAGE_KEY);
+    expect(JSON.parse(saved ?? "").model).toBe("");
+    unmount();
+
+    renderPicker();
+    expect(modelTitle()).toHaveTextContent("Provider default");
+    expect(screen.queryByRole("slider")).not.toBeInTheDocument();
+    openModels();
+    expect(button("Provider default")).toHaveAttribute("aria-pressed", "true");
+    expect(button("Provider default")).toHaveFocus();
   });
 
   it("persists effort across model changes and remounts, and synchronizes all picker variants", () => {

@@ -11,6 +11,7 @@
  * judgment over a small, well-defined list when literal matching is not enough.
  */
 
+import { getAiMaxOutputTokens, isAiReasoningModel } from "@/config/aiModels";
 import type { AiReasoningEffort } from "@/types/aiProvider";
 import type {
   ComponentReference,
@@ -86,16 +87,6 @@ interface LlmOptions {
   // Bearer token. Leave blank when the proxy owns authentication.
   apiKey: string;
   credentials?: RequestCredentials;
-}
-
-/**
- * GPT-5, GPT-6, and o-series models can reject `temperature` when reasoning.
- * For other configured models we pin `temperature: 0` so the reranker's ordering is
- * deterministic run-to-run; without it the provider default (often 1.0) makes
- * the same query reorder differently between runs.
- */
-function isReasoningModel(model: string): boolean {
-  return /^(openai:)?(gpt-[56]|o\d)/i.test(model);
 }
 
 /** Clamp score to [0, 1] and reject NaN so the UI/sort never sees garbage. */
@@ -293,6 +284,7 @@ function validateConfig(options: LlmOptions): {
 interface ResponsesCallConfig {
   systemPrompt: string;
   userPrompt: string;
+  maxOutputTokens: number;
 }
 
 async function callLlmResponse(
@@ -314,14 +306,15 @@ async function callLlmResponse(
       ...(options.reasoningEffort
         ? { reasoning: { effort: options.reasoningEffort } }
         : {}),
-      // Deterministic ordering for non-reasoning models; omitted when the proxy
-      // owns model selection (blank model) or for reasoning models that reject
-      // an explicit temperature.
-      ...(model && !options.reasoningEffort && !isReasoningModel(model)
+      // Host-defined reasoning models can reject temperature with unknown IDs.
+      ...(model && !options.reasoningEffort && !isAiReasoningModel(model)
         ? { temperature: 0 }
         : {}),
-      // Leave the token budget to the provider so reasoning can finish. Keep
-      // visible answers concise through the task instructions instead.
+      max_output_tokens: getAiMaxOutputTokens(
+        model,
+        options.reasoningEffort,
+        config.maxOutputTokens,
+      ),
       instructions: config.systemPrompt,
       input: `Return JSON.\n\n${config.userPrompt}`,
       text: { format: { type: "json_object" } },
@@ -376,6 +369,9 @@ export async function rerankComponentsByNaturalLanguage(
   const rawContent = await callLlmResponse(options, {
     systemPrompt: buildRerankSystemPrompt(scoreAllCandidates),
     userPrompt: buildRerankUserPrompt(trimmed, candidates),
+    maxOutputTokens: scoreAllCandidates
+      ? Math.max(1500, candidates.length * 100)
+      : 1500,
   });
 
   let matchesValue: RerankedMatch[] = [];
@@ -499,6 +495,7 @@ export async function generateComponentAiDescription(
   const rawContent = await callLlmResponse(options, {
     systemPrompt: buildDescriptionSystemPrompt(),
     userPrompt: buildDescriptionUserPrompt(input),
+    maxOutputTokens: 900,
   });
 
   const description = readDescription(rawContent);

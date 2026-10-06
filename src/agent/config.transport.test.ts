@@ -66,6 +66,7 @@ describe("AI client transport", () => {
 
   it.each([
     ["", false],
+    ["", true],
     ["gpt-6-sol", false],
     ["custom-reasoning-model", false],
     ["custom-reasoning-model", true],
@@ -119,7 +120,11 @@ describe("AI client transport", () => {
       expect(result.finalOutput).toBe("Hello");
       const request = fetchMock.mock.calls[0][1];
       const body = JSON.parse(String(request?.body));
-      expect(body.model).toBe(model || "gpt-6-sol");
+      if (model) {
+        expect(body.model).toBe(model);
+      } else {
+        expect(body).not.toHaveProperty("model");
+      }
       expect(body.reasoning).toMatchObject({ effort: "max" });
       expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
         `${config.apiBase}/responses`,

@@ -48,14 +48,20 @@ export function AiModelPicker({ variant = "settings" }: AiModelPickerProps) {
   const effort = config.reasoningEffort;
   const effortLabel = effort ? getAiReasoningLabel(effort) : "Unavailable";
   const selectedIndex = levels.findIndex((level) => level.value === effort);
-  const configuredOptions = getAiModelOptions();
+  const configuredOptions = [
+    { id: "", label: "Provider default" },
+    ...getAiModelOptions(),
+  ];
   const options = configuredOptions.some((option) => option.id === config.model)
     ? configuredOptions
     : [{ id: config.model }, ...configuredOptions];
 
   useEffect(() => {
+    if (open) focusRef.current?.focus();
+  }, [open, selectingModel]);
+
+  useEffect(() => {
     if (!open) return;
-    focusRef.current?.focus();
 
     const dismissOnOutsidePress = (event: PointerEvent) => {
       const target = event.target;
@@ -73,7 +79,7 @@ export function AiModelPicker({ variant = "settings" }: AiModelPickerProps) {
     document.addEventListener("pointerdown", dismissOnOutsidePress, true);
     return () =>
       document.removeEventListener("pointerdown", dismissOnOutsidePress, true);
-  }, [open, selectingModel]);
+  }, [open]);
 
   return (
     <Popover

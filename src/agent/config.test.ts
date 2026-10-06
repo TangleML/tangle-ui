@@ -30,19 +30,26 @@ const BASE_CONFIG = {
 };
 
 describe("getAgentModelConfig", () => {
-  it("defaults blank selections to Sol with High thinking", () => {
+  it("uses the provider default for a blank model", () => {
     expect(getAgentModelConfig(BASE_CONFIG)).toStrictEqual({
-      model: "gpt-6-sol",
+      model: "",
       modelSettings: {
-        reasoning: { effort: "high" },
         providerData: {
           include: ["reasoning.encrypted_content"],
+          model: undefined,
         },
       },
     });
   });
 
-  it("uses the configured model with Responses reasoning continuity", () => {
+  it("preserves explicit reasoning effort", () => {
+    expect(
+      getAgentModelConfig({ ...BASE_CONFIG, reasoningEffort: "max" })
+        .modelSettings.reasoning,
+    ).toEqual({ effort: "max" });
+  });
+
+  it("uses the configured model", () => {
     expect(getAgentModelConfig({ ...BASE_CONFIG, model: "gpt-5.5" })).toEqual({
       model: "gpt-5.5",
       modelSettings: {
@@ -53,7 +60,7 @@ describe("getAgentModelConfig", () => {
     });
   });
 
-  it("does not add effort when the caller supplied a model without thinking support", () => {
+  it("omits unspecified reasoning effort", () => {
     expect(
       getAgentModelConfig({ ...BASE_CONFIG, model: "gpt-6-sol" }).modelSettings,
     ).not.toHaveProperty("reasoning");

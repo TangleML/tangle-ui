@@ -6,10 +6,6 @@ import {
 } from "@openai/agents";
 import OpenAI from "openai";
 
-import {
-  getDefaultAiModelId,
-  getEffectiveReasoningEffort,
-} from "@/config/aiModels";
 import type { AiProviderConfig } from "@/types/aiProvider";
 import { BASE_URL } from "@/utils/constants";
 
@@ -22,17 +18,17 @@ export function getAgentModelConfig(config: AiProviderConfig): {
   model: string;
   modelSettings: ModelSettings;
 } {
-  const selectedModel = config.model.trim();
-  const model = selectedModel || getDefaultAiModelId();
-  const effort =
-    config.reasoningEffort ??
-    (selectedModel ? undefined : getEffectiveReasoningEffort(model));
+  const model = config.model.trim();
+  const effort = config.reasoningEffort;
+  // The SDK substitutes a named default for blank models; providerData must
+  // suppress that default so the provider can choose.
   return {
     model,
     modelSettings: {
       ...(effort ? { reasoning: { effort } } : {}),
       providerData: {
         include: RESPONSES_REASONING_INCLUDE,
+        ...(!model ? { model: undefined } : {}),
       },
     },
   };

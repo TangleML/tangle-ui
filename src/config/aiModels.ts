@@ -14,6 +14,7 @@ interface AiModelOptionsConfig {
 }
 
 export const DEFAULT_AI_REASONING_EFFORT: AiReasoningEffort = "high";
+const REASONING_TOKEN_ALLOWANCE = 8192;
 
 const AI_REASONING_LEVELS: {
   value: AiReasoningEffort;
@@ -110,7 +111,8 @@ export function getDefaultAiModelId(): string {
 }
 
 export function getAiModelLabel(modelId: string): string {
-  const trimmed = modelId.trim() || getDefaultAiModelId();
+  const trimmed = modelId.trim();
+  if (!trimmed) return "Provider default";
   return (
     getAiModelOptions().find((option) => option.id === trimmed)?.label ??
     trimmed
@@ -118,7 +120,8 @@ export function getAiModelLabel(modelId: string): string {
 }
 
 export function getAiModelReasoningLevels(modelId: string) {
-  const id = modelId.trim() || getDefaultAiModelId();
+  const id = modelId.trim();
+  if (!id) return [];
   const model = getAiModelOptions().find((option) => option.id === id);
   return AI_REASONING_LEVELS.filter((level) =>
     model?.reasoningEfforts?.includes(level.value),
@@ -147,4 +150,22 @@ export function getAiReasoningLabel(effort: AiReasoningEffort): string {
   return (
     AI_REASONING_LEVELS.find((level) => level.value === effort)?.label ?? effort
   );
+}
+
+export function isAiReasoningModel(modelId: string): boolean {
+  return /^(openai:)?(gpt-[56]|o\d)/i.test(modelId);
+}
+
+export function getAiMaxOutputTokens(
+  modelId: string,
+  reasoningEffort: AiReasoningEffort | undefined,
+  outputTokenBudget: number,
+): number {
+  const model = modelId.trim();
+  if (reasoningEffort === "none") return outputTokenBudget;
+  if (!model || reasoningEffort || isAiReasoningModel(model)) {
+    // Responses counts reasoning tokens against the output limit.
+    return outputTokenBudget + REASONING_TOKEN_ALLOWANCE;
+  }
+  return outputTokenBudget;
 }

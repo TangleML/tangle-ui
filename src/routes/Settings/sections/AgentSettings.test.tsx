@@ -137,7 +137,7 @@ describe("AgentSettings", () => {
       model: "gpt-6-sol",
       reasoning: { effort: "high" },
     });
-    expect(body).not.toHaveProperty("max_output_tokens");
+    expect(body.max_output_tokens).toBe(8224);
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
@@ -160,6 +160,7 @@ describe("AgentSettings", () => {
   it.each([
     { model: "gpt-6-astra", preference: "none", effort: "low" },
     { model: "gpt-6-sol", preference: "max", effort: "max" },
+    { model: "gpt-6-sol", preference: "none", effort: "none" },
   ])(
     "tests $model with $effort thinking and preserves $preference",
     async ({ model, preference, effort }) => {
@@ -177,6 +178,9 @@ describe("AgentSettings", () => {
       expect(requestBody().reasoning).toEqual({
         effort,
       });
+      expect(requestBody().max_output_tokens).toBe(
+        effort === "none" ? 32 : 8224,
+      );
       expect(readSavedConfig()).toEqual(savedConfig);
     },
   );
@@ -196,6 +200,7 @@ describe("AgentSettings", () => {
 
     backend.backendUrl = "https://other.example.com";
     rerender(<AgentSettings />);
+    expect(button("Testing…")).toBeDisabled();
     await act(async () =>
       finishTest(new Response(JSON.stringify({ ok: true }))),
     );
@@ -223,6 +228,7 @@ describe("AgentSettings", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save and test AI" }));
     await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
     fireEvent.click(screen.getByRole("switch", { name: "Bring your own key" }));
+    expect(button("Testing…")).toBeDisabled();
     await act(async () =>
       finishTest(new Response(JSON.stringify({ ok: true }))),
     );
@@ -267,6 +273,9 @@ describe("AgentSettings", () => {
         field,
         field === "API key" ? "new-key" : "https://new.example.com/v1",
       );
+      expect(button("Testing…")).toBeDisabled();
+      fireEvent.submit(button("Testing…").closest("form")!);
+      expect(mockFetch).toHaveBeenCalledOnce();
       await act(async () =>
         finishTest(new Response(JSON.stringify({ ok: true }))),
       );
@@ -322,7 +331,64 @@ describe("AgentSettings", () => {
       reasoning: { effort: "high" },
       text: { format: { type: "json_object" } },
     });
-    expect(body).not.toHaveProperty("max_output_tokens");
+    expect(body.max_output_tokens).toBe(8224);
+  });
+
+  it.each(["model", "thinking", "clear"])(
+    "blocks overlapping checks after changing %s",
+    async (change) => {
+      window.localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          apiBase: "https://api.example.com/v1",
+          apiKey: "",
+          model: "gpt-6-sol",
+        }),
+      );
+      let finishTest!: (response: Response) => void;
+      mockFetch.mockReturnValue(
+        new Promise<Response>((resolve) => {
+          finishTest = resolve;
+        }),
+      );
+      render(<AgentSettings />);
+      fireEvent.click(button("Save and test AI"));
+
+      if (change === "model") {
+        chooseModel("GPT-6 Luna");
+      } else if (change === "thinking") {
+        fireEvent.click(button(/^AI model and thinking:/));
+        fireEvent.keyDown(screen.getByRole("slider", { name: "Thinking" }), {
+          key: "End",
+        });
+      } else {
+        fireEvent.click(button("Clear"));
+        mockNotify.mockClear();
+      }
+
+      expect(button("Testing…")).toBeDisabled();
+      fireEvent.submit(button("Testing…").closest("form")!);
+      expect(mockFetch).toHaveBeenCalledOnce();
+      await act(async () =>
+        finishTest(new Response("Failed", { status: 500 })),
+      );
+      expect(mockNotify).not.toHaveBeenCalled();
+      expect(button("Save and test AI")).toBeEnabled();
+    },
+  );
+
+  it("tests the provider default without model or thinking overrides", async () => {
+    mockFetch.mockResolvedValue(new Response(JSON.stringify({ ok: true })));
+    render(<AgentSettings />);
+    editField("API base URL", "https://api.example.com/v1");
+    chooseModel("Provider default");
+    fireEvent.click(button("Save and test AI"));
+
+    await waitFor(() => expect(mockNotify).toHaveBeenCalled());
+    expect(requestBody()).not.toHaveProperty("model");
+    expect(requestBody()).not.toHaveProperty("reasoning");
+    expect(requestBody().max_output_tokens).toBe(8224);
+    expect(readSavedConfig().model).toBe("");
   });
 
   it("reports an error and does not save provider details when the Responses API is not supported", async () => {
@@ -365,7 +431,7 @@ describe("AgentSettings", () => {
       ).toEqual({
         apiBase: "https://api.example.com/v1",
         apiKey: "",
-        model: "",
+        model: "gpt-6-sol",
       });
     });
     expect(mockNotify).toHaveBeenCalledWith(
