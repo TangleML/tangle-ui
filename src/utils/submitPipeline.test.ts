@@ -1,4 +1,5 @@
 import yaml from "js-yaml";
+import { observable } from "mobx";
 import {
   afterEach,
   beforeEach,
@@ -13,6 +14,7 @@ import * as pipelineRunService from "@/services/pipelineRunService";
 import type { PipelineRun } from "@/types/pipelineRun";
 
 import { type ComponentSpec, isGraphImplementation } from "./componentSpec";
+import { projectRunAnnotations } from "./projectRunAnnotation";
 import { submitPipelineRun } from "./submitPipeline";
 
 // Mock dependencies
@@ -225,7 +227,7 @@ describe("submitPipelineRun", () => {
 
       await submitPipelineRun(componentSpec, mockBackendUrl, {
         runAnnotations: {
-          "tangleml.com/project/project-id/project-42": "true",
+          "tangleml.com/project/id/project-42": "true",
         },
       });
 
@@ -233,7 +235,7 @@ describe("submitPipelineRun", () => {
         .calls[0]!;
       expect(payload.annotations).toEqual({
         source: "web-app",
-        "tangleml.com/project/project-id/project-42": "true",
+        "tangleml.com/project/id/project-42": "true",
       });
     });
 
@@ -248,6 +250,21 @@ describe("submitPipelineRun", () => {
       const [payload] = vi.mocked(pipelineRunService.createPipelineRun).mock
         .calls[0]!;
       expect(payload.annotations).toEqual({ source: "web-app" });
+    });
+
+    it("records the source the caller asked for", async () => {
+      const componentSpec: ComponentSpec = {
+        name: "agent-submitted",
+        implementation: { container: { image: "test:latest" } },
+      };
+
+      await submitPipelineRun(componentSpec, mockBackendUrl, {
+        runSource: "tangent-ui",
+      });
+
+      const [payload] = vi.mocked(pipelineRunService.createPipelineRun).mock
+        .calls[0]!;
+      expect(payload.annotations).toEqual({ source: "tangent-ui" });
     });
 
     it("should use 'Pipeline' as default name when componentSpec.name is undefined", async () => {
@@ -265,6 +282,69 @@ describe("submitPipelineRun", () => {
         undefined,
         undefined,
       );
+    });
+  });
+
+  describe("attributing a run to a project", () => {
+    const spec: ComponentSpec = {
+      name: "churn-training",
+      implementation: { container: { image: "test:latest" } },
+    };
+    const PROJECT = "035d6de5-23d6-402b-ad7e-9a7359194caf";
+    const OTHER = "a1a58adc-e035-47de-afea-0eef486bb82f";
+
+    const submittedPayload = () =>
+      vi.mocked(pipelineRunService.createPipelineRun).mock
+        .calls[0][0] as unknown as {
+        annotations: Record<string, string>;
+        root_task: { componentRef: { spec: ComponentSpec } };
+      };
+
+    /**
+     * The project has to be named on the run itself, not inside the spec: the
+     * endpoint that sets one annotation later rejects this key for its
+     * slashes, so submission is the only chance to get attribution right.
+     */
+    it("names the project on the run, beside the source that was always there", async () => {
+      await submitPipelineRun(spec, mockBackendUrl, {
+        runAnnotations: projectRunAnnotations([PROJECT]),
+      });
+
+      expect(submittedPayload().annotations).toEqual({
+        source: "web-app",
+        [`tangleml.com/project/id/${PROJECT}`]: "true",
+      });
+    });
+
+    it("leaves the pipeline's own annotations out of it", async () => {
+      await submitPipelineRun(spec, mockBackendUrl, {
+        runAnnotations: projectRunAnnotations([PROJECT]),
+      });
+
+      expect(
+        submittedPayload().root_task.componentRef.spec.metadata?.annotations,
+      ).toBeUndefined();
+    });
+
+    it("keeps every project of a run that belongs to more than one", async () => {
+      await submitPipelineRun(spec, mockBackendUrl, {
+        runAnnotations: projectRunAnnotations([PROJECT, OTHER]),
+      });
+
+      expect(Object.keys(submittedPayload().annotations)).toEqual([
+        `tangleml.com/project/id/${PROJECT}`,
+        `tangleml.com/project/id/${OTHER}`,
+        "source",
+      ]);
+    });
+
+    /** Every run in the app goes through here, so no project must change nothing. */
+    it("annotates nothing extra when there is no project", async () => {
+      await submitPipelineRun(spec, mockBackendUrl, {
+        runAnnotations: projectRunAnnotations([]),
+      });
+
+      expect(submittedPayload().annotations).toEqual({ source: "web-app" });
     });
   });
 
@@ -1157,6 +1237,45 @@ describe("submitPipelineRun", () => {
           originalSpec.implementation.graph.tasks["task-1"].componentRef.spec,
         ).toBeUndefined();
       }
+    });
+
+    /**
+     * An agent submits the spec straight off the editor's store, where
+     * `serializeComponentSpec` passes each `componentRef` through by reference.
+     * The wire object is plain but the reference inside it is still live, and
+     * `structuredClone` refuses it — the submit died before a run was created.
+     */
+    it("submits a spec that still holds a live observable inside it", async () => {
+      const spec: ComponentSpec = {
+        name: "from-the-editor",
+        implementation: {
+          graph: {
+            tasks: {
+              "task-1": {
+                componentRef: observable({
+                  url: "https://example.com/component.yaml",
+                }),
+              },
+            },
+          },
+        },
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: () =>
+          Promise.resolve(
+            yaml.dump({
+              name: "fetched-component",
+              implementation: { container: { image: "fetched:latest" } },
+            }),
+          ),
+      });
+      const onError = vi.fn();
+
+      await submitPipelineRun(spec, mockBackendUrl, { onError });
+
+      expect(onError).not.toHaveBeenCalled();
     });
   });
 });

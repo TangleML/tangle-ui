@@ -1,4 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { type ChangeEvent, useEffect, useState } from "react";
 
 import type { TaskSpecOutput } from "@/api/types.gen";
@@ -59,6 +60,8 @@ interface SubmitTaskArgumentsDialogProps {
   onCancel: () => void;
   onConfirm: (args: Record<string, ArgumentType>, notes: string) => void;
   componentSpec: ComponentSpec;
+  showCopyFromRun?: boolean;
+  projectField?: ReactNode;
 }
 
 export const SubmitTaskArgumentsDialog = ({
@@ -66,6 +69,8 @@ export const SubmitTaskArgumentsDialog = ({
   onCancel,
   onConfirm,
   componentSpec,
+  showCopyFromRun = true,
+  projectField,
 }: SubmitTaskArgumentsDialogProps) => {
   const notify = useToastNotification();
   const tourMode = useTourMode();
@@ -163,12 +168,17 @@ export const SubmitTaskArgumentsDialog = ({
               <Paragraph tone="subdued" size="sm">
                 Customize the pipeline input values before submitting.
               </Paragraph>
-              <InlineStack align="end" className="w-full">
-                <CopyFromRunPopover
-                  componentSpec={componentSpec}
-                  onCopy={handleCopyFromRun}
-                />
-              </InlineStack>
+              {/* Past runs are found by the pipeline's name in this browser,
+                  so they are only this pipeline's runs where the pipeline is
+                  the one this browser holds. */}
+              {showCopyFromRun && (
+                <InlineStack align="end" className="w-full">
+                  <CopyFromRunPopover
+                    componentSpec={componentSpec}
+                    onCopy={handleCopyFromRun}
+                  />
+                </InlineStack>
+              )}
             </BlockStack>
           ) : (
             <Paragraph tone="subdued">
@@ -195,6 +205,8 @@ export const SubmitTaskArgumentsDialog = ({
             </BlockStack>
           </ScrollArea>
         )}
+
+        {projectField}
 
         <BlockStack gap="2">
           <Paragraph tone="subdued" size="sm">
@@ -425,7 +437,7 @@ const ArgumentField = ({
                   "bg-white! dark:bg-input!",
                 )}
               />
-              <InlineStack className="absolute right-0 top-1/2 -translate-y-1/2 mr-1 px-1 bg-white dark:bg-input">
+              <InlineStack className="absolute right-0 top-1/2 -translate-y-1/2 mr-1 px-1 bg-input">
                 <TooltipButton
                   onClick={() => setIsSelectSecretDialogOpen(true)}
                   className="text-muted-foreground hover:bg-transparent hover:text-blue-500 hidden group-hover:flex"

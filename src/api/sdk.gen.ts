@@ -343,14 +343,14 @@ export const getWorkspaceApiWorkspacesWorkspaceIdGet = <ThrowOnError extends boo
 /**
  * List Projects
  *
- * Projects, notes and resource payloads are public to authenticated readers with read permission. `created_by` is attribution and is never access control. Secret values must be stored in the secrets service and referenced; this resource is not a secret store.
+ * Projects, `data`, and resource payloads are public to authenticated readers with read permission. `created_by` is attribution and is never access control. Secret values must be stored in the secrets service and referenced; this resource is not a secret store.
  */
 export const listProjectsApiProjectsGet = <ThrowOnError extends boolean = false>(options?: Options<ListProjectsApiProjectsGetData, ThrowOnError>) => (options?.client ?? client).get<ListProjectsApiProjectsGetResponses, ListProjectsApiProjectsGetErrors, ThrowOnError>({ url: '/api/projects/', ...options });
 
 /**
  * Create Project
  *
- * Projects, notes and resource payloads are public to authenticated readers with read permission. `created_by` is attribution and is never access control. Secret values must be stored in the secrets service and referenced; this resource is not a secret store.
+ * Projects, `data`, and resource payloads are public to authenticated readers with read permission. `created_by` is attribution and is never access control. Secret values must be stored in the secrets service and referenced; this resource is not a secret store.
  */
 export const createProjectApiProjectsPost = <ThrowOnError extends boolean = false>(options: Options<CreateProjectApiProjectsPostData, ThrowOnError>) => (options.client ?? client).post<CreateProjectApiProjectsPostResponses, CreateProjectApiProjectsPostErrors, ThrowOnError>({
     url: '/api/projects/',
@@ -371,14 +371,14 @@ export const deleteProjectApiProjectsProjectIdDelete = <ThrowOnError extends boo
 /**
  * Get Project
  *
- * Projects, notes and resource payloads are public to authenticated readers with read permission. `created_by` is attribution and is never access control. Secret values must be stored in the secrets service and referenced; this resource is not a secret store.
+ * Projects, `data`, and resource payloads are public to authenticated readers with read permission. `created_by` is attribution and is never access control. Secret values must be stored in the secrets service and referenced; this resource is not a secret store.
  */
 export const getProjectApiProjectsProjectIdGet = <ThrowOnError extends boolean = false>(options: Options<GetProjectApiProjectsProjectIdGetData, ThrowOnError>) => (options.client ?? client).get<GetProjectApiProjectsProjectIdGetResponses, GetProjectApiProjectsProjectIdGetErrors, ThrowOnError>({ url: '/api/projects/{project_id}', ...options });
 
 /**
  * Update Project
  *
- * Projects, notes and resource payloads are public to authenticated readers with read permission. `created_by` is attribution and is never access control. Secret values must be stored in the secrets service and referenced; this resource is not a secret store.
+ * Projects, `data`, and resource payloads are public to authenticated readers with read permission. `created_by` is attribution and is never access control. Secret values must be stored in the secrets service and referenced; this resource is not a secret store.
  */
 export const updateProjectApiProjectsProjectIdPatch = <ThrowOnError extends boolean = false>(options: Options<UpdateProjectApiProjectsProjectIdPatchData, ThrowOnError>) => (options.client ?? client).patch<UpdateProjectApiProjectsProjectIdPatchResponses, UpdateProjectApiProjectsProjectIdPatchErrors, ThrowOnError>({
     url: '/api/projects/{project_id}',
@@ -392,14 +392,14 @@ export const updateProjectApiProjectsProjectIdPatch = <ThrowOnError extends bool
 /**
  * List Resources
  *
- * Projects, notes and resource payloads are public to authenticated readers with read permission. `created_by` is attribution and is never access control. Secret values must be stored in the secrets service and referenced; this resource is not a secret store.
+ * Projects, `data`, and resource payloads are public to authenticated readers with read permission. `created_by` is attribution and is never access control. Secret values must be stored in the secrets service and referenced; this resource is not a secret store.
  */
 export const listResourcesApiProjectsProjectIdResourcesGet = <ThrowOnError extends boolean = false>(options: Options<ListResourcesApiProjectsProjectIdResourcesGetData, ThrowOnError>) => (options.client ?? client).get<ListResourcesApiProjectsProjectIdResourcesGetResponses, ListResourcesApiProjectsProjectIdResourcesGetErrors, ThrowOnError>({ url: '/api/projects/{project_id}/resources/', ...options });
 
 /**
  * Create Resource
  *
- * Projects, notes and resource payloads are public to authenticated readers with read permission. `created_by` is attribution and is never access control. Secret values must be stored in the secrets service and referenced; this resource is not a secret store.
+ * Projects, `data`, and resource payloads are public to authenticated readers with read permission. `created_by` is attribution and is never access control. Secret values must be stored in the secrets service and referenced; this resource is not a secret store.
  */
 export const createResourceApiProjectsProjectIdResourcesPost = <ThrowOnError extends boolean = false>(options: Options<CreateResourceApiProjectsProjectIdResourcesPostData, ThrowOnError>) => (options.client ?? client).post<CreateResourceApiProjectsProjectIdResourcesPostResponses, CreateResourceApiProjectsProjectIdResourcesPostErrors, ThrowOnError>({
     url: '/api/projects/{project_id}/resources/',
@@ -420,14 +420,14 @@ export const deleteResourceApiProjectsProjectIdResourcesResourceIdDelete = <Thro
 /**
  * Get Resource
  *
- * Projects, notes and resource payloads are public to authenticated readers with read permission. `created_by` is attribution and is never access control. Secret values must be stored in the secrets service and referenced; this resource is not a secret store.
+ * Projects, `data`, and resource payloads are public to authenticated readers with read permission. `created_by` is attribution and is never access control. Secret values must be stored in the secrets service and referenced; this resource is not a secret store.
  */
 export const getResourceApiProjectsProjectIdResourcesResourceIdGet = <ThrowOnError extends boolean = false>(options: Options<GetResourceApiProjectsProjectIdResourcesResourceIdGetData, ThrowOnError>) => (options.client ?? client).get<GetResourceApiProjectsProjectIdResourcesResourceIdGetResponses, GetResourceApiProjectsProjectIdResourcesResourceIdGetErrors, ThrowOnError>({ url: '/api/projects/{project_id}/resources/{resource_id}', ...options });
 
 /**
  * Update Resource
  *
- * Projects, notes and resource payloads are public to authenticated readers with read permission. `created_by` is attribution and is never access control. Secret values must be stored in the secrets service and referenced; this resource is not a secret store.
+ * Projects, `data`, and resource payloads are public to authenticated readers with read permission. `created_by` is attribution and is never access control. Secret values must be stored in the secrets service and referenced; this resource is not a secret store.
  */
 export const updateResourceApiProjectsProjectIdResourcesResourceIdPatch = <ThrowOnError extends boolean = false>(options: Options<UpdateResourceApiProjectsProjectIdResourcesResourceIdPatchData, ThrowOnError>) => (options.client ?? client).patch<UpdateResourceApiProjectsProjectIdResourcesResourceIdPatchResponses, UpdateResourceApiProjectsProjectIdResourcesResourceIdPatchErrors, ThrowOnError>({
     url: '/api/projects/{project_id}/resources/{resource_id}',

@@ -3,5 +3,6 @@
 // renders, instead of coupling registration to whichever component happens to
 // import a kind first.
 import "./artifactKind";
+import "./documentKind";
 import "./pipelineKind";
 import "./runKind";

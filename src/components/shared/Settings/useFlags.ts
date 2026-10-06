@@ -3,19 +3,41 @@ import { useSyncExternalStore } from "react";
 import { ExistingFlags } from "@/flags";
 import { getStorage } from "@/utils/typedStorage";
 
+import { hasSatisfiedDependencies } from "./flagDependencies";
 import type { BetaFlagsStorage } from "./types";
 
 const storage = getStorage<keyof BetaFlagsStorage, BetaFlagsStorage>();
 
-/**
- * Non-hook flag check for use outside React (e.g., route beforeLoad).
- */
-export function isFlagEnabled(flagName: keyof typeof ExistingFlags): boolean {
+function storedFlagValue(flagName: string): boolean {
   return (
     storage.getItem("betaFlags")?.[flagName] ??
     ExistingFlags[flagName]?.default ??
     false
   );
+}
+
+/**
+ * Resolving the `dependsOn` chain at read time rather than rewriting storage is
+ * what lets turning a dependency back on restore what the user had. The
+ * Settings switches deliberately read {@link useFlags}.getFlag instead, so they
+ * keep showing what the user chose rather than what dependencies now allow.
+ *
+ * Only knows `ExistingFlags`, so a `__TANGLE_EXTRA_FLAGS__` flag declaring
+ * `dependsOn` would not resolve here. None does today.
+ */
+function resolveFlag(flagName: string): boolean {
+  if (!storedFlagValue(flagName)) return false;
+
+  return hasSatisfiedDependencies(flagName, (key) => {
+    const flag = ExistingFlags[key];
+    if (!flag) return undefined;
+    return { enabled: storedFlagValue(key), dependsOn: flag.dependsOn };
+  });
+}
+
+/** For callers outside React, such as a route's `beforeLoad`. */
+export function isFlagEnabled(flagName: keyof typeof ExistingFlags): boolean {
+  return resolveFlag(flagName);
 }
 
 export function useFlags() {
@@ -43,11 +65,6 @@ export function useFlags() {
       storage.setItem("betaFlags", undefined);
     },
 
-    /**
-     * Subscribe to changes in the local storage
-     * @param listener - callback from useSyncExternalStore
-     * @returns A function to unsubscribe from the storage changes
-     */
     subscribe: (listener: () => void) => {
       function handleStorageChange(event: StorageEvent) {
         if (event.key === "betaFlags") {
@@ -61,9 +78,18 @@ export function useFlags() {
 }
 
 export function useFlagValue(flagName: keyof typeof ExistingFlags) {
-  const { getFlag, subscribe } = useFlags();
+  const { subscribe } = useFlags();
 
-  return useSyncExternalStore(subscribe, () =>
-    getFlag(flagName, ExistingFlags[flagName]?.default ?? false),
-  );
+  return useSyncExternalStore(subscribe, () => resolveFlag(flagName));
 }
+
+/**
+ * The two flags that draw the projects/Tangent boundary are read from twenty
+ * places. Named here so a site says which feature it is gating rather than
+ * repeating a string that nothing checks against the flag list.
+ */
+export const useProjectsEnabled = () => useFlagValue("projects");
+export const useTangentEnabled = () => useFlagValue("tangent-shell");
+
+export const isProjectsEnabled = () => isFlagEnabled("projects");
+export const isTangentEnabled = () => isFlagEnabled("tangent-shell");

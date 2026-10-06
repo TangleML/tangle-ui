@@ -1,24 +1,9 @@
-/**
- * Connects the Tangent project workspace to the `/remote-env` gateway as the
- * session's default environment.
- *
- * This one environment does two jobs on a single socket:
- * - Hosts the workarea RPC **tools** (open / list / read / close tabs, plus
- *   run inspect) so an agent can arrange and read the Dynamic Workarea.
- * - Hosts an editor sub-agent **runtime** (spawn / message / kill) bound to a
- *   routing bridge that drives whichever pipeline tab is active. This catches
- *   editor spawns that Prime does not bind to a specific tab's environment; per
- *   tab, the embedded views still host their own environment for spawns
- *   explicitly bound to that tab.
- *
- * It mints a scoped token, boots the agent worker, connects, and re-registers
- * the tool catalog on reconnect. It renders `children` unchanged.
- */
 import { useQueryClient } from "@tanstack/react-query";
 import * as Comlink from "comlink";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import type { RemoteEnvWorkerApi } from "@/agent/createRemoteEnvWorkerApi";
+import type { TraceScope } from "@/agent/middleware/agentTrace";
 import { buildTaskSpecShape } from "@/components/shared/PipelineRunNameTemplate/types";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
@@ -31,18 +16,22 @@ import {
   createActiveTabRoutingBridge,
   createAgentTargetRouter,
 } from "@/routes/v2/pages/Tangent/services/createActiveTabRoutingBridge";
+import { createNamingHandlers } from "@/routes/v2/pages/Tangent/services/createNamingHandlers";
 import {
   createWorkareaRemoteTools,
   type RunInspectDeps,
 } from "@/routes/v2/pages/Tangent/services/createWorkareaRemoteTools";
 import { createRemoteEnvAgentWorker } from "@/routes/v2/pages/Tangent/services/remoteEnvAgentWorker";
 import { createRemoteEnvHost } from "@/routes/v2/pages/Tangent/services/remoteEnvHost";
-import { localPipelineByNameResourceExtraData } from "@/routes/v2/pages/Tangent/workarea/resourceExtraData";
 import { createDebugBridgeHandlers } from "@/routes/v2/shared/components/AiChat/toolBridge/debugBridge";
 import { createRunBridgeHandlers } from "@/routes/v2/shared/components/AiChat/toolBridge/runBridge";
 import type { BridgeDeps } from "@/routes/v2/shared/components/AiChat/toolBridge/utils";
 import { copyRunToPipeline } from "@/services/pipelineRunService";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
+import { createAndAttachPipeline } from "@/services/projects/createAndAttachPipeline";
+import { UNNAMED_PIPELINE } from "@/services/projects/placeholderNames";
 import { createProjectResource } from "@/services/projects/projectResourcesService";
+import { localPipelineResourceInput } from "@/services/projects/resourceDescriptor";
 import {
   ProjectResourcesQueryKeys,
   ProjectsQueryKeys,
@@ -99,6 +88,13 @@ async function clonePipelineFromRun(
   return { pipelineName: result.name };
 }
 
+/**
+ * One environment does two jobs on a single socket: it hosts the workarea tools
+ * an agent arranges the workarea with, and an editor sub-agent runtime bound to
+ * a bridge that routes to whichever pipeline tab is active. That second job
+ * catches editor spawns not bound to a specific tab's environment; a spawn that
+ * names a tab is still hosted by that tab's own embedded view.
+ */
 export function TangentProjectAgentProvider({
   sessionId,
   children,
@@ -108,6 +104,7 @@ export function TangentProjectAgentProvider({
   const { backendUrl } = useBackend();
   const queryClient = useQueryClient();
   const store = useTangentProject();
+  const storage = usePipelineStorage();
   const { baseUrl } = useTangentBaseUrl(store.projectId);
 
   const authToken = useRemoteEnvAuthToken();
@@ -115,6 +112,9 @@ export function TangentProjectAgentProvider({
   const backendUrlRef = useRef(backendUrl);
   const notifyRef = useRef(notify);
   const aiConfigRef = useRef(aiConfig);
+  const traceScopeRef = useRef<TraceScope | undefined>(
+    sessionId ? { projectId: store.projectId, sessionId } : undefined,
+  );
   const workerRef = useRef<Comlink.Remote<RemoteEnvWorkerApi> | null>(null);
 
   // A project-level backend bridge for the run inspect tools: read-only run and
@@ -159,6 +159,14 @@ export function TangentProjectAgentProvider({
     void workerRef.current?.setAiConfig(aiConfig);
   }, [aiConfig]);
 
+  // Nothing to file an event under until a session exists, so the worker's
+  // scope is left unset rather than stamped with a placeholder.
+  useEffect(() => {
+    if (!sessionId) return;
+    traceScopeRef.current = { projectId: store.projectId, sessionId };
+    void workerRef.current?.setTraceScope(traceScopeRef.current);
+  }, [store.projectId, sessionId]);
+
   const refreshProjectResources = async () => {
     await Promise.all([
       queryClient.invalidateQueries({
@@ -170,6 +178,15 @@ export function TangentProjectAgentProvider({
     ]);
   };
 
+  const [naming] = useState(() =>
+    createNamingHandlers({
+      projectId: store.projectId,
+      getActiveSessionId: () => store.activeSessionId,
+      getPipelineBridge: () => store.getActiveTabBridge(),
+      onRenamed: () => refreshProjectResources(),
+    }),
+  );
+
   const [tools] = useState(() =>
     createWorkareaRemoteTools(() => ({
       openTarget: (target, title) => store.openWorkareaTarget(target, title),
@@ -179,18 +196,32 @@ export function TangentProjectAgentProvider({
       getEnvironmentId: (id) => store.getTabEnvironmentId(id),
       waitForEnvironment: (id) => store.waitForTabEnvironment(id),
       runInspect,
+      createPipeline: async (name) => {
+        const file = await createAndAttachPipeline({
+          storage,
+          name: name ?? UNNAMED_PIPELINE,
+          attach: (input) => createProjectResource(store.projectId, input),
+        });
+        await refreshProjectResources();
+        return { pipelineName: file.storageKey, fileId: file.id };
+      },
       clonePipeline: async (runId) => {
         const { pipelineName } = await clonePipelineFromRun(runInspect, runId);
-        await createProjectResource(store.projectId, {
-          entity: "document",
-          name: pipelineName,
-          extraData: localPipelineByNameResourceExtraData(pipelineName),
-          payload: {},
-        });
+        const registered = await storage.resolvePipelineByName(pipelineName);
+        await createProjectResource(
+          store.projectId,
+          localPipelineResourceInput({
+            localName: pipelineName,
+            ...(registered ? { localId: registered.id } : undefined),
+          }),
+        );
         await refreshProjectResources();
         return { pipelineName };
       },
       refreshResources: refreshProjectResources,
+      renameProject: naming.renameProject,
+      nameSession: naming.nameSession,
+      namePipeline: naming.namePipeline,
     })),
   );
   const [routingBridge] = useState(() =>
@@ -212,6 +243,9 @@ export function TangentProjectAgentProvider({
 
     void remote.init(Comlink.proxy(routingBridge), { mode: "editor" });
     void remote.setAiConfig(aiConfigRef.current);
+    if (traceScopeRef.current) {
+      void remote.setTraceScope(traceScopeRef.current);
+    }
 
     const host = createRemoteEnvHost({
       url: baseUrl,

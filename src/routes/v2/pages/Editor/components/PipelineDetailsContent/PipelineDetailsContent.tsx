@@ -1,5 +1,7 @@
 import { observer } from "mobx-react-lite";
 
+import { ProjectDetailsSection } from "@/components/Project/ProjectDetailsSection";
+import { useRunProjectContext } from "@/components/Project/useRunProjectContext";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
@@ -33,6 +35,7 @@ export const PipelineDetailsContent = observer(
     const { navigation } = useSharedStores();
     const pipelineSpec = useSpec();
     const notify = useToastNotification();
+    const { projectIds } = useRunProjectContext();
     const {
       updatePipelineDescription,
       updatePipelineNotes,
@@ -113,6 +116,8 @@ export const PipelineDetailsContent = observer(
         <Separator />
 
         <BlockStack className="min-h-0 flex-1 overflow-y-auto">
+          <ProjectDetailsSection projectIds={projectIds} />
+
           <PipelineDetailsCollapsibleSection
             title="Details"
             icon="FileText"

@@ -12,13 +12,14 @@ import {
 import type { PipelineRun } from "@/types/pipelineRun";
 
 import { transformAggregatorComponentSpec } from "./aggregatorTransform";
-import { RUN_SOURCE_ANNOTATION } from "./annotations";
+import { RUN_SOURCE_ANNOTATION, WEB_APP_RUN_SOURCE } from "./annotationKeys";
 import { buildAnnotationsWithCanonicalName } from "./canonicalPipelineName";
 import type {
   ArgumentType,
   ComponentReference,
   ComponentSpec,
 } from "./componentSpec";
+import { deepClone } from "./deepClone";
 import { runPreSubmitHooks } from "./runPreSubmitHooks";
 import { componentSpecFromYaml } from "./yaml";
 
@@ -30,6 +31,7 @@ export async function submitPipelineRun(
     authorizationToken?: string;
     canonicalName?: string;
     runAnnotations?: Record<string, string>;
+    runSource?: string;
     onSuccess?: (data: PipelineRun) => void;
     onError?: (error: Error) => void;
   },
@@ -48,7 +50,12 @@ export async function submitPipelineRun(
   }
 
   try {
-    const specCopy = structuredClone(componentSpec);
+    // The spec is copied so loading each task's component cannot mutate what
+    // the caller handed over. It goes through `deepClone` because an agent
+    // submits a spec straight off the editor's store, where `serializeComponentSpec`
+    // passes each `componentRef` through by reference — leaving live observables
+    // inside an otherwise plain object, which `structuredClone` refuses.
+    const specCopy = deepClone(componentSpec);
     const componentCache = new Map<string, ComponentSpec>();
     const fullyLoadedSpec = await processComponentSpec(
       specCopy,
@@ -90,7 +97,7 @@ export async function submitPipelineRun(
     const payload = {
       annotations: {
         ...(options?.runAnnotations ?? {}),
-        [RUN_SOURCE_ANNOTATION]: "web-app",
+        [RUN_SOURCE_ANNOTATION]: options?.runSource ?? WEB_APP_RUN_SOURCE,
       },
       root_task: {
         componentRef: {

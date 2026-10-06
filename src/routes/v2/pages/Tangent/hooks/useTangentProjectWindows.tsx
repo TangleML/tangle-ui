@@ -4,19 +4,35 @@ import { useEffect } from "react";
 import type { IconName } from "@/components/ui/icon";
 import { AgentsWindowContent } from "@/routes/v2/pages/Tangent/components/AgentsWindowContent";
 import { AssetsWindowContent } from "@/routes/v2/pages/Tangent/components/AssetsWindowContent";
+import { ProjectWindowContent } from "@/routes/v2/pages/Tangent/components/ProjectWindowContent";
 import { ResourcesWindowContent } from "@/routes/v2/pages/Tangent/components/ResourcesWindowContent";
+import { RunsWindowContent } from "@/routes/v2/pages/Tangent/components/RunsWindowContent";
 import { SessionsWindowContent } from "@/routes/v2/pages/Tangent/components/SessionsWindowContent";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { WindowMiniButton } from "@/routes/v2/shared/windows/WindowMiniButton";
 
+import {
+  placeProjectDockWindows,
+  PROJECT_DOCK_WINDOW_IDS,
+  rememberedDockWindows,
+} from "./tangentProjectWindowOrder";
+
 interface ProjectDockWindow {
-  id: string;
+  id: (typeof PROJECT_DOCK_WINDOW_IDS)[number];
   title: string;
   icon: IconName;
   content: ReactNode;
 }
 
+const MAX_PROJECT_WINDOW_HEIGHT = 320;
+
 const PROJECT_DOCK_WINDOWS: ProjectDockWindow[] = [
+  {
+    id: "tangent-project-details",
+    title: "Project",
+    icon: "Folder",
+    content: <ProjectWindowContent />,
+  },
   {
     id: "tangent-project-sessions",
     title: "Sessions",
@@ -38,8 +54,14 @@ const PROJECT_DOCK_WINDOWS: ProjectDockWindow[] = [
   {
     id: "tangent-project-resources",
     title: "Resources",
-    icon: "Folder",
+    icon: "FileText",
     content: <ResourcesWindowContent />,
+  },
+  {
+    id: "tangent-project-runs",
+    title: "Runs",
+    icon: "ListChecks",
+    content: <RunsWindowContent />,
   },
 ];
 
@@ -47,14 +69,17 @@ export function useTangentProjectWindows() {
   const { windows } = useSharedStores();
 
   useEffect(() => {
-    for (const win of PROJECT_DOCK_WINDOWS) {
-      if (windows.getWindowById(win.id)) continue;
+    const remembered = rememberedDockWindows(windows);
+
+    PROJECT_DOCK_WINDOWS.forEach((win) => {
+      if (windows.getWindowById(win.id)) return;
       windows.openWindow(win.content, {
         id: win.id,
         title: win.title,
         persisted: true,
         defaultDockState: "left",
         startVisible: true,
+        maxDockedHeight: MAX_PROJECT_WINDOW_HEIGHT,
         miniContent: (
           <WindowMiniButton
             tooltip={win.title}
@@ -63,6 +88,8 @@ export function useTangentProjectWindows() {
           />
         ),
       });
-    }
+    });
+
+    placeProjectDockWindows(windows, remembered);
   }, [windows]);
 }

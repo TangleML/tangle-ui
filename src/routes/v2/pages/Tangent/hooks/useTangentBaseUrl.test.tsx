@@ -11,8 +11,10 @@ vi.mock("@/providers/BackendProvider", () => ({
   useBackend: () => backend,
 }));
 
-import { DEFAULT_TANGENT_BASE_URL } from "@/routes/v2/pages/Tangent/constants";
-import { ProjectsApiError } from "@/services/projects/errors";
+import {
+  ProjectsApiError,
+  WorkspacesApiError,
+} from "@/services/projects/errors";
 import * as projectsService from "@/services/projects/projectsService";
 import type { Project, Workspace } from "@/services/projects/types";
 import * as workspacesService from "@/services/projects/workspacesService";
@@ -25,13 +27,12 @@ function project(overrides: Partial<Project> = {}): Project {
     workspaceId: "w1",
     name: "Project",
     description: null,
-    notes: null,
     origin: "user",
     createdBy: null,
     createdAt: new Date("2024-01-01T00:00:00Z"),
     updatedAt: new Date("2024-01-01T00:00:00Z"),
     resourceCounts: {},
-    extraData: null,
+    metadata: null,
     ...overrides,
   };
 }
@@ -43,7 +44,7 @@ function workspace(overrides: Partial<Workspace> = {}): Workspace {
     description: null,
     isActive: true,
     createdAt: new Date("2024-01-01T00:00:00Z"),
-    extraData: null,
+    metadata: null,
     ...overrides,
   };
 }
@@ -64,6 +65,7 @@ function wrapperFor(client: QueryClient) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.unstubAllEnvs();
   backend = { configured: true, available: true };
 });
 
@@ -71,7 +73,7 @@ describe("useTangentBaseUrl", () => {
   it("reports the workspace's configured base url", async () => {
     vi.mocked(projectsService.getProject).mockResolvedValue(project());
     vi.mocked(workspacesService.getWorkspace).mockResolvedValue(
-      workspace({ extraData: { tangentBaseUrl: "https://tangent.example" } }),
+      workspace({ metadata: { tangentBaseUrl: "https://tangent.example" } }),
     );
 
     const { result } = renderHook(() => useTangentBaseUrl("p1"), {
@@ -84,8 +86,8 @@ describe("useTangentBaseUrl", () => {
     expect(result.current.isError).toBe(false);
   });
 
-  // A 404 rather than a bare Error: `useProject` retries anything that is not
-  // a 4xx, so a generic failure only reports itself after three backoffs.
+  // A 404 rather than a bare Error: these reads retry anything that is not a
+  // 4xx, so a generic failure only reports itself after three backoffs.
   it("reports an error when the project cannot be loaded", async () => {
     vi.mocked(projectsService.getProject).mockRejectedValue(
       new ProjectsApiError("not found", 404),
@@ -102,7 +104,7 @@ describe("useTangentBaseUrl", () => {
   it("reports an error when the workspace cannot be loaded", async () => {
     vi.mocked(projectsService.getProject).mockResolvedValue(project());
     vi.mocked(workspacesService.getWorkspace).mockRejectedValue(
-      new Error("not found"),
+      new WorkspacesApiError("not found", 404),
     );
 
     const { result } = renderHook(() => useTangentBaseUrl("p1"), {
@@ -110,8 +112,44 @@ describe("useTangentBaseUrl", () => {
     });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
-    // baseUrl still resolves to the localhost default, which is exactly why
-    // callers have to gate on isError rather than trusting it.
-    expect(result.current.baseUrl).toBe(DEFAULT_TANGENT_BASE_URL);
+    expect(result.current.baseUrl).toBeNull();
+  });
+
+  // The regression that had Chrome asking to reach the local network: a url
+  // resolved before the workspace arrived fell back to loopback, and the
+  // runtime probe imported it on the very first commit.
+  it("has no url until the workspace arrives", async () => {
+    vi.mocked(projectsService.getProject).mockResolvedValue(project());
+    vi.mocked(workspacesService.getWorkspace).mockReturnValue(
+      new Promise<Workspace>(() => {}),
+    );
+
+    const { result } = renderHook(() => useTangentBaseUrl("p1"), {
+      wrapper: wrapperFor(makeClient()),
+    });
+
+    expect(result.current.baseUrl).toBeNull();
+
+    await waitFor(() =>
+      expect(workspacesService.getWorkspace).toHaveBeenCalled(),
+    );
+    expect(result.current.baseUrl).toBeNull();
+  });
+
+  it("surfaces a local address a build refused instead of using it", async () => {
+    vi.stubEnv("DEV", false);
+    vi.mocked(projectsService.getProject).mockResolvedValue(project());
+    vi.mocked(workspacesService.getWorkspace).mockResolvedValue(
+      workspace({ metadata: { tangentBaseUrl: "http://localhost:5173" } }),
+    );
+
+    const { result } = renderHook(() => useTangentBaseUrl("p1"), {
+      wrapper: wrapperFor(makeClient()),
+    });
+
+    await waitFor(() =>
+      expect(result.current.localAddress).toBe("http://localhost:5173"),
+    );
+    expect(result.current.baseUrl).toBeNull();
   });
 });

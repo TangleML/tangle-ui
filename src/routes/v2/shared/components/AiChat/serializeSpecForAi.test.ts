@@ -13,6 +13,7 @@ import {
   FLEX_NODES_ANNOTATION,
   PIPELINE_TAGS_ANNOTATION,
 } from "@/utils/annotationKeys";
+import { PROVISIONAL_NAME_ANNOTATION } from "@/utils/annotationKeys";
 
 import { serializeSpecForAi } from "./serializeSpecForAi";
 
@@ -174,12 +175,41 @@ describe("serializeSpecForAi", () => {
           name: "Load",
           inputs: [{ name: "path", type: "String" }],
           outputs: [{ name: "table", type: "String" }],
+          implementation: "container",
         },
       },
       arguments: [{ name: "path", value: "data.csv" }],
       position: { x: 200, y: 0 },
     });
     expect(ai.tasks[1].isSubgraph).toBe(true);
+    expect(ai.tasks[1].componentRef.spec?.implementation).toBe("graph");
+  });
+
+  /** A task whose component cannot run otherwise reads like one that can. */
+  it("says when a component has no implementation", () => {
+    const spec = new ComponentSpec({ $id: "spec_2", name: "Greeter" });
+    spec.addTask(
+      new Task({
+        $id: "task_1",
+        name: "greet",
+        componentRef: {
+          name: "Hello greeting",
+          spec: {
+            name: "Hello greeting",
+            inputs: [{ name: "name", type: "String" }],
+            outputs: [{ name: "greeting", type: "String" }],
+            // The shape an agent authoring a component inline produces, and
+            // the one nothing downstream can run.
+          } as unknown as NonNullable<
+            ConstructorParameters<typeof Task>[0]["componentRef"]
+          >["spec"],
+        },
+      }),
+    );
+
+    const ai = serializeSpecForAi(spec);
+
+    expect(ai.tasks[0].componentRef.spec?.implementation).toBe("missing");
   });
 
   it("serializes bindings", () => {
@@ -326,5 +356,19 @@ describe("serializeSpecForAi", () => {
 
       expect(() => structuredClone(serializeSpecForAi(spec))).not.toThrow();
     });
+  });
+
+  /** The editor agent renames a placeholder and leaves a chosen name alone. */
+  it("tells the agent when the name is a placeholder nobody chose", () => {
+    const spec = buildBasicSpec();
+    spec.annotations.set(PROVISIONAL_NAME_ANNOTATION, "true");
+
+    expect(serializeSpecForAi(spec).nameIsProvisional).toBe(true);
+  });
+
+  it("says nothing about a name someone chose", () => {
+    expect(
+      serializeSpecForAi(buildBasicSpec()).nameIsProvisional,
+    ).toBeUndefined();
   });
 });

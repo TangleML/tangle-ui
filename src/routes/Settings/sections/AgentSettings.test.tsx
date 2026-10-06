@@ -238,6 +238,47 @@ describe("AgentSettings", () => {
     expect(screen.getByRole("button", { name: "Test AI" })).toBeEnabled();
   });
 
+  it("handles provider mode persistence failures", async () => {
+    let finishTest!: (response: Response) => void;
+    mockFetch.mockReturnValue(
+      new Promise<Response>((resolve) => {
+        finishTest = resolve;
+      }),
+    );
+    render(<AgentSettings />);
+    fireEvent.change(screen.getByLabelText("API base URL"), {
+      target: { value: "https://api.example.com/v1" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save and test AI" }));
+    expect(screen.getByRole("button", { name: "Testing…" })).toBeDisabled();
+
+    const setItemSpy = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementationOnce(() => {
+        throw new Error("Storage is unavailable");
+      });
+    try {
+      const toggle = screen.getByRole("switch", { name: "Bring your own key" });
+      fireEvent.click(toggle);
+      expect(setItemSpy).toHaveBeenCalledWith(
+        AI_USE_OWN_KEY_STORAGE_KEY,
+        "false",
+      );
+      await act(async () =>
+        finishTest(new Response(JSON.stringify({ ok: true }))),
+      );
+
+      expect(toggle).toBeChecked();
+      expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
+      expect(mockNotify).not.toHaveBeenCalled();
+      expect(
+        screen.getByRole("button", { name: "Save and test AI" }),
+      ).toBeEnabled();
+    } finally {
+      setItemSpy.mockRestore();
+    }
+  });
+
   it("shows inline feedback instead of saving when API base URL is blank", () => {
     render(<AgentSettings />);
 

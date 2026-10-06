@@ -107,8 +107,8 @@ describe("createEditorDispatcher", () => {
 
   async function assertDispatcher(aiConfig: Partial<AgentSession["aiConfig"]>) {
     const session = makeSession();
-    session.aiConfig = { ...session.aiConfig, ...aiConfig };
-    const selectedConfig = { ...session.aiConfig };
+    const initialConfig = { ...session.aiConfig };
+    const selectedConfig = { ...session.aiConfig, ...aiConfig };
     const dispatcher = createEditorDispatcher();
     await dispatcher.invoke({
       message: "add a component",
@@ -138,7 +138,7 @@ describe("createEditorDispatcher", () => {
     } else {
       expect(agentConfig.modelSettings).not.toHaveProperty("reasoning");
     }
-    expect(session.aiConfig).toEqual(selectedConfig);
+    expect(session.aiConfig).toEqual(initialConfig);
     expect(fetch).not.toHaveBeenCalled();
     expect(runMock).toHaveBeenCalledOnce();
   }

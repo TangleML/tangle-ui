@@ -1,6 +1,9 @@
 import { RunContext } from "@openai/agents-core";
 import { describe, expect, it, vi } from "vitest";
 
+import type { ComponentReference } from "@/utils/componentSpec";
+
+import { createComponentCatalog } from "../componentCatalog";
 import type { ToolBridgeApi } from "../toolBridgeApi";
 import { createCsomTools } from "./csomTools";
 
@@ -15,11 +18,6 @@ interface JsonSchemaNode {
   $ref?: string;
 }
 
-/**
- * Lightweight stub bridge: only the methods a test sets via `overrides`
- * are ever called. Anything else returns a vi.fn() so unrelated tools
- * don't blow up if they're inspected through the same factory call.
- */
 function makeBridge(overrides: Partial<ToolBridgeApi> = {}): ToolBridgeApi {
   const stub = vi.fn();
   return new Proxy({} as ToolBridgeApi, {
@@ -47,8 +45,17 @@ async function invoke(tool: FunctionTool, payload: unknown): Promise<unknown> {
   return typeof raw === "string" ? JSON.parse(raw) : raw;
 }
 
+/** An optional field is emitted as an `anyOf` with a null branch beside it. */
+function objectBranchOf(
+  schema: JsonSchemaNode | undefined,
+): JsonSchemaNode | undefined {
+  if (!schema) return undefined;
+  if (schema.properties) return schema;
+  return schema.anyOf?.find((entry) => entry.type === "object");
+}
+
 function getImplementationAnyOf(schema: JsonSchemaNode): JsonSchemaNode[] {
-  const componentRef = schema.properties?.componentRef;
+  const componentRef = objectBranchOf(schema.properties?.componentRef);
   if (!componentRef) return [];
 
   const specAnyOf = componentRef.properties?.spec?.anyOf;
@@ -75,7 +82,10 @@ function hasAllOf(schema: JsonSchemaNode | undefined): boolean {
 
 describe("createCsomTools", () => {
   it("exposes the full 30-tool surface", () => {
-    const { allTools } = createCsomTools(makeBridge());
+    const { allTools } = createCsomTools(
+      makeBridge(),
+      createComponentCatalog(),
+    );
     const names = allTools.map((t) => t.name).sort();
     expect(names).toEqual(
       [
@@ -121,7 +131,10 @@ describe("createCsomTools", () => {
       tasks: [],
       bindings: [],
     });
-    const { allTools } = createCsomTools(makeBridge({ getPipelineState }));
+    const { allTools } = createCsomTools(
+      makeBridge({ getPipelineState }),
+      createComponentCatalog(),
+    );
 
     const result = await invoke(findTool(allTools, "get_pipeline_state"), {});
     expect(result).toEqual({
@@ -140,7 +153,10 @@ describe("createCsomTools", () => {
       issueCount: 0,
       issues: [],
     });
-    const { allTools } = createCsomTools(makeBridge({ validatePipeline }));
+    const { allTools } = createCsomTools(
+      makeBridge({ validatePipeline }),
+      createComponentCatalog(),
+    );
 
     const result = await invoke(findTool(allTools, "validate_pipeline"), {});
     expect(result).toEqual({ valid: true, issueCount: 0, issues: [] });
@@ -152,7 +168,10 @@ describe("createCsomTools", () => {
       taskId: "task_42",
       name: "Loader",
     });
-    const { allTools } = createCsomTools(makeBridge({ addTask }));
+    const { allTools } = createCsomTools(
+      makeBridge({ addTask }),
+      createComponentCatalog(),
+    );
 
     await invoke(findTool(allTools, "add_task"), {
       name: "Loader",
@@ -182,11 +201,97 @@ describe("createCsomTools", () => {
     });
   });
 
+  /**
+   * The point of the id: a registry component reaches the canvas whole, with
+   * no part of it having to survive a round trip through the tool schema.
+   */
+  it("add_task resolves a componentId against what search found", async () => {
+    const addTask = vi.fn().mockResolvedValue({ success: true });
+    const catalog = createComponentCatalog();
+    const reference = {
+      name: "Filter text",
+      spec: {
+        name: "Filter text",
+        inputs: [{ name: "text" }],
+        implementation: {
+          container: { image: "python:3.11", env: { LEVEL: "info" } },
+        },
+      },
+    };
+    catalog.remember("abc123", reference as ComponentReference);
+    const { allTools } = createCsomTools(makeBridge({ addTask }), catalog);
+
+    await invoke(findTool(allTools, "add_task"), {
+      name: "Filter",
+      componentId: "abc123",
+    });
+
+    expect(addTask.mock.calls[0][0].componentRef).toEqual(reference);
+  });
+
+  it("add_task says what to do about an id it has never seen", async () => {
+    const addTask = vi.fn();
+    const { allTools } = createCsomTools(
+      makeBridge({ addTask }),
+      createComponentCatalog(),
+    );
+
+    const result = (await invoke(findTool(allTools, "add_task"), {
+      name: "Filter",
+      componentId: "never-searched",
+    })) as { success: boolean; error: string };
+
+    expect(addTask).not.toHaveBeenCalled();
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("search_components");
+  });
+
+  it("add_task needs either an id or a component to author", async () => {
+    const addTask = vi.fn();
+    const { allTools } = createCsomTools(
+      makeBridge({ addTask }),
+      createComponentCatalog(),
+    );
+
+    await invoke(findTool(allTools, "add_task"), { name: "Filter" }).catch(
+      () => undefined,
+    );
+
+    expect(addTask).not.toHaveBeenCalled();
+  });
+
+  it("add_task refuses a component with nothing that runs it", async () => {
+    const addTask = vi.fn();
+    const { allTools } = createCsomTools(
+      makeBridge({ addTask }),
+      createComponentCatalog(),
+    );
+
+    await invoke(findTool(allTools, "add_task"), {
+      name: "greet",
+      componentRef: {
+        name: "Hello greeting",
+        url: null,
+        spec: {
+          name: "Hello greeting",
+          inputs: [{ name: "name", type: "String" }],
+          outputs: [{ name: "greeting", type: "String" }],
+          implementation: {},
+        },
+      },
+    }).catch(() => undefined);
+
+    expect(addTask).not.toHaveBeenCalled();
+  });
+
   it("add_task implementation schema has typed anyOf branches", () => {
     // Regression guard for OpenAI structured-outputs strict mode: every
     // `anyOf` branch must declare a concrete `type` (or `$ref`), or tool
     // registration fails before the model even runs.
-    const { allTools } = createCsomTools(makeBridge());
+    const { allTools } = createCsomTools(
+      makeBridge(),
+      createComponentCatalog(),
+    );
     const addTaskTool = findTool(allTools, "add_task");
 
     const implementationAnyOf = getImplementationAnyOf(
@@ -202,30 +307,40 @@ describe("createCsomTools", () => {
     expect(
       implementationAnyOf.every((entry) => typeof entry.type === "string"),
     ).toBe(true);
+  });
 
-    const objectBranch = implementationAnyOf.find(
-      (entry) => entry.type === "object",
+  /**
+   * Strict mode rewrites every object to `additionalProperties: false`, so a
+   * field whose content lives only in `additionalProperties` can hold nothing
+   * but `{}` — which is what `implementation` was, and why the editor agent
+   * added and deleted the same task until its turn ran out. Every key an agent
+   * has to fill must be a named property.
+   */
+  it("add_task implementation keys survive strict mode", () => {
+    const { allTools } = createCsomTools(
+      makeBridge(),
+      createComponentCatalog(),
     );
-    expect(objectBranch).toBeDefined();
-    const additionalProperties = objectBranch?.additionalProperties;
-    expect(additionalProperties).not.toEqual({});
-    if (
-      additionalProperties &&
-      typeof additionalProperties === "object" &&
-      !Array.isArray(additionalProperties)
-    ) {
-      expect(
-        typeof additionalProperties.type === "string" ||
-          typeof additionalProperties.$ref === "string",
-      ).toBe(true);
-    }
+    const addTaskTool = findTool(allTools, "add_task");
+
+    const objectBranch = getImplementationAnyOf(
+      addTaskTool.parameters as JsonSchemaNode,
+    ).find((entry) => entry.type === "object");
+
+    const container = objectBranch?.properties?.container;
+    expect(Object.keys(container?.properties ?? {})).toEqual(
+      expect.arrayContaining(["image", "command"]),
+    );
   });
 
   it("rename_task forwards (entityId, newName) in the right order", async () => {
     // Both args are strings — TypeScript can't catch a swap, so this
     // pin is the only guard against a regression.
     const renameTask = vi.fn().mockResolvedValue({ success: true });
-    const { allTools } = createCsomTools(makeBridge({ renameTask }));
+    const { allTools } = createCsomTools(
+      makeBridge({ renameTask }),
+      createComponentCatalog(),
+    );
 
     await invoke(findTool(allTools, "rename_task"), {
       entityId: "task_1",
@@ -236,7 +351,10 @@ describe("createCsomTools", () => {
 
   it("rename_input forwards (entityId, newName) in the right order", async () => {
     const renameInput = vi.fn().mockResolvedValue({ success: true });
-    const { allTools } = createCsomTools(makeBridge({ renameInput }));
+    const { allTools } = createCsomTools(
+      makeBridge({ renameInput }),
+      createComponentCatalog(),
+    );
 
     await invoke(findTool(allTools, "rename_input"), {
       entityId: "input_1",
@@ -247,7 +365,10 @@ describe("createCsomTools", () => {
 
   it("rename_output forwards (entityId, newName) in the right order", async () => {
     const renameOutput = vi.fn().mockResolvedValue({ success: true });
-    const { allTools } = createCsomTools(makeBridge({ renameOutput }));
+    const { allTools } = createCsomTools(
+      makeBridge({ renameOutput }),
+      createComponentCatalog(),
+    );
 
     await invoke(findTool(allTools, "rename_output"), {
       entityId: "output_1",
@@ -259,7 +380,10 @@ describe("createCsomTools", () => {
   it("set_task_argument forwards (taskEntityId, inputName, value) in the right order", async () => {
     // Three string positional args — TypeScript can't catch a swap.
     const setTaskArgument = vi.fn().mockResolvedValue({ success: true });
-    const { allTools } = createCsomTools(makeBridge({ setTaskArgument }));
+    const { allTools } = createCsomTools(
+      makeBridge({ setTaskArgument }),
+      createComponentCatalog(),
+    );
 
     await invoke(findTool(allTools, "set_task_argument"), {
       taskEntityId: "task_1",
@@ -271,7 +395,10 @@ describe("createCsomTools", () => {
 
   it("set_task_argument accepts graph input and task output argument objects", async () => {
     const setTaskArgument = vi.fn().mockResolvedValue({ success: true });
-    const { allTools } = createCsomTools(makeBridge({ setTaskArgument }));
+    const { allTools } = createCsomTools(
+      makeBridge({ setTaskArgument }),
+      createComponentCatalog(),
+    );
 
     await invoke(findTool(allTools, "set_task_argument"), {
       taskEntityId: "task_1",
@@ -293,7 +420,10 @@ describe("createCsomTools", () => {
   });
 
   it("set_task_argument schema avoids recursive allOf shapes rejected by Responses", () => {
-    const { allTools } = createCsomTools(makeBridge());
+    const { allTools } = createCsomTools(
+      makeBridge(),
+      createComponentCatalog(),
+    );
     const setTaskArgumentTool = findTool(allTools, "set_task_argument");
     const valueSchema = (setTaskArgumentTool.parameters as JsonSchemaNode)
       .properties?.value;
@@ -313,7 +443,10 @@ describe("createCsomTools", () => {
       inputId: "input_42",
       name: "threshold",
     });
-    const { allTools } = createCsomTools(makeBridge({ addInput }));
+    const { allTools } = createCsomTools(
+      makeBridge({ addInput }),
+      createComponentCatalog(),
+    );
 
     await invoke(findTool(allTools, "add_input"), {
       name: "threshold",
@@ -336,7 +469,10 @@ describe("createCsomTools", () => {
     const addStickyNote = vi
       .fn()
       .mockResolvedValue({ success: true, stickyNoteId: "flex_1" });
-    const { allTools } = createCsomTools(makeBridge({ addStickyNote }));
+    const { allTools } = createCsomTools(
+      makeBridge({ addStickyNote }),
+      createComponentCatalog(),
+    );
 
     await invoke(findTool(allTools, "add_sticky_note"), {
       title: "Careful",
@@ -363,7 +499,10 @@ describe("createCsomTools", () => {
 
   it("update_sticky_note forwards (noteId, updates) in the right order", async () => {
     const updateStickyNote = vi.fn().mockResolvedValue({ success: true });
-    const { allTools } = createCsomTools(makeBridge({ updateStickyNote }));
+    const { allTools } = createCsomTools(
+      makeBridge({ updateStickyNote }),
+      createComponentCatalog(),
+    );
 
     await invoke(findTool(allTools, "update_sticky_note"), {
       noteId: "flex_1",
@@ -379,7 +518,10 @@ describe("createCsomTools", () => {
 
   it("set_task_color forwards (taskEntityIds, color) in the right order", async () => {
     const setTaskColor = vi.fn().mockResolvedValue({ success: true });
-    const { allTools } = createCsomTools(makeBridge({ setTaskColor }));
+    const { allTools } = createCsomTools(
+      makeBridge({ setTaskColor }),
+      createComponentCatalog(),
+    );
 
     await invoke(findTool(allTools, "set_task_color"), {
       taskEntityIds: ["task_1", "task_2"],
@@ -391,7 +533,10 @@ describe("createCsomTools", () => {
 
   it("update_input keeps an explicit empty string as a clear instruction", async () => {
     const updateInput = vi.fn().mockResolvedValue({ success: true });
-    const { allTools } = createCsomTools(makeBridge({ updateInput }));
+    const { allTools } = createCsomTools(
+      makeBridge({ updateInput }),
+      createComponentCatalog(),
+    );
 
     await invoke(findTool(allTools, "update_input"), {
       entityId: "input_1",
@@ -411,7 +556,10 @@ describe("createCsomTools", () => {
 
   it("update_output forwards (entityId, updates) in the right order", async () => {
     const updateOutput = vi.fn().mockResolvedValue({ success: true });
-    const { allTools } = createCsomTools(makeBridge({ updateOutput }));
+    const { allTools } = createCsomTools(
+      makeBridge({ updateOutput }),
+      createComponentCatalog(),
+    );
 
     await invoke(findTool(allTools, "update_output"), {
       entityId: "output_1",
@@ -427,7 +575,10 @@ describe("createCsomTools", () => {
 
   it("move_node forwards (entityId, position) in the right order", async () => {
     const moveNode = vi.fn().mockResolvedValue({ success: true });
-    const { allTools } = createCsomTools(makeBridge({ moveNode }));
+    const { allTools } = createCsomTools(
+      makeBridge({ moveNode }),
+      createComponentCatalog(),
+    );
 
     await invoke(findTool(allTools, "move_node"), {
       entityId: "task_1",
@@ -439,7 +590,10 @@ describe("createCsomTools", () => {
 
   it("auto_layout normalizes a null algorithm to undefined", async () => {
     const autoLayout = vi.fn().mockResolvedValue({ success: true });
-    const { allTools } = createCsomTools(makeBridge({ autoLayout }));
+    const { allTools } = createCsomTools(
+      makeBridge({ autoLayout }),
+      createComponentCatalog(),
+    );
 
     await invoke(findTool(allTools, "auto_layout"), { algorithm: null });
 
@@ -448,7 +602,10 @@ describe("createCsomTools", () => {
 
   it("delete_sticky_note forwards the note id", async () => {
     const deleteStickyNote = vi.fn().mockResolvedValue({ success: true });
-    const { allTools } = createCsomTools(makeBridge({ deleteStickyNote }));
+    const { allTools } = createCsomTools(
+      makeBridge({ deleteStickyNote }),
+      createComponentCatalog(),
+    );
 
     await invoke(findTool(allTools, "delete_sticky_note"), {
       noteId: "flex_1",
@@ -463,7 +620,10 @@ describe("createCsomTools", () => {
       outputId: "output_42",
       name: "metrics",
     });
-    const { allTools } = createCsomTools(makeBridge({ addOutput }));
+    const { allTools } = createCsomTools(
+      makeBridge({ addOutput }),
+      createComponentCatalog(),
+    );
 
     await invoke(findTool(allTools, "add_output"), {
       name: "metrics",

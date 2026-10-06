@@ -22,7 +22,7 @@ export function mapWorkspace(dto: WorkspaceResponse): Workspace {
     name: dto.name,
     description: dto.description,
     isActive: dto.is_active,
-    extraData: dto.extra_data,
+    metadata: dto.data,
     createdAt: new Date(dto.created_at),
   };
 }
@@ -35,6 +35,7 @@ export function mapProjectSummary(dto: ProjectSummaryResponse): ProjectSummary {
     description: dto.description,
     createdBy: dto.created_by,
     origin: dto.origin,
+    metadata: dto.data,
     createdAt: new Date(dto.created_at),
     updatedAt: new Date(dto.updated_at),
     resourceCounts: dto.resource_counts,
@@ -42,11 +43,7 @@ export function mapProjectSummary(dto: ProjectSummaryResponse): ProjectSummary {
 }
 
 export function mapProject(dto: ProjectResponse): Project {
-  return {
-    ...mapProjectSummary(dto),
-    notes: dto.notes,
-    extraData: dto.extra_data,
-  };
+  return mapProjectSummary(dto);
 }
 
 export function mapDeleteResult(
@@ -68,7 +65,7 @@ export function mapProjectResourceSummary(
     entity: dto.entity,
     name: dto.name,
     entityId: dto.entity_id,
-    extraData: dto.extra_data,
+    metadata: dto.data,
     createdBy: dto.created_by,
     createdAt: new Date(dto.created_at),
     updatedAt: new Date(dto.updated_at),

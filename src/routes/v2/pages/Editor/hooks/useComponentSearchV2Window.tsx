@@ -16,11 +16,7 @@ function ComponentSearchV2MiniContent() {
       size="icon"
       aria-label="Component Search"
     >
-      <Icon
-        name="Search"
-        size="sm"
-        className="text-gray-700 dark:text-muted-foreground"
-      />
+      <Icon name="Search" size="sm" className="text-muted-foreground" />
     </TooltipButton>
   );
 }

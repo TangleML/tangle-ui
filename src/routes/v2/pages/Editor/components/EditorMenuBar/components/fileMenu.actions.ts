@@ -13,9 +13,10 @@ import { componentSpecToYaml } from "@/utils/yaml";
 
 export async function createNewPipeline(
   storage: PipelineStorageService,
+  name = (generate(4) as string[]).join(" "),
+  { provisionalName = false } = {},
 ): Promise<PipelineFile> {
-  const name = (generate(4) as string[]).join(" ");
-  const componentText = defaultPipelineYamlWithName(name);
+  const componentText = defaultPipelineYamlWithName(name, { provisionalName });
 
   return storage.rootFolder.addFile(name, componentText);
 }

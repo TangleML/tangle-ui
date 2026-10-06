@@ -48,7 +48,7 @@ export type RemoteEditorTool = ReturnType<
  *   mutations, no `search_components`, and no `submit_pipeline_run`.
  */
 function buildToolRegistry(session: AgentSession): RemoteEditorTool[] {
-  const csom = createCsomTools(session.bridge);
+  const csom = createCsomTools(session.bridge, session.componentCatalog);
   const componentSearch = createComponentSearchTools(session);
   const runTools = createRunTools(session.bridge);
   const debugTools = createDebugTools(session.bridge);
@@ -69,6 +69,34 @@ function buildToolRegistry(session: AgentSession): RemoteEditorTool[] {
     ...runTools.allTools,
     ...debugTools.allTools,
   ];
+}
+
+export interface ToolGrant {
+  granted: string[];
+  withheld: string[];
+  unknown: string[];
+}
+
+/**
+ * What the server's allowlist did to the registry. `withheld` is a tool this
+ * build has and was not asked for; `unknown` is a name it was asked for and
+ * does not have. Either one leaves an agent saying a capability is
+ * unavailable, which reads identically to the tool being broken, so both are
+ * worth recording where someone reading the log will see them.
+ */
+export function describeToolGrant(
+  session: AgentSession,
+  toolNames: string[],
+): ToolGrant {
+  const registry = buildToolRegistry(session).map((toolDef) => toolDef.name);
+  const requested = new Set(toolNames);
+  const known = new Set(registry);
+
+  return {
+    granted: registry.filter((name) => requested.has(name)),
+    withheld: registry.filter((name) => !requested.has(name)),
+    unknown: toolNames.filter((name) => !known.has(name)),
+  };
 }
 
 export function selectRemoteEditorTools(

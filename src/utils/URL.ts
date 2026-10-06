@@ -1,3 +1,4 @@
+import { getProjectHomePath } from "@/routes/projectRoutes";
 import { RUNS_BASE_PATH } from "@/routes/router";
 import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
 
@@ -251,6 +252,13 @@ const getRawExecutionLogsUrl = (
 ): string =>
   `${backendUrl}/api/executions/${encodeURIComponent(executionId)}/stream_container_log`;
 
+/**
+ * Where a project card goes, which is where someone following a shared link
+ * expects to arrive.
+ */
+const getProjectUrl = (projectId: string): string =>
+  buildAbsoluteAppUrl(getProjectHomePath(projectId));
+
 export {
   buildComponentSourceUrl,
   convertArtifactUriToHTTPUrl,
@@ -263,6 +271,7 @@ export {
   getArtifactPreviewUrl,
   getExecutionLogsUrl,
   getIdOrTitleFromPath,
+  getProjectUrl,
   getRawExecutionLogsUrl,
   isGithubUrl,
   normalizeUrl,

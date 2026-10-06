@@ -1,8 +1,14 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
+import { useFavorites } from "@/hooks/useFavorites";
+import { removeRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
-import { MINUTES } from "@/utils/constants";
 
 import {
   createProject,
@@ -11,6 +17,7 @@ import {
   listProjects,
   updateProject,
 } from "./projectsService";
+import { projectQueryDefaults } from "./queryDefaults";
 import type {
   CreateProjectInput,
   ListProjectsParams,
@@ -18,15 +25,17 @@ import type {
 } from "./types";
 import { ProjectsQueryKeys } from "./types";
 
-export function useProjects(params: ListProjectsParams = {}) {
+export function useProjects(
+  params: ListProjectsParams = {},
+  { enabled = true }: { enabled?: boolean } = {},
+) {
   const { configured, available } = useBackend();
 
   return useQuery({
     queryKey: ProjectsQueryKeys.List(params),
     queryFn: () => listProjects(params),
-    enabled: configured && available,
-    staleTime: 5 * MINUTES,
-    refetchOnWindowFocus: false,
+    enabled: enabled && configured && available,
+    ...projectQueryDefaults,
   });
 }
 
@@ -42,9 +51,28 @@ export function useProject(id: string | undefined) {
       return getProject(id);
     },
     enabled: configured && available && Boolean(id),
-    staleTime: 5 * MINUTES,
-    refetchOnWindowFocus: false,
+    ...projectQueryDefaults,
   });
+}
+
+/**
+ * Only the ids that still exist, in the order asked for. A run's attribution
+ * outlives the project it names, and there is nothing a reader can do about a
+ * project that is gone, so those are absent rather than reported.
+ */
+export function useProjectsById(ids: readonly string[]) {
+  const { configured, available } = useBackend();
+
+  const results = useQueries({
+    queries: ids.map((id) => ({
+      queryKey: ProjectsQueryKeys.Id(id),
+      queryFn: () => getProject(id),
+      enabled: configured && available,
+      ...projectQueryDefaults,
+    })),
+  });
+
+  return results.flatMap((result) => (result.data ? [result.data] : []));
 }
 
 export function useCreateProject() {
@@ -88,6 +116,7 @@ export function useUpdateProject() {
 export function useDeleteProject() {
   const queryClient = useQueryClient();
   const notify = useToastNotification();
+  const { removeFavorite } = useFavorites();
 
   return useMutation({
     mutationFn: (id: string) => deleteProject(id),
@@ -95,9 +124,14 @@ export function useDeleteProject() {
       void queryClient.invalidateQueries({
         queryKey: ProjectsQueryKeys.All(),
       });
-      void queryClient.invalidateQueries({
-        queryKey: ProjectsQueryKeys.Id(id),
-      });
+      // Removed rather than invalidated: an invalidated query keeps its data,
+      // so the project's page would come up fully furnished from the cache of a
+      // project that is gone, and only then refetch its way to an error.
+      queryClient.removeQueries({ queryKey: ProjectsQueryKeys.Id(id) });
+
+      // The link outlives the project everywhere it was recorded.
+      removeRecentlyViewed("project", id);
+      void removeFavorite("project", id);
     },
     onError: () => {
       notify("Failed to delete project", "error");

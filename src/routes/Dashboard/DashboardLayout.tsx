@@ -1,12 +1,19 @@
 import { Link, Outlet } from "@tanstack/react-router";
+import { Fragment } from "react";
 
 import { TipOfTheDay } from "@/components/Learn/TipOfTheDay";
 import { isAuthorizationRequired } from "@/components/shared/Authentication/helpers";
 import { TopBarAuthentication } from "@/components/shared/Authentication/TopBarAuthentication";
-import { useFlagValue } from "@/components/shared/Settings/useFlags";
+import {
+  useFlagValue,
+  useProjectsEnabled,
+  useTangentEnabled,
+} from "@/components/shared/Settings/useFlags";
+import { Badge } from "@/components/ui/badge";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Link as UILink } from "@/components/ui/link";
+import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { useOnboarding } from "@/providers/OnboardingProvider/OnboardingProvider";
@@ -27,7 +34,12 @@ interface SidebarItem {
   label: string;
   icon: IconName;
   exact?: boolean;
+  highlighted?: boolean;
+  badge?: string;
+  dividerAfter?: boolean;
 }
+
+const ALL_RUNS_PATH = "/runs";
 
 const BASE_SIDEBAR_ITEMS: SidebarItem[] = [
   {
@@ -37,7 +49,7 @@ const BASE_SIDEBAR_ITEMS: SidebarItem[] = [
     exact: true,
   },
   { to: "/pipelines", label: "My Pipelines", icon: "GitBranch" },
-  { to: "/runs", label: "All Runs", icon: "Play" },
+  { to: ALL_RUNS_PATH, label: "All Runs", icon: "Play" },
   { to: "/components", label: "Components", icon: "Package" },
   { to: "/favorites", label: "Favorites", icon: "Star" },
   { to: "/recently-viewed", label: "Recently Viewed", icon: "Clock" },
@@ -50,25 +62,75 @@ const COMPONENT_SEARCH_ITEM: SidebarItem = {
   icon: "PackageSearch",
 };
 
-const navItemClass = (isActive: boolean) =>
+const TANGENT_ITEM: SidebarItem = {
+  to: APP_ROUTES.PROJECTS,
+  label: "Tangent",
+  icon: "Bot",
+  highlighted: true,
+  badge: "Beta",
+  dividerAfter: true,
+};
+
+const PROJECTS_ITEM: SidebarItem = {
+  to: APP_ROUTES.PROJECTS,
+  label: "Projects",
+  icon: "Folder",
+  badge: "Beta",
+};
+
+interface ProjectsNavState {
+  projectsEnabled: boolean;
+  tangentEnabled: boolean;
+}
+
+/**
+ * Tangent leads the sidebar because it is the way in to the whole product;
+ * Projects on its own is one place among the others, so it sits with them.
+ */
+function withProjectsItem(
+  items: SidebarItem[],
+  { projectsEnabled, tangentEnabled }: ProjectsNavState,
+): SidebarItem[] {
+  if (!projectsEnabled) return items;
+  if (tangentEnabled) return [TANGENT_ITEM, ...items];
+
+  const afterAllRuns = items.findIndex((item) => item.to === ALL_RUNS_PATH) + 1;
+  return [
+    ...items.slice(0, afterAllRuns),
+    PROJECTS_ITEM,
+    ...items.slice(afterAllRuns),
+  ];
+}
+
+const navItemClass = (isActive: boolean, highlighted?: boolean) =>
   cn(
     "w-full px-3 py-2 rounded-md text-sm cursor-pointer hover:bg-accent",
     isActive && "bg-accent font-medium",
+    // Inset so the outline costs no layout and the row still lines up with the
+    // items around it.
+    highlighted && "ring-1 ring-inset ring-brand-accent/60",
   );
 
 export function DashboardLayout() {
   const requiresAuthorization = isAuthorizationRequired();
   const isComponentSearchEnabled = useFlagValue("component-search-v2");
+  const projectsEnabled = useProjectsEnabled();
+  const tangentEnabled = useTangentEnabled();
 
   const { shouldShowOnboarding } = useOnboarding();
 
-  const baseItems = isComponentSearchEnabled
+  const componentItems = isComponentSearchEnabled
     ? BASE_SIDEBAR_ITEMS.map((item) =>
         item.to === APP_ROUTES.DASHBOARD_COMPONENTS
           ? COMPONENT_SEARCH_ITEM
           : item,
       )
     : BASE_SIDEBAR_ITEMS;
+
+  const baseItems = withProjectsItem(componentItems, {
+    projectsEnabled,
+    tangentEnabled,
+  });
 
   const sidebarItems: SidebarItem[] = shouldShowOnboarding
     ? [
@@ -98,24 +160,35 @@ export function DashboardLayout() {
 
         <BlockStack gap="1" className="px-3">
           {sidebarItems.map((item) => (
-            <Link
-              key={item.to}
-              to={item.to}
-              className="w-full"
-              activeProps={{ className: "is-active" }}
-              activeOptions={item.exact ? { exact: true } : undefined}
-            >
-              {({ isActive }) => (
-                <InlineStack
-                  gap="2"
-                  blockAlign="center"
-                  className={navItemClass(isActive)}
-                >
-                  <Icon name={item.icon} size="sm" />
-                  <Text size="sm">{item.label}</Text>
-                </InlineStack>
-              )}
-            </Link>
+            <Fragment key={item.to}>
+              <Link
+                to={item.to}
+                className="w-full"
+                activeProps={{ className: "is-active" }}
+                activeOptions={item.exact ? { exact: true } : undefined}
+              >
+                {({ isActive }) => (
+                  <InlineStack
+                    gap="2"
+                    blockAlign="center"
+                    className={navItemClass(isActive, item.highlighted)}
+                  >
+                    <Icon
+                      name={item.icon}
+                      size="sm"
+                      className={cn(item.highlighted && "text-brand-accent")}
+                    />
+                    <Text size="sm">{item.label}</Text>
+                    {item.badge && (
+                      <Badge variant="brand" shape="rounded" size="sm">
+                        {item.badge}
+                      </Badge>
+                    )}
+                  </InlineStack>
+                )}
+              </Link>
+              {item.dividerAfter && <Separator className="my-2" />}
+            </Fragment>
           ))}
         </BlockStack>
 

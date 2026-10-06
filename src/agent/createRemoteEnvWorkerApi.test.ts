@@ -2,8 +2,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AiProviderConfig } from "@/types/aiProvider";
 
-import { buildRemoteEditorAgent } from "./agents/remoteEditorAgent";
+import {
+  buildRemoteEditorAgent,
+  describeToolGrant,
+} from "./agents/remoteEditorAgent";
+import { MISSING_AI_PROVIDER } from "./config";
 import { createRemoteEnvWorkerApi } from "./createRemoteEnvWorkerApi";
+import { recordTraceEvent } from "./middleware/agentTrace";
 import { createSession } from "./session";
 import type { ToolBridgeApi } from "./toolBridgeApi";
 import type { AgentContext } from "./types";
@@ -18,6 +23,7 @@ vi.mock("@openai/agents", () => ({
 }));
 
 vi.mock("./config", () => ({
+  MISSING_AI_PROVIDER: "No AI provider is configured.",
   ProxyClient: class {
     ensureConfigured = vi.fn();
   },
@@ -29,10 +35,21 @@ vi.mock("./skills/loader", () => ({
 
 vi.mock("./agents/remoteEditorAgent", () => ({
   buildRemoteEditorAgent: vi.fn(() => ({})),
+  describeToolGrant: vi.fn(() => ({
+    granted: ["add_task"],
+    withheld: ["auto_layout"],
+    unknown: [],
+  })),
 }));
 
 vi.mock("./session", () => ({
   createSession: vi.fn(() => ({})),
+}));
+
+vi.mock("./middleware/agentTrace", () => ({
+  recordTraceEvent: vi.fn(),
+  setTraceScope: vi.fn(),
+  truncateForTrace: (value: string) => value,
 }));
 
 const bridge = {} as ToolBridgeApi;
@@ -83,7 +100,31 @@ describe("createRemoteEnvWorkerApi", () => {
 
     await expect(
       api.runTurn({ agentId: "a1", message: "hi" }, onStatus),
-    ).rejects.toThrow(/not configured/);
+    ).rejects.toThrow(MISSING_AI_PROVIDER);
+  });
+
+  /**
+   * The allowlist is fixed at spawn, so repeating it every turn would bury a
+   * hundred-turn log in the same line. It still has to be recorded at all: a
+   * tool the server never granted reads in the log exactly like a broken one.
+   */
+  it("records what the server granted once per spawn, not per turn", async () => {
+    const api = createRemoteEnvWorkerApi();
+    api.init(bridge, { mode: "editor" });
+    api.setAiConfig(aiConfig);
+    api.spawnAgent({ agentId: "a1", tools: ["add_task"], systemPrompt: "" });
+
+    await api.runTurn({ agentId: "a1", message: "hi" }, onStatus);
+    await api.runTurn({ agentId: "a1", message: "again" }, onStatus);
+
+    expect(vi.mocked(describeToolGrant)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(describeToolGrant).mock.calls[0][1]).toEqual(["add_task"]);
+    expect(vi.mocked(recordTraceEvent)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        label: "tools",
+        detail: "granted (1): add_task\nwithheld (1): auto_layout",
+      }),
+    );
   });
 
   it("builds the turn session with the latest context set after init", async () => {

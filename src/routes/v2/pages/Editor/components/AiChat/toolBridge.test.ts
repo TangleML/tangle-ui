@@ -1751,13 +1751,19 @@ describe("createEditorToolBridge", () => {
       expect(result.error).toContain("no pipeline canvas is open");
     });
 
-    it("autoLayout reports when no canvas is mounted to lay out", async () => {
+    /**
+     * A host that forgot to inject the handler used to read exactly like an
+     * empty canvas, which is how the Tangent editor went without layout
+     * unnoticed. The two have to be told apart in the log.
+     */
+    it("autoLayout says so when the host never wired layout up at all", async () => {
       const { bridge } = makeBridge();
 
       const result = await bridge.autoLayout();
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain("no pipeline canvas is open");
+      expect(result.error).toContain("not wired up");
+      expect(result.error).not.toContain("no pipeline canvas is open");
     });
   });
 

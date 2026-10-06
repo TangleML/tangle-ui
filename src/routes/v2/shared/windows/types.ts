@@ -63,6 +63,7 @@ export interface WindowOptions {
   variant?: "window" | "panel";
   fillDockHeight?: boolean;
   minDockedHeight?: number;
+  maxDockedHeight?: number;
   onClose?: () => void;
   // Without miniContent a window is filtered out of the collapsed dock strip, so
   // it is unreachable until the user expands the dock area again.
@@ -89,11 +90,13 @@ export const DEFAULT_DOCK_AREA_WIDTH = 320;
 
 export const MIN_DOCK_AREA_WIDTH = 220;
 
-export const DOCK_AREA_RESIZE_SNAP_THRESHOLD = MIN_DOCK_AREA_WIDTH - 20;
+export const DOCK_AREA_COLLAPSE_SNAP_THRESHOLD = MIN_DOCK_AREA_WIDTH - 20;
 
 export const MAX_DOCK_AREA_WIDTH = 600;
 
 export const COLLAPSED_DOCK_AREA_WIDTH = 36;
+
+export const DOCK_AREA_EXPAND_SNAP_THRESHOLD = COLLAPSED_DOCK_AREA_WIDTH + 24;
 
 export const DEFAULT_DOCKED_HEIGHT = 300;
 

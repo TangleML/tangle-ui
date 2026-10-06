@@ -8,7 +8,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Heading, Paragraph, Text } from "@/components/ui/typography";
+import { Paragraph, Text } from "@/components/ui/typography";
 import {
   type RecentItem,
   useRecentlyUsed,
@@ -20,31 +20,12 @@ import { formatRelativeTime } from "@/utils/date";
 import { tracking } from "@/utils/tracking";
 
 import { FavoritesPreview } from "./FavoritesPreview";
+import { ProjectsPreview } from "./ProjectsPreview";
+import { SectionHeader } from "./SectionHeader";
 import { getRecentlyViewedUrl, TypePill } from "./TypePill";
+import { useListedItems } from "./useListedItems";
 
 const PREVIEW_COUNT = 5;
-
-interface SectionHeaderProps {
-  title: string;
-  viewAllTo: string;
-  viewAllLabel?: string;
-}
-
-const SectionHeader = ({
-  title,
-  viewAllTo,
-  viewAllLabel = "View all",
-}: SectionHeaderProps) => (
-  <InlineStack gap="3" blockAlign="center" className="min-w-0">
-    <Heading level={2}>{title}</Heading>
-    <Link
-      to={viewAllTo}
-      className="text-xs text-muted-foreground hover:text-foreground"
-    >
-      {viewAllLabel} →
-    </Link>
-  </InlineStack>
-);
 
 const RecentlyViewedPreviewRow = ({ item }: { item: RecentItem }) => (
   <InlineStack gap="2" className="min-w-0 overflow-hidden">
@@ -71,7 +52,7 @@ const RecentlyViewedPreviewRow = ({ item }: { item: RecentItem }) => (
 
 const RecentlyViewedPreview = () => {
   const { recentlyViewed } = useRecentlyViewed();
-  const preview = recentlyViewed.slice(0, PREVIEW_COUNT);
+  const preview = useListedItems(recentlyViewed).slice(0, PREVIEW_COUNT);
 
   return (
     <BlockStack gap="4" className="min-w-0">
@@ -191,6 +172,8 @@ export function DashboardHomeView() {
         <RecentlyViewedPreview />
         <RecentComponentsPreview />
       </div>
+
+      <ProjectsPreview />
 
       <BlockStack gap="3">
         <SectionHeader

@@ -4,15 +4,12 @@ import { useEffect, useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Paragraph } from "@/components/ui/typography";
 import { useBackend } from "@/providers/BackendProvider";
-import {
-  fetchRunAnnotations,
-  updateRunAnnotation,
-} from "@/services/pipelineRunService";
+import { updateRunAnnotation } from "@/services/pipelineRunService";
+import { runAnnotationsQueryOptions } from "@/services/runAnnotations";
 import {
   getAnnotationValue,
   PIPELINE_RUN_NOTES_ANNOTATION,
 } from "@/utils/annotations";
-import { TWENTY_FOUR_HOURS_IN_MS } from "@/utils/constants";
 
 interface RunNotesEditorProps {
   runId: string;
@@ -27,11 +24,7 @@ export const RunNotesEditor = ({ runId, readOnly }: RunNotesEditorProps) => {
     isLoading,
     refetch,
   } = useQuery({
-    queryKey: ["pipeline-run-annotations", runId],
-    queryFn: () => fetchRunAnnotations(runId, backendUrl),
-    enabled: !!runId,
-    refetchOnWindowFocus: false,
-    staleTime: TWENTY_FOUR_HOURS_IN_MS,
+    ...runAnnotationsQueryOptions(runId, backendUrl),
   });
 
   const { mutate: saveRunNotes, isPending } = useMutation({

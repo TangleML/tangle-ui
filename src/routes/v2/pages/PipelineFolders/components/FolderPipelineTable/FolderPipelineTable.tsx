@@ -20,8 +20,10 @@ import {
 import { Text } from "@/components/ui/typography";
 import { usePagination } from "@/hooks/usePagination";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
+import { useFolderNavigation } from "@/routes/v2/pages/PipelineFolders/context/FolderNavigationContext";
 import { useBulkDeleteMutation } from "@/routes/v2/pages/PipelineFolders/hooks/useBulkDeleteMutation";
 import { useDropMutation } from "@/routes/v2/pages/PipelineFolders/hooks/useDropMutation";
+import { useEmptyPipelineFilter } from "@/routes/v2/pages/PipelineFolders/hooks/useEmptyPipelineFilter";
 import { useFolderBreadcrumbs } from "@/routes/v2/pages/PipelineFolders/hooks/useFolderBreadcrumbs";
 import { useDisconnectFolder } from "@/routes/v2/pages/PipelineFolders/hooks/useFolderMutations";
 import { useFolderPipelines } from "@/routes/v2/pages/PipelineFolders/hooks/useFolderPipelines";
@@ -35,6 +37,7 @@ import { tracking } from "@/utils/tracking";
 
 import { FolderList } from "./components/FolderList";
 import { FolderPermissionBanner } from "./components/FolderPermissionBanner";
+import { HideEmptyPipelinesToggle } from "./components/HideEmptyPipelinesToggle";
 import { ParentFolderRow } from "./components/ParentFolderRow";
 import { PipelineRows } from "./components/PipelineRows";
 import { SelectionToolbar } from "./components/SelectionToolbar";
@@ -71,6 +74,7 @@ export const FolderPipelineTable = withSuspenseWrapper(
     const { data: breadcrumbPath } = useFolderBreadcrumbs(folderId);
 
     const { track } = useAnalytics();
+    const folderNav = useFolderNavigation();
     const selection = useSelection();
     const [searchQuery, setSearchQuery] = useState("");
     const [moveDialogOpen, setMoveDialogOpen] = useState(false);
@@ -99,10 +103,15 @@ export const FolderPipelineTable = withSuspenseWrapper(
       f.name.toLowerCase().includes(searchQuery.toLowerCase()),
     );
 
-    const filteredPipelines = pipelines
-      .filter((p) =>
-        p.storageKey.toLowerCase().includes(searchQuery.toLowerCase()),
-      )
+    const isPicker = folderNav?.onPipelineClick !== undefined;
+    const emptyFilter = useEmptyPipelineFilter(pipelines, isPicker);
+
+    const searchedPipelines = pipelines.filter((p) =>
+      p.storageKey.toLowerCase().includes(searchQuery.toLowerCase()),
+    );
+
+    const filteredPipelines = emptyFilter
+      .apply(searchedPipelines)
       .sort(
         (a, b) =>
           (b.modifiedAt?.getTime() ?? 0) - (a.modifiedAt?.getTime() ?? 0),
@@ -171,6 +180,17 @@ export const FolderPipelineTable = withSuspenseWrapper(
       <BlockStack gap="4" className="w-full">
         {requiresPermission && (
           <FolderPermissionBanner folder={currentFolder} onGranted={refetch} />
+        )}
+
+        {isPicker && (
+          <HideEmptyPipelinesToggle
+            checked={emptyFilter.hideEmpty}
+            hiddenCount={emptyFilter.hiddenCountIn(searchedPipelines)}
+            onChange={(hide) => {
+              emptyFilter.setHideEmpty(hide);
+              pagination.resetPage();
+            }}
+          />
         )}
 
         {hasContent ? (

@@ -20,5 +20,13 @@ export const ZINDEX_ANNOTATION = "zIndex";
 export const SDK_ANNOTATION = "sdk";
 export const TASK_COLOR_ANNOTATION = "tangleml.com/editor/task-color";
 export const EDGE_CONDUITS_ANNOTATION = "tangleml.com/editor/edge-conduits";
-export const PROJECT_ID_ANNOTATION_PREFIX = "tangleml.com/project/project-id/";
+export const PROJECT_ID_ANNOTATION_PREFIX = "tangleml.com/project/id/";
 export const BACKEND_ANNOTATION_PREFIX = "system/";
+export const PROVISIONAL_NAME_ANNOTATION = "tangleml.com/provisional-name";
+
+export const WEB_APP_RUN_SOURCE = "web-app";
+/** Not `tangent`, which submitters outside this app already use. */
+export const TANGENT_UI_RUN_SOURCE = "tangent-ui";
+// Submitted elsewhere and only ever read here: this app writes neither.
+export const TANGLE_CLI_RUN_SOURCE = "tangle-cli";
+export const TANGENT_AGENT_RUN_SOURCE = "tangent";

@@ -25,10 +25,9 @@ const AutoSaveStatus = ({ lastSavedAt }: AutoSaveStatusProps) => {
     if (autoSaveStatus.isSaving) {
       return "Saving...";
     }
-    if (autoSaveStatus.lastSavedAt || lastSavedAt) {
-      return `Last saved ${formatRelativeTime(
-        autoSaveStatus.lastSavedAt ?? lastSavedAt,
-      )}`;
+    const savedAt = autoSaveStatus.lastSavedAt ?? lastSavedAt;
+    if (savedAt) {
+      return `Last saved ${formatRelativeTime(savedAt)}`;
     }
     return "All changes saved";
   }, [autoSaveStatus, lastSavedAt]);

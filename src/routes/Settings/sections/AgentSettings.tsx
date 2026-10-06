@@ -14,10 +14,6 @@ import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
 import type { AiProviderConfig } from "@/types/aiProvider";
 
-/**
- * Shared provider configuration UI for AI features. Custom credentials stay in
- * localStorage and are only used while bring-your-own-key mode is enabled.
- */
 export function AgentSettings() {
   const {
     config,
@@ -45,6 +41,10 @@ export function AgentSettings() {
         reasoningEffort: config.reasoningEffort,
       }
     : config;
+  const unconfiguredStatus = useOwnKey
+    ? "Status: not configured. AI features are disabled until you save a provider."
+    : "Status: not configured. Select a backend in Settings → Backend to use its AI proxy.";
+  const submitLabel = useOwnKey ? "Save and test AI" : "Test AI";
 
   useEffect(() => {
     testRunIdRef.current += 1;
@@ -60,12 +60,14 @@ export function AgentSettings() {
 
   const handleUseOwnKeyChange = (enabled: boolean) => {
     testRunIdRef.current += 1;
-    setValidationError(null);
     setShowKey(false);
     setUseOwnKey(enabled);
   };
 
-  const validateRequiredFields = () => {
+  const handleSave = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (testPendingRef.current) return;
+
     const trimmed = testConfig;
     if (!trimmed.apiBase) {
       setValidationError(
@@ -73,18 +75,9 @@ export function AgentSettings() {
           ? "Enter an API base URL before continuing."
           : "Configure a backend in Settings → Backend before testing AI.",
       );
-      return null;
+      return;
     }
     setValidationError(null);
-    return trimmed;
-  };
-
-  const handleSave = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (testPendingRef.current) return;
-
-    const trimmed = validateRequiredFields();
-    if (!trimmed) return;
 
     const testRunId = testRunIdRef.current + 1;
     testRunIdRef.current = testRunId;
@@ -139,14 +132,13 @@ export function AgentSettings() {
         setApiKey(trimmed.apiKey);
         update({ apiBase: trimmed.apiBase, apiKey: trimmed.apiKey });
       }
-      notify(
-        useOwnKey
-          ? trimmed.model
-            ? `AI provider settings saved. Model “${trimmed.model}” works with the Responses API.`
-            : "AI provider settings saved. The provider works with the Responses API."
-          : "Backend AI proxy is working.",
-        "success",
-      );
+      let successMessage = "Backend AI proxy is working.";
+      if (useOwnKey) {
+        successMessage = trimmed.model
+          ? `AI provider settings saved. Model “${trimmed.model}” works with the Responses API.`
+          : "AI provider settings saved. The provider works with the Responses API.";
+      }
+      notify(successMessage, "success");
     } catch (err) {
       if (!isCurrentTest()) return;
       notify(
@@ -181,11 +173,7 @@ export function AgentSettings() {
             : "AI features use the backend AI proxy. No personal API key is required."}
         </Paragraph>
         <Paragraph size="xs" tone="subdued">
-          {isConfigured
-            ? "Status: configured ✅"
-            : useOwnKey
-              ? "Status: not configured. AI features are disabled until you save a provider."
-              : "Status: not configured. Select a backend in Settings → Backend to use its AI proxy."}
+          {isConfigured ? "Status: configured ✅" : unconfiguredStatus}
         </Paragraph>
       </BlockStack>
 
@@ -202,7 +190,7 @@ export function AgentSettings() {
 
       <form onSubmit={handleSave}>
         <BlockStack gap="4">
-          {useOwnKey ? (
+          {useOwnKey && (
             <>
               <BlockStack gap="1">
                 <Label htmlFor="agent-settings-api-base">API base URL</Label>
@@ -264,11 +252,12 @@ export function AgentSettings() {
                 </Text>
               </BlockStack>
             </>
-          ) : isConfigured ? (
+          )}
+          {!useOwnKey && isConfigured && (
             <Paragraph size="sm" tone="subdued">
               Backend AI proxy: {config.apiBase}
             </Paragraph>
-          ) : null}
+          )}
 
           <BlockStack gap="2">
             <Text size="sm" weight="medium">
@@ -285,11 +274,7 @@ export function AgentSettings() {
 
           <InlineStack gap="2">
             <Button type="submit" disabled={testing}>
-              {testing
-                ? "Testing…"
-                : useOwnKey
-                  ? "Save and test AI"
-                  : "Test AI"}
+              {testing ? "Testing…" : submitLabel}
             </Button>
             {useOwnKey && (
               <Button type="button" variant="ghost" onClick={handleClear}>

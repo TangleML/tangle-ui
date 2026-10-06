@@ -11,9 +11,10 @@ import {
 
 import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import { ComponentSpec, Input, Output, Task } from "@/models/componentSpec";
+import { sessionMemorySeed } from "@/routes/v2/pages/Tangent/services/sessionMemory";
 import type { WorkareaTarget } from "@/routes/v2/pages/Tangent/workarea/types";
-import { idIdentity } from "@/routes/v2/pages/Tangent/workarea/workareaTarget";
 import type { SharedUIStore } from "@/routes/v2/shared/store/SharedStoreContext";
+import { idIdentity } from "@/services/projects/resourceTarget";
 
 import {
   CHAT_TAB_VALUE,
@@ -317,6 +318,7 @@ interface FakeSharedStore {
   editor: {
     setPendingFocusNode: ReturnType<typeof vi.fn>;
     selectNode: ReturnType<typeof vi.fn>;
+    setDraggedSincePointerDown: ReturnType<typeof vi.fn>;
   };
   navigation: {
     rootSpec: ComponentSpec | null;
@@ -326,7 +328,11 @@ interface FakeSharedStore {
 
 function makeSharedStore(rootSpec: ComponentSpec | null): SharedUIStore {
   const fake: FakeSharedStore = {
-    editor: { setPendingFocusNode: vi.fn(), selectNode: vi.fn() },
+    editor: {
+      setPendingFocusNode: vi.fn(),
+      selectNode: vi.fn(),
+      setDraggedSincePointerDown: vi.fn(),
+    },
     navigation: { rootSpec, navigateToPath: vi.fn() },
   };
   return fake as unknown as SharedUIStore;
@@ -391,10 +397,13 @@ interface StartSessionIoMock extends TangentSessionIo {
   newSession: Mock<TangentSessionIo["newSession"]>;
   attachSession: Mock<TangentSessionIo["attachSession"]>;
   detachSession: Mock<TangentSessionIo["detachSession"]>;
+  nameSessionIfUnnamed: Mock<TangentSessionIo["nameSessionIfUnnamed"]>;
   notify: Mock<TangentSessionIo["notify"]>;
 }
 
-function makeSessionIo(projectNotes?: string | null): StartSessionIoMock {
+function makeSessionIo(
+  projectInstructions?: string | null,
+): StartSessionIoMock {
   return {
     newSession: vi
       .fn<TangentSessionIo["newSession"]>()
@@ -402,16 +411,19 @@ function makeSessionIo(projectNotes?: string | null): StartSessionIoMock {
     attachSession: vi
       .fn<TangentSessionIo["attachSession"]>()
       .mockResolvedValue({ id: "resource-1" }),
+    nameSessionIfUnnamed: vi
+      .fn<TangentSessionIo["nameSessionIfUnnamed"]>()
+      .mockResolvedValue(undefined),
     detachSession: vi
       .fn<TangentSessionIo["detachSession"]>()
       .mockResolvedValue(undefined),
     notify: vi.fn<TangentSessionIo["notify"]>(),
-    projectNotes,
+    projectInstructions,
   };
 }
 
 describe("TangentProjectStore.startSession", () => {
-  it("seeds project notes as a session-scoped memory resource", async () => {
+  it("seeds the project instructions as a session-scoped memory resource", async () => {
     const store = new TangentProjectStore("project-1");
     const io = makeSessionIo("Prefer concise plans.");
     store.setSessionIo(io);
@@ -427,14 +439,18 @@ describe("TangentProjectStore.startSession", () => {
           {
             kind: "memory",
             scope: "session",
-            content: "Prefer concise plans.",
+            content: sessionMemorySeed("project-1", "Prefer concise plans."),
           },
         ],
       },
     );
+    expect(io.newSession.mock.calls[0][2].resources?.[0]).toMatchObject({
+      content: expect.stringContaining("Prefer concise plans."),
+    });
   });
 
-  it("omits resources when notes are null", async () => {
+  /** The naming brief is seeded whether or not the project says anything. */
+  it("still seeds a session in a project with no instructions", async () => {
     const store = new TangentProjectStore("project-1");
     const io = makeSessionIo(null);
     store.setSessionIo(io);
@@ -442,28 +458,34 @@ describe("TangentProjectStore.startSession", () => {
     await store.startSession();
 
     const options = io.newSession.mock.calls[0][2];
-    expect(options.resources).toBeUndefined();
+    expect(options.resources).toEqual([
+      {
+        kind: "memory",
+        scope: "session",
+        content: sessionMemorySeed("project-1", null),
+      },
+    ]);
   });
 
-  it("omits resources when notes are only whitespace", async () => {
+  /** A second memory seed would be a second write of the same document. */
+  it("seeds exactly one memory resource", async () => {
     const store = new TangentProjectStore("project-1");
-    const io = makeSessionIo("   \n  ");
+    const io = makeSessionIo("Prefer concise plans.");
     store.setSessionIo(io);
 
     await store.startSession();
 
-    const options = io.newSession.mock.calls[0][2];
-    expect(options.resources).toBeUndefined();
+    expect(io.newSession.mock.calls[0][2].resources).toHaveLength(1);
   });
 
   it("attaches the session after creating it", async () => {
     const store = new TangentProjectStore("project-1");
-    const io = makeSessionIo("Notes");
+    const io = makeSessionIo("Standing context");
     store.setSessionIo(io);
 
     await store.startSession();
 
-    expect(io.attachSession).toHaveBeenCalledWith("new-session");
+    expect(io.attachSession).toHaveBeenCalledWith("new-session", undefined);
     expect(io.newSession.mock.invocationCallOrder[0]).toBeLessThan(
       io.attachSession.mock.invocationCallOrder[0],
     );
@@ -476,12 +498,52 @@ describe("TangentProjectStore.startSession", () => {
 
     await store.startSession({
       prompt: "Fix the failed run",
-      name: "Debug session",
+      name: "Repair run 7",
     });
 
     const [prompt, , options] = io.newSession.mock.calls[0];
     expect(prompt).toBe("Fix the failed run");
-    expect(options.name).toBe("Debug session");
+    expect(options.name).toBe("Repair run 7");
+  });
+
+  /** The name has to reach Tangle's own list, which reads the resource row. */
+  it("attaches the session under the name it was started with", async () => {
+    const store = new TangentProjectStore("project-1");
+    const io = makeSessionIo(null);
+    store.setSessionIo(io);
+
+    await store.startSession({ prompt: "Fix it", name: "Repair run 7" });
+
+    expect(io.attachSession).toHaveBeenCalledWith(
+      "new-session",
+      "Repair run 7",
+    );
+  });
+
+  /** Nothing else will name a session started from inside a project. */
+  it("names an unnamed session after its first message", async () => {
+    const store = new TangentProjectStore("project-1");
+    const io = makeSessionIo(null);
+    store.setSessionIo(io);
+
+    await store.startSession();
+    store.recordSessionPrompt("Why does the preprocessing step time out?");
+
+    expect(io.nameSessionIfUnnamed).toHaveBeenCalledWith(
+      "new-session",
+      "Why does the preprocessing step time out?",
+    );
+  });
+
+  it("says nothing about a message that is only whitespace", async () => {
+    const store = new TangentProjectStore("project-1");
+    const io = makeSessionIo(null);
+    store.setSessionIo(io);
+
+    await store.startSession();
+    store.recordSessionPrompt("   ");
+
+    expect(io.nameSessionIfUnnamed).not.toHaveBeenCalled();
   });
 
   it("keeps a prompted session out of auto-discard", async () => {
@@ -502,6 +564,19 @@ describe("TangentProjectStore.startSession", () => {
     const withIo = new TangentProjectStore("project-1");
     withIo.setSessionIo(makeSessionIo(null));
     await expect(withIo.startSession()).resolves.toBe(true);
+  });
+
+  /**
+   * A link asking for a new session arrives before Tangent is reachable, so
+   * whoever acts on it has to be able to see that starting one would refuse.
+   */
+  it("says whether it can start one at all", () => {
+    const store = new TangentProjectStore("project-1");
+    expect(store.canStartSession).toBe(false);
+
+    store.setSessionIo(makeSessionIo(null));
+
+    expect(store.canStartSession).toBe(true);
   });
 });
 

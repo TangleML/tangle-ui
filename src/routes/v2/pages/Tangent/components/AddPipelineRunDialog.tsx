@@ -8,8 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { BlockStack } from "@/components/ui/layout";
 import type { DialogProps } from "@/providers/DialogProvider/types";
-import { getDefaultRunPath } from "@/routes/runRoutes";
-import { pipelineRunResourceExtraData } from "@/routes/v2/pages/Tangent/workarea/resourceExtraData";
+import { pipelineRunResourceInput } from "@/services/projects/resourceDescriptor";
 import type { CreateResourceInput } from "@/services/projects/types";
 
 export function AddPipelineRunDialog({
@@ -17,14 +16,7 @@ export function AddPipelineRunDialog({
 }: DialogProps<CreateResourceInput>) {
   function handleRunClick(run: PipelineRunResponse) {
     const runId = `${run.id}`;
-    const url = new URL(getDefaultRunPath(runId), window.location.origin).href;
-    close({
-      entity: "document",
-      name: run.pipeline_name ?? `Run ${runId}`,
-      extraData: pipelineRunResourceExtraData(runId, url),
-      // required by api
-      payload: {},
-    });
+    close(pipelineRunResourceInput(runId, run.pipeline_name ?? `Run ${runId}`));
   }
 
   return (

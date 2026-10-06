@@ -99,8 +99,7 @@ export const isOlderThanDays = (date: string | Date, days: number): boolean => {
 };
 
 /** Returns e.g. "9:43am", "yesterday", "3 days ago". */
-export const formatRelativeTime = (date: Date | null) => {
-  if (!date) return null;
+export const formatRelativeTime = (date: Date) => {
   const now = new Date();
   const past = new Date(date);
 

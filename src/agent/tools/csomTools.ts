@@ -1,18 +1,6 @@
-/**
- * CSOM tools for the in-browser agent.
- *
- * Each tool is a thin OpenAI Agents `tool()` wrapper around a method on
- * the Comlink-proxied `ToolBridgeApi`. The bridge runs on the main
- * thread and mutates the live MobX `ComponentSpec` inside an undo
- * group, so the agent's edits are immediately reflected in the editor
- * and undoable as a single user action.
- *
- * Schema note: OpenAI's structured-outputs strict mode requires every
- * Zod field to be required or `.nullable().optional()` — `.optional()`
- * alone is rejected. The model passes `null` for fields it wants to
- * omit; the execute functions normalize `null` to `undefined` before
- * handing data to the bridge, since the bridge contract uses `T?`.
- */
+// Strict mode rejects a bare `.optional()`, so every omittable field is
+// `.nullable().optional()` and the model passes `null` to omit it. The bridge
+// contract uses `T?`, so each execute normalizes those back to `undefined`.
 import { tool } from "@openai/agents";
 import { z } from "zod";
 
@@ -23,6 +11,7 @@ import {
 import { PRESET_COLORS } from "@/components/ui/colorPresets";
 import type { ArgumentType, ComponentReference } from "@/models/componentSpec";
 
+import type { ComponentCatalog } from "../componentCatalog";
 import type { ToolBridgeApi } from "../toolBridgeApi";
 
 type JsonValue =
@@ -44,6 +33,37 @@ const jsonValueSchema: z.ZodType<JsonValue> = z.lazy(() =>
 );
 
 const arbitraryObjectSchema = z.object({}).catchall(jsonValueSchema);
+
+/**
+ * `implementation` cannot be an open object: strict mode rewrites every
+ * `type: "object"` to `additionalProperties: false`, so a catchall permits
+ * exactly one value — `{}` — and the model cannot say what runs, however it is
+ * prompted. Every key has to be spelled out to be reachable.
+ */
+const commandArgumentSchema = z.union([
+  z.string(),
+  z.object({ inputValue: z.string() }),
+  z.object({ inputPath: z.string() }),
+  z.object({ outputPath: z.string() }),
+]);
+
+const containerImplementationSchema = z.object({
+  container: z.object({
+    image: z
+      .string()
+      .describe(
+        "Container image to run, e.g. `python:3.11-slim`. Pick one that already has what the command needs.",
+      ),
+    command: z
+      .array(commandArgumentSchema)
+      .nullable()
+      .optional()
+      .describe(
+        'Executable and its arguments, run without a shell; null falls back to the image\'s own ENTRYPOINT. An input reaches it as {"inputValue": "<input name>"} for the value itself or {"inputPath": "<input name>"} for a file holding it; an output is a file the command must write at {"outputPath": "<output name>"}, creating parent directories first.',
+      ),
+    args: z.array(commandArgumentSchema).nullable().optional(),
+  }),
+});
 
 const argumentValueSchema = z.union([
   z.string(),
@@ -78,12 +98,7 @@ const argumentValueSchema = z.union([
   }),
 ]);
 
-/**
- * Recursively strips `null` values from an object so the bridge contract
- * (which uses `T?` for optional fields) sees missing keys instead of
- * explicit nulls. Used for the nested `componentRef` payload in
- * `add_task`.
- */
+/** For a nested payload, where the per-field normalizing cannot reach. */
 function dropNulls<T>(value: T): T {
   return JSON.parse(
     JSON.stringify(value, (_key, v: unknown) => (v === null ? undefined : v)),
@@ -100,7 +115,16 @@ const EXPECTED_GRAPH_GUIDANCE =
 const positionSchema = z.object({ x: z.number(), y: z.number() });
 const sizeSchema = z.object({ width: z.number(), height: z.number() });
 
-export function createCsomTools(bridge: ToolBridgeApi) {
+/**
+ * The catalog is required rather than defaulted: a host that forgot to pass the
+ * session's own would get a fresh empty one, where every `componentId` misses
+ * and `add_task` answers that the component was never searched for — which
+ * reads in the log exactly like the model misusing the tool.
+ */
+export function createCsomTools(
+  bridge: ToolBridgeApi,
+  catalog: ComponentCatalog,
+) {
   const getPipelineState = tool({
     name: "get_pipeline_state",
     description:
@@ -195,73 +219,108 @@ export function createCsomTools(bridge: ToolBridgeApi) {
   const addTask = tool({
     name: "add_task",
     description:
-      "Add a new task node. Pass the full componentRef from a search_components result (with `url` and/or `spec`). Adds to the top-level pipeline unless inSubgraphTaskId names a subgraph to add it inside.",
-    parameters: z.object({
-      name: z.string().describe("Human-readable task name"),
-      componentRef: z
-        .object({
-          name: z.string(),
-          url: z.string().nullable().optional(),
-          spec: z
-            .object({
-              name: z.string(),
-              description: z.string().nullable().optional(),
-              inputs: z
-                .array(
-                  z.object({
-                    name: z.string(),
-                    type: z.string().nullable().optional(),
-                    description: z.string().nullable().optional(),
-                    default: z.string().nullable().optional(),
-                    optional: z.boolean().nullable().optional(),
-                  }),
-                )
-                .nullable()
-                .optional(),
-              outputs: z
-                .array(
-                  z.object({
-                    name: z.string(),
-                    type: z.string().nullable().optional(),
-                    description: z.string().nullable().optional(),
-                  }),
-                )
-                .nullable()
-                .optional(),
-              // `z.record(z.string(), …)` emits `propertyNames` in its JSON
-              // Schema, which OpenAI's strict mode rejects at tool registration
-              // (failing every request routed to this agent before the model
-              // ever runs). Keep the field opaque; the bridge accepts arbitrary
-              // implementation shapes, but force an explicit object type so
-              // strict JSON Schema validation does not see typeless `anyOf`.
-              implementation: arbitraryObjectSchema.nullable().optional(),
-            })
-            .nullable()
-            .optional(),
-        })
-        .refine(
-          (ref) => ref.url != null || ref.spec != null,
-          "componentRef must include either a url or an inline spec — name alone is not enough",
-        )
-        .describe(
-          "Component reference from search_components — must include url and/or spec.",
-        ),
-      inSubgraphTaskId: z
-        .string()
-        .nullable()
-        .optional()
-        .describe(
-          "$id of a subgraph task to add this inside. Omit for the top-level pipeline. When the user means the subgraph they are viewing, pass activeSubgraphTaskId from get_pipeline_state verbatim — a name from activeSubgraphPath is not an $id.",
-        ),
-    }),
-    execute: async ({ name, componentRef, inSubgraphTaskId }) =>
-      asJson(
+      "Add a new task node. For anything `search_components` found, pass its result `id` as `componentId` — the component is already held, and repeating its spec back loses whatever part of it this schema does not name. Use `componentRef` only to author a component the registry does not have, and then `spec.implementation` is required: a component with ports and nothing that runs them is refused at submit. Adds to the top-level pipeline unless inSubgraphTaskId names a subgraph to add it inside.",
+    parameters: z
+      .object({
+        name: z.string().describe("Human-readable task name"),
+        componentId: z
+          .string()
+          .trim()
+          .min(1)
+          .nullable()
+          .optional()
+          .describe(
+            "The `id` of a search_components result, which is how you add anything the registry already has. Pass this or componentRef, not both.",
+          ),
+        componentRef: z
+          .object({
+            name: z.string(),
+            url: z.string().nullable().optional(),
+            spec: z
+              .object({
+                name: z.string(),
+                description: z.string().nullable().optional(),
+                inputs: z
+                  .array(
+                    z.object({
+                      name: z.string(),
+                      type: z.string().nullable().optional(),
+                      description: z.string().nullable().optional(),
+                      default: z.string().nullable().optional(),
+                      optional: z.boolean().nullable().optional(),
+                    }),
+                  )
+                  .nullable()
+                  .optional(),
+                outputs: z
+                  .array(
+                    z.object({
+                      name: z.string(),
+                      type: z.string().nullable().optional(),
+                      description: z.string().nullable().optional(),
+                    }),
+                  )
+                  .nullable()
+                  .optional(),
+                implementation: containerImplementationSchema
+                  .nullable()
+                  .optional()
+                  .describe(
+                    "How the task actually runs. Required unless `url` is given — a component with ports and nothing to run them is refused at submit. Carry it through verbatim from a search_components result, or write one: an image, and a command that reads each input and writes each output.",
+                  ),
+              })
+              .nullable()
+              .optional(),
+          })
+          .nullable()
+          .optional()
+          .refine(
+            (ref) => ref == null || ref.url != null || ref.spec != null,
+            "componentRef must include either a url or an inline spec — name alone is not enough",
+          )
+          .refine(
+            (ref) =>
+              ref == null ||
+              ref.url != null ||
+              ref.spec?.implementation != null,
+            "an inline spec must include `implementation` — a component with ports and nothing that runs them is refused at submit, and the refusal cannot say which task it came from",
+          )
+          .describe(
+            "A component you are authoring yourself. For a component search_components found, pass componentId instead.",
+          ),
+        inSubgraphTaskId: z
+          .string()
+          .nullable()
+          .optional()
+          .describe(
+            "$id of a subgraph task to add this inside. Omit for the top-level pipeline. When the user means the subgraph they are viewing, pass activeSubgraphTaskId from get_pipeline_state verbatim — a name from activeSubgraphPath is not an $id.",
+          ),
+      })
+      .refine(
+        (args) => (args.componentId != null) !== (args.componentRef != null),
+        "pass componentId (from a search_components result) or componentRef (a component you are authoring) — exactly one of the two",
+      ),
+    execute: async ({ name, componentId, componentRef, inSubgraphTaskId }) => {
+      const resolved =
+        componentId != null
+          ? catalog.lookup(componentId)
+          : (dropNulls(componentRef) as ComponentReference);
+
+      if (!resolved) {
+        return asJson({
+          success: false,
+          error: `No component with id "${componentId}" has been searched for in this session. Call search_components first and use an id from its results, or pass componentRef to author a component yourself.`,
+        });
+      }
+
+      return asJson(
         await bridge.addTask({
           name,
-          componentRef: dropNulls(componentRef) as ComponentReference,
+          componentRef: resolved,
           inSubgraphTaskId: inSubgraphTaskId ?? undefined,
         }),
-      ),
+      );
+    },
   });
 
   const deleteTask = tool({

@@ -65,12 +65,22 @@ export const ExistingFlags: ConfigFlags = {
     category: "beta",
   },
 
+  ["projects"]: {
+    name: "Projects",
+    description:
+      "Enable the Projects dashboard for grouping pipelines, documents and runs.",
+    default: false,
+    category: "beta",
+  },
+
   ["tangent-shell"]: {
     name: "Tangent",
-    description: "Agentic Tangle - coming soon!",
+    description:
+      "Turn Projects into Tangent. Each session chats with an agent that can build, run and debug the pipelines in a project. Needs an AI provider set in AI Configuration.",
     default: false,
     category: "beta",
     canEnable: isTangentEnabled,
+    dependsOn: "projects",
   },
 
   ["component-search-v2"]: {

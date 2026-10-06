@@ -6,11 +6,23 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("./projectsService");
 vi.mock("./workspacesService");
 
+const removeFavorite = vi.fn().mockResolvedValue(undefined);
+vi.mock("@/hooks/useFavorites", () => ({
+  useFavorites: () => ({ removeFavorite }),
+}));
+
+vi.mock("@/hooks/useRecentlyViewed", () => ({
+  removeRecentlyViewed: vi.fn(),
+}));
+
 let backend = { configured: true, available: true };
 vi.mock("@/providers/BackendProvider", () => ({
   useBackend: () => backend,
 }));
 
+import { removeRecentlyViewed } from "@/hooks/useRecentlyViewed";
+
+import { ProjectsApiError } from "./errors";
 import * as projectsService from "./projectsService";
 import type { Project, ProjectPage, Workspace } from "./types";
 import {
@@ -28,7 +40,7 @@ const workspace: Workspace = {
   name: "Research",
   description: null,
   isActive: true,
-  extraData: null,
+  metadata: null,
   createdAt: new Date("2024-01-02T03:04:05Z"),
 };
 
@@ -42,8 +54,7 @@ const project: Project = {
   createdAt: new Date("2024-01-02T03:04:05Z"),
   updatedAt: new Date("2024-02-03T04:05:06Z"),
   resourceCounts: {},
-  notes: null,
-  extraData: null,
+  metadata: null,
 };
 
 const projectPage: ProjectPage = {
@@ -56,6 +67,15 @@ function makeClient() {
   return new QueryClient({
     defaultOptions: {
       queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
+}
+
+function makeImpatientClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: { retryDelay: 0 },
       mutations: { retry: false },
     },
   });
@@ -142,6 +162,45 @@ describe("project query hooks", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual(project);
   });
+
+  it("useProject takes a 404 as the answer and does not ask again", async () => {
+    vi.mocked(projectsService.getProject).mockRejectedValue(
+      new ProjectsApiError("not found", 404),
+    );
+
+    const { result } = renderHook(() => useProject("missing"), {
+      wrapper: wrapperFor(makeImpatientClient()),
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(projectsService.getProject).toHaveBeenCalledTimes(1);
+  });
+
+  it("useProject asks again when the backend merely faltered", async () => {
+    vi.mocked(projectsService.getProject).mockRejectedValue(
+      new ProjectsApiError("gateway", 502),
+    );
+
+    const { result } = renderHook(() => useProject("p1"), {
+      wrapper: wrapperFor(makeImpatientClient()),
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(projectsService.getProject).toHaveBeenCalledTimes(4);
+  });
+
+  it("useProjects takes a refused list as the answer", async () => {
+    vi.mocked(projectsService.listProjects).mockRejectedValue(
+      new ProjectsApiError("forbidden", 403),
+    );
+
+    const { result } = renderHook(() => useProjects(), {
+      wrapper: wrapperFor(makeImpatientClient()),
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(projectsService.listProjects).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("project mutation hooks", () => {
@@ -178,24 +237,68 @@ describe("project mutation hooks", () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["projects", "p1"] });
   });
 
-  it("useDeleteProject invalidates list and detail", async () => {
-    vi.mocked(projectsService.deleteProject).mockResolvedValue({
-      id: "p1",
-      deletedResourceCounts: {},
-      deletedResourceTotal: 0,
-    });
-    const client = makeClient();
-    const invalidate = vi.spyOn(client, "invalidateQueries");
-
-    const { result } = renderHook(() => useDeleteProject(), {
-      wrapper: wrapperFor(client),
+  describe("useDeleteProject", () => {
+    beforeEach(() => {
+      vi.mocked(projectsService.deleteProject).mockResolvedValue({
+        id: "p1",
+        deletedResourceCounts: {},
+        deletedResourceTotal: 0,
+      });
     });
 
-    await act(async () => {
-      await result.current.mutateAsync("p1");
+    async function deleteProject(client: QueryClient) {
+      const { result } = renderHook(() => useDeleteProject(), {
+        wrapper: wrapperFor(client),
+      });
+      await act(async () => {
+        await result.current.mutateAsync("p1");
+      });
+    }
+
+    it("invalidates the list", async () => {
+      const client = makeClient();
+      const invalidate = vi.spyOn(client, "invalidateQueries");
+
+      await deleteProject(client);
+
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: ["projects"] });
     });
 
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["projects"] });
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["projects", "p1"] });
+    /**
+     * Invalidating leaves the data in place, so the project's own page would
+     * mount, render the cached project in full, and only then refetch its way
+     * to an error — a deleted project, on screen, complete.
+     */
+    it("drops the project from the cache rather than marking it stale", async () => {
+      const client = makeClient();
+      client.setQueryData(["projects", "p1"], project);
+
+      await deleteProject(client);
+
+      expect(client.getQueryData(["projects", "p1"])).toBeUndefined();
+    });
+
+    it("forgets the links left pointing at it", async () => {
+      await deleteProject(makeClient());
+
+      expect(removeRecentlyViewed).toHaveBeenCalledWith("project", "p1");
+      expect(removeFavorite).toHaveBeenCalledWith("project", "p1");
+    });
+
+    it("leaves the lists alone when the delete fails", async () => {
+      vi.mocked(projectsService.deleteProject).mockRejectedValue(
+        new Error("nope"),
+      );
+      const { result } = renderHook(() => useDeleteProject(), {
+        wrapper: wrapperFor(makeClient()),
+      });
+
+      await act(async () => {
+        await result.current.mutateAsync("p1").catch(() => undefined);
+      });
+
+      expect(removeRecentlyViewed).not.toHaveBeenCalled();
+      expect(removeFavorite).not.toHaveBeenCalled();
+    });
   });
 });

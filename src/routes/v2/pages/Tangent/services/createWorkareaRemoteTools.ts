@@ -6,6 +6,7 @@ import {
   truncateContainerState,
   truncateExecutionDetails,
 } from "@/agent/util/truncate";
+import { coerceWorkareaTarget } from "@/routes/v2/pages/Tangent/services/resolveWorkareaTarget";
 import type {
   WorkareaTab,
   WorkareaTarget,
@@ -13,18 +14,17 @@ import type {
 } from "@/routes/v2/pages/Tangent/workarea/types";
 import {
   formatWorkareaTarget,
+  idIdentity,
   nameIdentity,
   parseIdentity,
-  parseWorkareaTarget,
-} from "@/routes/v2/pages/Tangent/workarea/workareaTarget";
+} from "@/services/projects/resourceTarget";
 import { getOverallExecutionStatusFromStats } from "@/utils/executionStatus";
 import { isRecord } from "@/utils/typeGuards";
 
 /**
- * The read-only run/execution fetches the workarea inspect tools drive. These
- * mirror the same-named `ToolBridgeApi` methods, but are backed by a
- * project-level backend bridge (not any one tab's canvas) so Prime can inspect
- * runs without spawning a sub-agent.
+ * Mirrors the same-named `ToolBridgeApi` methods, but backed by a project-level
+ * bridge rather than any one tab's canvas, so runs can be inspected without
+ * spawning a sub-agent.
  */
 export type RunInspectDeps = Pick<
   ToolBridgeApi,
@@ -45,8 +45,14 @@ export interface WorkareaToolDeps {
   getEnvironmentId: (tabId: string) => string | undefined;
   waitForEnvironment: (tabId: string) => Promise<string | undefined>;
   runInspect: RunInspectDeps;
+  createPipeline: (
+    name?: string,
+  ) => Promise<{ pipelineName: string; fileId: string }>;
   clonePipeline: (runId: string) => Promise<{ pipelineName: string }>;
   refreshResources: () => Promise<void>;
+  renameProject: (name: string) => Promise<{ renamed: boolean }>;
+  nameSession: (name: string) => Promise<void>;
+  namePipeline: (name: string) => Promise<{ renamed: boolean }>;
 }
 
 interface WorkareaTabSummary {
@@ -80,6 +86,55 @@ function summarize(
   return { ...base, environmentId, ready: environmentId != null };
 }
 
+/**
+ * A pipeline or run tab is held back until its sub-agent host connects or the
+ * wait gives up, because the tab is worth little to an agent until it can be
+ * spawned into; `ready` says which happened.
+ */
+async function openAndSummarize(
+  getDeps: () => WorkareaToolDeps,
+  target: WorkareaTarget,
+  title?: string,
+): Promise<WorkareaTabSummary> {
+  const tab = await getDeps().openTarget(target, title);
+  if (!isSpawnable(tab)) return summarize(tab, tab.id);
+
+  const environmentId = await getDeps().waitForEnvironment(tab.id);
+  const currentDeps = getDeps();
+  const currentTab = currentDeps
+    .getTabs()
+    .find((candidate) => candidate.id === tab.id);
+  if (!currentTab) {
+    throw new Error(
+      `Workarea tab "${tab.id}" was closed before its environment became ready.`,
+    );
+  }
+  return summarize(currentTab, currentDeps.getActiveTabId(), environmentId);
+}
+
+function optionalName(args: unknown): string | undefined {
+  if (!isRecord(args) || !("name" in args) || args.name === undefined) {
+    return undefined;
+  }
+  if (typeof args.name !== "string" || args.name.trim().length === 0) {
+    throw new Error("`name` must be a non-empty string when provided.");
+  }
+  return args.name.trim();
+}
+
+const NAME_LIMIT = 60;
+
+function requireName(args: unknown): string {
+  const name = optionalName(args);
+  if (!name) {
+    throw new Error("`name` is required and must be a non-empty string.");
+  }
+  if (name.length > NAME_LIMIT) {
+    throw new Error(`\`name\` must be at most ${NAME_LIMIT} characters.`);
+  }
+  return name;
+}
+
 function optionalRunId(args: unknown): string | undefined {
   if (!isRecord(args) || !("runId" in args)) return undefined;
   if (typeof args.runId !== "string" || args.runId.trim().length === 0) {
@@ -101,11 +156,7 @@ function requireExecutionId(args: unknown): string {
   return args.executionId;
 }
 
-/**
- * Resolves which run to inspect: an explicit `runId` wins, else the active run
- * tab, else the only open run tab. Throws a model-friendly error when the
- * choice is ambiguous or there is no run open.
- */
+/** Throws model-readable prose, because the model is what reads the failure. */
 function resolveRunId(deps: WorkareaToolDeps, explicit?: string): string {
   if (explicit) return explicit;
   const runTabs = deps.getTabs().filter((tab) => tab.target.type === "run");
@@ -128,8 +179,8 @@ function resolveRunId(deps: WorkareaToolDeps, explicit?: string): string {
 const TARGET_DESCRIPTION =
   "A `type://identity` target: `artifact://id/<url>`, " +
   "`pipeline://id/<fileId>`, `pipeline://name/<name>`, or `run://id/<runId>`. " +
-  "Legacy `pipeline://<fileId>`, `run:<id>`, run URLs, artifact URLs, and bare " +
-  "pipeline names are also accepted.";
+  "A run url is also accepted, from any origin, and names the run this " +
+  "environment holds under that id.";
 
 const RUN_ID_SCHEMA = {
   type: "object",
@@ -151,15 +202,17 @@ const EXECUTION_ID_SCHEMA = {
 } as const;
 
 /**
- * The tab-management + run-inspect tools an agent uses to arrange and read the
- * Dynamic Workarea: open a resource, list open tabs, read the active tab, close
- * a tab, and inspect an open run. Spawnable (pipeline / run) tabs report an
- * `environmentId` that identifies whether that tab's sub-agent host is
- * connected; the server routes spawns to the prompting person's host, so an
- * agent cannot pick one.
+ * Creating a pipeline belongs here rather than with the canvas tools, which are
+ * a sub-agent's view of an editor already mounted on a loaded pipeline. Nothing
+ * downstream of a tab can bring a pipeline into being, so without this an agent
+ * asked to build one has nowhere to start.
  *
- * `getDeps` reads the live handles per call so a single catalog instance always
- * acts on the current tab state without rebuilding the socket connection.
+ * `environmentId` only says whether a tab's sub-agent host is connected: the
+ * server routes spawns to the prompting person's host, so an agent cannot pick
+ * one.
+ *
+ * `getDeps` reads the live handles per call so one catalog instance always acts
+ * on the current tab state without rebuilding the socket connection.
  */
 export function createWorkareaRemoteTools(
   getDeps: () => WorkareaToolDeps,
@@ -191,24 +244,45 @@ export function createWorkareaRemoteTools(
           throw new Error("`target` is required and must be a string.");
         }
         const title = typeof args.title === "string" ? args.title : undefined;
-        const target = parseWorkareaTarget(args.target);
-        const tab = await getDeps().openTarget(target, title);
-        if (!isSpawnable(tab)) return summarize(tab, tab.id);
-        const environmentId = await getDeps().waitForEnvironment(tab.id);
-        const currentDeps = getDeps();
-        const currentTab = currentDeps
-          .getTabs()
-          .find((candidate) => candidate.id === tab.id);
-        if (!currentTab) {
-          throw new Error(
-            `Workarea tab "${tab.id}" was closed before its environment became ready.`,
-          );
-        }
-        return summarize(
-          currentTab,
-          currentDeps.getActiveTabId(),
-          environmentId,
+        return openAndSummarize(
+          getDeps,
+          coerceWorkareaTarget(args.target),
+          title,
         );
+      },
+    },
+    create_pipeline: {
+      description:
+        "Create a new, empty pipeline and open it in the Dynamic Workarea, " +
+        "ready to build on. Use this when asked to build a pipeline and none " +
+        "is open — there is no other way to get a canvas from nothing, and the " +
+        "canvas editing tools only exist once a pipeline tab is open. `name` is " +
+        "optional and is made unique if it is already taken. The pipeline is " +
+        "attached to the project automatically (it shows up in Resources). " +
+        "Returns the tab summary plus the pipeline `name` and its " +
+        "`pipeline://id/<fileId>` `target`, including the `environmentId` and " +
+        "`ready` flag for that tab's sub-agent host, so a spawn can follow " +
+        "straight on.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          name: {
+            type: "string",
+            description:
+              "Optional name for the new pipeline. Defaults to an untitled one.",
+          },
+        },
+      },
+      execute: async (args) => {
+        const { pipelineName, fileId } = await getDeps().createPipeline(
+          optionalName(args),
+        );
+        const target: WorkareaTarget = {
+          type: "pipeline",
+          identity: idIdentity(fileId),
+        };
+        const tab = await openAndSummarize(getDeps, target, pipelineName);
+        return { ...tab, name: pipelineName };
       },
     },
     clone_pipeline: {
@@ -280,6 +354,69 @@ export function createWorkareaRemoteTools(
         getDeps().closeTab(args.tabId);
         return { ok: true };
       },
+    },
+    rename_project: {
+      description:
+        "Rename the project this session belongs to, once you know what the " +
+        "work is actually about. Only a provisional name may be replaced — one " +
+        "derived from the opening prompt, or numbered. A name someone chose is " +
+        "left alone and the call returns `{ renamed: false }`, which is a " +
+        "final answer, not something to retry or work around. Keep the name " +
+        "short: a title for the work, not a description of it.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          name: {
+            type: "string",
+            description: `A short title for the project, at most ${NAME_LIMIT} characters.`,
+          },
+        },
+        required: ["name"],
+      },
+      execute: async (args) => getDeps().renameProject(requireName(args)),
+    },
+    name_session: {
+      description:
+        "Name this session after what the conversation is about, so it can be " +
+        "told apart from the others in the project. Call it once, as soon as " +
+        "the subject is clear. Naming again replaces the previous name, so do " +
+        "not call it repeatedly as the work moves on. Keep it short: a title " +
+        "for the conversation, not a summary of it.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          name: {
+            type: "string",
+            description: `A short title for the session, at most ${NAME_LIMIT} characters.`,
+          },
+        },
+        required: ["name"],
+      },
+      execute: async (args) => {
+        await getDeps().nameSession(requireName(args));
+        return { ok: true };
+      },
+    },
+    name_pipeline: {
+      description:
+        "Name the pipeline open on the canvas, at the same time you name the " +
+        "session — the opening message says what it is for, so there is " +
+        "nothing to wait for. Only a provisional name may be replaced: a " +
+        "pipeline someone named is left alone and the call returns " +
+        "`{ renamed: false }`, which is a final answer, not something to " +
+        "retry. Keep it short: a title for what the pipeline does, not a " +
+        "restatement of the request.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          name: {
+            type: "string",
+            description: `A short title for the pipeline, at most ${NAME_LIMIT} characters.`,
+          },
+        },
+        required: ["name"],
+      },
+      execute: async (args) => getDeps().namePipeline(requireName(args)),
     },
     refresh_project_resources: {
       description:

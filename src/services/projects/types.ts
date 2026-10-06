@@ -6,7 +6,7 @@ export interface Workspace {
   name: string;
   description: string | null;
   isActive: boolean;
-  extraData: Record<string, unknown> | null;
+  metadata: Record<string, unknown> | null;
   createdAt: Date;
 }
 
@@ -17,15 +17,18 @@ export interface ProjectSummary {
   description: string | null;
   createdBy: string | null;
   origin: string;
+  metadata: Record<string, unknown> | null;
   createdAt: Date;
   updatedAt: Date;
   resourceCounts: Record<string, number>;
 }
 
-export interface Project extends ProjectSummary {
-  notes: string | null;
-  extraData: Record<string, unknown> | null;
-}
+/**
+ * The single read returns exactly what the list does. Kept as its own name so
+ * the distinction the API draws survives a field being added back to one and
+ * not the other.
+ */
+export type Project = ProjectSummary;
 
 export interface ProjectPage {
   items: ProjectSummary[];
@@ -44,16 +47,14 @@ export interface CreateProjectInput {
   workspaceId: string;
   name: string;
   description?: string | null;
-  notes?: string | null;
   origin?: ProjectOrigin;
-  extraData?: Record<string, unknown> | null;
+  metadata?: Record<string, unknown> | null;
 }
 
 export interface UpdateProjectInput {
   name?: string | null;
   description?: string | null;
-  notes?: string | null;
-  extraData?: Record<string, unknown> | null;
+  metadata?: Record<string, unknown> | null;
 }
 
 export interface DeleteProjectResult {
@@ -71,7 +72,7 @@ export interface ProjectResourceSummary {
   entity: string;
   name: string | null;
   entityId: string | null;
-  extraData: Record<string, unknown> | null;
+  metadata: Record<string, unknown> | null;
   createdBy: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -87,6 +88,25 @@ export interface ProjectResourcePage {
   totalCount: number;
 }
 
+export interface ProjectRun {
+  id: string;
+  rootExecutionId: string;
+  pipelineName: string | null;
+  createdBy: string | null;
+  createdAt: Date | null;
+}
+
+export interface ProjectRunPage {
+  items: ProjectRun[];
+  nextPageToken: string | null;
+}
+
+export interface ListProjectRunsParams {
+  pageToken?: string;
+  since?: string;
+  until?: string;
+}
+
 export interface ListProjectResourcesParams {
   entity?: ProjectResourceEntity[];
   pageToken?: string;
@@ -98,13 +118,13 @@ export interface CreateResourceInput {
   name?: string | null;
   entityId?: string | null;
   payload?: Record<string, unknown> | null;
-  extraData?: Record<string, unknown> | null;
+  metadata?: Record<string, unknown> | null;
 }
 
 export interface UpdateResourceInput {
   name?: string | null;
   payload?: Record<string, unknown> | null;
-  extraData?: Record<string, unknown> | null;
+  metadata?: Record<string, unknown> | null;
 }
 
 export const WorkspacesQueryKeys = {
@@ -123,6 +143,15 @@ export const ProjectResourcesQueryKeys = {
   All: (projectId: string) => ["projects", projectId, "resources"] as const,
   Id: (projectId: string, resourceId: string) =>
     ["projects", projectId, "resources", resourceId] as const,
+  Lists: (projectId: string) =>
+    ["projects", projectId, "resources", "list"] as const,
   List: (projectId: string, params: ListProjectResourcesParams = {}) =>
     ["projects", projectId, "resources", "list", params] as const,
+} as const;
+
+export const ProjectRunsQueryKeys = {
+  All: (projectId: string) => ["projects", projectId, "runs"] as const,
+  List: (projectId: string, params: ListProjectRunsParams = {}) =>
+    ["projects", projectId, "runs", "list", params] as const,
+  Stats: (runId: string) => ["pipeline-run-stats", runId] as const,
 } as const;

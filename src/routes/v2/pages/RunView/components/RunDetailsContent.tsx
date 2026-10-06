@@ -7,6 +7,7 @@ import type {
   PipelineRunResponse,
 } from "@/api/types.gen";
 import { RunNotesEditor } from "@/components/PipelineRun/RunNotesEditor";
+import { ProjectDetailsSection } from "@/components/Project/ProjectDetailsSection";
 import { AnnotationList } from "@/components/shared/ContextPanel/Blocks/AnnotationList";
 import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlock";
 import { KeyValueList } from "@/components/shared/ContextPanel/Blocks/KeyValueList";
@@ -15,13 +16,23 @@ import PipelineIO from "@/components/shared/Execution/PipelineIO";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import {
-  getRunSourceBucket,
   getRunSourceMessage,
+  hasRunSource,
   RunSourceIcon,
 } from "@/components/shared/RunSource";
-import { useFlagValue } from "@/components/shared/Settings/useFlags";
+import {
+  useProjectsEnabled,
+  useTangentEnabled,
+} from "@/components/shared/Settings/useFlags";
 import { TagList } from "@/components/shared/Tags/TagList";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
@@ -31,9 +42,11 @@ import type { ComponentSpec } from "@/models/componentSpec";
 import { useBackend } from "@/providers/BackendProvider";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
 import { useDebugInTangent } from "@/routes/v2/pages/RunView/hooks/useDebugInTangent";
+import { useAiGate } from "@/routes/v2/shared/components/AiChat/components/useAiGate";
 import { PipelineDetailsCollapsibleSection } from "@/routes/v2/shared/components/PipelineDetailsCollapsibleSection";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
-import { fetchRunAnnotations } from "@/services/pipelineRunService";
+import { useProjectsById } from "@/services/projects/useProjects";
+import { runAnnotationsQueryOptions } from "@/services/runAnnotations";
 import {
   getAnnotationValue,
   isSystemRunAnnotation,
@@ -42,12 +55,12 @@ import {
   RUN_SOURCE_ANNOTATION,
   SYSTEM_ANNOTATIONS,
 } from "@/utils/annotations";
-import { TWENTY_FOUR_HOURS_IN_MS } from "@/utils/constants";
 import {
   flattenExecutionStatusStats,
   getExecutionStatusLabel,
   getOverallExecutionStatusFromStats,
 } from "@/utils/executionStatus";
+import { projectIdsFromAnnotations } from "@/utils/projectRunAnnotation";
 import { tracking } from "@/utils/tracking";
 
 import { RunDetailsHeader } from "./RunDetailsHeader";
@@ -124,7 +137,7 @@ function RunDetailsContentLoaded({
     getOverallExecutionStatusFromStats(executionStatusStats);
   const statusLabel = getExecutionStatusLabel(overallStatus);
 
-  const tangentShellEnabled = useFlagValue("tangent-shell");
+  const tangentShellEnabled = useTangentEnabled();
   const isFailedRun = FAILURE_STATUSES.includes(overallStatus ?? "");
   const showDebugInTangent =
     tangentShellEnabled && isFailedRun && !!metadata?.id;
@@ -136,6 +149,8 @@ function RunDetailsContentLoaded({
   const displayedAnnotations = specAnnotations
     .filter((a) => !SYSTEM_ANNOTATIONS.includes(a.key))
     .map((a) => ({ label: a.key, value: String(a.value) }));
+
+  const projectIds = useRunProjectIds(metadata?.id);
 
   return (
     <BlockStack className="h-full min-h-0 w-full">
@@ -170,6 +185,8 @@ function RunDetailsContentLoaded({
             </Paragraph>
           )}
         </PipelineDetailsCollapsibleSection>
+
+        <ProjectDetailsSection projectIds={projectIds} />
 
         <PipelineDetailsCollapsibleSection
           title="Details"
@@ -217,6 +234,18 @@ function RunDetailsContentLoaded({
   );
 }
 
+/** Attribution is written when the run is created and cannot be revised. */
+function useRunProjectIds(runId: string | undefined) {
+  const { backendUrl } = useBackend();
+  const projectsEnabled = useProjectsEnabled();
+
+  const { data: runAnnotations } = useQuery({
+    ...runAnnotationsQueryOptions(runId, backendUrl),
+  });
+
+  return projectsEnabled ? projectIdsFromAnnotations(runAnnotations) : [];
+}
+
 interface DebugInTangentButtonProps {
   runId: string;
   pipelineName: string;
@@ -227,19 +256,53 @@ function DebugInTangentButton({
   pipelineName,
 }: DebugInTangentButtonProps) {
   const { debug, isPending } = useDebugInTangent();
+  const aiGate = useAiGate();
+  // Only the projects still there: one that has been deleted since is not a
+  // place anything can be debugged, and picking it would just make a project.
+  const projects = useProjectsById(useRunProjectIds(runId));
 
-  return (
+  const label = isPending ? "Starting…" : "Debug in Tangent";
+  const button = (
     <Button
       variant="outline"
       size="sm"
       className="w-full"
-      disabled={isPending}
-      onClick={() => debug({ runId, pipelineName })}
+      disabled={isPending || aiGate.disabled}
+      title={aiGate.title}
+      onClick={
+        projects.length > 1 ? undefined : () => debug({ runId, pipelineName })
+      }
       {...tracking("v2.run_view.debug_in_tangent")}
     >
       <Icon name="Bug" size="sm" />
-      {isPending ? "Starting…" : "Debug in Tangent"}
+      {label}
     </Button>
+  );
+
+  // Attribution is written once and never revised, so a run in two projects
+  // cannot be asked which one it meant — only the reader can say.
+  if (projects.length <= 1) {
+    return button;
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>{button}</DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="max-w-72 min-w-56">
+        <DropdownMenuLabel>Debug in which project?</DropdownMenuLabel>
+        {projects.map((project) => (
+          <DropdownMenuItem
+            key={project.id}
+            onSelect={() =>
+              debug({ runId, pipelineName, projectId: project.id })
+            }
+          >
+            <Icon name="Folder" size="sm" />
+            <span className="truncate">{project.name}</span>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -247,11 +310,7 @@ function useRunAnnotations(runId: string | undefined) {
   const { backendUrl } = useBackend();
 
   return useQuery({
-    queryKey: ["pipeline-run-annotations", backendUrl, runId],
-    queryFn: () => fetchRunAnnotations(runId!, backendUrl),
-    enabled: !!runId,
-    refetchOnWindowFocus: false,
-    staleTime: TWENTY_FOUR_HOURS_IN_MS,
+    ...runAnnotationsQueryOptions(runId, backendUrl),
   });
 }
 
@@ -259,7 +318,7 @@ function RunInfoSection({ metadata }: { metadata: PipelineRunResponse }) {
   const { data: runAnnotations } = useRunAnnotations(metadata.id);
 
   const runSource = getAnnotationValue(runAnnotations, RUN_SOURCE_ANNOTATION);
-  const hasKnownSource = getRunSourceBucket(runSource) !== "unknown";
+  const hasKnownSource = hasRunSource(runSource);
 
   return (
     <BlockStack gap="2">

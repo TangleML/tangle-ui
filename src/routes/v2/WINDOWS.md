@@ -527,8 +527,13 @@ interface WindowContextValue {
 | `WINDOW_CHROME_HEIGHT`      | `30px`      | Window chrome height                                          |
 | `TASK_PANEL_HEIGHT`         | `43px`      | Height of the TaskPanel bar (used for floating window offset) |
 
-`DOCK_AREA_RESIZE_SNAP_THRESHOLD` is derived (`MIN_DOCK_AREA_WIDTH - 20`): it is the resize width at
-which a dock area previews and snaps between expanded and collapsed.
+Snapping between expanded and collapsed uses a separate derived threshold per direction, because a
+collapsed area's resize handle is pinned and so gives no visual feedback until it snaps:
+
+| Constant                            | Derived as                       | Snaps                |
+| ----------------------------------- | -------------------------------- | -------------------- |
+| `DOCK_AREA_COLLAPSE_SNAP_THRESHOLD` | `MIN_DOCK_AREA_WIDTH - 20`       | expanded → collapsed |
+| `DOCK_AREA_EXPAND_SNAP_THRESHOLD`   | `COLLAPSED_DOCK_AREA_WIDTH + 24` | collapsed → expanded |
 
 ## Rules and Restrictions
 

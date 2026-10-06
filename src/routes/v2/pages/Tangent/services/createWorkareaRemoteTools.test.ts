@@ -1,10 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { WorkareaTab } from "@/routes/v2/pages/Tangent/workarea/types";
-import {
-  idIdentity,
-  nameIdentity,
-} from "@/routes/v2/pages/Tangent/workarea/workareaTarget";
+import { idIdentity, nameIdentity } from "@/services/projects/resourceTarget";
 import { getOverallExecutionStatusFromStats } from "@/utils/executionStatus";
 
 import {
@@ -63,8 +60,12 @@ function makeDeps(overrides: Partial<WorkareaToolDeps> = {}): WorkareaToolDeps {
     getEnvironmentId: () => undefined,
     waitForEnvironment: vi.fn().mockResolvedValue(undefined),
     runInspect: makeRunInspect(),
+    createPipeline: vi.fn(),
     clonePipeline: vi.fn(),
     refreshResources: vi.fn().mockResolvedValue(undefined),
+    renameProject: vi.fn().mockResolvedValue({ renamed: true }),
+    nameSession: vi.fn().mockResolvedValue(undefined),
+    namePipeline: vi.fn().mockResolvedValue({ renamed: true }),
     ...overrides,
   };
 }
@@ -307,6 +308,73 @@ describe("createWorkareaRemoteTools", () => {
     expect(result).toEqual({ ok: true });
   });
 
+  /**
+   * Nothing downstream of a tab can bring a pipeline into being, so an agent
+   * asked to build one with nothing open has only this to start from.
+   */
+  it("create_pipeline creates one, opens it, and reports the tab it can spawn into", async () => {
+    const createPipeline = vi
+      .fn()
+      .mockResolvedValue({ pipelineName: "Mordor DAG", fileId: "file-9" });
+    const tab = { ...pipelineTab("tab-new", "file-9"), title: "Mordor DAG" };
+    const openTarget = vi.fn().mockResolvedValue(tab);
+    const tools = createWorkareaRemoteTools(() =>
+      makeDeps({
+        createPipeline,
+        openTarget,
+        getTabs: () => [tab],
+        getActiveTabId: () => "tab-new",
+        waitForEnvironment: vi.fn().mockResolvedValue("env-1"),
+      }),
+    );
+
+    const result = await tools.create_pipeline.execute({ name: "Mordor DAG" });
+
+    expect(createPipeline).toHaveBeenCalledWith("Mordor DAG");
+    expect(openTarget).toHaveBeenCalledWith(
+      { type: "pipeline", identity: "id/file-9" },
+      "Mordor DAG",
+    );
+    expect(result).toEqual({
+      id: "tab-new",
+      kind: "pipeline",
+      name: "Mordor DAG",
+      title: "Mordor DAG",
+      target: "pipeline://id/file-9",
+      active: true,
+      environmentId: "env-1",
+      ready: true,
+    });
+  });
+
+  it("create_pipeline leaves the name to the caller's default when none is given", async () => {
+    const createPipeline = vi
+      .fn()
+      .mockResolvedValue({ pipelineName: "Untitled pipeline", fileId: "f-1" });
+    const tab = pipelineTab("tab-new", "f-1");
+    const tools = createWorkareaRemoteTools(() =>
+      makeDeps({
+        createPipeline,
+        openTarget: vi.fn().mockResolvedValue(tab),
+        getTabs: () => [tab],
+      }),
+    );
+
+    await tools.create_pipeline.execute({});
+
+    expect(createPipeline).toHaveBeenCalledWith(undefined);
+  });
+
+  it("create_pipeline refuses a name that is not worth a pipeline", async () => {
+    const createPipeline = vi.fn();
+    const tools = createWorkareaRemoteTools(() => makeDeps({ createPipeline }));
+
+    await expect(tools.create_pipeline.execute({ name: "  " })).rejects.toThrow(
+      /non-empty string/,
+    );
+    expect(createPipeline).not.toHaveBeenCalled();
+  });
+
   it("clone_pipeline clones the resolved run tab and returns the new pipeline target", async () => {
     const clonePipeline = vi
       .fn()
@@ -341,6 +409,83 @@ describe("createWorkareaRemoteTools", () => {
     await tools.clone_pipeline.execute({ runId: "run-explicit" });
 
     expect(clonePipeline).toHaveBeenCalledWith("run-explicit");
+  });
+
+  describe("naming tools", () => {
+    it("rename_project renames the project and says it did", async () => {
+      const renameProject = vi.fn().mockResolvedValue({ renamed: true });
+      const tools = createWorkareaRemoteTools(() =>
+        makeDeps({ renameProject }),
+      );
+
+      const result = await tools.rename_project.execute({
+        name: "Churn model",
+      });
+
+      expect(renameProject).toHaveBeenCalledWith("Churn model");
+      expect(result).toEqual({ renamed: true });
+    });
+
+    /** So the agent stops rather than retrying against a deliberate name. */
+    it("rename_project reports a refusal as an answer, not a failure", async () => {
+      const renameProject = vi.fn().mockResolvedValue({ renamed: false });
+      const tools = createWorkareaRemoteTools(() =>
+        makeDeps({ renameProject }),
+      );
+
+      await expect(
+        tools.rename_project.execute({ name: "Churn model" }),
+      ).resolves.toEqual({ renamed: false });
+    });
+
+    it("name_session names the session it is called from", async () => {
+      const nameSession = vi.fn().mockResolvedValue(undefined);
+      const tools = createWorkareaRemoteTools(() => makeDeps({ nameSession }));
+
+      const result = await tools.name_session.execute({
+        name: "Fix the churn run",
+      });
+
+      expect(nameSession).toHaveBeenCalledWith("Fix the churn run");
+      expect(result).toEqual({ ok: true });
+    });
+
+    it("trims the name before writing it", async () => {
+      const nameSession = vi.fn().mockResolvedValue(undefined);
+      const tools = createWorkareaRemoteTools(() => makeDeps({ nameSession }));
+
+      await tools.name_session.execute({ name: "  Churn model  " });
+
+      expect(nameSession).toHaveBeenCalledWith("Churn model");
+    });
+
+    it.each([
+      ["missing", {}],
+      ["blank", { name: "   " }],
+      ["not a string", { name: 42 }],
+    ])("refuses a %s name", async (_case, args) => {
+      const nameSession = vi.fn();
+      const renameProject = vi.fn();
+      const tools = createWorkareaRemoteTools(() =>
+        makeDeps({ nameSession, renameProject }),
+      );
+
+      await expect(tools.name_session.execute(args)).rejects.toThrow(/name/);
+      await expect(tools.rename_project.execute(args)).rejects.toThrow(/name/);
+      expect(nameSession).not.toHaveBeenCalled();
+      expect(renameProject).not.toHaveBeenCalled();
+    });
+
+    /** A title, not a summary — the lists these appear in are one line tall. */
+    it("refuses a name too long to be a title", async () => {
+      const nameSession = vi.fn();
+      const tools = createWorkareaRemoteTools(() => makeDeps({ nameSession }));
+
+      await expect(
+        tools.name_session.execute({ name: "a".repeat(61) }),
+      ).rejects.toThrow(/60 characters/);
+      expect(nameSession).not.toHaveBeenCalled();
+    });
   });
 
   describe("run inspect tools", () => {

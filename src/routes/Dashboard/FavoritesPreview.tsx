@@ -8,7 +8,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Heading, Paragraph, Text } from "@/components/ui/typography";
+import { Paragraph, Text } from "@/components/ui/typography";
 import {
   type FavoriteItem,
   type FavoriteType,
@@ -17,7 +17,9 @@ import {
 import { APP_ROUTES } from "@/routes/router";
 import { tracking } from "@/utils/tracking";
 
+import { SectionHeader } from "./SectionHeader";
 import { getFavoriteUrl, TypePill } from "./TypePill";
+import { useListedItems } from "./useListedItems";
 
 const PREVIEW_COUNT = 5;
 
@@ -78,24 +80,17 @@ export const FavoritesPreview = ({
   trackingId = "homepage.favorites.item",
 }: FavoritesPreviewProps) => {
   const { favorites, removeFavorite } = useFavorites();
+  const listed = useListedItems(favorites);
   const filtered = typeFilter
-    ? favorites.filter((f) => f.type === typeFilter)
-    : favorites;
+    ? listed.filter((f) => f.type === typeFilter)
+    : listed;
   const preview = filtered.slice(0, PREVIEW_COUNT);
 
   if (hideWhenEmpty && preview.length === 0) return null;
 
   return (
     <BlockStack gap="4" className="min-w-0">
-      <InlineStack gap="3" blockAlign="center" className="min-w-0">
-        <Heading level={2}>{title}</Heading>
-        <Link
-          to={APP_ROUTES.DASHBOARD_FAVORITES}
-          className="text-xs text-muted-foreground hover:text-foreground"
-        >
-          View all →
-        </Link>
-      </InlineStack>
+      <SectionHeader title={title} viewAllTo={APP_ROUTES.DASHBOARD_FAVORITES} />
       <div className="w-full border border-border rounded-lg overflow-hidden divide-y divide-border">
         {preview.length === 0 ? (
           <div className="px-4 py-3">

@@ -1,19 +1,20 @@
 import { observer } from "mobx-react-lite";
-import { useState } from "react";
 
 import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
-import { VerticalResizeHandle } from "@/components/ui/resize-handle";
-import { Tabs, TabsContent, TabsList } from "@/components/ui/tabs";
+import {
+  SCROLLING_TAB_STRIP,
+  Tabs,
+  TabsContent,
+  TabsList,
+} from "@/components/ui/tabs";
 import { Text } from "@/components/ui/typography";
+import { cn } from "@/lib/utils";
 import { CloseableTabTrigger } from "@/routes/v2/pages/Tangent/components/CloseableTabTrigger";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
+import { MIN_WORKAREA_WIDTH } from "@/routes/v2/pages/Tangent/layout";
 import { getWorkareaKind } from "@/routes/v2/pages/Tangent/workarea/registry";
 import type { WorkareaHostProps } from "@/routes/v2/pages/Tangent/workarea/types";
-
-const DEFAULT_WIDTH = 960;
-const MIN_WIDTH = 320;
-const MAX_WIDTH = 960;
 
 /**
  * The right-hand "Dynamic Workarea": a tabbed surface people and Tangent agents
@@ -29,12 +30,6 @@ export const DynamicWorkarea = observer(function DynamicWorkarea() {
   const activeSessionId = store.activeSessionId;
   const workareaTabs = store.workareaTabs;
   const activeWorkareaTabId = store.activeWorkareaTabId;
-  const [width, setWidth] = useState(DEFAULT_WIDTH);
-
-  function handleResizeEnd(attemptedWidth: number) {
-    setWidth(Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, attemptedWidth)));
-  }
-
   function hostPropsFor(tabId: string): WorkareaHostProps {
     return {
       isActive: tabId === activeWorkareaTabId,
@@ -56,22 +51,21 @@ export const DynamicWorkarea = observer(function DynamicWorkarea() {
 
   return (
     <div
-      className="relative flex h-full shrink-0 flex-col border-l border-border bg-card"
-      style={{ width }}
+      className="relative flex h-full min-w-0 flex-1 flex-col border-l border-border bg-card"
+      style={{ minWidth: MIN_WORKAREA_WIDTH }}
     >
-      <VerticalResizeHandle
-        side="left"
-        minWidth={MIN_WIDTH}
-        maxWidth={MAX_WIDTH}
-        onResizeEnd={handleResizeEnd}
-      />
       {workareaTabs.length > 0 ? (
         <Tabs
           value={activeWorkareaTabId ?? undefined}
           onValueChange={(id) => store.selectWorkareaTab(id)}
           className="flex h-full min-h-0 flex-col gap-1"
         >
-          <TabsList className="max-w-full shrink-0 overflow-x-auto rounded-none border-b border-border bg-card">
+          <TabsList
+            className={cn(
+              "max-w-full shrink-0 rounded-none border-b border-border bg-card",
+              SCROLLING_TAB_STRIP,
+            )}
+          >
             {workareaTabs.map((tab) => (
               <CloseableTabTrigger
                 key={tab.id}

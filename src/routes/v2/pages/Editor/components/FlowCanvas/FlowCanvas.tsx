@@ -15,6 +15,7 @@ import { SubgraphBreadcrumbs } from "@/routes/v2/shared/components/SubgraphBread
 import { FLOW_CANVAS_DEFAULT_PROPS } from "@/routes/v2/shared/flowCanvasDefaults";
 import { useDoubleClickBehavior } from "@/routes/v2/shared/hooks/useDoubleClickBehavior";
 import { useFitViewOnFocus } from "@/routes/v2/shared/hooks/useFitViewOnFocus";
+import { useFitViewOnRequest } from "@/routes/v2/shared/hooks/useFitViewOnRequest";
 import { useFlowCanvasState } from "@/routes/v2/shared/hooks/useFlowCanvasState";
 import { focusModeStore } from "@/routes/v2/shared/hooks/useFocusMode";
 import { useIsDetailedView } from "@/routes/v2/shared/hooks/useIsDetailedView";
@@ -45,7 +46,7 @@ export const FlowCanvas = observer(function FlowCanvas({
   const registry = useNodeRegistry();
   const nodeTypes = registry.getNodeTypes();
   const edgeTypes = registry.getEdgeTypes();
-  const { keyboard } = useSharedStores();
+  const { keyboard, editor } = useSharedStores();
   const { containerRef, handleViewportChange } = useViewportScaling();
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance | null>(null);
@@ -68,6 +69,7 @@ export const FlowCanvas = observer(function FlowCanvas({
   const onBeforeDelete = useFlowCanvasOnBeforeDelete(spec);
 
   useFitViewOnFocus();
+  useFitViewOnRequest();
   useAutoLayout(spec);
   useClipboardShortcuts(spec, containerRef, reactFlowInstance);
 
@@ -107,6 +109,9 @@ export const FlowCanvas = observer(function FlowCanvas({
         {...doubleClickBehavior}
         {...paneClickBehavior}
         onEdgeClick={onEdgeClick}
+        onPointerDownCapture={() => editor.setDraggedSincePointerDown(false)}
+        onNodeDragStart={() => editor.setDraggedSincePointerDown(true)}
+        onNodeClick={() => editor.requestContextPanelReveal()}
         onInit={setReactFlowInstance}
         onViewportChange={handleViewportChange}
         onBeforeDelete={onBeforeDelete}

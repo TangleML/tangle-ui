@@ -1,4 +1,12 @@
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 import {
   buildComponentSourceUrl,
@@ -7,6 +15,7 @@ import {
   convertHfUrlToDirectoryUrl,
   downloadYamlFromComponentText,
   getIdOrTitleFromPath,
+  getProjectUrl,
   normalizeUrl,
   parseHttpUrl,
   toAbsoluteHttpUrl,
@@ -59,6 +68,39 @@ describe("toAbsoluteHttpUrl", () => {
     expect(toAbsoluteHttpUrl(42)).toBeNull();
     expect(toAbsoluteHttpUrl({ url: "https://example.com" })).toBeNull();
     expect(toAbsoluteHttpUrl(["https://example.com"])).toBeNull();
+  });
+});
+
+describe("getProjectUrl", () => {
+  const enableFlags = (flags: Record<string, boolean>) =>
+    localStorage.setItem("betaFlags", JSON.stringify(flags));
+
+  afterEach(() => localStorage.clear());
+
+  /** The same place a project card goes, so a project has one link. */
+  it("builds an absolute url for where a project opens", () => {
+    enableFlags({ projects: true, "tangent-shell": true });
+
+    expect(getProjectUrl("abc-123")).toBe(
+      `${window.location.origin}/tangent/abc-123`,
+    );
+  });
+
+  /** A shared link has to land somewhere the recipient can actually open. */
+  it("points at the project's own page when Tangent is off", () => {
+    enableFlags({ projects: true, "tangent-shell": false });
+
+    expect(getProjectUrl("abc-123")).toBe(
+      `${window.location.origin}/projects/abc-123`,
+    );
+  });
+
+  it("escapes an id that would otherwise change the path", () => {
+    enableFlags({ projects: true, "tangent-shell": true });
+
+    expect(getProjectUrl("a/b?c")).toBe(
+      `${window.location.origin}/tangent/a%2Fb%3Fc`,
+    );
   });
 });
 

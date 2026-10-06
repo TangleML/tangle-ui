@@ -45,6 +45,7 @@ export interface WindowModelInit {
   variant: "window" | "panel";
   fillDockHeight?: boolean;
   minDockedHeight?: number;
+  maxDockedHeight?: number;
   renderMiniInline?: boolean;
   onClose?: () => void;
 }
@@ -76,6 +77,7 @@ export class WindowModel {
   /** Static config: when docked, fill remaining dock-area height. */
   readonly fillDockHeight: boolean;
   readonly minDockedHeight: number;
+  readonly maxDockedHeight: number | undefined;
   readonly renderMiniInline: boolean;
   readonly onClose: (() => void) | undefined;
   private readonly store: WindowStoreRef;
@@ -100,6 +102,7 @@ export class WindowModel {
     this.variant = init.variant;
     this.fillDockHeight = init.fillDockHeight ?? false;
     this.minDockedHeight = init.minDockedHeight ?? MIN_DOCKED_HEIGHT;
+    this.maxDockedHeight = init.maxDockedHeight;
     this.renderMiniInline = init.renderMiniInline ?? false;
     this.onClose = init.onClose;
     this.store = store;

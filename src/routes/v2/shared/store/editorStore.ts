@@ -19,12 +19,29 @@ export class EditorStore {
   @observable accessor focusedArgumentName: string | null = null;
   @observable accessor hoveredEntityId: string | null = null;
   @observable accessor pendingFocusNodeId: string | null = null;
+  @observable accessor fitViewRequestCount = 0;
   @observable accessor pendingTaskDetailTab: string | null = null;
   @observable.ref accessor selectedValidationIssue: ValidationIssue | null =
     null;
 
+  @observable accessor draggedSincePointerDown = false;
+  @observable accessor contextPanelRevealCount = 0;
+
   constructor() {
     makeObservable(this);
+  }
+
+  @action setDraggedSincePointerDown(value: boolean) {
+    this.draggedSincePointerDown = value;
+  }
+
+  /**
+   * Clicking a node that is already selected changes no selection, so the
+   * panel's selection watcher never hears about it. A counter rather than a
+   * flag, for the same reason as `requestFitView`.
+   */
+  @action requestContextPanelReveal() {
+    this.contextPanelRevealCount += 1;
   }
 
   @action resetState() {
@@ -36,8 +53,11 @@ export class EditorStore {
     this.focusedArgumentName = null;
     this.hoveredEntityId = null;
     this.pendingFocusNodeId = null;
+    this.fitViewRequestCount = 0;
     this.pendingTaskDetailTab = null;
     this.selectedValidationIssue = null;
+    this.draggedSincePointerDown = false;
+    this.contextPanelRevealCount = 0;
   }
 
   @action selectNode(
@@ -108,6 +128,15 @@ export class EditorStore {
 
   @action setPendingFocusNode(nodeId: string | null) {
     this.pendingFocusNodeId = nodeId;
+  }
+
+  /**
+   * Asks the canvas to frame everything, for a change the user did not make
+   * and cannot anticipate. A counter rather than a flag: consecutive requests
+   * have to stay distinguishable, because the canvas coalesces them.
+   */
+  @action requestFitView() {
+    this.fitViewRequestCount += 1;
   }
 
   @action setSelectedValidationIssue(issue: ValidationIssue | null) {

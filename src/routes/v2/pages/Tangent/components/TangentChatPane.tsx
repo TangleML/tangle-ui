@@ -1,7 +1,16 @@
 import { Chat } from "@tangent/embed-react";
+import type { ReactNode } from "react";
 
 import { Icon } from "@/components/ui/icon";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { InlineStack } from "@/components/ui/layout";
+import {
+  SCROLLING_TAB_STRIP,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 import { CloseableTabTrigger } from "@/routes/v2/pages/Tangent/components/CloseableTabTrigger";
 import {
   type AgentTab,
@@ -20,6 +29,7 @@ interface TangentChatPaneProps {
   onOpenArtifact?: (url: string, title: string) => void;
   onSendPrompt?: (content: string) => void;
   onError?: (message: string) => void;
+  headerAction?: ReactNode;
 }
 
 /**
@@ -36,6 +46,7 @@ export function TangentChatPane({
   onOpenArtifact,
   onSendPrompt,
   onError,
+  headerAction,
 }: TangentChatPaneProps) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -44,20 +55,28 @@ export function TangentChatPane({
         onValueChange={onTabChange}
         className="flex h-full min-h-0 flex-col gap-1"
       >
-        <TabsList className="max-w-full shrink-0 overflow-x-auto">
-          <TabsTrigger value={CHAT_TAB_VALUE}>
-            <Icon name="MessageSquare" size="xs" />
-            Chat
-          </TabsTrigger>
-          {tabs.map((tab) => (
-            <CloseableTabTrigger
-              key={tab.id}
-              value={tab.id}
-              title={tab.title}
-              onClose={() => onCloseTab(tab.id)}
-            />
-          ))}
-        </TabsList>
+        <InlineStack
+          gap="2"
+          align="space-between"
+          blockAlign="center"
+          className="w-full shrink-0"
+        >
+          <TabsList className={cn("min-w-0 max-w-full", SCROLLING_TAB_STRIP)}>
+            <TabsTrigger value={CHAT_TAB_VALUE}>
+              <Icon name="MessageSquare" size="xs" />
+              Chat
+            </TabsTrigger>
+            {tabs.map((tab) => (
+              <CloseableTabTrigger
+                key={tab.id}
+                value={tab.id}
+                title={tab.title}
+                onClose={() => onCloseTab(tab.id)}
+              />
+            ))}
+          </TabsList>
+          {headerAction}
+        </InlineStack>
         <TabsContent
           value={CHAT_TAB_VALUE}
           forceMount
@@ -65,6 +84,7 @@ export function TangentChatPane({
         >
           <Chat
             sessionId={sessionId}
+            autoFocus
             className="h-full min-h-0"
             style={{ height: "100%" }}
             onOpenArtifact={onOpenArtifact}

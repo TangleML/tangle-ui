@@ -1,20 +1,3 @@
-/**
- * Serializes the live MobX `ComponentSpec` into a stable plain-JSON shape
- * the in-browser agent's CSOM tools can reason about.
- *
- * The shape is intentionally narrower than the wire format: optional
- * properties are omitted when empty (so the LLM sees a smaller blob),
- * subgraph tasks are flagged with `isSubgraph: true`, and the active
- * subgraph breadcrumb (`activeSubgraphPath`) is surfaced so the model
- * can disambiguate "fix the pipeline" vs "fix this subgraph" without a
- * separate bridge call. Edits land in whichever spec owns the `$id` they
- * name, so the breadcrumb tells the model where the user is looking
- * rather than where an edit will go.
- *
- * `activeSubgraphTaskId` accompanies it because the breadcrumb is made of
- * display names, which are unique only within one graph — the model cannot
- * turn a name in it back into the `$id` that `inSubgraphTaskId` needs.
- */
 import type { FlexNodeData } from "@/components/shared/ReactFlow/FlowCanvas/FlexNode/types";
 import type {
   Binding,
@@ -27,6 +10,7 @@ import type {
 } from "@/models/componentSpec";
 import { getFlexNodes } from "@/models/componentSpec/queries/flexNodes";
 import { resolveEntityPositions } from "@/routes/v2/shared/nodes/buildUtils";
+import { specNameIsProvisional } from "@/services/localPipelines/provisionalPipelineName";
 import {
   PIPELINE_NOTES_ANNOTATION,
   PIPELINE_TAGS_ANNOTATION,
@@ -59,6 +43,7 @@ interface AiComponentRef {
     name?: string;
     inputs?: Array<{ name: string; type?: TypeSpecType }>;
     outputs?: Array<{ name: string; type?: TypeSpecType }>;
+    implementation: "container" | "graph" | "missing";
   };
 }
 
@@ -93,6 +78,7 @@ interface AiStickyNoteSpec {
 
 export interface AiSpec {
   name: string;
+  nameIsProvisional?: boolean;
   description?: string;
   notes?: string;
   tags?: string[];
@@ -199,16 +185,32 @@ const serializePort = (port: {
 }): { name: string; type?: TypeSpecType } =>
   pickDefined({ name: port.name, type: port.type });
 
+/**
+ * The implementation is reported by kind, not in full: a container spec is
+ * long and a graph is the whole subgraph again, but a reader that cannot see
+ * whether a task runs at all has no way to tell a component it just authored
+ * from one that never landed.
+ */
+function implementationKind(
+  spec: NonNullable<ComponentReference["spec"]>,
+): "container" | "graph" | "missing" {
+  if (isGraphImplementation(spec.implementation)) return "graph";
+  return spec.implementation ? "container" : "missing";
+}
+
 function serializeComponentRef(ref: ComponentReference): AiComponentRef {
   return pickDefined({
     name: ref.name,
     url: ref.url,
     spec: ref.spec
-      ? pickDefined({
-          name: ref.spec.name,
-          inputs: ref.spec.inputs?.map(serializePort),
-          outputs: ref.spec.outputs?.map(serializePort),
-        })
+      ? {
+          ...pickDefined({
+            name: ref.spec.name,
+            inputs: ref.spec.inputs?.map(serializePort),
+            outputs: ref.spec.outputs?.map(serializePort),
+          }),
+          implementation: implementationKind(ref.spec),
+        }
       : undefined,
   });
 }
@@ -220,6 +222,15 @@ function serializeComponentRef(ref: ComponentReference): AiComponentRef {
  */
 const toPlainJson = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
+/**
+ * Narrower than the wire format: empty optional properties are dropped so the
+ * blob stays small, and `activeSubgraphPath` says where the user is looking —
+ * not where an edit lands, since an edit follows the `$id` it names.
+ *
+ * `activeSubgraphTaskId` accompanies it because that path is display names,
+ * which are unique only within one graph, so the model cannot turn a name in it
+ * back into the `$id` that `inSubgraphTaskId` needs.
+ */
 export function serializeSpecForAi(
   spec: ComponentSpec,
   {
@@ -235,6 +246,7 @@ export function serializeSpecForAi(
   return toPlainJson(
     pickDefined({
       name: spec.name,
+      nameIsProvisional: specNameIsProvisional(spec) || undefined,
       description: spec.description || undefined,
       notes: activeSpec.annotations.get(PIPELINE_NOTES_ANNOTATION) || undefined,
       tags: tags.length > 0 ? tags : undefined,

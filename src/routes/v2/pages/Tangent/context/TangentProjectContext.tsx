@@ -1,5 +1,4 @@
 import { useTangent } from "@tangent/embed-react";
-import { useMutation } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useState } from "react";
 
 import {
@@ -7,67 +6,15 @@ import {
   useRequiredContext,
 } from "@/hooks/useRequiredContext";
 import useToastNotification from "@/hooks/useToastNotification";
+import { usePrepareProjectArrival } from "@/routes/v2/pages/Tangent/hooks/usePrepareProjectArrival";
 import { useProjectSessions } from "@/routes/v2/pages/Tangent/hooks/useProjectSessions";
 import { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
-import { useProject, useUpdateProject } from "@/services/projects/useProjects";
+import { nameFromPrompt } from "@/services/projects/nameFromPrompt";
+import { useProjectInstructions } from "@/services/projects/useProjectInstructions";
 
 const TangentProjectCtx = createRequiredContext<TangentProjectStore>(
   "TangentProjectContext",
 );
-
-function readStartingPrompt(
-  extraData: Record<string, unknown> | null | undefined,
-): string | undefined {
-  const value = extraData?.startingPrompt;
-  return typeof value === "string" && value.trim().length > 0
-    ? value
-    : undefined;
-}
-
-function useStartSessionWithPrompt(
-  store: TangentProjectStore,
-  {
-    projectId,
-    sessionCount,
-    isSessionsLoading,
-  }: {
-    projectId: string;
-    sessionCount: number;
-    isSessionsLoading: boolean;
-  },
-) {
-  const { data: project } = useProject(projectId);
-  const { mutateAsync: updateProject } = useUpdateProject();
-  const startingPrompt = readStartingPrompt(project?.extraData);
-
-  const { mutate, isIdle } = useMutation({
-    mutationFn: async (prompt: string) => {
-      const started = await store.startSession({
-        prompt,
-        name: "Debug session",
-      });
-      if (!started) return;
-      const nextExtraData = { ...(project?.extraData ?? {}) };
-      delete nextExtraData.startingPrompt;
-      await updateProject({
-        id: projectId,
-        input: { extraData: nextExtraData },
-      });
-    },
-  });
-
-  const shouldStart =
-    isIdle &&
-    !isSessionsLoading &&
-    !store.isStartingSession &&
-    Boolean(startingPrompt) &&
-    sessionCount === 0;
-
-  useEffect(() => {
-    if (!shouldStart || !startingPrompt) return;
-    mutate(startingPrompt);
-  }, [shouldStart, startingPrompt]);
-}
 
 interface TangentProjectProviderProps {
   projectId: string;
@@ -80,32 +27,47 @@ export function TangentProjectProvider({
 }: TangentProjectProviderProps) {
   const notify = useToastNotification();
   const { newSession } = useTangent();
-  const { data: project } = useProject(projectId);
+  const { instructions } = useProjectInstructions(projectId);
   const {
     sessions,
     isLoading: isSessionsLoading,
     attachSession,
     detachSession,
+    renameSession,
   } = useProjectSessions(projectId);
   const [store] = useState(() => new TangentProjectStore(projectId));
 
-  const projectNotes = project?.notes ?? null;
   useEffect(() => {
     store.setSessionIo({
       newSession,
       attachSession,
       detachSession,
+      nameSessionIfUnnamed: async (sessionId, prompt) => {
+        const session = sessions.find((one) => one.sessionId === sessionId);
+        const name = nameFromPrompt(prompt);
+        if (!session || session.name || !name) return;
+        await renameSession(session.resourceId, name);
+      },
       notify,
-      projectNotes,
+      projectInstructions: instructions,
     });
-  }, [store, newSession, attachSession, detachSession, notify, projectNotes]);
+  }, [
+    store,
+    newSession,
+    attachSession,
+    detachSession,
+    renameSession,
+    sessions,
+    notify,
+    instructions,
+  ]);
 
   const defaultSessionId = sessions[0]?.sessionId;
   useEffect(() => {
     store.setDefaultSessionId(defaultSessionId);
   }, [store, defaultSessionId]);
 
-  useStartSessionWithPrompt(store, {
+  usePrepareProjectArrival(store, {
     projectId,
     sessionCount: sessions.length,
     isSessionsLoading,

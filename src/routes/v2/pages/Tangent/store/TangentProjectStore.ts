@@ -3,6 +3,7 @@ import type {
   EmbedAsset,
   HostResourceInput,
 } from "@tangent/embed-react";
+import type { ThinkingLevel } from "@tangent/shared/contracts.ts";
 import {
   action,
   computed,
@@ -14,18 +15,16 @@ import {
 import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import { TANGENT_BUNDLE_ID } from "@/routes/v2/pages/Tangent/constants";
 import { resolveWorkareaTarget } from "@/routes/v2/pages/Tangent/services/resolveWorkareaTarget";
+import { sessionMemorySeed } from "@/routes/v2/pages/Tangent/services/sessionMemory";
 import type {
   ResolvedWorkareaView,
   WorkareaTab,
   WorkareaTarget,
 } from "@/routes/v2/pages/Tangent/workarea/types";
-import {
-  idIdentity,
-  sameTarget,
-} from "@/routes/v2/pages/Tangent/workarea/workareaTarget";
 import { resolveChatEntity } from "@/routes/v2/shared/components/AiChat/components/resolveChatEntity";
 import { navigateToEntity } from "@/routes/v2/shared/store/focus.actions";
 import type { SharedUIStore } from "@/routes/v2/shared/store/SharedStoreContext";
+import { idIdentity, sameTarget } from "@/services/projects/resourceTarget";
 import { getErrorMessage } from "@/utils/string";
 
 export const CHAT_TAB_VALUE = "chat";
@@ -65,28 +64,34 @@ export interface TangentSessionIo {
   newSession: (
     prompt: string,
     bundleId: string,
-    options: { name: string; resources?: HostResourceInput[] },
+    options: {
+      name: string;
+      resources?: HostResourceInput[];
+      model?: string;
+      thinkingDepth?: ThinkingLevel;
+    },
   ) => Promise<{ sessionId: string }>;
-  attachSession: (sessionId: string) => Promise<{ id: string }>;
+  attachSession: (sessionId: string, name?: string) => Promise<{ id: string }>;
   detachSession: (resourceId: string) => Promise<void>;
+  nameSessionIfUnnamed: (sessionId: string, prompt: string) => Promise<void>;
   notify: (message: string, type: "error") => void;
-  projectNotes?: string | null;
+  projectInstructions?: string | null;
 }
 
 export interface StartSessionOptions {
   prompt?: string;
   name?: string;
+  model?: string;
+  thinkingDepth?: ThinkingLevel;
 }
 
 /**
- * Single source of truth for the Tangent project shell UI: which session is
- * active, and each session's chat + workarea tabs. Server data (sessions,
- * project, resources) stays in TanStack Query; this store only owns UI state
- * that the workarea shell, the chat panels, and the out-of-render agent tools
- * all read from the same place.
+ * Owns only UI state, so that the workarea shell, the chat panels and the
+ * out-of-render agent tools read it from one place. Sessions, project and
+ * resources stay in TanStack Query.
  *
- * Per-session chat/workarea are keyed by session id and restored on switch. The
- * live tab wiring (stores, environments, bridges) is keyed by globally-unique
+ * Chat and workarea are keyed by session id and restored on switch, but the
+ * live tab wiring — stores, environments, bridges — is keyed by globally unique
  * tab id, so backgrounded tabs clean up on unmount without a session-scoped
  * reset.
  */
@@ -96,6 +101,7 @@ export class TangentProjectStore {
   @observable accessor selectedSessionId: string | undefined = undefined;
   @observable accessor defaultSessionId: string | undefined = undefined;
   @observable accessor isStartingSession = false;
+  @observable accessor canStartSession = false;
 
   @observable.shallow accessor workareaBySession = new Map<
     string,
@@ -123,8 +129,9 @@ export class TangentProjectStore {
     makeObservable(this);
   }
 
-  setSessionIo(io: TangentSessionIo) {
+  @action setSessionIo(io: TangentSessionIo) {
     this.#io = io;
+    this.canStartSession = true;
   }
 
   // The selected session wins while it exists; otherwise fall back to the most
@@ -194,6 +201,10 @@ export class TangentProjectStore {
     if (!sessionId) return;
     if (!content.trim()) return;
     this.#sessionsWithPrompt.add(sessionId);
+    // A session started inside a project has no opening prompt to be named
+    // from, so its first message is the first chance to call it anything. The
+    // agent replaces this with a better title once it has read the message.
+    void this.#io?.nameSessionIfUnnamed(sessionId, content);
   }
 
   async startSession(options?: StartSessionOptions): Promise<boolean> {
@@ -205,19 +216,22 @@ export class TangentProjectStore {
       this.isStartingSession = true;
     });
     try {
-      // An empty prompt makes the embed skip the opening turn so the human types
-      // the first message; a non-empty prompt runs the opening turn immediately
-      // so the agent starts working. `name` labels the session in Tangent's own
-      // session list.
+      // An empty prompt makes the embed skip the opening turn, so the human
+      // types the first message; a non-empty one runs it immediately.
       const prompt = options?.prompt ?? "";
-      const notes = io.projectNotes?.trim();
       const { sessionId } = await io.newSession(prompt, TANGENT_BUNDLE_ID, {
         name: options?.name ?? "New Tangent session",
-        resources: notes
-          ? [{ kind: "memory", scope: "session", content: notes }]
-          : undefined,
+        resources: [
+          {
+            kind: "memory",
+            scope: "session",
+            content: sessionMemorySeed(this.projectId, io.projectInstructions),
+          },
+        ],
+        model: options?.model,
+        thinkingDepth: options?.thinkingDepth,
       });
-      const resource = await io.attachSession(sessionId);
+      const resource = await io.attachSession(sessionId, options?.name);
       runInAction(() => {
         this.#freshSessions.set(sessionId, resource.id);
         this.selectedSessionId = sessionId;
@@ -299,6 +313,17 @@ export class TangentProjectStore {
     const tab: WorkareaTab = { ...view, id: crypto.randomUUID() };
     this.#putSlice([...tabs, tab], tab.id);
     return tab;
+  }
+
+  // A tab's title is resolved once, when it opens, so a rename is the only
+  // thing that can tell a tab the name it announces has changed.
+  @action retitleWorkareaTarget(target: WorkareaTarget, title: string) {
+    const tabs = this.workareaTabs;
+    const index = tabs.findIndex((tab) => sameTarget(tab.target, target));
+    if (index < 0 || tabs[index].title === title) return;
+    const next = [...tabs];
+    next[index] = { ...next[index], title };
+    this.#putSlice(next, this.activeWorkareaTabId);
   }
 
   @action selectWorkareaTab(id: string) {

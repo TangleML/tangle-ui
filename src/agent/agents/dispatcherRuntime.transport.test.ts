@@ -56,87 +56,124 @@ const bridge = {
 describe("dispatcher provider switching", () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it("uses the current endpoint and credentials on every turn of an existing chat", async () => {
-    const fetchMock = vi.fn<typeof fetch>().mockImplementation(async () => {
-      const sequence = fetchMock.mock.calls.length;
-      return new Response(
-        JSON.stringify({
-          id: `response-${sequence}`,
-          output: [
-            {
-              id: `message-${sequence}`,
-              type: "message",
-              role: "assistant",
-              status: "completed",
-              content: [
-                { type: "output_text", text: "Hello", annotations: [] },
-              ],
-            },
-          ],
-        }),
-        { headers: { "content-type": "application/json" } },
-      );
-    });
-    vi.stubGlobal("fetch", fetchMock);
-
-    const personal: AiProviderConfig = {
-      apiBase: "https://api.example.com/v1",
-      apiKey: "sk-personal",
-      model: "gpt-5.5",
-    };
-    const backend: AiProviderConfig = {
-      apiBase: "https://backend.example.com/api/experimental/ai/v1",
-      apiKey: "",
-      model: "gpt-5.5",
-      credentials: "include",
-    };
-    const configurations = [
-      personal,
-      backend,
-      {
-        ...backend,
-        apiBase: "https://other.example.com/api/experimental/ai/v1",
-      },
-      personal,
-    ];
-    const proxyClient = new ProxyClient();
-    const skillsLoader = new SkillsLoader();
-    const dispatcher = createDispatcherRuntime((session) =>
-      Promise.resolve(
-        new Agent({
-          name: "Transport test",
-          ...getAgentModelConfig(session.aiConfig),
-        }),
-      ),
-    );
-
-    for (const [index, aiConfig] of configurations.entries()) {
-      const session = createSession({
-        threadId: "same-chat",
-        proxyClient,
-        skillsLoader,
-        bridge,
-        context: { mode: "editor" },
-        aiConfig,
+  it.each([
+    ["", undefined],
+    ["", "max"],
+    ["gpt-6-sol", undefined],
+    ["gpt-6-sol", "high"],
+    ["custom-reasoning-model", "max"],
+  ] as const)(
+    "uses the current endpoint, credentials, model %j, and reasoning %j on every turn of an existing chat",
+    async (model, reasoningEffort) => {
+      const fetchMock = vi.fn<typeof fetch>().mockImplementation(async () => {
+        const sequence = fetchMock.mock.calls.length;
+        return new Response(
+          JSON.stringify({
+            id: `response-${sequence}`,
+            output: [
+              {
+                id: `message-${sequence}`,
+                type: "message",
+                role: "assistant",
+                status: "completed",
+                content: [
+                  { type: "output_text", text: "Hello", annotations: [] },
+                ],
+              },
+            ],
+          }),
+          { headers: { "content-type": "application/json" } },
+        );
       });
-      await expect(
-        dispatcher.invoke({
-          message: `Message ${index}`,
-          threadId: session.threadId,
-          aiConfig,
-          session,
-        }),
-      ).resolves.toEqual({ answer: "Hello", threadId: "same-chat" });
+      vi.stubGlobal("fetch", fetchMock);
 
-      expect(fetchMock).toHaveBeenCalledTimes(index + 1);
-      const [url, request] = fetchMock.mock.calls[index];
-      expect(url).toBe(`${aiConfig.apiBase}/responses`);
-      expect(request?.credentials).toBe(aiConfig.credentials);
-      expect(new Headers(request?.headers).get("authorization")).toBe(
-        aiConfig.apiKey ? `Bearer ${aiConfig.apiKey}` : null,
+      const personal: AiProviderConfig = {
+        apiBase: "https://api.example.com/v1",
+        apiKey: "sk-personal",
+        model,
+        reasoningEffort,
+      };
+      const backend: AiProviderConfig = {
+        apiBase: "https://backend.example.com/api/experimental/ai/v1",
+        apiKey: "",
+        model,
+        reasoningEffort,
+        credentials: "include",
+      };
+      const configurations: AiProviderConfig[] = [
+        personal,
+        backend,
+        {
+          ...backend,
+          apiBase: "https://other.example.com/api/experimental/ai/v1",
+          reasoningEffort: "low",
+        },
+        personal,
+      ];
+      const proxyClient = new ProxyClient();
+      const skillsLoader = new SkillsLoader();
+      const dispatcher = createDispatcherRuntime((session) =>
+        Promise.resolve(
+          new Agent({
+            name: "Transport test",
+            ...getAgentModelConfig(session.aiConfig),
+          }),
+        ),
       );
-      expect(String(request?.body)).toContain("Message 0");
-      expect(String(request?.body)).toContain(`Message ${index}`);
-    }
-  });
+
+      for (const [index, aiConfig] of configurations.entries()) {
+        const previousConfig: AiProviderConfig = {
+          ...aiConfig,
+          model: "previous-model",
+          reasoningEffort: "medium",
+        };
+        const session = createSession({
+          threadId: "same-chat",
+          proxyClient,
+          skillsLoader,
+          bridge,
+          context: { mode: "editor" },
+          aiConfig: previousConfig,
+        });
+        await expect(
+          dispatcher.invoke({
+            message: `Message ${index}`,
+            threadId: session.threadId,
+            aiConfig,
+            session,
+          }),
+        ).resolves.toEqual({ answer: "Hello", threadId: "same-chat" });
+
+        expect(fetchMock).toHaveBeenCalledTimes(index + 1);
+        const [url, request] = fetchMock.mock.calls[index];
+        expect(url).toBe(`${aiConfig.apiBase}/responses`);
+        expect(request?.credentials).toBe(aiConfig.credentials);
+        expect(new Headers(request?.headers).get("authorization")).toBe(
+          aiConfig.apiKey ? `Bearer ${aiConfig.apiKey}` : null,
+        );
+        const body = JSON.parse(String(request?.body));
+        if (model) {
+          expect(body.model).toBe(model);
+        } else {
+          expect(body).not.toHaveProperty("model");
+        }
+        if (aiConfig.reasoningEffort) {
+          expect(body.reasoning).toMatchObject({
+            effort: aiConfig.reasoningEffort,
+          });
+        } else {
+          expect(body).not.toHaveProperty("reasoning");
+        }
+        expect(body.include).toContain("reasoning.encrypted_content");
+        expect(session.aiConfig).toEqual(previousConfig);
+        expect(fetchMock.mock.calls.map(([requestUrl]) => requestUrl)).toEqual(
+          configurations
+            .slice(0, index + 1)
+            .map((configuration) => `${configuration.apiBase}/responses`),
+        );
+        expect(String(request?.body)).toContain("Message 0");
+        expect(String(request?.body)).toContain(`Message ${index}`);
+      }
+    },
+  );
 });

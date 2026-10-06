@@ -22,6 +22,7 @@ export function useShortcutListener(enabled = true): void {
 
   useEffect(() => {
     if (!enabled) return;
+    keyboard.setListening(true);
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.repeat && event.metaKey) return;
@@ -36,7 +37,7 @@ export function useShortcutListener(enabled = true): void {
         keyboard.pressKey(key);
       }
 
-      const editable = isEditableTarget(event.target);
+      const editable = isEditableTarget(event);
 
       for (const shortcut of keyboard.shortcuts.values()) {
         if (editable && !shortcut.allowInEditable) continue;
@@ -78,6 +79,7 @@ export function useShortcutListener(enabled = true): void {
       window.removeEventListener("keyup", handleKeyUp);
       window.removeEventListener("blur", handleBlur);
       keyboard.clearPressed();
+      keyboard.setListening(false);
     };
   }, [keyboard, enabled]);
 }

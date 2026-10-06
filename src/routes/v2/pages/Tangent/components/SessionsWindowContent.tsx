@@ -7,12 +7,19 @@ import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { useProjectSessions } from "@/routes/v2/pages/Tangent/hooks/useProjectSessions";
+import { useAiGate } from "@/routes/v2/shared/components/AiChat/components/useAiGate";
+import { sessionLabelsById } from "@/services/projects/sessionLabel";
 import { formatRelativeTime } from "@/utils/date";
+import { tracking } from "@/utils/tracking";
 
 export const SessionsWindowContent = observer(function SessionsWindowContent() {
   const store = useTangentProject();
+  const aiGate = useAiGate("New session");
   const { sessions } = useProjectSessions(store.projectId);
   const activeSessionId = store.activeSessionId;
+  const labels = sessionLabelsById(
+    sessions.map((session) => [session.sessionId, session]),
+  );
 
   return (
     <BlockStack gap="2" className="p-2">
@@ -22,14 +29,15 @@ export const SessionsWindowContent = observer(function SessionsWindowContent() {
         </Text>
       ) : (
         <BlockStack gap="1">
-          {sessions.map((session, index) => {
+          {sessions.map((session) => {
             const isActive = session.sessionId === activeSessionId;
-            const label = `Session ${sessions.length - index}`;
+            const label = labels.get(session.sessionId);
             return (
               <button
                 key={session.sessionId}
                 type="button"
                 onClick={() => store.selectSession(session.sessionId)}
+                {...tracking("projects.open_session")}
                 className={cn(
                   "w-full rounded-md px-2 py-1.5 text-left hover:bg-accent",
                   isActive && "bg-accent",
@@ -42,7 +50,7 @@ export const SessionsWindowContent = observer(function SessionsWindowContent() {
                   </Text>
                 </InlineStack>
                 <Text size="xs" tone="subdued">
-                  {formatRelativeTime(session.createdAt) ?? ""}
+                  {formatRelativeTime(session.createdAt)}
                 </Text>
               </button>
             );
@@ -53,9 +61,10 @@ export const SessionsWindowContent = observer(function SessionsWindowContent() {
       <Button
         variant="outline"
         aria-label="New session"
-        title="New session"
+        title={aiGate.title}
         onClick={() => void store.startSession()}
-        disabled={store.isStartingSession}
+        {...tracking("projects.start_session")}
+        disabled={store.isStartingSession || aiGate.disabled}
         className="w-full"
       >
         <Icon name={store.isStartingSession ? "Loader" : "Plus"} size="xs" />

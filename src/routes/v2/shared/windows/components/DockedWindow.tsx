@@ -92,6 +92,7 @@ export const DockedWindow = observer(function DockedWindow() {
 
   const actions = <WindowActions />;
   const showCollapsedStyle = model.isMinimized || isStuck;
+  const fitsContent = !model.fillDockHeight && model.dockedHeight === undefined;
 
   if (model.isMaximized) {
     return createPortal(
@@ -202,6 +203,7 @@ export const DockedWindow = observer(function DockedWindow() {
             height: model.fillDockHeight
               ? undefined
               : (model.dockedHeight ?? undefined),
+            maxHeight: fitsContent ? model.maxDockedHeight : undefined,
           }}
           onMouseDown={handleContainerMouseDown}
           onClick={handleContainerClick}

@@ -48,6 +48,7 @@ function applyValidationIssueEditorFocus(
   options?: { skipHoveredEntity?: boolean },
 ): void {
   if (resolved) {
+    editor.setDraggedSincePointerDown(false);
     editor.setPendingFocusNode(resolved.id);
     editor.selectNode(resolved.id, resolved.type, {
       entityId: resolved.id,
@@ -82,6 +83,7 @@ export function navigateToEntity(
   entityType: NodeEntityType,
 ): void {
   navigation.navigateToPath(path);
+  editor.setDraggedSincePointerDown(false);
   editor.setPendingFocusNode(entityId);
   editor.selectNode(entityId, entityType);
 }

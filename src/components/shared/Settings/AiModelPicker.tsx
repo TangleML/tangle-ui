@@ -173,6 +173,7 @@ export function AiModelPicker({ variant = "settings" }: AiModelPickerProps) {
               {effort && (
                 <BlockStack gap="2">
                   <Slider
+                    className="cursor-pointer data-[disabled]:cursor-default"
                     max={Math.max(1, levels.length - 1)}
                     value={[selectedIndex]}
                     disabled={levels.length < 2}

@@ -27,7 +27,7 @@ function sessionResource(
     entity: "agent_session",
     name: null,
     entityId: "sess-1",
-    extraData: null,
+    metadata: null,
     createdBy: null,
     createdAt: new Date("2024-01-01T00:00:00Z"),
     updatedAt: new Date("2024-01-01T00:00:00Z"),
@@ -108,6 +108,7 @@ describe("useProjectSessions", () => {
     expect(result.current.sessions[0]).toEqual({
       resourceId: "r-new",
       sessionId: "sess-new",
+      name: null,
       createdAt: new Date("2024-02-01T00:00:00Z"),
     });
   });
