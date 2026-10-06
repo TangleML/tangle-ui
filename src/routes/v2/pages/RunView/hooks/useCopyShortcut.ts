@@ -7,6 +7,7 @@ import { copyNodesToClipboard } from "@/routes/v2/shared/clipboard/copyNodesToCl
 import { getEffectiveSelection } from "@/routes/v2/shared/clipboard/getEffectiveSelection";
 import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { CMDALT } from "@/routes/v2/shared/shortcuts/keys";
+import { hasTextSelection } from "@/routes/v2/shared/shortcuts/shortcutUtils";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 export function useCopyShortcut(spec: ComponentSpec | null): void {
@@ -20,10 +21,12 @@ export function useCopyShortcut(spec: ComponentSpec | null): void {
       keys: [CMDALT, "C"],
       label: "Copy",
       action: (e) => {
-        e.preventDefault();
-        if (!spec) return;
+        if (hasTextSelection()) return false;
+        if (!spec) return false;
         const selection = getEffectiveSelection(registry, spec, editor);
-        if (selection.length === 0) return;
+        if (selection.length === 0) return false;
+
+        e.preventDefault();
         copyNodesToClipboard(registry, spec, selection).catch(() =>
           notify(CLIPBOARD_COPY_FAILED_MESSAGE, "error"),
         );
