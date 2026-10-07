@@ -8,6 +8,7 @@ import type {
 } from "@/api/types.gen";
 import { RunNotesEditor } from "@/components/PipelineRun/RunNotesEditor";
 import { ProjectDetailsSection } from "@/components/Project/ProjectDetailsSection";
+import { useRunPermissions } from "@/components/shared/AccessControl/useRunPermissions";
 import { AnnotationList } from "@/components/shared/ContextPanel/Blocks/AnnotationList";
 import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlock";
 import { KeyValueList } from "@/components/shared/ContextPanel/Blocks/KeyValueList";
@@ -385,8 +386,7 @@ function NotesSection({
   metadata,
   currentUserId,
 }: NotesSectionProps) {
-  const isRunCreator =
-    !!currentUserId && metadata?.created_by === currentUserId;
+  const { canAnnotate } = useRunPermissions(metadata, currentUserId);
 
   return (
     <BlockStack gap="2">
@@ -399,7 +399,7 @@ function NotesSection({
       {!!metadata?.id && (
         <BlockStack>
           <Paragraph size="xs">Run Notes</Paragraph>
-          <RunNotesEditor runId={metadata.id} readOnly={!isRunCreator} />
+          <RunNotesEditor runId={metadata.id} readOnly={!canAnnotate} />
         </BlockStack>
       )}
     </BlockStack>
