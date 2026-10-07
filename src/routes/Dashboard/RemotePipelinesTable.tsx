@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { type PointerEvent, useRef, useState } from "react";
 
 import {
   Table,
@@ -12,7 +13,42 @@ import { useBackend } from "@/providers/BackendProvider";
 import { listRemotePipelines } from "@/services/remotePipelinesService";
 import { formatDate } from "@/utils/date";
 
+const COLUMN_NAMES = [
+  "Name",
+  "ID",
+  "User",
+  "Created at",
+  "Updated at",
+  "Current version",
+];
+const INITIAL_COLUMN_WIDTHS = [25, 15, 20, 12, 12, 16];
+const MIN_COLUMN_WIDTH = 8;
+
+function resizeColumnWidths(widths: number[], index: number, delta: number) {
+  const remaining = widths.length - index - 1;
+  const maxDelta =
+    (Math.min(...widths.slice(index + 1)) - MIN_COLUMN_WIDTH) * remaining;
+  const change = Math.max(
+    MIN_COLUMN_WIDTH - widths[index],
+    Math.min(delta, maxDelta),
+  );
+
+  return widths.map((width, columnIndex) => {
+    if (columnIndex < index) return width;
+    if (columnIndex === index) return width + change;
+    return width - change / remaining;
+  });
+}
+
 export function RemotePipelinesTable() {
+  const [columnWidths, setColumnWidths] = useState(INITIAL_COLUMN_WIDTHS);
+  const tableRef = useRef<HTMLTableElement>(null);
+  const dragRef = useRef<{
+    pointerId: number;
+    startX: number;
+    tableWidth: number;
+    widths: number[];
+  } | null>(null);
   const { backendUrl, configured, available, ready } = useBackend();
   const {
     data: pipelines = [],
@@ -35,28 +71,89 @@ export function RemotePipelinesTable() {
   else if (error) message = "Failed to load remote pipelines.";
   else if (pipelines.length === 0) message = "No remote pipelines found.";
 
+  function stopResizing(event: PointerEvent<HTMLDivElement>) {
+    if (dragRef.current?.pointerId === event.pointerId) dragRef.current = null;
+  }
+
   return (
-    <Table aria-label="Remote Pipelines" className="table-fixed">
+    <Table ref={tableRef} aria-label="Remote Pipelines" className="table-fixed">
       <TableHeader>
         <TableRow className="text-xs">
-          <TableHead scope="col" className="w-[25%] truncate">
-            Name
-          </TableHead>
-          <TableHead scope="col" className="w-[15%] truncate">
-            ID
-          </TableHead>
-          <TableHead scope="col" className="w-[20%] truncate">
-            User
-          </TableHead>
-          <TableHead scope="col" className="w-[12%] truncate">
-            Created at
-          </TableHead>
-          <TableHead scope="col" className="w-[12%] truncate">
-            Updated at
-          </TableHead>
-          <TableHead scope="col" className="w-[16%] truncate">
-            Current version
-          </TableHead>
+          {COLUMN_NAMES.map((name, index) => (
+            <TableHead
+              key={name}
+              scope="col"
+              className="relative"
+              style={{ width: `${columnWidths[index]}%` }}
+            >
+              <span className="block truncate" title={name}>
+                {name}
+              </span>
+              {index < COLUMN_NAMES.length - 1 && (
+                <div
+                  role="separator"
+                  aria-label={`Resize ${name} column`}
+                  aria-orientation="vertical"
+                  aria-valuemin={MIN_COLUMN_WIDTH}
+                  aria-valuemax={
+                    columnWidths[index] +
+                    (Math.min(...columnWidths.slice(index + 1)) -
+                      MIN_COLUMN_WIDTH) *
+                      (COLUMN_NAMES.length - index - 1)
+                  }
+                  aria-valuenow={columnWidths[index]}
+                  tabIndex={0}
+                  title={`Drag or use arrow keys to resize ${name}`}
+                  className="absolute inset-y-0 right-0 w-2 cursor-col-resize touch-none select-none hover:bg-muted focus-visible:bg-muted focus-visible:outline-ring"
+                  onPointerDown={(event) => {
+                    if (event.button !== 0 || dragRef.current) return;
+                    const tableWidth =
+                      tableRef.current?.getBoundingClientRect().width;
+                    if (!tableWidth) return;
+                    event.preventDefault();
+                    event.currentTarget.setPointerCapture(event.pointerId);
+                    dragRef.current = {
+                      pointerId: event.pointerId,
+                      startX: event.clientX,
+                      tableWidth,
+                      widths: columnWidths,
+                    };
+                  }}
+                  onPointerMove={(event) => {
+                    const drag = dragRef.current;
+                    if (!drag || drag.pointerId !== event.pointerId) return;
+                    setColumnWidths(
+                      resizeColumnWidths(
+                        drag.widths,
+                        index,
+                        ((event.clientX - drag.startX) / drag.tableWidth) * 100,
+                      ),
+                    );
+                  }}
+                  onPointerUp={stopResizing}
+                  onPointerCancel={stopResizing}
+                  onLostPointerCapture={stopResizing}
+                  onKeyDown={(event) => {
+                    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight")
+                      return;
+                    event.preventDefault();
+                    setColumnWidths((widths) =>
+                      resizeColumnWidths(
+                        widths,
+                        index,
+                        event.key === "ArrowRight" ? 1 : -1,
+                      ),
+                    );
+                  }}
+                >
+                  <span
+                    aria-hidden="true"
+                    className="absolute inset-y-2 left-1/2 w-px bg-border"
+                  />
+                </div>
+              )}
+            </TableHead>
+          ))}
         </TableRow>
       </TableHeader>
       <TableBody>
