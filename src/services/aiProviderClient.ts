@@ -1,8 +1,13 @@
-import { AI_PROVIDER_CONFIG, type AiHeaderConfig } from "@/config/aiProviders";
+import {
+  AI_CONFIG,
+  type AiHeaderConfig,
+  getAiMinimumOutputTokens,
+  getAiProviderConfig,
+} from "@/config/aiConfig";
 import { isRecord } from "@/utils/typeGuards";
 
 type JsonObject = Record<string, unknown>;
-const ANTHROPIC = AI_PROVIDER_CONFIG.anthropic;
+const ANTHROPIC = AI_CONFIG.providers.anthropic;
 const NATIVE_REASONING = ANTHROPIC.nativeReasoningPrefix;
 interface Message {
   role: "user" | "assistant";
@@ -59,10 +64,6 @@ function nativeReasoning(value: unknown): boolean {
   );
 }
 
-export function isAnthropicModel(model: string): boolean {
-  return ANTHROPIC.modelPattern.test(model);
-}
-
 function configuredHeaders(
   source: HeadersInit | undefined,
   ...rules: AiHeaderConfig[]
@@ -84,7 +85,7 @@ function fetchOpenAI(
   input: Parameters<typeof fetch>[0],
   init?: Parameters<typeof fetch>[1],
 ): ReturnType<typeof fetch> {
-  const rules: AiHeaderConfig = AI_PROVIDER_CONFIG.openai.requestHeaders;
+  const rules: AiHeaderConfig = AI_CONFIG.providers.openai.requestHeaders;
   if (
     !rules.rename &&
     !rules.exclude.length &&
@@ -186,13 +187,9 @@ function toAnthropic(request: JsonObject, proxy: boolean): JsonObject {
   const maxTokens = Number(
     request.max_output_tokens ?? ANTHROPIC.defaultMaxOutputTokens,
   );
-  const minimum = ANTHROPIC.minimumOutputTokens;
   const result: JsonObject = {
     model: proxy ? model : model.replace(ANTHROPIC.directModelPrefix, ""),
-    // New Claude models spend this shared budget on both thinking and the answer.
-    max_tokens: minimum.modelPattern.test(model)
-      ? Math.max(maxTokens, minimum.tokens)
-      : maxTokens,
+    max_tokens: Math.max(maxTokens, getAiMinimumOutputTokens(model)),
     messages,
   };
   const text = isRecord(request.text) ? request.text : {};
@@ -233,6 +230,11 @@ function toAnthropic(request: JsonObject, proxy: boolean): JsonObject {
 
 function toResponses(value: unknown, model: string): JsonObject {
   const message = object(value);
+  if (message.stop_reason === "model_context_window_exceeded") {
+    throw new Error(
+      "Anthropic reached its context window limit before completing the response",
+    );
+  }
   if (!Array.isArray(message.content)) {
     throw new Error("Anthropic returned a response without content");
   }
@@ -240,13 +242,23 @@ function toResponses(value: unknown, model: string): JsonObject {
   for (const [index, value] of message.content.entries()) {
     const block = object(value);
     if (block.type === "text") {
-      output.push({
-        type: "message",
-        id: `msg_${message.id}_${index}`,
-        role: "assistant",
-        status: "completed",
-        content: [{ type: "output_text", text: block.text, annotations: [] }],
-      });
+      const content = {
+        type: "output_text",
+        text: block.text,
+        annotations: [],
+      };
+      const previous = output.at(-1);
+      if (previous?.type === "message" && Array.isArray(previous.content)) {
+        previous.content.push(content);
+      } else {
+        output.push({
+          type: "message",
+          id: `msg_${message.id}_${index}`,
+          role: "assistant",
+          status: "completed",
+          content: [content],
+        });
+      }
     } else if (block.type === "tool_use") {
       if (message.stop_reason === "max_tokens") {
         throw new Error(
@@ -325,7 +337,7 @@ export async function aiProviderFetch(
       : input instanceof URL
         ? input.href
         : input.url;
-  if (!AI_PROVIDER_CONFIG.openai.endpoint.test(url)) return fetch(input, init);
+  if (!AI_CONFIG.providers.openai.endpoint.test(url)) return fetch(input, init);
   const original = input instanceof Request ? input : null;
   if ((init?.method ?? original?.method ?? "GET").toUpperCase() !== "POST") {
     return fetch(input, init);
@@ -342,7 +354,7 @@ export async function aiProviderFetch(
   if (
     !isRecord(request) ||
     typeof request.model !== "string" ||
-    !isAnthropicModel(request.model)
+    getAiProviderConfig(request.model) !== ANTHROPIC
   ) {
     if (isRecord(request) && Array.isArray(request.input)) {
       const history = request.input.filter((item) => !nativeReasoning(item));

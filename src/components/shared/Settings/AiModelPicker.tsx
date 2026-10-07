@@ -16,7 +16,7 @@ import {
   getAiModelOptions,
   getAiModelReasoningLevels,
   getAiReasoningLabel,
-} from "@/config/aiModels";
+} from "@/config/aiConfig";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 
 interface AiModelPickerProps {

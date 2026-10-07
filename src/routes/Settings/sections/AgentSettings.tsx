@@ -9,10 +9,10 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
-import { getAiMaxOutputTokens } from "@/config/aiModels";
+import { getAiMaxOutputTokens, getAiProviderConfig } from "@/config/aiConfig";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
-import { aiProviderFetch, isAnthropicModel } from "@/services/aiProviderClient";
+import { aiProviderFetch } from "@/services/aiProviderClient";
 import type { AiProviderConfig } from "@/types/aiProvider";
 
 export function AgentSettings() {
@@ -26,6 +26,7 @@ export function AgentSettings() {
     isConfigured,
   } = useAiProviderSettings();
   const notify = useToastNotification();
+  const provider = getAiProviderConfig(config.model);
 
   const [apiBase, setApiBase] = useState(customConfig.apiBase);
   const [apiKey, setApiKey] = useState(customConfig.apiKey);
@@ -115,11 +116,11 @@ export function AgentSettings() {
       if (!isCurrentTest()) return;
       if (!response.ok) {
         // Some misconfigured proxies echo request headers back in error bodies.
-        // Redact any bearer token before surfacing the detail in a toast.
-        const detail = (await response.text().catch(() => "")).replace(
+        let detail = (await response.text().catch(() => "")).replace(
           /Bearer\s+[\w.\-~+/]+=*/gi,
           "Bearer ***",
         );
+        if (trimmed.apiKey) detail = detail.replaceAll(trimmed.apiKey, "***");
         if (!isCurrentTest()) return;
         notify(
           `AI test failed: ${response.status} ${response.statusText}${detail ? ` — ${detail.slice(0, 200)}` : ""}`,
@@ -135,12 +136,9 @@ export function AgentSettings() {
       }
       let successMessage = "Backend AI proxy is working.";
       if (useOwnKey) {
-        const apiName = isAnthropicModel(trimmed.model)
-          ? "Anthropic Messages API"
-          : "Responses API";
         successMessage = trimmed.model
-          ? `AI provider settings saved. Model “${trimmed.model}” works with the ${apiName}.`
-          : `AI provider settings saved. The provider works with the ${apiName}.`;
+          ? `AI provider settings saved. Model “${trimmed.model}” works with the ${provider.apiName}.`
+          : `AI provider settings saved. The provider works with the ${provider.apiName}.`;
       }
       notify(successMessage, "success");
     } catch (err) {
@@ -173,7 +171,7 @@ export function AgentSettings() {
         <Heading level={2}>AI Provider Settings</Heading>
         <Paragraph size="sm" tone="subdued">
           {useOwnKey
-            ? "AI features use an OpenAI Responses or Anthropic Messages API of your choice. Your key is stored in this browser only and is sent only to the configured provider."
+            ? "AI features use the provider you configure. Your key is stored in this browser only and is sent only to the configured provider."
             : "AI features use the backend AI proxy. No personal API key is required."}
         </Paragraph>
         <Paragraph size="xs" tone="subdued">
@@ -201,7 +199,7 @@ export function AgentSettings() {
                 <Input
                   id="agent-settings-api-base"
                   type="url"
-                  placeholder="https://api.openai.com/v1"
+                  placeholder={provider.apiBaseExample}
                   value={apiBase}
                   onChange={(e) => {
                     setApiBase(e.target.value);
@@ -216,9 +214,8 @@ export function AgentSettings() {
                   size="xs"
                   tone="subdued"
                 >
-                  The provider base URL, such as https://api.openai.com/v1 or
-                  https://api.anthropic.com/v1. Do not include /responses or
-                  /messages.
+                  The provider base URL, such as {provider.apiBaseExample}.
+                  Enter the base URL without an endpoint path.
                 </Text>
               </BlockStack>
 

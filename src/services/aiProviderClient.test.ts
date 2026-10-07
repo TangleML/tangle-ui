@@ -9,6 +9,7 @@ import OpenAI from "openai";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
+import { AI_CONFIG } from "@/config/aiConfig";
 import type { ComponentReference } from "@/utils/componentSpec";
 
 import { aiProviderFetch } from "./aiProviderClient";
@@ -366,6 +367,28 @@ describe("aiProviderFetch", () => {
     },
   );
 
+  it.each(["custom-reasoner", "anthropic/claude-opus-5-5"])(
+    "uses the configured provider and token limit for %s",
+    async (model) => {
+      AI_CONFIG.models.push({
+        id: model,
+        provider: "anthropic",
+        label: "Custom reasoner",
+        description: "Custom model",
+        minimumOutputTokens: 1024,
+      });
+      try {
+        await request({ model, max_output_tokens: 256 });
+        expect(String(fetchMock.mock.calls[0][0])).toBe(
+          "https://api.example.com/v1/messages",
+        );
+        expect(sentBody().max_tokens).toBe(1024);
+      } finally {
+        AI_CONFIG.models.pop();
+      }
+    },
+  );
+
   it.each(["claude-haiku-4-5", "claude-opus-4-8", "claude-sonnet-4-6"])(
     "preserves the requested small output budget for %s",
     async (model) => {
@@ -385,6 +408,21 @@ describe("aiProviderFetch", () => {
       }),
     );
     await expect(request({})).rejects.toThrow(/token budget/i);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    { type: "text", text: "Incomplete answer" },
+    { type: "tool_use", id: "toolu_partial", name: "lookup", input: {} },
+  ])("rejects context-truncated $type responses", async (block) => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({
+        ...nativeMessage,
+        content: [block],
+        stop_reason: "model_context_window_exceeded",
+      }),
+    );
+    await expect(request({})).rejects.toThrow(/context window/i);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
@@ -692,5 +730,35 @@ describe("aiProviderFetch", () => {
     expect(finalHistory).not.toContain("signed-native-thinking");
     expect(finalHistory).not.toContain("tangle-anthropic:");
     expect((await session.getItems()).length).toBeGreaterThan(3);
+  });
+
+  it("includes every native text block in the SDK's final answer", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({
+        ...nativeMessage,
+        content: [
+          { type: "text", text: "First part. " },
+          { type: "text", text: "Second part." },
+        ],
+      }),
+    );
+    const client = new OpenAI({
+      baseURL: "https://api.example.com/v1",
+      apiKey: "key",
+      dangerouslyAllowBrowser: true,
+      fetch: aiProviderFetch,
+    });
+    const runner = new Runner({
+      modelProvider: new OpenAIProvider({
+        openAIClient: client,
+        useResponses: true,
+      }),
+      tracingDisabled: true,
+    });
+    const result = await runner.run(
+      new Agent({ name: "Assistant", model: "claude-sonnet-4-6" }),
+      "Hello",
+    );
+    expect(result.finalOutput).toBe("First part. Second part.");
   });
 });

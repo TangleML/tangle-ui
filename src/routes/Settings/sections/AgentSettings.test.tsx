@@ -456,6 +456,36 @@ describe("AgentSettings", () => {
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
+  it("redacts a native API key echoed in a failed Claude test", async () => {
+    const apiKey = "sk-test.+native";
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          error: {
+            type: "authentication_error",
+            message: `Invalid x-api-key: ${apiKey}`,
+          },
+        }),
+        { status: 401, statusText: "Unauthorized" },
+      ),
+    );
+    render(<AgentSettings />);
+    editField("API base URL", "https://api.example.com/v1");
+    editField("API key", apiKey);
+    chooseModel("Claude Opus 5.5");
+    fireEvent.click(button("Save and test AI"));
+
+    await waitFor(() => expect(mockNotify).toHaveBeenCalled());
+    expect(mockFetch.mock.calls[0][0]).toBe(
+      "https://api.example.com/v1/messages",
+    );
+    expect(mockNotify).toHaveBeenCalledWith(
+      'AI test failed: 401 Unauthorized — {"error":{"type":"authentication_error","message":"Invalid x-api-key: ***"}}',
+      "error",
+    );
+    expect(JSON.stringify(mockNotify.mock.calls)).not.toContain(apiKey);
+  });
+
   it("saves after a successful AI test using the default model and thinking", async () => {
     mockFetch.mockResolvedValue(new Response(JSON.stringify({ ok: true })));
     render(<AgentSettings />);

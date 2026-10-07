@@ -11,7 +11,7 @@
  * judgment over a small, well-defined list when literal matching is not enough.
  */
 
-import { getAiMaxOutputTokens, isAiReasoningModel } from "@/config/aiModels";
+import { getAiMaxOutputTokens, isAiReasoningModel } from "@/config/aiConfig";
 import { aiProviderFetch } from "@/services/aiProviderClient";
 import type { AiReasoningEffort } from "@/types/aiProvider";
 import type {
