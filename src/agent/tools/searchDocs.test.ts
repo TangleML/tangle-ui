@@ -1,6 +1,6 @@
 import "fake-indexeddb/auto";
 
-import type OpenAI from "openai";
+import OpenAI from "openai";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { OpenAIProvider } from "../config";
@@ -160,6 +160,77 @@ describe("executeSearchDocs", () => {
     const parsed = JSON.parse(raw) as { results: unknown[] };
 
     expect(parsed.results).toHaveLength(5);
+  });
+
+  it("returns ranked text matches and citations when embeddings are unavailable", async () => {
+    const store = makeStore();
+    store.vectors[0].content = "Tasks combine inputs and outputs.";
+    fetchMock.mockResolvedValue(jsonResponse(store));
+    embeddingsCreateMock.mockRejectedValue(new Error("Embeddings unavailable"));
+
+    const { executeSearchDocs, DocsVectorStoreCache } =
+      await import("./searchDocs");
+    const raw = await executeSearchDocs(
+      { query: "TASKS tasks inputs outputs", topK: 2 },
+      fakeProvider,
+      new DocsVectorStoreCache(),
+    );
+    const parsed = JSON.parse(raw);
+
+    expect(parsed.error).toBeUndefined();
+    expect(parsed.results).toHaveLength(2);
+    expect(parsed.results[0]).toMatchObject({
+      title: "Tasks",
+      score: 1,
+      citation: "[Tasks](https://tangleml.com/docs/core-concepts/tasks)",
+    });
+    expect(parsed.results[1].title).toBe("Inputs");
+    expect(parsed.results[1].score).toBeCloseTo(1 / 3, 3);
+    expect(parsed.instruction).toContain("markdown link");
+  });
+
+  it("omits unrelated documents when the text fallback has no matches", async () => {
+    fetchMock.mockResolvedValue(jsonResponse(makeStore()));
+    embeddingsCreateMock.mockRejectedValue(new Error("Embeddings unavailable"));
+
+    const { executeSearchDocs, DocsVectorStoreCache } =
+      await import("./searchDocs");
+    const raw = await executeSearchDocs(
+      { query: "unrelated-query" },
+      fakeProvider,
+      new DocsVectorStoreCache(),
+    );
+    const parsed = JSON.parse(raw);
+
+    expect(parsed.error).toBeUndefined();
+    expect(parsed.results).toEqual([]);
+  });
+
+  it("searches docs without requesting unsupported Anthropic embeddings", async () => {
+    fetchMock.mockResolvedValue(jsonResponse(makeStore()));
+    const provider = {
+      openai: new OpenAI({
+        baseURL: "https://api.anthropic.com/v1",
+        apiKey: "test-key",
+        dangerouslyAllowBrowser: true,
+      }),
+    };
+    const { executeSearchDocs, DocsVectorStoreCache } =
+      await import("./searchDocs");
+    const parsed = JSON.parse(
+      await executeSearchDocs(
+        { query: "components" },
+        provider,
+        new DocsVectorStoreCache(),
+      ),
+    );
+
+    expect(parsed.error).toBeUndefined();
+    expect(parsed.results[0].citation).toBe(
+      "[Components](https://tangleml.com/docs/core-concepts/components)",
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(embeddingsCreateMock).not.toHaveBeenCalled();
   });
 
   it("returns the populate-instruction message when the index is empty", async () => {

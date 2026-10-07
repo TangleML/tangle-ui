@@ -1,6 +1,7 @@
 import {
   Agent,
   MemorySession,
+  ModelRefusalError,
   OpenAIProvider,
   Runner,
   tool,
@@ -23,7 +24,7 @@ vi.mock("@/utils/getComponentName", () => ({
     component.spec?.name ?? "Component",
 }));
 
-const endpoint = "https://api.example.com/v1/responses";
+const endpoint = "https://api.anthropic.com/v1/responses";
 const nativeMessage = {
   id: "msg_native",
   type: "message",
@@ -89,7 +90,7 @@ describe("aiProviderFetch", () => {
   it.each(["embeddings", "models"])(
     "leaves %s requests untouched even with a Claude model",
     async (path) => {
-      const url = `https://api.example.com/v1/${path}`;
+      const url = `https://api.anthropic.com/v1/${path}`;
       const init = {
         method: "POST",
         body: JSON.stringify({ model: "claude-test" }),
@@ -98,6 +99,37 @@ describe("aiProviderFetch", () => {
       expect(fetchMock).toHaveBeenCalledWith(url, init);
     },
   );
+
+  it("keeps Claude gateways on Responses with their original authentication", async () => {
+    const url = "https://gateway.example.com/v1/responses";
+    const upstream = jsonResponse({ output_text: "Hello" });
+    fetchMock.mockResolvedValue(upstream);
+    const headers = { authorization: "Bearer gateway-key" };
+    const input = [{ role: "user", content: "Hello" }];
+
+    expect(
+      await aiProviderFetch(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          model: "claude-sonnet-5-5",
+          input: [
+            {
+              type: "reasoning",
+              encrypted_content:
+                AI_CONFIG.providers.anthropic.nativeReasoningPrefix + "native",
+            },
+            ...input,
+          ],
+        }),
+      }),
+    ).toBe(upstream);
+    expect(fetchMock).toHaveBeenCalledWith(
+      url,
+      expect.objectContaining({ headers }),
+    );
+    expect(sentBody()).toEqual({ model: "claude-sonnet-5-5", input });
+  });
 
   it("uses native direct authentication and accepts a Request input", async () => {
     await aiProviderFetch(
@@ -122,7 +154,7 @@ describe("aiProviderFetch", () => {
     );
     const [url, init] = fetchMock.mock.calls[0];
     const headers = new Headers(init?.headers);
-    expect(String(url)).toBe("https://api.example.com/v1/messages?trace=1");
+    expect(String(url)).toBe("https://api.anthropic.com/v1/messages?trace=1");
     expect(headers.get("authorization")).toBeNull();
     expect(headers.get("x-api-key")).toBe("direct-key");
     expect(headers.get("anthropic-version")).toBe("2023-06-01");
@@ -141,7 +173,7 @@ describe("aiProviderFetch", () => {
       expect(headers.has(name)).toBe(false);
     }
     expect(sentBody().model).toBe("claude-sonnet-4-6");
-    expect(sentBody().max_tokens).toBe(8192);
+    expect(sentBody().max_tokens).toBe(16384);
   });
 
   it("routes cookie-authenticated requests through a sibling native endpoint", async () => {
@@ -174,6 +206,7 @@ describe("aiProviderFetch", () => {
     expect(headers.has("anthropic-dangerous-direct-browser-access")).toBe(
       false,
     );
+    expect(sentBody().max_tokens).toBe(16384);
   });
 
   it("preserves messages and tool results while omitting opaque reasoning", async () => {
@@ -353,47 +386,22 @@ describe("aiProviderFetch", () => {
   });
 
   it.each([
-    "claude-opus-5",
-    "claude-opus-5-5",
+    "claude-haiku-4-5",
     "claude-sonnet-5-5",
-    "claude-fable-5-1",
-    "claude-mythos-preview",
     "anthropic/claude-sonnet-5-5",
-  ])(
-    "allows room for thinking when %s has a small requested output budget",
-    async (model) => {
-      await request({ model, max_output_tokens: 256 });
-      expect(sentBody().max_tokens).toBeGreaterThanOrEqual(4096);
-    },
-  );
+  ])("uses the provider's default output limit for %s", async (model) => {
+    await request({ model });
+    expect(sentBody().max_tokens).toBe(16384);
+  });
 
-  it.each(["custom-reasoner", "anthropic/claude-opus-5-5"])(
-    "uses the configured provider and token limit for %s",
-    async (model) => {
-      AI_CONFIG.models.push({
-        id: model,
-        provider: "anthropic",
-        label: "Custom reasoner",
-        description: "Custom model",
-        minimumOutputTokens: 1024,
+  it.each([256, 32768])(
+    "preserves the explicitly requested output limit of %i",
+    async (maxOutputTokens) => {
+      await request({
+        model: "claude-sonnet-5-5",
+        max_output_tokens: maxOutputTokens,
       });
-      try {
-        await request({ model, max_output_tokens: 256 });
-        expect(String(fetchMock.mock.calls[0][0])).toBe(
-          "https://api.example.com/v1/messages",
-        );
-        expect(sentBody().max_tokens).toBe(1024);
-      } finally {
-        AI_CONFIG.models.pop();
-      }
-    },
-  );
-
-  it.each(["claude-haiku-4-5", "claude-opus-4-8", "claude-sonnet-4-6"])(
-    "preserves the requested small output budget for %s",
-    async (model) => {
-      await request({ model, max_output_tokens: 256 });
-      expect(sentBody().max_tokens).toBe(256);
+      expect(sentBody().max_tokens).toBe(maxOutputTokens);
     },
   );
 
@@ -504,14 +512,14 @@ describe("aiProviderFetch", () => {
         },
       },
       {
-        apiBase: "https://api.example.com/v1",
+        apiBase: "https://api.anthropic.com/v1",
         apiKey: "direct-key",
         model: "claude-sonnet-4-6",
       },
     );
     expect(result.description).toBe(description);
     expect(String(fetchMock.mock.calls[0][0])).toBe(
-      "https://api.example.com/v1/messages",
+      "https://api.anthropic.com/v1/messages",
     );
     expect(
       new Headers(fetchMock.mock.calls[0][1]?.headers).get("x-api-key"),
@@ -519,6 +527,7 @@ describe("aiProviderFetch", () => {
     expect(JSON.stringify(sentBody().messages)).toContain("Sort rows");
     expect(JSON.stringify(sentBody().messages)).toContain("example/sorter");
     expect(sentBody().system).toContain("single JSON object");
+    expect(sentBody().max_tokens).toBe(16384);
   });
 
   it("reranks component search results through cookie-authenticated Claude Messages", async () => {
@@ -552,7 +561,7 @@ describe("aiProviderFetch", () => {
     expect(JSON.stringify(sentBody().messages)).toContain("sorter");
     expect(JSON.stringify(sentBody().messages)).toContain("sort rows");
     expect(sentBody().system).toContain("reranker");
-    expect(sentBody().max_tokens).toBeGreaterThanOrEqual(4096);
+    expect(sentBody().max_tokens).toBe(16384);
   });
 
   it("returns upstream errors with their status, headers, and payload intact", async () => {
@@ -674,9 +683,10 @@ describe("aiProviderFetch", () => {
       execute: ({ q }) => `Found ${q}`,
     });
     const client = new OpenAI({
-      baseURL: "https://api.example.com/v1",
+      baseURL: "https://backend.example.com/ai/v1",
       apiKey: "key",
       dangerouslyAllowBrowser: true,
+      fetchOptions: { credentials: "include" },
       fetch: aiProviderFetch,
     });
     const runner = new Runner({
@@ -701,7 +711,7 @@ describe("aiProviderFetch", () => {
     }
     expect(fetchMock).toHaveBeenCalledTimes(5);
     expect(String(fetchMock.mock.calls[2][0])).toBe(
-      "https://api.example.com/v1/messages",
+      "https://backend.example.com/ai/anthropic/v1/messages",
     );
     expect(JSON.stringify(sentBody(2).messages)).toContain("Found first");
     expect(JSON.stringify(sentBody(2).messages)).toContain("First answer");
@@ -714,7 +724,9 @@ describe("aiProviderFetch", () => {
       type: "tool_use",
       id: "toolu_two",
     });
-    expect(String(fetchMock.mock.calls[4][0])).toBe(endpoint);
+    expect(String(fetchMock.mock.calls[4][0])).toBe(
+      "https://backend.example.com/ai/v1/responses",
+    );
     const finalHistory = JSON.stringify(sentBody(4).input);
     for (const text of [
       "First question",
@@ -732,6 +744,53 @@ describe("aiProviderFetch", () => {
     expect((await session.getItems()).length).toBeGreaterThan(3);
   });
 
+  it.each([
+    {
+      stopDetails: { explanation: "This request was declined." },
+      explanation: "This request was declined.",
+    },
+    {
+      stopDetails: null,
+      explanation: "Anthropic declined this request.",
+    },
+    {
+      stopDetails: { explanation: "" },
+      explanation: "Anthropic declined this request.",
+    },
+  ])(
+    "surfaces a native refusal without retrying",
+    async ({ stopDetails, explanation }) => {
+      fetchMock.mockImplementation(async () =>
+        jsonResponse({
+          ...nativeMessage,
+          content: [],
+          stop_reason: "refusal",
+          stop_details: stopDetails,
+        }),
+      );
+      const client = new OpenAI({
+        baseURL: "https://api.anthropic.com/v1",
+        apiKey: "key",
+        dangerouslyAllowBrowser: true,
+        fetch: aiProviderFetch,
+      });
+      const runner = new Runner({
+        modelProvider: new OpenAIProvider({
+          openAIClient: client,
+          useResponses: true,
+        }),
+        tracingDisabled: true,
+      });
+      const result = runner.run(
+        new Agent({ name: "Assistant", model: "claude-fable-5-1" }),
+        "Hello",
+      );
+      await expect(result).rejects.toBeInstanceOf(ModelRefusalError);
+      await expect(result).rejects.toThrow(explanation);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    },
+  );
+
   it("includes every native text block in the SDK's final answer", async () => {
     fetchMock.mockResolvedValue(
       jsonResponse({
@@ -743,7 +802,7 @@ describe("aiProviderFetch", () => {
       }),
     );
     const client = new OpenAI({
-      baseURL: "https://api.example.com/v1",
+      baseURL: "https://api.anthropic.com/v1",
       apiKey: "key",
       dangerouslyAllowBrowser: true,
       fetch: aiProviderFetch,

@@ -212,7 +212,8 @@ describe("rerankComponentsByNaturalLanguage", () => {
     const init = call?.[1];
     const body = parseFetchBody(call);
     expect(body.model).toBeUndefined();
-    expect(body.max_output_tokens).toBe(9692);
+    expect(body).not.toHaveProperty("max_output_tokens");
+    expect(body.temperature).toBeUndefined();
     expect(JSON.stringify(init)).not.toContain("authorization");
   });
 
@@ -348,7 +349,7 @@ describe("rerankComponentsByNaturalLanguage", () => {
     );
     expect(body.input).toContain("Query: train");
     expect(body.text).toEqual({ format: { type: "json_object" } });
-    expect(body.max_output_tokens).toBe(1500);
+    expect(body).not.toHaveProperty("max_output_tokens");
     expect(body.max_tokens).toBeUndefined();
     expect(body.max_completion_tokens).toBeUndefined();
     expect(body.temperature).toBe(0);
@@ -370,7 +371,7 @@ describe("rerankComponentsByNaturalLanguage", () => {
     expect(body.instructions).not.toContain("Score EVERY candidate");
   });
 
-  it("scales the output budget for all candidates", async () => {
+  it("requests scores for every candidate without overriding output limits", async () => {
     vi.mocked(global.fetch).mockResolvedValue(
       mockResponsesResponse({ matches: [] }),
     );
@@ -392,7 +393,7 @@ describe("rerankComponentsByNaturalLanguage", () => {
     const body = parseFetchBody(vi.mocked(global.fetch).mock.calls[0]);
     expect(body.instructions).toContain("Score EVERY candidate");
     expect(body.instructions).not.toContain("at most the 20 strongest");
-    expect(body.max_output_tokens).toBe(4000);
+    expect(body).not.toHaveProperty("max_output_tokens");
   });
 
   it.each([
@@ -414,25 +415,7 @@ describe("rerankComponentsByNaturalLanguage", () => {
 
     const body = parseFetchBody(vi.mocked(global.fetch).mock.calls[0]);
     expect(body.temperature).toBeUndefined();
-    expect(body.max_output_tokens).toBe(9692);
-  });
-
-  it("bounds proxy-selected model output", async () => {
-    vi.mocked(global.fetch).mockResolvedValue(
-      mockResponsesResponse({ matches: [] }),
-    );
-
-    await rerankComponentsByNaturalLanguage(
-      "train",
-      [{ id: "a", name: "a", description: "" }],
-      { ...VALID_OPTIONS, model: "" },
-    );
-
-    const call = vi.mocked(global.fetch).mock.calls[0];
-    const body = parseFetchBody(call);
-    expect(body.model).toBeUndefined();
-    expect(body.max_output_tokens).toBe(9692);
-    expect(body.temperature).toBeUndefined();
+    expect(body).not.toHaveProperty("max_output_tokens");
   });
 });
 
@@ -494,7 +477,7 @@ describe("generateComponentAiDescription", () => {
     expect(JSON.stringify(body.input)).toContain("dataset");
     expect(body.instructions).toContain("preferably 2-4 short sentences");
     expect(body.reasoning).toBeUndefined();
-    expect(body.max_output_tokens).toBe(900);
+    expect(body).not.toHaveProperty("max_output_tokens");
   });
 
   it.each([
@@ -505,7 +488,7 @@ describe("generateComponentAiDescription", () => {
     ["description", "high", VALID_OPTIONS.model],
     ["description", "max", VALID_OPTIONS.model],
   ] as const)(
-    "bounds %s output with reasoning %s",
+    "preserves %s reasoning %s without overriding output limits",
     async (request, effort, model) => {
       vi.mocked(fetch).mockResolvedValue(
         mockResponsesResponse({ matches: [], description: "Trains a model." }),
@@ -524,32 +507,10 @@ describe("generateComponentAiDescription", () => {
       const body = parseFetchBody(call);
       expect(body.model).toBe(model);
       expect(body.reasoning).toEqual({ effort });
-      expect(body.max_output_tokens).toBe(
-        (request === "search" ? 1500 : 900) + (effort === "none" ? 0 : 8192),
-      );
+      expect(body).not.toHaveProperty("max_output_tokens");
       expect(body.temperature).toBeUndefined();
     },
   );
-
-  it("scales the output budget with reasoning", async () => {
-    vi.mocked(fetch).mockResolvedValue(mockResponsesResponse({ matches: [] }));
-    const candidates = Array.from({ length: 40 }, (_, i) => ({
-      id: `c${i}`,
-      name: `c${i}`,
-      description: "",
-    }));
-
-    await rerankComponentsByNaturalLanguage(
-      "train",
-      candidates,
-      { ...VALID_OPTIONS, model: "custom-reasoner", reasoningEffort: "high" },
-      { scoreAllCandidates: true },
-    );
-
-    const body = parseFetchBody(vi.mocked(fetch).mock.calls[0]);
-    expect(body.max_output_tokens).toBe(12192);
-    expect(body.temperature).toBeUndefined();
-  });
 
   it.each([
     ["search", "max_output_tokens", "", TOKEN_LIMIT_ERROR],

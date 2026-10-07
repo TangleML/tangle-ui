@@ -11,7 +11,7 @@
  * judgment over a small, well-defined list when literal matching is not enough.
  */
 
-import { getAiMaxOutputTokens, isAiReasoningModel } from "@/config/aiConfig";
+import { isAiReasoningModel } from "@/config/aiConfig";
 import { aiProviderFetch } from "@/services/aiProviderClient";
 import type { AiReasoningEffort } from "@/types/aiProvider";
 import type {
@@ -285,7 +285,6 @@ function validateConfig(options: LlmOptions): {
 interface ResponsesCallConfig {
   systemPrompt: string;
   userPrompt: string;
-  maxOutputTokens: number;
 }
 
 async function callLlmResponse(
@@ -311,11 +310,6 @@ async function callLlmResponse(
       ...(model && !options.reasoningEffort && !isAiReasoningModel(model)
         ? { temperature: 0 }
         : {}),
-      max_output_tokens: getAiMaxOutputTokens(
-        model,
-        options.reasoningEffort,
-        config.maxOutputTokens,
-      ),
       instructions: config.systemPrompt,
       input: `Return JSON.\n\n${config.userPrompt}`,
       text: { format: { type: "json_object" } },
@@ -370,9 +364,6 @@ export async function rerankComponentsByNaturalLanguage(
   const rawContent = await callLlmResponse(options, {
     systemPrompt: buildRerankSystemPrompt(scoreAllCandidates),
     userPrompt: buildRerankUserPrompt(trimmed, candidates),
-    maxOutputTokens: scoreAllCandidates
-      ? Math.max(1500, candidates.length * 100)
-      : 1500,
   });
 
   let matchesValue: RerankedMatch[] = [];
@@ -496,7 +487,6 @@ export async function generateComponentAiDescription(
   const rawContent = await callLlmResponse(options, {
     systemPrompt: buildDescriptionSystemPrompt(),
     userPrompt: buildDescriptionUserPrompt(input),
-    maxOutputTokens: 900,
   });
 
   const description = readDescription(rawContent);

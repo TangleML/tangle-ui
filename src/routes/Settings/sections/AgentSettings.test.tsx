@@ -137,7 +137,7 @@ describe("AgentSettings", () => {
       model: "gpt-6-sol",
       reasoning: { effort: "high" },
     });
-    expect(body.max_output_tokens).toBe(8224);
+    expect(body).not.toHaveProperty("max_output_tokens");
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
@@ -178,9 +178,7 @@ describe("AgentSettings", () => {
       expect(requestBody().reasoning).toEqual({
         effort,
       });
-      expect(requestBody().max_output_tokens).toBe(
-        effort === "none" ? 32 : 8224,
-      );
+      expect(requestBody()).not.toHaveProperty("max_output_tokens");
       expect(readSavedConfig()).toEqual(savedConfig);
     },
   );
@@ -372,7 +370,7 @@ describe("AgentSettings", () => {
       reasoning: { effort: "high" },
       text: { format: { type: "json_object" } },
     });
-    expect(body.max_output_tokens).toBe(8224);
+    expect(body).not.toHaveProperty("max_output_tokens");
   });
 
   it.each(["model", "thinking", "clear"])(
@@ -428,7 +426,7 @@ describe("AgentSettings", () => {
     await waitFor(() => expect(mockNotify).toHaveBeenCalled());
     expect(requestBody()).not.toHaveProperty("model");
     expect(requestBody()).not.toHaveProperty("reasoning");
-    expect(requestBody().max_output_tokens).toBe(8224);
+    expect(requestBody()).not.toHaveProperty("max_output_tokens");
     expect(readSavedConfig().model).toBe("");
   });
 
@@ -470,20 +468,44 @@ describe("AgentSettings", () => {
       ),
     );
     render(<AgentSettings />);
-    editField("API base URL", "https://api.example.com/v1");
+    editField("API base URL", "https://api.anthropic.com/v1");
     editField("API key", apiKey);
     chooseModel("Claude Opus 5.5");
     fireEvent.click(button("Save and test AI"));
 
     await waitFor(() => expect(mockNotify).toHaveBeenCalled());
     expect(mockFetch.mock.calls[0][0]).toBe(
-      "https://api.example.com/v1/messages",
+      "https://api.anthropic.com/v1/messages",
     );
     expect(mockNotify).toHaveBeenCalledWith(
       'AI test failed: 401 Unauthorized — {"error":{"type":"authentication_error","message":"Invalid x-api-key: ***"}}',
       "error",
     );
     expect(JSON.stringify(mockNotify.mock.calls)).not.toContain(apiKey);
+  });
+
+  it("tests Claude through an OpenAI-compatible gateway", async () => {
+    mockFetch.mockResolvedValue(new Response(JSON.stringify({ ok: true })));
+    render(<AgentSettings />);
+    editField("API base URL", "https://gateway.example.com/v1");
+    editField("API key", "gateway-key");
+    chooseModel("Claude Opus 5.5");
+    fireEvent.click(button("Save and test AI"));
+
+    await waitFor(() => expect(mockNotify).toHaveBeenCalled());
+    expect(mockFetch).toHaveBeenCalledWith(
+      "https://gateway.example.com/v1/responses",
+      expect.objectContaining({
+        headers: {
+          "content-type": "application/json",
+          authorization: "Bearer gateway-key",
+        },
+      }),
+    );
+    expect(mockNotify).toHaveBeenCalledWith(
+      "AI provider settings saved. Model “claude-opus-5-5” works with the Responses API.",
+      "success",
+    );
   });
 
   it("saves after a successful AI test using the default model and thinking", async () => {

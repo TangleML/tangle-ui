@@ -10,7 +10,6 @@ export interface AiModelOption {
 
 interface AiModelConfig extends AiModelOption {
   provider: "openai" | "anthropic";
-  minimumOutputTokens?: number;
 }
 
 interface AiModelOptionsConfig {
@@ -29,7 +28,6 @@ export const AI_CONFIG = {
   embeddingModel: "text-embedding-3-small",
   defaultProvider: "openai" as const,
   defaultReasoningEffort: "high" as const,
-  reasoningTokenAllowance: 8192,
   reasoningLevels: [
     { value: "none", label: "None" },
     { value: "low", label: "Low" },
@@ -52,15 +50,12 @@ export const AI_CONFIG = {
     anthropic: {
       apiName: "Anthropic Messages API",
       apiBaseExample: "https://api.anthropic.com/v1",
+      nativeApiBasePattern:
+        /^https:\/\/api\.anthropic\.com(?::443)?\/v1(?:\/|$)/i,
       modelPattern: /(^|[/:])claude[-_]/i,
       directModelPrefix: /^.*[/:](?=claude[-_])/i,
       nativeReasoningPrefix: "tangle-anthropic:",
-      defaultMaxOutputTokens: 8192,
-      minimumOutputTokenRule: {
-        modelPattern:
-          /claude-(?:opus|sonnet|fable|mythos)-(?:5(?:[-.]|$)|preview)/i,
-        tokens: 4096,
-      },
+      defaultMaxOutputTokens: 16384,
       routes: {
         proxy: {
           match: /\/v1\/responses(?=\?|$)/,
@@ -123,21 +118,18 @@ export const AI_CONFIG = {
     {
       id: "claude-fable-5-1",
       provider: "anthropic",
-      minimumOutputTokens: 4096,
       label: "Claude Fable 5.1",
       description: "For demanding reasoning and long-running agents",
     },
     {
       id: "claude-opus-5-5",
       provider: "anthropic",
-      minimumOutputTokens: 4096,
       label: "Claude Opus 5.5",
       description: "For complex coding and agentic workflows",
     },
     {
       id: "claude-sonnet-5-5",
       provider: "anthropic",
-      minimumOutputTokens: 4096,
       label: "Claude Sonnet 5.5",
       description: "Balanced speed and intelligence",
     },
@@ -223,21 +215,17 @@ export function getAiProviderConfig(modelId: string) {
   );
 }
 
-export function getAiMinimumOutputTokens(modelId: string): number {
+export function getAiRequestProviderConfig(
+  modelId: string,
+  apiBase: string,
+  credentials?: RequestCredentials,
+) {
   const provider = getAiProviderConfig(modelId);
-  const id =
-    "directModelPrefix" in provider
-      ? modelId.replace(provider.directModelPrefix, "")
-      : modelId;
-  const model =
-    AI_CONFIG.models.find((option) => option.id === modelId) ??
-    AI_CONFIG.models.find((option) => option.id === id);
-  if (model?.minimumOutputTokens !== undefined)
-    return model.minimumOutputTokens;
-  return "minimumOutputTokenRule" in provider &&
-    provider.minimumOutputTokenRule.modelPattern.test(modelId)
-    ? provider.minimumOutputTokenRule.tokens
-    : 0;
+  return "nativeApiBasePattern" in provider &&
+    credentials !== "include" &&
+    !provider.nativeApiBasePattern.test(apiBase)
+    ? AI_CONFIG.providers.openai
+    : provider;
 }
 
 export function getAiModelLabel(modelId: string): string {
@@ -285,18 +273,4 @@ export function getAiReasoningLabel(effort: AiReasoningEffort): string {
 
 export function isAiReasoningModel(modelId: string): boolean {
   return AI_CONFIG.providers.openai.reasoningModelPattern.test(modelId);
-}
-
-export function getAiMaxOutputTokens(
-  modelId: string,
-  reasoningEffort: AiReasoningEffort | undefined,
-  outputTokenBudget: number,
-): number {
-  const model = modelId.trim();
-  if (reasoningEffort === "none") return outputTokenBudget;
-  if (!model || reasoningEffort || isAiReasoningModel(model)) {
-    // Responses counts reasoning tokens against the output limit.
-    return outputTokenBudget + AI_CONFIG.reasoningTokenAllowance;
-  }
-  return outputTokenBudget;
 }

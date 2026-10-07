@@ -1,8 +1,7 @@
 import {
   AI_CONFIG,
   type AiHeaderConfig,
-  getAiMinimumOutputTokens,
-  getAiProviderConfig,
+  getAiRequestProviderConfig,
 } from "@/config/aiConfig";
 import { isRecord } from "@/utils/typeGuards";
 
@@ -184,12 +183,9 @@ function toAnthropic(request: JsonObject, proxy: boolean): JsonObject {
   }
 
   const model = String(request.model);
-  const maxTokens = Number(
-    request.max_output_tokens ?? ANTHROPIC.defaultMaxOutputTokens,
-  );
   const result: JsonObject = {
     model: proxy ? model : model.replace(ANTHROPIC.directModelPrefix, ""),
-    max_tokens: Math.max(maxTokens, getAiMinimumOutputTokens(model)),
+    max_tokens: request.max_output_tokens ?? ANTHROPIC.defaultMaxOutputTokens,
     messages,
   };
   const text = isRecord(request.text) ? request.text : {};
@@ -238,15 +234,30 @@ function toResponses(value: unknown, model: string): JsonObject {
   if (!Array.isArray(message.content)) {
     throw new Error("Anthropic returned a response without content");
   }
+  const stopDetails = isRecord(message.stop_details)
+    ? message.stop_details
+    : {};
+  const blocks =
+    message.stop_reason === "refusal"
+      ? [
+          {
+            type: "refusal",
+            refusal:
+              typeof stopDetails.explanation === "string" &&
+              stopDetails.explanation
+                ? stopDetails.explanation
+                : "Anthropic declined this request.",
+          },
+        ]
+      : message.content;
   const output: JsonObject[] = [];
-  for (const [index, value] of message.content.entries()) {
+  for (const [index, value] of blocks.entries()) {
     const block = object(value);
-    if (block.type === "text") {
-      const content = {
-        type: "output_text",
-        text: block.text,
-        annotations: [],
-      };
+    if (block.type === "text" || block.type === "refusal") {
+      const content =
+        block.type === "refusal"
+          ? block
+          : { type: "output_text", text: block.text, annotations: [] };
       const previous = output.at(-1);
       if (previous?.type === "message" && Array.isArray(previous.content)) {
         previous.content.push(content);
@@ -308,7 +319,7 @@ function toResponses(value: unknown, model: string): JsonObject {
         ? { reason: "max_output_tokens" }
         : null,
     output,
-    output_text: message.content
+    output_text: blocks
       .filter((block) => isRecord(block) && block.type === "text")
       .map((block) => String(object(block).text))
       .join(""),
@@ -354,7 +365,11 @@ export async function aiProviderFetch(
   if (
     !isRecord(request) ||
     typeof request.model !== "string" ||
-    getAiProviderConfig(request.model) !== ANTHROPIC
+    getAiRequestProviderConfig(
+      request.model,
+      url,
+      init?.credentials ?? original?.credentials,
+    ) !== ANTHROPIC
   ) {
     if (isRecord(request) && Array.isArray(request.input)) {
       const history = request.input.filter((item) => !nativeReasoning(item));

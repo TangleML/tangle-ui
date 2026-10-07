@@ -9,7 +9,10 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
-import { getAiMaxOutputTokens, getAiProviderConfig } from "@/config/aiConfig";
+import {
+  getAiProviderConfig,
+  getAiRequestProviderConfig,
+} from "@/config/aiConfig";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
 import { aiProviderFetch } from "@/services/aiProviderClient";
@@ -105,11 +108,6 @@ export function AgentSettings() {
           instructions:
             "You are testing provider compatibility. Return only JSON.",
           input: 'Return the JSON object {"ok": true}.',
-          max_output_tokens: getAiMaxOutputTokens(
-            trimmed.model,
-            trimmed.reasoningEffort,
-            32,
-          ),
           text: { format: { type: "json_object" } },
         }),
       });
@@ -136,9 +134,14 @@ export function AgentSettings() {
       }
       let successMessage = "Backend AI proxy is working.";
       if (useOwnKey) {
+        const requestProvider = getAiRequestProviderConfig(
+          trimmed.model,
+          trimmed.apiBase,
+          trimmed.credentials,
+        );
         successMessage = trimmed.model
-          ? `AI provider settings saved. Model “${trimmed.model}” works with the ${provider.apiName}.`
-          : `AI provider settings saved. The provider works with the ${provider.apiName}.`;
+          ? `AI provider settings saved. Model “${trimmed.model}” works with the ${requestProvider.apiName}.`
+          : `AI provider settings saved. The provider works with the ${requestProvider.apiName}.`;
       }
       notify(successMessage, "success");
     } catch (err) {
