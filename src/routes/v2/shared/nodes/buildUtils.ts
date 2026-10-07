@@ -1,6 +1,11 @@
 import type { Edge, Node, XYPosition } from "@xyflow/react";
 
-import type { ComponentSpec } from "@/models/componentSpec";
+import type {
+  ComponentSpec,
+  Input,
+  Output,
+  Task,
+} from "@/models/componentSpec";
 import {
   EDITOR_POSITION_ANNOTATION,
   ZINDEX_ANNOTATION,
@@ -11,35 +16,25 @@ const IO_OFFSET = 150;
 const INPUT_COLUMN_X = -200;
 const OUTPUT_COLUMN_X = 800;
 
-interface PositionedEntity {
-  annotations: {
-    has(key: string): boolean;
-    get(key: string): unknown;
-  };
-}
+type PositionedEntity = Input | Output | Task;
 
 // Copied, not passed through: React Flow reuses a node's internals while the
 // node object it holds is identical, so sharing the annotation's own position
 // object leaves an in-place write (undo, redo) invisible on screen.
 function resolvePosition(
   entity: PositionedEntity,
-  fallback: { x: number; y: number },
-): { x: number; y: number } {
+  fallback: XYPosition,
+): XYPosition {
   if (!entity.annotations.has(EDITOR_POSITION_ANNOTATION)) return fallback;
-  const { x, y } = entity.annotations.get(
-    EDITOR_POSITION_ANNOTATION,
-  ) as XYPosition;
+  const { x, y } = entity.annotations.get(EDITOR_POSITION_ANNOTATION);
   return { x, y };
 }
 
-export function ioDefaultPosition(
-  index: number,
-  x: number,
-): { x: number; y: number } {
+export function ioDefaultPosition(index: number, x: number): XYPosition {
   return { x, y: index * IO_OFFSET };
 }
 
-export function taskDefaultPosition(index: number): { x: number; y: number } {
+export function taskDefaultPosition(index: number): XYPosition {
   return {
     x: 200 + (index % 3) * TASK_OFFSET,
     y: Math.floor(index / 3) * TASK_OFFSET,
@@ -95,9 +90,9 @@ function parseZIndex(raw: unknown): number | undefined {
 }
 
 export function createEntityNode(
-  entity: PositionedEntity & { $id: string },
+  entity: PositionedEntity,
   nodeType: string,
-  fallback: { x: number; y: number },
+  fallback: XYPosition,
   data: Record<string, unknown>,
   domAttributes?: Record<string, string>,
 ): Node {
