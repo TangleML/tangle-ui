@@ -137,7 +137,7 @@ describe("AgentSettings", () => {
       model: "gpt-6-sol",
       reasoning: { effort: "high" },
     });
-    expect(body).not.toHaveProperty("max_output_tokens");
+    expect(body.max_output_tokens).toBe(8224);
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
@@ -178,7 +178,9 @@ describe("AgentSettings", () => {
       expect(requestBody().reasoning).toEqual({
         effort,
       });
-      expect(requestBody()).not.toHaveProperty("max_output_tokens");
+      expect(requestBody().max_output_tokens).toBe(
+        effort === "none" ? 32 : 8224,
+      );
       expect(readSavedConfig()).toEqual(savedConfig);
     },
   );
@@ -370,7 +372,7 @@ describe("AgentSettings", () => {
       reasoning: { effort: "high" },
       text: { format: { type: "json_object" } },
     });
-    expect(body).not.toHaveProperty("max_output_tokens");
+    expect(body.max_output_tokens).toBe(8224);
   });
 
   it.each(["model", "thinking", "clear"])(
@@ -426,7 +428,7 @@ describe("AgentSettings", () => {
     await waitFor(() => expect(mockNotify).toHaveBeenCalled());
     expect(requestBody()).not.toHaveProperty("model");
     expect(requestBody()).not.toHaveProperty("reasoning");
-    expect(requestBody()).not.toHaveProperty("max_output_tokens");
+    expect(requestBody().max_output_tokens).toBe(8224);
     expect(readSavedConfig().model).toBe("");
   });
 
@@ -506,6 +508,22 @@ describe("AgentSettings", () => {
       "AI provider settings saved. Model “claude-opus-5-5” works with the Responses API.",
       "success",
     );
+  });
+
+  it("allows entering and reselecting a custom BYOK model ID", async () => {
+    mockFetch.mockResolvedValue(new Response(JSON.stringify({ ok: true })));
+    render(<AgentSettings />);
+    editField("API base URL", "https://gateway.example.com/v1");
+    editField("API key", "gateway-key");
+    editField("Model ID", "custom-model");
+    chooseModel("GPT-6 Sol");
+    expect(screen.getByLabelText("Model ID")).toHaveValue("gpt-6-sol");
+    editField("Model ID", "custom-model");
+    fireEvent.click(button("Save and test AI"));
+
+    await waitFor(() => expect(mockNotify).toHaveBeenCalled());
+    expect(requestBody().model).toBe("custom-model");
+    expect(readSavedConfig().model).toBe("custom-model");
   });
 
   it("saves after a successful AI test using the default model and thinking", async () => {

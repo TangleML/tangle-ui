@@ -1,13 +1,9 @@
-import {
-  AI_CONFIG,
-  type AiHeaderConfig,
-  getAiRequestProviderConfig,
-} from "@/config/aiConfig";
+import { AI_CONFIG, getAiRequestProviderConfig } from "@/config/aiConfig";
 import { isRecord } from "@/utils/typeGuards";
 
 type JsonObject = Record<string, unknown>;
 const ANTHROPIC = AI_CONFIG.providers.anthropic;
-const NATIVE_REASONING = ANTHROPIC.nativeReasoningPrefix;
+const NATIVE_REASONING = "tangle-anthropic:";
 interface Message {
   role: "user" | "assistant";
   content: JsonObject[];
@@ -61,41 +57,6 @@ function nativeReasoning(value: unknown): boolean {
     typeof value.encrypted_content === "string" &&
     value.encrypted_content.startsWith(NATIVE_REASONING)
   );
-}
-
-function configuredHeaders(
-  source: HeadersInit | undefined,
-  ...rules: AiHeaderConfig[]
-): Headers {
-  const headers = new Headers(source);
-  for (const rule of rules) {
-    const value = rule.rename
-      ? headers.get(rule.rename.from)?.replace(rule.rename.stripPrefix, "")
-      : null;
-    for (const name of rule.exclude) headers.delete(name);
-    for (const [name, value] of Object.entries(rule.include))
-      headers.set(name, value);
-    if (rule.rename && value) headers.set(rule.rename.to, value);
-  }
-  return headers;
-}
-
-function fetchOpenAI(
-  input: Parameters<typeof fetch>[0],
-  init?: Parameters<typeof fetch>[1],
-): ReturnType<typeof fetch> {
-  const rules: AiHeaderConfig = AI_CONFIG.providers.openai.requestHeaders;
-  if (
-    !rules.rename &&
-    !rules.exclude.length &&
-    !Object.keys(rules.include).length
-  )
-    return fetch(input, init);
-  const original = input instanceof Request ? input : null;
-  return fetch(input, {
-    ...init,
-    headers: configuredHeaders(init?.headers ?? original?.headers, rules),
-  });
 }
 
 function toAnthropic(request: JsonObject, proxy: boolean): JsonObject {
@@ -184,7 +145,7 @@ function toAnthropic(request: JsonObject, proxy: boolean): JsonObject {
 
   const model = String(request.model);
   const result: JsonObject = {
-    model: proxy ? model : model.replace(ANTHROPIC.directModelPrefix, ""),
+    model: proxy ? model : model.replace(/^.*[/:](?=claude[-_])/i, ""),
     max_tokens: request.max_output_tokens ?? ANTHROPIC.defaultMaxOutputTokens,
     messages,
   };
@@ -348,7 +309,7 @@ export async function aiProviderFetch(
       : input instanceof URL
         ? input.href
         : input.url;
-  if (!AI_CONFIG.providers.openai.endpoint.test(url)) return fetch(input, init);
+  if (!/\/responses(?:\?|$)/.test(url)) return fetch(input, init);
   const original = input instanceof Request ? input : null;
   if ((init?.method ?? original?.method ?? "GET").toUpperCase() !== "POST") {
     return fetch(input, init);
@@ -374,24 +335,36 @@ export async function aiProviderFetch(
     if (isRecord(request) && Array.isArray(request.input)) {
       const history = request.input.filter((item) => !nativeReasoning(item));
       if (history.length !== request.input.length) {
-        return fetchOpenAI(input, {
+        return fetch(input, {
           ...init,
           body: JSON.stringify({ ...request, input: history }),
         });
       }
     }
-    return fetchOpenAI(input, init);
+    return fetch(input, init);
   }
 
   const credentials = init?.credentials ?? original?.credentials;
   const proxy = credentials === "include";
-  const headers = configuredHeaders(
-    init?.headers ?? original?.headers,
-    ANTHROPIC.requestHeaders,
-    ...(proxy ? [] : [ANTHROPIC.directHeaders]),
-  );
-  const route = ANTHROPIC.routes[proxy ? "proxy" : "direct"];
-  const target = url.replace(route.match, route.replacement);
+  const headers = new Headers(init?.headers ?? original?.headers);
+  for (const name of [
+    "content-length",
+    "openai-beta",
+    "openai-organization",
+    "openai-project",
+  ])
+    headers.delete(name);
+  headers.set("anthropic-version", "2023-06-01");
+  headers.set("content-type", "application/json");
+  if (!proxy) {
+    const apiKey = headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+    headers.delete("authorization");
+    if (apiKey) headers.set("x-api-key", apiKey);
+    headers.set("anthropic-dangerous-direct-browser-access", "true");
+  }
+  const target = proxy
+    ? url.replace(/\/v1\/responses(?=\?|$)/, "/anthropic/v1/messages")
+    : url.replace(/\/responses(?=\?|$)/, "/messages");
   const response = await fetch(target, {
     ...init,
     method: init?.method ?? original?.method ?? "POST",
@@ -402,10 +375,10 @@ export async function aiProviderFetch(
   });
   if (!response.ok) return response;
   const payload = toResponses(await response.json(), request.model);
-  const responseHeaders = configuredHeaders(
-    response.headers,
-    ANTHROPIC.responseHeaders,
-  );
+  const responseHeaders = new Headers(response.headers);
+  responseHeaders.delete("content-length");
+  responseHeaders.delete("content-encoding");
+  responseHeaders.set("content-type", "application/json");
   return new Response(JSON.stringify(payload), {
     status: response.status,
     statusText: response.statusText,

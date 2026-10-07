@@ -8,26 +8,31 @@ export interface AiModelOption {
   reasoningEfforts?: AiReasoningEffort[];
 }
 
-interface AiModelConfig extends AiModelOption {
-  provider: "openai" | "anthropic";
-}
-
 interface AiModelOptionsConfig {
   models?: AiModelOption[];
   defaultModel?: string;
 }
 
-export interface AiHeaderConfig {
-  include: Record<string, string>;
-  exclude: readonly string[];
-  rename?: { from: string; to: string; stripPrefix: RegExp };
-}
-
 export const AI_CONFIG = {
   defaultModel: "gpt-6-sol",
   embeddingModel: "text-embedding-3-small",
-  defaultProvider: "openai" as const,
   defaultReasoningEffort: "high" as const,
+  reasoningTokenAllowance: 8192,
+  reasoningModelPattern: /^(openai:)?(gpt-[56]|o\d)/i,
+  providers: {
+    openai: {
+      apiName: "Responses API",
+      apiBaseExample: "https://api.openai.com/v1",
+    },
+    anthropic: {
+      apiName: "Anthropic Messages API",
+      apiBaseExample: "https://api.anthropic.com/v1",
+      nativeApiBasePattern:
+        /^https:\/\/api\.anthropic\.com(?::443)?\/v1(?:\/|$)/i,
+      modelPattern: /(^|[/:])claude[-_]/i,
+      defaultMaxOutputTokens: 16384,
+    },
+  },
   reasoningLevels: [
     { value: "none", label: "None" },
     { value: "low", label: "Low" },
@@ -36,110 +41,46 @@ export const AI_CONFIG = {
     { value: "xhigh", label: "Extra high" },
     { value: "max", label: "Max" },
   ] satisfies { value: AiReasoningEffort; label: string }[],
-  providers: {
-    openai: {
-      apiName: "Responses API",
-      apiBaseExample: "https://api.openai.com/v1",
-      endpoint: /\/responses(?:\?|$)/,
-      reasoningModelPattern: /^(openai:)?(gpt-[56]|o\d)/i,
-      requestHeaders: {
-        include: {},
-        exclude: [],
-      },
-    },
-    anthropic: {
-      apiName: "Anthropic Messages API",
-      apiBaseExample: "https://api.anthropic.com/v1",
-      nativeApiBasePattern:
-        /^https:\/\/api\.anthropic\.com(?::443)?\/v1(?:\/|$)/i,
-      modelPattern: /(^|[/:])claude[-_]/i,
-      directModelPrefix: /^.*[/:](?=claude[-_])/i,
-      nativeReasoningPrefix: "tangle-anthropic:",
-      defaultMaxOutputTokens: 16384,
-      routes: {
-        proxy: {
-          match: /\/v1\/responses(?=\?|$)/,
-          replacement: "/anthropic/v1/messages",
-        },
-        direct: {
-          match: /\/responses(?=\?|$)/,
-          replacement: "/messages",
-        },
-      },
-      requestHeaders: {
-        include: {
-          "anthropic-version": "2023-06-01",
-          "content-type": "application/json",
-        },
-        exclude: [
-          "content-length",
-          "openai-beta",
-          "openai-organization",
-          "openai-project",
-        ],
-      },
-      directHeaders: {
-        include: { "anthropic-dangerous-direct-browser-access": "true" },
-        exclude: ["authorization"],
-        rename: {
-          from: "authorization",
-          to: "x-api-key",
-          stripPrefix: /^Bearer\s+/i,
-        },
-      },
-      responseHeaders: {
-        include: { "content-type": "application/json" },
-        exclude: ["content-length", "content-encoding"],
-      },
-    },
-  },
   models: [
     {
       id: "gpt-6-astra",
-      provider: "openai",
       label: "GPT-6 Astra",
       description: "Most capable model for complex reasoning and coding",
       reasoningEfforts: ["low", "medium", "high", "xhigh", "max"],
     },
     {
       id: "gpt-6-sol",
-      provider: "openai",
       label: "GPT-6 Sol",
       description: "Balanced model for coding and agentic workflows",
       reasoningEfforts: ["none", "low", "medium", "high", "xhigh", "max"],
     },
     {
       id: "gpt-6-luna",
-      provider: "openai",
       label: "GPT-6 Luna",
       description: "Fast, efficient model for focused tasks",
       reasoningEfforts: ["none", "low", "medium", "high", "xhigh", "max"],
     },
     {
       id: "claude-fable-5-1",
-      provider: "anthropic",
       label: "Claude Fable 5.1",
       description: "For demanding reasoning and long-running agents",
     },
     {
       id: "claude-opus-5-5",
-      provider: "anthropic",
       label: "Claude Opus 5.5",
       description: "For complex coding and agentic workflows",
     },
     {
       id: "claude-sonnet-5-5",
-      provider: "anthropic",
       label: "Claude Sonnet 5.5",
       description: "Balanced speed and intelligence",
     },
     {
       id: "claude-haiku-4-5",
-      provider: "anthropic",
       label: "Claude Haiku 4.5",
       description: "Fast model for focused tasks",
     },
-  ] satisfies AiModelConfig[],
+  ] satisfies AiModelOption[],
 };
 
 export const DEFAULT_AI_REASONING_EFFORT: AiReasoningEffort =
@@ -205,14 +146,9 @@ export function getDefaultAiModelId(): string {
 }
 
 export function getAiProviderConfig(modelId: string) {
-  const model = AI_CONFIG.models.find((option) => option.id === modelId);
-  if (model) return AI_CONFIG.providers[model.provider];
-  return (
-    Object.values(AI_CONFIG.providers).find(
-      (provider) =>
-        "modelPattern" in provider && provider.modelPattern.test(modelId),
-    ) ?? AI_CONFIG.providers[AI_CONFIG.defaultProvider]
-  );
+  return AI_CONFIG.providers.anthropic.modelPattern.test(modelId)
+    ? AI_CONFIG.providers.anthropic
+    : AI_CONFIG.providers.openai;
 }
 
 export function getAiRequestProviderConfig(
@@ -221,9 +157,9 @@ export function getAiRequestProviderConfig(
   credentials?: RequestCredentials,
 ) {
   const provider = getAiProviderConfig(modelId);
-  return "nativeApiBasePattern" in provider &&
+  return provider === AI_CONFIG.providers.anthropic &&
     credentials !== "include" &&
-    !provider.nativeApiBasePattern.test(apiBase)
+    !AI_CONFIG.providers.anthropic.nativeApiBasePattern.test(apiBase)
     ? AI_CONFIG.providers.openai
     : provider;
 }
@@ -272,5 +208,19 @@ export function getAiReasoningLabel(effort: AiReasoningEffort): string {
 }
 
 export function isAiReasoningModel(modelId: string): boolean {
-  return AI_CONFIG.providers.openai.reasoningModelPattern.test(modelId);
+  return AI_CONFIG.reasoningModelPattern.test(modelId);
+}
+
+export function getAiMaxOutputTokens(
+  modelId: string,
+  reasoningEffort: AiReasoningEffort | undefined,
+  outputTokenBudget: number,
+): number {
+  const model = modelId.trim();
+  if (reasoningEffort === "none") return outputTokenBudget;
+  if (!model || reasoningEffort || isAiReasoningModel(model)) {
+    // Responses counts reasoning tokens against the output limit.
+    return outputTokenBudget + AI_CONFIG.reasoningTokenAllowance;
+  }
+  return outputTokenBudget;
 }

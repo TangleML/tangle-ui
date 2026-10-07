@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
 import {
+  getAiMaxOutputTokens,
   getAiProviderConfig,
   getAiRequestProviderConfig,
 } from "@/config/aiConfig";
@@ -108,6 +109,11 @@ export function AgentSettings() {
           instructions:
             "You are testing provider compatibility. Return only JSON.",
           input: 'Return the JSON object {"ok": true}.',
+          max_output_tokens: getAiMaxOutputTokens(
+            trimmed.model,
+            trimmed.reasoningEffort,
+            32,
+          ),
           text: { format: { type: "json_object" } },
         }),
       });
@@ -268,6 +274,19 @@ export function AgentSettings() {
               Model and thinking
             </Text>
             <AiModelPicker />
+            {useOwnKey && (
+              <BlockStack gap="1">
+                <Label htmlFor="agent-settings-model">Model ID</Label>
+                <Input
+                  id="agent-settings-model"
+                  value={config.model}
+                  onChange={(event) => update({ model: event.target.value })}
+                  placeholder="Provider default"
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+              </BlockStack>
+            )}
           </BlockStack>
 
           {validationError && (

@@ -10,7 +10,6 @@ import OpenAI from "openai";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { AI_CONFIG } from "@/config/aiConfig";
 import type { ComponentReference } from "@/utils/componentSpec";
 
 import { aiProviderFetch } from "./aiProviderClient";
@@ -116,8 +115,7 @@ describe("aiProviderFetch", () => {
           input: [
             {
               type: "reasoning",
-              encrypted_content:
-                AI_CONFIG.providers.anthropic.nativeReasoningPrefix + "native",
+              encrypted_content: "tangle-anthropic:native",
             },
             ...input,
           ],
@@ -527,7 +525,7 @@ describe("aiProviderFetch", () => {
     expect(JSON.stringify(sentBody().messages)).toContain("Sort rows");
     expect(JSON.stringify(sentBody().messages)).toContain("example/sorter");
     expect(sentBody().system).toContain("single JSON object");
-    expect(sentBody().max_tokens).toBe(16384);
+    expect(sentBody().max_tokens).toBe(900);
   });
 
   it("reranks component search results through cookie-authenticated Claude Messages", async () => {
@@ -561,7 +559,7 @@ describe("aiProviderFetch", () => {
     expect(JSON.stringify(sentBody().messages)).toContain("sorter");
     expect(JSON.stringify(sentBody().messages)).toContain("sort rows");
     expect(sentBody().system).toContain("reranker");
-    expect(sentBody().max_tokens).toBe(16384);
+    expect(sentBody().max_tokens).toBe(1500);
   });
 
   it("returns upstream errors with their status, headers, and payload intact", async () => {
