@@ -47,6 +47,26 @@ const BUILT_IN_AI_MODEL_OPTIONS: AiModelOption[] = [
     description: "Fast, efficient model for focused tasks",
     reasoningEfforts: ["none", "low", "medium", "high", "xhigh", "max"],
   },
+  {
+    id: "claude-fable-5-1",
+    label: "Claude Fable 5.1",
+    description: "For demanding reasoning and long-running agents",
+  },
+  {
+    id: "claude-opus-5-5",
+    label: "Claude Opus 5.5",
+    description: "For complex coding and agentic workflows",
+  },
+  {
+    id: "claude-sonnet-5-5",
+    label: "Claude Sonnet 5.5",
+    description: "Balanced speed and intelligence",
+  },
+  {
+    id: "claude-haiku-4-5",
+    label: "Claude Haiku 4.5",
+    description: "Fast model for focused tasks",
+  },
 ];
 
 const BUILT_IN_DEFAULT_MODEL = "gpt-6-sol";

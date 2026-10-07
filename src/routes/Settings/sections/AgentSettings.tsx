@@ -12,6 +12,7 @@ import { Heading, Paragraph, Text } from "@/components/ui/typography";
 import { getAiMaxOutputTokens } from "@/config/aiModels";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
+import { aiProviderFetch, isAnthropicModel } from "@/services/aiProviderClient";
 import type { AiProviderConfig } from "@/types/aiProvider";
 
 export function AgentSettings() {
@@ -86,7 +87,7 @@ export function AgentSettings() {
     testPendingRef.current = true;
     setTesting(true);
     try {
-      const response = await fetch(`${trimmed.apiBase}/responses`, {
+      const response = await aiProviderFetch(`${trimmed.apiBase}/responses`, {
         method: "POST",
         credentials: trimmed.credentials,
         headers: {
@@ -134,9 +135,12 @@ export function AgentSettings() {
       }
       let successMessage = "Backend AI proxy is working.";
       if (useOwnKey) {
+        const apiName = isAnthropicModel(trimmed.model)
+          ? "Anthropic Messages API"
+          : "Responses API";
         successMessage = trimmed.model
-          ? `AI provider settings saved. Model “${trimmed.model}” works with the Responses API.`
-          : "AI provider settings saved. The provider works with the Responses API.";
+          ? `AI provider settings saved. Model “${trimmed.model}” works with the ${apiName}.`
+          : `AI provider settings saved. The provider works with the ${apiName}.`;
       }
       notify(successMessage, "success");
     } catch (err) {
@@ -169,7 +173,7 @@ export function AgentSettings() {
         <Heading level={2}>AI Provider Settings</Heading>
         <Paragraph size="sm" tone="subdued">
           {useOwnKey
-            ? "AI features use an OpenAI-compatible API of your choice. Your key is stored in this browser only and is sent only to the configured provider."
+            ? "AI features use an OpenAI Responses or Anthropic Messages API of your choice. Your key is stored in this browser only and is sent only to the configured provider."
             : "AI features use the backend AI proxy. No personal API key is required."}
         </Paragraph>
         <Paragraph size="xs" tone="subdued">
@@ -212,9 +216,9 @@ export function AgentSettings() {
                   size="xs"
                   tone="subdued"
                 >
-                  Any OpenAI-compatible base URL, such as
-                  https://api.openai.com/v1. Do not include endpoint paths like
-                  /responses.
+                  The provider base URL, such as https://api.openai.com/v1 or
+                  https://api.anthropic.com/v1. Do not include /responses or
+                  /messages.
                 </Text>
               </BlockStack>
 

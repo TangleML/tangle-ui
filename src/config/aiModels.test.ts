@@ -17,6 +17,10 @@ describe("aiModels", () => {
       "gpt-6-astra",
       "gpt-6-sol",
       "gpt-6-luna",
+      "claude-fable-5-1",
+      "claude-opus-5-5",
+      "claude-sonnet-5-5",
+      "claude-haiku-4-5",
     ]);
     expect(getDefaultAiModelId()).toBe("gpt-6-sol");
   });
