@@ -42,6 +42,7 @@ async function main(): Promise<void> {
     platform: "node",
     format: "esm",
     target: "node20",
+    alias: { "@": path.resolve(process.cwd(), "src") },
     external: ["bufferutil", "utf-8-validate"],
     banner: {
       js: "import { createRequire as __createRequire } from 'module'; const require = __createRequire(import.meta.url);",

@@ -137,7 +137,11 @@ function moveCommand(seq: number, taskId: string): ClientMessage {
   return {
     type: "command",
     seq,
-    command: { type: "setTaskPosition", taskId, position: { x: seq, y: seq } },
+    command: {
+      kind: "patches",
+      label: `move:${taskId}`,
+      patches: [{ op: "replace", path: ["marker"], value: `${taskId}:${seq}` }],
+    },
   };
 }
 

@@ -1,3 +1,5 @@
+import type { Patch, SerializedActionCall } from "mobx-keystone";
+
 export const COLLAB_PROTOCOL_VERSION = 1;
 export const COLLAB_MODEL_VERSION = 1;
 
@@ -11,35 +13,43 @@ export type CollabJsonValue =
 
 export type CollabJsonObject = { [key: string]: CollabJsonValue };
 
-export interface CollabEndpoint {
-  entityId: string;
-  portName: string;
-}
-
 /** @public */
 export interface CollabPosition {
   x: number;
   y: number;
 }
 
-export type CollabCommand =
-  | { type: "addTask"; task: CollabJsonObject }
-  | { type: "deleteTask"; taskId: string }
-  | { type: "renameTask"; taskId: string; name: string }
-  | { type: "setTaskPosition"; taskId: string; position: CollabPosition }
-  | {
-      type: "setTaskArgument";
-      taskId: string;
-      portName: string;
-      value: CollabJsonValue;
-    }
-  | {
-      type: "connectNodes";
-      bindingId: string;
-      source: CollabEndpoint;
-      target: CollabEndpoint;
-    }
-  | { type: "deleteEdge"; bindingId: string };
+/** @public */
+export interface CollabDragState {
+  taskId: string;
+  position: CollabPosition;
+}
+
+/**
+ * A captured mobx-keystone action, replayed on every replica by running `call`
+ * and then adopting `newModelIds`. The ids are the model ids the action
+ * generated on the originating replica (e.g. the `Binding` created by
+ * `connectNodes`), in creation order; each applier re-derives the matching
+ * leaf positions locally, so convergence does not depend on absolute indices.
+ */
+interface SerializedActionCommand {
+  kind: "action";
+  call: SerializedActionCall;
+  newModelIds: string[];
+}
+
+/**
+ * Fallback for actions whose arguments cannot be serialized (predicate
+ * closures such as `removeAllBindingsBy`). The recorded forward patches are
+ * replayed verbatim; they rebase coarsely but keep the action routable.
+ */
+interface PatchesCommand {
+  kind: "patches";
+  label: string;
+  patches: Patch[];
+}
+
+export type CollabCommand = SerializedActionCommand | PatchesCommand;
 
 export interface CollabSnapshot {
   modelVersion: number;
@@ -59,7 +69,7 @@ export interface JoinMessage {
   protocolVersion: number;
   modelVersion: number;
   room: string;
-  snapshot: CollabSnapshot;
+  snapshot?: CollabSnapshot;
 }
 
 export interface CommandMessage {
@@ -74,7 +84,28 @@ export interface SnapshotMessage {
   snapshot: CollabSnapshot;
 }
 
-export type ClientMessage = JoinMessage | CommandMessage | SnapshotMessage;
+export interface PresenceMessage {
+  type: "presence";
+  color: string;
+}
+
+export interface PointerMessage {
+  type: "pointer";
+  position: CollabPosition;
+}
+
+export interface DragMessage {
+  type: "drag";
+  drags: CollabDragState[];
+}
+
+export type ClientMessage =
+  | JoinMessage
+  | CommandMessage
+  | SnapshotMessage
+  | PresenceMessage
+  | PointerMessage
+  | DragMessage;
 
 export interface HelloMessage {
   type: "hello";
@@ -105,8 +136,38 @@ export interface SnapshotRequestMessage {
   version: number;
 }
 
+export interface ParticipantInfo {
+  actorId: string;
+  color: string;
+  position?: CollabPosition;
+  drags?: CollabDragState[];
+}
+
+export interface ParticipantsMessage {
+  type: "participants";
+  actors: ParticipantInfo[];
+}
+
+export interface PointerBroadcastMessage {
+  type: "pointer";
+  actorId: string;
+  position: CollabPosition;
+}
+
+export interface DragBroadcastMessage {
+  type: "drag";
+  actorId: string;
+  drags: CollabDragState[];
+}
+
 export type ServerMessage =
-  HelloMessage | BroadcastMessage | RejectMessage | SnapshotRequestMessage;
+  | HelloMessage
+  | BroadcastMessage
+  | RejectMessage
+  | SnapshotRequestMessage
+  | ParticipantsMessage
+  | PointerBroadcastMessage
+  | DragBroadcastMessage;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -130,14 +191,6 @@ function isJsonObject(value: unknown): value is CollabJsonObject {
   return isRecord(value) && Object.values(value).every(isJsonValue);
 }
 
-function isEndpoint(value: unknown): value is CollabEndpoint {
-  return (
-    isRecord(value) &&
-    typeof value.entityId === "string" &&
-    typeof value.portName === "string"
-  );
-}
-
 function isPosition(value: unknown): value is CollabPosition {
   return (
     isRecord(value) &&
@@ -146,34 +199,62 @@ function isPosition(value: unknown): value is CollabPosition {
   );
 }
 
+function isDragState(value: unknown): value is CollabDragState {
+  return (
+    isRecord(value) &&
+    typeof value.taskId === "string" &&
+    isPosition(value.position)
+  );
+}
+
+function isDragStateArray(value: unknown): value is CollabDragState[] {
+  return Array.isArray(value) && value.every(isDragState);
+}
+
+function isPath(value: unknown): value is (string | number)[] {
+  return (
+    Array.isArray(value) &&
+    value.every((part) => typeof part === "string" || typeof part === "number")
+  );
+}
+
+function isPatch(value: unknown): value is Patch {
+  return (
+    isRecord(value) &&
+    (value.op === "add" || value.op === "replace" || value.op === "remove") &&
+    isPath(value.path)
+  );
+}
+
+function isSerializedActionCall(value: unknown): value is SerializedActionCall {
+  return (
+    isRecord(value) &&
+    typeof value.actionName === "string" &&
+    Array.isArray(value.args) &&
+    isPath(value.targetPath) &&
+    Array.isArray(value.targetPathIds) &&
+    value.targetPathIds.every((id) => id === null || typeof id === "string") &&
+    value.serialized === true
+  );
+}
+
 export function isCollabCommand(value: unknown): value is CollabCommand {
-  if (!isRecord(value) || typeof value.type !== "string") return false;
-  switch (value.type) {
-    case "addTask":
-      return isJsonObject(value.task);
-    case "deleteTask":
-      return typeof value.taskId === "string";
-    case "renameTask":
-      return typeof value.taskId === "string" && typeof value.name === "string";
-    case "setTaskPosition":
-      return typeof value.taskId === "string" && isPosition(value.position);
-    case "setTaskArgument":
-      return (
-        typeof value.taskId === "string" &&
-        typeof value.portName === "string" &&
-        isJsonValue(value.value)
-      );
-    case "connectNodes":
-      return (
-        typeof value.bindingId === "string" &&
-        isEndpoint(value.source) &&
-        isEndpoint(value.target)
-      );
-    case "deleteEdge":
-      return typeof value.bindingId === "string";
-    default:
-      return false;
+  if (!isRecord(value)) return false;
+  if (value.kind === "action") {
+    return (
+      isSerializedActionCall(value.call) &&
+      Array.isArray(value.newModelIds) &&
+      value.newModelIds.every((id) => typeof id === "string")
+    );
   }
+  if (value.kind === "patches") {
+    return (
+      typeof value.label === "string" &&
+      Array.isArray(value.patches) &&
+      value.patches.every(isPatch)
+    );
+  }
+  return false;
 }
 
 function isCollabSnapshot(value: unknown): value is CollabSnapshot {
@@ -201,7 +282,7 @@ export function isJoinMessage(value: unknown): value is JoinMessage {
     typeof value.protocolVersion === "number" &&
     typeof value.modelVersion === "number" &&
     typeof value.room === "string" &&
-    isCollabSnapshot(value.snapshot)
+    (value.snapshot === undefined || isCollabSnapshot(value.snapshot))
   );
 }
 
@@ -267,9 +348,73 @@ export function isSnapshotRequestMessage(
   );
 }
 
+export function isPresenceMessage(value: unknown): value is PresenceMessage {
+  return (
+    isRecord(value) &&
+    value.type === "presence" &&
+    typeof value.color === "string"
+  );
+}
+
+export function isPointerMessage(value: unknown): value is PointerMessage {
+  return (
+    isRecord(value) && value.type === "pointer" && isPosition(value.position)
+  );
+}
+
+export function isDragMessage(value: unknown): value is DragMessage {
+  return (
+    isRecord(value) && value.type === "drag" && isDragStateArray(value.drags)
+  );
+}
+
+function isParticipantInfo(value: unknown): value is ParticipantInfo {
+  return (
+    isRecord(value) &&
+    typeof value.actorId === "string" &&
+    typeof value.color === "string" &&
+    (value.position === undefined || isPosition(value.position)) &&
+    (value.drags === undefined || isDragStateArray(value.drags))
+  );
+}
+
+function isParticipantsMessage(value: unknown): value is ParticipantsMessage {
+  return (
+    isRecord(value) &&
+    value.type === "participants" &&
+    Array.isArray(value.actors) &&
+    value.actors.every(isParticipantInfo)
+  );
+}
+
+function isPointerBroadcastMessage(
+  value: unknown,
+): value is PointerBroadcastMessage {
+  return (
+    isRecord(value) &&
+    value.type === "pointer" &&
+    typeof value.actorId === "string" &&
+    isPosition(value.position)
+  );
+}
+
+function isDragBroadcastMessage(value: unknown): value is DragBroadcastMessage {
+  return (
+    isRecord(value) &&
+    value.type === "drag" &&
+    typeof value.actorId === "string" &&
+    isDragStateArray(value.drags)
+  );
+}
+
 export function isClientMessage(value: unknown): value is ClientMessage {
   return (
-    isJoinMessage(value) || isCommandMessage(value) || isSnapshotMessage(value)
+    isJoinMessage(value) ||
+    isCommandMessage(value) ||
+    isSnapshotMessage(value) ||
+    isPresenceMessage(value) ||
+    isPointerMessage(value) ||
+    isDragMessage(value)
   );
 }
 
@@ -278,6 +423,9 @@ export function isServerMessage(value: unknown): value is ServerMessage {
     isHelloMessage(value) ||
     isBroadcastMessage(value) ||
     isRejectMessage(value) ||
-    isSnapshotRequestMessage(value)
+    isSnapshotRequestMessage(value) ||
+    isParticipantsMessage(value) ||
+    isPointerBroadcastMessage(value) ||
+    isDragBroadcastMessage(value)
   );
 }

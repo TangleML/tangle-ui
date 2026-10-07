@@ -1,4 +1,4 @@
-import { autorun, reaction } from "mobx";
+import { autorun, reaction, untracked } from "mobx";
 import type { UndoStore as MobxUndoStore } from "mobx-keystone";
 import { isRootStore, unregisterRootStore } from "mobx-keystone";
 import { useEffect, useRef } from "react";
@@ -42,7 +42,11 @@ export function useSpecLifecycle(
   const storage = usePipelineStorage();
   const prevTaskEntityIdsRef = useRef<Set<string>>(new Set());
 
-  const { room: collabRoom, active: collabActive } = useCollabRoom();
+  const {
+    room: collabRoom,
+    active: collabActive,
+    seedFromClient: collabSeedFromClient,
+  } = useCollabRoom();
 
   useEffect(() => {
     if (!rootSpec) return;
@@ -54,7 +58,9 @@ export function useSpecLifecycle(
       // Collab mode owns the shared document: undo (which would itself have to
       // become a command) and autosave (which would fork the local file) are
       // both off; the room, not disk, is the source of truth.
-      collaboration.init(rootSpec, collabRoom, getCollabServerUrl());
+      collaboration.init(rootSpec, collabRoom, getCollabServerUrl(), {
+        seedFromClient: collabSeedFromClient,
+      });
     } else {
       undo.init(rootSpec, restoredUndoStore);
 
@@ -82,6 +88,16 @@ export function useSpecLifecycle(
       for (const prevId of prevTaskEntityIdsRef.current) {
         if (!currentTaskIds.has(prevId)) {
           windowStore.closeWindowsByLinkedEntity(prevId);
+          // A remote delete can retire a task the local user has selected;
+          // drop the stale selection so the context panel does not linger.
+          untracked(() => {
+            if (editor.selectedNodeId === prevId) editor.clearSelection();
+            if (editor.multiSelection.some((n) => n.id === prevId)) {
+              editor.setMultiSelection(
+                editor.multiSelection.filter((n) => n.id !== prevId),
+              );
+            }
+          });
         }
       }
 
@@ -125,6 +141,7 @@ export function useSpecLifecycle(
     collaboration,
     collabActive,
     collabRoom,
+    collabSeedFromClient,
     pipelineFileStore,
     storage,
   ]);

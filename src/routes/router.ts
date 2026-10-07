@@ -53,6 +53,7 @@ import { PreferencesSettings } from "./Settings/sections/PreferencesSettings";
 import { SecretsSettings } from "./Settings/sections/SecretsSettings";
 import { SettingsLayout } from "./Settings/SettingsLayout";
 import { CompareView } from "./v2/pages/CompareView/CompareView";
+import { CollabPipelineEditor } from "./v2/pages/Editor/CollabPipelineEditor";
 import { EditorV2 } from "./v2/pages/Editor/EditorV2";
 import { PipelineFoldersPage } from "./v2/pages/PipelineFolders/PipelineFoldersPage";
 import { RunViewV2 } from "./v2/pages/RunView/RunViewV2";
@@ -363,6 +364,17 @@ const editorV2PipelineRoute = createRoute({
   },
 });
 
+const editorV2CollabRoute = createRoute({
+  getParentRoute: () => mainLayout,
+  path: APP_ROUTES.EDITOR_V2_COLLAB,
+  component: CollabPipelineEditor,
+  beforeLoad: () => {
+    if (!isFlagEnabled("v2_editor") || !isFlagEnabled("collab-poc")) {
+      throw redirect({ to: APP_ROUTES.DASHBOARD_PIPELINES });
+    }
+  },
+});
+
 const runV2Route = createRoute({
   getParentRoute: () => mainLayout,
   path: APP_ROUTES.RUN_DETAIL_V2,
@@ -474,6 +486,7 @@ const appRouteTree = mainLayout.addChildren([
   runDetailWithSubgraphRoute,
   editorV2Route,
   editorV2PipelineRoute,
+  editorV2CollabRoute,
   runV2Route,
   runV2WithSubgraphRoute,
   compareRoute,

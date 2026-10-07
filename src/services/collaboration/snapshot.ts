@@ -14,7 +14,7 @@ import type {
 } from "./protocol";
 import { COLLAB_MODEL_VERSION } from "./protocol";
 
-export function isRecord(value: unknown): value is Record<string, unknown> {
+function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
@@ -39,7 +39,7 @@ function toCollabJsonValue(value: unknown): CollabJsonValue {
   throw new Error(`Non-serializable value in snapshot: ${typeof value}`);
 }
 
-export function toCollabJsonObject(value: unknown): CollabJsonObject {
+function toCollabJsonObject(value: unknown): CollabJsonObject {
   const json = toCollabJsonValue(value);
   if (json === null || typeof json !== "object" || Array.isArray(json)) {
     throw new Error("Expected snapshot to be a JSON object");
@@ -74,7 +74,16 @@ export function applyCollabSnapshot(
   if (!isComponentSpecSnapshot(snapshot.spec)) {
     throw new Error("Collab snapshot is not a ComponentSpec snapshot");
   }
-  applySnapshot(root, snapshot.spec);
+  // applySnapshot requires the incoming root model id to equal the target's.
+  // A server-seeded room hands every client a snapshot built by an independent
+  // id generator, so the root ids differ. Only child entity ids (tasks,
+  // bindings, io) are addressed by commands and they come from the snapshot
+  // verbatim, so aligning just the root id is enough to converge.
+  const aligned: SnapshotInOf<ComponentSpec> = {
+    ...snapshot.spec,
+    $id: root.$id,
+  };
+  applySnapshot(root, aligned);
 }
 
 function stableStringify(value: CollabJsonValue): string {
