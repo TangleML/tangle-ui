@@ -68,7 +68,13 @@ export interface CommandMessage {
   command: CollabCommand;
 }
 
-export type ClientMessage = JoinMessage | CommandMessage;
+export interface SnapshotMessage {
+  type: "snapshot";
+  version: number;
+  snapshot: CollabSnapshot;
+}
+
+export type ClientMessage = JoinMessage | CommandMessage | SnapshotMessage;
 
 export interface HelloMessage {
   type: "hello";
@@ -94,7 +100,13 @@ export interface RejectMessage {
   reason: string;
 }
 
-export type ServerMessage = HelloMessage | BroadcastMessage | RejectMessage;
+export interface SnapshotRequestMessage {
+  type: "snapshotRequest";
+  version: number;
+}
+
+export type ServerMessage =
+  HelloMessage | BroadcastMessage | RejectMessage | SnapshotRequestMessage;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -236,12 +248,36 @@ export function isRejectMessage(value: unknown): value is RejectMessage {
   );
 }
 
+export function isSnapshotMessage(value: unknown): value is SnapshotMessage {
+  return (
+    isRecord(value) &&
+    value.type === "snapshot" &&
+    typeof value.version === "number" &&
+    isCollabSnapshot(value.snapshot)
+  );
+}
+
+export function isSnapshotRequestMessage(
+  value: unknown,
+): value is SnapshotRequestMessage {
+  return (
+    isRecord(value) &&
+    value.type === "snapshotRequest" &&
+    typeof value.version === "number"
+  );
+}
+
 export function isClientMessage(value: unknown): value is ClientMessage {
-  return isJoinMessage(value) || isCommandMessage(value);
+  return (
+    isJoinMessage(value) || isCommandMessage(value) || isSnapshotMessage(value)
+  );
 }
 
 export function isServerMessage(value: unknown): value is ServerMessage {
   return (
-    isHelloMessage(value) || isBroadcastMessage(value) || isRejectMessage(value)
+    isHelloMessage(value) ||
+    isBroadcastMessage(value) ||
+    isRejectMessage(value) ||
+    isSnapshotRequestMessage(value)
   );
 }

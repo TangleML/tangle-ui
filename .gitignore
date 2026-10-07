@@ -27,6 +27,10 @@ yarn-error.log*
 dist
 dist-ssr
 test-results
+
+# collab PoC sync server build output
+dist-server
+collab-server.zip
 playwright-report
 
 #local files

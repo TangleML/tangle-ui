@@ -137,7 +137,10 @@ export default defineConfig(({ mode }) => {
       globals: true,
       environment: "jsdom",
       setupFiles: ["./vitest-setup.js"],
-      include: ["src/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
+      include: [
+        "src/**/*.{test,spec}.?(c|m)[jt]s?(x)",
+        "server/**/*.{test,spec}.?(c|m)[jt]s?(x)",
+      ],
       coverage: {
         provider: "v8",
         reporter: ["text", "json", "html"],
