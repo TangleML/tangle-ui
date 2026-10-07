@@ -1,5 +1,12 @@
 import { PipelineSection } from "@/components/Home/PipelineSection/PipelineSection";
 import { BlockStack } from "@/components/ui/layout";
+import {
+  Table,
+  TableBody,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Heading } from "@/components/ui/typography";
 
@@ -24,7 +31,21 @@ export function DashboardPipelinesView() {
           <TabsContent value="local">
             <PipelineSection />
           </TabsContent>
-          <TabsContent value="remote" />
+          <TabsContent value="remote">
+            <Table aria-label="Remote Pipelines">
+              <TableHeader>
+                <TableRow className="text-xs">
+                  <TableHead scope="col">Name</TableHead>
+                  <TableHead scope="col">ID</TableHead>
+                  <TableHead scope="col">User</TableHead>
+                  <TableHead scope="col">Created at</TableHead>
+                  <TableHead scope="col">Updated at</TableHead>
+                  <TableHead scope="col">Current version</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody />
+            </Table>
+          </TabsContent>
         </Tabs>
       </BlockStack>
     </BlockStack>
