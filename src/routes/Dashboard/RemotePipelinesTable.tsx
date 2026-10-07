@@ -36,15 +36,27 @@ export function RemotePipelinesTable() {
   else if (pipelines.length === 0) message = "No remote pipelines found.";
 
   return (
-    <Table aria-label="Remote Pipelines">
+    <Table aria-label="Remote Pipelines" className="table-fixed">
       <TableHeader>
         <TableRow className="text-xs">
-          <TableHead scope="col">Name</TableHead>
-          <TableHead scope="col">ID</TableHead>
-          <TableHead scope="col">User</TableHead>
-          <TableHead scope="col">Created at</TableHead>
-          <TableHead scope="col">Updated at</TableHead>
-          <TableHead scope="col">Current version</TableHead>
+          <TableHead scope="col" className="w-[25%] truncate">
+            Name
+          </TableHead>
+          <TableHead scope="col" className="w-[15%] truncate">
+            ID
+          </TableHead>
+          <TableHead scope="col" className="w-[20%] truncate">
+            User
+          </TableHead>
+          <TableHead scope="col" className="w-[12%] truncate">
+            Created at
+          </TableHead>
+          <TableHead scope="col" className="w-[12%] truncate">
+            Updated at
+          </TableHead>
+          <TableHead scope="col" className="w-[16%] truncate">
+            Current version
+          </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -52,7 +64,7 @@ export function RemotePipelinesTable() {
           <TableRow>
             <TableCell
               colSpan={6}
-              className="text-center text-muted-foreground"
+              className="whitespace-normal text-center text-muted-foreground"
             >
               {message}
             </TableCell>
@@ -60,18 +72,40 @@ export function RemotePipelinesTable() {
         ) : (
           pipelines.map((pipeline) => (
             <TableRow key={pipeline.id}>
-              <TableCell>
+              <TruncatedTableCell>
                 {pipeline.pipeline_name ?? "Untitled Pipeline"}
-              </TableCell>
-              <TableCell>{pipeline.id}</TableCell>
-              <TableCell>{pipeline.user_id}</TableCell>
-              <TableCell>{formatDate(pipeline.created_at)}</TableCell>
-              <TableCell>{formatDate(pipeline.updated_at)}</TableCell>
-              <TableCell>{pipeline.current_version}</TableCell>
+              </TruncatedTableCell>
+              <TruncatedTableCell>{pipeline.id}</TruncatedTableCell>
+              <TruncatedTableCell>{pipeline.user_id}</TruncatedTableCell>
+              <TruncatedTableCell title={pipeline.created_at}>
+                {formatDate(pipeline.created_at)}
+              </TruncatedTableCell>
+              <TruncatedTableCell title={pipeline.updated_at}>
+                {formatDate(pipeline.updated_at)}
+              </TruncatedTableCell>
+              <TruncatedTableCell>
+                {pipeline.current_version}
+              </TruncatedTableCell>
             </TableRow>
           ))
         )}
       </TableBody>
     </Table>
+  );
+}
+
+function TruncatedTableCell({
+  children,
+  title = children,
+}: {
+  children: string;
+  title?: string;
+}) {
+  return (
+    <TableCell>
+      <span className="block truncate" title={title}>
+        {children}
+      </span>
+    </TableCell>
   );
 }
