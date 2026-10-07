@@ -13,48 +13,49 @@ interface AiModelOptionsConfig {
   defaultModel?: string;
 }
 
-export const DEFAULT_AI_REASONING_EFFORT: AiReasoningEffort = "high";
-const REASONING_TOKEN_ALLOWANCE = 8192;
+export const AI_CONFIG = {
+  defaultModel: "gpt-6-sol",
+  embeddingModel: "text-embedding-3-small",
+  defaultReasoningEffort: "high" as const,
+  reasoningTokenAllowance: 8192,
+  reasoningModelPattern: /^(openai:)?(gpt-[56]|o\d)/i,
+  reasoningLevels: [
+    { value: "none", label: "None" },
+    { value: "low", label: "Low" },
+    { value: "medium", label: "Medium" },
+    { value: "high", label: "High" },
+    { value: "xhigh", label: "Extra high" },
+    { value: "max", label: "Max" },
+  ] satisfies { value: AiReasoningEffort; label: string }[],
+  models: [
+    {
+      id: "gpt-6-astra",
+      label: "GPT-6 Astra",
+      description: "Most capable model for complex reasoning and coding",
+      reasoningEfforts: ["low", "medium", "high", "xhigh", "max"],
+    },
+    {
+      id: "gpt-6-sol",
+      label: "GPT-6 Sol",
+      description: "Balanced model for coding and agentic workflows",
+      reasoningEfforts: ["none", "low", "medium", "high", "xhigh", "max"],
+    },
+    {
+      id: "gpt-6-luna",
+      label: "GPT-6 Luna",
+      description: "Fast, efficient model for focused tasks",
+      reasoningEfforts: ["none", "low", "medium", "high", "xhigh", "max"],
+    },
+  ] satisfies AiModelOption[],
+};
 
-const AI_REASONING_LEVELS: {
-  value: AiReasoningEffort;
-  label: string;
-}[] = [
-  { value: "none", label: "None" },
-  { value: "low", label: "Low" },
-  { value: "medium", label: "Medium" },
-  { value: "high", label: "High" },
-  { value: "xhigh", label: "Extra high" },
-  { value: "max", label: "Max" },
-];
-
-const BUILT_IN_AI_MODEL_OPTIONS: AiModelOption[] = [
-  {
-    id: "gpt-6-astra",
-    label: "GPT-6 Astra",
-    description: "Most capable model for complex reasoning and coding",
-    reasoningEfforts: ["low", "medium", "high", "xhigh", "max"],
-  },
-  {
-    id: "gpt-6-sol",
-    label: "GPT-6 Sol",
-    description: "Balanced model for coding and agentic workflows",
-    reasoningEfforts: ["none", "low", "medium", "high", "xhigh", "max"],
-  },
-  {
-    id: "gpt-6-luna",
-    label: "GPT-6 Luna",
-    description: "Fast, efficient model for focused tasks",
-    reasoningEfforts: ["none", "low", "medium", "high", "xhigh", "max"],
-  },
-];
-
-const BUILT_IN_DEFAULT_MODEL = "gpt-6-sol";
+export const DEFAULT_AI_REASONING_EFFORT: AiReasoningEffort =
+  AI_CONFIG.defaultReasoningEffort;
 
 export function isAiReasoningEffort(
   value: unknown,
 ): value is AiReasoningEffort {
-  return AI_REASONING_LEVELS.some((level) => level.value === value);
+  return AI_CONFIG.reasoningLevels.some((level) => level.value === value);
 }
 
 declare global {
@@ -102,12 +103,12 @@ export function getAiModelOptions(): AiModelOption[] {
   const injected = readInjectedModelOptions();
   return injected?.models && injected.models.length > 0
     ? injected.models
-    : BUILT_IN_AI_MODEL_OPTIONS;
+    : AI_CONFIG.models;
 }
 
 export function getDefaultAiModelId(): string {
   const injected = readInjectedModelOptions();
-  return injected?.defaultModel ?? BUILT_IN_DEFAULT_MODEL;
+  return injected?.defaultModel ?? AI_CONFIG.defaultModel;
 }
 
 export function getAiModelLabel(modelId: string): string {
@@ -123,7 +124,7 @@ export function getAiModelReasoningLevels(modelId: string) {
   const id = modelId.trim();
   if (!id) return [];
   const model = getAiModelOptions().find((option) => option.id === id);
-  return AI_REASONING_LEVELS.filter((level) =>
+  return AI_CONFIG.reasoningLevels.filter((level) =>
     model?.reasoningEfforts?.includes(level.value),
   );
 }
@@ -133,12 +134,12 @@ export function getEffectiveReasoningEffort(
   preference: AiReasoningEffort = DEFAULT_AI_REASONING_EFFORT,
 ): AiReasoningEffort | undefined {
   const levels = getAiModelReasoningLevels(modelId);
-  const preferredIndex = AI_REASONING_LEVELS.findIndex(
+  const preferredIndex = AI_CONFIG.reasoningLevels.findIndex(
     (level) => level.value === preference,
   );
   const distance = (effort: AiReasoningEffort) =>
     Math.abs(
-      AI_REASONING_LEVELS.findIndex((level) => level.value === effort) -
+      AI_CONFIG.reasoningLevels.findIndex((level) => level.value === effort) -
         preferredIndex,
     );
   return levels.sort(
@@ -148,12 +149,13 @@ export function getEffectiveReasoningEffort(
 
 export function getAiReasoningLabel(effort: AiReasoningEffort): string {
   return (
-    AI_REASONING_LEVELS.find((level) => level.value === effort)?.label ?? effort
+    AI_CONFIG.reasoningLevels.find((level) => level.value === effort)?.label ??
+    effort
   );
 }
 
 export function isAiReasoningModel(modelId: string): boolean {
-  return /^(openai:)?(gpt-[56]|o\d)/i.test(modelId);
+  return AI_CONFIG.reasoningModelPattern.test(modelId);
 }
 
 export function getAiMaxOutputTokens(
@@ -165,7 +167,7 @@ export function getAiMaxOutputTokens(
   if (reasoningEffort === "none") return outputTokenBudget;
   if (!model || reasoningEffort || isAiReasoningModel(model)) {
     // Responses counts reasoning tokens against the output limit.
-    return outputTokenBudget + REASONING_TOKEN_ALLOWANCE;
+    return outputTokenBudget + AI_CONFIG.reasoningTokenAllowance;
   }
   return outputTokenBudget;
 }

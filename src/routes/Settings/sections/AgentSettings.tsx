@@ -9,7 +9,7 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
-import { getAiMaxOutputTokens } from "@/config/aiModels";
+import { getAiMaxOutputTokens } from "@/config/aiConfig";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
 import type { AiProviderConfig } from "@/types/aiProvider";

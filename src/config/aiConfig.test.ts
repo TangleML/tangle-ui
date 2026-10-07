@@ -5,9 +5,9 @@ import {
   getAiModelOptions,
   getDefaultAiModelId,
   getEffectiveReasoningEffort,
-} from "./aiModels";
+} from "./aiConfig";
 
-describe("aiModels", () => {
+describe("aiConfig", () => {
   afterEach(() => {
     delete window.__TANGLE_AI_MODELS__;
   });
