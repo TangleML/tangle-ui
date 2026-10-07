@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
 import { FloatingSelectionBar } from "@/components/shared/FloatingSelectionBar";
 import { Button } from "@/components/ui/button";
@@ -12,9 +14,7 @@ interface SelectionToolbarProps {
   onDelete: () => void;
   onClear: () => void;
   isDeleting?: boolean;
-  canEnableCollaboration?: boolean;
-  onEnableCollaboration?: () => void;
-  isEnablingCollaboration?: boolean;
+  children?: ReactNode;
 }
 
 export function SelectionToolbar({
@@ -24,9 +24,7 @@ export function SelectionToolbar({
   onDelete,
   onClear,
   isDeleting,
-  canEnableCollaboration = false,
-  onEnableCollaboration,
-  isEnablingCollaboration,
+  children,
 }: SelectionToolbarProps) {
   return (
     <FloatingSelectionBar
@@ -35,18 +33,7 @@ export function SelectionToolbar({
       onClear={onClear}
       clearTrackingId="v2.pipeline_folders.table.selection_clear"
     >
-      {canEnableCollaboration && onEnableCollaboration && (
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={isEnablingCollaboration}
-          onClick={onEnableCollaboration}
-          {...tracking("v2.pipeline_folders.table.enable_collaboration")}
-        >
-          <Icon name="Users" />
-          Enable collaboration
-        </Button>
-      )}
+      {children}
       {canMove && (
         <Button
           variant="outline"
