@@ -61,6 +61,7 @@ export const RunToolsContent = observer(function RunToolsContent({
         />
 
         <SharePipelineButton
+          runId={runId}
           aria-label="Share run"
           className={RAIL_TOOL_CLASS_NAME}
           tooltipSide="right"
@@ -129,6 +130,7 @@ export const RunToolsContent = observer(function RunToolsContent({
       />
 
       <SharePipelineButton
+        runId={runId}
         displayLabel="Share run"
         showTooltip={false}
         className={toolClassName}

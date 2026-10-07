@@ -16,6 +16,7 @@ import {
   downloadYamlFromComponentText,
   getIdOrTitleFromPath,
   getProjectUrl,
+  getRunUrl,
   normalizeUrl,
   parseHttpUrl,
   toAbsoluteHttpUrl,
@@ -68,6 +69,31 @@ describe("toAbsoluteHttpUrl", () => {
     expect(toAbsoluteHttpUrl(42)).toBeNull();
     expect(toAbsoluteHttpUrl({ url: "https://example.com" })).toBeNull();
     expect(toAbsoluteHttpUrl(["https://example.com"])).toBeNull();
+  });
+});
+
+describe("getRunUrl", () => {
+  afterEach(() => localStorage.clear());
+
+  /** The address bar names a Tangent project when a run is open in a tab. */
+  it("builds an absolute url from the run id", () => {
+    expect(getRunUrl("01a0fa8aac1ff2ca5211")).toBe(
+      `${window.location.origin}/runs-v2/01a0fa8aac1ff2ca5211`,
+    );
+  });
+
+  it("follows the reader to whichever run view they use", () => {
+    localStorage.setItem("betaFlags", JSON.stringify({ v2_editor: false }));
+
+    expect(getRunUrl("01a0fa8aac1ff2ca5211")).toBe(
+      `${window.location.origin}/runs/01a0fa8aac1ff2ca5211`,
+    );
+  });
+
+  it("escapes an id that would otherwise change the path", () => {
+    expect(getRunUrl("a/../b")).toBe(
+      `${window.location.origin}/runs-v2/a%2F..%2Fb`,
+    );
   });
 });
 
