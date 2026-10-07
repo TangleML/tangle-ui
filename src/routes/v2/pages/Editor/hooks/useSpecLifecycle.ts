@@ -5,9 +5,11 @@ import { useEffect, useRef } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 import { collectIdStack } from "@/models/componentSpec";
+import { useCollabRoom } from "@/routes/v2/pages/Editor/hooks/useCollabRoom";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { saveIdStack } from "@/routes/v2/pages/Editor/utils/undoHistoryStorage";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { getCollabServerUrl } from "@/services/collaboration/collabServerUrl";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
 import type { PipelineRef } from "@/services/pipelineStorage/types";
@@ -34,32 +36,43 @@ export function useSpecLifecycle(
   const {
     undo,
     autoSave,
+    collaboration,
     pipelineFile: pipelineFileStore,
   } = useEditorSession();
   const storage = usePipelineStorage();
   const prevTaskEntityIdsRef = useRef<Set<string>>(new Set());
+
+  const { room: collabRoom, active: collabActive } = useCollabRoom();
 
   useEffect(() => {
     if (!rootSpec) return;
 
     editor.resetState();
     navigation.initNavigation(rootSpec);
-    undo.init(rootSpec, restoredUndoStore);
 
-    const saveName = pipelineRef.name ?? rootSpec.name;
+    if (collabActive && collabRoom) {
+      // Collab mode owns the shared document: undo (which would itself have to
+      // become a command) and autosave (which would fork the local file) are
+      // both off; the room, not disk, is the source of truth.
+      collaboration.init(rootSpec, collabRoom, getCollabServerUrl());
+    } else {
+      undo.init(rootSpec, restoredUndoStore);
 
-    void (async () => {
-      if (saveName) {
-        const file = await resolvePipelineFile(pipelineRef, storage);
-        pipelineFileStore.init(file ?? null);
-        autoSave.init(rootSpec, saveName);
-        // Persist the id ordering up front so a reload replays the same `$id`s
-        // even if the user never edits — keeps chat entity links resolvable.
-        await saveIdStack(saveName, collectIdStack(rootSpec)).catch((error) =>
-          console.warn("Failed to persist pipeline id stack", error),
-        );
-      }
-    })();
+      const saveName = pipelineRef.name ?? rootSpec.name;
+
+      void (async () => {
+        if (saveName) {
+          const file = await resolvePipelineFile(pipelineRef, storage);
+          pipelineFileStore.init(file ?? null);
+          autoSave.init(rootSpec, saveName);
+          // Persist the id ordering up front so a reload replays the same `$id`s
+          // even if the user never edits — keeps chat entity links resolvable.
+          await saveIdStack(saveName, collectIdStack(rootSpec)).catch((error) =>
+            console.warn("Failed to persist pipeline id stack", error),
+          );
+        }
+      })();
+    }
 
     prevTaskEntityIdsRef.current = new Set(rootSpec.tasks.map((t) => t.$id));
 
@@ -91,6 +104,7 @@ export function useSpecLifecycle(
       disposeTaskWatcher();
       disposeNavGuard();
       autoSave.dispose();
+      collaboration.dispose();
       pipelineFileStore.dispose();
       editor.clearSelection();
       navigation.clearNavigation();
@@ -108,6 +122,9 @@ export function useSpecLifecycle(
     windowStore,
     undo,
     autoSave,
+    collaboration,
+    collabActive,
+    collabRoom,
     pipelineFileStore,
     storage,
   ]);

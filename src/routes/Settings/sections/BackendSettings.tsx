@@ -1,6 +1,7 @@
 import { type ChangeEvent, useEffect, useState } from "react";
 
 import { InfoBox } from "@/components/shared/InfoBox";
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,10 @@ import { Heading, Paragraph } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
 import { useBackend } from "@/providers/BackendProvider";
+import {
+  getCollabServerUrl,
+  setCollabServerUrl,
+} from "@/services/collaboration/collabServerUrl";
 import { API_URL } from "@/utils/constants";
 
 const HasEnvConfig = !!API_URL;
@@ -243,6 +248,47 @@ export function BackendSettings() {
       <InlineStack align="end">
         <Button onClick={handleSave}>{saveButtonText}</Button>
       </InlineStack>
+
+      <CollabServerSetting />
     </BlockStack>
+  );
+}
+
+function CollabServerSetting() {
+  const notify = useToastNotification();
+  const collabEnabled = useFlagValue("collab-poc");
+  const [url, setUrl] = useState(() => getCollabServerUrl());
+
+  if (!collabEnabled) return null;
+
+  const handleSave = () => {
+    setCollabServerUrl(url);
+    setUrl(url.trim());
+    notify("Collaboration server saved", "success");
+  };
+
+  return (
+    <>
+      <Separator />
+      <BlockStack gap="2">
+        <Heading level={3}>Collaboration server (PoC)</Heading>
+        <Paragraph tone="subdued" size="sm">
+          WebSocket URL of the collaboration sync server used by the
+          proof-of-concept multi-client editor.
+        </Paragraph>
+        <InlineStack gap="2" wrap="nowrap" className="w-full">
+          <Input
+            value={url}
+            placeholder="ws://localhost:8080"
+            onChange={(e: ChangeEvent<HTMLInputElement>) =>
+              setUrl(e.target.value)
+            }
+          />
+          <Button variant="secondary" onClick={handleSave}>
+            Save
+          </Button>
+        </InlineStack>
+      </BlockStack>
+    </>
   );
 }

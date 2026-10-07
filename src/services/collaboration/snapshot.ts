@@ -1,4 +1,9 @@
-import { fromSnapshot, getSnapshot, type SnapshotInOf } from "mobx-keystone";
+import {
+  applySnapshot,
+  fromSnapshot,
+  getSnapshot,
+  type SnapshotInOf,
+} from "mobx-keystone";
 
 import { ComponentSpec } from "@/models/componentSpec/entities/componentSpec";
 
@@ -60,6 +65,16 @@ export function fromCollabSnapshot(snapshot: CollabSnapshot): ComponentSpec {
     throw new Error("Collab snapshot is not a ComponentSpec snapshot");
   }
   return fromSnapshot<ComponentSpec>(snapshot.spec);
+}
+
+export function applyCollabSnapshot(
+  root: ComponentSpec,
+  snapshot: CollabSnapshot,
+): void {
+  if (!isComponentSpecSnapshot(snapshot.spec)) {
+    throw new Error("Collab snapshot is not a ComponentSpec snapshot");
+  }
+  applySnapshot(root, snapshot.spec);
 }
 
 function stableStringify(value: CollabJsonValue): string {

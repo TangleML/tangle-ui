@@ -38,6 +38,7 @@ import {
 import type { PipelineRef } from "@/services/pipelineStorage/types";
 
 import { createEditorAgentWorker } from "./components/AiChat/editorAgentWorker";
+import { useCollabDebugWindow } from "./components/CollabDebug/useCollabDebugWindow";
 import { useDebugPanelWindow } from "./components/DebugPanel";
 import { DriverPermissionGate } from "./components/DriverPermissionGate";
 import { EditorMenuBar } from "./components/EditorMenuBar/EditorMenuBar";
@@ -45,6 +46,7 @@ import { EditorTourBridge } from "./components/EditorTourBridge/EditorTourBridge
 import { EmptyEditorState } from "./components/EmptyEditorState";
 import { FlowCanvas } from "./components/FlowCanvas/FlowCanvas";
 import { useAiChatWindow } from "./hooks/useAiChatWindow";
+import { useCollabRoom } from "./hooks/useCollabRoom";
 import { useComponentLibraryWindow } from "./hooks/useComponentLibraryWindow";
 import { useComponentSearchV2Window } from "./hooks/useComponentSearchV2Window";
 import { useEditorEscapeShortcut } from "./hooks/useEditorEscapeShortcut";
@@ -101,6 +103,9 @@ const PipelineEditor = withSuspenseWrapper(
     useEditorEscapeShortcut();
     useDebugPanelWindow();
     useTipOfTheDayWindow();
+
+    const { active: collabActive } = useCollabRoom();
+    useCollabDebugWindow(collabActive);
 
     const aiEnabled = useFlagValue("ai-assistant");
     useAiChatWindow(aiEnabled);
