@@ -18,8 +18,8 @@ const runtimePackageJson = {
 
 const runReadme = `# Collaboration PoC sync server
 
-A throwaway, in-memory WebSocket sequencer for the collaboration proof of concept. Do not deploy
-it anywhere reachable: there is no auth, no persistence, and no rate limiting.
+A throwaway WebSocket sequencer for the collaboration proof of concept. Do not deploy it anywhere
+reachable: there is no auth and no rate limiting.
 
 ## Run
 
@@ -29,8 +29,14 @@ node index.js
 
 ## Config
 
-- \`PORT\` — the port to listen on (default 8080).
+- \`PORT\` — the port to listen on (default 8080). HTTP (\`GET /info\`, \`POST /rooms\`) and
+  WebSocket share it.
 - \`LOG_FOLD_AT\` — fold the per-room command log once it passes this many entries (default 1000).
+- \`COLLAB_STORAGE\` — \`ephemeral\` (default) keeps room pipelines as JSON files on this machine and
+  never calls the backend; \`backend\` seeds and persists rooms through the Backend Pipelines API.
+- \`COLLAB_DATA_DIR\` — directory for ephemeral room files (default \`./collab-data\`).
+- \`COLLAB_BACKEND_URL\`, \`TANGENT_MCP_BASIC_AUTH\` — backend location and credentials, used only in
+  \`backend\` mode.
 `;
 
 async function main(): Promise<void> {

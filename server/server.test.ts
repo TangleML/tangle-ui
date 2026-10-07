@@ -1,5 +1,9 @@
 // @vitest-environment node
-import { afterEach, describe, expect, it } from "vitest";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { WebSocket } from "ws";
 
 import {
@@ -16,6 +20,11 @@ import {
   type RejectMessage,
   type ServerMessage,
 } from "../src/services/collaboration/protocol";
+import {
+  isCollabServerInfo,
+  isCreateRoomResponse,
+} from "../src/services/collaboration/serverInfo";
+import { FileSystemPipelineRepository } from "./fileSystemPipelineRepository";
 import { type CollabServer, createCollabServer } from "./server";
 
 const cleanups: Array<() => Promise<void> | void> = [];
@@ -27,10 +36,58 @@ afterEach(async () => {
   }
 });
 
-async function startServer(logFoldAt = 1000): Promise<CollabServer> {
-  const server = await createCollabServer({ port: 0, logFoldAt });
+interface StartedServer extends CollabServer {
+  dataDir: string;
+}
+
+async function startServer(logFoldAt = 1000): Promise<StartedServer> {
+  const dataDir = await mkdtemp(path.join(tmpdir(), "collab-server-test-"));
+  cleanups.push(() => rm(dataDir, { recursive: true, force: true }));
+  const server = await createCollabServer({
+    port: 0,
+    logFoldAt,
+    repository: new FileSystemPipelineRepository(dataDir),
+  });
   cleanups.push(() => server.close());
-  return server;
+  return Object.assign(server, { dataDir });
+}
+
+const DEMO_SPEC = {
+  name: "demo",
+  implementation: { graph: { tasks: {} } },
+};
+
+async function createRoom(port: number, spec: unknown): Promise<string> {
+  const response = await fetch(`http://localhost:${port}/rooms`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ spec }),
+  });
+  const body: unknown = await response.json();
+  if (!isCreateRoomResponse(body)) {
+    throw new Error(`unexpected create room response: ${JSON.stringify(body)}`);
+  }
+  return body.roomId;
+}
+
+async function readPersistedRoomName(
+  dataDir: string,
+  roomId: string,
+): Promise<unknown> {
+  const parsed: unknown = JSON.parse(
+    await readFile(path.join(dataDir, `${roomId}.json`), "utf8"),
+  );
+  if (
+    typeof parsed === "object" &&
+    parsed !== null &&
+    "spec" in parsed &&
+    typeof parsed.spec === "object" &&
+    parsed.spec !== null &&
+    "name" in parsed.spec
+  ) {
+    return parsed.spec.name;
+  }
+  return undefined;
 }
 
 interface TestClient {
@@ -42,6 +99,7 @@ interface TestClient {
     guard: (message: ServerMessage) => message is T,
   ): Promise<T>;
   waitClose(): Promise<void>;
+  close(): void;
 }
 
 function openClient(port: number): Promise<TestClient> {
@@ -114,6 +172,7 @@ function openClient(port: number): Promise<TestClient> {
           closed
             ? Promise.resolve()
             : new Promise((resolveClose) => closeWaiters.push(resolveClose)),
+        close: () => socket.close(),
       });
     });
   });
@@ -268,5 +327,90 @@ describe("collab sync server", () => {
     expect(helloB.version).toBe(4);
     expect(helloB.snapshot.spec.marker).toBe("folded");
     expect(helloB.log.map((entry) => entry.version)).toEqual([4]);
+  });
+});
+
+describe("collab sync server in ephemeral mode", () => {
+  it("reports ephemeral storage on GET /info", async () => {
+    const server = await startServer();
+    const response = await fetch(`http://localhost:${server.port}/info`);
+    const body: unknown = await response.json();
+
+    expect(response.headers.get("access-control-allow-origin")).toBe("*");
+    expect(isCollabServerInfo(body) && body.storage).toBe("ephemeral");
+  });
+
+  it("rejects a room upload that is not a pipeline spec", async () => {
+    const server = await startServer();
+    const response = await fetch(`http://localhost:${server.port}/rooms`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ spec: { name: "no implementation" } }),
+    });
+    expect(response.status).toBe(400);
+  });
+
+  it("seeds a created room from disk without a client snapshot", async () => {
+    const server = await startServer();
+    const roomId = await createRoom(server.port, DEMO_SPEC);
+
+    const a = await openClient(server.port);
+    a.send({
+      type: "join",
+      protocolVersion: COLLAB_PROTOCOL_VERSION,
+      modelVersion: COLLAB_MODEL_VERSION,
+      room: roomId,
+    });
+    const hello = await a.waitFor(isHelloMessage);
+
+    expect(hello.snapshot.spec.$modelType).toBe("spec/ComponentSpec");
+    expect(hello.snapshot.spec.name).toBe("demo");
+  });
+
+  it("persists room edits to disk once the last client leaves", async () => {
+    const server = await startServer();
+    const roomId = await createRoom(server.port, DEMO_SPEC);
+
+    const a = await openClient(server.port);
+    a.send({
+      type: "join",
+      protocolVersion: COLLAB_PROTOCOL_VERSION,
+      modelVersion: COLLAB_MODEL_VERSION,
+      room: roomId,
+    });
+    await a.waitFor(isHelloMessage);
+
+    a.send({
+      type: "command",
+      seq: 1,
+      command: {
+        kind: "patches",
+        label: "rename",
+        patches: [{ op: "replace", path: ["name"], value: "renamed" }],
+      },
+    });
+    await a.waitUntil(() => a.received.some(isBroadcastMessage));
+    a.close();
+    await a.waitClose();
+
+    await vi.waitFor(async () => {
+      expect(await readPersistedRoomName(server.dataDir, roomId)).toBe(
+        "renamed",
+      );
+    });
+  });
+
+  it("never resolves a room id outside the data directory", async () => {
+    const server = await startServer();
+    await writeFile(
+      path.join(server.dataDir, "on-disk.json"),
+      JSON.stringify({ spec: { ...DEMO_SPEC, name: "on disk" } }),
+    );
+
+    const a = await openClient(server.port);
+    a.send(join("nested/../on-disk", "client-seed"));
+    const hello = await a.waitFor(isHelloMessage);
+
+    expect(hello.snapshot.spec.marker).toBe("client-seed");
   });
 });

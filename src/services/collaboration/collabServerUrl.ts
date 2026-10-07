@@ -23,6 +23,14 @@ export function getCollabServerUrl(): string {
   return stored && stored.length > 0 ? stored : defaultCollabServerUrl();
 }
 
+export function toCollabHttpUrl(webSocketUrl: string): string {
+  return webSocketUrl.replace(/^ws(s?):/i, "http$1:").replace(/\/$/, "");
+}
+
+export function getCollabHttpUrl(): string {
+  return toCollabHttpUrl(getCollabServerUrl());
+}
+
 export function setCollabServerUrl(url: string): void {
   storage.setItem("collabServerUrl", url.trim());
 }

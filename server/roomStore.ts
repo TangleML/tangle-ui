@@ -17,8 +17,7 @@ export interface RoomState {
   snapshotVersion: number;
   log: LogEntry[];
   participants: Map<string, Participant>;
-  /** Backend `file_path` to persist to, when the room is a backend pipeline. */
-  filePath?: string;
+  storageKey?: string;
 }
 
 export interface RoomStore {
@@ -26,7 +25,7 @@ export interface RoomStore {
   create(
     roomId: string,
     snapshot: CollabSnapshot,
-    filePath?: string,
+    storageKey?: string,
   ): RoomState;
 }
 
@@ -40,7 +39,7 @@ export class InMemoryRoomStore implements RoomStore {
   create(
     roomId: string,
     snapshot: CollabSnapshot,
-    filePath?: string,
+    storageKey?: string,
   ): RoomState {
     const room: RoomState = {
       version: 0,
@@ -48,7 +47,7 @@ export class InMemoryRoomStore implements RoomStore {
       snapshotVersion: 0,
       log: [],
       participants: new Map(),
-      filePath,
+      storageKey,
     };
     this.rooms.set(roomId, room);
     return room;

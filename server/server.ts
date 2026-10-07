@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { createServer } from "node:http";
 
 import { type RawData, type WebSocket, WebSocketServer } from "ws";
 
@@ -20,7 +21,8 @@ import {
   type SnapshotRequestMessage,
 } from "../src/services/collaboration/protocol";
 import { roomStateToPlainSpec, specToCollabSnapshot } from "./csom";
-import { fetchPipeline, writePipeline } from "./pipelineApi";
+import { createHttpHandler } from "./httpRoutes";
+import type { PipelineRepository } from "./pipelineRepository";
 import { InMemoryRoomStore, type RoomState, type RoomStore } from "./roomStore";
 
 const PERSIST_DEBOUNCE_MS = 1500;
@@ -28,6 +30,7 @@ const PERSIST_DEBOUNCE_MS = 1500;
 export interface CollabServerOptions {
   port: number;
   logFoldAt: number;
+  repository: PipelineRepository;
   store?: RoomStore;
 }
 
@@ -45,6 +48,7 @@ interface Connection {
 export function createCollabServer(
   options: CollabServerOptions,
 ): Promise<CollabServer> {
+  const { repository } = options;
   const store = options.store ?? new InMemoryRoomStore();
   const connections = new Set<Connection>();
   const pendingFolds = new Map<string, string>();
@@ -61,11 +65,11 @@ export function createCollabServer(
 
   async function persistRoom(roomId: string): Promise<void> {
     const room = store.get(roomId);
-    if (!room || !room.filePath) return;
+    if (!room?.storageKey) return;
     try {
-      await writePipeline(room.filePath, roomStateToPlainSpec(room));
+      await repository.save(room.storageKey, roomStateToPlainSpec(room));
       console.log(
-        `flushed room ${roomId} to backend ${room.filePath} (version ${room.version})`,
+        `flushed room ${roomId} to ${repository.mode} storage ${room.storageKey} (version ${room.version})`,
       );
     } catch (error) {
       console.warn(`failed to persist room ${roomId}`, error);
@@ -74,7 +78,7 @@ export function createCollabServer(
 
   function schedulePersist(roomId: string): void {
     const room = store.get(roomId);
-    if (!room?.filePath) return;
+    if (!room?.storageKey) return;
     const existing = persistTimers.get(roomId);
     if (existing) clearTimeout(existing);
     persistTimers.set(
@@ -114,17 +118,20 @@ export function createCollabServer(
 
     const task = (async () => {
       try {
-        const pipeline = await fetchPipeline(roomId);
+        const pipeline = await repository.load(roomId);
         if (pipeline) {
           store.create(
             roomId,
             specToCollabSnapshot(pipeline.spec),
-            pipeline.filePath,
+            pipeline.storageKey,
           );
           return;
         }
       } catch (error) {
-        console.warn(`failed to seed room ${roomId} from backend`, error);
+        console.warn(
+          `failed to seed room ${roomId} from ${repository.mode} storage`,
+          error,
+        );
       }
       if (clientSnapshot) store.create(roomId, clientSnapshot);
     })();
@@ -356,7 +363,8 @@ export function createCollabServer(
     }
   }
 
-  const wss = new WebSocketServer({ port: options.port });
+  const httpServer = createServer(createHttpHandler(repository));
+  const wss = new WebSocketServer({ server: httpServer });
 
   wss.on("connection", (socket) => {
     const connection: Connection = {
@@ -371,9 +379,9 @@ export function createCollabServer(
   });
 
   return new Promise((resolve, rejectPromise) => {
-    wss.on("error", rejectPromise);
-    wss.on("listening", () => {
-      const address = wss.address();
+    httpServer.on("error", rejectPromise);
+    httpServer.listen(options.port, () => {
+      const address = httpServer.address();
       const boundPort =
         typeof address === "object" && address !== null
           ? address.port
@@ -383,7 +391,10 @@ export function createCollabServer(
         close: () =>
           new Promise((resolveClose) => {
             for (const connection of connections) connection.socket.terminate();
-            wss.close(() => resolveClose());
+            wss.close(() => {
+              httpServer.closeAllConnections();
+              httpServer.close(() => resolveClose());
+            });
           }),
       });
     });
