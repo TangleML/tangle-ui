@@ -42,17 +42,16 @@ function selectMessageText() {
   message.textContent = "the run failed on step two";
   const range = document.createRange();
   range.selectNodeContents(message);
-  window.getSelection()?.addRange(range);
+  const selection = window.getSelection();
+  selection?.removeAllRanges();
+  selection?.addRange(range);
 }
 
 function pressCopy(pipelineSpec: ComponentSpec | null = spec) {
   renderHook(() => useCopyShortcut(pipelineSpec));
 
   const event = new KeyboardEvent("keydown", { key: "c", metaKey: true });
-  const preventDefault = vi.spyOn(event, "preventDefault");
-  const handled = stores.keyboard.getShortcut("copy")?.action(event);
-
-  return { handled, preventDefault };
+  return stores.keyboard.getShortcut("copy")?.action(event);
 }
 
 describe("useCopyShortcut", () => {
@@ -67,10 +66,7 @@ describe("useCopyShortcut", () => {
   });
 
   it("copies the selected nodes", () => {
-    const { handled, preventDefault } = pressCopy();
-
-    expect(preventDefault).toHaveBeenCalled();
-    expect(handled).not.toBe(false);
+    expect(pressCopy()).toBeUndefined();
     expect(copyNodesToClipboard).toHaveBeenCalledWith(
       registry,
       spec,
@@ -80,27 +76,20 @@ describe("useCopyShortcut", () => {
 
   it("leaves the copy to the browser when text is selected", () => {
     selectMessageText();
-    const { handled, preventDefault } = pressCopy();
 
-    expect(handled).toBe(false);
-    expect(preventDefault).not.toHaveBeenCalled();
+    expect(pressCopy()).toBe(false);
     expect(copyNodesToClipboard).not.toHaveBeenCalled();
   });
 
   it("leaves the copy to the browser when no node is selected", () => {
     vi.mocked(getEffectiveSelection).mockReturnValue([]);
-    const { handled, preventDefault } = pressCopy();
 
-    expect(handled).toBe(false);
-    expect(preventDefault).not.toHaveBeenCalled();
+    expect(pressCopy()).toBe(false);
     expect(copyNodesToClipboard).not.toHaveBeenCalled();
   });
 
   it("leaves the copy to the browser without a spec", () => {
-    const { handled, preventDefault } = pressCopy(null);
-
-    expect(handled).toBe(false);
-    expect(preventDefault).not.toHaveBeenCalled();
+    expect(pressCopy(null)).toBe(false);
     expect(copyNodesToClipboard).not.toHaveBeenCalled();
   });
 });

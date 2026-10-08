@@ -20,13 +20,12 @@ export function useCopyShortcut(spec: ComponentSpec | null): void {
       id: "copy",
       keys: [CMDALT, "C"],
       label: "Copy",
-      action: (e) => {
+      action: () => {
         if (hasTextSelection()) return false;
         if (!spec) return false;
         const selection = getEffectiveSelection(registry, spec, editor);
         if (selection.length === 0) return false;
 
-        e.preventDefault();
         copyNodesToClipboard(registry, spec, selection).catch(() =>
           notify(CLIPBOARD_COPY_FAILED_MESSAGE, "error"),
         );
