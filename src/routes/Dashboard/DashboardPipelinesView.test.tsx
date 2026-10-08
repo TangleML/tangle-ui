@@ -403,10 +403,13 @@ describe("DashboardPipelinesView remote pipelines", () => {
   });
 
   it("disables navigation until the next page request settles", async () => {
-    const nextPage = Promise.withResolvers<RemotePipelinesPage>();
+    let resolveNextPage: ((page: RemotePipelinesPage) => void) | undefined;
+    const nextPage = new Promise<RemotePipelinesPage>((resolve) => {
+      resolveNextPage = resolve;
+    });
     vi.mocked(listRemotePipelines)
       .mockResolvedValueOnce(createPage(1, 10, 20, "page-two"))
-      .mockReturnValueOnce(nextPage.promise);
+      .mockReturnValueOnce(nextPage);
     const { user } = renderDashboard();
     await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
     await screen.findByText("Pipeline 1");
@@ -424,7 +427,10 @@ describe("DashboardPipelinesView remote pipelines", () => {
     expect(listRemotePipelines).toHaveBeenCalledTimes(2);
 
     await act(async () => {
-      nextPage.resolve(createPage(11, 10, 20, null));
+      if (!resolveNextPage) {
+        throw new Error("Next-page resolver was not initialized");
+      }
+      resolveNextPage(createPage(11, 10, 20, null));
     });
     expect(await screen.findByText("Pipeline 11")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "First page" })).toBeEnabled();
