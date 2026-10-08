@@ -22,6 +22,26 @@ vi.mock("@/components/shared/Settings/useFlags", () => ({
   isFlagEnabled: vi.fn(),
 }));
 
+// Target prose comes from the bundled schema, which this repo ships empty for a
+// consumer's overlay to fill, so it has to be stood in for here.
+vi.mock("@/config/launcherTaskAnnotationSchema.json", () => ({
+  default: {
+    launcher_annotation_schemas: {
+      acme: {
+        type: "object",
+        properties: {},
+        "x-note": "Runs need an Acme account. Create one at {url}",
+      },
+      globex: {
+        type: "object",
+        properties: {},
+        "x-note": "Runs here are billed to your team.",
+      },
+    },
+    common_annotations: { type: "object", properties: {} },
+  },
+}));
+
 const makeSchema = (
   launchers: Record<string, Record<string, unknown>>,
   cloudProvider: Record<string, unknown> = {},
@@ -139,6 +159,33 @@ describe("getCloudProviderConfig", () => {
       deprecated: true,
       deprecationMessage: "Use eo9 instead",
     });
+  });
+
+  it("carries a target note onto its option", () => {
+    const config = getCloudProviderConfig(
+      makeSchema({
+        acme: {
+          title: "Acme",
+          "x-note": "Runs here need your own account.",
+        },
+      }),
+    );
+
+    expect(config?.options?.[0]).toEqual({
+      value: "acme",
+      name: "Acme",
+      note: "Runs here need your own account.",
+    });
+  });
+
+  it("drops a note whose url placeholder was never filled", () => {
+    const config = getCloudProviderConfig(
+      makeSchema({
+        acme: { title: "Acme", "x-note": "Create an account at {url}" },
+      }),
+    );
+
+    expect(config?.options?.[0]).not.toHaveProperty("note");
   });
 
   it("qualifies the name by platform and captions the project from x- fields", () => {
@@ -514,6 +561,50 @@ describe("buildLauncherSchemaFromCapabilities", () => {
     expect(
       built.launcher_annotation_schemas?.h200["x-deprecated-message"],
     ).toBe("h200 is no longer available as of 2020-01-01. Use ce7 instead.");
+  });
+
+  it("fills the bundled note's placeholder from the target url, and carries it onto an alias", () => {
+    const built = buildLauncherSchemaFromCapabilities({
+      acme: { label: "Acme", url: "https://acme.example.com" },
+      aliases: { fast: "acme" },
+    } as LauncherConfig);
+
+    expect(built.launcher_annotation_schemas?.["acme"]["x-note"]).toBe(
+      "Runs need an Acme account. Create one at https://acme.example.com",
+    );
+    expect(built.launcher_annotation_schemas?.["fast"]["x-note"]).toBe(
+      "Runs need an Acme account. Create one at https://acme.example.com",
+    );
+  });
+
+  it("drops a bundled note whose placeholder no target url can fill", () => {
+    const built = buildLauncherSchemaFromCapabilities({
+      acme: { label: "Acme" },
+    } as LauncherConfig);
+
+    expect(built.launcher_annotation_schemas?.["acme"]).not.toHaveProperty(
+      "x-note",
+    );
+  });
+
+  it("keeps a bundled note that names no url", () => {
+    const built = buildLauncherSchemaFromCapabilities({
+      globex: { label: "Globex" },
+    } as LauncherConfig);
+
+    expect(built.launcher_annotation_schemas?.["globex"]["x-note"]).toBe(
+      "Runs here are billed to your team.",
+    );
+  });
+
+  it("leaves x-note off a target the bundled schema says nothing about", () => {
+    const built = buildLauncherSchemaFromCapabilities({
+      nebius: nebius({ b300: {} }),
+    });
+
+    expect(built.launcher_annotation_schemas?.b300).not.toHaveProperty(
+      "x-note",
+    );
   });
 
   it("inverts aliases into per-cluster x-aliases and stamps no feature flag", () => {
