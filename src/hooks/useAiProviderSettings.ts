@@ -5,7 +5,7 @@ import {
   getDefaultAiModelId,
   getEffectiveReasoningEffort,
   isAiReasoningEffort,
-} from "@/config/aiModels";
+} from "@/config/aiConfig";
 import { useBackend } from "@/providers/BackendProvider";
 import type { AiProviderConfig } from "@/types/aiProvider";
 import { getStorage } from "@/utils/typedStorage";
