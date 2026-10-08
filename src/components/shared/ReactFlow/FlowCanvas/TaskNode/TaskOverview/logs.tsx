@@ -16,6 +16,8 @@ import { getBackendStatusString } from "@/utils/backend";
 import { shouldStatusHaveLogs } from "@/utils/executionStatus";
 import { getExecutionLogsUrl } from "@/utils/URL";
 
+import { SystemErrorSection } from "./SystemErrorSection";
+
 const LogDisplay = ({
   logs,
   allowFullscreen,
@@ -150,8 +152,12 @@ const Logs = ({
   }
 
   return (
-    <div className="space-y-4 h-full">
-      <div className="font-mono text-sm whitespace-pre-wrap bg-muted p-4 rounded-lg h-full min-h-0 flex-1">
+    <div className="flex flex-col gap-4 h-full min-h-0">
+      <SystemErrorSection
+        systemErrorExceptionFull={logs?.system_error_exception_full}
+        className="shrink-0"
+      />
+      <div className="font-mono text-sm whitespace-pre-wrap bg-muted p-4 rounded-lg flex-1 min-h-0">
         {logs && (
           <LogDisplay
             logs={logs}

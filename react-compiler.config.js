@@ -94,6 +94,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/components/shared/Notices",
   "src/components/shared/Markdown",
   "src/components/shared/ReactFlow/FlowCanvas/TaskNode/TaskOverview/IOSection",
+  "src/components/shared/ReactFlow/FlowCanvas/TaskNode/TaskOverview/SystemErrorSection.tsx",
   "src/components/ui/typography.tsx",
 
   "src/providers/DialogProvider",
