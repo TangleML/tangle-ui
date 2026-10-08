@@ -1,6 +1,6 @@
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test } from "vitest";
 
-import { isEditableTarget } from "./shortcutUtils";
+import { hasTextSelection, isEditableTarget } from "./shortcutUtils";
 
 function editableAtWindow(root: Node, from: EventTarget = root): boolean {
   document.body.appendChild(root);
@@ -19,6 +19,40 @@ function editableAtWindow(root: Node, from: EventTarget = root): boolean {
   if (result === undefined) throw new Error("event never reached window");
   return result;
 }
+
+function selectTextOf(element: HTMLElement): void {
+  document.body.appendChild(element);
+  const range = document.createRange();
+  range.selectNodeContents(element);
+  const selection = window.getSelection();
+  selection?.removeAllRanges();
+  selection?.addRange(range);
+}
+
+describe("hasTextSelection", () => {
+  afterEach(() => {
+    window.getSelection()?.removeAllRanges();
+    document.body.replaceChildren();
+  });
+
+  test("is false with nothing selected", () => {
+    expect(hasTextSelection()).toBe(false);
+  });
+
+  test("is true for selected text", () => {
+    const message = document.createElement("p");
+    message.textContent = "the run failed on step two";
+    selectTextOf(message);
+
+    expect(hasTextSelection()).toBe(true);
+  });
+
+  test("is false for a collapsed selection in an empty element", () => {
+    selectTextOf(document.createElement("p"));
+
+    expect(hasTextSelection()).toBe(false);
+  });
+});
 
 describe("isEditableTarget", () => {
   test("is false for an event that reached no element", () => {
