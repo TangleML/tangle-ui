@@ -129,12 +129,7 @@ export interface LauncherConfig {
   aliases?: Record<string, string>;
 }
 
-export const launcherTaskAnnotationSchema =
-  schema satisfies LauncherAnnotationSchema;
-
-// Widened so a target can be looked up by key; the export above keeps the literal
-// type its other consumers read.
-const bundledSchema: LauncherAnnotationSchema = schema;
+export const launcherTaskAnnotationSchema: LauncherAnnotationSchema = schema;
 
 const URL_PLACEHOLDER = "{url}";
 
@@ -532,7 +527,9 @@ function resourceFields(
 // and a hostname change needs no rebuild.
 function noteFor(cluster: FlatCluster): string | undefined {
   const prose =
-    bundledSchema.launcher_annotation_schemas?.[cluster.key]?.["x-note"];
+    launcherTaskAnnotationSchema.launcher_annotation_schemas?.[cluster.key]?.[
+      "x-note"
+    ];
   if (!prose?.includes(URL_PLACEHOLDER)) return prose;
   return cluster.url
     ? prose.replaceAll(URL_PLACEHOLDER, cluster.url)

@@ -2,8 +2,9 @@ import { Fragment } from "react";
 
 import { Icon } from "@/components/ui/icon";
 
-// Matches http/https URLs; defined at module level to avoid re-creation on every render.
-const URL_REGEX = /https?:\/\/\S+/g;
+// A URL that ends a sentence must not swallow the punctuation into its href, so the
+// match may not end on a character that reads as prose rather than as the address.
+const URL_REGEX = /https?:\/\/\S*[^\s.,;:!?)\]}'"]/g;
 
 interface DescriptionWithLinksProps {
   text: string;

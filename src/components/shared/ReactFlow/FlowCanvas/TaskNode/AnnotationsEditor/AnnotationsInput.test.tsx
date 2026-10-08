@@ -1,12 +1,12 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, test } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import type { AnnotationConfig } from "@/types/annotations";
 
 import { AnnotationsInput } from "./AnnotationsInput";
 
 const NOTE =
-  "Tasks here run under your own account. Create one at https://example.test/setup first.";
+  "Tasks here run under your own account. Create one at https://example.test/setup.";
 
 const config = (note?: string, deprecated?: boolean): AnnotationConfig => ({
   annotation: "cloud-pipelines.net/orchestration/cloud_provider",
@@ -27,7 +27,7 @@ const renderInput = (value: string, annotationConfig: AnnotationConfig) =>
   );
 
 describe("AnnotationsInput target note", () => {
-  test("shows the selected target's note, with its URL clickable", () => {
+  it("shows the selected target's note, with its URL clickable", () => {
     renderInput("acme", config(NOTE));
 
     expect(screen.getByText(/run under your own account/)).toBeInTheDocument();
@@ -37,7 +37,7 @@ describe("AnnotationsInput target note", () => {
     );
   });
 
-  test("shows nothing for a target with no note", () => {
+  it("shows nothing for a target with no note", () => {
     renderInput("gke", config(NOTE));
 
     expect(
@@ -45,7 +45,7 @@ describe("AnnotationsInput target note", () => {
     ).not.toBeInTheDocument();
   });
 
-  test("gives way to the deprecation message rather than stacking under it", () => {
+  it("gives way to the deprecation message rather than stacking under it", () => {
     renderInput("acme", config(NOTE, true));
 
     expect(screen.getByText("No longer available")).toBeInTheDocument();
