@@ -1,5 +1,6 @@
 import {
   Background,
+  type Node,
   type NodeChange,
   ReactFlow,
   useReactFlow,
@@ -10,6 +11,7 @@ import { BlockStack } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
 import type { ComponentSpec } from "@/models/componentSpec";
 import { useCopyShortcut } from "@/routes/v2/pages/RunView/hooks/useCopyShortcut";
+import { useLayoutUnplacedSpec } from "@/routes/v2/pages/RunView/hooks/useLayoutUnplacedSpec";
 import { SubgraphBreadcrumbs } from "@/routes/v2/shared/components/SubgraphBreadcrumbs";
 import {
   FLOW_CANVAS_DEFAULT_PROPS,
@@ -53,10 +55,11 @@ export const RunViewFlowCanvas = observer(function RunViewFlowCanvas({
   useCopyShortcut(spec);
   useFitViewOnFocus();
 
-  const applyLayout = (layoutedNodes: import("@xyflow/react").Node[]) => {
+  const applyLayout = (layoutedNodes: Node[]) => {
     rfSetNodes(layoutedNodes);
   };
   useAutoLayoutShortcut(applyLayout);
+  useLayoutUnplacedSpec(spec);
 
   const onNodesChange = (changes: NodeChange[]) => {
     const filtered = changes.filter(

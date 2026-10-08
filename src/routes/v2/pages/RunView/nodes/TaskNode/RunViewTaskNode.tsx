@@ -38,11 +38,13 @@ export const RunViewTaskNode = observer(function RunViewTaskNode(
         <StatusIndicator status={status} disabledCache={disabledCache} />
       )}
       {showLogsButton && (
+        // `dark:bg-card` overrides the outline variant's translucent dark fill,
+        // which let the canvas show through the button.
         <Button
           onClick={handleOpenLogs}
           variant="outline"
           size="sm"
-          className="absolute -z-1 -top-8 right-0"
+          className="absolute -top-8 right-0 dark:bg-card"
           {...tracking("v2.run_view.canvas.task_node_open_logs")}
         >
           <Icon name="ScrollText" size="xs" />
