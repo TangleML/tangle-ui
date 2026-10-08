@@ -26,6 +26,10 @@ function runTarget(path: string): WorkareaTarget | undefined {
   return { type: "run", identity: idIdentity(path) };
 }
 
+function requestsNewTab(event: MouseEvent<HTMLButtonElement>) {
+  return event.shiftKey || event.ctrlKey || event.metaKey;
+}
+
 function RunAnchor({ path, label }: AnchorProtocolProps) {
   const store = useTangentProject();
   const notify = useToastNotification();
@@ -42,7 +46,7 @@ function RunAnchor({ path, label }: AnchorProtocolProps) {
 
   function handleClick(event: MouseEvent<HTMLButtonElement>) {
     if (!target) return;
-    if (event.shiftKey) {
+    if (requestsNewTab(event)) {
       window.open(
         getDefaultRunPath(parseIdentity(target.identity).value),
         "_blank",
@@ -56,7 +60,7 @@ function RunAnchor({ path, label }: AnchorProtocolProps) {
     <ChatEntityChip
       icon={resourceMeta("run").icon}
       label={label}
-      title={target ? `${label} — shift-click to open in a new tab` : undefined}
+      title={target ? "Shift-click to open in a new tab" : undefined}
       disabled={!target}
       onClick={handleClick}
     />
