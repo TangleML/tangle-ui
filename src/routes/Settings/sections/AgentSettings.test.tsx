@@ -456,6 +456,76 @@ describe("AgentSettings", () => {
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
+  it("redacts a native API key echoed in a failed Claude test", async () => {
+    const apiKey = "sk-test.+native";
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          error: {
+            type: "authentication_error",
+            message: `Invalid x-api-key: ${apiKey}`,
+          },
+        }),
+        { status: 401, statusText: "Unauthorized" },
+      ),
+    );
+    render(<AgentSettings />);
+    editField("API base URL", "https://api.anthropic.com/v1");
+    editField("API key", apiKey);
+    chooseModel("Claude Opus 5.5");
+    fireEvent.click(button("Save and test AI"));
+
+    await waitFor(() => expect(mockNotify).toHaveBeenCalled());
+    expect(mockFetch.mock.calls[0][0]).toBe(
+      "https://api.anthropic.com/v1/messages",
+    );
+    expect(mockNotify).toHaveBeenCalledWith(
+      'AI test failed: 401 Unauthorized — {"error":{"type":"authentication_error","message":"Invalid x-api-key: ***"}}',
+      "error",
+    );
+    expect(JSON.stringify(mockNotify.mock.calls)).not.toContain(apiKey);
+  });
+
+  it("tests Claude through an OpenAI-compatible gateway", async () => {
+    mockFetch.mockResolvedValue(new Response(JSON.stringify({ ok: true })));
+    render(<AgentSettings />);
+    editField("API base URL", "https://gateway.example.com/v1");
+    editField("API key", "gateway-key");
+    chooseModel("Claude Opus 5.5");
+    fireEvent.click(button("Save and test AI"));
+
+    await waitFor(() => expect(mockNotify).toHaveBeenCalled());
+    expect(mockFetch).toHaveBeenCalledWith(
+      "https://gateway.example.com/v1/responses",
+      expect.objectContaining({
+        headers: {
+          "content-type": "application/json",
+          authorization: "Bearer gateway-key",
+        },
+      }),
+    );
+    expect(mockNotify).toHaveBeenCalledWith(
+      "AI provider settings saved. Model “claude-opus-5-5” works with the Responses API.",
+      "success",
+    );
+  });
+
+  it("allows entering and reselecting a custom BYOK model ID", async () => {
+    mockFetch.mockResolvedValue(new Response(JSON.stringify({ ok: true })));
+    render(<AgentSettings />);
+    editField("API base URL", "https://gateway.example.com/v1");
+    editField("API key", "gateway-key");
+    editField("Model ID", "custom-model");
+    chooseModel("GPT-6 Sol");
+    expect(screen.getByLabelText("Model ID")).toHaveValue("gpt-6-sol");
+    editField("Model ID", "custom-model");
+    fireEvent.click(button("Save and test AI"));
+
+    await waitFor(() => expect(mockNotify).toHaveBeenCalled());
+    expect(requestBody().model).toBe("custom-model");
+    expect(readSavedConfig().model).toBe("custom-model");
+  });
+
   it("saves after a successful AI test using the default model and thinking", async () => {
     mockFetch.mockResolvedValue(new Response(JSON.stringify({ ok: true })));
     render(<AgentSettings />);

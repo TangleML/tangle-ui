@@ -19,6 +19,20 @@ export const AI_CONFIG = {
   defaultReasoningEffort: "high" as const,
   reasoningTokenAllowance: 8192,
   reasoningModelPattern: /^(openai:)?(gpt-[56]|o\d)/i,
+  providers: {
+    openai: {
+      apiName: "Responses API",
+      apiBaseExample: "https://api.openai.com/v1",
+    },
+    anthropic: {
+      apiName: "Anthropic Messages API",
+      apiBaseExample: "https://api.anthropic.com/v1",
+      nativeApiBasePattern:
+        /^https:\/\/api\.anthropic\.com(?::443)?\/v1(?:\/|$)/i,
+      modelPattern: /(^|[/:])claude[-_]/i,
+      defaultMaxOutputTokens: 16384,
+    },
+  },
   reasoningLevels: [
     { value: "none", label: "None" },
     { value: "low", label: "Low" },
@@ -45,6 +59,26 @@ export const AI_CONFIG = {
       label: "GPT-6 Luna",
       description: "Fast, efficient model for focused tasks",
       reasoningEfforts: ["none", "low", "medium", "high", "xhigh", "max"],
+    },
+    {
+      id: "claude-fable-5-1",
+      label: "Claude Fable 5.1",
+      description: "For demanding reasoning and long-running agents",
+    },
+    {
+      id: "claude-opus-5-5",
+      label: "Claude Opus 5.5",
+      description: "For complex coding and agentic workflows",
+    },
+    {
+      id: "claude-sonnet-5-5",
+      label: "Claude Sonnet 5.5",
+      description: "Balanced speed and intelligence",
+    },
+    {
+      id: "claude-haiku-4-5",
+      label: "Claude Haiku 4.5",
+      description: "Fast model for focused tasks",
     },
   ] satisfies AiModelOption[],
 };
@@ -109,6 +143,25 @@ export function getAiModelOptions(): AiModelOption[] {
 export function getDefaultAiModelId(): string {
   const injected = readInjectedModelOptions();
   return injected?.defaultModel ?? AI_CONFIG.defaultModel;
+}
+
+export function getAiProviderConfig(modelId: string) {
+  return AI_CONFIG.providers.anthropic.modelPattern.test(modelId)
+    ? AI_CONFIG.providers.anthropic
+    : AI_CONFIG.providers.openai;
+}
+
+export function getAiRequestProviderConfig(
+  modelId: string,
+  apiBase: string,
+  credentials?: RequestCredentials,
+) {
+  const provider = getAiProviderConfig(modelId);
+  return provider === AI_CONFIG.providers.anthropic &&
+    credentials !== "include" &&
+    !AI_CONFIG.providers.anthropic.nativeApiBasePattern.test(apiBase)
+    ? AI_CONFIG.providers.openai
+    : provider;
 }
 
 export function getAiModelLabel(modelId: string): string {

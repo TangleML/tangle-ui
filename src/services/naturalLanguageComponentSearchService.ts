@@ -12,6 +12,7 @@
  */
 
 import { getAiMaxOutputTokens, isAiReasoningModel } from "@/config/aiConfig";
+import { aiProviderFetch } from "@/services/aiProviderClient";
 import type { AiReasoningEffort } from "@/types/aiProvider";
 import type {
   ComponentReference,
@@ -293,7 +294,7 @@ async function callLlmResponse(
 ): Promise<string> {
   const { base, key, model } = validateConfig(options);
 
-  const response = await fetch(`${base}/responses`, {
+  const response = await aiProviderFetch(`${base}/responses`, {
     method: "POST",
     signal: options.signal,
     credentials: options.credentials,

@@ -7,6 +7,7 @@ import {
 import OpenAI from "openai";
 
 import { AI_CONFIG } from "@/config/aiConfig";
+import { aiProviderFetch } from "@/services/aiProviderClient";
 import type { AiProviderConfig } from "@/types/aiProvider";
 import { BASE_URL } from "@/utils/constants";
 
@@ -51,7 +52,7 @@ function stripAuthorizationFetch(
 ): ReturnType<typeof fetch> {
   const headers = new Headers(init?.headers);
   headers.delete("authorization");
-  return fetch(input, { ...init, headers });
+  return aiProviderFetch(input, { ...init, headers });
 }
 
 /**
@@ -93,7 +94,7 @@ export class ProxyClient implements OpenAIProvider {
       baseURL,
       dangerouslyAllowBrowser: true,
       fetchOptions: { credentials: config.credentials },
-      ...(apiKey ? {} : { fetch: stripAuthorizationFetch }),
+      fetch: apiKey ? aiProviderFetch : stripAuthorizationFetch,
     });
     setDefaultOpenAIClient(this.#client);
     setOpenAIAPI(SIDEKICK_OPENAI_API);

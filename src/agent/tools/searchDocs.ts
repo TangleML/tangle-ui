@@ -1,20 +1,7 @@
-/**
- * In-browser docs RAG tool.
- *
- * Loads the Tangle docs vector store from `/agent-index/docs-vector-store.json`
- * on first use (cached in IndexedDB via `agentDb.vectors` for subsequent
- * loads, and in-memory per `createSearchDocsTool` call for the lifetime of
- * the tool), embeds the user's query through the configured OpenAI proxy,
- * ranks all stored vectors by cosine similarity, and returns the top-K
- * hits formatted for the model to cite back.
- *
- * Replaces the PoC's `search_docs` backend call — see PR 4 of
- * `.cursor/plans/ai_assistant_beta_rollout_e309f590.plan.md` for the
- * reasoning behind moving this in-browser.
- */
 import { tool } from "@openai/agents";
 import { z } from "zod";
 
+import { AI_CONFIG } from "@/config/aiConfig";
 import { BASE_URL } from "@/utils/constants";
 
 import { type OpenAIProvider, requireEmbeddingModel } from "../config";
@@ -157,6 +144,28 @@ function rankByCosine(
   return scored.slice(0, topK);
 }
 
+function rankByText(
+  vectors: PersistedVector[],
+  query: string,
+  topK: number,
+): ReturnType<typeof rankByCosine> {
+  const words = [...new Set(query.toLowerCase().match(/\w+/g) ?? [])];
+  return vectors
+    .map((vector) => {
+      const text = [
+        vector.metadata.title,
+        vector.metadata.sectionTitle,
+        vector.content,
+      ].join(" ");
+      const documentWords = new Set(text.toLowerCase().match(/\w+/g) ?? []);
+      const matches = words.filter((word) => documentWords.has(word)).length;
+      return { vector, score: words.length ? matches / words.length : 0 };
+    })
+    .filter(({ score }) => score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, topK);
+}
+
 function truncate(content: string): string {
   if (content.length <= MAX_CONTENT_CHARS) return content;
   return content.substring(0, MAX_CONTENT_CHARS) + "\n... (truncated)";
@@ -209,8 +218,14 @@ export async function executeSearchDocs(
       return JSON.stringify(empty);
     }
 
-    const queryVec = await embedQuery(query, provider);
-    const ranked = rankByCosine(store.vectors, queryVec, topK);
+    const queryVec = AI_CONFIG.providers.anthropic.nativeApiBasePattern.test(
+      provider.openai.baseURL,
+    )
+      ? null
+      : await embedQuery(query, provider).catch(() => null);
+    const ranked = queryVec
+      ? rankByCosine(store.vectors, queryVec, topK)
+      : rankByText(store.vectors, query, topK);
 
     const hits: SearchDocsHit[] = [];
     for (const { vector, score } of ranked) {
@@ -245,7 +260,7 @@ export function createSearchDocsTool(provider: OpenAIProvider) {
   return tool({
     name: "search_docs",
     description:
-      "Search Tangle documentation by semantic meaning. Returns relevant doc sections with URLs to tangleml.com/docs. " +
+      "Search Tangle documentation. Returns relevant doc sections with URLs to tangleml.com/docs. " +
       "Use for conceptual questions about Tangle. Each result includes a `url` and `citation` field — " +
       "always include the documentation link in your response.",
     parameters: z.object({

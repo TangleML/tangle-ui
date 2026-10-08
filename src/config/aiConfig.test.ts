@@ -12,13 +12,10 @@ describe("aiConfig", () => {
     delete window.__TANGLE_AI_MODELS__;
   });
 
-  it("uses built-in model suggestions by default", () => {
-    expect(getAiModelOptions().map((option) => option.id)).toEqual([
-      "gpt-6-astra",
-      "gpt-6-sol",
-      "gpt-6-luna",
-    ]);
-    expect(getDefaultAiModelId()).toBe("gpt-6-sol");
+  it("suggests unique models and includes the default", () => {
+    const ids = getAiModelOptions().map((option) => option.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids).toContain(getDefaultAiModelId());
   });
 
   it("allows host pages to replace model suggestions and the suggested default", () => {
