@@ -107,9 +107,9 @@ async function renderResizableTable() {
   await screen.findByText("Example pipeline");
 
   const table = screen.getByRole("table", { name: "Remote Pipelines" });
-  vi.spyOn(table, "getBoundingClientRect").mockReturnValue({
-    width: 1000,
-  } as DOMRect);
+  vi.spyOn(table, "getBoundingClientRect").mockReturnValue(
+    new DOMRect(0, 0, 1000, 0),
+  );
   const handle = within(table).getByRole("separator", {
     name: "Resize User column",
   });
@@ -166,7 +166,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
 
     await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
 
-    const row = (await screen.findByText("Example pipeline")).closest("tr")!;
+    const row = await screen.findByRole("row", { name: /Example pipeline/ });
     expect(
       within(row)
         .getAllByRole("cell")
@@ -292,17 +292,18 @@ describe("DashboardPipelinesView remote pipelines", () => {
       ["page-two", createPage(11, 10, 25, "page-three")],
       ["page-three", createPage(21, 5, 25, null)],
     ]);
-    vi.mocked(listRemotePipelines).mockImplementation(async (_, pageToken) =>
-      pages.get(pageToken)!,
-    );
+    vi.mocked(listRemotePipelines).mockImplementation(async (_, pageToken) => {
+      const page = pages.get(pageToken);
+      if (!page) throw new Error(`Unexpected page token: ${pageToken}`);
+      return page;
+    });
     const { user } = renderDashboard();
     await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
 
     await screen.findByText("Pipeline 1");
     expect(screen.getByText("Page 1 of 3")).toBeInTheDocument();
     const table = screen.getByRole("table", { name: "Remote Pipelines" });
-    const rows = () =>
-      within(table.querySelector("tbody")!).getAllByRole("row");
+    const rows = () => within(table).getAllByRole("row").slice(1);
     expect(rows()).toHaveLength(10);
     expect(listRemotePipelines).toHaveBeenNthCalledWith(
       1,
@@ -365,9 +366,11 @@ describe("DashboardPipelinesView remote pipelines", () => {
       ["page-two", createPage(11, 10, 25, "page-three")],
       ["page-three", createPage(21, 5, 25, null)],
     ]);
-    vi.mocked(listRemotePipelines).mockImplementation(async (_, pageToken) =>
-      pages.get(pageToken)!,
-    );
+    vi.mocked(listRemotePipelines).mockImplementation(async (_, pageToken) => {
+      const page = pages.get(pageToken);
+      if (!page) throw new Error(`Unexpected page token: ${pageToken}`);
+      return page;
+    });
     const { user } = renderDashboard();
     await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
     await screen.findByText("Pipeline 1");
@@ -400,14 +403,10 @@ describe("DashboardPipelinesView remote pipelines", () => {
   });
 
   it("disables navigation until the next page request settles", async () => {
-    let resolveNextPage!: (page: RemotePipelinesPage) => void;
+    const nextPage = Promise.withResolvers<RemotePipelinesPage>();
     vi.mocked(listRemotePipelines)
       .mockResolvedValueOnce(createPage(1, 10, 20, "page-two"))
-      .mockReturnValueOnce(
-        new Promise((resolve) => {
-          resolveNextPage = resolve;
-        }),
-      );
+      .mockReturnValueOnce(nextPage.promise);
     const { user } = renderDashboard();
     await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
     await screen.findByText("Pipeline 1");
@@ -425,7 +424,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
     expect(listRemotePipelines).toHaveBeenCalledTimes(2);
 
     await act(async () => {
-      resolveNextPage(createPage(11, 10, 20, null));
+      nextPage.resolve(createPage(11, 10, 20, null));
     });
     expect(await screen.findByText("Pipeline 11")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "First page" })).toBeEnabled();
@@ -454,9 +453,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
     await user.click(screen.getByRole("button", { name: "First page" }));
     const table = screen.getByRole("table", { name: "Remote Pipelines" });
     await waitFor(() => {
-      expect(
-        within(table.querySelector("tbody")!).getAllByRole("row"),
-      ).toHaveLength(8);
+      expect(within(table).getAllByRole("row").slice(1)).toHaveLength(8);
       expectNoPaginationControls();
     });
     expect(screen.getByText("Pipeline 1")).toBeInTheDocument();
@@ -585,20 +582,20 @@ describe("DashboardPipelinesView remote pipelines", () => {
     expect(widths()).toEqual([25, 15, 8, 16, 16, 20]);
   });
 
-  it.each(["pointerUp", "pointerCancel", "lostPointerCapture"] as const)(
-    "stops resizing after %s",
-    async (event) => {
-      const { handle, widths, startDrag, dragTo } =
-        await renderResizableTable();
+  it.each<"pointerUp" | "pointerCancel" | "lostPointerCapture">([
+    "pointerUp",
+    "pointerCancel",
+    "lostPointerCapture",
+  ])("stops resizing after %s", async (event) => {
+    const { handle, widths, startDrag, dragTo } = await renderResizableTable();
 
-      startDrag();
-      dragTo(690);
-      fireEvent[event](handle, { pointerId: 1 });
-      dragTo(750);
+    startDrag();
+    dragTo(690);
+    fireEvent[event](handle, { pointerId: 1 });
+    dragTo(750);
 
-      expect(widths()).toEqual([25, 15, 29, 9, 9, 13]);
-    },
-  );
+    expect(widths()).toEqual([25, 15, 29, 9, 9, 13]);
+  });
 
   it("keeps resizing when a different pointer ends on another handle", async () => {
     const { table, widths, startDrag, dragTo } = await renderResizableTable();

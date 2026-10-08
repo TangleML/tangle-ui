@@ -26,6 +26,12 @@ const COLUMN_NAMES = [
 const INITIAL_COLUMN_WIDTHS = [25, 15, 20, 12, 12, 16];
 const MIN_COLUMN_WIDTH = 8;
 
+interface RemotePipelinesPagination {
+  backendUrl: string;
+  tokens: string[];
+  totalCount: number;
+}
+
 function resizeColumnWidths(widths: number[], index: number, delta: number) {
   const remaining = widths.length - index - 1;
   const maxDelta =
@@ -44,9 +50,9 @@ function resizeColumnWidths(widths: number[], index: number, delta: number) {
 
 export function RemotePipelinesTable() {
   const { backendUrl, configured, available, ready } = useBackend();
-  const [pagination, setPagination] = useState({
+  const [pagination, setPagination] = useState<RemotePipelinesPagination>({
     backendUrl,
-    tokens: [] as string[],
+    tokens: [],
     totalCount: 0,
   });
   const pageTokens =

@@ -22,11 +22,13 @@ const pipeline: RemotePipeline = {
   current_version: "version-1",
 };
 
-function mockResponse(data: unknown, status = 200) {
+function mockResponse<T>(data: T, status = 200) {
   vi.mocked(client.post).mockResolvedValue({
     data,
-    response: { status },
-  } as unknown as ReturnType<typeof client.post>);
+    error: undefined,
+    request: new Request(BACKEND_URL),
+    response: new Response(null, { status }),
+  });
 }
 
 describe("listRemotePipelines", () => {
