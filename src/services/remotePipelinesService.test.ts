@@ -8,7 +8,7 @@ import {
 } from "./remotePipelinesService";
 
 vi.mock("@/api/client.gen", () => ({
-  client: { get: vi.fn() },
+  client: { post: vi.fn() },
 }));
 
 const BACKEND_URL = "https://backend.example.com";
@@ -23,10 +23,10 @@ const pipeline: RemotePipeline = {
 };
 
 function mockResponse(data: unknown, status = 200) {
-  vi.mocked(client.get).mockResolvedValue({
+  vi.mocked(client.post).mockResolvedValue({
     data,
     response: { status },
-  } as unknown as ReturnType<typeof client.get>);
+  } as unknown as ReturnType<typeof client.post>);
 }
 
 describe("listRemotePipelines", () => {
@@ -34,27 +34,66 @@ describe("listRemotePipelines", () => {
     vi.resetAllMocks();
   });
 
-  it("uses the endpoint defaults without filters or pagination options", async () => {
-    mockResponse({ pipelines: [] });
+  it("requests ten pipelines for the first page", async () => {
+    mockResponse({ pipelines: [], total_count: 0, next_page_token: null });
 
-    await expect(listRemotePipelines(BACKEND_URL)).resolves.toEqual([]);
+    await expect(listRemotePipelines(BACKEND_URL)).resolves.toEqual({
+      pipelines: [],
+      totalCount: 0,
+      nextPageToken: null,
+    });
 
-    expect(client.get).toHaveBeenCalledExactlyOnceWith({
+    expect(client.post).toHaveBeenCalledExactlyOnceWith({
       baseUrl: BACKEND_URL,
       url: "/api/pipelines/search",
+      body: { page_size: 10, page_token: undefined },
     });
   });
 
-  it("returns the first page without requesting the next page", async () => {
+  it("preserves the total count and continuation token without fetching more pages", async () => {
     mockResponse({
       pipelines: [pipeline],
       total_count: 50,
       next_page_token: "page-2",
     });
 
-    await expect(listRemotePipelines(BACKEND_URL)).resolves.toEqual([pipeline]);
+    await expect(listRemotePipelines(BACKEND_URL)).resolves.toEqual({
+      pipelines: [pipeline],
+      totalCount: 50,
+      nextPageToken: "page-2",
+    });
 
-    expect(client.get).toHaveBeenCalledTimes(1);
+    expect(client.post).toHaveBeenCalledTimes(1);
+  });
+
+  it("requests ten more pipelines with the supplied continuation token", async () => {
+    mockResponse({
+      pipelines: [pipeline],
+      total_count: 11,
+      next_page_token: null,
+    });
+
+    await expect(listRemotePipelines(BACKEND_URL, "page-2")).resolves.toEqual({
+      pipelines: [pipeline],
+      totalCount: 11,
+      nextPageToken: null,
+    });
+
+    expect(client.post).toHaveBeenCalledExactlyOnceWith({
+      baseUrl: BACKEND_URL,
+      url: "/api/pipelines/search",
+      body: { page_size: 10, page_token: "page-2" },
+    });
+  });
+
+  it("normalizes an omitted continuation token to null", async () => {
+    mockResponse({ pipelines: [pipeline], total_count: 1 });
+
+    await expect(listRemotePipelines(BACKEND_URL)).resolves.toEqual({
+      pipelines: [pipeline],
+      totalCount: 1,
+      nextPageToken: null,
+    });
   });
 
   it("rejects with a clear error when the API returns no data", async () => {
