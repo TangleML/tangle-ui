@@ -9,19 +9,22 @@ import {
   DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
-import { InlineStack } from "@/components/ui/layout";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { Text } from "@/components/ui/typography";
 import { tracking } from "@/utils/tracking";
 
 type DynamicDataGroup = ReturnType<typeof getDynamicDataGroups>[number];
 
 interface DynamicDataSubmenuProps {
   groups: DynamicDataGroup[];
+  secretsOwner?: string;
   onOpenSecretDialog: () => void;
   onSelectSystemData: (key: string) => void;
 }
 
 export function DynamicDataSubmenu({
   groups,
+  secretsOwner,
   onOpenSecretDialog,
   onSelectSystemData,
 }: DynamicDataSubmenuProps) {
@@ -44,7 +47,19 @@ export function DynamicDataSubmenu({
                 {group.title}
               </InlineStack>
             </DropdownMenuLabel>
-            {group.requiresDialog ? (
+            {group.requiresDialog && secretsOwner ? (
+              <BlockStack gap="1" className="px-2 py-1.5">
+                <InlineStack gap="2" blockAlign="center">
+                  <Icon name="Lock" size="sm" className="text-info" />
+                  <Text size="sm" tone="subdued">
+                    Select Secret...
+                  </Text>
+                </InlineStack>
+                <Text size="xs" tone="subdued">
+                  Ask {secretsOwner} to add secrets.
+                </Text>
+              </BlockStack>
+            ) : group.requiresDialog ? (
               <DropdownMenuItem
                 {...tracking(
                   "v2.pipeline_editor.task_arguments.thunder_menu.dynamic_data.secret_dialog_open",

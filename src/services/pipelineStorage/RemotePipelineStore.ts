@@ -242,7 +242,11 @@ export class RemotePipelineStore {
     );
     // Other owners can use the same file path; never attach our draft to their pipeline.
     const ownRecord = record?.pipeline?.id === pipeline.id ? record : undefined;
-    return this.fromSummary(
+    const sharedScopes =
+      pipeline.user_id === this.account?.id
+        ? []
+        : await this.driver.scopes(pipeline);
+    const file = this.fromSummary(
       pipeline,
       ownRecord
         ? { ...ownRecord, pipeline }
@@ -262,6 +266,8 @@ export class RemotePipelineStore {
                 : undefined,
           },
     );
+    file.sharedScopes = sharedScopes;
+    return file;
   }
 
   async resolveLocal(fileId: string): Promise<RemotePipelineFile | undefined> {

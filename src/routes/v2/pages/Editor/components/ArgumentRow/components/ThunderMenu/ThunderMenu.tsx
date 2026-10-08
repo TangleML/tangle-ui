@@ -34,6 +34,7 @@ interface ThunderMenuProps {
   canReset: boolean;
   canUnset: boolean;
   disabled?: boolean;
+  secretsOwner?: string;
   excludeEntityIds: string[];
   taskAnnotations?: TaskAnnotations;
   onResetToDefault: () => void;
@@ -48,6 +49,7 @@ export const ThunderMenu = observer(function ThunderMenu({
   canReset,
   canUnset,
   disabled = false,
+  secretsOwner,
   excludeEntityIds,
   taskAnnotations,
   onResetToDefault,
@@ -144,6 +146,7 @@ export const ThunderMenu = observer(function ThunderMenu({
               <DropdownMenuSeparator />
               <DynamicDataSubmenu
                 groups={dynamicDataGroups}
+                secretsOwner={secretsOwner}
                 onOpenSecretDialog={handleOpenSecretDialog}
                 onSelectSystemData={handleSelectSystemData}
               />

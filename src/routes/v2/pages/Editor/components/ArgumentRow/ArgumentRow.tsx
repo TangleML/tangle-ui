@@ -3,6 +3,7 @@ import { observer } from "mobx-react-lite";
 import { useEffect, useRef, useState } from "react";
 
 import { getDynamicDataDisplayInfo } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/ArgumentsEditor/dynamicDataUtils";
+import { FieldMessage } from "@/components/ui/field-message";
 import { InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import type {
@@ -13,8 +14,12 @@ import type {
 } from "@/models/componentSpec";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useIOActions } from "@/routes/v2/pages/Editor/store/actions/useIOActions";
+import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
-import type { DynamicDataArgument } from "@/utils/componentSpec";
+import {
+  type DynamicDataArgument,
+  isSecretArgument,
+} from "@/utils/componentSpec";
 
 import {
   canResetArgument,
@@ -63,6 +68,8 @@ export const ArgumentRow = observer(function ArgumentRow({
 }: ArgumentRowProps) {
   const { track } = useAnalytics();
   const { editor } = useSharedStores();
+  const { pipelineFile } = useEditorSession();
+  const secretsOwner = pipelineFile.activePipelineFile?.secretsOwner;
   const {
     setArgument,
     removeArgument,
@@ -79,6 +86,9 @@ export const ArgumentRow = observer(function ArgumentRow({
   const isBound = binding !== undefined;
 
   const isDynamic = isDynamicDataValue(currentValue);
+  const secretsLocked =
+    !!secretsOwner &&
+    task.arguments.some((argument) => isSecretArgument(argument.value));
   const dynamicDisplayInfo = isDynamic
     ? getDynamicDataDisplayInfo(currentValue.dynamicData)
     : null;
@@ -98,7 +108,7 @@ export const ArgumentRow = observer(function ArgumentRow({
   }, [isFocused, externalEditor]);
 
   const handleClick = () => {
-    if (isDynamic) return;
+    if (isDynamic || secretsLocked) return;
     track("v2.pipeline_editor.task_arguments.argument_row.edit_started");
     onSelectionChanged?.(inputSpec.name);
     if (externalEditor) {
@@ -198,6 +208,8 @@ export const ArgumentRow = observer(function ArgumentRow({
           inputType={inputSpec.type}
           canReset={canReset}
           canUnset={canUnset}
+          disabled={secretsLocked}
+          secretsOwner={secretsOwner}
           excludeEntityIds={[task.$id]}
           taskAnnotations={taskAnnotations}
           onResetToDefault={handleResetToDefault}
@@ -219,9 +231,15 @@ export const ArgumentRow = observer(function ArgumentRow({
         task={task}
         inputSpec={inputSpec}
         currentValue={currentValue}
+        readOnly={secretsLocked}
         onChangeComplete={handleChangeComplete}
         onBlur={handleBlur}
       />
+      {secretsLocked && isSecretArgument(currentValue) && (
+        <FieldMessage icon="Lock" tone="info" className="mt-1">
+          Only {secretsOwner} can change tasks with secrets.
+        </FieldMessage>
+      )}
     </div>
   );
 });

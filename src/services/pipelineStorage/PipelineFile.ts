@@ -53,6 +53,9 @@ export class PipelineFile {
   get savedTaskArguments(): Record<string, ArgumentType> {
     return this.redirectedFile?.savedTaskArguments ?? {};
   }
+  get secretsOwner(): string | undefined {
+    return this.redirectedFile?.secretsOwner;
+  }
 
   async retry(): Promise<void> {
     await this.redirectedFile?.retry();

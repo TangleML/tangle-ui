@@ -19,6 +19,7 @@ import type { RemotePipelineStore } from "./RemotePipelineStore";
 
 export class RemotePipelineFile extends PipelineFile {
   @observable.ref accessor recovery: RemotePipelineRecovery;
+  @observable.ref accessor sharedScopes: string[] = [];
   private pendingWrites = observable.box(0);
 
   constructor(
@@ -45,10 +46,19 @@ export class RemotePipelineFile extends PipelineFile {
     const account = this.store.account;
     return pipeline
       ? account
-        ? account.id === pipeline.user_id &&
-          account.permissions.includes("write")
+        ? account.permissions.includes("write") &&
+          (account.id === pipeline.user_id ||
+            this.sharedScopes.includes("pipeline:update"))
         : this.recovery.ownerId === pipeline.user_id
       : !account || account.permissions.includes("write");
+  }
+
+  override get secretsOwner(): string | undefined {
+    const pipeline = this.recovery.pipeline ?? this.summary;
+    const account = this.store.account;
+    return pipeline && account && account.id !== pipeline.user_id
+      ? pipeline.user_id
+      : undefined;
   }
 
   override get displayName(): string {
