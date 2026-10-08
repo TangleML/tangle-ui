@@ -50,9 +50,13 @@ describe("tangentAnchorProtocols run anchor", () => {
     expect(window.open).not.toHaveBeenCalled();
   });
 
-  it("opens the run page in a new tab on a shift-click", () => {
+  it.each([
+    ["shift", { shiftKey: true }],
+    ["ctrl", { ctrlKey: true }],
+    ["meta", { metaKey: true }],
+  ])("opens the run page in a new tab on a %s-click", (_modifier, event) => {
     render(<RunAnchor {...anchorProps()} />);
-    fireEvent.click(screen.getByRole("button"), { shiftKey: true });
+    fireEvent.click(screen.getByRole("button"), event);
 
     expect(window.open).toHaveBeenCalledWith("/runs/run_1", "_blank");
     expect(openWorkareaTarget).not.toHaveBeenCalled();
@@ -65,11 +69,9 @@ describe("tangentAnchorProtocols run anchor", () => {
     expect(window.open).toHaveBeenCalledWith("/runs/run_2", "_blank");
   });
 
-  it("does nothing when the path is not a run", () => {
+  it("disables the chip when the path is not a run", () => {
     render(<RunAnchor {...anchorProps({ path: "name/nope" })} />);
-    fireEvent.click(screen.getByRole("button"), { shiftKey: true });
 
-    expect(window.open).not.toHaveBeenCalled();
-    expect(openWorkareaTarget).not.toHaveBeenCalled();
+    expect(screen.getByRole("button")).toBeDisabled();
   });
 });
