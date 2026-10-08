@@ -2,8 +2,10 @@ import type {
   AnchorProtocolMap,
   AnchorProtocolProps,
 } from "@tangent/embed-react";
+import type { MouseEvent } from "react";
 
 import useToastNotification from "@/hooks/useToastNotification";
+import { getDefaultRunPath } from "@/routes/runRoutes";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { chatAnchorProtocols } from "@/routes/v2/shared/components/AiChat/components/chatAnchorProtocols";
 import { ChatEntityChip } from "@/routes/v2/shared/components/AiChat/components/ChatEntityChip";
@@ -12,6 +14,7 @@ import type { WorkareaTarget } from "@/services/projects/resourceTarget";
 import {
   idIdentity,
   isWorkareaTargetString,
+  parseIdentity,
   parseWorkareaTarget,
 } from "@/services/projects/resourceTarget";
 import { getErrorMessage } from "@/utils/string";
@@ -37,12 +40,25 @@ function RunAnchor({ path, label }: AnchorProtocolProps) {
     }
   }
 
+  function handleClick(event: MouseEvent<HTMLButtonElement>) {
+    if (!target) return;
+    if (event.shiftKey) {
+      window.open(
+        getDefaultRunPath(parseIdentity(target.identity).value),
+        "_blank",
+      );
+      return;
+    }
+    void openRun();
+  }
+
   return (
     <ChatEntityChip
       icon={resourceMeta("run").icon}
       label={label}
+      title={target ? `${label} — shift-click to open in a new tab` : undefined}
       disabled={!target}
-      onClick={() => void openRun()}
+      onClick={handleClick}
     />
   );
 }
