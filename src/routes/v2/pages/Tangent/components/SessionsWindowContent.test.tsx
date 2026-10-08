@@ -1,10 +1,23 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { DialogProvider } from "@/providers/DialogProvider/DialogProvider";
 import { useProjectSessions } from "@/routes/v2/pages/Tangent/hooks/useProjectSessions";
 
 import { SessionsWindowContent } from "./SessionsWindowContent";
+
+class ResizeObserverMock {
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+}
+vi.stubGlobal("ResizeObserver", ResizeObserverMock);
+
+vi.mock("@tanstack/react-router", () => ({
+  useNavigate: () => vi.fn(),
+  useSearch: () => ({}),
+}));
 
 const selectSession = vi.fn();
 const renameSession = vi.fn();
@@ -51,6 +64,14 @@ function given(...sessions: ReturnType<typeof session>[]) {
   } as unknown as ReturnType<typeof useProjectSessions>);
 }
 
+function renderSessions() {
+  return render(
+    <DialogProvider disableRouterSync>
+      <SessionsWindowContent />
+    </DialogProvider>,
+  );
+}
+
 describe("SessionsWindowContent", () => {
   beforeEach(() => {
     given(
@@ -61,7 +82,7 @@ describe("SessionsWindowContent", () => {
   afterEach(() => vi.resetAllMocks());
 
   it("numbers an unnamed session and shows a named one by its name", () => {
-    render(<SessionsWindowContent />);
+    renderSessions();
 
     expect(screen.getByText("Session 1")).toBeInTheDocument();
     expect(screen.getByText("Feature exploration")).toBeInTheDocument();
@@ -69,21 +90,24 @@ describe("SessionsWindowContent", () => {
 
   it("renames a session to what was typed", async () => {
     const user = userEvent.setup();
-    render(<SessionsWindowContent />);
+    renderSessions();
 
     await user.click(screen.getByRole("button", { name: "Rename Session 1" }));
     await user.type(screen.getByLabelText("Name"), "  Data cleanup  ");
     await user.click(screen.getByRole("button", { name: "Rename" }));
 
-    expect(renameSession).toHaveBeenCalledWith(
-      "resource-session-1",
-      "Data cleanup",
+    await waitFor(() =>
+      expect(renameSession).toHaveBeenCalledWith(
+        "resource-session-1",
+        "Data cleanup",
+      ),
     );
+    expect(notify).toHaveBeenCalledWith("Session renamed", "success");
   });
 
   it("prefills the dialog with an existing name", async () => {
     const user = userEvent.setup();
-    render(<SessionsWindowContent />);
+    renderSessions();
 
     await user.click(
       screen.getByRole("button", { name: "Rename Feature exploration" }),
@@ -94,7 +118,7 @@ describe("SessionsWindowContent", () => {
 
   it("offers the numbered label as a placeholder for an unnamed session", async () => {
     const user = userEvent.setup();
-    render(<SessionsWindowContent />);
+    renderSessions();
 
     await user.click(screen.getByRole("button", { name: "Rename Session 1" }));
 
@@ -105,7 +129,7 @@ describe("SessionsWindowContent", () => {
 
   it("refuses an empty name", async () => {
     const user = userEvent.setup();
-    render(<SessionsWindowContent />);
+    renderSessions();
 
     await user.click(
       screen.getByRole("button", { name: "Rename Feature exploration" }),
@@ -119,24 +143,24 @@ describe("SessionsWindowContent", () => {
 
   /**
    * `useUpdateProjectResource` already toasts on failure, so a complaint from
-   * the dialog as well would be two toasts for one rename.
+   * here as well would be two toasts for one rename.
    */
   it("leaves a failed rename for the mutation to report", async () => {
     renameSession.mockRejectedValueOnce(new Error("Session is gone"));
     const user = userEvent.setup();
-    render(<SessionsWindowContent />);
+    renderSessions();
 
     await user.click(screen.getByRole("button", { name: "Rename Session 1" }));
     await user.type(screen.getByLabelText("Name"), "Data cleanup");
     await user.click(screen.getByRole("button", { name: "Rename" }));
 
+    await waitFor(() => expect(renameSession).toHaveBeenCalled());
     expect(notify).not.toHaveBeenCalled();
-    expect(screen.getByLabelText("Name")).toHaveValue("Data cleanup");
   });
 
   it("opening the rename dialog does not select the session", async () => {
     const user = userEvent.setup();
-    render(<SessionsWindowContent />);
+    renderSessions();
 
     await user.click(screen.getByRole("button", { name: "Rename Session 1" }));
 

@@ -1,19 +1,27 @@
 import { observer } from "mobx-react-lite";
-import { useState } from "react";
 
+import {
+  RenameDialog,
+  type RenameDialogProps,
+} from "@/components/shared/Dialogs/RenameDialog";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
+import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
+import { useDialog } from "@/providers/DialogProvider/hooks/useDialog";
+import { convertCancelErrorTo } from "@/providers/DialogProvider/utils";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
-import { useProjectSessions } from "@/routes/v2/pages/Tangent/hooks/useProjectSessions";
+import {
+  type ProjectSession,
+  useProjectSessions,
+} from "@/routes/v2/pages/Tangent/hooks/useProjectSessions";
 import { useAiGate } from "@/routes/v2/shared/components/AiChat/components/useAiGate";
 import { sessionLabelsById } from "@/services/projects/sessionLabel";
 import { formatRelativeTime } from "@/utils/date";
 import { tracking } from "@/utils/tracking";
-
-import { RenameSessionDialog } from "./RenameSessionDialog";
 
 export const SessionsWindowContent = observer(function SessionsWindowContent() {
   const store = useTangentProject();
@@ -24,12 +32,34 @@ export const SessionsWindowContent = observer(function SessionsWindowContent() {
     sessions.map((session) => [session.sessionId, session]),
   );
   const labelFor = (sessionId: string) => labels.get(sessionId) ?? "";
-  const [renamingSessionId, setRenamingSessionId] = useState<string | null>(
-    null,
-  );
-  const renamingSession = sessions.find(
-    (session) => session.sessionId === renamingSessionId,
-  );
+  const { open } = useDialog();
+  const notify = useToastNotification();
+  const { track } = useAnalytics();
+
+  async function rename(session: ProjectSession) {
+    const name = await open<string, RenameDialogProps>({
+      component: RenameDialog,
+      props: {
+        title: "Rename session",
+        description: "Give this session a name of your own.",
+        currentName: session.name ?? "",
+        placeholder: labelFor(session.sessionId),
+        trackingPrefix: "projects.rename_session",
+      },
+      routeKey: "rename-session",
+    }).catch(convertCancelErrorTo(undefined));
+
+    if (!name) return;
+
+    try {
+      await renameSession(session.resourceId, name);
+      track("projects.rename_session_completed");
+      notify("Session renamed", "success");
+    } catch {
+      // The resource mutation reports its own failure, so saying anything here
+      // would be a second toast for one rename.
+    }
+  }
 
   return (
     <BlockStack gap="2" className="p-2">
@@ -72,7 +102,7 @@ export const SessionsWindowContent = observer(function SessionsWindowContent() {
                   variant="ghost"
                   size="xs"
                   aria-label={`Rename ${label}`}
-                  onClick={() => setRenamingSessionId(session.sessionId)}
+                  onClick={() => void rename(session)}
                   {...tracking("projects.rename_session_open")}
                   className="mr-1 shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100"
                 >
@@ -96,15 +126,6 @@ export const SessionsWindowContent = observer(function SessionsWindowContent() {
         <Icon name={store.isStartingSession ? "Loader" : "Plus"} size="xs" />
         New session
       </Button>
-
-      {renamingSession && (
-        <RenameSessionDialog
-          session={renamingSession}
-          currentLabel={labelFor(renamingSession.sessionId)}
-          onRename={renameSession}
-          onClose={() => setRenamingSessionId(null)}
-        />
-      )}
     </BlockStack>
   );
 });

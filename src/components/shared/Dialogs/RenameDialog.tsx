@@ -2,8 +2,6 @@ import { type FormEvent, useEffect, useId, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
@@ -14,31 +12,30 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
+import type { DialogProps } from "@/providers/DialogProvider/types";
 import { tracking } from "@/utils/tracking";
 
-interface RenameDialogProps {
-  open: boolean;
+export interface RenameDialogProps {
   title: string;
   description: string;
   currentName: string;
   placeholder?: string;
-  isSaving?: boolean;
   trackingPrefix: string;
-  onRename: (name: string) => void;
-  onOpenChange: (open: boolean) => void;
 }
 
+/**
+ * Resolves the trimmed name that was typed, and cancels when it is the name the
+ * subject already had. Saving belongs to the caller, which outlives the dialog.
+ */
 export function RenameDialog({
-  open,
+  close,
+  cancel,
   title,
   description,
   currentName,
   placeholder,
-  isSaving = false,
   trackingPrefix,
-  onRename,
-  onOpenChange,
-}: RenameDialogProps) {
+}: DialogProps<string, RenameDialogProps>) {
   const [name, setName] = useState(currentName);
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const { track } = useAnalytics();
@@ -46,15 +43,8 @@ export function RenameDialog({
   const errorId = useId();
 
   useEffect(() => {
-    if (!open) return;
-    setName(currentName);
-    setSubmitAttempted(false);
-  }, [open, currentName]);
-
-  useEffect(() => {
-    if (!open) return;
     track(`${trackingPrefix}_dialog_impression`);
-  }, [open, track, trackingPrefix]);
+  }, [track, trackingPrefix]);
 
   const trimmedName = name.trim();
   const nameError = trimmedName === "" ? "Name cannot be empty" : undefined;
@@ -67,67 +57,59 @@ export function RenameDialog({
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
     setSubmitAttempted(true);
-    if (nameError || isSaving) return;
+    if (nameError) return;
 
     if (trimmedName === currentName) {
-      onOpenChange(false);
+      cancel();
       return;
     }
 
-    onRename(trimmedName);
+    close(trimmedName);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription className="sr-only">
-            {description}
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit}>
-          <BlockStack gap="4">
-            <BlockStack gap="2">
-              <Label htmlFor={fieldId}>Name</Label>
-              <Input
-                id={fieldId}
-                value={name}
-                placeholder={placeholder}
-                onChange={(event) => setName(event.target.value)}
-                aria-invalid={showError}
-                aria-describedby={showError ? errorId : undefined}
-                autoFocus
-              />
-              {showError && (
-                <FieldMessage id={errorId} icon="CircleAlert" tone="critical">
-                  {nameError}
-                </FieldMessage>
-              )}
-            </BlockStack>
-
-            <DialogFooter className="w-full">
-              <InlineStack gap="2" className="w-full" align="end">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => onOpenChange(false)}
-                  {...tracking(`${trackingPrefix}_cancel`)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isSaving}
-                  {...tracking(`${trackingPrefix}_submit`)}
-                >
-                  Rename
-                </Button>
-              </InlineStack>
-            </DialogFooter>
+    <>
+      <DialogHeader>
+        <DialogTitle>{title}</DialogTitle>
+        <DialogDescription className="sr-only">{description}</DialogDescription>
+      </DialogHeader>
+      <form onSubmit={handleSubmit}>
+        <BlockStack gap="4">
+          <BlockStack gap="2">
+            <Label htmlFor={fieldId}>Name</Label>
+            <Input
+              id={fieldId}
+              value={name}
+              placeholder={placeholder}
+              onChange={(event) => setName(event.target.value)}
+              aria-invalid={showError}
+              aria-describedby={showError ? errorId : undefined}
+              autoFocus
+            />
+            {showError && (
+              <FieldMessage id={errorId} icon="CircleAlert" tone="critical">
+                {nameError}
+              </FieldMessage>
+            )}
           </BlockStack>
-        </form>
-      </DialogContent>
-    </Dialog>
+
+          <DialogFooter className="w-full">
+            <InlineStack gap="2" className="w-full" align="end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={cancel}
+                {...tracking(`${trackingPrefix}_cancel`)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" {...tracking(`${trackingPrefix}_submit`)}>
+                Rename
+              </Button>
+            </InlineStack>
+          </DialogFooter>
+        </BlockStack>
+      </form>
+    </>
   );
 }

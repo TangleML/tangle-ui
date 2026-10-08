@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { DialogProvider } from "@/providers/DialogProvider/DialogProvider";
 import type { Project } from "@/services/projects/types";
 import { formatDate } from "@/utils/date";
 
@@ -9,6 +10,7 @@ import { ProjectSidebar } from "./ProjectSidebar";
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@tanstack/react-router")>()),
   useNavigate: () => vi.fn(),
+  useSearch: () => ({}),
 }));
 
 vi.mock("@/services/projects/useProjects", () => ({
@@ -51,7 +53,11 @@ function enableFlags(flags: Record<string, boolean>) {
 }
 
 function renderSidebar(overrides: Partial<Project> = {}) {
-  return render(<ProjectSidebar project={{ ...project, ...overrides }} />);
+  return render(
+    <DialogProvider disableRouterSync>
+      <ProjectSidebar project={{ ...project, ...overrides }} />
+    </DialogProvider>,
+  );
 }
 
 describe("ProjectSidebar", () => {
