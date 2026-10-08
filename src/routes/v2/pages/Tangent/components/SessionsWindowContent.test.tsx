@@ -8,6 +8,8 @@ import { SessionsWindowContent } from "./SessionsWindowContent";
 
 const selectSession = vi.fn();
 const renameSession = vi.fn();
+const notify = vi.fn();
+const track = vi.fn();
 
 vi.mock("@/routes/v2/pages/Tangent/context/TangentProjectContext", () => ({
   useTangentProject: () => ({
@@ -27,10 +29,10 @@ vi.mock("@/routes/v2/shared/components/AiChat/components/useAiGate", () => ({
   useAiGate: () => ({ disabled: false, title: "" }),
 }));
 
-vi.mock("@/hooks/useToastNotification", () => ({ default: () => vi.fn() }));
+vi.mock("@/hooks/useToastNotification", () => ({ default: () => notify }));
 
 vi.mock("@/providers/AnalyticsProvider", () => ({
-  useAnalytics: () => ({ track: vi.fn() }),
+  useAnalytics: () => ({ track }),
 }));
 
 function session(sessionId: string, name: string | null, createdAt: string) {
@@ -113,6 +115,23 @@ describe("SessionsWindowContent", () => {
 
     expect(screen.getByText("Name cannot be empty")).toBeInTheDocument();
     expect(renameSession).not.toHaveBeenCalled();
+  });
+
+  /**
+   * `useUpdateProjectResource` already toasts on failure, so a complaint from
+   * the dialog as well would be two toasts for one rename.
+   */
+  it("leaves a failed rename for the mutation to report", async () => {
+    renameSession.mockRejectedValueOnce(new Error("Session is gone"));
+    const user = userEvent.setup();
+    render(<SessionsWindowContent />);
+
+    await user.click(screen.getByRole("button", { name: "Rename Session 1" }));
+    await user.type(screen.getByLabelText("Name"), "Data cleanup");
+    await user.click(screen.getByRole("button", { name: "Rename" }));
+
+    expect(notify).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Name")).toHaveValue("Data cleanup");
   });
 
   it("opening the rename dialog does not select the session", async () => {

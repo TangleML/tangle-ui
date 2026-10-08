@@ -27,6 +27,8 @@ const messageToneVariants = cva("", {
 });
 
 interface FieldMessageProps extends VariantProps<typeof messageToneVariants> {
+  /** Point the control's `aria-describedby` here so the message is announced with it. */
+  id?: string;
   /** Leading icon. Omitted for a plain help line. */
   icon?: IconName;
   /** Hold the message to one line and ellipsize it. Suits a value, not a sentence. */
@@ -37,6 +39,7 @@ interface FieldMessageProps extends VariantProps<typeof messageToneVariants> {
 
 /** A line of help, or a warning, beneath a form control. */
 export function FieldMessage({
+  id,
   icon,
   tone,
   truncate = false,
@@ -58,6 +61,7 @@ export function FieldMessage({
         />
       )}
       <Text
+        id={id}
         as="span"
         size="xs"
         tone="subdued"

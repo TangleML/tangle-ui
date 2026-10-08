@@ -23,6 +23,7 @@ export const SessionsWindowContent = observer(function SessionsWindowContent() {
   const labels = sessionLabelsById(
     sessions.map((session) => [session.sessionId, session]),
   );
+  const labelFor = (sessionId: string) => labels.get(sessionId) ?? "";
   const [renamingSessionId, setRenamingSessionId] = useState<string | null>(
     null,
   );
@@ -40,7 +41,7 @@ export const SessionsWindowContent = observer(function SessionsWindowContent() {
         <BlockStack gap="1">
           {sessions.map((session) => {
             const isActive = session.sessionId === activeSessionId;
-            const label = labels.get(session.sessionId);
+            const label = labelFor(session.sessionId);
             return (
               <InlineStack
                 key={session.sessionId}
@@ -73,7 +74,7 @@ export const SessionsWindowContent = observer(function SessionsWindowContent() {
                   aria-label={`Rename ${label}`}
                   onClick={() => setRenamingSessionId(session.sessionId)}
                   {...tracking("projects.rename_session_open")}
-                  className="mr-1 shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+                  className="mr-1 shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100"
                 >
                   <Icon name="Pencil" size="xs" />
                 </Button>
@@ -99,7 +100,7 @@ export const SessionsWindowContent = observer(function SessionsWindowContent() {
       {renamingSession && (
         <RenameSessionDialog
           session={renamingSession}
-          currentLabel={labels.get(renamingSession.sessionId) ?? ""}
+          currentLabel={labelFor(renamingSession.sessionId)}
           onRename={renameSession}
           onClose={() => setRenamingSessionId(null)}
         />
