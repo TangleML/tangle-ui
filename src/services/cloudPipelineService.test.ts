@@ -485,20 +485,22 @@ describe("remote pipeline writes", () => {
     expect(body).not.toHaveProperty("versioning_mode");
   });
 
-  it("rejects updates to another owner's pipeline before issuing a write", async () => {
-    fetchMock.mockResolvedValueOnce(accountResponse());
+  it("saves another owner's pipeline by id so the backend can check edit access", async () => {
+    const shared = pipeline({ user_id: "another-owner@example.com" });
+    saveResponses(shared);
 
-    await expect(
-      writeCloudPipeline(
-        {
-          filePath: FILE_PATH,
-          componentSpec: localSpec,
-          existingPipeline: pipeline({ user_id: "another-owner@example.com" }),
-        },
-        connection,
-      ),
-    ).rejects.toThrow("Only the owner");
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await writeCloudPipeline(
+      {
+        filePath: FILE_PATH,
+        componentSpec: localSpec,
+        existingPipeline: shared,
+      },
+      connection,
+    );
+
+    const request = requestAt(1);
+    expect(request.method).toBe("PUT");
+    expect(new URL(request.url).pathname).toBe(`/api/pipelines/${shared.id}`);
   });
 
   it("creates a copy under the viewer's account when no existing pipeline is supplied", async () => {

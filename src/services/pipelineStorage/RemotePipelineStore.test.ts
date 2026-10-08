@@ -34,6 +34,7 @@ vi.mock("@/services/cloudPipelineService", () => ({
   getCloudPipelineSavedTaskArguments: vi.fn(),
   getCloudPipeline: vi.fn(),
   getCloudPipelineAccount: vi.fn(),
+  getCloudPipelineScopes: vi.fn(async () => []),
   listCloudPipelinePage: vi.fn(),
   listCloudPipelines: vi.fn(),
   writeCloudPipeline: vi.fn(),

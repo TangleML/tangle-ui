@@ -21,6 +21,7 @@ interface ArgumentValueDisplayProps {
   task: Task;
   inputSpec: InputSpec;
   currentValue: unknown;
+  readOnly?: boolean;
   onChangeComplete: (value: string) => void;
   onBlur: () => void;
 }
@@ -36,6 +37,7 @@ export function ArgumentValueDisplay({
   task,
   inputSpec,
   currentValue,
+  readOnly,
   onChangeComplete,
   onBlur,
 }: ArgumentValueDisplayProps) {
@@ -70,8 +72,9 @@ export function ArgumentValueDisplay({
       key={`${task.$id}-${inputSpec.name}-${String(currentValue ?? "")}`}
       defaultValue={typeof currentValue === "string" ? currentValue : ""}
       expandDialogTitle={`Value for ${inputSpec.name}`}
-      onChangeComplete={onChangeComplete}
+      onChangeComplete={readOnly ? undefined : onChangeComplete}
       onBlur={onBlur}
+      readOnly={readOnly}
       highlightSyntax
       placeholder={isBound ? bindingLabel || "" : placeholder}
       className={cn(

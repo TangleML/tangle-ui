@@ -14,6 +14,8 @@ import { isRecord } from "@/utils/typeGuards";
 
 const USER_PIPELINES_PATH = "/api/users/me/pipelines";
 const PIPELINE_BY_ID_PATH = "/api/pipelines/{pipeline_id}";
+const PIPELINE_SCOPES_PATH =
+  "/api/access_control/pipeline/{pipeline_id}/my_scopes";
 
 const accountSchema = z.object({
   id: z.string().min(1),
@@ -175,6 +177,22 @@ export async function getCloudPipeline(
   return pipeline;
 }
 
+export async function getCloudPipelineScopes(
+  pipelineId: string,
+  connection: CloudConnection,
+): Promise<string[]> {
+  const result = await client.get<unknown>({
+    ...requestOptions(connection),
+    url: PIPELINE_SCOPES_PATH,
+    path: { pipeline_id: pipelineId },
+  });
+  if (!result.response.ok) return [];
+  const scopes = z
+    .object({ my_scopes: z.array(z.string()) })
+    .safeParse(result.data);
+  return scopes.success ? scopes.data.my_scopes : [];
+}
+
 export async function writeCloudPipeline(
   {
     filePath,
@@ -186,26 +204,36 @@ export async function writeCloudPipeline(
 ): Promise<CloudPipeline> {
   const account =
     connection.account ?? (await getCloudPipelineAccount(connection));
-  requireWritePermission(account, existingPipeline);
+  const owner = existingPipeline?.user_id ?? account.id;
+  requireWritePermission(account);
   if (existingPipeline && existingPipeline.file_path !== filePath) {
     throw new Error("A remote pipeline's storage path cannot change.");
   }
 
   const template = existingPipeline ?? sourcePipeline;
   const task = componentSpecToCloudTask(componentSpec, template);
-  const result = await client.put<unknown>({
-    ...requestOptions(connection),
-    url: USER_PIPELINES_PATH,
-    query: { file_path: filePath },
-    body: {
-      root_pipeline_task: task,
-      pipeline_run_annotations: template?.pipeline_run_annotations ?? {},
-    },
-  });
+  const body = {
+    root_pipeline_task: task,
+    pipeline_run_annotations: template?.pipeline_run_annotations ?? {},
+  };
+  const result =
+    existingPipeline && owner !== account.id
+      ? await client.put<unknown>({
+          ...requestOptions(connection),
+          url: PIPELINE_BY_ID_PATH,
+          path: { pipeline_id: existingPipeline.id },
+          body,
+        })
+      : await client.put<unknown>({
+          ...requestOptions(connection),
+          url: USER_PIPELINES_PATH,
+          query: { file_path: filePath },
+          body,
+        });
   requireSuccessfulResponse(result);
   const savedPipeline = pipelineSchema.parse(result.data);
   if (
-    savedPipeline.user_id !== account.id ||
+    savedPipeline.user_id !== owner ||
     savedPipeline.file_path !== filePath ||
     (existingPipeline && savedPipeline.id !== existingPipeline.id)
   ) {

@@ -10,6 +10,7 @@ import {
   deleteCloudPipeline,
   getCloudPipeline,
   getCloudPipelineAccount,
+  getCloudPipelineScopes,
   listCloudPipelinePage,
   listCloudPipelines,
   writeCloudPipeline,
@@ -119,6 +120,10 @@ export class RemotePipelineStorageDriver implements PipelineStorageDriver<Remote
       content: yaml.dump(cloudPipelineToComponentSpec(pipeline)),
       descriptor: this.describe(pipeline),
     };
+  }
+
+  async scopes(pipeline: CloudPipelineSummary): Promise<string[]> {
+    return getCloudPipelineScopes(pipeline.id, await this.connect());
   }
 
   async write(

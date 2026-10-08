@@ -78,6 +78,8 @@ async function mockBackend(page: Page, initial = [pipeline()]) {
     runs: [] as ReturnType<typeof pipelineRun>[],
     runSubmissions: [] as BodyCreateApiPipelineRunsPost[],
     writeOrder: [] as string[],
+    scopes: {} as Record<string, string[]>,
+    sharedWrites: [] as ReturnType<typeof pipeline>["root_pipeline_task"][],
   };
   const context = page.context();
   await context.addInitScript(() => {
@@ -136,6 +138,29 @@ async function mockBackend(page: Page, initial = [pipeline()]) {
             nextOffset < pipelines.length ? `page:${nextOffset}` : null,
         },
       });
+    }
+    if (url.pathname.startsWith("/api/access_control/pipeline/")) {
+      return route.fulfill({
+        json: { my_scopes: state.scopes[url.pathname.split("/")[4]] ?? [] },
+      });
+    }
+    if (
+      url.pathname.startsWith("/api/pipelines/") &&
+      request.method() === "PUT"
+    ) {
+      const body = request.postDataJSON();
+      const item = state.pipelines.find(
+        (item) => item.id === url.pathname.split("/").at(-1),
+      );
+      if (!item)
+        return route.fulfill({ status: 404, json: { detail: "Not found" } });
+      state.sharedWrites.push(body.root_pipeline_task);
+      const saved = { ...item, ...body };
+      state.pipelines = [
+        ...state.pipelines.filter((entry) => entry.id !== item.id),
+        saved,
+      ];
+      return route.fulfill({ json: saved });
     }
     if (url.pathname.startsWith("/api/pipelines/")) {
       state.reads.push(url.pathname);
@@ -1196,4 +1221,121 @@ test("opens another owner's pipeline read-only and clones into the viewer's acco
   expect(
     state.pipelines.find((item) => item.id === viewerPipelineId)?.pipeline_name,
   ).toBe("Shared report");
+});
+
+const sharedOwner = "ada@example.com";
+
+function containerTask(
+  name: string,
+  inputs: string[],
+  args: Record<string, unknown>,
+  position: { x: number; y: number },
+) {
+  return {
+    componentRef: {
+      spec: {
+        name,
+        inputs: inputs.map((input) => ({
+          name: input,
+          type: "String",
+          optional: input === "api_key",
+        })),
+        implementation: {
+          container: { image: "python:3.12", command: ["python", "-c", name] },
+        },
+      },
+    },
+    arguments: args,
+    annotations: { "editor.position": JSON.stringify(position) },
+  };
+}
+
+function sharedPipelineWithSecret() {
+  const item = pipeline(viewerPipelineId, sharedOwner, "Churn model");
+  item.root_pipeline_task.componentRef.spec.implementation.graph.tasks = {
+    "Fetch data": containerTask(
+      "Fetch data",
+      ["token", "table"],
+      {
+        token: { dynamicData: { secret: { name: "WAREHOUSE_TOKEN" } } },
+        table: "orders",
+      },
+      { x: 80, y: 120 },
+    ),
+    "Train model": containerTask(
+      "Train model",
+      ["epochs", "api_key"],
+      { epochs: "10" },
+      { x: 480, y: 120 },
+    ),
+  } as never;
+  return item;
+}
+
+async function openTask(page: Page, name: string) {
+  await page.locator(".react-flow__node").filter({ hasText: name }).click();
+}
+
+test("an editor changes a shared pipeline around its secrets", async ({
+  page,
+}) => {
+  const state = await mockBackend(page, [sharedPipelineWithSecret()]);
+  state.scopes[viewerPipelineId] = ["pipeline:read", "pipeline:update"];
+  await page.goto(editorUrl(viewerPipelineId));
+  await expect(page.locator("[data-editor-ready]")).toBeVisible();
+  await expect(page.getByTestId("auto-save-button")).toBeEnabled();
+
+  await openTask(page, "Fetch data");
+  await expect(
+    page.getByText(`Only ${sharedOwner} can change tasks with secrets.`),
+  ).toBeVisible();
+  await page.screenshot({ path: "test-results/editor-tips/secret-task.png" });
+
+  await openTask(page, "Train model");
+  const row = page.locator('[data-argument-name="api_key"]');
+  await row.hover();
+  await row.getByTestId("thunder-menu-trigger").click();
+  await page
+    .locator('[data-tour="thunder-menu-content"]')
+    .getByText(/dynamic data/i)
+    .click();
+  const submenu = page.locator('[data-tour="thunder-menu-submenu-content"]');
+  await expect(
+    submenu.getByText(`Ask ${sharedOwner} to add secrets.`),
+  ).toBeVisible();
+  await submenu.evaluate((element) =>
+    Promise.all(
+      element
+        .getAnimations({ subtree: true })
+        .map((animation) => animation.finished),
+    ),
+  );
+  await page.screenshot({ path: "test-results/editor-tips/add-secret.png" });
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
+  await openTask(page, "Train model");
+
+  const epochs = page
+    .locator('[data-argument-name="epochs"]')
+    .getByTestId("argument-input");
+  await epochs.click();
+  await epochs.fill("20");
+  await epochs.blur();
+  await expect.poll(() => state.sharedWrites.length).toBeGreaterThan(0);
+  const saved = state.sharedWrites.at(-1) as unknown as {
+    componentRef: {
+      spec: {
+        implementation: {
+          graph: { tasks: Record<string, { arguments: unknown }> };
+        };
+      };
+    };
+  };
+  const tasks = saved.componentRef.spec.implementation.graph.tasks;
+  expect(tasks["Train model"].arguments).toEqual({ epochs: "20" });
+  expect(tasks["Fetch data"].arguments).toEqual({
+    token: { dynamicData: { secret: { name: "WAREHOUSE_TOKEN" } } },
+    table: "orders",
+  });
+  expect(state.writes).toHaveLength(0);
 });
