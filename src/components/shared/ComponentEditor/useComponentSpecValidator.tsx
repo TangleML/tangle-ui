@@ -2,7 +2,7 @@ import { addMediaTypePlugin } from "@hyperjump/browser";
 import { type OutputUnit, validate } from "@hyperjump/json-schema/draft-06";
 import { buildSchemaDocument } from "@hyperjump/json-schema/experimental";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import yaml from "js-yaml";
+import * as yaml from "js-yaml";
 
 import { PIPELINE_YAML_LOAD_OPTIONS } from "@/utils/yaml";
 

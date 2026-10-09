@@ -1,11 +1,11 @@
-import yaml from "js-yaml";
+import * as yaml from "js-yaml";
 
 import { type ComponentSpec, isValidComponentSpec } from "./componentSpec";
 
 // Each subgraph level nests ~6 YAML mappings. A limit of 1000 allows around 150 levels of nested subgraphs.
-export const PIPELINE_YAML_LOAD_OPTIONS = {
+export const PIPELINE_YAML_LOAD_OPTIONS: yaml.LoadOptions = {
   maxDepth: 1000,
-} as unknown as yaml.LoadOptions;
+};
 
 class ComponentSpecParsingError extends Error {
   readonly name = "ComponentSpecParsingError";

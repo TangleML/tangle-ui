@@ -4,7 +4,7 @@ import crypto from "crypto";
 import fs from "fs/promises";
 import http from "http";
 import https from "https";
-import yaml from "js-yaml";
+import * as yaml from "js-yaml";
 import process from "process";
 
 // Type definitions
