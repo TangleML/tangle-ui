@@ -189,8 +189,8 @@ importers:
         specifier: ^5.1.16
         version: 5.1.16
       openai:
-        specifier: ^6.48.0
-        version: 6.48.0(ws@8.22.0)(zod@4.6.5)
+        specifier: ^7.28.0
+        version: 7.28.0(undici@7.25.0)(ws@8.22.0)(zod@4.6.5)
       papaparse:
         specifier: ^5.7.0
         version: 5.7.0
@@ -4942,28 +4942,8 @@ packages:
     resolution: {integrity: sha512-smsWv2LzFjP03xmvFoJ331ss6h+jixfA4UUV/Bsiyuu4YJPfN+FIQGOIiv4w9/+MoHkfkJ22UIaQWRVFRfH6Vw==}
     engines: {node: '>=20'}
 
-  openai@6.48.0:
-    resolution: {integrity: sha512-KhVp+FyV50QrXNextvL9hIU5l6ox5HYuKQjGVk7lIqprgJol90+dQXWONV6S1lRWsKA1bXjrow8RsUT14M1hNA==}
-    peerDependencies:
-      '@aws-sdk/credential-provider-node': '>=3.972.0 <4'
-      '@smithy/hash-node': '>=4.3.0 <5'
-      '@smithy/signature-v4': '>=5.4.0 <6'
-      ws: ^8.18.0
-      zod: ^3.25 || ^4.0
-    peerDependenciesMeta:
-      '@aws-sdk/credential-provider-node':
-        optional: true
-      '@smithy/hash-node':
-        optional: true
-      '@smithy/signature-v4':
-        optional: true
-      ws:
-        optional: true
-      zod:
-        optional: true
-
   openai@7.28.0:
-    resolution: {integrity: sha512-HSY4fFLflQGYe2kvO0atm6/GzhD61gpyiOZZUvO4nptMUhuB1to2K3wwFpFqc5gfEK0SxyIIFiu1yE2MtygWcA==}
+    resolution: {integrity: sha512-HSY4fFLflQGYe2kvO0atm6/GzhD61gpyiOZZUvO4nptMUhuB1to2K3wwFpFqc5gfEK0SxyIIFiu1yE2MtygWcA==, tarball: https://registry.npmjs.org/openai/-/openai-7.28.0.tgz}
     engines: {node: '>=22.0.0'}
     peerDependencies:
       '@aws-sdk/credential-provider-node': '>=3.972.0 <4'
@@ -11011,11 +10991,6 @@ snapshots:
       is-inside-container: 1.0.0
       powershell-utils: 0.1.0
       wsl-utils: 0.3.1
-
-  openai@6.48.0(ws@8.22.0)(zod@4.6.5):
-    optionalDependencies:
-      ws: 8.22.0
-      zod: 4.6.5
 
   openai@7.28.0(undici@7.25.0)(ws@8.22.0)(zod@4.6.5):
     optionalDependencies:

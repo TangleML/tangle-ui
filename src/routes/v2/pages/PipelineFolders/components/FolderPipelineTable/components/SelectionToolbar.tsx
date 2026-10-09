@@ -50,7 +50,7 @@ export function SelectionToolbar({
               "v2.pipeline_folders.table.selection_bulk_delete_open",
             )}
           >
-            <Icon name="Trash2" />
+            <Icon name="Trash" />
             Delete
           </Button>
         }

@@ -165,7 +165,7 @@ export function FileMenu() {
             }}
             className="text-destructive focus:text-destructive"
           >
-            <Icon name="Trash2" size="sm" />
+            <Icon name="Trash" size="sm" />
             Delete pipeline
           </DropdownMenuItem>
         </DropdownMenuContent>

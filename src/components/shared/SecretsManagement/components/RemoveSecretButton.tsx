@@ -40,7 +40,7 @@ export function RemoveSecretButton({
       className="text-destructive hover:text-destructive"
       data-testid="secret-remove-button"
     >
-      <Icon name="Trash2" size="sm" />
+      <Icon name="Trash" size="sm" />
     </Button>
   );
 }

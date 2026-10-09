@@ -92,7 +92,7 @@ export const SelectionToolbar = observer(function SelectionToolbar({
       <Separator orientation="vertical" className="mx-0.5 self-stretch" />
       <ToolbarButton
         label="Delete"
-        icon="Trash2"
+        icon="Trash"
         onClick={onDelete}
         dangerous
         testId="selection-delete"

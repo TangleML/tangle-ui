@@ -22,7 +22,7 @@ export function useHistoryWindow() {
           <WindowMiniButton
             tooltip="View History"
             label="History"
-            icon="History"
+            icon="RotateCcwClock"
           />
         ),
       });

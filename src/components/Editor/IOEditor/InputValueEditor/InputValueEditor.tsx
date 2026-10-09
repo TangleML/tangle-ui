@@ -323,7 +323,7 @@ export const InputValueEditor = ({
       <InlineStack gap="4">
         {!disabled && (
           <Button onClick={deleteNode} variant="destructive" size="icon">
-            <Icon name="Trash2" />
+            <Icon name="Trash" />
           </Button>
         )}
 
