@@ -6,6 +6,7 @@ const agentCtor = vi.hoisted(() => vi.fn());
 const memorySessionCtor = vi.hoisted(() => vi.fn());
 const runMock = vi.hoisted(() => vi.fn());
 const attachObservabilityHooks = vi.hoisted(() => vi.fn());
+const providerCtor = vi.hoisted(() => vi.fn());
 
 vi.mock("@openai/agents", () => {
   class FakeAgent {
@@ -20,10 +21,23 @@ vi.mock("@openai/agents", () => {
     }
   }
 
+  class FakeOpenAIProvider {
+    constructor(options: unknown) {
+      providerCtor(options);
+    }
+  }
+
+  class FakeRunner {
+    run(...args: unknown[]) {
+      return runMock(...args);
+    }
+  }
+
   return {
     Agent: FakeAgent,
     MemorySession: FakeMemorySession,
-    run: (...args: unknown[]) => runMock(...args),
+    OpenAIProvider: FakeOpenAIProvider,
+    Runner: FakeRunner,
     tool: (config: unknown) => ({ type: "tool", config }),
   };
 });
@@ -84,6 +98,7 @@ describe("createEditorDispatcher", () => {
     memorySessionCtor.mockClear();
     runMock.mockReset();
     attachObservabilityHooks.mockClear();
+    providerCtor.mockClear();
     runMock.mockResolvedValue({ finalOutput: "Done" });
   });
 
