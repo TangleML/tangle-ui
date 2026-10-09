@@ -109,7 +109,7 @@
     "localforage": "^1.10.0",
     "lucide-react": "^1.52.0",
     "mobx": "^6.16.1",
-    "mobx-keystone": "^1.23.0",
+    "mobx-keystone": "^2.2.0",
     "mobx-react-lite": "^4.1.1",
     "nanoid": "^6.0.1",
     "openai": "^7.30.0",
