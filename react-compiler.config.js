@@ -42,6 +42,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/hooks/useExecutionArtifacts.ts",
   "src/hooks/useContainerLog.ts",
   "src/hooks/usePipelineRunList.ts",
+  "src/hooks/useRemotePipelinesPage.ts",
   "src/hooks/useNotices.ts",
   "src/hooks/useNoticeInbox.ts",
   "src/hooks/useHiddenNotices.ts",

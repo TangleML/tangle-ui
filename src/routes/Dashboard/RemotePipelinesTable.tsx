@@ -1,5 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
-import { type PointerEvent, useRef, useState } from "react";
+import { type PointerEvent, useEffect, useRef, useState } from "react";
 
 import { PaginationControls } from "@/components/shared/PaginationControls";
 import { BlockStack } from "@/components/ui/layout";
@@ -11,8 +10,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useRemotePipelinesPage } from "@/hooks/useRemotePipelinesPage";
 import { useBackend } from "@/providers/BackendProvider";
-import { listRemotePipelines } from "@/services/remotePipelinesService";
 import { formatDate } from "@/utils/date";
 
 const COLUMN_NAMES = [
@@ -26,10 +25,9 @@ const COLUMN_NAMES = [
 const INITIAL_COLUMN_WIDTHS = [25, 15, 20, 12, 12, 16];
 const MIN_COLUMN_WIDTH = 8;
 
-interface RemotePipelinesPagination {
-  backendUrl: string;
-  tokens: string[];
-  totalCount: number;
+interface RemotePipelinesTableProps {
+  page: number;
+  onPageChange: (page: number, replace?: boolean) => Promise<void>;
 }
 
 function resizeColumnWidths(widths: number[], index: number, delta: number) {
@@ -48,18 +46,13 @@ function resizeColumnWidths(widths: number[], index: number, delta: number) {
   });
 }
 
-export function RemotePipelinesTable() {
+export function RemotePipelinesTable({
+  page,
+  onPageChange,
+}: RemotePipelinesTableProps) {
   const { backendUrl, configured, available, ready } = useBackend();
-  const [pagination, setPagination] = useState<RemotePipelinesPagination>({
-    backendUrl,
-    tokens: [],
-    totalCount: 0,
-  });
-  const pageTokens =
-    pagination.backendUrl === backendUrl ? pagination.tokens : [];
-  if (pagination.backendUrl !== backendUrl) {
-    setPagination({ backendUrl, tokens: [], totalCount: 0 });
-  }
+  const [previousBackendUrl, setPreviousBackendUrl] = useState(backendUrl);
+  const currentPage = previousBackendUrl === backendUrl ? page : 1;
   const [columnWidths, setColumnWidths] = useState(INITIAL_COLUMN_WIDTHS);
   const tableRef = useRef<HTMLTableElement>(null);
   const dragRef = useRef<{
@@ -68,21 +61,27 @@ export function RemotePipelinesTable() {
     tableWidth: number;
     widths: number[];
   } | null>(null);
-  const pageToken = pageTokens.at(-1);
   const canFetch = ready && configured && available;
-  const { data, isLoading, isFetching, error } = useQuery({
-    queryKey: ["remote-pipelines", backendUrl, pageToken],
-    queryFn: () => listRemotePipelines(backendUrl, pageToken),
-    enabled: canFetch,
-    refetchOnWindowFocus: false,
-    retry: false,
-  });
+  const { data, isLoading, isFetching, isPlaceholderData, error, totalCount } =
+    useRemotePipelinesPage(backendUrl, currentPage, canFetch);
   const pipelines = data?.pipelines ?? [];
-  const totalCount = data?.totalCount ?? pagination.totalCount;
 
-  function changePage(tokens: string[]) {
-    setPagination({ backendUrl, tokens, totalCount });
-  }
+  useEffect(() => {
+    if (previousBackendUrl === backendUrl) return;
+    if (page === 1) setPreviousBackendUrl(backendUrl);
+    else void onPageChange(1, true);
+  }, [backendUrl, previousBackendUrl, page, onPageChange]);
+
+  useEffect(() => {
+    if (
+      data &&
+      !isFetching &&
+      !isPlaceholderData &&
+      data.page !== currentPage
+    ) {
+      void onPageChange(data.page, true);
+    }
+  }, [data, isFetching, isPlaceholderData, currentPage, onPageChange]);
 
   let message: string | undefined;
   if (!ready) message = "Loading remote pipelines…";
@@ -102,6 +101,7 @@ export function RemotePipelinesTable() {
       <Table
         ref={tableRef}
         aria-label="Remote Pipelines"
+        aria-busy={isFetching}
         className="table-fixed"
       >
         <TableHeader>
@@ -221,21 +221,18 @@ export function RemotePipelinesTable() {
       </Table>
       <nav aria-label="Remote pipelines pagination" className="w-full">
         <PaginationControls
-          currentPage={pageTokens.length + 1}
-          totalPages={Math.max(
-            pageTokens.length + 1,
-            Math.ceil(totalCount / 10),
-          )}
-          hasPreviousPage={pageTokens.length > 0}
+          currentPage={currentPage}
+          totalPages={Math.max(currentPage, Math.ceil(totalCount / 10))}
+          hasPreviousPage={currentPage > 1}
           hasNextPage={Boolean(data?.nextPageToken)}
           disabled={!canFetch || isFetching}
-          onPreviousPage={() => changePage(pageTokens.slice(0, -1))}
+          onPreviousPage={() => void onPageChange(currentPage - 1)}
           onNextPage={() => {
             if (data?.nextPageToken) {
-              changePage([...pageTokens, data.nextPageToken]);
+              void onPageChange(currentPage + 1);
             }
           }}
-          onReset={() => changePage([])}
+          onReset={() => void onPageChange(1)}
         />
       </nav>
     </BlockStack>
