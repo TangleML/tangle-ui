@@ -1,18 +1,21 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
   screen,
+  waitFor,
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
+import { createContext, type ReactNode, useContext } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   listRemotePipelines,
   type RemotePipeline,
+  type RemotePipelinesPage,
 } from "@/services/remotePipelinesService";
 import { formatDate } from "@/utils/date";
 
@@ -32,9 +35,10 @@ let backend = {
   available: true,
   ready: true,
 };
+const BackendContext = createContext(backend);
 
 vi.mock("@/providers/BackendProvider", () => ({
-  useBackend: () => backend,
+  useBackend: () => useContext(BackendContext),
 }));
 
 vi.mock("@/services/remotePipelinesService");
@@ -50,13 +54,46 @@ const pipeline: RemotePipeline = {
 
 const clients: QueryClient[] = [];
 
+function createPage(
+  start: number,
+  count: number,
+  totalCount: number,
+  nextPageToken: string | null,
+): RemotePipelinesPage {
+  return {
+    pipelines: Array.from({ length: count }, (_, index) => ({
+      ...pipeline,
+      id: `pipeline-${start + index}`,
+      pipeline_name: `Pipeline ${start + index}`,
+    })),
+    totalCount,
+    nextPageToken,
+  };
+}
+
+function expectNoPaginationControls() {
+  expect(
+    screen.queryByRole("button", { name: "First page" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "Previous" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "Next" }),
+  ).not.toBeInTheDocument();
+}
+
 function renderDashboard() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   clients.push(client);
   const wrapper = ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    <QueryClientProvider client={client}>
+      <BackendContext.Provider value={backend}>
+        {children}
+      </BackendContext.Provider>
+    </QueryClientProvider>
   );
   return {
     ...render(<DashboardPipelinesView />, { wrapper }),
@@ -70,9 +107,9 @@ async function renderResizableTable() {
   await screen.findByText("Example pipeline");
 
   const table = screen.getByRole("table", { name: "Remote Pipelines" });
-  vi.spyOn(table, "getBoundingClientRect").mockReturnValue({
-    width: 1000,
-  } as DOMRect);
+  vi.spyOn(table, "getBoundingClientRect").mockReturnValue(
+    new DOMRect(0, 0, 1000, 0),
+  );
   const handle = within(table).getByRole("separator", {
     name: "Resize User column",
   });
@@ -106,7 +143,11 @@ beforeEach(() => {
     available: true,
     ready: true,
   };
-  vi.mocked(listRemotePipelines).mockResolvedValue([pipeline]);
+  vi.mocked(listRemotePipelines).mockResolvedValue({
+    pipelines: [pipeline],
+    totalCount: 1,
+    nextPageToken: null,
+  });
 });
 
 afterEach(() => {
@@ -125,7 +166,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
 
     await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
 
-    const row = (await screen.findByText("Example pipeline")).closest("tr")!;
+    const row = await screen.findByRole("row", { name: /Example pipeline/ });
     expect(
       within(row)
         .getAllByRole("cell")
@@ -140,7 +181,9 @@ describe("DashboardPipelinesView remote pipelines", () => {
     ]);
     expect(listRemotePipelines).toHaveBeenCalledExactlyOnceWith(
       backend.backendUrl,
+      undefined,
     );
+    expectNoPaginationControls();
     expect(screen.getByText("Favorite Pipelines")).toBeInTheDocument();
     expect(screen.queryByText("Local pipeline list")).not.toBeInTheDocument();
 
@@ -155,10 +198,16 @@ describe("DashboardPipelinesView remote pipelines", () => {
     await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
 
     expect(screen.getByText("Loading remote pipelines…")).toBeInTheDocument();
+    expectNoPaginationControls();
+    expect(listRemotePipelines).toHaveBeenCalledTimes(1);
   });
 
   it("shows an empty result clearly", async () => {
-    vi.mocked(listRemotePipelines).mockResolvedValue([]);
+    vi.mocked(listRemotePipelines).mockResolvedValue({
+      pipelines: [],
+      totalCount: 0,
+      nextPageToken: null,
+    });
     const { user } = renderDashboard();
 
     await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
@@ -166,6 +215,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
     expect(
       await screen.findByText("No remote pipelines found."),
     ).toBeInTheDocument();
+    expectNoPaginationControls();
   });
 
   it("shows an API failure instead of an empty result", async () => {
@@ -195,13 +245,16 @@ describe("DashboardPipelinesView remote pipelines", () => {
     await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
 
     expect(screen.getByText(message)).toBeInTheDocument();
+    expectNoPaginationControls();
     expect(listRemotePipelines).not.toHaveBeenCalled();
   });
 
   it("keeps unnamed pipelines in the table", async () => {
-    vi.mocked(listRemotePipelines).mockResolvedValue([
-      { ...pipeline, pipeline_name: null },
-    ]);
+    vi.mocked(listRemotePipelines).mockResolvedValue({
+      pipelines: [{ ...pipeline, pipeline_name: null }],
+      totalCount: 1,
+      nextPageToken: null,
+    });
     const { user } = renderDashboard();
 
     await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
@@ -216,16 +269,291 @@ describe("DashboardPipelinesView remote pipelines", () => {
     await screen.findByText("Example pipeline");
 
     backend = { ...backend, backendUrl: "https://other.example.com" };
-    vi.mocked(listRemotePipelines).mockResolvedValue([
-      { ...pipeline, id: "pipeline-2", pipeline_name: "Other pipeline" },
-    ]);
-    rerender(<DashboardPipelinesView key={backend.backendUrl} />);
-    await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
+    vi.mocked(listRemotePipelines).mockResolvedValue({
+      pipelines: [
+        { ...pipeline, id: "pipeline-2", pipeline_name: "Other pipeline" },
+      ],
+      totalCount: 1,
+      nextPageToken: null,
+    });
+    rerender(<DashboardPipelinesView />);
 
     expect(await screen.findByText("Other pipeline")).toBeInTheDocument();
     expect(screen.queryByText("Example pipeline")).not.toBeInTheDocument();
     expect(listRemotePipelines).toHaveBeenLastCalledWith(
       "https://other.example.com",
+      undefined,
+    );
+  });
+
+  it("uses the returned cursors to show ten records per page and a partial final page", async () => {
+    const pages = new Map<string | undefined, RemotePipelinesPage>([
+      [undefined, createPage(1, 10, 25, "page-two")],
+      ["page-two", createPage(11, 10, 25, "page-three")],
+      ["page-three", createPage(21, 5, 25, null)],
+    ]);
+    vi.mocked(listRemotePipelines).mockImplementation(async (_, pageToken) => {
+      const page = pages.get(pageToken);
+      if (!page) throw new Error(`Unexpected page token: ${pageToken}`);
+      return page;
+    });
+    const { user } = renderDashboard();
+    await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
+
+    await screen.findByText("Pipeline 1");
+    expect(screen.getByText("Page 1 of 3")).toBeInTheDocument();
+    const table = screen.getByRole("table", { name: "Remote Pipelines" });
+    const rows = () => within(table).getAllByRole("row").slice(1);
+    expect(rows()).toHaveLength(10);
+    expect(listRemotePipelines).toHaveBeenNthCalledWith(
+      1,
+      backend.backendUrl,
+      undefined,
+    );
+    expect(screen.getByRole("button", { name: "First page" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Next" })).toBeEnabled();
+
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect(await screen.findByText("Pipeline 11")).toBeInTheDocument();
+    expect(screen.getByText("Page 2 of 3")).toBeInTheDocument();
+    expect(screen.queryByText("Pipeline 1")).not.toBeInTheDocument();
+    expect(rows()).toHaveLength(10);
+    expect(listRemotePipelines).toHaveBeenNthCalledWith(
+      2,
+      backend.backendUrl,
+      "page-two",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await screen.findByText("Pipeline 21");
+    expect(screen.getByText("Page 3 of 3")).toBeInTheDocument();
+    expect(rows()).toHaveLength(5);
+    expect(listRemotePipelines).toHaveBeenNthCalledWith(
+      3,
+      backend.backendUrl,
+      "page-three",
+    );
+    expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
+
+    await user.click(screen.getByRole("button", { name: "Previous" }));
+    expect(await screen.findByText("Pipeline 11")).toBeInTheDocument();
+    expect(screen.getByText("Page 2 of 3")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Previous" })).toBeEnabled();
+    });
+    expect(listRemotePipelines).toHaveBeenLastCalledWith(
+      backend.backendUrl,
+      "page-two",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Previous" }));
+    await screen.findByText("Pipeline 1");
+    expect(screen.getByText("Page 1 of 3")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "First page" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
+    await waitFor(() => {
+      expect(listRemotePipelines).toHaveBeenLastCalledWith(
+        backend.backendUrl,
+        undefined,
+      );
+    });
+  });
+
+  it("returns to the first page and clears cursor history with the First page button", async () => {
+    const pages = new Map<string | undefined, RemotePipelinesPage>([
+      [undefined, createPage(1, 10, 25, "page-two")],
+      ["page-two", createPage(11, 10, 25, "page-three")],
+      ["page-three", createPage(21, 5, 25, null)],
+    ]);
+    vi.mocked(listRemotePipelines).mockImplementation(async (_, pageToken) => {
+      const page = pages.get(pageToken);
+      if (!page) throw new Error(`Unexpected page token: ${pageToken}`);
+      return page;
+    });
+    const { user } = renderDashboard();
+    await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
+    await screen.findByText("Pipeline 1");
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await screen.findByText("Pipeline 11");
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await screen.findByText("Pipeline 21");
+    expect(screen.getByText("Page 3 of 3")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "First page" }));
+    expect(await screen.findByText("Pipeline 1")).toBeInTheDocument();
+    expect(screen.getByText("Page 1 of 3")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "First page" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Next" })).toBeEnabled();
+    });
+    expect(listRemotePipelines).toHaveBeenLastCalledWith(
+      backend.backendUrl,
+      undefined,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect(await screen.findByText("Pipeline 11")).toBeInTheDocument();
+    expect(screen.getByText("Page 2 of 3")).toBeInTheDocument();
+    expect(listRemotePipelines).toHaveBeenLastCalledWith(
+      backend.backendUrl,
+      "page-two",
+    );
+  });
+
+  it("disables navigation until the next page request settles", async () => {
+    let resolveNextPage: ((page: RemotePipelinesPage) => void) | undefined;
+    const nextPage = new Promise<RemotePipelinesPage>((resolve) => {
+      resolveNextPage = resolve;
+    });
+    vi.mocked(listRemotePipelines)
+      .mockResolvedValueOnce(createPage(1, 10, 20, "page-two"))
+      .mockReturnValueOnce(nextPage);
+    const { user } = renderDashboard();
+    await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
+    await screen.findByText("Pipeline 1");
+
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect(screen.getByText("Loading remote pipelines…")).toBeInTheDocument();
+    expect(screen.getByText("Page 2 of 2")).toBeInTheDocument();
+    expect(screen.queryByText("Pipeline 1")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "First page" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await user.click(screen.getByRole("button", { name: "Previous" }));
+    await user.click(screen.getByRole("button", { name: "First page" }));
+    expect(listRemotePipelines).toHaveBeenCalledTimes(2);
+
+    await act(async () => {
+      if (!resolveNextPage) {
+        throw new Error("Next-page resolver was not initialized");
+      }
+      resolveNextPage(createPage(11, 10, 20, null));
+    });
+    expect(await screen.findByText("Pipeline 11")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "First page" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Previous" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
+  });
+
+  it("keeps recovery controls when the pipeline count shrinks on a later page", async () => {
+    vi.mocked(listRemotePipelines)
+      .mockResolvedValueOnce(createPage(1, 10, 20, "page-two"))
+      .mockResolvedValueOnce(createPage(11, 0, 8, null))
+      .mockResolvedValueOnce(createPage(1, 8, 8, null));
+    const { user } = renderDashboard();
+    await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
+    await screen.findByText("Pipeline 1");
+
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect(
+      await screen.findByText("No remote pipelines found."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Page 2 of 2")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "First page" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Previous" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
+
+    await user.click(screen.getByRole("button", { name: "First page" }));
+    const table = screen.getByRole("table", { name: "Remote Pipelines" });
+    await waitFor(() => {
+      expect(within(table).getAllByRole("row").slice(1)).toHaveLength(8);
+      expectNoPaginationControls();
+    });
+    expect(screen.getByText("Pipeline 1")).toBeInTheDocument();
+    expect(
+      screen.queryByText("No remote pipelines found."),
+    ).not.toBeInTheDocument();
+    expect(listRemotePipelines).toHaveBeenNthCalledWith(
+      3,
+      backend.backendUrl,
+      undefined,
+    );
+  });
+
+  it("allows returning to the previous page after a next page request fails", async () => {
+    vi.mocked(listRemotePipelines).mockImplementation(async (_, pageToken) => {
+      if (pageToken) throw new Error("Request failed");
+      return createPage(1, 10, 20, "page-two");
+    });
+    const { user } = renderDashboard();
+    await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
+    await screen.findByText("Pipeline 1");
+
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect(
+      await screen.findByText("Failed to load remote pipelines."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Page 2 of 2")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "First page" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Previous" })).toBeEnabled();
+
+    await user.click(screen.getByRole("button", { name: "Previous" }));
+    expect(await screen.findByText("Pipeline 1")).toBeInTheDocument();
+    expect(screen.getByText("Page 1 of 2")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Failed to load remote pipelines."),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
+  });
+
+  it("disables every page control when the backend becomes unavailable", async () => {
+    vi.mocked(listRemotePipelines).mockImplementation(async (_, pageToken) =>
+      pageToken
+        ? createPage(11, 10, 30, "page-three")
+        : createPage(1, 10, 30, "page-two"),
+    );
+    const { user, rerender } = renderDashboard();
+    await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
+    await screen.findByText("Pipeline 1");
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await screen.findByText("Pipeline 11");
+
+    backend = { ...backend, available: false };
+    rerender(<DashboardPipelinesView />);
+
+    expect(screen.getByText("Backend is unavailable.")).toBeInTheDocument();
+    expect(screen.getByText("Page 2 of 3")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "First page" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "First page" }));
+    await user.click(screen.getByRole("button", { name: "Previous" }));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect(listRemotePipelines).toHaveBeenCalledTimes(2);
+  });
+
+  it("resets to the first page when the backend changes without remounting", async () => {
+    const originalBackendUrl = backend.backendUrl;
+    vi.mocked(listRemotePipelines).mockImplementation(
+      async (url, pageToken) => {
+        if (url !== originalBackendUrl) return createPage(101, 1, 1, null);
+        return pageToken
+          ? createPage(11, 10, 20, null)
+          : createPage(1, 10, 20, "original-page-two");
+      },
+    );
+    const { user, rerender } = renderDashboard();
+    await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
+    await screen.findByText("Pipeline 1");
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await screen.findByText("Pipeline 11");
+
+    backend = { ...backend, backendUrl: "https://other.example.com" };
+    rerender(<DashboardPipelinesView />);
+
+    expect(await screen.findByText("Pipeline 101")).toBeInTheDocument();
+    expect(screen.queryByText("Pipeline 11")).not.toBeInTheDocument();
+    expectNoPaginationControls();
+    expect(listRemotePipelines).toHaveBeenLastCalledWith(
+      backend.backendUrl,
+      undefined,
+    );
+    expect(listRemotePipelines).not.toHaveBeenCalledWith(
+      backend.backendUrl,
+      "original-page-two",
     );
   });
 
@@ -260,20 +588,20 @@ describe("DashboardPipelinesView remote pipelines", () => {
     expect(widths()).toEqual([25, 15, 8, 16, 16, 20]);
   });
 
-  it.each(["pointerUp", "pointerCancel", "lostPointerCapture"] as const)(
-    "stops resizing after %s",
-    async (event) => {
-      const { handle, widths, startDrag, dragTo } =
-        await renderResizableTable();
+  it.each<"pointerUp" | "pointerCancel" | "lostPointerCapture">([
+    "pointerUp",
+    "pointerCancel",
+    "lostPointerCapture",
+  ])("stops resizing after %s", async (event) => {
+    const { handle, widths, startDrag, dragTo } = await renderResizableTable();
 
-      startDrag();
-      dragTo(690);
-      fireEvent[event](handle, { pointerId: 1 });
-      dragTo(750);
+    startDrag();
+    dragTo(690);
+    fireEvent[event](handle, { pointerId: 1 });
+    dragTo(750);
 
-      expect(widths()).toEqual([25, 15, 29, 9, 9, 13]);
-    },
-  );
+    expect(widths()).toEqual([25, 15, 29, 9, 9, 13]);
+  });
 
   it("keeps resizing when a different pointer ends on another handle", async () => {
     const { table, widths, startDrag, dragTo } = await renderResizableTable();
