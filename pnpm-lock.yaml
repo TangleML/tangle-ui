@@ -15,8 +15,8 @@ importers:
         specifier: ^8.10.0
         version: 8.10.0
       '@bugsnag/plugin-react':
-        specifier: ^8.9.0
-        version: 8.9.0(@bugsnag/core@8.9.0)
+        specifier: ^9.0.0
+        version: 9.0.0(@bugsnag/core@8.9.0)
       '@dagrejs/dagre':
         specifier: ^3.1.1
         version: 3.1.1
@@ -612,8 +612,8 @@ packages:
   '@bugsnag/node@8.10.0':
     resolution: {integrity: sha512-xLDSk3EBUDIAwYyECxzdEpsgZv6Mwn/WAV57vQBiKsTgia7cnjE83VeR9O6uu4oAUhye160LAVzRCvmJNac+nw==}
 
-  '@bugsnag/plugin-react@8.9.0':
-    resolution: {integrity: sha512-36vmZC4Wi+A53mEM25uFlKo/Khhk2qDVJfsmVtFkBnOr5AdKyr0VhqR0dSEaTaDtoZDtVpF60ux/ujahxVCxzQ==}
+  '@bugsnag/plugin-react@9.0.0':
+    resolution: {integrity: sha512-+qHrcE39GZsLwZ0dTe4AxPGbrvOFjGlE1jkvFh74EXFKqDncg+aK1j+cedcYbYQDqSAdxCZ/i4oZ1j72BjGS8g==}
     peerDependencies:
       '@bugsnag/core': ^8.0.0
     peerDependenciesMeta:
@@ -6595,7 +6595,7 @@ snapshots:
       pump: 3.0.4
       stack-generator: 2.0.10
 
-  '@bugsnag/plugin-react@8.9.0(@bugsnag/core@8.9.0)':
+  '@bugsnag/plugin-react@9.0.0(@bugsnag/core@8.9.0)':
     optionalDependencies:
       '@bugsnag/core': 8.9.0
 
