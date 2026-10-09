@@ -4,6 +4,7 @@ export type AnnotationOption = {
   value: string;
   name: string;
   caption?: string;
+  note?: string;
   deprecated?: boolean;
   deprecationMessage?: string;
 };

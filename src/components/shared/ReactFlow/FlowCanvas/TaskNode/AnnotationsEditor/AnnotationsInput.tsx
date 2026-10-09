@@ -35,6 +35,7 @@ import type {
 import { getAnnotationValue as getAnnotationString } from "@/utils/annotations";
 import { clamp } from "@/utils/math";
 
+import { DescriptionWithLinks } from "./DescriptionWithLinks";
 import { listedOptions } from "./utils";
 
 interface AnnotationsInputProps {
@@ -392,6 +393,11 @@ export const AnnotationsInput = ({
             {selectedOption?.deprecated && (
               <FieldMessage tone="warning" icon="TriangleAlert">
                 {selectedOption.deprecationMessage ?? "No longer available"}
+              </FieldMessage>
+            )}
+            {!selectedOption?.deprecated && !!selectedOption?.note && (
+              <FieldMessage tone="info" icon="Info">
+                <DescriptionWithLinks text={selectedOption.note} />
               </FieldMessage>
             )}
           </BlockStack>

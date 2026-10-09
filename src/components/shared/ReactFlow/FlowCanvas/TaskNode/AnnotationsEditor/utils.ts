@@ -33,6 +33,7 @@ interface JSONSchemaObject {
   properties: Record<string, JSONSchemaProperty>;
   "x-label"?: string;
   "feature-flag-key"?: string;
+  "x-note"?: string;
   "x-deprecated"?: boolean;
   "x-deprecated-message"?: string;
   "x-provider"?: string;
@@ -93,6 +94,7 @@ interface LauncherResourceField {
 
 interface LauncherClusterCommon {
   label?: string | null;
+  url?: string | null;
   project_id?: string | null;
   valid_until?: string | null;
   succeeded_by?: LauncherClusterSuccessor | null;
@@ -127,8 +129,9 @@ export interface LauncherConfig {
   aliases?: Record<string, string>;
 }
 
-export const launcherTaskAnnotationSchema =
-  schema satisfies LauncherAnnotationSchema;
+export const launcherTaskAnnotationSchema: LauncherAnnotationSchema = schema;
+
+const URL_PLACEHOLDER = "{url}";
 
 export function parseSchemaToAnnotationConfig(
   schema: JSONSchemaObject,
@@ -267,6 +270,10 @@ export function getCloudProviderConfig(
         } else if (launcherSchema["x-project"]) {
           option.caption = `Project: ${launcherSchema["x-project"]}`;
         }
+        // An unfilled placeholder means there was no config to resolve it against,
+        // so the environment is unknown: no note beats one naming the wrong one.
+        const note = launcherSchema["x-note"];
+        if (note && !note.includes(URL_PLACEHOLDER)) option.note = note;
         if (launcherSchema["x-deprecated"]) {
           option.deprecated = true;
           const message = launcherSchema["x-deprecated-message"];
@@ -496,6 +503,7 @@ interface FlatCluster {
   key: string;
   providerLabel?: string;
   label?: string | null;
+  url?: string | null;
   project?: string | null;
   validUntil?: string | null;
   succeededBy?: LauncherClusterSuccessor | null;
@@ -511,6 +519,21 @@ function resourceFields(
   return cluster.resource_fields?.length
     ? cluster.resource_fields
     : (provider?.resource_fields ?? []);
+}
+
+// A target's note is consumer-specific presentation, like `common_annotations`, so
+// the prose stays bundled and the config supplies only the URL it points at. That
+// way a deployment cannot send its users to another environment's sign-up page,
+// and a hostname change needs no rebuild.
+function noteFor(cluster: FlatCluster): string | undefined {
+  const prose =
+    launcherTaskAnnotationSchema.launcher_annotation_schemas?.[cluster.key]?.[
+      "x-note"
+    ];
+  if (!prose?.includes(URL_PLACEHOLDER)) return prose;
+  return cluster.url
+    ? prose.replaceAll(URL_PLACEHOLDER, cluster.url)
+    : undefined;
 }
 
 function flattenClusters(config: LauncherConfig): FlatCluster[] {
@@ -593,6 +616,8 @@ export function buildLauncherSchemaFromCapabilities(
       object["x-provider"] = cluster.providerLabel;
     }
     if (cluster.project) object["x-project"] = cluster.project;
+    const note = noteFor(cluster);
+    if (note) object["x-note"] = note;
     const aliases = aliasesByCluster[cluster.key];
     if (aliases && aliases.length > 0) object["x-aliases"] = aliases;
 
@@ -624,6 +649,8 @@ export function buildLauncherSchemaFromCapabilities(
       "x-label": `${capitalize(alias)} default`,
       "x-alias-of": clusterKey,
     };
+    const note = target["x-note"];
+    if (note) object["x-note"] = note;
     if (target["x-deprecated"]) {
       object["x-deprecated"] = true;
       const message = target["x-deprecated-message"];
@@ -787,6 +814,7 @@ function flatCluster(
     key,
     providerLabel,
     label: cluster.label,
+    url: cluster.url,
     project: cluster.project_id,
     validUntil: cluster.valid_until,
     succeededBy: cluster.succeeded_by,
