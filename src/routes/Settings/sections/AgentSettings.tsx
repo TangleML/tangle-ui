@@ -1,23 +1,15 @@
 import { type FormEvent, useEffect, useRef, useState } from "react";
 
+import { AiModelPicker } from "@/components/shared/Settings/AiModelPicker";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
-import { getAiModelOptions, getDefaultAiModelId } from "@/config/aiModels";
+import { getAiMaxOutputTokens } from "@/config/aiModels";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
 import type { AiProviderConfig } from "@/types/aiProvider";
@@ -36,53 +28,47 @@ export function AgentSettings() {
 
   const [apiBase, setApiBase] = useState(customConfig.apiBase);
   const [apiKey, setApiKey] = useState(customConfig.apiKey);
-  const [model, setModel] = useState(config.model);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [showKey, setShowKey] = useState(false);
   const [testing, setTesting] = useState(false);
+  const testPendingRef = useRef(false);
   const testRunIdRef = useRef(0);
-  const modelOptions = getAiModelOptions();
-  const defaultModelId = getDefaultAiModelId();
+  const testConfig: AiProviderConfig = useOwnKey
+    ? {
+        apiBase: apiBase.trim().replace(/\/+$/, ""),
+        apiKey: apiKey.trim(),
+        model: config.model,
+        reasoningEffort: config.reasoningEffort,
+      }
+    : config;
   const unconfiguredStatus = useOwnKey
     ? "Status: not configured. AI features are disabled until you save a provider."
     : "Status: not configured. Select a backend in Settings → Backend to use its AI proxy.";
   const submitLabel = useOwnKey ? "Save and test AI" : "Test AI";
 
   useEffect(() => {
-    setModel(config.model);
-  }, [config.model]);
-
-  useEffect(() => {
     testRunIdRef.current += 1;
-    setTesting(false);
     setValidationError(null);
-  }, [config.apiBase, useOwnKey]);
+  }, [
+    testConfig.apiBase,
+    testConfig.apiKey,
+    testConfig.credentials,
+    testConfig.model,
+    testConfig.reasoningEffort,
+    useOwnKey,
+  ]);
 
   const handleUseOwnKeyChange = (enabled: boolean) => {
-    // Reset here too: a failed mode write leaves the effect dependencies unchanged.
     testRunIdRef.current += 1;
-    setTesting(false);
     setShowKey(false);
     setUseOwnKey(enabled);
   };
 
-  const handleModelChange = (nextModel: string) => {
-    setModel(nextModel);
-    setValidationError(null);
-    update({ model: nextModel.trim() });
-  };
-
   const handleSave = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (testing) return;
+    if (testPendingRef.current) return;
 
-    const trimmed: AiProviderConfig = useOwnKey
-      ? {
-          apiBase: apiBase.trim().replace(/\/+$/, ""),
-          apiKey: apiKey.trim(),
-          model: model.trim(),
-        }
-      : config;
+    const trimmed = testConfig;
     if (!trimmed.apiBase) {
       setValidationError(
         useOwnKey
@@ -97,6 +83,7 @@ export function AgentSettings() {
     testRunIdRef.current = testRunId;
     const isCurrentTest = () => testRunIdRef.current === testRunId;
 
+    testPendingRef.current = true;
     setTesting(true);
     try {
       const response = await fetch(`${trimmed.apiBase}/responses`, {
@@ -110,10 +97,17 @@ export function AgentSettings() {
         },
         body: JSON.stringify({
           ...(trimmed.model ? { model: trimmed.model } : {}),
-          max_output_tokens: 32,
+          ...(trimmed.reasoningEffort
+            ? { reasoning: { effort: trimmed.reasoningEffort } }
+            : {}),
           instructions:
             "You are testing provider compatibility. Return only JSON.",
           input: 'Return the JSON object {"ok": true}.',
+          max_output_tokens: getAiMaxOutputTokens(
+            trimmed.model,
+            trimmed.reasoningEffort,
+            32,
+          ),
           text: { format: { type: "json_object" } },
         }),
       });
@@ -136,9 +130,8 @@ export function AgentSettings() {
       if (useOwnKey) {
         setApiBase(trimmed.apiBase);
         setApiKey(trimmed.apiKey);
-        update(trimmed);
+        update({ apiBase: trimmed.apiBase, apiKey: trimmed.apiKey });
       }
-      setModel(trimmed.model);
       let successMessage = "Backend AI proxy is working.";
       if (useOwnKey) {
         successMessage = trimmed.model
@@ -155,7 +148,8 @@ export function AgentSettings() {
         "error",
       );
     } finally {
-      if (isCurrentTest()) setTesting(false);
+      testPendingRef.current = false;
+      setTesting(false);
     }
   };
 
@@ -164,10 +158,8 @@ export function AgentSettings() {
     clear();
     setApiBase("");
     setApiKey("");
-    setModel("");
     setValidationError(null);
     setShowKey(false);
-    setTesting(false);
     notify("AI provider settings cleared", "success");
   };
 
@@ -267,45 +259,11 @@ export function AgentSettings() {
             </Paragraph>
           )}
 
-          <BlockStack gap="1">
-            <Label htmlFor="agent-settings-model">Model</Label>
-            <InlineStack gap="0" wrap="nowrap">
-              <Input
-                id="agent-settings-model"
-                type="text"
-                placeholder={`e.g. ${defaultModelId}`}
-                value={model}
-                onChange={(e) => handleModelChange(e.target.value)}
-                aria-label="Model id"
-                aria-describedby="agent-settings-model-hint"
-                autoComplete="off"
-                spellCheck={false}
-                className="rounded-r-none"
-              />
-              <Select onValueChange={handleModelChange}>
-                <SelectTrigger
-                  aria-label="Select a model"
-                  className="w-11 rounded-l-none border-l-0 px-2 [&_[data-slot=select-value]]:hidden"
-                >
-                  <SelectValue placeholder="Model suggestions" />
-                </SelectTrigger>
-                <SelectContent align="end">
-                  <SelectGroup>
-                    <SelectLabel>Common models</SelectLabel>
-                    {modelOptions.map((option) => (
-                      <SelectItem key={option.id} value={option.id}>
-                        {option.label ?? option.id}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </InlineStack>
-            <Text id="agent-settings-model-hint" size="xs" tone="subdued">
-              Optional if your proxy selects a model. Choose a common
-              OpenAI-compatible model or enter any model id supported by your
-              provider.
+          <BlockStack gap="2">
+            <Text size="sm" weight="medium">
+              Model and thinking
             </Text>
+            <AiModelPicker />
           </BlockStack>
 
           {validationError && (

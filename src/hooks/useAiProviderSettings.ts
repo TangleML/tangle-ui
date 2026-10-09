@@ -1,5 +1,11 @@
 import { useSyncExternalStore } from "react";
 
+import {
+  DEFAULT_AI_REASONING_EFFORT,
+  getDefaultAiModelId,
+  getEffectiveReasoningEffort,
+  isAiReasoningEffort,
+} from "@/config/aiModels";
 import { useBackend } from "@/providers/BackendProvider";
 import type { AiProviderConfig } from "@/types/aiProvider";
 import { getStorage } from "@/utils/typedStorage";
@@ -45,14 +51,17 @@ function readTrimmedString(
 
 function parseStoredConfig(value: unknown): AiProviderConfig | null {
   if (!isRecord(value)) return null;
+  // An explicit blank model must not inherit the legacy thinkingModel.
   return {
     apiBase: readTrimmedString(value, "apiBase") || DEFAULTS.apiBase,
     apiKey: readTrimmedString(value, "apiKey") || DEFAULTS.apiKey,
-    // Migration: previous Components V2 builds stored `thinkingModel`.
     model:
-      readTrimmedString(value, "model") ||
-      readTrimmedString(value, "thinkingModel") ||
-      DEFAULTS.model,
+      typeof value.model === "string"
+        ? readTrimmedString(value, "model")
+        : readTrimmedString(value, "thinkingModel"),
+    ...(isAiReasoningEffort(value.reasoningEffort)
+      ? { reasoningEffort: value.reasoningEffort }
+      : {}),
   };
 }
 
@@ -60,21 +69,23 @@ function isAllEmpty(config: AiProviderConfig): boolean {
   return (
     config.apiBase.length === 0 &&
     config.apiKey.length === 0 &&
-    config.model.length === 0
+    config.model.length === 0 &&
+    config.reasoningEffort === undefined
   );
 }
 
 function readStoredConfig(): AiProviderConfig {
   if (typeof window === "undefined") return DEFAULTS;
-  // Treat an all-empty central record as "absent" so a partial save (e.g. a
-  // blanked-out apiBase) doesn't shadow a working legacy config from before
-  // this hook was renamed.
-  const current = parseStoredConfig(storage.getItem(AI_PROVIDER_STORAGE_KEY));
-  if (current && !isAllEmpty(current)) return current;
+  // Empty partial records must not shadow legacy settings; an explicit model
+  // selection takes precedence even when it selects the provider default.
+  const stored = storage.getItem(AI_PROVIDER_STORAGE_KEY);
+  const current = parseStoredConfig(stored);
+  const hasModelSelection =
+    isRecord(stored) && typeof stored.model === "string";
+  if (current && (!isAllEmpty(current) || hasModelSelection)) return current;
   return (
     parseStoredConfig(storage.getItem(LEGACY_COMPONENT_SEARCH_STORAGE_KEY)) ??
-    current ??
-    DEFAULTS
+    current ?? { ...DEFAULTS, model: getDefaultAiModelId() }
   );
 }
 
@@ -123,14 +134,22 @@ export function useAiProviderSettings() {
     () => storage.getItem(AI_USE_OWN_KEY_STORAGE_KEY) !== false,
     () => true,
   );
-  const config: AiProviderConfig = useOwnKey
-    ? customConfig
-    : {
-        apiBase: backendBase ? `${backendBase}/api/experimental/ai/v1` : "",
-        apiKey: "",
-        model: customConfig.model,
-        credentials: "include",
-      };
+  const model = customConfig.model;
+  const reasoningEffort = getEffectiveReasoningEffort(
+    model,
+    customConfig.reasoningEffort ?? DEFAULT_AI_REASONING_EFFORT,
+  );
+  const config: AiProviderConfig = {
+    apiBase: useOwnKey
+      ? customConfig.apiBase
+      : backendBase
+        ? `${backendBase}/api/experimental/ai/v1`
+        : "",
+    apiKey: useOwnKey ? customConfig.apiKey : "",
+    model,
+    ...(reasoningEffort ? { reasoningEffort } : {}),
+    ...(useOwnKey ? {} : { credentials: "include" }),
+  };
 
   const setUseOwnKey = (enabled: boolean) => {
     storage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, enabled);

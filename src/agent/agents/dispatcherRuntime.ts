@@ -55,7 +55,10 @@ export function createDispatcherRuntime(
       params.session.proxyClient.ensureConfigured(params.aiConfig);
       const openAIClient = params.session.proxyClient.openai;
       const sessionMemory = getOrCreateSessionMemory(params.threadId);
-      const agent = await buildAgent(params.session);
+      const agent = await buildAgent({
+        ...params.session,
+        aiConfig: params.aiConfig,
+      });
       const runner = new Runner({
         modelProvider: new OpenAIProvider({
           openAIClient,

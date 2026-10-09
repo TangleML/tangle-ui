@@ -30,8 +30,9 @@ const BASE_CONFIG = {
 };
 
 describe("getAgentModelConfig", () => {
-  it("overrides the SDK model fallback when the configured model is blank", () => {
+  it("uses the provider default for a blank model", () => {
     expect(getAgentModelConfig(BASE_CONFIG)).toStrictEqual({
+      model: "",
       modelSettings: {
         providerData: {
           include: ["reasoning.encrypted_content"],
@@ -41,7 +42,14 @@ describe("getAgentModelConfig", () => {
     });
   });
 
-  it("uses the configured model with Responses reasoning continuity", () => {
+  it("preserves explicit reasoning effort", () => {
+    expect(
+      getAgentModelConfig({ ...BASE_CONFIG, reasoningEffort: "max" })
+        .modelSettings.reasoning,
+    ).toEqual({ effort: "max" });
+  });
+
+  it("uses the configured model", () => {
     expect(getAgentModelConfig({ ...BASE_CONFIG, model: "gpt-5.5" })).toEqual({
       model: "gpt-5.5",
       modelSettings: {
@@ -50,6 +58,12 @@ describe("getAgentModelConfig", () => {
         },
       },
     });
+  });
+
+  it("omits unspecified reasoning effort", () => {
+    expect(
+      getAgentModelConfig({ ...BASE_CONFIG, model: "gpt-6-sol" }).modelSettings,
+    ).not.toHaveProperty("reasoning");
   });
 });
 
