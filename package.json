@@ -3,6 +3,9 @@
   "homepage": "https://tangleml.com",
   "version": "0.1.0",
   "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22.22.2"
+  },
   "description": "Tangle-UI is a web app that allows the users to build and run Machine Learning pipelines using drag and drop without having to set up development environment.",
   "keywords": [
     "ML",
