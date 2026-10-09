@@ -1,5 +1,3 @@
-import { useState } from "react";
-
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -7,8 +5,8 @@ import { BlockStack } from "@/components/ui/layout";
 import type { Project } from "@/services/projects/types";
 import { tracking } from "@/utils/tracking";
 
-import { RenameProjectDialog } from "./RenameProjectDialog";
 import { useDeleteProjectAction } from "./useDeleteProjectAction";
+import { useRenameProjectAction } from "./useRenameProjectAction";
 import { useShareProjectAction } from "./useShareProjectAction";
 
 interface ProjectActionsProps {
@@ -24,12 +22,12 @@ export function ProjectActions({
   project,
   showRename = true,
 }: ProjectActionsProps) {
-  const [renameOpen, setRenameOpen] = useState(false);
   const { confirmAndDelete, isDeleting, confirmation } = useDeleteProjectAction(
     project,
     { navigateAfterDelete: true },
   );
   const share = useShareProjectAction(project.id);
+  const rename = useRenameProjectAction(project);
 
   return (
     <BlockStack gap="1">
@@ -38,7 +36,7 @@ export function ProjectActions({
           variant="ghost"
           size="sm"
           className="w-full justify-start"
-          onClick={() => setRenameOpen(true)}
+          onClick={() => void rename()}
           {...tracking("projects.rename_project_open")}
         >
           <Icon name="Pencil" size="sm" />
@@ -66,14 +64,6 @@ export function ProjectActions({
         <Icon name="Trash2" size="sm" />
         Delete project
       </Button>
-
-      {showRename && (
-        <RenameProjectDialog
-          project={project}
-          open={renameOpen}
-          onOpenChange={setRenameOpen}
-        />
-      )}
 
       <ConfirmationDialog {...confirmation} />
     </BlockStack>

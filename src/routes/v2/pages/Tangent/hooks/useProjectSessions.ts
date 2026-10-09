@@ -6,7 +6,7 @@ import {
   useUpdateProjectResource,
 } from "@/services/projects/useProjectResources";
 
-interface ProjectSession {
+export interface ProjectSession {
   resourceId: string;
   sessionId: string;
   name: string | null;
