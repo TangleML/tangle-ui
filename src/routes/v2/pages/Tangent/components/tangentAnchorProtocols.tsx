@@ -27,7 +27,7 @@ function runTarget(path: string): WorkareaTarget | undefined {
 }
 
 function requestsNewTab(event: MouseEvent<HTMLButtonElement>) {
-  return event.shiftKey || event.ctrlKey || event.metaKey;
+  return event.ctrlKey || event.metaKey;
 }
 
 function RunAnchor({ path, label }: AnchorProtocolProps) {
@@ -60,7 +60,7 @@ function RunAnchor({ path, label }: AnchorProtocolProps) {
     <ChatEntityChip
       icon={resourceMeta("run").icon}
       label={label}
-      title={target ? "Shift-click to open in a new tab" : undefined}
+      title={target ? "Cmd/Ctrl+click to open in a new tab" : undefined}
       disabled={!target}
       onClick={handleClick}
     />

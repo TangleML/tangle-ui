@@ -50,8 +50,15 @@ describe("tangentAnchorProtocols run anchor", () => {
     expect(window.open).not.toHaveBeenCalled();
   });
 
+  it("opens the run in the workarea on a shift-click", () => {
+    render(<RunAnchor {...anchorProps()} />);
+    fireEvent.click(screen.getByRole("button"), { shiftKey: true });
+
+    expect(openWorkareaTarget).toHaveBeenCalled();
+    expect(window.open).not.toHaveBeenCalled();
+  });
+
   it.each([
-    ["shift", { shiftKey: true }],
     ["ctrl", { ctrlKey: true }],
     ["meta", { metaKey: true }],
   ])("opens the run page in a new tab on a %s-click", (_modifier, event) => {
@@ -64,7 +71,7 @@ describe("tangentAnchorProtocols run anchor", () => {
 
   it("accepts a bare run id", () => {
     render(<RunAnchor {...anchorProps({ path: "run_2" })} />);
-    fireEvent.click(screen.getByRole("button"), { shiftKey: true });
+    fireEvent.click(screen.getByRole("button"), { metaKey: true });
 
     expect(window.open).toHaveBeenCalledWith("/runs/run_2", "_blank");
   });
