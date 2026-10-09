@@ -52,7 +52,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: "22.x"
+          node-version-file: ".nvmrc"
           cache: "pnpm"
 
       - name: Install dependencies
