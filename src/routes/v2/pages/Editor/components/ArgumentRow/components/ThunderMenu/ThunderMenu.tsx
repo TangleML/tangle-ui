@@ -135,7 +135,7 @@ export const ThunderMenu = observer(function ThunderMenu({
             )}
             onClick={onUnset}
           >
-            <Icon name="Trash2" size="sm" />
+            <Icon name="Trash" size="sm" />
             Unset Argument
           </DropdownMenuItem>
 

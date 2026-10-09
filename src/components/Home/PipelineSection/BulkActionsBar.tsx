@@ -46,7 +46,7 @@ const BulkActionsBar = ({
       <ConfirmationDialog
         trigger={
           <Button variant="destructive" size="sm">
-            <Icon name="Trash2" />
+            <Icon name="Trash" />
             Delete {selectedPipelines.length}{" "}
             {pluralize(selectedPipelines.length, "item")}
           </Button>
