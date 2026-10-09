@@ -64,9 +64,9 @@ export function RunMenu() {
     );
   }
 
-  const { canAccessEditorSpec, isRunCreator, isInProgress, isComplete } =
+  const { canAccessEditorSpec, canCancelRun, isInProgress, isComplete } =
     actions;
-  const showCancel = isInProgress && isRunCreator;
+  const showCancel = isInProgress && canCancelRun;
   const showSeparator = showCancel || isComplete;
 
   return (

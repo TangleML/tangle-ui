@@ -3,6 +3,7 @@ import type {
   GetGraphExecutionStateResponse,
   PipelineRunResponse,
 } from "@/api/types.gen";
+import { useRunPermissions } from "@/components/shared/AccessControl/useRunPermissions";
 import { buildTaskSpecShape } from "@/components/shared/PipelineRunNameTemplate/types";
 import { useCheckComponentSpecFromPath } from "@/hooks/useCheckComponentSpecFromPath";
 import { useUserDetails } from "@/hooks/useUserDetails";
@@ -22,7 +23,7 @@ interface RunViewActionsReady {
   componentSpec: ComponentSpec;
   runId: string | null | undefined;
   canAccessEditorSpec: boolean;
-  isRunCreator: boolean | "" | undefined;
+  canCancelRun: boolean;
   isInProgress: boolean;
   isComplete: boolean;
   pipelineName: string | undefined;
@@ -40,12 +41,9 @@ function resolveActions(
   runId: string | null | undefined,
   metadata: PipelineRunResponse | undefined,
   details: GetExecutionInfoResponse | undefined,
-  currentUserId: string | undefined,
+  canCancelRun: boolean,
   canAccessEditorSpec: boolean,
 ): RunViewActionsReady {
-  const isRunCreator =
-    !!currentUserId && metadata?.created_by === currentUserId;
-
   const executionStatusStats =
     metadata?.execution_status_stats ??
     flattenExecutionStatusStats(state.child_execution_status_stats);
@@ -63,7 +61,7 @@ function resolveActions(
     componentSpec,
     runId,
     canAccessEditorSpec,
-    isRunCreator,
+    canCancelRun,
     isInProgress,
     isComplete,
     pipelineName,
@@ -79,6 +77,7 @@ export function useRunViewActions(): RunViewActions {
     rootDetails: details,
   } = useExecutionData();
   const { data: currentUserDetails } = useUserDetails();
+  const { canCancel } = useRunPermissions(metadata, currentUserDetails?.id);
 
   const editorRoute = componentSpec?.name
     ? getDefaultEditorPath(componentSpec.name)
@@ -99,7 +98,7 @@ export function useRunViewActions(): RunViewActions {
     runId,
     metadata,
     details,
-    currentUserDetails?.id,
+    canCancel,
     canAccessEditorSpec,
   );
 }
