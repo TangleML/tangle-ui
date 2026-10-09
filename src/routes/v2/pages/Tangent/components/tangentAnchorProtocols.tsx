@@ -5,8 +5,11 @@ import type {
 import type { MouseEvent } from "react";
 
 import useToastNotification from "@/hooks/useToastNotification";
-import { getDefaultRunPath } from "@/routes/runRoutes";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
+import {
+  openRunPageInNewTab,
+  requestsNewTab,
+} from "@/routes/v2/pages/Tangent/services/openRunPageInNewTab";
 import { chatAnchorProtocols } from "@/routes/v2/shared/components/AiChat/components/chatAnchorProtocols";
 import { ChatEntityChip } from "@/routes/v2/shared/components/AiChat/components/ChatEntityChip";
 import { resourceMeta } from "@/services/projects/resourceMeta";
@@ -26,10 +29,6 @@ function runTarget(path: string): WorkareaTarget | undefined {
   return { type: "run", identity: idIdentity(path) };
 }
 
-function requestsNewTab(event: MouseEvent<HTMLButtonElement>) {
-  return event.ctrlKey || event.metaKey;
-}
-
 function RunAnchor({ path, label }: AnchorProtocolProps) {
   const store = useTangentProject();
   const notify = useToastNotification();
@@ -47,10 +46,7 @@ function RunAnchor({ path, label }: AnchorProtocolProps) {
   function handleClick(event: MouseEvent<HTMLButtonElement>) {
     if (!target) return;
     if (requestsNewTab(event)) {
-      window.open(
-        getDefaultRunPath(parseIdentity(target.identity).value),
-        "_blank",
-      );
+      openRunPageInNewTab(parseIdentity(target.identity).value);
       return;
     }
     void openRun();

@@ -1,3 +1,5 @@
+import type { MouseEvent } from "react";
+
 import { ProjectRunStatus } from "@/components/Project/ProjectRunStatus";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { Button } from "@/components/ui/button";
@@ -6,6 +8,10 @@ import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
+import {
+  openRunPageInNewTab,
+  requestsNewTab,
+} from "@/routes/v2/pages/Tangent/services/openRunPageInNewTab";
 import { UNNAMED_PIPELINE } from "@/services/projects/placeholderNames";
 import { idIdentity } from "@/services/projects/resourceTarget";
 import type { ProjectRun } from "@/services/projects/types";
@@ -27,7 +33,11 @@ export function RunsWindowContent() {
     fetchNextPage,
   } = useProjectRuns(store.projectId);
 
-  async function handleOpenRun(run: ProjectRun) {
+  async function handleOpenRun(run: ProjectRun, event: MouseEvent) {
+    if (requestsNewTab(event)) {
+      openRunPageInNewTab(run.id);
+      return;
+    }
     const title = run.pipelineName ?? UNNAMED_PIPELINE;
     try {
       await store.openWorkareaTarget(
@@ -70,7 +80,7 @@ export function RunsWindowContent() {
               title={run.pipelineName ?? UNNAMED_PIPELINE}
               description={<ProjectRunStatus runId={run.id} />}
               testId={`open-run-${run.id}`}
-              onOpen={() => void handleOpenRun(run)}
+              onOpen={(event) => void handleOpenRun(run, event)}
               {...tracking("projects.project_runs.open_run")}
             />
           ))}
