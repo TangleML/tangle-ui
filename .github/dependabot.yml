@@ -16,3 +16,13 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    ignore:
+      # Blocked until eslint-plugin-react supports ESLint 10:
+      # https://github.com/jsx-eslint/eslint-plugin-react/issues/3977
+      # Upgrade eslint, @eslint/js and eslint-plugin-react together, then remove this.
+      - dependency-name: "eslint"
+        update-types:
+          - "version-update:semver-major"
+      - dependency-name: "@eslint/js"
+        update-types:
+          - "version-update:semver-major"
