@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import yaml from "js-yaml";
+import * as yaml from "js-yaml";
 import type { ReactNode } from "react";
 
 import { CodeViewer, languageFor } from "@/components/shared/CodeViewer";

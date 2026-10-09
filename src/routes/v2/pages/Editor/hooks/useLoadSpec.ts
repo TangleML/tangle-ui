@@ -1,5 +1,5 @@
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import yaml from "js-yaml";
+import * as yaml from "js-yaml";
 import {
   registerRootStore,
   type UndoStore as MobxUndoStore,
