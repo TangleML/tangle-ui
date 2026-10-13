@@ -11,7 +11,7 @@ import {
 import { Slider } from "@/components/ui/slider";
 import { Paragraph, Text } from "@/components/ui/typography";
 import {
-  DEFAULT_AI_REASONING_EFFORT,
+  AI_CONFIG,
   getAiModelLabel,
   getAiModelOptions,
   getAiModelReasoningLevels,
@@ -56,7 +56,7 @@ export function AiModelPicker({ variant = "settings" }: AiModelPickerProps) {
   const modelDescriptionId = useId();
   const modelLabel = getAiModelLabel(config.model);
   const preference =
-    customConfig.reasoningEffort ?? DEFAULT_AI_REASONING_EFFORT;
+    customConfig.reasoningEffort ?? AI_CONFIG.defaultReasoningEffort;
   const levels = getAiModelReasoningLevels(config.model);
   const effort = config.reasoningEffort;
   const effortLabel = effort ? getAiReasoningLabel(effort) : "Unavailable";

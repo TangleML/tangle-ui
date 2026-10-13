@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 
 import {
-  DEFAULT_AI_REASONING_EFFORT,
+  AI_CONFIG,
   getDefaultAiModelId,
   getEffectiveReasoningEffort,
   isAiReasoningEffort,
@@ -137,7 +137,7 @@ export function useAiProviderSettings() {
   const model = customConfig.model;
   const reasoningEffort = getEffectiveReasoningEffort(
     model,
-    customConfig.reasoningEffort ?? DEFAULT_AI_REASONING_EFFORT,
+    customConfig.reasoningEffort ?? AI_CONFIG.defaultReasoningEffort,
   );
   const config: AiProviderConfig = {
     apiBase: isOwnKeyEnabled
