@@ -377,13 +377,25 @@ describe("AgentSettings", () => {
     expect(button(/^AI model and thinking:/)).toHaveTextContent("GPT-6 Sol");
   });
 
-  it("replaces model drafts when the picker changes and resets them on Clear", () => {
+  it.each([
+    { label: "GPT-6 Sol", id: "gpt-6-sol" },
+    { label: "GPT-6 Luna", id: "gpt-6-luna" },
+  ])(
+    "replaces an unfinished model draft when selecting $label",
+    ({ label, id }) => {
+      render(<AgentSettings />);
+      editField("Model ID", "unfinished");
+      chooseModel(label);
+      expect(screen.getByLabelText("Model ID")).toHaveValue(id);
+      expect(button(/^AI model and thinking:/)).toHaveTextContent(label);
+      expect(readSavedConfig().model).toBe(id);
+      expect(mockFetch).not.toHaveBeenCalled();
+    },
+  );
+
+  it("resets an unfinished model draft on Clear", () => {
     render(<AgentSettings />);
     editField("Model ID", "unfinished");
-    chooseModel("GPT-6 Luna");
-    expect(screen.getByLabelText("Model ID")).toHaveValue("gpt-6-luna");
-
-    editField("Model ID", "unfinished again");
     fireEvent.click(button("Clear"));
     expect(screen.getByLabelText("Model ID")).toHaveValue("gpt-6-sol");
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();

@@ -22,6 +22,7 @@ import type { AiReasoningEffort } from "@/types/aiProvider";
 
 interface AiModelPickerProps {
   variant?: "header" | "settings" | "compact";
+  onModelSelect?: () => void;
 }
 
 const TRIGGER_STYLES = {
@@ -41,7 +42,10 @@ function getThinkingHint(
   return "More thinking gives the model more time to work through a task.";
 }
 
-export function AiModelPicker({ variant = "settings" }: AiModelPickerProps) {
+export function AiModelPicker({
+  variant = "settings",
+  onModelSelect,
+}: AiModelPickerProps) {
   const { config, customConfig, update } = useAiProviderSettings();
   const [view, setView] = useState<"closed" | "thinking" | "models">("closed");
   const open = view !== "closed";
@@ -173,6 +177,7 @@ export function AiModelPicker({ variant = "settings" }: AiModelPickerProps) {
                     className="h-auto w-full justify-between px-3 py-3 text-left whitespace-normal aria-[pressed=true]:bg-accent"
                     onClick={() => {
                       update({ model: option.id });
+                      onModelSelect?.();
                       setView("thinking");
                     }}
                   >
