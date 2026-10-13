@@ -9,7 +9,10 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
-import { getAiMaxOutputTokens } from "@/config/aiModels";
+import {
+  getAiMaxOutputTokens,
+  getEffectiveReasoningEffort,
+} from "@/config/aiModels";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
 import type { AiProviderConfig } from "@/types/aiProvider";
@@ -28,23 +31,32 @@ export function AgentSettings() {
 
   const [apiBase, setApiBase] = useState(customConfig.apiBase);
   const [apiKey, setApiKey] = useState(customConfig.apiKey);
+  const [modelDraft, setModelDraft] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [showKey, setShowKey] = useState(false);
   const [testing, setTesting] = useState(false);
   const testPendingRef = useRef(false);
   const testRunIdRef = useRef(0);
+  const model = (modelDraft ?? config.model).trim();
   const testConfig: AiProviderConfig = isOwnKeyEnabled
     ? {
         apiBase: apiBase.trim().replace(/\/+$/, ""),
         apiKey: apiKey.trim(),
-        model: config.model,
-        reasoningEffort: config.reasoningEffort,
+        model,
+        reasoningEffort: getEffectiveReasoningEffort(
+          model,
+          customConfig.reasoningEffort,
+        ),
       }
     : config;
   const unconfiguredStatus = isOwnKeyEnabled
     ? "Status: not configured. AI features are disabled until you save a provider."
     : "Status: not configured. Select a backend in Settings → Backend to use its AI proxy.";
   const submitLabel = isOwnKeyEnabled ? "Save and test AI" : "Test AI";
+
+  useEffect(() => {
+    setModelDraft(null);
+  }, [config.model]);
 
   useEffect(() => {
     testRunIdRef.current += 1;
@@ -130,7 +142,12 @@ export function AgentSettings() {
       if (isOwnKeyEnabled) {
         setApiBase(trimmed.apiBase);
         setApiKey(trimmed.apiKey);
-        update({ apiBase: trimmed.apiBase, apiKey: trimmed.apiKey });
+        update({
+          apiBase: trimmed.apiBase,
+          apiKey: trimmed.apiKey,
+          model: trimmed.model,
+        });
+        setModelDraft(trimmed.model);
       }
       let successMessage = "Backend AI proxy is working.";
       if (isOwnKeyEnabled) {
@@ -158,6 +175,7 @@ export function AgentSettings() {
     clear();
     setApiBase("");
     setApiKey("");
+    setModelDraft(null);
     setValidationError(null);
     setShowKey(false);
     notify("AI provider settings cleared", "success");
@@ -264,6 +282,24 @@ export function AgentSettings() {
               Model and thinking
             </Text>
             <AiModelPicker />
+            {isOwnKeyEnabled && (
+              <BlockStack gap="1">
+                <Label htmlFor="agent-settings-model">Model ID</Label>
+                <Input
+                  id="agent-settings-model"
+                  value={modelDraft ?? config.model}
+                  onChange={(event) => setModelDraft(event.target.value)}
+                  placeholder="Provider default"
+                  aria-describedby="agent-settings-model-hint"
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+                <Text id="agent-settings-model-hint" size="xs" tone="subdued">
+                  Enter a custom model ID, or leave blank for the provider
+                  default. Saved after a successful test.
+                </Text>
+              </BlockStack>
+            )}
           </BlockStack>
 
           {validationError && (
