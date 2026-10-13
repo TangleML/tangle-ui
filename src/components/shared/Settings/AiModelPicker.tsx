@@ -11,16 +11,18 @@ import {
 import { Slider } from "@/components/ui/slider";
 import { Paragraph, Text } from "@/components/ui/typography";
 import {
-  DEFAULT_AI_REASONING_EFFORT,
+  AI_CONFIG,
   getAiModelLabel,
   getAiModelOptions,
   getAiModelReasoningLevels,
   getAiReasoningLabel,
 } from "@/config/aiConfig";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
+import type { AiReasoningEffort } from "@/types/aiProvider";
 
 interface AiModelPickerProps {
   variant?: "header" | "settings" | "compact";
+  onModelSelect?: () => void;
 }
 
 const TRIGGER_STYLES = {
@@ -29,7 +31,21 @@ const TRIGGER_STYLES = {
   settings: ["outline", "h-11 w-full max-w-sm justify-between px-3"],
 } as const;
 
-export function AiModelPicker({ variant = "settings" }: AiModelPickerProps) {
+function getThinkingHint(
+  effort: AiReasoningEffort | undefined,
+  preference: AiReasoningEffort,
+): string {
+  if (!effort) return "Thinking controls aren’t available for this model.";
+  if (effort !== preference) {
+    return `Using ${getAiReasoningLabel(effort).toLowerCase()} for this model. Your ${getAiReasoningLabel(preference).toLowerCase()} preference is saved.`;
+  }
+  return "More thinking gives the model more time to work through a task.";
+}
+
+export function AiModelPicker({
+  variant = "settings",
+  onModelSelect,
+}: AiModelPickerProps) {
   const { config, customConfig, update } = useAiProviderSettings();
   const [view, setView] = useState<"closed" | "thinking" | "models">("closed");
   const open = view !== "closed";
@@ -41,9 +57,10 @@ export function AiModelPicker({ variant = "settings" }: AiModelPickerProps) {
   const dismissedOutsideRef = useRef(false);
   const focusRef = useRef<HTMLButtonElement>(null);
   const thinkingHintId = useId();
+  const modelDescriptionId = useId();
   const modelLabel = getAiModelLabel(config.model);
   const preference =
-    customConfig.reasoningEffort ?? DEFAULT_AI_REASONING_EFFORT;
+    customConfig.reasoningEffort ?? AI_CONFIG.defaultReasoningEffort;
   const levels = getAiModelReasoningLevels(config.model);
   const effort = config.reasoningEffort;
   const effortLabel = effort ? getAiReasoningLabel(effort) : "Unavailable";
@@ -131,40 +148,58 @@ export function AiModelPicker({ variant = "settings" }: AiModelPickerProps) {
             type="button"
             variant="ghost"
             className="h-11 w-full justify-start gap-2 px-3"
-            aria-label={selectingModel ? "Back to thinking" : "Choose a model"}
+            aria-label={
+              selectingModel
+                ? "Models: back to thinking"
+                : `Choose a model: ${modelLabel}`
+            }
             onClick={() => setView(selectingModel ? "thinking" : "models")}
           >
             <Icon name={modelIcon} size="sm" />
             {selectingModel ? "Models" : modelLabel}
           </Button>
           {selectingModel ? (
-            options.map((option) => (
-              <Button
-                key={option.id}
-                ref={option.id === config.model ? focusRef : undefined}
-                type="button"
-                variant="ghost"
-                aria-label={option.label ?? option.id}
-                aria-pressed={option.id === config.model}
-                className="h-auto w-full justify-between px-3 py-3 text-left whitespace-normal aria-[pressed=true]:bg-accent"
-                onClick={() => {
-                  update({ model: option.id });
-                  setView("thinking");
-                }}
-              >
-                <BlockStack as="span" gap="1">
-                  {option.label ?? option.id}
-                  {option.description && (
-                    <Text size="xs" tone="subdued">
-                      {option.description}
-                    </Text>
-                  )}
-                </BlockStack>
-                {option.id === config.model && (
-                  <Icon name="Check" size="sm" className="shrink-0" />
-                )}
-              </Button>
-            ))
+            <div role="group" aria-label="Models">
+              <BlockStack gap="2">
+                {options.map((option, index) => (
+                  <Button
+                    key={option.id}
+                    ref={option.id === config.model ? focusRef : undefined}
+                    type="button"
+                    variant="ghost"
+                    aria-label={option.label ?? option.id}
+                    aria-describedby={
+                      option.description
+                        ? `${modelDescriptionId}-${index}`
+                        : undefined
+                    }
+                    aria-pressed={option.id === config.model}
+                    className="h-auto w-full justify-between px-3 py-3 text-left whitespace-normal aria-[pressed=true]:bg-accent"
+                    onClick={() => {
+                      update({ model: option.id });
+                      onModelSelect?.();
+                      setView("thinking");
+                    }}
+                  >
+                    <BlockStack as="span" gap="1">
+                      {option.label ?? option.id}
+                      {option.description && (
+                        <Text
+                          id={`${modelDescriptionId}-${index}`}
+                          size="xs"
+                          tone="subdued"
+                        >
+                          {option.description}
+                        </Text>
+                      )}
+                    </BlockStack>
+                    {option.id === config.model && (
+                      <Icon name="Check" size="sm" className="shrink-0" />
+                    )}
+                  </Button>
+                ))}
+              </BlockStack>
+            </div>
           ) : (
             <BlockStack gap="4" className="p-3">
               <Text size="xs" weight="medium">
@@ -200,11 +235,7 @@ export function AiModelPicker({ variant = "settings" }: AiModelPickerProps) {
                 </BlockStack>
               )}
               <Paragraph id={thinkingHintId} size="xs" tone="subdued">
-                {!effort
-                  ? "Thinking controls aren’t available for this model."
-                  : effort !== preference
-                    ? `Using ${effortLabel.toLowerCase()} for this model. Your ${getAiReasoningLabel(preference).toLowerCase()} preference is saved.`
-                    : "More thinking gives the model more time to work through a task."}
+                {getThinkingHint(effort, preference)}
               </Paragraph>
             </BlockStack>
           )}

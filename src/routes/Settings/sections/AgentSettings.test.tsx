@@ -35,7 +35,7 @@ function openModels() {
   fireEvent.click(
     screen.getByRole("button", { name: /^AI model and thinking:/ }),
   );
-  fireEvent.click(screen.getByRole("button", { name: "Choose a model" }));
+  fireEvent.click(screen.getByRole("button", { name: /^Choose a model:/ }));
 }
 
 function chooseModel(name: string) {
@@ -298,7 +298,7 @@ describe("AgentSettings", () => {
     );
   });
 
-  it.each(["API base URL", "API key"])(
+  it.each(["API base URL", "API key", "Model ID"])(
     "ignores an in-flight test after editing %s",
     async (field) => {
       let finishTest!: (response: Response) => void;
@@ -312,7 +312,7 @@ describe("AgentSettings", () => {
       fireEvent.click(button("Save and test AI"));
       editField(
         field,
-        field === "API key" ? "new-key" : "https://new.example.com/v1",
+        field === "API base URL" ? "https://new.example.com/v1" : "new-value",
       );
       expect(button("Testing…")).toBeDisabled();
       fireEvent.submit(button("Testing…").closest("form")!);
@@ -327,6 +327,92 @@ describe("AgentSettings", () => {
       expect(button("Save and test AI")).toBeEnabled();
     },
   );
+
+  it("keeps a custom model local until its complete draft passes the connection test", async () => {
+    const savedConfig = {
+      apiBase: "https://api.example.com/v1",
+      apiKey: "sk-test",
+      model: "gpt-6-sol",
+      reasoningEffort: "high",
+    };
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(savedConfig));
+    mockFetch.mockResolvedValue(new Response(JSON.stringify({ ok: true })));
+    render(<AgentSettings />);
+
+    for (const value of ["custom", "custom ", "custom model "]) {
+      editField("Model ID", value);
+      expect(screen.getByLabelText("Model ID")).toHaveValue(value);
+      expect(readSavedConfig()).toEqual(savedConfig);
+      expect(button(/^AI model and thinking:/)).toHaveTextContent("GPT-6 Sol");
+    }
+    expect(mockFetch).not.toHaveBeenCalled();
+    fireEvent.click(button("Save and test AI"));
+
+    await waitFor(() => expect(mockNotify).toHaveBeenCalled());
+    expect(requestBody().model).toBe("custom model");
+    expect(requestBody()).not.toHaveProperty("reasoning");
+    expect(readSavedConfig()).toEqual({
+      ...savedConfig,
+      model: "custom model",
+    });
+    expect(screen.getByLabelText("Model ID")).toHaveValue("custom model");
+    expect(button(/^AI model and thinking:/)).toHaveTextContent("custom model");
+  });
+
+  it("retains the active model and unfinished draft when testing fails", async () => {
+    const savedConfig = {
+      apiBase: "https://api.example.com/v1",
+      apiKey: "",
+      model: "gpt-6-sol",
+    };
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(savedConfig));
+    mockFetch.mockResolvedValue(new Response("Unknown model", { status: 400 }));
+    render(<AgentSettings />);
+    editField("Model ID", "custom-model");
+    fireEvent.click(button("Save and test AI"));
+
+    await waitFor(() => expect(mockNotify).toHaveBeenCalled());
+    expect(readSavedConfig()).toEqual(savedConfig);
+    expect(screen.getByLabelText("Model ID")).toHaveValue("custom-model");
+    expect(button(/^AI model and thinking:/)).toHaveTextContent("GPT-6 Sol");
+  });
+
+  it.each([
+    { label: "GPT-6 Sol", id: "gpt-6-sol" },
+    { label: "GPT-6 Luna", id: "gpt-6-luna" },
+  ])(
+    "replaces an unfinished model draft when selecting $label",
+    ({ label, id }) => {
+      render(<AgentSettings />);
+      editField("Model ID", "unfinished");
+      chooseModel(label);
+      expect(screen.getByLabelText("Model ID")).toHaveValue(id);
+      expect(button(/^AI model and thinking:/)).toHaveTextContent(label);
+      expect(readSavedConfig().model).toBe(id);
+      expect(mockFetch).not.toHaveBeenCalled();
+    },
+  );
+
+  it("resets an unfinished model draft on Clear", () => {
+    render(<AgentSettings />);
+    editField("Model ID", "unfinished");
+    fireEvent.click(button("Clear"));
+    expect(screen.getByLabelText("Model ID")).toHaveValue("gpt-6-sol");
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it("saves a blank model draft as provider default after testing", async () => {
+    mockFetch.mockResolvedValue(new Response(JSON.stringify({ ok: true })));
+    render(<AgentSettings />);
+    editField("API base URL", "https://api.example.com/v1");
+    editField("Model ID", "");
+    fireEvent.click(button("Save and test AI"));
+
+    await waitFor(() => expect(mockNotify).toHaveBeenCalled());
+    expect(requestBody()).not.toHaveProperty("model");
+    expect(requestBody()).not.toHaveProperty("reasoning");
+    expect(readSavedConfig().model).toBe("");
+  });
 
   it("selects local models and tests draft credentials with the Responses API", async () => {
     mockFetch.mockResolvedValue(new Response(JSON.stringify({ ok: true })));
@@ -454,6 +540,53 @@ describe("AgentSettings", () => {
       );
     });
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it("tests and saves a Claude draft using the native protocol and hint", async () => {
+    const savedConfig = {
+      apiBase: "https://api.example.com/v1",
+      apiKey: "old-key",
+      model: "gpt-6-sol",
+    };
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(savedConfig));
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          id: "msg_test",
+          model: "claude-opus-5-5",
+          content: [{ type: "text", text: '{"ok": true}' }],
+          stop_reason: "end_turn",
+        }),
+      ),
+    );
+    render(<AgentSettings />);
+    editField("API base URL", "https://api.anthropic.com/v1");
+    editField("API key", "native-key");
+    editField("Model ID", " claude-opus-5-5 ");
+
+    expect(readSavedConfig()).toEqual(savedConfig);
+    expect(button(/^AI model and thinking:/)).toHaveTextContent("GPT-6 Sol");
+    expect(screen.getByLabelText("API base URL")).toHaveAttribute(
+      "placeholder",
+      "https://api.anthropic.com/v1",
+    );
+    fireEvent.click(button("Save and test AI"));
+
+    await waitFor(() =>
+      expect(mockNotify).toHaveBeenCalledWith(
+        "AI provider settings saved. Model “claude-opus-5-5” works with the Anthropic Messages API.",
+        "success",
+      ),
+    );
+    expect(mockFetch.mock.calls[0][0]).toBe(
+      "https://api.anthropic.com/v1/messages",
+    );
+    expect(requestBody().model).toBe("claude-opus-5-5");
+    expect(readSavedConfig()).toEqual({
+      apiBase: "https://api.anthropic.com/v1",
+      apiKey: "native-key",
+      model: "claude-opus-5-5",
+    });
   });
 
   it("redacts a native API key echoed in a failed Claude test", async () => {

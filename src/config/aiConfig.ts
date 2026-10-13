@@ -16,7 +16,7 @@ interface AiModelOptionsConfig {
 export const AI_CONFIG = {
   defaultModel: "gpt-6-sol",
   embeddingModel: "text-embedding-3-small",
-  defaultReasoningEffort: "high" as const,
+  defaultReasoningEffort: "high" as const satisfies AiReasoningEffort,
   reasoningTokenAllowance: 8192,
   reasoningModelPattern: /^(openai:)?(gpt-[56]|o\d)/i,
   providers: {
@@ -82,9 +82,6 @@ export const AI_CONFIG = {
     },
   ] satisfies AiModelOption[],
 };
-
-export const DEFAULT_AI_REASONING_EFFORT: AiReasoningEffort =
-  AI_CONFIG.defaultReasoningEffort;
 
 export function isAiReasoningEffort(
   value: unknown,
@@ -184,7 +181,7 @@ export function getAiModelReasoningLevels(modelId: string) {
 
 export function getEffectiveReasoningEffort(
   modelId: string,
-  preference: AiReasoningEffort = DEFAULT_AI_REASONING_EFFORT,
+  preference: AiReasoningEffort = AI_CONFIG.defaultReasoningEffort,
 ): AiReasoningEffort | undefined {
   const levels = getAiModelReasoningLevels(modelId);
   const preferredIndex = AI_CONFIG.reasoningLevels.findIndex(

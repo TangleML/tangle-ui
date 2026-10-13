@@ -1,5 +1,6 @@
 import { getProjectHomePath } from "@/routes/projectRoutes";
 import { RUNS_BASE_PATH } from "@/routes/router";
+import { getDefaultRunPath } from "@/routes/runRoutes";
 import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
 
 const convertGcsUrlToBrowserUrl = (
@@ -259,6 +260,13 @@ const getRawExecutionLogsUrl = (
 const getProjectUrl = (projectId: string): string =>
   buildAbsoluteAppUrl(getProjectHomePath(projectId));
 
+/**
+ * Built from the run's id rather than the address bar, which names a Tangent
+ * project when the run is open in one of its workarea tabs.
+ */
+const getRunUrl = (runId: string | number): string =>
+  buildAbsoluteAppUrl(getDefaultRunPath(runId));
+
 export {
   buildComponentSourceUrl,
   convertArtifactUriToHTTPUrl,
@@ -273,6 +281,7 @@ export {
   getIdOrTitleFromPath,
   getProjectUrl,
   getRawExecutionLogsUrl,
+  getRunUrl,
   isGithubUrl,
   normalizeUrl,
   parseHttpUrl,

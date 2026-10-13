@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import { PinProjectButton } from "@/components/Project/PinProjectButton";
 import { RenameProjectDialog } from "@/components/Project/RenameProjectDialog";
+import { useShareProjectAction } from "@/components/Project/useShareProjectAction";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
@@ -15,6 +16,7 @@ import { tracking } from "@/utils/tracking";
 export function ProjectHeader() {
   const store = useTangentProject();
   const { data: project } = useProject(store.projectId);
+  const share = useShareProjectAction(store.projectId);
   const [renameOpen, setRenameOpen] = useState(false);
 
   if (!project) return null;
@@ -77,6 +79,18 @@ export function ProjectHeader() {
         </Button>
 
         <PinProjectButton project={project} className="size-7" />
+
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={share}
+          aria-label={`Share ${project.name}`}
+          title="Copy link to project"
+          className="size-7 shrink-0 text-muted-foreground hover:text-foreground"
+          {...tracking("projects.share_project")}
+        >
+          <Icon name="Share2" size="sm" />
+        </Button>
       </InlineStack>
 
       <RenameProjectDialog

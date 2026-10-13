@@ -4,8 +4,10 @@ import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { Icon } from "@/components/ui/icon";
 import useToastNotification from "@/hooks/useToastNotification";
 import { copyToClipboard } from "@/utils/string";
+import { getRunUrl } from "@/utils/URL";
 
 type SharePipelineButtonProps = {
+  runId: string | null | undefined;
   showLabel?: boolean;
   displayLabel?: string;
   showTooltip?: boolean;
@@ -15,6 +17,7 @@ type SharePipelineButtonProps = {
 >;
 
 export const SharePipelineButton = ({
+  runId,
   showLabel,
   displayLabel,
   showTooltip = true,
@@ -23,14 +26,16 @@ export const SharePipelineButton = ({
   const notify = useToastNotification();
 
   const handleShare = useCallback(() => {
-    copyToClipboard(window.location.href);
+    if (!runId) return;
+    copyToClipboard(getRunUrl(runId));
     notify("Run URL copied to clipboard", "success");
-  }, [notify]);
+  }, [notify, runId]);
 
   return (
     <TooltipButton
       variant="outline"
       onClick={handleShare}
+      disabled={!runId}
       tooltip={showTooltip ? "Share run" : undefined}
       data-testid="share-pipeline-button"
       {...rest}
