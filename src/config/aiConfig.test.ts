@@ -5,6 +5,7 @@ import {
   getAiModelOptions,
   getDefaultAiModelId,
   getEffectiveReasoningEffort,
+  supportsAiEmbeddings,
 } from "./aiConfig";
 
 describe("aiConfig", () => {
@@ -40,6 +41,17 @@ describe("aiConfig", () => {
       },
       { id: "proxy-fast" },
     ]);
+  });
+
+  it.each<[string, boolean]>([
+    ["", false],
+    ["   ", false],
+    ["https://api.anthropic.com/v1", false],
+    [" https://api.anthropic.com:443/v1/ ", false],
+    ["https://gateway.example.com/v1", true],
+    ["https://backend.example.com/api/experimental/ai/v1", true],
+  ])("checks embedding support for %s", (apiBase, expected) => {
+    expect(supportsAiEmbeddings(apiBase)).toBe(expected);
   });
 
   it("uses the nearest supported thinking level without inventing capabilities", () => {

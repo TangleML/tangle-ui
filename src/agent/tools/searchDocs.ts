@@ -1,8 +1,9 @@
 import { tool } from "@openai/agents";
 import { z } from "zod";
 
-import { AI_CONFIG } from "@/config/aiConfig";
+import { supportsAiEmbeddings } from "@/config/aiConfig";
 import { BASE_URL } from "@/utils/constants";
+import { isRecord } from "@/utils/typeGuards";
 
 import { type OpenAIProvider, requireEmbeddingModel } from "../config";
 import {
@@ -37,6 +38,8 @@ interface SearchDocsHit {
 
 interface SearchDocsResponse {
   results: SearchDocsHit[];
+  searchMode?: "semantic" | "text";
+  fallbackReason?: "unsupported_provider" | "embedding_error";
   instruction?: string;
   message?: string;
   error?: string;
@@ -218,11 +221,22 @@ export async function executeSearchDocs(
       return JSON.stringify(empty);
     }
 
-    const queryVec = AI_CONFIG.providers.anthropic.nativeApiBasePattern.test(
-      provider.openai.baseURL,
-    )
-      ? null
-      : await embedQuery(query, provider).catch(() => null);
+    let fallbackReason: SearchDocsResponse["fallbackReason"];
+    const queryVec = supportsAiEmbeddings(provider.openai.baseURL)
+      ? await embedQuery(query, provider).catch((error: unknown) => {
+          fallbackReason = "embedding_error";
+          const status =
+            isRecord(error) && typeof error.status === "number"
+              ? error.status
+              : undefined;
+          console.warn(
+            "search_docs: embeddings unavailable, using text ranking",
+            { status },
+          );
+          return null;
+        })
+      : null;
+    if (!queryVec && !fallbackReason) fallbackReason = "unsupported_provider";
     const ranked = queryVec
       ? rankByCosine(store.vectors, queryVec, topK)
       : rankByText(store.vectors, query, topK);
@@ -243,6 +257,8 @@ export async function executeSearchDocs(
 
     const response: SearchDocsResponse = {
       results: hits,
+      searchMode: queryVec ? "semantic" : "text",
+      ...(fallbackReason ? { fallbackReason } : {}),
       instruction:
         "IMPORTANT: You MUST include the `url` from the top result(s) in your response as a markdown link. " +
         "Use the `citation` field directly, e.g. 'Learn more: [Title](url)'.",

@@ -1,6 +1,6 @@
 import { Dexie, type EntityTable } from "dexie";
 
-import { AI_CONFIG } from "@/config/aiConfig";
+import { AI_CONFIG, supportsAiEmbeddings } from "@/config/aiConfig";
 import {
   type IndexEntry,
   indexEntryToLexicalMatch,
@@ -270,7 +270,13 @@ export async function rankComponentMatchesByEmbeddings(
   { limit }: RankOptions,
 ): Promise<LexicalMatch[]> {
   const trimmedQuery = query.trim();
-  if (trimmedQuery.length === 0 || index.length === 0 || limit <= 0) return [];
+  if (
+    trimmedQuery.length === 0 ||
+    index.length === 0 ||
+    limit <= 0 ||
+    !supportsAiEmbeddings(options.apiBase)
+  )
+    return [];
 
   const textByDigest = new Map<string, string>();
   const texts = [trimmedQuery];

@@ -164,6 +164,31 @@ describe("component search embeddings", () => {
     );
   });
 
+  it.each(["", "https://api.anthropic.com/v1"])(
+    "skips unsupported embedding requests to %s",
+    async (apiBase) => {
+      const index = buildSearchIndex([
+        makeSourced({
+          digest: "csv",
+          spec: {
+            name: "load_csv_file",
+            implementation: { container: { image: "example" } },
+          },
+        }),
+      ]);
+
+      const results = await rankComponentMatchesByEmbeddings(
+        index,
+        "open a spreadsheet",
+        { ...OPTIONS, apiBase },
+        { limit: 1 },
+      );
+
+      expect(results).toEqual([]);
+      expect(global.fetch).not.toHaveBeenCalled();
+    },
+  );
+
   it("requests cache misses in batches", async () => {
     const index = buildSearchIndex(
       Array.from({ length: 257 }, (_, index) =>

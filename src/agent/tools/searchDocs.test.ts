@@ -21,6 +21,7 @@ vi.mock("../config", () => ({
 
 const fakeProvider: OpenAIProvider = {
   openai: {
+    baseURL: "https://api.example.com/v1",
     embeddings: { create: embeddingsCreateMock },
   } as unknown as OpenAI,
 };
@@ -98,11 +99,13 @@ beforeEach(() => {
   globalThis.fetch = fetchMock as unknown as typeof fetch;
   fetchMock.mockReset();
   embeddingsCreateMock.mockReset();
+  vi.spyOn(console, "warn").mockImplementation(() => {});
 });
 
 afterEach(async () => {
   globalThis.fetch = originalFetch;
   await agentDb.vectors.clear();
+  vi.restoreAllMocks();
   vi.resetModules();
 });
 
@@ -129,11 +132,15 @@ describe("executeSearchDocs", () => {
         score: number;
       }>;
       instruction?: string;
+      searchMode?: string;
+      fallbackReason?: string;
       error?: string;
     };
 
     expect(parsed.error).toBeUndefined();
     expect(parsed.results).toHaveLength(2);
+    expect(parsed.searchMode).toBe("semantic");
+    expect(parsed.fallbackReason).toBeUndefined();
     expect(parsed.results[0].title).toBe("Tasks");
     expect(parsed.results[1].title).toBe("Components");
     expect(parsed.results[0].score).toBeGreaterThan(parsed.results[1].score);
@@ -166,7 +173,12 @@ describe("executeSearchDocs", () => {
     const store = makeStore();
     store.vectors[0].content = "Tasks combine inputs and outputs.";
     fetchMock.mockResolvedValue(jsonResponse(store));
-    embeddingsCreateMock.mockRejectedValue(new Error("Embeddings unavailable"));
+    embeddingsCreateMock.mockRejectedValue(
+      Object.assign(new Error("Response echoed secret-test-key"), {
+        status: 401,
+        headers: { authorization: "Bearer secret-test-key" },
+      }),
+    );
 
     const { executeSearchDocs, DocsVectorStoreCache } =
       await import("./searchDocs");
@@ -179,6 +191,13 @@ describe("executeSearchDocs", () => {
 
     expect(parsed.error).toBeUndefined();
     expect(parsed.results).toHaveLength(2);
+    expect(parsed.searchMode).toBe("text");
+    expect(parsed.fallbackReason).toBe("embedding_error");
+    expect(console.warn).toHaveBeenCalledTimes(1);
+    expect(console.warn).toHaveBeenCalledWith(
+      "search_docs: embeddings unavailable, using text ranking",
+      { status: 401 },
+    );
     expect(parsed.results[0]).toMatchObject({
       title: "Tasks",
       score: 1,
@@ -231,6 +250,9 @@ describe("executeSearchDocs", () => {
     );
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(embeddingsCreateMock).not.toHaveBeenCalled();
+    expect(parsed.searchMode).toBe("text");
+    expect(parsed.fallbackReason).toBe("unsupported_provider");
+    expect(console.warn).not.toHaveBeenCalled();
   });
 
   it("returns the populate-instruction message when the index is empty", async () => {

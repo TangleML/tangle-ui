@@ -76,8 +76,8 @@ export const AI_CONFIG = {
       description: "Balanced speed and intelligence",
     },
     {
-      id: "claude-haiku-4-5",
-      label: "Claude Haiku 4.5",
+      id: "claude-haiku-5-5",
+      label: "Claude Haiku 5.5",
       description: "Fast model for focused tasks",
     },
   ] satisfies AiModelOption[],
@@ -140,6 +140,14 @@ export function getAiModelOptions(): AiModelOption[] {
 export function getDefaultAiModelId(): string {
   const injected = readInjectedModelOptions();
   return injected?.defaultModel ?? AI_CONFIG.defaultModel;
+}
+
+export function supportsAiEmbeddings(apiBase: string): boolean {
+  const base = apiBase.trim();
+  return (
+    base.length > 0 &&
+    !AI_CONFIG.providers.anthropic.nativeApiBasePattern.test(base)
+  );
 }
 
 export function getAiProviderConfig(modelId: string) {
