@@ -33,7 +33,7 @@ describe("useAiProviderSettings", () => {
       model: "",
     });
     expect(result.current.isConfigured).toBe(false);
-    expect(result.current.useOwnKey).toBe(true);
+    expect(result.current.isOwnKeyEnabled).toBe(true);
   });
 
   it("uses the selected backend proxy without a personal key and preserves saved settings", () => {
@@ -48,7 +48,7 @@ describe("useAiProviderSettings", () => {
     );
     const { result, unmount } = renderHook(() => useAiProviderSettings());
 
-    act(() => result.current.setUseOwnKey(false));
+    act(() => result.current.setOwnKeyEnabled(false));
 
     expect(result.current.config).toEqual({
       apiBase: "https://backend.example.com/api/experimental/ai/v1",
@@ -61,8 +61,8 @@ describe("useAiProviderSettings", () => {
     unmount();
 
     const reloaded = renderHook(() => useAiProviderSettings());
-    expect(reloaded.result.current.useOwnKey).toBe(false);
-    act(() => reloaded.result.current.setUseOwnKey(true));
+    expect(reloaded.result.current.isOwnKeyEnabled).toBe(false);
+    act(() => reloaded.result.current.setOwnKeyEnabled(true));
     expect(reloaded.result.current.config).toEqual(customConfig);
   });
 
@@ -108,7 +108,7 @@ describe("useAiProviderSettings", () => {
 
     act(() => {
       result.current.update({ apiBase: "https://api.example.com/v1" });
-      result.current.setUseOwnKey(true);
+      result.current.setOwnKeyEnabled(true);
     });
 
     expect(result.current.isConfigured).toBe(true);
@@ -129,8 +129,8 @@ describe("useAiProviderSettings", () => {
   it("syncs mode changes between mounted consumers and browser tabs", () => {
     const first = renderHook(() => useAiProviderSettings());
     const second = renderHook(() => useAiProviderSettings());
-    act(() => first.result.current.setUseOwnKey(false));
-    expect(second.result.current.useOwnKey).toBe(false);
+    act(() => first.result.current.setOwnKeyEnabled(false));
+    expect(second.result.current.isOwnKeyEnabled).toBe(false);
 
     act(() => {
       window.localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, "true");
@@ -138,8 +138,8 @@ describe("useAiProviderSettings", () => {
         new StorageEvent("storage", { key: AI_USE_OWN_KEY_STORAGE_KEY }),
       );
     });
-    expect(first.result.current.useOwnKey).toBe(true);
-    expect(second.result.current.useOwnKey).toBe(true);
+    expect(first.result.current.isOwnKeyEnabled).toBe(true);
+    expect(second.result.current.isOwnKeyEnabled).toBe(true);
   });
 
   it("reads stored values from localStorage", () => {
