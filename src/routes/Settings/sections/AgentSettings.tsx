@@ -281,7 +281,7 @@ export function AgentSettings() {
             <Text size="sm" weight="medium">
               Model and thinking
             </Text>
-            <AiModelPicker />
+            <AiModelPicker onModelSelect={() => setModelDraft(null)} />
             {isOwnKeyEnabled && (
               <BlockStack gap="1">
                 <Label htmlFor="agent-settings-model">Model ID</Label>
