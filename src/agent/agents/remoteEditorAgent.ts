@@ -14,6 +14,8 @@
 import { Agent } from "@openai/agents";
 import type { ThinkingLevel } from "@tangent/shared/contracts.ts";
 
+import { getEffectiveReasoningEffort } from "@/config/aiConfig";
+
 import { getAgentModelConfig } from "../config";
 import { attachObservabilityHooks } from "../middleware/observability";
 import remoteEditorPrompt from "../prompts/remoteEditor.md?raw";
@@ -149,9 +151,15 @@ export function buildRemoteEditorAgent(
   session: AgentSession,
   spec: RemoteAgentSpec,
 ): Agent {
+  const model = (spec.model ?? session.aiConfig.model).trim();
   const modelConfig = getAgentModelConfig({
     ...session.aiConfig,
-    model: spec.model ?? session.aiConfig.model,
+    model,
+    reasoningEffort:
+      model === session.aiConfig.model.trim() ||
+      session.aiConfig.reasoningEffort === undefined
+        ? session.aiConfig.reasoningEffort
+        : getEffectiveReasoningEffort(model, session.aiConfig.reasoningEffort),
   });
   const tools = selectRemoteEditorTools(session, spec.tools);
   const effort = reasoningEffort(spec.thinkingDepth);

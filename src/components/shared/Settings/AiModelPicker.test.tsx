@@ -19,7 +19,7 @@ const button = (name: string | RegExp) => screen.getByRole("button", { name });
 const triggers = (name: string | RegExp = /^AI model and thinking:/) =>
   screen.getAllByRole("button", { name });
 const trigger = () => button(/^AI model and thinking:/);
-const modelTitle = () => button("Choose a model");
+const modelTitle = () => button(/^Choose a model:/);
 const thinking = () => screen.getByRole("slider", { name: "Thinking" });
 const openPicker = () => fireEvent.click(trigger());
 const openModels = () => fireEvent.click(modelTitle());
@@ -78,14 +78,19 @@ describe("AiModelPicker", () => {
     renderPicker();
     expectEffort("High");
     expect(modelTitle()).toHaveTextContent("GPT-6 Sol");
+    expect(modelTitle()).toHaveAccessibleName("Choose a model: GPT-6 Sol");
     fireEvent.pointerDown(modelTitle());
     openModels();
-    expect(button("Back to thinking")).toBeInTheDocument();
+    expect(button("Models: back to thinking")).toHaveTextContent("Models");
+    expect(screen.getByRole("group", { name: "Models" })).toBeInTheDocument();
     screen.getByRole("dialog", { name: "Model and thinking" });
     expect(screen.queryByRole("slider")).not.toBeInTheDocument();
     expect(button("Provider default")).toBeInTheDocument();
     const sol = button("GPT-6 Sol");
     expect(sol).toHaveAttribute("aria-pressed", "true");
+    expect(sol).toHaveAccessibleDescription(
+      "Balanced model for coding and agentic workflows",
+    );
     expect(sol).toHaveFocus();
     expect(button("GPT-6 Astra")).toBeInTheDocument();
     expect(button("GPT-6 Luna")).toBeInTheDocument();

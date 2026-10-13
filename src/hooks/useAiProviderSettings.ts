@@ -129,7 +129,7 @@ export function useAiProviderSettings() {
     getSnapshot,
     getServerSnapshot,
   );
-  const useOwnKey = useSyncExternalStore(
+  const isOwnKeyEnabled = useSyncExternalStore(
     subscribe,
     () => storage.getItem(AI_USE_OWN_KEY_STORAGE_KEY) !== false,
     () => true,
@@ -140,18 +140,18 @@ export function useAiProviderSettings() {
     customConfig.reasoningEffort ?? DEFAULT_AI_REASONING_EFFORT,
   );
   const config: AiProviderConfig = {
-    apiBase: useOwnKey
+    apiBase: isOwnKeyEnabled
       ? customConfig.apiBase
       : backendBase
         ? `${backendBase}/api/experimental/ai/v1`
         : "",
-    apiKey: useOwnKey ? customConfig.apiKey : "",
+    apiKey: isOwnKeyEnabled ? customConfig.apiKey : "",
     model,
     ...(reasoningEffort ? { reasoningEffort } : {}),
-    ...(useOwnKey ? {} : { credentials: "include" }),
+    ...(isOwnKeyEnabled ? {} : { credentials: "include" }),
   };
 
-  const setUseOwnKey = (enabled: boolean) => {
+  const setOwnKeyEnabled = (enabled: boolean) => {
     storage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, enabled);
   };
 
@@ -177,8 +177,8 @@ export function useAiProviderSettings() {
   return {
     config,
     customConfig,
-    useOwnKey,
-    setUseOwnKey,
+    isOwnKeyEnabled,
+    setOwnKeyEnabled,
     update,
     clear,
     isConfigured,
