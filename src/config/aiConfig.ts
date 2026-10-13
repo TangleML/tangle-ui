@@ -16,7 +16,7 @@ interface AiModelOptionsConfig {
 export const AI_CONFIG = {
   defaultModel: "gpt-6-sol",
   embeddingModel: "text-embedding-3-small",
-  defaultReasoningEffort: "high" satisfies AiReasoningEffort,
+  defaultReasoningEffort: "high" as const satisfies AiReasoningEffort,
   reasoningTokenAllowance: 8192,
   reasoningModelPattern: /^(openai:)?(gpt-[56]|o\d)/i,
   reasoningLevels: [
