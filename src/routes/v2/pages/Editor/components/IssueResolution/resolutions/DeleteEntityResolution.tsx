@@ -28,7 +28,7 @@ export function DeleteEntityResolution({
         onClick={onDelete}
         disabled={!issue.entityId}
       >
-        <Icon name="Trash2" size="xs" />
+        <Icon name="Trash" size="xs" />
         {label}
       </Button>
     </BlockStack>

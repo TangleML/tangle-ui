@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { DialogProvider } from "@/providers/DialogProvider/DialogProvider";
 import { useProject } from "@/services/projects/useProjects";
 import { copyToClipboard } from "@/utils/string";
 
@@ -21,6 +22,7 @@ vi.mock("@/services/projects/useProjects", () => ({
 vi.mock("@tanstack/react-router", () => ({
   Link: ({ children }: { children: ReactNode }) => <a>{children}</a>,
   useNavigate: () => navigate,
+  useSearch: () => ({}),
 }));
 
 const deleteProject = vi.fn();
@@ -73,26 +75,34 @@ function mockProject(overrides: Record<string, unknown> = {}) {
   } as unknown as ReturnType<typeof useProject>);
 }
 
+function renderWindow() {
+  return render(
+    <DialogProvider disableRouterSync>
+      <ProjectWindowContent />
+    </DialogProvider>,
+  );
+}
+
 describe("ProjectWindowContent", () => {
   beforeEach(() => mockProject());
   afterEach(() => vi.resetAllMocks());
 
   it("shows what the project is for without leaving Tangent", () => {
-    render(<ProjectWindowContent />);
+    renderWindow();
 
     expect(screen.getByDisplayValue("Q3 churn work")).toBeInTheDocument();
   });
 
   /** Instructions are edited from the Resources window, not from here twice. */
   it("leaves the instructions to the row that owns them", () => {
-    render(<ProjectWindowContent />);
+    renderWindow();
 
     expect(screen.queryByText("Instructions")).toBeNull();
     expect(screen.queryByText("Notes")).toBeNull();
   });
 
   it("shows who made it and when", () => {
-    render(<ProjectWindowContent />);
+    renderWindow();
 
     expect(screen.getByText("alice@example.com")).toBeInTheDocument();
     expect(screen.getByText("Created by")).toBeInTheDocument();
@@ -100,7 +110,7 @@ describe("ProjectWindowContent", () => {
   });
 
   it("says nothing about the workspace the project lives in", () => {
-    render(<ProjectWindowContent />);
+    renderWindow();
 
     expect(screen.queryByText(/workspace/i)).toBeNull();
   });
@@ -111,7 +121,7 @@ describe("ProjectWindowContent", () => {
       isPending: true,
     } as unknown as ReturnType<typeof useProject>);
 
-    render(<ProjectWindowContent />);
+    renderWindow();
 
     expect(screen.getByText("Loading…")).toBeInTheDocument();
   });
@@ -122,7 +132,7 @@ describe("deleting the project from Tangent", () => {
   afterEach(() => vi.resetAllMocks());
 
   it("offers it here, so it need not be done from the project's own page", () => {
-    render(<ProjectWindowContent />);
+    renderWindow();
 
     expect(
       screen.getByRole("button", { name: "Delete project" }),
@@ -132,7 +142,7 @@ describe("deleting the project from Tangent", () => {
   /** Destroying a project is not something a stray click should achieve. */
   it("asks before destroying anything", async () => {
     const user = userEvent.setup();
-    render(<ProjectWindowContent />);
+    renderWindow();
 
     await user.click(screen.getByRole("button", { name: "Delete project" }));
 
@@ -151,7 +161,7 @@ describe("sharing the project from Tangent", () => {
   /** The link has to be the same one the project's own page hands over. */
   it("copies the link to this page", async () => {
     const user = userEvent.setup();
-    render(<ProjectWindowContent />);
+    renderWindow();
 
     await user.click(screen.getByRole("button", { name: "Share project" }));
 

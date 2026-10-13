@@ -1,8 +1,7 @@
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
 
 import { PinProjectButton } from "@/components/Project/PinProjectButton";
-import { RenameProjectDialog } from "@/components/Project/RenameProjectDialog";
+import { useRenameProjectAction } from "@/components/Project/useRenameProjectAction";
 import { useShareProjectAction } from "@/components/Project/useShareProjectAction";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -10,16 +9,22 @@ import { InlineStack } from "@/components/ui/layout";
 import { Heading } from "@/components/ui/typography";
 import { APP_ROUTES } from "@/routes/appRoutes";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
+import type { Project } from "@/services/projects/types";
 import { useProject } from "@/services/projects/useProjects";
 import { tracking } from "@/utils/tracking";
 
 export function ProjectHeader() {
   const store = useTangentProject();
   const { data: project } = useProject(store.projectId);
-  const share = useShareProjectAction(store.projectId);
-  const [renameOpen, setRenameOpen] = useState(false);
 
   if (!project) return null;
+
+  return <ProjectHeaderBar project={project} />;
+}
+
+function ProjectHeaderBar({ project }: { project: Project }) {
+  const share = useShareProjectAction(project.id);
+  const rename = useRenameProjectAction(project);
 
   return (
     <InlineStack
@@ -69,7 +74,7 @@ export function ProjectHeader() {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => setRenameOpen(true)}
+          onClick={() => void rename()}
           aria-label={`Rename ${project.name}`}
           title="Rename project"
           className="size-7 shrink-0 text-muted-foreground hover:text-foreground"
@@ -92,12 +97,6 @@ export function ProjectHeader() {
           <Icon name="Share2" size="sm" />
         </Button>
       </InlineStack>
-
-      <RenameProjectDialog
-        project={project}
-        open={renameOpen}
-        onOpenChange={setRenameOpen}
-      />
     </InlineStack>
   );
 }
