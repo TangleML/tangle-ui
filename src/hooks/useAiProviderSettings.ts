@@ -118,12 +118,12 @@ export function useAiProviderSettings() {
     getSnapshot,
     getServerSnapshot,
   );
-  const useOwnKey = useSyncExternalStore(
+  const isOwnKeyEnabled = useSyncExternalStore(
     subscribe,
     () => storage.getItem(AI_USE_OWN_KEY_STORAGE_KEY) !== false,
     () => true,
   );
-  const config: AiProviderConfig = useOwnKey
+  const config: AiProviderConfig = isOwnKeyEnabled
     ? customConfig
     : {
         apiBase: backendBase ? `${backendBase}/api/experimental/ai/v1` : "",
@@ -132,7 +132,7 @@ export function useAiProviderSettings() {
         credentials: "include",
       };
 
-  const setUseOwnKey = (enabled: boolean) => {
+  const setOwnKeyEnabled = (enabled: boolean) => {
     storage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, enabled);
   };
 
@@ -158,8 +158,8 @@ export function useAiProviderSettings() {
   return {
     config,
     customConfig,
-    useOwnKey,
-    setUseOwnKey,
+    isOwnKeyEnabled,
+    setOwnKeyEnabled,
     update,
     clear,
     isConfigured,
