@@ -1,3 +1,4 @@
+import babel from "@rolldown/plugin-babel";
 import tailwindcss from "@tailwindcss/vite";
 import viteReact from "@vitejs/plugin-react";
 import { createRequire } from "module";
@@ -42,22 +43,21 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [
-      viteReact({
-        babel: {
-          plugins: [
-            ["@babel/plugin-proposal-decorators", { version: "2023-11" }],
-            [
-              "babel-plugin-react-compiler",
-              {
-                sources: (filename) => {
-                  return REACT_COMPILER_ENABLED_DIRS.some((dir) =>
-                    filename.includes(dir),
-                  );
-                },
+      viteReact(),
+      babel({
+        plugins: [
+          ["@babel/plugin-proposal-decorators", { version: "2023-11" }],
+          [
+            "babel-plugin-react-compiler",
+            {
+              sources: (filename) => {
+                return REACT_COMPILER_ENABLED_DIRS.some((dir) =>
+                  filename.includes(dir),
+                );
               },
-            ],
+            },
           ],
-        },
+        ],
       }),
       tailwindcss(),
       ...(uploadSourcemaps
