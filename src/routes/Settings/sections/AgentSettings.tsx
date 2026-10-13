@@ -26,8 +26,8 @@ export function AgentSettings() {
   const {
     config,
     customConfig,
-    useOwnKey,
-    setUseOwnKey,
+    isOwnKeyEnabled,
+    setOwnKeyEnabled,
     update,
     clear,
     isConfigured,
@@ -43,10 +43,10 @@ export function AgentSettings() {
   const testRunIdRef = useRef(0);
   const modelOptions = getAiModelOptions();
   const defaultModelId = getDefaultAiModelId();
-  const unconfiguredStatus = useOwnKey
+  const unconfiguredStatus = isOwnKeyEnabled
     ? "Status: not configured. AI features are disabled until you save a provider."
     : "Status: not configured. Select a backend in Settings → Backend to use its AI proxy.";
-  const submitLabel = useOwnKey ? "Save and test AI" : "Test AI";
+  const submitLabel = isOwnKeyEnabled ? "Save and test AI" : "Test AI";
 
   useEffect(() => {
     setModel(config.model);
@@ -56,14 +56,14 @@ export function AgentSettings() {
     testRunIdRef.current += 1;
     setTesting(false);
     setValidationError(null);
-  }, [config.apiBase, useOwnKey]);
+  }, [config.apiBase, isOwnKeyEnabled]);
 
-  const handleUseOwnKeyChange = (enabled: boolean) => {
+  const handleOwnKeyEnabledChange = (enabled: boolean) => {
     // Reset here too: a failed mode write leaves the effect dependencies unchanged.
     testRunIdRef.current += 1;
     setTesting(false);
     setShowKey(false);
-    setUseOwnKey(enabled);
+    setOwnKeyEnabled(enabled);
   };
 
   const handleModelChange = (nextModel: string) => {
@@ -76,7 +76,7 @@ export function AgentSettings() {
     event.preventDefault();
     if (testing) return;
 
-    const trimmed: AiProviderConfig = useOwnKey
+    const trimmed: AiProviderConfig = isOwnKeyEnabled
       ? {
           apiBase: apiBase.trim().replace(/\/+$/, ""),
           apiKey: apiKey.trim(),
@@ -85,7 +85,7 @@ export function AgentSettings() {
       : config;
     if (!trimmed.apiBase) {
       setValidationError(
-        useOwnKey
+        isOwnKeyEnabled
           ? "Enter an API base URL before continuing."
           : "Configure a backend in Settings → Backend before testing AI.",
       );
@@ -133,14 +133,14 @@ export function AgentSettings() {
         return;
       }
 
-      if (useOwnKey) {
+      if (isOwnKeyEnabled) {
         setApiBase(trimmed.apiBase);
         setApiKey(trimmed.apiKey);
         update(trimmed);
       }
       setModel(trimmed.model);
       let successMessage = "Backend AI proxy is working.";
-      if (useOwnKey) {
+      if (isOwnKeyEnabled) {
         successMessage = trimmed.model
           ? `AI provider settings saved. Model “${trimmed.model}” works with the Responses API.`
           : "AI provider settings saved. The provider works with the Responses API.";
@@ -176,7 +176,7 @@ export function AgentSettings() {
       <BlockStack gap="2">
         <Heading level={2}>AI Provider Settings</Heading>
         <Paragraph size="sm" tone="subdued">
-          {useOwnKey
+          {isOwnKeyEnabled
             ? "AI features use an OpenAI-compatible API of your choice. Your key is stored in this browser only and is sent only to the configured provider."
             : "AI features use the backend AI proxy. No personal API key is required."}
         </Paragraph>
@@ -190,15 +190,15 @@ export function AgentSettings() {
       <InlineStack gap="2" blockAlign="center">
         <Switch
           id="agent-settings-use-own-key"
-          checked={useOwnKey}
-          onCheckedChange={handleUseOwnKeyChange}
+          checked={isOwnKeyEnabled}
+          onCheckedChange={handleOwnKeyEnabledChange}
         />
         <Label htmlFor="agent-settings-use-own-key">Bring your own key</Label>
       </InlineStack>
 
       <form onSubmit={handleSave}>
         <BlockStack gap="4">
-          {useOwnKey && (
+          {isOwnKeyEnabled && (
             <>
               <BlockStack gap="1">
                 <Label htmlFor="agent-settings-api-base">API base URL</Label>
@@ -261,7 +261,7 @@ export function AgentSettings() {
               </BlockStack>
             </>
           )}
-          {!useOwnKey && isConfigured && (
+          {!isOwnKeyEnabled && isConfigured && (
             <Paragraph size="sm" tone="subdued">
               Backend AI proxy: {config.apiBase}
             </Paragraph>
@@ -318,7 +318,7 @@ export function AgentSettings() {
             <Button type="submit" disabled={testing}>
               {testing ? "Testing…" : submitLabel}
             </Button>
-            {useOwnKey && (
+            {isOwnKeyEnabled && (
               <Button type="button" variant="ghost" onClick={handleClear}>
                 Clear
               </Button>
