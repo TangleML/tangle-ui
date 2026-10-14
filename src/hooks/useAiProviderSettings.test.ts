@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   AI_PROVIDER_STORAGE_KEY,
+  AI_PROXY_STORAGE_KEY,
   AI_USE_OWN_KEY_STORAGE_KEY,
   useAiProviderSettings,
 } from "./useAiProviderSettings";
@@ -54,7 +55,8 @@ describe("useAiProviderSettings", () => {
     expect(result.current.config).toEqual({
       apiBase: "https://backend.example.com/api/experimental/ai/v1",
       apiKey: "",
-      model: "gpt-5-mini",
+      model: "gpt-6-sol",
+      reasoningEffort: "high",
       credentials: "include",
     });
     expect(result.current.isConfigured).toBe(true);
@@ -65,6 +67,66 @@ describe("useAiProviderSettings", () => {
     expect(reloaded.result.current.isOwnKeyEnabled).toBe(false);
     act(() => reloaded.result.current.setOwnKeyEnabled(true));
     expect(reloaded.result.current.config).toEqual(customConfig);
+  });
+
+  it("keeps proxy and personal models independent across switches and reloads", () => {
+    const personal = {
+      apiBase: "https://gateway.example.com/v1",
+      apiKey: "personal-key",
+      model: "gateway/custom-model",
+    };
+    window.localStorage.setItem(
+      AI_PROVIDER_STORAGE_KEY,
+      JSON.stringify(personal),
+    );
+    const first = renderHook(() => useAiProviderSettings());
+    const second = renderHook(() => useAiProviderSettings());
+
+    act(() => {
+      first.result.current.setOwnKeyEnabled(false);
+      first.result.current.update({
+        model: "proxy-model",
+        apiKey: "ignored-key",
+      });
+    });
+    expect(second.result.current.config.model).toBe("proxy-model");
+    expect(
+      JSON.parse(window.localStorage.getItem(AI_PROVIDER_STORAGE_KEY) ?? ""),
+    ).toEqual(personal);
+    expect(
+      JSON.parse(window.localStorage.getItem(AI_PROXY_STORAGE_KEY) ?? ""),
+    ).toEqual({ model: "proxy-model" });
+    act(() => first.result.current.setOwnKeyEnabled(true));
+    expect(first.result.current.config).toEqual(personal);
+    first.unmount();
+    second.unmount();
+
+    const reloaded = renderHook(() => useAiProviderSettings());
+    act(() => reloaded.result.current.setOwnKeyEnabled(false));
+    expect(reloaded.result.current.config.model).toBe("proxy-model");
+    act(() => reloaded.result.current.clear());
+    expect(window.localStorage.getItem(AI_PROXY_STORAGE_KEY)).toBeNull();
+    expect(
+      JSON.parse(window.localStorage.getItem(AI_PROVIDER_STORAGE_KEY) ?? ""),
+    ).toEqual(personal);
+  });
+
+  it("syncs proxy model changes from another tab without changing the personal model", () => {
+    const { result } = renderHook(() => useAiProviderSettings());
+    act(() => {
+      result.current.update({ model: "personal-model" });
+      result.current.setOwnKeyEnabled(false);
+      window.localStorage.setItem(
+        AI_PROXY_STORAGE_KEY,
+        JSON.stringify({ model: "proxy-model" }),
+      );
+      window.dispatchEvent(
+        new StorageEvent("storage", { key: AI_PROXY_STORAGE_KEY }),
+      );
+    });
+    expect(result.current.config.model).toBe("proxy-model");
+    act(() => result.current.setOwnKeyEnabled(true));
+    expect(result.current.config.model).toBe("personal-model");
   });
 
   it("uses Sol with High thinking without saved provider details", () => {
@@ -109,8 +171,8 @@ describe("useAiProviderSettings", () => {
     expect(result.current.isConfigured).toBe(false);
 
     act(() => {
-      result.current.update({ apiBase: "https://api.example.com/v1" });
       result.current.setOwnKeyEnabled(true);
+      result.current.update({ apiBase: "https://api.example.com/v1" });
     });
 
     expect(result.current.isConfigured).toBe(true);
