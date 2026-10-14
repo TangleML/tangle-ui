@@ -28,14 +28,22 @@ const button = (name: string | RegExp) => screen.getByRole("button", { name });
 const requestBody = () => JSON.parse(mockFetch.mock.calls[0][1].body);
 const readSavedConfig = () =>
   JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "");
-const editField = (name: string, value: string) =>
+function editField(name: string, value: string) {
+  if (name === "Model ID") {
+    openModels();
+    fireEvent.click(button("Custom model…"));
+    fireEvent.change(screen.getByLabelText(name), { target: { value } });
+    fireEvent.click(button("Use model"));
+    return;
+  }
   fireEvent.change(screen.getByLabelText(name), { target: { value } });
+}
 
 function openModels() {
-  fireEvent.click(
-    screen.getByRole("button", { name: /^AI model and thinking:/ }),
-  );
-  fireEvent.click(screen.getByRole("button", { name: /^Choose a model:/ }));
+  if (!screen.queryByRole("dialog")) {
+    fireEvent.click(button(/^AI model and thinking:/));
+  }
+  fireEvent.click(button(/^Choose a model:/));
 }
 
 function chooseModel(name: string) {
@@ -54,6 +62,7 @@ describe("AgentSettings", () => {
       },
     );
     window.localStorage.clear();
+    window.localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, "true");
     delete window.__TANGLE_AI_MODELS__;
     mockNotify.mockClear();
     mockFetch.mockReset();
@@ -115,8 +124,8 @@ describe("AgentSettings", () => {
     expect(screen.getByLabelText("API key")).toHaveValue(savedConfig.apiKey);
   });
 
-  it("tests the proxy with default model and thinking without personal provider details", async () => {
-    window.localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, "false");
+  it("defaults to the proxy and the first listed model without personal provider details", async () => {
+    window.localStorage.removeItem(AI_USE_OWN_KEY_STORAGE_KEY);
     mockFetch.mockResolvedValue(new Response(JSON.stringify({ ok: true })));
     render(<AgentSettings />);
 
@@ -134,7 +143,7 @@ describe("AgentSettings", () => {
     );
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
     expect(body).toMatchObject({
-      model: "gpt-6-sol",
+      model: "gpt-6-astra",
       reasoning: { effort: "high" },
     });
     expect(body.max_output_tokens).toBe(8224);
@@ -341,9 +350,9 @@ describe("AgentSettings", () => {
 
     for (const value of ["custom", "custom ", "custom model "]) {
       editField("Model ID", value);
-      expect(screen.getByLabelText("Model ID")).toHaveValue(value);
       expect(readSavedConfig()).toEqual(savedConfig);
-      expect(button(/^AI model and thinking:/)).toHaveTextContent("GPT-6 Sol");
+      expect(button(/^AI model and thinking:/)).toHaveTextContent(value.trim());
+      expect(screen.queryByRole("slider")).not.toBeInTheDocument();
     }
     expect(mockFetch).not.toHaveBeenCalled();
     fireEvent.click(button("Save and test AI"));
@@ -355,7 +364,7 @@ describe("AgentSettings", () => {
       ...savedConfig,
       model: "custom model",
     });
-    expect(screen.getByLabelText("Model ID")).toHaveValue("custom model");
+    expect(screen.queryByLabelText("Model ID")).not.toBeInTheDocument();
     expect(button(/^AI model and thinking:/)).toHaveTextContent("custom model");
   });
 
@@ -373,8 +382,31 @@ describe("AgentSettings", () => {
 
     await waitFor(() => expect(mockNotify).toHaveBeenCalled());
     expect(readSavedConfig()).toEqual(savedConfig);
-    expect(screen.getByLabelText("Model ID")).toHaveValue("custom-model");
-    expect(button(/^AI model and thinking:/)).toHaveTextContent("GPT-6 Sol");
+    expect(button(/^AI model and thinking:/)).toHaveTextContent("custom-model");
+    expect(
+      screen.getByText(/saved after a successful test/),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps a custom draft staged when it is reselected from the model list", () => {
+    const savedConfig = {
+      apiBase: "https://api.example.com/v1",
+      apiKey: "",
+      model: "gpt-6-sol",
+    };
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(savedConfig));
+    render(<AgentSettings />);
+    editField("Model ID", "untested-custom");
+    chooseModel("untested-custom");
+
+    expect(readSavedConfig()).toEqual(savedConfig);
+    expect(button(/^AI model and thinking:/)).toHaveTextContent(
+      "untested-custom",
+    );
+    expect(
+      screen.getByText(/saved after a successful test/),
+    ).toBeInTheDocument();
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -386,7 +418,6 @@ describe("AgentSettings", () => {
       render(<AgentSettings />);
       editField("Model ID", "unfinished");
       chooseModel(label);
-      expect(screen.getByLabelText("Model ID")).toHaveValue(id);
       expect(button(/^AI model and thinking:/)).toHaveTextContent(label);
       expect(readSavedConfig().model).toBe(id);
       expect(mockFetch).not.toHaveBeenCalled();
@@ -397,21 +428,42 @@ describe("AgentSettings", () => {
     render(<AgentSettings />);
     editField("Model ID", "unfinished");
     fireEvent.click(button("Clear"));
-    expect(screen.getByLabelText("Model ID")).toHaveValue("gpt-6-sol");
+    expect(button(/^AI model and thinking:/)).toHaveTextContent("GPT-6 Astra");
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
-  it("saves a blank model draft as provider default after testing", async () => {
+  it("tests and saves a custom proxy model without exposing the saved personal provider", async () => {
+    window.localStorage.removeItem(AI_USE_OWN_KEY_STORAGE_KEY);
+    const savedConfig = {
+      apiBase: "https://api.example.com/v1",
+      apiKey: "sk-personal",
+      model: "gpt-6-sol",
+      reasoningEffort: "high",
+    };
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(savedConfig));
     mockFetch.mockResolvedValue(new Response(JSON.stringify({ ok: true })));
     render(<AgentSettings />);
-    editField("API base URL", "https://api.example.com/v1");
-    editField("Model ID", "");
+    editField("Model ID", " custom-proxy-model ");
+    expect(readSavedConfig()).toEqual(savedConfig);
+    expect(screen.queryByLabelText("API key")).not.toBeInTheDocument();
     fireEvent.click(button("Save and test AI"));
 
     await waitFor(() => expect(mockNotify).toHaveBeenCalled());
-    expect(requestBody()).not.toHaveProperty("model");
+    expect(mockFetch).toHaveBeenCalledWith(
+      "https://backend.example.com/api/experimental/ai/v1/responses",
+      expect.objectContaining({
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    expect(requestBody().model).toBe("custom-proxy-model");
     expect(requestBody()).not.toHaveProperty("reasoning");
-    expect(readSavedConfig().model).toBe("");
+    expect(JSON.stringify(mockFetch.mock.calls)).not.toContain("sk-personal");
+    expect(readSavedConfig()).toEqual({
+      ...savedConfig,
+      model: "custom-proxy-model",
+    });
+    expect(button("Test AI")).toBeInTheDocument();
   });
 
   it("selects local models and tests draft credentials with the Responses API", async () => {
@@ -504,18 +556,20 @@ describe("AgentSettings", () => {
     },
   );
 
-  it("tests the provider default without model or thinking overrides", async () => {
+  it("uses the first listed model when the saved model was blank", async () => {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ apiBase: "https://api.example.com/v1", model: "" }),
+    );
     mockFetch.mockResolvedValue(new Response(JSON.stringify({ ok: true })));
     render(<AgentSettings />);
-    editField("API base URL", "https://api.example.com/v1");
-    chooseModel("Provider default");
     fireEvent.click(button("Save and test AI"));
 
     await waitFor(() => expect(mockNotify).toHaveBeenCalled());
-    expect(requestBody()).not.toHaveProperty("model");
-    expect(requestBody()).not.toHaveProperty("reasoning");
+    expect(requestBody().model).toBe("gpt-6-astra");
+    expect(requestBody().reasoning).toEqual({ effort: "high" });
     expect(requestBody().max_output_tokens).toBe(8224);
-    expect(readSavedConfig().model).toBe("");
+    expect(readSavedConfig().model).toBe("gpt-6-astra");
   });
 
   it("reports an error and does not save provider details when the Responses API is not supported", async () => {
@@ -565,7 +619,9 @@ describe("AgentSettings", () => {
     editField("Model ID", " claude-opus-5-5 ");
 
     expect(readSavedConfig()).toEqual(savedConfig);
-    expect(button(/^AI model and thinking:/)).toHaveTextContent("GPT-6 Sol");
+    expect(button(/^AI model and thinking:/)).toHaveTextContent(
+      "Claude Opus 5.5",
+    );
     expect(screen.getByLabelText("API base URL")).toHaveAttribute(
       "placeholder",
       "https://api.anthropic.com/v1",
@@ -650,7 +706,7 @@ describe("AgentSettings", () => {
     editField("API key", "gateway-key");
     editField("Model ID", "custom-model");
     chooseModel("GPT-6 Sol");
-    expect(screen.getByLabelText("Model ID")).toHaveValue("gpt-6-sol");
+    expect(button(/^AI model and thinking:/)).toHaveTextContent("GPT-6 Sol");
     editField("Model ID", "custom-model");
     fireEvent.click(button("Save and test AI"));
 
@@ -675,11 +731,11 @@ describe("AgentSettings", () => {
       ).toEqual({
         apiBase: "https://api.example.com/v1",
         apiKey: "",
-        model: "gpt-6-sol",
+        model: "gpt-6-astra",
       });
     });
     expect(mockNotify).toHaveBeenCalledWith(
-      "AI provider settings saved. Model “gpt-6-sol” works with the Responses API.",
+      "AI provider settings saved. Model “gpt-6-astra” works with the Responses API.",
       "success",
     );
   });

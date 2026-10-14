@@ -22,19 +22,21 @@ describe("useAiProviderSettings", () => {
 
   afterEach(() => {
     window.localStorage.clear();
+    delete window.__TANGLE_AI_MODELS__;
   });
 
-  it("returns defaults when nothing is stored", () => {
+  it("defaults to the backend proxy and first catalog model when nothing is stored", () => {
     const { result } = renderHook(() => useAiProviderSettings());
 
     expect(result.current.config).toEqual({
-      apiBase: "",
+      apiBase: "https://backend.example.com/api/experimental/ai/v1",
       apiKey: "",
-      model: "gpt-6-sol",
+      model: "gpt-6-astra",
       reasoningEffort: "high",
+      credentials: "include",
     });
-    expect(result.current.isConfigured).toBe(false);
-    expect(result.current.isOwnKeyEnabled).toBe(true);
+    expect(result.current.isConfigured).toBe(true);
+    expect(result.current.isOwnKeyEnabled).toBe(false);
   });
 
   it("uses the selected backend proxy without a personal key and preserves saved settings", () => {
@@ -47,6 +49,7 @@ describe("useAiProviderSettings", () => {
       AI_PROVIDER_STORAGE_KEY,
       JSON.stringify(customConfig),
     );
+    window.localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, "true");
     const { result, unmount } = renderHook(() => useAiProviderSettings());
 
     act(() => result.current.setOwnKeyEnabled(false));
@@ -67,18 +70,32 @@ describe("useAiProviderSettings", () => {
     expect(reloaded.result.current.config).toEqual(customConfig);
   });
 
-  it("uses Sol with High thinking without saved provider details", () => {
-    window.localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, "false");
-    const { result } = renderHook(() => useAiProviderSettings());
+  it.each(["false", "null", '"true"', "not json"])(
+    "uses the proxy unless the stored own-key flag is boolean true (%s)",
+    (storedFlag) => {
+      window.localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, storedFlag);
+      const { result } = renderHook(() => useAiProviderSettings());
 
-    expect(result.current.config).toEqual({
-      apiBase: "https://backend.example.com/api/experimental/ai/v1",
+      expect(result.current.isOwnKeyEnabled).toBe(false);
+      expect(result.current.config.apiBase).toBe(
+        "https://backend.example.com/api/experimental/ai/v1",
+      );
+    },
+  );
+
+  it("preserves an explicitly enabled own-key mode after reloading", () => {
+    const { result } = renderHook(() => useAiProviderSettings());
+    act(() => result.current.setOwnKeyEnabled(true));
+    const reloaded = renderHook(() => useAiProviderSettings());
+
+    expect(reloaded.result.current.isOwnKeyEnabled).toBe(true);
+    expect(reloaded.result.current.config).toEqual({
+      apiBase: "",
       apiKey: "",
-      model: "gpt-6-sol",
+      model: "gpt-6-astra",
       reasoningEffort: "high",
-      credentials: "include",
     });
-    expect(result.current.isConfigured).toBe(true);
+    expect(reloaded.result.current.isConfigured).toBe(false);
   });
 
   it("follows backend changes and preserves a backend path prefix", () => {
@@ -116,21 +133,21 @@ describe("useAiProviderSettings", () => {
     expect(result.current.isConfigured).toBe(true);
   });
 
-  it("preserves the provider default after reloading", () => {
+  it("resolves a blank model to the first catalog model after reloading", () => {
     window.localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, "false");
     const { result, unmount } = renderHook(() => useAiProviderSettings());
     act(() => result.current.update({ model: "gpt-5-mini" }));
     act(() => result.current.update({ model: "" }));
-    expect(result.current.config.model).toBe("");
-    expect(result.current.config.reasoningEffort).toBeUndefined();
+    expect(result.current.config.model).toBe("gpt-6-astra");
+    expect(result.current.config.reasoningEffort).toBe("high");
     unmount();
 
     const reloaded = renderHook(() => useAiProviderSettings());
-    expect(reloaded.result.current.config.model).toBe("");
-    expect(reloaded.result.current.config.reasoningEffort).toBeUndefined();
+    expect(reloaded.result.current.config.model).toBe("gpt-6-astra");
+    expect(reloaded.result.current.config.reasoningEffort).toBe("high");
   });
 
-  it("preserves an explicit provider default over legacy settings", () => {
+  it("resolves an explicitly blank model without restoring a legacy model", () => {
     window.localStorage.setItem(
       LEGACY_STORAGE_KEY,
       JSON.stringify({ model: "legacy-model" }),
@@ -141,27 +158,47 @@ describe("useAiProviderSettings", () => {
     );
 
     const { result } = renderHook(() => useAiProviderSettings());
-    expect(result.current.config.model).toBe("");
-    expect(result.current.config.reasoningEffort).toBeUndefined();
+    expect(result.current.config.model).toBe("gpt-6-astra");
+    expect(result.current.config.reasoningEffort).toBe("high");
   });
+
+  it.each([{}, { model: "" }, { model: "   " }])(
+    "uses the first host model for an empty saved selection (%j)",
+    (storedConfig) => {
+      window.__TANGLE_AI_MODELS__ = {
+        models: [{ id: "proxy-first" }, { id: "proxy-second" }],
+      };
+      window.localStorage.setItem(
+        AI_PROVIDER_STORAGE_KEY,
+        JSON.stringify(storedConfig),
+      );
+
+      const { result } = renderHook(() => useAiProviderSettings());
+
+      expect(result.current.config.model).toBe("proxy-first");
+      expect(result.current.customConfig.model).toBe("proxy-first");
+      expect(result.current.config.reasoningEffort).toBeUndefined();
+    },
+  );
 
   it("syncs mode changes between mounted consumers and browser tabs", () => {
     const first = renderHook(() => useAiProviderSettings());
     const second = renderHook(() => useAiProviderSettings());
-    act(() => first.result.current.setOwnKeyEnabled(false));
-    expect(second.result.current.isOwnKeyEnabled).toBe(false);
+    act(() => first.result.current.setOwnKeyEnabled(true));
+    expect(second.result.current.isOwnKeyEnabled).toBe(true);
 
     act(() => {
-      window.localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, "true");
+      window.localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, "false");
       window.dispatchEvent(
         new StorageEvent("storage", { key: AI_USE_OWN_KEY_STORAGE_KEY }),
       );
     });
-    expect(first.result.current.isOwnKeyEnabled).toBe(true);
-    expect(second.result.current.isOwnKeyEnabled).toBe(true);
+    expect(first.result.current.isOwnKeyEnabled).toBe(false);
+    expect(second.result.current.isOwnKeyEnabled).toBe(false);
   });
 
   it("reads stored values from localStorage", () => {
+    window.localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, "true");
     window.localStorage.setItem(
       AI_PROVIDER_STORAGE_KEY,
       JSON.stringify({
@@ -182,6 +219,7 @@ describe("useAiProviderSettings", () => {
   });
 
   it("isConfigured only requires apiBase", () => {
+    window.localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, "true");
     window.localStorage.setItem(
       AI_PROVIDER_STORAGE_KEY,
       JSON.stringify({
@@ -224,6 +262,7 @@ describe("useAiProviderSettings", () => {
   });
 
   it("clear() removes central and legacy stored config", () => {
+    window.localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, "true");
     window.localStorage.setItem(
       AI_PROVIDER_STORAGE_KEY,
       JSON.stringify({ apiBase: "https://api.example.com/v1" }),
@@ -242,9 +281,12 @@ describe("useAiProviderSettings", () => {
     expect(window.localStorage.getItem(AI_PROVIDER_STORAGE_KEY)).toBeNull();
     expect(window.localStorage.getItem(LEGACY_STORAGE_KEY)).toBeNull();
     expect(result.current.isConfigured).toBe(false);
+    expect(result.current.config.model).toBe("gpt-6-astra");
+    expect(result.current.config.reasoningEffort).toBe("high");
   });
 
   it("falls back to legacy Components V2 config", () => {
+    window.localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, "true");
     window.localStorage.setItem(
       LEGACY_STORAGE_KEY,
       JSON.stringify({
@@ -282,10 +324,11 @@ describe("useAiProviderSettings", () => {
 
     const { result } = renderHook(() => useAiProviderSettings());
     expect(result.current.config).toEqual({
-      apiBase: "",
+      apiBase: "https://backend.example.com/api/experimental/ai/v1",
       apiKey: "",
-      model: "gpt-6-sol",
+      model: "gpt-6-astra",
       reasoningEffort: "high",
+      credentials: "include",
     });
   });
 
@@ -314,5 +357,19 @@ describe("useAiProviderSettings", () => {
     );
     const { result } = renderHook(() => useAiProviderSettings());
     expect(result.current.config.reasoningEffort).toBe("high");
+  });
+
+  it("keeps thinking preferences without applying them to custom models", () => {
+    const { result } = renderHook(() => useAiProviderSettings());
+    act(() => {
+      result.current.update({ model: "custom-model", reasoningEffort: "max" });
+    });
+
+    expect(result.current.config.reasoningEffort).toBeUndefined();
+    expect(result.current.customConfig.reasoningEffort).toBe("max");
+
+    act(() => result.current.update({ model: "gpt-6-astra" }));
+
+    expect(result.current.config.reasoningEffort).toBe("max");
   });
 });

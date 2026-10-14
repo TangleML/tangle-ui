@@ -13,18 +13,19 @@ describe("aiConfig", () => {
     delete window.__TANGLE_AI_MODELS__;
   });
 
-  it("suggests unique models and includes the default", () => {
+  it("defaults to the first model in the catalog", () => {
     const ids = getAiModelOptions().map((option) => option.id);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(ids).toContain(getDefaultAiModelId());
+    expect(getDefaultAiModelId()).toBe(ids[0]);
+    expect(getDefaultAiModelId()).toBe("gpt-6-astra");
   });
 
-  it("allows host pages to replace model suggestions and the suggested default", () => {
+  it("uses the first valid model supplied by the host as the default", () => {
     window.__TANGLE_AI_MODELS__ = {
-      defaultModel: "proxy-frontier",
       models: [
+        { id: "   " },
         {
-          id: "proxy-frontier",
+          id: " proxy-frontier ",
           label: "Proxy frontier",
           description: "Default proxy model",
         },
@@ -41,6 +42,12 @@ describe("aiConfig", () => {
       },
       { id: "proxy-fast" },
     ]);
+  });
+
+  it("falls back to the built-in catalog when the host supplies no valid models", () => {
+    window.__TANGLE_AI_MODELS__ = { models: [{ id: " " }] };
+
+    expect(getDefaultAiModelId()).toBe("gpt-6-astra");
   });
 
   it.each<[string, boolean]>([
@@ -61,9 +68,13 @@ describe("aiConfig", () => {
     expect(getEffectiveReasoningEffort("custom-model", "high")).toBeUndefined();
   });
 
-  it("leaves model capabilities to the provider default", () => {
-    expect(getAiModelLabel("")).toBe("Provider default");
+  it("labels an empty selection with the first catalog model", () => {
+    expect(getAiModelLabel(" ")).toBe("GPT-6 Astra");
+  });
+
+  it("does not infer reasoning capabilities for a blank model ID", () => {
     expect(getEffectiveReasoningEffort("", "max")).toBeUndefined();
+    expect(getEffectiveReasoningEffort(" ", "max")).toBeUndefined();
   });
 
   it("resolves thinking levels supplied by the host", () => {

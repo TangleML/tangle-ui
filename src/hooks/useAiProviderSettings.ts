@@ -35,7 +35,7 @@ const storage = getStorage<StorageKey, AiProviderSettingsStorage>();
 const DEFAULTS: AiProviderConfig = {
   apiBase: "",
   apiKey: "",
-  model: "",
+  model: AI_CONFIG.models[0].id,
 };
 
 function readTrimmedString(
@@ -76,17 +76,22 @@ function isAllEmpty(config: AiProviderConfig): boolean {
 
 function readStoredConfig(): AiProviderConfig {
   if (typeof window === "undefined") return DEFAULTS;
-  // Empty partial records must not shadow legacy settings; an explicit model
-  // selection takes precedence even when it selects the provider default.
+  // An explicit blank model resets to the catalog default instead of reviving
+  // legacy settings. Other empty partial records must not shadow legacy settings.
   const stored = storage.getItem(AI_PROVIDER_STORAGE_KEY);
   const current = parseStoredConfig(stored);
   const hasModelSelection =
     isRecord(stored) && typeof stored.model === "string";
-  if (current && (!isAllEmpty(current) || hasModelSelection)) return current;
-  return (
-    parseStoredConfig(storage.getItem(LEGACY_COMPONENT_SEARCH_STORAGE_KEY)) ??
-    current ?? { ...DEFAULTS, model: getDefaultAiModelId() }
-  );
+  const config =
+    current && (!isAllEmpty(current) || hasModelSelection)
+      ? current
+      : (parseStoredConfig(
+          storage.getItem(LEGACY_COMPONENT_SEARCH_STORAGE_KEY),
+        ) ?? current);
+  return {
+    ...(config ?? DEFAULTS),
+    model: config?.model || getDefaultAiModelId(),
+  };
 }
 
 function subscribe(callback: () => void): () => void {
@@ -131,8 +136,8 @@ export function useAiProviderSettings() {
   );
   const isOwnKeyEnabled = useSyncExternalStore(
     subscribe,
-    () => storage.getItem(AI_USE_OWN_KEY_STORAGE_KEY) !== false,
-    () => true,
+    () => storage.getItem(AI_USE_OWN_KEY_STORAGE_KEY) === true,
+    () => false,
   );
   const model = customConfig.model;
   const reasoningEffort = getEffectiveReasoningEffort(

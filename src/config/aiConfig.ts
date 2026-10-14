@@ -10,11 +10,9 @@ export interface AiModelOption {
 
 interface AiModelOptionsConfig {
   models?: AiModelOption[];
-  defaultModel?: string;
 }
 
 export const AI_CONFIG = {
-  defaultModel: "gpt-6-sol",
   embeddingModel: "text-embedding-3-small",
   defaultReasoningEffort: "high" as const satisfies AiReasoningEffort,
   reasoningTokenAllowance: 8192,
@@ -124,9 +122,6 @@ function readInjectedModelOptions(): AiModelOptionsConfig | null {
     ...(Array.isArray(config.models)
       ? { models: config.models.map(readModelOption).filter((v) => v !== null) }
       : {}),
-    ...(typeof config.defaultModel === "string" && config.defaultModel.trim()
-      ? { defaultModel: config.defaultModel.trim() }
-      : {}),
   };
 }
 
@@ -138,8 +133,7 @@ export function getAiModelOptions(): AiModelOption[] {
 }
 
 export function getDefaultAiModelId(): string {
-  const injected = readInjectedModelOptions();
-  return injected?.defaultModel ?? AI_CONFIG.defaultModel;
+  return getAiModelOptions()[0].id;
 }
 
 export function supportsAiEmbeddings(apiBase: string): boolean {
@@ -170,8 +164,7 @@ export function getAiRequestProviderConfig(
 }
 
 export function getAiModelLabel(modelId: string): string {
-  const trimmed = modelId.trim();
-  if (!trimmed) return "Provider default";
+  const trimmed = modelId.trim() || getDefaultAiModelId();
   return (
     getAiModelOptions().find((option) => option.id === trimmed)?.label ??
     trimmed

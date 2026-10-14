@@ -29,6 +29,7 @@ describe("AiModelQuickSelect", () => {
 
   it("does not render until AI provider settings are configured", () => {
     enableFlags({ "ai-assistant": true });
+    window.localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, "true");
 
     render(<AiModelQuickSelect />);
 
@@ -116,13 +117,12 @@ describe("AiModelQuickSelect", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows Sol with High thinking in proxy mode", () => {
+  it("shows the first model with High thinking in proxy mode by default", () => {
     enableFlags({ "ai-assistant": true });
-    window.localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, "false");
     render(<AiModelQuickSelect />);
     expect(
       screen.getByRole("button", {
-        name: "AI model and thinking: GPT-6 Sol, High",
+        name: "AI model and thinking: GPT-6 Astra, High",
       }),
     ).toBeInTheDocument();
   });
