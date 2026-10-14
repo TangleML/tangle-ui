@@ -3,9 +3,17 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { DialogProvider } from "@/providers/DialogProvider/DialogProvider";
 import { useProject } from "@/services/projects/useProjects";
 
 import { ProjectHeader } from "./ProjectHeader";
+
+class ResizeObserverMock {
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+}
+vi.stubGlobal("ResizeObserver", ResizeObserverMock);
 
 const updateProject = vi.fn();
 const share = vi.fn();
@@ -33,6 +41,8 @@ vi.mock("@tanstack/react-router", () => ({
       {children}
     </a>
   ),
+  useNavigate: () => vi.fn(),
+  useSearch: () => ({}),
 }));
 
 vi.mock("@/routes/v2/pages/Tangent/context/TangentProjectContext", () => ({
@@ -65,6 +75,14 @@ const project = {
   updatedAt: new Date("2026-09-15T10:00:00Z"),
 };
 
+function renderHeader() {
+  return render(
+    <DialogProvider disableRouterSync>
+      <ProjectHeader />
+    </DialogProvider>,
+  );
+}
+
 describe("Tangent ProjectHeader", () => {
   beforeEach(() => {
     Element.prototype.scrollIntoView = vi.fn();
@@ -79,7 +97,7 @@ describe("Tangent ProjectHeader", () => {
   });
 
   it("offers the project's own page from its name", () => {
-    render(<ProjectHeader />);
+    renderHeader();
 
     expect(screen.getByRole("link", { name: /Churn model/ })).toHaveAttribute(
       "href",
@@ -90,7 +108,7 @@ describe("Tangent ProjectHeader", () => {
 
   /** The way out was the logo, which leaves Tangent rather than going up one. */
   it("offers a way back to the projects list", () => {
-    render(<ProjectHeader />);
+    renderHeader();
 
     expect(
       screen.getByRole("link", { name: "Back to projects" }),
@@ -99,7 +117,7 @@ describe("Tangent ProjectHeader", () => {
 
   /** Pinning is the only thing that keeps a shared project reachable. */
   it("offers to pin the project from inside it", () => {
-    render(<ProjectHeader />);
+    renderHeader();
 
     expect(
       screen.getByRole("button", { name: "Pin Churn model" }),
@@ -109,7 +127,7 @@ describe("Tangent ProjectHeader", () => {
   /** The link was only on the project's own page, two clicks away from here. */
   it("shares the project without leaving the session", async () => {
     const user = userEvent.setup();
-    render(<ProjectHeader />);
+    renderHeader();
 
     await user.click(screen.getByRole("button", { name: "Share Churn model" }));
 
@@ -119,7 +137,7 @@ describe("Tangent ProjectHeader", () => {
   /** The name used to rename on click, which cost the only way back out. */
   it("does not rename when the name is clicked", async () => {
     const user = userEvent.setup();
-    render(<ProjectHeader />);
+    renderHeader();
 
     await user.click(screen.getByText("Churn model"));
 
@@ -129,7 +147,7 @@ describe("Tangent ProjectHeader", () => {
 
   it("renames from the pencil beside it", async () => {
     const user = userEvent.setup();
-    render(<ProjectHeader />);
+    renderHeader();
 
     await user.click(
       screen.getByRole("button", { name: "Rename Churn model" }),
@@ -139,7 +157,7 @@ describe("Tangent ProjectHeader", () => {
   });
 
   it("says nothing about the workspace the project lives in", () => {
-    render(<ProjectHeader />);
+    renderHeader();
 
     expect(screen.queryByText(/workspace/i)).toBeNull();
   });

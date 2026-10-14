@@ -2,11 +2,19 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { DialogProvider } from "@/providers/DialogProvider/DialogProvider";
 import type { Project } from "@/services/projects/types";
 import { useDeleteProject } from "@/services/projects/useProjects";
 import { copyToClipboard } from "@/utils/string";
 
 import { ProjectActions } from "./ProjectActions";
+
+class ResizeObserverMock {
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+}
+vi.stubGlobal("ResizeObserver", ResizeObserverMock);
 
 const mutate = vi.fn();
 const notify = vi.fn();
@@ -16,6 +24,7 @@ const navigate = vi.fn();
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@tanstack/react-router")>()),
   useNavigate: () => navigate,
+  useSearch: () => ({}),
 }));
 
 vi.mock("@/services/projects/useProjects", () => ({
@@ -53,7 +62,11 @@ const project: Project = {
 };
 
 function renderActions(overrides: Partial<Project> = {}) {
-  return render(<ProjectActions project={{ ...project, ...overrides }} />);
+  return render(
+    <DialogProvider disableRouterSync>
+      <ProjectActions project={{ ...project, ...overrides }} />
+    </DialogProvider>,
+  );
 }
 
 async function openDeleteConfirmation(overrides: Partial<Project> = {}) {

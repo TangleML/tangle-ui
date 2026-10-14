@@ -1,4 +1,4 @@
-import yaml from "js-yaml";
+import * as yaml from "js-yaml";
 
 import { getAppSettings } from "@/appSettings";
 import type { PipelineLibrary } from "@/types/pipelineLibrary";

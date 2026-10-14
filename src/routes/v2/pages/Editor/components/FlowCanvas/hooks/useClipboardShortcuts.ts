@@ -18,17 +18,11 @@ import {
 import { getEffectiveSelection } from "@/routes/v2/shared/clipboard/getEffectiveSelection";
 import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { CMDALT } from "@/routes/v2/shared/shortcuts/keys";
-import { isEditableTarget } from "@/routes/v2/shared/shortcuts/shortcutUtils";
+import {
+  hasTextSelection,
+  isEditableTarget,
+} from "@/routes/v2/shared/shortcuts/shortcutUtils";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
-
-function hasTextSelection(): boolean {
-  const selection = window.getSelection();
-  return (
-    selection !== null &&
-    !selection.isCollapsed &&
-    selection.toString().length > 0
-  );
-}
 
 export function useClipboardShortcuts(
   spec: ComponentSpec | null,
@@ -59,14 +53,12 @@ export function useClipboardShortcuts(
       id: "copy",
       keys: [CMDALT, "C"],
       label: "Copy",
-      action: (e) => {
-        if (hasTextSelection()) {
-          return false;
-        }
-        e.preventDefault();
-        if (!spec) return;
+      action: () => {
+        if (hasTextSelection()) return false;
+        if (!spec) return false;
         const selection = getEffectiveSelection(registry, spec, editor);
-        if (selection.length === 0) return;
+        if (selection.length === 0) return false;
+
         copySelectedNodes(clipboard, spec, selection).catch(() =>
           notify(CLIPBOARD_COPY_FAILED_MESSAGE, "error"),
         );

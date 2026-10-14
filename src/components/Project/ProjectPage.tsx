@@ -8,6 +8,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
 import { useTrackRecentlyViewedProject } from "@/hooks/useTrackRecentlyViewedProject";
 import { useBackend } from "@/providers/BackendProvider";
+import { DialogProvider } from "@/providers/DialogProvider/DialogProvider";
 import { APP_ROUTES } from "@/routes/appRoutes";
 import { isProjectGone } from "@/services/projects/errors";
 import { useProject } from "@/services/projects/useProjects";
@@ -87,29 +88,31 @@ function ProjectDetail({ projectId }: { projectId: string | undefined }) {
   }
 
   return (
-    <BlockStack gap="6">
-      <ProjectHeader project={project} />
+    <DialogProvider>
+      <BlockStack gap="6">
+        <ProjectHeader project={project} />
 
-      <div className="flex w-full flex-col items-start gap-6 xl:flex-row xl:gap-8">
-        <BlockStack gap="6" className="w-full shrink-0 xl:w-108">
-          <ProjectResources
-            projectId={project.id}
-            selectedResourceId={selectedResourceId}
-            onSelect={setSelectedResourceId}
-          />
-          <Separator />
-          <ProjectRuns projectId={project.id} />
-        </BlockStack>
+        <div className="flex w-full flex-col items-start gap-6 xl:flex-row xl:gap-8">
+          <BlockStack gap="6" className="w-full shrink-0 xl:w-108">
+            <ProjectResources
+              projectId={project.id}
+              selectedResourceId={selectedResourceId}
+              onSelect={setSelectedResourceId}
+            />
+            <Separator />
+            <ProjectRuns projectId={project.id} />
+          </BlockStack>
 
-        <div className="min-w-0 w-full flex-1">
-          <ProjectResourcePreview
-            projectId={project.id}
-            resourceId={selectedResourceId}
-          />
+          <div className="min-w-0 w-full flex-1">
+            <ProjectResourcePreview
+              projectId={project.id}
+              resourceId={selectedResourceId}
+            />
+          </div>
+
+          <ProjectSidebar project={project} />
         </div>
-
-        <ProjectSidebar project={project} />
-      </div>
-    </BlockStack>
+      </BlockStack>
+    </DialogProvider>
   );
 }
