@@ -5,11 +5,13 @@ import {
   OpenAIProvider,
   Runner,
   tool,
+  webSearchTool,
 } from "@openai/agents";
 import OpenAI from "openai";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
+import { ProxyClient } from "@/agent/config";
 import type { ComponentReference } from "@/utils/componentSpec";
 
 import { aiProviderFetch } from "./aiProviderClient";
@@ -61,6 +63,23 @@ const fetchMock = vi.fn<typeof fetch>();
 
 function sentBody(index = 0) {
   return JSON.parse(String(fetchMock.mock.calls[index]?.[1]?.body));
+}
+
+function nativeProxyRunner(): Runner {
+  const client = new ProxyClient();
+  client.ensureConfigured({
+    apiBase: "https://backend.example.com/ai/v1",
+    apiKey: "",
+    credentials: "include",
+    model: "claude-sonnet-5-5",
+  });
+  return new Runner({
+    modelProvider: new OpenAIProvider({
+      openAIClient: client.openai,
+      useResponses: true,
+    }),
+    tracingDisabled: true,
+  });
 }
 
 describe("aiProviderFetch", () => {
@@ -470,7 +489,14 @@ describe("aiProviderFetch", () => {
         stop_reason: "max_tokens",
       }),
     );
-    await expect(request({})).rejects.toThrow(/token budget/i);
+    const response = await request({});
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      error: {
+        type: "invalid_request_error",
+        message: "Anthropic exhausted its token budget during a tool call",
+      },
+    });
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
@@ -485,7 +511,15 @@ describe("aiProviderFetch", () => {
         stop_reason: "model_context_window_exceeded",
       }),
     );
-    await expect(request({})).rejects.toThrow(/context window/i);
+    const response = await request({});
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      error: {
+        type: "invalid_request_error",
+        message:
+          "Anthropic reached its context window limit before completing the response",
+      },
+    });
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
@@ -631,14 +665,60 @@ describe("aiProviderFetch", () => {
     });
   });
 
-  it("preserves fetch cancellation", async () => {
+  it.each([
+    new DOMException("Aborted", "AbortError"),
+    new TypeError("Network request failed"),
+  ])("preserves fetch rejection %s", async (error) => {
     const controller = new AbortController();
-    const error = new DOMException("Aborted", "AbortError");
     fetchMock.mockRejectedValue(error);
     await expect(request({}, { signal: controller.signal })).rejects.toBe(
       error,
     );
     expect(fetchMock.mock.calls[0][1]?.signal).toBe(controller.signal);
+  });
+
+  it.each([
+    new DOMException("Aborted", "AbortError"),
+    new TypeError("Response stream failed"),
+  ])("preserves response body rejection %s", async (error) => {
+    fetchMock.mockResolvedValue(
+      new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.error(error);
+          },
+        }),
+      ),
+    );
+    await expect(request({})).rejects.toBe(error);
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it("returns a nonretryable error for invalid native JSON with request tracing intact", async () => {
+    fetchMock.mockResolvedValue(
+      new Response("not-json", {
+        headers: {
+          "x-request-id": "trace",
+          "x-should-retry": "true",
+          "content-length": "8",
+          "content-encoding": "gzip",
+        },
+      }),
+    );
+    const response = await request({});
+    expect(response.status).toBe(400);
+    expect(response.headers.get("x-request-id")).toBe("trace");
+    expect(response.headers.get("x-should-retry")).toBe("false");
+    expect(response.headers.get("content-type")).toBe("application/json");
+    expect(response.headers.has("content-length")).toBe(false);
+    expect(response.headers.has("content-encoding")).toBe(false);
+    expect(await response.json()).toEqual({
+      error: {
+        type: "invalid_request_error",
+        message: expect.stringMatching(/JSON/i),
+      },
+    });
+    expect(fetchMock).toHaveBeenCalledOnce();
   });
 
   it.each([
@@ -663,10 +743,83 @@ describe("aiProviderFetch", () => {
   ])(
     "rejects unsupported or invalid input without sending it: %j",
     async (body) => {
-      await expect(request(body)).rejects.toThrow();
+      const response = await request(body);
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({
+        error: {
+          type: "invalid_request_error",
+          message: expect.any(String),
+        },
+      });
       expect(fetchMock).not.toHaveBeenCalled();
     },
   );
+
+  it.each([
+    {
+      failure: "truncated tool call",
+      body: {
+        ...nativeMessage,
+        content: [
+          { type: "tool_use", id: "toolu_partial", name: "lookup", input: {} },
+        ],
+        stop_reason: "max_tokens",
+      },
+      message: /Anthropic exhausted its token budget during a tool call/,
+    },
+    {
+      failure: "context overflow",
+      body: {
+        ...nativeMessage,
+        stop_reason: "model_context_window_exceeded",
+      },
+      message: /Anthropic reached its context window limit/,
+    },
+    {
+      failure: "unsupported content",
+      body: { ...nativeMessage, content: [{ type: "unknown_content" }] },
+      message: /Unsupported Anthropic response block: unknown_content/,
+    },
+    {
+      failure: "invalid JSON",
+      body: "not-json",
+      message: /JSON/i,
+    },
+  ])(
+    "surfaces $failure through the real SDK without retrying the upstream request",
+    async ({ body, message }) => {
+      fetchMock.mockImplementation(
+        async () =>
+          new Response(typeof body === "string" ? body : JSON.stringify(body), {
+            headers: { "x-request-id": "trace", "x-should-retry": "true" },
+          }),
+      );
+      const result = nativeProxyRunner().run(
+        new Agent({ name: "Assistant", model: "claude-sonnet-5-5" }),
+        "Hello",
+      );
+
+      await expect(result).rejects.toBeInstanceOf(OpenAI.BadRequestError);
+      await expect(result).rejects.toThrow(message);
+      await expect(result).rejects.toHaveProperty("requestID", "trace");
+      expect(fetchMock).toHaveBeenCalledOnce();
+    },
+  );
+
+  it("surfaces unsupported native tools through the real SDK without sending a request", async () => {
+    const result = nativeProxyRunner().run(
+      new Agent({
+        name: "Assistant",
+        model: "claude-sonnet-5-5",
+        tools: [webSearchTool()],
+      }),
+      "Hello",
+    );
+
+    await expect(result).rejects.toBeInstanceOf(OpenAI.BadRequestError);
+    await expect(result).rejects.toThrow(/Unsupported Anthropic tool/);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 
   it("keeps one SDK chat and its tool history across OpenAI, Claude, and OpenAI", async () => {
     const openAIText = (id: string, text: string) => ({

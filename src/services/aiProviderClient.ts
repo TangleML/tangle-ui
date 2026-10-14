@@ -307,6 +307,27 @@ function toResponses(value: unknown, model: string): JsonObject {
   };
 }
 
+// The SDK retries fetch rejections as network failures, even for translation errors.
+function translationErrorResponse(
+  error: unknown,
+  headers?: HeadersInit,
+): Response {
+  const responseHeaders = new Headers(headers);
+  responseHeaders.delete("content-length");
+  responseHeaders.delete("content-encoding");
+  responseHeaders.set("content-type", "application/json");
+  responseHeaders.set("x-should-retry", "false");
+  return new Response(
+    JSON.stringify({
+      error: {
+        message: error instanceof Error ? error.message : String(error),
+        type: "invalid_request_error",
+      },
+    }),
+    { status: 400, statusText: "Bad Request", headers: responseHeaders },
+  );
+}
+
 /**
  * Keep the application's Responses shape and history; translate at the network
  * boundary for native Claude models. Other endpoints (including embeddings) and
@@ -378,16 +399,28 @@ export async function aiProviderFetch(
   const target = proxy
     ? url.replace(/\/v1\/responses(?=\?|$)/, "/anthropic/v1/messages")
     : url.replace(/\/responses(?=\?|$)/, "/messages");
+  let body: string;
+  try {
+    body = JSON.stringify(toAnthropic(request, proxy));
+  } catch (error) {
+    return translationErrorResponse(error);
+  }
   const response = await fetch(target, {
     ...init,
     method: init?.method ?? original?.method ?? "POST",
     credentials,
     signal: init?.signal ?? original?.signal,
     headers,
-    body: JSON.stringify(toAnthropic(request, proxy)),
+    body,
   });
   if (!response.ok) return response;
-  const payload = toResponses(await response.json(), request.model);
+  const responseBody = await response.text();
+  let payload: JsonObject;
+  try {
+    payload = toResponses(JSON.parse(responseBody), request.model);
+  } catch (error) {
+    return translationErrorResponse(error, response.headers);
+  }
   const responseHeaders = new Headers(response.headers);
   responseHeaders.delete("content-length");
   responseHeaders.delete("content-encoding");
