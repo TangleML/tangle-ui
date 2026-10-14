@@ -162,7 +162,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
             onSelect={() => void confirmAndDelete()}
             {...tracking("projects.delete_project_open")}
           >
-            <Icon name="Trash2" size="sm" />
+            <Icon name="Trash" size="sm" />
             Delete project
           </DropdownMenuItem>
         </DropdownMenuContent>

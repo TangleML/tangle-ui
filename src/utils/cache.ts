@@ -1,4 +1,4 @@
-import yaml from "js-yaml";
+import * as yaml from "js-yaml";
 
 import type { TaskSpec } from "./componentSpec";
 import { ISO8601_DURATION_ZERO_DAYS } from "./constants";

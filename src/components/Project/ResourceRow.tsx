@@ -101,7 +101,7 @@ export function ResourceRow({
             }
             {...tracking("projects.remove_resource_open")}
           >
-            <Icon name={destroys ? "Trash2" : "X"} size="sm" />
+            <Icon name={destroys ? "Trash" : "X"} size="sm" />
           </Button>
         )}
       </TableCell>

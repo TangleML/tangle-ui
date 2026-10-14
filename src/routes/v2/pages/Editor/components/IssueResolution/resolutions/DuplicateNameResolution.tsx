@@ -82,7 +82,7 @@ export function DuplicateNameResolution({
           )}
           onClick={handleDelete}
         >
-          <Icon name="Trash2" size="xs" />
+          <Icon name="Trash" size="xs" />
           Delete {entityType}
         </Button>
       </div>

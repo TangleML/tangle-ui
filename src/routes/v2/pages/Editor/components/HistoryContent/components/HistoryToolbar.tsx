@@ -82,7 +82,7 @@ export function HistoryToolbar({
               {...tracking("v2.pipeline_editor.history.clear")}
               onClick={onClear}
             >
-              <Icon name="Trash2" size="xs" />
+              <Icon name="Trash" size="xs" />
             </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom">Clear history</TooltipContent>
