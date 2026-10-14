@@ -2,6 +2,10 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import {
+  AI_PROVIDER_STORAGE_KEY,
+  AI_USE_OWN_KEY_STORAGE_KEY,
+} from "@/hooks/useAiProviderSettings";
 import type {
   ProjectResourcePage,
   ProjectResourceSummary,
@@ -54,7 +58,7 @@ function enableFlags(flags: Record<string, boolean>) {
 
 function configureAi() {
   localStorage.setItem(
-    "tangle.aiProvider.config",
+    AI_PROVIDER_STORAGE_KEY,
     JSON.stringify({ apiBase: "https://proxy.example/v1" }),
   );
 }
@@ -203,22 +207,32 @@ describe("ProjectResources", () => {
       ).toBeInTheDocument();
     });
 
-    it("starts a session in Tangent, since one cannot be started here", async () => {
-      const user = userEvent.setup();
-      renderResources();
+    it.each(["default proxy", "own-key provider"])(
+      "starts a session in Tangent using the %s",
+      async (provider) => {
+        if (provider === "default proxy") {
+          localStorage.removeItem(AI_PROVIDER_STORAGE_KEY);
+          localStorage.removeItem(AI_USE_OWN_KEY_STORAGE_KEY);
+        } else {
+          localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, "true");
+        }
+        const user = userEvent.setup();
+        renderResources();
 
-      await user.click(screen.getByRole("button", { name: /New session/ }));
+        await user.click(screen.getByRole("button", { name: /New session/ }));
 
-      expect(navigate).toHaveBeenCalledWith({
-        to: "/tangent/$projectId",
-        params: { projectId: "project-1" },
-        search: { session: "new" },
-      });
-    });
+        expect(navigate).toHaveBeenCalledWith({
+          to: "/tangent/$projectId",
+          params: { projectId: "project-1" },
+          search: { session: "new" },
+        });
+      },
+    );
 
     /** A session nobody can answer is not worth starting. */
-    it("cannot start one without an AI provider", () => {
-      localStorage.removeItem("tangle.aiProvider.config");
+    it("cannot start one in own-key mode without a configured provider", () => {
+      localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, "true");
+      localStorage.removeItem(AI_PROVIDER_STORAGE_KEY);
       renderResources();
 
       expect(
