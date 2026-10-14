@@ -1,7 +1,10 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { AI_USE_OWN_KEY_STORAGE_KEY } from "@/hooks/useAiProviderSettings";
+import {
+  AI_PROXY_STORAGE_KEY,
+  AI_USE_OWN_KEY_STORAGE_KEY,
+} from "@/hooks/useAiProviderSettings";
 
 import { AiModelQuickSelect } from "./AiModelQuickSelect";
 
@@ -109,7 +112,7 @@ describe("AiModelQuickSelect", () => {
 
     expect(select).toHaveTextContent("Provider default");
     expect(
-      JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "").model,
+      JSON.parse(window.localStorage.getItem(AI_PROXY_STORAGE_KEY) ?? "").model,
     ).toBe("");
   });
 });

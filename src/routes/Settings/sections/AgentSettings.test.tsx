@@ -7,7 +7,10 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { AI_USE_OWN_KEY_STORAGE_KEY } from "@/hooks/useAiProviderSettings";
+import {
+  AI_PROXY_STORAGE_KEY,
+  AI_USE_OWN_KEY_STORAGE_KEY,
+} from "@/hooks/useAiProviderSettings";
 
 import { AgentSettings } from "./AgentSettings";
 
@@ -113,7 +116,7 @@ describe("AgentSettings", () => {
   it("lets the backend choose the model after the model field is cleared", async () => {
     window.localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, "false");
     window.localStorage.setItem(
-      STORAGE_KEY,
+      AI_PROXY_STORAGE_KEY,
       JSON.stringify({ model: "gpt-5-mini" }),
     );
     mockFetch.mockResolvedValue(new Response(JSON.stringify({ ok: true })));
