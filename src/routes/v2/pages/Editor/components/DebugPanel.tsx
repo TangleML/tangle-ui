@@ -1,4 +1,4 @@
-import yaml from "js-yaml";
+import * as yaml from "js-yaml";
 import { observer } from "mobx-react-lite";
 import { useEffect, useState } from "react";
 

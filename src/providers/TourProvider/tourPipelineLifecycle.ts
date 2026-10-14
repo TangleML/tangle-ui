@@ -1,4 +1,4 @@
-import yaml from "js-yaml";
+import * as yaml from "js-yaml";
 
 import type { TourDefinition } from "@/components/Learn/tours/registry";
 import { defaultPipelineYamlWithName } from "@/utils/constants";

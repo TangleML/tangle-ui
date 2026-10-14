@@ -53,3 +53,18 @@ LibraryDB.version(DEXIE_EPOCH + 1).stores({
 LibraryDB.version(DEXIE_EPOCH + 2).stores({
   favorites: "[type+id]",
 });
+
+// GitHub libraries linked before lucide-react 1.x stored its since-removed
+// `Github` brand icon, and `<Icon>` cannot render a name lucide no longer has.
+const RETIRED_LIBRARY_ICONS: Record<string, keyof typeof icons> = {
+  Github: "CloudSync",
+};
+
+function withRenderableIcon(
+  library: StoredLibrary | undefined,
+): StoredLibrary | undefined {
+  if (!library?.icon || Object.hasOwn(icons, library.icon)) return library;
+  return { ...library, icon: RETIRED_LIBRARY_ICONS[library.icon] };
+}
+
+LibraryDB.component_libraries.hook("reading", withRenderableIcon);

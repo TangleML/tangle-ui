@@ -14,6 +14,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => ({
   Link: ({ children }: { children: ReactNode }) => <a>{children}</a>,
   useNavigate: () => vi.fn(),
   useParams: () => ({ projectId: "project-1" }),
+  useSearch: () => ({}),
 }));
 
 vi.mock("@/providers/BackendProvider", () => ({

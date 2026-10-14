@@ -3,7 +3,7 @@
  */
 import Dexie, { type EntityTable } from "dexie";
 import type { UndoEvent, UndoManager } from "mobx-keystone";
-import { UndoStore } from "mobx-keystone";
+import { frozen, FrozenCheckMode, UndoStore } from "mobx-keystone";
 
 const CURRENT_VERSION = 2;
 const MAX_UNDO_EVENTS = 10;
@@ -82,5 +82,7 @@ export async function saveIdStack(
 }
 
 export function createUndoStoreWithEvents(events: UndoEvent[]): UndoStore {
-  return new UndoStore({ undoEvents: events });
+  return new UndoStore({
+    undoEvents: events.map((event) => frozen(event, FrozenCheckMode.Off)),
+  });
 }

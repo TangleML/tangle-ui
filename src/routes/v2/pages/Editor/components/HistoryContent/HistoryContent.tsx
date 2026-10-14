@@ -25,7 +25,7 @@ export const HistoryContent = observer(function HistoryContent() {
         align="center"
       >
         <Icon
-          name="History"
+          name="RotateCcwClock"
           size="md"
           className="text-slate-300 dark:text-slate-600"
         />
