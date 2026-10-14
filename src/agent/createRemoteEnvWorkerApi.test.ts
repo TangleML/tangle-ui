@@ -170,6 +170,46 @@ describe("createRemoteEnvWorkerApi", () => {
     );
   });
 
+  it("passes the original preference and host capabilities into each turn", async () => {
+    const api = createRemoteEnvWorkerApi();
+    api.init(bridge, { mode: "editor" });
+    const hostConfig: AiProviderConfig = {
+      ...aiConfig,
+      model: "host-selected",
+      reasoningEffort: "low",
+      reasoningEffortPreference: "none",
+      modelCapabilities: [
+        { id: "host-selected", reasoningEfforts: ["low", "high"] },
+        { id: "host-remote", reasoningEfforts: ["none", "high"] },
+      ],
+    };
+    api.setAiConfig(hostConfig);
+    api.spawnAgent({ agentId: "a1", tools: [], systemPrompt: "" });
+
+    await api.runTurn({ agentId: "a1", message: "hi" }, onStatus);
+
+    expect(vi.mocked(createSession)).toHaveBeenCalledWith(
+      expect.objectContaining({ aiConfig: hostConfig }),
+    );
+  });
+
+  it.each(["", "   "])(
+    "preserves an explicitly blank remote model %j",
+    async (model) => {
+      const api = createRemoteEnvWorkerApi();
+      api.init(bridge, { mode: "editor" });
+      api.setAiConfig(aiConfig);
+      api.spawnAgent({ agentId: "a1", tools: [], systemPrompt: "", model });
+
+      await api.runTurn({ agentId: "a1", message: "hi" }, onStatus);
+
+      expect(vi.mocked(buildRemoteEditorAgent)).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ model }),
+      );
+    },
+  );
+
   it("rejects overlapping turns for the same agent", async () => {
     const turn = defer<{ finalOutput: string }>();
     runAgent.mockReturnValueOnce(turn.promise);

@@ -26,6 +26,10 @@ import {
   extractComponentMetadata,
 } from "./componentSearchIndex";
 
+const RERANK_MIN_OUTPUT_TOKENS = 1500;
+// A scored match needs about 90 tokens; round up for JSON formatting overhead.
+const RERANK_OUTPUT_TOKENS_PER_CANDIDATE = 100;
+
 /**
  * Compact candidate shape sent to the model. Only the fields that inform
  * judgment: name, description, source, and i/o summaries. Implementation/
@@ -306,7 +310,7 @@ async function callLlmResponse(
       ...(options.reasoningEffort
         ? { reasoning: { effort: options.reasoningEffort } }
         : {}),
-      // Host-defined reasoning models can reject temperature with unknown IDs.
+      // Keep rankings repeatable, except when reasoning models reject temperature.
       ...(model && !options.reasoningEffort && !isAiReasoningModel(model)
         ? { temperature: 0 }
         : {}),
@@ -370,8 +374,11 @@ export async function rerankComponentsByNaturalLanguage(
     systemPrompt: buildRerankSystemPrompt(scoreAllCandidates),
     userPrompt: buildRerankUserPrompt(trimmed, candidates),
     maxOutputTokens: scoreAllCandidates
-      ? Math.max(1500, candidates.length * 100)
-      : 1500,
+      ? Math.max(
+          RERANK_MIN_OUTPUT_TOKENS,
+          candidates.length * RERANK_OUTPUT_TOKENS_PER_CANDIDATE,
+        )
+      : RERANK_MIN_OUTPUT_TOKENS,
   });
 
   let matchesValue: RerankedMatch[] = [];
