@@ -21,6 +21,7 @@ export function AgentSettings() {
   const {
     config,
     customConfig,
+    modelPreferences,
     isOwnKeyEnabled,
     setOwnKeyEnabled,
     update,
@@ -35,8 +36,7 @@ export function AgentSettings() {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [showKey, setShowKey] = useState(false);
   const [testing, setTesting] = useState(false);
-  const testPendingRef = useRef(false);
-  const testRunIdRef = useRef(0);
+  const testControllerRef = useRef<AbortController | null>(null);
   const model = (modelDraft ?? config.model).trim();
   const testConfig: AiProviderConfig = isOwnKeyEnabled
     ? {
@@ -45,8 +45,10 @@ export function AgentSettings() {
         model,
         reasoningEffort: getEffectiveReasoningEffort(
           model,
-          customConfig.reasoningEffort,
+          modelPreferences.reasoningEffortPreference,
+          config.modelCapabilities,
         ),
+        reasoningEffortPreference: modelPreferences.reasoningEffortPreference,
       }
     : config;
   const unconfiguredStatus = isOwnKeyEnabled
@@ -56,29 +58,42 @@ export function AgentSettings() {
 
   useEffect(() => {
     setModelDraft(null);
-  }, [config.model]);
+  }, [config.model, isOwnKeyEnabled]);
 
   useEffect(() => {
-    testRunIdRef.current += 1;
+    setTesting(false);
     setValidationError(null);
+    return () => {
+      const controller = testControllerRef.current;
+      testControllerRef.current = null;
+      controller?.abort();
+    };
   }, [
     testConfig.apiBase,
     testConfig.apiKey,
     testConfig.credentials,
     testConfig.model,
     testConfig.reasoningEffort,
+    testConfig.reasoningEffortPreference,
     isOwnKeyEnabled,
   ]);
 
+  const abortTest = () => {
+    const controller = testControllerRef.current;
+    testControllerRef.current = null;
+    controller?.abort();
+    setTesting(false);
+  };
+
   const handleOwnKeyEnabledChange = (enabled: boolean) => {
-    testRunIdRef.current += 1;
+    abortTest();
     setShowKey(false);
     setOwnKeyEnabled(enabled);
   };
 
   const handleSave = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (testPendingRef.current) return;
+    if (testControllerRef.current) return;
 
     const trimmed = testConfig;
     if (!trimmed.apiBase) {
@@ -91,15 +106,15 @@ export function AgentSettings() {
     }
     setValidationError(null);
 
-    const testRunId = testRunIdRef.current + 1;
-    testRunIdRef.current = testRunId;
-    const isCurrentTest = () => testRunIdRef.current === testRunId;
+    const controller = new AbortController();
+    testControllerRef.current = controller;
+    const isCurrentTest = () => testControllerRef.current === controller;
 
-    testPendingRef.current = true;
     setTesting(true);
     try {
       const response = await fetch(`${trimmed.apiBase}/responses`, {
         method: "POST",
+        signal: controller.signal,
         credentials: trimmed.credentials,
         headers: {
           "content-type": "application/json",
@@ -165,13 +180,15 @@ export function AgentSettings() {
         "error",
       );
     } finally {
-      testPendingRef.current = false;
-      setTesting(false);
+      if (isCurrentTest()) {
+        testControllerRef.current = null;
+        setTesting(false);
+      }
     }
   };
 
   const handleClear = () => {
-    testRunIdRef.current += 1;
+    abortTest();
     clear();
     setApiBase("");
     setApiKey("");

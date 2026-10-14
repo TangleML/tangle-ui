@@ -46,7 +46,7 @@ export function AiModelPicker({
   variant = "settings",
   onModelSelect,
 }: AiModelPickerProps) {
-  const { config, customConfig, update } = useAiProviderSettings();
+  const { config, modelPreferences, update } = useAiProviderSettings();
   const [view, setView] = useState<"closed" | "thinking" | "models">("closed");
   const open = view !== "closed";
   const selectingModel = view === "models";
@@ -56,11 +56,13 @@ export function AiModelPicker({
   const contentRef = useRef<HTMLDivElement>(null);
   const dismissedOutsideRef = useRef(false);
   const focusRef = useRef<HTMLButtonElement>(null);
+  const modelOptionRefs = useRef(new Map<string, HTMLButtonElement>());
   const thinkingHintId = useId();
   const modelDescriptionId = useId();
   const modelLabel = getAiModelLabel(config.model);
   const preference =
-    customConfig.reasoningEffort ?? AI_CONFIG.defaultReasoningEffort;
+    modelPreferences.reasoningEffortPreference ??
+    AI_CONFIG.defaultReasoningEffort;
   const levels = getAiModelReasoningLevels(config.model);
   const effort = config.reasoningEffort;
   const effortLabel = effort ? getAiReasoningLabel(effort) : "Unavailable";
@@ -74,8 +76,10 @@ export function AiModelPicker({
     : [{ id: config.model }, ...configuredOptions];
 
   useEffect(() => {
-    if (open) focusRef.current?.focus();
-  }, [open, selectingModel]);
+    if (!open) return;
+    if (selectingModel) modelOptionRefs.current.get(config.model)?.focus();
+    else focusRef.current?.focus();
+  }, [open, selectingModel, config.model]);
 
   useEffect(() => {
     if (!open) return;
@@ -159,22 +163,54 @@ export function AiModelPicker({
             {selectingModel ? "Models" : modelLabel}
           </Button>
           {selectingModel ? (
-            <div role="group" aria-label="Models">
+            <div role="radiogroup" aria-label="Models">
               <BlockStack gap="2">
                 {options.map((option, index) => (
                   <Button
                     key={option.id}
-                    ref={option.id === config.model ? focusRef : undefined}
+                    ref={(element) => {
+                      if (element)
+                        modelOptionRefs.current.set(option.id, element);
+                      else modelOptionRefs.current.delete(option.id);
+                    }}
                     type="button"
                     variant="ghost"
+                    role="radio"
                     aria-label={option.label ?? option.id}
                     aria-describedby={
                       option.description
                         ? `${modelDescriptionId}-${index}`
                         : undefined
                     }
-                    aria-pressed={option.id === config.model}
-                    className="h-auto w-full justify-between px-3 py-3 text-left whitespace-normal aria-[pressed=true]:bg-accent"
+                    aria-checked={option.id === config.model}
+                    tabIndex={option.id === config.model ? 0 : -1}
+                    className="h-auto w-full justify-between px-3 py-3 text-left whitespace-normal aria-[checked=true]:bg-accent"
+                    onKeyDown={(event) => {
+                      let nextIndex: number;
+                      if (
+                        event.key === "ArrowDown" ||
+                        event.key === "ArrowRight"
+                      ) {
+                        nextIndex = (index + 1) % options.length;
+                      } else if (
+                        event.key === "ArrowUp" ||
+                        event.key === "ArrowLeft"
+                      ) {
+                        nextIndex =
+                          (index - 1 + options.length) % options.length;
+                      } else if (event.key === "Home") {
+                        nextIndex = 0;
+                      } else if (event.key === "End") {
+                        nextIndex = options.length - 1;
+                      } else {
+                        return;
+                      }
+                      event.preventDefault();
+                      const nextModel = options[nextIndex].id;
+                      update({ model: nextModel });
+                      onModelSelect?.();
+                      modelOptionRefs.current.get(nextModel)?.focus();
+                    }}
                     onClick={() => {
                       update({ model: option.id });
                       onModelSelect?.();
@@ -220,7 +256,7 @@ export function AiModelPicker({
                     onValueChange={([index]) => {
                       const level = levels[index];
                       if (level && level.value !== effort) {
-                        update({ reasoningEffort: level.value });
+                        update({ reasoningEffortPreference: level.value });
                       }
                     }}
                   />
