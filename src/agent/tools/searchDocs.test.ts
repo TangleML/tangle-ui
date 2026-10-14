@@ -208,22 +208,61 @@ describe("executeSearchDocs", () => {
     expect(parsed.instruction).toContain("markdown link");
   });
 
-  it("omits unrelated documents when the text fallback has no matches", async () => {
-    fetchMock.mockResolvedValue(jsonResponse(makeStore()));
-    embeddingsCreateMock.mockRejectedValue(new Error("Embeddings unavailable"));
+  it.each(["unrelated-query", "How do I?"])(
+    "omits documents without matching topic words for '%s'",
+    async (query) => {
+      const store = makeStore();
+      store.vectors[0].content = "How do I pick a name for the output?";
+      fetchMock.mockResolvedValue(jsonResponse(store));
+      embeddingsCreateMock.mockRejectedValue(
+        new Error("Embeddings unavailable"),
+      );
 
-    const { executeSearchDocs, DocsVectorStoreCache } =
-      await import("./searchDocs");
-    const raw = await executeSearchDocs(
-      { query: "unrelated-query" },
-      fakeProvider,
-      new DocsVectorStoreCache(),
-    );
-    const parsed = JSON.parse(raw);
+      const { executeSearchDocs, DocsVectorStoreCache } =
+        await import("./searchDocs");
+      const raw = await executeSearchDocs(
+        { query },
+        fakeProvider,
+        new DocsVectorStoreCache(),
+      );
+      const parsed = JSON.parse(raw);
 
-    expect(parsed.error).toBeUndefined();
-    expect(parsed.results).toEqual([]);
-  });
+      expect(parsed.error).toBeUndefined();
+      expect(parsed.results).toEqual([]);
+    },
+  );
+
+  it.each([
+    { query: "How do I enable caching?", topic: "Caching" },
+    { query: "How do I define a component?", topic: "Component" },
+  ])(
+    "ranks the topic above question filler for '$query'",
+    async ({ query, topic }) => {
+      const store = makeStore();
+      store.vectors = [makeVector("Overview", 0), makeVector(topic, 1)];
+      store.vectors[0].content = "How do I pick a name for the output?";
+      fetchMock.mockResolvedValue(jsonResponse(store));
+      embeddingsCreateMock.mockRejectedValue(
+        new Error("Embeddings unavailable"),
+      );
+
+      const { executeSearchDocs, DocsVectorStoreCache } =
+        await import("./searchDocs");
+      const parsed = JSON.parse(
+        await executeSearchDocs(
+          { query, topK: 1 },
+          fakeProvider,
+          new DocsVectorStoreCache(),
+        ),
+      );
+
+      expect(parsed.error).toBeUndefined();
+      expect(parsed.searchMode).toBe("text");
+      expect(parsed.results).toEqual([
+        expect.objectContaining({ title: topic, score: 0.5 }),
+      ]);
+    },
+  );
 
   it("searches docs without requesting unsupported Anthropic embeddings", async () => {
     fetchMock.mockResolvedValue(jsonResponse(makeStore()));

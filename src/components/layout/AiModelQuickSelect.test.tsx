@@ -44,6 +44,7 @@ describe("AiModelQuickSelect", () => {
       "component-search-v2": false,
       "tangent-shell": false,
     });
+    window.localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, "true");
     window.localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -62,6 +63,7 @@ describe("AiModelQuickSelect", () => {
 
   it("shows configured model choices when component search is enabled", () => {
     enableFlags({ "component-search-v2": true });
+    window.localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, "true");
     window.localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -79,12 +81,13 @@ describe("AiModelQuickSelect", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /^Choose a model:/ }));
     expect(
-      screen.getByRole("button", { name: "gpt-4.1-mini" }),
+      screen.getByRole("radio", { name: "gpt-4.1-mini" }),
     ).toBeInTheDocument();
   });
 
   it("shows configured model choices when the AI assistant is enabled", () => {
     enableFlags({ "ai-assistant": true });
+    window.localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, "true");
     window.localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({

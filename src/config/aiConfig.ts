@@ -1,11 +1,12 @@
-import type { AiReasoningEffort } from "@/types/aiProvider";
+import type {
+  AiModelCapabilities,
+  AiReasoningEffort,
+} from "@/types/aiProvider";
 import { isRecord } from "@/utils/typeGuards";
 
-export interface AiModelOption {
-  id: string;
+export interface AiModelOption extends AiModelCapabilities {
   label?: string;
   description?: string;
-  reasoningEfforts?: AiReasoningEffort[];
 }
 
 interface AiModelOptionsConfig {
@@ -175,10 +176,13 @@ export function getAiModelLabel(modelId: string): string {
   );
 }
 
-export function getAiModelReasoningLevels(modelId: string) {
+export function getAiModelReasoningLevels(
+  modelId: string,
+  models: readonly AiModelCapabilities[] = getAiModelOptions(),
+) {
   const id = modelId.trim();
   if (!id) return [];
-  const model = getAiModelOptions().find((option) => option.id === id);
+  const model = models.find((option) => option.id === id);
   return AI_CONFIG.reasoningLevels.filter((level) =>
     model?.reasoningEfforts?.includes(level.value),
   );
@@ -187,8 +191,9 @@ export function getAiModelReasoningLevels(modelId: string) {
 export function getEffectiveReasoningEffort(
   modelId: string,
   preference: AiReasoningEffort = AI_CONFIG.defaultReasoningEffort,
+  models?: readonly AiModelCapabilities[],
 ): AiReasoningEffort | undefined {
-  const levels = getAiModelReasoningLevels(modelId);
+  const levels = getAiModelReasoningLevels(modelId, models);
   const preferredIndex = AI_CONFIG.reasoningLevels.findIndex(
     (level) => level.value === preference,
   );

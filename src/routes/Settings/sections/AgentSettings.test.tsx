@@ -7,7 +7,10 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { AI_USE_OWN_KEY_STORAGE_KEY } from "@/hooks/useAiProviderSettings";
+import {
+  AI_PROXY_STORAGE_KEY,
+  AI_USE_OWN_KEY_STORAGE_KEY,
+} from "@/hooks/useAiProviderSettings";
 
 import { AgentSettings } from "./AgentSettings";
 
@@ -48,7 +51,7 @@ function openModels() {
 
 function chooseModel(name: string) {
   openModels();
-  fireEvent.click(screen.getByRole("button", { name }));
+  fireEvent.click(screen.getByRole("radio", { name }));
 }
 
 describe("AgentSettings", () => {
@@ -124,6 +127,23 @@ describe("AgentSettings", () => {
     expect(screen.getByLabelText("API key")).toHaveValue(savedConfig.apiKey);
   });
 
+  it("discards an unfinished custom model when switching modes with the same saved model", () => {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ model: "gpt-6-sol" }),
+    );
+    window.localStorage.setItem(
+      AI_PROXY_STORAGE_KEY,
+      JSON.stringify({ model: "gpt-6-sol" }),
+    );
+    render(<AgentSettings />);
+    editField("Model ID", "personal-draft");
+    fireEvent.click(screen.getByRole("switch", { name: "Bring your own key" }));
+    fireEvent.click(screen.getByRole("switch", { name: "Bring your own key" }));
+    expect(button(/^AI model and thinking:/)).toHaveTextContent("GPT-6 Sol");
+    expect(screen.queryByLabelText("Model ID")).not.toBeInTheDocument();
+  });
+
   it("defaults to the proxy and the first listed model without personal provider details", async () => {
     window.localStorage.removeItem(AI_USE_OWN_KEY_STORAGE_KEY);
     mockFetch.mockResolvedValue(new Response(JSON.stringify({ ok: true })));
@@ -186,9 +206,11 @@ describe("AgentSettings", () => {
       model: "claude-sonnet-5-5",
       output_config: { effort: "max" },
     });
-    expect(readSavedConfig()).toMatchObject({
+    expect(
+      JSON.parse(window.localStorage.getItem(AI_PROXY_STORAGE_KEY) ?? ""),
+    ).toMatchObject({
       model: "claude-sonnet-5-5",
-      reasoningEffort: "max",
+      reasoningEffortPreference: "max",
     });
   });
 
@@ -219,7 +241,7 @@ describe("AgentSettings", () => {
         apiBase: "https://api.example.com/v1",
         apiKey: "sk-test",
         model,
-        reasoningEffort: preference,
+        reasoningEffortPreference: preference,
       };
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(savedConfig));
       mockFetch.mockResolvedValue(new Response(JSON.stringify({ ok: true })));
@@ -251,7 +273,8 @@ describe("AgentSettings", () => {
 
     backend.backendUrl = "https://other.example.com";
     rerender(<AgentSettings />);
-    expect(button("Testing…")).toBeDisabled();
+    expect(mockFetch.mock.calls[0][1].signal.aborted).toBe(true);
+    expect(button("Test AI")).toBeEnabled();
     await act(async () =>
       finishTest(new Response(JSON.stringify({ ok: true }))),
     );
@@ -279,7 +302,8 @@ describe("AgentSettings", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save and test AI" }));
     await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
     fireEvent.click(screen.getByRole("switch", { name: "Bring your own key" }));
-    expect(button("Testing…")).toBeDisabled();
+    expect(mockFetch.mock.calls[0][1].signal.aborted).toBe(true);
+    expect(button("Test AI")).toBeEnabled();
     await act(async () =>
       finishTest(new Response(JSON.stringify({ ok: true }))),
     );
@@ -315,6 +339,8 @@ describe("AgentSettings", () => {
         AI_USE_OWN_KEY_STORAGE_KEY,
         "false",
       );
+      expect(mockFetch.mock.calls[0][1].signal.aborted).toBe(true);
+      expect(button("Save and test AI")).toBeEnabled();
       await act(async () =>
         finishTest(new Response(JSON.stringify({ ok: true }))),
       );
@@ -365,8 +391,8 @@ describe("AgentSettings", () => {
         field,
         field === "API base URL" ? "https://new.example.com/v1" : "new-value",
       );
-      expect(button("Testing…")).toBeDisabled();
-      fireEvent.submit(button("Testing…").closest("form")!);
+      expect(mockFetch.mock.calls[0][1].signal.aborted).toBe(true);
+      expect(button("Save and test AI")).toBeEnabled();
       expect(mockFetch).toHaveBeenCalledOnce();
       await act(async () =>
         finishTest(new Response(JSON.stringify({ ok: true }))),
@@ -384,7 +410,7 @@ describe("AgentSettings", () => {
       apiBase: "https://api.example.com/v1",
       apiKey: "sk-test",
       model: "gpt-6-sol",
-      reasoningEffort: "high",
+      reasoningEffortPreference: "high",
     };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(savedConfig));
     mockFetch.mockResolvedValue(new Response(JSON.stringify({ ok: true })));
@@ -501,10 +527,10 @@ describe("AgentSettings", () => {
     expect(requestBody().model).toBe("custom-proxy-model");
     expect(requestBody()).not.toHaveProperty("reasoning");
     expect(JSON.stringify(mockFetch.mock.calls)).not.toContain("sk-personal");
-    expect(readSavedConfig()).toEqual({
-      ...savedConfig,
-      model: "custom-proxy-model",
-    });
+    expect(readSavedConfig()).toEqual(savedConfig);
+    expect(
+      JSON.parse(window.localStorage.getItem(AI_PROXY_STORAGE_KEY) ?? ""),
+    ).toEqual({ model: "custom-proxy-model" });
     expect(button("Test AI")).toBeInTheDocument();
   });
 
@@ -556,7 +582,7 @@ describe("AgentSettings", () => {
   });
 
   it.each(["model", "thinking", "clear"])(
-    "blocks overlapping checks after changing %s",
+    "aborts the active check after changing %s",
     async (change) => {
       window.localStorage.setItem(
         STORAGE_KEY,
@@ -587,8 +613,8 @@ describe("AgentSettings", () => {
         mockNotify.mockClear();
       }
 
-      expect(button("Testing…")).toBeDisabled();
-      fireEvent.submit(button("Testing…").closest("form")!);
+      expect(mockFetch.mock.calls[0][1].signal.aborted).toBe(true);
+      expect(button("Save and test AI")).toBeEnabled();
       expect(mockFetch).toHaveBeenCalledOnce();
       await act(async () =>
         finishTest(new Response("Failed", { status: 500 })),
@@ -597,6 +623,73 @@ describe("AgentSettings", () => {
       expect(button("Save and test AI")).toBeEnabled();
     },
   );
+
+  it("can test new settings before the aborted request settles without releasing the new request's lock", async () => {
+    let finishFirst!: (response: Response) => void;
+    let finishSecond!: (response: Response) => void;
+    mockFetch
+      .mockReturnValueOnce(
+        new Promise<Response>((resolve) => {
+          finishFirst = resolve;
+        }),
+      )
+      .mockReturnValueOnce(
+        new Promise<Response>((resolve) => {
+          finishSecond = resolve;
+        }),
+      );
+    render(<AgentSettings />);
+    editField("API base URL", "https://api.example.com/v1");
+    fireEvent.click(button("Save and test AI"));
+    const firstSignal = mockFetch.mock.calls[0][1].signal;
+    expect(firstSignal.aborted).toBe(false);
+
+    editField("API key", "sk-new");
+    expect(firstSignal.aborted).toBe(true);
+    expect(button("Save and test AI")).toBeEnabled();
+    fireEvent.click(button("Save and test AI"));
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    const secondSignal = mockFetch.mock.calls[1][1].signal;
+    expect(secondSignal.aborted).toBe(false);
+
+    await act(async () =>
+      finishFirst(new Response(JSON.stringify({ ok: true }))),
+    );
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
+    expect(mockNotify).not.toHaveBeenCalled();
+    expect(button("Testing…")).toBeDisabled();
+    fireEvent.submit(button("Testing…").closest("form")!);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(secondSignal.aborted).toBe(false);
+
+    await act(async () =>
+      finishSecond(new Response(JSON.stringify({ ok: true }))),
+    );
+    expect(readSavedConfig().apiKey).toBe("sk-new");
+    expect(mockNotify).toHaveBeenCalledOnce();
+    expect(button("Save and test AI")).toBeEnabled();
+  });
+
+  it("aborts an active test when unmounted and ignores its eventual result", async () => {
+    let finishTest!: (response: Response) => void;
+    mockFetch.mockReturnValue(
+      new Promise<Response>((resolve) => {
+        finishTest = resolve;
+      }),
+    );
+    const { unmount } = render(<AgentSettings />);
+    editField("API base URL", "https://api.example.com/v1");
+    fireEvent.click(button("Save and test AI"));
+    const signal = mockFetch.mock.calls[0][1].signal;
+    unmount();
+    expect(signal.aborted).toBe(true);
+
+    await act(async () =>
+      finishTest(new Response(JSON.stringify({ ok: true }))),
+    );
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
+    expect(mockNotify).not.toHaveBeenCalled();
+  });
 
   it("uses the first listed model when the saved model was blank", async () => {
     window.localStorage.setItem(
@@ -686,7 +779,7 @@ describe("AgentSettings", () => {
       apiBase: "https://api.anthropic.com/v1",
       apiKey: "native-key",
       model: "claude-opus-5-5",
-      reasoningEffort: "medium",
+      reasoningEffortPreference: "medium",
     });
   });
 
@@ -747,7 +840,7 @@ describe("AgentSettings", () => {
     );
     expect(requestBody().reasoning).toEqual({ effort: "low" });
     expect(requestBody()).not.toHaveProperty("output_config");
-    expect(readSavedConfig().reasoningEffort).toBe("low");
+    expect(readSavedConfig().reasoningEffortPreference).toBe("low");
   });
 
   it("allows entering and reselecting a custom BYOK model ID", async () => {

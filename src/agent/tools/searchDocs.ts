@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { supportsAiEmbeddings } from "@/config/aiConfig";
 import { BASE_URL } from "@/utils/constants";
+import { isSearchQueryStopWord } from "@/utils/searchQuery";
 import { isRecord } from "@/utils/typeGuards";
 
 import { type OpenAIProvider, requireEmbeddingModel } from "../config";
@@ -152,7 +153,13 @@ function rankByText(
   query: string,
   topK: number,
 ): ReturnType<typeof rankByCosine> {
-  const words = [...new Set(query.toLowerCase().match(/\w+/g) ?? [])];
+  const words = [
+    ...new Set(
+      (query.toLowerCase().match(/\w+/g) ?? []).filter(
+        (word) => !isSearchQueryStopWord(word),
+      ),
+    ),
+  ];
   return vectors
     .map((vector) => {
       const text = [

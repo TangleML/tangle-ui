@@ -143,7 +143,7 @@ export function createRemoteEnvWorkerApi(): RemoteEnvWorkerApi {
         spec: {
           tools,
           systemPrompt,
-          ...(model ? { model } : {}),
+          ...(model !== undefined ? { model } : {}),
           ...(thinkingDepth ? { thinkingDepth } : {}),
         },
         memory: new MemorySession({ sessionId: agentId }),

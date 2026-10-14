@@ -14,6 +14,7 @@
 
 import type { ComponentReference } from "@/utils/componentSpec";
 import { getComponentName } from "@/utils/getComponentName";
+import { isSearchQueryStopWord } from "@/utils/searchQuery";
 
 import { expandSynonymTokens } from "./componentSearchSynonyms";
 
@@ -387,30 +388,9 @@ export function buildSearchIndex(
   return entries;
 }
 
-const QUERY_STOP_WORDS = new Set([
-  "a",
-  "an",
-  "and",
-  "are",
-  "but",
-  "component",
-  "for",
-  "from",
-  "i",
-  "in",
-  "into",
-  "me",
-  "my",
-  "no",
-  "of",
-  "on",
-  "please",
-  "that",
-  "the",
-  "to",
-  "want",
-  "with",
-]);
+function isComponentQueryStopWord(token: string): boolean {
+  return token === "component" || isSearchQueryStopWord(token);
+}
 
 /**
  * Drop filler words and de-duplicate query tokens. Natural-language searches
@@ -422,7 +402,7 @@ function uniqueTokens(tokens: string[]): string[] {
   const unique: string[] = [];
   const seen = new Set<string>();
   for (const token of tokens) {
-    if (QUERY_STOP_WORDS.has(token) || seen.has(token)) continue;
+    if (isComponentQueryStopWord(token) || seen.has(token)) continue;
     seen.add(token);
     unique.push(token);
   }
@@ -440,14 +420,14 @@ function tokenizeQuery(text: string): {
     .split(/[^a-z0-9]+/)
     .filter(isNonEmptyString);
   const positiveRawTokens = rawTokens.filter(
-    (token) => !QUERY_STOP_WORDS.has(token),
+    (token) => !isComponentQueryStopWord(token),
   );
   const concepts: string[][] = [];
   const conceptTokens: string[] = [];
   const seenConcepts = new Set<string>();
 
   for (const token of rawTokens) {
-    if (QUERY_STOP_WORDS.has(token)) continue;
+    if (isComponentQueryStopWord(token)) continue;
 
     const variants = uniqueTokens(
       expandSynonymTokens([token, stemToken(token)]),

@@ -711,7 +711,10 @@ describe("lexicalSearch", () => {
     expect(results).not.toContain("plural");
   });
 
-  it("ignores natural-language filler words that would otherwise swamp intent", () => {
+  it.each([
+    "I want to upload a component to GCS",
+    "How do I upload a component to GCS?",
+  ])("ignores natural-language filler in '%s'", (query) => {
     const index = buildSearchIndex([
       makeSourced({
         digest: "target",
@@ -727,7 +730,7 @@ describe("lexicalSearch", () => {
         digest: "noise",
         spec: {
           name: "train_component",
-          description: "A component to train a model.",
+          description: "How do I use a component to train a model?",
           inputs: [],
           outputs: [],
           implementation: { container: { image: "x" } },
@@ -735,7 +738,7 @@ describe("lexicalSearch", () => {
       }),
     ]);
 
-    const results = lexicalSearch(index, "I want to upload a component to GCS");
+    const results = lexicalSearch(index, query);
     expect(results.map((result) => result.digest)).toEqual(["target"]);
   });
 
