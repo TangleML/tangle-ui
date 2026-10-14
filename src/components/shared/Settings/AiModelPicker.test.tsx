@@ -16,6 +16,7 @@ const customCatalog = { defaultModel: customModel.id, models: [customModel] };
 const variants = ["settings", "compact"] as const;
 const canvasShortcut = vi.fn();
 const button = (name: string | RegExp) => screen.getByRole("button", { name });
+const modelOption = (name: string) => screen.getByRole("radio", { name });
 const triggers = (name: string | RegExp = /^AI model and thinking:/) =>
   screen.getAllByRole("button", { name });
 const trigger = () => button(/^AI model and thinking:/);
@@ -41,7 +42,7 @@ function renderPicker(variant: "settings" | "compact" = "settings") {
 
 function selectModel(name: string) {
   openModels();
-  fireEvent.click(button(name));
+  fireEvent.click(modelOption(name));
 }
 
 describe("AiModelPicker", () => {
@@ -82,20 +83,22 @@ describe("AiModelPicker", () => {
     fireEvent.pointerDown(modelTitle());
     openModels();
     expect(button("Models: back to thinking")).toHaveTextContent("Models");
-    expect(screen.getByRole("group", { name: "Models" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("radiogroup", { name: "Models" }),
+    ).toBeInTheDocument();
     screen.getByRole("dialog", { name: "Model and thinking" });
     expect(screen.queryByRole("slider")).not.toBeInTheDocument();
-    expect(button("Provider default")).toBeInTheDocument();
-    const sol = button("GPT-6 Sol");
-    expect(sol).toHaveAttribute("aria-pressed", "true");
+    expect(modelOption("Provider default")).toBeInTheDocument();
+    const sol = modelOption("GPT-6 Sol");
+    expect(sol).toBeChecked();
     expect(sol).toHaveAccessibleDescription(
       "Balanced model for coding and agentic workflows",
     );
     expect(sol).toHaveFocus();
-    expect(button("GPT-6 Astra")).toBeInTheDocument();
-    expect(button("GPT-6 Luna")).toBeInTheDocument();
+    expect(modelOption("GPT-6 Astra")).toBeInTheDocument();
+    expect(modelOption("GPT-6 Luna")).toBeInTheDocument();
     const nextModel = configured ? "GPT-6 Astra" : "GPT-6 Luna";
-    fireEvent.click(button(nextModel));
+    fireEvent.click(modelOption(nextModel));
     expect(modelTitle()).toHaveTextContent(nextModel);
     expectEffort("High");
     expect(modelTitle()).toHaveFocus();
@@ -118,9 +121,44 @@ describe("AiModelPicker", () => {
     expect(modelTitle()).toHaveTextContent("Provider default");
     expect(screen.queryByRole("slider")).not.toBeInTheDocument();
     openModels();
-    expect(button("Provider default")).toHaveAttribute("aria-pressed", "true");
-    expect(button("Provider default")).toHaveFocus();
+    expect(modelOption("Provider default")).toBeChecked();
+    expect(modelOption("Provider default")).toHaveFocus();
   });
+
+  it.each(variants)(
+    "navigates the model radio group with the keyboard in %s",
+    async (variant) => {
+      const user = userEvent.setup();
+      renderPicker(variant);
+      openModels();
+      expect(modelOption("GPT-6 Sol")).toHaveFocus();
+      for (const [key, label] of [
+        ["ArrowDown", "GPT-6 Luna"],
+        ["ArrowDown", "Claude Fable 5.1"],
+        ["ArrowUp", "GPT-6 Luna"],
+        ["ArrowLeft", "GPT-6 Sol"],
+        ["ArrowRight", "GPT-6 Luna"],
+        ["Home", "Provider default"],
+        ["End", "Claude Haiku 5.5"],
+        ["ArrowDown", "Provider default"],
+        ["ArrowUp", "Claude Haiku 5.5"],
+      ]) {
+        await user.keyboard(`{${key}}`);
+        expect(modelOption(label)).toHaveFocus();
+        expect(modelOption(label)).toBeChecked();
+        expect(modelOption(label)).toHaveAttribute("tabindex", "0");
+        expect(screen.getAllByRole("radio", { checked: true })).toHaveLength(1);
+        for (const option of screen.getAllByRole("radio", { checked: false })) {
+          expect(option).toHaveAttribute("tabindex", "-1");
+        }
+      }
+      await user.keyboard("{Enter}");
+      expect(modelTitle()).toHaveTextContent("Claude Haiku 5.5");
+      expect(modelTitle()).toHaveFocus();
+      expect(screen.queryByRole("radiogroup")).not.toBeInTheDocument();
+      expect(canvasShortcut).not.toHaveBeenCalled();
+    },
+  );
 
   it("persists effort across model changes and remounts, and synchronizes all picker variants", () => {
     const { unmount } = renderPicker();
@@ -159,7 +197,7 @@ describe("AiModelPicker", () => {
     expectEffort("Low");
     expectText(/Your none preference is saved/);
     const saved = window.localStorage.getItem(AI_PROVIDER_STORAGE_KEY);
-    expect(JSON.parse(saved ?? "").reasoningEffort).toBe("none");
+    expect(JSON.parse(saved ?? "").reasoningEffortPreference).toBe("none");
     if (variant === "compact") {
       selectModel("Custom model");
       expect(screen.queryByRole("slider")).not.toBeInTheDocument();

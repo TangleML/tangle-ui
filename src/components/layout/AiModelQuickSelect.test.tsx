@@ -78,7 +78,7 @@ describe("AiModelQuickSelect", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /^Choose a model:/ }));
     expect(
-      screen.getByRole("button", { name: "gpt-4.1-mini" }),
+      screen.getByRole("radio", { name: "gpt-4.1-mini" }),
     ).toBeInTheDocument();
   });
 

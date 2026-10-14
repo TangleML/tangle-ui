@@ -15,6 +15,7 @@ import { Agent } from "@openai/agents";
 import type { ThinkingLevel } from "@tangent/shared/contracts.ts";
 
 import { getEffectiveReasoningEffort } from "@/config/aiConfig";
+import type { AiProviderConfig } from "@/types/aiProvider";
 
 import { getAgentModelConfig } from "../config";
 import { attachObservabilityHooks } from "../middleware/observability";
@@ -123,6 +124,21 @@ function reasoningEffort(
   return thinkingDepth === "off" ? "none" : thinkingDepth;
 }
 
+function getInheritedReasoningEffort(config: AiProviderConfig, model: string) {
+  if (!model) return undefined;
+  if (
+    config.reasoningEffortPreference === undefined &&
+    config.modelCapabilities === undefined &&
+    model === config.model.trim()
+  ) {
+    return config.reasoningEffort;
+  }
+  const preference = config.reasoningEffortPreference ?? config.reasoningEffort;
+  return preference === undefined
+    ? undefined
+    : getEffectiveReasoningEffort(model, preference, config.modelCapabilities);
+}
+
 function formatCurrentRunSection(context: AgentContext): string {
   if (context.mode !== "runView") return "";
   const subgraph = context.subgraphExecutionId
@@ -155,11 +171,7 @@ export function buildRemoteEditorAgent(
   const modelConfig = getAgentModelConfig({
     ...session.aiConfig,
     model,
-    reasoningEffort:
-      model === session.aiConfig.model.trim() ||
-      session.aiConfig.reasoningEffort === undefined
-        ? session.aiConfig.reasoningEffort
-        : getEffectiveReasoningEffort(model, session.aiConfig.reasoningEffort),
+    reasoningEffort: getInheritedReasoningEffort(session.aiConfig, model),
   });
   const tools = selectRemoteEditorTools(session, spec.tools);
   const effort = reasoningEffort(spec.thinkingDepth);

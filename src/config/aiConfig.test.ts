@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   getAiModelLabel,
@@ -11,6 +11,7 @@ import {
 
 describe("aiConfig", () => {
   afterEach(() => {
+    vi.unstubAllGlobals();
     delete window.__TANGLE_AI_MODELS__;
   });
 
@@ -90,5 +91,19 @@ describe("aiConfig", () => {
     };
     expect(getEffectiveReasoningEffort("custom", "max")).toBe("high");
     expect(getEffectiveReasoningEffort("custom", "medium")).toBe("low");
+  });
+
+  it("resolves a transmitted host catalog without access to the host window", () => {
+    window.__TANGLE_AI_MODELS__ = {
+      models: [{ id: "custom", reasoningEfforts: ["low", "high"] }],
+    };
+    const models = getAiModelOptions();
+    vi.stubGlobal("window", undefined);
+
+    expect(getEffectiveReasoningEffort("custom", "max", models)).toBe("high");
+    expect(
+      getEffectiveReasoningEffort("gpt-6-sol", "max", models),
+    ).toBeUndefined();
+    expect(getEffectiveReasoningEffort(" ", "max", models)).toBeUndefined();
   });
 });
