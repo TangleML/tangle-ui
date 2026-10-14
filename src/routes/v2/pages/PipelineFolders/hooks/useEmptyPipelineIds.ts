@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import yaml from "js-yaml";
+import * as yaml from "js-yaml";
 
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import { FoldersQueryKeys } from "@/services/pipelineStorage/types";

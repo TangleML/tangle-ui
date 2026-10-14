@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 
-import yaml from "js-yaml";
+import * as yaml from "js-yaml";
 import { describe, expect, it } from "vitest";
 
 import type { ComponentSpec } from "@/utils/componentSpec";
