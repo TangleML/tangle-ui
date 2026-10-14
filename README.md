@@ -70,6 +70,8 @@ The frontend sends backend requests with browser credentials; the backend owns u
 
 Model suggestions do not detect backend capabilities. Only select Claude in backend mode if that backend implements the native Messages route; otherwise those requests fail. Hosts can replace suggestions with `window.__TANGLE_AI_MODELS__.models`; the first valid entry is the default. Hosts must keep that catalog consistent with the backends they offer.
 
+The catalog's Claude models support Low, Medium, High, Extra high, and Max in the thinking slider. Native requests send the selected level as `output_config.effort`; compatible gateways receive `reasoning.effort`. These models use adaptive thinking by default, so no manual thinking-token budget is needed. See [Claude's effort documentation](https://platform.claude.com/docs/en/build-with-claude/effort). Custom model IDs only show thinking controls when the host catalog declares supported effort levels.
+
 ### Environment Variables
 
 Add these to a `.env` file at the root of `tangle-ui`.

@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   getAiModelLabel,
   getAiModelOptions,
+  getAiModelReasoningLevels,
   getDefaultAiModelId,
   getEffectiveReasoningEffort,
   supportsAiEmbeddings,
@@ -66,6 +67,23 @@ describe("aiConfig", () => {
     expect(getEffectiveReasoningEffort("gpt-6-sol", "none")).toBe("none");
     expect(getEffectiveReasoningEffort("gpt-6-luna", "max")).toBe("max");
     expect(getEffectiveReasoningEffort("custom-model", "high")).toBeUndefined();
+    expect(
+      getEffectiveReasoningEffort("claude-custom", "high"),
+    ).toBeUndefined();
+  });
+
+  it.each([
+    "claude-fable-5-1",
+    "claude-opus-5-5",
+    "claude-sonnet-5-5",
+    "claude-haiku-5-5",
+  ])("supports Low through Max thinking for %s", (model) => {
+    expect(
+      getAiModelReasoningLevels(model).map((level) => level.value),
+    ).toEqual(["low", "medium", "high", "xhigh", "max"]);
+    expect(getEffectiveReasoningEffort(model)).toBe("high");
+    expect(getEffectiveReasoningEffort(model, "none")).toBe("low");
+    expect(getEffectiveReasoningEffort(model, "max")).toBe("max");
   });
 
   it("labels an empty selection with the first catalog model", () => {
