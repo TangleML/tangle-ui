@@ -168,6 +168,31 @@ describe("AiModelPicker", () => {
     expectEffort("None");
   });
 
+  it.each([
+    "Claude Fable 5.1",
+    "Claude Opus 5.5",
+    "Claude Sonnet 5.5",
+    "Claude Haiku 5.5",
+  ])("selects and persists thinking for %s", (model) => {
+    saveProvider({ model: "gpt-6-sol", reasoningEffort: "none" });
+    const { unmount } = renderPicker();
+    selectModel(model);
+    expectEffort("Low");
+    expect(thinking()).toHaveAttribute("aria-valuemin", "0");
+    expect(thinking()).toHaveAttribute("aria-valuemax", "4");
+    expectText(/Your none preference is saved/);
+    selectModel("GPT-6 Sol");
+    expectEffort("None");
+    selectModel(model);
+    fireEvent.keyDown(thinking(), { key: "End" });
+    expectEffort("Max");
+    unmount();
+
+    renderPicker();
+    expect(modelTitle()).toHaveTextContent(model);
+    expectEffort("Max");
+  });
+
   it.each(variants)("isolates shortcuts and Escape in %s", async (variant) => {
     renderPicker(variant);
     fireEvent.keyDown(thinking(), { key: "ArrowRight" });

@@ -3,6 +3,13 @@ import { isRecord } from "@/utils/typeGuards";
 
 type JsonObject = Record<string, unknown>;
 const ANTHROPIC = AI_CONFIG.providers.anthropic;
+const ANTHROPIC_REASONING_EFFORTS = new Set([
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max",
+]);
 const NATIVE_REASONING = "tangle-anthropic:";
 interface Message {
   role: "user" | "assistant";
@@ -149,15 +156,22 @@ function toAnthropic(request: JsonObject, proxy: boolean): JsonObject {
     max_tokens: request.max_output_tokens ?? ANTHROPIC.defaultMaxOutputTokens,
     messages,
   };
+  const outputConfig: JsonObject = {};
+  const reasoning = isRecord(request.reasoning) ? request.reasoning : {};
+  if (
+    typeof reasoning.effort === "string" &&
+    ANTHROPIC_REASONING_EFFORTS.has(reasoning.effort)
+  ) {
+    outputConfig.effort = reasoning.effort;
+  }
   const text = isRecord(request.text) ? request.text : {};
   const format = isRecord(text.format) ? text.format : {};
   if (format.type === "json_object") {
     system.push("Return only a valid JSON object, without Markdown fences.");
   } else if (format.type === "json_schema") {
-    result.output_config = {
-      format: { type: "json_schema", schema: format.schema },
-    };
+    outputConfig.format = { type: "json_schema", schema: format.schema };
   }
+  if (Object.keys(outputConfig).length > 0) result.output_config = outputConfig;
   if (system.length > 0) result.system = system.join("\n\n");
   if (Array.isArray(request.tools) && request.tools.length > 0) {
     result.tools = request.tools.map((value) => {
@@ -181,7 +195,6 @@ function toAnthropic(request: JsonObject, proxy: boolean): JsonObject {
         : {}),
     };
   }
-  // OpenAI reasoning/include/temperature settings are not portable to Claude.
   return result;
 }
 

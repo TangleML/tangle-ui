@@ -112,6 +112,7 @@ describe("aiProviderFetch", () => {
         headers,
         body: JSON.stringify({
           model: "claude-sonnet-5-5",
+          reasoning: { effort: "high" },
           input: [
             {
               type: "reasoning",
@@ -126,7 +127,61 @@ describe("aiProviderFetch", () => {
       url,
       expect.objectContaining({ headers }),
     );
-    expect(sentBody()).toEqual({ model: "claude-sonnet-5-5", input });
+    expect(sentBody()).toEqual({
+      model: "claude-sonnet-5-5",
+      reasoning: { effort: "high" },
+      input,
+    });
+  });
+
+  describe.each([
+    {
+      route: "direct",
+      url: endpoint,
+      nativeUrl: "https://api.anthropic.com/v1/messages",
+    },
+    {
+      route: "proxy",
+      url: "https://backend.example.com/ai/v1/responses",
+      nativeUrl: "https://backend.example.com/ai/anthropic/v1/messages",
+    },
+  ])("$route Claude thinking", ({ route, url, nativeUrl }) => {
+    it.each(["low", "medium", "high", "xhigh", "max"])(
+      "sends %s as native effort without changing the output token budget",
+      async (effort) => {
+        await aiProviderFetch(url, {
+          method: "POST",
+          credentials: route === "proxy" ? "include" : undefined,
+          body: JSON.stringify({
+            model: "claude-sonnet-5-5",
+            input: "Hello",
+            reasoning: { effort },
+            max_output_tokens: 256,
+          }),
+        });
+        expect(String(fetchMock.mock.calls[0][0])).toBe(nativeUrl);
+        expect(sentBody()).toMatchObject({
+          output_config: { effort },
+          max_tokens: 256,
+        });
+        expect(sentBody()).not.toHaveProperty("reasoning");
+        expect(sentBody()).not.toHaveProperty("thinking");
+      },
+    );
+  });
+
+  it.each([
+    undefined,
+    null,
+    {},
+    { effort: "none" },
+    { effort: "minimal" },
+    { effort: 100 },
+  ])("omits unsupported native reasoning settings %j", async (reasoning) => {
+    await request({ reasoning });
+    expect(sentBody()).not.toHaveProperty("output_config");
+    expect(sentBody()).not.toHaveProperty("reasoning");
+    expect(sentBody()).not.toHaveProperty("thinking");
   });
 
   it("uses native direct authentication and accepts a Request input", async () => {
@@ -300,11 +355,13 @@ describe("aiProviderFetch", () => {
       additionalProperties: false,
     };
     await request({
+      reasoning: { effort: "high" },
       text: {
         format: { type: "json_schema", name: "answer", strict: true, schema },
       },
     });
     expect(sentBody().output_config).toEqual({
+      effort: "high",
       format: { type: "json_schema", schema },
     });
     await request({ text: { format: { type: "json_object" } } });
@@ -697,11 +754,16 @@ describe("aiProviderFetch", () => {
     const session = new MemorySession({ sessionId: "one-chat" });
     for (const [model, prompt, answer] of [
       ["gpt-5.2", "First question", "First answer"],
-      ["claude-sonnet-4-6", "Second question", "Second answer"],
+      ["claude-sonnet-5-5", "Second question", "Second answer"],
       ["gpt-5.2", "Third question", "Third answer"],
     ]) {
       const result = await runner.run(
-        new Agent({ name: "Assistant", model, tools: [lookup] }),
+        new Agent({
+          name: "Assistant",
+          model,
+          tools: [lookup],
+          modelSettings: { reasoning: { effort: "high" } },
+        }),
         prompt,
         { session },
       );
@@ -711,6 +773,10 @@ describe("aiProviderFetch", () => {
     expect(String(fetchMock.mock.calls[2][0])).toBe(
       "https://backend.example.com/ai/anthropic/v1/messages",
     );
+    expect(sentBody(0).reasoning).toMatchObject({ effort: "high" });
+    expect(sentBody(2).output_config).toEqual({ effort: "high" });
+    expect(sentBody(3).output_config).toEqual({ effort: "high" });
+    expect(sentBody(4).reasoning).toMatchObject({ effort: "high" });
     expect(JSON.stringify(sentBody(2).messages)).toContain("Found first");
     expect(JSON.stringify(sentBody(2).messages)).toContain("First answer");
     expect(JSON.stringify(sentBody(3).messages)).toContain("Found second");
