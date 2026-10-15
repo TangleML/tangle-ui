@@ -5,7 +5,6 @@ import {
   DEFAULT_THINKING_LEVEL,
   THINKING_LEVELS,
 } from "@tangent/shared/contracts.ts";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
@@ -22,22 +21,16 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Text } from "@/components/ui/typography";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
-import useToastNotification from "@/hooks/useToastNotification";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useBackend } from "@/providers/BackendProvider";
 import { APP_ROUTES } from "@/routes/appRoutes";
 import { TANGENT_AI_REQUIRED } from "@/routes/v2/shared/components/AiChat/components/aiSetupCopy";
 import { rememberLastUsedWorkspace } from "@/services/projects/defaultWorkspace";
 import { nameFromPrompt } from "@/services/projects/nameFromPrompt";
-import { createProject } from "@/services/projects/projectsService";
 import { provisionalNameMetadata } from "@/services/projects/provisionalName";
 import { startingSessionMetadata } from "@/services/projects/startingSession";
-import {
-  ProjectsQueryKeys,
-  WorkspacesQueryKeys,
-} from "@/services/projects/types";
+import { useCreateProject } from "@/services/projects/useProjects";
 import { useWorkspaces } from "@/services/projects/useWorkspaces";
-import { getErrorMessage } from "@/utils/string";
 import { tracking } from "@/utils/tracking";
 
 import { nextProjectName } from "./nextProjectName";
@@ -51,11 +44,6 @@ const THINKING_LABELS: Partial<Record<ThinkingLevel, string>> = {
 
 const thinkingLabel = (level: ThinkingLevel) =>
   THINKING_LABELS[level] ?? level.charAt(0).toUpperCase() + level.slice(1);
-
-interface StartSessionVariables {
-  startingPrompt: string;
-  workspaceId: string;
-}
 
 function missingWorkspaceNotice({
   backendMissing,
@@ -85,8 +73,7 @@ export function StartSessionPrompt() {
   const composer = useRef<HTMLTextAreaElement>(null);
   const hasFocused = useRef(false);
   const navigate = useNavigate();
-  const notify = useToastNotification();
-  const queryClient = useQueryClient();
+  const createProject = useCreateProject();
   const { track } = useAnalytics();
   const { configured, available, ready } = useBackend();
   const {
@@ -100,53 +87,11 @@ export function StartSessionPrompt() {
 
   const workspace = workspaceChoice.selected;
 
-  const { mutate: start, isPending } = useMutation({
-    mutationFn: ({ startingPrompt, workspaceId }: StartSessionVariables) => {
-      // The prompt rides on the project rather than the url, so arriving at
-      // Tangent starts a session and runs it as the opening turn. The name is
-      // marked as nobody's choice, so the agent may replace it with a real one.
-      return createProject({
-        workspaceId,
-        name:
-          nameFromPrompt(startingPrompt) ??
-          nextProjectName(projects.map((p) => p.name)),
-        origin: "agent",
-        metadata: provisionalNameMetadata(
-          startingSessionMetadata({
-            prompt: startingPrompt,
-            model,
-            thinkingDepth,
-          }),
-        ),
-      });
-    },
-    onSuccess: (project, { workspaceId }) => {
-      track("projects.start_session_completed", {
-        model,
-        thinkingDepth,
-        workspace_changed: workspaceChoice.changedFromDefault,
-      });
-      rememberLastUsedWorkspace(workspaceId);
-      setPrompt("");
-      void queryClient.invalidateQueries({ queryKey: ProjectsQueryKeys.All() });
-      void navigate({
-        to: APP_ROUTES.TANGENT_PROJECT,
-        params: { projectId: project.id },
-      });
-    },
-    onError: (error) => {
-      void queryClient.invalidateQueries({
-        queryKey: WorkspacesQueryKeys.All(),
-      });
-      notify(getErrorMessage(error), "error");
-    },
-  });
-
   const isEmpty = prompt.trim() === "";
   // The box is the point of the page, so what stops it working leaves it
   // standing and disabled rather than taking it away.
   const isUnavailable = isFindingWorkspace || !workspace || !isAiConfigured;
-  const isBusy = isPending || isUnavailable;
+  const isBusy = createProject.isPending || isUnavailable;
   const workspaceNotice = workspace
     ? undefined
     : missingWorkspaceNotice({
@@ -166,7 +111,44 @@ export function StartSessionPrompt() {
 
   const submit = () => {
     if (isEmpty || isBusy || !workspace) return;
-    start({ startingPrompt: prompt.trim(), workspaceId: workspace.id });
+
+    const startingPrompt = prompt.trim();
+    const workspaceChanged = workspaceChoice.changedFromDefault;
+
+    // The prompt rides on the project rather than the url, so arriving at
+    // Tangent starts a session and runs it as the opening turn. The name is
+    // marked as nobody's choice, so the agent may replace it with a real one.
+    createProject.mutate(
+      {
+        workspaceId: workspace.id,
+        name:
+          nameFromPrompt(startingPrompt) ??
+          nextProjectName(projects.map((p) => p.name)),
+        origin: "agent",
+        metadata: provisionalNameMetadata(
+          startingSessionMetadata({
+            prompt: startingPrompt,
+            model,
+            thinkingDepth,
+          }),
+        ),
+      },
+      {
+        onSuccess: (project) => {
+          rememberLastUsedWorkspace(workspace.id);
+          track("projects.start_session_completed", {
+            model,
+            thinkingDepth,
+            workspace_changed: workspaceChanged,
+          });
+          setPrompt("");
+          void navigate({
+            to: APP_ROUTES.TANGENT_PROJECT,
+            params: { projectId: project.id },
+          });
+        },
+      },
+    );
   };
 
   return (

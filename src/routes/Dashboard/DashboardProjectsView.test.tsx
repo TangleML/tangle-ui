@@ -17,7 +17,16 @@ vi.mock("@/components/shared/Settings/useFlags", () => {
 });
 
 vi.mock("@/components/Home/ProjectsSection/ProjectsSection", () => ({
-  ProjectsSection: () => null,
+  ProjectsSection: ({
+    showWorkspaceNotices,
+  }: {
+    showWorkspaceNotices: boolean;
+  }) => (
+    <div
+      data-testid="projects-section"
+      data-workspace-notices={String(showWorkspaceNotices)}
+    />
+  ),
 }));
 
 vi.mock("@/components/Home/ProjectsSection/StartSessionPrompt", () => ({
@@ -64,6 +73,15 @@ describe("DashboardProjectsView", () => {
           Node.DOCUMENT_POSITION_FOLLOWING,
       ).toBeTruthy();
     });
+
+    it("leaves the workspace notices to the prompt box", () => {
+      render(<DashboardProjectsView />);
+
+      expect(screen.getByTestId("projects-section")).toHaveAttribute(
+        "data-workspace-notices",
+        "false",
+      );
+    });
   });
 
   /** Without the agent there is no session to start, and nothing to start it from. */
@@ -86,6 +104,15 @@ describe("DashboardProjectsView", () => {
 
       expect(screen.queryByLabelText("Start a new session")).toBeNull();
       expect(screen.queryByText("What should we build?")).toBeNull();
+    });
+
+    it("shows the workspace notices with the projects", () => {
+      render(<DashboardProjectsView />);
+
+      expect(screen.getByTestId("projects-section")).toHaveAttribute(
+        "data-workspace-notices",
+        "true",
+      );
     });
   });
 });
