@@ -8,16 +8,9 @@ import {
 import type { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
 
 /**
- * A link asks for a session by url because one can only be started from inside
- * Tangent's provider. The ask is then taken back out: left there, a reload
- * would start a second session, and returning to a session the user has since
- * left would fight them for the selection.
- *
- * A new session waits for the store to be able to start one. This hook runs in
- * a child of the provider that wires the store up, and a child's effects run
- * first, so on the first commit `startSession` refuses. Reading
- * `canStartSession` needs an observer for the flip to re-run this, which is
- * what the workspace is.
+ * A link selects a session by url. The ask is then taken back out: left there,
+ * returning to a session the user has since left would fight them for the
+ * selection. A link asking for a new session is `usePrepareProjectArrival`'s.
  */
 export function useTangentSessionParam(store: TangentProjectStore) {
   const search = useSearch({ strict: false });
@@ -25,18 +18,13 @@ export function useTangentSessionParam(store: TangentProjectStore) {
   const handled = useRef(false);
 
   const asked = readTangentSessionParam(search);
-  const canStartSession = store.canStartSession;
+  const sessionId = asked?.kind === "existing" ? asked.sessionId : undefined;
 
   useEffect(() => {
-    if (!asked || handled.current) return;
-    if (asked.kind === "new" && !canStartSession) return;
+    if (!sessionId || handled.current) return;
     handled.current = true;
 
-    if (asked.kind === "new") {
-      void store.startSession();
-    } else {
-      store.selectSession(asked.sessionId);
-    }
+    store.selectSession(sessionId);
 
     void navigate({
       to: ".",
@@ -47,5 +35,5 @@ export function useTangentSessionParam(store: TangentProjectStore) {
       },
       replace: true,
     } as never);
-  }, [asked, canStartSession, navigate, store]);
+  }, [sessionId, navigate, store]);
 }

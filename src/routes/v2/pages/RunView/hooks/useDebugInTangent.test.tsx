@@ -143,6 +143,16 @@ describe("useDebugInTangent", () => {
       );
     });
 
+    it("asks Tangent to open the failed run on arrival", async () => {
+      debugRun();
+
+      await waitFor(() =>
+        expect(navigate).toHaveBeenCalledWith(
+          expect.objectContaining({ search: { open: "run://id/run-7" } }),
+        ),
+      );
+    });
+
     /** A project holding a brief and no run is worse than no project at all. */
     it("takes the project back out again when attaching fails", async () => {
       vi.mocked(createProjectResource).mockRejectedValue(new Error("nope"));

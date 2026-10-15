@@ -1,7 +1,13 @@
 import { useMutation } from "@tanstack/react-query";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
+import {
+  readTangentOpenParam,
+  readTangentSessionParam,
+  withoutTangentArrivalSearch,
+} from "@/routes/tangentSearch";
 import type { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
@@ -11,6 +17,7 @@ import { MAX_PAGE_SIZE } from "@/services/projects/queryDefaults";
 import {
   describeResource,
   LOCAL_PIPELINE,
+  PIPELINE_RUN,
 } from "@/services/projects/resourceDescriptor";
 import type { WorkareaTarget } from "@/services/projects/resourceTarget";
 import { idIdentity } from "@/services/projects/resourceTarget";
@@ -39,16 +46,28 @@ function oldestFirst(resources: readonly ProjectResourceSummary[]) {
   );
 }
 
+function oldestAttached(
+  resources: readonly ProjectResourceSummary[],
+  type: string,
+) {
+  return oldestFirst(resources).flatMap((resource) => {
+    const described = describeResource(resource);
+    return described?.type === type && described.target
+      ? [{ resource, target: described.target }]
+      : [];
+  })[0];
+}
+
 /**
  * A session someone asked for elsewhere — the dashboard's prompt box, Debug in
- * Tangent — is started however many sessions the project already holds: the ask
- * was made once, and would otherwise be dropped on every project but an empty
- * one. Only the rest of the arrival is gated on emptiness, so a project someone
- * has worked in comes up as they left it.
+ * Tangent, a link asking for one — is started however many sessions the project
+ * already holds: the ask was made once, and would otherwise be dropped on every
+ * project but an empty one. Only the rest of the arrival is gated on emptiness,
+ * so a project someone has worked in comes up as they left it.
  *
  * A session nobody typed into is detached again on unmount, so an untouched new
- * project arrives session-less a second time. Reusing the pipeline attached
- * last time is what stops that adding another.
+ * project arrives session-less a second time. Reusing the pipeline or run
+ * attached last time is what stops that adding a pipeline.
  *
  * The sequence is one mutation so `isIdle` guards all of it, and the pipeline
  * opens only after `startSession` resolves, because the workarea is keyed by
@@ -61,6 +80,8 @@ export function usePrepareProjectArrival(
   { projectId, sessionCount, isSessionsLoading }: PrepareProjectArrivalOptions,
 ) {
   const storage = usePipelineStorage();
+  const search = useSearch({ strict: false });
+  const navigate = useNavigate();
   const { windows } = useSharedStores();
   const { data: project } = useProject(projectId);
   const { data: documents } = useProjectResources(projectId, {
@@ -75,9 +96,11 @@ export function usePrepareProjectArrival(
   const starting = readStartingSession(project?.metadata);
   const askedFor = starting ? nameFromPrompt(starting.prompt) : undefined;
   const isEmpty = sessionCount === 0;
+  const linkAsksForSession = readTangentSessionParam(search)?.kind === "new";
+  const linkAsksToOpen = readTangentOpenParam(search);
 
   const { mutate, isIdle } = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (askedToOpen: WorkareaTarget | undefined) => {
       const started = await store.startSession(
         starting && { ...starting, name: askedFor },
       );
@@ -101,20 +124,22 @@ export function usePrepareProjectArrival(
         }
       }
 
-      if (!isEmpty) return;
-
       // Nothing has been written about a project nobody has worked in, so its
       // window is a tall empty form sitting above what someone came for.
-      windows.getWindowById(PROJECT_DETAILS_WINDOW_ID)?.minimize();
+      if (isEmpty) {
+        windows.getWindowById(PROJECT_DETAILS_WINDOW_ID)?.minimize();
+      }
 
-      const attached = oldestFirst(documents?.items ?? []).flatMap(
-        (resource) => {
-          const described = describeResource(resource);
-          return described?.type === LOCAL_PIPELINE && described.target
-            ? [{ resource, target: described.target }]
-            : [];
-        },
-      )[0];
+      if (askedToOpen) {
+        await store.openWorkareaTarget(askedToOpen);
+        return;
+      }
+
+      if (!isEmpty) return;
+
+      const attached =
+        oldestAttached(documents?.items ?? [], LOCAL_PIPELINE) ??
+        oldestAttached(documents?.items ?? [], PIPELINE_RUN);
 
       if (attached) {
         await store.openWorkareaTarget(
@@ -147,7 +172,7 @@ export function usePrepareProjectArrival(
   // provider up and coming back still gets the arrival it was meant to have.
   const hasArrival =
     !isSessionsLoading &&
-    (isEmpty || starting !== undefined) &&
+    (isEmpty || starting !== undefined || linkAsksForSession) &&
     isAiConfigured &&
     project !== undefined &&
     documents !== undefined;
@@ -156,6 +181,22 @@ export function usePrepareProjectArrival(
     if (!hasArrival || prepared.current) return;
     if (!isIdle || store.isStartingSession) return;
     prepared.current = true;
-    mutate();
-  }, [hasArrival, isIdle, store]);
+    mutate(linkAsksToOpen);
+
+    if (linkAsksForSession || linkAsksToOpen) {
+      void navigate({
+        to: ".",
+        search: withoutTangentArrivalSearch,
+        replace: true,
+      } as never);
+    }
+  }, [
+    hasArrival,
+    isIdle,
+    store,
+    mutate,
+    linkAsksForSession,
+    linkAsksToOpen,
+    navigate,
+  ]);
 }

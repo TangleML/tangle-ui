@@ -4,6 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useRerunProjectIds } from "@/hooks/useRerunProjectIds";
 import useToastNotification from "@/hooks/useToastNotification";
 import { APP_ROUTES } from "@/routes/appRoutes";
+import { tangentOpenSearch } from "@/routes/tangentSearch";
 import { attachPipelineRunOnce } from "@/services/projects/attachPipelineRun";
 import { isProjectGone } from "@/services/projects/errors";
 import { createProjectResource } from "@/services/projects/projectResourcesService";
@@ -14,6 +15,7 @@ import {
   updateProject,
 } from "@/services/projects/projectsService";
 import { pipelineRunResourceInput } from "@/services/projects/resourceDescriptor";
+import { runTarget } from "@/services/projects/resourceTarget";
 import type { StartingSession } from "@/services/projects/startingSession";
 import { startingSessionMetadata } from "@/services/projects/startingSession";
 import type { CreateResourceInput, Project } from "@/services/projects/types";
@@ -145,11 +147,12 @@ export function useRunTangentHandoff(handoff: RunTangentHandoff) {
         ? intoExistingProject(destination.project, run)
         : intoNewProject(destination, run);
     },
-    onSuccess: (project) => {
+    onSuccess: (project, { runId }) => {
       void queryClient.invalidateQueries({ queryKey: ProjectsQueryKeys.All() });
       void navigate({
         to: APP_ROUTES.TANGENT_PROJECT,
         params: { projectId: project.id },
+        search: tangentOpenSearch(runTarget(runId)),
       });
     },
     onError: (error) => {
