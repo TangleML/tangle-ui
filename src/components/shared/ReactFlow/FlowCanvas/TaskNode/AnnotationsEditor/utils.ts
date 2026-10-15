@@ -270,8 +270,6 @@ export function getCloudProviderConfig(
         } else if (launcherSchema["x-project"]) {
           option.caption = `Project: ${launcherSchema["x-project"]}`;
         }
-        // An unfilled placeholder means there was no config to resolve it against,
-        // so the environment is unknown: no note beats one naming the wrong one.
         const note = launcherSchema["x-note"];
         if (note && !note.includes(URL_PLACEHOLDER)) option.note = note;
         if (launcherSchema["x-deprecated"]) {
@@ -521,18 +519,17 @@ function resourceFields(
     : (provider?.resource_fields ?? []);
 }
 
-// A target's note is consumer-specific presentation, like `common_annotations`, so
-// the prose stays bundled and the config supplies only the URL it points at. That
-// way a deployment cannot send its users to another environment's sign-up page,
-// and a hostname change needs no rebuild.
 function noteFor(cluster: FlatCluster): string | undefined {
-  const prose =
-    launcherTaskAnnotationSchema.launcher_annotation_schemas?.[cluster.key]?.[
-      "x-note"
-    ];
-  if (!prose?.includes(URL_PLACEHOLDER)) return prose;
+  const clusterSchema = getProviderSchema(
+    launcherTaskAnnotationSchema,
+    cluster.key,
+  );
+  if (!clusterSchema) return undefined;
+
+  const noteTemplate = clusterSchema["x-note"];
+  if (!noteTemplate?.includes(URL_PLACEHOLDER)) return noteTemplate;
   return cluster.url
-    ? prose.replaceAll(URL_PLACEHOLDER, cluster.url)
+    ? noteTemplate.replaceAll(URL_PLACEHOLDER, cluster.url)
     : undefined;
 }
 

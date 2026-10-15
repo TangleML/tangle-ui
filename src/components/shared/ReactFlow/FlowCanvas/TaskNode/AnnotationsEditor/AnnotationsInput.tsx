@@ -346,6 +346,8 @@ export const AnnotationsInput = ({
       const selectedOption = selectOptions.find(
         (opt) => opt.value === currentValue,
       );
+      const { caption, deprecated, deprecationMessage, note } =
+        selectedOption ?? {};
 
       inputElement = (
         <Select
@@ -387,17 +389,15 @@ export const AnnotationsInput = ({
                 </Button>
               )}
             </div>
-            {!!selectedOption?.caption && (
-              <FieldMessage truncate>{selectedOption.caption}</FieldMessage>
-            )}
-            {selectedOption?.deprecated && (
+            {!!caption && <FieldMessage truncate>{caption}</FieldMessage>}
+            {deprecated && (
               <FieldMessage tone="warning" icon="TriangleAlert">
-                {selectedOption.deprecationMessage ?? "No longer available"}
+                {deprecationMessage ?? "No longer available"}
               </FieldMessage>
             )}
-            {!selectedOption?.deprecated && !!selectedOption?.note && (
+            {!deprecated && !!note && (
               <FieldMessage tone="info" icon="Info">
-                <DescriptionWithLinks text={selectedOption.note} />
+                <DescriptionWithLinks text={note} />
               </FieldMessage>
             )}
           </BlockStack>

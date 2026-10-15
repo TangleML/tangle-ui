@@ -22,8 +22,6 @@ vi.mock("@/components/shared/Settings/useFlags", () => ({
   isFlagEnabled: vi.fn(),
 }));
 
-// Target prose comes from the bundled schema, which this repo ships empty for a
-// consumer's overlay to fill, so it has to be stood in for here.
 vi.mock("@/config/launcherTaskAnnotationSchema.json", () => ({
   default: {
     launcher_annotation_schemas: {
