@@ -2,16 +2,15 @@ import { Fragment } from "react";
 
 import { Icon } from "@/components/ui/icon";
 
-// Matches http/https URLs; defined at module level to avoid re-creation on every render.
-const URL_REGEX = /https?:\/\/\S+/g;
+const URL_WITHOUT_TRAILING_PUNCTUATION = /https?:\/\/\S*[^\s.,;:!?)\]}'"]/g;
 
 interface DescriptionWithLinksProps {
   text: string;
 }
 
 export function DescriptionWithLinks({ text }: DescriptionWithLinksProps) {
-  const parts = text.split(URL_REGEX);
-  const urls = text.match(URL_REGEX) ?? [];
+  const parts = text.split(URL_WITHOUT_TRAILING_PUNCTUATION);
+  const urls = text.match(URL_WITHOUT_TRAILING_PUNCTUATION) ?? [];
 
   return (
     <>

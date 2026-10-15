@@ -35,6 +35,7 @@ import type {
 import { getAnnotationValue as getAnnotationString } from "@/utils/annotations";
 import { clamp } from "@/utils/math";
 
+import { DescriptionWithLinks } from "./DescriptionWithLinks";
 import { listedOptions } from "./utils";
 
 interface AnnotationsInputProps {
@@ -345,6 +346,8 @@ export const AnnotationsInput = ({
       const selectedOption = selectOptions.find(
         (opt) => opt.value === currentValue,
       );
+      const { caption, deprecated, deprecationMessage, note } =
+        selectedOption ?? {};
 
       inputElement = (
         <Select
@@ -386,12 +389,15 @@ export const AnnotationsInput = ({
                 </Button>
               )}
             </div>
-            {!!selectedOption?.caption && (
-              <FieldMessage truncate>{selectedOption.caption}</FieldMessage>
-            )}
-            {selectedOption?.deprecated && (
+            {!!caption && <FieldMessage truncate>{caption}</FieldMessage>}
+            {deprecated && (
               <FieldMessage tone="warning" icon="TriangleAlert">
-                {selectedOption.deprecationMessage ?? "No longer available"}
+                {deprecationMessage ?? "No longer available"}
+              </FieldMessage>
+            )}
+            {!deprecated && !!note && (
+              <FieldMessage tone="info" icon="Info">
+                <DescriptionWithLinks text={note} />
               </FieldMessage>
             )}
           </BlockStack>
