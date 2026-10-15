@@ -16,11 +16,6 @@ interface WorkspaceChoice {
   reset: () => void;
 }
 
-/**
- * Only an explicit pick is held in state, and only while it is still on offer:
- * a workspace retired after it was picked falls back to the default rather than
- * leaving the form pointing at somewhere that refuses new projects.
- */
 export function useWorkspaceChoice(
   workspaces: readonly Workspace[] | undefined,
 ): WorkspaceChoice {

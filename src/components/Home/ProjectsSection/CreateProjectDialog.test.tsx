@@ -110,7 +110,6 @@ describe("CreateProjectDialog", () => {
     expect(mutate).not.toHaveBeenCalled();
   });
 
-  /** Users who never touch the picker keep getting the workspace they always had. */
   it("starts on the oldest workspace rather than the first listed", async () => {
     await openDialog();
 

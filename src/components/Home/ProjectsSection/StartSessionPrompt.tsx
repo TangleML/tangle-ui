@@ -57,11 +57,6 @@ interface StartSessionVariables {
   workspaceId: string;
 }
 
-/**
- * The backend is asked about first: without one the workspace query never
- * runs, so it stays pending and the box would sit disabled without a word.
- * And "none" said while the lookup runs would accuse a backend about to answer.
- */
 function missingWorkspaceNotice({
   backendMissing,
   workspacesError,
@@ -140,8 +135,6 @@ export function StartSessionPrompt() {
       });
     },
     onError: (error) => {
-      // The workspace list is cached for minutes, so the refusal may be a
-      // workspace retired since; refetching drops it from the picker.
       void queryClient.invalidateQueries({
         queryKey: WorkspacesQueryKeys.All(),
       });

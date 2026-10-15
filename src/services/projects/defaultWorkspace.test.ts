@@ -40,7 +40,6 @@ describe("activeWorkspaces", () => {
 });
 
 describe("pickDefaultWorkspace", () => {
-  /** The API lists by name, so a workspace added later can sort first. */
   it("picks the oldest workspace rather than the first listed", () => {
     expect(pickDefaultWorkspace([newer, original], null)).toBe(original);
   });

@@ -120,7 +120,6 @@ describe("requestFailureMessage", () => {
   });
 });
 
-/** The generated SDK hands over the body already parsed. */
 describe("describeErrorBody", () => {
   it("reads the detail of a parsed body", () => {
     expect(describeErrorBody({ detail: "Workspace is retired" })).toBe(

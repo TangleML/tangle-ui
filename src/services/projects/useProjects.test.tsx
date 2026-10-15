@@ -259,7 +259,6 @@ describe("project mutation hooks", () => {
       expect(notify).toHaveBeenCalledWith("Failed to create project", "error");
     });
 
-    /** The picker's list may predate the workspace being retired. */
     it("asks for the workspaces again", async () => {
       const client = makeClient();
       const invalidate = vi.spyOn(client, "invalidateQueries");

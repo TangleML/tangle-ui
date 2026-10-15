@@ -259,7 +259,6 @@ describe("StartSessionPrompt", () => {
   describe("choosing a workspace", () => {
     beforeEach(() => mockWorkspaces([analytics, research]));
 
-    /** Users who never touch the picker keep getting the workspace they always had. */
     it("starts on the oldest workspace rather than the first listed", async () => {
       renderPrompt();
 
@@ -361,7 +360,6 @@ describe("StartSessionPrompt", () => {
     expect(screen.getByText(/Projects cannot be created yet/)).toBeVisible();
   });
 
-  /** The workspace lookup never runs without a backend, so it never settles. */
   it("asks for a backend when none is connected", () => {
     mockBackend({ configured: false, available: false });
     mockWorkspaces(undefined, { isPending: true });
