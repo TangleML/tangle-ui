@@ -13,11 +13,6 @@ export function activeWorkspaces(workspaces: readonly Workspace[]) {
   return workspaces.filter((workspace) => workspace.isActive);
 }
 
-/**
- * The oldest workspace rather than the first listed: the API sorts by name, so
- * adding a workspace that sorts earlier would otherwise move every user who
- * never chose one.
- */
 export function pickDefaultWorkspace(
   workspaces: readonly Workspace[],
   lastUsedWorkspaceId: string | null,

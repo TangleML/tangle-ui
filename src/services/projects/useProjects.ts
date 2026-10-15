@@ -88,8 +88,6 @@ export function useCreateProject() {
       });
     },
     onError: (error) => {
-      // The workspace list is cached for minutes, so the refusal may be a
-      // workspace retired since; refetching drops it from the picker.
       void queryClient.invalidateQueries({
         queryKey: WorkspacesQueryKeys.All(),
       });

@@ -233,7 +233,6 @@ describe("projectsService", () => {
     });
   });
 
-  /** The schema types a 422 as field errors; the projects API sends a sentence. */
   it("says why the backend refused a project", async () => {
     vi.mocked(apiSdk.createProjectApiProjectsPost).mockResolvedValue({
       ...createMockApiErrorResponse(422),
