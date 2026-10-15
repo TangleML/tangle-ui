@@ -1,6 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { type FormEvent, type ReactNode, useEffect, useState } from "react";
 
+import { WorkspaceField } from "@/components/Project/WorkspaceSelect";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,24 +16,15 @@ import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Text } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { getProjectHomeRoute } from "@/routes/projectRoutes";
 import { rememberLastUsedWorkspace } from "@/services/projects/defaultWorkspace";
 import type { Workspace } from "@/services/projects/types";
 import { useCreateProject } from "@/services/projects/useProjects";
+import { useWorkspaceChoice } from "@/services/projects/useWorkspaceChoice";
 import { tracking } from "@/utils/tracking";
-
-import { useWorkspaceChoice } from "./useWorkspaceChoice";
 
 interface CreateProjectDialogProps {
   workspaces: readonly Workspace[];
@@ -143,31 +135,7 @@ export function CreateProjectDialog({
               )}
             </BlockStack>
 
-            <BlockStack gap="2">
-              <Label htmlFor="create-project-workspace">Workspace</Label>
-              <Select
-                value={workspaceChoice.selected?.id ?? ""}
-                onValueChange={workspaceChoice.choose}
-              >
-                <SelectTrigger
-                  id="create-project-workspace"
-                  aria-describedby="create-project-workspace-hint"
-                  className="w-full"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {workspaceChoice.workspaces.map((workspace) => (
-                    <SelectItem key={workspace.id} value={workspace.id}>
-                      {workspace.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Text id="create-project-workspace-hint" size="xs" tone="subdued">
-                The workspace cannot be changed after the project is created.
-              </Text>
-            </BlockStack>
+            <WorkspaceField choice={workspaceChoice} />
 
             <BlockStack gap="2">
               <Label htmlFor="create-project-description">
