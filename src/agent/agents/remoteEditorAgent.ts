@@ -14,7 +14,7 @@
 import { Agent } from "@openai/agents";
 import type { ThinkingLevel } from "@tangent/shared/contracts.ts";
 
-import { getEffectiveReasoningEffort } from "@/config/aiModels";
+import { getEffectiveReasoningEffort } from "@/config/aiConfig";
 import type { AiProviderConfig } from "@/types/aiProvider";
 
 import { getAgentModelConfig } from "../config";

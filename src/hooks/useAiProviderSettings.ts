@@ -1,12 +1,12 @@
 import { useSyncExternalStore } from "react";
 
 import {
-  DEFAULT_AI_REASONING_EFFORT,
+  AI_CONFIG,
   getAiModelOptions,
   getDefaultAiModelId,
   getEffectiveReasoningEffort,
   isAiReasoningEffort,
-} from "@/config/aiModels";
+} from "@/config/aiConfig";
 import { useBackend } from "@/providers/BackendProvider";
 import type { AiProviderConfig } from "@/types/aiProvider";
 import { getStorage } from "@/utils/typedStorage";
@@ -182,7 +182,8 @@ export function useAiProviderSettings() {
   const modelPreferences = isOwnKeyEnabled ? customConfig : proxyConfig;
   const model = modelPreferences.model;
   const reasoningEffortPreference =
-    modelPreferences.reasoningEffortPreference ?? DEFAULT_AI_REASONING_EFFORT;
+    modelPreferences.reasoningEffortPreference ??
+    AI_CONFIG.defaultReasoningEffort;
   const modelCapabilities = getAiModelOptions();
   const reasoningEffort = getEffectiveReasoningEffort(
     model,

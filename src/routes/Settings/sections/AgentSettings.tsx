@@ -12,7 +12,7 @@ import { Heading, Paragraph, Text } from "@/components/ui/typography";
 import {
   getAiMaxOutputTokens,
   getEffectiveReasoningEffort,
-} from "@/config/aiModels";
+} from "@/config/aiConfig";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
 import type { AiProviderConfig } from "@/types/aiProvider";

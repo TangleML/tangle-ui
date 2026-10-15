@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { getAiModelOptions } from "@/config/aiModels";
+import { getAiModelOptions } from "@/config/aiConfig";
 import { AI_PROVIDER_STORAGE_KEY } from "@/hooks/useAiProviderSettings";
 
 import { AiModelPicker } from "./AiModelPicker";

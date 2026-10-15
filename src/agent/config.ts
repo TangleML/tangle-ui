@@ -6,10 +6,10 @@ import {
 } from "@openai/agents";
 import OpenAI from "openai";
 
+import { AI_CONFIG } from "@/config/aiConfig";
 import type { AiProviderConfig } from "@/types/aiProvider";
 import { BASE_URL } from "@/utils/constants";
 
-const AI_ASSISTANT_EMBEDDING_MODEL = "text-embedding-3-small";
 const SIDEKICK_OPENAI_API = "responses";
 
 const RESPONSES_REASONING_INCLUDE = ["reasoning.encrypted_content"];
@@ -38,7 +38,7 @@ export function getAgentModelConfig(config: AiProviderConfig): {
 }
 
 export function requireEmbeddingModel(): string {
-  return AI_ASSISTANT_EMBEDDING_MODEL;
+  return AI_CONFIG.embeddingModel;
 }
 
 export function requireSkillsBaseUrl(): string {

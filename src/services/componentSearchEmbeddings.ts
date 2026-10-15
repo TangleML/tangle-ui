@@ -1,5 +1,6 @@
 import { Dexie, type EntityTable } from "dexie";
 
+import { AI_CONFIG } from "@/config/aiConfig";
 import {
   type IndexEntry,
   indexEntryToLexicalMatch,
@@ -7,7 +8,6 @@ import {
 } from "@/services/componentSearchIndex";
 import { isRecord } from "@/utils/typeGuards";
 
-const COMPONENT_SEARCH_EMBEDDING_MODEL = "text-embedding-3-small";
 const DB_NAME = "tangle_component_search_embeddings";
 const CACHE_SCHEMA_VERSION = 1;
 // The embeddings endpoint caps a single request at 2048 inputs (plus a token
@@ -57,7 +57,7 @@ function hashText(text: string): string {
 }
 
 function cacheKey(text: string): string {
-  return `${CACHE_SCHEMA_VERSION}:${COMPONENT_SEARCH_EMBEDDING_MODEL}:${hashText(text)}`;
+  return `${CACHE_SCHEMA_VERSION}:${AI_CONFIG.embeddingModel}:${hashText(text)}`;
 }
 
 function stringifyEmbeddingField(value: unknown): string {
@@ -115,7 +115,7 @@ async function fetchEmbeddings(
         : {}),
     },
     body: JSON.stringify({
-      model: COMPONENT_SEARCH_EMBEDDING_MODEL,
+      model: AI_CONFIG.embeddingModel,
       input: texts,
     }),
   });
@@ -159,7 +159,7 @@ async function embedTextsWithCache(
     const cached = cachedRows[i];
     if (
       cached &&
-      cached.embeddingModel === COMPONENT_SEARCH_EMBEDDING_MODEL &&
+      cached.embeddingModel === AI_CONFIG.embeddingModel &&
       cached.textHash === hashText(uniqueTexts[i]) &&
       cached.textLength === uniqueTexts[i].length &&
       cached.updatedAt >= expiresBefore
@@ -188,7 +188,7 @@ async function embedTextsWithCache(
     await componentSearchEmbeddingDb.embeddings.bulkPut(
       missingTexts.map((text, index) => ({
         cacheKey: cacheKey(text),
-        embeddingModel: COMPONENT_SEARCH_EMBEDDING_MODEL,
+        embeddingModel: AI_CONFIG.embeddingModel,
         textHash: hashText(text),
         textLength: text.length,
         embedding: embeddings[index],

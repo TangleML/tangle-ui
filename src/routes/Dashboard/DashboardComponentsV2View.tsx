@@ -28,7 +28,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { QuickTooltip } from "@/components/ui/tooltip";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
-import { getAiModelLabel } from "@/config/aiModels";
+import { getAiModelLabel } from "@/config/aiConfig";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import { useDebouncedSearchValue } from "@/hooks/useDebouncedSearchValue";
 import { getComponentQueryKey } from "@/hooks/useHydrateComponentReference";
