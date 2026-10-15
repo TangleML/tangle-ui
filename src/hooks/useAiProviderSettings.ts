@@ -1,21 +1,28 @@
 import { useSyncExternalStore } from "react";
 
+import { useBackend } from "@/providers/BackendProvider";
 import type { AiProviderConfig } from "@/types/aiProvider";
 import { getStorage } from "@/utils/typedStorage";
 import { isRecord } from "@/utils/typeGuards";
 
 /**
- * Bring-your-own-provider configuration shared by all AI features.
+ * Provider selection shared by all AI features. Turning off bring-your-own-key
+ * mode uses the selected backend without overwriting the saved custom provider.
  *
  * Stored in localStorage so each user owns their credentials. API keys stored
  * in localStorage are readable by JavaScript on this origin; users should use
  * scoped keys and rotate them if needed.
  */
 export const AI_PROVIDER_STORAGE_KEY = "tangle.aiProvider.config";
+export const AI_PROXY_STORAGE_KEY = "tangle.aiProvider.proxy";
+export const AI_USE_OWN_KEY_STORAGE_KEY = "tangle.aiProvider.useOwnKey";
 const LEGACY_COMPONENT_SEARCH_STORAGE_KEY = "tangle.componentSearchV2.config";
 
 type StorageKey =
-  typeof AI_PROVIDER_STORAGE_KEY | typeof LEGACY_COMPONENT_SEARCH_STORAGE_KEY;
+  | typeof AI_PROVIDER_STORAGE_KEY
+  | typeof AI_PROXY_STORAGE_KEY
+  | typeof AI_USE_OWN_KEY_STORAGE_KEY
+  | typeof LEGACY_COMPONENT_SEARCH_STORAGE_KEY;
 
 type AiProviderSettingsStorage = Record<StorageKey, unknown>;
 
@@ -25,6 +32,18 @@ const DEFAULTS: AiProviderConfig = {
   apiBase: "",
   apiKey: "",
   model: "",
+};
+
+type ProxySettings = Pick<AiProviderConfig, "model">;
+
+interface AiProviderSettings {
+  customConfig: AiProviderConfig;
+  proxyConfig: ProxySettings;
+}
+
+const SERVER_SETTINGS: AiProviderSettings = {
+  customConfig: DEFAULTS,
+  proxyConfig: { model: DEFAULTS.model },
 };
 
 function readTrimmedString(
@@ -73,11 +92,20 @@ function readStoredConfig(): AiProviderConfig {
   );
 }
 
+function readProxySettings(): ProxySettings {
+  const stored = storage.getItem(AI_PROXY_STORAGE_KEY);
+  return {
+    model: isRecord(stored) ? readTrimmedString(stored, "model") : "",
+  };
+}
+
 function subscribe(callback: () => void): () => void {
   if (typeof window === "undefined") return () => {};
   const handler = (event: StorageEvent) => {
     if (
       event.key === AI_PROVIDER_STORAGE_KEY ||
+      event.key === AI_PROXY_STORAGE_KEY ||
+      event.key === AI_USE_OWN_KEY_STORAGE_KEY ||
       event.key === LEGACY_COMPONENT_SEARCH_STORAGE_KEY ||
       event.key === null
     ) {
@@ -89,9 +117,12 @@ function subscribe(callback: () => void): () => void {
 }
 
 let cachedJSON = "";
-let cachedConfig: AiProviderConfig | null = null;
-function getSnapshot(): AiProviderConfig {
-  const fresh = readStoredConfig();
+let cachedConfig: AiProviderSettings | null = null;
+function getSnapshot(): AiProviderSettings {
+  const fresh = {
+    customConfig: readStoredConfig(),
+    proxyConfig: readProxySettings(),
+  };
   const json = JSON.stringify(fresh);
   if (json !== cachedJSON) {
     cachedJSON = json;
@@ -100,16 +131,35 @@ function getSnapshot(): AiProviderConfig {
   return cachedConfig ?? fresh;
 }
 
-function getServerSnapshot(): AiProviderConfig {
-  return DEFAULTS;
+function getServerSnapshot(): AiProviderSettings {
+  return SERVER_SETTINGS;
 }
 
 export function useAiProviderSettings() {
-  const config = useSyncExternalStore(
+  const { backendUrl } = useBackend();
+  const backendBase = backendUrl.trim().replace(/\/+$/, "");
+  const { customConfig, proxyConfig } = useSyncExternalStore(
     subscribe,
     getSnapshot,
     getServerSnapshot,
   );
+  const isOwnKeyEnabled = useSyncExternalStore(
+    subscribe,
+    () => storage.getItem(AI_USE_OWN_KEY_STORAGE_KEY) !== false,
+    () => true,
+  );
+  const config: AiProviderConfig = isOwnKeyEnabled
+    ? customConfig
+    : {
+        apiBase: backendBase ? `${backendBase}/api/experimental/ai/v1` : "",
+        apiKey: "",
+        model: proxyConfig.model,
+        credentials: "include",
+      };
+
+  const setOwnKeyEnabled = (enabled: boolean) => {
+    storage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, enabled);
+  };
 
   // Read fresh from storage instead of merging onto the render-time `config`
   // so two updates in the same tick (e.g. two field handlers firing back-to-
@@ -117,6 +167,13 @@ export function useAiProviderSettings() {
   // each other with the same stale snapshot.
   const update = (partial: Partial<AiProviderConfig>) => {
     if (typeof window === "undefined") return;
+    if (storage.getItem(AI_USE_OWN_KEY_STORAGE_KEY) === false) {
+      const current = readProxySettings();
+      storage.setItem(AI_PROXY_STORAGE_KEY, {
+        model: partial.model ?? current.model,
+      });
+      return;
+    }
     const current = readStoredConfig();
     const next: AiProviderConfig = { ...current, ...partial };
     storage.setItem(AI_PROVIDER_STORAGE_KEY, next);
@@ -124,11 +181,24 @@ export function useAiProviderSettings() {
 
   const clear = () => {
     if (typeof window === "undefined") return;
+    if (storage.getItem(AI_USE_OWN_KEY_STORAGE_KEY) === false) {
+      storage.setItem(AI_PROXY_STORAGE_KEY, null);
+      return;
+    }
     storage.setItem(AI_PROVIDER_STORAGE_KEY, null);
     storage.setItem(LEGACY_COMPONENT_SEARCH_STORAGE_KEY, null);
   };
 
   const isConfigured = config.apiBase.trim().length > 0;
 
-  return { config, update, clear, isConfigured };
+  return {
+    config,
+    customConfig,
+    proxyConfig,
+    isOwnKeyEnabled,
+    setOwnKeyEnabled,
+    update,
+    clear,
+    isConfigured,
+  };
 }

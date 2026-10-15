@@ -5,4 +5,5 @@ export interface AiProviderConfig {
   apiKey: string;
   // Leave blank to use the provider default.
   model: string;
+  credentials?: RequestCredentials;
 }

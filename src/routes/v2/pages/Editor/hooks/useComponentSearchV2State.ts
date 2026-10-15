@@ -273,8 +273,7 @@ export function useComponentSearchV2State(
         sourceIndex,
         searchableQuery,
         {
-          apiBase: aiConfig.apiBase,
-          apiKey: aiConfig.apiKey,
+          ...aiConfig,
           signal: abortController.signal,
         },
         { limit },

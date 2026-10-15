@@ -11,12 +11,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  getAiModelLabel,
-  getAiModelOptions,
-  getDefaultAiModelId,
-} from "@/config/aiModels";
+import { getAiModelLabel, getAiModelOptions } from "@/config/aiModels";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
+
+const PROVIDER_DEFAULT_VALUE = "__provider_default__";
 
 export function AiModelQuickSelect() {
   const componentSearchEnabled = useFlagValue("component-search-v2");
@@ -25,11 +23,12 @@ export function AiModelQuickSelect() {
   const { config, update, isConfigured } = useAiProviderSettings();
   const configuredModel = config.model.trim();
   const options = getAiModelOptions();
-  const selectedValue = configuredModel || getDefaultAiModelId();
-  const hasCustomModel = options.every((option) => option.id !== selectedValue);
+  const selectedValue = configuredModel || PROVIDER_DEFAULT_VALUE;
+  const hasCustomModel =
+    configuredModel && options.every((option) => option.id !== configuredModel);
 
   const handleValueChange = (value: string) => {
-    update({ model: value });
+    update({ model: value === PROVIDER_DEFAULT_VALUE ? "" : value });
   };
 
   const usesTheModel =
@@ -51,6 +50,9 @@ export function AiModelQuickSelect() {
       <SelectContent align="end">
         <SelectGroup>
           <SelectLabel>AI model</SelectLabel>
+          <SelectItem value={PROVIDER_DEFAULT_VALUE}>
+            Provider default
+          </SelectItem>
           {hasCustomModel && (
             <SelectItem value={selectedValue}>{selectedValue}</SelectItem>
           )}

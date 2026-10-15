@@ -1141,7 +1141,7 @@ export const DashboardComponentsV2View = () => {
       return await rankComponentMatchesByEmbeddings(
         filteredIndex,
         trimmed,
-        { apiBase: aiConfig.apiBase, apiKey: aiConfig.apiKey },
+        aiConfig,
         { limit },
       );
     } catch {

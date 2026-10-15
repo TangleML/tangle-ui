@@ -7,7 +7,12 @@
  * close over the per-turn `AgentSession` (bridge, recent runs, status
  * emitter).
  */
-import { type Agent, MemorySession, run } from "@openai/agents";
+import {
+  type Agent,
+  MemorySession,
+  OpenAIProvider,
+  Runner,
+} from "@openai/agents";
 
 import type { AiProviderConfig } from "@/types/aiProvider";
 
@@ -48,9 +53,17 @@ export function createDispatcherRuntime(
   return {
     async invoke(params) {
       params.session.proxyClient.ensureConfigured(params.aiConfig);
+      const openAIClient = params.session.proxyClient.openai;
       const sessionMemory = getOrCreateSessionMemory(params.threadId);
       const agent = await buildAgent(params.session);
-      const result = await run(agent, params.message, {
+      const runner = new Runner({
+        modelProvider: new OpenAIProvider({
+          openAIClient,
+          useResponses: true,
+        }),
+        tracingDisabled: true,
+      });
+      const result = await runner.run(agent, params.message, {
         session: sessionMemory,
       });
       const answer =
