@@ -62,9 +62,26 @@ function WorkspaceSecrets({ workspaceId }: { workspaceId: string }) {
   return (
     <>
       {workspace && (
-        <Text size="xs" tone="subdued">
-          {`Shared with every project in ${workspace.name}.`}
-        </Text>
+        <InlineStack gap="1" blockAlign="center" wrap="nowrap">
+          <Text size="xs" tone="subdued" className="shrink-0">
+            Shared with every project in
+          </Text>
+          <Icon
+            name="Shapes"
+            size="xs"
+            aria-label="Workspace"
+            className="shrink-0 text-muted-foreground"
+          />
+          <Text
+            size="xs"
+            tone="subdued"
+            weight="semibold"
+            className="min-w-0 truncate"
+            title={workspace.name}
+          >
+            {`${workspace.name}.`}
+          </Text>
+        </InlineStack>
       )}
 
       {isPending && <LoadingSecrets />}

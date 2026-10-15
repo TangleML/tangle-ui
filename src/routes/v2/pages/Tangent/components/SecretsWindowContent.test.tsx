@@ -110,9 +110,11 @@ describe("SecretsWindowContent", () => {
   it("says the secrets are shared across the workspace", () => {
     render(<SecretsWindowContent />);
 
-    expect(
-      screen.getByText("Shared with every project in ML Research."),
-    ).toBeVisible();
+    const workspaceIcon = screen.getByLabelText("Workspace");
+    expect(workspaceIcon.previousElementSibling).toHaveTextContent(
+      "Shared with every project in",
+    );
+    expect(workspaceIcon.nextElementSibling).toHaveTextContent("ML Research.");
   });
 
   it("waits for the project before it can say which workspace", () => {
