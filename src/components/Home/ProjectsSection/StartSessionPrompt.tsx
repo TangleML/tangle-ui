@@ -21,12 +21,12 @@ import { nameFromPrompt } from "@/services/projects/nameFromPrompt";
 import { provisionalNameMetadata } from "@/services/projects/provisionalName";
 import { startingSessionMetadata } from "@/services/projects/startingSession";
 import { useCreateProject } from "@/services/projects/useProjects";
+import { useWorkspaceChoice } from "@/services/projects/useWorkspaceChoice";
 import { useWorkspaces } from "@/services/projects/useWorkspaces";
 
 import { nextProjectName } from "./nextProjectName";
 import { StartSessionToolbar } from "./StartSessionToolbar";
 import { useMyProjects } from "./useMyProjects";
-import { useWorkspaceChoice } from "./useWorkspaceChoice";
 
 export function StartSessionPrompt() {
   const [prompt, setPrompt] = useState("");
