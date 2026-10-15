@@ -15,6 +15,11 @@ vi.mock("@/hooks/useRecentlyViewed", () => ({
   removeRecentlyViewed: vi.fn(),
 }));
 
+const notify = vi.fn();
+vi.mock("@/hooks/useToastNotification", () => ({
+  default: () => notify,
+}));
+
 let backend = { configured: true, available: true };
 vi.mock("@/providers/BackendProvider", () => ({
   useBackend: () => backend,
@@ -218,6 +223,51 @@ describe("project mutation hooks", () => {
     });
 
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["projects"] });
+  });
+
+  describe("useCreateProject refused", () => {
+    async function createRefused(error: Error, client = makeClient()) {
+      vi.mocked(projectsService.createProject).mockRejectedValue(error);
+      const { result } = renderHook(() => useCreateProject(), {
+        wrapper: wrapperFor(client),
+      });
+
+      await act(async () => {
+        await result.current
+          .mutateAsync({ workspaceId: "w-retired", name: "P" })
+          .catch(() => undefined);
+      });
+    }
+
+    it("says why the backend refused", async () => {
+      await createRefused(
+        new ProjectsApiError(
+          "Failed to create project: Workspace 'Legacy' is no longer accepting new projects.",
+          422,
+        ),
+      );
+
+      expect(notify).toHaveBeenCalledWith(
+        "Failed to create project: Workspace 'Legacy' is no longer accepting new projects.",
+        "error",
+      );
+    });
+
+    it("keeps a generic message for a failure that never reached the API", async () => {
+      await createRefused(new TypeError("Failed to fetch"));
+
+      expect(notify).toHaveBeenCalledWith("Failed to create project", "error");
+    });
+
+    /** The picker's list may predate the workspace being retired. */
+    it("asks for the workspaces again", async () => {
+      const client = makeClient();
+      const invalidate = vi.spyOn(client, "invalidateQueries");
+
+      await createRefused(new ProjectsApiError("refused", 422), client);
+
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: ["workspaces"] });
+    });
   });
 
   it("useUpdateProject invalidates list and detail", async () => {

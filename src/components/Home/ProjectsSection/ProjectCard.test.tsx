@@ -5,8 +5,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useProjectPin } from "@/components/Project/useProjectPin";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
-import type { ProjectSummary } from "@/services/projects/types";
+import type { ProjectSummary, Workspace } from "@/services/projects/types";
 import { useDeleteProject } from "@/services/projects/useProjects";
+import { useWorkspaces } from "@/services/projects/useWorkspaces";
 import { copyToClipboard } from "@/utils/string";
 
 import { ProjectCard } from "./ProjectCard";
@@ -64,6 +65,25 @@ vi.mock("@/utils/URL", () => ({
   getProjectUrl: (id: string) => `https://tangle.example/projects/${id}`,
 }));
 
+vi.mock("@/services/projects/useWorkspaces", () => ({
+  useWorkspaces: vi.fn(),
+}));
+
+const workspace: Workspace = {
+  id: "workspace-1",
+  name: "ML Research",
+  description: null,
+  isActive: true,
+  metadata: null,
+  createdAt: new Date("2026-09-01T10:00:00Z"),
+};
+
+function mockWorkspaces(workspaces: Workspace[] | undefined) {
+  vi.mocked(useWorkspaces).mockReturnValue({
+    data: workspaces,
+  } as ReturnType<typeof useWorkspaces>);
+}
+
 const project: ProjectSummary = {
   id: "project-1",
   workspaceId: "workspace-1",
@@ -120,6 +140,7 @@ describe("ProjectCard", () => {
     mockDeleteProject();
     mockPin();
     mockFlags({ "tangent-shell": true });
+    mockWorkspaces([workspace]);
   });
 
   afterEach(() => {
@@ -296,10 +317,27 @@ describe("ProjectCard", () => {
     expect(togglePin).toHaveBeenCalled();
   });
 
-  it("says nothing about the workspace a project lives in", () => {
+  it("names the workspace the project lives in", () => {
     renderCard();
 
-    expect(screen.queryByText("ML Research")).toBeNull();
+    expect(screen.getByLabelText("Workspace")).toBeInTheDocument();
+    expect(screen.getByText("ML Research")).toBeInTheDocument();
+    expect(screen.queryByText("workspace-1")).toBeNull();
+  });
+
+  /** A retired workspace still holds its projects, so they still say where they live. */
+  it("names a workspace that has since been retired", () => {
+    mockWorkspaces([{ ...workspace, isActive: false }]);
+    renderCard();
+
+    expect(screen.getByText("ML Research")).toBeInTheDocument();
+  });
+
+  it("leaves the workspace out until the list says what it is called", () => {
+    mockWorkspaces(undefined);
+    renderCard();
+
+    expect(screen.queryByLabelText("Workspace")).toBeNull();
     expect(screen.queryByText("workspace-1")).toBeNull();
   });
 

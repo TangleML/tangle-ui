@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { APP_ROUTES } from "@/routes/appRoutes";
 import { projectHomeRoute } from "@/routes/projectRoutes";
 import type { ProjectSummary } from "@/services/projects/types";
+import { useWorkspaces } from "@/services/projects/useWorkspaces";
 import { formatDate, formatRelativeTime } from "@/utils/date";
 import { tracking } from "@/utils/tracking";
 
@@ -42,6 +43,8 @@ export function ProjectCard({ project }: ProjectCardProps) {
   const share = useShareProjectAction(project.id);
 
   const { pinned, isPinning, togglePin } = useProjectPin(project);
+  const { data: workspaces } = useWorkspaces();
+  const workspace = workspaces?.find(({ id }) => id === project.workspaceId);
   const tangentEnabled = useTangentEnabled();
   const resourceCounts = visibleResourceCounts(
     project.resourceCounts,
@@ -106,6 +109,19 @@ export function ProjectCard({ project }: ProjectCardProps) {
           </Text>
           <Separator />
           <BlockStack gap="1" align="stretch">
+            {workspace && (
+              <InlineStack gap="1" blockAlign="center" wrap="nowrap">
+                <Icon
+                  name="Shapes"
+                  size="xs"
+                  aria-label="Workspace"
+                  className="shrink-0 text-muted-foreground"
+                />
+                <Text size="xs" tone="subdued" className="min-w-0 truncate">
+                  {workspace.name}
+                </Text>
+              </InlineStack>
+            )}
             <Text size="xs" tone="subdued" className="truncate">
               {`Created ${formatDate(project.createdAt)}`}
             </Text>
