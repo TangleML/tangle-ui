@@ -13,9 +13,8 @@ vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => navigate,
 }));
 
-function makeStore(canStartSession = true) {
+function makeStore() {
   return {
-    canStartSession,
     selectSession: vi.fn(),
     startSession: vi.fn().mockResolvedValue(true),
   } as unknown as TangentProjectStore;
@@ -37,71 +36,44 @@ describe("useTangentSessionParam", () => {
     expect(store.startSession).not.toHaveBeenCalled();
   });
 
-  it("starts one when that is what was asked for", () => {
-    search = { session: "new" };
-    const store = makeStore();
-
-    renderHook(() => useTangentSessionParam(store));
-
-    expect(store.startSession).toHaveBeenCalled();
-    expect(store.selectSession).not.toHaveBeenCalled();
-  });
-
-  /** Left in the url, a reload would start a second session. */
+  /** Left in the url, it would fight the user for the selection later. */
   it("takes the request out of the url once it is done", () => {
-    search = { session: "new" };
+    search = { session: "sess-a" };
 
     renderHook(() => useTangentSessionParam(makeStore()));
 
     expect(navigate).toHaveBeenCalled();
     const { search: rewrite, replace } = navigate.mock.calls[0][0];
     expect(replace).toBe(true);
-    expect(rewrite({ session: "new", other: "kept" })).toEqual({
+    expect(rewrite({ session: "sess-a", other: "kept" })).toEqual({
       other: "kept",
     });
   });
 
   it("acts once however often it re-renders", () => {
-    search = { session: "new" };
+    search = { session: "sess-a" };
     const store = makeStore();
 
     const { rerender } = renderHook(() => useTangentSessionParam(store));
     rerender();
     rerender();
 
-    expect(store.startSession).toHaveBeenCalledTimes(1);
+    expect(store.selectSession).toHaveBeenCalledTimes(1);
   });
 
   /**
-   * This hook runs in a child of the provider that wires the store up, and a
-   * child's effects run first, so on the first commit there is no way to reach
-   * Tangent yet. Consuming the ask there left the caller on whichever session
-   * was already selected, which is what asking for a new one is not.
+   * The arrival starts a new session alongside whatever else the project
+   * arrives with; starting one here too raced it for the only start allowed.
    */
-  it("waits until the store can start one rather than dropping the request", () => {
+  it("leaves a request for a new session to the arrival", () => {
     search = { session: "new" };
-    const store = makeStore(false);
-
-    const { rerender } = renderHook(() => useTangentSessionParam(store));
-
-    expect(store.startSession).not.toHaveBeenCalled();
-    expect(navigate).not.toHaveBeenCalled();
-
-    (store as { canStartSession: boolean }).canStartSession = true;
-    rerender();
-
-    expect(store.startSession).toHaveBeenCalledTimes(1);
-    expect(navigate).toHaveBeenCalled();
-  });
-
-  /** Selecting a session needs nothing of Tangent, so it need not wait. */
-  it("opens an existing session before the store could start one", () => {
-    search = { session: "sess-a" };
-    const store = makeStore(false);
+    const store = makeStore();
 
     renderHook(() => useTangentSessionParam(store));
 
-    expect(store.selectSession).toHaveBeenCalledWith("sess-a");
+    expect(store.startSession).not.toHaveBeenCalled();
+    expect(store.selectSession).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   it("does nothing when no session was asked for", () => {
