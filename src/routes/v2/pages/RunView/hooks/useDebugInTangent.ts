@@ -4,6 +4,10 @@ import { useNavigate } from "@tanstack/react-router";
 import { useRerunProjectIds } from "@/hooks/useRerunProjectIds";
 import useToastNotification from "@/hooks/useToastNotification";
 import { APP_ROUTES } from "@/routes/appRoutes";
+import {
+  pickDefaultWorkspace,
+  readLastUsedWorkspaceId,
+} from "@/services/projects/defaultWorkspace";
 import { isProjectGone } from "@/services/projects/errors";
 import { createProjectResource } from "@/services/projects/projectResourcesService";
 import {
@@ -81,7 +85,10 @@ export function useDebugInTangent() {
     runId,
     pipelineName,
   }: DebugInTangentVariables) => {
-    const workspace = workspaces?.find((w) => w.isActive) ?? workspaces?.[0];
+    const workspace = pickDefaultWorkspace(
+      workspaces ?? [],
+      readLastUsedWorkspaceId(),
+    );
     if (!workspace) {
       throw new Error("No workspace is available to create a project.");
     }

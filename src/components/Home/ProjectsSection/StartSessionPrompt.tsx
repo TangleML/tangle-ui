@@ -24,19 +24,26 @@ import { Text } from "@/components/ui/typography";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
+import { useBackend } from "@/providers/BackendProvider";
 import { APP_ROUTES } from "@/routes/appRoutes";
 import { TANGENT_AI_REQUIRED } from "@/routes/v2/shared/components/AiChat/components/aiSetupCopy";
+import { rememberLastUsedWorkspace } from "@/services/projects/defaultWorkspace";
 import { nameFromPrompt } from "@/services/projects/nameFromPrompt";
 import { createProject } from "@/services/projects/projectsService";
 import { provisionalNameMetadata } from "@/services/projects/provisionalName";
 import { startingSessionMetadata } from "@/services/projects/startingSession";
-import { ProjectsQueryKeys } from "@/services/projects/types";
+import {
+  ProjectsQueryKeys,
+  WorkspacesQueryKeys,
+} from "@/services/projects/types";
 import { useWorkspaces } from "@/services/projects/useWorkspaces";
 import { getErrorMessage } from "@/utils/string";
 import { tracking } from "@/utils/tracking";
 
 import { nextProjectName } from "./nextProjectName";
 import { useMyProjects } from "./useMyProjects";
+import { useWorkspaceChoice } from "./useWorkspaceChoice";
+import { NO_WORKSPACE_AVAILABLE } from "./workspaceCopy";
 
 const THINKING_LABELS: Partial<Record<ThinkingLevel, string>> = {
   xhigh: "Extra high",
@@ -44,6 +51,35 @@ const THINKING_LABELS: Partial<Record<ThinkingLevel, string>> = {
 
 const thinkingLabel = (level: ThinkingLevel) =>
   THINKING_LABELS[level] ?? level.charAt(0).toUpperCase() + level.slice(1);
+
+interface StartSessionVariables {
+  startingPrompt: string;
+  workspaceId: string;
+}
+
+/**
+ * The backend is asked about first: without one the workspace query never
+ * runs, so it stays pending and the box would sit disabled without a word.
+ * And "none" said while the lookup runs would accuse a backend about to answer.
+ */
+function missingWorkspaceNotice({
+  backendMissing,
+  workspacesError,
+  isFindingWorkspace,
+}: {
+  backendMissing: boolean;
+  workspacesError: Error | null;
+  isFindingWorkspace: boolean;
+}): string | undefined {
+  if (backendMissing) {
+    return "Connect a backend to enable agentic features in Tangle";
+  }
+  if (workspacesError) {
+    return `Could not load workspaces: ${workspacesError.message}`;
+  }
+  if (isFindingWorkspace) return undefined;
+  return NO_WORKSPACE_AVAILABLE;
+}
 
 export function StartSessionPrompt() {
   const [prompt, setPrompt] = useState("");
@@ -57,22 +93,25 @@ export function StartSessionPrompt() {
   const notify = useToastNotification();
   const queryClient = useQueryClient();
   const { track } = useAnalytics();
-  const { data: workspaces, isPending: isFindingWorkspace } = useWorkspaces();
+  const { configured, available, ready } = useBackend();
+  const {
+    data: workspaces,
+    isPending: isFindingWorkspace,
+    error: workspacesError,
+  } = useWorkspaces();
+  const workspaceChoice = useWorkspaceChoice(workspaces);
   const { projects } = useMyProjects();
   const { isConfigured: isAiConfigured } = useAiProviderSettings();
 
-  const workspace = workspaces?.find((w) => w.isActive) ?? workspaces?.[0];
+  const workspace = workspaceChoice.selected;
 
   const { mutate: start, isPending } = useMutation({
-    mutationFn: async (startingPrompt: string) => {
-      if (!workspace) {
-        throw new Error("No workspace is available to create a project.");
-      }
+    mutationFn: ({ startingPrompt, workspaceId }: StartSessionVariables) => {
       // The prompt rides on the project rather than the url, so arriving at
       // Tangent starts a session and runs it as the opening turn. The name is
       // marked as nobody's choice, so the agent may replace it with a real one.
       return createProject({
-        workspaceId: workspace.id,
+        workspaceId,
         name:
           nameFromPrompt(startingPrompt) ??
           nextProjectName(projects.map((p) => p.name)),
@@ -86,8 +125,13 @@ export function StartSessionPrompt() {
         ),
       });
     },
-    onSuccess: (project) => {
-      track("projects.start_session_completed", { model, thinkingDepth });
+    onSuccess: (project, { workspaceId }) => {
+      track("projects.start_session_completed", {
+        model,
+        thinkingDepth,
+        workspace_changed: workspaceChoice.changedFromDefault,
+      });
+      rememberLastUsedWorkspace(workspaceId);
       setPrompt("");
       void queryClient.invalidateQueries({ queryKey: ProjectsQueryKeys.All() });
       void navigate({
@@ -96,6 +140,11 @@ export function StartSessionPrompt() {
       });
     },
     onError: (error) => {
+      // The workspace list is cached for minutes, so the refusal may be a
+      // workspace retired since; refetching drops it from the picker.
+      void queryClient.invalidateQueries({
+        queryKey: WorkspacesQueryKeys.All(),
+      });
       notify(getErrorMessage(error), "error");
     },
   });
@@ -105,8 +154,13 @@ export function StartSessionPrompt() {
   // standing and disabled rather than taking it away.
   const isUnavailable = isFindingWorkspace || !workspace || !isAiConfigured;
   const isBusy = isPending || isUnavailable;
-  // Said while the lookup runs, this would accuse a backend about to answer.
-  const hasNoBackend = !isFindingWorkspace && !workspace;
+  const workspaceNotice = workspace
+    ? undefined
+    : missingWorkspaceNotice({
+        backendMissing: ready && !(configured && available),
+        workspacesError,
+        isFindingWorkspace,
+      });
 
   // Once, as soon as it can take input: arriving here is the act of wanting to
   // type, but the box is disabled until the backend says where a project would
@@ -118,8 +172,8 @@ export function StartSessionPrompt() {
   }, [isUnavailable]);
 
   const submit = () => {
-    if (isEmpty || isBusy) return;
-    start(prompt.trim());
+    if (isEmpty || isBusy || !workspace) return;
+    start({ startingPrompt: prompt.trim(), workspaceId: workspace.id });
   };
 
   return (
@@ -194,6 +248,26 @@ export function StartSessionPrompt() {
             </SelectContent>
           </Select>
 
+          <Select
+            value={workspace?.id ?? ""}
+            onValueChange={workspaceChoice.choose}
+            disabled={isBusy}
+          >
+            <SelectTrigger
+              aria-label="Workspace"
+              className="h-8 w-auto max-w-48 text-xs"
+            >
+              <SelectValue placeholder="Workspace" />
+            </SelectTrigger>
+            <SelectContent>
+              {workspaceChoice.workspaces.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <div className="flex-1" />
 
           <Button
@@ -221,9 +295,9 @@ export function StartSessionPrompt() {
           </Link>
         </InlineStack>
       ) : (
-        hasNoBackend && (
+        workspaceNotice && (
           <Text size="sm" tone="subdued">
-            Connect a backend to enable agentic features in Tangle
+            {workspaceNotice}
           </Text>
         )
       )}

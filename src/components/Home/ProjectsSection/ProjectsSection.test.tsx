@@ -50,13 +50,16 @@ vi.mock("@/utils/user", () => ({
 
 vi.mock("./CreateProjectDialog", () => ({
   CreateProjectDialog: ({
-    workspaceId,
+    workspaces,
     trigger,
   }: {
-    workspaceId: string;
+    workspaces: Workspace[];
     trigger: ReactNode;
   }) => (
-    <div data-testid="create-project" data-workspace-id={workspaceId}>
+    <div
+      data-testid="create-project"
+      data-workspace-ids={workspaces.map(({ id }) => id).join(",")}
+    >
       {trigger}
     </div>
   ),
@@ -158,18 +161,21 @@ describe("ProjectsSection", () => {
     expect(screen.getByText("3 pipelines · 1 document")).toBeInTheDocument();
   });
 
-  it("keeps the workspace out of the project list entirely", async () => {
+  it("labels each project with its workspace", async () => {
     renderSection();
 
     await screen.findByText("Churn model");
 
-    expect(screen.queryByText("ML Research")).toBeNull();
-    expect(screen.queryByText("workspace-1")).toBeNull();
+    expect(screen.getByText("ML Research")).toBeInTheDocument();
   });
 
-  it("creates into the first workspace the backend offers", async () => {
+  it("offers every workspace still taking new projects", async () => {
     vi.mocked(useWorkspaces).mockReturnValue({
-      data: [workspace, { ...workspace, id: "workspace-2", name: "Growth" }],
+      data: [
+        workspace,
+        { ...workspace, id: "workspace-2", name: "Growth" },
+        { ...workspace, id: "workspace-3", name: "Old", isActive: false },
+      ],
     } as ReturnType<typeof useWorkspaces>);
 
     renderSection();
@@ -177,12 +183,12 @@ describe("ProjectsSection", () => {
     await screen.findByRole("button", { name: "New project" });
 
     expect(screen.getByTestId("create-project")).toHaveAttribute(
-      "data-workspace-id",
-      "workspace-1",
+      "data-workspace-ids",
+      "workspace-1,workspace-2",
     );
   });
 
-  it("picks the same workspace for an admin as for anyone else", async () => {
+  it("offers an admin the same workspaces as anyone else", async () => {
     vi.mocked(getUserDetails).mockResolvedValue({
       id: "someone@example.com",
       permissions: ["read", "write", "admin"],
@@ -196,9 +202,24 @@ describe("ProjectsSection", () => {
     await screen.findByRole("button", { name: "New project" });
 
     expect(screen.getByTestId("create-project")).toHaveAttribute(
-      "data-workspace-id",
-      "workspace-1",
+      "data-workspace-ids",
+      "workspace-1,workspace-2",
     );
+  });
+
+  it("treats a backend holding only retired workspaces as having none", async () => {
+    vi.mocked(useWorkspaces).mockReturnValue({
+      data: [{ ...workspace, isActive: false }],
+    } as ReturnType<typeof useWorkspaces>);
+
+    renderSection();
+
+    expect(
+      await screen.findByText(
+        "Projects cannot be created yet. Contact your Tangle Admin for help.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "New project" })).toBeNull();
   });
 
   it("points at an admin when there is nowhere to create a project", async () => {

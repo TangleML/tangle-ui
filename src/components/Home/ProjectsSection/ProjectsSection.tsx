@@ -6,6 +6,7 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
 import { useBackend } from "@/providers/BackendProvider";
+import { activeWorkspaces } from "@/services/projects/defaultWorkspace";
 import { usePinnedProjects } from "@/services/projects/usePinnedProjects";
 import { useWorkspaces } from "@/services/projects/useWorkspaces";
 
@@ -14,6 +15,7 @@ import { NewProjectCard } from "./NewProjectCard";
 import { ProjectCard } from "./ProjectCard";
 import { PROJECT_GRID } from "./projectGrid";
 import { useMyProjects } from "./useMyProjects";
+import { NO_WORKSPACE_AVAILABLE } from "./workspaceCopy";
 
 const LoadingProjects = () => (
   <InlineStack gap="2" blockAlign="center">
@@ -91,14 +93,14 @@ function ProjectsGrid() {
     );
   }
 
-  // Nothing in the UI names a workspace: a project goes into the first one the
-  // backend offers, and creation is withdrawn when it offers none.
-  const targetWorkspaceId = workspaces?.[0]?.id;
+  const creatableWorkspaces = activeWorkspaces(workspaces ?? []);
 
   // A workspace list still on its way says nothing about whether there is one
   // to create in, and one that failed to arrive is not the same as none.
   const noWorkspace =
-    !isWorkspacesPending && !workspacesError && !targetWorkspaceId;
+    !isWorkspacesPending &&
+    !workspacesError &&
+    creatableWorkspaces.length === 0;
 
   return (
     <BlockStack gap="4">
@@ -113,15 +115,13 @@ function ProjectsGrid() {
       {noWorkspace && (
         <Alert className="w-fit">
           <Icon name="CircleAlert" />
-          <AlertDescription>
-            Projects cannot be created yet. Contact your Tangle Admin for help.
-          </AlertDescription>
+          <AlertDescription>{NO_WORKSPACE_AVAILABLE}</AlertDescription>
         </Alert>
       )}
       <div className={PROJECT_GRID}>
-        {targetWorkspaceId && (
+        {creatableWorkspaces.length > 0 && (
           <CreateProjectDialog
-            workspaceId={targetWorkspaceId}
+            workspaces={creatableWorkspaces}
             trigger={<NewProjectCard />}
           />
         )}
