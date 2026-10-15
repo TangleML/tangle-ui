@@ -5,11 +5,8 @@ import type {
 import type { MouseEvent } from "react";
 
 import useToastNotification from "@/hooks/useToastNotification";
+import { getDefaultRunPath } from "@/routes/runRoutes";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
-import {
-  openRunPageInNewTab,
-  requestsNewTab,
-} from "@/routes/v2/pages/Tangent/services/openRunPageInNewTab";
 import { chatAnchorProtocols } from "@/routes/v2/shared/components/AiChat/components/chatAnchorProtocols";
 import { ChatEntityChip } from "@/routes/v2/shared/components/AiChat/components/ChatEntityChip";
 import { resourceMeta } from "@/services/projects/resourceMeta";
@@ -20,6 +17,7 @@ import {
   parseIdentity,
   parseWorkareaTarget,
 } from "@/services/projects/resourceTarget";
+import { hasNewTabModifier } from "@/utils/dom";
 import { getErrorMessage } from "@/utils/string";
 
 function runTarget(path: string): WorkareaTarget | undefined {
@@ -33,6 +31,7 @@ function RunAnchor({ path, label }: AnchorProtocolProps) {
   const store = useTangentProject();
   const notify = useToastNotification();
   const target = runTarget(path);
+  const newTabHint = target ? "Cmd/Ctrl+click to open in a new tab" : undefined;
 
   async function openRun() {
     if (!target) return;
@@ -45,8 +44,9 @@ function RunAnchor({ path, label }: AnchorProtocolProps) {
 
   function handleClick(event: MouseEvent<HTMLButtonElement>) {
     if (!target) return;
-    if (requestsNewTab(event)) {
-      openRunPageInNewTab(parseIdentity(target.identity).value);
+    if (hasNewTabModifier(event)) {
+      const runId = parseIdentity(target.identity).value;
+      window.open(getDefaultRunPath(runId), "_blank");
       return;
     }
     void openRun();
@@ -56,7 +56,7 @@ function RunAnchor({ path, label }: AnchorProtocolProps) {
     <ChatEntityChip
       icon={resourceMeta("run").icon}
       label={label}
-      title={target ? "Cmd/Ctrl+click to open in a new tab" : undefined}
+      title={newTabHint}
       disabled={!target}
       onClick={handleClick}
     />

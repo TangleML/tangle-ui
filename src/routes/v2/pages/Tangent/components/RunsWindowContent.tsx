@@ -7,15 +7,13 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
+import { getDefaultRunPath } from "@/routes/runRoutes";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
-import {
-  openRunPageInNewTab,
-  requestsNewTab,
-} from "@/routes/v2/pages/Tangent/services/openRunPageInNewTab";
 import { UNNAMED_PIPELINE } from "@/services/projects/placeholderNames";
 import { idIdentity } from "@/services/projects/resourceTarget";
 import type { ProjectRun } from "@/services/projects/types";
 import { useProjectRuns } from "@/services/projects/useProjectRuns";
+import { hasNewTabModifier } from "@/utils/dom";
 import { getErrorMessage } from "@/utils/string";
 import { tracking } from "@/utils/tracking";
 
@@ -34,8 +32,8 @@ export function RunsWindowContent() {
   } = useProjectRuns(store.projectId);
 
   async function handleOpenRun(run: ProjectRun, event: MouseEvent) {
-    if (requestsNewTab(event)) {
-      openRunPageInNewTab(run.id);
+    if (hasNewTabModifier(event)) {
+      window.open(getDefaultRunPath(run.id), "_blank");
       return;
     }
     const title = run.pipelineName ?? UNNAMED_PIPELINE;
