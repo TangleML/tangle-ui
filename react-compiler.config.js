@@ -8,6 +8,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/components/Learn",
   "src/components/Onboarding",
   "src/components/Project",
+  "src/components/WorkspaceSecrets",
 
   // 0 useCallback/useMemo - ready to enable
   "src/components/layout",
@@ -52,6 +53,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/services/projects/usePipelineProjects.ts",
   "src/services/projects/useProjectInstructions.ts",
   "src/services/projects/useProjectRuns.ts",
+  "src/services/projects/useWorkspaceSecrets.ts",
   "src/services/usePipelineSpec.ts",
   "src/components/shared/FavoriteToggle.tsx",
   "src/components/shared/PageHeader.tsx",

@@ -10,6 +10,34 @@ export interface Workspace {
   createdAt: Date;
 }
 
+export interface WorkspaceSecret {
+  name: string;
+  description: string | null;
+  expiresAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  createdBy: string | null;
+  canManage: boolean;
+}
+
+export interface WorkspaceSecretList {
+  secrets: WorkspaceSecret[];
+  canCreate: boolean;
+}
+
+export interface CreateWorkspaceSecretInput {
+  name: string;
+  value: string;
+  description?: string;
+  expiresAt?: string;
+}
+
+export interface ReplaceWorkspaceSecretInput {
+  value: string;
+  description?: string;
+  expiresAt?: string;
+}
+
 export interface ProjectSummary {
   id: string;
   workspaceId: string;
@@ -130,6 +158,10 @@ export interface UpdateResourceInput {
 export const WorkspacesQueryKeys = {
   All: () => ["workspaces"] as const,
   Id: (id: string) => ["workspaces", id] as const,
+} as const;
+
+export const WorkspaceSecretsQueryKeys = {
+  All: (workspaceId: string) => ["workspaces", workspaceId, "secrets"] as const,
 } as const;
 
 export const ProjectsQueryKeys = {
