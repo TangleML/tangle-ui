@@ -1,5 +1,12 @@
 import { useSyncExternalStore } from "react";
 
+import {
+  DEFAULT_AI_REASONING_EFFORT,
+  getAiModelOptions,
+  getDefaultAiModelId,
+  getEffectiveReasoningEffort,
+  isAiReasoningEffort,
+} from "@/config/aiModels";
 import { useBackend } from "@/providers/BackendProvider";
 import type { AiProviderConfig } from "@/types/aiProvider";
 import { getStorage } from "@/utils/typedStorage";
@@ -28,16 +35,24 @@ type AiProviderSettingsStorage = Record<StorageKey, unknown>;
 
 const storage = getStorage<StorageKey, AiProviderSettingsStorage>();
 
-const DEFAULTS: AiProviderConfig = {
+type StoredProviderSettings = Pick<
+  AiProviderConfig,
+  "apiBase" | "apiKey" | "model" | "reasoningEffortPreference"
+>;
+
+const DEFAULTS: StoredProviderSettings = {
   apiBase: "",
   apiKey: "",
   model: "",
 };
 
-type ProxySettings = Pick<AiProviderConfig, "model">;
+type ProxySettings = Pick<
+  StoredProviderSettings,
+  "model" | "reasoningEffortPreference"
+>;
 
 interface AiProviderSettings {
-  customConfig: AiProviderConfig;
+  customConfig: StoredProviderSettings;
   proxyConfig: ProxySettings;
 }
 
@@ -57,45 +72,61 @@ function readTrimmedString(
   return trimmed.length > 0 ? trimmed : "";
 }
 
-function parseStoredConfig(value: unknown): AiProviderConfig | null {
+function readReasoningPreference(record: Record<string, unknown>) {
+  const preference = isAiReasoningEffort(record.reasoningEffortPreference)
+    ? record.reasoningEffortPreference
+    : record.reasoningEffort;
+  return isAiReasoningEffort(preference)
+    ? { reasoningEffortPreference: preference }
+    : {};
+}
+
+function parseStoredConfig(value: unknown): StoredProviderSettings | null {
   if (!isRecord(value)) return null;
+  // An explicit blank model must not inherit the legacy thinkingModel.
   return {
     apiBase: readTrimmedString(value, "apiBase") || DEFAULTS.apiBase,
     apiKey: readTrimmedString(value, "apiKey") || DEFAULTS.apiKey,
-    // Migration: previous Components V2 builds stored `thinkingModel`.
     model:
-      readTrimmedString(value, "model") ||
-      readTrimmedString(value, "thinkingModel") ||
-      DEFAULTS.model,
+      typeof value.model === "string"
+        ? readTrimmedString(value, "model")
+        : readTrimmedString(value, "thinkingModel"),
+    ...readReasoningPreference(value),
   };
 }
 
-function isAllEmpty(config: AiProviderConfig): boolean {
+function isAllEmpty(config: StoredProviderSettings): boolean {
   return (
     config.apiBase.length === 0 &&
     config.apiKey.length === 0 &&
-    config.model.length === 0
+    config.model.length === 0 &&
+    config.reasoningEffortPreference === undefined
   );
 }
 
-function readStoredConfig(): AiProviderConfig {
+function readStoredConfig(): StoredProviderSettings {
   if (typeof window === "undefined") return DEFAULTS;
-  // Treat an all-empty central record as "absent" so a partial save (e.g. a
-  // blanked-out apiBase) doesn't shadow a working legacy config from before
-  // this hook was renamed.
-  const current = parseStoredConfig(storage.getItem(AI_PROVIDER_STORAGE_KEY));
-  if (current && !isAllEmpty(current)) return current;
+  // Empty partial records must not shadow legacy settings; an explicit model
+  // selection takes precedence even when it selects the provider default.
+  const stored = storage.getItem(AI_PROVIDER_STORAGE_KEY);
+  const current = parseStoredConfig(stored);
+  const hasModelSelection =
+    isRecord(stored) && typeof stored.model === "string";
+  if (current && (!isAllEmpty(current) || hasModelSelection)) return current;
   return (
     parseStoredConfig(storage.getItem(LEGACY_COMPONENT_SEARCH_STORAGE_KEY)) ??
-    current ??
-    DEFAULTS
+    current ?? { ...DEFAULTS, model: getDefaultAiModelId() }
   );
 }
 
 function readProxySettings(): ProxySettings {
   const stored = storage.getItem(AI_PROXY_STORAGE_KEY);
   return {
-    model: isRecord(stored) ? readTrimmedString(stored, "model") : "",
+    model:
+      isRecord(stored) && typeof stored.model === "string"
+        ? readTrimmedString(stored, "model")
+        : getDefaultAiModelId(),
+    ...(isRecord(stored) ? readReasoningPreference(stored) : {}),
   };
 }
 
@@ -148,14 +179,29 @@ export function useAiProviderSettings() {
     () => storage.getItem(AI_USE_OWN_KEY_STORAGE_KEY) !== false,
     () => true,
   );
-  const config: AiProviderConfig = isOwnKeyEnabled
-    ? customConfig
-    : {
-        apiBase: backendBase ? `${backendBase}/api/experimental/ai/v1` : "",
-        apiKey: "",
-        model: proxyConfig.model,
-        credentials: "include",
-      };
+  const modelPreferences = isOwnKeyEnabled ? customConfig : proxyConfig;
+  const model = modelPreferences.model;
+  const reasoningEffortPreference =
+    modelPreferences.reasoningEffortPreference ?? DEFAULT_AI_REASONING_EFFORT;
+  const modelCapabilities = getAiModelOptions();
+  const reasoningEffort = getEffectiveReasoningEffort(
+    model,
+    reasoningEffortPreference,
+    modelCapabilities,
+  );
+  const config: AiProviderConfig = {
+    apiBase: isOwnKeyEnabled
+      ? customConfig.apiBase
+      : backendBase
+        ? `${backendBase}/api/experimental/ai/v1`
+        : "",
+    apiKey: isOwnKeyEnabled ? customConfig.apiKey : "",
+    model,
+    reasoningEffortPreference,
+    modelCapabilities,
+    ...(reasoningEffort ? { reasoningEffort } : {}),
+    ...(isOwnKeyEnabled ? {} : { credentials: "include" }),
+  };
 
   const setOwnKeyEnabled = (enabled: boolean) => {
     storage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, enabled);
@@ -165,17 +211,29 @@ export function useAiProviderSettings() {
   // so two updates in the same tick (e.g. two field handlers firing back-to-
   // back, or an update racing a cross-tab storage event) don't both clobber
   // each other with the same stale snapshot.
-  const update = (partial: Partial<AiProviderConfig>) => {
+  const update = (partial: Partial<StoredProviderSettings>) => {
     if (typeof window === "undefined") return;
     if (storage.getItem(AI_USE_OWN_KEY_STORAGE_KEY) === false) {
       const current = readProxySettings();
       storage.setItem(AI_PROXY_STORAGE_KEY, {
+        ...current,
         model: partial.model ?? current.model,
+        ...(partial.reasoningEffortPreference === undefined
+          ? {}
+          : { reasoningEffortPreference: partial.reasoningEffortPreference }),
       });
       return;
     }
     const current = readStoredConfig();
-    const next: AiProviderConfig = { ...current, ...partial };
+    const next: StoredProviderSettings = {
+      ...current,
+      apiBase: partial.apiBase ?? current.apiBase,
+      apiKey: partial.apiKey ?? current.apiKey,
+      model: partial.model ?? current.model,
+      ...(partial.reasoningEffortPreference === undefined
+        ? {}
+        : { reasoningEffortPreference: partial.reasoningEffortPreference }),
+    };
     storage.setItem(AI_PROVIDER_STORAGE_KEY, next);
   };
 
@@ -195,6 +253,7 @@ export function useAiProviderSettings() {
     config,
     customConfig,
     proxyConfig,
+    modelPreferences,
     isOwnKeyEnabled,
     setOwnKeyEnabled,
     update,

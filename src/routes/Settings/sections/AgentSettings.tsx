@@ -1,23 +1,18 @@
 import { type FormEvent, useEffect, useRef, useState } from "react";
 
+import { AiModelPicker } from "@/components/shared/Settings/AiModelPicker";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
-import { getAiModelOptions, getDefaultAiModelId } from "@/config/aiModels";
+import {
+  getAiMaxOutputTokens,
+  getEffectiveReasoningEffort,
+} from "@/config/aiModels";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
 import type { AiProviderConfig } from "@/types/aiProvider";
@@ -26,6 +21,7 @@ export function AgentSettings() {
   const {
     config,
     customConfig,
+    modelPreferences,
     isOwnKeyEnabled,
     setOwnKeyEnabled,
     update,
@@ -36,53 +32,70 @@ export function AgentSettings() {
 
   const [apiBase, setApiBase] = useState(customConfig.apiBase);
   const [apiKey, setApiKey] = useState(customConfig.apiKey);
-  const [model, setModel] = useState(config.model);
+  const [modelDraft, setModelDraft] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [showKey, setShowKey] = useState(false);
   const [testing, setTesting] = useState(false);
-  const testRunIdRef = useRef(0);
-  const modelOptions = getAiModelOptions();
-  const defaultModelId = getDefaultAiModelId();
+  const testControllerRef = useRef<AbortController | null>(null);
+  const model = (modelDraft ?? config.model).trim();
+  const testConfig: AiProviderConfig = isOwnKeyEnabled
+    ? {
+        apiBase: apiBase.trim().replace(/\/+$/, ""),
+        apiKey: apiKey.trim(),
+        model,
+        reasoningEffort: getEffectiveReasoningEffort(
+          model,
+          modelPreferences.reasoningEffortPreference,
+          config.modelCapabilities,
+        ),
+        reasoningEffortPreference: modelPreferences.reasoningEffortPreference,
+      }
+    : config;
   const unconfiguredStatus = isOwnKeyEnabled
     ? "Status: not configured. AI features are disabled until you save a provider."
     : "Status: not configured. Select a backend in Settings → Backend to use its AI proxy.";
   const submitLabel = isOwnKeyEnabled ? "Save and test AI" : "Test AI";
 
   useEffect(() => {
-    setModel(config.model);
-  }, [config.model]);
+    setModelDraft(null);
+  }, [config.model, isOwnKeyEnabled]);
 
   useEffect(() => {
-    testRunIdRef.current += 1;
     setTesting(false);
     setValidationError(null);
-  }, [config.apiBase, isOwnKeyEnabled]);
+    return () => {
+      const controller = testControllerRef.current;
+      testControllerRef.current = null;
+      controller?.abort();
+    };
+  }, [
+    testConfig.apiBase,
+    testConfig.apiKey,
+    testConfig.credentials,
+    testConfig.model,
+    testConfig.reasoningEffort,
+    testConfig.reasoningEffortPreference,
+    isOwnKeyEnabled,
+  ]);
+
+  const abortTest = () => {
+    const controller = testControllerRef.current;
+    testControllerRef.current = null;
+    controller?.abort();
+    setTesting(false);
+  };
 
   const handleOwnKeyEnabledChange = (enabled: boolean) => {
-    // Reset here too: a failed mode write leaves the effect dependencies unchanged.
-    testRunIdRef.current += 1;
-    setTesting(false);
+    abortTest();
     setShowKey(false);
     setOwnKeyEnabled(enabled);
   };
 
-  const handleModelChange = (nextModel: string) => {
-    setModel(nextModel);
-    setValidationError(null);
-    update({ model: nextModel.trim() });
-  };
-
   const handleSave = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (testing) return;
+    if (testControllerRef.current) return;
 
-    const trimmed: AiProviderConfig = isOwnKeyEnabled
-      ? {
-          apiBase: apiBase.trim().replace(/\/+$/, ""),
-          apiKey: apiKey.trim(),
-          model: model.trim(),
-        }
-      : config;
+    const trimmed = testConfig;
     if (!trimmed.apiBase) {
       setValidationError(
         isOwnKeyEnabled
@@ -93,14 +106,15 @@ export function AgentSettings() {
     }
     setValidationError(null);
 
-    const testRunId = testRunIdRef.current + 1;
-    testRunIdRef.current = testRunId;
-    const isCurrentTest = () => testRunIdRef.current === testRunId;
+    const controller = new AbortController();
+    testControllerRef.current = controller;
+    const isCurrentTest = () => testControllerRef.current === controller;
 
     setTesting(true);
     try {
       const response = await fetch(`${trimmed.apiBase}/responses`, {
         method: "POST",
+        signal: controller.signal,
         credentials: trimmed.credentials,
         headers: {
           "content-type": "application/json",
@@ -110,10 +124,17 @@ export function AgentSettings() {
         },
         body: JSON.stringify({
           ...(trimmed.model ? { model: trimmed.model } : {}),
-          max_output_tokens: 32,
+          ...(trimmed.reasoningEffort
+            ? { reasoning: { effort: trimmed.reasoningEffort } }
+            : {}),
           instructions:
             "You are testing provider compatibility. Return only JSON.",
           input: 'Return the JSON object {"ok": true}.',
+          max_output_tokens: getAiMaxOutputTokens(
+            trimmed.model,
+            trimmed.reasoningEffort,
+            32,
+          ),
           text: { format: { type: "json_object" } },
         }),
       });
@@ -136,9 +157,13 @@ export function AgentSettings() {
       if (isOwnKeyEnabled) {
         setApiBase(trimmed.apiBase);
         setApiKey(trimmed.apiKey);
-        update(trimmed);
+        update({
+          apiBase: trimmed.apiBase,
+          apiKey: trimmed.apiKey,
+          model: trimmed.model,
+        });
+        setModelDraft(trimmed.model);
       }
-      setModel(trimmed.model);
       let successMessage = "Backend AI proxy is working.";
       if (isOwnKeyEnabled) {
         successMessage = trimmed.model
@@ -155,19 +180,21 @@ export function AgentSettings() {
         "error",
       );
     } finally {
-      if (isCurrentTest()) setTesting(false);
+      if (isCurrentTest()) {
+        testControllerRef.current = null;
+        setTesting(false);
+      }
     }
   };
 
   const handleClear = () => {
-    testRunIdRef.current += 1;
+    abortTest();
     clear();
     setApiBase("");
     setApiKey("");
-    setModel("");
+    setModelDraft(null);
     setValidationError(null);
     setShowKey(false);
-    setTesting(false);
     notify("AI provider settings cleared", "success");
   };
 
@@ -267,45 +294,29 @@ export function AgentSettings() {
             </Paragraph>
           )}
 
-          <BlockStack gap="1">
-            <Label htmlFor="agent-settings-model">Model</Label>
-            <InlineStack gap="0" wrap="nowrap">
-              <Input
-                id="agent-settings-model"
-                type="text"
-                placeholder={`e.g. ${defaultModelId}`}
-                value={model}
-                onChange={(e) => handleModelChange(e.target.value)}
-                aria-label="Model id"
-                aria-describedby="agent-settings-model-hint"
-                autoComplete="off"
-                spellCheck={false}
-                className="rounded-r-none"
-              />
-              <Select onValueChange={handleModelChange}>
-                <SelectTrigger
-                  aria-label="Select a model"
-                  className="w-11 rounded-l-none border-l-0 px-2 [&_[data-slot=select-value]]:hidden"
-                >
-                  <SelectValue placeholder="Model suggestions" />
-                </SelectTrigger>
-                <SelectContent align="end">
-                  <SelectGroup>
-                    <SelectLabel>Common models</SelectLabel>
-                    {modelOptions.map((option) => (
-                      <SelectItem key={option.id} value={option.id}>
-                        {option.label ?? option.id}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </InlineStack>
-            <Text id="agent-settings-model-hint" size="xs" tone="subdued">
-              Optional if your proxy selects a model. Choose a common
-              OpenAI-compatible model or enter any model id supported by your
-              provider.
+          <BlockStack gap="2">
+            <Text size="sm" weight="medium">
+              Model and thinking
             </Text>
+            <AiModelPicker onModelSelect={() => setModelDraft(null)} />
+            {isOwnKeyEnabled && (
+              <BlockStack gap="1">
+                <Label htmlFor="agent-settings-model">Model ID</Label>
+                <Input
+                  id="agent-settings-model"
+                  value={modelDraft ?? config.model}
+                  onChange={(event) => setModelDraft(event.target.value)}
+                  placeholder="Provider default"
+                  aria-describedby="agent-settings-model-hint"
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+                <Text id="agent-settings-model-hint" size="xs" tone="subdued">
+                  Enter a custom model ID, or leave blank for the provider
+                  default. Saved after a successful test.
+                </Text>
+              </BlockStack>
+            )}
           </BlockStack>
 
           {validationError && (

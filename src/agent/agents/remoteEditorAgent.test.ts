@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AgentSession } from "../session";
 import type { ToolBridgeApi } from "../toolBridgeApi";
@@ -73,6 +73,141 @@ describe("selectRemoteEditorTools", () => {
     expect(agent.instructions).toContain(
       "Do not attempt workflow steps that require a tool outside this list.",
     );
+    expect(agent.modelSettings.reasoning).toEqual({ effort: "none" });
+  });
+});
+
+describe("remote agent reasoning", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it.each(["custom-model", " custom-model "])(
+    "preserves inherited effort for the unchanged host-defined model %j",
+    (model) => {
+      const session = makeSession();
+      session.aiConfig = {
+        ...session.aiConfig,
+        model: " custom-model ",
+        reasoningEffort: "high",
+      };
+      const agent = buildRemoteEditorAgent(session, {
+        tools: [],
+        systemPrompt: "",
+        model,
+      });
+
+      expect(agent.model).toBe("custom-model");
+      expect(agent.modelSettings.reasoning).toEqual({ effort: "high" });
+    },
+  );
+
+  it.each([
+    [undefined, "high", undefined, "high"],
+    ["gpt-4.1-mini", "high", undefined, undefined],
+    ["gpt-6-astra", "none", undefined, "low"],
+    ["", "high", undefined, undefined],
+    ["gpt-6-astra", undefined, undefined, undefined],
+    ["gpt-6-astra", "none", "high", "high"],
+    ["gpt-6-astra", "high", "off", "none"],
+    ["custom-model", "high", "low", "low"],
+  ] as const)(
+    "normalizes model %j, selected effort %j, and depth %j to effort %j",
+    (model, selectedEffort, thinkingDepth, expectedEffort) => {
+      const session = makeSession();
+      session.aiConfig = {
+        ...session.aiConfig,
+        model: "gpt-6-sol",
+        reasoningEffort: selectedEffort,
+      };
+      const agent = buildRemoteEditorAgent(session, {
+        tools: [],
+        systemPrompt: "",
+        model,
+        thinkingDepth,
+      });
+
+      expect(agent.model).toBe(model ?? "gpt-6-sol");
+      expect(agent.modelSettings.reasoning).toEqual(
+        expectedEffort ? { effort: expectedEffort } : undefined,
+      );
+      expect(session.aiConfig.reasoningEffort).toBe(selectedEffort);
+    },
+  );
+
+  it.each([
+    ["gpt-6-astra", "low", "none", "gpt-6-sol", "none"],
+    ["custom-model", undefined, "max", "gpt-6-astra", "max"],
+  ] as const)(
+    "uses the original preference when %s delegates to another model",
+    (selectedModel, selectedEffort, preference, model, expectedEffort) => {
+      const session = makeSession();
+      session.aiConfig = {
+        ...session.aiConfig,
+        model: selectedModel,
+        reasoningEffort: selectedEffort,
+        reasoningEffortPreference: preference,
+      };
+      const agent = buildRemoteEditorAgent(session, {
+        tools: [],
+        systemPrompt: "",
+        model,
+      });
+
+      expect(agent.modelSettings.reasoning).toEqual({ effort: expectedEffort });
+      expect(session.aiConfig.reasoningEffortPreference).toBe(preference);
+      expect(session.aiConfig.reasoningEffort).toBe(selectedEffort);
+    },
+  );
+
+  it.each([
+    ["host-selected", "medium"],
+    ["host-remote", "low"],
+    ["gpt-6-sol", undefined],
+    ["", undefined],
+    ["   ", undefined],
+  ] as const)(
+    "uses the transmitted host catalog for model %j without a window",
+    (model, expectedEffort) => {
+      vi.stubGlobal("window", undefined);
+      const session = makeSession();
+      session.aiConfig = {
+        ...session.aiConfig,
+        model: "host-selected",
+        reasoningEffort: "medium",
+        reasoningEffortPreference: "max",
+        modelCapabilities: [
+          { id: "host-selected", reasoningEfforts: ["low", "medium"] },
+          { id: "host-remote", reasoningEfforts: ["low"] },
+        ],
+      };
+      const agent = buildRemoteEditorAgent(session, {
+        tools: [],
+        systemPrompt: "",
+        model,
+      });
+
+      expect(agent.model).toBe(model.trim());
+      expect(agent.modelSettings.reasoning).toEqual(
+        expectedEffort ? { effort: expectedEffort } : undefined,
+      );
+    },
+  );
+
+  it("lets explicit thinking depth override the transmitted preference", () => {
+    const session = makeSession();
+    session.aiConfig = {
+      ...session.aiConfig,
+      reasoningEffortPreference: "max",
+      modelCapabilities: [],
+    };
+    const agent = buildRemoteEditorAgent(session, {
+      tools: [],
+      systemPrompt: "",
+      model: "custom-model",
+      thinkingDepth: "off",
+    });
+
     expect(agent.modelSettings.reasoning).toEqual({ effort: "none" });
   });
 });

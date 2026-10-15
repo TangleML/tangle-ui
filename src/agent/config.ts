@@ -18,17 +18,20 @@ export const MISSING_AI_PROVIDER =
   "No AI provider is configured. Set one up in Settings → AI Configuration.";
 
 export function getAgentModelConfig(config: AiProviderConfig): {
-  model?: string;
+  model: string;
   modelSettings: ModelSettings;
 } {
   const model = config.model.trim();
+  const effort = config.reasoningEffort;
+  // The SDK substitutes a named default for blank models; providerData must
+  // suppress that default so the provider can choose.
   return {
-    ...(model ? { model } : {}),
+    model,
     modelSettings: {
+      ...(effort ? { reasoning: { effort } } : {}),
       providerData: {
         include: RESPONSES_REASONING_INCLUDE,
-        // Override the SDK fallback so a blank model lets the proxy choose.
-        ...(model ? {} : { model: undefined }),
+        ...(!model ? { model: undefined } : {}),
       },
     },
   };

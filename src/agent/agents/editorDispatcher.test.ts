@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AgentSession } from "../session";
 
@@ -94,6 +94,7 @@ function makeSession(): AgentSession {
 
 describe("createEditorDispatcher", () => {
   beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
     agentCtor.mockClear();
     memorySessionCtor.mockClear();
     runMock.mockReset();
@@ -102,22 +103,23 @@ describe("createEditorDispatcher", () => {
     runMock.mockResolvedValue({ finalOutput: "Done" });
   });
 
-  it("preserves Responses reasoning continuity for Sidekick runs", async () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  async function assertDispatcher(aiConfig: Partial<AgentSession["aiConfig"]>) {
+    const session = makeSession();
+    const initialConfig = { ...session.aiConfig };
+    const selectedConfig = { ...session.aiConfig, ...aiConfig };
     const dispatcher = createEditorDispatcher();
     await dispatcher.invoke({
       message: "add a component",
       threadId: "thread-1",
-      aiConfig: {
-        apiBase: "https://api.example.com/v1",
-        apiKey: "sk-test",
-        model: "gpt-5.5",
-      },
-      session: makeSession(),
+      aiConfig: selectedConfig,
+      session,
     });
 
     const agentConfig = agentCtor.mock.calls.at(-1)?.[0];
     expect(agentConfig).toMatchObject({
-      model: "gpt-5.5",
+      model: selectedConfig.model,
       modelSettings: {
         providerData: {
           include: ["reasoning.encrypted_content"],
@@ -129,5 +131,24 @@ describe("createEditorDispatcher", () => {
     expect(options).toEqual({
       session: expect.any(Object),
     });
-  });
+    if (aiConfig.reasoningEffort) {
+      expect(agentConfig.modelSettings.reasoning).toEqual({
+        effort: aiConfig.reasoningEffort,
+      });
+    } else {
+      expect(agentConfig.modelSettings).not.toHaveProperty("reasoning");
+    }
+    expect(session.aiConfig).toEqual(initialConfig);
+    expect(fetch).not.toHaveBeenCalled();
+    expect(runMock).toHaveBeenCalledOnce();
+  }
+
+  it.each([
+    { model: "gpt-5.5" },
+    { model: "gpt-6-sol", reasoningEffort: "high" },
+    { model: "gpt-6-sol" },
+  ] as const)(
+    "preserves Responses continuity and selected config %j without a catalog request",
+    assertDispatcher,
+  );
 });

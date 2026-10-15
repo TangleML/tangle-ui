@@ -56,9 +56,15 @@ const bridge = {
 describe("dispatcher provider switching", () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it.each(["", "gpt-5.5"])(
-    "uses the current endpoint, credentials, and model %j on every turn of an existing chat",
-    async (model) => {
+  it.each([
+    ["", undefined],
+    ["", "max"],
+    ["gpt-6-sol", undefined],
+    ["gpt-6-sol", "high"],
+    ["custom-reasoning-model", "max"],
+  ] as const)(
+    "uses the current endpoint, credentials, model %j, and reasoning %j on every turn of an existing chat",
+    async (model, reasoningEffort) => {
       const fetchMock = vi.fn<typeof fetch>().mockImplementation(async () => {
         const sequence = fetchMock.mock.calls.length;
         return new Response(
@@ -85,19 +91,22 @@ describe("dispatcher provider switching", () => {
         apiBase: "https://api.example.com/v1",
         apiKey: "sk-personal",
         model,
+        reasoningEffort,
       };
       const backend: AiProviderConfig = {
         apiBase: "https://backend.example.com/api/experimental/ai/v1",
         apiKey: "",
         model,
+        reasoningEffort,
         credentials: "include",
       };
-      const configurations = [
+      const configurations: AiProviderConfig[] = [
         personal,
         backend,
         {
           ...backend,
           apiBase: "https://other.example.com/api/experimental/ai/v1",
+          reasoningEffort: "low",
         },
         personal,
       ];
@@ -113,13 +122,18 @@ describe("dispatcher provider switching", () => {
       );
 
       for (const [index, aiConfig] of configurations.entries()) {
+        const previousConfig: AiProviderConfig = {
+          ...aiConfig,
+          model: "previous-model",
+          reasoningEffort: "medium",
+        };
         const session = createSession({
           threadId: "same-chat",
           proxyClient,
           skillsLoader,
           bridge,
           context: { mode: "editor" },
-          aiConfig,
+          aiConfig: previousConfig,
         });
         await expect(
           dispatcher.invoke({
@@ -143,6 +157,20 @@ describe("dispatcher provider switching", () => {
         } else {
           expect(body).not.toHaveProperty("model");
         }
+        if (aiConfig.reasoningEffort) {
+          expect(body.reasoning).toMatchObject({
+            effort: aiConfig.reasoningEffort,
+          });
+        } else {
+          expect(body).not.toHaveProperty("reasoning");
+        }
+        expect(body.include).toContain("reasoning.encrypted_content");
+        expect(session.aiConfig).toEqual(previousConfig);
+        expect(fetchMock.mock.calls.map(([requestUrl]) => requestUrl)).toEqual(
+          configurations
+            .slice(0, index + 1)
+            .map((configuration) => `${configuration.apiBase}/responses`),
+        );
         expect(String(request?.body)).toContain("Message 0");
         expect(String(request?.body)).toContain(`Message ${index}`);
       }
