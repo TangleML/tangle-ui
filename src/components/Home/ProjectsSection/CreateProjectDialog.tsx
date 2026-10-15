@@ -15,26 +15,39 @@ import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Text } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { getProjectHomeRoute } from "@/routes/projectRoutes";
+import { rememberLastUsedWorkspace } from "@/services/projects/defaultWorkspace";
+import type { Workspace } from "@/services/projects/types";
 import { useCreateProject } from "@/services/projects/useProjects";
 import { tracking } from "@/utils/tracking";
 
+import { useWorkspaceChoice } from "./useWorkspaceChoice";
+
 interface CreateProjectDialogProps {
-  workspaceId: string;
+  workspaces: readonly Workspace[];
   trigger: ReactNode;
 }
 
 export function CreateProjectDialog({
-  workspaceId,
+  workspaces,
   trigger,
 }: CreateProjectDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [description, setDescription] = useState("");
+  const workspaceChoice = useWorkspaceChoice(workspaces);
 
   const createProject = useCreateProject();
   const notify = useToastNotification();
@@ -59,6 +72,7 @@ export function CreateProjectDialog({
     setName("");
     setSubmitAttempted(false);
     setDescription("");
+    workspaceChoice.reset();
   };
 
   const handleOpenChange = (nextOpen: boolean) => {
@@ -69,20 +83,24 @@ export function CreateProjectDialog({
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
     setSubmitAttempted(true);
-    if (!canSubmit) return;
+    const workspace = workspaceChoice.selected;
+    if (!canSubmit || !workspace) return;
 
     const trimmedDescription = description.trim();
+    const workspaceChanged = workspaceChoice.changedFromDefault;
 
     createProject.mutate(
       {
-        workspaceId,
+        workspaceId: workspace.id,
         name: trimmedName,
         description: trimmedDescription === "" ? undefined : trimmedDescription,
       },
       {
         onSuccess: (project) => {
+          rememberLastUsedWorkspace(workspace.id);
           track("projects.create_project_completed", {
             has_description: trimmedDescription !== "",
+            workspace_changed: workspaceChanged,
           });
           notify("Project created", "success");
           resetForm();
@@ -123,6 +141,32 @@ export function CreateProjectDialog({
                   <AlertDescription>{nameError}</AlertDescription>
                 </Alert>
               )}
+            </BlockStack>
+
+            <BlockStack gap="2">
+              <Label htmlFor="create-project-workspace">Workspace</Label>
+              <Select
+                value={workspaceChoice.selected?.id ?? ""}
+                onValueChange={workspaceChoice.choose}
+              >
+                <SelectTrigger
+                  id="create-project-workspace"
+                  aria-describedby="create-project-workspace-hint"
+                  className="w-full"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {workspaceChoice.workspaces.map((workspace) => (
+                    <SelectItem key={workspace.id} value={workspace.id}>
+                      {workspace.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Text id="create-project-workspace-hint" size="xs" tone="subdued">
+                The workspace cannot be changed after the project is created.
+              </Text>
             </BlockStack>
 
             <BlockStack gap="2">

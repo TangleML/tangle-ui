@@ -10,6 +10,7 @@ import { removeRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
 
+import { ProjectsApiError } from "./errors";
 import {
   createProject,
   deleteProject,
@@ -23,7 +24,7 @@ import type {
   ListProjectsParams,
   UpdateProjectInput,
 } from "./types";
-import { ProjectsQueryKeys } from "./types";
+import { ProjectsQueryKeys, WorkspacesQueryKeys } from "./types";
 
 export function useProjects(
   params: ListProjectsParams = {},
@@ -86,8 +87,18 @@ export function useCreateProject() {
         queryKey: ProjectsQueryKeys.All(),
       });
     },
-    onError: () => {
-      notify("Failed to create project", "error");
+    onError: (error) => {
+      // The workspace list is cached for minutes, so the refusal may be a
+      // workspace retired since; refetching drops it from the picker.
+      void queryClient.invalidateQueries({
+        queryKey: WorkspacesQueryKeys.All(),
+      });
+      notify(
+        error instanceof ProjectsApiError
+          ? error.message
+          : "Failed to create project",
+        "error",
+      );
     },
   });
 }
