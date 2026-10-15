@@ -23,7 +23,13 @@ const LoadingProjects = () => (
   </InlineStack>
 );
 
-export function ProjectsSection() {
+interface ProjectsSectionProps {
+  showWorkspaceNotices: boolean;
+}
+
+export function ProjectsSection({
+  showWorkspaceNotices,
+}: ProjectsSectionProps) {
   const { configured, available, ready } = useBackend();
 
   if (!ready) {
@@ -46,10 +52,10 @@ export function ProjectsSection() {
     );
   }
 
-  return <ProjectsGrid />;
+  return <ProjectsGrid showWorkspaceNotices={showWorkspaceNotices} />;
 }
 
-function ProjectsGrid() {
+function ProjectsGrid({ showWorkspaceNotices }: ProjectsSectionProps) {
   const {
     projects: allProjects,
     createdBy,
@@ -104,7 +110,7 @@ function ProjectsGrid() {
 
   return (
     <BlockStack gap="4">
-      {workspacesError && (
+      {showWorkspaceNotices && workspacesError && (
         <Alert className="w-fit">
           <Icon name="CircleAlert" />
           <AlertDescription>
@@ -112,7 +118,7 @@ function ProjectsGrid() {
           </AlertDescription>
         </Alert>
       )}
-      {noWorkspace && (
+      {showWorkspaceNotices && noWorkspace && (
         <Alert className="w-fit">
           <Icon name="CircleAlert" />
           <AlertDescription>{NO_WORKSPACE_AVAILABLE}</AlertDescription>
