@@ -54,6 +54,22 @@ If you find you are blocked by CORS, you will, for now, need to use the manual s
 
 If you complete these steps the app will launch on `127.0.0.1:8000` with the latest build you've created on the frontend.
 
+### AI provider configuration
+
+In Settings → AI Configuration, bring your own key to use a provider directly, or turn that option off to use the selected backend. Direct Anthropic requests use `https://api.anthropic.com/v1`; OpenAI-compatible gateways keep the Responses protocol even when the selected model is Claude.
+
+Backend proxy mode sends requests to these routes under the selected backend URL:
+
+- `POST /api/experimental/ai/v1/responses`: OpenAI Responses-compatible requests and responses.
+- `POST /api/experimental/ai/v1/embeddings`: OpenAI-compatible embeddings for semantic search.
+- `POST /api/experimental/ai/anthropic/v1/messages`: native Anthropic Messages requests and responses for Claude models.
+
+The frontend sends backend requests with browser credentials; the backend owns upstream provider authentication. Native Claude translation supports non-streaming requests with the full conversation history. Documentation search falls back to text ranking when embeddings are unavailable; native Anthropic component search skips embeddings and can rerank lexical candidates.
+
+Model suggestions do not detect backend capabilities. Only select Claude in backend mode if that backend implements the native Messages route; otherwise those requests fail. Hosts can replace suggestions with `window.__TANGLE_AI_MODELS__`, but must keep that catalog consistent with the backends they offer.
+
+The catalog's Claude models support Low, Medium, High, Extra high, and Max in the thinking slider. Native requests send the selected level as `output_config.effort`; compatible gateways receive `reasoning.effort`. These models use adaptive thinking by default, so no manual thinking-token budget is needed. See [Claude's effort documentation](https://platform.claude.com/docs/en/build-with-claude/effort). Custom model IDs only show thinking controls when the host catalog declares supported effort levels.
+
 ### Environment Variables
 
 Add these to a `.env` file at the root of `tangle-ui`.

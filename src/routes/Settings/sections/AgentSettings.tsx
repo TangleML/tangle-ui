@@ -11,10 +11,13 @@ import { Switch } from "@/components/ui/switch";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
 import {
   getAiMaxOutputTokens,
+  getAiProviderConfig,
+  getAiRequestProviderConfig,
   getEffectiveReasoningEffort,
 } from "@/config/aiConfig";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
+import { aiProviderFetch } from "@/services/aiProviderClient";
 import type { AiProviderConfig } from "@/types/aiProvider";
 
 export function AgentSettings() {
@@ -51,6 +54,7 @@ export function AgentSettings() {
         reasoningEffortPreference: modelPreferences.reasoningEffortPreference,
       }
     : config;
+  const provider = getAiProviderConfig(testConfig.model);
   const unconfiguredStatus = isOwnKeyEnabled
     ? "Status: not configured. AI features are disabled until you save a provider."
     : "Status: not configured. Select a backend in Settings → Backend to use its AI proxy.";
@@ -112,7 +116,7 @@ export function AgentSettings() {
 
     setTesting(true);
     try {
-      const response = await fetch(`${trimmed.apiBase}/responses`, {
+      const response = await aiProviderFetch(`${trimmed.apiBase}/responses`, {
         method: "POST",
         signal: controller.signal,
         credentials: trimmed.credentials,
@@ -141,11 +145,11 @@ export function AgentSettings() {
       if (!isCurrentTest()) return;
       if (!response.ok) {
         // Some misconfigured proxies echo request headers back in error bodies.
-        // Redact any bearer token before surfacing the detail in a toast.
-        const detail = (await response.text().catch(() => "")).replace(
+        let detail = (await response.text().catch(() => "")).replace(
           /Bearer\s+[\w.\-~+/]+=*/gi,
           "Bearer ***",
         );
+        if (trimmed.apiKey) detail = detail.replaceAll(trimmed.apiKey, "***");
         if (!isCurrentTest()) return;
         notify(
           `AI test failed: ${response.status} ${response.statusText}${detail ? ` — ${detail.slice(0, 200)}` : ""}`,
@@ -166,9 +170,14 @@ export function AgentSettings() {
       }
       let successMessage = "Backend AI proxy is working.";
       if (isOwnKeyEnabled) {
+        const requestProvider = getAiRequestProviderConfig(
+          trimmed.model,
+          trimmed.apiBase,
+          trimmed.credentials,
+        );
         successMessage = trimmed.model
-          ? `AI provider settings saved. Model “${trimmed.model}” works with the Responses API.`
-          : "AI provider settings saved. The provider works with the Responses API.";
+          ? `AI provider settings saved. Model “${trimmed.model}” works with the ${requestProvider.apiName}.`
+          : `AI provider settings saved. The provider works with the ${requestProvider.apiName}.`;
       }
       notify(successMessage, "success");
     } catch (err) {
@@ -204,7 +213,7 @@ export function AgentSettings() {
         <Heading level={2}>AI Provider Settings</Heading>
         <Paragraph size="sm" tone="subdued">
           {isOwnKeyEnabled
-            ? "AI features use an OpenAI-compatible API of your choice. Your key is stored in this browser only and is sent only to the configured provider."
+            ? "AI features use the provider you configure. Your key is stored in this browser only and is sent only to the configured provider."
             : "AI features use the backend AI proxy. No personal API key is required."}
         </Paragraph>
         <Paragraph size="xs" tone="subdued">
@@ -232,7 +241,7 @@ export function AgentSettings() {
                 <Input
                   id="agent-settings-api-base"
                   type="url"
-                  placeholder="https://api.openai.com/v1"
+                  placeholder={provider.apiBaseExample}
                   value={apiBase}
                   onChange={(e) => {
                     setApiBase(e.target.value);
@@ -247,9 +256,8 @@ export function AgentSettings() {
                   size="xs"
                   tone="subdued"
                 >
-                  Any OpenAI-compatible base URL, such as
-                  https://api.openai.com/v1. Do not include endpoint paths like
-                  /responses.
+                  The provider base URL, such as {provider.apiBaseExample}.
+                  Enter the base URL without an endpoint path.
                 </Text>
               </BlockStack>
 

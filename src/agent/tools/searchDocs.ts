@@ -1,21 +1,10 @@
-/**
- * In-browser docs RAG tool.
- *
- * Loads the Tangle docs vector store from `/agent-index/docs-vector-store.json`
- * on first use (cached in IndexedDB via `agentDb.vectors` for subsequent
- * loads, and in-memory per `createSearchDocsTool` call for the lifetime of
- * the tool), embeds the user's query through the configured OpenAI proxy,
- * ranks all stored vectors by cosine similarity, and returns the top-K
- * hits formatted for the model to cite back.
- *
- * Replaces the PoC's `search_docs` backend call — see PR 4 of
- * `.cursor/plans/ai_assistant_beta_rollout_e309f590.plan.md` for the
- * reasoning behind moving this in-browser.
- */
 import { tool } from "@openai/agents";
 import { z } from "zod";
 
+import { supportsAiEmbeddings } from "@/config/aiConfig";
 import { BASE_URL } from "@/utils/constants";
+import { isSearchQueryStopWord } from "@/utils/searchQuery";
+import { isRecord } from "@/utils/typeGuards";
 
 import { type OpenAIProvider, requireEmbeddingModel } from "../config";
 import {
@@ -50,6 +39,8 @@ interface SearchDocsHit {
 
 interface SearchDocsResponse {
   results: SearchDocsHit[];
+  searchMode?: "semantic" | "text";
+  fallbackReason?: "unsupported_provider" | "embedding_error";
   instruction?: string;
   message?: string;
   error?: string;
@@ -157,6 +148,34 @@ function rankByCosine(
   return scored.slice(0, topK);
 }
 
+function rankByText(
+  vectors: PersistedVector[],
+  query: string,
+  topK: number,
+): ReturnType<typeof rankByCosine> {
+  const words = [
+    ...new Set(
+      (query.toLowerCase().match(/\w+/g) ?? []).filter(
+        (word) => !isSearchQueryStopWord(word),
+      ),
+    ),
+  ];
+  return vectors
+    .map((vector) => {
+      const text = [
+        vector.metadata.title,
+        vector.metadata.sectionTitle,
+        vector.content,
+      ].join(" ");
+      const documentWords = new Set(text.toLowerCase().match(/\w+/g) ?? []);
+      const matches = words.filter((word) => documentWords.has(word)).length;
+      return { vector, score: words.length ? matches / words.length : 0 };
+    })
+    .filter(({ score }) => score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, topK);
+}
+
 function truncate(content: string): string {
   if (content.length <= MAX_CONTENT_CHARS) return content;
   return content.substring(0, MAX_CONTENT_CHARS) + "\n... (truncated)";
@@ -209,8 +228,25 @@ export async function executeSearchDocs(
       return JSON.stringify(empty);
     }
 
-    const queryVec = await embedQuery(query, provider);
-    const ranked = rankByCosine(store.vectors, queryVec, topK);
+    let fallbackReason: SearchDocsResponse["fallbackReason"];
+    const queryVec = supportsAiEmbeddings(provider.openai.baseURL)
+      ? await embedQuery(query, provider).catch((error: unknown) => {
+          fallbackReason = "embedding_error";
+          const status =
+            isRecord(error) && typeof error.status === "number"
+              ? error.status
+              : undefined;
+          console.warn(
+            "search_docs: embeddings unavailable, using text ranking",
+            { status },
+          );
+          return null;
+        })
+      : null;
+    if (!queryVec && !fallbackReason) fallbackReason = "unsupported_provider";
+    const ranked = queryVec
+      ? rankByCosine(store.vectors, queryVec, topK)
+      : rankByText(store.vectors, query, topK);
 
     const hits: SearchDocsHit[] = [];
     for (const { vector, score } of ranked) {
@@ -228,6 +264,8 @@ export async function executeSearchDocs(
 
     const response: SearchDocsResponse = {
       results: hits,
+      searchMode: queryVec ? "semantic" : "text",
+      ...(fallbackReason ? { fallbackReason } : {}),
       instruction:
         "IMPORTANT: You MUST include the `url` from the top result(s) in your response as a markdown link. " +
         "Use the `citation` field directly, e.g. 'Learn more: [Title](url)'.",
@@ -245,7 +283,7 @@ export function createSearchDocsTool(provider: OpenAIProvider) {
   return tool({
     name: "search_docs",
     description:
-      "Search Tangle documentation by semantic meaning. Returns relevant doc sections with URLs to tangleml.com/docs. " +
+      "Search Tangle documentation. Returns relevant doc sections with URLs to tangleml.com/docs. " +
       "Use for conceptual questions about Tangle. Each result includes a `url` and `citation` field — " +
       "always include the documentation link in your response.",
     parameters: z.object({

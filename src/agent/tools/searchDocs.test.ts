@@ -1,6 +1,6 @@
 import "fake-indexeddb/auto";
 
-import type OpenAI from "openai";
+import OpenAI from "openai";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { OpenAIProvider } from "../config";
@@ -21,6 +21,7 @@ vi.mock("../config", () => ({
 
 const fakeProvider: OpenAIProvider = {
   openai: {
+    baseURL: "https://api.example.com/v1",
     embeddings: { create: embeddingsCreateMock },
   } as unknown as OpenAI,
 };
@@ -98,11 +99,13 @@ beforeEach(() => {
   globalThis.fetch = fetchMock as unknown as typeof fetch;
   fetchMock.mockReset();
   embeddingsCreateMock.mockReset();
+  vi.spyOn(console, "warn").mockImplementation(() => {});
 });
 
 afterEach(async () => {
   globalThis.fetch = originalFetch;
   await agentDb.vectors.clear();
+  vi.restoreAllMocks();
   vi.resetModules();
 });
 
@@ -129,11 +132,15 @@ describe("executeSearchDocs", () => {
         score: number;
       }>;
       instruction?: string;
+      searchMode?: string;
+      fallbackReason?: string;
       error?: string;
     };
 
     expect(parsed.error).toBeUndefined();
     expect(parsed.results).toHaveLength(2);
+    expect(parsed.searchMode).toBe("semantic");
+    expect(parsed.fallbackReason).toBeUndefined();
     expect(parsed.results[0].title).toBe("Tasks");
     expect(parsed.results[1].title).toBe("Components");
     expect(parsed.results[0].score).toBeGreaterThan(parsed.results[1].score);
@@ -160,6 +167,131 @@ describe("executeSearchDocs", () => {
     const parsed = JSON.parse(raw) as { results: unknown[] };
 
     expect(parsed.results).toHaveLength(5);
+  });
+
+  it("returns ranked text matches and citations when embeddings are unavailable", async () => {
+    const store = makeStore();
+    store.vectors[0].content = "Tasks combine inputs and outputs.";
+    fetchMock.mockResolvedValue(jsonResponse(store));
+    embeddingsCreateMock.mockRejectedValue(
+      Object.assign(new Error("Response echoed secret-test-key"), {
+        status: 401,
+        headers: { authorization: "Bearer secret-test-key" },
+      }),
+    );
+
+    const { executeSearchDocs, DocsVectorStoreCache } =
+      await import("./searchDocs");
+    const raw = await executeSearchDocs(
+      { query: "TASKS tasks inputs outputs", topK: 2 },
+      fakeProvider,
+      new DocsVectorStoreCache(),
+    );
+    const parsed = JSON.parse(raw);
+
+    expect(parsed.error).toBeUndefined();
+    expect(parsed.results).toHaveLength(2);
+    expect(parsed.searchMode).toBe("text");
+    expect(parsed.fallbackReason).toBe("embedding_error");
+    expect(console.warn).toHaveBeenCalledTimes(1);
+    expect(console.warn).toHaveBeenCalledWith(
+      "search_docs: embeddings unavailable, using text ranking",
+      { status: 401 },
+    );
+    expect(parsed.results[0]).toMatchObject({
+      title: "Tasks",
+      score: 1,
+      citation: "[Tasks](https://tangleml.com/docs/core-concepts/tasks)",
+    });
+    expect(parsed.results[1].title).toBe("Inputs");
+    expect(parsed.results[1].score).toBeCloseTo(1 / 3, 3);
+    expect(parsed.instruction).toContain("markdown link");
+  });
+
+  it.each(["unrelated-query", "How do I?"])(
+    "omits documents without matching topic words for '%s'",
+    async (query) => {
+      const store = makeStore();
+      store.vectors[0].content = "How do I pick a name for the output?";
+      fetchMock.mockResolvedValue(jsonResponse(store));
+      embeddingsCreateMock.mockRejectedValue(
+        new Error("Embeddings unavailable"),
+      );
+
+      const { executeSearchDocs, DocsVectorStoreCache } =
+        await import("./searchDocs");
+      const raw = await executeSearchDocs(
+        { query },
+        fakeProvider,
+        new DocsVectorStoreCache(),
+      );
+      const parsed = JSON.parse(raw);
+
+      expect(parsed.error).toBeUndefined();
+      expect(parsed.results).toEqual([]);
+    },
+  );
+
+  it.each([
+    { query: "How do I enable caching?", topic: "Caching" },
+    { query: "How do I define a component?", topic: "Component" },
+  ])(
+    "ranks the topic above question filler for '$query'",
+    async ({ query, topic }) => {
+      const store = makeStore();
+      store.vectors = [makeVector("Overview", 0), makeVector(topic, 1)];
+      store.vectors[0].content = "How do I pick a name for the output?";
+      fetchMock.mockResolvedValue(jsonResponse(store));
+      embeddingsCreateMock.mockRejectedValue(
+        new Error("Embeddings unavailable"),
+      );
+
+      const { executeSearchDocs, DocsVectorStoreCache } =
+        await import("./searchDocs");
+      const parsed = JSON.parse(
+        await executeSearchDocs(
+          { query, topK: 1 },
+          fakeProvider,
+          new DocsVectorStoreCache(),
+        ),
+      );
+
+      expect(parsed.error).toBeUndefined();
+      expect(parsed.searchMode).toBe("text");
+      expect(parsed.results).toEqual([
+        expect.objectContaining({ title: topic, score: 0.5 }),
+      ]);
+    },
+  );
+
+  it("searches docs without requesting unsupported Anthropic embeddings", async () => {
+    fetchMock.mockResolvedValue(jsonResponse(makeStore()));
+    const provider = {
+      openai: new OpenAI({
+        baseURL: "https://api.anthropic.com/v1",
+        apiKey: "test-key",
+        dangerouslyAllowBrowser: true,
+      }),
+    };
+    const { executeSearchDocs, DocsVectorStoreCache } =
+      await import("./searchDocs");
+    const parsed = JSON.parse(
+      await executeSearchDocs(
+        { query: "components" },
+        provider,
+        new DocsVectorStoreCache(),
+      ),
+    );
+
+    expect(parsed.error).toBeUndefined();
+    expect(parsed.results[0].citation).toBe(
+      "[Components](https://tangleml.com/docs/core-concepts/components)",
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(embeddingsCreateMock).not.toHaveBeenCalled();
+    expect(parsed.searchMode).toBe("text");
+    expect(parsed.fallbackReason).toBe("unsupported_provider");
+    expect(console.warn).not.toHaveBeenCalled();
   });
 
   it("returns the populate-instruction message when the index is empty", async () => {

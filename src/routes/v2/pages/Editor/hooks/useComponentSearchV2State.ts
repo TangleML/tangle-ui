@@ -3,6 +3,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { useEffect, useRef, useState } from "react";
 
 import { listApiPublishedComponentsGet } from "@/api/sdk.gen";
+import { supportsAiEmbeddings } from "@/config/aiConfig";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import { getComponentQueryKey } from "@/hooks/useHydrateComponentReference";
 import { useNaturalLanguageComponentRerank } from "@/hooks/useNaturalLanguageComponentSearch";
@@ -204,7 +205,7 @@ export function useComponentSearchV2State(
     (item) => !disabled.has(item.source.kind),
   );
 
-  const canUseEmbeddingSearch = aiConfig.apiBase.trim().length > 0;
+  const canUseEmbeddingSearch = supportsAiEmbeddings(aiConfig.apiBase);
   const lexicalMatches = pauseSearch
     ? []
     : buildLexicalMatches(filteredIndex, searchableQuery);

@@ -134,12 +134,14 @@ describe("AiModelPicker", () => {
       expect(modelOption("GPT-6 Sol")).toHaveFocus();
       for (const [key, label] of [
         ["ArrowDown", "GPT-6 Luna"],
-        ["ArrowDown", "Provider default"],
+        ["ArrowDown", "Claude Fable 5.1"],
         ["ArrowUp", "GPT-6 Luna"],
         ["ArrowLeft", "GPT-6 Sol"],
         ["ArrowRight", "GPT-6 Luna"],
         ["Home", "Provider default"],
-        ["End", "GPT-6 Luna"],
+        ["End", "Claude Haiku 5.5"],
+        ["ArrowDown", "Provider default"],
+        ["ArrowUp", "Claude Haiku 5.5"],
       ]) {
         await user.keyboard(`{${key}}`);
         expect(modelOption(label)).toHaveFocus();
@@ -151,7 +153,7 @@ describe("AiModelPicker", () => {
         }
       }
       await user.keyboard("{Enter}");
-      expect(modelTitle()).toHaveTextContent("GPT-6 Luna");
+      expect(modelTitle()).toHaveTextContent("Claude Haiku 5.5");
       expect(modelTitle()).toHaveFocus();
       expect(screen.queryByRole("radiogroup")).not.toBeInTheDocument();
       expect(canvasShortcut).not.toHaveBeenCalled();
@@ -202,6 +204,31 @@ describe("AiModelPicker", () => {
     }
     selectModel("GPT-6 Sol");
     expectEffort("None");
+  });
+
+  it.each([
+    "Claude Fable 5.1",
+    "Claude Opus 5.5",
+    "Claude Sonnet 5.5",
+    "Claude Haiku 5.5",
+  ])("selects and persists thinking for %s", (model) => {
+    saveProvider({ model: "gpt-6-sol", reasoningEffort: "none" });
+    const { unmount } = renderPicker();
+    selectModel(model);
+    expectEffort("Low");
+    expect(thinking()).toHaveAttribute("aria-valuemin", "0");
+    expect(thinking()).toHaveAttribute("aria-valuemax", "4");
+    expectText(/Your none preference is saved/);
+    selectModel("GPT-6 Sol");
+    expectEffort("None");
+    selectModel(model);
+    fireEvent.keyDown(thinking(), { key: "End" });
+    expectEffort("Max");
+    unmount();
+
+    renderPicker();
+    expect(modelTitle()).toHaveTextContent(model);
+    expectEffort("Max");
   });
 
   it.each(variants)("isolates shortcuts and Escape in %s", async (variant) => {
