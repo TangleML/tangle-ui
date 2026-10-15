@@ -25,15 +25,6 @@ import {
   useTangentEnabled,
 } from "@/components/shared/Settings/useFlags";
 import { TagList } from "@/components/shared/Tags/TagList";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Paragraph, Text } from "@/components/ui/typography";
@@ -42,10 +33,8 @@ import type { ComponentSpec } from "@/models/componentSpec";
 import { useBackend } from "@/providers/BackendProvider";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
 import { useDebugInTangent } from "@/routes/v2/pages/RunView/hooks/useDebugInTangent";
-import { useAiGate } from "@/routes/v2/shared/components/AiChat/components/useAiGate";
 import { PipelineDetailsCollapsibleSection } from "@/routes/v2/shared/components/PipelineDetailsCollapsibleSection";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
-import { useProjectsById } from "@/services/projects/useProjects";
 import { runAnnotationsQueryOptions } from "@/services/runAnnotations";
 import {
   getAnnotationValue,
@@ -61,9 +50,9 @@ import {
   getOverallExecutionStatusFromStats,
 } from "@/utils/executionStatus";
 import { projectIdsFromAnnotations } from "@/utils/projectRunAnnotation";
-import { tracking } from "@/utils/tracking";
 
 import { RunDetailsHeader } from "./RunDetailsHeader";
+import { RunTangentButton } from "./RunTangentButton";
 
 const FAILURE_STATUSES = ["FAILED", "SYSTEM_ERROR", "INVALID"];
 
@@ -255,54 +244,17 @@ function DebugInTangentButton({
   runId,
   pipelineName,
 }: DebugInTangentButtonProps) {
-  const { start: debug, isPending } = useDebugInTangent();
-  const aiGate = useAiGate();
-  // Only the projects still there: one that has been deleted since is not a
-  // place anything can be debugged, and picking it would just make a project.
-  const projects = useProjectsById(useRunProjectIds(runId));
-
-  const label = isPending ? "Starting…" : "Debug in Tangent";
-  const button = (
-    <Button
-      variant="outline"
-      size="sm"
-      className="w-full"
-      disabled={isPending || aiGate.disabled}
-      title={aiGate.title}
-      onClick={
-        projects.length > 1 ? undefined : () => debug({ runId, pipelineName })
-      }
-      {...tracking("v2.run_view.debug_in_tangent")}
-    >
-      <Icon name="Bug" size="sm" />
-      {label}
-    </Button>
-  );
-
-  // Attribution is written once and never revised, so a run in two projects
-  // cannot be asked which one it meant — only the reader can say.
-  if (projects.length <= 1) {
-    return button;
-  }
+  const handoff = useDebugInTangent();
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>{button}</DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="max-w-72 min-w-56">
-        <DropdownMenuLabel>Debug in which project?</DropdownMenuLabel>
-        {projects.map((project) => (
-          <DropdownMenuItem
-            key={project.id}
-            onSelect={() =>
-              debug({ runId, pipelineName, projectId: project.id })
-            }
-          >
-            <Icon name="Folder" size="sm" />
-            <span className="truncate">{project.name}</span>
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <RunTangentButton
+      run={{ runId, pipelineName }}
+      handoff={handoff}
+      label="Debug in Tangent"
+      icon="Bug"
+      createLabel="Create and debug"
+      trackingId="v2.run_view.debug_in_tangent"
+    />
   );
 }
 

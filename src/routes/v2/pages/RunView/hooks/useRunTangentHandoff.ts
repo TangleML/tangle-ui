@@ -1,11 +1,13 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 
 import { useRerunProjectIds } from "@/hooks/useRerunProjectIds";
 import useToastNotification from "@/hooks/useToastNotification";
 import { APP_ROUTES } from "@/routes/appRoutes";
 import { tangentOpenSearch } from "@/routes/tangentSearch";
 import { attachPipelineRunOnce } from "@/services/projects/attachPipelineRun";
+import { rememberLastUsedWorkspace } from "@/services/projects/defaultWorkspace";
 import { isProjectGone } from "@/services/projects/errors";
 import { createProjectResource } from "@/services/projects/projectResourcesService";
 import {
@@ -20,7 +22,6 @@ import type { StartingSession } from "@/services/projects/startingSession";
 import { startingSessionMetadata } from "@/services/projects/startingSession";
 import type { CreateResourceInput, Project } from "@/services/projects/types";
 import { ProjectsQueryKeys } from "@/services/projects/types";
-import { useWorkspaces } from "@/services/projects/useWorkspaces";
 import { getErrorMessage } from "@/utils/string";
 
 export interface RunInTangent {
@@ -28,16 +29,13 @@ export interface RunInTangent {
   pipelineName: string;
 }
 
-interface HandoffVariables extends RunInTangent {
-  projectId?: string;
-}
-
-type TangentDestination =
-  | { kind: "existing"; project: Project }
+export type TangentDestination =
+  | { kind: "existing"; projectId: string }
   | { kind: "new"; workspaceId: string; name: string };
 
 export interface RunTangentHandoff {
   newProjectName: (run: RunInTangent) => string;
+  newProjectMetadata?: Record<string, unknown>;
   newProjectDocuments?: (
     project: Project,
     run: RunInTangent,
@@ -45,49 +43,39 @@ export interface RunTangentHandoff {
   startingSession?: (run: RunInTangent) => StartingSession;
 }
 
+interface ChoosingDestination {
+  run: RunInTangent;
+  attributed: Project[];
+  newProjectName: string;
+}
+
 /**
- * Only a definite "not there" is skipped past: a backend that merely failed to
- * answer would otherwise strand the run in a new project beside the real one.
+ * Only a definite "not there" is dropped: a backend that merely failed to
+ * answer would otherwise offer a new project beside the real one.
  */
-async function firstProjectStillThere(projectIds: readonly string[]) {
-  for (const projectId of projectIds) {
-    try {
-      return await getProject(projectId);
-    } catch (error) {
-      if (!isProjectGone(error)) throw error;
-    }
-  }
-  return undefined;
+async function projectsStillThere(projectIds: readonly string[]) {
+  const found = await Promise.all(
+    projectIds.map(async (projectId) => {
+      try {
+        return await getProject(projectId);
+      } catch (error) {
+        if (isProjectGone(error)) return undefined;
+        throw error;
+      }
+    }),
+  );
+  return found.filter((project) => project !== undefined);
 }
 
 export function useRunTangentHandoff(handoff: RunTangentHandoff) {
   const navigate = useNavigate();
   const notify = useToastNotification();
   const queryClient = useQueryClient();
-  const { data: workspaces } = useWorkspaces();
   const rerunProjectIds = useRerunProjectIds();
+  const [choosing, setChoosing] = useState<ChoosingDestination>();
 
-  const resolveDestination = async ({
-    runId,
-    pipelineName,
-    projectId,
-  }: HandoffVariables): Promise<TangentDestination> => {
-    const attributed = projectId ? [projectId] : await rerunProjectIds(runId);
-    const existing = await firstProjectStillThere(attributed);
-    if (existing) return { kind: "existing", project: existing };
-
-    const workspace = workspaces?.find((w) => w.isActive) ?? workspaces?.[0];
-    if (!workspace) {
-      throw new Error("No workspace is available to create a project.");
-    }
-    return {
-      kind: "new",
-      workspaceId: workspace.id,
-      name: handoff.newProjectName({ runId, pipelineName }),
-    };
-  };
-
-  const intoExistingProject = async (project: Project, run: RunInTangent) => {
+  const intoExistingProject = async (projectId: string, run: RunInTangent) => {
+    const project = await getProject(projectId);
     await attachPipelineRunOnce(project.id, run.runId, run.pipelineName);
 
     const session = handoff.startingSession?.(run);
@@ -111,7 +99,10 @@ export function useRunTangentHandoff(handoff: RunTangentHandoff) {
       workspaceId,
       name,
       origin: "agent",
-      metadata: session ? startingSessionMetadata(session) : {},
+      metadata: {
+        ...handoff.newProjectMetadata,
+        ...(session ? startingSessionMetadata(session) : {}),
+      },
     });
 
     try {
@@ -133,26 +124,27 @@ export function useRunTangentHandoff(handoff: RunTangentHandoff) {
       throw error;
     }
 
+    rememberLastUsedWorkspace(workspaceId);
     return project;
   };
 
-  const { mutate: start, isPending } = useMutation({
-    mutationFn: async (variables: HandoffVariables) => {
-      const run = {
-        runId: variables.runId,
-        pipelineName: variables.pipelineName,
-      };
-      const destination = await resolveDestination(variables);
-      return destination.kind === "existing"
-        ? intoExistingProject(destination.project, run)
-        : intoNewProject(destination, run);
-    },
-    onSuccess: (project, { runId }) => {
+  const send = useMutation({
+    mutationFn: ({
+      run,
+      destination,
+    }: {
+      run: RunInTangent;
+      destination: TangentDestination;
+    }) =>
+      destination.kind === "existing"
+        ? intoExistingProject(destination.projectId, run)
+        : intoNewProject(destination, run),
+    onSuccess: (project, { run }) => {
       void queryClient.invalidateQueries({ queryKey: ProjectsQueryKeys.All() });
       void navigate({
         to: APP_ROUTES.TANGENT_PROJECT,
         params: { projectId: project.id },
-        search: tangentOpenSearch(runTarget(runId)),
+        search: tangentOpenSearch(runTarget(run.runId)),
       });
     },
     onError: (error) => {
@@ -160,5 +152,41 @@ export function useRunTangentHandoff(handoff: RunTangentHandoff) {
     },
   });
 
-  return { start, isPending };
+  const lookUp = useMutation({
+    mutationFn: async (run: RunInTangent) =>
+      projectsStillThere(await rerunProjectIds(run.runId)),
+    onSuccess: (attributed, run) => {
+      if (attributed.length === 1) {
+        send.mutate({
+          run,
+          destination: { kind: "existing", projectId: attributed[0].id },
+        });
+        return;
+      }
+      setChoosing({
+        run,
+        attributed,
+        newProjectName: handoff.newProjectName(run),
+      });
+    },
+    onError: (error) => {
+      notify(getErrorMessage(error), "error");
+    },
+  });
+
+  const choose = (destination: TangentDestination) => {
+    if (!choosing) return;
+    setChoosing(undefined);
+    send.mutate({ run: choosing.run, destination });
+  };
+
+  return {
+    start: lookUp.mutate,
+    isPending: lookUp.isPending || send.isPending,
+    choosing,
+    choose,
+    dismiss: () => setChoosing(undefined),
+  };
 }
+
+export type RunTangentHandoffState = ReturnType<typeof useRunTangentHandoff>;
