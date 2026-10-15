@@ -43,7 +43,7 @@ type StoredProviderSettings = Pick<
 const DEFAULTS: StoredProviderSettings = {
   apiBase: "",
   apiKey: "",
-  model: "",
+  model: AI_CONFIG.models[0].id,
 };
 
 type ProxySettings = Pick<
@@ -106,26 +106,30 @@ function isAllEmpty(config: StoredProviderSettings): boolean {
 
 function readStoredConfig(): StoredProviderSettings {
   if (typeof window === "undefined") return DEFAULTS;
-  // Empty partial records must not shadow legacy settings; an explicit model
-  // selection takes precedence even when it selects the provider default.
+  // An explicit blank model resets to the catalog default instead of reviving
+  // legacy settings. Other empty partial records must not shadow legacy settings.
   const stored = storage.getItem(AI_PROVIDER_STORAGE_KEY);
   const current = parseStoredConfig(stored);
   const hasModelSelection =
     isRecord(stored) && typeof stored.model === "string";
-  if (current && (!isAllEmpty(current) || hasModelSelection)) return current;
-  return (
-    parseStoredConfig(storage.getItem(LEGACY_COMPONENT_SEARCH_STORAGE_KEY)) ??
-    current ?? { ...DEFAULTS, model: getDefaultAiModelId() }
-  );
+  const config =
+    current && (!isAllEmpty(current) || hasModelSelection)
+      ? current
+      : (parseStoredConfig(
+          storage.getItem(LEGACY_COMPONENT_SEARCH_STORAGE_KEY),
+        ) ?? current);
+  return {
+    ...(config ?? DEFAULTS),
+    model: config?.model || getDefaultAiModelId(),
+  };
 }
 
 function readProxySettings(): ProxySettings {
   const stored = storage.getItem(AI_PROXY_STORAGE_KEY);
   return {
     model:
-      isRecord(stored) && typeof stored.model === "string"
-        ? readTrimmedString(stored, "model")
-        : getDefaultAiModelId(),
+      (isRecord(stored) ? readTrimmedString(stored, "model") : "") ||
+      getDefaultAiModelId(),
     ...(isRecord(stored) ? readReasoningPreference(stored) : {}),
   };
 }
@@ -176,8 +180,8 @@ export function useAiProviderSettings() {
   );
   const isOwnKeyEnabled = useSyncExternalStore(
     subscribe,
-    () => storage.getItem(AI_USE_OWN_KEY_STORAGE_KEY) !== false,
-    () => true,
+    () => storage.getItem(AI_USE_OWN_KEY_STORAGE_KEY) === true,
+    () => false,
   );
   const modelPreferences = isOwnKeyEnabled ? customConfig : proxyConfig;
   const model = modelPreferences.model;
@@ -214,7 +218,7 @@ export function useAiProviderSettings() {
   // each other with the same stale snapshot.
   const update = (partial: Partial<StoredProviderSettings>) => {
     if (typeof window === "undefined") return;
-    if (storage.getItem(AI_USE_OWN_KEY_STORAGE_KEY) === false) {
+    if (storage.getItem(AI_USE_OWN_KEY_STORAGE_KEY) !== true) {
       const current = readProxySettings();
       storage.setItem(AI_PROXY_STORAGE_KEY, {
         ...current,
@@ -240,7 +244,7 @@ export function useAiProviderSettings() {
 
   const clear = () => {
     if (typeof window === "undefined") return;
-    if (storage.getItem(AI_USE_OWN_KEY_STORAGE_KEY) === false) {
+    if (storage.getItem(AI_USE_OWN_KEY_STORAGE_KEY) !== true) {
       storage.setItem(AI_PROXY_STORAGE_KEY, null);
       return;
     }

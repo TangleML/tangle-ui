@@ -29,6 +29,7 @@ describe("AiModelQuickSelect", () => {
 
   it("does not render until AI provider settings are configured", () => {
     enableFlags({ "ai-assistant": true });
+    window.localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, "true");
 
     render(<AiModelQuickSelect />);
 
@@ -43,6 +44,7 @@ describe("AiModelQuickSelect", () => {
       "component-search-v2": false,
       "tangent-shell": false,
     });
+    window.localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, "true");
     window.localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -61,6 +63,7 @@ describe("AiModelQuickSelect", () => {
 
   it("shows configured model choices when component search is enabled", () => {
     enableFlags({ "component-search-v2": true });
+    window.localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, "true");
     window.localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -84,6 +87,7 @@ describe("AiModelQuickSelect", () => {
 
   it("shows configured model choices when the AI assistant is enabled", () => {
     enableFlags({ "ai-assistant": true });
+    window.localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, "true");
     window.localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -116,13 +120,12 @@ describe("AiModelQuickSelect", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows Sol with High thinking in proxy mode", () => {
+  it("shows the first model with High thinking in proxy mode by default", () => {
     enableFlags({ "ai-assistant": true });
-    window.localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, "false");
     render(<AiModelQuickSelect />);
     expect(
       screen.getByRole("button", {
-        name: "AI model and thinking: GPT-6 Sol, High",
+        name: "AI model and thinking: GPT-6 Astra, High",
       }),
     ).toBeInTheDocument();
   });

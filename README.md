@@ -56,7 +56,9 @@ If you complete these steps the app will launch on `127.0.0.1:8000` with the lat
 
 ### AI provider configuration
 
-In Settings → AI Configuration, bring your own key to use a provider directly, or turn that option off to use the selected backend. Direct Anthropic requests use `https://api.anthropic.com/v1`; OpenAI-compatible gateways keep the Responses protocol even when the selected model is Claude.
+AI features use the selected backend proxy by default. In Settings → AI Configuration, turn on bring your own key to use a provider directly. Explicitly saved choices are preserved. Direct Anthropic requests use `https://api.anthropic.com/v1`; OpenAI-compatible gateways keep the Responses protocol even when the selected model is Claude.
+
+The model picker selects the first suggested model when no model is selected. Choose **Custom model…** in its model list to enter a model ID; models without declared thinking options show only the model. In Settings, custom model selections are saved after a successful connection test.
 
 Backend proxy mode sends requests to these routes under the selected backend URL:
 
@@ -66,7 +68,7 @@ Backend proxy mode sends requests to these routes under the selected backend URL
 
 The frontend sends backend requests with browser credentials; the backend owns upstream provider authentication. Native Claude translation supports non-streaming requests with the full conversation history. Documentation search falls back to text ranking when embeddings are unavailable; native Anthropic component search skips embeddings and can rerank lexical candidates.
 
-Model suggestions do not detect backend capabilities. Only select Claude in backend mode if that backend implements the native Messages route; otherwise those requests fail. Hosts can replace suggestions with `window.__TANGLE_AI_MODELS__`, but must keep that catalog consistent with the backends they offer.
+Model suggestions do not detect backend capabilities. Only select Claude in backend mode if that backend implements the native Messages route; otherwise those requests fail. Hosts can replace suggestions with `window.__TANGLE_AI_MODELS__.models`; the first valid entry is the default. Hosts must keep that catalog consistent with the backends they offer.
 
 The catalog's Claude models support Low, Medium, High, Extra high, and Max in the thinking slider. Native requests send the selected level as `output_config.effort`; compatible gateways receive `reasoning.effort`. These models use adaptive thinking by default, so no manual thinking-token budget is needed. See [Claude's effort documentation](https://platform.claude.com/docs/en/build-with-claude/effort). Custom model IDs only show thinking controls when the host catalog declares supported effort levels.
 

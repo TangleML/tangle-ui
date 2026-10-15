@@ -41,24 +41,28 @@ export function AgentSettings() {
   const [testing, setTesting] = useState(false);
   const testControllerRef = useRef<AbortController | null>(null);
   const model = (modelDraft ?? config.model).trim();
-  const testConfig: AiProviderConfig = isOwnKeyEnabled
-    ? {
-        apiBase: apiBase.trim().replace(/\/+$/, ""),
-        apiKey: apiKey.trim(),
-        model,
-        reasoningEffort: getEffectiveReasoningEffort(
-          model,
-          modelPreferences.reasoningEffortPreference,
-          config.modelCapabilities,
-        ),
-        reasoningEffortPreference: modelPreferences.reasoningEffortPreference,
-      }
-    : config;
+  const testConfig: AiProviderConfig = {
+    ...config,
+    ...(isOwnKeyEnabled
+      ? {
+          apiBase: apiBase.trim().replace(/\/+$/, ""),
+          apiKey: apiKey.trim(),
+        }
+      : {}),
+    model,
+    reasoningEffort: getEffectiveReasoningEffort(
+      model,
+      modelPreferences.reasoningEffortPreference,
+      config.modelCapabilities,
+    ),
+    reasoningEffortPreference: modelPreferences.reasoningEffortPreference,
+  };
   const provider = getAiProviderConfig(testConfig.model);
   const unconfiguredStatus = isOwnKeyEnabled
     ? "Status: not configured. AI features are disabled until you save a provider."
     : "Status: not configured. Select a backend in Settings → Backend to use its AI proxy.";
-  const submitLabel = isOwnKeyEnabled ? "Save and test AI" : "Test AI";
+  const submitLabel =
+    isOwnKeyEnabled || modelDraft !== null ? "Save and test AI" : "Test AI";
 
   useEffect(() => {
     setModelDraft(null);
@@ -166,8 +170,10 @@ export function AgentSettings() {
           apiKey: trimmed.apiKey,
           model: trimmed.model,
         });
-        setModelDraft(trimmed.model);
+      } else if (modelDraft !== null) {
+        update({ model: trimmed.model });
       }
+      setModelDraft(null);
       let successMessage = "Backend AI proxy is working.";
       if (isOwnKeyEnabled) {
         const requestProvider = getAiRequestProviderConfig(
@@ -304,26 +310,17 @@ export function AgentSettings() {
 
           <BlockStack gap="2">
             <Text size="sm" weight="medium">
-              Model and thinking
+              Model
             </Text>
-            <AiModelPicker onModelSelect={() => setModelDraft(null)} />
-            {isOwnKeyEnabled && (
-              <BlockStack gap="1">
-                <Label htmlFor="agent-settings-model">Model ID</Label>
-                <Input
-                  id="agent-settings-model"
-                  value={modelDraft ?? config.model}
-                  onChange={(event) => setModelDraft(event.target.value)}
-                  placeholder="Provider default"
-                  aria-describedby="agent-settings-model-hint"
-                  autoComplete="off"
-                  spellCheck={false}
-                />
-                <Text id="agent-settings-model-hint" size="xs" tone="subdued">
-                  Enter a custom model ID, or leave blank for the provider
-                  default. Saved after a successful test.
-                </Text>
-              </BlockStack>
+            <AiModelPicker
+              modelDraft={modelDraft}
+              onCustomModelSelect={setModelDraft}
+              onModelSelect={() => setModelDraft(null)}
+            />
+            {modelDraft !== null && (
+              <Text size="xs" tone="subdued">
+                This model will be saved after a successful test.
+              </Text>
             )}
           </BlockStack>
 

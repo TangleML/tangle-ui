@@ -2,6 +2,8 @@ import { useEffect, useId, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import {
   Popover,
@@ -16,13 +18,16 @@ import {
   getAiModelOptions,
   getAiModelReasoningLevels,
   getAiReasoningLabel,
+  getEffectiveReasoningEffort,
 } from "@/config/aiConfig";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import type { AiReasoningEffort } from "@/types/aiProvider";
 
 interface AiModelPickerProps {
   variant?: "header" | "settings" | "compact";
+  modelDraft?: string | null;
   onModelSelect?: () => void;
+  onCustomModelSelect?: (model: string) => void;
 }
 
 const TRIGGER_STYLES = {
@@ -32,10 +37,9 @@ const TRIGGER_STYLES = {
 } as const;
 
 function getThinkingHint(
-  effort: AiReasoningEffort | undefined,
+  effort: AiReasoningEffort,
   preference: AiReasoningEffort,
 ): string {
-  if (!effort) return "Thinking controls aren’t available for this model.";
   if (effort !== preference) {
     return `Using ${getAiReasoningLabel(effort).toLowerCase()} for this model. Your ${getAiReasoningLabel(preference).toLowerCase()} preference is saved.`;
   }
@@ -44,42 +48,102 @@ function getThinkingHint(
 
 export function AiModelPicker({
   variant = "settings",
+  modelDraft,
   onModelSelect,
+  onCustomModelSelect,
 }: AiModelPickerProps) {
-  const { config, modelPreferences, update } = useAiProviderSettings();
-  const [view, setView] = useState<"closed" | "thinking" | "models">("closed");
+  const { config, modelPreferences, isOwnKeyEnabled, update } =
+    useAiProviderSettings();
+  const [view, setView] = useState<"closed" | "thinking" | "models" | "custom">(
+    "closed",
+  );
+  const [customModelId, setCustomModelId] = useState("");
   const open = view !== "closed";
   const selectingModel = view === "models";
-  const modelIcon = selectingModel ? "ChevronLeft" : "ChevronDown";
+  const editingCustomModel = view === "custom";
+  const modelIcon =
+    selectingModel || editingCustomModel ? "ChevronLeft" : "ChevronDown";
   const [buttonVariant, triggerClassName] = TRIGGER_STYLES[variant];
   const triggerRef = useRef<HTMLButtonElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const dismissedOutsideRef = useRef(false);
   const focusRef = useRef<HTMLButtonElement>(null);
   const modelOptionRefs = useRef(new Map<string, HTMLButtonElement>());
+  const customModelRef = useRef<HTMLInputElement>(null);
+  const customActionRef = useRef<HTMLButtonElement>(null);
+  const returnToCustomActionRef = useRef(false);
   const thinkingHintId = useId();
   const modelDescriptionId = useId();
-  const modelLabel = getAiModelLabel(config.model);
+  const customModelInputId = useId();
+  const model = modelDraft ?? config.model;
+  const modelLabel = getAiModelLabel(model);
   const preference =
     modelPreferences.reasoningEffortPreference ??
     AI_CONFIG.defaultReasoningEffort;
-  const levels = getAiModelReasoningLevels(config.model);
-  const effort = config.reasoningEffort;
-  const effortLabel = effort ? getAiReasoningLabel(effort) : "Unavailable";
+  const levels = getAiModelReasoningLevels(model, config.modelCapabilities);
+  const effort = getEffectiveReasoningEffort(
+    model,
+    preference,
+    config.modelCapabilities,
+  );
+  const effortLabel = effort ? getAiReasoningLabel(effort) : undefined;
   const selectedIndex = levels.findIndex((level) => level.value === effort);
-  const configuredOptions = [
-    { id: "", label: "Provider default" },
-    ...getAiModelOptions(),
-  ];
-  const options = configuredOptions.some((option) => option.id === config.model)
-    ? configuredOptions
-    : [{ id: config.model }, ...configuredOptions];
+  const configuredOptions = getAiModelOptions();
+  const isConfiguredModel = configuredOptions.some(
+    (option) => option.id === model,
+  );
+  const options =
+    !model || isConfiguredModel
+      ? configuredOptions
+      : [{ id: model }, ...configuredOptions];
 
   useEffect(() => {
-    if (!open) return;
-    if (selectingModel) modelOptionRefs.current.get(config.model)?.focus();
-    else focusRef.current?.focus();
-  }, [open, selectingModel, config.model]);
+    if (view === "closed") return;
+    if (view === "custom") {
+      customModelRef.current?.focus();
+    } else if (view === "models" && returnToCustomActionRef.current) {
+      returnToCustomActionRef.current = false;
+      customActionRef.current?.focus();
+    } else if (view === "models") {
+      modelOptionRefs.current.get(model)?.focus();
+    } else {
+      focusRef.current?.focus();
+    }
+  }, [view, model]);
+
+  useEffect(() => {
+    setCustomModelId("");
+    setView("closed");
+    returnToCustomActionRef.current = false;
+  }, [isOwnKeyEnabled]);
+
+  const backToModels = () => {
+    returnToCustomActionRef.current = true;
+    setView("models");
+  };
+
+  const selectCustomModel = () => {
+    const nextModel = customModelId.trim();
+    if (!nextModel) return;
+    if (onCustomModelSelect) {
+      onCustomModelSelect(nextModel);
+    } else {
+      update({ model: nextModel });
+    }
+    setView("closed");
+  };
+
+  const selectModel = (nextModel: string) => {
+    const isCustomModel = !configuredOptions.some(
+      (option) => option.id === nextModel,
+    );
+    if (isCustomModel && onCustomModelSelect) {
+      onCustomModelSelect(nextModel);
+    } else {
+      update({ model: nextModel });
+      onModelSelect?.();
+    }
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -115,7 +179,7 @@ export function AiModelPicker({
           ref={triggerRef}
           type="button"
           variant={buttonVariant}
-          aria-label={`AI model and thinking: ${modelLabel}, ${effortLabel}`}
+          aria-label={`AI model and thinking: ${modelLabel}${effortLabel ? `, ${effortLabel}` : ""}`}
           className={triggerClassName}
         >
           <Text
@@ -141,6 +205,11 @@ export function AiModelPicker({
         onKeyDown={(event) => event.stopPropagation()}
         onEscapeKeyDown={(event) => {
           event.stopPropagation();
+          if (editingCustomModel) {
+            event.preventDefault();
+            backToModels();
+            return;
+          }
           if (!selectingModel) return;
           event.preventDefault();
           setView("thinking");
@@ -148,133 +217,181 @@ export function AiModelPicker({
       >
         <BlockStack gap="2">
           <Button
-            ref={selectingModel ? undefined : focusRef}
+            ref={selectingModel || editingCustomModel ? undefined : focusRef}
             type="button"
             variant="ghost"
             className="h-11 w-full justify-start gap-2 px-3"
             aria-label={
-              selectingModel
-                ? "Models: back to thinking"
-                : `Choose a model: ${modelLabel}`
+              editingCustomModel
+                ? "Custom model: back to models"
+                : selectingModel
+                  ? "Models: back to model settings"
+                  : `Choose a model: ${modelLabel}`
             }
-            onClick={() => setView(selectingModel ? "thinking" : "models")}
+            onClick={() => {
+              if (editingCustomModel) backToModels();
+              else setView(selectingModel ? "thinking" : "models");
+            }}
           >
             <Icon name={modelIcon} size="sm" />
-            {selectingModel ? "Models" : modelLabel}
+            {editingCustomModel
+              ? "Custom model"
+              : selectingModel
+                ? "Models"
+                : modelLabel}
           </Button>
-          {selectingModel ? (
-            <div role="radiogroup" aria-label="Models">
-              <BlockStack gap="2">
-                {options.map((option, index) => (
-                  <Button
-                    key={option.id}
-                    ref={(element) => {
-                      if (element)
-                        modelOptionRefs.current.set(option.id, element);
-                      else modelOptionRefs.current.delete(option.id);
-                    }}
-                    type="button"
-                    variant="ghost"
-                    role="radio"
-                    aria-label={option.label ?? option.id}
-                    aria-describedby={
-                      option.description
-                        ? `${modelDescriptionId}-${index}`
-                        : undefined
-                    }
-                    aria-checked={option.id === config.model}
-                    tabIndex={option.id === config.model ? 0 : -1}
-                    className="h-auto w-full justify-between px-3 py-3 text-left whitespace-normal aria-[checked=true]:bg-accent"
-                    onKeyDown={(event) => {
-                      let nextIndex: number;
-                      if (
-                        event.key === "ArrowDown" ||
-                        event.key === "ArrowRight"
-                      ) {
-                        nextIndex = (index + 1) % options.length;
-                      } else if (
-                        event.key === "ArrowUp" ||
-                        event.key === "ArrowLeft"
-                      ) {
-                        nextIndex =
-                          (index - 1 + options.length) % options.length;
-                      } else if (event.key === "Home") {
-                        nextIndex = 0;
-                      } else if (event.key === "End") {
-                        nextIndex = options.length - 1;
-                      } else {
-                        return;
+          {editingCustomModel ? (
+            <BlockStack gap="3" className="p-3">
+              <Label htmlFor={customModelInputId}>Model ID</Label>
+              <Input
+                ref={customModelRef}
+                id={customModelInputId}
+                value={customModelId}
+                autoComplete="off"
+                spellCheck={false}
+                aria-describedby={`${customModelInputId}-hint`}
+                onChange={(event) => setCustomModelId(event.target.value)}
+                onEnter={selectCustomModel}
+              />
+              <Paragraph
+                id={`${customModelInputId}-hint`}
+                size="xs"
+                tone="subdued"
+              >
+                Enter the model ID from your provider.
+              </Paragraph>
+              <Button
+                type="button"
+                disabled={!customModelId.trim()}
+                onClick={selectCustomModel}
+              >
+                Use model
+              </Button>
+            </BlockStack>
+          ) : selectingModel ? (
+            <BlockStack gap="2">
+              <div role="radiogroup" aria-label="Models">
+                <BlockStack gap="2">
+                  {options.map((option, index) => (
+                    <Button
+                      key={option.id}
+                      ref={(element) => {
+                        if (element)
+                          modelOptionRefs.current.set(option.id, element);
+                        else modelOptionRefs.current.delete(option.id);
+                      }}
+                      type="button"
+                      variant="ghost"
+                      role="radio"
+                      aria-label={option.label ?? option.id}
+                      aria-describedby={
+                        option.description
+                          ? `${modelDescriptionId}-${index}`
+                          : undefined
                       }
-                      event.preventDefault();
-                      const nextModel = options[nextIndex].id;
-                      update({ model: nextModel });
-                      onModelSelect?.();
-                      modelOptionRefs.current.get(nextModel)?.focus();
-                    }}
-                    onClick={() => {
-                      update({ model: option.id });
-                      onModelSelect?.();
-                      setView("thinking");
-                    }}
-                  >
-                    <BlockStack as="span" gap="1">
-                      {option.label ?? option.id}
-                      {option.description && (
-                        <Text
-                          id={`${modelDescriptionId}-${index}`}
-                          size="xs"
-                          tone="subdued"
-                        >
-                          {option.description}
-                        </Text>
+                      aria-checked={option.id === model}
+                      tabIndex={option.id === model ? 0 : -1}
+                      className="h-auto w-full justify-between px-3 py-3 text-left whitespace-normal aria-[checked=true]:bg-accent"
+                      onKeyDown={(event) => {
+                        let nextIndex: number;
+                        if (
+                          event.key === "ArrowDown" ||
+                          event.key === "ArrowRight"
+                        ) {
+                          nextIndex = (index + 1) % options.length;
+                        } else if (
+                          event.key === "ArrowUp" ||
+                          event.key === "ArrowLeft"
+                        ) {
+                          nextIndex =
+                            (index - 1 + options.length) % options.length;
+                        } else if (event.key === "Home") {
+                          nextIndex = 0;
+                        } else if (event.key === "End") {
+                          nextIndex = options.length - 1;
+                        } else {
+                          return;
+                        }
+                        event.preventDefault();
+                        const nextModel = options[nextIndex].id;
+                        selectModel(nextModel);
+                        modelOptionRefs.current.get(nextModel)?.focus();
+                      }}
+                      onClick={() => {
+                        selectModel(option.id);
+                        setView("thinking");
+                      }}
+                    >
+                      <BlockStack as="span" gap="1">
+                        {option.label ?? option.id}
+                        {option.description && (
+                          <Text
+                            id={`${modelDescriptionId}-${index}`}
+                            size="xs"
+                            tone="subdued"
+                          >
+                            {option.description}
+                          </Text>
+                        )}
+                      </BlockStack>
+                      {option.id === model && (
+                        <Icon name="Check" size="sm" className="shrink-0" />
                       )}
-                    </BlockStack>
-                    {option.id === config.model && (
-                      <Icon name="Check" size="sm" className="shrink-0" />
-                    )}
-                  </Button>
-                ))}
-              </BlockStack>
-            </div>
-          ) : (
+                    </Button>
+                  ))}
+                </BlockStack>
+              </div>
+              <Button
+                ref={customActionRef}
+                type="button"
+                variant="ghost"
+                className="h-11 w-full justify-start gap-2 px-3"
+                onClick={() => {
+                  setCustomModelId(isConfiguredModel ? "" : model);
+                  setView("custom");
+                }}
+              >
+                <Icon name="Plus" size="sm" />
+                Custom model…
+              </Button>
+            </BlockStack>
+          ) : effort ? (
             <BlockStack gap="4" className="p-3">
               <Text size="xs" weight="medium">
                 Thinking: {effortLabel}
               </Text>
-              {effort && (
-                <BlockStack gap="2">
-                  <Slider
-                    className="cursor-pointer data-[disabled]:cursor-default"
-                    max={Math.max(1, levels.length - 1)}
-                    value={[selectedIndex]}
-                    disabled={levels.length < 2}
-                    thumbProps={{
-                      "aria-label": "Thinking",
-                      "aria-valuetext": effortLabel,
-                      "aria-describedby": thinkingHintId,
-                    }}
-                    onValueChange={([index]) => {
-                      const level = levels[index];
-                      if (level && level.value !== effort) {
-                        update({ reasoningEffortPreference: level.value });
-                      }
-                    }}
-                  />
-                  <InlineStack align="space-between" className="w-full">
-                    <Text size="xs" tone="subdued">
-                      Faster
-                    </Text>
-                    <Text size="xs" tone="subdued">
-                      Deeper
-                    </Text>
-                  </InlineStack>
-                </BlockStack>
-              )}
+              <BlockStack gap="2">
+                <Slider
+                  className="cursor-pointer data-[disabled]:cursor-default"
+                  max={Math.max(1, levels.length - 1)}
+                  value={[selectedIndex]}
+                  disabled={levels.length < 2}
+                  thumbProps={{
+                    "aria-label": "Thinking",
+                    "aria-valuetext": effortLabel,
+                    "aria-describedby": thinkingHintId,
+                  }}
+                  onValueChange={([index]) => {
+                    const level = levels[index];
+                    if (level && level.value !== effort) {
+                      update({ reasoningEffortPreference: level.value });
+                    }
+                  }}
+                />
+                <InlineStack align="space-between" className="w-full">
+                  <Text size="xs" tone="subdued">
+                    Faster
+                  </Text>
+                  <Text size="xs" tone="subdued">
+                    Deeper
+                  </Text>
+                </InlineStack>
+              </BlockStack>
               <Paragraph id={thinkingHintId} size="xs" tone="subdued">
                 {getThinkingHint(effort, preference)}
               </Paragraph>
             </BlockStack>
-          )}
+          ) : null}
         </BlockStack>
       </PopoverContent>
     </Popover>

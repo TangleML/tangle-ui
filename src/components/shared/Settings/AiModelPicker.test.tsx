@@ -1,9 +1,19 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { getAiModelOptions } from "@/config/aiConfig";
-import { AI_PROVIDER_STORAGE_KEY } from "@/hooks/useAiProviderSettings";
+import {
+  AI_PROVIDER_STORAGE_KEY,
+  AI_PROXY_STORAGE_KEY,
+  AI_USE_OWN_KEY_STORAGE_KEY,
+} from "@/hooks/useAiProviderSettings";
 
 import { AiModelPicker } from "./AiModelPicker";
 
@@ -12,7 +22,7 @@ vi.mock("@/providers/BackendProvider", () => ({
 }));
 
 const customModel = { id: "custom-model", label: "Custom model" };
-const customCatalog = { defaultModel: customModel.id, models: [customModel] };
+const customCatalog = { models: [customModel] };
 const variants = ["settings", "compact"] as const;
 const canvasShortcut = vi.fn();
 const button = (name: string | RegExp) => screen.getByRole("button", { name });
@@ -31,10 +41,10 @@ const expectText = (value: string | RegExp) =>
 const escape = () =>
   fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
 const expectClosed = () => expect(screen.queryByRole("dialog")).toBeNull();
-const saveProvider = (config: unknown) =>
-  window.localStorage.setItem(AI_PROVIDER_STORAGE_KEY, JSON.stringify(config));
+const saveModelPreferences = (config: unknown) =>
+  window.localStorage.setItem(AI_PROXY_STORAGE_KEY, JSON.stringify(config));
 
-function renderPicker(variant: "settings" | "compact" = "settings") {
+function renderPicker(variant: "settings" | "compact" | "header" = "settings") {
   const result = render(<AiModelPicker variant={variant} />);
   openPicker();
   return result;
@@ -43,6 +53,12 @@ function renderPicker(variant: "settings" | "compact" = "settings") {
 function selectModel(name: string) {
   openModels();
   fireEvent.click(modelOption(name));
+}
+
+function openCustomModel() {
+  openModels();
+  fireEvent.click(button("Custom model…"));
+  return screen.getByRole("textbox", { name: "Model ID" });
 }
 
 describe("AiModelPicker", () => {
@@ -70,31 +86,36 @@ describe("AiModelPicker", () => {
 
   it.each([false, true])("selects models (configured: %s)", (configured) => {
     if (configured) {
-      saveProvider({
-        apiBase: "https://api.example.com/v1",
-        apiKey: "sk-test",
+      saveModelPreferences({
         model: "gpt-6-sol",
       });
     }
     renderPicker();
+    const selectedModel = configured ? "GPT-6 Sol" : "GPT-6 Astra";
     expectEffort("High");
-    expect(modelTitle()).toHaveTextContent("GPT-6 Sol");
-    expect(modelTitle()).toHaveAccessibleName("Choose a model: GPT-6 Sol");
+    expect(modelTitle()).toHaveTextContent(selectedModel);
+    expect(modelTitle()).toHaveAccessibleName(
+      `Choose a model: ${selectedModel}`,
+    );
     fireEvent.pointerDown(modelTitle());
     openModels();
-    expect(button("Models: back to thinking")).toHaveTextContent("Models");
+    expect(button("Models: back to model settings")).toHaveTextContent(
+      "Models",
+    );
     expect(
       screen.getByRole("radiogroup", { name: "Models" }),
     ).toBeInTheDocument();
     screen.getByRole("dialog", { name: "Model and thinking" });
     expect(screen.queryByRole("slider")).not.toBeInTheDocument();
-    expect(modelOption("Provider default")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("radio", { name: "Provider default" }),
+    ).toBeNull();
     const sol = modelOption("GPT-6 Sol");
-    expect(sol).toBeChecked();
+    expect(modelOption(selectedModel)).toBeChecked();
     expect(sol).toHaveAccessibleDescription(
       "Balanced model for coding and agentic workflows",
     );
-    expect(sol).toHaveFocus();
+    expect(modelOption(selectedModel)).toHaveFocus();
     expect(modelOption("GPT-6 Astra")).toBeInTheDocument();
     expect(modelOption("GPT-6 Luna")).toBeInTheDocument();
     const nextModel = configured ? "GPT-6 Astra" : "GPT-6 Luna";
@@ -108,21 +129,143 @@ describe("AiModelPicker", () => {
     expectClosed();
   });
 
-  it("selects and persists the provider default", () => {
-    const { unmount } = renderPicker();
-    selectModel("Provider default");
-    expect(modelTitle()).toHaveTextContent("Provider default");
-    expect(screen.queryByRole("slider")).not.toBeInTheDocument();
-    const saved = window.localStorage.getItem(AI_PROVIDER_STORAGE_KEY);
-    expect(JSON.parse(saved ?? "").model).toBe("");
-    unmount();
+  it.each(["settings", "compact", "header"] as const)(
+    "selects a custom model without thinking in %s",
+    async (variant) => {
+      const { unmount } = renderPicker(variant);
+      const input = openCustomModel();
+      expect(input).toHaveFocus();
+      expect(button("Use model")).toBeDisabled();
+      fireEvent.change(input, { target: { value: "   " } });
+      fireEvent.keyDown(input, { key: "Enter" });
+      expect(button("Use model")).toBeDisabled();
+      expect(window.localStorage.getItem(AI_PROXY_STORAGE_KEY)).toBeNull();
+      fireEvent.change(input, { target: { value: "  vendor/custom-model  " } });
+      fireEvent.keyDown(input, { key: "Enter" });
+      expectClosed();
+      expect(trigger()).toHaveTextContent("vendor/custom-model");
+      expect(trigger()).toHaveAccessibleName(
+        "AI model and thinking: vendor/custom-model",
+      );
+      await waitFor(() => expect(trigger()).toHaveFocus());
+      const saved = window.localStorage.getItem(AI_PROXY_STORAGE_KEY);
+      expect(JSON.parse(saved ?? "").model).toBe("vendor/custom-model");
+      expect(canvasShortcut).not.toHaveBeenCalled();
+      expect(fetch).not.toHaveBeenCalled();
+      unmount();
 
-    renderPicker();
-    expect(modelTitle()).toHaveTextContent("Provider default");
+      renderPicker(variant);
+      expect(modelTitle()).toHaveTextContent("vendor/custom-model");
+      expect(screen.queryByRole("slider")).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/Thinking:|Unavailable/),
+      ).not.toBeInTheDocument();
+      openModels();
+      expect(modelOption("vendor/custom-model")).toBeChecked();
+      expect(modelOption("vendor/custom-model")).toHaveFocus();
+      fireEvent.click(button("Custom model…"));
+      expect(screen.getByRole("textbox", { name: "Model ID" })).toHaveValue(
+        "vendor/custom-model",
+      );
+    },
+  );
+
+  it("stages custom model selections when a callback is provided", () => {
+    const onCustomModelSelect = vi.fn();
+    const onModelSelect = vi.fn();
+    const { rerender } = render(
+      <AiModelPicker
+        onCustomModelSelect={onCustomModelSelect}
+        onModelSelect={onModelSelect}
+      />,
+    );
+    openPicker();
+    const input = openCustomModel();
+    fireEvent.change(input, { target: { value: " custom-draft " } });
+    fireEvent.click(button("Use model"));
+    expectClosed();
+    expect(onCustomModelSelect).toHaveBeenCalledWith("custom-draft");
+    expect(onModelSelect).not.toHaveBeenCalled();
+    expect(window.localStorage.getItem(AI_PROXY_STORAGE_KEY)).toBeNull();
+
+    rerender(
+      <AiModelPicker
+        modelDraft="custom-draft"
+        onCustomModelSelect={onCustomModelSelect}
+        onModelSelect={onModelSelect}
+      />,
+    );
+    expect(trigger()).toHaveTextContent("custom-draft");
+    openPicker();
     expect(screen.queryByRole("slider")).not.toBeInTheDocument();
     openModels();
-    expect(modelOption("Provider default")).toBeChecked();
-    expect(modelOption("Provider default")).toHaveFocus();
+    fireEvent.keyDown(modelOption("custom-draft"), { key: "Home" });
+    expect(onCustomModelSelect).toHaveBeenCalledTimes(2);
+    expect(onModelSelect).not.toHaveBeenCalled();
+    expect(window.localStorage.getItem(AI_PROXY_STORAGE_KEY)).toBeNull();
+    escape();
+    selectModel("custom-draft");
+    expect(onCustomModelSelect).toHaveBeenCalledTimes(3);
+    expect(onCustomModelSelect).toHaveBeenLastCalledWith("custom-draft");
+    expect(onModelSelect).not.toHaveBeenCalled();
+    expect(window.localStorage.getItem(AI_PROXY_STORAGE_KEY)).toBeNull();
+    selectModel("GPT-6 Sol");
+    expect(onModelSelect).toHaveBeenCalledOnce();
+    const saved = window.localStorage.getItem(AI_PROXY_STORAGE_KEY);
+    expect(JSON.parse(saved ?? "").model).toBe("gpt-6-sol");
+  });
+
+  it.each([false, true])(
+    "discards open custom edits when switching provider mode from own key %s",
+    (ownKey) => {
+      window.localStorage.setItem(
+        AI_USE_OWN_KEY_STORAGE_KEY,
+        JSON.stringify(ownKey),
+      );
+      renderPicker();
+      const input = openCustomModel();
+      fireEvent.change(input, { target: { value: "unfinished-model" } });
+
+      act(() => {
+        window.localStorage.setItem(
+          AI_USE_OWN_KEY_STORAGE_KEY,
+          JSON.stringify(!ownKey),
+        );
+        window.dispatchEvent(
+          new StorageEvent("storage", { key: AI_USE_OWN_KEY_STORAGE_KEY }),
+        );
+      });
+
+      expectClosed();
+      expect(window.localStorage.getItem(AI_PROVIDER_STORAGE_KEY)).toBeNull();
+      expect(window.localStorage.getItem(AI_PROXY_STORAGE_KEY)).toBeNull();
+      openPicker();
+      expect(openCustomModel()).toHaveValue("");
+      expect(button("Use model")).toBeDisabled();
+    },
+  );
+
+  it("cancels custom edits with back and Escape while containing shortcuts", async () => {
+    renderPicker();
+    let input = openCustomModel();
+    fireEvent.change(input, { target: { value: "unsaved-model" } });
+    fireEvent.keyDown(input, { key: "a", metaKey: true });
+    fireEvent.keyDown(input, { key: "Delete" });
+    fireEvent.click(button("Custom model: back to models"));
+    expect(button("Custom model…")).toHaveFocus();
+    fireEvent.click(button("Custom model…"));
+    input = screen.getByRole("textbox", { name: "Model ID" });
+    expect(input).toHaveValue("");
+    expect(input).toHaveFocus();
+    escape();
+    expect(button("Custom model…")).toHaveFocus();
+    escape();
+    expect(thinking()).toBeInTheDocument();
+    escape();
+    expectClosed();
+    expect(window.localStorage.getItem(AI_PROXY_STORAGE_KEY)).toBeNull();
+    expect(canvasShortcut).not.toHaveBeenCalled();
+    await waitFor(() => expect(trigger()).toHaveFocus());
   });
 
   it.each(variants)(
@@ -131,16 +274,17 @@ describe("AiModelPicker", () => {
       const user = userEvent.setup();
       renderPicker(variant);
       openModels();
-      expect(modelOption("GPT-6 Sol")).toHaveFocus();
+      expect(modelOption("GPT-6 Astra")).toHaveFocus();
       for (const [key, label] of [
+        ["ArrowDown", "GPT-6 Sol"],
         ["ArrowDown", "GPT-6 Luna"],
         ["ArrowDown", "Claude Fable 5.1"],
         ["ArrowUp", "GPT-6 Luna"],
         ["ArrowLeft", "GPT-6 Sol"],
         ["ArrowRight", "GPT-6 Luna"],
-        ["Home", "Provider default"],
+        ["Home", "GPT-6 Astra"],
         ["End", "Claude Haiku 5.5"],
-        ["ArrowDown", "Provider default"],
+        ["ArrowDown", "GPT-6 Astra"],
         ["ArrowUp", "Claude Haiku 5.5"],
       ]) {
         await user.keyboard(`{${key}}`);
@@ -184,7 +328,9 @@ describe("AiModelPicker", () => {
       const models = getAiModelOptions();
       window.__TANGLE_AI_MODELS__ = customCatalog;
       const { unmount } = renderPicker();
-      expectText("Thinking controls aren’t available for this model.");
+      expect(
+        screen.queryByText(/Thinking:|Unavailable/),
+      ).not.toBeInTheDocument();
       expect(screen.queryByRole("slider")).not.toBeInTheDocument();
       unmount();
       window.__TANGLE_AI_MODELS__ = {
@@ -192,11 +338,12 @@ describe("AiModelPicker", () => {
       };
     }
     renderPicker(variant);
+    selectModel("GPT-6 Sol");
     fireEvent.keyDown(thinking(), { key: "Home" });
     selectModel("GPT-6 Astra");
     expectEffort("Low");
     expectText(/Your none preference is saved/);
-    const saved = window.localStorage.getItem(AI_PROVIDER_STORAGE_KEY);
+    const saved = window.localStorage.getItem(AI_PROXY_STORAGE_KEY);
     expect(JSON.parse(saved ?? "").reasoningEffortPreference).toBe("none");
     if (variant === "compact") {
       selectModel("Custom model");
@@ -212,7 +359,10 @@ describe("AiModelPicker", () => {
     "Claude Sonnet 5.5",
     "Claude Haiku 5.5",
   ])("selects and persists thinking for %s", (model) => {
-    saveProvider({ model: "gpt-6-sol", reasoningEffort: "none" });
+    saveModelPreferences({
+      model: "gpt-6-sol",
+      reasoningEffortPreference: "none",
+    });
     const { unmount } = renderPicker();
     selectModel(model);
     expectEffort("Low");
@@ -246,32 +396,36 @@ describe("AiModelPicker", () => {
     await waitFor(() => expect(trigger()).toHaveFocus());
   });
 
-  it.each(["thinking", "models"])("dismisses %s outside", async (view) => {
-    const user = userEvent.setup();
-    const interactWithCanvas = vi.fn();
-    render(
-      <>
-        <AiModelPicker />
-        <input aria-label="Component search" />
-        <div
-          data-testid="canvas"
-          onPointerDown={(event) => {
-            event.stopPropagation();
-            interactWithCanvas();
-          }}
-        />
-      </>,
-    );
-    await user.click(trigger());
-    if (view === "models") openModels();
-    fireEvent.pointerDown(screen.getByTestId("canvas"));
-    expectClosed();
-    expect(interactWithCanvas).toHaveBeenCalledOnce();
-    openPicker();
-    expect(thinking()).toBeInTheDocument();
-    const input = screen.getByRole("textbox", { name: "Component search" });
-    await user.click(input);
-    expectClosed();
-    expect(input).toHaveFocus();
-  });
+  it.each(["thinking", "models", "custom"])(
+    "dismisses %s outside",
+    async (view) => {
+      const user = userEvent.setup();
+      const interactWithCanvas = vi.fn();
+      render(
+        <>
+          <AiModelPicker />
+          <input aria-label="Component search" />
+          <div
+            data-testid="canvas"
+            onPointerDown={(event) => {
+              event.stopPropagation();
+              interactWithCanvas();
+            }}
+          />
+        </>,
+      );
+      await user.click(trigger());
+      if (view === "models") openModels();
+      if (view === "custom") openCustomModel();
+      fireEvent.pointerDown(screen.getByTestId("canvas"));
+      expectClosed();
+      expect(interactWithCanvas).toHaveBeenCalledOnce();
+      openPicker();
+      expect(thinking()).toBeInTheDocument();
+      const input = screen.getByRole("textbox", { name: "Component search" });
+      await user.click(input);
+      expectClosed();
+      expect(input).toHaveFocus();
+    },
+  );
 });
