@@ -35,6 +35,7 @@ import { deletePipeline } from "@/services/pipelineService";
 import { getPipelineTagsFromSpec } from "@/utils/annotations";
 import type { ComponentReferenceWithSpec } from "@/utils/componentStore";
 import { formatDate } from "@/utils/date";
+import { hasNewTabModifier } from "@/utils/dom";
 import { tracking } from "@/utils/tracking";
 
 import type { MatchedField } from "./usePipelineFilters";
@@ -109,7 +110,7 @@ const PipelineRow = withSuspenseWrapper(
 
       if (!name) return;
 
-      if (e.ctrlKey || e.metaKey) {
+      if (hasNewTabModifier(e)) {
         rowTrack("pipeline_opened", { open_mode: "editor_new_tab" });
         window.open(getDefaultEditorPath(name), "_blank");
         return;

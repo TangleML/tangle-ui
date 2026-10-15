@@ -15,6 +15,7 @@ import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { ArtifactFetchError } from "@/services/executionService";
+import { hasNewTabModifier } from "@/utils/dom";
 import { copyToClipboard } from "@/utils/string";
 import { getArtifactPreviewUrl } from "@/utils/URL";
 
@@ -61,7 +62,7 @@ const ArtifactVisualizer = ({
   const notify = useToastNotification();
 
   const handleFullScreenClick = (e: MouseEvent) => {
-    if ((e.metaKey || e.ctrlKey) && previewUrl) {
+    if (hasNewTabModifier(e) && previewUrl) {
       track("pipeline_run.artifact_preview.open_in_new_tab", {
         artifact_type: normalizedType,
       });

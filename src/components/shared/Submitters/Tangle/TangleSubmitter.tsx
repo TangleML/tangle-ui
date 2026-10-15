@@ -21,6 +21,7 @@ import {
   type ComponentSpec,
   isGraphImplementation,
 } from "@/utils/componentSpec";
+import { hasNewTabModifier } from "@/utils/dom";
 import { validateArguments } from "@/utils/validations";
 
 import TooltipButton from "../../Buttons/TooltipButton";
@@ -71,7 +72,7 @@ const TangleSubmitter = ({
 
   const handleViewRun = (runId: number, e: MouseEvent) => {
     const href = getDefaultRunPath(runId);
-    if (e.ctrlKey || e.metaKey) {
+    if (hasNewTabModifier(e)) {
       window.open(href, "_blank");
     } else {
       navigate({ to: href });

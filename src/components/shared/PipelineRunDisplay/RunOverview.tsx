@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { getDefaultRunPath } from "@/routes/runRoutes";
 import type { PipelineRun, TaskStatusCounts } from "@/types/pipelineRun";
 import { formatDate } from "@/utils/date";
+import { hasNewTabModifier } from "@/utils/dom";
 import type { ExecutionStatusStats } from "@/utils/executionStatus";
 
 import { PipelineRunStatus } from "./components/PipelineRunStatus";
@@ -77,7 +78,7 @@ const RunOverview = ({
     } else {
       const clickThroughUrl = getDefaultRunPath(run.id);
 
-      if (e.ctrlKey || e.metaKey) {
+      if (hasNewTabModifier(e)) {
         window.open(clickThroughUrl, "_blank");
         return;
       }

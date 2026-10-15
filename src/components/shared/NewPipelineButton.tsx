@@ -10,6 +10,7 @@ import {
   IS_GITHUB_PAGES,
   USER_PIPELINES_LIST_NAME,
 } from "@/utils/constants";
+import { hasNewTabModifier } from "@/utils/dom";
 
 const randomName = () => (generate(4) as string[]).join(" ");
 
@@ -34,7 +35,7 @@ const NewPipelineButton = ({
 
     const clickThroughUrl = getDefaultEditorPath(name);
 
-    if (e.ctrlKey || e.metaKey) {
+    if (hasNewTabModifier(e)) {
       window.open(clickThroughUrl, "_blank");
       return;
     }

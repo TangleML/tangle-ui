@@ -8,6 +8,7 @@ import {
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { Icon } from "@/components/ui/icon";
 import { getDefaultEditorPath } from "@/routes/editorRoutes";
+import { hasNewTabModifier } from "@/utils/dom";
 
 type InspectPipelineButtonProps = {
   pipelineName: string;
@@ -32,7 +33,7 @@ export const InspectPipelineButton = ({
     (e: MouseEvent<HTMLButtonElement>) => {
       const clickThroughUrl = getDefaultEditorPath(pipelineName);
 
-      if (e.ctrlKey || e.metaKey) {
+      if (hasNewTabModifier(e)) {
         window.open(clickThroughUrl, "_blank");
         return;
       }
