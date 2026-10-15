@@ -120,14 +120,14 @@ function mockProjects(
   });
 }
 
-function renderSection() {
+function renderSection({ showWorkspaceNotices = true } = {}) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
 
   return render(
     <QueryClientProvider client={queryClient}>
-      <ProjectsSection />
+      <ProjectsSection showWorkspaceNotices={showWorkspaceNotices} />
     </QueryClientProvider>,
   );
 }
@@ -236,6 +236,32 @@ describe("ProjectsSection", () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "New project" })).toBeNull();
     expect(screen.queryByText(/workspace/i)).toBeNull();
+  });
+
+  describe("when the workspace notices are shown elsewhere", () => {
+    it("says nothing about having nowhere to create a project", async () => {
+      vi.mocked(useWorkspaces).mockReturnValue({
+        data: [],
+      } as unknown as ReturnType<typeof useWorkspaces>);
+
+      renderSection({ showWorkspaceNotices: false });
+
+      await screen.findByText("Churn model");
+      expect(screen.queryByText(/Projects cannot be created/)).toBeNull();
+      expect(screen.queryByRole("button", { name: "New project" })).toBeNull();
+    });
+
+    it("says nothing about workspaces that failed to load", async () => {
+      vi.mocked(useWorkspaces).mockReturnValue({
+        data: undefined,
+        error: new Error("Gateway timeout"),
+      } as unknown as ReturnType<typeof useWorkspaces>);
+
+      renderSection({ showWorkspaceNotices: false });
+
+      await screen.findByText("Churn model");
+      expect(screen.queryByText(/Could not load workspaces/)).toBeNull();
+    });
   });
 
   it("offers a new project card when the user has none", async () => {

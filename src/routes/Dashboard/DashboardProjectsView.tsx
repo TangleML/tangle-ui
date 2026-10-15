@@ -40,7 +40,7 @@ export function DashboardProjectsView() {
 
       <BlockStack gap="4">
         {tangentEnabled && <Heading level={2}>Projects</Heading>}
-        <ProjectsSection />
+        <ProjectsSection showWorkspaceNotices={!tangentEnabled} />
       </BlockStack>
     </BlockStack>
   );

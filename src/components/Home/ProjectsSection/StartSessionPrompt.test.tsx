@@ -3,7 +3,7 @@ import {
   DEFAULT_THINKING_LEVEL,
 } from "@tangent/shared/contracts.ts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import { useBackend } from "@/providers/BackendProvider";
 import { rememberLastUsedWorkspace } from "@/services/projects/defaultWorkspace";
+import { ProjectsApiError } from "@/services/projects/errors";
 import { createProject } from "@/services/projects/projectsService";
 import { startingSessionMetadata } from "@/services/projects/startingSession";
 import type { Workspace } from "@/services/projects/types";
@@ -221,12 +222,17 @@ describe("StartSessionPrompt", () => {
   });
 
   it("says why the backend refused rather than a generic failure", async () => {
-    vi.mocked(createProject).mockRejectedValue(new Error("Quota exceeded"));
+    vi.mocked(createProject).mockRejectedValue(
+      new ProjectsApiError("Failed to create project: Quota exceeded", 422),
+    );
     renderPrompt();
 
     await type("Build a churn model{Enter}");
 
-    expect(notify).toHaveBeenCalledWith("Quota exceeded", "error");
+    expect(notify).toHaveBeenCalledWith(
+      "Failed to create project: Quota exceeded",
+      "error",
+    );
     expect(navigate).not.toHaveBeenCalled();
   });
 
@@ -321,6 +327,28 @@ describe("StartSessionPrompt", () => {
 
       await pickWorkspace("Analytics");
       await type("Build a churn model{Enter}");
+
+      await waitFor(() =>
+        expect(track).toHaveBeenCalledWith(
+          "projects.start_session_completed",
+          expect.objectContaining({ workspace_changed: true }),
+        ),
+      );
+    });
+
+    it("records the change against the default it was sent with", async () => {
+      let finish: (project: { id: string }) => void = () => {};
+      vi.mocked(createProject).mockReturnValue(
+        new Promise((resolve) => {
+          finish = resolve;
+        }) as never,
+      );
+      renderPrompt();
+
+      await pickWorkspace("Analytics");
+      await type("Build a churn model{Enter}");
+      act(() => rememberLastUsedWorkspace("ws-2"));
+      finish({ id: "project-9" });
 
       await waitFor(() =>
         expect(track).toHaveBeenCalledWith(
