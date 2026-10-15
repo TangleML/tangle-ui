@@ -325,7 +325,6 @@ describe("ProjectCard", () => {
     expect(screen.queryByText("workspace-1")).toBeNull();
   });
 
-  /** A retired workspace still holds its projects, so they still say where they live. */
   it("names a workspace that has since been retired", () => {
     mockWorkspaces([{ ...workspace, isActive: false }]);
     renderCard();

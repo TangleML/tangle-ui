@@ -194,7 +194,6 @@ describe("useDebugInTangent", () => {
         );
       });
 
-      /** Only a pick the user made counts as one. */
       it("does not remember the workspace it fell back to", async () => {
         debugRun();
 
