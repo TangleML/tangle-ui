@@ -252,7 +252,6 @@ function DebugInTangentButton({
       handoff={handoff}
       label="Debug in Tangent"
       icon="Bug"
-      createLabel="Create and debug"
       trackingId="v2.run_view.debug_in_tangent"
     />
   );

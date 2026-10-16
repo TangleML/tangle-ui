@@ -9,13 +9,6 @@ import { useWorkspaces } from "@/services/projects/useWorkspaces";
 
 import { TangentDestinationDialog } from "./TangentDestinationDialog";
 
-class ResizeObserverMock {
-  observe = vi.fn();
-  unobserve = vi.fn();
-  disconnect = vi.fn();
-}
-vi.stubGlobal("ResizeObserver", ResizeObserverMock);
-
 vi.mock("@/services/projects/useReachableProjects", () => ({
   useReachableProjects: vi.fn(),
 }));
@@ -66,7 +59,6 @@ function openDialog(attributed: ProjectSummary[] = []) {
   render(
     <TangentDestinationDialog
       title="Debug in Tangent"
-      createLabel="Create and debug"
       attributed={attributed}
       newProjectName="Debug: Churn"
       onChoose={onChoose}
@@ -76,12 +68,9 @@ function openDialog(attributed: ProjectSummary[] = []) {
   return user;
 }
 
-const button = (name: string) => screen.getByRole("button", { name });
-
-async function startNewProject(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole("radio", { name: "New project" }));
-  await user.click(button("Next"));
-}
+const option = (name: RegExp | string) => screen.getByRole("button", { name });
+const newProject = () => option("New project");
+const confirmButton = () => option("Confirm");
 
 describe("TangentDestinationDialog", () => {
   beforeEach(() => {
@@ -99,9 +88,9 @@ describe("TangentDestinationDialog", () => {
   it("works in the project picked once it is confirmed", async () => {
     const user = openDialog();
 
-    await user.click(screen.getByRole("radio", { name: /Churn model/ }));
+    await user.click(option(/Churn model/));
     expect(onChoose).not.toHaveBeenCalled();
-    await user.click(button("Confirm"));
+    await user.click(confirmButton());
 
     expect(onChoose).toHaveBeenCalledWith({
       kind: "existing",
@@ -109,10 +98,28 @@ describe("TangentDestinationDialog", () => {
     });
   });
 
+  it("marks the row that is picked", async () => {
+    const user = openDialog();
+
+    await user.click(option(/Churn model/));
+
+    expect(option(/Churn model/)).toHaveAttribute("aria-pressed", "true");
+    expect(newProject()).toHaveAttribute("aria-pressed", "false");
+  });
+
   it("confirms nothing until something is picked", () => {
     openDialog();
 
-    expect(button("Confirm")).toBeDisabled();
+    expect(confirmButton()).toBeDisabled();
+  });
+
+  it("lets go of a pick that is clicked again", async () => {
+    const user = openDialog();
+
+    await user.click(option(/Churn model/));
+    await user.click(option(/Churn model/));
+
+    expect(confirmButton()).toBeDisabled();
   });
 
   it("offers the run's own projects first, and only once", () => {
@@ -129,8 +136,8 @@ describe("TangentDestinationDialog", () => {
 
     expect(
       screen
-        .getAllByRole("radio")
-        .map((radio) => radio.closest("label")?.textContent),
+        .getAllByRole("button", { pressed: false })
+        .map((button) => button.textContent),
     ).toEqual(["Run's", "Run's and mine", "Mine", "New project"]);
   });
 
@@ -145,18 +152,18 @@ describe("TangentDestinationDialog", () => {
 
     await user.type(screen.getByLabelText("Search projects"), "churn");
 
-    expect(screen.getByRole("radio", { name: /Churn model/ })).toBeVisible();
-    expect(screen.queryByRole("radio", { name: /Forecast/ })).toBeNull();
+    expect(option(/Churn model/)).toBeVisible();
+    expect(screen.queryByRole("button", { name: /Forecast/ })).toBeNull();
   });
 
   /** Confirming a project that is no longer on screen would be a surprise. */
   it("forgets a pick the search has hidden", async () => {
     const user = openDialog();
 
-    await user.click(screen.getByRole("radio", { name: /Churn model/ }));
+    await user.click(option(/Churn model/));
     await user.type(screen.getByLabelText("Search projects"), "forecast");
 
-    expect(button("Confirm")).toBeDisabled();
+    expect(confirmButton()).toBeDisabled();
   });
 
   it("names each project's workspace only when they are not all in one", () => {
@@ -168,57 +175,92 @@ describe("TangentDestinationDialog", () => {
     });
     openDialog();
 
-    expect(
-      screen.getByRole("radio", { name: /Churn model/ }).closest("label"),
-    ).toHaveTextContent("Research");
-    expect(
-      screen.getByRole("radio", { name: /Forecast/ }).closest("label"),
-    ).toHaveTextContent("Analytics");
+    expect(option(/Churn model/)).toHaveTextContent("Research");
+    expect(option(/Forecast/)).toHaveTextContent("Analytics");
   });
 
   it("leaves the workspace off when every project shares one", () => {
     openDialog();
 
-    expect(
-      screen.getByRole("radio", { name: /Churn model/ }).closest("label"),
-    ).not.toHaveTextContent("Research");
+    expect(option(/Churn model/)).not.toHaveTextContent("Research");
   });
 
   it("goes nowhere when cancelled", async () => {
     const user = openDialog();
 
-    await user.click(button("Cancel"));
+    await user.click(option("Cancel"));
 
     expect(onDismiss).toHaveBeenCalled();
     expect(onChoose).not.toHaveBeenCalled();
   });
 
   describe("a new project", () => {
-    it("is a step of its own, reached by picking it", async () => {
-      const user = openDialog();
+    it("asks for nothing until it is picked", () => {
+      openDialog();
 
-      await startNewProject(user);
-
-      expect(screen.queryByRole("radio")).toBeNull();
-      expect(screen.getByLabelText("Name")).toHaveValue("Debug: Churn");
-      expect(onChoose).not.toHaveBeenCalled();
+      expect(screen.queryByLabelText("Name")).toBeNull();
+      expect(screen.queryByLabelText("Workspace")).toBeNull();
     });
 
-    it("is what is on offer when there are no projects to pick", async () => {
-      given();
+    it("asks for a name and workspace once picked", async () => {
       const user = openDialog();
 
-      expect(screen.getByRole("radio", { name: "New project" })).toBeChecked();
-      await user.click(button("Next"));
+      await user.click(newProject());
 
+      expect(newProject()).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getByLabelText("Name")).toHaveValue("Debug: Churn");
+      expect(screen.getByLabelText("Workspace")).toBeInTheDocument();
+    });
+
+    it("puts the questions away again when a project is picked instead", async () => {
+      const user = openDialog();
+
+      await user.click(newProject());
+      await user.click(option(/Churn model/));
+
+      expect(screen.queryByLabelText("Name")).toBeNull();
+      await user.click(confirmButton());
+      expect(onChoose).toHaveBeenCalledWith({
+        kind: "existing",
+        projectId: "project-1",
+      });
+    });
+
+    it("puts them away when it is clicked again", async () => {
+      const user = openDialog();
+
+      await user.click(newProject());
+      await user.click(newProject());
+
+      expect(screen.queryByLabelText("Name")).toBeNull();
+      expect(confirmButton()).toBeDisabled();
+    });
+
+    it("keeps the name typed when picked a second time", async () => {
+      const user = openDialog();
+
+      await user.click(newProject());
+      await user.clear(screen.getByLabelText("Name"));
+      await user.type(screen.getByLabelText("Name"), "Why run-7 failed");
+      await user.click(option(/Churn model/));
+      await user.click(newProject());
+
+      expect(screen.getByLabelText("Name")).toHaveValue("Why run-7 failed");
+    });
+
+    it("is what is on offer when there are no projects to pick", () => {
+      given();
+      openDialog();
+
+      expect(newProject()).toHaveAttribute("aria-pressed", "true");
       expect(screen.getByLabelText("Name")).toBeInTheDocument();
     });
 
     it("is named for what it is for unless renamed", async () => {
       const user = openDialog();
 
-      await startNewProject(user);
-      await user.click(button("Create and debug"));
+      await user.click(newProject());
+      await user.click(confirmButton());
 
       expect(onChoose).toHaveBeenCalledWith({
         kind: "new",
@@ -230,43 +272,31 @@ describe("TangentDestinationDialog", () => {
     it("takes the name it is given", async () => {
       const user = openDialog();
 
-      await startNewProject(user);
+      await user.click(newProject());
       await user.clear(screen.getByLabelText("Name"));
       await user.type(screen.getByLabelText("Name"), "  Why run-7 failed ");
-      await user.click(button("Create and debug"));
+      await user.click(confirmButton());
 
       expect(onChoose).toHaveBeenCalledWith(
         expect.objectContaining({ name: "Why run-7 failed" }),
       );
     });
 
-    it("keeps the name typed when going back and forth", async () => {
+    it("cannot be confirmed without a name", async () => {
       const user = openDialog();
 
-      await startNewProject(user);
-      await user.clear(screen.getByLabelText("Name"));
-      await user.type(screen.getByLabelText("Name"), "Why run-7 failed");
-      await user.click(button("Back"));
-      await user.click(button("Next"));
-
-      expect(screen.getByLabelText("Name")).toHaveValue("Why run-7 failed");
-    });
-
-    it("cannot be made without a name", async () => {
-      const user = openDialog();
-
-      await startNewProject(user);
+      await user.click(newProject());
       await user.clear(screen.getByLabelText("Name"));
 
-      expect(button("Create and debug")).toBeDisabled();
+      expect(confirmButton()).toBeDisabled();
     });
 
     it("starts on the workspace last created in", async () => {
       rememberLastUsedWorkspace("ws-2");
       const user = openDialog();
 
-      await startNewProject(user);
-      await user.click(button("Create and debug"));
+      await user.click(newProject());
+      await user.click(confirmButton());
 
       expect(onChoose).toHaveBeenCalledWith(
         expect.objectContaining({ workspaceId: "ws-2" }),
@@ -276,23 +306,26 @@ describe("TangentDestinationDialog", () => {
     it("goes in the workspace that was picked", async () => {
       const user = openDialog();
 
-      await startNewProject(user);
+      await user.click(newProject());
       await user.click(screen.getByLabelText("Workspace"));
       await user.click(screen.getByRole("option", { name: "Analytics" }));
-      await user.click(button("Create and debug"));
+      await user.click(confirmButton());
 
       expect(onChoose).toHaveBeenCalledWith(
         expect.objectContaining({ workspaceId: "ws-2" }),
       );
     });
 
-    it("cannot be made when no workspace takes new projects", async () => {
-      given({ workspaces: [] });
+    it("cannot be confirmed when no workspace takes new projects", async () => {
+      given({
+        reachable: [project("project-1", "Churn model")],
+        workspaces: [],
+      });
       const user = openDialog();
 
-      await startNewProject(user);
+      await user.click(newProject());
 
-      expect(button("Create and debug")).toBeDisabled();
+      expect(confirmButton()).toBeDisabled();
       expect(
         screen.getByText(/Projects cannot be created yet/),
       ).toBeInTheDocument();
