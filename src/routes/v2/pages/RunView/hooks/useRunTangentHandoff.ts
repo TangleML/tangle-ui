@@ -43,6 +43,9 @@ export interface RunTangentHandoff {
   startingSession?: (run: RunInTangent) => StartingSession;
 }
 
+type HandoffDestination =
+  TangentDestination | { kind: "attributed"; project: Project };
+
 interface ChoosingDestination {
   run: RunInTangent;
   attributed: Project[];
@@ -74,8 +77,7 @@ export function useRunTangentHandoff(handoff: RunTangentHandoff) {
   const rerunProjectIds = useRerunProjectIds();
   const [choosing, setChoosing] = useState<ChoosingDestination>();
 
-  const intoExistingProject = async (projectId: string, run: RunInTangent) => {
-    const project = await getProject(projectId);
+  const intoExistingProject = async (project: Project, run: RunInTangent) => {
     await attachPipelineRunOnce(project.id, run);
 
     const session = handoff.startingSession?.(run);
@@ -129,16 +131,20 @@ export function useRunTangentHandoff(handoff: RunTangentHandoff) {
   };
 
   const send = useMutation({
-    mutationFn: ({
+    mutationFn: async ({
       run,
       destination,
     }: {
       run: RunInTangent;
-      destination: TangentDestination;
-    }) =>
-      destination.kind === "existing"
-        ? intoExistingProject(destination.projectId, run)
-        : intoNewProject(destination, run),
+      destination: HandoffDestination;
+    }) => {
+      if (destination.kind === "new") return intoNewProject(destination, run);
+      const project =
+        destination.kind === "attributed"
+          ? destination.project
+          : await getProject(destination.projectId);
+      return intoExistingProject(project, run);
+    },
     onSuccess: (project, { run }) => {
       void queryClient.invalidateQueries({ queryKey: ProjectsQueryKeys.All() });
       void navigate({
@@ -159,7 +165,7 @@ export function useRunTangentHandoff(handoff: RunTangentHandoff) {
       if (attributed.length === 1) {
         send.mutate({
           run,
-          destination: { kind: "existing", projectId: attributed[0].id },
+          destination: { kind: "attributed", project: attributed[0] },
         });
         return;
       }

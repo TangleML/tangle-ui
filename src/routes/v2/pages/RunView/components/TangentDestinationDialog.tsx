@@ -1,5 +1,7 @@
 import { type FormEvent, useState } from "react";
 
+import { PickerOption } from "@/components/Project/PickerOption";
+import { PickerSearchField } from "@/components/Project/PickerSearchField";
 import { NO_WORKSPACE_AVAILABLE } from "@/components/Project/workspaceCopy";
 import { WorkspaceField } from "@/components/Project/WorkspaceSelect";
 import { InfoBox } from "@/components/shared/InfoBox";
@@ -12,15 +14,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { IconName } from "@/components/ui/icon";
-import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 import { Heading, Text } from "@/components/ui/typography";
-import { cn } from "@/lib/utils";
 import type { TangentDestination } from "@/routes/v2/pages/RunView/hooks/useRunTangentHandoff";
 import type { ProjectSummary } from "@/services/projects/types";
 import { useReachableProjects } from "@/services/projects/useReachableProjects";
@@ -119,23 +118,12 @@ export function TangentDestinationDialog({
         </DialogHeader>
 
         {listed.length > 0 && (
-          <div className="relative w-full">
-            <Icon
-              name="Search"
-              size="sm"
-              className="pointer-events-none absolute top-1/2 left-2 -translate-y-1/2 text-muted-foreground"
-              aria-hidden="true"
-            />
-            <Input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              onEscape={() => setQuery("")}
-              placeholder="Search projects"
-              aria-label="Search projects"
-              className="pl-7"
-              autoFocus
-            />
-          </div>
+          <PickerSearchField
+            label="Search projects"
+            value={query}
+            onChange={setQuery}
+            className="w-full"
+          />
         )}
 
         <BlockStack gap="4" className="min-h-0 flex-1 overflow-y-auto">
@@ -182,11 +170,11 @@ export function TangentDestinationDialog({
 
         <form onSubmit={confirm}>
           <BlockStack gap="4">
-            <OptionRow
+            <PickerOption
               icon="Plus"
               label="New project"
               isSelected={isNewProject}
-              onToggle={() => toggle(NEW_PROJECT)}
+              onClick={() => toggle(NEW_PROJECT)}
               trackingId="v2.run_view.tangent_destination.new_project"
             />
 
@@ -259,60 +247,16 @@ function ProjectOptions({
     <BlockStack gap="1">
       <Heading level={3}>{heading}</Heading>
       {projects.map((project) => (
-        <OptionRow
+        <PickerOption
           key={project.id}
           icon="Folder"
           label={project.name}
           detail={workspaceNames?.get(project.workspaceId)}
           isSelected={choice === project.id}
-          onToggle={() => onToggle(project.id)}
+          onClick={() => onToggle(project.id)}
           trackingId="v2.run_view.tangent_destination.select_project"
         />
       ))}
     </BlockStack>
-  );
-}
-
-interface OptionRowProps {
-  icon: IconName;
-  label: string;
-  detail?: string;
-  isSelected: boolean;
-  onToggle: () => void;
-  trackingId: string;
-}
-
-function OptionRow({
-  icon,
-  label,
-  detail,
-  isSelected,
-  onToggle,
-  trackingId,
-}: OptionRowProps) {
-  return (
-    <Button
-      type="button"
-      variant="ghost"
-      aria-pressed={isSelected}
-      className={cn(
-        "h-auto w-full justify-start py-2",
-        isSelected && "bg-accent hover:bg-accent",
-      )}
-      onClick={onToggle}
-      {...tracking(trackingId)}
-    >
-      <InlineStack gap="2" blockAlign="center" wrap="nowrap" fill>
-        <Icon name={icon} size="xs" className="shrink-0" />
-        <Text size="sm" className="flex-1 truncate text-left">
-          {label}
-        </Text>
-        {detail && (
-          <Text size="xs" tone="subdued" className="truncate">
-            {detail}
-          </Text>
-        )}
-      </InlineStack>
-    </Button>
   );
 }
