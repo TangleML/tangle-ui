@@ -13,17 +13,18 @@ export function useRemotePipelinesPage(
   backendUrl: string,
   page: number,
   enabled: boolean,
+  filterQuery?: string,
 ) {
   const queryClient = useQueryClient();
   const query = useQuery({
-    queryKey: ["remote-pipelines-page", backendUrl, page],
+    queryKey: ["remote-pipelines-page", backendUrl, filterQuery, page],
     queryFn: async (): Promise<NumberedRemotePipelinesPage> => {
       let pageToken: string | undefined;
       for (let previousPage = 1; previousPage < page; previousPage++) {
         const token = pageToken;
         const previousPageQuery = {
-          queryKey: ["remote-pipelines", backendUrl, token],
-          queryFn: () => listRemotePipelines(backendUrl, token),
+          queryKey: ["remote-pipelines", backendUrl, filterQuery, token],
+          queryFn: () => listRemotePipelines(backendUrl, token, filterQuery),
           retry: false,
           staleTime: 0,
         };
@@ -37,8 +38,9 @@ export function useRemotePipelinesPage(
       }
       return {
         ...(await queryClient.fetchQuery({
-          queryKey: ["remote-pipelines", backendUrl, pageToken],
-          queryFn: () => listRemotePipelines(backendUrl, pageToken),
+          queryKey: ["remote-pipelines", backendUrl, filterQuery, pageToken],
+          queryFn: () =>
+            listRemotePipelines(backendUrl, pageToken, filterQuery),
           staleTime: 0,
           retry: false,
         })),
@@ -57,6 +59,7 @@ export function useRemotePipelinesPage(
     queryClient.getQueryData<RemotePipelinesPage>([
       "remote-pipelines",
       backendUrl,
+      filterQuery,
       undefined,
     ])?.totalCount ??
     0;
