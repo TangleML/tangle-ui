@@ -587,6 +587,30 @@ describe("usePrepareProjectArrival", () => {
       expect(rewrite(search)).toEqual({ other: "kept" });
     });
 
+    it("drops a view from the url when nothing will open it", async () => {
+      search = { open: "run://id/run-7", other: "kept" };
+      const store = makeStore();
+
+      prepare(store, 2);
+
+      await waitFor(() => expect(navigate).toHaveBeenCalled());
+      const { search: rewrite, replace } = navigate.mock.calls[0][0];
+      expect(replace).toBe(true);
+      expect(rewrite(search)).toEqual({ other: "kept" });
+      expect(store.startSession).not.toHaveBeenCalled();
+      expect(store.openWorkareaTarget).not.toHaveBeenCalled();
+    });
+
+    it("keeps a view for an arrival still waiting on an AI provider", async () => {
+      mockAiConfigured(false);
+      search = { open: "run://id/run-7" };
+
+      prepare(makeStore());
+
+      await settle();
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
     it("leaves a url that asks for nothing alone", async () => {
       prepare(makeStore());
 

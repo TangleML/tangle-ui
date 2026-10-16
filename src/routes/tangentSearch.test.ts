@@ -5,6 +5,7 @@ import {
   readTangentSessionParam,
   tangentOpenSearch,
   withoutTangentArrivalSearch,
+  withoutTangentOpenSearch,
 } from "./tangentSearch";
 
 describe("readTangentSessionParam", () => {
@@ -58,6 +59,14 @@ describe("readTangentOpenParam", () => {
     expect(readTangentOpenParam({ open: "nonsense" })).toBeUndefined();
     expect(readTangentOpenParam({ open: 42 })).toBeUndefined();
     expect(readTangentOpenParam(undefined)).toBeUndefined();
+  });
+});
+
+describe("withoutTangentOpenSearch", () => {
+  it("drops only the view to open", () => {
+    expect(
+      withoutTangentOpenSearch({ session: "sess-a", open: "run://id/run-7" }),
+    ).toEqual({ session: "sess-a" });
   });
 });
 

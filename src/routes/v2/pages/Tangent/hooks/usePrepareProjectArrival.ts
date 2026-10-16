@@ -7,6 +7,7 @@ import {
   readTangentOpenParam,
   readTangentSessionParam,
   withoutTangentArrivalSearch,
+  withoutTangentOpenSearch,
 } from "@/routes/tangentSearch";
 import type { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
@@ -167,15 +168,29 @@ export function usePrepareProjectArrival(
     },
   });
 
+  const knowsWhetherToArrive = !isSessionsLoading && project !== undefined;
+  const asksForArrival =
+    isEmpty || starting !== undefined || linkAsksForSession;
+
   // A session started without a provider cannot be spoken to, and the opening
   // prompt would be spent on it. Leave the project as it is, so setting a
   // provider up and coming back still gets the arrival it was meant to have.
   const hasArrival =
-    !isSessionsLoading &&
-    (isEmpty || starting !== undefined || linkAsksForSession) &&
+    knowsWhetherToArrive &&
+    asksForArrival &&
     isAiConfigured &&
-    project !== undefined &&
     documents !== undefined;
+  const dropsOpenAsk =
+    knowsWhetherToArrive && !asksForArrival && linkAsksToOpen !== undefined;
+
+  useEffect(() => {
+    if (!dropsOpenAsk) return;
+    void navigate({
+      to: ".",
+      search: withoutTangentOpenSearch,
+      replace: true,
+    } as never);
+  }, [dropsOpenAsk, navigate]);
 
   useEffect(() => {
     if (!hasArrival || prepared.current) return;
