@@ -10,6 +10,10 @@ import {
 import { componentSpecFromYaml, componentSpecToYaml } from "@/utils/yaml";
 
 import {
+  editorSpecFromRemoteTask,
+  remotePipelineTaskFromSpec,
+} from "../remotePipelineTask";
+import {
   getEditorPipelineIdentity,
   type PipelineFileDescriptor,
   type PipelineStorageDriver,
@@ -76,7 +80,7 @@ export class RemotePipelineStorageDriver implements PipelineStorageDriver {
     // Names are labels; a new random path prevents Save As replacing a namesake.
     const filePath = `pipelines/${crypto.randomUUID()}.yaml`;
     const document = await writeRemotePipelineDocument(backendUrl, filePath, {
-      root_pipeline_task: { componentRef: { spec } },
+      root_pipeline_task: remotePipelineTaskFromSpec(spec),
       pipeline_run_annotations: {},
     });
     assertRemotePipelineOwner(document, userId);
@@ -93,7 +97,7 @@ export class RemotePipelineStorageDriver implements PipelineStorageDriver {
 
   async read(_storageKey: string): Promise<string> {
     return componentSpecToYaml(
-      this.document.root_pipeline_task.componentRef.spec,
+      editorSpecFromRemoteTask(this.document.root_pipeline_task),
     );
   }
 
@@ -108,11 +112,10 @@ export class RemotePipelineStorageDriver implements PipelineStorageDriver {
           this.backendUrl,
           this.filePath,
           {
-            root_pipeline_task: {
-              ...this.document.root_pipeline_task,
-              // Previous digest, URL, and text no longer identify the edited spec.
-              componentRef: { spec },
-            },
+            root_pipeline_task: remotePipelineTaskFromSpec(
+              spec,
+              this.document.root_pipeline_task,
+            ),
             pipeline_run_annotations: this.document.pipeline_run_annotations,
           },
         );
