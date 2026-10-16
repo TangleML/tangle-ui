@@ -4,6 +4,7 @@ import { createDriver } from "./createDriver";
 import { pipelineStorageDb } from "./db";
 import { RemotePipelineStorageDriver } from "./drivers/RemotePipelineStorageDriver";
 import { RootFolderDbStorageDriver } from "./drivers/RootFolderDbStorageDriver";
+import { movePipelineAssociationsToRemote } from "./pipelineAssociations";
 import { PipelineFile } from "./PipelineFile";
 import { PipelineFolder } from "./PipelineFolder";
 import { findById, findByStorageKey } from "./pipelineRegistry";
@@ -67,6 +68,14 @@ export class PipelineStorageService {
       name,
       await local.read(),
     );
+    try {
+      await movePipelineAssociationsToRemote(local, remote);
+    } catch (cause) {
+      throw new Error(
+        "Pipeline was saved remotely, but its local links could not be updated. The local copy was kept.",
+        { cause },
+      );
+    }
     try {
       await local.deleteFile();
     } catch (cause) {

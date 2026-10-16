@@ -3,9 +3,11 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import {
   addRecentlyViewed,
+  moveRecentPipelineToRemote,
   parseRecent,
   type RecentItem,
   removeRecentlyViewed,
+  useRecentlyUsed,
   useRecentlyViewed,
 } from "./useRecentlyViewed";
 
@@ -52,6 +54,62 @@ describe("parseRecent", () => {
     expect(parseRecent("not json")).toEqual([]);
     expect(parseRecent(JSON.stringify({ not: "an array" }))).toEqual([]);
   });
+});
+
+describe("moveRecentPipelineToRemote", () => {
+  beforeEach(() => localStorage.clear());
+
+  it.each([5, 15, 35])(
+    "merges existing remote history while keeping the latest visit (%s)",
+    (timestamp) => {
+      const items: RecentItem[] = [
+        { type: "pipeline", id: "Other", name: "Other", timestamp: 40 },
+        { type: "pipeline", id: "local-id", name: "Old name", timestamp: 30 },
+        { type: "run", id: "Original", name: "Run", timestamp: 20 },
+        { type: "pipeline", id: "Original", name: "Original", timestamp: 10 },
+        {
+          type: "remote-pipeline",
+          id: "remote-id",
+          name: "Stale name",
+          timestamp,
+        },
+      ].sort((a, b) => b.timestamp - a.timestamp) as RecentItem[];
+      for (const key of ["Home/recently_viewed", "Home/recently_used"]) {
+        localStorage.setItem(key, JSON.stringify(items));
+      }
+      const { result } = renderHook(() => ({
+        ...useRecentlyViewed(),
+        ...useRecentlyUsed(),
+      }));
+
+      act(() =>
+        moveRecentPipelineToRemote(["Original", "local-id"], {
+          id: "remote-id",
+          name: "Original",
+        }),
+      );
+
+      const expected = [
+        items[0],
+        {
+          type: "remote-pipeline",
+          id: "remote-id",
+          name: "Original",
+          timestamp: Math.max(30, timestamp),
+        },
+        { type: "run", id: "Original", name: "Run", timestamp: 20 },
+      ];
+      expect(result.current.recentlyViewed).toEqual(expected);
+      expect(result.current.recentlyUsed).toEqual(expected);
+      act(() =>
+        moveRecentPipelineToRemote(["Original", "local-id"], {
+          id: "remote-id",
+          name: "Original",
+        }),
+      );
+      expect(result.current.recentlyViewed).toEqual(expected);
+    },
+  );
 });
 
 describe("removeRecentlyViewed", () => {
