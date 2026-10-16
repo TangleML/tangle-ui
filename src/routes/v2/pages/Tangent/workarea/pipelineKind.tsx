@@ -3,9 +3,11 @@ import type { ComponentProps } from "react";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { useBackend } from "@/providers/BackendProvider";
 import { EmbeddedPipelineEditor } from "@/routes/v2/pages/Editor/EmbeddedPipelineEditor";
+import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { findById } from "@/services/pipelineStorage/pipelineRegistry";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import type { EditorPipelineRef } from "@/services/pipelineStorage/types";
+import { pipelineFileTarget } from "@/services/projects/pipelineResource";
 import { parseIdentity } from "@/services/projects/resourceTarget";
 
 import { registerWorkareaKind } from "./registry";
@@ -21,6 +23,7 @@ function PipelineWorkareaEditor({
 }) {
   const { backendUrl, ready, configured } = useBackend();
   const storage = usePipelineStorage();
+  const project = useTangentProject();
   const { key, value } = parseIdentity(target.identity);
   if (key === "remote" || key === "draft") {
     if (!ready) return <LoadingScreen message="Loading pipeline..." />;
@@ -35,7 +38,15 @@ function PipelineWorkareaEditor({
         : key === "id"
           ? { fileId: value, name: title }
           : { name: value };
-  return <EmbeddedPipelineEditor pipelineRef={pipelineRef} {...props} />;
+  return (
+    <EmbeddedPipelineEditor
+      pipelineRef={pipelineRef}
+      {...props}
+      onMigrated={(file) =>
+        project.replaceWorkareaTarget(target, pipelineFileTarget(file))
+      }
+    />
+  );
 }
 
 registerWorkareaKind({

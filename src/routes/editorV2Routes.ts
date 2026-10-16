@@ -60,14 +60,6 @@ export function createEditorV2Routes<TParent extends AnyRoute>(
   const remotePipeline = createRoute({
     getParentRoute: () => layout,
     path: APP_ROUTES.EDITOR_V2_REMOTE_PIPELINE,
-    beforeLoad: ({ params }) => {
-      if (!isFlagEnabled("v2_editor")) {
-        throw redirect({
-          to: APP_ROUTES.REMOTE_PIPELINE_EDITOR,
-          params: { pipelineId: params.pipelineId },
-        });
-      }
-    },
   });
   return layout.addChildren([index, pipeline, newPipeline, remotePipeline]);
 }

@@ -28,6 +28,7 @@ import { createEditorV2Routes } from "./editorV2Routes";
 import type { useEditorSession } from "./v2/pages/Editor/store/EditorSessionContext";
 
 const canvas = vi.hoisted(() => ({ mounts: 0, unmounts: 0 }));
+const flags = vi.hoisted(() => ({ v2Editor: true }));
 let session: ReturnType<typeof useEditorSession>;
 const storage = new PipelineStorageService();
 const queryClient = new QueryClient({
@@ -49,7 +50,7 @@ vi.mock("@/providers/BackendProvider", () => ({
 }));
 vi.mock("@/components/shared/Settings/useFlags", () => ({
   useFlagValue: () => false,
-  isFlagEnabled: () => true,
+  isFlagEnabled: () => flags.v2Editor,
 }));
 vi.mock("@/services/pipelineStorage/createDriver", () => ({
   createDriver: () => ({}),
@@ -149,6 +150,7 @@ beforeEach(() => {
   vi.spyOn(window, "scrollTo").mockImplementation(() => {});
   canvas.mounts = 0;
   canvas.unmounts = 0;
+  flags.v2Editor = true;
   vi.mocked(getCurrentUserApiUsersMeGet).mockResolvedValue({
     data: { id: "user", permissions: ["read", "write"] },
     response: new Response(null, { status: 200 }),
@@ -172,7 +174,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-async function open(initialEntry = APP_ROUTES.EDITOR_V2_NEW_PIPELINE) {
+async function open(initialEntry: string = APP_ROUTES.EDITOR_V2_NEW_PIPELINE) {
   const root = createRootRoute();
   const dashboard = createRoute({
     getParentRoute: () => root,
@@ -272,4 +274,28 @@ it("starts a separate unsaved pipeline when New is used again at the same URL", 
     expect(history.location.pathname).toBe(`/editor-v2/remote/${pipelineId}`),
   );
   expect(client.put).toHaveBeenCalledOnce();
+});
+
+it("opens remote pipelines when the V2 editor flag is disabled", async () => {
+  flags.v2Editor = false;
+  vi.mocked(client.get).mockResolvedValue({
+    data: {
+      id: pipelineId,
+      user_id: "user",
+      file_path: "pipelines/remote.yaml",
+      root_pipeline_task: {
+        componentRef: {
+          spec: {
+            name: "Remote pipeline",
+            implementation: { graph: { tasks: {} } },
+          },
+        },
+      },
+      pipeline_run_annotations: {},
+    },
+    response: new Response(null, { status: 200 }),
+  } as Awaited<ReturnType<typeof client.get>>);
+  const { history } = await open(`/editor-v2/remote/${pipelineId}`);
+  expect(history.location.pathname).toBe(`/editor-v2/remote/${pipelineId}`);
+  expect(client.get).toHaveBeenCalledOnce();
 });

@@ -594,6 +594,32 @@ describe("moving local pipelines to remote storage", () => {
     expect(localStorage.getItem("Home/recently_used")).toBeNull();
   });
 
+  it("uses a resolved file's current name and updates project links before deletion", async () => {
+    const onCreated = vi.fn(async (remote: PipelineFile) => {
+      expect(remote.storageKey).toBe(local.storageKey);
+      expect(local.deleteFile).not.toHaveBeenCalled();
+    });
+    await storage.moveLocalPipelineToRemote(local, ref.backendUrl, onCreated);
+    expect(storage.resolvePipeline).not.toHaveBeenCalled();
+    expect(onCreated).toHaveBeenCalledOnce();
+    expect(local.deleteFile).toHaveBeenCalledOnce();
+  });
+
+  it("keeps the local pipeline if updating project links fails", async () => {
+    await expect(
+      storage.moveLocalPipelineToRemote(local, ref.backendUrl, async () => {
+        throw new Error("Project unavailable");
+      }),
+    ).rejects.toThrow("local links could not be updated");
+    expect(local.deleteFile).not.toHaveBeenCalled();
+    await storage.moveLocalPipelineToRemote(local, ref.backendUrl);
+    expect(
+      vi
+        .mocked(client.put)
+        .mock.calls.map(([options]) => options?.query?.file_path),
+    ).toEqual([`pipelines/${local.id}.yaml`, `pipelines/${local.id}.yaml`]);
+  });
+
   it.each(["read", "save"])(
     "keeps the local pipeline when %s fails",
     async (step) => {

@@ -56,6 +56,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/services/projects/useProjectRuns.ts",
   "src/services/usePipelineSpec.ts",
   "src/components/shared/FavoriteToggle.tsx",
+  "src/components/shared/LocalPipelineMigration.tsx",
   "src/components/shared/PageHeader.tsx",
   "src/components/shared/FloatingSelectionBar.tsx",
   "src/components/shared/ComponentLifecycleBadges.tsx",
