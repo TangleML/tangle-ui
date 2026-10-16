@@ -25,6 +25,7 @@ interface JSONSchemaProperty {
   "x-allow-custom-value"?: boolean;
   "x-hidden"?: boolean;
   "x-type"?: string;
+  "x-options-url"?: string;
 }
 
 interface JSONSchemaObject {
@@ -90,6 +91,7 @@ interface LauncherResourceField {
   hidden?: boolean;
   enum?: string[];
   enum_labels?: Record<string, string>;
+  options_url?: string;
 }
 
 interface LauncherClusterCommon {
@@ -214,6 +216,10 @@ export function parseSchemaToAnnotationConfig(
 
     if (property["x-hidden"]) {
       config.hidden = true;
+    }
+
+    if (property["x-options-url"]) {
+      config.optionsUrl = property["x-options-url"];
     }
 
     configs.push(config);
@@ -474,6 +480,8 @@ function fieldCapabilityToProperty(
   if (field.enum !== undefined) property.enum = field.enum;
   if (field.enum_labels !== undefined)
     property["x-enum-labels"] = field.enum_labels;
+  if (field.options_url !== undefined)
+    property["x-options-url"] = field.options_url;
 
   return property;
 }
