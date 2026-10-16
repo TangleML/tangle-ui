@@ -1,4 +1,3 @@
-import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import { ExamplePipelines } from "@/components/Learn/ExamplePipelines";
@@ -8,7 +7,6 @@ import { PaginationControls } from "@/components/shared/PaginationControls";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -21,7 +19,6 @@ import {
 } from "@/components/ui/table";
 import { Paragraph, Text } from "@/components/ui/typography";
 import { usePagination } from "@/hooks/usePagination";
-import { APP_ROUTES } from "@/routes/router";
 import {
   type ComponentFileEntry,
   getAllComponentFilesFromList,
@@ -141,10 +138,7 @@ export const PipelineSection = withSuspenseWrapper(
 
     return (
       <BlockStack gap="4" className="w-full">
-        <PipelineFiltersBar
-          filters={filterBarProps}
-          actions={<ExamplePipelineButton />}
-        />
+        <PipelineFiltersBar filters={filterBarProps} />
 
         <Table className="text-sm">
           <TableHeader>
@@ -219,14 +213,3 @@ export const PipelineSection = withSuspenseWrapper(
   },
   PipelineSectionSkeleton,
 );
-
-function ExamplePipelineButton() {
-  return (
-    <Button variant="secondary" asChild className="shrink-0">
-      <Link to={APP_ROUTES.LEARN_EXAMPLES}>
-        <Icon name="Sparkles" />
-        Example Pipelines
-      </Link>
-    </Button>
-  );
-}
