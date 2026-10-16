@@ -9,6 +9,11 @@ const route = vi.hoisted(() => ({
   params: {} as Record<string, string>,
   search: {} as Record<string, string>,
 }));
+const backend = vi.hoisted(() => ({
+  backendUrl: "https://backend.example.com",
+  ready: true,
+  configured: true,
+}));
 const loadLegacy = vi.hoisted(() => vi.fn());
 const loadV2 = vi.hoisted(() => vi.fn());
 const initializeEditing = vi.hoisted(() => vi.fn());
@@ -19,6 +24,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => ({
   useParams: () => route.params,
   useSearch: () => route.search,
 }));
+vi.mock("@/providers/BackendProvider", () => ({ useBackend: () => backend }));
 vi.mock("@/routes/router", async () => import("./appRoutes"));
 vi.mock("@/hooks/useLoadComponentSpecFromPath", () => ({
   useLoadComponentSpecFromPath: loadLegacy,
@@ -30,6 +36,14 @@ vi.mock("@/hooks/useRecentlyViewed", () => ({ addRecentlyViewed: vi.fn() }));
 vi.mock("./v2/pages/Editor/hooks/useLoadSpec", () => ({
   useLoadSpec: loadV2,
 }));
+vi.mock(
+  "./v2/pages/Editor/components/RemotePipelineView/RemotePipelineView",
+  () => ({
+    RemotePipelineView: ({ spec }: { spec: { name: string } }) => (
+      <div>{spec.name}</div>
+    ),
+  }),
+);
 vi.mock("./v2/pages/Editor/hooks/useSpecLifecycle", () => ({
   useSpecLifecycle: initializeEditing,
 }));
@@ -78,6 +92,9 @@ beforeEach(() => {
   vi.clearAllMocks();
   route.params = { pipelineName: "pipeline-123" };
   route.search = {};
+  backend.ready = true;
+  backend.configured = true;
+  backend.backendUrl = "https://backend.example.com";
   loadLegacy.mockReturnValue({ componentSpec: null, error: null });
   loadV2.mockImplementation(() => {
     throw pendingSpec;
@@ -104,17 +121,48 @@ describe("remote pipeline editor entry", () => {
     expect(screen.getByText("Loading Pipeline")).toBeInTheDocument();
   });
 
-  it("opens the V2 shell without loading a remote ID or initializing editing", () => {
+  it("loads remote IDs through the backend-scoped V2 storage reference", () => {
     route.params = { pipelineId: "pipeline-123" };
     route.search = { fileId: "local-file-id" };
     render(<EditorV2 />);
 
     expect(
-      screen.getByRole("navigation", { name: "Editor navigation" }),
-    ).toBeInTheDocument();
-    expect(loadV2).not.toHaveBeenCalled();
+      screen.queryByRole("navigation", { name: "Editor navigation" }),
+    ).not.toBeInTheDocument();
+    expect(loadV2).toHaveBeenCalledWith({
+      source: "remote",
+      backendUrl: "https://backend.example.com",
+      pipelineId: "pipeline-123",
+    });
     expect(initializeEditing).not.toHaveBeenCalled();
     expect(screen.queryByText("Open local pipeline")).not.toBeInTheDocument();
+  });
+
+  it("shows the loaded remote graph without initializing editor sessions or autosave", () => {
+    route.params = { pipelineId: "pipeline-123" };
+    loadV2.mockReturnValue({ data: { spec: { name: "Remote graph" } } });
+    render(<EditorV2 />);
+    expect(screen.getByText("Remote graph")).toBeInTheDocument();
+    expect(initializeEditing).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole("navigation", { name: "Editor navigation" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("waits for backend settings before resolving a remote pipeline", () => {
+    route.params = { pipelineId: "pipeline-123" };
+    backend.ready = false;
+    render(<EditorV2 />);
+    expect(loadV2).not.toHaveBeenCalled();
+    expect(screen.getByText("Loading pipeline...")).toBeInTheDocument();
+  });
+
+  it("explains when a remote pipeline has no configured backend", () => {
+    route.params = { pipelineId: "pipeline-123" };
+    backend.configured = false;
+    render(<EditorV2 />);
+    expect(loadV2).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent("Configure a backend");
   });
 
   it("continues resolving local names and file IDs in V2", () => {

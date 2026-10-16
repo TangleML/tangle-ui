@@ -18,19 +18,22 @@ import {
   createUndoStoreWithEvents,
   loadUndoHistory,
 } from "@/routes/v2/pages/Editor/utils/undoHistoryStorage";
-import { RootFolderDbStorageDriver } from "@/services/pipelineStorage/drivers/RootFolderDbStorageDriver";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import {
   getLastForeignWriteTime,
   subscribePipelineFileChanged,
 } from "@/services/pipelineStorage/pipelineFileEvents";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
-import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
-import type { PipelineRef } from "@/services/pipelineStorage/types";
+import {
+  type EditorPipelineRef,
+  getEditorPipelineIdentity,
+  isRemotePipelineRef,
+} from "@/services/pipelineStorage/types";
 import { PIPELINE_YAML_LOAD_OPTIONS } from "@/utils/yaml";
 
 interface LoadedSpec {
   spec: ComponentSpec;
+  file: PipelineFile;
   restoredUndoStore?: MobxUndoStore;
 }
 
@@ -42,43 +45,38 @@ function deserializeSpec(data: unknown, idGen?: IdGenerator): ComponentSpec {
   return spec;
 }
 
-async function backfillFromLegacyStore(
-  name: string,
-  storage: PipelineStorageService,
-): Promise<PipelineFile | undefined> {
-  const legacyDriver = new RootFolderDbStorageDriver();
-
-  const existsInLegacy = await legacyDriver.hasKey(name);
-  if (!existsInLegacy) return undefined;
-
-  return storage.rootFolder.assignFile(name);
-}
-
-async function resolveSpecData(
-  ref: PipelineRef,
-  storage: PipelineStorageService,
-): Promise<unknown> {
-  let pipelineFile = ref.fileId
-    ? await storage.findPipelineById(ref.fileId)
-    : await storage.resolvePipelineByName(ref.name);
-
-  if (!pipelineFile) {
-    pipelineFile = await backfillFromLegacyStore(ref.name, storage);
-  }
-
-  if (!pipelineFile) {
-    throw new Error(`Pipeline "${ref.name}" not found`);
-  }
-  const yamlContent = await pipelineFile.read();
-  return yaml.load(yamlContent, PIPELINE_YAML_LOAD_OPTIONS);
-}
-
 export const EDITOR_SPEC_QUERY_KEY = "editor-v2-spec";
 
-export function useLoadSpec(ref: PipelineRef) {
+export function useLoadSpec(ref: EditorPipelineRef) {
   const storage = usePipelineStorage();
   const queryClient = useQueryClient();
-  const queryKey = [EDITOR_SPEC_QUERY_KEY, ref.fileId ?? ref.name];
+  const identity = getEditorPipelineIdentity(ref);
+  const remote = isRemotePipelineRef(ref);
+  const localName = remote ? undefined : ref.name;
+  const localFileId = remote ? undefined : ref.fileId;
+  const queryKey = [EDITOR_SPEC_QUERY_KEY, identity];
+
+  const query = useSuspenseQuery({
+    queryKey,
+    queryFn: async (): Promise<LoadedSpec> => {
+      const file = await storage.resolvePipeline(ref);
+      const yamlContent = await file.read();
+      const specData = yaml.load(yamlContent, PIPELINE_YAML_LOAD_OPTIONS);
+      const undoHistory = remote
+        ? null
+        : await loadUndoHistory(file.storageKey).catch(() => null);
+
+      const loadedSpec = deserializeSpecData(specData, undoHistory);
+      await hydrateLoadedSpecRefs(loadedSpec.spec);
+
+      return { ...loadedSpec, file };
+    },
+    // Mutable MobX models must not be replaced by background refetches. Remote
+    // documents leave the cache on close, so reopening reads the server again.
+    staleTime: Infinity,
+    gcTime: remote ? 0 : undefined,
+    retry: false,
+  });
 
   // When the v1 editor writes to the same IndexedDB file, drop our cached
   // deserialization so the next read of this query goes back to disk. We
@@ -86,12 +84,25 @@ export function useLoadSpec(ref: PipelineRef) {
   // spec under our feet would discard MobX editor state (selection, undo, …)
   // and the in-memory model is already authoritative for v2.
   useEffect(() => {
-    const matchKey = [EDITOR_SPEC_QUERY_KEY, ref.fileId ?? ref.name];
+    if (remote) {
+      return () => {
+        // StrictMode reconnects observers after replaying effect cleanup.
+        // Wait for that before evicting a genuinely closed document.
+        queueMicrotask(() => {
+          queryClient.removeQueries({
+            queryKey: [EDITOR_SPEC_QUERY_KEY, identity],
+            exact: true,
+            type: "inactive",
+          });
+        });
+      };
+    }
+    const matchKey = [EDITOR_SPEC_QUERY_KEY, identity];
 
     const state = queryClient.getQueryState(matchKey);
     const lastFetched = state?.dataUpdatedAt;
     if (lastFetched !== undefined) {
-      const candidates = [ref.name, ref.fileId].filter(
+      const candidates = [localName, localFileId].filter(
         (k): k is string => typeof k === "string",
       );
       const lastForeign = candidates
@@ -109,33 +120,18 @@ export function useLoadSpec(ref: PipelineRef) {
     // v1 editor is slated for removal once v2 becomes the default.
     return subscribePipelineFileChanged(({ storageKey, source }) => {
       if (source === "v2") return;
-      if (storageKey !== ref.name && storageKey !== ref.fileId) return;
+      if (storageKey !== localName && storageKey !== localFileId) return;
       queryClient.invalidateQueries({ queryKey: matchKey });
     });
-  }, [queryClient, ref.fileId, ref.name]);
+  }, [queryClient, identity, localFileId, localName, remote]);
 
-  return useSuspenseQuery({
-    queryKey,
-    queryFn: async (): Promise<LoadedSpec> => {
-      const [specData, undoHistory] = await Promise.all([
-        resolveSpecData(ref, storage),
-        loadUndoHistory(ref.name).catch(() => null),
-      ]);
-
-      const loadedSpec = deserializeSpecData(specData, undoHistory);
-      await hydrateLoadedSpecRefs(loadedSpec.spec);
-
-      return loadedSpec;
-    },
-    staleTime: Infinity,
-    retry: false,
-  });
+  return query;
 }
 
 function deserializeSpecData(
   specData: unknown,
   undoHistory: Awaited<ReturnType<typeof loadUndoHistory>> | null,
-): LoadedSpec {
+): Omit<LoadedSpec, "file"> {
   if (undoHistory) {
     try {
       const replayIdGen = new ReplayIdGenerator(undoHistory.idStack);
