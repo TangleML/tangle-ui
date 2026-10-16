@@ -15,7 +15,6 @@ interface RunTangentButtonProps {
   handoff: RunTangentHandoffState;
   label: string;
   icon: IconName;
-  createLabel: string;
   trackingId: string;
 }
 
@@ -24,7 +23,6 @@ export function RunTangentButton({
   handoff,
   label,
   icon,
-  createLabel,
   trackingId,
 }: RunTangentButtonProps) {
   const aiGate = useAiGate();
@@ -47,7 +45,6 @@ export function RunTangentButton({
       {handoff.choosing && (
         <TangentDestinationDialog
           title={label}
-          createLabel={createLabel}
           attributed={handoff.choosing.attributed}
           newProjectName={handoff.choosing.newProjectName}
           onChoose={handoff.choose}
