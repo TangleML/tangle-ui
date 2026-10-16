@@ -45,6 +45,7 @@ export const APP_ROUTES = {
   GITHUB_AUTH_CALLBACK: "/authorize/github",
   HUGGINGFACE_AUTH_CALLBACK: "/authorize/huggingface",
   EDITOR_V2: EDITOR_V2_BASE_PATH,
+  EDITOR_V2_NEW_PIPELINE: `${EDITOR_V2_BASE_PATH}/new/pipeline`,
   EDITOR_V2_PIPELINE: `${EDITOR_V2_BASE_PATH}/$pipelineName`,
   EDITOR_V2_REMOTE_PIPELINE: `${EDITOR_V2_BASE_PATH}/pipeline/$pipelineId`,
   LEGACY_EDITOR_V2_REMOTE_PIPELINE: `${EDITOR_V2_BASE_PATH}/remote/$pipelineId`,

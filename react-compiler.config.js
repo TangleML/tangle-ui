@@ -33,6 +33,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/hooks/useHandleEdgeSelection.ts",
   "src/hooks/useEdgeSelectionHighlight.ts",
   "src/hooks/useRunSearchParams.ts",
+  "src/hooks/useNewPipelineDraft.ts",
   "src/hooks/useAiProviderSettings.ts",
   "src/hooks/useNaturalLanguageComponentSearch.ts",
   "src/hooks/useDebouncedSearchValue.ts",

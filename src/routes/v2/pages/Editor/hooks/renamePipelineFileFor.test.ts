@@ -14,6 +14,7 @@ const rename = vi.fn().mockResolvedValue(undefined);
 function store(
   storageKey: string | undefined,
   remote = false,
+  isDraft = false,
 ): PipelineFileStore {
   return {
     activePipelineFile:
@@ -23,6 +24,7 @@ function store(
             id: "file-1",
             storageKey,
             rename,
+            isDraft,
             remote: remote
               ? {
                   backendUrl: "https://backend.example.com",
@@ -34,6 +36,14 @@ function store(
 }
 
 describe("renamePipelineFileFor", () => {
+  it("keeps a remote draft name without checking local names", async () => {
+    const applied = await renamePipelineFileFor(store("Draft", false, true))(
+      "Example pipeline",
+    );
+    expect(availablePipelineName).not.toHaveBeenCalled();
+    expect(rename).toHaveBeenCalledWith("Example pipeline");
+    expect(applied).toBe("Example pipeline");
+  });
   it("keeps a remote name even when a local pipeline already uses it", async () => {
     const onRenamed = vi.fn();
     const applied = await renamePipelineFileFor(

@@ -3,6 +3,8 @@ import { generate } from "random-words";
 import type { MouseEvent, ReactNode } from "react";
 
 import { Button, type ButtonProps } from "@/components/ui/button";
+import { useNewPipelineDraft } from "@/hooks/useNewPipelineDraft";
+import useToastNotification from "@/hooks/useToastNotification";
 import { getDefaultEditorPath } from "@/routes/editorRoutes";
 import { writeComponentToFileListFromText } from "@/utils/componentStore";
 import {
@@ -23,27 +25,42 @@ const NewPipelineButton = ({
   ...buttonProps
 }: NewPipelineButtonProps) => {
   const navigate = useNavigate();
+  const newDraft = useNewPipelineDraft();
+  const notify = useToastNotification();
 
   const handleCreate = async (e: MouseEvent<HTMLButtonElement>) => {
-    const name = randomName();
-    const componentText = defaultPipelineYamlWithName(name);
-    await writeComponentToFileListFromText(
-      USER_PIPELINES_LIST_NAME,
-      name,
-      componentText,
-    );
+    try {
+      const name = randomName();
+      const draft = newDraft(name);
+      if (draft) {
+        if (hasNewTabModifier(e)) window.open(draft.to, "_blank");
+        else await navigate(draft);
+        return;
+      }
+      const componentText = defaultPipelineYamlWithName(name);
+      await writeComponentToFileListFromText(
+        USER_PIPELINES_LIST_NAME,
+        name,
+        componentText,
+      );
 
-    const clickThroughUrl = getDefaultEditorPath(name);
+      const clickThroughUrl = getDefaultEditorPath(name);
 
-    if (hasNewTabModifier(e)) {
-      window.open(clickThroughUrl, "_blank");
-      return;
+      if (hasNewTabModifier(e)) {
+        window.open(clickThroughUrl, "_blank");
+        return;
+      }
+
+      navigate({
+        to: clickThroughUrl,
+        reloadDocument: !IS_GITHUB_PAGES,
+      });
+    } catch (error) {
+      notify(
+        error instanceof Error ? error.message : "Unable to create pipeline",
+        "error",
+      );
     }
-
-    navigate({
-      to: clickThroughUrl,
-      reloadDocument: !IS_GITHUB_PAGES,
-    });
   };
 
   return (

@@ -1,4 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
+import { observer } from "mobx-react-lite";
 import { useState } from "react";
 
 import {
@@ -22,12 +23,13 @@ import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionCo
 import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButton";
 import { MovePipelineDialog } from "@/routes/v2/shared/components/MovePipelineDialog";
 import { ShortcutBadge } from "@/routes/v2/shared/components/ShortcutBadge";
+import { isRemotePipelineRef } from "@/services/pipelineStorage/types";
 import { tracking } from "@/utils/tracking";
 
 import { OpenPipelineDialog } from "./OpenPipelineDialog";
 import { useFileMenuState } from "./useFileMenuState";
 
-export function FileMenu() {
+export const FileMenu = observer(function FileMenu() {
   const { track } = useAnalytics();
   const {
     importTriggerRef,
@@ -55,7 +57,9 @@ export function FileMenu() {
   const { pipelineFile: pipelineFileStore } = useEditorSession();
   const activePipeline = pipelineFileStore.activePipelineFile;
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
-  const isRemote = Boolean(activePipeline?.remote);
+  const isRemote = Boolean(
+    activePipeline?.remote || activePipeline?.draftBackendUrl,
+  );
   const canMove =
     !isRemote && (activePipeline?.folder.canMoveFilesOut ?? false);
   const tourMode = useTourMode();
@@ -237,6 +241,13 @@ export function FileMenu() {
           />
         }
         onImportComplete={(pipeline) => {
+          if (isRemotePipelineRef(pipeline)) {
+            navigate({
+              to: APP_ROUTES.EDITOR_V2_REMOTE_PIPELINE,
+              params: { pipelineId: pipeline.pipelineId },
+            });
+            return;
+          }
           navigate({
             to: APP_ROUTES.EDITOR_V2_PIPELINE,
             params: { pipelineName: pipeline.name },
@@ -246,4 +257,4 @@ export function FileMenu() {
       />
     </>
   );
-}
+});

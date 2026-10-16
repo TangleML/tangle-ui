@@ -1115,6 +1115,11 @@ describe("DashboardPipelinesView remote pipelines", () => {
     expect(searchParams().get("panel")).toBe("compact");
     expect(screen.getByRole("table", { name: "Remote Pipelines" })).toBe(table);
     expect(window.scrollTo).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "First page" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Next" })).toBeEnabled(),
+    );
   });
 
   it("restores tabs through browser Back and Forward with fresh cursor history", async () => {

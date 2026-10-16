@@ -82,14 +82,12 @@ export const TypePill = ({
 };
 
 export function getFavoriteUrl(item: FavoriteItem): string {
-  if (item.type === "pipeline") return getDefaultEditorPath(item.id);
-  if (item.type === "remote-pipeline")
-    return getDefaultRemoteEditorPath(item.id);
-  if (item.type === "project") return getProjectHomePath(item.id);
-  return getDefaultRunPath(item.id);
+  return getRecentlyViewedUrl(item);
 }
 
-export function getRecentlyViewedUrl(item: RecentItem): string {
+export function getRecentlyViewedUrl(
+  item: Pick<RecentItem, "type" | "id">,
+): string {
   if (item.type === "pipeline") return getDefaultEditorPath(item.id);
   if (item.type === "remote-pipeline")
     return getDefaultRemoteEditorPath(item.id);

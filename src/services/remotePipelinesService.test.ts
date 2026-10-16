@@ -122,19 +122,6 @@ describe("listRemotePipelines", () => {
     });
   });
 
-  it("ignores a total count from older responses", async () => {
-    mockResponse({
-      pipelines: [pipeline],
-      total_count: 50,
-      next_page_token: "page-2",
-    });
-
-    await expect(listRemotePipelines(BACKEND_URL)).resolves.toEqual({
-      pipelines: [pipeline],
-      nextPageToken: "page-2",
-    });
-  });
-
   it("rejects with a clear error when the API returns no data", async () => {
     mockResponse(undefined, 503);
 

@@ -15,6 +15,10 @@ import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import { createAndAttachPipeline } from "@/services/projects/createAndAttachPipeline";
 import { nameFromPrompt } from "@/services/projects/nameFromPrompt";
+import {
+  pipelineFileTarget,
+  remoteResourceTarget,
+} from "@/services/projects/pipelineResource";
 import { MAX_PAGE_SIZE } from "@/services/projects/queryDefaults";
 import {
   describeResource,
@@ -22,7 +26,6 @@ import {
   PIPELINE_RUN,
 } from "@/services/projects/resourceDescriptor";
 import type { WorkareaTarget } from "@/services/projects/resourceTarget";
-import { idIdentity } from "@/services/projects/resourceTarget";
 import {
   readStartingSession,
   withoutStartingSession,
@@ -55,6 +58,9 @@ function oldestAttached(
 ) {
   return oldestFirst(resources).flatMap((resource) => {
     const described = describeResource(resource);
+    const remote =
+      type === LOCAL_PIPELINE ? remoteResourceTarget(resource) : undefined;
+    if (remote) return [{ resource, target: remote }];
     return described?.type === type && described.target
       ? [{ resource, target: described.target }]
       : [];
@@ -92,7 +98,7 @@ export function usePrepareProjectArrival(
   const { data: project, isFetching: isProjectFetching } =
     useProject(projectId);
   const { data: documents } = useProjectResources(projectId, {
-    entity: ["document"],
+    entity: ["document", "pipeline"],
     pageSize: MAX_PAGE_SIZE,
   });
   const { mutateAsync: createResource } = useCreateProjectResource(projectId);
@@ -168,10 +174,7 @@ export function usePrepareProjectArrival(
         attach: createResource,
       });
 
-      const target: WorkareaTarget = {
-        type: "pipeline",
-        identity: idIdentity(file.id),
-      };
+      const target: WorkareaTarget = pipelineFileTarget(file);
       await store.openWorkareaTarget(target, file.storageKey);
     },
     onError: (error) => notify(getErrorMessage(error), "error"),

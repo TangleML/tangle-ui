@@ -1,5 +1,5 @@
 import { renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ComponentSpec } from "@/models/componentSpec";
 import { APP_ROUTES } from "@/routes/appRoutes";
@@ -13,6 +13,8 @@ const state = vi.hoisted(() => ({
     id: "pipeline-1",
     storageKey: "Original",
     remote: undefined as { backendUrl: string; pipelineId: string } | undefined,
+    isDraft: false,
+    draftBackendUrl: undefined as string | undefined,
     rename: vi.fn(),
     write: vi.fn(),
     deleteFile: vi.fn(),
@@ -29,6 +31,21 @@ const remote = {
 
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => state.navigate,
+}));
+vi.mock("@/components/shared/Settings/useFlags", () => ({
+  useFlagValue: () => true,
+}));
+vi.mock("@/providers/BackendProvider", () => ({
+  useBackend: () => ({
+    backendUrl: remote.backendUrl,
+    configured: true,
+    ready: true,
+  }),
+}));
+vi.mock("@/utils/localforage", () => ({
+  getUseEnv: async () => false,
+  getUseRelativePath: async () => false,
+  getUserBackendUrl: async () => remote.backendUrl,
 }));
 vi.mock("@/routes/router", async () => import("@/routes/appRoutes"));
 vi.mock("@/hooks/useToastNotification", () => ({
@@ -69,6 +86,9 @@ beforeEach(() => {
   state.spec = new ComponentSpec({ $id: "root", name: "Original" });
   state.spec.setDescription("Preserve the full pipeline content");
   state.file.remote = undefined;
+  state.file.isDraft = false;
+  state.file.draftBackendUrl = undefined;
+  vi.stubEnv("VITE_LOCAL_PIPELINES", undefined);
   state.save.mockResolvedValue(undefined);
   state.navigate.mockResolvedValue(undefined);
   const copy = { id: "copy-id", storageKey: "Copy" };
@@ -79,11 +99,38 @@ beforeEach(() => {
   });
 });
 
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
 describe("editor file actions", () => {
-  it.each([false, true])(
-    "copies content to the matching storage and opens the copy (remote: %s)",
-    async (isRemote) => {
-      if (isRemote) state.file.remote = remote;
+  it("renames a draft as a content edit and saves copies remotely", async () => {
+    state.file.isDraft = true;
+    state.file.draftBackendUrl = remote.backendUrl;
+    const { result } = renderHook(useFileMenuState);
+    await result.current.renamePipeline("Renamed draft");
+    expect(state.save).toHaveBeenCalledOnce();
+    expect(state.spec?.name).toBe("Renamed draft");
+    expect(state.navigate).not.toHaveBeenCalled();
+    await result.current.handleSavePipelineAs("Copy");
+    expect(state.storage.createRemotePipeline).toHaveBeenCalledWith(
+      remote.backendUrl,
+      "Copy",
+      expect.any(String),
+    );
+    expect(state.storage.rootFolder.addFile).not.toHaveBeenCalled();
+  });
+  it.each([
+    { sourceRemote: false, local: false },
+    { sourceRemote: true, local: false },
+    { sourceRemote: false, local: true },
+    { sourceRemote: true, local: true },
+  ])(
+    "copies content using the deployment policy: %j",
+    async ({ sourceRemote, local }) => {
+      vi.stubEnv("VITE_LOCAL_PIPELINES", String(local));
+      if (sourceRemote) state.file.remote = remote;
+      const isRemote = !local;
       const { result } = renderHook(useFileMenuState);
       await result.current.handleSavePipelineAs("Copy");
       const target = isRemote
