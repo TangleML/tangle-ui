@@ -197,7 +197,7 @@ export function StartSessionPrompt() {
 
           <WorkspaceSelect
             choice={workspaceChoice}
-            ariaLabel="Workspace"
+            aria-label="Workspace"
             placeholder="Workspace"
             disabled={isBusy}
             className="h-8 w-auto max-w-48 text-xs"
