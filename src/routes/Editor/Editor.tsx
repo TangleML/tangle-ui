@@ -1,6 +1,7 @@
 import "@/styles/editor.css";
 
 import { DndContext } from "@dnd-kit/core";
+import { useParams } from "@tanstack/react-router";
 import { ReactFlowProvider } from "@xyflow/react";
 import { useEffect } from "react";
 
@@ -12,7 +13,7 @@ import { Paragraph } from "@/components/ui/typography";
 import { useLoadComponentSpecFromPath } from "@/hooks/useLoadComponentSpecFromPath";
 import { addRecentlyViewed } from "@/hooks/useRecentlyViewed";
 
-const Editor = () => {
+const LocalEditor = () => {
   const { componentSpec, error } = useLoadComponentSpecFromPath();
   useEffect(() => {
     if (!componentSpec?.name) return;
@@ -48,6 +49,14 @@ const Editor = () => {
       </ReactFlowProvider>
     </DndContext>
   );
+};
+
+const Editor = () => {
+  const params = useParams({ strict: false });
+  if ("pipelineId" in params) {
+    return <div className="h-full w-full bg-slate-100 dark:bg-background" />;
+  }
+  return <LocalEditor />;
 };
 
 export default Editor;

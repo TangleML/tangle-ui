@@ -1,3 +1,4 @@
+import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { type PointerEvent, useEffect, useRef, useState } from "react";
 
 import { CopyText } from "@/components/shared/CopyText/CopyText";
@@ -13,6 +14,7 @@ import {
 } from "@/components/ui/table";
 import { useRemotePipelinesPage } from "@/hooks/useRemotePipelinesPage";
 import { useBackend } from "@/providers/BackendProvider";
+import { getDefaultRemoteEditorPath } from "@/routes/editorRoutes";
 import { formatDate } from "@/utils/date";
 
 import {
@@ -64,6 +66,8 @@ export function RemotePipelinesTable({
   filters,
   onFiltersChange,
 }: RemotePipelinesTableProps) {
+  const navigate = useNavigate();
+  const router = useRouter();
   const { backendUrl, configured, available, ready } = useBackend();
   const filterQuery = getRemotePipelinesFilterQuery(filters);
   const invalidId = isInvalidPipelineId(filters.id);
@@ -235,11 +239,39 @@ export function RemotePipelinesTable({
             </TableRow>
           ) : (
             pipelines.map((pipeline) => (
-              <TableRow key={pipeline.id} className="text-xs">
-                <TruncatedTableCell className="text-sm">
-                  {pipeline.pipeline_name ?? "Untitled Pipeline"}
-                </TruncatedTableCell>
-                <TableCell>
+              <TableRow
+                key={pipeline.id}
+                className="cursor-pointer text-xs"
+                onClick={(event) => {
+                  const destination = {
+                    to: getDefaultRemoteEditorPath(pipeline.id),
+                  };
+                  if (event.ctrlKey || event.metaKey) {
+                    window.open(
+                      router.history.createHref(
+                        router.buildLocation(destination).href,
+                      ),
+                      "_blank",
+                      "noopener,noreferrer",
+                    );
+                  } else {
+                    void navigate(destination);
+                  }
+                }}
+              >
+                <TableCell className="text-sm">
+                  <div className="flex min-h-9 items-center">
+                    <Link
+                      to={getDefaultRemoteEditorPath(pipeline.id)}
+                      onClick={(event) => event.stopPropagation()}
+                      className="block truncate hover:underline"
+                      title={pipeline.pipeline_name ?? "Untitled Pipeline"}
+                    >
+                      {pipeline.pipeline_name ?? "Untitled Pipeline"}
+                    </Link>
+                  </div>
+                </TableCell>
+                <TableCell onClick={(event) => event.stopPropagation()}>
                   <div className="flex min-h-9 items-center">
                     <CopyText
                       size="xs"

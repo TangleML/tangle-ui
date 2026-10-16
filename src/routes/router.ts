@@ -299,6 +299,12 @@ const editorRoute = createRoute({
   },
 });
 
+const remoteEditorRoute = createRoute({
+  getParentRoute: () => mainLayout,
+  path: APP_ROUTES.REMOTE_PIPELINE_EDITOR,
+  component: Editor,
+});
+
 const githubAuthCallbackRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: APP_ROUTES.GITHUB_AUTH_CALLBACK,
@@ -358,6 +364,20 @@ const editorV2PipelineRoute = createRoute({
       throw redirect({
         to: APP_ROUTES.PIPELINE_EDITOR,
         params: { name: params.pipelineName },
+      });
+    }
+  },
+});
+
+const editorV2RemotePipelineRoute = createRoute({
+  getParentRoute: () => mainLayout,
+  path: APP_ROUTES.EDITOR_V2_REMOTE_PIPELINE,
+  component: EditorV2,
+  beforeLoad: ({ params }) => {
+    if (!isFlagEnabled("v2_editor")) {
+      throw redirect({
+        to: APP_ROUTES.REMOTE_PIPELINE_EDITOR,
+        params: { pipelineId: params.pipelineId },
       });
     }
   },
@@ -470,10 +490,12 @@ const appRouteTree = mainLayout.addChildren([
   settingsRouteTree,
   importRoute,
   editorRoute,
+  remoteEditorRoute,
   runDetailRoute,
   runDetailWithSubgraphRoute,
   editorV2Route,
   editorV2PipelineRoute,
+  editorV2RemotePipelineRoute,
   runV2Route,
   runV2WithSubgraphRoute,
   compareRoute,
