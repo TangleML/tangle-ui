@@ -42,17 +42,18 @@ export function useAiChatWindow(enabled: boolean) {
             ...deps,
             undo: editorSession.undo,
             invokeAutoLayout: invokeAutoLayoutVia(keyboard),
-            // This route is keyed by pipeline name, so a rename the agent made
-            // leaves the url pointing at a pipeline that no longer exists.
             renamePipelineFile: renamePipelineFileFor(
               editorSession.pipelineFile,
-              (fileId, name) =>
+              (fileId, name) => {
+                if (editorSession.pipelineFile.activePipelineFile?.remote)
+                  return;
                 void navigate({
                   to: APP_ROUTES.EDITOR_V2_PIPELINE,
                   params: { pipelineName: name },
                   search: { fileId },
                   replace: true,
-                }),
+                });
+              },
             ),
           })
         }

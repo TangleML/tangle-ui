@@ -22,6 +22,8 @@ export interface SavedPipelineDocument {
   id: string;
   file_path: string;
   pipeline_name: string | null;
+  user_id: string;
+  pipeline_run_annotations: Record<string, string>;
   root_pipeline_task: TaskSpec & { componentRef: { spec: ComponentSpec } };
 }
 

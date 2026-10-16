@@ -1,4 +1,10 @@
-import { action, makeObservable, observable, reaction } from "mobx";
+import {
+  action,
+  makeObservable,
+  observable,
+  reaction,
+  runInAction,
+} from "mobx";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 import {
@@ -6,10 +12,10 @@ import {
   serializeComponentSpecToText,
 } from "@/models/componentSpec";
 import { saveUndoHistory } from "@/routes/v2/pages/Editor/utils/undoHistoryStorage";
+import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import { AUTOSAVE_DEBOUNCE_TIME_MS } from "@/utils/constants";
 import { debounce } from "@/utils/debounce";
 
-import type { PipelineFileStore } from "./pipelineFileStore";
 import type { UndoStore } from "./undoStore";
 
 const AUTOSAVE_MIN_SAVING_INDICATOR_MS = 600;
@@ -17,130 +23,135 @@ const AUTOSAVE_MIN_SAVING_INDICATOR_MS = 600;
 export class AutoSaveStore {
   @observable accessor isSaving = false;
   @observable accessor lastSavedAt: Date | null = null;
+  @observable accessor error: string | null = null;
 
   private spec: ComponentSpec | null = null;
-  private pipelineName: string | null = null;
+  private file: PipelineFile | null = null;
   private disposeReaction: (() => void) | null = null;
-  // Last content written to disk; used to skip a redundant flush on dispose.
   private lastSavedYaml: string | null = null;
-
-  private debouncedSave = debounce((yamlText: string) => {
-    void this.performSave(yamlText);
+  private pendingSave: { yaml: string; promise: Promise<void> } | null = null;
+  private debouncedSave = debounce((yaml: string) => {
+    void this.performSave(yaml).catch(() => {});
   }, AUTOSAVE_DEBOUNCE_TIME_MS);
 
   constructor(
     private undoStore: UndoStore,
-    private pipelineFileStore: PipelineFileStore,
+    private onSaveError?: (error: Error) => void,
   ) {
     makeObservable(this);
   }
 
-  @action init(spec: ComponentSpec, pipelineName: string) {
+  @action init(spec: ComponentSpec, file: PipelineFile) {
     this.dispose();
     this.spec = spec;
-    this.pipelineName = pipelineName;
+    this.file = file;
     this.isSaving = false;
     this.lastSavedAt = null;
-    // The freshly-loaded spec matches what's on disk, so seed the baseline to
-    // avoid flushing an unchanged pipeline on dispose.
+    this.error = null;
     this.lastSavedYaml = this.serializeSpec();
-
     this.disposeReaction = reaction(
       () => this.serializeSpec(),
-      (yamlText) => this.scheduleAutoSave(yamlText),
-      { fireImmediately: false },
+      (yaml) => {
+        if (yaml === null) this.debouncedSave.cancel();
+        else this.debouncedSave(yaml);
+      },
     );
   }
 
   @action dispose() {
-    const yaml = this.serializeSpec();
-    const file = this.pipelineFileStore.activePipelineFile;
-    if (yaml && file && yaml !== this.lastSavedYaml) {
-      void file.write(yaml).catch((error) => {
-        console.error("Auto-save flush on dispose failed:", error);
-      });
-    }
-    this.debouncedSave.cancel();
+    void this.save().catch((error) => {
+      console.error("Auto-save flush on dispose failed:", error);
+      this.onSaveError?.(
+        error instanceof Error ? error : new Error(String(error)),
+      );
+    });
     this.disposeReaction?.();
     this.disposeReaction = null;
     this.spec = null;
-    this.pipelineName = null;
-  }
-
-  async save() {
-    if (!this.spec || !this.pipelineName) return;
-    const yamlText = this.serializeSpec();
-    if (!yamlText) return;
-    await this.performSave(yamlText);
-  }
-
-  @action setSaving(value: boolean) {
-    this.isSaving = value;
-  }
-
-  @action setSaved(date: Date) {
-    this.lastSavedAt = date;
+    this.file = null;
+    this.pendingSave = null;
     this.isSaving = false;
+  }
+
+  async save(): Promise<void> {
+    this.debouncedSave.cancel();
+    if (!this.spec || !this.file) return;
+    const yaml = this.serializeSpec();
+    if (yaml === null)
+      throw new Error(this.error ?? "Could not serialize pipeline");
+    await this.performSave(yaml);
   }
 
   private serializeSpec(): string | null {
     if (!this.spec) return null;
     try {
       return serializeComponentSpecToText(this.spec);
-    } catch {
+    } catch (error) {
+      this.recordError(error);
       return null;
     }
   }
 
-  private scheduleAutoSave(yamlText: string | null) {
-    if (!yamlText || !this.pipelineName) {
-      this.debouncedSave.cancel();
-      return;
-    }
-    this.debouncedSave(yamlText);
+  @action private recordError(error: unknown) {
+    this.error = error instanceof Error ? error.message : String(error);
   }
 
-  private async performSave(yamlText: string) {
-    const pipelineName = this.pipelineName;
-    if (!pipelineName) return;
-
-    this.setSaving(true);
-
-    const savePromise = (async () => {
-      try {
-        await this.pipelineFileStore.activePipelineFile?.write(yamlText);
-        await this.persistUndoHistory();
-        this.lastSavedYaml = yamlText;
-        return new Date();
-      } catch (error) {
-        console.error("Auto-save failed:", error);
-        return null;
-      }
-    })();
-
-    const minDisplayPromise = new Promise((resolve) =>
-      setTimeout(resolve, AUTOSAVE_MIN_SAVING_INDICATOR_MS),
-    );
-
-    const [savedAt] = await Promise.all([savePromise, minDisplayPromise]);
-
-    if (savedAt) {
-      this.setSaved(savedAt);
-    } else {
-      this.setSaving(false);
-    }
-  }
-
-  private async persistUndoHistory() {
-    if (!this.spec || !this.pipelineName) return;
+  private performSave(yaml: string): Promise<void> {
+    const spec = this.spec;
+    const file = this.file;
     const manager = this.undoStore.undoManager;
-    if (!manager) return;
-
-    try {
-      const idStack = collectIdStack(this.spec);
-      await saveUndoHistory(this.pipelineName, idStack, manager);
-    } catch (error) {
-      console.error("Failed to persist undo history:", error);
+    if (!spec || !file) return Promise.resolve();
+    if (this.pendingSave?.yaml === yaml) return this.pendingSave.promise;
+    if (!this.pendingSave && yaml === this.lastSavedYaml) {
+      runInAction(() => {
+        this.error = null;
+      });
+      return Promise.resolve();
     }
+
+    const job = { yaml, promise: Promise.resolve() };
+    this.pendingSave = job;
+    runInAction(() => {
+      this.isSaving = true;
+    });
+    const write = async () => {
+      await file.write(yaml);
+      if (this.spec === spec && this.file === file) this.lastSavedYaml = yaml;
+      if (!file.remote && manager) {
+        await saveUndoHistory(
+          file.storageKey,
+          collectIdStack(spec),
+          manager,
+        ).catch((error) =>
+          console.error("Failed to persist undo history:", error),
+        );
+      }
+    };
+    job.promise = Promise.all([
+      write(),
+      new Promise((resolve) =>
+        setTimeout(resolve, AUTOSAVE_MIN_SAVING_INDICATOR_MS),
+      ),
+    ])
+      .then(() => {
+        if (this.pendingSave !== job) return;
+        runInAction(() => {
+          this.lastSavedAt = new Date();
+          this.error = null;
+        });
+      })
+      .catch((error) => {
+        if (this.pendingSave === job) this.recordError(error);
+        throw error;
+      })
+      .finally(() => {
+        if (this.pendingSave === job) {
+          this.pendingSave = null;
+          runInAction(() => {
+            this.isSaving = false;
+          });
+        }
+      });
+    return job.promise;
   }
 }

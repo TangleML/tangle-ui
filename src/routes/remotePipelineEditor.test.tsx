@@ -174,15 +174,64 @@ describe("remote pipeline editor entry", () => {
     expect(screen.queryByText("Open local pipeline")).not.toBeInTheDocument();
   });
 
-  it("shows the loaded remote graph without initializing editor sessions or autosave", () => {
+  it.each([false, undefined])(
+    "preserves viewing without an editing session when write access is %s",
+    (canEdit) => {
+      route.params = { pipelineId: "pipeline-123" };
+      loadV2.mockReturnValue({
+        data: {
+          spec: { name: "Remote graph" },
+          file: { folder: { driver: { canEdit } } },
+        },
+      });
+      renderEditor(<EditorV2 />);
+      expect(screen.getByText("Remote graph")).toBeInTheDocument();
+      expect(initializeEditing).not.toHaveBeenCalled();
+      expect(
+        screen.queryByRole("navigation", { name: "Editor navigation" }),
+      ).not.toBeInTheDocument();
+    },
+  );
+
+  it("opens the editor after the remote driver verifies write access", () => {
     route.params = { pipelineId: "pipeline-123" };
-    loadV2.mockReturnValue({ data: { spec: { name: "Remote graph" } } });
+    loadV2.mockReturnValueOnce({
+      data: {
+        spec: { name: "Remote graph" },
+        file: { folder: { driver: { canEdit: true } } },
+      },
+    });
     renderEditor(<EditorV2 />);
-    expect(screen.getByText("Remote graph")).toBeInTheDocument();
-    expect(initializeEditing).not.toHaveBeenCalled();
     expect(
-      screen.queryByRole("navigation", { name: "Editor navigation" }),
-    ).not.toBeInTheDocument();
+      screen.getByRole("navigation", { name: "Editor navigation" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Remote graph")).not.toBeInTheDocument();
+    expect(loadV2).toHaveBeenCalledWith({
+      source: "remote",
+      backendUrl: backend.backendUrl,
+      pipelineId: "pipeline-123",
+    });
+  });
+
+  it("shows failed remote reads without entering the editor", () => {
+    route.params = { pipelineId: "pipeline-123" };
+    loadV2.mockImplementation(() => {
+      throw new Error("Pipeline not found");
+    });
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    try {
+      renderEditor(<EditorV2 />);
+      expect(screen.getByRole("alert")).toHaveTextContent("Pipeline not found");
+      expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+      expect(initializeEditing).not.toHaveBeenCalled();
+      expect(
+        screen.queryByRole("navigation", { name: "Editor navigation" }),
+      ).not.toBeInTheDocument();
+    } finally {
+      consoleError.mockRestore();
+    }
   });
 
   it("waits for backend settings before resolving a remote pipeline", () => {

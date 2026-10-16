@@ -55,7 +55,9 @@ export function FileMenu() {
   const { pipelineFile: pipelineFileStore } = useEditorSession();
   const activePipeline = pipelineFileStore.activePipelineFile;
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
-  const canMove = activePipeline?.folder.canMoveFilesOut ?? false;
+  const isRemote = Boolean(activePipeline?.remote);
+  const canMove =
+    !isRemote && (activePipeline?.folder.canMoveFilesOut ?? false);
   const tourMode = useTourMode();
 
   const isTour = !!tourMode;
@@ -156,18 +158,22 @@ export function FileMenu() {
               </DropdownMenuItem>
             </>
           )}
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            disabled={isTour}
-            onClick={() => {
-              track("v2.pipeline_editor.file_menu.delete_pipeline.click");
-              setDeleteDialogOpen(true);
-            }}
-            className="text-destructive focus:text-destructive"
-          >
-            <Icon name="Trash" size="sm" />
-            Delete pipeline
-          </DropdownMenuItem>
+          {!isRemote && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                disabled={isTour}
+                onClick={() => {
+                  track("v2.pipeline_editor.file_menu.delete_pipeline.click");
+                  setDeleteDialogOpen(true);
+                }}
+                className="text-destructive focus:text-destructive"
+              >
+                <Icon name="Trash" size="sm" />
+                Delete pipeline
+              </DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -185,6 +191,7 @@ export function FileMenu() {
         initialName={getSaveAsInitialName()}
         onSubmit={handleSavePipelineAs}
         submitButtonText="Save"
+        validateLocalName={!isRemote}
       />
 
       <PipelineNameDialog
@@ -196,6 +203,7 @@ export function FileMenu() {
         submitButtonText="Rename"
         isSubmitDisabled={(name) => name === getRenameInitialName()}
         excludeNames={[getRenameInitialName()]}
+        validateLocalName={!isRemote}
       />
 
       {canMove && activePipeline && (

@@ -24,6 +24,7 @@ export interface PipelineStorageDriver {
   readonly permissions?: DriverPermissions;
   readonly allowsMoveIn: boolean;
   readonly allowsMoveOut: boolean;
+  readonly canEdit?: boolean;
   list(): Promise<PipelineFileDescriptor[]>;
   read(storageKey: string): Promise<string>;
   write(storageKey: string, content: string): Promise<void>;

@@ -41,8 +41,13 @@ function IdleLayer({ children }: { children: ReactNode }) {
   );
 }
 
-function getTooltipText(isSaving: boolean, lastSavedAt: Date | null): string {
+function getTooltipText(
+  isSaving: boolean,
+  lastSavedAt: Date | null,
+  error: string | null,
+): string {
   if (isSaving) return "Saving...";
+  if (error) return `Save failed: ${error}. Click to retry.`;
   if (lastSavedAt) {
     return `Last saved at ${lastSavedAt.toLocaleTimeString()}`;
   }
@@ -51,16 +56,17 @@ function getTooltipText(isSaving: boolean, lastSavedAt: Date | null): string {
 
 export const AutoSaveIndicator = observer(function AutoSaveIndicator() {
   const { autoSave } = useEditorSession();
-  const { isSaving, lastSavedAt } = autoSave;
-  const tooltipText = getTooltipText(isSaving, lastSavedAt);
+  const { isSaving, lastSavedAt, error } = autoSave;
+  const tooltipText = getTooltipText(isSaving, lastSavedAt, error);
 
   const handleClick = () => {
-    void autoSave.save();
+    void autoSave.save().catch(() => {});
   };
 
   return (
     <TooltipButton
       tooltip={tooltipText}
+      aria-label={tooltipText}
       variant="header"
       disabled={isSaving}
       onClick={handleClick}
@@ -75,9 +81,17 @@ export const AutoSaveIndicator = observer(function AutoSaveIndicator() {
           <Spinner size={16} />
         </SavingLayer>
         <IdleLayer>
-          <Icon name="CloudCheck" />
+          <Icon
+            name={error ? "CloudAlert" : "CloudCheck"}
+            className={error ? "text-red-400" : undefined}
+          />
         </IdleLayer>
       </div>
+      {error && (
+        <span role="status" className="sr-only">
+          Save failed: {error}
+        </span>
+      )}
     </TooltipButton>
   );
 });
