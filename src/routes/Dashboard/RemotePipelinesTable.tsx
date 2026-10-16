@@ -14,6 +14,8 @@ import { useRemotePipelinesPage } from "@/hooks/useRemotePipelinesPage";
 import { useBackend } from "@/providers/BackendProvider";
 import { formatDate } from "@/utils/date";
 
+import { RemotePipelinesFilters } from "./RemotePipelinesFilters";
+
 const COLUMN_NAMES = [
   "Name",
   "ID",
@@ -51,8 +53,15 @@ export function RemotePipelinesTable({
   onPageChange,
 }: RemotePipelinesTableProps) {
   const { backendUrl, configured, available, ready } = useBackend();
-  const [previousBackendUrl, setPreviousBackendUrl] = useState(backendUrl);
-  const currentPage = previousBackendUrl === backendUrl ? page : 1;
+  const [filterQuery, setFilterQuery] = useState<string>();
+  const [previousSearch, setPreviousSearch] = useState({
+    backendUrl,
+    filterQuery,
+  });
+  const searchChanged =
+    previousSearch.backendUrl !== backendUrl ||
+    previousSearch.filterQuery !== filterQuery;
+  const currentPage = searchChanged ? 1 : page;
   const [columnWidths, setColumnWidths] = useState(INITIAL_COLUMN_WIDTHS);
   const tableRef = useRef<HTMLTableElement>(null);
   const dragRef = useRef<{
@@ -63,14 +72,14 @@ export function RemotePipelinesTable({
   } | null>(null);
   const canFetch = ready && configured && available;
   const { data, isLoading, isFetching, isPlaceholderData, error, totalCount } =
-    useRemotePipelinesPage(backendUrl, currentPage, canFetch);
+    useRemotePipelinesPage(backendUrl, currentPage, canFetch, filterQuery);
   const pipelines = data?.pipelines ?? [];
 
   useEffect(() => {
-    if (previousBackendUrl === backendUrl) return;
-    if (page === 1) setPreviousBackendUrl(backendUrl);
+    if (!searchChanged) return;
+    if (page === 1) setPreviousSearch({ backendUrl, filterQuery });
     else void onPageChange(1, true);
-  }, [backendUrl, previousBackendUrl, page, onPageChange]);
+  }, [backendUrl, filterQuery, searchChanged, page, onPageChange]);
 
   useEffect(() => {
     if (
@@ -98,6 +107,7 @@ export function RemotePipelinesTable({
 
   return (
     <BlockStack gap="4" className="w-full">
+      <RemotePipelinesFilters onSearch={setFilterQuery} />
       <Table
         ref={tableRef}
         aria-label="Remote Pipelines"
