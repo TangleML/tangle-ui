@@ -4,13 +4,18 @@ import { CopyIcon } from "@/components/shared/CopyText/CopyText";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { copyToClipboard } from "@/utils/string";
+import { tracking } from "@/utils/tracking";
 
 export function CopyValueButton({
   valueFn,
   className,
+  trackingId,
+  trackingMetadata,
 }: {
   className?: string;
   valueFn: () => string | undefined;
+  trackingId?: string;
+  trackingMetadata?: Record<string, unknown>;
 }) {
   const [isCopied, setIsCopied] = useState(false);
 
@@ -37,6 +42,7 @@ export function CopyValueButton({
       size="xs"
       onClick={copyValue}
       className={cn(className)}
+      {...(trackingId ? tracking(trackingId, trackingMetadata) : {})}
     >
       <CopyIcon isCopied={isCopied} alwaysShow={true} compact={true} />
     </Button>

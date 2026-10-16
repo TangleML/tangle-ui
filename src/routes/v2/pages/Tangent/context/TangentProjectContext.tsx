@@ -7,8 +7,11 @@ import {
   useRequiredContext,
 } from "@/hooks/useRequiredContext";
 import useToastNotification from "@/hooks/useToastNotification";
+import { useBackfillSessionTags } from "@/routes/v2/pages/Tangent/hooks/useBackfillSessionTags";
 import { usePrepareProjectArrival } from "@/routes/v2/pages/Tangent/hooks/usePrepareProjectArrival";
 import { useProjectSessions } from "@/routes/v2/pages/Tangent/hooks/useProjectSessions";
+import { useRemoteEnvAuthToken } from "@/routes/v2/pages/Tangent/hooks/useRemoteEnvAuthToken";
+import { useTangentBaseUrl } from "@/routes/v2/pages/Tangent/hooks/useTangentBaseUrl";
 import { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
 import { observeWorkareaPipelineDrafts } from "@/routes/v2/pages/Tangent/workarea/observeWorkareaPipelineDrafts";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
@@ -76,6 +79,15 @@ export function TangentProjectProvider({
   useEffect(() => {
     store.setDefaultSessionId(defaultSessionId);
   }, [store, defaultSessionId]);
+
+  const { baseUrl } = useTangentBaseUrl(projectId);
+  const authToken = useRemoteEnvAuthToken();
+  useBackfillSessionTags({
+    projectId,
+    baseUrl,
+    authToken,
+    sessionIds: sessions.map((session) => session.sessionId),
+  });
 
   usePrepareProjectArrival(store, {
     projectId,
