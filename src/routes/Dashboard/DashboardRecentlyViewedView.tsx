@@ -20,7 +20,7 @@ const RecentlyViewedCardBody = ({ item }: { item: RecentItem }) => (
     className="p-3 rounded-lg transition-all shadow-sm hover:shadow-md bg-card border border-border hover:border-foreground/20 overflow-hidden"
   >
     <InlineStack blockAlign="center" align="space-between" gap="2">
-      <TypePill type={item.type} />
+      <TypePill type={item.type} id={item.id} />
       <Text size="xs" tone="subdued">
         {formatRelativeTime(new Date(item.timestamp))}
       </Text>

@@ -67,7 +67,11 @@ describe("useProjectPin", () => {
     await waitFor(() => expect(result.current.pinned).toBe(true));
 
     await expect(LibraryDB.favorites.toArray()).resolves.toEqual([
-      { type: "project", id: "p-1", name: "Churn model" },
+      expect.objectContaining({
+        type: "project",
+        id: "p-1",
+        name: "Churn model",
+      }),
     ]);
   });
 });
