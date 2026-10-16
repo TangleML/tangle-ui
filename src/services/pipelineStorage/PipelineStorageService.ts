@@ -10,6 +10,10 @@ import { RootFolderDbStorageDriver } from "./drivers/RootFolderDbStorageDriver";
 import { movePipelineAssociationsToRemote } from "./pipelineAssociations";
 import { PipelineFile } from "./PipelineFile";
 import { PipelineFolder } from "./PipelineFolder";
+import {
+  findPipelineMigration,
+  rememberPipelineMigration,
+} from "./pipelineMigrations";
 import { findById, findByStorageKey } from "./pipelineRegistry";
 import {
   type EditorPipelineRef,
@@ -65,14 +69,22 @@ export class PipelineStorageService {
       return remoteFile(await RemotePipelineStorageDriver.open(ref));
     }
 
-    const file = ref.fileId
-      ? await this.findPipelineById(ref.fileId)
-      : await this.resolvePipelineByName(ref.name);
-    if (file) return file;
+    if (ref.fileId) {
+      if (await findById(ref.fileId)) {
+        return this.findPipelineById(ref.fileId);
+      }
+    } else {
+      const file = await this.resolvePipelineByName(ref.name);
+      if (file) return file;
 
-    const legacyDriver = new RootFolderDbStorageDriver();
-    if (await legacyDriver.hasKey(ref.name)) {
-      return this.rootFolder.assignFile(ref.name);
+      const legacyDriver = new RootFolderDbStorageDriver();
+      if (await legacyDriver.hasKey(ref.name)) {
+        return this.rootFolder.assignFile(ref.name);
+      }
+    }
+    const migration = await findPipelineMigration(ref);
+    if (migration) {
+      return this.resolvePipeline(migration.remote);
     }
     throw new Error(`Pipeline "${ref.name}" not found`);
   }
@@ -229,13 +241,32 @@ export class PipelineStorageService {
       typeof pipeline === "string"
         ? await this.resolvePipeline({ name: pipeline })
         : pipeline;
-    const remote = await this.createRemotePipeline(
-      backendUrl,
-      local.storageKey,
-      await local.read(),
-      `pipelines/${local.id}.yaml`,
-    );
+    if (local.remote) {
+      await onCreated?.(local);
+      return local;
+    }
+    const migration = await findPipelineMigration({
+      name: local.storageKey,
+      fileId: local.id,
+    });
+    const remote = migration
+      ? remoteFile(await RemotePipelineStorageDriver.open(migration.remote))
+      : await this.createRemotePipeline(
+          backendUrl,
+          local.storageKey,
+          await local.read(),
+          `pipelines/${local.id}.yaml`,
+        );
     try {
+      await rememberPipelineMigration(
+        local,
+        migration?.remote ?? {
+          source: "remote",
+          backendUrl,
+          pipelineId: remote.id,
+        },
+        remote.storageKey,
+      );
       await onCreated?.(remote);
       await movePipelineAssociationsToRemote(local, remote);
     } catch (cause) {

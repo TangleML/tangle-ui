@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { BlockStack } from "@/components/ui/layout";
 import { Paragraph } from "@/components/ui/typography";
 import { useTourMode } from "@/providers/TourProvider/TourModeContext";
+import { LocalPipelinesQueryKeys } from "@/services/localPipelines/types";
 import {
   createsLocalPipelines,
   getPipelineCreationBackendUrl,
@@ -29,7 +30,7 @@ interface LocalPipelineMigrationProps {
 
 export function LocalPipelineMigration(props: LocalPipelineMigrationProps) {
   const tourMode = useTourMode();
-  if (createsLocalPipelines() || tourMode) return props.children;
+  if (tourMode) return props.children;
   return <MigrateLocalPipeline {...props} />;
 }
 
@@ -50,17 +51,35 @@ function MigrateLocalPipeline({
     queryFn: async () => {
       const local = await storage.resolvePipeline(pipelineRef);
       const driver = local.folder.driver.type;
-      if (driver !== "root-indexdb" && driver !== "folder-indexdb") {
+      if (
+        !local.remote &&
+        (createsLocalPipelines() ||
+          (driver !== "root-indexdb" && driver !== "folder-indexdb"))
+      ) {
         return null;
       }
-      const backendUrl = await getPipelineCreationBackendUrl();
-      const remote = await storage.moveLocalPipelineToRemote(
-        local,
-        backendUrl,
-        projectId
-          ? (file) => moveLocalPipelineResourceToRemote(projectId, local, file)
-          : undefined,
-      );
+      const backendUrl =
+        local.remote?.backendUrl ?? (await getPipelineCreationBackendUrl());
+      const remote = local.remote
+        ? local
+        : await storage.moveLocalPipelineToRemote(
+            local,
+            backendUrl,
+            projectId
+              ? (file) =>
+                  moveLocalPipelineResourceToRemote(projectId, local, file)
+              : undefined,
+          );
+      if (local.remote && projectId) {
+        await moveLocalPipelineResourceToRemote(
+          projectId,
+          { id: pipelineRef.fileId ?? "", storageKey: pipelineRef.name },
+          remote,
+        );
+      }
+      void queryClient.invalidateQueries({
+        queryKey: LocalPipelinesQueryKeys.All(),
+      });
       void queryClient.invalidateQueries({
         queryKey: ["remote-pipelines-page", backendUrl],
       });

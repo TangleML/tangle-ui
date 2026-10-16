@@ -22,6 +22,7 @@ import { Paragraph, Text } from "@/components/ui/typography";
 import { usePagination } from "@/hooks/usePagination";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
+import { LocalPipelinesQueryKeys } from "@/services/localPipelines/types";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import {
   type ComponentFileEntry,
@@ -114,6 +115,12 @@ export const PipelineSection = withSuspenseWrapper(
       onError: (error) => notify(getErrorMessage(error), "error"),
       onSettled: () => {
         void fetchUserPipelines();
+        void queryClient.invalidateQueries({
+          queryKey: LocalPipelinesQueryKeys.All(),
+        });
+        void queryClient.invalidateQueries({
+          queryKey: ["local-pipeline-migration"],
+        });
         void queryClient.invalidateQueries({
           queryKey: ["remote-pipelines-page", backendUrl],
         });

@@ -1,9 +1,16 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { StrictMode } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { useTourMode } from "@/providers/TourProvider/TourModeContext";
+import { LocalPipelinesQueryKeys } from "@/services/localPipelines/types";
 import { getPipelineCreationBackendUrl } from "@/services/pipelineStorage/pipelineCreation";
 import { moveLocalPipelineResourceToRemote } from "@/services/projects/moveLocalPipelineResourceToRemote";
 
@@ -40,7 +47,7 @@ const local = {
 const remote = {
   id: "remote-id",
   storageKey: local.storageKey,
-  folder: local.folder,
+  folder: { driver: { type: "remote-pipeline" } },
   remote: { backendUrl, pipelineId: "remote-id" },
 };
 const pipelineRef = { name: "Old name", fileId: local.id };
@@ -71,10 +78,12 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   client.clear();
+  vi.restoreAllMocks();
   vi.unstubAllEnvs();
 });
 
 it("uploads the resolved file once on open, before enabling edits", async () => {
+  const invalidate = vi.spyOn(client, "invalidateQueries");
   open();
   expect(screen.queryByText("Local editor")).not.toBeInTheDocument();
   await waitFor(() => expect(onMigrated).toHaveBeenCalledWith(remote));
@@ -84,13 +93,58 @@ it("uploads the resolved file once on open, before enabling edits", async () => 
     backendUrl,
     undefined,
   );
+  expect(invalidate).toHaveBeenCalledWith({
+    queryKey: LocalPipelinesQueryKeys.All(),
+  });
 });
 
-it("keeps the local editor when the deployment selects local storage", () => {
+it("keeps the local editor when the deployment selects local storage", async () => {
   vi.stubEnv("VITE_LOCAL_PIPELINES", "true");
   open();
-  expect(screen.getByText("Local editor")).toBeInTheDocument();
-  expect(storage.resolvePipeline).not.toHaveBeenCalled();
+  await screen.findByText("Local editor");
+  expect(storage.moveLocalPipelineToRemote).not.toHaveBeenCalled();
+  expect(getPipelineCreationBackendUrl).not.toHaveBeenCalled();
+});
+
+it.each([undefined, "true"])(
+  "follows one migrated local link from both projects with local storage set to %s",
+  async (localStorage) => {
+    vi.stubEnv("VITE_LOCAL_PIPELINES", localStorage);
+    storage.resolvePipeline.mockResolvedValue(remote);
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    open("first-project");
+    open("second-project");
+    await waitFor(() => expect(onMigrated).toHaveBeenCalledTimes(2));
+    expect(storage.moveLocalPipelineToRemote).not.toHaveBeenCalled();
+    expect(getPipelineCreationBackendUrl).not.toHaveBeenCalled();
+    expect(moveLocalPipelineResourceToRemote).toHaveBeenCalledTimes(2);
+    for (const projectId of ["first-project", "second-project"]) {
+      expect(moveLocalPipelineResourceToRemote).toHaveBeenCalledWith(
+        projectId,
+        { id: pipelineRef.fileId, storageKey: pipelineRef.name },
+        remote,
+      );
+    }
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: LocalPipelinesQueryKeys.All(),
+    });
+  },
+);
+
+it("retries a failed project repair without uploading another pipeline", async () => {
+  storage.resolvePipeline.mockResolvedValue(remote);
+  vi.mocked(moveLocalPipelineResourceToRemote).mockRejectedValueOnce(
+    new Error("Project update failed"),
+  );
+  open("project-id");
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Project update failed",
+  );
+  expect(onMigrated).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+  await waitFor(() => expect(onMigrated).toHaveBeenCalledWith(remote));
+  expect(storage.moveLocalPipelineToRemote).not.toHaveBeenCalled();
+  expect(getPipelineCreationBackendUrl).not.toHaveBeenCalled();
 });
 
 it("does not migrate tour scratch pipelines", () => {
