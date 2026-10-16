@@ -86,7 +86,7 @@ export function StartSessionToolbar({
       {workspaceChoice.offersChoice && (
         <WorkspaceSelect
           choice={workspaceChoice}
-          ariaLabel="Workspace"
+          aria-label="Workspace"
           placeholder="Workspace"
           disabled={disabled}
           className="h-8 w-auto max-w-48 text-xs"

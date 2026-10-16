@@ -15,8 +15,8 @@ import type { WorkspaceChoice } from "@/services/projects/useWorkspaceChoice";
 interface WorkspaceSelectProps {
   choice: WorkspaceChoice;
   id?: string;
-  ariaLabel?: string;
-  ariaDescribedBy?: string;
+  "aria-label"?: string;
+  "aria-describedby"?: string;
   placeholder?: string;
   disabled?: boolean;
   className?: string;
@@ -25,8 +25,8 @@ interface WorkspaceSelectProps {
 export function WorkspaceSelect({
   choice,
   id,
-  ariaLabel,
-  ariaDescribedBy,
+  "aria-label": ariaLabel,
+  "aria-describedby": ariaDescribedBy,
   placeholder,
   disabled,
   className,
@@ -58,10 +58,9 @@ export function WorkspaceSelect({
 
 interface WorkspaceFieldProps {
   choice: WorkspaceChoice;
-  disabled?: boolean;
 }
 
-export function WorkspaceField({ choice, disabled }: WorkspaceFieldProps) {
+export function WorkspaceField({ choice }: WorkspaceFieldProps) {
   const id = useId();
   const hintId = `${id}-hint`;
 
@@ -71,8 +70,7 @@ export function WorkspaceField({ choice, disabled }: WorkspaceFieldProps) {
       <WorkspaceSelect
         choice={choice}
         id={id}
-        ariaDescribedBy={hintId}
-        disabled={disabled}
+        aria-describedby={hintId}
         className="w-full"
       />
       <Text id={hintId} size="xs" tone="subdued">
