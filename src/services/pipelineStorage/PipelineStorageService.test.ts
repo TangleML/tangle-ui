@@ -2,9 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { client } from "@/api/client.gen";
 import { getCurrentUserApiUsersMeGet } from "@/api/sdk.gen";
+import type { SavedPipelineDocument } from "@/services/pipelineSpecService";
 import { componentSpecFromYaml, componentSpecToYaml } from "@/utils/yaml";
 
 import { RootFolderDbStorageDriver } from "./drivers/RootFolderDbStorageDriver";
+import { PipelineFile } from "./PipelineFile";
 import { emitPipelineFileChanged } from "./pipelineFileEvents";
 import * as registry from "./pipelineRegistry";
 import { PipelineStorageService } from "./PipelineStorageService";
@@ -65,6 +67,50 @@ beforeEach(() => {
 });
 
 describe("PipelineStorageService editor resolution", () => {
+  it("uploads, reopens, and edits pipeline input values using backend task arguments", async () => {
+    const editorSpec = {
+      ...spec,
+      inputs: [{ name: "name", type: "String", value: "", optional: false }],
+    };
+    let saved: SavedPipelineDocument = structuredClone(document);
+    vi.mocked(client.put).mockImplementation(async (options) => {
+      const body = options?.body as Pick<
+        SavedPipelineDocument,
+        "root_pipeline_task" | "pipeline_run_annotations"
+      >;
+      expect(body.root_pipeline_task.componentRef.spec.inputs).toEqual([
+        { name: "name", type: "String", optional: false },
+      ]);
+      saved = {
+        ...saved,
+        file_path: String(options?.query?.file_path),
+        ...body,
+      };
+      return response(saved);
+    });
+    const file = await storage.createRemotePipeline(
+      ref.backendUrl,
+      "Original",
+      componentSpecToYaml(editorSpec),
+    );
+    expect(saved.root_pipeline_task.arguments).toEqual({ name: "" });
+    expect(componentSpecFromYaml(await file.read())).toEqual(editorSpec);
+
+    vi.mocked(client.get).mockImplementation(async () => response(saved));
+    const reopened = await storage.resolvePipeline(ref);
+    const loaded = componentSpecFromYaml(await reopened.read());
+    expect(loaded).toEqual(editorSpec);
+    loaded.inputs![0].value = "Ada";
+    await reopened.write(componentSpecToYaml(loaded));
+    expect(saved.root_pipeline_task.arguments).toEqual({ name: "Ada" });
+    expect(componentSpecFromYaml(await reopened.read())).toEqual(loaded);
+
+    delete loaded.inputs![0].value;
+    await reopened.write(componentSpecToYaml(loaded));
+    expect(saved.root_pipeline_task.arguments).toEqual({});
+    expect(componentSpecFromYaml(await reopened.read())).toEqual(loaded);
+  });
+
   it("reads and edits the owned remote document without touching the local registry", async () => {
     const file = await storage.resolvePipeline(ref);
     expect(client.get).toHaveBeenCalledExactlyOnceWith({
@@ -327,5 +373,78 @@ describe("PipelineStorageService editor resolution", () => {
       file,
     );
     expect(storage.rootFolder.assignFile).toHaveBeenCalledWith("Legacy");
+  });
+});
+
+describe("moving local pipelines to remote storage", () => {
+  let local: PipelineFile;
+
+  beforeEach(() => {
+    local = new PipelineFile({
+      id: "local-id",
+      storageKey: "Original",
+      folder: storage.rootFolder,
+    });
+    vi.spyOn(storage, "resolvePipeline").mockResolvedValue(local);
+    vi.spyOn(local, "read").mockResolvedValue(content);
+    vi.spyOn(local, "deleteFile").mockResolvedValue();
+    vi.mocked(client.put).mockImplementation(async (options) =>
+      response({
+        ...document,
+        file_path: String(options?.query?.file_path),
+        ...(options?.body as Partial<typeof document>),
+      }),
+    );
+  });
+
+  it("waits for remote creation before removing the local pipeline", async () => {
+    let finishSave = () => {};
+    const pending = new Promise<void>((resolve) => {
+      finishSave = resolve;
+    });
+    const save = vi.mocked(client.put).getMockImplementation()!;
+    vi.mocked(client.put).mockImplementation(async (...args) => {
+      await pending;
+      return save(...args);
+    });
+    const moving = storage.moveLocalPipelineToRemote(
+      "Original",
+      ref.backendUrl,
+    );
+    await vi.waitFor(() => expect(client.put).toHaveBeenCalledTimes(1));
+    expect(local.deleteFile).not.toHaveBeenCalled();
+    finishSave();
+    const remote = await moving;
+    expect(storage.resolvePipeline).toHaveBeenCalledWith({ name: "Original" });
+    expect(componentSpecFromYaml(await remote.read())).toEqual({
+      ...editedSpec,
+      name: "Original",
+    });
+    expect(local.deleteFile).toHaveBeenCalledExactlyOnceWith();
+  });
+
+  it.each(["read", "save"])(
+    "keeps the local pipeline when %s fails",
+    async (step) => {
+      const error = new Error("Unavailable");
+      if (step === "read") vi.mocked(local.read).mockRejectedValue(error);
+      else vi.mocked(client.put).mockRejectedValue(error);
+      await expect(
+        storage.moveLocalPipelineToRemote("Original", ref.backendUrl),
+      ).rejects.toThrow("Unavailable");
+      expect(local.deleteFile).not.toHaveBeenCalled();
+    },
+  );
+
+  it("reports that the remote copy exists if local removal fails", async () => {
+    vi.mocked(local.deleteFile).mockRejectedValue(
+      new Error("Storage unavailable"),
+    );
+    await expect(
+      storage.moveLocalPipelineToRemote("Original", ref.backendUrl),
+    ).rejects.toThrow(
+      "Pipeline was saved remotely, but the local copy could not be removed.",
+    );
+    expect(client.put).toHaveBeenCalledTimes(1);
   });
 });
