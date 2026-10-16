@@ -18,6 +18,7 @@ test.describe("Navigation tracking", () => {
     await expect(
       page.locator("[data-testid='app-menu-actions']"),
     ).toBeVisible();
+    await expect(page).toHaveURL(/\/(welcome|dashboard)$/);
 
     await page.getByRole("link", { name: "Settings" }).click();
     await expect(page).toHaveURL(/\/settings/);
