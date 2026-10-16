@@ -20,13 +20,15 @@ export type TangentSessionParam =
 export function readTangentSessionParam(
   search: unknown,
 ): TangentSessionParam | undefined {
-  if (typeof search !== "object" || search === null) {
+  if (
+    typeof search !== "object" ||
+    search === null ||
+    !(TANGENT_SESSION_SEARCH_PARAM in search)
+  ) {
     return undefined;
   }
 
-  const value = (search as Record<string, unknown>)[
-    TANGENT_SESSION_SEARCH_PARAM
-  ];
+  const value = search[TANGENT_SESSION_SEARCH_PARAM];
 
   const sessionId =
     typeof value === "string"
@@ -46,11 +48,15 @@ export function readTangentSessionParam(
 export function readTangentOpenParam(
   search: unknown,
 ): WorkareaTarget | undefined {
-  if (typeof search !== "object" || search === null) {
+  if (
+    typeof search !== "object" ||
+    search === null ||
+    !(TANGENT_OPEN_SEARCH_PARAM in search)
+  ) {
     return undefined;
   }
 
-  const value = (search as Record<string, unknown>)[TANGENT_OPEN_SEARCH_PARAM];
+  const value = search[TANGENT_OPEN_SEARCH_PARAM];
   return typeof value === "string" && isWorkareaTargetString(value)
     ? parseWorkareaTarget(value)
     : undefined;
@@ -61,6 +67,14 @@ export function withoutTangentArrivalSearch(
 ): Record<string, unknown> {
   const next = { ...search };
   delete next[TANGENT_SESSION_SEARCH_PARAM];
+  delete next[TANGENT_OPEN_SEARCH_PARAM];
+  return next;
+}
+
+export function withoutTangentOpenSearch(
+  search: Record<string, unknown>,
+): Record<string, unknown> {
+  const next = { ...search };
   delete next[TANGENT_OPEN_SEARCH_PARAM];
   return next;
 }
