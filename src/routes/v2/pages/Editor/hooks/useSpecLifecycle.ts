@@ -34,8 +34,7 @@ export function useSpecLifecycle(
     if (!isRootStore(rootSpec)) registerRootStore(rootSpec);
     editor.resetState();
     navigation.initNavigation(rootSpec);
-    if (file.remote) undo.dispose();
-    else undo.init(rootSpec, restoredUndoStore);
+    undo.init(rootSpec, restoredUndoStore);
 
     pipelineFileStore.init(file);
     autoSave.init(rootSpec, file);

@@ -12,10 +12,16 @@ const loadUndoHistory = vi.hoisted(() => vi.fn().mockResolvedValue(null));
 vi.mock("@/services/pipelineStorage/PipelineStorageProvider", () => ({
   usePipelineStorage: () => ({ resolvePipeline }),
 }));
-vi.mock("@/routes/v2/pages/Editor/utils/undoHistoryStorage", () => ({
-  loadUndoHistory,
-  createUndoStoreWithEvents: vi.fn(),
-}));
+vi.mock(
+  "@/routes/v2/pages/Editor/utils/undoHistoryStorage",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("@/routes/v2/pages/Editor/utils/undoHistoryStorage")
+    >()),
+    loadUndoHistory,
+    createUndoStoreWithEvents: vi.fn(),
+  }),
+);
 vi.mock("@/routes/v2/pages/Editor/utils/hydrateSpecRefs", () => ({
   hydrateLoadedSpecRefs: vi.fn(),
 }));
@@ -26,8 +32,12 @@ const remote = {
   backendUrl: "https://backend.example.com",
   pipelineId: "pipeline-1",
 } as const;
-const file = (name: string) => ({
+const file = (
+  name: string,
+  ref?: { backendUrl: string; pipelineId: string },
+) => ({
   storageKey: name,
+  remote: ref,
   read: async () => `name: ${name}\nimplementation:\n  graph:\n    tasks: {}\n`,
 });
 
@@ -59,24 +69,27 @@ afterEach(() => {
 
 describe("useLoadSpec", () => {
   it("keeps nested StrictMode observers stable, then reloads a closed remote document", async () => {
-    resolvePipeline.mockResolvedValue(file("Before"));
+    resolvePipeline.mockResolvedValue(file("Before", remote));
     const first = render(view(remote));
     await screen.findByText("Before");
     expect(resolvePipeline).toHaveBeenCalledExactlyOnceWith(remote);
-    expect(loadUndoHistory).not.toHaveBeenCalled();
+    expect(loadUndoHistory).toHaveBeenCalledExactlyOnceWith(
+      JSON.stringify(["remote-pipeline", remote.backendUrl, remote.pipelineId]),
+      expect.stringContaining("Before"),
+    );
     await act(async () => first.unmount());
-    resolvePipeline.mockResolvedValue(file("After"));
+    resolvePipeline.mockResolvedValue(file("After", remote));
     render(view(remote));
     await screen.findByText("After");
     expect(resolvePipeline).toHaveBeenCalledTimes(2);
   });
 
   it("loads the same ID separately for each backend", async () => {
-    resolvePipeline.mockResolvedValue(file("First backend"));
+    resolvePipeline.mockResolvedValue(file("First backend", remote));
     const { rerender } = render(view(remote));
     await screen.findByText("First backend");
     const other = { ...remote, backendUrl: "https://other.example.com" };
-    resolvePipeline.mockResolvedValue(file("Second backend"));
+    resolvePipeline.mockResolvedValue(file("Second backend", other));
     rerender(view(other));
     await screen.findByText("Second backend");
     expect(resolvePipeline).toHaveBeenLastCalledWith(other);
@@ -88,6 +101,9 @@ describe("useLoadSpec", () => {
     render(view(ref));
     await screen.findByText("Current name");
     expect(resolvePipeline).toHaveBeenCalledExactlyOnceWith(ref);
-    expect(loadUndoHistory).toHaveBeenCalledExactlyOnceWith("Current name");
+    expect(loadUndoHistory).toHaveBeenCalledExactlyOnceWith(
+      "Current name",
+      undefined,
+    );
   });
 });
