@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
+import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 
 import { DashboardProjectsView } from "./DashboardProjectsView";
 
@@ -33,11 +34,25 @@ vi.mock("@/components/Home/ProjectsSection/StartSessionPrompt", () => ({
   StartSessionPrompt: () => <input aria-label="Start a new session" />,
 }));
 
+vi.mock("@/hooks/useAiProviderSettings", () => ({
+  useAiProviderSettings: vi.fn(),
+}));
+
 function mockFlags(flags: Record<string, boolean>) {
   vi.mocked(useFlagValue).mockImplementation((flag) => flags[flag] ?? false);
 }
 
+function mockAiConfigured(isConfigured: boolean) {
+  vi.mocked(useAiProviderSettings).mockReturnValue({
+    isConfigured,
+  } as unknown as ReturnType<typeof useAiProviderSettings>);
+}
+
 describe("DashboardProjectsView", () => {
+  beforeEach(() => {
+    mockAiConfigured(true);
+  });
+
   afterEach(() => {
     vi.resetAllMocks();
   });
@@ -80,6 +95,17 @@ describe("DashboardProjectsView", () => {
       expect(screen.getByTestId("projects-section")).toHaveAttribute(
         "data-workspace-notices",
         "false",
+      );
+    });
+
+    it("keeps the workspace notices while the prompt box asks for an AI provider", () => {
+      mockAiConfigured(false);
+
+      render(<DashboardProjectsView />);
+
+      expect(screen.getByTestId("projects-section")).toHaveAttribute(
+        "data-workspace-notices",
+        "true",
       );
     });
   });
