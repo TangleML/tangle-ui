@@ -16,6 +16,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { format } from "date-fns";
 import { createContext, type ReactNode, useContext } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -218,6 +219,85 @@ describe("DashboardPipelinesView remote pipelines", () => {
 
     await user.click(screen.getByRole("tab", { name: "Local Pipelines" }));
     expect(screen.getByText("Local pipeline list")).toBeInTheDocument();
+  });
+
+  it("keeps filter edits local without changing rows, pagination, or requests", async () => {
+    vi.mocked(listRemotePipelines).mockImplementation(async (_, pageToken) =>
+      pageToken
+        ? createPage(11, 10, 20, null)
+        : createPage(1, 10, 20, "page-two"),
+    );
+    const { user, searchParams } = await renderDashboard(
+      `${APP_ROUTES.DASHBOARD_PIPELINES}?tab=remote&page=2&panel=compact`,
+    );
+    await screen.findByText("Pipeline 11");
+    const table = screen.getByRole("table", { name: "Remote Pipelines" });
+    const initialRows = table.textContent;
+    const initialSearch = searchParams().toString();
+    const initialRequests = vi.mocked(listRemotePipelines).mock.calls.slice();
+    const filters = within(screen.getByLabelText("Remote pipeline filters"));
+    const nameInput = filters.getByRole("textbox", { name: "Search by name" });
+    const idInput = filters.getByRole("textbox", { name: "Search by ID" });
+    const userInput = filters.getByRole("textbox", { name: "Search by user" });
+
+    await user.type(nameInput, "Different pipeline");
+    await user.type(idInput, "pipeline-999");
+    await user.type(userInput, "another@example.com");
+    await user.click(
+      filters.getByRole("button", { name: "Clear user filter" }),
+    );
+    await user.click(filters.getByRole("button", { name: "Me" }));
+    expect(userInput).toHaveValue("me");
+
+    const today = new Date();
+    for (const { field, day } of [
+      { field: "Created at", day: 10 },
+      { field: "Updated at", day: 20 },
+    ]) {
+      const group = filters.getByRole("group", { name: field });
+      const from = new Date(today.getFullYear(), today.getMonth() - 1, day);
+      const to = new Date(today.getFullYear(), today.getMonth() - 1, day + 2);
+      await user.click(within(group).getByRole("button"));
+      const calendar = within(screen.getByRole("dialog"));
+      await user.click(
+        calendar.getByRole("button", { name: "Go to the Previous Month" }),
+      );
+      await user.click(
+        calendar.getByRole("button", { name: format(from, "PPPP") }),
+      );
+      await user.click(
+        calendar.getByRole("button", { name: format(to, "PPPP") }),
+      );
+      await user.keyboard("{Escape}");
+      expect(within(group).getByRole("button")).toHaveTextContent(
+        `${format(from, "MMM d, yyyy")} – ${format(to, "MMM d, yyyy")}`,
+      );
+    }
+
+    const expectUnchangedResults = () => {
+      expect(table.textContent).toBe(initialRows);
+      expect(screen.getByText("Page 2 of 2")).toBeInTheDocument();
+      expect(searchParams().toString()).toBe(initialSearch);
+      expect(vi.mocked(listRemotePipelines).mock.calls).toEqual(
+        initialRequests,
+      );
+    };
+    expectUnchangedResults();
+
+    await user.click(
+      filters.getByRole("button", { name: "Clear all filters" }),
+    );
+
+    expect(nameInput).toHaveValue("");
+    expect(idInput).toHaveValue("");
+    expect(userInput).toHaveValue("");
+    expect(
+      filters.getByRole("button", { name: "Created at" }),
+    ).toBeInTheDocument();
+    expect(
+      filters.getByRole("button", { name: "Updated at" }),
+    ).toBeInTheDocument();
+    expectUnchangedResults();
   });
 
   it("shows a loading message while the request is pending", async () => {
