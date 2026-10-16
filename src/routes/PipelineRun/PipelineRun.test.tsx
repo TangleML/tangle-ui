@@ -8,6 +8,7 @@ import type {
   GetGraphExecutionStateResponse,
 } from "@/api/types.gen";
 import { ComponentSpecProvider } from "@/providers/ComponentSpecProvider";
+import { PipelineStorageProvider } from "@/services/pipelineStorage/PipelineStorageProvider";
 
 import PipelineRun from "./PipelineRun";
 
@@ -226,9 +227,11 @@ describe("<PipelineRun/>", () => {
     // act
     const { getByText } = render(
       <QueryClientProvider client={queryClient}>
-        <ComponentSpecProvider spec={undefined}>
-          <PipelineRun />
-        </ComponentSpecProvider>
+        <PipelineStorageProvider>
+          <ComponentSpecProvider spec={undefined}>
+            <PipelineRun />
+          </ComponentSpecProvider>
+        </PipelineStorageProvider>
       </QueryClientProvider>,
     );
 

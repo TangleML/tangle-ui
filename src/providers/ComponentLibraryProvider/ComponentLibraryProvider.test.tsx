@@ -4,6 +4,7 @@ import * as yaml from "js-yaml";
 import { type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { PipelineStorageProvider } from "@/services/pipelineStorage/PipelineStorageProvider";
 import type {
   ComponentFolder,
   ComponentLibrary,
@@ -137,9 +138,11 @@ describe("ComponentLibraryProvider - Component Management", () => {
 
     return (
       <QueryClientProvider client={queryClient}>
-        <ComponentSpecProvider spec={mockComponentSpec}>
-          <ComponentLibraryProvider>{children}</ComponentLibraryProvider>
-        </ComponentSpecProvider>
+        <PipelineStorageProvider>
+          <ComponentSpecProvider spec={mockComponentSpec}>
+            <ComponentLibraryProvider>{children}</ComponentLibraryProvider>
+          </ComponentSpecProvider>
+        </PipelineStorageProvider>
       </QueryClientProvider>
     );
   };

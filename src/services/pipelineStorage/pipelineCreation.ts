@@ -4,11 +4,8 @@ import {
   getUserBackendUrl,
   getUseRelativePath,
 } from "@/utils/localforage";
-import { emitUserPipelineWritten } from "@/utils/userPipelineWriteEvents";
 
-import { RemotePipelineStorageDriver } from "./drivers/RemotePipelineStorageDriver";
 import type { PipelineStorageService } from "./PipelineStorageService";
-import type { RemotePipelineRef } from "./types";
 
 export const createsLocalPipelines = () =>
   import.meta.env.VITE_LOCAL_PIPELINES === "true";
@@ -47,18 +44,4 @@ export async function createPipelineFromContent(
         name,
         content,
       );
-}
-
-export async function saveNewRemotePipeline(
-  name: string,
-  content: string,
-): Promise<RemotePipelineRef> {
-  const backendUrl = await getPipelineCreationBackendUrl();
-  const driver = await RemotePipelineStorageDriver.create(
-    backendUrl,
-    name,
-    content,
-  );
-  emitUserPipelineWritten();
-  return { source: "remote", backendUrl, pipelineId: driver.pipelineId };
 }

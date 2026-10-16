@@ -7,6 +7,7 @@ import {
   getRemotePipelineWriter,
   writeRemotePipelineDocument,
 } from "@/services/remotePipelineEditorService";
+import type { ComponentSpec } from "@/utils/componentSpec";
 import { componentSpecFromYaml, componentSpecToYaml } from "@/utils/yaml";
 
 import {
@@ -21,7 +22,7 @@ import {
 } from "../types";
 
 // Writes survive editor navigation; reopening waits for the last write to this ID.
-const pendingWrites = new Map<string, Promise<void>>();
+const pendingWrites = new Map<string, Promise<SavedPipelineDocument>>();
 
 /** One editor document, bound to its backend and stable server identity. */
 export class RemotePipelineStorageDriver implements PipelineStorageDriver {
@@ -56,7 +57,7 @@ export class RemotePipelineStorageDriver implements PipelineStorageDriver {
   ): Promise<RemotePipelineStorageDriver> {
     const key = getEditorPipelineIdentity(ref);
     while (pendingWrites.has(key)) {
-      await pendingWrites.get(key)?.catch(() => {});
+      await pendingWrites.get(key);
     }
     const [document, userId] = await Promise.all([
       getPipelineDocument(ref.pipelineId, ref.backendUrl),
@@ -103,37 +104,16 @@ export class RemotePipelineStorageDriver implements PipelineStorageDriver {
 
   async write(_storageKey: string, content: string): Promise<void> {
     const spec = componentSpecFromYaml(content);
-    const key = getEditorPipelineIdentity({ source: "remote", ...this });
-    const write = (pendingWrites.get(key) ?? Promise.resolve())
-      .catch(() => {})
-      .then(async () => {
-        await this.assertCurrentOwner();
-        const document = await writeRemotePipelineDocument(
-          this.backendUrl,
-          this.filePath,
-          {
-            root_pipeline_task: remotePipelineTaskFromSpec(
-              spec,
-              this.document.root_pipeline_task,
-            ),
-            pipeline_run_annotations: this.document.pipeline_run_annotations,
-          },
-        );
-        this.assertSameDocument(document);
-        this.document = document;
-      });
-    pendingWrites.set(key, write);
-    try {
-      await write;
-    } finally {
-      if (pendingWrites.get(key) === write) pendingWrites.delete(key);
-    }
+    await this.updateSpec(() => spec);
   }
 
   async rename(_oldStorageKey: string, newStorageKey: string): Promise<void> {
-    await this.assertCurrentOwner();
-    // The shared editor rename updates spec.name and persists through autosave.
-    // The server file path remains the stable owner/path identity.
+    await this.updateSpec((document) => {
+      const spec = editorSpecFromRemoteTask(document.root_pipeline_task);
+      return spec.name === newStorageKey
+        ? undefined
+        : { ...spec, name: newStorageKey };
+    });
     this.displayName = newStorageKey;
   }
 
@@ -145,6 +125,41 @@ export class RemotePipelineStorageDriver implements PipelineStorageDriver {
 
   async hasKey(storageKey: string): Promise<boolean> {
     return storageKey === this.displayName;
+  }
+
+  private async updateSpec(
+    getSpec: (document: SavedPipelineDocument) => ComponentSpec | undefined,
+  ): Promise<void> {
+    const key = getEditorPipelineIdentity({ source: "remote", ...this });
+    const write = (
+      pendingWrites.get(key) ?? Promise.resolve(this.document)
+    ).then(async (current) => {
+      this.document = current;
+      await this.assertCurrentOwner();
+      const spec = getSpec(current);
+      if (!spec) return current;
+      const document = await writeRemotePipelineDocument(
+        this.backendUrl,
+        this.filePath,
+        {
+          root_pipeline_task: remotePipelineTaskFromSpec(
+            spec,
+            this.document.root_pipeline_task,
+          ),
+          pipeline_run_annotations: this.document.pipeline_run_annotations,
+        },
+      );
+      this.assertSameDocument(document);
+      this.document = document;
+      return document;
+    });
+    const settled = write.catch(() => this.document);
+    pendingWrites.set(key, settled);
+    try {
+      await write;
+    } finally {
+      if (pendingWrites.get(key) === settled) pendingWrites.delete(key);
+    }
   }
 
   private async assertCurrentOwner(): Promise<void> {

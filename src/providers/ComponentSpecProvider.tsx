@@ -10,12 +10,13 @@ import {
 
 import { type UndoRedo, useUndoRedo } from "@/hooks/useUndoRedo";
 import { loadPipelineByName } from "@/services/pipelineService";
-import { RemotePipelineDraftStorageDriver } from "@/services/pipelineStorage/drivers/RemotePipelineDraftStorageDriver";
 import {
   createsLocalPipelines,
   getPipelineCreationBackendUrl,
 } from "@/services/pipelineStorage/pipelineCreation";
+import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import { emitPipelineFileChanged } from "@/services/pipelineStorage/pipelineFileEvents";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import type { RemotePipelineRef } from "@/services/pipelineStorage/types";
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 import { prepareComponentRefForEditor } from "@/utils/prepareComponentRefForEditor";
@@ -23,7 +24,6 @@ import {
   getSubgraphComponentSpec,
   updateSubgraphSpec,
 } from "@/utils/subgraphUtils";
-import { emitUserPipelineWritten } from "@/utils/userPipelineWriteEvents";
 import {
   checkComponentSpecValidity,
   collectComponentValidationIssues,
@@ -45,7 +45,6 @@ import {
   type ComponentReferenceWithSpec,
   generateDigest,
   getComponentFileFromList,
-  writeComponentToFileListFromText,
 } from "../utils/componentStore";
 
 const EMPTY_GRAPH_SPEC: GraphSpec = {
@@ -95,13 +94,14 @@ export const ComponentSpecProvider = ({
   readOnly?: boolean;
   children: ReactNode;
 }) => {
+  const storage = usePipelineStorage();
   const [componentSpec, setComponentSpec] = useState<ComponentSpec>(
     spec ?? EMPTY_GRAPH_COMPONENT_SPEC,
   );
   const [digest, setDigest] = useState<string>("");
   const remoteSave = useRef<{
     sourceName?: string;
-    driver: Promise<RemotePipelineDraftStorageDriver>;
+    file: Promise<PipelineFile>;
   } | null>(null);
 
   const [isLoading, setIsLoading] = useState(!!spec);
@@ -238,34 +238,31 @@ export const ComponentSpecProvider = ({
         ) {
           remoteSave.current = {
             sourceName: componentSpec.name,
-            driver: getPipelineCreationBackendUrl().then(
-              (backendUrl) =>
-                new RemotePipelineDraftStorageDriver({
-                  source: "draft",
-                  backendUrl,
-                  name,
-                  draftId: crypto.randomUUID(),
-                }),
+            file: getPipelineCreationBackendUrl().then((backendUrl) =>
+              storage.createRemoteDraft({
+                source: "draft",
+                backendUrl,
+                name,
+                draftId: crypto.randomUUID(),
+              }),
             ),
           };
         }
         const saving = remoteSave.current;
-        const driver = await saving.driver.catch((error) => {
+        const file = await saving.file.catch((error) => {
           if (remoteSave.current === saving) remoteSave.current = null;
           throw error;
         });
-        await driver.write(name, componentText);
-        emitUserPipelineWritten();
-        return driver.remoteRef;
+        await file.write(componentText);
+        return file.remote && { source: "remote" as const, ...file.remote };
       }
-      await writeComponentToFileListFromText(
-        USER_PIPELINES_LIST_NAME,
-        name,
-        componentText,
-      );
+      const file =
+        (await storage.resolvePipelineByName(name)) ??
+        (await storage.rootFolder.assignFile(name));
+      await file.write(componentText);
       emitPipelineFileChanged({ storageKey: name, source: "v1" });
     },
-    [componentSpec, readOnly],
+    [componentSpec, readOnly, storage],
   );
 
   const updateGraphSpec = useCallback(

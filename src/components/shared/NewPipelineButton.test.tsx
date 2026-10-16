@@ -33,8 +33,8 @@ vi.mock("@/providers/BackendProvider", () => ({
 vi.mock("@/hooks/useToastNotification", () => ({
   default: () => state.notify,
 }));
-vi.mock("@/utils/componentStore", () => ({
-  writeComponentToFileListFromText: state.write,
+vi.mock("@/services/pipelineStorage/PipelineStorageProvider", () => ({
+  usePipelineStorage: () => ({ rootFolder: { addFile: state.write } }),
 }));
 vi.mock("random-words", () => ({ generate: () => ["New", "pipeline"] }));
 
