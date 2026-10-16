@@ -44,7 +44,9 @@ export const EditorMenuBar = observer(function EditorMenuBar() {
 
   const activePipeline = pipelineFile.activePipelineFile;
   const displayMenu = Boolean(activePipeline);
-  const isRemote = Boolean(activePipeline?.remote);
+  const isRemote = Boolean(
+    activePipeline?.remote || activePipeline?.draftBackendUrl,
+  );
   const [renameOpen, setRenameOpen] = useState(false);
 
   const handleExitTour = () => {
@@ -104,6 +106,11 @@ export const EditorMenuBar = observer(function EditorMenuBar() {
                 {tourMode && (
                   <Badge size="sm" variant="default" className="shrink-0">
                     Tour
+                  </Badge>
+                )}
+                {activePipeline?.isDraft && (
+                  <Badge size="sm" variant="default" className="shrink-0">
+                    Draft
                   </Badge>
                 )}
                 {!tourMode && (

@@ -8,9 +8,11 @@ import type { EditorPipelineRef } from "@/services/pipelineStorage/types";
 import { useLoadSpec } from "./useLoadSpec";
 
 const resolvePipeline = vi.hoisted(() => vi.fn());
+const discardRemoteDraft = vi.hoisted(() => vi.fn());
+const storage = { resolvePipeline, discardRemoteDraft };
 const loadUndoHistory = vi.hoisted(() => vi.fn().mockResolvedValue(null));
 vi.mock("@/services/pipelineStorage/PipelineStorageProvider", () => ({
-  usePipelineStorage: () => ({ resolvePipeline }),
+  usePipelineStorage: () => storage,
 }));
 vi.mock(
   "@/routes/v2/pages/Editor/utils/undoHistoryStorage",
@@ -68,6 +70,21 @@ afterEach(() => {
 });
 
 describe("useLoadSpec", () => {
+  it("keeps an open StrictMode draft in memory and discards it on close", async () => {
+    const draft = {
+      source: "draft",
+      backendUrl: remote.backendUrl,
+      draftId: "draft-1",
+      name: "Untouched",
+    } as const;
+    resolvePipeline.mockResolvedValue({ ...file(draft.name), isDraft: true });
+    const opened = render(view(draft));
+    await screen.findByText(draft.name);
+    expect(loadUndoHistory).not.toHaveBeenCalled();
+    expect(discardRemoteDraft).not.toHaveBeenCalled();
+    await act(async () => opened.unmount());
+    expect(discardRemoteDraft).toHaveBeenCalledWith(draft);
+  });
   it("keeps nested StrictMode observers stable, then reloads a closed remote document", async () => {
     resolvePipeline.mockResolvedValue(file("Before", remote));
     const first = render(view(remote));

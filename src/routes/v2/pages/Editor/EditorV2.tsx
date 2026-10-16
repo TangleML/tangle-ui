@@ -1,7 +1,7 @@
 import "@xyflow/react/dist/style.css";
 import "@/styles/editor.css";
 
-import { useParams, useSearch } from "@tanstack/react-router";
+import { useRouterState } from "@tanstack/react-router";
 import { ReactFlowProvider } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
 import { type ReactNode, useEffect } from "react";
@@ -42,8 +42,10 @@ import {
 import {
   type EditorPipelineRef,
   getEditorPipelineIdentity,
+  isRemotePipelineDraftRef,
   isRemotePipelineRef,
   type PipelineRef,
+  type RemotePipelineDraftRef,
   type RemotePipelineRef,
 } from "@/services/pipelineStorage/types";
 
@@ -66,6 +68,7 @@ import { usePipelineDetailsWindow } from "./hooks/usePipelineDetailsWindow";
 import { usePipelineTreeWindow } from "./hooks/usePipelineTreeWindow";
 import { usePropertiesWindowPositioning } from "./hooks/usePropertiesWindowPositioning";
 import { useRecentRunsWindow } from "./hooks/useRecentRunsWindow";
+import { useRemoteDraftPromotion } from "./hooks/useRemoteDraftPromotion";
 import { useRunsAndSubmissionWindow } from "./hooks/useRunsAndSubmissionWindow";
 import { useSeedInitialDockLayoutFromPreset } from "./hooks/useSeedInitialDockLayoutFromPreset";
 import { useSelectionWindowSync } from "./hooks/useSelectionWindowSync";
@@ -94,6 +97,7 @@ const PipelineEditor = withSuspenseWrapper(
     useWindowPersistence(tourMode ? TOUR_WINDOW_LAYOUT_ID : "editor");
     useDockAreaAccordion();
     useSpecLifecycle(rootSpec, file, restoredUndoStore);
+    useRemoteDraftPromotion(pipelineRef, rootSpec, file);
     useSelectionWindowSync();
     usePropertiesWindowPositioning();
     useLinkedWindowCleanup();
@@ -173,7 +177,11 @@ function EditorV2Content({
   const tourMode = useTourMode();
 
   const requestedName =
-    pipelineRef && !isRemotePipelineRef(pipelineRef) ? pipelineRef.name : null;
+    pipelineRef &&
+    !isRemotePipelineRef(pipelineRef) &&
+    !isRemotePipelineDraftRef(pipelineRef)
+      ? pipelineRef.name
+      : null;
   useEffect(() => {
     navigation.setRequestedPipelineName(requestedName);
   }, [navigation, requestedName]);
@@ -182,10 +190,7 @@ function EditorV2Content({
   if (pipelineRef) {
     body = (
       <DriverPermissionGate pipelineRef={pipelineRef}>
-        <PipelineEditor
-          key={getEditorPipelineIdentity(pipelineRef)}
-          pipelineRef={pipelineRef}
-        />
+        <PipelineEditor pipelineRef={pipelineRef} />
       </DriverPermissionGate>
     );
   } else if (tourMode) {
@@ -212,12 +217,16 @@ function EditorV2Content({
 }
 
 const RemotePipelineDocumentView = withSuspenseWrapper(
-  ({ pipelineRef }: { pipelineRef: RemotePipelineRef }) => {
+  ({
+    pipelineRef,
+  }: {
+    pipelineRef: RemotePipelineRef | RemotePipelineDraftRef;
+  }) => {
     const {
       data: { spec, file },
     } = useLoadSpec(pipelineRef);
     return file.folder.driver.canEdit === true ? (
-      <EditorV2Document pipelineRef={pipelineRef} />
+      <EditorV2Document key={file.initialId} pipelineRef={pipelineRef} />
     ) : (
       <RemotePipelineView spec={spec} />
     );
@@ -233,9 +242,16 @@ const RemotePipelineDocumentView = withSuspenseWrapper(
       </Button>
     </BlockStack>
   ),
+  ({ pipelineRef }) => [getEditorPipelineIdentity(pipelineRef)],
 );
 
-function RemotePipelineEditor({ pipelineId }: { pipelineId: string }) {
+function RemotePipelineEditor({
+  pipeline,
+}: {
+  pipeline:
+    | { source: "remote"; pipelineId: string }
+    | { source: "draft"; name: string; draftId: string };
+}) {
   const { backendUrl, ready, configured } = useBackend();
   if (!ready) return <PipelineEditorSkeleton />;
   if (!configured) {
@@ -246,30 +262,31 @@ function RemotePipelineEditor({ pipelineId }: { pipelineId: string }) {
       </BlockStack>
     );
   }
-  const pipelineRef: RemotePipelineRef = {
-    source: "remote",
-    backendUrl,
-    pipelineId,
-  };
   return (
-    <RemotePipelineDocumentView
-      key={getEditorPipelineIdentity(pipelineRef)}
-      pipelineRef={pipelineRef}
-    />
+    <RemotePipelineDocumentView pipelineRef={{ ...pipeline, backendUrl }} />
   );
 }
 
 // Non-editor-v2 routes (e.g. `/tour/$tourId`) pass `pipelineRef` directly.
-// Without a prop, we fall back to reading the route's params/search.
+// Without a prop, we fall back to the committed route match.
 export function EditorV2({
   pipelineRef: pipelineRefProp,
 }: {
   pipelineRef?: PipelineRef | null;
 } = {}) {
-  const params = useParams({ strict: false });
-  const search = useSearch({ strict: false });
-  if (pipelineRefProp === undefined && "pipelineId" in params) {
-    return <RemotePipelineEditor pipelineId={params.pipelineId!} />;
+  // The editor lives on a shared layout so changing a draft's URL does not
+  // unmount it. Read the leaf match rather than the layout's empty params.
+  const match = useRouterState({
+    select: (state) => state.matches.at(-1),
+  });
+  const params = match?.params;
+  const search = match?.search ?? {};
+  if (pipelineRefProp === undefined && params && "pipelineId" in params) {
+    return (
+      <RemotePipelineEditor
+        pipeline={{ source: "remote", pipelineId: params.pipelineId! }}
+      />
+    );
   }
 
   const fileId =
@@ -278,9 +295,26 @@ export function EditorV2({
       : undefined;
 
   const pipelineName =
-    "pipelineName" in params && typeof params.pipelineName === "string"
+    params &&
+    "pipelineName" in params &&
+    typeof params.pipelineName === "string"
       ? params.pipelineName
       : null;
+
+  const draft =
+    match?.context && "newPipeline" in match.context
+      ? match.context.newPipeline
+      : undefined;
+  if (pipelineRefProp === undefined && draft) {
+    return (
+      <RemotePipelineEditor
+        pipeline={{
+          source: "draft",
+          ...draft,
+        }}
+      />
+    );
+  }
 
   const pipelineRef: PipelineRef | null =
     pipelineRefProp !== undefined
@@ -289,7 +323,12 @@ export function EditorV2({
         ? { name: pipelineName, fileId }
         : null;
 
-  return <EditorV2Document pipelineRef={pipelineRef} />;
+  return (
+    <EditorV2Document
+      key={pipelineRef ? getEditorPipelineIdentity(pipelineRef) : "empty"}
+      pipelineRef={pipelineRef}
+    />
+  );
 }
 
 function EditorV2Document({

@@ -6,16 +6,40 @@ import {
   serializeComponentSpecToYaml,
 } from "@/models/componentSpec";
 import type { NavigationStore } from "@/routes/v2/shared/store/navigationStore";
+import {
+  createPipelineFromContent,
+  createsLocalPipelines,
+  getPipelineCreationBackendUrl,
+} from "@/services/pipelineStorage/pipelineCreation";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
+import type { RemotePipelineRef } from "@/services/pipelineStorage/types";
 import { defaultPipelineYamlWithName } from "@/utils/constants";
 import { componentSpecToYaml } from "@/utils/yaml";
 
 export async function createNewPipeline(
   storage: PipelineStorageService,
   name = (generate(4) as string[]).join(" "),
-  { provisionalName = false } = {},
+  {
+    provisionalName = false,
+    onRemoteCreated,
+  }: {
+    provisionalName?: boolean;
+    onRemoteCreated?: (ref: RemotePipelineRef) => Promise<unknown>;
+  } = {},
 ): Promise<PipelineFile> {
+  if (!createsLocalPipelines()) {
+    return storage.createRemoteDraft(
+      {
+        source: "draft",
+        backendUrl: await getPipelineCreationBackendUrl(),
+        draftId: crypto.randomUUID(),
+        name,
+        provisionalName,
+      },
+      onRemoteCreated,
+    );
+  }
   const componentText = defaultPipelineYamlWithName(name, { provisionalName });
 
   return storage.rootFolder.addFile(name, componentText);
@@ -36,14 +60,15 @@ export async function savePipelineAs(
   };
   const componentText = componentSpecToYaml(serialized);
 
-  if (sourceFile?.remote) {
-    return storage.createRemotePipeline(
-      sourceFile.remote.backendUrl,
-      newName,
-      componentText,
-    );
+  if (createsLocalPipelines())
+    return storage.rootFolder.addFile(newName, componentText);
+
+  const backendUrl =
+    sourceFile?.remote?.backendUrl ?? sourceFile?.draftBackendUrl;
+  if (backendUrl) {
+    return storage.createRemotePipeline(backendUrl, newName, componentText);
   }
-  return storage.rootFolder.addFile(newName, componentText);
+  return createPipelineFromContent(storage, newName, componentText);
 }
 
 export function exportCurrentPipeline(navigation: NavigationStore): void {

@@ -26,10 +26,14 @@ import {
 import { SharedStoreRegistrar } from "@/routes/v2/shared/store/SharedStoreRegistrar";
 import { DockArea } from "@/routes/v2/shared/windows/DockArea";
 import { WindowContainer } from "@/routes/v2/shared/windows/WindowContainer";
-import type { PipelineRef } from "@/services/pipelineStorage/types";
+import {
+  type EditorPipelineRef,
+  isRemotePipelineRef,
+} from "@/services/pipelineStorage/types";
 
 import { DriverPermissionGate } from "./components/DriverPermissionGate";
 import { FlowCanvas } from "./components/FlowCanvas/FlowCanvas";
+import { RemotePipelineView } from "./components/RemotePipelineView/RemotePipelineView";
 import { useComponentLibraryWindow } from "./hooks/useComponentLibraryWindow";
 import { useComponentSearchV2Window } from "./hooks/useComponentSearchV2Window";
 import { useEditorEscapeShortcut } from "./hooks/useEditorEscapeShortcut";
@@ -48,7 +52,7 @@ import { EditorSessionProvider } from "./store/EditorSessionContext";
 import { TangentEditorAgentProvider } from "./TangentEditorAgentProvider";
 
 interface EmbeddedPipelineEditorProps {
-  pipelineRef: PipelineRef;
+  pipelineRef: EditorPipelineRef;
   isActive: boolean;
   projectId: string;
   onStoreReady?: (store: SharedUIStore) => void;
@@ -71,7 +75,7 @@ interface EmbeddedEditorAgentBoundaryProps {
 }
 
 interface EmbeddedPipelineEditorCanvasProps extends EmbeddedEditorAgentBoundaryProps {
-  pipelineRef: PipelineRef;
+  pipelineRef: EditorPipelineRef;
   isActive: boolean;
 }
 
@@ -167,7 +171,7 @@ const EmbeddedPipelineEditorCanvas = withSuspenseWrapper(
   EmbeddedPipelineEditorSkeleton,
 );
 
-export function EmbeddedPipelineEditor({
+const EditableEmbeddedPipelineEditor = ({
   pipelineRef,
   isActive,
   projectId,
@@ -179,7 +183,7 @@ export function EmbeddedPipelineEditor({
   onEnvironmentClosed,
   onBridgeReady,
   onBridgeClosed,
-}: EmbeddedPipelineEditorProps) {
+}: EmbeddedPipelineEditorProps) => {
   return (
     <RunSubmissionScopeProvider projectId={projectId}>
       <div className="h-full w-full flex flex-col bg-slate-100 dark:bg-background select-none">
@@ -215,5 +219,27 @@ export function EmbeddedPipelineEditor({
         </SharedStoreProvider>
       </div>
     </RunSubmissionScopeProvider>
+  );
+};
+
+const RemoteEmbeddedPipelineEditor = withSuspenseWrapper(
+  (props: EmbeddedPipelineEditorProps) => {
+    const {
+      data: { spec, file },
+    } = useLoadSpec(props.pipelineRef);
+    return file.folder.driver.canEdit !== true ? (
+      <RemotePipelineView spec={spec} />
+    ) : (
+      <EditableEmbeddedPipelineEditor {...props} />
+    );
+  },
+  EmbeddedPipelineEditorSkeleton,
+);
+
+export function EmbeddedPipelineEditor(props: EmbeddedPipelineEditorProps) {
+  return isRemotePipelineRef(props.pipelineRef) ? (
+    <RemoteEmbeddedPipelineEditor {...props} />
+  ) : (
+    <EditableEmbeddedPipelineEditor {...props} />
   );
 }

@@ -76,12 +76,16 @@ The catalog's Claude models support Low, Medium, High, Extra high, and Max in th
 
 Add these to a `.env` file at the root of `tangle-ui`.
 
-| Variable                       | Required             | Description                                                                                                                                            |
-| ------------------------------ | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `VITE_BACKEND_API_URL`         | For backend features | URL of your Tangle backend (e.g. `http://127.0.0.1:8000`).                                                                                             |
-| `VITE_ARTIFACT_RETENTION_DAYS` | No                   | Number of days artifacts are stored by your backend. When set, the UI shows artifact expiry dates and warns when artifacts may no longer be available. |
-| `VITE_BUGSNAG_API_KEY`         | No                   | Bugsnag API key. Required alongside `VITE_TANGLE_ENV` to enable error reporting.                                                                       |
-| `VITE_TANGLE_ENV`              | No                   | Release stage passed to Bugsnag (e.g. `development`, `staging`, `production`).                                                                         |
+Vite reads these values at development server startup or build time. Restart the
+development server after changes, or rebuild the frontend for deployment.
+
+| Variable                       | Required             | Description                                                                                                                                                                                                                                 |
+| ------------------------------ | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `VITE_BACKEND_API_URL`         | For backend features | URL of your Tangle backend (e.g. `http://127.0.0.1:8000`).                                                                                                                                                                                  |
+| `VITE_LOCAL_PIPELINES`         | No                   | Defaults to remote creation for new pipelines, imports, copies, and project/agent pipelines. Blank V2 pipelines remain drafts until the first edit. Set to `true` to create locally instead. Remote creation requires a configured backend. |
+| `VITE_ARTIFACT_RETENTION_DAYS` | No                   | Number of days artifacts are stored by your backend. When set, the UI shows artifact expiry dates and warns when artifacts may no longer be available.                                                                                      |
+| `VITE_BUGSNAG_API_KEY`         | No                   | Bugsnag API key. Required alongside `VITE_TANGLE_ENV` to enable error reporting.                                                                                                                                                            |
+| `VITE_TANGLE_ENV`              | No                   | Release stage passed to Bugsnag (e.g. `development`, `staging`, `production`).                                                                                                                                                              |
 
 ## App features:
 

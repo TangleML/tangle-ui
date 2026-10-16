@@ -41,6 +41,7 @@ import { LearnTipsView } from "./Dashboard/Learn/LearnTipsView";
 import { LearnToursView } from "./Dashboard/Learn/LearnToursView";
 import { TourPage } from "./Dashboard/Learn/Tour";
 import Editor from "./Editor";
+import { createEditorV2Routes } from "./editorV2Routes";
 import { ImportPage } from "./Import";
 import NotFoundPage from "./NotFoundPage";
 import PipelineRun from "./PipelineRun";
@@ -53,7 +54,6 @@ import { PreferencesSettings } from "./Settings/sections/PreferencesSettings";
 import { SecretsSettings } from "./Settings/sections/SecretsSettings";
 import { SettingsLayout } from "./Settings/SettingsLayout";
 import { CompareView } from "./v2/pages/CompareView/CompareView";
-import { EditorV2 } from "./v2/pages/Editor/EditorV2";
 import { PipelineFoldersPage } from "./v2/pages/PipelineFolders/PipelineFoldersPage";
 import { RunViewV2 } from "./v2/pages/RunView/RunViewV2";
 import { TangentProjectPage } from "./v2/pages/Tangent/TangentProjectPage";
@@ -344,45 +344,6 @@ const settingsRouteTree = settingsLayoutRoute.addChildren([
   secretsRouteTree,
 ]);
 
-const editorV2Route = createRoute({
-  getParentRoute: () => mainLayout,
-  path: APP_ROUTES.EDITOR_V2,
-  component: EditorV2,
-  beforeLoad: () => {
-    if (!isFlagEnabled("v2_editor")) {
-      throw redirect({ to: APP_ROUTES.DASHBOARD_PIPELINES });
-    }
-  },
-});
-
-const editorV2PipelineRoute = createRoute({
-  getParentRoute: () => mainLayout,
-  path: APP_ROUTES.EDITOR_V2_PIPELINE,
-  component: EditorV2,
-  beforeLoad: ({ params }) => {
-    if (!isFlagEnabled("v2_editor")) {
-      throw redirect({
-        to: APP_ROUTES.PIPELINE_EDITOR,
-        params: { name: params.pipelineName },
-      });
-    }
-  },
-});
-
-const editorV2RemotePipelineRoute = createRoute({
-  getParentRoute: () => mainLayout,
-  path: APP_ROUTES.EDITOR_V2_REMOTE_PIPELINE,
-  component: EditorV2,
-  beforeLoad: ({ params }) => {
-    if (!isFlagEnabled("v2_editor")) {
-      throw redirect({
-        to: APP_ROUTES.REMOTE_PIPELINE_EDITOR,
-        params: { pipelineId: params.pipelineId },
-      });
-    }
-  },
-});
-
 const runV2Route = createRoute({
   getParentRoute: () => mainLayout,
   path: APP_ROUTES.RUN_DETAIL_V2,
@@ -493,9 +454,7 @@ const appRouteTree = mainLayout.addChildren([
   remoteEditorRoute,
   runDetailRoute,
   runDetailWithSubgraphRoute,
-  editorV2Route,
-  editorV2PipelineRoute,
-  editorV2RemotePipelineRoute,
+  createEditorV2Routes(mainLayout),
   runV2Route,
   runV2WithSubgraphRoute,
   compareRoute,

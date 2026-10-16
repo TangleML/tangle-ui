@@ -7,13 +7,16 @@ import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import { createAndAttachPipeline } from "@/services/projects/createAndAttachPipeline";
 import { nameFromPrompt } from "@/services/projects/nameFromPrompt";
+import {
+  pipelineFileTarget,
+  remoteResourceTarget,
+} from "@/services/projects/pipelineResource";
 import { MAX_PAGE_SIZE } from "@/services/projects/queryDefaults";
 import {
   describeResource,
   LOCAL_PIPELINE,
 } from "@/services/projects/resourceDescriptor";
 import type { WorkareaTarget } from "@/services/projects/resourceTarget";
-import { idIdentity } from "@/services/projects/resourceTarget";
 import {
   readStartingSession,
   withoutStartingSession,
@@ -64,7 +67,7 @@ export function usePrepareProjectArrival(
   const { windows } = useSharedStores();
   const { data: project } = useProject(projectId);
   const { data: documents } = useProjectResources(projectId, {
-    entity: ["document"],
+    entity: ["document", "pipeline"],
     pageSize: MAX_PAGE_SIZE,
   });
   const { mutateAsync: createResource } = useCreateProjectResource(projectId);
@@ -110,6 +113,8 @@ export function usePrepareProjectArrival(
       const attached = oldestFirst(documents?.items ?? []).flatMap(
         (resource) => {
           const described = describeResource(resource);
+          const remote = remoteResourceTarget(resource);
+          if (remote) return [{ resource, target: remote }];
           return described?.type === LOCAL_PIPELINE && described.target
             ? [{ resource, target: described.target }]
             : [];
@@ -134,10 +139,7 @@ export function usePrepareProjectArrival(
         attach: createResource,
       });
 
-      const target: WorkareaTarget = {
-        type: "pipeline",
-        identity: idIdentity(file.id),
-      };
+      const target: WorkareaTarget = pipelineFileTarget(file);
       await store.openWorkareaTarget(target, file.storageKey);
     },
   });

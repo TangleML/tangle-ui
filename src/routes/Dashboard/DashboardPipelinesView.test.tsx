@@ -1243,6 +1243,11 @@ describe("DashboardPipelinesView remote pipelines", () => {
     expect(searchParams().get("panel")).toBe("compact");
     expect(screen.getByRole("table", { name: "Remote Pipelines" })).toBe(table);
     expect(window.scrollTo).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "First page" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Next" })).toBeEnabled(),
+    );
   });
 
   it("restores the tab and remote page through browser Back and Forward", async () => {
@@ -1407,50 +1412,6 @@ describe("DashboardPipelinesView remote pipelines", () => {
     );
     expect(listRemotePipelines).toHaveBeenNthCalledWith(
       3,
-      backend.backendUrl,
-      "page-two",
-      undefined,
-    );
-  });
-
-  it("returns to the first page with the First page button", async () => {
-    const pages = new Map<string | undefined, RemotePipelinesPage>([
-      [undefined, createPage(1, 10, "page-two")],
-      ["page-two", createPage(11, 10, "page-three")],
-      ["page-three", createPage(21, 5, null)],
-    ]);
-    vi.mocked(listRemotePipelines).mockImplementation(async (_, pageToken) => {
-      const page = pages.get(pageToken);
-      if (!page) throw new Error(`Unexpected page token: ${pageToken}`);
-      return page;
-    });
-    const { user } = await renderDashboard();
-    await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
-    await screen.findByText("Pipeline 1");
-    await user.click(screen.getByRole("button", { name: "Next" }));
-    await screen.findByText("Pipeline 11");
-    await user.click(screen.getByRole("button", { name: "Next" }));
-    await screen.findByText("Pipeline 21");
-    expect(screen.getByText("Page 3")).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "First page" }));
-    expect(await screen.findByText("Pipeline 1")).toBeInTheDocument();
-    expect(screen.getByText("Page 1")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "First page" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Next" })).toBeEnabled();
-    });
-    expect(listRemotePipelines).toHaveBeenLastCalledWith(
-      backend.backendUrl,
-      undefined,
-      undefined,
-    );
-
-    await user.click(screen.getByRole("button", { name: "Next" }));
-    expect(await screen.findByText("Pipeline 11")).toBeInTheDocument();
-    expect(screen.getByText("Page 2")).toBeInTheDocument();
-    expect(listRemotePipelines).toHaveBeenLastCalledWith(
       backend.backendUrl,
       "page-two",
       undefined,

@@ -28,10 +28,19 @@ import { createRunBridgeHandlers } from "@/routes/v2/shared/components/AiChat/to
 import type { BridgeDeps } from "@/routes/v2/shared/components/AiChat/toolBridge/utils";
 import { copyRunToPipeline } from "@/services/pipelineRunService";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
+import type { RemotePipelineRef } from "@/services/pipelineStorage/types";
 import { createAndAttachPipeline } from "@/services/projects/createAndAttachPipeline";
+import {
+  pipelineFileTarget,
+  remotePipelineResourceInput,
+} from "@/services/projects/pipelineResource";
 import { UNNAMED_PIPELINE } from "@/services/projects/placeholderNames";
 import { createProjectResource } from "@/services/projects/projectResourcesService";
 import { localPipelineResourceInput } from "@/services/projects/resourceDescriptor";
+import {
+  remotePipelineIdentity,
+  type WorkareaTarget,
+} from "@/services/projects/resourceTarget";
 import {
   ProjectResourcesQueryKeys,
   ProjectsQueryKeys,
@@ -52,7 +61,7 @@ interface TangentProjectAgentProviderProps {
 async function clonePipelineFromRun(
   runInspect: RunInspectDeps,
   runId: string,
-): Promise<{ pipelineName: string }> {
+): Promise<{ pipelineName: string; remote?: RemotePipelineRef }> {
   const run = await runInspect.getRunDetails(runId);
   const rootExecutionId = run.root_execution_id;
   if (!rootExecutionId) {
@@ -85,7 +94,7 @@ async function clonePipelineFromRun(
   if (!result.name) {
     throw new Error(`Failed to clone the pipeline for run ${runId}.`);
   }
-  return { pipelineName: result.name };
+  return { pipelineName: result.name, remote: result.remote };
 }
 
 /**
@@ -200,13 +209,38 @@ export function TangentProjectAgentProvider({
         const file = await createAndAttachPipeline({
           storage,
           name: name ?? UNNAMED_PIPELINE,
-          attach: (input) => createProjectResource(store.projectId, input),
+          attach: async (input) => {
+            const resource = await createProjectResource(
+              store.projectId,
+              input,
+            );
+            await refreshProjectResources();
+            return resource;
+          },
         });
-        await refreshProjectResources();
-        return { pipelineName: file.storageKey, fileId: file.id };
+        return {
+          pipelineName: file.storageKey,
+          fileId: file.id,
+          target: pipelineFileTarget(file),
+        };
       },
       clonePipeline: async (runId) => {
-        const { pipelineName } = await clonePipelineFromRun(runInspect, runId);
+        const { pipelineName, remote } = await clonePipelineFromRun(
+          runInspect,
+          runId,
+        );
+        if (remote) {
+          await createProjectResource(
+            store.projectId,
+            remotePipelineResourceInput(remote.pipelineId, pipelineName),
+          );
+          await refreshProjectResources();
+          const target: WorkareaTarget = {
+            type: "pipeline",
+            identity: remotePipelineIdentity(remote.pipelineId),
+          };
+          return { pipelineName, target };
+        }
         const registered = await storage.resolvePipelineByName(pipelineName);
         await createProjectResource(
           store.projectId,

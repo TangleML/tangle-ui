@@ -11,11 +11,17 @@ export function useImportPipeline() {
   const notify = useToastNotification();
 
   return useMutation({
-    mutationFn: async (url: string) => await importPipelineFromUrl(url),
+    mutationFn: async (url: string) => {
+      const result = await importPipelineFromUrl(url);
+      if (!result.successful)
+        throw new Error(result.errorMessage ?? "Failed to import pipeline.");
+      return result;
+    },
+    onError: (error) => notify(error.message, "error"),
     onSuccess: (result) => {
       notify(`Pipeline "${result.name}" created successfully`, "success");
       navigate({
-        to: getDefaultEditorPath(result.name),
+        to: result.url ?? getDefaultEditorPath(result.name),
       });
     },
   });

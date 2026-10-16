@@ -55,9 +55,13 @@ function getTooltipText(
 }
 
 export const AutoSaveIndicator = observer(function AutoSaveIndicator() {
-  const { autoSave } = useEditorSession();
+  const { autoSave, pipelineFile } = useEditorSession();
   const { isSaving, lastSavedAt, error } = autoSave;
-  const tooltipText = getTooltipText(isSaving, lastSavedAt, error);
+  const isDraft = pipelineFile.activePipelineFile?.isDraft;
+  const tooltipText =
+    isDraft && !isSaving && !error
+      ? "Draft — saved remotely after your first edit"
+      : getTooltipText(isSaving, lastSavedAt, error);
 
   const handleClick = () => {
     void autoSave.save().catch(() => {});
@@ -82,7 +86,7 @@ export const AutoSaveIndicator = observer(function AutoSaveIndicator() {
         </SavingLayer>
         <IdleLayer>
           <Icon
-            name={error ? "CloudAlert" : "CloudCheck"}
+            name={error ? "CloudAlert" : isDraft ? "Cloud" : "CloudCheck"}
             className={error ? "text-red-400" : undefined}
           />
         </IdleLayer>
