@@ -9,6 +9,7 @@ import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
 import { ComponentSpecProvider } from "@/providers/ComponentSpecProvider";
 import { ContextPanelProvider } from "@/providers/ContextPanelProvider";
 import { hydrateComponentReference } from "@/services/componentService";
+import { PipelineStorageProvider } from "@/services/pipelineStorage/PipelineStorageProvider";
 import { saveComponent } from "@/utils/localforage";
 
 import { ComponentEditorDialog } from "./ComponentEditorDialog";
@@ -61,9 +62,11 @@ describe("<ComponentEditorDialog />", () => {
     return (
       <QueryClientProvider client={queryClient}>
         <ReactFlowProvider>
-          <ComponentSpecProvider>
-            <ContextPanelProvider>{children}</ContextPanelProvider>
-          </ComponentSpecProvider>
+          <PipelineStorageProvider>
+            <ComponentSpecProvider>
+              <ContextPanelProvider>{children}</ContextPanelProvider>
+            </ComponentSpecProvider>
+          </PipelineStorageProvider>
         </ReactFlowProvider>
       </QueryClientProvider>
     );

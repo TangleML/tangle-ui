@@ -27,8 +27,8 @@ function RootLayoutContent() {
 
   return (
     <BackendProvider>
-      <ComponentSpecProvider>
-        <PipelineStorageProvider>
+      <PipelineStorageProvider>
+        <ComponentSpecProvider>
           <TourProvider>
             <OnboardingProvider>
               <SessionPipelineStatsTracker />
@@ -48,8 +48,8 @@ function RootLayoutContent() {
               </div>
             </OnboardingProvider>
           </TourProvider>
-        </PipelineStorageProvider>
-      </ComponentSpecProvider>
+        </ComponentSpecProvider>
+      </PipelineStorageProvider>
     </BackendProvider>
   );
 }

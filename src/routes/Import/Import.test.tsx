@@ -24,6 +24,10 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
 vi.mock("@/services/pipelineService", () => ({
   importPipelineFromYaml: vi.fn(),
 }));
+const storage = vi.hoisted(() => ({}));
+vi.mock("@/services/pipelineStorage/PipelineStorageProvider", () => ({
+  usePipelineStorage: () => storage,
+}));
 
 describe("isAllowedImportUrl", () => {
   test("accepts valid localhost URL with high port", () => {
@@ -137,7 +141,11 @@ describe("ImportPage", () => {
     });
 
     await waitFor(() => {
-      expect(importPipelineFromYaml).toHaveBeenCalledWith(yamlContent, true);
+      expect(importPipelineFromYaml).toHaveBeenCalledWith(
+        storage,
+        yamlContent,
+        true,
+      );
     });
 
     await waitFor(() => {

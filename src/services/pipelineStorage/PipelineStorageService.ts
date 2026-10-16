@@ -1,6 +1,7 @@
 import { makeObservable, observable } from "mobx";
 
 import { emitUserPipelineWritten } from "@/utils/userPipelineWriteEvents";
+import { componentSpecFromYaml } from "@/utils/yaml";
 
 import { createDriver } from "./createDriver";
 import { pipelineStorageDb } from "./db";
@@ -76,10 +77,20 @@ export class PipelineStorageService {
     ref: RemotePipelineDraftRef,
     onCreated?: (remote: RemotePipelineRef) => Promise<unknown>,
   ): PipelineFile {
-    const driver = new RemotePipelineDraftStorageDriver(ref, async (remote) => {
-      file.promoteToRemote(remote);
-      await onCreated?.(remote);
-    });
+    const driver = new RemotePipelineDraftStorageDriver(
+      ref,
+      (content) =>
+        this.createRemoteDriver(
+          ref.backendUrl,
+          componentSpecFromYaml(content).name ?? ref.name,
+          content,
+          `pipelines/${ref.draftId}.yaml`,
+        ),
+      async (remote) => {
+        file.promoteToRemote(remote);
+        await onCreated?.(remote);
+      },
+    );
     const file = new PipelineFile({
       id: ref.draftId,
       storageKey: ref.name,
@@ -118,15 +129,24 @@ export class PipelineStorageService {
     filePath?: string,
   ): Promise<PipelineFile> {
     const file = remoteFile(
-      await RemotePipelineStorageDriver.create(
-        backendUrl,
-        name,
-        content,
-        filePath,
-      ),
+      await this.createRemoteDriver(backendUrl, name, content, filePath),
     );
     emitUserPipelineWritten();
     return file;
+  }
+
+  private createRemoteDriver(
+    backendUrl: string,
+    name: string,
+    content: string,
+    filePath?: string,
+  ): Promise<RemotePipelineStorageDriver> {
+    return RemotePipelineStorageDriver.create(
+      backendUrl,
+      name,
+      content,
+      filePath,
+    );
   }
 
   async moveLocalPipelineToRemote(

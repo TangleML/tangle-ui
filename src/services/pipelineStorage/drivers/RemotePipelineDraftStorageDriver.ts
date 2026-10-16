@@ -1,5 +1,4 @@
 import { defaultPipelineYamlWithName } from "@/utils/constants";
-import { componentSpecFromYaml } from "@/utils/yaml";
 
 import type {
   PipelineFileDescriptor,
@@ -7,7 +6,7 @@ import type {
   RemotePipelineDraftRef,
   RemotePipelineRef,
 } from "../types";
-import { RemotePipelineStorageDriver } from "./RemotePipelineStorageDriver";
+import type { RemotePipelineStorageDriver } from "./RemotePipelineStorageDriver";
 
 /** An in-memory document; only its first write creates a server record. */
 export class RemotePipelineDraftStorageDriver implements PipelineStorageDriver {
@@ -31,6 +30,9 @@ export class RemotePipelineDraftStorageDriver implements PipelineStorageDriver {
 
   constructor(
     private ref: RemotePipelineDraftRef,
+    private createRemote: (
+      content: string,
+    ) => Promise<RemotePipelineStorageDriver>,
     private onCreated: (
       remote: RemotePipelineRef,
     ) => void | Promise<void> = () => {},
@@ -51,29 +53,32 @@ export class RemotePipelineDraftStorageDriver implements PipelineStorageDriver {
   write(storageKey: string, content: string): Promise<void> {
     // Keep the same path across failures, including a lost creation response.
     // Serialize all writes, even ones queued while creation is in flight.
-    this.pending = this.pending
-      .catch(() => {})
-      .then(async () => {
-        if (this.remote) {
-          await this.remote.write(storageKey, content);
-        } else {
-          this.remote = await RemotePipelineStorageDriver.create(
-            this.ref.backendUrl,
-            componentSpecFromYaml(content).name ?? this.ref.name,
-            content,
-            `pipelines/${this.ref.draftId}.yaml`,
-          );
-        }
-        if (!this.notified) {
-          await this.onCreated(this.remoteRef!);
-          this.notified = true;
-        }
-      });
-    return this.pending;
+    return this.enqueue(async () => {
+      if (this.remote) {
+        await this.remote.write(storageKey, content);
+      } else {
+        this.remote = await this.createRemote(content);
+      }
+      if (!this.notified) {
+        await this.onCreated(this.remoteRef!);
+        this.notified = true;
+      }
+    });
   }
 
-  async rename(_oldStorageKey: string, _newStorageKey: string): Promise<void> {
-    // The editor changes spec.name and autosave persists that content.
+  rename(oldStorageKey: string, newStorageKey: string): Promise<void> {
+    return this.enqueue(async () => {
+      if (this.remote) {
+        await this.remote.rename(oldStorageKey, newStorageKey);
+      } else {
+        this.ref = { ...this.ref, name: newStorageKey };
+      }
+    });
+  }
+
+  private enqueue(operation: () => Promise<void>): Promise<void> {
+    this.pending = this.pending.catch(() => {}).then(operation);
+    return this.pending;
   }
 
   async delete(_storageKey: string): Promise<void> {

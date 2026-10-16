@@ -9,10 +9,7 @@ import {
   ComponentSpecProvider,
   useComponentSpec,
 } from "@/providers/ComponentSpecProvider";
-import {
-  getComponentFileFromList,
-  writeComponentToFileListFromText,
-} from "@/utils/componentStore";
+import { getComponentFileFromList } from "@/utils/componentStore";
 import { componentSpecFromYaml, componentSpecToYaml } from "@/utils/yaml";
 
 import { copyRunToPipeline } from "./pipelineRunService";
@@ -22,6 +19,7 @@ import {
   createPipelineFromContent,
   getPipelineCreationBackendUrl,
 } from "./pipelineStorage/pipelineCreation";
+import type { PipelineFile } from "./pipelineStorage/PipelineFile";
 import { PipelineStorageService } from "./pipelineStorage/PipelineStorageService";
 import { editorSpecFromRemoteTask } from "./pipelineStorage/remotePipelineTask";
 
@@ -45,7 +43,6 @@ vi.mock("@/utils/localforage", () => ({
 vi.mock("@/utils/componentStore", () => ({
   generateDigest: async () => "digest",
   getComponentFileFromList: vi.fn(),
-  writeComponentToFileListFromText: vi.fn(),
 }));
 vi.mock("@/api/client.gen", () => ({ client: { put: vi.fn() } }));
 vi.mock("@/api/sdk.gen", () => ({ getCurrentUserApiUsersMeGet: vi.fn() }));
@@ -53,6 +50,20 @@ vi.mock("@/components/shared/Settings/useFlags", () => ({
   isFlagEnabled: () => true,
 }));
 vi.mock("./pipelineStorage/createDriver", () => ({ createDriver: () => ({}) }));
+vi.mock("./pipelineStorage/PipelineStorageProvider", () => ({
+  usePipelineStorage: () => storage,
+}));
+
+let storage: PipelineStorageService;
+let localWrites: [string, string][];
+const localFile = (name: string) =>
+  ({
+    id: `local-${name}`,
+    storageKey: name,
+    write: async (content: string) => {
+      localWrites.push([name, content]);
+    },
+  }) as PipelineFile;
 
 const spec = {
   name: "Example",
@@ -68,6 +79,20 @@ const remoteSpec = (index: number) =>
 
 beforeEach(() => {
   vi.resetAllMocks();
+  storage = new PipelineStorageService();
+  localWrites = [];
+  vi.spyOn(storage.rootFolder, "addFile").mockImplementation(
+    async (name, content) => {
+      localWrites.push([name, content]);
+      return localFile(name);
+    },
+  );
+  vi.spyOn(storage, "resolvePipeline").mockImplementation(async (ref) =>
+    localFile("name" in ref ? ref.name : "Local"),
+  );
+  vi.spyOn(storage, "resolvePipelineByName").mockImplementation(async (name) =>
+    localFile(name),
+  );
   vi.stubEnv("VITE_LOCAL_PIPELINES", undefined);
   Object.assign(settings, {
     apiUrl: "",
@@ -124,18 +149,16 @@ it.each([undefined, "false", "true"])(
     vi.stubEnv("VITE_LOCAL_PIPELINES", override);
     const local = override === "true";
     const results = [
-      await importPipelineFromYaml(componentSpecToYaml(spec)),
+      await importPipelineFromYaml(storage, componentSpecToYaml(spec)),
       await useSavePipeline(spec).savePipeline("Copy"),
-      await copyRunToPipeline(spec, "run-7", "Clone", { greeting: "after" }),
+      await copyRunToPipeline(storage, spec, "run-7", "Clone", {
+        greeting: "after",
+      }),
     ];
-    expect(writeComponentToFileListFromText).toHaveBeenCalledTimes(
-      local ? 3 : 0,
-    );
+    expect(localWrites).toHaveLength(local ? 3 : 0);
     expect(client.put).toHaveBeenCalledTimes(local ? 0 : 3);
     const specs = local
-      ? vi
-          .mocked(writeComponentToFileListFromText)
-          .mock.calls.map((call) => componentSpecFromYaml(String(call[2])))
+      ? localWrites.map(([, content]) => componentSpecFromYaml(content))
       : [0, 1, 2].map(remoteSpec);
     expect(specs[0]).toMatchObject(spec);
     expect(specs[1].name).toBe("Copy");
@@ -156,13 +179,13 @@ it("keeps local collision handling and existing local edits", async () => {
   vi.mocked(getComponentFileFromList)
     .mockResolvedValueOnce({} as never)
     .mockResolvedValueOnce({} as never);
-  expect(await importPipelineFromYaml(componentSpecToYaml(spec))).toMatchObject(
-    { name: "Example (1)", successful: true },
-  );
+  expect(
+    await importPipelineFromYaml(storage, componentSpecToYaml(spec)),
+  ).toMatchObject({ name: "Example (1)", successful: true });
   vi.stubEnv("VITE_LOCAL_PIPELINES", undefined);
   vi.mocked(getComponentFileFromList).mockResolvedValue({} as never);
   await useSavePipeline(spec).savePipeline();
-  expect(writeComponentToFileListFromText).toHaveBeenCalledTimes(2);
+  expect(localWrites).toHaveLength(2);
   expect(client.put).not.toHaveBeenCalled();
 });
 
@@ -204,9 +227,7 @@ it.each(["remote", "existing local", "local override", "read-only"])(
         result.current.saveComponentSpec("Renamed"),
       ]);
     });
-    expect(writeComponentToFileListFromText).toHaveBeenCalledTimes(
-      mode.includes("local") ? 2 : 0,
-    );
+    expect(localWrites).toHaveLength(mode.includes("local") ? 2 : 0);
     expect(client.put).toHaveBeenCalledTimes(mode === "remote" ? 2 : 0);
     if (mode === "remote") {
       expect(result.current.componentSpec.name).toBe("Example");
@@ -229,8 +250,8 @@ it.each(["backend configuration", "remote response"])(
     if (failure === "backend configuration") settings.relative = false;
     else vi.mocked(client.put).mockRejectedValueOnce(new Error("Unavailable"));
     expect(
-      await importPipelineFromYaml(componentSpecToYaml(spec)),
+      await importPipelineFromYaml(storage, componentSpecToYaml(spec)),
     ).toMatchObject({ successful: false });
-    expect(writeComponentToFileListFromText).not.toHaveBeenCalled();
+    expect(localWrites).toHaveLength(0);
   },
 );
