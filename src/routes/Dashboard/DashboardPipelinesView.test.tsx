@@ -1,5 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -58,6 +64,41 @@ function renderDashboard() {
   };
 }
 
+async function renderResizableTable() {
+  const { user } = renderDashboard();
+  await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
+  await screen.findByText("Example pipeline");
+
+  const table = screen.getByRole("table", { name: "Remote Pipelines" });
+  vi.spyOn(table, "getBoundingClientRect").mockReturnValue({
+    width: 1000,
+  } as DOMRect);
+  const handle = within(table).getByRole("separator", {
+    name: "Resize User column",
+  });
+  Object.assign(handle, {
+    setPointerCapture: vi.fn(),
+    releasePointerCapture: vi.fn(),
+    hasPointerCapture: vi.fn(() => true),
+  });
+
+  const widths = () =>
+    within(table)
+      .getAllByRole("columnheader")
+      .map((header) => Number.parseFloat(header.style.width));
+  const startDrag = () =>
+    fireEvent.pointerDown(handle, {
+      pointerId: 1,
+      button: 0,
+      isPrimary: true,
+      clientX: 600,
+    });
+  const dragTo = (clientX: number) =>
+    fireEvent.pointerMove(handle, { pointerId: 1, clientX });
+
+  return { table, handle, widths, startDrag, dragTo };
+}
+
 beforeEach(() => {
   backend = {
     backendUrl: "https://backend.example.com",
@@ -71,6 +112,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   clients.splice(0).forEach((client) => client.clear());
+  vi.restoreAllMocks();
   vi.resetAllMocks();
 });
 
@@ -185,5 +227,85 @@ describe("DashboardPipelinesView remote pipelines", () => {
     expect(listRemotePipelines).toHaveBeenLastCalledWith(
       "https://other.example.com",
     );
+  });
+
+  it("redistributes a dragged column's width equally to the columns on its right", async () => {
+    const { table, handle, widths, startDrag, dragTo } =
+      await renderResizableTable();
+
+    expect(within(table).getAllByRole("separator")).toHaveLength(5);
+    startDrag();
+    expect(handle.setPointerCapture).toHaveBeenCalledWith(1);
+    dragTo(690);
+
+    expect(widths()).toEqual([25, 15, 29, 9, 9, 13]);
+    expect(widths().reduce((total, width) => total + width, 0)).toBe(100);
+    expect(screen.getByText(pipeline.user_id)).toHaveAttribute(
+      "title",
+      pipeline.user_id,
+    );
+
+    dragTo(630);
+    expect(widths()).toEqual([25, 15, 23, 11, 11, 15]);
+  });
+
+  it("keeps columns above their minimum width during large drags", async () => {
+    const { widths, startDrag, dragTo } = await renderResizableTable();
+
+    startDrag();
+    dragTo(1600);
+    expect(widths()).toEqual([25, 15, 32, 8, 8, 12]);
+
+    dragTo(-400);
+    expect(widths()).toEqual([25, 15, 8, 16, 16, 20]);
+  });
+
+  it.each(["pointerUp", "pointerCancel", "lostPointerCapture"] as const)(
+    "stops resizing after %s",
+    async (event) => {
+      const { handle, widths, startDrag, dragTo } =
+        await renderResizableTable();
+
+      startDrag();
+      dragTo(690);
+      fireEvent[event](handle, { pointerId: 1 });
+      dragTo(750);
+
+      expect(widths()).toEqual([25, 15, 29, 9, 9, 13]);
+    },
+  );
+
+  it("keeps resizing when a different pointer ends on another handle", async () => {
+    const { table, widths, startDrag, dragTo } = await renderResizableTable();
+    const otherHandle = within(table).getByRole("separator", {
+      name: "Resize ID column",
+    });
+
+    startDrag();
+    fireEvent.pointerUp(otherHandle, { pointerId: 2 });
+    dragTo(690);
+
+    expect(widths()).toEqual([25, 15, 29, 9, 9, 13]);
+  });
+
+  it("lets a focused resize handle adjust columns with arrow keys", async () => {
+    const { handle, widths } = await renderResizableTable();
+    handle.focus();
+    expect(handle).toHaveFocus();
+
+    fireEvent.keyDown(handle, { key: "ArrowRight" });
+    const expandedWidths = widths();
+    expect(expandedWidths.slice(0, 3)).toEqual([25, 15, 21]);
+    [12, 12, 16].forEach((width, index) => {
+      expect(expandedWidths[index + 3]).toBeCloseTo(width - 1 / 3);
+    });
+    expect(
+      expandedWidths.reduce((total, width) => total + width, 0),
+    ).toBeCloseTo(100);
+
+    fireEvent.keyDown(handle, { key: "ArrowLeft" });
+    widths().forEach((width, index) => {
+      expect(width).toBeCloseTo([25, 15, 20, 12, 12, 16][index]);
+    });
   });
 });
