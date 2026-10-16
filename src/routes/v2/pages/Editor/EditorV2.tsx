@@ -120,11 +120,11 @@ const PipelineEditor = withSuspenseWrapper(
     useComponentLibraryWindow(!componentSearchV2Enabled);
     usePipelineDetailsWindow();
     usePipelineTreeWindow();
-    useHistoryWindow(!file.remote);
+    useHistoryWindow();
     useCanvasControlsWindow("v2.pipeline_canvas");
     useRecentRunsWindow();
     useRunsAndSubmissionWindow();
-    useUndoRedoKeyboard(!file.remote);
+    useUndoRedoKeyboard();
     useFocusMode();
     useShortcutListener();
     useEditorEscapeShortcut();

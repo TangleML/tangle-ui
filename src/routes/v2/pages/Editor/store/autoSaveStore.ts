@@ -12,7 +12,10 @@ import {
   collectIdStack,
   serializeComponentSpecToText,
 } from "@/models/componentSpec";
-import { saveUndoHistory } from "@/routes/v2/pages/Editor/utils/undoHistoryStorage";
+import {
+  getUndoHistoryKey,
+  saveUndoHistory,
+} from "@/routes/v2/pages/Editor/utils/undoHistoryStorage";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import { AUTOSAVE_DEBOUNCE_TIME_MS } from "@/utils/constants";
 import { debounce } from "@/utils/debounce";
@@ -137,6 +140,9 @@ export class AutoSaveStore {
     runInAction(() => {
       document.pendingCount += 1;
     });
+    const idStack = collectIdStack(spec);
+    const history = manager && { undoQueue: manager.undoQueue.slice() };
+    const historyKey = getUndoHistoryKey(file);
     const write = async () => {
       try {
         await file.write(yaml);
@@ -150,11 +156,12 @@ export class AutoSaveStore {
       runInAction(() => {
         document.lastSavedYaml = yaml;
       });
-      if (!file.remote && manager) {
+      if (history) {
         await saveUndoHistory(
-          file.storageKey,
-          collectIdStack(spec),
-          manager,
+          historyKey,
+          idStack,
+          history,
+          file.remote ? yaml : undefined,
         ).catch((error) =>
           console.error("Failed to persist undo history:", error),
         );

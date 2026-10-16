@@ -2,8 +2,13 @@
  * Todo: move this file to "persistence" layer.
  */
 import Dexie, { type EntityTable } from "dexie";
+import equal from "fast-deep-equal";
 import type { UndoEvent, UndoManager } from "mobx-keystone";
 import { frozen, FrozenCheckMode, UndoStore } from "mobx-keystone";
+
+import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
+import { getEditorPipelineIdentity } from "@/services/pipelineStorage/types";
+import { componentSpecFromYaml } from "@/utils/yaml";
 
 const CURRENT_VERSION = 2;
 const MAX_UNDO_EVENTS = 10;
@@ -13,6 +18,7 @@ interface StoredUndoHistory {
   version: number;
   idStack: string[];
   undoEvents: UndoEvent[];
+  yaml?: string;
 }
 
 const UndoHistoryDB = new Dexie("undo-history") as Dexie & {
@@ -22,6 +28,14 @@ const UndoHistoryDB = new Dexie("undo-history") as Dexie & {
 UndoHistoryDB.version(1).stores({
   entries: "pipelineName",
 });
+
+export function getUndoHistoryKey(
+  file: Pick<PipelineFile, "remote" | "storageKey">,
+): string {
+  return file.remote
+    ? getEditorPipelineIdentity({ source: "remote", ...file.remote })
+    : file.storageKey;
+}
 
 /**
  * Saves undo history for a pipeline.
@@ -35,7 +49,8 @@ UndoHistoryDB.version(1).stores({
 export async function saveUndoHistory(
   pipelineName: string,
   idStack: string[],
-  undoManager: UndoManager,
+  undoManager: Pick<UndoManager, "undoQueue">,
+  yaml?: string,
 ): Promise<void> {
   const rawEvents = undoManager.undoQueue.slice(-MAX_UNDO_EVENTS);
   const clonedEvents: UndoEvent[] = JSON.parse(JSON.stringify(rawEvents));
@@ -45,11 +60,13 @@ export async function saveUndoHistory(
     version: CURRENT_VERSION,
     idStack,
     undoEvents: clonedEvents,
+    yaml,
   });
 }
 
 export async function loadUndoHistory(
   pipelineName: string,
+  yaml?: string,
 ): Promise<StoredUndoHistory | null> {
   const data = await UndoHistoryDB.entries.get(pipelineName);
 
@@ -59,6 +76,14 @@ export async function loadUndoHistory(
   // optional (a pipeline opened but never edited has none).
   if (!data.idStack?.length) return null;
   if (!data.undoEvents) return null;
+  // Another browser may have edited the remote document since this history.
+  if (
+    yaml !== undefined &&
+    (!data.yaml ||
+      !equal(componentSpecFromYaml(data.yaml), componentSpecFromYaml(yaml)))
+  ) {
+    return null;
+  }
 
   return data;
 }

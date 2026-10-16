@@ -44,10 +44,16 @@ vi.mock("@/routes/v2/pages/Editor/store/EditorSessionContext", () => ({
   useEditorSession: () => session,
 }));
 vi.mock("@/utils/componentStore", () => ({}));
-vi.mock("@/routes/v2/pages/Editor/utils/undoHistoryStorage", () => ({
-  saveIdStack: vi.fn().mockResolvedValue(undefined),
-  saveUndoHistory: vi.fn().mockResolvedValue(undefined),
-}));
+vi.mock(
+  "@/routes/v2/pages/Editor/utils/undoHistoryStorage",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("@/routes/v2/pages/Editor/utils/undoHistoryStorage")
+    >()),
+    saveIdStack: vi.fn().mockResolvedValue(undefined),
+    saveUndoHistory: vi.fn().mockResolvedValue(undefined),
+  }),
+);
 
 function pipeline(name = "Original", remote = true) {
   const spec = new ComponentSpec({ name });
@@ -86,7 +92,7 @@ afterEach(() => {
 });
 
 it.each([false, true])(
-  "preserves local undo and deduplicates the disposal flush (remote: %s)",
+  "preserves undo/redo and deduplicates the disposal flush (remote: %s)",
   async (remote) => {
     const current = pipeline("Original", remote);
     const view = render(<Editor {...current} />, { wrapper: StrictMode });
@@ -101,13 +107,11 @@ it.each([false, true])(
     });
     view.rerender(<Editor {...current} />);
     expect(undo.undoManager).toBe(manager);
-    expect(undo.canUndo).toBe(!remote);
-    if (!remote) {
-      act(() => undo.undo());
-      expect(current.spec.name).toBe("Original");
-      act(() => undo.redo());
-      expect(current.spec.name).toBe("Renamed");
-    }
+    expect(undo.canUndo).toBe(true);
+    act(() => undo.undo());
+    expect(current.spec.name).toBe("Original");
+    act(() => undo.redo());
+    expect(current.spec.name).toBe("Renamed");
     fireEvent.click(screen.getByRole("button"));
     view.unmount();
     await vi.runAllTimersAsync();
@@ -115,10 +119,16 @@ it.each([false, true])(
       expect.stringContaining("Renamed"),
     );
     expect(session.pipelineFile.activePipelineFile).toBeNull();
-    if (remote) expect(manager).toBeNull();
+    expect(manager).not.toBeNull();
+    expect(undo.undoManager).toBeNull();
     expect(saveIdStack).toHaveBeenCalledTimes(remote ? 0 : 2);
-    expect(vi.mocked(saveUndoHistory).mock.calls).toEqual(
-      remote ? [] : [["Renamed", expect.any(Array), manager]],
+    expect(saveUndoHistory).toHaveBeenCalledExactlyOnceWith(
+      remote
+        ? JSON.stringify(["remote-pipeline", "https://example.com", "Original"])
+        : "Renamed",
+      expect.any(Array),
+      { undoQueue: expect.any(Array) },
+      remote ? expect.stringContaining("Renamed") : undefined,
     );
   },
 );
@@ -223,4 +233,57 @@ it("saves a return to the baseline while another save is pending", async () => {
   expect(current.write).toHaveBeenLastCalledWith(
     expect.stringContaining("Original"),
   );
+});
+
+it("autosaves remote undo and redo without carrying history to another document", async () => {
+  const current = pipeline();
+  const view = render(<Editor {...current} />, { wrapper: StrictMode });
+  act(() => current.spec.setDescription("Edited"));
+  await act(() => vi.runAllTimersAsync());
+  expect(current.write).toHaveBeenLastCalledWith(
+    expect.stringContaining("Edited"),
+  );
+
+  act(() => undo.undo());
+  await act(() => vi.runAllTimersAsync());
+  expect(current.spec.description).toBeUndefined();
+  expect(current.write).toHaveBeenLastCalledWith(
+    expect.not.stringContaining("Edited"),
+  );
+
+  act(() => undo.redo());
+  await act(() => vi.runAllTimersAsync());
+  expect(current.spec.description).toBe("Edited");
+  expect(current.write).toHaveBeenLastCalledWith(
+    expect.stringContaining("Edited"),
+  );
+  expect(current.write).toHaveBeenCalledTimes(3);
+
+  view.rerender(<Editor {...pipeline("Next")} />);
+  expect(undo.canUndo).toBe(false);
+  expect(undo.canRedo).toBe(false);
+});
+
+it("persists the undo steps for the saved remote version while more edits are pending", async () => {
+  const current = pipeline();
+  let finish!: () => void;
+  current.write.mockReturnValueOnce(
+    new Promise<void>((resolve) => {
+      finish = resolve;
+    }),
+  );
+  render(<Editor {...current} />, { wrapper: StrictMode });
+  act(() => current.spec.setDescription("First edit"));
+  fireEvent.click(screen.getByRole("button"));
+  act(() => current.spec.setDescription("Second edit"));
+  await act(async () => {
+    finish();
+    await vi.runAllTimersAsync();
+  });
+  const calls = vi.mocked(saveUndoHistory).mock.calls;
+  expect(calls).toHaveLength(2);
+  expect(calls[0][2].undoQueue).toHaveLength(1);
+  expect(calls[0][3]).toContain("First edit");
+  expect(calls[1][2].undoQueue).toHaveLength(2);
+  expect(calls[1][3]).toContain("Second edit");
 });
