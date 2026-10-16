@@ -1,41 +1,43 @@
 import {
   Background,
-  type Node,
   type NodeChange,
   ReactFlow,
   useReactFlow,
 } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
+import type { ReactNode } from "react";
 
 import { BlockStack } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
 import type { ComponentSpec } from "@/models/componentSpec";
-import { useCopyShortcut } from "@/routes/v2/pages/RunView/hooks/useCopyShortcut";
-import { useLayoutUnplacedSpec } from "@/routes/v2/pages/RunView/hooks/useLayoutUnplacedSpec";
 import { SubgraphBreadcrumbs } from "@/routes/v2/shared/components/SubgraphBreadcrumbs";
 import {
   FLOW_CANVAS_DEFAULT_PROPS,
   GRID_SIZE,
 } from "@/routes/v2/shared/flowCanvasDefaults";
 import { useAutoLayoutShortcut } from "@/routes/v2/shared/hooks/useAutoLayoutShortcut";
+import { useCopyShortcut } from "@/routes/v2/shared/hooks/useCopyShortcut";
 import { useDoubleClickBehavior } from "@/routes/v2/shared/hooks/useDoubleClickBehavior";
 import { useFitViewOnFocus } from "@/routes/v2/shared/hooks/useFitViewOnFocus";
 import { useFlowCanvasState } from "@/routes/v2/shared/hooks/useFlowCanvasState";
+import { useLayoutUnplacedSpec } from "@/routes/v2/shared/hooks/useLayoutUnplacedSpec";
 import { useViewportScaling } from "@/routes/v2/shared/hooks/useViewportScaling";
 import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
-import { RunViewSelectionToolbar } from "./RunViewSelectionToolbar";
-
-interface RunViewFlowCanvasProps {
+interface ReadOnlyFlowCanvasProps {
   spec: ComponentSpec | null;
   className?: string;
+  nodesDraggable?: boolean;
+  children?: ReactNode;
 }
 
-export const RunViewFlowCanvas = observer(function RunViewFlowCanvas({
+export const ReadOnlyFlowCanvas = observer(function ReadOnlyFlowCanvas({
   spec,
   className,
-}: RunViewFlowCanvasProps) {
+  nodesDraggable = true,
+  children,
+}: ReadOnlyFlowCanvasProps) {
   const registry = useNodeRegistry();
   const nodeTypes = registry.getNodeTypes();
   const edgeTypes = registry.getEdgeTypes();
@@ -55,10 +57,7 @@ export const RunViewFlowCanvas = observer(function RunViewFlowCanvas({
   useCopyShortcut(spec);
   useFitViewOnFocus();
 
-  const applyLayout = (layoutedNodes: Node[]) => {
-    rfSetNodes(layoutedNodes);
-  };
-  useAutoLayoutShortcut(applyLayout);
+  useAutoLayoutShortcut(rfSetNodes);
   useLayoutUnplacedSpec(spec);
 
   const onNodesChange = (changes: NodeChange[]) => {
@@ -95,11 +94,12 @@ export const RunViewFlowCanvas = observer(function RunViewFlowCanvas({
         {...doubleClickBehavior}
         onViewportChange={handleViewportChange}
         nodesConnectable={false}
-        nodesDraggable
+        edgesReconnectable={false}
+        nodesDraggable={nodesDraggable}
         elementsSelectable
         deleteKeyCode={null}
       >
-        <RunViewSelectionToolbar spec={spec} />
+        {children}
         <Background gap={GRID_SIZE} className="bg-canvas!" />
       </ReactFlow>
     </BlockStack>

@@ -5,6 +5,7 @@ import { emitUserPipelineWritten } from "@/utils/userPipelineWriteEvents";
 import { emitPipelineFileChanged } from "./pipelineFileEvents";
 import type { PipelineFolder } from "./PipelineFolder";
 import { deleteEntry, updateEntry } from "./pipelineRegistry";
+import type { RemotePipelineRef } from "./types";
 
 interface PipelineFileInit {
   id: string;
@@ -12,12 +13,14 @@ interface PipelineFileInit {
   folder: PipelineFolder;
   createdAt?: Date;
   modifiedAt?: Date;
+  remote?: Omit<RemotePipelineRef, "source">;
 }
 
 export class PipelineFile {
   readonly id: string;
   readonly createdAt?: Date;
   readonly modifiedAt?: Date;
+  readonly remote?: Readonly<Omit<RemotePipelineRef, "source">>;
 
   @observable accessor storageKey: string;
   @observable accessor folder: PipelineFolder;
@@ -28,6 +31,7 @@ export class PipelineFile {
     this.folder = options.folder;
     this.createdAt = options.createdAt;
     this.modifiedAt = options.modifiedAt;
+    this.remote = options.remote && Object.freeze({ ...options.remote });
 
     makeObservable(this);
   }

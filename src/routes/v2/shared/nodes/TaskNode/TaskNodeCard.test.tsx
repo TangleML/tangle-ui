@@ -52,6 +52,28 @@ const buildProps = (
 afterEach(cleanup);
 
 describe("TaskNodeCard", () => {
+  it.each([true, false])(
+    "only disables aggregator output changes in read-only mode (%s)",
+    (readOnly) => {
+      render(
+        <ReactFlowProvider>
+          <TaskNodeCard
+            {...buildProps({
+              isAggregator: true,
+              readOnly,
+            })}
+          />
+        </ReactFlowProvider>,
+      );
+      const selector = screen.getByRole("combobox");
+      if (readOnly) {
+        expect(selector).toBeDisabled();
+      } else {
+        expect(selector).toBeEnabled();
+      }
+    },
+  );
+
   it("resolves secret argument references for display", () => {
     const task = new Task({
       $id: "task-1",
