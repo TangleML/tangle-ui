@@ -1,0 +1,346 @@
+{
+  "name": "tangent-local-agent",
+  "displayName": "Tangent Local Agent",
+  "description": "Browse a Tangle project's runs, resources, and agentic sessions from VS Code, chat with sessions in an editor panel, and host Tangent sub-agents locally with pi.",
+  "version": "0.0.27",
+  "private": true,
+  "publisher": "tangent",
+  "license": "Apache-2.0",
+  "repository": "github:tangleml/tangle-ui",
+  "icon": "resources/icon.png",
+  "type": "module",
+  "main": "./dist/extension.cjs",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "AI"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onUri"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "tangle",
+          "title": "Tangle",
+          "icon": "resources/tangle.svg"
+        }
+      ]
+    },
+    "views": {
+      "tangle": [
+        {
+          "id": "tangle.runs",
+          "name": "Runs"
+        },
+        {
+          "id": "tangle.resources",
+          "name": "Resources"
+        },
+        {
+          "id": "tangle.sessions",
+          "name": "Sessions"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "tangle.runs",
+        "contents": "Select a Tangle project to see its runs.\n[Select Project](command:tangle.selectProject)\n[Set Tangle API URL](command:tangle.setApiUrl)",
+        "when": "!tangle.hasProject"
+      },
+      {
+        "view": "tangle.resources",
+        "contents": "Select a Tangle project to see its resources.\n[Select Project](command:tangle.selectProject)\n[Set Tangle API URL](command:tangle.setApiUrl)",
+        "when": "!tangle.hasProject"
+      },
+      {
+        "view": "tangle.sessions",
+        "contents": "Select a Tangle project to see its agentic sessions.\n[Select Project](command:tangle.selectProject)\n[Set Tangle API URL](command:tangle.setApiUrl)",
+        "when": "!tangle.hasProject"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "tangle.newSession",
+          "when": "view == tangle.sessions",
+          "group": "navigation@1"
+        },
+        {
+          "command": "tangle.selectProject",
+          "when": "view =~ /^tangle\\.(runs|resources|sessions)$/",
+          "group": "navigation@2"
+        },
+        {
+          "command": "tangle.refresh",
+          "when": "view =~ /^tangle\\.(runs|resources|sessions)$/",
+          "group": "navigation@3"
+        },
+        {
+          "command": "tangle.openProject",
+          "when": "view =~ /^tangle\\.(runs|resources|sessions)$/ && tangle.hasProject",
+          "group": "1_project"
+        },
+        {
+          "command": "tangle.setApiUrl",
+          "when": "view =~ /^tangle\\.(runs|resources|sessions)$/",
+          "group": "2_settings"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "tangle.openRun",
+          "when": "view == tangle.runs && viewItem == tangleRun",
+          "group": "inline"
+        },
+        {
+          "command": "tangle.openResource",
+          "when": "view == tangle.resources && viewItem == tangleResource",
+          "group": "inline"
+        },
+        {
+          "command": "tangle.openSession",
+          "when": "view == tangle.sessions && viewItem == tangleSession",
+          "group": "inline"
+        },
+        {
+          "command": "tangle.renameSession",
+          "when": "view == tangle.sessions && viewItem == tangleSession",
+          "group": "1_edit"
+        },
+        {
+          "command": "tangle.detachSession",
+          "when": "view == tangle.sessions && viewItem == tangleSession",
+          "group": "2_remove"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "tangle.openRun",
+          "when": "false"
+        },
+        {
+          "command": "tangle.openResource",
+          "when": "false"
+        },
+        {
+          "command": "tangle.openSession",
+          "when": "false"
+        },
+        {
+          "command": "tangle.renameSession",
+          "when": "false"
+        },
+        {
+          "command": "tangle.detachSession",
+          "when": "false"
+        },
+        {
+          "command": "tangle.loadMoreRuns",
+          "when": "false"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "tangle.selectProject",
+        "title": "Select Project",
+        "category": "Tangle",
+        "icon": "$(folder-library)"
+      },
+      {
+        "command": "tangle.refresh",
+        "title": "Refresh",
+        "category": "Tangle",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "tangle.setApiUrl",
+        "title": "Set Tangle API URL",
+        "category": "Tangle"
+      },
+      {
+        "command": "tangle.openProject",
+        "title": "Open Project in Tangle",
+        "category": "Tangle",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "tangle.openRun",
+        "title": "Open Run in Tangle",
+        "category": "Tangle",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "tangle.openResource",
+        "title": "Open Resource in Tangle",
+        "category": "Tangle",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "tangle.loadMoreRuns",
+        "title": "Load More Runs",
+        "category": "Tangle"
+      },
+      {
+        "command": "tangle.newSession",
+        "title": "New Session",
+        "category": "Tangle",
+        "icon": "$(add)"
+      },
+      {
+        "command": "tangle.openSession",
+        "title": "Open Session Chat",
+        "category": "Tangle",
+        "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "tangle.renameSession",
+        "title": "Rename Session",
+        "category": "Tangle"
+      },
+      {
+        "command": "tangle.detachSession",
+        "title": "Remove Session from Project",
+        "category": "Tangle"
+      },
+      {
+        "command": "tangent.connect",
+        "title": "Connect Local Agent",
+        "category": "Tangent"
+      },
+      {
+        "command": "tangent.disconnect",
+        "title": "Disconnect Local Agent",
+        "category": "Tangent"
+      },
+      {
+        "command": "tangent.attachSession",
+        "title": "Attach to Session",
+        "category": "Tangent"
+      },
+      {
+        "command": "tangent.setPiProxyApiKey",
+        "title": "Set Pi Proxy API Key",
+        "category": "Tangent"
+      },
+      {
+        "command": "tangent.showMenu",
+        "title": "Show Menu",
+        "category": "Tangent"
+      },
+      {
+        "command": "tangent.checkForUpdates",
+        "title": "Check for Updates",
+        "category": "Tangent"
+      }
+    ],
+    "configuration": {
+      "title": "Tangent Local Agent",
+      "properties": {
+        "tangent.shellUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Base URL of the Tangent Shell, e.g. http://localhost:5173."
+        },
+        "tangent.autoConnect": {
+          "type": "boolean",
+          "default": true,
+          "description": "Reconnect to the saved Shell URL when VS Code starts."
+        },
+        "tangent.defaultBundleId": {
+          "type": "string",
+          "default": "",
+          "description": "Agent bundle used by \"New Session\". Leave empty to pick from a list."
+        },
+        "tangent.userEmail": {
+          "type": "string",
+          "default": "",
+          "description": "Email this window mints scoped remote-env tokens as. Must match the identity you chat as, so Tangent routes a session's tools and sub-agents to this window. Leave empty for the local dev identity."
+        },
+        "tangent.piBin": {
+          "type": "string",
+          "default": "pi",
+          "description": "Path to the pi executable."
+        },
+        "tangent.piModel": {
+          "type": "string",
+          "default": "",
+          "description": "Model (provider/id) for local sub-agents. Leave empty to use the model Prime asked for."
+        },
+        "tangent.piProxyUrl": {
+          "type": "string",
+          "default": "",
+          "description": "LLM proxy base URL for local pi. Leave empty to use your own pi configuration."
+        },
+        "tangent.tangleApiUrl": {
+          "type": "string",
+          "default": "http://localhost:8000",
+          "description": "Base URL of the Tangle backend the Runs, Resources, and Sessions views read from."
+        },
+        "tangent.tangleUiUrl": {
+          "type": "string",
+          "default": "http://localhost:3000",
+          "description": "Base URL of the Tangle web app, used to open projects and runs in the browser."
+        },
+        "tangent.updateBaseUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Base URL this extension checks for new .vsix builds (reads <url>/extension/latest.json). Leave empty to use tangent.tangleUiUrl."
+        },
+        "tangent.autoCheckUpdates": {
+          "type": "boolean",
+          "default": true,
+          "description": "Check for a newer extension build on startup and offer to update."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.webview.json",
+    "test": "tsx --test \"src/**/*.test.ts\"",
+    "format": "prettier --write .",
+    "package": "node esbuild.mjs && vsce package --no-dependencies"
+  },
+  "dependencies": {
+    "@tangent/embed-react": "github:TangleML/tangent-shell#b0c6ac565872440b779f12e7787f8065d9af867a&path:packages/embed-react",
+    "@tangent/local-agent-host": "github:TangleML/tangent-shell#b0c6ac565872440b779f12e7787f8065d9af867a&path:packages/local-agent-host",
+    "@tangent/remote-subagent": "github:TangleML/tangent-shell#b0c6ac565872440b779f12e7787f8065d9af867a&path:packages/remote-subagent",
+    "@tangent/shared": "github:TangleML/tangent-shell#b0c6ac565872440b779f12e7787f8065d9af867a&path:packages/shared",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "socket.io-client": "^4.8.3",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@types/vscode": "~1.90.0",
+    "@vscode/vsce": "^4.0.0",
+    "esbuild": "^0.28.2",
+    "eslint": "^9.39.2",
+    "eslint-plugin-simple-import-sort": "^14.0.0",
+    "globals": "^17.7.0",
+    "prettier": "^3.9.6",
+    "tsx": "^4.23.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.65.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "@tangent/local-agent-host": "github:TangleML/tangent-shell#b0c6ac565872440b779f12e7787f8065d9af867a&path:packages/local-agent-host",
+      "@tangent/remote-subagent": "github:TangleML/tangent-shell#b0c6ac565872440b779f12e7787f8065d9af867a&path:packages/remote-subagent",
+      "@tangent/shared": "github:TangleML/tangent-shell#b0c6ac565872440b779f12e7787f8065d9af867a&path:packages/shared"
+    }
+  }
+}

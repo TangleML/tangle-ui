@@ -12,7 +12,8 @@
     "src/api/**",
     "src/components/ui/**",
     "src/config/preSubmitHooks.ts",
-    "src/components/shared/BetaFeatureWrapper/BetaFeatureWrapper.tsx"
+    "src/components/shared/BetaFeatureWrapper/BetaFeatureWrapper.tsx",
+    "vscode-extension/**"
   ],
   "ignoreDependencies": [
     "@tanstack/react-query-devtools",
