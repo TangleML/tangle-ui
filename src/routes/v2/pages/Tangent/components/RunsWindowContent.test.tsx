@@ -23,6 +23,10 @@ vi.mock("@/services/projects/useProjectRuns", () => ({
 
 vi.mock("@/hooks/useToastNotification", () => ({ default: () => vi.fn() }));
 
+vi.mock("@/routes/runRoutes", () => ({
+  getDefaultRunPath: (runId: string) => `/runs/${runId}`,
+}));
+
 function run(id: string, pipelineName: string | null): ProjectRun {
   return {
     id,
@@ -80,6 +84,25 @@ describe("RunsWindowContent", () => {
       "Churn model",
     );
   });
+
+  it.each([
+    ["ctrl", "{Control>}"],
+    ["meta", "{Meta>}"],
+  ])(
+    "opens the run page in a new tab on a %s-click",
+    async (_modifier, heldKey) => {
+      given(run("run-7", "Churn model"));
+      vi.stubGlobal("open", vi.fn());
+      const user = userEvent.setup();
+
+      render(<RunsWindowContent />);
+      await user.keyboard(heldKey);
+      await user.click(screen.getByTestId("open-run-run-7"));
+
+      expect(window.open).toHaveBeenCalledWith("/runs/run-7", "_blank");
+      expect(openWorkareaTarget).not.toHaveBeenCalled();
+    },
+  );
 
   it("still names a run whose pipeline has none", async () => {
     given(run("run-8", null));

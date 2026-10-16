@@ -1,4 +1,10 @@
+import type { MouseEvent } from "react";
+
 import { getStringFromData } from "./string";
+
+export function hasNewTabModifier(event: MouseEvent) {
+  return event.ctrlKey || event.metaKey;
+}
 
 export async function readTextFromFile(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
