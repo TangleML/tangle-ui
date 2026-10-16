@@ -101,6 +101,7 @@ describe("StartSessionPrompt", () => {
           model: DEFAULT_MODEL_ID,
           thinkingDepth: DEFAULT_THINKING_LEVEL,
         }),
+        startingRequestedAt: expect.any(String),
         provisionalName: true,
       },
     });
