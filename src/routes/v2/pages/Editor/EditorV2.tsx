@@ -181,6 +181,19 @@ function EditorV2Content({ pipelineRef }: { pipelineRef: PipelineRef | null }) {
   );
 }
 
+// Remote links open the editor shell without initializing local loading or saving.
+function RemotePipelineEditorShell() {
+  return (
+    <div className="h-full w-full flex flex-col bg-slate-100 dark:bg-background select-none">
+      <SharedStoreProvider>
+        <EditorSessionProvider>
+          <EditorMenuBar />
+        </EditorSessionProvider>
+      </SharedStoreProvider>
+    </div>
+  );
+}
+
 // Non-editor-v2 routes (e.g. `/tour/$tourId`) pass `pipelineRef` directly.
 // Without a prop, we fall back to reading the route's params/search.
 export function EditorV2({
@@ -190,6 +203,10 @@ export function EditorV2({
 } = {}) {
   const params = useParams({ strict: false });
   const search = useSearch({ strict: false });
+  if (pipelineRefProp === undefined && "pipelineId" in params) {
+    return <RemotePipelineEditorShell />;
+  }
+
   const fileId =
     "fileId" in search && typeof search.fileId === "string"
       ? search.fileId

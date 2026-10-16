@@ -26,15 +26,14 @@ export const EditorVersionToggle = ({
   const version = detectEditorVersion(location.pathname);
   if (!version) return null;
 
-  const lastSegment = location.pathname.split("/").pop() ?? "";
-  const pipelineName = decodeURIComponent(lastSegment);
-  if (!pipelineName) return null;
+  const editorPath = version === "v2" ? APP_ROUTES.EDITOR_V2 : EDITOR_PATH;
+  const pipelinePath = location.pathname.slice(editorPath.length);
+  if (pipelinePath === "/") return null;
 
   const targetVersion = version === "v1" ? "v2" : "v1";
-  const targetPath =
-    targetVersion === "v2"
-      ? `${APP_ROUTES.EDITOR_V2}/${encodeURIComponent(pipelineName)}`
-      : `${EDITOR_PATH}/${encodeURIComponent(pipelineName)}`;
+  const targetEditorPath =
+    targetVersion === "v2" ? APP_ROUTES.EDITOR_V2 : EDITOR_PATH;
+  const targetPath = `${targetEditorPath}${pipelinePath}`;
   const tooltip =
     targetVersion === "v2" ? "Switch to new editor" : "Switch to legacy editor";
 

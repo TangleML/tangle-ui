@@ -30,6 +30,20 @@ import { formatDate } from "@/utils/date";
 
 import { DashboardPipelinesView } from "./DashboardPipelinesView";
 
+const editorFlags = vi.hoisted(() => ({ v2Enabled: true }));
+
+vi.mock("@/components/shared/Settings/useFlags", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("@/components/shared/Settings/useFlags")
+    >();
+  return {
+    ...actual,
+    isFlagEnabled: (flag: Parameters<typeof actual.isFlagEnabled>[0]) =>
+      flag === "v2_editor" ? editorFlags.v2Enabled : actual.isFlagEnabled(flag),
+  };
+});
+
 vi.mock("@/components/Home/PipelineSection/PipelineSection", () => ({
   PipelineSection: () => <div>Local pipeline list</div>,
 }));
@@ -133,9 +147,35 @@ async function renderDashboard(
     path: APP_ROUTES.DASHBOARD_PIPELINES,
     component: DashboardPipelinesView,
   });
+  const editorRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: APP_ROUTES.PIPELINE_EDITOR,
+    component: () => <div>Editor destination</div>,
+  });
+  const editorV2Route = createRoute({
+    getParentRoute: () => rootRoute,
+    path: APP_ROUTES.EDITOR_V2_PIPELINE,
+    component: () => <div>Editor destination</div>,
+  });
+  const remoteEditorRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: APP_ROUTES.REMOTE_PIPELINE_EDITOR,
+    component: () => <div>Remote editor destination</div>,
+  });
+  const remoteEditorV2Route = createRoute({
+    getParentRoute: () => rootRoute,
+    path: APP_ROUTES.EDITOR_V2_REMOTE_PIPELINE,
+    component: () => <div>Remote editor destination</div>,
+  });
   const history = createMemoryHistory({ initialEntries: [initialEntry] });
   const router = createRouter({
-    routeTree: rootRoute.addChildren([pipelinesRoute]),
+    routeTree: rootRoute.addChildren([
+      pipelinesRoute,
+      editorRoute,
+      editorV2Route,
+      remoteEditorRoute,
+      remoteEditorV2Route,
+    ]),
     history,
     scrollRestoration: true,
   });
@@ -187,6 +227,7 @@ async function renderResizableTable() {
 }
 
 beforeEach(() => {
+  editorFlags.v2Enabled = true;
   vi.spyOn(window, "scrollTo").mockImplementation(() => {});
   backend = {
     backendUrl: "https://backend.example.com",
@@ -209,6 +250,123 @@ afterEach(() => {
 });
 
 describe("DashboardPipelinesView remote pipelines", () => {
+  it.each([
+    { v2Enabled: true, editorPath: "/editor-v2/remote/pipeline-1" },
+    { v2Enabled: false, editorPath: "/editor/remote/pipeline-1" },
+  ])(
+    "opens remote pipeline names and rows at $editorPath",
+    async ({ v2Enabled, editorPath }) => {
+      editorFlags.v2Enabled = v2Enabled;
+      const { user, router, searchParams } = await renderDashboard(
+        `${APP_ROUTES.DASHBOARD_PIPELINES}?tab=remote`,
+      );
+      const nameLink = await screen.findByRole("link", {
+        name: "Example pipeline",
+      });
+      expect(nameLink).toHaveAttribute("href", editorPath);
+
+      await user.click(nameLink);
+      await screen.findByText("Remote editor destination");
+      expect(router.state.location.pathname).toBe(editorPath);
+      expect(searchParams().get("source")).toBeNull();
+
+      await act(async () => {
+        await router.navigate({
+          to: APP_ROUTES.DASHBOARD_PIPELINES,
+          search: { tab: "remote" },
+        });
+      });
+      const row = await screen.findByRole("row", {
+        name: /Example pipeline/,
+      });
+      await user.click(
+        within(row).getByRole("cell", { name: pipeline.user_id }),
+      );
+      await screen.findByText("Remote editor destination");
+      expect(router.state.location.pathname).toBe(editorPath);
+      expect(searchParams().get("source")).toBeNull();
+    },
+  );
+
+  it("copies the full ID from its text and keyboard button without opening the editor", async () => {
+    const { user, router, searchParams } = await renderDashboard(
+      `${APP_ROUTES.DASHBOARD_PIPELINES}?tab=remote`,
+    );
+    const writeText = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockResolvedValue();
+    const row = await screen.findByRole("row", { name: /Example pipeline/ });
+
+    await user.click(within(row).getByText(pipeline.id));
+    const copyButton = within(row).getByRole("button", {
+      name: "Copy pipeline ID",
+    });
+    copyButton.focus();
+    await user.keyboard("{Enter}");
+
+    expect(writeText).toHaveBeenCalledTimes(2);
+    expect(writeText).toHaveBeenNthCalledWith(1, pipeline.id);
+    expect(writeText).toHaveBeenNthCalledWith(2, pipeline.id);
+    expect(router.state.location.pathname).toBe(APP_ROUTES.DASHBOARD_PIPELINES);
+    expect(searchParams().get("tab")).toBe("remote");
+    expect(screen.queryByText(/editor destination/i)).not.toBeInTheDocument();
+  });
+
+  it.each(["metaKey", "ctrlKey"] as const)(
+    "opens a remote pipeline in a new tab on a %s row click",
+    async (modifier) => {
+      const open = vi.spyOn(window, "open").mockReturnValue(null);
+      const { router } = await renderDashboard(
+        `${APP_ROUTES.DASHBOARD_PIPELINES}?tab=remote`,
+      );
+      const row = await screen.findByRole("row", { name: /Example pipeline/ });
+
+      await act(async () => {
+        fireEvent.click(
+          within(row).getByRole("cell", { name: pipeline.user_id }),
+          {
+            [modifier]: true,
+          },
+        );
+      });
+
+      expect(open).toHaveBeenCalledOnce();
+      const [href, target] = open.mock.calls[0];
+      const openedUrl = new URL(String(href), "http://localhost");
+      expect(openedUrl.pathname).toBe("/editor-v2/remote/pipeline-1");
+      expect(openedUrl.searchParams.get("source")).toBeNull();
+      expect(target).toBe("_blank");
+      expect(router.state.location.pathname).toBe(
+        APP_ROUTES.DASHBOARD_PIPELINES,
+      );
+    },
+  );
+
+  it("preserves a deployment's hash prefix when opening a remote pipeline in a new tab", async () => {
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
+    const { router } = await renderDashboard(
+      `${APP_ROUTES.DASHBOARD_PIPELINES}?tab=remote`,
+    );
+    const row = await screen.findByRole("row", { name: /Example pipeline/ });
+    vi.spyOn(router.history, "createHref").mockImplementation(
+      (href) => `/tangle-ui/#${href}`,
+    );
+
+    await act(async () => {
+      fireEvent.click(
+        within(row).getByRole("cell", { name: pipeline.user_id }),
+        { metaKey: true },
+      );
+    });
+
+    expect(open).toHaveBeenCalledExactlyOnceWith(
+      "/tangle-ui/#/editor-v2/remote/pipeline-1",
+      "_blank",
+      "noopener,noreferrer",
+    );
+    expect(router.state.location.pathname).toBe(APP_ROUTES.DASHBOARD_PIPELINES);
+  });
+
   it("fetches only when the remote tab opens and displays the returned metadata", async () => {
     const { user } = await renderDashboard();
 
