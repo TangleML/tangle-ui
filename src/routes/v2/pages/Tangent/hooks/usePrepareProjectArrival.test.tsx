@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import { createNewPipeline } from "@/routes/v2/pages/Editor/components/EditorMenuBar/components/fileMenu.actions";
 import type { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
+import { startingSessionMetadata } from "@/services/projects/startingSession";
 import type {
   Project,
   ProjectResourceSummary,
@@ -250,7 +251,11 @@ describe("usePrepareProjectArrival", () => {
    * belongs to, which is usually one somebody has already worked in.
    */
   it("still starts the session a busy project was asked for", async () => {
-    given({ projectOverrides: { metadata: { startingPrompt: "Fix run 7" } } });
+    given({
+      projectOverrides: {
+        metadata: startingSessionMetadata({ prompt: "Fix run 7" }),
+      },
+    });
     const store = makeStore();
 
     prepare(store, 2);
@@ -270,8 +275,34 @@ describe("usePrepareProjectArrival", () => {
   });
 
   /** Somebody is working in it: it is not theirs to rearrange. */
+  /**
+   * An ask left on the project and never arrived for would otherwise open
+   * whichever session is started there next, days later or by someone else.
+   */
+  it("leaves an ask nobody arrived for within the hour unsent", async () => {
+    given({
+      projectOverrides: {
+        metadata: {
+          startingPrompt: "hello world",
+          startingRequestedAt: "2026-10-14T23:06:36Z",
+        },
+      },
+    });
+    const store = makeStore();
+
+    prepare(store, 2);
+    await settle();
+
+    expect(store.startSession).not.toHaveBeenCalled();
+    expect(updateProject).not.toHaveBeenCalled();
+  });
+
   it("leaves a busy project's window and pipelines as they are", async () => {
-    given({ projectOverrides: { metadata: { startingPrompt: "Fix run 7" } } });
+    given({
+      projectOverrides: {
+        metadata: startingSessionMetadata({ prompt: "Fix run 7" }),
+      },
+    });
     const store = makeStore();
 
     prepare(store, 2);
@@ -363,7 +394,11 @@ describe("usePrepareProjectArrival", () => {
   });
 
   it("still opens with the prompt a debug project carries, and clears it", async () => {
-    given({ projectOverrides: { metadata: { startingPrompt: "Fix run 7" } } });
+    given({
+      projectOverrides: {
+        metadata: startingSessionMetadata({ prompt: "Fix run 7" }),
+      },
+    });
     const store = makeStore();
 
     prepare(store);
@@ -387,7 +422,11 @@ describe("usePrepareProjectArrival", () => {
    * must not cost the caller the pipeline and the workarea they came for.
    */
   it("still opens the workarea when the prompt cannot be cleared", async () => {
-    given({ projectOverrides: { metadata: { startingPrompt: "Fix run 7" } } });
+    given({
+      projectOverrides: {
+        metadata: startingSessionMetadata({ prompt: "Fix run 7" }),
+      },
+    });
     updateProject.mockRejectedValueOnce(new Error("conflict"));
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     const store = makeStore();
@@ -415,7 +454,9 @@ describe("usePrepareProjectArrival", () => {
   it("names the session and the pipeline it opens after the prompt", async () => {
     given({
       projectOverrides: {
-        metadata: { startingPrompt: "Can you build a churn model for Q3" },
+        metadata: startingSessionMetadata({
+          prompt: "Can you build a churn model for Q3",
+        }),
       },
     });
     const store = makeStore();
