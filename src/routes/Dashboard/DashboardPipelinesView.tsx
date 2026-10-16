@@ -7,13 +7,35 @@ import { Heading } from "@/components/ui/typography";
 import { APP_ROUTES } from "@/routes/appRoutes";
 
 import { FavoritesPreview } from "./FavoritesPreview";
-import { validatePipelinesSearch } from "./pipelinesSearch";
+import {
+  type RemotePipelineSearchFilters,
+  validatePipelinesSearch,
+} from "./pipelinesSearch";
 import { RemotePipelinesTable } from "./RemotePipelinesTable";
 
 export function DashboardPipelinesView() {
   const navigate = useNavigate();
   const search = validatePipelinesSearch(useSearch({ strict: false }));
-  const tab = search.tab ?? "local";
+  const hasFilters =
+    search.name ||
+    search.id ||
+    search.user ||
+    search.createdFrom ||
+    search.updatedFrom;
+  const tab = search.tab ?? (hasFilters ? "remote" : "local");
+
+  function changeFilters(filters: RemotePipelineSearchFilters) {
+    void navigate({
+      to: APP_ROUTES.DASHBOARD_PIPELINES,
+      search: (previous) => ({
+        ...validatePipelinesSearch(previous),
+        ...filters,
+        tab: "remote",
+      }),
+      resetScroll: false,
+      replace: true,
+    });
+  }
 
   return (
     <BlockStack gap="6">
@@ -48,7 +70,10 @@ export function DashboardPipelinesView() {
             <PipelineSection />
           </TabsContent>
           <TabsContent value="remote">
-            <RemotePipelinesTable />
+            <RemotePipelinesTable
+              filters={search}
+              onFiltersChange={changeFilters}
+            />
           </TabsContent>
         </Tabs>
       </BlockStack>
