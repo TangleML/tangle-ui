@@ -6,7 +6,7 @@ import { tracking } from "@/utils/tracking";
 
 interface PaginationControlsProps {
   currentPage: number;
-  totalPages: number;
+  totalPages?: number;
   hasNextPage: boolean;
   hasPreviousPage: boolean;
   disabled?: boolean;
@@ -27,7 +27,9 @@ export function PaginationControls({
   onReset,
   analyticsTrackingPrefix,
 }: PaginationControlsProps) {
-  if (totalPages <= 1) return null;
+  const hasMultiplePages =
+    totalPages === undefined ? hasPreviousPage || hasNextPage : totalPages > 1;
+  if (!hasMultiplePages) return null;
 
   const firstProps = analyticsTrackingPrefix
     ? tracking(`${analyticsTrackingPrefix}.pagination_first`)
@@ -67,7 +69,9 @@ export function PaginationControls({
         </Button>
       </InlineStack>
       <Text size="sm" tone="subdued">
-        Page {currentPage} of {totalPages}
+        {totalPages === undefined
+          ? `Page ${currentPage}`
+          : `Page ${currentPage} of ${totalPages}`}
       </Text>
       <Button
         variant="outline"

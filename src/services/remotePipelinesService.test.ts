@@ -39,11 +39,10 @@ describe("listRemotePipelines", () => {
   });
 
   it("requests ten pipelines for the first page", async () => {
-    mockResponse({ pipelines: [], total_count: 0, next_page_token: null });
+    mockResponse({ pipelines: [], next_page_token: null });
 
     await expect(listRemotePipelines(BACKEND_URL)).resolves.toEqual({
       pipelines: [],
-      totalCount: 0,
       nextPageToken: null,
     });
 
@@ -54,16 +53,14 @@ describe("listRemotePipelines", () => {
     });
   });
 
-  it("preserves the total count and continuation token without fetching more pages", async () => {
+  it("preserves the continuation token without requiring a total or fetching more pages", async () => {
     mockResponse({
       pipelines: [pipeline],
-      total_count: 50,
       next_page_token: "page-2",
     });
 
     await expect(listRemotePipelines(BACKEND_URL)).resolves.toEqual({
       pipelines: [pipeline],
-      totalCount: 50,
       nextPageToken: "page-2",
     });
 
@@ -73,13 +70,11 @@ describe("listRemotePipelines", () => {
   it("requests ten more pipelines with the supplied continuation token", async () => {
     mockResponse({
       pipelines: [pipeline],
-      total_count: 11,
       next_page_token: null,
     });
 
     await expect(listRemotePipelines(BACKEND_URL, "page-2")).resolves.toEqual({
       pipelines: [pipeline],
-      totalCount: 11,
       nextPageToken: null,
     });
 
@@ -93,7 +88,7 @@ describe("listRemotePipelines", () => {
   it.each([undefined, "filtered-page-2"])(
     "includes the filter query with page token %s",
     async (pageToken) => {
-      mockResponse({ pipelines: [], total_count: 0, next_page_token: null });
+      mockResponse({ pipelines: [], next_page_token: null });
       const filterQuery = remotePipelineFiltersToQuery({ user: "me" });
 
       await listRemotePipelines(BACKEND_URL, pageToken, filterQuery);
@@ -111,12 +106,24 @@ describe("listRemotePipelines", () => {
   );
 
   it("normalizes an omitted continuation token to null", async () => {
-    mockResponse({ pipelines: [pipeline], total_count: 1 });
+    mockResponse({ pipelines: [pipeline] });
 
     await expect(listRemotePipelines(BACKEND_URL)).resolves.toEqual({
       pipelines: [pipeline],
-      totalCount: 1,
       nextPageToken: null,
+    });
+  });
+
+  it("ignores a total count from older responses", async () => {
+    mockResponse({
+      pipelines: [pipeline],
+      total_count: 50,
+      next_page_token: "page-2",
+    });
+
+    await expect(listRemotePipelines(BACKEND_URL)).resolves.toEqual({
+      pipelines: [pipeline],
+      nextPageToken: "page-2",
     });
   });
 

@@ -11,7 +11,6 @@ export interface RemotePipeline {
 
 export interface RemotePipelinesPage {
   pipelines: RemotePipeline[];
-  totalCount: number;
   nextPageToken: string | null;
 }
 
@@ -68,7 +67,6 @@ export async function listRemotePipelines(
   const result = await client.post<{
     200: {
       pipelines: RemotePipeline[];
-      total_count: number;
       next_page_token?: string | null;
     };
   }>({
@@ -89,7 +87,6 @@ export async function listRemotePipelines(
 
   return {
     pipelines: result.data.pipelines,
-    totalCount: result.data.total_count,
     nextPageToken: result.data.next_page_token ?? null,
   };
 }
