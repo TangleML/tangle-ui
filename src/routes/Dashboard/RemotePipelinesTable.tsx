@@ -1,5 +1,6 @@
 import { type PointerEvent, useEffect, useRef, useState } from "react";
 
+import { CopyText } from "@/components/shared/CopyText/CopyText";
 import { PaginationControls } from "@/components/shared/PaginationControls";
 import { BlockStack } from "@/components/ui/layout";
 import {
@@ -244,11 +245,21 @@ export function RemotePipelinesTable({
             </TableRow>
           ) : (
             pipelines.map((pipeline) => (
-              <TableRow key={pipeline.id}>
-                <TruncatedTableCell>
+              <TableRow key={pipeline.id} className="text-xs">
+                <TruncatedTableCell className="text-sm">
                   {pipeline.pipeline_name ?? "Untitled Pipeline"}
                 </TruncatedTableCell>
-                <TruncatedTableCell>{pipeline.id}</TruncatedTableCell>
+                <TableCell>
+                  <div className="flex min-h-9 items-center">
+                    <CopyText
+                      size="xs"
+                      className="truncate"
+                      copyLabel="Copy pipeline ID"
+                    >
+                      {pipeline.id}
+                    </CopyText>
+                  </div>
+                </TableCell>
                 <TruncatedTableCell>{pipeline.user_id}</TruncatedTableCell>
                 <TruncatedTableCell title={pipeline.created_at}>
                   {formatDate(pipeline.created_at)}
@@ -286,15 +297,19 @@ export function RemotePipelinesTable({
 function TruncatedTableCell({
   children,
   title = children,
+  className,
 }: {
   children: string;
   title?: string;
+  className?: string;
 }) {
   return (
-    <TableCell>
-      <span className="block truncate" title={title}>
-        {children}
-      </span>
+    <TableCell className={className}>
+      <div className="flex min-h-9 items-center">
+        <span className="block truncate" title={title}>
+          {children}
+        </span>
+      </div>
     </TableCell>
   );
 }

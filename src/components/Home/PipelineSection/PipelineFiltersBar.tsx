@@ -1,5 +1,4 @@
 import { format } from "date-fns";
-import type { ReactNode } from "react";
 import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -35,13 +34,9 @@ function isValidSortField(value: string): value is PipelineSortField {
 
 interface PipelineFiltersBarProps {
   filters: FilterBarProps;
-  actions?: ReactNode;
 }
 
-export function PipelineFiltersBar({
-  filters,
-  actions,
-}: PipelineFiltersBarProps) {
+export function PipelineFiltersBar({ filters }: PipelineFiltersBarProps) {
   const {
     searchQuery,
     setSearchQuery,
@@ -186,8 +181,6 @@ export function PipelineFiltersBar({
               )}
             </Button>
           </CollapsibleTrigger>
-
-          {actions}
         </InlineStack>
 
         {/* Row 2: Advanced (Collapsible) */}

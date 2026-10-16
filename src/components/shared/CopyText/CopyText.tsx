@@ -23,6 +23,7 @@ interface CopyTextProps {
   tone?: ComponentProps<typeof Text>["tone"];
   font?: ComponentProps<typeof Text>["font"];
   copyTrackingAction?: string;
+  copyLabel?: string;
 }
 
 export const CopyText = ({
@@ -35,10 +36,12 @@ export const CopyText = ({
   tone,
   font,
   copyTrackingAction,
+  copyLabel = "Copy to clipboard",
 }: CopyTextProps) => {
   const { track } = useAnalytics();
   const [isCopied, setIsCopied] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
 
   const handleCopy = () => {
     copyToClipboard(children);
@@ -90,15 +93,18 @@ export const CopyText = ({
           className={cn(
             compact ? "h-2 w-2" : "h-6 w-6",
             "shrink-0 transition-opacity duration-200",
-            alwaysShowButton || isCopied
+            alwaysShowButton || isCopied || isFocused
               ? "opacity-100"
               : "opacity-0 group-hover:opacity-100",
           )}
+          aria-label={copyLabel}
           onClick={handleButtonClick}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
         >
           <CopyIcon
             isCopied={isCopied}
-            alwaysShow={alwaysShowButton || isHovered}
+            alwaysShow={alwaysShowButton || isHovered || isFocused}
             compact={compact}
           />
         </Button>
