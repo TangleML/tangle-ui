@@ -1,5 +1,9 @@
 import { client } from "@/api/client.gen";
-import type { ComponentSpec } from "@/utils/componentSpec";
+import {
+  type ComponentSpec,
+  isValidComponentSpec,
+  type TaskSpec,
+} from "@/utils/componentSpec";
 
 export class PipelineSpecApiError extends Error {
   readonly status: number;
@@ -17,11 +21,11 @@ export class PipelineSpecApiError extends Error {
  * whatever backend happens to be running, so this one call is written out by
  * hand against the `client` that `BackendProvider` already configures.
  */
-interface SavedPipelineDto {
+export interface SavedPipelineDocument {
   id: string;
   file_path: string;
   pipeline_name: string | null;
-  root_pipeline_task: { componentRef?: { spec?: ComponentSpec } } | null;
+  root_pipeline_task: TaskSpec & { componentRef: { spec: ComponentSpec } };
 }
 
 export interface SavedPipeline {
@@ -29,29 +33,48 @@ export interface SavedPipeline {
   spec: ComponentSpec;
 }
 
-export async function getPipelineSpec(
+export async function getPipelineDocument(
   pipelineId: string,
-): Promise<SavedPipeline> {
-  const result = await client.get<{ 200: SavedPipelineDto }>({
+  backendUrl?: string,
+): Promise<SavedPipelineDocument> {
+  const result = await client.get<{ 200: SavedPipelineDocument }>({
+    ...(backendUrl ? { baseUrl: backendUrl } : {}),
     url: "/api/pipelines/{pipeline_id}",
     path: { pipeline_id: pipelineId },
   });
 
   if (!result.data) {
     throw new PipelineSpecApiError(
-      `Failed to fetch pipeline ${pipelineId}`,
+      `Failed to fetch pipeline ${pipelineId} (${result.response.status})`,
       result.response.status,
     );
   }
 
   const spec = result.data.root_pipeline_task?.componentRef?.spec;
 
-  if (!spec) {
+  if (!isValidComponentSpec(spec)) {
     throw new PipelineSpecApiError(
       `Pipeline ${pipelineId} holds no component spec`,
       result.response.status,
     );
   }
 
-  return { editorName: result.data.file_path, spec };
+  if (result.data.id !== pipelineId) {
+    throw new PipelineSpecApiError(
+      "The backend returned a different remote pipeline.",
+      result.response.status,
+    );
+  }
+  return result.data;
+}
+
+export async function getPipelineSpec(
+  pipelineId: string,
+  backendUrl?: string,
+): Promise<SavedPipeline> {
+  const document = await getPipelineDocument(pipelineId, backendUrl);
+  return {
+    editorName: document.file_path,
+    spec: document.root_pipeline_task.componentRef.spec,
+  };
 }

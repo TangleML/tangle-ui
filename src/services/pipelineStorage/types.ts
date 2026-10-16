@@ -55,6 +55,26 @@ export interface PipelineRef {
   name: string;
   fileId?: string;
 }
+export interface RemotePipelineRef {
+  source: "remote";
+  backendUrl: string;
+  pipelineId: string;
+}
+
+export type EditorPipelineRef = PipelineRef | RemotePipelineRef;
+
+export function isRemotePipelineRef(
+  ref: EditorPipelineRef,
+): ref is RemotePipelineRef {
+  return "source" in ref && ref.source === "remote";
+}
+
+export function getEditorPipelineIdentity(ref: EditorPipelineRef): string {
+  return isRemotePipelineRef(ref)
+    ? JSON.stringify(["remote-pipeline", ref.backendUrl, ref.pipelineId])
+    : (ref.fileId ?? ref.name);
+}
+
 export const FoldersQueryKeys = {
   All: () => ["pipeline-folders"] as const,
   Children: (parentId: string | null) =>

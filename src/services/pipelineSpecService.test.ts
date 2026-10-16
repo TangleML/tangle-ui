@@ -25,18 +25,32 @@ describe("getPipelineSpec", () => {
     vi.resetAllMocks();
   });
 
-  it("asks for the pipeline by its id", async () => {
+  it.each([undefined, "https://backend.example.com"])(
+    "asks for the pipeline by ID on backend %s",
+    async (backendUrl) => {
+      mockResponse({
+        id: "pipeline-1",
+        root_pipeline_task: { componentRef: { spec } },
+      });
+
+      await getPipelineSpec("pipeline-1", backendUrl);
+
+      expect(client.get).toHaveBeenCalledWith({
+        ...(backendUrl ? { baseUrl: backendUrl } : {}),
+        url: "/api/pipelines/{pipeline_id}",
+        path: { pipeline_id: "pipeline-1" },
+      });
+    },
+  );
+
+  it("rejects a response for another pipeline", async () => {
     mockResponse({
-      id: "pipeline-1",
+      id: "another-id",
       root_pipeline_task: { componentRef: { spec } },
     });
-
-    await getPipelineSpec("pipeline-1");
-
-    expect(client.get).toHaveBeenCalledWith({
-      url: "/api/pipelines/{pipeline_id}",
-      path: { pipeline_id: "pipeline-1" },
-    });
+    await expect(getPipelineSpec("pipeline-1")).rejects.toThrow(
+      "different remote pipeline",
+    );
   });
 
   it("digs the component spec out of the root task", async () => {
