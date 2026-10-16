@@ -60,6 +60,7 @@ export function CreatedByFilter({
         className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
       />
       <Input
+        aria-label="Search by user"
         placeholder="Search by user..."
         value={inputValue}
         onChange={handleChange}
