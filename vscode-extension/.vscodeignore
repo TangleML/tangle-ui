@@ -1,0 +1,10 @@
+**
+!dist/extension.cjs
+!dist/chat.js
+!dist/proxyProvider.ts
+!dist/sessionResources.ts
+!resources/tangle.svg
+!resources/icon.png
+!package.json
+!README.md
+!LICENSE
