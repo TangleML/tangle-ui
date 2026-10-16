@@ -1,3 +1,4 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 import { ExamplePipelines } from "@/components/Learn/ExamplePipelines";
@@ -19,11 +20,15 @@ import {
 } from "@/components/ui/table";
 import { Paragraph, Text } from "@/components/ui/typography";
 import { usePagination } from "@/hooks/usePagination";
+import useToastNotification from "@/hooks/useToastNotification";
+import { useBackend } from "@/providers/BackendProvider";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import {
   type ComponentFileEntry,
   getAllComponentFilesFromList,
 } from "@/utils/componentStore";
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
+import { getErrorMessage } from "@/utils/string";
 
 import BulkActionsBar from "./BulkActionsBar";
 import { PipelineFiltersBar } from "./PipelineFiltersBar";
@@ -62,6 +67,10 @@ interface PipelineSectionProps {
 
 export const PipelineSection = withSuspenseWrapper(
   ({ onPipelineClick }: PipelineSectionProps) => {
+    const storage = usePipelineStorage();
+    const { backendUrl, ready, configured, available } = useBackend();
+    const queryClient = useQueryClient();
+    const notify = useToastNotification();
     const [pipelines, setPipelines] = useState<Pipelines>(new Map());
     const [isLoading, setIsLoading] = useState(false);
     const [selectedPipelines, setSelectedPipelines] = useState<Set<string>>(
@@ -94,6 +103,28 @@ export const PipelineSection = withSuspenseWrapper(
         setIsLoading(false);
       }
     };
+
+    const { mutate: saveAsRemote, isPending: isSavingAsRemote } = useMutation({
+      mutationFn: (name: string) =>
+        storage.moveLocalPipelineToRemote(name, backendUrl),
+      onSuccess: () => {
+        setSelectedPipelines(new Set());
+        notify(
+          "Pipeline saved remotely and removed from local pipelines.",
+          "success",
+        );
+      },
+      onError: (error) => notify(getErrorMessage(error), "error"),
+      onSettled: () => {
+        void fetchUserPipelines();
+        void queryClient.invalidateQueries({
+          queryKey: ["remote-pipelines-page", backendUrl],
+        });
+        void queryClient.invalidateQueries({
+          queryKey: ["remote-pipelines", backendUrl],
+        });
+      },
+    });
 
     const handleSelectAll = (checked: boolean) => {
       setSelectedPipelines(
@@ -172,6 +203,10 @@ export const PipelineSection = withSuspenseWrapper(
                 componentRef={fileEntry.componentRef}
                 modificationTime={fileEntry.modificationTime}
                 onDelete={fetchUserPipelines}
+                onSaveAsRemote={() => saveAsRemote(name)}
+                saveAsRemoteDisabled={
+                  isSavingAsRemote || !ready || !configured || !available
+                }
                 isSelected={selectedPipelines.has(name)}
                 onSelect={(checked) => handleSelectPipeline(name, checked)}
                 searchQuery={matchMetadata.searchQuery}
