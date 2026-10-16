@@ -14,6 +14,11 @@ import { useRemotePipelinesPage } from "@/hooks/useRemotePipelinesPage";
 import { useBackend } from "@/providers/BackendProvider";
 import { formatDate } from "@/utils/date";
 
+import {
+  getRemotePipelinesFilterQuery,
+  isInvalidPipelineId,
+  type RemotePipelineSearchFilters,
+} from "./pipelinesSearch";
 import { RemotePipelinesFilters } from "./RemotePipelinesFilters";
 
 const COLUMN_NAMES = [
@@ -30,6 +35,8 @@ const MIN_COLUMN_WIDTH = 8;
 interface RemotePipelinesTableProps {
   page: number;
   onPageChange: (page: number, replace?: boolean) => Promise<void>;
+  filters: RemotePipelineSearchFilters;
+  onFiltersChange: (filters: RemotePipelineSearchFilters) => void;
 }
 
 function resizeColumnWidths(widths: number[], index: number, delta: number) {
@@ -51,17 +58,17 @@ function resizeColumnWidths(widths: number[], index: number, delta: number) {
 export function RemotePipelinesTable({
   page,
   onPageChange,
+  filters,
+  onFiltersChange,
 }: RemotePipelinesTableProps) {
   const { backendUrl, configured, available, ready } = useBackend();
-  const [filterQuery, setFilterQuery] = useState<string>();
-  const [previousSearch, setPreviousSearch] = useState({
-    backendUrl,
-    filterQuery,
-  });
-  const searchChanged =
-    previousSearch.backendUrl !== backendUrl ||
-    previousSearch.filterQuery !== filterQuery;
-  const currentPage = searchChanged ? 1 : page;
+  const filterQuery = getRemotePipelinesFilterQuery(filters);
+  const invalidId = isInvalidPipelineId(filters.id);
+  const [debouncedQuery, setDebouncedQuery] = useState(filterQuery);
+  const isDebouncing =
+    !invalidId && Boolean(filterQuery) && filterQuery !== debouncedQuery;
+  const [previousBackendUrl, setPreviousBackendUrl] = useState(backendUrl);
+  const currentPage = previousBackendUrl === backendUrl ? page : 1;
   const [columnWidths, setColumnWidths] = useState(INITIAL_COLUMN_WIDTHS);
   const tableRef = useRef<HTMLTableElement>(null);
   const dragRef = useRef<{
@@ -70,27 +77,55 @@ export function RemotePipelinesTable({
     tableWidth: number;
     widths: number[];
   } | null>(null);
-  const canFetch = ready && configured && available;
-  const { data, isLoading, isFetching, isPlaceholderData, error, totalCount } =
-    useRemotePipelinesPage(backendUrl, currentPage, canFetch, filterQuery);
+  const canFetch =
+    ready && configured && available && !isDebouncing && !invalidId;
+  const {
+    data,
+    isLoading,
+    isFetching: isQueryFetching,
+    isPlaceholderData,
+    error,
+  } = useRemotePipelinesPage(backendUrl, currentPage, canFetch, filterQuery);
+  const isFetching = isQueryFetching || isDebouncing;
   const pipelines = data?.pipelines ?? [];
 
   useEffect(() => {
-    if (!searchChanged) return;
-    if (page === 1) setPreviousSearch({ backendUrl, filterQuery });
+    if (invalidId) return;
+    if (!filterQuery) {
+      setDebouncedQuery(undefined);
+      return;
+    }
+    const timeout = window.setTimeout(
+      () => setDebouncedQuery(filterQuery),
+      200,
+    );
+    return () => window.clearTimeout(timeout);
+  }, [filterQuery, invalidId]);
+
+  useEffect(() => {
+    if (previousBackendUrl === backendUrl) return;
+    if (page === 1) setPreviousBackendUrl(backendUrl);
     else void onPageChange(1, true);
-  }, [backendUrl, filterQuery, searchChanged, page, onPageChange]);
+  }, [backendUrl, previousBackendUrl, page, onPageChange]);
 
   useEffect(() => {
     if (
       data &&
       !isFetching &&
+      !invalidId &&
       !isPlaceholderData &&
       data.page !== currentPage
     ) {
       void onPageChange(data.page, true);
     }
-  }, [data, isFetching, isPlaceholderData, currentPage, onPageChange]);
+  }, [
+    data,
+    isFetching,
+    invalidId,
+    isPlaceholderData,
+    currentPage,
+    onPageChange,
+  ]);
 
   let message: string | undefined;
   if (!ready) message = "Loading remote pipelines…";
@@ -107,7 +142,7 @@ export function RemotePipelinesTable({
 
   return (
     <BlockStack gap="4" className="w-full">
-      <RemotePipelinesFilters onSearch={setFilterQuery} />
+      <RemotePipelinesFilters filters={filters} onChange={onFiltersChange} />
       <Table
         ref={tableRef}
         aria-label="Remote Pipelines"
@@ -232,7 +267,6 @@ export function RemotePipelinesTable({
       <nav aria-label="Remote pipelines pagination" className="w-full">
         <PaginationControls
           currentPage={currentPage}
-          totalPages={Math.max(currentPage, Math.ceil(totalCount / 10))}
           hasPreviousPage={currentPage > 1}
           hasNextPage={Boolean(data?.nextPageToken)}
           disabled={!canFetch || isFetching}

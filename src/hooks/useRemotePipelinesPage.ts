@@ -16,7 +16,7 @@ export function useRemotePipelinesPage(
   filterQuery?: string,
 ) {
   const queryClient = useQueryClient();
-  const query = useQuery({
+  return useQuery({
     queryKey: ["remote-pipelines-page", backendUrl, filterQuery, page],
     queryFn: async (): Promise<NumberedRemotePipelinesPage> => {
       let pageToken: string | undefined;
@@ -53,16 +53,4 @@ export function useRemotePipelinesPage(
     refetchOnWindowFocus: false,
     retry: false,
   });
-
-  const totalCount =
-    query.data?.totalCount ??
-    queryClient.getQueryData<RemotePipelinesPage>([
-      "remote-pipelines",
-      backendUrl,
-      filterQuery,
-      undefined,
-    ])?.totalCount ??
-    0;
-
-  return { ...query, totalCount };
 }

@@ -1,6 +1,5 @@
-import { addDays, startOfDay } from "date-fns";
-import { useEffect, useId, useState } from "react";
-import type { DateRange } from "react-day-picker";
+import { format, parseISO } from "date-fns";
+import { useId } from "react";
 
 import { CreatedByFilter } from "@/components/shared/CreatedByFilter/CreatedByFilter";
 import { Button } from "@/components/ui/button";
@@ -9,56 +8,49 @@ import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
-import { remotePipelineFiltersToQuery } from "@/services/remotePipelinesService";
+
+import {
+  isInvalidPipelineId,
+  type RemotePipelineSearchFilters,
+} from "./pipelinesSearch";
 
 interface RemotePipelinesFiltersProps {
-  onSearch: (filterQuery: string | undefined) => void;
+  filters: RemotePipelineSearchFilters;
+  onChange: (filters: RemotePipelineSearchFilters) => void;
 }
 
 export function RemotePipelinesFilters({
-  onSearch,
+  filters,
+  onChange,
 }: RemotePipelinesFiltersProps) {
-  const [name, setName] = useState("");
-  const [id, setId] = useState("");
-  const [user, setUser] = useState<string>();
-  const [createdAt, setCreatedAt] = useState<DateRange>();
-  const [updatedAt, setUpdatedAt] = useState<DateRange>();
+  const { name, id, user, createdFrom, createdTo, updatedFrom, updatedTo } =
+    filters;
+  const createdAt = createdFrom
+    ? {
+        from: parseISO(createdFrom),
+        to: createdTo ? parseISO(createdTo) : undefined,
+      }
+    : undefined;
+  const updatedAt = updatedFrom
+    ? {
+        from: parseISO(updatedFrom),
+        to: updatedTo ? parseISO(updatedTo) : undefined,
+      }
+    : undefined;
   const hasFilters = name || id || user || createdAt?.from || updatedAt?.from;
   const idErrorId = useId();
-  const invalidId = Boolean(
-    id.trim() &&
-    !/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(
-      id.trim(),
-    ),
-  );
-  const filterQuery = remotePipelineFiltersToQuery({
-    name: name.trim(),
-    id: id.trim(),
-    user: user?.trim(),
-    createdAfter: createdAt?.from && startOfDay(createdAt.from).toISOString(),
-    createdBefore:
-      createdAt?.to && startOfDay(addDays(createdAt.to, 1)).toISOString(),
-    updatedAfter: updatedAt?.from && startOfDay(updatedAt.from).toISOString(),
-    updatedBefore:
-      updatedAt?.to && startOfDay(addDays(updatedAt.to, 1)).toISOString(),
-  });
-
-  useEffect(() => {
-    if (invalidId) return;
-    if (!filterQuery) {
-      onSearch(undefined);
-      return;
-    }
-    const timeout = window.setTimeout(() => onSearch(filterQuery), 200);
-    return () => window.clearTimeout(timeout);
-  }, [filterQuery, invalidId, onSearch]);
+  const invalidId = isInvalidPipelineId(id);
 
   function clearFilters() {
-    setName("");
-    setId("");
-    setUser(undefined);
-    setCreatedAt(undefined);
-    setUpdatedAt(undefined);
+    onChange({
+      name: undefined,
+      id: undefined,
+      user: undefined,
+      createdFrom: undefined,
+      createdTo: undefined,
+      updatedFrom: undefined,
+      updatedTo: undefined,
+    });
   }
 
   return (
@@ -72,8 +64,10 @@ export function RemotePipelinesFilters({
           <Input
             aria-label="Search by name"
             placeholder="Search by name..."
-            value={name}
-            onChange={(event) => setName(event.target.value)}
+            value={name ?? ""}
+            onChange={(event) =>
+              onChange({ name: event.target.value || undefined })
+            }
             className="pl-9"
           />
         </div>
@@ -82,20 +76,27 @@ export function RemotePipelinesFilters({
           aria-invalid={invalidId}
           aria-describedby={invalidId ? idErrorId : undefined}
           placeholder="Search by ID..."
-          value={id}
-          onChange={(event) => setId(event.target.value)}
+          value={id ?? ""}
+          onChange={(event) =>
+            onChange({ id: event.target.value || undefined })
+          }
           className="w-40"
         />
         <CreatedByFilter
           value={user}
-          onChange={setUser}
-          onClear={() => setUser(undefined)}
+          onChange={(user) => onChange({ user })}
+          onClear={() => onChange({ user: undefined })}
         />
         <fieldset className="min-w-0" title="Created at">
           <legend className="sr-only">Created at</legend>
           <DatePickerWithRange
             value={createdAt}
-            onChange={setCreatedAt}
+            onChange={(range) =>
+              onChange({
+                createdFrom: range?.from && format(range.from, "yyyy-MM-dd"),
+                createdTo: range?.to && format(range.to, "yyyy-MM-dd"),
+              })
+            }
             placeholder="Created at"
           />
         </fieldset>
@@ -103,7 +104,12 @@ export function RemotePipelinesFilters({
           <legend className="sr-only">Updated at</legend>
           <DatePickerWithRange
             value={updatedAt}
-            onChange={setUpdatedAt}
+            onChange={(range) =>
+              onChange({
+                updatedFrom: range?.from && format(range.from, "yyyy-MM-dd"),
+                updatedTo: range?.to && format(range.to, "yyyy-MM-dd"),
+              })
+            }
             placeholder="Updated at"
           />
         </fieldset>

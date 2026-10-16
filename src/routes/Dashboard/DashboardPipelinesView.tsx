@@ -7,14 +7,37 @@ import { Heading } from "@/components/ui/typography";
 import { APP_ROUTES } from "@/routes/appRoutes";
 
 import { FavoritesPreview } from "./FavoritesPreview";
-import { validatePipelinesSearch } from "./pipelinesSearch";
+import {
+  type RemotePipelineSearchFilters,
+  validatePipelinesSearch,
+} from "./pipelinesSearch";
 import { RemotePipelinesTable } from "./RemotePipelinesTable";
 
 export function DashboardPipelinesView() {
   const navigate = useNavigate();
   const search = validatePipelinesSearch(useSearch({ strict: false }));
-  const tab = search.tab ?? (search.page ? "remote" : "local");
+  const hasFilters =
+    search.name ||
+    search.id ||
+    search.user ||
+    search.createdFrom ||
+    search.updatedFrom;
+  const tab = search.tab ?? (search.page || hasFilters ? "remote" : "local");
   const page = search.page ?? 1;
+
+  function changeFilters(filters: RemotePipelineSearchFilters) {
+    void navigate({
+      to: APP_ROUTES.DASHBOARD_PIPELINES,
+      search: (previous) => ({
+        ...previous,
+        ...filters,
+        tab: "remote",
+        page: 1,
+      }),
+      resetScroll: false,
+      replace: true,
+    });
+  }
 
   function changePage(page: number, replace = false) {
     return navigate({
@@ -55,7 +78,12 @@ export function DashboardPipelinesView() {
             <PipelineSection />
           </TabsContent>
           <TabsContent value="remote">
-            <RemotePipelinesTable page={page} onPageChange={changePage} />
+            <RemotePipelinesTable
+              page={page}
+              onPageChange={changePage}
+              filters={search}
+              onFiltersChange={changeFilters}
+            />
           </TabsContent>
         </Tabs>
       </BlockStack>
