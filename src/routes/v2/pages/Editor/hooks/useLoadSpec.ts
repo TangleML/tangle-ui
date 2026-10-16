@@ -16,6 +16,7 @@ import {
 import { hydrateLoadedSpecRefs } from "@/routes/v2/pages/Editor/utils/hydrateSpecRefs";
 import {
   createUndoStoreWithEvents,
+  getUndoHistoryKey,
   loadUndoHistory,
 } from "@/routes/v2/pages/Editor/utils/undoHistoryStorage";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
@@ -62,9 +63,10 @@ export function useLoadSpec(ref: EditorPipelineRef) {
       const file = await storage.resolvePipeline(ref);
       const yamlContent = await file.read();
       const specData = yaml.load(yamlContent, PIPELINE_YAML_LOAD_OPTIONS);
-      const undoHistory = remote
-        ? null
-        : await loadUndoHistory(file.storageKey).catch(() => null);
+      const undoHistory = await loadUndoHistory(
+        getUndoHistoryKey(file),
+        remote ? yamlContent : undefined,
+      ).catch(() => null);
 
       const loadedSpec = deserializeSpecData(specData, undoHistory);
       await hydrateLoadedSpecRefs(loadedSpec.spec);
