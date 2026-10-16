@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { client } from "@/api/client.gen";
 import { getCurrentUserApiUsersMeGet } from "@/api/sdk.gen";
 import { LibraryDB } from "@/providers/ComponentLibraryProvider/libraries/storage";
+import { TourPipelineStorageService } from "@/providers/TourProvider/tourPipelineStorage/TourPipelineStorageService";
 import type { SavedPipelineDocument } from "@/services/pipelineSpecService";
 import { createAndAttachPipeline } from "@/services/projects/createAndAttachPipeline";
 import { pipelineFileTarget } from "@/services/projects/pipelineResource";
@@ -387,11 +388,6 @@ describe("PipelineStorageService editor resolution", () => {
 
   it("keeps file IDs and legacy name backfill for local pipelines", async () => {
     const file = await storage.resolvePipeline(ref);
-    vi.mocked(registry.findById).mockResolvedValue({
-      id: "local-id",
-      storageKey: "Local",
-      folderId: "__root__",
-    });
     vi.spyOn(storage, "findPipelineById").mockResolvedValue(file);
     await expect(
       storage.resolvePipeline({ name: "Local", fileId: "local-id" }),
@@ -406,6 +402,17 @@ describe("PipelineStorageService editor resolution", () => {
       file,
     );
     expect(storage.rootFolder.assignFile).toHaveBeenCalledWith("Legacy");
+  });
+
+  it("resolves tour file IDs through their existing session-storage lookup", async () => {
+    const tour = new TourPipelineStorageService();
+    const file = await tour.rootFolder.addFile("Tour pipeline", content);
+    const reopened = await tour.resolvePipeline({
+      fileId: file.id,
+      name: file.storageKey,
+    });
+    expect(await reopened.read()).toBe(content);
+    expect(registry.findById).not.toHaveBeenCalled();
   });
 });
 
@@ -838,7 +845,7 @@ describe("moving local pipelines to remote storage", () => {
         name: local.storageKey,
         fileId: "missing-id",
       }),
-    ).rejects.toThrow("not found");
+    ).rejects.toThrow("Pipeline not found");
   });
 
   it("keeps earlier ID links when another pipeline with the same name is migrated", async () => {

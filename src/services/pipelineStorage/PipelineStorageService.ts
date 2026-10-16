@@ -69,18 +69,14 @@ export class PipelineStorageService {
       return remoteFile(await RemotePipelineStorageDriver.open(ref));
     }
 
-    if (ref.fileId) {
-      if (await findById(ref.fileId)) {
-        return this.findPipelineById(ref.fileId);
-      }
-    } else {
-      const file = await this.resolvePipelineByName(ref.name);
-      if (file) return file;
+    const file = ref.fileId
+      ? await this.findPipelineById(ref.fileId)
+      : await this.resolvePipelineByName(ref.name);
+    if (file) return file;
 
-      const legacyDriver = new RootFolderDbStorageDriver();
-      if (await legacyDriver.hasKey(ref.name)) {
-        return this.rootFolder.assignFile(ref.name);
-      }
+    const legacyDriver = new RootFolderDbStorageDriver();
+    if (await legacyDriver.hasKey(ref.name)) {
+      return this.rootFolder.assignFile(ref.name);
     }
     const migration = await findPipelineMigration(ref);
     if (migration) {
@@ -304,6 +300,8 @@ export class PipelineStorageService {
   async findPipelineById(id: string): Promise<PipelineFile> {
     const entry = await findById(id);
     if (!entry) {
+      const migration = await findPipelineMigration({ name: id, fileId: id });
+      if (migration) return this.resolvePipeline(migration.remote);
       throw new Error(`Pipeline not found: ${id}`);
     }
 
