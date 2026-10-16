@@ -30,6 +30,7 @@ import {
   RUN_SOURCE_ANNOTATION,
 } from "@/utils/annotations";
 import { formatDate } from "@/utils/date";
+import { hasNewTabModifier } from "@/utils/dom";
 import { getOverallExecutionStatusFromStats } from "@/utils/executionStatus";
 import { copyToClipboard } from "@/utils/string";
 import { tracking } from "@/utils/tracking";
@@ -90,7 +91,7 @@ const RunRow = ({
       return;
     }
 
-    if (e.ctrlKey || e.metaKey) {
+    if (hasNewTabModifier(e)) {
       window.open(clickThroughUrl, "_blank");
       return;
     }

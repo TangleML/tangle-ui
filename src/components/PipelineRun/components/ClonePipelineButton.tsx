@@ -19,6 +19,7 @@ import {
   type ComponentSpec,
   isSecretArgument,
 } from "@/utils/componentSpec";
+import { hasNewTabModifier } from "@/utils/dom";
 import { getInitialName } from "@/utils/getComponentName";
 import { extractTaskArguments } from "@/utils/nodes/taskArguments";
 
@@ -77,7 +78,7 @@ export const ClonePipelineButton = ({
 
   const handleClone = useCallback(
     (e: MouseEvent) => {
-      openInNewTabRef.current = e.metaKey || e.ctrlKey;
+      openInNewTabRef.current = hasNewTabModifier(e);
       /**
        * We cannnot convert SecretArguments into strings compatible with inputs,
        * so we need to override them with undefined.
