@@ -15,3 +15,10 @@ export function getDefaultEditorPath(pipelineName: string): string {
     ? getEditorV2Path(pipelineName)
     : getLegacyEditorPath(pipelineName);
 }
+
+export function getDefaultRemoteEditorPath(pipelineId: string): string {
+  const editorPath = isFlagEnabled("v2_editor")
+    ? APP_ROUTES.EDITOR_V2
+    : EDITOR_PATH;
+  return `${editorPath}/remote/${encodeURIComponent(pipelineId)}`;
+}
