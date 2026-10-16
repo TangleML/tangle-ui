@@ -9,7 +9,13 @@ import {
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { WindowMiniButton } from "@/routes/v2/shared/windows/WindowMiniButton";
 
-export function useRunViewWindows() {
+interface RunViewWindowsOptions {
+  offersTangentHandoff: boolean;
+}
+
+export function useRunViewWindows({
+  offersTangentHandoff,
+}: RunViewWindowsOptions) {
   const { windows } = useSharedStores();
   useEffect(() => {
     // Guard each openWindow: calling it for an existing window restores it if
@@ -34,20 +40,23 @@ export function useRunViewWindows() {
     }
 
     if (!windows.getWindowById(RUN_DETAILS_WINDOW_ID)) {
-      windows.openWindow(<RunDetailsContent />, {
-        id: RUN_DETAILS_WINDOW_ID,
-        title: "Run Details",
-        defaultVisible: true,
-        defaultDockState: "right",
-        persisted: true,
-        miniContent: (
-          <WindowMiniButton
-            tooltip="View Run Details"
-            label="Run Details"
-            icon="Info"
-          />
-        ),
-      });
+      windows.openWindow(
+        <RunDetailsContent offersTangentHandoff={offersTangentHandoff} />,
+        {
+          id: RUN_DETAILS_WINDOW_ID,
+          title: "Run Details",
+          defaultVisible: true,
+          defaultDockState: "right",
+          persisted: true,
+          miniContent: (
+            <WindowMiniButton
+              tooltip="View Run Details"
+              label="Run Details"
+              icon="Info"
+            />
+          ),
+        },
+      );
     }
-  }, [windows]);
+  }, [windows, offersTangentHandoff]);
 }
