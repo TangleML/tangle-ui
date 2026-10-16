@@ -1,15 +1,41 @@
+import type { ComponentProps } from "react";
+
+import { LoadingScreen } from "@/components/shared/LoadingScreen";
+import { useBackend } from "@/providers/BackendProvider";
 import { EmbeddedPipelineEditor } from "@/routes/v2/pages/Editor/EmbeddedPipelineEditor";
 import { findById } from "@/services/pipelineStorage/pipelineRegistry";
-import type { PipelineRef } from "@/services/pipelineStorage/types";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
+import type { EditorPipelineRef } from "@/services/pipelineStorage/types";
 import { parseIdentity } from "@/services/projects/resourceTarget";
 
 import { registerWorkareaKind } from "./registry";
 import type { WorkareaTarget } from "./types";
 
-function toPipelineRef(target: WorkareaTarget, title: string): PipelineRef {
+function PipelineWorkareaEditor({
+  target,
+  title,
+  ...props
+}: Omit<ComponentProps<typeof EmbeddedPipelineEditor>, "pipelineRef"> & {
+  target: WorkareaTarget;
+  title: string;
+}) {
+  const { backendUrl, ready, configured } = useBackend();
+  const storage = usePipelineStorage();
   const { key, value } = parseIdentity(target.identity);
-  if (key === "id") return { fileId: value, name: title };
-  return { name: value };
+  if (key === "remote" || key === "draft") {
+    if (!ready) return <LoadingScreen message="Loading pipeline..." />;
+    if (!configured)
+      return <p role="alert">Configure a backend to open remote pipelines.</p>;
+  }
+  const pipelineRef: EditorPipelineRef =
+    key === "remote"
+      ? { source: "remote", backendUrl, pipelineId: value }
+      : key === "draft"
+        ? storage.getRemoteDraftRef(value, backendUrl)
+        : key === "id"
+          ? { fileId: value, name: title }
+          : { name: value };
+  return <EmbeddedPipelineEditor pipelineRef={pipelineRef} {...props} />;
 }
 
 registerWorkareaKind({
@@ -19,12 +45,14 @@ registerWorkareaKind({
   resolveTitle: async (target) => {
     const { key, value } = parseIdentity(target.identity);
     if (key === "name") return value;
+    if (key === "remote" || key === "draft") return value;
     const entry = await findById(value).catch(() => undefined);
     return entry?.storageKey ?? value;
   },
   render: (tab, hostProps) => (
-    <EmbeddedPipelineEditor
-      pipelineRef={toPipelineRef(tab.target, tab.title)}
+    <PipelineWorkareaEditor
+      target={tab.target}
+      title={tab.title}
       isActive={hostProps.isActive}
       projectId={hostProps.projectId}
       onStoreReady={(store) => hostProps.registerTabStore(tab.id, store)}

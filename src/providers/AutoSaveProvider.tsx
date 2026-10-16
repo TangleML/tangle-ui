@@ -1,3 +1,4 @@
+import { useNavigate, useRouter } from "@tanstack/react-router";
 import equal from "fast-deep-equal";
 import { type ReactNode, useEffect, useState } from "react";
 
@@ -10,6 +11,7 @@ import {
   EMPTY_GRAPH_COMPONENT_SPEC,
   useComponentSpec,
 } from "@/providers/ComponentSpecProvider";
+import { getDefaultRemoteEditorPath } from "@/routes/editorRoutes";
 import { AUTOSAVE_DEBOUNCE_TIME_MS } from "@/utils/constants";
 
 interface AutoSaveContextType {
@@ -21,6 +23,8 @@ const AutoSaveContext =
 
 export const AutoSaveProvider = ({ children }: { children: ReactNode }) => {
   const { componentSpec, saveComponentSpec, isLoading } = useComponentSpec();
+  const navigate = useNavigate();
+  const router = useRouter();
 
   const [isEmptySpec, setIsEmptySpec] = useState(
     equal(componentSpec, EMPTY_GRAPH_COMPONENT_SPEC),
@@ -36,7 +40,14 @@ export const AutoSaveProvider = ({ children }: { children: ReactNode }) => {
   const autoSaveStatus = useAutoSave(
     async (spec) => {
       if (spec.name) {
-        saveComponentSpec(spec.name);
+        const href = router.state.location.href;
+        const remote = await saveComponentSpec(spec.name);
+        if (remote && router.state.location.href === href) {
+          await navigate({
+            to: getDefaultRemoteEditorPath(remote.pipelineId),
+            replace: true,
+          });
+        }
       }
     },
     componentSpec,

@@ -18,7 +18,7 @@ export function usePipelineRename() {
     if (!spec) return;
     const file = pipelineFileStore.activePipelineFile;
     try {
-      if (file?.remote) {
+      if (file?.remote || file?.isDraft) {
         renamePipeline(spec, newName);
         await Promise.all([autoSave.save(), file.rename(newName)]);
         return;

@@ -19,7 +19,7 @@ import { importPipelineFromYaml } from "@/services/pipelineService";
  * 1. Read `url` from search params, validate with isAllowedImportUrl()
  * 2. Show confirmation screen with URL
  * 3. On user click: fetch YAML from the URL
- * 4. Import into IndexedDB via importPipelineFromYaml (overwrite if same name exists)
+ * 4. Save using the deployment's pipeline storage policy via importPipelineFromYaml
  * 5. Redirect to the editor
  */
 
@@ -202,7 +202,7 @@ export const ImportPage = () => {
         setPipelineName(result.name);
         setStep(Step.Done);
         navigate({
-          to: getDefaultEditorPath(result.name),
+          to: result.url ?? getDefaultEditorPath(result.name),
         });
       } else {
         setError(result.errorMessage || "Failed to import pipeline from URL.");

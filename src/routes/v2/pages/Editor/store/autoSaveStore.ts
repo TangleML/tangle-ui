@@ -85,6 +85,10 @@ export class AutoSaveStore {
     await this.performSave(yaml);
   }
 
+  get hasUnsavedChanges(): boolean {
+    return this.serializeSpec() !== this.lastSavedYaml;
+  }
+
   private serializeSpec(): string | null {
     if (!this.spec) return null;
     try {
@@ -119,13 +123,13 @@ export class AutoSaveStore {
     });
     const idStack = collectIdStack(spec);
     const history = manager && { undoQueue: manager.undoQueue.slice() };
-    const historyKey = getUndoHistoryKey(file);
+    const historyKey = file.isDraft ? undefined : getUndoHistoryKey(file);
     const write = async () => {
       await file.write(yaml);
       if (this.spec === spec && this.file === file) this.lastSavedYaml = yaml;
       if (history) {
         await saveUndoHistory(
-          historyKey,
+          historyKey ?? getUndoHistoryKey(file),
           idStack,
           history,
           file.remote ? yaml : undefined,

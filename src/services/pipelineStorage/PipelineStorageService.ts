@@ -1,7 +1,10 @@
 import { makeObservable, observable } from "mobx";
 
+import { emitUserPipelineWritten } from "@/utils/userPipelineWriteEvents";
+
 import { createDriver } from "./createDriver";
 import { pipelineStorageDb } from "./db";
+import { RemotePipelineDraftStorageDriver } from "./drivers/RemotePipelineDraftStorageDriver";
 import { RemotePipelineStorageDriver } from "./drivers/RemotePipelineStorageDriver";
 import { RootFolderDbStorageDriver } from "./drivers/RootFolderDbStorageDriver";
 import { movePipelineAssociationsToRemote } from "./pipelineAssociations";
@@ -11,8 +14,11 @@ import { findById, findByStorageKey } from "./pipelineRegistry";
 import {
   type EditorPipelineRef,
   getEditorPipelineIdentity,
+  isRemotePipelineDraftRef,
   isRemotePipelineRef,
   type PipelineStorageDriver,
+  type RemotePipelineDraftRef,
+  type RemotePipelineRef,
   ROOT_FOLDER_ID,
 } from "./types";
 
@@ -22,6 +28,10 @@ const ROOT_DRIVER_CONFIG = {
 } as const;
 
 export class PipelineStorageService {
+  private readonly remoteDrafts = new Map<
+    string,
+    { ref: RemotePipelineDraftRef; file: PipelineFile }
+  >();
   @observable accessor rootFolder: PipelineFolder;
 
   constructor() {
@@ -32,6 +42,12 @@ export class PipelineStorageService {
   }
 
   async resolvePipeline(ref: EditorPipelineRef): Promise<PipelineFile> {
+    if (isRemotePipelineDraftRef(ref)) {
+      return (
+        this.remoteDrafts.get(getEditorPipelineIdentity(ref))?.file ??
+        this.createRemoteDraft(ref)
+      );
+    }
     if (isRemotePipelineRef(ref)) {
       return remoteFile(await RemotePipelineStorageDriver.open(ref));
     }
@@ -48,14 +64,55 @@ export class PipelineStorageService {
     throw new Error(`Pipeline "${ref.name}" not found`);
   }
 
+  createRemoteDraft(
+    ref: RemotePipelineDraftRef,
+    onCreated?: (remote: RemotePipelineRef) => Promise<unknown>,
+  ): PipelineFile {
+    const driver = new RemotePipelineDraftStorageDriver(ref, async (remote) => {
+      file.promoteToRemote(remote);
+      await onCreated?.(remote);
+    });
+    const file = new PipelineFile({
+      id: ref.draftId,
+      storageKey: ref.name,
+      draftBackendUrl: ref.backendUrl,
+      folder: new PipelineFolder({
+        id: getEditorPipelineIdentity(ref),
+        name: "Remote pipelines",
+        parentId: null,
+        driver,
+      }),
+    });
+    this.remoteDrafts.set(getEditorPipelineIdentity(ref), { ref, file });
+    return file;
+  }
+
+  getRemoteDraftRef(
+    draftId: string,
+    backendUrl: string,
+  ): RemotePipelineDraftRef {
+    const draft = [...this.remoteDrafts.values()].find(
+      ({ ref }) => ref.draftId === draftId && ref.backendUrl === backendUrl,
+    );
+    if (!draft)
+      throw new Error("This unsaved pipeline draft is no longer available.");
+    return draft.ref;
+  }
+
+  discardRemoteDraft(ref: RemotePipelineDraftRef): void {
+    this.remoteDrafts.delete(getEditorPipelineIdentity(ref));
+  }
+
   async createRemotePipeline(
     backendUrl: string,
     name: string,
     content: string,
   ): Promise<PipelineFile> {
-    return remoteFile(
+    const file = remoteFile(
       await RemotePipelineStorageDriver.create(backendUrl, name, content),
     );
+    emitUserPipelineWritten();
+    return file;
   }
 
   async moveLocalPipelineToRemote(

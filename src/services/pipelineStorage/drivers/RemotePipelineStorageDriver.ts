@@ -74,11 +74,11 @@ export class RemotePipelineStorageDriver implements PipelineStorageDriver {
     backendUrl: string,
     name: string,
     content: string,
+    filePath = `pipelines/${crypto.randomUUID()}.yaml`,
   ): Promise<RemotePipelineStorageDriver> {
     const spec = { ...componentSpecFromYaml(content), name };
     const userId = await getRemotePipelineWriter(backendUrl);
     // Names are labels; a new random path prevents Save As replacing a namesake.
-    const filePath = `pipelines/${crypto.randomUUID()}.yaml`;
     const document = await writeRemotePipelineDocument(backendUrl, filePath, {
       root_pipeline_task: remotePipelineTaskFromSpec(spec),
       pipeline_run_annotations: {},

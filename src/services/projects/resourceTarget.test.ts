@@ -8,16 +8,39 @@ import type {
   WorkareaTarget,
 } from "./resourceTarget";
 import {
+  draftPipelineIdentity,
   formatWorkareaTarget,
   idIdentity,
   isWorkareaTargetString,
   nameIdentity,
   parseIdentity,
   parseWorkareaTarget,
+  remotePipelineIdentity,
   sameTarget,
 } from "./resourceTarget";
 
 describe("workareaTarget", () => {
+  it.each([
+    remotePipelineIdentity("pipeline-1"),
+    draftPipelineIdentity("draft-1"),
+  ])(
+    "round-trips pipeline identity %s without treating it as local",
+    (identity) => {
+      expect(parseWorkareaTarget(`pipeline://${identity}`)).toEqual({
+        type: "pipeline",
+        identity,
+      });
+      expect(formatWorkareaTarget({ type: "pipeline", identity })).toBe(
+        `pipeline://${identity}`,
+      );
+      for (const type of ["run", "artifact", "document"]) {
+        expect(isWorkareaTargetString(`${type}://${identity}`)).toBe(false);
+        expect(() => parseWorkareaTarget(`${type}://${identity}`)).toThrow(
+          /identity/,
+        );
+      }
+    },
+  );
   it("round-trips between object and string form", () => {
     const target: WorkareaTarget = {
       type: "artifact",

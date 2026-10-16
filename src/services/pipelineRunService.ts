@@ -4,7 +4,14 @@ import type {
   BodyCreateApiPipelineRunsPost,
   ListAnnotationsApiPipelineRunsIdAnnotationsGetResponse,
 } from "@/api/types.gen";
-import { getDefaultEditorPath } from "@/routes/editorRoutes";
+import {
+  getDefaultEditorPath,
+  getDefaultRemoteEditorPath,
+} from "@/routes/editorRoutes";
+import {
+  createsLocalPipelines,
+  saveNewRemotePipeline,
+} from "@/services/pipelineStorage/pipelineCreation";
 import type { PipelineRun } from "@/types/pipelineRun";
 import { EDITOR_FLOW_DIRECTION_ANNOTATION } from "@/utils/annotations";
 import { removeCachingStrategyFromSpec } from "@/utils/cache";
@@ -136,6 +143,18 @@ export const copyRunToPipeline = async (
     // Generate a name for the copied pipeline
     const originalName = cleanComponentSpec.name || "Unnamed Pipeline";
     let newName = name || originalName;
+
+    if (!createsLocalPipelines()) {
+      const remote = await saveNewRemotePipeline(
+        newName,
+        componentSpecToYaml({ ...cleanComponentSpec, name: newName }),
+      );
+      return {
+        name: newName,
+        url: getDefaultRemoteEditorPath(remote.pipelineId),
+        remote,
+      };
+    }
 
     // Check if the name already exists and append a number if needed
     let nameExists = true;

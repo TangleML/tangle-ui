@@ -45,8 +45,8 @@ export function useAiChatWindow(enabled: boolean) {
             renamePipelineFile: renamePipelineFileFor(
               editorSession.pipelineFile,
               (fileId, name) => {
-                if (editorSession.pipelineFile.activePipelineFile?.remote)
-                  return;
+                const file = editorSession.pipelineFile.activePipelineFile;
+                if (file?.remote || file?.isDraft) return;
                 void navigate({
                   to: APP_ROUTES.EDITOR_V2_PIPELINE,
                   params: { pipelineName: name },

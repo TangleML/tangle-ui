@@ -28,7 +28,7 @@ import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStoragePr
 import {
   type EditorPipelineRef,
   getEditorPipelineIdentity,
-  isRemotePipelineRef,
+  isRemotePipelineDraftRef,
 } from "@/services/pipelineStorage/types";
 import { PIPELINE_YAML_LOAD_OPTIONS } from "@/utils/yaml";
 
@@ -52,7 +52,7 @@ export function useLoadSpec(ref: EditorPipelineRef) {
   const storage = usePipelineStorage();
   const queryClient = useQueryClient();
   const identity = getEditorPipelineIdentity(ref);
-  const remote = isRemotePipelineRef(ref);
+  const remote = "source" in ref;
   const localName = remote ? undefined : ref.name;
   const localFileId = remote ? undefined : ref.fileId;
   const queryKey = [EDITOR_SPEC_QUERY_KEY, identity];
@@ -63,10 +63,12 @@ export function useLoadSpec(ref: EditorPipelineRef) {
       const file = await storage.resolvePipeline(ref);
       const yamlContent = await file.read();
       const specData = yaml.load(yamlContent, PIPELINE_YAML_LOAD_OPTIONS);
-      const undoHistory = await loadUndoHistory(
-        getUndoHistoryKey(file),
-        remote ? yamlContent : undefined,
-      ).catch(() => null);
+      const undoHistory = file.isDraft
+        ? null
+        : await loadUndoHistory(
+            getUndoHistoryKey(file),
+            file.remote ? yamlContent : undefined,
+          ).catch(() => null);
 
       const loadedSpec = deserializeSpecData(specData, undoHistory);
       await hydrateLoadedSpecRefs(loadedSpec.spec);
@@ -91,11 +93,17 @@ export function useLoadSpec(ref: EditorPipelineRef) {
         // StrictMode reconnects observers after replaying effect cleanup.
         // Wait for that before evicting a genuinely closed document.
         queueMicrotask(() => {
+          const key = [EDITOR_SPEC_QUERY_KEY, identity];
+          const cached = queryClient
+            .getQueryCache()
+            .find({ queryKey: key, exact: true });
+          if (cached?.getObserversCount()) return;
           queryClient.removeQueries({
-            queryKey: [EDITOR_SPEC_QUERY_KEY, identity],
+            queryKey: key,
             exact: true,
             type: "inactive",
           });
+          if (isRemotePipelineDraftRef(ref)) storage.discardRemoteDraft(ref);
         });
       };
     }
@@ -125,7 +133,7 @@ export function useLoadSpec(ref: EditorPipelineRef) {
       if (storageKey !== localName && storageKey !== localFileId) return;
       queryClient.invalidateQueries({ queryKey: matchKey });
     });
-  }, [queryClient, identity, localFileId, localName, remote]);
+  }, [queryClient, storage, identity, localFileId, localName, remote]);
 
   return query;
 }
