@@ -14,6 +14,12 @@ export class WorkspacesApiError extends ApiError {
   }
 }
 
+export class WorkspaceSecretsApiError extends ApiError {
+  constructor(message: string, status: number) {
+    super("WorkspaceSecretsApiError", message, status);
+  }
+}
+
 export class ProjectsApiError extends ApiError {
   constructor(message: string, status: number) {
     super("ProjectsApiError", message, status);

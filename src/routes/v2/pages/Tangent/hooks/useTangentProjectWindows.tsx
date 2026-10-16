@@ -7,6 +7,7 @@ import { AssetsWindowContent } from "@/routes/v2/pages/Tangent/components/Assets
 import { ProjectWindowContent } from "@/routes/v2/pages/Tangent/components/ProjectWindowContent";
 import { ResourcesWindowContent } from "@/routes/v2/pages/Tangent/components/ResourcesWindowContent";
 import { RunsWindowContent } from "@/routes/v2/pages/Tangent/components/RunsWindowContent";
+import { SecretsWindowContent } from "@/routes/v2/pages/Tangent/components/SecretsWindowContent";
 import { SessionsWindowContent } from "@/routes/v2/pages/Tangent/components/SessionsWindowContent";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { WindowMiniButton } from "@/routes/v2/shared/windows/WindowMiniButton";
@@ -62,6 +63,12 @@ const PROJECT_DOCK_WINDOWS: ProjectDockWindow[] = [
     title: "Runs",
     icon: "ListChecks",
     content: <RunsWindowContent />,
+  },
+  {
+    id: "tangent-project-secrets",
+    title: "Secrets",
+    icon: "KeyRound",
+    content: <SecretsWindowContent />,
   },
 ];
 
