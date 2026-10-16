@@ -11,12 +11,13 @@ import {
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { IconName } from "@/components/ui/icon";
-import { Icon } from "@/components/ui/icon";
-import { Input } from "@/components/ui/input";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
 import { tracking } from "@/utils/tracking";
+
+import { PickerOption } from "./PickerOption";
+import { PickerSearchField } from "./PickerSearchField";
 
 interface PickableItem {
   id: string;
@@ -83,23 +84,11 @@ export function PickFromListDialog({
           </Text>
 
           {all.length > 0 && (
-            <div className="relative">
-              <Icon
-                name="Search"
-                size="sm"
-                className="pointer-events-none absolute top-1/2 left-2 -translate-y-1/2 text-muted-foreground"
-                aria-hidden="true"
-              />
-              <Input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                onEscape={() => setQuery("")}
-                placeholder={`Search ${noun}s`}
-                aria-label={`Search ${noun}s`}
-                className="pl-7"
-                autoFocus
-              />
-            </div>
+            <PickerSearchField
+              label={`Search ${noun}s`}
+              value={query}
+              onChange={setQuery}
+            />
           )}
 
           {isPending && (
@@ -131,31 +120,15 @@ export function PickFromListDialog({
 
           <BlockStack gap="1" className="min-h-0 flex-1 overflow-y-auto">
             {matches.map((item) => (
-              <Button
+              <PickerOption
                 key={item.id}
-                variant="ghost"
-                className="h-auto w-full justify-start py-2"
+                icon={icon}
+                label={item.label}
+                detail={item.alreadyAdded ? "Added" : undefined}
                 disabled={item.alreadyAdded || isAdding}
                 onClick={() => onPick(item.id)}
-                {...tracking(selectTracking)}
-              >
-                <InlineStack
-                  gap="2"
-                  blockAlign="center"
-                  wrap="nowrap"
-                  className="w-full"
-                >
-                  <Icon name={icon} size="xs" className="shrink-0" />
-                  <Text size="sm" className="flex-1 truncate text-left">
-                    {item.label}
-                  </Text>
-                  {item.alreadyAdded && (
-                    <Text size="xs" tone="subdued">
-                      Added
-                    </Text>
-                  )}
-                </InlineStack>
-              </Button>
+                trackingId={selectTracking}
+              />
             ))}
           </BlockStack>
         </BlockStack>

@@ -238,6 +238,13 @@ describe("useDebugInTangent", () => {
       expect(createProject).not.toHaveBeenCalled();
     });
 
+    it("looks the project up only once", async () => {
+      debugRun();
+
+      await waitFor(() => expect(navigate).toHaveBeenCalled());
+      expect(getProject).toHaveBeenCalledTimes(1);
+    });
+
     /**
      * A project holds one instructions document and the oldest wins, so a
      * second one is read by nobody and quietly replaces nothing.
