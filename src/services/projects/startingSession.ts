@@ -1,12 +1,14 @@
 import type { ThinkingLevel } from "@tangent/shared/contracts.ts";
 import { THINKING_LEVELS } from "@tangent/shared/contracts.ts";
 
+import { HOURS } from "@/utils/constants";
+
 const PROMPT = "startingPrompt";
 const MODEL = "startingModel";
 const THINKING_DEPTH = "startingThinkingDepth";
 const REQUESTED_AT = "startingRequestedAt";
 
-const STARTING_SESSION_LIFETIME_MS = 60 * 60 * 1000;
+const STARTING_SESSION_LIFETIME = 1 * HOURS;
 
 export interface StartingSession {
   prompt: string;
@@ -40,7 +42,7 @@ const asThinkingLevel = (value: unknown) =>
 
 function isStillWanted(requestedAt: unknown) {
   const time = typeof requestedAt === "string" ? Date.parse(requestedAt) : NaN;
-  return Date.now() - time < STARTING_SESSION_LIFETIME_MS;
+  return Date.now() - time < STARTING_SESSION_LIFETIME;
 }
 
 /** Anyone may PATCH a project, so every key here may be anything at all. */

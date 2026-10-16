@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { HOURS } from "@/utils/constants";
+
 import {
   readStartingSession,
   startingSessionMetadata,
   withoutStartingSession,
 } from "./startingSession";
-
-const HOUR = 60 * 60 * 1000;
 
 describe("startingSession", () => {
   afterEach(() => vi.useRealTimers());
@@ -44,7 +44,7 @@ describe("startingSession", () => {
     vi.setSystemTime(new Date("2026-10-16T09:00:00Z"));
     const written = startingSessionMetadata({ prompt: "Go" });
 
-    vi.setSystemTime(Date.now() + HOUR - 1000);
+    vi.setSystemTime(Date.now() + HOURS - 1000);
     expect(readStartingSession(written)?.prompt).toBe("Go");
 
     vi.setSystemTime(Date.now() + 2000);
