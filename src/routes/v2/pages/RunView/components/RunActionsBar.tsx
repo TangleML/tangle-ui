@@ -1,3 +1,4 @@
+import { ManageAccessButton } from "@/components/shared/AccessControl/ManageAccessButton";
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import ConfirmationDialog from "@/components/shared/Dialogs/ConfirmationDialog";
 import { StatusBar } from "@/components/shared/Status";
@@ -72,9 +73,9 @@ export function RunActionsBar({
     );
   }
 
-  const { canAccessEditorSpec, isRunCreator, isInProgress, isComplete } =
+  const { canAccessEditorSpec, canCancelRun, isInProgress, isComplete } =
     actions;
-  const showCancel = isInProgress && isRunCreator;
+  const showCancel = isInProgress && canCancelRun;
   const showSeparator = showCancel || isComplete;
 
   return (
@@ -88,6 +89,7 @@ export function RunActionsBar({
         {status}
 
         <InlineStack blockAlign="center" className="shrink-0">
+          <ManageAccessButton runId={actions.runId ?? undefined} />
           <TooltipButton
             variant="ghost"
             size="min"
