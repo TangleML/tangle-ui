@@ -9,14 +9,26 @@ export interface RemotePipeline {
   current_version: string;
 }
 
+export interface RemotePipelinesPage {
+  pipelines: RemotePipeline[];
+  totalCount: number;
+  nextPageToken: string | null;
+}
+
 export async function listRemotePipelines(
   backendUrl: string,
-): Promise<RemotePipeline[]> {
-  const result = await client.get<{
-    200: { pipelines: RemotePipeline[] };
+  pageToken?: string,
+): Promise<RemotePipelinesPage> {
+  const result = await client.post<{
+    200: {
+      pipelines: RemotePipeline[];
+      total_count: number;
+      next_page_token?: string | null;
+    };
   }>({
     baseUrl: backendUrl,
     url: "/api/pipelines/search",
+    body: { page_size: 10, page_token: pageToken },
   });
 
   if (!result.data) {
@@ -25,5 +37,9 @@ export async function listRemotePipelines(
     );
   }
 
-  return result.data.pipelines;
+  return {
+    pipelines: result.data.pipelines,
+    totalCount: result.data.total_count,
+    nextPageToken: result.data.next_page_token ?? null,
+  };
 }
