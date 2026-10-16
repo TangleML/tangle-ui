@@ -57,7 +57,13 @@ import { RunTangentButton } from "./RunTangentButton";
 
 const FAILURE_STATUSES = ["FAILED", "SYSTEM_ERROR", "INVALID"];
 
-export const RunDetailsContent = observer(function RunDetailsContent() {
+interface RunDetailsContentProps {
+  offersTangentHandoff: boolean;
+}
+
+export const RunDetailsContent = observer(function RunDetailsContent({
+  offersTangentHandoff,
+}: RunDetailsContentProps) {
   const { configured } = useBackend();
   const spec = useSpec();
   const { data: currentUserDetails } = useUserDetails();
@@ -100,6 +106,7 @@ export const RunDetailsContent = observer(function RunDetailsContent() {
       state={state}
       metadata={metadata}
       currentUserId={currentUserDetails?.id}
+      offersTangentHandoff={offersTangentHandoff}
     />
   );
 });
@@ -110,6 +117,7 @@ interface RunDetailsContentLoadedProps {
   state: GetGraphExecutionStateResponse;
   metadata: PipelineRunResponse | undefined;
   currentUserId: string | undefined;
+  offersTangentHandoff: boolean;
 }
 
 function RunDetailsContentLoaded({
@@ -118,6 +126,7 @@ function RunDetailsContentLoaded({
   state,
   metadata,
   currentUserId,
+  offersTangentHandoff,
 }: RunDetailsContentLoadedProps) {
   const executionStatusStats =
     metadata?.execution_status_stats ??
@@ -149,7 +158,7 @@ function RunDetailsContentLoaded({
         statusLabel={statusLabel}
       />
 
-      {tangentShellEnabled && metadata?.id && (
+      {offersTangentHandoff && tangentShellEnabled && metadata?.id && (
         <BlockStack gap="2" className="shrink-0 px-4 pb-2">
           {isFailedRun && (
             <DebugInTangentButton

@@ -21,6 +21,8 @@ const mockMetadata = {
 };
 
 const fetchRunAnnotations = vi.fn();
+let tangentEnabled = false;
+let runStats: Record<string, number> | undefined;
 
 vi.mock("@/routes/v2/shared/providers/SpecContext", () => ({
   useSpec: () => mockSpec,
@@ -30,7 +32,7 @@ vi.mock("@/providers/ExecutionDataProvider", () => ({
   useExecutionData: () => ({
     rootDetails: { task_spec: { arguments: {} } },
     rootState: { child_execution_status_stats: {} },
-    metadata: mockMetadata,
+    metadata: { ...mockMetadata, execution_status_stats: runStats },
     isLoading: false,
     error: undefined,
   }),
@@ -55,6 +57,25 @@ vi.mock("@/services/pipelineRunService", () => ({
 
 vi.mock("@/components/shared/Execution/PipelineIO", () => ({
   default: () => <div data-testid="pipeline-io" />,
+}));
+
+vi.mock("@/components/shared/Settings/useFlags", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("@/components/shared/Settings/useFlags")
+  >()),
+  useTangentEnabled: () => tangentEnabled,
+}));
+
+vi.mock("@/routes/v2/pages/RunView/hooks/useDebugInTangent", () => ({
+  useDebugInTangent: () => ({}),
+}));
+
+vi.mock("@/routes/v2/pages/RunView/hooks/useOpenInTangent", () => ({
+  useOpenInTangent: () => ({}),
+}));
+
+vi.mock("./RunTangentButton", () => ({
+  RunTangentButton: ({ label }: { label: string }) => <button>{label}</button>,
 }));
 
 vi.mock("./RunDetailsHeader", () => ({
@@ -91,7 +112,7 @@ describe("<RunDetailsContent/>", () => {
       "cost-center": "research",
     });
 
-    renderPanel(<RunDetailsContent />);
+    renderPanel(<RunDetailsContent offersTangentHandoff />);
     await openDetailsSection();
 
     expect(await screen.findByText("Run Annotations")).toBeInTheDocument();
@@ -111,9 +132,43 @@ describe("<RunDetailsContent/>", () => {
       "tangleml.com/project/id/project-1": "true",
     });
 
-    renderPanel(<RunDetailsContent />);
+    renderPanel(<RunDetailsContent offersTangentHandoff />);
     await openDetailsSection();
 
     expect(screen.queryByText("Run Annotations")).not.toBeInTheDocument();
+  });
+
+  describe("with Tangent", () => {
+    beforeEach(() => {
+      tangentEnabled = true;
+      runStats = { FAILED: 1 };
+    });
+
+    afterEach(() => {
+      tangentEnabled = false;
+      runStats = undefined;
+    });
+
+    it("offers to take a failed run to Tangent", () => {
+      renderPanel(<RunDetailsContent offersTangentHandoff />);
+
+      expect(
+        screen.getByRole("button", { name: "Debug in Tangent" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Open in Tangent" }),
+      ).toBeInTheDocument();
+    });
+
+    it("offers nothing to take there from inside Tangent", () => {
+      renderPanel(<RunDetailsContent offersTangentHandoff={false} />);
+
+      expect(
+        screen.queryByRole("button", { name: "Debug in Tangent" }),
+      ).toBeNull();
+      expect(
+        screen.queryByRole("button", { name: "Open in Tangent" }),
+      ).toBeNull();
+    });
   });
 });
