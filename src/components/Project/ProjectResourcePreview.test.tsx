@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useLocalPipeline } from "@/services/localPipelines/useLocalPipelines";
+import type { RemotePipelineRef } from "@/services/pipelineStorage/types";
 import type { ProjectResource } from "@/services/projects/types";
 import { useProjectResource } from "@/services/projects/useProjectResources";
 import { usePipelineSpec } from "@/services/usePipelineSpec";
@@ -23,13 +24,24 @@ vi.mock("@/services/localPipelines/useLocalPipelines", () => ({
 
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@tanstack/react-router")>()),
-  Link: ({ to, children }: { to: string; children: ReactNode }) => (
-    <a href={to}>{children}</a>
+  Link: ({
+    to,
+    search,
+    children,
+  }: {
+    to: string;
+    search?: Record<string, unknown>;
+    children: ReactNode;
+  }) => (
+    <a href={to} data-search={JSON.stringify(search)}>
+      {children}
+    </a>
   ),
 }));
 
 vi.mock("@/routes/editorRoutes", () => ({
   getDefaultEditorPath: (name: string) => `/editor/${name}`,
+  getDefaultRemoteEditorPath: (id: string) => `/editor/remote/${id}`,
 }));
 
 vi.mock("./RunPipelineButton", () => ({
@@ -106,7 +118,12 @@ function mockSpec(
 }
 
 function mockLocalPipeline(
-  pipeline: { name: string; yaml: string; spec: unknown } | null,
+  pipeline: {
+    name: string;
+    yaml: string;
+    spec: unknown;
+    remote?: RemotePipelineRef;
+  } | null,
 ) {
   vi.mocked(useLocalPipeline).mockReturnValue({
     data: pipeline,
@@ -192,20 +209,16 @@ describe("ProjectResourcePreview", () => {
     expect(viewer()).toHaveTextContent("name: Churn training");
   });
 
-  /**
-   * The editor addresses a pipeline by name out of browser storage, so a local
-   * pipeline that happens to share a backend pipeline's name is a different
-   * pipeline, and linking to it opened the wrong one.
-   */
-  it("does not send a backend pipeline to a local one of the same name", () => {
+  it("opens a backend pipeline by ID even when a local one shares its name", () => {
     mockPipeline();
     mockLocalPipeline(localPipeline("churn training"));
     renderPreview("resource-1");
 
-    expect(
-      screen.queryByRole("link", { name: /Open in the editor/ }),
-    ).toBeNull();
-    expect(screen.getByText(/editor cannot open/)).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: /Open in the editor/ });
+    expect(link).toHaveAttribute("href", "/editor/remote/pipeline-1");
+    expect(JSON.parse(link.getAttribute("data-search")!)).toEqual({
+      projectId: "project-1",
+    });
   });
 
   it("offers no editor link for something that is not a pipeline", () => {
@@ -296,17 +309,6 @@ describe("ProjectResourcePreview", () => {
     expect(screen.queryByRole("button", { name: "Run pipeline" })).toBeNull();
   });
 
-  it("says why a backend pipeline cannot be opened rather than leaving a gap", () => {
-    mockPipeline();
-    mockLocalPipeline(null);
-    renderPreview("resource-1");
-
-    expect(
-      screen.queryByRole("link", { name: /Open in the editor/ }),
-    ).toBeNull();
-    expect(screen.getByText(/Stored on the backend/)).toBeInTheDocument();
-  });
-
   describe("a pipeline held in this browser", () => {
     const pointerResource = {
       entity: "document",
@@ -338,6 +340,33 @@ describe("ProjectResourcePreview", () => {
       expect(
         screen.getByRole("link", { name: /Open in the editor/ }),
       ).toHaveAttribute("href", "/editor/Churn model v2");
+    });
+
+    it("opens a migrated pointer through the route that repairs its project link", () => {
+      mockResource({
+        ...pointerResource,
+        metadata: {
+          ...pointerResource.metadata,
+          identity: "pipeline://id/id-9",
+        },
+      });
+      mockLocalPipeline({
+        ...localPipeline("Renamed remotely"),
+        remote: {
+          source: "remote",
+          backendUrl: "https://backend.example",
+          pipelineId: "remote-id",
+        },
+      });
+      renderPreview("resource-1");
+
+      const link = screen.getByRole("link", { name: /Open in the editor/ });
+      expect(link).toHaveAttribute("href", "/editor/Churn model");
+      expect(JSON.parse(link.getAttribute("data-search")!)).toEqual({
+        projectId: "project-1",
+        fileId: "id-9",
+      });
+      expect(viewer()).toHaveTextContent("name: Renamed remotely");
     });
 
     it("offers to run it into this project, from the browser that holds it", () => {

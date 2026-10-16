@@ -10,7 +10,10 @@ import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
 import { Heading, Text } from "@/components/ui/typography";
-import { getDefaultEditorPath } from "@/routes/editorRoutes";
+import {
+  getDefaultEditorPath,
+  getDefaultRemoteEditorPath,
+} from "@/routes/editorRoutes";
 import { PROJECT_ID_SEARCH_PARAM } from "@/routes/projectRunSearch";
 import { getDefaultRunPath } from "@/routes/runRoutes";
 import type { LocalPipelinePointer } from "@/services/localPipelines/types";
@@ -228,12 +231,18 @@ function LocalPipelinePreview({
         <RunPipelineButton
           projectId={projectId}
           spec={pipeline.spec}
-          heldInThisBrowser
+          heldInThisBrowser={!pipeline.remote}
         />
         <Button variant="outline" size="sm" asChild>
+          {/* The original local route follows the alias and repairs this project's resource. */}
           <Link
-            to={getDefaultEditorPath(pipeline.name)}
-            search={{ [PROJECT_ID_SEARCH_PARAM]: projectId }}
+            to={getDefaultEditorPath(
+              pipeline.remote ? pointer.localName : pipeline.name,
+            )}
+            search={{
+              [PROJECT_ID_SEARCH_PARAM]: projectId,
+              ...(pipeline.remote && { fileId: pointer.localId }),
+            }}
             {...tracking("projects.open_local_pipeline")}
           >
             <Icon name="PencilRuler" size="xs" />
@@ -280,12 +289,16 @@ function PipelinePreview({
       />
       <InlineStack gap="3" blockAlign="center" className="w-full">
         <RunPipelineButton projectId={projectId} spec={pipeline.spec} />
-        {/* The editor opens a pipeline by name out of browser storage, so it
-            cannot reach one held on the backend, and a local pipeline that
-            merely shares the name is a different pipeline. */}
-        <Text size="xs" tone="subdued">
-          Stored on the backend, which the editor cannot open yet.
-        </Text>
+        <Button variant="outline" size="sm" asChild>
+          <Link
+            to={getDefaultRemoteEditorPath(pipelineId)}
+            search={{ [PROJECT_ID_SEARCH_PARAM]: projectId }}
+            {...tracking("projects.open_remote_pipeline")}
+          >
+            <Icon name="PencilRuler" size="xs" />
+            Open in the editor
+          </Link>
+        </Button>
         <ValidityBadge validity={pipelineValidity(pipeline.spec)} />
       </InlineStack>
     </BlockStack>

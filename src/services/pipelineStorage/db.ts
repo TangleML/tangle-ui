@@ -4,6 +4,7 @@ import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 
 import {
   type FolderEntry,
+  type PipelineMigration,
   type PipelineRegistryEntry,
   ROOT_FOLDER_ID,
 } from "./types";
@@ -11,11 +12,16 @@ import {
 export const pipelineStorageDb = new Dexie("tangle_pipelines") as Dexie & {
   pipeline_registry: EntityTable<PipelineRegistryEntry, "id">;
   folders: EntityTable<FolderEntry, "id">;
+  pipeline_migrations: EntityTable<PipelineMigration, "key">;
 };
 
 pipelineStorageDb.version(1).stores({
   pipeline_registry: "id, &storageKey, folderId, [folderId+storageKey]",
   folders: "id, parentId",
+});
+
+pipelineStorageDb.version(2).stores({
+  pipeline_migrations: "key",
 });
 
 pipelineStorageDb.on("ready", async () => {
