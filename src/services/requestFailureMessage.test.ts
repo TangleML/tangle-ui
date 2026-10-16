@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { requestFailureMessage } from "./requestFailureMessage";
+import {
+  describeErrorBody,
+  requestFailureMessage,
+} from "./requestFailureMessage";
 
 function refusal(body: unknown, status = 422, statusText = "Unprocessable") {
   return new Response(
@@ -114,5 +117,18 @@ describe("requestFailureMessage", () => {
     expect(
       await describeIt({ detail: [{ msg: "Something was wrong" }] }),
     ).toContain("Something was wrong");
+  });
+});
+
+describe("describeErrorBody", () => {
+  it("reads the detail of a parsed body", () => {
+    expect(describeErrorBody({ detail: "Workspace is retired" })).toBe(
+      "Workspace is retired",
+    );
+  });
+
+  it("says nothing for a body that explains nothing", () => {
+    expect(describeErrorBody({})).toBeUndefined();
+    expect(describeErrorBody(undefined)).toBeUndefined();
   });
 });
