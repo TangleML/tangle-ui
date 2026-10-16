@@ -5,15 +5,37 @@ import {
   type FavoriteType,
   LibraryDB,
 } from "@/providers/ComponentLibraryProvider/libraries/storage";
+import { persistFavoriteOrder, sortFavorites } from "@/services/favoriteOrder";
 
 export type { FavoriteItem, FavoriteType };
 
 export function useFavorites() {
-  const favorites = useLiveQuery(() => LibraryDB.favorites.toArray(), []) ?? [];
+  const favorites =
+    useLiveQuery(
+      async () =>
+        sortFavorites(await LibraryDB.favorites.toArray()).map(
+          ({ type, id, name }) => ({
+            type,
+            id,
+            name,
+          }),
+        ),
+      [],
+    ) ?? [];
 
   const addFavorite = async (item: FavoriteItem) => {
-    // put is an upsert — compound PK [type+id] prevents duplicates
-    await LibraryDB.favorites.put(item);
+    await LibraryDB.transaction("rw", LibraryDB.favorites, async () => {
+      const ordered = await persistFavoriteOrder(
+        sortFavorites(await LibraryDB.favorites.toArray()),
+      );
+      const existing = ordered.find(
+        (favorite) => favorite.type === item.type && favorite.id === item.id,
+      );
+      await LibraryDB.favorites.put({
+        ...item,
+        sortKey: existing?.sortKey ?? -1,
+      });
+    });
   };
 
   const removeFavorite = async (type: FavoriteType, id: string) => {

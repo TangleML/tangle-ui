@@ -10,6 +10,7 @@ type RecentKey = typeof RECENTLY_VIEWED_KEY | typeof RECENTLY_USED_KEY;
 
 const RECENT_ITEM_TYPES = [
   "pipeline",
+  "remote-pipeline",
   "run",
   "component",
   "tour",
@@ -61,8 +62,9 @@ function readRecent(key: RecentKey): RecentItem[] {
 // `storage` events only reach the other tabs, so a write here tells this one.
 const listeners = new Set<(key: RecentKey) => void>();
 
-function writeRecent(key: RecentKey, items: RecentItem[]) {
-  storage.setItem(key, items);
+function writeRecent(key: RecentKey, items: RecentItem[], required = false) {
+  if (required) localStorage.setItem(key, JSON.stringify(items));
+  else storage.setItem(key, items);
   listeners.forEach((listener) => listener(key));
 }
 
@@ -127,6 +129,38 @@ export function addRecentlyViewed(item: Omit<RecentItem, "timestamp">) {
 export function removeRecentlyViewed(type: RecentItemType, id: string) {
   removeRecent(RECENTLY_VIEWED_KEY, type, id);
   removeRecent(RECENTLY_USED_KEY, type, id);
+}
+
+export function moveRecentPipelineToRemote(
+  localIds: readonly string[],
+  remote: { id: string; name: string },
+) {
+  for (const key of [RECENTLY_VIEWED_KEY, RECENTLY_USED_KEY] as const) {
+    const items = readRecent(key);
+    const isLocal = (item: RecentItem) =>
+      item.type === "pipeline" && localIds.includes(item.id);
+    if (!items.some(isLocal)) continue;
+
+    const matches = items.filter(
+      (item) =>
+        isLocal(item) ||
+        (item.type === "remote-pipeline" && item.id === remote.id),
+    );
+    const latest = matches.reduce((a, b) =>
+      a.timestamp >= b.timestamp ? a : b,
+    );
+    writeRecent(
+      key,
+      items.flatMap((item) => {
+        if (!matches.includes(item)) return [item];
+        return item === latest
+          ? [{ type: "remote-pipeline", ...remote, timestamp: item.timestamp }]
+          : [];
+      }),
+      // A failed migration must keep the local pipeline available.
+      true,
+    );
+  }
 }
 
 export function useRecentlyUsed() {
