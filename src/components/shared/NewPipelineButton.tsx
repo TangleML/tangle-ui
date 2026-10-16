@@ -6,11 +6,10 @@ import { Button, type ButtonProps } from "@/components/ui/button";
 import { useNewPipelineDraft } from "@/hooks/useNewPipelineDraft";
 import useToastNotification from "@/hooks/useToastNotification";
 import { getDefaultEditorPath } from "@/routes/editorRoutes";
-import { writeComponentToFileListFromText } from "@/utils/componentStore";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import {
   defaultPipelineYamlWithName,
   IS_GITHUB_PAGES,
-  USER_PIPELINES_LIST_NAME,
 } from "@/utils/constants";
 import { hasNewTabModifier } from "@/utils/dom";
 
@@ -26,6 +25,7 @@ const NewPipelineButton = ({
 }: NewPipelineButtonProps) => {
   const navigate = useNavigate();
   const newDraft = useNewPipelineDraft();
+  const storage = usePipelineStorage();
   const notify = useToastNotification();
 
   const handleCreate = async (e: MouseEvent<HTMLButtonElement>) => {
@@ -38,11 +38,7 @@ const NewPipelineButton = ({
         return;
       }
       const componentText = defaultPipelineYamlWithName(name);
-      await writeComponentToFileListFromText(
-        USER_PIPELINES_LIST_NAME,
-        name,
-        componentText,
-      );
+      await storage.rootFolder.addFile(name, componentText);
 
       const clickThroughUrl = getDefaultEditorPath(name);
 

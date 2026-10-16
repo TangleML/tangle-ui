@@ -1,6 +1,7 @@
 import { makeObservable, observable } from "mobx";
 
 import { emitUserPipelineWritten } from "@/utils/userPipelineWriteEvents";
+import { componentSpecFromYaml } from "@/utils/yaml";
 
 import { createDriver } from "./createDriver";
 import { pipelineStorageDb } from "./db";
@@ -89,24 +90,34 @@ export class PipelineStorageService {
     ref: RemotePipelineDraftRef,
     onCreated?: (remote: RemotePipelineRef) => Promise<unknown>,
   ): PipelineFile {
-    const driver = new RemotePipelineDraftStorageDriver(ref, async (remote) => {
-      file.promoteToRemote(remote);
-      const key = getEditorPipelineIdentity(ref);
-      this.savedDrafts.set(key, remote);
-      try {
-        sessionStorage.setItem(`saved-draft:${key}`, JSON.stringify(remote));
-      } catch {
-        // In-memory history recovery still works when browser storage is full.
-      }
-      try {
-        await onCreated?.(remote);
-      } catch (cause) {
-        throw new Error(
-          "Pipeline saved, but it could not be attached to the project. Retry to attach the saved pipeline.",
-          { cause },
-        );
-      }
-    });
+    const driver = new RemotePipelineDraftStorageDriver(
+      ref,
+      (content, filePath) =>
+        this.createRemoteDriver(
+          ref.backendUrl,
+          componentSpecFromYaml(content).name ?? ref.name,
+          content,
+          filePath,
+        ),
+      async (remote) => {
+        file.promoteToRemote(remote);
+        const key = getEditorPipelineIdentity(ref);
+        this.savedDrafts.set(key, remote);
+        try {
+          sessionStorage.setItem(`saved-draft:${key}`, JSON.stringify(remote));
+        } catch {
+          // In-memory history recovery still works when browser storage is full.
+        }
+        try {
+          await onCreated?.(remote);
+        } catch (cause) {
+          throw new Error(
+            "Pipeline saved, but it could not be attached to the project. Retry to attach the saved pipeline.",
+            { cause },
+          );
+        }
+      },
+    );
     const file = new PipelineFile({
       id: ref.draftId,
       storageKey: ref.name,
@@ -217,15 +228,24 @@ export class PipelineStorageService {
     filePath?: string,
   ): Promise<PipelineFile> {
     const file = remoteFile(
-      await RemotePipelineStorageDriver.create(
-        backendUrl,
-        name,
-        content,
-        filePath,
-      ),
+      await this.createRemoteDriver(backendUrl, name, content, filePath),
     );
     emitUserPipelineWritten();
     return file;
+  }
+
+  private createRemoteDriver(
+    backendUrl: string,
+    name: string,
+    content: string,
+    filePath?: string,
+  ): Promise<RemotePipelineStorageDriver> {
+    return RemotePipelineStorageDriver.create(
+      backendUrl,
+      name,
+      content,
+      filePath,
+    );
   }
 
   async moveLocalPipelineToRemote(

@@ -9,9 +9,10 @@ import {
   getDefaultRemoteEditorPath,
 } from "@/routes/editorRoutes";
 import {
+  createPipelineFromContent,
   createsLocalPipelines,
-  saveNewRemotePipeline,
 } from "@/services/pipelineStorage/pipelineCreation";
+import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
 import type { PipelineRun } from "@/types/pipelineRun";
 import { EDITOR_FLOW_DIRECTION_ANNOTATION } from "@/utils/annotations";
 import { removeCachingStrategyFromSpec } from "@/utils/cache";
@@ -19,10 +20,7 @@ import {
   type ComponentSpec,
   isGraphImplementation,
 } from "@/utils/componentSpec";
-import {
-  getComponentFileFromList,
-  writeComponentToFileListFromText,
-} from "@/utils/componentStore";
+import { getComponentFileFromList } from "@/utils/componentStore";
 import {
   DB_NAME,
   PIPELINE_RUNS_STORE_NAME,
@@ -91,6 +89,7 @@ export const savePipelineRun = async (
 };
 
 export const copyRunToPipeline = async (
+  storage: PipelineStorageService,
   componentSpec: ComponentSpec,
   runId?: string | null,
   name?: string,
@@ -143,14 +142,15 @@ export const copyRunToPipeline = async (
   let newName = name || originalName;
 
   if (!createsLocalPipelines()) {
-    const remote = await saveNewRemotePipeline(
+    const file = await createPipelineFromContent(
+      storage,
       newName,
       componentSpecToYaml({ ...cleanComponentSpec, name: newName }),
     );
     return {
       name: newName,
-      url: getDefaultRemoteEditorPath(remote.pipelineId),
-      remote,
+      url: getDefaultRemoteEditorPath(file.id),
+      remote: file.remote && { source: "remote" as const, ...file.remote },
     };
   }
 
@@ -176,11 +176,7 @@ export const copyRunToPipeline = async (
   cleanComponentSpec.name = newName;
 
   const componentText = componentSpecToYaml(cleanComponentSpec);
-  await writeComponentToFileListFromText(
-    USER_PIPELINES_LIST_NAME,
-    newName,
-    componentText,
-  );
+  await createPipelineFromContent(storage, newName, componentText);
 
   return {
     url: getDefaultEditorPath(newName),

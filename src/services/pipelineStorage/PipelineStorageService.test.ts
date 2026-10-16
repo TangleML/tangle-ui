@@ -161,6 +161,15 @@ describe("PipelineStorageService editor resolution", () => {
   });
 
   it("reads and edits the owned remote document without touching the local registry", async () => {
+    vi.mocked(client.put).mockResolvedValue(
+      response({
+        ...document,
+        root_pipeline_task: {
+          ...document.root_pipeline_task,
+          componentRef: { spec: editedSpec },
+        },
+      }),
+    );
     const file = await storage.resolvePipeline(ref);
     expect(client.get).toHaveBeenCalledExactlyOnceWith({
       baseUrl: ref.backendUrl,
@@ -177,8 +186,8 @@ describe("PipelineStorageService editor resolution", () => {
     expect(file.folder.driver.canEdit).toBe(true);
     await file.rename("Edited");
     expect(file.storageKey).toBe("Edited");
-    expect(client.put).not.toHaveBeenCalled();
-    await file.write(content);
+    expect(componentSpecFromYaml(await file.read())).toEqual(editedSpec);
+    expect(file.id).toBe(ref.pipelineId);
     expect(client.put).toHaveBeenCalledExactlyOnceWith({
       baseUrl: ref.backendUrl,
       url: "/api/users/me/pipelines",
@@ -191,6 +200,9 @@ describe("PipelineStorageService editor resolution", () => {
         pipeline_run_annotations: document.pipeline_run_annotations,
       },
     });
+    await file.write(content);
+    await file.rename("Edited");
+    expect(client.put).toHaveBeenCalledTimes(2);
     expect(getCurrentUserApiUsersMeGet).toHaveBeenLastCalledWith({
       baseUrl: ref.backendUrl,
     });
@@ -248,18 +260,21 @@ describe("PipelineStorageService editor resolution", () => {
       const file = await storage.resolvePipeline(ref);
       vi.mocked(client.put).mockResolvedValue(result);
       await expect(file.write(content)).rejects.toThrow(error);
+      await expect(file.rename("Edited")).rejects.toThrow(error);
       expect(componentSpecFromYaml(await file.read())).toEqual(spec);
+      expect(file.storageKey).toBe("Original");
+      expect(await file.folder.driver.hasKey("Original")).toBe(true);
     },
   );
 
-  it("serializes writes across document instances and waits for saves queued during reopen", async () => {
+  it("renames the latest queued edit across document instances and waits during reopen", async () => {
     const first = await storage.resolvePipeline(ref);
     const second = await storage.resolvePipeline(ref);
     let release = () => {};
     const pending = new Promise<void>((resolve) => {
       release = resolve;
     });
-    let savedSpec = spec;
+    let savedSpec = { ...spec, description: "Original description" };
     const serverResponse = () =>
       response({
         ...document,
@@ -268,20 +283,27 @@ describe("PipelineStorageService editor resolution", () => {
     vi.mocked(client.put)
       .mockImplementationOnce(async () => {
         await pending;
-        savedSpec = editedSpec;
+        savedSpec = { ...editedSpec, description: "Latest description" };
         return serverResponse();
       })
-      .mockImplementationOnce(async () => {
-        savedSpec = { ...editedSpec, name: "Latest" };
+      .mockImplementationOnce(async (options) => {
+        expect(options?.body).toMatchObject({
+          root_pipeline_task: {
+            componentRef: {
+              spec: { name: "Latest", description: "Latest description" },
+            },
+          },
+        });
+        savedSpec = { ...savedSpec, name: "Latest" };
         return serverResponse();
       });
-    const firstWrite = first.write(content);
+    const firstWrite = first.write(
+      componentSpecToYaml({ ...editedSpec, description: "Latest description" }),
+    );
     await vi.waitFor(() => expect(client.put).toHaveBeenCalledTimes(1));
     vi.mocked(client.get).mockImplementation(async () => serverResponse());
     const reopening = storage.resolvePipeline(ref);
-    const secondWrite = second.write(
-      componentSpecToYaml({ ...editedSpec, name: "Latest" }),
-    );
+    const secondWrite = second.rename("Latest");
     try {
       await new Promise((resolve) => setTimeout(resolve, 0));
       expect(client.put).toHaveBeenCalledTimes(1);
@@ -297,6 +319,9 @@ describe("PipelineStorageService editor resolution", () => {
     expect(client.put).toHaveBeenCalledTimes(2);
     expect(client.get).toHaveBeenCalledTimes(3);
     expect(componentSpecFromYaml(await reopened.read()).name).toBe("Latest");
+    expect(componentSpecFromYaml(await reopened.read()).description).toBe(
+      "Latest description",
+    );
   });
 
   it("gives same-name Save As copies distinct remote identities without local registration", async () => {
@@ -523,6 +548,12 @@ describe("remote drafts and project attachment", () => {
     expect(file.storageKey).toBe("Edited");
     expect(file.isDraft).toBe(false);
     expect(componentSpecFromYaml(await file.read()).description).toBe("Third");
+    await file.rename("Renamed after saving");
+    expect(componentSpecFromYaml(await file.read())).toMatchObject({
+      name: "Renamed after saving",
+      description: "Third",
+    });
+    expect(paths().at(-1)).toBe("pipelines/draft-1.yaml");
     expect(registry.addEntry).not.toHaveBeenCalled();
     expect(registry.updateEntry).not.toHaveBeenCalled();
     storage.discardRemoteDraft(draft);

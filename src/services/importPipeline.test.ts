@@ -1,10 +1,18 @@
 import * as yaml from "js-yaml";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
 import * as componentStore from "@/utils/componentStore";
-import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 
 import { importPipelineFromYaml } from "./pipelineService";
+
+const addFile = vi.fn();
+const write = vi.fn();
+const resolvePipeline = vi.fn();
+const storage = {
+  rootFolder: { addFile },
+  resolvePipeline,
+} as unknown as PipelineStorageService;
 
 describe("importPipelineFromYaml", () => {
   const validYamlObject = {
@@ -28,11 +36,12 @@ describe("importPipelineFromYaml", () => {
     vi.clearAllMocks();
     vi.stubEnv("VITE_LOCAL_PIPELINES", "true");
     vi.spyOn(console, "error").mockImplementation(() => {});
+    addFile.mockResolvedValue({ id: "local-1" });
+    resolvePipeline.mockResolvedValue({ write });
 
     vi.spyOn(componentStore, "getComponentFileFromList").mockResolvedValue(
       null,
     );
-    vi.spyOn(componentStore, "writeComponentToFileListFromText");
   });
 
   afterEach(() => {
@@ -44,10 +53,9 @@ describe("importPipelineFromYaml", () => {
     // Mock no existing pipeline with the same name
     vi.mocked(componentStore.getComponentFileFromList).mockResolvedValue(null);
 
-    const result = await importPipelineFromYaml(validYamlContent);
+    const result = await importPipelineFromYaml(storage, validYamlContent);
 
-    // Expect writeComponentToFileListFromText to be called with correct parameters
-    expect(componentStore.writeComponentToFileListFromText).toHaveBeenCalled();
+    expect(addFile).toHaveBeenCalled();
 
     // Expect successful result
     expect(result).toEqual({
@@ -68,18 +76,18 @@ describe("importPipelineFromYaml", () => {
       },
     );
 
-    const result = await importPipelineFromYaml(validYamlContent, false);
+    const result = await importPipelineFromYaml(
+      storage,
+      validYamlContent,
+      false,
+    );
 
     // Since we're now renaming rather than erroring, expect a successful result
     expect(result.successful).toBe(true);
     expect(result.name).toBe("Test Pipeline (1)");
     expect(result.errorMessage).toContain("was renamed");
 
-    // Expect writeComponentToFileListFromText to be called with the new name and YAML
-    expect(
-      componentStore.writeComponentToFileListFromText,
-    ).toHaveBeenCalledWith(
-      USER_PIPELINES_LIST_NAME,
+    expect(addFile).toHaveBeenCalledWith(
       "Test Pipeline (1)",
       expect.stringContaining("name: Test Pipeline (1)"),
     );
@@ -100,17 +108,17 @@ describe("importPipelineFromYaml", () => {
       },
     );
 
-    const result = await importPipelineFromYaml(validYamlContent, false);
+    const result = await importPipelineFromYaml(
+      storage,
+      validYamlContent,
+      false,
+    );
 
     // Expect a successful result with the name incremented to (3)
     expect(result.successful).toBe(true);
     expect(result.name).toBe("Test Pipeline (3)");
 
-    // Expect writeComponentToFileListFromText to be called with the new name and YAML
-    expect(
-      componentStore.writeComponentToFileListFromText,
-    ).toHaveBeenCalledWith(
-      USER_PIPELINES_LIST_NAME,
+    expect(addFile).toHaveBeenCalledWith(
       "Test Pipeline (3)",
       yaml.dump({
         ...validYamlObject,
@@ -120,7 +128,10 @@ describe("importPipelineFromYaml", () => {
   });
 
   it("should handle invalid YAML content", async () => {
-    const result = await importPipelineFromYaml("invalid: yaml: content: -");
+    const result = await importPipelineFromYaml(
+      storage,
+      "invalid: yaml: content: -",
+    );
 
     // Expect unsuccessful result
     expect(result.successful).toBe(false);
@@ -140,16 +151,14 @@ describe("importPipelineFromYaml", () => {
     };
     const containerPipeline = yaml.dump(containerPipelineObj);
 
-    const result = await importPipelineFromYaml(containerPipeline);
+    const result = await importPipelineFromYaml(storage, containerPipeline);
 
     // Expect unsuccessful result
     expect(result.successful).toBe(false);
     expect(result.errorMessage).toContain("graph-based pipeline");
 
     // Expect the writing function not to be called
-    expect(
-      componentStore.writeComponentToFileListFromText,
-    ).not.toHaveBeenCalled();
+    expect(addFile).not.toHaveBeenCalled();
   });
 
   it("should use default name for unnamed pipelines", async () => {
@@ -171,17 +180,27 @@ describe("importPipelineFromYaml", () => {
 
     vi.mocked(componentStore.getComponentFileFromList).mockResolvedValue(null);
 
-    const result = await importPipelineFromYaml(unnamedYaml);
+    const result = await importPipelineFromYaml(storage, unnamedYaml);
 
-    // Expect writeComponentToFileListFromText to be called with default name
-    expect(
-      componentStore.writeComponentToFileListFromText,
-    ).toHaveBeenCalledWith(
-      USER_PIPELINES_LIST_NAME,
-      "Imported Pipeline",
-      unnamedYaml,
-    );
+    expect(addFile).toHaveBeenCalledWith("Imported Pipeline", unnamedYaml);
 
     expect(result.name).toBe("Imported Pipeline");
+  });
+
+  it("overwrites an existing local pipeline through its storage file", async () => {
+    vi.mocked(componentStore.getComponentFileFromList).mockResolvedValue(
+      {} as never,
+    );
+
+    const result = await importPipelineFromYaml(
+      storage,
+      validYamlContent,
+      true,
+    );
+
+    expect(result.overwritten).toBe(true);
+    expect(resolvePipeline).toHaveBeenCalledWith({ name: "Test Pipeline" });
+    expect(write).toHaveBeenCalledWith(validYamlContent);
+    expect(addFile).not.toHaveBeenCalled();
   });
 });

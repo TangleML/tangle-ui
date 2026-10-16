@@ -16,6 +16,7 @@ import { useBackend } from "@/providers/BackendProvider";
 import { ComponentSpecProvider } from "@/providers/ComponentSpecProvider";
 import { ContextPanelProvider } from "@/providers/ContextPanelProvider";
 import { ExecutionDataProvider } from "@/providers/ExecutionDataProvider";
+import { PipelineStorageProvider } from "@/services/pipelineStorage/PipelineStorageProvider";
 import type { ComponentSpec } from "@/utils/componentSpec";
 
 import { RunDetails } from "./RunDetails";
@@ -164,15 +165,17 @@ describe("<RunDetails/>", () => {
   const renderWithProviders = (component: ReactElement) => {
     return render(component, {
       wrapper: ({ children }) => (
-        <ComponentSpecProvider spec={mockComponentSpec}>
-          <QueryClientProvider client={queryClient}>
-            <ExecutionDataProvider pipelineRunId="123">
-              <ReactFlowProvider>
-                <ContextPanelProvider>{children}</ContextPanelProvider>
-              </ReactFlowProvider>
-            </ExecutionDataProvider>
-          </QueryClientProvider>
-        </ComponentSpecProvider>
+        <PipelineStorageProvider>
+          <ComponentSpecProvider spec={mockComponentSpec}>
+            <QueryClientProvider client={queryClient}>
+              <ExecutionDataProvider pipelineRunId="123">
+                <ReactFlowProvider>
+                  <ContextPanelProvider>{children}</ContextPanelProvider>
+                </ReactFlowProvider>
+              </ExecutionDataProvider>
+            </QueryClientProvider>
+          </ComponentSpecProvider>
+        </PipelineStorageProvider>
       ),
     });
   };

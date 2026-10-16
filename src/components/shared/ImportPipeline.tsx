@@ -108,7 +108,7 @@ const ImportPipeline = ({
     setSuccessMessage(null);
 
     try {
-      const result = await importPipelineFromFile(files[0]);
+      const result = await importPipelineFromFile(storage, files[0]);
       await handleImportResult(result);
       if (result.successful) {
         track("pipeline_editor.pipeline_actions.import_pipeline_completed", {
@@ -139,7 +139,7 @@ const ImportPipeline = ({
     setSuccessMessage(null);
 
     try {
-      const result = await importPipelineFromYaml(yamlContent);
+      const result = await importPipelineFromYaml(storage, yamlContent);
       await handleImportResult(result);
       if (result.successful) {
         track("pipeline_editor.pipeline_actions.import_pipeline_completed", {
