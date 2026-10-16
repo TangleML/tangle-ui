@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   readStartingSession,
@@ -6,7 +6,11 @@ import {
   withoutStartingSession,
 } from "./startingSession";
 
+const HOUR = 60 * 60 * 1000;
+
 describe("startingSession", () => {
+  afterEach(() => vi.useRealTimers());
+
   it("round-trips what a session should start on", () => {
     const written = startingSessionMetadata({
       prompt: "Build a churn model",
@@ -21,10 +25,40 @@ describe("startingSession", () => {
     });
   });
 
-  it("writes only what was chosen", () => {
+  it("writes only what was chosen, and when", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-16T09:00:00Z"));
+
     expect(startingSessionMetadata({ prompt: "Go" })).toEqual({
       startingPrompt: "Go",
+      startingRequestedAt: "2026-10-16T09:00:00.000Z",
     });
+  });
+
+  /**
+   * The ask lives on the project, so one nobody arrived for would otherwise
+   * open whichever session is started there next, days later or by someone else.
+   */
+  it("forgets an ask nobody arrived for within the hour", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-16T09:00:00Z"));
+    const written = startingSessionMetadata({ prompt: "Go" });
+
+    vi.setSystemTime(Date.now() + HOUR - 1000);
+    expect(readStartingSession(written)?.prompt).toBe("Go");
+
+    vi.setSystemTime(Date.now() + 2000);
+    expect(readStartingSession(written)).toBeUndefined();
+  });
+
+  it("takes an ask with no time on it as stale", () => {
+    expect(readStartingSession({ startingPrompt: "Go" })).toBeUndefined();
+    expect(
+      readStartingSession({
+        startingPrompt: "Go",
+        startingRequestedAt: "yesterday-ish",
+      }),
+    ).toBeUndefined();
   });
 
   /** A project someone else wrote to may carry anything under these keys. */
@@ -36,7 +70,7 @@ describe("startingSession", () => {
 
   it("drops a thinking depth the agent could not run", () => {
     const session = readStartingSession({
-      startingPrompt: "Go",
+      ...startingSessionMetadata({ prompt: "Go" }),
       startingThinkingDepth: "ludicrous",
     });
 
