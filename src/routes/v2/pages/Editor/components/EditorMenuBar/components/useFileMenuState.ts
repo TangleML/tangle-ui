@@ -71,8 +71,16 @@ export function useFileMenuState(): FileMenuState {
     }
   }, [importOpen]);
 
-  const handleSave = () => {
-    void autoSave.save();
+  const notifyFailure = (error: unknown, fallback: string) => {
+    notify(error instanceof Error ? error.message : fallback, "error");
+  };
+
+  const handleSave = async () => {
+    try {
+      await autoSave.save();
+    } catch (error) {
+      notifyFailure(error, "Failed to save pipeline");
+    }
   };
 
   const handleNewPipeline = async () => {
@@ -94,13 +102,30 @@ export function useFileMenuState(): FileMenuState {
   };
 
   const handleSavePipelineAs = async (name: string) => {
-    const file = await savePipelineAs(navigation, name, storage);
-    notify(`Pipeline saved as "${name}"`, "success");
-    navigate({
-      to: APP_ROUTES.EDITOR_V2_PIPELINE,
-      params: { pipelineName: name },
-      search: { fileId: file?.id },
-    });
+    try {
+      const file = await savePipelineAs(
+        navigation,
+        name,
+        storage,
+        pipelineFileStore.activePipelineFile,
+      );
+      if (!file) return;
+      notify(`Pipeline saved as "${name}"`, "success");
+      if (file.remote) {
+        await navigate({
+          to: APP_ROUTES.EDITOR_V2_REMOTE_PIPELINE,
+          params: { pipelineId: file.id },
+        });
+      } else {
+        await navigate({
+          to: APP_ROUTES.EDITOR_V2_PIPELINE,
+          params: { pipelineName: file.storageKey },
+          search: { fileId: file.id },
+        });
+      }
+    } catch (error) {
+      notifyFailure(error, "Failed to save pipeline copy");
+    }
   };
 
   const getRenameInitialName = () => navigation.rootSpec?.name ?? "";
@@ -111,7 +136,7 @@ export function useFileMenuState(): FileMenuState {
 
   const handleDeletePipeline = async () => {
     const file = pipelineFileStore.activePipelineFile;
-    if (!file) return;
+    if (!file || file.remote) return;
     await file.deleteFile();
     void navigate({ to: APP_ROUTES.HOME });
   };

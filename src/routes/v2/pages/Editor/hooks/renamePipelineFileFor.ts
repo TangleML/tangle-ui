@@ -18,7 +18,7 @@ export function renamePipelineFileFor(
     if (!file) return name;
     if (file.storageKey === name) return name;
 
-    const available = await availablePipelineName(name);
+    const available = file.remote ? name : await availablePipelineName(name);
     await file.rename(available);
     onRenamed?.(file.id, available);
     return available;

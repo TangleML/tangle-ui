@@ -24,6 +24,7 @@ interface PipelineNameDialogProps {
   description?: string;
   initialName: string;
   excludeNames?: string[];
+  validateLocalName?: boolean;
   submitButtonText: string;
   submitButtonIcon?: ReactNode;
   onSubmit: (name: string) => void;
@@ -40,6 +41,7 @@ const PipelineNameDialog = ({
   description = "Please, name your pipeline.",
   initialName,
   excludeNames,
+  validateLocalName = true,
   submitButtonText,
   submitButtonIcon,
   onSubmit,
@@ -65,10 +67,10 @@ const PipelineNameDialog = ({
   });
 
   let error: string | null = null;
-  if (!isLoadingUserPipelines) {
+  if (!validateLocalName || !isLoadingUserPipelines) {
     if (normalized === "") {
       error = "Name cannot be empty";
-    } else if (nameIsTaken) {
+    } else if (validateLocalName && nameIsTaken) {
       error = "Name already exists";
     }
   }
@@ -82,7 +84,7 @@ const PipelineNameDialog = ({
     if (open) {
       setName(initialName);
       setTouched(false);
-      refetchUserPipelines();
+      if (validateLocalName) refetchUserPipelines();
     }
     onOpenChange?.(open);
   };
@@ -94,7 +96,7 @@ const PipelineNameDialog = ({
   };
 
   const isDisabled =
-    isLoadingUserPipelines ||
+    (validateLocalName && isLoadingUserPipelines) ||
     !!error ||
     !trimmedName ||
     !!isSubmitDisabled?.(trimmedName, error);
