@@ -9,6 +9,7 @@ interface PaginationControlsProps {
   totalPages: number;
   hasNextPage: boolean;
   hasPreviousPage: boolean;
+  disabled?: boolean;
   onNextPage: () => void;
   onPreviousPage: () => void;
   onReset: () => void;
@@ -20,6 +21,7 @@ export function PaginationControls({
   totalPages,
   hasNextPage,
   hasPreviousPage,
+  disabled = false,
   onNextPage,
   onPreviousPage,
   onReset,
@@ -47,8 +49,9 @@ export function PaginationControls({
       <InlineStack gap="2" blockAlign="center">
         <Button
           variant="outline"
+          aria-label="First page"
           onClick={onReset}
-          disabled={currentPage === 1}
+          disabled={disabled || currentPage === 1}
           {...firstProps}
         >
           <Icon name="ChevronFirst" />
@@ -56,7 +59,7 @@ export function PaginationControls({
         <Button
           variant="outline"
           onClick={onPreviousPage}
-          disabled={!hasPreviousPage}
+          disabled={disabled || !hasPreviousPage}
           {...previousProps}
         >
           <Icon name="ChevronLeft" />
@@ -69,7 +72,7 @@ export function PaginationControls({
       <Button
         variant="outline"
         onClick={onNextPage}
-        disabled={!hasNextPage}
+        disabled={disabled || !hasNextPage}
         {...nextProps}
       >
         Next
