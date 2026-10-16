@@ -2,64 +2,164 @@ import {
   getPipelineDocument,
   type SavedPipelineDocument,
 } from "@/services/pipelineSpecService";
-import { componentSpecToYaml } from "@/utils/yaml";
+import {
+  assertRemotePipelineOwner,
+  getRemotePipelineWriter,
+  writeRemotePipelineDocument,
+} from "@/services/remotePipelineEditorService";
+import { componentSpecFromYaml, componentSpecToYaml } from "@/utils/yaml";
 
-import type {
-  PipelineFileDescriptor,
-  PipelineStorageDriver,
-  RemotePipelineRef,
+import {
+  getEditorPipelineIdentity,
+  type PipelineFileDescriptor,
+  type PipelineStorageDriver,
+  type RemotePipelineRef,
 } from "../types";
 
+// Writes survive editor navigation; reopening waits for the last write to this ID.
+const pendingWrites = new Map<string, Promise<void>>();
+
+/** One editor document, bound to its backend and stable server identity. */
 export class RemotePipelineStorageDriver implements PipelineStorageDriver {
   readonly type = "remote-pipeline";
   readonly allowsMoveIn = false;
   readonly allowsMoveOut = false;
-  private constructor(
-    readonly backendUrl: string,
-    readonly pipelineId: string,
-    private readonly pipeline: SavedPipelineDocument,
-  ) {}
+  readonly backendUrl: string;
+  readonly pipelineId: string;
+  readonly filePath: string;
+  readonly canEdit: boolean;
+  private document: SavedPipelineDocument;
+  private displayName: string;
 
-  get name(): string {
-    return (
-      this.pipeline.root_pipeline_task.componentRef.spec.name ??
-      this.pipeline.file_path
-    );
+  private constructor(
+    backendUrl: string,
+    document: SavedPipelineDocument,
+    canEdit: boolean,
+  ) {
+    this.backendUrl = backendUrl;
+    this.pipelineId = document.id;
+    this.filePath = document.file_path;
+    this.canEdit = canEdit;
+    this.document = document;
+    this.displayName =
+      document.root_pipeline_task.componentRef.spec.name ??
+      document.pipeline_name ??
+      document.file_path;
   }
 
   static async open(
     ref: RemotePipelineRef,
   ): Promise<RemotePipelineStorageDriver> {
+    const key = getEditorPipelineIdentity(ref);
+    while (pendingWrites.has(key)) {
+      await pendingWrites.get(key)?.catch(() => {});
+    }
+    const [document, userId] = await Promise.all([
+      getPipelineDocument(ref.pipelineId, ref.backendUrl),
+      // Failure to verify write access must not prevent reading the document.
+      getRemotePipelineWriter(ref.backendUrl).catch(() => null),
+    ]);
     return new RemotePipelineStorageDriver(
       ref.backendUrl,
-      ref.pipelineId,
-      await getPipelineDocument(ref.pipelineId, ref.backendUrl),
+      document,
+      userId === document.user_id,
     );
   }
 
+  static async create(
+    backendUrl: string,
+    name: string,
+    content: string,
+  ): Promise<RemotePipelineStorageDriver> {
+    const spec = { ...componentSpecFromYaml(content), name };
+    const userId = await getRemotePipelineWriter(backendUrl);
+    // Names are labels; a new random path prevents Save As replacing a namesake.
+    const filePath = `pipelines/${crypto.randomUUID()}.yaml`;
+    const document = await writeRemotePipelineDocument(backendUrl, filePath, {
+      root_pipeline_task: { componentRef: { spec } },
+      pipeline_run_annotations: {},
+    });
+    assertRemotePipelineOwner(document, userId);
+    return new RemotePipelineStorageDriver(backendUrl, document, true);
+  }
+
+  get name(): string {
+    return this.displayName;
+  }
+
   async list(): Promise<PipelineFileDescriptor[]> {
-    return [{ storageKey: this.name }];
+    return [{ storageKey: this.displayName }];
   }
 
   async read(_storageKey: string): Promise<string> {
     return componentSpecToYaml(
-      this.pipeline.root_pipeline_task.componentRef.spec,
+      this.document.root_pipeline_task.componentRef.spec,
     );
   }
 
-  async write(_storageKey: string, _content: string): Promise<void> {
-    throw new Error("Remote pipelines are read-only.");
+  async write(_storageKey: string, content: string): Promise<void> {
+    const spec = componentSpecFromYaml(content);
+    const key = getEditorPipelineIdentity({ source: "remote", ...this });
+    const write = (pendingWrites.get(key) ?? Promise.resolve())
+      .catch(() => {})
+      .then(async () => {
+        await this.assertCurrentOwner();
+        const document = await writeRemotePipelineDocument(
+          this.backendUrl,
+          this.filePath,
+          {
+            root_pipeline_task: {
+              ...this.document.root_pipeline_task,
+              // Previous digest, URL, and text no longer identify the edited spec.
+              componentRef: { spec },
+            },
+            pipeline_run_annotations: this.document.pipeline_run_annotations,
+          },
+        );
+        this.assertSameDocument(document);
+        this.document = document;
+      });
+    pendingWrites.set(key, write);
+    try {
+      await write;
+    } finally {
+      if (pendingWrites.get(key) === write) pendingWrites.delete(key);
+    }
   }
 
-  async rename(_oldStorageKey: string, _newStorageKey: string): Promise<void> {
-    throw new Error("Remote pipelines are read-only.");
+  async rename(_oldStorageKey: string, newStorageKey: string): Promise<void> {
+    await this.assertCurrentOwner();
+    // The shared editor rename updates spec.name and persists through autosave.
+    // The server file path remains the stable owner/path identity.
+    this.displayName = newStorageKey;
   }
 
   async delete(_storageKey: string): Promise<void> {
-    throw new Error("Remote pipelines are read-only.");
+    throw new Error(
+      "Remote pipeline deletion is not supported in this editor.",
+    );
   }
 
   async hasKey(storageKey: string): Promise<boolean> {
-    return storageKey === this.name;
+    return storageKey === this.displayName;
+  }
+
+  private async assertCurrentOwner(): Promise<void> {
+    assertRemotePipelineOwner(
+      this.document,
+      await getRemotePipelineWriter(this.backendUrl),
+    );
+  }
+
+  private assertSameDocument(document: SavedPipelineDocument): void {
+    if (
+      document.id !== this.pipelineId ||
+      document.file_path !== this.filePath ||
+      document.user_id !== this.document.user_id
+    ) {
+      throw new Error(
+        "The backend returned a different pipeline after saving. Reload before editing again.",
+      );
+    }
   }
 }

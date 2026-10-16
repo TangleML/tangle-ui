@@ -11,16 +11,42 @@ vi.mock("@/services/localPipelines/localPipelinesService", () => ({
 
 const rename = vi.fn().mockResolvedValue(undefined);
 
-function store(storageKey: string | undefined): PipelineFileStore {
+function store(
+  storageKey: string | undefined,
+  remote = false,
+): PipelineFileStore {
   return {
     activePipelineFile:
       storageKey === undefined
         ? undefined
-        : { id: "file-1", storageKey, rename },
+        : {
+            id: "file-1",
+            storageKey,
+            rename,
+            remote: remote
+              ? {
+                  backendUrl: "https://backend.example.com",
+                  pipelineId: "file-1",
+                }
+              : undefined,
+          },
   } as unknown as PipelineFileStore;
 }
 
 describe("renamePipelineFileFor", () => {
+  it("keeps a remote name even when a local pipeline already uses it", async () => {
+    const onRenamed = vi.fn();
+    const applied = await renamePipelineFileFor(
+      store("Draft", true),
+      onRenamed,
+    )("Churn model");
+
+    expect(availablePipelineName).not.toHaveBeenCalled();
+    expect(rename).toHaveBeenCalledWith("Churn model");
+    expect(applied).toBe("Churn model");
+    expect(onRenamed).toHaveBeenCalledWith("file-1", "Churn model");
+  });
+
   afterEach(() => vi.resetAllMocks());
 
   it("renames the file the pipeline is saved as", async () => {

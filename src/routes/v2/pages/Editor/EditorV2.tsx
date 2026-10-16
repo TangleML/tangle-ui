@@ -40,7 +40,9 @@ import {
   useWindowPersistence,
 } from "@/routes/v2/shared/windows/windowPersistence";
 import {
+  type EditorPipelineRef,
   getEditorPipelineIdentity,
+  isRemotePipelineRef,
   type PipelineRef,
   type RemotePipelineRef,
 } from "@/services/pipelineStorage/types";
@@ -74,7 +76,7 @@ import { editorRegistry } from "./nodes";
 import { EditorSessionProvider } from "./store/EditorSessionContext";
 
 interface PipelineEditorProps {
-  pipelineRef: PipelineRef;
+  pipelineRef: EditorPipelineRef;
 }
 
 const PipelineEditorSkeleton = () => (
@@ -84,14 +86,14 @@ const PipelineEditorSkeleton = () => (
 const PipelineEditor = withSuspenseWrapper(
   observer(({ pipelineRef }: PipelineEditorProps) => {
     const {
-      data: { spec: rootSpec, restoredUndoStore },
+      data: { spec: rootSpec, file, restoredUndoStore },
     } = useLoadSpec(pipelineRef);
     const { navigation } = useSharedStores();
     const tourMode = useTourMode();
 
     useWindowPersistence(tourMode ? TOUR_WINDOW_LAYOUT_ID : "editor");
     useDockAreaAccordion();
-    useSpecLifecycle(rootSpec, pipelineRef, restoredUndoStore);
+    useSpecLifecycle(rootSpec, file, restoredUndoStore);
     useSelectionWindowSync();
     usePropertiesWindowPositioning();
     useLinkedWindowCleanup();
@@ -100,11 +102,11 @@ const PipelineEditor = withSuspenseWrapper(
     useComponentLibraryWindow(!componentSearchV2Enabled);
     usePipelineDetailsWindow();
     usePipelineTreeWindow();
-    useHistoryWindow();
+    useHistoryWindow(!file.remote);
     useCanvasControlsWindow("v2.pipeline_canvas");
     useRecentRunsWindow();
     useRunsAndSubmissionWindow();
-    useUndoRedoKeyboard();
+    useUndoRedoKeyboard(!file.remote);
     useFocusMode();
     useShortcutListener();
     useEditorEscapeShortcut();
@@ -150,21 +152,40 @@ const PipelineEditor = withSuspenseWrapper(
     );
   }),
   PipelineEditorSkeleton,
+  ({ error, resetErrorBoundary }: FallbackProps) => (
+    <BlockStack fill align="center" inlineAlign="center" gap="3">
+      <p role="alert">
+        {error instanceof Error ? error.message : "Unable to load pipeline."}
+      </p>
+      <Button variant="outline" onClick={resetErrorBoundary}>
+        Retry
+      </Button>
+    </BlockStack>
+  ),
 );
 
-function EditorV2Content({ pipelineRef }: { pipelineRef: PipelineRef | null }) {
+function EditorV2Content({
+  pipelineRef,
+}: {
+  pipelineRef: EditorPipelineRef | null;
+}) {
   const { navigation } = useSharedStores();
   const tourMode = useTourMode();
 
+  const requestedName =
+    pipelineRef && !isRemotePipelineRef(pipelineRef) ? pipelineRef.name : null;
   useEffect(() => {
-    navigation.setRequestedPipelineName(pipelineRef?.name ?? null);
-  }, [navigation, pipelineRef?.name]);
+    navigation.setRequestedPipelineName(requestedName);
+  }, [navigation, requestedName]);
 
   let body: ReactNode;
   if (pipelineRef) {
     body = (
       <DriverPermissionGate pipelineRef={pipelineRef}>
-        <PipelineEditor pipelineRef={pipelineRef} />
+        <PipelineEditor
+          key={getEditorPipelineIdentity(pipelineRef)}
+          pipelineRef={pipelineRef}
+        />
       </DriverPermissionGate>
     );
   } else if (tourMode) {
@@ -193,9 +214,13 @@ function EditorV2Content({ pipelineRef }: { pipelineRef: PipelineRef | null }) {
 const RemotePipelineDocumentView = withSuspenseWrapper(
   ({ pipelineRef }: { pipelineRef: RemotePipelineRef }) => {
     const {
-      data: { spec },
+      data: { spec, file },
     } = useLoadSpec(pipelineRef);
-    return <RemotePipelineView spec={spec} />;
+    return file.folder.driver.canEdit === true ? (
+      <EditorV2Document pipelineRef={pipelineRef} />
+    ) : (
+      <RemotePipelineView spec={spec} />
+    );
   },
   PipelineEditorSkeleton,
   ({ error, resetErrorBoundary }: FallbackProps) => (
@@ -264,6 +289,14 @@ export function EditorV2({
         ? { name: pipelineName, fileId }
         : null;
 
+  return <EditorV2Document pipelineRef={pipelineRef} />;
+}
+
+function EditorV2Document({
+  pipelineRef,
+}: {
+  pipelineRef: EditorPipelineRef | null;
+}) {
   return (
     <div className="h-full w-full flex flex-col bg-slate-100 dark:bg-background select-none">
       <SharedStoreProvider>
