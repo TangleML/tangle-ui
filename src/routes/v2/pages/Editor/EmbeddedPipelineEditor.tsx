@@ -8,6 +8,7 @@ import { useRef } from "react";
 import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import { ComponentEditorProvider } from "@/components/shared/ComponentEditor/ComponentEditorProvider";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
+import { LocalPipelineMigration } from "@/components/shared/LocalPipelineMigration";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { InlineStack } from "@/components/ui/layout";
@@ -26,6 +27,7 @@ import {
 import { SharedStoreRegistrar } from "@/routes/v2/shared/store/SharedStoreRegistrar";
 import { DockArea } from "@/routes/v2/shared/windows/DockArea";
 import { WindowContainer } from "@/routes/v2/shared/windows/WindowContainer";
+import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import {
   type EditorPipelineRef,
   isRemotePipelineDraftRef,
@@ -56,6 +58,7 @@ interface EmbeddedPipelineEditorProps {
   pipelineRef: EditorPipelineRef;
   isActive: boolean;
   projectId: string;
+  onMigrated?: (file: PipelineFile) => void;
   onStoreReady?: (store: SharedUIStore) => void;
   onStoreClosed?: () => void;
   sessionId?: string;
@@ -199,18 +202,16 @@ const EditableEmbeddedPipelineEditor = ({
                 <ComponentEditorProvider>
                   <ReactFlowProvider>
                     <ForcedSearchProvider>
-                      <DriverPermissionGate pipelineRef={pipelineRef}>
-                        <EmbeddedPipelineEditorCanvas
-                          pipelineRef={pipelineRef}
-                          isActive={isActive}
-                          sessionId={sessionId}
-                          environmentId={environmentId}
-                          onEnvironmentReady={onEnvironmentReady}
-                          onEnvironmentClosed={onEnvironmentClosed}
-                          onBridgeReady={onBridgeReady}
-                          onBridgeClosed={onBridgeClosed}
-                        />
-                      </DriverPermissionGate>
+                      <EmbeddedPipelineEditorCanvas
+                        pipelineRef={pipelineRef}
+                        isActive={isActive}
+                        sessionId={sessionId}
+                        environmentId={environmentId}
+                        onEnvironmentReady={onEnvironmentReady}
+                        onEnvironmentClosed={onEnvironmentClosed}
+                        onBridgeReady={onBridgeReady}
+                        onBridgeClosed={onBridgeClosed}
+                      />
                     </ForcedSearchProvider>
                   </ReactFlowProvider>
                 </ComponentEditorProvider>
@@ -238,10 +239,21 @@ const RemoteEmbeddedPipelineEditor = withSuspenseWrapper(
 );
 
 export function EmbeddedPipelineEditor(props: EmbeddedPipelineEditorProps) {
-  return isRemotePipelineRef(props.pipelineRef) ||
-    isRemotePipelineDraftRef(props.pipelineRef) ? (
-    <RemoteEmbeddedPipelineEditor {...props} />
-  ) : (
-    <EditableEmbeddedPipelineEditor {...props} />
+  if (
+    isRemotePipelineRef(props.pipelineRef) ||
+    isRemotePipelineDraftRef(props.pipelineRef)
+  ) {
+    return <RemoteEmbeddedPipelineEditor {...props} />;
+  }
+  return (
+    <DriverPermissionGate pipelineRef={props.pipelineRef}>
+      <LocalPipelineMigration
+        pipelineRef={props.pipelineRef}
+        projectId={props.projectId}
+        onMigrated={(file) => props.onMigrated?.(file)}
+      >
+        <EditableEmbeddedPipelineEditor {...props} />
+      </LocalPipelineMigration>
+    </DriverPermissionGate>
   );
 }

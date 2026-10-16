@@ -206,25 +206,37 @@ export class PipelineStorageService {
     backendUrl: string,
     name: string,
     content: string,
+    filePath?: string,
   ): Promise<PipelineFile> {
     const file = remoteFile(
-      await RemotePipelineStorageDriver.create(backendUrl, name, content),
+      await RemotePipelineStorageDriver.create(
+        backendUrl,
+        name,
+        content,
+        filePath,
+      ),
     );
     emitUserPipelineWritten();
     return file;
   }
 
   async moveLocalPipelineToRemote(
-    name: string,
+    pipeline: string | PipelineFile,
     backendUrl: string,
+    onCreated?: (remote: PipelineFile) => Promise<unknown>,
   ): Promise<PipelineFile> {
-    const local = await this.resolvePipeline({ name });
+    const local =
+      typeof pipeline === "string"
+        ? await this.resolvePipeline({ name: pipeline })
+        : pipeline;
     const remote = await this.createRemotePipeline(
       backendUrl,
-      name,
+      local.storageKey,
       await local.read(),
+      `pipelines/${local.id}.yaml`,
     );
     try {
+      await onCreated?.(remote);
       await movePipelineAssociationsToRemote(local, remote);
     } catch (cause) {
       throw new Error(

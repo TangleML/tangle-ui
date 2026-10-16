@@ -31,6 +31,7 @@ import type { useEditorSession } from "./v2/pages/Editor/store/EditorSessionCont
 
 const canvas = vi.hoisted(() => ({ mounts: 0, unmounts: 0 }));
 const chat = vi.hoisted(() => ({ mounts: 0, threads: [{ abort: vi.fn() }] }));
+const flags = vi.hoisted(() => ({ v2Editor: true }));
 let session: ReturnType<typeof useEditorSession>;
 const storage = new PipelineStorageService();
 const queryClient = new QueryClient({
@@ -52,7 +53,7 @@ vi.mock("@/providers/BackendProvider", () => ({
 }));
 vi.mock("@/components/shared/Settings/useFlags", () => ({
   useFlagValue: () => false,
-  isFlagEnabled: () => true,
+  isFlagEnabled: () => flags.v2Editor,
 }));
 vi.mock("@/services/pipelineStorage/createDriver", () => ({
   createDriver: () => ({}),
@@ -166,6 +167,7 @@ beforeEach(() => {
   canvas.mounts = 0;
   chat.mounts = 0;
   canvas.unmounts = 0;
+  flags.v2Editor = true;
   vi.mocked(getCurrentUserApiUsersMeGet).mockResolvedValue({
     data: { id: "user", permissions: ["read", "write"] },
     response: new Response(null, { status: 200 }),
@@ -377,4 +379,27 @@ it("keeps local chat mounted while replacing document undo and save state", asyn
   expect(writeSecond).not.toHaveBeenCalled();
   expect(chat.mounts).toBe(1);
   expect(chat.threads[0].abort).toHaveBeenCalled();
+});
+it("opens remote pipelines when the V2 editor flag is disabled", async () => {
+  flags.v2Editor = false;
+  vi.mocked(client.get).mockResolvedValue({
+    data: {
+      id: pipelineId,
+      user_id: "user",
+      file_path: "pipelines/remote.yaml",
+      root_pipeline_task: {
+        componentRef: {
+          spec: {
+            name: "Remote pipeline",
+            implementation: { graph: { tasks: {} } },
+          },
+        },
+      },
+      pipeline_run_annotations: {},
+    },
+    response: new Response(null, { status: 200 }),
+  } as Awaited<ReturnType<typeof client.get>>);
+  const { history } = await open(`/editor-v2/remote/${pipelineId}`);
+  expect(history.location.pathname).toBe(`/editor-v2/remote/${pipelineId}`);
+  expect(client.get).toHaveBeenCalledOnce();
 });

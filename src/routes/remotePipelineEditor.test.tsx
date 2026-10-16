@@ -30,6 +30,8 @@ const loadLegacy = vi.hoisted(() => vi.fn());
 const loadV2 = vi.hoisted(() => vi.fn());
 const initializeEditing = vi.hoisted(() => vi.fn());
 const mountEditor = vi.hoisted(() => vi.fn());
+const navigate = vi.hoisted(() => vi.fn());
+const migrateLocal = vi.hoisted(() => vi.fn());
 const pendingSpec = new Promise<never>(() => {});
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
@@ -39,6 +41,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
     ...original,
     useParams: () => route.params,
     useSearch: () => route.search,
+    useNavigate: () => navigate,
     useRouterState: ({ select }: { select: (state: unknown) => unknown }) =>
       original.useRouterState({
         select: (state) =>
@@ -74,6 +77,9 @@ vi.mock("@/components/Editor/PipelineEditor", () => ({
   default: () => <div>Legacy pipeline canvas</div>,
 }));
 vi.mock("@/hooks/useRecentlyViewed", () => ({ addRecentlyViewed: vi.fn() }));
+vi.mock("@/components/shared/LocalPipelineMigration", () => ({
+  LocalPipelineMigration: migrateLocal,
+}));
 vi.mock("./v2/pages/Editor/hooks/useLoadSpec", () => ({
   useLoadSpec: loadV2,
 }));
@@ -144,6 +150,9 @@ beforeEach(() => {
   backend.configured = true;
   backend.backendUrl = "https://backend.example.com";
   loadLegacy.mockReturnValue({ componentSpec: null, error: null });
+  migrateLocal.mockImplementation(
+    ({ children }: { children: ReactNode }) => children,
+  );
   loadV2.mockImplementation(() => {
     throw pendingSpec;
   });
@@ -249,15 +258,61 @@ describe("remote pipeline editor entry", () => {
     expect(loadV2).not.toHaveBeenCalled();
     expect(screen.getByRole("alert")).toHaveTextContent("Configure a backend");
   });
-  it("keeps the legacy editor from looking up a remote ID locally", () => {
+  it("redirects legacy remote URLs to the V2 editor", () => {
     route.params = { pipelineId: "pipeline-123" };
+    route.search = { projectId: "project-1" };
     renderEditor(<Editor />);
 
     expect(loadLegacy).not.toHaveBeenCalled();
-    expect(screen.queryByText("Loading Pipeline")).not.toBeInTheDocument();
-    expect(
-      screen.queryByText("Legacy pipeline canvas"),
-    ).not.toBeInTheDocument();
+    expect(navigate).toHaveBeenCalledWith({
+      to: "/editor-v2/remote/$pipelineId",
+      params: { pipelineId: "pipeline-123" },
+      search: { projectId: "project-1" },
+      replace: true,
+    });
+  });
+
+  it.each(["legacy", "V2"])(
+    "waits for %s local migration before loading and preserves the project",
+    (editor) => {
+      const View = editor === "legacy" ? Editor : EditorV2;
+      route.params =
+        editor === "legacy"
+          ? { name: "Local pipeline" }
+          : { pipelineName: "Local pipeline" };
+      route.search = { fileId: "local-1", projectId: "project-1" };
+      migrateLocal.mockImplementation(
+        ({ onMigrated }: { onMigrated: (file: { id: string }) => void }) => (
+          <button onClick={() => onMigrated({ id: "remote-1" })}>
+            Finish migration
+          </button>
+        ),
+      );
+      renderEditor(<View />);
+      expect(loadLegacy).not.toHaveBeenCalled();
+      expect(migrateLocal.mock.calls[0][0]).toMatchObject({
+        pipelineRef: { name: "Local pipeline", fileId: "local-1" },
+        projectId: "project-1",
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Finish migration" }));
+      expect(navigate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: "/editor-v2/remote/$pipelineId",
+          params: { pipelineId: "remote-1" },
+          search: { projectId: "project-1" },
+          replace: true,
+        }),
+      );
+    },
+  );
+
+  it("requests legacy local file permission before migration", () => {
+    route.params = { name: "Local pipeline" };
+    permission.granted = false;
+    renderEditor(<Editor />);
+    expect(screen.getByText("Grant Access")).toBeInTheDocument();
+    expect(migrateLocal).not.toHaveBeenCalled();
+    expect(loadLegacy).not.toHaveBeenCalled();
   });
 
   it("continues loading a local pipeline named remote in the legacy editor", () => {

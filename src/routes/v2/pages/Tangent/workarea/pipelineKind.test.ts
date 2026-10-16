@@ -1,12 +1,19 @@
 import { render, screen } from "@testing-library/react";
+import type { ComponentProps } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import type { EmbeddedPipelineEditor } from "@/routes/v2/pages/Editor/EmbeddedPipelineEditor";
+import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 
 import type { WorkareaIdentity } from "./types";
 
 const mocks = vi.hoisted(() => ({
   findById: vi.fn(),
-  editor: vi.fn((_props: unknown) => null),
+  editor: vi.fn(
+    (_props: ComponentProps<typeof EmbeddedPipelineEditor>) => null,
+  ),
   draft: vi.fn(),
+  replaceWorkareaTarget: vi.fn(),
 }));
 
 vi.mock("@/routes/v2/pages/Editor/EmbeddedPipelineEditor", () => ({
@@ -26,6 +33,11 @@ vi.mock("@/services/pipelineStorage/PipelineStorageProvider", () => ({
 vi.mock("@/services/pipelineStorage/pipelineRegistry", () => ({
   findById: mocks.findById,
 }));
+vi.mock("@/routes/v2/pages/Tangent/context/TangentProjectContext", () => ({
+  useTangentProject: () => ({
+    replaceWorkareaTarget: mocks.replaceWorkareaTarget,
+  }),
+}));
 
 import "./pipelineKind";
 
@@ -37,6 +49,30 @@ function resolvePipelineTitle(
   const kind = getWorkareaKind("pipeline");
   if (!kind) throw new Error("pipeline kind is not registered");
   return kind.resolveTitle({ type: "pipeline", identity });
+}
+
+function renderPipeline(identity: WorkareaIdentity) {
+  const kind = getWorkareaKind("pipeline")!;
+  render(
+    kind.render(
+      {
+        id: "tab-1",
+        title: "Example",
+        target: { type: "pipeline", identity },
+      },
+      {
+        isActive: true,
+        projectId: "project-1",
+        tabEnvironmentId: () => undefined,
+        registerTabStore: vi.fn(),
+        unregisterTabStore: vi.fn(),
+        registerTabEnvironment: vi.fn(),
+        unregisterTabEnvironment: vi.fn(),
+        registerTabBridge: vi.fn(),
+        unregisterTabBridge: vi.fn(),
+      },
+    ),
+  );
 }
 
 describe("pipelineKind resolveTitle", () => {
@@ -74,28 +110,7 @@ describe("pipelineKind resolveTitle", () => {
         name: "Draft",
       };
       mocks.draft.mockReturnValue(draftRef);
-      const kind = getWorkareaKind("pipeline")!;
-      const host = {
-        isActive: true,
-        projectId: "project-1",
-        tabEnvironmentId: () => undefined,
-        registerTabStore: vi.fn(),
-        unregisterTabStore: vi.fn(),
-        registerTabEnvironment: vi.fn(),
-        unregisterTabEnvironment: vi.fn(),
-        registerTabBridge: vi.fn(),
-        unregisterTabBridge: vi.fn(),
-      } as Parameters<typeof kind.render>[1];
-      render(
-        kind.render(
-          {
-            id: "tab-1",
-            title: "Example",
-            target: { type: "pipeline", identity },
-          } as Parameters<typeof kind.render>[0],
-          host,
-        ),
-      );
+      renderPipeline(identity);
       const props = mocks.editor.mock.calls.at(-1)?.[0];
       expect(props).toMatchObject({
         pipelineRef: identity.startsWith("draft/")
@@ -109,6 +124,22 @@ describe("pipelineKind resolveTitle", () => {
       expect(mocks.findById).not.toHaveBeenCalled();
     },
   );
+
+  it("replaces the local workarea target after migration", () => {
+    renderPipeline("id/local-1");
+    const props = mocks.editor.mock.calls.at(-1)?.[0];
+    props?.onMigrated?.({
+      id: "remote-1",
+      remote: {
+        backendUrl: "https://backend.example.com",
+        pipelineId: "remote-1",
+      },
+    } as PipelineFile);
+    expect(mocks.replaceWorkareaTarget).toHaveBeenCalledWith(
+      { type: "pipeline", identity: "id/local-1" },
+      { type: "pipeline", identity: "remote/remote-1" },
+    );
+  });
 });
 
 it("shows a recoverable message when an old draft target is unavailable", () => {

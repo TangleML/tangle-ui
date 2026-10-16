@@ -215,6 +215,28 @@ describe("TangentProjectStore workarea tabs", () => {
     expect(store.activeWorkareaTabId).toBe(first.id);
   });
 
+  it("replaces a pipeline target without moving its tab or changing focus", () => {
+    const store = activeStore();
+    const local = pipeline("local-1");
+    const remote: WorkareaTarget = {
+      type: "pipeline",
+      identity: "remote/remote-1",
+    };
+    const tab = store.openResolvedView({ title: "Example", target: local });
+    const other = store.openResolvedView({
+      title: "Other",
+      target: pipeline("other"),
+    });
+
+    store.replaceWorkareaTarget(local, remote);
+
+    expect(store.workareaTabs).toEqual([{ ...tab, target: remote }, other]);
+    expect(store.activeWorkareaTabId).toBe(other.id);
+    expect(
+      store.openResolvedView({ title: "Example", target: remote }).id,
+    ).toBe(tab.id);
+  });
+
   it("selects the last remaining tab when the active tab is closed", () => {
     const store = activeStore();
 
