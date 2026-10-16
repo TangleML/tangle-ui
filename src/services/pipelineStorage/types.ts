@@ -62,6 +62,12 @@ export interface RemotePipelineRef {
   pipelineId: string;
 }
 
+export interface PipelineMigration {
+  key: string;
+  remote: RemotePipelineRef;
+  name: string;
+}
+
 export interface RemotePipelineDraftRef {
   source: "draft";
   backendUrl: string;
