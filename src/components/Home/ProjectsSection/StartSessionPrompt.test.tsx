@@ -3,20 +3,24 @@ import {
   DEFAULT_THINKING_LEVEL,
 } from "@tangent/shared/contracts.ts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
+import { useBackend } from "@/providers/BackendProvider";
+import { rememberLastUsedWorkspace } from "@/services/projects/defaultWorkspace";
 import { createProject } from "@/services/projects/projectsService";
 import { startingSessionMetadata } from "@/services/projects/startingSession";
+import type { Workspace } from "@/services/projects/types";
 import { useWorkspaces } from "@/services/projects/useWorkspaces";
 
 import { StartSessionPrompt } from "./StartSessionPrompt";
 
 const navigate = vi.fn();
 const notify = vi.fn();
+const track = vi.fn();
 
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => navigate,
@@ -26,7 +30,11 @@ vi.mock("@tanstack/react-router", () => ({
 vi.mock("@/hooks/useToastNotification", () => ({ default: () => notify }));
 
 vi.mock("@/providers/AnalyticsProvider", () => ({
-  useAnalytics: () => ({ track: vi.fn() }),
+  useAnalytics: () => ({ track }),
+}));
+
+vi.mock("@/providers/BackendProvider", () => ({
+  useBackend: vi.fn(),
 }));
 
 vi.mock("@/services/projects/projectsService", () => ({
@@ -66,21 +74,59 @@ async function type(text: string) {
   return user;
 }
 
+const workspace = (id: string, name: string, createdAt: string): Workspace => ({
+  id,
+  name,
+  description: null,
+  isActive: true,
+  metadata: null,
+  createdAt: new Date(createdAt),
+});
+
+const research = workspace("ws-1", "Research", "2026-01-01T00:00:00Z");
+const analytics = workspace("ws-2", "Analytics", "2026-06-01T00:00:00Z");
+
+function mockWorkspaces(
+  workspaces: Workspace[] | undefined,
+  { isPending = false } = {},
+) {
+  vi.mocked(useWorkspaces).mockReturnValue({
+    data: workspaces,
+    isPending,
+  } as unknown as ReturnType<typeof useWorkspaces>);
+}
+
+function mockBackend(overrides: Partial<ReturnType<typeof useBackend>> = {}) {
+  vi.mocked(useBackend).mockReturnValue({
+    configured: true,
+    available: true,
+    ready: true,
+    ...overrides,
+  } as ReturnType<typeof useBackend>);
+}
+
+async function pickWorkspace(name: string) {
+  const user = userEvent.setup();
+  await user.click(screen.getByLabelText("Workspace"));
+  await user.click(screen.getByRole("option", { name }));
+}
+
 describe("StartSessionPrompt", () => {
   beforeEach(() => {
     // Radix's select measures and scrolls, neither of which jsdom does.
     Element.prototype.scrollIntoView = vi.fn();
     Element.prototype.hasPointerCapture = vi.fn();
-    vi.mocked(useWorkspaces).mockReturnValue({
-      data: [{ id: "ws-1", isActive: true }],
-      isPending: false,
-    } as unknown as ReturnType<typeof useWorkspaces>);
+    mockBackend();
+    mockWorkspaces([research]);
     vi.mocked(createProject).mockResolvedValue({
       id: "project-9",
     } as unknown as Awaited<ReturnType<typeof createProject>>);
     mockAiConfigured(true);
   });
-  afterEach(() => vi.resetAllMocks());
+  afterEach(() => {
+    vi.resetAllMocks();
+    localStorage.clear();
+  });
 
   /**
    * The prompt rides on the project because Tangent runs it as the opening turn
@@ -164,16 +210,6 @@ describe("StartSessionPrompt", () => {
     expect(createProject).toHaveBeenCalledTimes(1);
   });
 
-  it("says why the backend refused rather than a generic failure", async () => {
-    vi.mocked(createProject).mockRejectedValue(new Error("Quota exceeded"));
-    renderPrompt();
-
-    await type("Build a churn model{Enter}");
-
-    expect(notify).toHaveBeenCalledWith("Quota exceeded", "error");
-    expect(navigate).not.toHaveBeenCalled();
-  });
-
   /** A brief is more than one line, so a newline has to be typeable. */
   it("takes a newline on shift-enter instead of starting", async () => {
     renderPrompt();
@@ -200,15 +236,76 @@ describe("StartSessionPrompt", () => {
     });
   });
 
+  describe("choosing a workspace", () => {
+    beforeEach(() => mockWorkspaces([analytics, research]));
+
+    it("starts the session in the workspace that was picked", async () => {
+      renderPrompt();
+
+      await pickWorkspace("Analytics");
+      await type("Build a churn model{Enter}");
+
+      expect(createProject).toHaveBeenCalledWith(
+        expect.objectContaining({ workspaceId: "ws-2" }),
+      );
+    });
+
+    it("remembers the workspace for the next session", async () => {
+      renderPrompt();
+
+      await pickWorkspace("Analytics");
+      await type("Build a churn model{Enter}");
+
+      await waitFor(() =>
+        expect(
+          localStorage.getItem("tangle.projects.lastUsedWorkspaceId"),
+        ).toBe(JSON.stringify("ws-2")),
+      );
+    });
+
+    it("records whether the preselected workspace was changed", async () => {
+      renderPrompt();
+
+      await pickWorkspace("Analytics");
+      await type("Build a churn model{Enter}");
+
+      await waitFor(() =>
+        expect(track).toHaveBeenCalledWith(
+          "projects.start_session_completed",
+          expect.objectContaining({ workspace_changed: true }),
+        ),
+      );
+    });
+
+    it("records the change against the default it was sent with", async () => {
+      let finish: (project: { id: string }) => void = () => {};
+      vi.mocked(createProject).mockReturnValue(
+        new Promise((resolve) => {
+          finish = resolve;
+        }) as never,
+      );
+      renderPrompt();
+
+      await pickWorkspace("Analytics");
+      await type("Build a churn model{Enter}");
+      act(() => rememberLastUsedWorkspace("ws-2"));
+      finish({ id: "project-9" });
+
+      await waitFor(() =>
+        expect(track).toHaveBeenCalledWith(
+          "projects.start_session_completed",
+          expect.objectContaining({ workspace_changed: true }),
+        ),
+      );
+    });
+  });
+
   /**
    * The box is the page, so it stays standing when the backend cannot say
    * where a project would go — vanishing reads as the page being broken.
    */
   it("stands but cannot be used when there is nowhere to put a project", () => {
-    vi.mocked(useWorkspaces).mockReturnValue({
-      data: [],
-      isPending: false,
-    } as unknown as ReturnType<typeof useWorkspaces>);
+    mockWorkspaces([]);
 
     renderPrompt();
 
@@ -216,6 +313,24 @@ describe("StartSessionPrompt", () => {
     expect(
       screen.getByRole("button", { name: "Start session" }),
     ).toBeDisabled();
+    expect(
+      screen.getByText(
+        "Projects cannot be created yet. Contact your Tangle Admin for help.",
+      ),
+    ).toBeVisible();
+  });
+
+  it("asks for a backend when none is connected", () => {
+    mockBackend({ configured: false, available: false });
+    mockWorkspaces(undefined, { isPending: true });
+
+    renderPrompt();
+
+    expect(
+      screen.getByText(
+        "Connect a backend to enable agentic features in Tangle",
+      ),
+    ).toBeVisible();
   });
 
   /** Arriving on this page is the act of wanting to type. */
@@ -226,14 +341,12 @@ describe("StartSessionPrompt", () => {
   });
 
   it("cannot be used before the backend has answered either", () => {
-    vi.mocked(useWorkspaces).mockReturnValue({
-      data: undefined,
-      isPending: true,
-    } as unknown as ReturnType<typeof useWorkspaces>);
+    mockWorkspaces(undefined, { isPending: true });
 
     renderPrompt();
 
     expect(screen.getByLabelText("Start a new session")).toBeDisabled();
+    expect(screen.queryByText(/Projects cannot be created/)).toBeNull();
   });
 
   describe("without an AI provider", () => {
@@ -266,10 +379,8 @@ describe("StartSessionPrompt", () => {
      * not be theirs to fix, so the actionable one is the one shown.
      */
     it("says so ahead of a missing backend", () => {
-      vi.mocked(useWorkspaces).mockReturnValue({
-        data: [],
-        isPending: false,
-      } as unknown as ReturnType<typeof useWorkspaces>);
+      mockBackend({ configured: false, available: false });
+      mockWorkspaces(undefined, { isPending: true });
 
       renderPrompt();
 

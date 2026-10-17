@@ -1,11 +1,11 @@
+import { WorkspaceNotice } from "@/components/Project/WorkspaceNotice";
 import { InfoBox } from "@/components/shared/InfoBox";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
 import { useBackend } from "@/providers/BackendProvider";
+import { activeWorkspaces } from "@/services/projects/defaultWorkspace";
 import { usePinnedProjects } from "@/services/projects/usePinnedProjects";
 import { useWorkspaces } from "@/services/projects/useWorkspaces";
 
@@ -58,11 +58,7 @@ function ProjectsGrid() {
     isLoadingMore,
     loadMore,
   } = useMyProjects();
-  const {
-    data: workspaces,
-    isPending: isWorkspacesPending,
-    error: workspacesError,
-  } = useWorkspaces();
+  const { data: workspaces } = useWorkspaces();
   const { projects: pinned } = usePinnedProjects();
 
   // Pinned projects lead the grid, so a pinned project of the caller's own is
@@ -91,37 +87,13 @@ function ProjectsGrid() {
     );
   }
 
-  // Nothing in the UI names a workspace: a project goes into the first one the
-  // backend offers, and creation is withdrawn when it offers none.
-  const targetWorkspaceId = workspaces?.[0]?.id;
-
-  // A workspace list still on its way says nothing about whether there is one
-  // to create in, and one that failed to arrive is not the same as none.
-  const noWorkspace =
-    !isWorkspacesPending && !workspacesError && !targetWorkspaceId;
-
   return (
     <BlockStack gap="4">
-      {workspacesError && (
-        <Alert className="w-fit">
-          <Icon name="CircleAlert" />
-          <AlertDescription>
-            {`Could not load workspaces, so a project cannot be created: ${workspacesError.message}`}
-          </AlertDescription>
-        </Alert>
-      )}
-      {noWorkspace && (
-        <Alert className="w-fit">
-          <Icon name="CircleAlert" />
-          <AlertDescription>
-            Projects cannot be created yet. Contact your Tangle Admin for help.
-          </AlertDescription>
-        </Alert>
-      )}
+      <WorkspaceNotice />
       <div className={PROJECT_GRID}>
-        {targetWorkspaceId && (
+        {workspaces && activeWorkspaces(workspaces).length > 0 && (
           <CreateProjectDialog
-            workspaceId={targetWorkspaceId}
+            workspaces={workspaces}
             trigger={<NewProjectCard />}
           />
         )}
