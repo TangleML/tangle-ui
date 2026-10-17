@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { readTangentSessionParam } from "./tangentSearch";
+import {
+  readTangentOpenParam,
+  readTangentSessionParam,
+  tangentOpenSearch,
+  withoutTangentArrivalSearch,
+  withoutTangentOpenSearch,
+} from "./tangentSearch";
 
 describe("readTangentSessionParam", () => {
   it("reads the session a link asked for", () => {
@@ -35,5 +41,43 @@ describe("readTangentSessionParam", () => {
     expect(readTangentSessionParam({ session: ["a"] })).toBeUndefined();
     expect(readTangentSessionParam({ session: { id: "a" } })).toBeUndefined();
     expect(readTangentSessionParam({ session: true })).toBeUndefined();
+  });
+});
+
+describe("readTangentOpenParam", () => {
+  it("reads back the view a link asked to open", () => {
+    const search = tangentOpenSearch({ type: "run", identity: "id/run-7" });
+
+    expect(readTangentOpenParam(search)).toEqual({
+      type: "run",
+      identity: "id/run-7",
+    });
+  });
+
+  it("ignores anything that is not a view Tangent can open", () => {
+    expect(readTangentOpenParam({ open: "run://name/x" })).toBeUndefined();
+    expect(readTangentOpenParam({ open: "nonsense" })).toBeUndefined();
+    expect(readTangentOpenParam({ open: 42 })).toBeUndefined();
+    expect(readTangentOpenParam(undefined)).toBeUndefined();
+  });
+});
+
+describe("withoutTangentOpenSearch", () => {
+  it("drops only the view to open", () => {
+    expect(
+      withoutTangentOpenSearch({ session: "sess-a", open: "run://id/run-7" }),
+    ).toEqual({ session: "sess-a" });
+  });
+});
+
+describe("withoutTangentArrivalSearch", () => {
+  it("drops what the arrival acts on and keeps the rest", () => {
+    expect(
+      withoutTangentArrivalSearch({
+        session: "new",
+        open: "run://id/run-7",
+        other: "kept",
+      }),
+    ).toEqual({ other: "kept" });
   });
 });

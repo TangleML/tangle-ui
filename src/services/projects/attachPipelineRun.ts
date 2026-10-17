@@ -8,11 +8,10 @@ import {
   PIPELINE_RUN,
   pipelineRunResourceInput,
 } from "./resourceDescriptor";
-import type { RunTarget } from "./resourceTarget";
-import { idIdentity, sameTarget } from "./resourceTarget";
+import { runTarget, sameTarget } from "./resourceTarget";
 
 async function holdsPipelineRun(projectId: string, runId: string) {
-  const run: RunTarget = { type: "run", identity: idIdentity(runId) };
+  const run = runTarget(runId);
   let pageToken: string | undefined;
 
   do {

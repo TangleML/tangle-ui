@@ -72,6 +72,10 @@ export function nameIdentity(value: string): `name/${string}` {
   return `name/${value}`;
 }
 
+export function runTarget(runId: string): RunTarget {
+  return { type: "run", identity: idIdentity(runId) };
+}
+
 export function formatWorkareaTarget(
   target: WorkareaTarget,
 ): WorkareaTargetString {

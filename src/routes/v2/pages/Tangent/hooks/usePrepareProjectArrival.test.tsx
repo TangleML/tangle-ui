@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import { createNewPipeline } from "@/routes/v2/pages/Editor/components/EditorMenuBar/components/fileMenu.actions";
 import type { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
+import { startingSessionMetadata } from "@/services/projects/startingSession";
 import type {
   Project,
   ProjectResourceSummary,
@@ -14,6 +15,15 @@ import { useProjectResources } from "@/services/projects/useProjectResources";
 import { useProject } from "@/services/projects/useProjects";
 
 import { usePrepareProjectArrival } from "./usePrepareProjectArrival";
+
+const navigate = vi.fn();
+let search: Record<string, unknown> = {};
+
+vi.mock("@tanstack/react-router", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@tanstack/react-router")>()),
+  useSearch: () => search,
+  useNavigate: () => navigate,
+}));
 
 vi.mock("@/hooks/useAiProviderSettings", () => ({
   useAiProviderSettings: vi.fn(),
@@ -124,6 +134,7 @@ function mockAiConfigured(isConfigured: boolean) {
 
 describe("usePrepareProjectArrival", () => {
   beforeEach(() => {
+    search = {};
     given();
     mockAiConfigured(true);
     windows.getWindowById.mockReturnValue({ minimize });
@@ -281,6 +292,29 @@ describe("usePrepareProjectArrival", () => {
     expect(minimize).not.toHaveBeenCalled();
     expect(createNewPipeline).not.toHaveBeenCalled();
     expect(store.openWorkareaTarget).not.toHaveBeenCalled();
+  });
+
+  /**
+   * An Open in Tangent project holds the run and no pipeline, and its untouched
+   * session is gone again the next time someone arrives.
+   */
+  it("opens the run a project holds when it has no pipeline", async () => {
+    given({
+      documents: [
+        document({ type: "pipeline_run", identity: "run://id/run-7" }),
+      ],
+    });
+    const store = makeStore();
+
+    prepare(store);
+
+    await waitFor(() =>
+      expect(store.openWorkareaTarget).toHaveBeenCalledWith(
+        { type: "run", identity: "id/run-7" },
+        "Churn model",
+      ),
+    );
+    expect(createNewPipeline).not.toHaveBeenCalled();
   });
 
   it("opens the pipeline a project already has rather than adding another", async () => {
@@ -471,5 +505,163 @@ describe("usePrepareProjectArrival", () => {
     expect(store.startSession).toHaveBeenCalled();
     expect(createNewPipeline).not.toHaveBeenCalled();
     expect(store.openWorkareaTarget).not.toHaveBeenCalled();
+  });
+
+  describe("asked for by the link", () => {
+    it("starts a session on a project that already has some", async () => {
+      search = { session: "new" };
+      const store = makeStore();
+
+      prepare(store, 2);
+
+      await waitFor(() => expect(store.startSession).toHaveBeenCalledTimes(1));
+      expect(store.startSession).toHaveBeenCalledWith(undefined);
+    });
+
+    it("opens the view it names in the session it starts", async () => {
+      search = { session: "new", open: "run://id/run-7" };
+      const store = makeStore();
+
+      prepare(store, 2);
+
+      await waitFor(() =>
+        expect(store.openWorkareaTarget).toHaveBeenCalledWith({
+          type: "run",
+          identity: "id/run-7",
+        }),
+      );
+      expect(
+        vi.mocked(store.startSession).mock.invocationCallOrder[0],
+      ).toBeLessThan(
+        vi.mocked(store.openWorkareaTarget).mock.invocationCallOrder[0],
+      );
+    });
+
+    it("opens that view instead of giving an empty project a pipeline", async () => {
+      search = { open: "run://id/run-7" };
+      const store = makeStore();
+
+      prepare(store);
+
+      await waitFor(() =>
+        expect(store.openWorkareaTarget).toHaveBeenCalledWith({
+          type: "run",
+          identity: "id/run-7",
+        }),
+      );
+      expect(store.startSession).toHaveBeenCalledTimes(1);
+      expect(createNewPipeline).not.toHaveBeenCalled();
+      expect(minimize).toHaveBeenCalled();
+    });
+
+    it("opens it alongside the prompt a debug project carries", async () => {
+      search = { open: "run://id/run-7" };
+      given({
+        projectOverrides: {
+          metadata: { startingPrompt: "Find out why run-7 failed." },
+        },
+      });
+      const store = makeStore();
+
+      prepare(store, 1);
+
+      await waitFor(() =>
+        expect(store.openWorkareaTarget).toHaveBeenCalledWith({
+          type: "run",
+          identity: "id/run-7",
+        }),
+      );
+      expect(store.startSession).toHaveBeenCalledWith(
+        expect.objectContaining({ prompt: "Find out why run-7 failed." }),
+      );
+    });
+
+    it("waits for a cached project to be read again before deciding", async () => {
+      search = { open: "run://id/run-7" };
+      navigate.mockImplementation(({ search: rewrite }) => {
+        search = rewrite(search);
+      });
+      vi.mocked(useProject).mockReturnValue({
+        data: project,
+        isFetching: true,
+      } as unknown as ReturnType<typeof useProject>);
+      const store = makeStore();
+
+      const { rerender } = prepare(store, 2);
+      await settle();
+      given({
+        projectOverrides: {
+          metadata: startingSessionMetadata({
+            prompt: "Find out why run-7 failed.",
+          }),
+        },
+      });
+      rerender();
+
+      await waitFor(() =>
+        expect(store.openWorkareaTarget).toHaveBeenCalledWith({
+          type: "run",
+          identity: "id/run-7",
+        }),
+      );
+      expect(store.startSession).toHaveBeenCalledWith(
+        expect.objectContaining({ prompt: "Find out why run-7 failed." }),
+      );
+    });
+
+    /** Left in the url, a reload would start a second session. */
+    it("is taken back out of the url once acted on", async () => {
+      search = { session: "new", open: "run://id/run-7", other: "kept" };
+
+      prepare(makeStore(), 2);
+
+      await waitFor(() => expect(navigate).toHaveBeenCalled());
+      const { search: rewrite, replace } = navigate.mock.calls[0][0];
+      expect(replace).toBe(true);
+      expect(rewrite(search)).toEqual({ other: "kept" });
+    });
+
+    it("drops a view from the url when nothing will open it", async () => {
+      search = { open: "run://id/run-7", other: "kept" };
+      const store = makeStore();
+
+      prepare(store, 2);
+
+      await waitFor(() => expect(navigate).toHaveBeenCalled());
+      const { search: rewrite, replace } = navigate.mock.calls[0][0];
+      expect(replace).toBe(true);
+      expect(rewrite(search)).toEqual({ other: "kept" });
+      expect(store.startSession).not.toHaveBeenCalled();
+      expect(store.openWorkareaTarget).not.toHaveBeenCalled();
+    });
+
+    it("keeps a view for an arrival still waiting on an AI provider", async () => {
+      mockAiConfigured(false);
+      search = { open: "run://id/run-7" };
+
+      prepare(makeStore());
+
+      await settle();
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it("leaves a url that asks for nothing alone", async () => {
+      prepare(makeStore());
+
+      await settle();
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it("waits for an AI provider before acting on it", async () => {
+      mockAiConfigured(false);
+      search = { session: "new" };
+      const store = makeStore();
+
+      prepare(store, 2);
+
+      await settle();
+      expect(store.startSession).not.toHaveBeenCalled();
+      expect(navigate).not.toHaveBeenCalled();
+    });
   });
 });
