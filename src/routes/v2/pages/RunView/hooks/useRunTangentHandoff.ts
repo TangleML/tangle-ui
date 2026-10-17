@@ -5,10 +5,6 @@ import { useRerunProjectIds } from "@/hooks/useRerunProjectIds";
 import useToastNotification from "@/hooks/useToastNotification";
 import { APP_ROUTES } from "@/routes/appRoutes";
 import { attachPipelineRunOnce } from "@/services/projects/attachPipelineRun";
-import {
-  pickDefaultWorkspace,
-  readLastUsedWorkspaceId,
-} from "@/services/projects/defaultWorkspace";
 import { isProjectGone } from "@/services/projects/errors";
 import { createProjectResource } from "@/services/projects/projectResourcesService";
 import {
@@ -40,7 +36,6 @@ type TangentDestination =
 
 export interface RunTangentHandoff {
   newProjectName: (run: RunInTangent) => string;
-  newProjectMetadata?: Record<string, unknown>;
   newProjectDocuments?: (
     project: Project,
     run: RunInTangent,
@@ -79,10 +74,7 @@ export function useRunTangentHandoff(handoff: RunTangentHandoff) {
     const existing = await firstProjectStillThere(attributed);
     if (existing) return { kind: "existing", project: existing };
 
-    const workspace = pickDefaultWorkspace(
-      workspaces ?? [],
-      readLastUsedWorkspaceId(),
-    );
+    const workspace = workspaces?.find((w) => w.isActive) ?? workspaces?.[0];
     if (!workspace) {
       throw new Error("No workspace is available to create a project.");
     }
@@ -117,10 +109,7 @@ export function useRunTangentHandoff(handoff: RunTangentHandoff) {
       workspaceId,
       name,
       origin: "agent",
-      metadata: {
-        ...handoff.newProjectMetadata,
-        ...(session ? startingSessionMetadata(session) : {}),
-      },
+      metadata: session ? startingSessionMetadata(session) : {},
     });
 
     try {
