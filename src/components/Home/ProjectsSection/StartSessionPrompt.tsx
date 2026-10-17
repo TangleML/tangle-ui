@@ -9,6 +9,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
 import { WorkspaceNotice } from "@/components/Project/WorkspaceNotice";
+import { WorkspaceSelect } from "@/components/Project/WorkspaceSelect";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -31,12 +32,12 @@ import { nameFromPrompt } from "@/services/projects/nameFromPrompt";
 import { provisionalNameMetadata } from "@/services/projects/provisionalName";
 import { startingSessionMetadata } from "@/services/projects/startingSession";
 import { useCreateProject } from "@/services/projects/useProjects";
+import { useWorkspaceChoice } from "@/services/projects/useWorkspaceChoice";
 import { useWorkspaces } from "@/services/projects/useWorkspaces";
 import { tracking } from "@/utils/tracking";
 
 import { nextProjectName } from "./nextProjectName";
 import { useMyProjects } from "./useMyProjects";
-import { useWorkspaceChoice } from "./useWorkspaceChoice";
 
 const THINKING_LABELS: Partial<Record<ThinkingLevel, string>> = {
   xhigh: "Extra high",
@@ -194,25 +195,13 @@ export function StartSessionPrompt() {
             </SelectContent>
           </Select>
 
-          <Select
-            value={workspace?.id ?? ""}
-            onValueChange={workspaceChoice.choose}
+          <WorkspaceSelect
+            choice={workspaceChoice}
+            aria-label="Workspace"
+            placeholder="Workspace"
             disabled={isBusy}
-          >
-            <SelectTrigger
-              aria-label="Workspace"
-              className="h-8 w-auto max-w-48 text-xs"
-            >
-              <SelectValue placeholder="Workspace" />
-            </SelectTrigger>
-            <SelectContent>
-              {workspaceChoice.workspaces.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            className="h-8 w-auto max-w-48 text-xs"
+          />
 
           <div className="flex-1" />
 
