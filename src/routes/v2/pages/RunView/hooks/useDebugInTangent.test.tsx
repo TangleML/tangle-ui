@@ -15,7 +15,6 @@ import {
   getProject,
   updateProject,
 } from "@/services/projects/projectsService";
-import { useWorkspaces } from "@/services/projects/useWorkspaces";
 
 import { useDebugInTangent } from "./useDebugInTangent";
 
@@ -44,10 +43,6 @@ vi.mock("@/services/projects/projectResourcesService", () => ({
   listProjectResources: vi.fn(),
 }));
 
-vi.mock("@/services/projects/useWorkspaces", () => ({
-  useWorkspaces: vi.fn(),
-}));
-
 function wrapper({ children }: { children: ReactNode }) {
   const client = new QueryClient({
     defaultOptions: { mutations: { retry: false } },
@@ -55,10 +50,17 @@ function wrapper({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
 
-function debugRun(projectId?: string) {
+function debugRun() {
   const { result } = renderHook(() => useDebugInTangent(), { wrapper });
+  act(() => result.current.start({ runId: "run-7", pipelineName: "Churn" }));
+  return result;
+}
+
+async function debugRunInNewProject(workspaceId = "ws-1") {
+  const result = debugRun();
+  await waitFor(() => expect(result.current.choosing).toBeDefined());
   act(() =>
-    result.current.start({ runId: "run-7", pipelineName: "Churn", projectId }),
+    result.current.choose({ kind: "new", workspaceId, name: "Debug: Churn" }),
   );
   return result;
 }
@@ -69,20 +71,24 @@ function runBelongsTo(...projectIds: string[]) {
   );
 }
 
+function projectsAre(...ids: string[]) {
+  vi.mocked(getProject).mockImplementation(async (id: string) => {
+    if (!ids.includes(id)) throw new ProjectsApiError("Not found", 404);
+    return {
+      id,
+      name: `Project ${id}`,
+      metadata: { pinned: true },
+    } as unknown as Awaited<ReturnType<typeof getProject>>;
+  });
+}
+
 describe("useDebugInTangent", () => {
   beforeEach(() => {
     runBelongsTo();
-    vi.mocked(useWorkspaces).mockReturnValue({
-      data: [{ id: "ws-1", isActive: true }],
-    } as unknown as ReturnType<typeof useWorkspaces>);
+    projectsAre("project-3", "project-4");
     vi.mocked(createProject).mockResolvedValue({
       id: "project-9",
     } as unknown as Awaited<ReturnType<typeof createProject>>);
-    vi.mocked(getProject).mockResolvedValue({
-      id: "project-3",
-      name: "Churn model",
-      metadata: { pinned: true },
-    } as unknown as Awaited<ReturnType<typeof getProject>>);
     vi.mocked(updateProject).mockResolvedValue(
       {} as unknown as Awaited<ReturnType<typeof updateProject>>,
     );
@@ -98,15 +104,55 @@ describe("useDebugInTangent", () => {
       undefined as unknown as Awaited<ReturnType<typeof deleteProject>>,
     );
   });
-  afterEach(() => vi.resetAllMocks());
+  afterEach(() => {
+    vi.resetAllMocks();
+    localStorage.clear();
+  });
 
   describe("a run that belongs to no project", () => {
+    it("asks where to debug rather than making a project unasked", async () => {
+      const result = debugRun();
+
+      await waitFor(() =>
+        expect(result.current.choosing).toEqual({
+          run: { runId: "run-7", pipelineName: "Churn" },
+          attributed: [],
+          newProjectName: "Debug: Churn",
+        }),
+      );
+      expect(createProject).not.toHaveBeenCalled();
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it("makes nothing when the question is dismissed", async () => {
+      const result = debugRun();
+      await waitFor(() => expect(result.current.choosing).toBeDefined());
+
+      act(() => result.current.dismiss());
+
+      expect(result.current.choosing).toBeUndefined();
+      expect(createProject).not.toHaveBeenCalled();
+    });
+
+    it("makes the project it was asked for, where it was asked", async () => {
+      await debugRunInNewProject("ws-2");
+
+      await waitFor(() =>
+        expect(createProject).toHaveBeenCalledWith(
+          expect.objectContaining({
+            workspaceId: "ws-2",
+            name: "Debug: Churn",
+          }),
+        ),
+      );
+    });
+
     /**
      * The agent is told what it is here to do through the project's
      * instructions, which is a document rather than a field on the project.
      */
     it("writes the brief as the project's instructions document", async () => {
-      debugRun();
+      await debugRunInNewProject();
 
       await waitFor(() => expect(createProjectResource).toHaveBeenCalled());
       const [projectId, input] = vi.mocked(createProjectResource).mock.calls[0];
@@ -121,7 +167,7 @@ describe("useDebugInTangent", () => {
     });
 
     it("attaches the failed run as well", async () => {
-      debugRun();
+      await debugRunInNewProject();
 
       await waitFor(() =>
         expect(createProjectResource).toHaveBeenCalledTimes(2),
@@ -133,23 +179,25 @@ describe("useDebugInTangent", () => {
       });
     });
 
-    it("opens the project it made", async () => {
-      debugRun();
+    it("opens the project it made on the failed run", async () => {
+      await debugRunInNewProject();
 
       await waitFor(() =>
         expect(navigate).toHaveBeenCalledWith(
-          expect.objectContaining({ params: { projectId: "project-9" } }),
+          expect.objectContaining({
+            params: { projectId: "project-9" },
+            search: { open: "run://id/run-7" },
+          }),
         ),
       );
     });
 
-    it("asks Tangent to open the failed run on arrival", async () => {
-      debugRun();
+    it("remembers the workspace for the next project", async () => {
+      await debugRunInNewProject("ws-2");
 
-      await waitFor(() =>
-        expect(navigate).toHaveBeenCalledWith(
-          expect.objectContaining({ search: { open: "run://id/run-7" } }),
-        ),
+      await waitFor(() => expect(navigate).toHaveBeenCalled());
+      expect(localStorage.getItem("tangle.projects.lastUsedWorkspaceId")).toBe(
+        JSON.stringify("ws-2"),
       );
     });
 
@@ -157,7 +205,7 @@ describe("useDebugInTangent", () => {
     it("takes the project back out again when attaching fails", async () => {
       vi.mocked(createProjectResource).mockRejectedValue(new Error("nope"));
 
-      debugRun();
+      await debugRunInNewProject("ws-2");
 
       await waitFor(() =>
         expect(deleteProject).toHaveBeenCalledWith("project-9"),
@@ -169,37 +217,32 @@ describe("useDebugInTangent", () => {
         ),
       );
       expect(navigate).not.toHaveBeenCalled();
-    });
-
-    it("says so rather than making a project with nowhere to put it", async () => {
-      vi.mocked(useWorkspaces).mockReturnValue({
-        data: [],
-      } as unknown as ReturnType<typeof useWorkspaces>);
-
-      debugRun();
-
-      await waitFor(() =>
-        expect(notify).toHaveBeenCalledWith(
-          expect.stringContaining("No workspace"),
-          "error",
-        ),
-      );
-      expect(createProject).not.toHaveBeenCalled();
+      expect(
+        localStorage.getItem("tangle.projects.lastUsedWorkspaceId"),
+      ).toBeNull();
     });
   });
 
-  describe("a run that belongs to a project", () => {
+  describe("a run that belongs to one project", () => {
     beforeEach(() => runBelongsTo("project-3"));
 
-    it("works in that project rather than making another", async () => {
-      debugRun();
+    it("works in that project without asking", async () => {
+      const result = debugRun();
 
       await waitFor(() =>
         expect(navigate).toHaveBeenCalledWith(
           expect.objectContaining({ params: { projectId: "project-3" } }),
         ),
       );
+      expect(result.current.choosing).toBeUndefined();
       expect(createProject).not.toHaveBeenCalled();
+    });
+
+    it("looks the project up only once", async () => {
+      debugRun();
+
+      await waitFor(() => expect(navigate).toHaveBeenCalled());
+      expect(getProject).toHaveBeenCalledTimes(1);
     });
 
     /**
@@ -254,36 +297,43 @@ describe("useDebugInTangent", () => {
       });
     });
 
-    /**
-     * Nothing rewrites a run's attribution when a project is deleted, so the
-     * id it carries can name nothing at all. Debugging still has to work.
-     */
-    it("makes a project when the one the run names has been deleted", async () => {
+    /** A backend that merely failed must not offer the run a new project. */
+    it("says so rather than asking when the read simply failed", async () => {
       vi.mocked(getProject).mockRejectedValue(
-        new ProjectsApiError("Not found", 404),
+        new ProjectsApiError("Server error", 500),
       );
 
-      debugRun();
+      const result = debugRun();
 
       await waitFor(() =>
-        expect(navigate).toHaveBeenCalledWith(
-          expect.objectContaining({ params: { projectId: "project-9" } }),
+        expect(notify).toHaveBeenCalledWith(
+          expect.stringContaining("Server error"),
+          "error",
         ),
       );
-      expect(createProject).toHaveBeenCalledWith(
-        expect.objectContaining({ name: "Debug: Churn" }),
+      expect(result.current.choosing).toBeUndefined();
+      expect(navigate).not.toHaveBeenCalled();
+    });
+  });
+
+  /**
+   * Nothing rewrites a run's attribution when a project is deleted, so the
+   * id it carries can name nothing at all.
+   */
+  describe("a run whose project has been deleted", () => {
+    it("asks where to debug, as for a run in no project", async () => {
+      runBelongsTo("gone");
+
+      const result = debugRun();
+
+      await waitFor(() =>
+        expect(result.current.choosing?.attributed).toEqual([]),
       );
       expect(notify).not.toHaveBeenCalled();
     });
 
-    it("moves on to the next project the run names", async () => {
+    it("goes straight to the one project the run still has", async () => {
       runBelongsTo("gone", "project-3");
-      vi.mocked(getProject).mockImplementation(async (id: string) => {
-        if (id === "gone") throw new ProjectsApiError("Not found", 404);
-        return { id, name: "Churn model" } as unknown as Awaited<
-          ReturnType<typeof getProject>
-        >;
-      });
 
       debugRun();
 
@@ -292,39 +342,41 @@ describe("useDebugInTangent", () => {
           expect.objectContaining({ params: { projectId: "project-3" } }),
         ),
       );
-      expect(createProject).not.toHaveBeenCalled();
     });
+  });
 
-    /** A backend that merely failed must not strand the run somewhere new. */
-    it("says so rather than making a project when the read simply failed", async () => {
-      vi.mocked(getProject).mockRejectedValue(
-        new ProjectsApiError("Server error", 500),
-      );
+  /**
+   * Attribution is written once and never revised, so a run in two projects
+   * cannot be asked which one it meant — only the reader can say.
+   */
+  describe("a run that belongs to several projects", () => {
+    beforeEach(() => runBelongsTo("project-3", "project-4"));
 
-      debugRun();
+    it("asks which, offering the run's projects", async () => {
+      const result = debugRun();
 
       await waitFor(() =>
-        expect(notify).toHaveBeenCalledWith(
-          expect.stringContaining("Server error"),
-          "error",
-        ),
+        expect(
+          result.current.choosing?.attributed.map((project) => project.id),
+        ).toEqual(["project-3", "project-4"]),
       );
-      expect(createProject).not.toHaveBeenCalled();
       expect(navigate).not.toHaveBeenCalled();
     });
 
-    it("debugs in the project it is handed when a run has several", async () => {
-      runBelongsTo("project-3", "project-4");
-      vi.mocked(getProject).mockResolvedValue({
-        id: "project-4",
-      } as unknown as Awaited<ReturnType<typeof getProject>>);
+    it("debugs in the project picked", async () => {
+      const result = debugRun();
+      await waitFor(() => expect(result.current.choosing).toBeDefined());
 
-      debugRun("project-4");
-
-      await waitFor(() => expect(getProject).toHaveBeenCalledWith("project-4"));
-      expect(navigate).toHaveBeenCalledWith(
-        expect.objectContaining({ params: { projectId: "project-4" } }),
+      act(() =>
+        result.current.choose({ kind: "existing", projectId: "project-4" }),
       );
+
+      await waitFor(() =>
+        expect(navigate).toHaveBeenCalledWith(
+          expect.objectContaining({ params: { projectId: "project-4" } }),
+        ),
+      );
+      expect(vi.mocked(updateProject).mock.calls[0][0]).toBe("project-4");
     });
   });
 });
