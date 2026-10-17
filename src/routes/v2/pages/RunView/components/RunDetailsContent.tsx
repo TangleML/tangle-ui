@@ -255,7 +255,7 @@ function DebugInTangentButton({
   runId,
   pipelineName,
 }: DebugInTangentButtonProps) {
-  const { debug, isPending } = useDebugInTangent();
+  const { start: debug, isPending } = useDebugInTangent();
   const aiGate = useAiGate();
   // Only the projects still there: one that has been deleted since is not a
   // place anything can be debugged, and picking it would just make a project.
