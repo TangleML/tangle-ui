@@ -35,7 +35,6 @@ export type TangentDestination =
 
 export interface RunTangentHandoff {
   newProjectName: (run: RunInTangent) => string;
-  newProjectMetadata?: Record<string, unknown>;
   newProjectDocuments?: (
     project: Project,
     run: RunInTangent,
@@ -101,10 +100,7 @@ export function useRunTangentHandoff(handoff: RunTangentHandoff) {
       workspaceId,
       name,
       origin: "agent",
-      metadata: {
-        ...handoff.newProjectMetadata,
-        ...(session ? startingSessionMetadata(session) : {}),
-      },
+      metadata: session ? startingSessionMetadata(session) : {},
     });
 
     try {

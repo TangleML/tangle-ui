@@ -2,7 +2,7 @@ import { type FormEvent, useState } from "react";
 
 import { PickerOption } from "@/components/Project/PickerOption";
 import { PickerSearchField } from "@/components/Project/PickerSearchField";
-import { NO_WORKSPACE_AVAILABLE } from "@/components/Project/workspaceCopy";
+import { WorkspaceNotice } from "@/components/Project/WorkspaceNotice";
 import { WorkspaceField } from "@/components/Project/WorkspaceSelect";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { Button } from "@/components/ui/button";
@@ -21,13 +21,24 @@ import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 import { Heading, Text } from "@/components/ui/typography";
 import type { TangentDestination } from "@/routes/v2/pages/RunView/hooks/useRunTangentHandoff";
-import type { ProjectSummary } from "@/services/projects/types";
+import type { ProjectSummary, Workspace } from "@/services/projects/types";
 import { useReachableProjects } from "@/services/projects/useReachableProjects";
 import { useWorkspaceChoice } from "@/services/projects/useWorkspaceChoice";
 import { useWorkspaces } from "@/services/projects/useWorkspaces";
 import { tracking } from "@/utils/tracking";
 
 const NEW_PROJECT = "new-project";
+
+function destinationFor(
+  choice: string | undefined,
+  name: string,
+  workspace: Workspace | undefined,
+): TangentDestination | undefined {
+  if (choice === undefined) return undefined;
+  if (choice !== NEW_PROJECT) return { kind: "existing", projectId: choice };
+  if (name === "" || !workspace) return undefined;
+  return { kind: "new", workspaceId: workspace.id, name };
+}
 
 interface TangentDestinationDialogProps {
   title: string;
@@ -48,11 +59,7 @@ export function TangentDestinationDialog({
   const [selected, setSelected] = useState<string>();
   const [name, setName] = useState(newProjectName);
   const reachable = useReachableProjects();
-  const {
-    data: workspaces,
-    isPending: isWorkspacesPending,
-    error: workspacesError,
-  } = useWorkspaces();
+  const { data: workspaces } = useWorkspaces();
   const workspaceChoice = useWorkspaceChoice(workspaces);
 
   const attributedIds = new Set(attributed.map((project) => project.id));
@@ -85,26 +92,15 @@ export function TangentDestinationDialog({
   const toggle = (option: string) =>
     setSelected(choice === option ? undefined : option);
 
-  const trimmedName = name.trim();
-  const workspace = workspaceChoice.selected;
-  const canConfirm = isNewProject
-    ? trimmedName !== "" && workspace !== undefined
-    : choice !== undefined;
-  const workspaceNotice = workspacesError
-    ? `Could not load workspaces: ${workspacesError.message}`
-    : !isWorkspacesPending && !workspace
-      ? NO_WORKSPACE_AVAILABLE
-      : undefined;
+  const destination = destinationFor(
+    choice,
+    name.trim(),
+    workspaceChoice.selected,
+  );
 
   const confirm = (event: FormEvent) => {
     event.preventDefault();
-    if (!canConfirm || !choice) return;
-    if (!isNewProject) {
-      onChoose({ kind: "existing", projectId: choice });
-      return;
-    }
-    if (!workspace) return;
-    onChoose({ kind: "new", workspaceId: workspace.id, name: trimmedName });
+    if (destination) onChoose(destination);
   };
 
   return (
@@ -190,11 +186,7 @@ export function TangentDestinationDialog({
                   />
                 </BlockStack>
                 <WorkspaceField choice={workspaceChoice} />
-                {workspaceNotice && (
-                  <Text size="sm" tone="subdued">
-                    {workspaceNotice}
-                  </Text>
-                )}
+                <WorkspaceNotice />
               </BlockStack>
             )}
 
@@ -210,7 +202,7 @@ export function TangentDestinationDialog({
                 </Button>
                 <Button
                   type="submit"
-                  disabled={!canConfirm}
+                  disabled={!destination}
                   {...tracking("v2.run_view.tangent_destination.confirm", {
                     new_project: isNewProject,
                     workspace_changed:
