@@ -84,7 +84,8 @@ export function usePrepareProjectArrival(
   const search = useSearch({ strict: false });
   const navigate = useNavigate();
   const { windows } = useSharedStores();
-  const { data: project } = useProject(projectId);
+  const { data: project, isFetching: isProjectFetching } =
+    useProject(projectId);
   const { data: documents } = useProjectResources(projectId, {
     entity: ["document"],
     pageSize: MAX_PAGE_SIZE,
@@ -168,7 +169,8 @@ export function usePrepareProjectArrival(
     },
   });
 
-  const knowsWhetherToArrive = !isSessionsLoading && project !== undefined;
+  const knowsWhetherToArrive =
+    !isSessionsLoading && project !== undefined && !isProjectFetching;
   const asksForArrival =
     isEmpty || starting !== undefined || linkAsksForSession;
 

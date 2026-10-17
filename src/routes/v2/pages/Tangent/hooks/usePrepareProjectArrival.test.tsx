@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import { createNewPipeline } from "@/routes/v2/pages/Editor/components/EditorMenuBar/components/fileMenu.actions";
 import type { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
+import { startingSessionMetadata } from "@/services/projects/startingSession";
 import type {
   Project,
   ProjectResourceSummary,
@@ -563,6 +564,39 @@ describe("usePrepareProjectArrival", () => {
       const store = makeStore();
 
       prepare(store, 1);
+
+      await waitFor(() =>
+        expect(store.openWorkareaTarget).toHaveBeenCalledWith({
+          type: "run",
+          identity: "id/run-7",
+        }),
+      );
+      expect(store.startSession).toHaveBeenCalledWith(
+        expect.objectContaining({ prompt: "Find out why run-7 failed." }),
+      );
+    });
+
+    it("waits for a cached project to be read again before deciding", async () => {
+      search = { open: "run://id/run-7" };
+      navigate.mockImplementation(({ search: rewrite }) => {
+        search = rewrite(search);
+      });
+      vi.mocked(useProject).mockReturnValue({
+        data: project,
+        isFetching: true,
+      } as unknown as ReturnType<typeof useProject>);
+      const store = makeStore();
+
+      const { rerender } = prepare(store, 2);
+      await settle();
+      given({
+        projectOverrides: {
+          metadata: startingSessionMetadata({
+            prompt: "Find out why run-7 failed.",
+          }),
+        },
+      });
+      rerender();
 
       await waitFor(() =>
         expect(store.openWorkareaTarget).toHaveBeenCalledWith({
