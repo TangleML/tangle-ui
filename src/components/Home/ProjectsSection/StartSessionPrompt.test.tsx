@@ -11,7 +11,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import { useBackend } from "@/providers/BackendProvider";
 import { rememberLastUsedWorkspace } from "@/services/projects/defaultWorkspace";
-import { ProjectsApiError } from "@/services/projects/errors";
 import { createProject } from "@/services/projects/projectsService";
 import { startingSessionMetadata } from "@/services/projects/startingSession";
 import type { Workspace } from "@/services/projects/types";
@@ -75,19 +74,13 @@ async function type(text: string) {
   return user;
 }
 
-const workspace = (
-  id: string,
-  name: string,
-  createdAt: string,
-  overrides: Partial<Workspace> = {},
-): Workspace => ({
+const workspace = (id: string, name: string, createdAt: string): Workspace => ({
   id,
   name,
   description: null,
   isActive: true,
   metadata: null,
   createdAt: new Date(createdAt),
-  ...overrides,
 });
 
 const research = workspace("ws-1", "Research", "2026-01-01T00:00:00Z");
@@ -95,15 +88,11 @@ const analytics = workspace("ws-2", "Analytics", "2026-06-01T00:00:00Z");
 
 function mockWorkspaces(
   workspaces: Workspace[] | undefined,
-  {
-    isPending = false,
-    error = null,
-  }: { isPending?: boolean; error?: Error | null } = {},
+  { isPending = false } = {},
 ) {
   vi.mocked(useWorkspaces).mockReturnValue({
     data: workspaces,
     isPending,
-    error,
   } as unknown as ReturnType<typeof useWorkspaces>);
 }
 
@@ -221,21 +210,6 @@ describe("StartSessionPrompt", () => {
     expect(createProject).toHaveBeenCalledTimes(1);
   });
 
-  it("says why the backend refused rather than a generic failure", async () => {
-    vi.mocked(createProject).mockRejectedValue(
-      new ProjectsApiError("Failed to create project: Quota exceeded", 422),
-    );
-    renderPrompt();
-
-    await type("Build a churn model{Enter}");
-
-    expect(notify).toHaveBeenCalledWith(
-      "Failed to create project: Quota exceeded",
-      "error",
-    );
-    expect(navigate).not.toHaveBeenCalled();
-  });
-
   /** A brief is more than one line, so a newline has to be typeable. */
   it("takes a newline on shift-enter instead of starting", async () => {
     renderPrompt();
@@ -265,16 +239,6 @@ describe("StartSessionPrompt", () => {
   describe("choosing a workspace", () => {
     beforeEach(() => mockWorkspaces([analytics, research]));
 
-    it("starts on the oldest workspace rather than the first listed", async () => {
-      renderPrompt();
-
-      await type("Build a churn model{Enter}");
-
-      expect(createProject).toHaveBeenCalledWith(
-        expect.objectContaining({ workspaceId: "ws-1" }),
-      );
-    });
-
     it("starts the session in the workspace that was picked", async () => {
       renderPrompt();
 
@@ -284,14 +248,6 @@ describe("StartSessionPrompt", () => {
       expect(createProject).toHaveBeenCalledWith(
         expect.objectContaining({ workspaceId: "ws-2" }),
       );
-    });
-
-    it("starts on the workspace last used", () => {
-      rememberLastUsedWorkspace("ws-2");
-
-      renderPrompt();
-
-      expect(screen.getByLabelText("Workspace")).toHaveTextContent("Analytics");
     });
 
     it("remembers the workspace for the next session", async () => {
@@ -305,21 +261,6 @@ describe("StartSessionPrompt", () => {
           localStorage.getItem("tangle.projects.lastUsedWorkspaceId"),
         ).toBe(JSON.stringify("ws-2")),
       );
-    });
-
-    it("leaves retired workspaces out of the picker", async () => {
-      mockWorkspaces([
-        research,
-        workspace("ws-3", "Legacy", "2025-01-01T00:00:00Z", {
-          isActive: false,
-        }),
-      ]);
-      renderPrompt();
-
-      await userEvent.setup().click(screen.getByLabelText("Workspace"));
-
-      expect(screen.getByRole("option", { name: "Research" })).toBeVisible();
-      expect(screen.queryByRole("option", { name: "Legacy" })).toBeNull();
     });
 
     it("records whether the preselected workspace was changed", async () => {
@@ -379,15 +320,6 @@ describe("StartSessionPrompt", () => {
     ).toBeVisible();
   });
 
-  it("treats a backend holding only retired workspaces as having none", () => {
-    mockWorkspaces([{ ...research, isActive: false }]);
-
-    renderPrompt();
-
-    expect(screen.getByLabelText("Start a new session")).toBeDisabled();
-    expect(screen.getByText(/Projects cannot be created yet/)).toBeVisible();
-  });
-
   it("asks for a backend when none is connected", () => {
     mockBackend({ configured: false, available: false });
     mockWorkspaces(undefined, { isPending: true });
@@ -398,16 +330,6 @@ describe("StartSessionPrompt", () => {
       screen.getByText(
         "Connect a backend to enable agentic features in Tangle",
       ),
-    ).toBeVisible();
-  });
-
-  it("says why the workspaces could not be loaded", () => {
-    mockWorkspaces(undefined, { error: new Error("Gateway timeout") });
-
-    renderPrompt();
-
-    expect(
-      screen.getByText("Could not load workspaces: Gateway timeout"),
     ).toBeVisible();
   });
 

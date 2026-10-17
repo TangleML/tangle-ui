@@ -8,6 +8,7 @@ import {
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
+import { WorkspaceNotice } from "@/components/Project/WorkspaceNotice";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -36,7 +37,6 @@ import { tracking } from "@/utils/tracking";
 import { nextProjectName } from "./nextProjectName";
 import { useMyProjects } from "./useMyProjects";
 import { useWorkspaceChoice } from "./useWorkspaceChoice";
-import { NO_WORKSPACE_AVAILABLE } from "./workspaceCopy";
 
 const THINKING_LABELS: Partial<Record<ThinkingLevel, string>> = {
   xhigh: "Extra high",
@@ -44,25 +44,6 @@ const THINKING_LABELS: Partial<Record<ThinkingLevel, string>> = {
 
 const thinkingLabel = (level: ThinkingLevel) =>
   THINKING_LABELS[level] ?? level.charAt(0).toUpperCase() + level.slice(1);
-
-function missingWorkspaceNotice({
-  backendMissing,
-  workspacesError,
-  isFindingWorkspace,
-}: {
-  backendMissing: boolean;
-  workspacesError: Error | null;
-  isFindingWorkspace: boolean;
-}): string | undefined {
-  if (backendMissing) {
-    return "Connect a backend to enable agentic features in Tangle";
-  }
-  if (workspacesError) {
-    return `Could not load workspaces: ${workspacesError.message}`;
-  }
-  if (isFindingWorkspace) return undefined;
-  return NO_WORKSPACE_AVAILABLE;
-}
 
 export function StartSessionPrompt() {
   const [prompt, setPrompt] = useState("");
@@ -76,11 +57,7 @@ export function StartSessionPrompt() {
   const createProject = useCreateProject();
   const { track } = useAnalytics();
   const { configured, available, ready } = useBackend();
-  const {
-    data: workspaces,
-    isPending: isFindingWorkspace,
-    error: workspacesError,
-  } = useWorkspaces();
+  const { data: workspaces, isPending: isFindingWorkspace } = useWorkspaces();
   const workspaceChoice = useWorkspaceChoice(workspaces);
   const { projects } = useMyProjects();
   const { isConfigured: isAiConfigured } = useAiProviderSettings();
@@ -92,13 +69,7 @@ export function StartSessionPrompt() {
   // standing and disabled rather than taking it away.
   const isUnavailable = isFindingWorkspace || !workspace || !isAiConfigured;
   const isBusy = createProject.isPending || isUnavailable;
-  const workspaceNotice = workspace
-    ? undefined
-    : missingWorkspaceNotice({
-        backendMissing: ready && !(configured && available),
-        workspacesError,
-        isFindingWorkspace,
-      });
+  const isBackendMissing = ready && !(configured && available);
 
   // Once, as soon as it can take input: arriving here is the act of wanting to
   // type, but the box is disabled until the backend says where a project would
@@ -269,12 +240,12 @@ export function StartSessionPrompt() {
             Open AI settings
           </Link>
         </InlineStack>
+      ) : isBackendMissing ? (
+        <Text size="sm" tone="subdued">
+          Connect a backend to enable agentic features in Tangle
+        </Text>
       ) : (
-        workspaceNotice && (
-          <Text size="sm" tone="subdued">
-            {workspaceNotice}
-          </Text>
-        )
+        <WorkspaceNotice />
       )}
     </BlockStack>
   );

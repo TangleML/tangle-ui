@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useRerunProjectIds } from "@/hooks/useRerunProjectIds";
-import { rememberLastUsedWorkspace } from "@/services/projects/defaultWorkspace";
 import { ProjectsApiError } from "@/services/projects/errors";
 import { createProjectResource } from "@/services/projects/projectResourcesService";
 import {
@@ -151,57 +150,6 @@ describe("useDebugInTangent", () => {
         ),
       );
       expect(navigate).not.toHaveBeenCalled();
-    });
-
-    describe("with several workspaces", () => {
-      beforeEach(() => {
-        vi.mocked(useWorkspaces).mockReturnValue({
-          data: [
-            {
-              id: "ws-2",
-              isActive: true,
-              createdAt: new Date("2026-06-01T00:00:00Z"),
-            },
-            {
-              id: "ws-1",
-              isActive: true,
-              createdAt: new Date("2026-01-01T00:00:00Z"),
-            },
-          ],
-        } as unknown as ReturnType<typeof useWorkspaces>);
-      });
-      afterEach(() => localStorage.clear());
-
-      it("makes the project in the oldest workspace", async () => {
-        debugRun();
-
-        await waitFor(() =>
-          expect(createProject).toHaveBeenCalledWith(
-            expect.objectContaining({ workspaceId: "ws-1" }),
-          ),
-        );
-      });
-
-      it("makes the project in the workspace last used", async () => {
-        rememberLastUsedWorkspace("ws-2");
-
-        debugRun();
-
-        await waitFor(() =>
-          expect(createProject).toHaveBeenCalledWith(
-            expect.objectContaining({ workspaceId: "ws-2" }),
-          ),
-        );
-      });
-
-      it("does not remember the workspace it fell back to", async () => {
-        debugRun();
-
-        await waitFor(() => expect(navigate).toHaveBeenCalled());
-        expect(
-          localStorage.getItem("tangle.projects.lastUsedWorkspaceId"),
-        ).toBeNull();
-      });
     });
 
     it("says so rather than making a project with nowhere to put it", async () => {

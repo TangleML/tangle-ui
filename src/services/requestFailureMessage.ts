@@ -78,14 +78,6 @@ export async function requestFailureMessage(
   return said ? `${fallback} (${status}): ${said}` : `${fallback} (${status})`;
 }
 
-export function describeErrorBody(body: unknown): string | undefined {
-  if (!isRecord(body)) return undefined;
-  return (
-    describeDetail(body.detail) ??
-    (typeof body.message === "string" ? body.message : undefined)
-  );
-}
-
 async function readServerMessage(
   response: Response,
 ): Promise<string | undefined> {
@@ -95,7 +87,13 @@ async function readServerMessage(
   const verbatim = () => truncate(body.trim(), MAX_BODY_LENGTH) || undefined;
 
   try {
-    return describeErrorBody(JSON.parse(body)) ?? verbatim();
+    const parsed: unknown = JSON.parse(body);
+    if (!isRecord(parsed)) return verbatim();
+    return (
+      describeDetail(parsed.detail) ??
+      (typeof parsed.message === "string" ? parsed.message : undefined) ??
+      verbatim()
+    );
   } catch {
     return verbatim();
   }

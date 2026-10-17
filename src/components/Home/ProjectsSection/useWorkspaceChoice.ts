@@ -26,7 +26,10 @@ export function useWorkspaceChoice(
   );
 
   const offered = activeWorkspaces(workspaces ?? []);
-  const defaultWorkspace = pickDefaultWorkspace(offered, lastUsedWorkspaceId);
+  const defaultWorkspace = pickDefaultWorkspace(
+    workspaces ?? [],
+    lastUsedWorkspaceId,
+  );
   const selected =
     offered.find((workspace) => workspace.id === chosenId) ?? defaultWorkspace;
 

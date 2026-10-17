@@ -10,7 +10,6 @@ import { removeRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
 
-import { ProjectsApiError } from "./errors";
 import {
   createProject,
   deleteProject,
@@ -24,7 +23,7 @@ import type {
   ListProjectsParams,
   UpdateProjectInput,
 } from "./types";
-import { ProjectsQueryKeys, WorkspacesQueryKeys } from "./types";
+import { ProjectsQueryKeys } from "./types";
 
 export function useProjects(
   params: ListProjectsParams = {},
@@ -87,16 +86,8 @@ export function useCreateProject() {
         queryKey: ProjectsQueryKeys.All(),
       });
     },
-    onError: (error) => {
-      void queryClient.invalidateQueries({
-        queryKey: WorkspacesQueryKeys.All(),
-      });
-      notify(
-        error instanceof ProjectsApiError
-          ? error.message
-          : "Failed to create project",
-        "error",
-      );
+    onError: () => {
+      notify("Failed to create project", "error");
     },
   });
 }

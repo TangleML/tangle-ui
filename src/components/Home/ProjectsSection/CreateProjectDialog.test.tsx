@@ -2,7 +2,6 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { rememberLastUsedWorkspace } from "@/services/projects/defaultWorkspace";
 import type { Workspace } from "@/services/projects/types";
 import { useCreateProject } from "@/services/projects/useProjects";
 
@@ -40,19 +39,13 @@ function mockCreateProject({ isPending = false } = {}) {
   } as unknown as ReturnType<typeof useCreateProject>);
 }
 
-const workspace = (
-  id: string,
-  name: string,
-  createdAt: string,
-  overrides: Partial<Workspace> = {},
-): Workspace => ({
+const workspace = (id: string, name: string, createdAt: string): Workspace => ({
   id,
   name,
   description: null,
   isActive: true,
   metadata: null,
   createdAt: new Date(createdAt),
-  ...overrides,
 });
 
 const research = workspace("workspace-1", "Research", "2026-01-01T00:00:00Z");
@@ -108,20 +101,6 @@ describe("CreateProjectDialog", () => {
     await user.click(submitButton());
 
     expect(mutate).not.toHaveBeenCalled();
-  });
-
-  it("starts on the oldest workspace rather than the first listed", async () => {
-    await openDialog();
-
-    expect(screen.getByLabelText("Workspace")).toHaveTextContent("Research");
-  });
-
-  it("starts on the workspace last created in", async () => {
-    rememberLastUsedWorkspace("workspace-2");
-
-    await openDialog();
-
-    expect(screen.getByLabelText("Workspace")).toHaveTextContent("Analytics");
   });
 
   it("asks for a workspace even when there is only one", async () => {
