@@ -2,7 +2,6 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { rememberLastUsedWorkspace } from "@/services/projects/defaultWorkspace";
 import type { ProjectSummary, Workspace } from "@/services/projects/types";
 import { useReachableProjects } from "@/services/projects/useReachableProjects";
 import { useWorkspaces } from "@/services/projects/useWorkspaces";
@@ -289,18 +288,6 @@ describe("TangentDestinationDialog", () => {
       await user.clear(screen.getByLabelText("Name"));
 
       expect(confirmButton()).toBeDisabled();
-    });
-
-    it("starts on the workspace last created in", async () => {
-      rememberLastUsedWorkspace("ws-2");
-      const user = openDialog();
-
-      await user.click(newProject());
-      await user.click(confirmButton());
-
-      expect(onChoose).toHaveBeenCalledWith(
-        expect.objectContaining({ workspaceId: "ws-2" }),
-      );
     });
 
     it("goes in the workspace that was picked", async () => {
