@@ -1,9 +1,8 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { rememberLastUsedWorkspace } from "@/services/projects/defaultWorkspace";
-import type { Workspace } from "@/services/projects/types";
-
+import { rememberLastUsedWorkspace } from "./defaultWorkspace";
+import type { Workspace } from "./types";
 import { useWorkspaceChoice } from "./useWorkspaceChoice";
 
 const workspace = (
