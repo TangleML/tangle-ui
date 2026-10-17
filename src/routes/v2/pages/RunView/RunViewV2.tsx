@@ -64,7 +64,7 @@ const RunViewLayout = observer(function RunViewLayout({
   useShortcutListener();
   useWindowPersistence("runview-v2");
   useDockAreaAccordion();
-  useRunViewWindows();
+  useRunViewWindows({ offersTangentHandoff: true });
   useRunViewSelectionSync();
   useRunViewSubgraphUrlSync();
   useFocusTaskFromUrl(spec);

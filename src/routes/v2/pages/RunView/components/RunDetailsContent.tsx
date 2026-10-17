@@ -33,6 +33,7 @@ import type { ComponentSpec } from "@/models/componentSpec";
 import { useBackend } from "@/providers/BackendProvider";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
 import { useDebugInTangent } from "@/routes/v2/pages/RunView/hooks/useDebugInTangent";
+import { useOpenInTangent } from "@/routes/v2/pages/RunView/hooks/useOpenInTangent";
 import { PipelineDetailsCollapsibleSection } from "@/routes/v2/shared/components/PipelineDetailsCollapsibleSection";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { runAnnotationsQueryOptions } from "@/services/runAnnotations";
@@ -56,7 +57,13 @@ import { RunTangentButton } from "./RunTangentButton";
 
 const FAILURE_STATUSES = ["FAILED", "SYSTEM_ERROR", "INVALID"];
 
-export const RunDetailsContent = observer(function RunDetailsContent() {
+interface RunDetailsContentProps {
+  offersTangentHandoff: boolean;
+}
+
+export const RunDetailsContent = observer(function RunDetailsContent({
+  offersTangentHandoff,
+}: RunDetailsContentProps) {
   const { configured } = useBackend();
   const spec = useSpec();
   const { data: currentUserDetails } = useUserDetails();
@@ -99,6 +106,7 @@ export const RunDetailsContent = observer(function RunDetailsContent() {
       state={state}
       metadata={metadata}
       currentUserId={currentUserDetails?.id}
+      offersTangentHandoff={offersTangentHandoff}
     />
   );
 });
@@ -109,6 +117,7 @@ interface RunDetailsContentLoadedProps {
   state: GetGraphExecutionStateResponse;
   metadata: PipelineRunResponse | undefined;
   currentUserId: string | undefined;
+  offersTangentHandoff: boolean;
 }
 
 function RunDetailsContentLoaded({
@@ -117,6 +126,7 @@ function RunDetailsContentLoaded({
   state,
   metadata,
   currentUserId,
+  offersTangentHandoff,
 }: RunDetailsContentLoadedProps) {
   const executionStatusStats =
     metadata?.execution_status_stats ??
@@ -128,8 +138,7 @@ function RunDetailsContentLoaded({
 
   const tangentShellEnabled = useTangentEnabled();
   const isFailedRun = FAILURE_STATUSES.includes(overallStatus ?? "");
-  const showDebugInTangent =
-    tangentShellEnabled && isFailedRun && !!metadata?.id;
+  const pipelineName = spec.name ?? "Unnamed Pipeline";
 
   const specAnnotations = spec.annotations;
   const pipelineNotes = specAnnotations.get(PIPELINE_NOTES_ANNOTATION);
@@ -144,16 +153,22 @@ function RunDetailsContentLoaded({
   return (
     <BlockStack className="h-full min-h-0 w-full">
       <RunDetailsHeader
-        pipelineName={spec.name ?? "Unnamed Pipeline"}
+        pipelineName={pipelineName}
         executionStatusStats={executionStatusStats}
         statusLabel={statusLabel}
       />
 
-      {showDebugInTangent && metadata?.id && (
-        <BlockStack className="shrink-0 px-4 pb-2">
-          <DebugInTangentButton
+      {offersTangentHandoff && tangentShellEnabled && metadata?.id && (
+        <BlockStack gap="2" className="shrink-0 px-4 pb-2">
+          {isFailedRun && (
+            <DebugInTangentButton
+              runId={metadata.id}
+              pipelineName={pipelineName}
+            />
+          )}
+          <OpenInTangentButton
             runId={metadata.id}
-            pipelineName={spec.name ?? "Unnamed Pipeline"}
+            pipelineName={pipelineName}
           />
         </BlockStack>
       )}
@@ -235,15 +250,12 @@ function useRunProjectIds(runId: string | undefined) {
   return projectsEnabled ? projectIdsFromAnnotations(runAnnotations) : [];
 }
 
-interface DebugInTangentButtonProps {
+interface TangentButtonProps {
   runId: string;
   pipelineName: string;
 }
 
-function DebugInTangentButton({
-  runId,
-  pipelineName,
-}: DebugInTangentButtonProps) {
+function DebugInTangentButton({ runId, pipelineName }: TangentButtonProps) {
   const handoff = useDebugInTangent();
 
   return (
@@ -253,6 +265,20 @@ function DebugInTangentButton({
       label="Debug in Tangent"
       icon="Bug"
       trackingId="v2.run_view.debug_in_tangent"
+    />
+  );
+}
+
+function OpenInTangentButton({ runId, pipelineName }: TangentButtonProps) {
+  const handoff = useOpenInTangent();
+
+  return (
+    <RunTangentButton
+      run={{ runId, pipelineName }}
+      handoff={handoff}
+      label="Open in Tangent"
+      icon="MessagesSquare"
+      trackingId="v2.run_view.open_in_tangent"
     />
   );
 }
