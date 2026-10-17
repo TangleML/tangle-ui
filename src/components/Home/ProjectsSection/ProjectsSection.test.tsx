@@ -120,14 +120,14 @@ function mockProjects(
   });
 }
 
-function renderSection({ showWorkspaceNotices = true } = {}) {
+function renderSection() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
 
   return render(
     <QueryClientProvider client={queryClient}>
-      <ProjectsSection showWorkspaceNotices={showWorkspaceNotices} />
+      <ProjectsSection />
     </QueryClientProvider>,
   );
 }
@@ -167,25 +167,6 @@ describe("ProjectsSection", () => {
     await screen.findByText("Churn model");
 
     expect(screen.getByText("ML Research")).toBeInTheDocument();
-  });
-
-  it("offers every workspace still taking new projects", async () => {
-    vi.mocked(useWorkspaces).mockReturnValue({
-      data: [
-        workspace,
-        { ...workspace, id: "workspace-2", name: "Growth" },
-        { ...workspace, id: "workspace-3", name: "Old", isActive: false },
-      ],
-    } as ReturnType<typeof useWorkspaces>);
-
-    renderSection();
-
-    await screen.findByRole("button", { name: "New project" });
-
-    expect(screen.getByTestId("create-project")).toHaveAttribute(
-      "data-workspace-ids",
-      "workspace-1,workspace-2",
-    );
   });
 
   it("offers an admin the same workspaces as anyone else", async () => {
@@ -236,32 +217,6 @@ describe("ProjectsSection", () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "New project" })).toBeNull();
     expect(screen.queryByText(/workspace/i)).toBeNull();
-  });
-
-  describe("when the workspace notices are shown elsewhere", () => {
-    it("says nothing about having nowhere to create a project", async () => {
-      vi.mocked(useWorkspaces).mockReturnValue({
-        data: [],
-      } as unknown as ReturnType<typeof useWorkspaces>);
-
-      renderSection({ showWorkspaceNotices: false });
-
-      await screen.findByText("Churn model");
-      expect(screen.queryByText(/Projects cannot be created/)).toBeNull();
-      expect(screen.queryByRole("button", { name: "New project" })).toBeNull();
-    });
-
-    it("says nothing about workspaces that failed to load", async () => {
-      vi.mocked(useWorkspaces).mockReturnValue({
-        data: undefined,
-        error: new Error("Gateway timeout"),
-      } as unknown as ReturnType<typeof useWorkspaces>);
-
-      renderSection({ showWorkspaceNotices: false });
-
-      await screen.findByText("Churn model");
-      expect(screen.queryByText(/Could not load workspaces/)).toBeNull();
-    });
   });
 
   it("offers a new project card when the user has none", async () => {

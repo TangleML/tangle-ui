@@ -4,7 +4,6 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { useTangentEnabled } from "@/components/shared/Settings/useFlags";
 import { BlockStack } from "@/components/ui/layout";
 import { Heading } from "@/components/ui/typography";
-import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 
 const PROJECTS_HEADER = {
   title: "Projects",
@@ -22,8 +21,6 @@ const TANGENT_HEADER = {
 
 export function DashboardProjectsView() {
   const tangentEnabled = useTangentEnabled();
-  const { isConfigured: isAiConfigured } = useAiProviderSettings();
-  const promptShowsWorkspaceNotices = tangentEnabled && isAiConfigured;
 
   return (
     <BlockStack gap="6">
@@ -43,7 +40,7 @@ export function DashboardProjectsView() {
 
       <BlockStack gap="4">
         {tangentEnabled && <Heading level={2}>Projects</Heading>}
-        <ProjectsSection showWorkspaceNotices={!promptShowsWorkspaceNotices} />
+        <ProjectsSection />
       </BlockStack>
     </BlockStack>
   );

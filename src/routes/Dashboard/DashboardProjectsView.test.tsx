@@ -2,7 +2,6 @@ import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
-import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 
 import { DashboardProjectsView } from "./DashboardProjectsView";
 
@@ -18,41 +17,18 @@ vi.mock("@/components/shared/Settings/useFlags", () => {
 });
 
 vi.mock("@/components/Home/ProjectsSection/ProjectsSection", () => ({
-  ProjectsSection: ({
-    showWorkspaceNotices,
-  }: {
-    showWorkspaceNotices: boolean;
-  }) => (
-    <div
-      data-testid="projects-section"
-      data-workspace-notices={String(showWorkspaceNotices)}
-    />
-  ),
+  ProjectsSection: () => null,
 }));
 
 vi.mock("@/components/Home/ProjectsSection/StartSessionPrompt", () => ({
   StartSessionPrompt: () => <input aria-label="Start a new session" />,
 }));
 
-vi.mock("@/hooks/useAiProviderSettings", () => ({
-  useAiProviderSettings: vi.fn(),
-}));
-
 function mockFlags(flags: Record<string, boolean>) {
   vi.mocked(useFlagValue).mockImplementation((flag) => flags[flag] ?? false);
 }
 
-function mockAiConfigured(isConfigured: boolean) {
-  vi.mocked(useAiProviderSettings).mockReturnValue({
-    isConfigured,
-  } as unknown as ReturnType<typeof useAiProviderSettings>);
-}
-
 describe("DashboardProjectsView", () => {
-  beforeEach(() => {
-    mockAiConfigured(true);
-  });
-
   afterEach(() => {
     vi.resetAllMocks();
   });
@@ -88,26 +64,6 @@ describe("DashboardProjectsView", () => {
           Node.DOCUMENT_POSITION_FOLLOWING,
       ).toBeTruthy();
     });
-
-    it("leaves the workspace notices to the prompt box", () => {
-      render(<DashboardProjectsView />);
-
-      expect(screen.getByTestId("projects-section")).toHaveAttribute(
-        "data-workspace-notices",
-        "false",
-      );
-    });
-
-    it("keeps the workspace notices while the prompt box asks for an AI provider", () => {
-      mockAiConfigured(false);
-
-      render(<DashboardProjectsView />);
-
-      expect(screen.getByTestId("projects-section")).toHaveAttribute(
-        "data-workspace-notices",
-        "true",
-      );
-    });
   });
 
   /** Without the agent there is no session to start, and nothing to start it from. */
@@ -130,15 +86,6 @@ describe("DashboardProjectsView", () => {
 
       expect(screen.queryByLabelText("Start a new session")).toBeNull();
       expect(screen.queryByText("What should we build?")).toBeNull();
-    });
-
-    it("shows the workspace notices with the projects", () => {
-      render(<DashboardProjectsView />);
-
-      expect(screen.getByTestId("projects-section")).toHaveAttribute(
-        "data-workspace-notices",
-        "true",
-      );
     });
   });
 });

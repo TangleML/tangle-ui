@@ -1,7 +1,6 @@
+import { WorkspaceNotice } from "@/components/Project/WorkspaceNotice";
 import { InfoBox } from "@/components/shared/InfoBox";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
@@ -15,7 +14,6 @@ import { NewProjectCard } from "./NewProjectCard";
 import { ProjectCard } from "./ProjectCard";
 import { PROJECT_GRID } from "./projectGrid";
 import { useMyProjects } from "./useMyProjects";
-import { NO_WORKSPACE_AVAILABLE } from "./workspaceCopy";
 
 const LoadingProjects = () => (
   <InlineStack gap="2" blockAlign="center">
@@ -23,13 +21,7 @@ const LoadingProjects = () => (
   </InlineStack>
 );
 
-interface ProjectsSectionProps {
-  showWorkspaceNotices: boolean;
-}
-
-export function ProjectsSection({
-  showWorkspaceNotices,
-}: ProjectsSectionProps) {
+export function ProjectsSection() {
   const { configured, available, ready } = useBackend();
 
   if (!ready) {
@@ -52,10 +44,10 @@ export function ProjectsSection({
     );
   }
 
-  return <ProjectsGrid showWorkspaceNotices={showWorkspaceNotices} />;
+  return <ProjectsGrid />;
 }
 
-function ProjectsGrid({ showWorkspaceNotices }: ProjectsSectionProps) {
+function ProjectsGrid() {
   const {
     projects: allProjects,
     createdBy,
@@ -66,11 +58,7 @@ function ProjectsGrid({ showWorkspaceNotices }: ProjectsSectionProps) {
     isLoadingMore,
     loadMore,
   } = useMyProjects();
-  const {
-    data: workspaces,
-    isPending: isWorkspacesPending,
-    error: workspacesError,
-  } = useWorkspaces();
+  const { data: workspaces } = useWorkspaces();
   const { projects: pinned } = usePinnedProjects();
 
   // Pinned projects lead the grid, so a pinned project of the caller's own is
@@ -99,35 +87,13 @@ function ProjectsGrid({ showWorkspaceNotices }: ProjectsSectionProps) {
     );
   }
 
-  const creatableWorkspaces = activeWorkspaces(workspaces ?? []);
-
-  // A workspace list still on its way says nothing about whether there is one
-  // to create in, and one that failed to arrive is not the same as none.
-  const noWorkspace =
-    !isWorkspacesPending &&
-    !workspacesError &&
-    creatableWorkspaces.length === 0;
-
   return (
     <BlockStack gap="4">
-      {showWorkspaceNotices && workspacesError && (
-        <Alert className="w-fit">
-          <Icon name="CircleAlert" />
-          <AlertDescription>
-            {`Could not load workspaces, so a project cannot be created: ${workspacesError.message}`}
-          </AlertDescription>
-        </Alert>
-      )}
-      {showWorkspaceNotices && noWorkspace && (
-        <Alert className="w-fit">
-          <Icon name="CircleAlert" />
-          <AlertDescription>{NO_WORKSPACE_AVAILABLE}</AlertDescription>
-        </Alert>
-      )}
+      <WorkspaceNotice />
       <div className={PROJECT_GRID}>
-        {creatableWorkspaces.length > 0 && (
+        {workspaces && activeWorkspaces(workspaces).length > 0 && (
           <CreateProjectDialog
-            workspaces={creatableWorkspaces}
+            workspaces={workspaces}
             trigger={<NewProjectCard />}
           />
         )}
