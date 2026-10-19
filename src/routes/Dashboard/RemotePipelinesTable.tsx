@@ -16,6 +16,7 @@ import { useRemotePipelinesPage } from "@/hooks/useRemotePipelinesPage";
 import { useBackend } from "@/providers/BackendProvider";
 import { getDefaultRemoteEditorPath } from "@/routes/editorRoutes";
 import { formatDate } from "@/utils/date";
+import { hasNewTabModifier } from "@/utils/dom";
 
 import {
   getRemotePipelinesFilterQuery,
@@ -246,7 +247,7 @@ export function RemotePipelinesTable({
                   const destination = {
                     to: getDefaultRemoteEditorPath(pipeline.id),
                   };
-                  if (event.ctrlKey || event.metaKey) {
+                  if (hasNewTabModifier(event)) {
                     window.open(
                       router.history.createHref(
                         router.buildLocation(destination).href,
