@@ -37,9 +37,11 @@ const pipeline: RemotePipeline = {
   id: "pipeline-1",
   user_id: "user@example.com",
   pipeline_name: "Example pipeline",
+  file_path: "Example pipeline",
   created_at: "2026-09-22T17:26:29Z",
   updated_at: "2026-09-23T17:26:29Z",
   current_version: "version-1",
+  versioning_mode: "full",
 };
 
 const clients: QueryClient[] = [];

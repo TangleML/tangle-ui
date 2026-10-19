@@ -51,6 +51,7 @@
     "validate": "pnpm run fix && pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run knip",
     "validate:test": "pnpm run validate && pnpm run test",
     "generate-api": "openapi-ts",
+    "generate-api:remote-pipelines": "pnpm --package=@hey-api/openapi-ts@0.72.2 dlx openapi-ts --file openapi-ts.remote-pipelines.config.ts",
     "knip": "knip",
     "fta": "fta",
     "depcruise": "depcruise",

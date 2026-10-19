@@ -1,22 +1,16 @@
 import { client } from "@/api/client.gen";
+import { searchPipelinesApiPipelinesSearchPost } from "@/api/remotePipelines/sdk.gen";
+import type { PipelineSummaryResponse } from "@/api/remotePipelines/types.gen";
 
-export interface RemotePipeline {
-  id: string;
-  user_id: string;
-  pipeline_name: string | null;
-  created_at: string;
-  updated_at: string;
-  current_version: string;
-}
+export type RemotePipeline = PipelineSummaryResponse;
 
 export async function listRemotePipelines(
   backendUrl: string,
 ): Promise<RemotePipeline[]> {
-  const result = await client.get<{
-    200: { pipelines: RemotePipeline[] };
-  }>({
+  const result = await searchPipelinesApiPipelinesSearchPost({
+    client,
     baseUrl: backendUrl,
-    url: "/api/pipelines/search",
+    body: {},
   });
 
   if (!result.data) {
