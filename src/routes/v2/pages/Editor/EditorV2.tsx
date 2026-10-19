@@ -216,7 +216,7 @@ function RemotePipelineEditor({ pipelineId }: { pipelineId: string }) {
   if (!configured) {
     return (
       <BlockStack gap="3" className="p-6">
-        <p role="alert">Configure a backend to open remote pipelines.</p>
+        <p role="alert">Configure a backend to open pipelines.</p>
         <Link href="/settings/backend">Backend settings</Link>
       </BlockStack>
     );

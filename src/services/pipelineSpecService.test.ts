@@ -49,7 +49,7 @@ describe("getPipelineSpec", () => {
       root_pipeline_task: { componentRef: { spec } },
     });
     await expect(getPipelineSpec("pipeline-1")).rejects.toThrow(
-      "different remote pipeline",
+      "different pipeline",
     );
   });
 

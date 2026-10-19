@@ -61,7 +61,7 @@ export async function getPipelineDocument(
 
   if (result.data.id !== pipelineId) {
     throw new PipelineSpecApiError(
-      "The backend returned a different remote pipeline.",
+      "The backend returned a different pipeline.",
       result.response.status,
     );
   }

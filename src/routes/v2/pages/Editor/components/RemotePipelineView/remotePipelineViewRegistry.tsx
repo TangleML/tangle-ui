@@ -1,15 +1,11 @@
 import type { Node, NodeProps } from "@xyflow/react";
 
 import { createFlexNode } from "@/components/shared/ReactFlow/FlowCanvas/FlexNode/utils";
-import { getFlexNodes } from "@/models/componentSpec/queries/flexNodes";
 import {
-  augmentEdgesWithGuidelines,
-  buildConduitNode,
-  getConduitPosition,
-  getConduits,
-} from "@/routes/v2/shared/nodes/ConduitNode/conduit.utils";
-import { ConduitNode } from "@/routes/v2/shared/nodes/ConduitNode/ConduitNode";
-import { ConduitEdge } from "@/routes/v2/shared/nodes/ConduitNode/edges/ConduitEdge";
+  findFlexNode,
+  getFlexNodes,
+} from "@/models/componentSpec/queries/flexNodes";
+import { readOnlyConduitManifest } from "@/routes/v2/shared/nodes/ConduitNode/readOnlyConduit.manifest";
 import { inputManifestBase } from "@/routes/v2/shared/nodes/IONode/inputManifestBase";
 import { outputManifestBase } from "@/routes/v2/shared/nodes/IONode/outputManifestBase";
 import { NodeTypeRegistry } from "@/routes/v2/shared/nodes/registry";
@@ -47,25 +43,8 @@ remotePipelineViewRegistry.register({
       draggable: false,
       selectable: false,
     })),
-  getPosition: (spec, nodeId) =>
-    getFlexNodes(spec).find((note) => note.id === nodeId)?.position,
+  getPosition: (spec, nodeId) => findFlexNode(spec, nodeId)?.position,
   ...noMutation,
   selectable: false,
 });
-remotePipelineViewRegistry.register({
-  type: "conduit",
-  idPrefix: "conduit_",
-  entityType: "conduit",
-  component: ConduitNode,
-  edgeTypes: { conduitEdge: ConduitEdge },
-  buildNodes: (spec) =>
-    getConduits(spec).map((conduit) => buildConduitNode(conduit, false)),
-  transformEdges: (spec, edges) =>
-    augmentEdgesWithGuidelines(spec, edges, getConduits(spec)),
-  getPosition(spec, nodeId) {
-    const conduit = getConduits(spec).find((item) => item.id === nodeId);
-    return conduit ? getConduitPosition(conduit) : undefined;
-  },
-  ...noMutation,
-  selectable: false,
-});
+remotePipelineViewRegistry.register(readOnlyConduitManifest);
