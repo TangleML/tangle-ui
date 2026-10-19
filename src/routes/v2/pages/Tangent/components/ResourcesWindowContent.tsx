@@ -49,7 +49,7 @@ interface ProjectResourceItem {
 
 const BACKEND_PIPELINE_META = {
   icon: resourceMeta("pipeline").icon,
-  description: "Remote pipeline",
+  description: resourceMeta("pipeline").label,
 };
 
 const ABSENT_PIPELINE_META = {

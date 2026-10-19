@@ -234,7 +234,7 @@ describe("ResourcesWindowContent", () => {
     render(<ResourcesWindowContent />);
 
     expect(screen.getByText("Hello World")).toBeInTheDocument();
-    expect(screen.getByText("Remote pipeline")).toBeInTheDocument();
+    expect(screen.getByText("Pipeline")).toBeInTheDocument();
     await userEvent.setup().click(screen.getByTestId("open-resource-r-5"));
     expect(openWorkareaTarget).toHaveBeenCalledWith(
       { type: "pipeline", identity: "remote/uuid-1" },

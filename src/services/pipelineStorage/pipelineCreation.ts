@@ -13,9 +13,7 @@ export async function getPipelineCreationBackendUrl(): Promise<string> {
     await getBackendSettings();
   const url = selectBackendUrl(useEnv, useRelativePath, userBackendUrl);
   if (!url.trim()) {
-    throw new Error(
-      "Configure a backend in Settings to create remote pipelines.",
-    );
+    throw new Error("Configure a backend in Settings to create pipelines.");
   }
   return url;
 }

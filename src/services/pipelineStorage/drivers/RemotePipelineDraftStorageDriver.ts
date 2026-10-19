@@ -77,9 +77,7 @@ export class RemotePipelineDraftStorageDriver implements PipelineStorageDriver {
   }
 
   async delete(_storageKey: string): Promise<void> {
-    throw new Error(
-      "Remote pipeline deletion is not supported in this editor.",
-    );
+    throw new Error("Pipeline deletion is not supported in this editor.");
   }
 
   async hasKey(_storageKey: string): Promise<boolean> {

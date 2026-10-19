@@ -61,7 +61,7 @@ export const AutoSaveIndicator = observer(function AutoSaveIndicator() {
   const isDraft = pipelineFile.activePipelineFile?.isDraft;
   const tooltipText =
     isDraft && !isSaving && !error
-      ? "Draft — saved remotely after your first edit"
+      ? "Draft — saved after your first edit"
       : getTooltipText(isSaving, lastSavedAt, error);
 
   const handleClick = () => {

@@ -207,7 +207,7 @@ it("replaces the draft URL without remounting the canvas or editor session", asy
   const spec = session.pipelineFile.activePipelineFile;
   fireEvent.click(screen.getByRole("button", { name: "Edit pipeline" }));
   await waitFor(() =>
-    expect(history.location.pathname).toBe(`/editor-v2/remote/${pipelineId}`),
+    expect(history.location.pathname).toBe(`/editor-v2/pipeline/${pipelineId}`),
   );
   expect(history.location.search).toBe("");
   expect(screen.getByRole("textbox", { name: "Canvas state" })).toBe(input);
@@ -241,7 +241,7 @@ it("retains a failed draft edit and changes its URL only after retry succeeds", 
   expect(session.pipelineFile.activePipelineFile?.isDraft).toBe(true);
   await act(async () => session.autoSave.save());
   await waitFor(() =>
-    expect(history.location.pathname).toBe(`/editor-v2/remote/${pipelineId}`),
+    expect(history.location.pathname).toBe(`/editor-v2/pipeline/${pipelineId}`),
   );
   expect(client.put).toHaveBeenCalledTimes(2);
   expect(canvas.mounts).toBe(1);
@@ -269,7 +269,7 @@ it("starts a separate unsaved pipeline when New is used again at the same URL", 
   expect(client.put).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole("button", { name: "Edit pipeline" }));
   await waitFor(() =>
-    expect(history.location.pathname).toBe(`/editor-v2/remote/${pipelineId}`),
+    expect(history.location.pathname).toBe(`/editor-v2/pipeline/${pipelineId}`),
   );
   expect(client.put).toHaveBeenCalledOnce();
 });

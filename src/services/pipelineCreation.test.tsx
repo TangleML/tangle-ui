@@ -147,7 +147,7 @@ it.each([undefined, "false", "true"])(
     expect(spec.inputs[0].value).toBe("before");
     if (!local)
       for (const result of results)
-        expect(result?.url).toBe(`/editor-v2/remote/${remoteId}`);
+        expect(result?.url).toBe(`/editor-v2/pipeline/${remoteId}`);
   },
 );
 

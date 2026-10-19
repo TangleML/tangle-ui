@@ -10,12 +10,10 @@ export function useNewPipelineDraft() {
   return (name: string) => {
     if (createsLocalPipelines()) return undefined;
     if (!v2Enabled) {
-      throw new Error("Enable the V2 editor to create remote pipelines.");
+      throw new Error("Enable the V2 editor to create pipelines.");
     }
     if (!ready || !configured || !backendUrl) {
-      throw new Error(
-        "Configure a backend in Settings to create remote pipelines.",
-      );
+      throw new Error("Configure a backend in Settings to create pipelines.");
     }
     return {
       to: APP_ROUTES.EDITOR_V2_NEW_PIPELINE,

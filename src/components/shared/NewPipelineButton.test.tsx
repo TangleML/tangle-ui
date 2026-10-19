@@ -107,7 +107,7 @@ it("requires the V2 editor when remote creation is enabled", () => {
   render(<NewPipelineButton />);
   fireEvent.click(screen.getByRole("button"));
   expect(state.notify).toHaveBeenCalledWith(
-    "Enable the V2 editor to create remote pipelines.",
+    "Enable the V2 editor to create pipelines.",
     "error",
   );
   expect(state.write).not.toHaveBeenCalled();

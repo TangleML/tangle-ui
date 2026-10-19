@@ -25,7 +25,7 @@ function PipelineWorkareaEditor({
   if (key === "remote" || key === "draft") {
     if (!ready) return <LoadingScreen message="Loading pipeline..." />;
     if (!configured)
-      return <p role="alert">Configure a backend to open remote pipelines.</p>;
+      return <p role="alert">Configure a backend to open pipelines.</p>;
   }
   const pipelineRef: EditorPipelineRef =
     key === "remote"
