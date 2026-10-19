@@ -242,16 +242,16 @@ const PipelineRow = withSuspenseWrapper(
                   <Button
                     variant="ghost"
                     size="icon"
-                    aria-label="Save as remote pipeline"
-                    title="Save as remote pipeline"
+                    aria-label="Upload pipeline"
+                    title="Upload pipeline"
                     disabled={saveAsRemoteDisabled}
                   >
                     <Icon name="CloudUpload" />
                   </Button>
                 }
-                title={`Save "${name}" as a remote pipeline?`}
+                title={`Upload "${name}"?`}
                 dismissForeverKey="skip-save-as-remote-pipeline-confirmation"
-                description="After saving remotely, this pipeline will be removed from your local pipelines. You can find it in Remote Pipelines."
+                description="After uploading, this pipeline moves to Remote Pipelines."
                 onConfirm={onSaveAsRemote}
               />
             )}

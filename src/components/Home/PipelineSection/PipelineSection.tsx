@@ -109,10 +109,7 @@ export const PipelineSection = withSuspenseWrapper(
         storage.moveLocalPipelineToRemote(name, backendUrl),
       onSuccess: () => {
         setSelectedPipelines(new Set());
-        notify(
-          "Pipeline saved remotely and removed from local pipelines.",
-          "success",
-        );
+        notify("Pipeline uploaded.", "success");
       },
       onError: (error) => notify(getErrorMessage(error), "error"),
       onSettled: () => {

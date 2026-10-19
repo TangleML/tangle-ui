@@ -60,6 +60,10 @@ export function remotePipelineTaskFromSpec(
   previous?: TaskSpec,
 ): EmbeddedTask {
   const args = { ...previous?.arguments };
+  const inputNames = new Set(spec.inputs?.map((input) => input.name));
+  for (const input of previous?.componentRef.spec?.inputs ?? []) {
+    if (!inputNames.has(input.name)) delete args[input.name];
+  }
   for (const input of spec.inputs ?? []) {
     if (input.value !== undefined) args[input.name] = input.value;
     // A string argument was exposed as an editable input value on read.

@@ -62,6 +62,30 @@ describe("remote pipeline task conversion", () => {
     expect(previous.arguments.name).toBe("Old name");
   });
 
+  it.each([undefined, "renamed"])(
+    "removes the old argument when an input is deleted or renamed to %s",
+    (newName) => {
+      const previous = remotePipelineTaskFromSpec(spec);
+      const loaded = editorSpecFromRemoteTask(previous);
+      const edited = {
+        ...loaded,
+        inputs: loaded.inputs?.flatMap((input) => {
+          if (input.name !== "name") return [input];
+          return newName ? [{ ...input, name: newName }] : [];
+        }),
+      };
+
+      const saved = remotePipelineTaskFromSpec(edited, previous);
+
+      expect(saved.arguments).toEqual({
+        ...(newName && { [newName]: "" }),
+        prefix: "Welcome",
+      });
+      expect(editorSpecFromRemoteTask(saved)).toEqual(edited);
+      expect(previous.arguments).toEqual({ name: "", prefix: "Welcome" });
+    },
+  );
+
   it.each([true, false])(
     "removes library metadata from nested references (embedded spec: %s)",
     (embedded) => {

@@ -83,7 +83,7 @@ export class PipelineStorageService {
       await local.deleteFile();
     } catch (cause) {
       throw new Error(
-        "Pipeline was saved remotely, but the local copy could not be removed.",
+        "Pipeline was uploaded, but the copy in this browser could not be removed.",
         { cause },
       );
     }

@@ -443,7 +443,7 @@ describe("moving local pipelines to remote storage", () => {
     await expect(
       storage.moveLocalPipelineToRemote("Original", ref.backendUrl),
     ).rejects.toThrow(
-      "Pipeline was saved remotely, but the local copy could not be removed.",
+      "Pipeline was uploaded, but the copy in this browser could not be removed.",
     );
     expect(client.put).toHaveBeenCalledTimes(1);
   });
