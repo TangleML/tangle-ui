@@ -61,7 +61,7 @@ describe("listRemotePipelines", () => {
     mockResponse(undefined, 503);
 
     await expect(listRemotePipelines(BACKEND_URL)).rejects.toThrow(
-      "Failed to fetch remote pipelines (503)",
+      "Failed to load pipelines (503)",
     );
   });
 });

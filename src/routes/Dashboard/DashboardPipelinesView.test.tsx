@@ -112,7 +112,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
 
     await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
 
-    expect(screen.getByText("Loading remote pipelines…")).toBeInTheDocument();
+    expect(screen.getByText("Loading pipelines…")).toBeInTheDocument();
   });
 
   it("shows an empty result clearly", async () => {
@@ -121,9 +121,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
 
     await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
 
-    expect(
-      await screen.findByText("No remote pipelines found."),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("No pipelines found.")).toBeInTheDocument();
   });
 
   it("shows an API failure instead of an empty result", async () => {
@@ -135,17 +133,15 @@ describe("DashboardPipelinesView remote pipelines", () => {
     await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
 
     expect(
-      await screen.findByText("Failed to load remote pipelines."),
+      await screen.findByText("Failed to load pipelines."),
     ).toBeInTheDocument();
-    expect(
-      screen.queryByText("No remote pipelines found."),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("No pipelines found.")).not.toBeInTheDocument();
   });
 
   it.each([
-    [{ ready: false }, "Loading remote pipelines…"],
-    [{ configured: false }, "Configure a backend to view remote pipelines."],
-    [{ available: false }, "Backend is unavailable."],
+    [{ ready: false }, "Loading pipelines…"],
+    [{ configured: false }, "Configure a backend to view pipelines."],
+    [{ available: false }, "Pipelines are unavailable."],
   ])("does not fetch when the backend state is %o", async (state, message) => {
     backend = { ...backend, ...state };
     const { user } = renderDashboard();

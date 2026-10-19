@@ -20,9 +20,7 @@ export async function listRemotePipelines(
   });
 
   if (!result.data) {
-    throw new Error(
-      `Failed to fetch remote pipelines (${result.response.status})`,
-    );
+    throw new Error(`Failed to load pipelines (${result.response.status})`);
   }
 
   return result.data.pipelines;

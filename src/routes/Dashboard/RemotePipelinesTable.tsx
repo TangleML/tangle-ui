@@ -27,13 +27,12 @@ export function RemotePipelinesTable() {
   });
 
   let message: string | undefined;
-  if (!ready) message = "Loading remote pipelines…";
-  else if (!configured)
-    message = "Configure a backend to view remote pipelines.";
-  else if (!available) message = "Backend is unavailable.";
-  else if (isLoading) message = "Loading remote pipelines…";
-  else if (error) message = "Failed to load remote pipelines.";
-  else if (pipelines.length === 0) message = "No remote pipelines found.";
+  if (!ready) message = "Loading pipelines…";
+  else if (!configured) message = "Configure a backend to view pipelines.";
+  else if (!available) message = "Pipelines are unavailable.";
+  else if (isLoading) message = "Loading pipelines…";
+  else if (error) message = "Failed to load pipelines.";
+  else if (pipelines.length === 0) message = "No pipelines found.";
 
   return (
     <Table aria-label="Remote Pipelines">
