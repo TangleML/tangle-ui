@@ -8,11 +8,9 @@ import {
 
 import { client } from "@/api/client.gen";
 import useToastNotification from "@/hooks/useToastNotification";
+import { getBackendSettings, selectBackendUrl } from "@/utils/backendSettings";
 import { API_URL } from "@/utils/constants";
 import {
-  getUseEnv,
-  getUserBackendUrl,
-  getUseRelativePath,
   setUseEnv as setUseEnvInLocalStorage,
   setUserBackendUrl as setUserBackendUrlInLocalStorage,
   setUseRelativePath as setUseRelativePathInLocalStorage,
@@ -49,8 +47,6 @@ const BackendContext =
 export const BackendProvider = ({ children }: { children: ReactNode }) => {
   const notify = useToastNotification();
 
-  const backendUrlFromEnv = API_URL;
-
   const [userBackendUrl, setUserBackendUrl] = useState("");
   const [useEnv, setUseEnv] = useState(true);
   const [useRelativePath, setUseRelativePath] = useState(false);
@@ -58,14 +54,7 @@ export const BackendProvider = ({ children }: { children: ReactNode }) => {
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [ready, setReady] = useState(false);
 
-  let backendUrl = "";
-  if (useEnv && backendUrlFromEnv) {
-    backendUrl = backendUrlFromEnv;
-  } else if (useRelativePath) {
-    backendUrl = window.location.origin;
-  } else {
-    backendUrl = userBackendUrl;
-  }
+  const backendUrl = selectBackendUrl(useEnv, useRelativePath, userBackendUrl);
 
   const configured = !!backendUrl.trim() || useRelativePath;
 
@@ -148,19 +137,12 @@ export const BackendProvider = ({ children }: { children: ReactNode }) => {
   }, [backendUrl, settingsLoaded]);
 
   useEffect(() => {
-    const getSettings = async () => {
-      const url = await getUserBackendUrl();
-      setUserBackendUrl(url);
-
-      const envFlag = await getUseEnv();
-      const relativeFlag = await getUseRelativePath();
-
-      setUseEnv(envFlag === true);
-      setUseRelativePath(relativeFlag === true && !backendUrlFromEnv);
-
+    getBackendSettings().then(({ userBackendUrl, useEnv, useRelativePath }) => {
+      setUserBackendUrl(userBackendUrl);
+      setUseEnv(useEnv);
+      setUseRelativePath(useRelativePath);
       setSettingsLoaded(true);
-    };
-    getSettings();
+    });
   }, []);
 
   const contextValue = useMemo(
@@ -169,7 +151,7 @@ export const BackendProvider = ({ children }: { children: ReactNode }) => {
       available,
       ready,
       backendUrl,
-      isConfiguredFromEnv: useEnv && !!backendUrlFromEnv,
+      isConfiguredFromEnv: useEnv && !!API_URL,
       isConfiguredFromRelativePath: useRelativePath,
       setEnvConfig,
       setRelativePathConfig,
@@ -183,7 +165,7 @@ export const BackendProvider = ({ children }: { children: ReactNode }) => {
       backendUrl,
       useEnv,
       useRelativePath,
-      backendUrlFromEnv,
+      API_URL,
       setEnvConfig,
       setRelativePathConfig,
       setBackendUrl,

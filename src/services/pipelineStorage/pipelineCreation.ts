@@ -1,9 +1,4 @@
-import { API_URL } from "@/utils/constants";
-import {
-  getUseEnv,
-  getUserBackendUrl,
-  getUseRelativePath,
-} from "@/utils/localforage";
+import { getBackendSettings, selectBackendUrl } from "@/utils/backendSettings";
 import { emitUserPipelineWritten } from "@/utils/userPipelineWriteEvents";
 
 import { RemotePipelineStorageDriver } from "./drivers/RemotePipelineStorageDriver";
@@ -13,19 +8,10 @@ import type { RemotePipelineRef } from "./types";
 export const createsLocalPipelines = () =>
   import.meta.env.VITE_LOCAL_PIPELINES === "true";
 
-/** Match the backend selection used by BackendProvider, including same-origin deployments. */
 export async function getPipelineCreationBackendUrl(): Promise<string> {
-  const [useEnv, useRelativePath, userUrl] = await Promise.all([
-    getUseEnv(),
-    getUseRelativePath(),
-    getUserBackendUrl(),
-  ]);
-  const url =
-    useEnv && API_URL
-      ? API_URL
-      : useRelativePath && !API_URL
-        ? window.location.origin
-        : userUrl;
+  const { useEnv, useRelativePath, userBackendUrl } =
+    await getBackendSettings();
+  const url = selectBackendUrl(useEnv, useRelativePath, userBackendUrl);
   if (!url.trim()) {
     throw new Error(
       "Configure a backend in Settings to create remote pipelines.",
