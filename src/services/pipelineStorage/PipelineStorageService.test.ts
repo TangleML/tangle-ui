@@ -771,7 +771,7 @@ describe("moving local pipelines to remote storage", () => {
       storage.moveLocalPipelineToRemote(local, ref.backendUrl, async () => {
         throw new Error("Project unavailable");
       }),
-    ).rejects.toThrow("local links could not be updated");
+    ).rejects.toThrow("saved links could not be updated");
     expect(local.deleteFile).not.toHaveBeenCalled();
     // A retry must not overwrite edits made to the already-created remote.
     vi.mocked(client.get).mockResolvedValue(
@@ -886,7 +886,7 @@ describe("moving local pipelines to remote storage", () => {
     ).mockRejectedValue(new Error("Storage unavailable"));
     await expect(
       storage.moveLocalPipelineToRemote(local, ref.backendUrl),
-    ).rejects.toThrow("local links could not be updated");
+    ).rejects.toThrow("saved links could not be updated");
     expect(local.deleteFile).not.toHaveBeenCalled();
   });
 

@@ -13,6 +13,11 @@ import { useTourMode } from "@/providers/TourProvider/TourModeContext";
 import { LocalPipelinesQueryKeys } from "@/services/localPipelines/types";
 import { getPipelineCreationBackendUrl } from "@/services/pipelineStorage/pipelineCreation";
 import { moveLocalPipelineResourceToRemote } from "@/services/projects/moveLocalPipelineResourceToRemote";
+import {
+  ProjectResourcesQueryKeys,
+  ProjectRunsQueryKeys,
+  ProjectsQueryKeys,
+} from "@/services/projects/types";
 
 import { LocalPipelineMigration } from "./LocalPipelineMigration";
 
@@ -177,7 +182,13 @@ it("reports upload failures without opening an editable local copy", async () =>
   expect(onMigrated).not.toHaveBeenCalled();
 });
 
-it("supplies the current project's association update to the upload service", async () => {
+it("updates the current project's association and refreshes its resources and counts", async () => {
+  const projectKey = ProjectsQueryKeys.Id("project-id");
+  const resourcesKey = ProjectResourcesQueryKeys.All("project-id");
+  const runsKey = ProjectRunsQueryKeys.List("project-id");
+  for (const key of [projectKey, resourcesKey, runsKey]) {
+    client.setQueryData(key, {});
+  }
   storage.moveLocalPipelineToRemote.mockImplementation(
     async (_file, _backend, onCreated) => {
       await onCreated(remote);
@@ -191,4 +202,7 @@ it("supplies the current project's association update to the upload service", as
     local,
     remote,
   );
+  expect(client.getQueryState(projectKey)?.isInvalidated).toBe(true);
+  expect(client.getQueryState(resourcesKey)?.isInvalidated).toBe(true);
+  expect(client.getQueryState(runsKey)?.isInvalidated).toBe(false);
 });

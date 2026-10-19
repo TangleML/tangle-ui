@@ -399,7 +399,7 @@ it("opens remote pipelines when the V2 editor flag is disabled", async () => {
     },
     response: new Response(null, { status: 200 }),
   } as Awaited<ReturnType<typeof client.get>>);
-  const { history } = await open(`/editor-v2/remote/${pipelineId}`);
-  expect(history.location.pathname).toBe(`/editor-v2/remote/${pipelineId}`);
+  const { history } = await open(`/editor-v2/pipeline/${pipelineId}`);
+  expect(history.location.pathname).toBe(`/editor-v2/pipeline/${pipelineId}`);
   expect(client.get).toHaveBeenCalledOnce();
 });

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { BlockStack } from "@/components/ui/layout";
 import { Paragraph } from "@/components/ui/typography";
 import { useTourMode } from "@/providers/TourProvider/TourModeContext";
-import { LocalPipelinesQueryKeys } from "@/services/localPipelines/types";
+import { invalidatePipelineQueries } from "@/services/pipelineStorage/invalidatePipelineQueries";
 import {
   createsLocalPipelines,
   getPipelineCreationBackendUrl,
@@ -17,7 +17,7 @@ import {
   type PipelineRef,
 } from "@/services/pipelineStorage/types";
 import { moveLocalPipelineResourceToRemote } from "@/services/projects/moveLocalPipelineResourceToRemote";
-import { ProjectResourcesQueryKeys } from "@/services/projects/types";
+import { invalidateProjectResources } from "@/services/projects/useProjectResources";
 
 import { LoadingScreen } from "./LoadingScreen";
 
@@ -77,19 +77,9 @@ function MigrateLocalPipeline({
           remote,
         );
       }
-      void queryClient.invalidateQueries({
-        queryKey: LocalPipelinesQueryKeys.All(),
-      });
-      void queryClient.invalidateQueries({
-        queryKey: ["remote-pipelines-page", backendUrl],
-      });
-      void queryClient.invalidateQueries({
-        queryKey: ["remote-pipelines", backendUrl],
-      });
+      invalidatePipelineQueries(queryClient, backendUrl);
       if (projectId) {
-        void queryClient.invalidateQueries({
-          queryKey: ProjectResourcesQueryKeys.All(projectId),
-        });
+        invalidateProjectResources(queryClient, projectId);
       }
       return remote;
     },
@@ -114,7 +104,7 @@ function MigrateLocalPipeline({
     );
   }
   if (isPending || data) {
-    return <LoadingScreen message="Moving pipeline to remote storage..." />;
+    return <LoadingScreen message="Opening pipeline..." />;
   }
   return children;
 }

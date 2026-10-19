@@ -26,7 +26,7 @@ import { ProjectResourcesQueryKeys, ProjectsQueryKeys } from "./types";
  * run feed for no reason. Only the project row itself needs it, for the
  * resource counts the dashboard shows.
  */
-function invalidateProjectResources(
+export function invalidateProjectResources(
   queryClient: QueryClient,
   projectId: string,
 ) {

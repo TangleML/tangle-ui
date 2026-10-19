@@ -41,7 +41,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => ({
 
 vi.mock("@/routes/editorRoutes", () => ({
   getDefaultEditorPath: (name: string) => `/editor/${name}`,
-  getDefaultRemoteEditorPath: (id: string) => `/editor/remote/${id}`,
+  getDefaultRemoteEditorPath: (id: string) => `/editor/pipeline/${id}`,
 }));
 
 vi.mock("./RunPipelineButton", () => ({
@@ -215,7 +215,7 @@ describe("ProjectResourcePreview", () => {
     renderPreview("resource-1");
 
     const link = screen.getByRole("link", { name: /Open in the editor/ });
-    expect(link).toHaveAttribute("href", "/editor/remote/pipeline-1");
+    expect(link).toHaveAttribute("href", "/editor/pipeline/pipeline-1");
     expect(JSON.parse(link.getAttribute("data-search")!)).toEqual({
       projectId: "project-1",
     });

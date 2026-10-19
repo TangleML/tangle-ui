@@ -265,7 +265,7 @@ describe("remote pipeline editor entry", () => {
 
     expect(loadLegacy).not.toHaveBeenCalled();
     expect(navigate).toHaveBeenCalledWith({
-      to: "/editor-v2/remote/$pipelineId",
+      to: "/editor-v2/pipeline/$pipelineId",
       params: { pipelineId: "pipeline-123" },
       search: { projectId: "project-1" },
       replace: true,
@@ -297,7 +297,7 @@ describe("remote pipeline editor entry", () => {
       fireEvent.click(screen.getByRole("button", { name: "Finish migration" }));
       expect(navigate).toHaveBeenCalledWith(
         expect.objectContaining({
-          to: "/editor-v2/remote/$pipelineId",
+          to: "/editor-v2/pipeline/$pipelineId",
           params: { pipelineId: "remote-1" },
           search: { projectId: "project-1" },
           replace: true,
