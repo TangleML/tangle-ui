@@ -20,9 +20,7 @@ function apiError(action: string, status: number, error: unknown): Error {
 
 function validateDocument(document: SavedPipelineDocument): void {
   if (!isValidComponentSpec(document.root_pipeline_task?.componentRef?.spec)) {
-    throw new Error(
-      "This remote pipeline has no embedded component spec to edit.",
-    );
+    throw new Error("This pipeline has no embedded component spec to edit.");
   }
 }
 
@@ -32,15 +30,13 @@ export async function getRemotePipelineWriter(
   const result = await getCurrentUserApiUsersMeGet({ baseUrl: backendUrl });
   if (!result.response.ok || !result.data?.id) {
     throw apiError(
-      "Unable to verify your remote pipeline identity",
+      "Unable to verify your editing permissions",
       result.response.status,
       result.error,
     );
   }
   if (!result.data.permissions.includes("write")) {
-    throw new Error(
-      "You do not have permission to edit remote pipelines on this backend.",
-    );
+    throw new Error("You do not have permission to edit pipelines.");
   }
   return result.data.id;
 }
@@ -50,7 +46,7 @@ export function assertRemotePipelineOwner(
   userId: string,
 ): void {
   if (document.user_id !== userId) {
-    throw new Error("You can only edit remote pipelines that you own.");
+    throw new Error("You can only edit pipelines that you own.");
   }
 }
 
@@ -68,7 +64,7 @@ export async function writeRemotePipelineDocument(
   });
   if (!result.response.ok || !result.data) {
     throw apiError(
-      "Failed to save remote pipeline",
+      "Failed to save pipeline",
       result.response.status,
       result.error,
     );

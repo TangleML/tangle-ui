@@ -15,6 +15,7 @@ import { ComponentEditorProvider } from "@/components/shared/ComponentEditor/Com
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
+import { Button } from "@/components/ui/button";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Paragraph } from "@/components/ui/typography";
 import { useBackend } from "@/providers/BackendProvider";
@@ -89,6 +90,17 @@ const PipelineEditorSkeleton = () => (
   <LoadingScreen message="Loading pipeline..." />
 );
 
+const PipelineLoadError = ({ error, resetErrorBoundary }: FallbackProps) => (
+  <BlockStack fill align="center" inlineAlign="center" gap="3">
+    <p role="alert">
+      {error instanceof Error ? error.message : "Unable to load pipeline."}
+    </p>
+    <Button variant="outline" onClick={resetErrorBoundary}>
+      Retry
+    </Button>
+  </BlockStack>
+);
+
 const PipelineEditor = withSuspenseWrapper(
   observer(({ pipelineRef }: PipelineEditorProps) => {
     const {
@@ -158,16 +170,7 @@ const PipelineEditor = withSuspenseWrapper(
     );
   }),
   PipelineEditorSkeleton,
-  ({ error, resetErrorBoundary }: FallbackProps) => (
-    <BlockStack fill align="center" inlineAlign="center" gap="3">
-      <p role="alert">
-        {error instanceof Error ? error.message : "Unable to load pipeline."}
-      </p>
-      <Button variant="outline" onClick={resetErrorBoundary}>
-        Retry
-      </Button>
-    </BlockStack>
-  ),
+  PipelineLoadError,
 );
 
 function EditorV2Content({

@@ -139,7 +139,7 @@ describe("PipelineStorageService editor resolution", () => {
   it.each([
     [
       { ...response(undefined, 422), error: { detail: "Invalid task" } },
-      "Failed to save remote pipeline (422): Invalid task",
+      "Failed to save pipeline (422): Invalid task",
     ],
     [
       response({ ...document, file_path: "other.yaml" }),
