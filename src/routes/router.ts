@@ -42,6 +42,7 @@ import { LearnToursView } from "./Dashboard/Learn/LearnToursView";
 import { TourPage } from "./Dashboard/Learn/Tour";
 import Editor from "./Editor";
 import { ImportPage } from "./Import";
+import { createLegacyRemoteEditorRoutes } from "./legacyRemoteEditorRoutes";
 import NotFoundPage from "./NotFoundPage";
 import PipelineRun from "./PipelineRun";
 import ArtifactPreviewPage from "./PipelineRun/ArtifactPreview";
@@ -305,6 +306,8 @@ const remoteEditorRoute = createRoute({
   component: Editor,
 });
 
+const legacyRemoteEditorRoutes = createLegacyRemoteEditorRoutes(mainLayout);
+
 const githubAuthCallbackRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: APP_ROUTES.GITHUB_AUTH_CALLBACK,
@@ -491,6 +494,7 @@ const appRouteTree = mainLayout.addChildren([
   importRoute,
   editorRoute,
   remoteEditorRoute,
+  ...legacyRemoteEditorRoutes,
   runDetailRoute,
   runDetailWithSubgraphRoute,
   editorV2Route,

@@ -82,7 +82,7 @@ describe("EditorVersionToggle", () => {
   it.each([
     {
       label: "remote pipeline ID",
-      suffix: "remote/pipeline-1",
+      suffix: "pipeline/pipeline-1",
       legacyRoute: APP_ROUTES.REMOTE_PIPELINE_EDITOR,
       v2Route: APP_ROUTES.EDITOR_V2_REMOTE_PIPELINE,
     },
@@ -95,6 +95,12 @@ describe("EditorVersionToggle", () => {
     {
       label: "local pipeline named remote",
       suffix: "remote",
+      legacyRoute: APP_ROUTES.PIPELINE_EDITOR,
+      v2Route: APP_ROUTES.EDITOR_V2_PIPELINE,
+    },
+    {
+      label: "local pipeline named pipeline",
+      suffix: "pipeline",
       legacyRoute: APP_ROUTES.PIPELINE_EDITOR,
       v2Route: APP_ROUTES.EDITOR_V2_PIPELINE,
     },

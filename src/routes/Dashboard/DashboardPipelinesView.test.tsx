@@ -253,8 +253,8 @@ afterEach(() => {
 
 describe("DashboardPipelinesView remote pipelines", () => {
   it.each([
-    { v2Enabled: true, editorPath: "/editor-v2/remote/pipeline-1" },
-    { v2Enabled: false, editorPath: "/editor/remote/pipeline-1" },
+    { v2Enabled: true, editorPath: "/editor-v2/pipeline/pipeline-1" },
+    { v2Enabled: false, editorPath: "/editor/pipeline/pipeline-1" },
   ])(
     "opens remote pipeline names and rows at $editorPath",
     async ({ v2Enabled, editorPath }) => {
@@ -335,7 +335,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
       expect(open).toHaveBeenCalledOnce();
       const [href, target] = open.mock.calls[0];
       const openedUrl = new URL(String(href), "http://localhost");
-      expect(openedUrl.pathname).toBe("/editor-v2/remote/pipeline-1");
+      expect(openedUrl.pathname).toBe("/editor-v2/pipeline/pipeline-1");
       expect(openedUrl.searchParams.get("source")).toBeNull();
       expect(target).toBe("_blank");
       expect(router.state.location.pathname).toBe(
@@ -362,7 +362,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
     });
 
     expect(open).toHaveBeenCalledExactlyOnceWith(
-      "/tangle-ui/#/editor-v2/remote/pipeline-1",
+      "/tangle-ui/#/editor-v2/pipeline/pipeline-1",
       "_blank",
       "noopener,noreferrer",
     );
