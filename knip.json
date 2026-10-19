@@ -6,6 +6,9 @@
     "src/agent/runViewWorker.ts",
     "src/agent/remoteEnvWorker.ts"
   ],
+  "openapi-ts": {
+    "config": ["openapi-ts.config.ts", "openapi-ts.remote-pipelines.config.ts"]
+  },
   "ignore": [
     "src/api/**",
     "src/components/ui/**",
