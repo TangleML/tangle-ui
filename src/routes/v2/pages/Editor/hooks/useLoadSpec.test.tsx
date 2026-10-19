@@ -7,6 +7,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
+import { observable, runInAction } from "mobx";
 import { observer } from "mobx-react-lite";
 import { StrictMode, Suspense, useEffect, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -25,6 +26,8 @@ const resolvePipeline = vi.hoisted(() => vi.fn());
 const discardRemoteDraft = vi.hoisted(() => vi.fn());
 const storage = { resolvePipeline, discardRemoteDraft };
 const loadUndoHistory = vi.hoisted(() => vi.fn().mockResolvedValue(null));
+const addRecentlyViewed = vi.hoisted(() => vi.fn());
+vi.mock("@/hooks/useRecentlyViewed", () => ({ addRecentlyViewed }));
 vi.mock("@/services/pipelineStorage/PipelineStorageProvider", () => ({
   usePipelineStorage: () => storage,
 }));
@@ -184,6 +187,7 @@ describe("useLoadSpec", () => {
     await screen.findByText(draft.name);
     expect(loadUndoHistory).not.toHaveBeenCalled();
     expect(discardRemoteDraft).not.toHaveBeenCalled();
+    expect(addRecentlyViewed).not.toHaveBeenCalled();
     await act(async () => opened.unmount());
     expect(discardRemoteDraft).toHaveBeenCalledWith(draft);
   });
@@ -192,6 +196,11 @@ describe("useLoadSpec", () => {
     const first = render(view(remote));
     await screen.findByText("Before");
     expect(resolvePipeline).toHaveBeenCalledExactlyOnceWith(remote);
+    expect(addRecentlyViewed).toHaveBeenLastCalledWith({
+      type: "remote-pipeline",
+      id: remote.pipelineId,
+      name: "Before",
+    });
     expect(loadUndoHistory).toHaveBeenCalledExactlyOnceWith(
       JSON.stringify(["remote-pipeline", remote.backendUrl, remote.pipelineId]),
       expect.stringContaining("Before"),
@@ -201,6 +210,38 @@ describe("useLoadSpec", () => {
     render(view(remote));
     await screen.findByText("After");
     expect(resolvePipeline).toHaveBeenCalledTimes(2);
+    expect(addRecentlyViewed).toHaveBeenLastCalledWith({
+      type: "remote-pipeline",
+      id: remote.pipelineId,
+      name: "After",
+    });
+  });
+
+  it("records a draft only after it becomes a remote pipeline without navigation", async () => {
+    const draft = {
+      source: "draft",
+      backendUrl: remote.backendUrl,
+      draftId: "draft-1",
+      name: "New pipeline",
+    } as const;
+    const current = observable({ ...file(draft.name), isDraft: true });
+    resolvePipeline.mockResolvedValue(current);
+    render(view(draft));
+    await screen.findByText(draft.name);
+    expect(addRecentlyViewed).not.toHaveBeenCalled();
+
+    act(() => {
+      runInAction(() => {
+        current.remote = remote;
+        current.isDraft = false;
+      });
+    });
+
+    expect(addRecentlyViewed).toHaveBeenLastCalledWith({
+      type: "remote-pipeline",
+      id: remote.pipelineId,
+      name: draft.name,
+    });
   });
 
   it.each([remote, draft])(
@@ -383,5 +424,6 @@ describe("useLoadSpec", () => {
       "Current name",
       undefined,
     );
+    expect(addRecentlyViewed).not.toHaveBeenCalled();
   });
 });

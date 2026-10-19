@@ -1,11 +1,13 @@
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import * as yaml from "js-yaml";
+import { autorun } from "mobx";
 import {
   registerRootStore,
   type UndoStore as MobxUndoStore,
 } from "mobx-keystone";
 import { useEffect } from "react";
 
+import { addRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import {
   type ComponentSpec,
   type IdGenerator,
@@ -90,6 +92,20 @@ export function useLoadSpec(ref: EditorPipelineRef) {
     gcTime: remote ? Infinity : undefined,
     retry: false,
   });
+
+  const { file } = query.data;
+  useEffect(
+    () =>
+      autorun(() => {
+        if (!file.remote) return;
+        addRecentlyViewed({
+          type: "remote-pipeline",
+          id: file.remote.pipelineId,
+          name: file.storageKey,
+        });
+      }),
+    [file],
+  );
 
   // When the v1 editor writes to the same IndexedDB file, drop our cached
   // deserialization so the next read of this query goes back to disk. We
