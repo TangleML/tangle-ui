@@ -243,6 +243,7 @@ async function renderDashboard(
       currentBackend = next;
       rendered.rerender(<RouterProvider router={router} />);
     },
+    client,
     router,
     searchParams: () =>
       new URL(history.location.href, "http://localhost").searchParams,
@@ -360,8 +361,10 @@ describe("DashboardPipelinesView remote pipelines", () => {
       deleted = true;
     });
     const { user, router, searchParams } = await renderDashboard(
-      `${APP_ROUTES.DASHBOARD_PIPELINES}?tab=remote&page=2&panel=compact`,
+      `${APP_ROUTES.DASHBOARD_PIPELINES}?tab=remote&panel=compact`,
     );
+    await screen.findByRole("link", { name: "Pipeline 1" });
+    await user.click(screen.getByRole("button", { name: "Next" }));
     const row = await screen.findByRole("row", { name: /Pipeline 11/ });
     await user.click(
       await within(row).findByRole("button", { name: "Delete pipeline" }),
@@ -369,7 +372,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
     await user.click(screen.getByRole("button", { name: "Continue" }));
 
     await screen.findByRole("link", { name: "Pipeline 1" });
-    await waitFor(() => expect(searchParams().get("page")).toBe("1"));
+    expect(searchParams().has("page")).toBe(false);
     expect(
       screen.queryByRole("link", { name: "Pipeline 11" }),
     ).not.toBeInTheDocument();
@@ -377,6 +380,59 @@ describe("DashboardPipelinesView remote pipelines", () => {
     expect(router.state.location.pathname).toBe(APP_ROUTES.DASHBOARD_PIPELINES);
     expectNoPaginationControls();
   });
+
+  it.each(["filters", "backend"])(
+    "keeps the new page when deletion finishes after changing %s",
+    async (changed) => {
+      const deletedPage = createDeferredPage();
+      let deleted = false;
+      vi.mocked(listRemotePipelines).mockImplementation(
+        async (url, token, query) => {
+          if (url !== backend.backendUrl || query) {
+            return token
+              ? createPage(211, 5, null)
+              : createPage(201, 10, "new-page-two");
+          }
+          if (!token) return createPage(1, 10, "original-page-two");
+          return deleted ? deletedPage.promise : createPage(11, 1, null);
+        },
+      );
+      vi.mocked(deleteRemotePipeline).mockImplementation(async () => {
+        deleted = true;
+      });
+      const { user, router, setBackend, client } = await renderDashboard(
+        `${APP_ROUTES.DASHBOARD_PIPELINES}?tab=remote`,
+      );
+      await screen.findByText("Pipeline 1");
+      await user.click(screen.getByRole("button", { name: "Next" }));
+      const row = await screen.findByRole("row", { name: /Pipeline 11/ });
+      await user.click(
+        await within(row).findByRole("button", { name: "Delete pipeline" }),
+      );
+      await user.click(screen.getByRole("button", { name: "Continue" }));
+      await waitFor(() => expect(listRemotePipelines).toHaveBeenCalledTimes(3));
+
+      if (changed === "backend") {
+        setBackend(createBackend({ backendUrl: "https://other.example.com" }));
+      } else {
+        await act(async () => {
+          await router.navigate({
+            to: APP_ROUTES.DASHBOARD_PIPELINES,
+            search: { tab: "remote", name: "new" },
+          });
+        });
+      }
+      await screen.findByText("Pipeline 201");
+      await user.click(screen.getByRole("button", { name: "Next" }));
+      await screen.findByText("Pipeline 211");
+
+      await act(async () => deletedPage.resolve(createPage(11, 0, null)));
+      await waitFor(() => expect(client.isMutating()).toBe(0));
+      expect(screen.getByText("Pipeline 211")).toBeInTheDocument();
+      expect(screen.getByText("Page 2")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Previous" })).toBeEnabled();
+    },
+  );
 
   it.each([
     { v2Enabled: true, editorPath: "/editor-v2/pipeline/pipeline-1" },

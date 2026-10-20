@@ -18,11 +18,13 @@ import {
 interface RemotePipelineActionsProps {
   backendUrl: string;
   pipeline: RemotePipeline;
+  onDeleted?: () => void;
 }
 
 export function RemotePipelineActions({
   backendUrl,
   pipeline,
+  onDeleted,
 }: RemotePipelineActionsProps) {
   const queryClient = useQueryClient();
   const notify = useToastNotification();
@@ -37,7 +39,7 @@ export function RemotePipelineActions({
     mutationKey: ["delete-remote-pipeline", backendUrl, pipeline.id],
     mutationFn: ({ backendUrl, pipeline }: RemotePipelineActionsProps) =>
       deleteRemotePipeline(backendUrl, pipeline),
-    onSuccess: async (_, { backendUrl, pipeline }) => {
+    onSuccess: async (_, { backendUrl, pipeline, onDeleted }) => {
       try {
         removeRecentlyViewed("remote-pipeline", pipeline.id);
         await removeFavorite("remote-pipeline", pipeline.id);
@@ -50,6 +52,7 @@ export function RemotePipelineActions({
       await queryClient.invalidateQueries({
         queryKey: RemotePipelineQueryKeys.All(backendUrl),
       });
+      onDeleted?.();
     },
     onError: (error) => notify(error.message, "error"),
   });
@@ -79,7 +82,9 @@ export function RemotePipelineActions({
                 <Icon name="Trash" />
               </Button>
             }
-            onConfirm={() => deletion.mutate({ backendUrl, pipeline })}
+            onConfirm={() =>
+              deletion.mutate({ backendUrl, pipeline, onDeleted })
+            }
           />
         )}
       </InlineStack>

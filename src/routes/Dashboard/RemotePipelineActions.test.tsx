@@ -183,18 +183,22 @@ describe("RemotePipelineActions", () => {
     const deletion = Promise.withResolvers<void>();
     vi.mocked(deleteRemotePipeline).mockReturnValue(deletion.promise);
     const { user, client, openPipeline } = renderActions();
-    const pageKey = RemotePipelineQueryKeys.Page(backendUrl, undefined, 1);
-    const cursorKey = RemotePipelineQueryKeys.Cursor(
+    const firstCursorKey = RemotePipelineQueryKeys.Cursor(
       backendUrl,
       undefined,
       undefined,
     );
-    const otherKey = RemotePipelineQueryKeys.Page(
+    const nextCursorKey = RemotePipelineQueryKeys.Cursor(
+      backendUrl,
+      undefined,
+      "next",
+    );
+    const otherKey = RemotePipelineQueryKeys.Cursor(
       otherBackendUrl,
       undefined,
-      1,
+      undefined,
     );
-    for (const key of [pageKey, cursorKey, otherKey])
+    for (const key of [firstCursorKey, nextCursorKey, otherKey])
       client.setQueryData(key, {});
 
     await confirmDelete(user);
@@ -215,9 +219,9 @@ describe("RemotePipelineActions", () => {
 
     await act(async () => deletion.resolve());
     await waitFor(() =>
-      expect(client.getQueryState(pageKey)?.isInvalidated).toBe(true),
+      expect(client.getQueryState(firstCursorKey)?.isInvalidated).toBe(true),
     );
-    expect(client.getQueryState(cursorKey)?.isInvalidated).toBe(true);
+    expect(client.getQueryState(nextCursorKey)?.isInvalidated).toBe(true);
     expect(client.getQueryState(otherKey)?.isInvalidated).toBe(false);
     expect(favorites.removeFavorite).toHaveBeenCalledExactlyOnceWith(
       "remote-pipeline",
@@ -236,8 +240,12 @@ describe("RemotePipelineActions", () => {
       new Error("Failed to delete pipeline (503)"),
     );
     const { user, client } = renderActions();
-    const pageKey = RemotePipelineQueryKeys.Page(backendUrl, undefined, 1);
-    client.setQueryData(pageKey, {});
+    const cursorKey = RemotePipelineQueryKeys.Cursor(
+      backendUrl,
+      undefined,
+      undefined,
+    );
+    client.setQueryData(cursorKey, {});
 
     await confirmDelete(user);
     await waitFor(() =>
@@ -248,7 +256,7 @@ describe("RemotePipelineActions", () => {
     );
     expect(favorites.removeFavorite).not.toHaveBeenCalled();
     expect(removeRecent).not.toHaveBeenCalled();
-    expect(client.getQueryState(pageKey)?.isInvalidated).toBe(false);
+    expect(client.getQueryState(cursorKey)?.isInvalidated).toBe(false);
     expect(
       screen.getByRole("button", {
         name: "Remove Saved pipeline from favorites",
@@ -266,8 +274,16 @@ describe("RemotePipelineActions", () => {
       url === backendUrl ? pipeline.user_id : "other@example.com",
     );
     const { user, client, rerender } = renderActions();
-    const oldKey = RemotePipelineQueryKeys.Page(backendUrl, undefined, 1);
-    const newKey = RemotePipelineQueryKeys.Page(otherBackendUrl, undefined, 1);
+    const oldKey = RemotePipelineQueryKeys.Cursor(
+      backendUrl,
+      undefined,
+      undefined,
+    );
+    const newKey = RemotePipelineQueryKeys.Cursor(
+      otherBackendUrl,
+      undefined,
+      undefined,
+    );
     client.setQueryData(oldKey, {});
     client.setQueryData(newKey, {});
 
@@ -303,12 +319,16 @@ describe("RemotePipelineActions", () => {
         });
       }
       const { user, client } = renderActions();
-      const pageKey = RemotePipelineQueryKeys.Page(backendUrl, undefined, 1);
-      client.setQueryData(pageKey, {});
+      const cursorKey = RemotePipelineQueryKeys.Cursor(
+        backendUrl,
+        undefined,
+        undefined,
+      );
+      client.setQueryData(cursorKey, {});
 
       await confirmDelete(user);
       await waitFor(() =>
-        expect(client.getQueryState(pageKey)?.isInvalidated).toBe(true),
+        expect(client.getQueryState(cursorKey)?.isInvalidated).toBe(true),
       );
       expect(notify).toHaveBeenCalledWith(
         "Pipeline deleted, but its local favorites or history could not be updated.",

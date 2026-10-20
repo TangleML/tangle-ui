@@ -1,4 +1,4 @@
-import { useMutationState } from "@tanstack/react-query";
+import { useMutationState, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { type PointerEvent, useRef, useState } from "react";
 
@@ -17,6 +17,8 @@ import { Text } from "@/components/ui/typography";
 import { useRemotePipelinesPage } from "@/hooks/useRemotePipelinesPage";
 import { useBackend } from "@/providers/BackendProvider";
 import { getDefaultRemoteEditorPath } from "@/routes/editorRoutes";
+import { RemotePipelineQueryKeys } from "@/services/remotePipelineQueryKeys";
+import type { RemotePipelinesPage } from "@/services/remotePipelinesService";
 import { formatDate } from "@/utils/date";
 import { hasNewTabModifier } from "@/utils/dom";
 
@@ -78,6 +80,7 @@ export function RemotePipelinesTable({
 }: RemotePipelinesTableProps) {
   const navigate = useNavigate();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { backendUrl, configured, available, ready } = useBackend();
   const deletingIds = useMutationState({
     filters: {
@@ -125,6 +128,25 @@ export function RemotePipelinesTable({
 
   function changePage(tokens: string[]) {
     setPagination({ backendUrl, filterQuery, tokens });
+  }
+
+  function recoverAfterDeletion() {
+    if (currentPage === 1) return;
+    const refreshed = queryClient.getQueryState<RemotePipelinesPage>(
+      RemotePipelineQueryKeys.Cursor(backendUrl, filterQuery, pageToken),
+    );
+    if (
+      refreshed?.status !== "success" ||
+      refreshed.data?.pipelines.length !== 0
+    )
+      return;
+    setPagination((current) =>
+      current.backendUrl === backendUrl &&
+      current.filterQuery === filterQuery &&
+      current.tokens.at(-1) === pageToken
+        ? { ...current, tokens: current.tokens.slice(0, -1) }
+        : current,
+    );
   }
 
   let message: string | undefined;
@@ -325,6 +347,7 @@ export function RemotePipelinesTable({
                     key={backendUrl}
                     backendUrl={backendUrl}
                     pipeline={pipeline}
+                    onDeleted={recoverAfterDeletion}
                   />
                 </TableCell>
               </TableRow>
