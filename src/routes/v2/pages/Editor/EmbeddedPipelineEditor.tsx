@@ -228,7 +228,7 @@ const RemoteEmbeddedPipelineEditor = withSuspenseWrapper(
       data: { spec, file },
     } = useLoadSpec(props.pipelineRef);
     return file.folder.driver.canEdit !== true ? (
-      <RemotePipelineView spec={spec} />
+      <RemotePipelineView spec={spec} isActive={props.isActive} />
     ) : (
       <EditableEmbeddedPipelineEditor {...props} />
     );

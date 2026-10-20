@@ -143,7 +143,15 @@ export function useLoadSpec(ref: EditorPipelineRef) {
       if (storageKey !== localName && storageKey !== localFileId) return;
       queryClient.invalidateQueries({ queryKey: matchKey });
     });
-  }, [queryClient, storage, identity, localFileId, localName, remote, query.data]);
+  }, [
+    queryClient,
+    storage,
+    identity,
+    localFileId,
+    localName,
+    remote,
+    query.data,
+  ]);
 
   return query;
 }

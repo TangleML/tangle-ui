@@ -44,6 +44,12 @@ const remote = {
   backendUrl: "https://backend.example.com",
   pipelineId: "pipeline-1",
 } as const;
+const draft = {
+  source: "draft",
+  backendUrl: remote.backendUrl,
+  draftId: "draft-1",
+  name: "Draft",
+} as const;
 const file = (
   name: string,
   ref?: { backendUrl: string; pipelineId: string },
@@ -155,42 +161,46 @@ describe("useLoadSpec", () => {
     expect(resolvePipeline).toHaveBeenCalledTimes(2);
   });
 
-  it("retains failed edits after unmount and retries them from the saved baseline", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
-    const write = vi.fn().mockRejectedValue(new Error("Save unavailable"));
-    resolvePipeline.mockResolvedValue({ ...file("Original"), write });
-    const first = render(view(remote, true));
-    await screen.findByText("Original");
-    fireEvent.click(screen.getByText("Edit"));
-    fireEvent.click(screen.getByText("Save"));
-    await screen.findByText("Save unavailable");
-    await act(async () => first.unmount());
-    await waitFor(() => expect(write).toHaveBeenCalledTimes(2));
+  it.each([remote, draft])(
+    "retains failed $source edits after unmount and retries them from the saved baseline",
+    async (pipelineRef) => {
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      const write = vi.fn().mockRejectedValue(new Error("Save unavailable"));
+      resolvePipeline.mockResolvedValue({ ...file("Original"), write });
+      const first = render(view(pipelineRef, true));
+      await screen.findByText("Original");
+      fireEvent.click(screen.getByText("Edit"));
+      fireEvent.click(screen.getByText("Save"));
+      await screen.findByText("Save unavailable");
+      await act(async () => first.unmount());
+      await waitFor(() => expect(write).toHaveBeenCalledTimes(2));
 
-    const reopened = render(view(remote, true));
-    await screen.findByText("Unsaved edit");
-    await screen.findByText("Save unavailable");
-    expect(resolvePipeline).toHaveBeenCalledTimes(1);
-    await screen.findByText("Idle");
-    const attemptsBeforeRetry = write.mock.calls.length;
-    write.mockResolvedValue(undefined);
-    fireEvent.click(screen.getByText("Save"));
-    await waitFor(() =>
-      expect(write).toHaveBeenCalledTimes(attemptsBeforeRetry + 1),
-    );
-    expect(write).toHaveBeenLastCalledWith(
-      expect.stringContaining("Unsaved edit"),
-    );
-    await act(async () => reopened.unmount());
-    await waitFor(() =>
-      expect(client.getQueryCache().getAll()).toHaveLength(0),
-    );
+      const reopened = render(view(pipelineRef, true));
+      await screen.findByText("Unsaved edit");
+      await screen.findByText("Save unavailable");
+      expect(resolvePipeline).toHaveBeenCalledTimes(1);
+      expect(discardRemoteDraft).not.toHaveBeenCalled();
+      await screen.findByText("Idle");
+      const attemptsBeforeRetry = write.mock.calls.length;
+      write.mockResolvedValue(undefined);
+      fireEvent.click(screen.getByText("Save"));
+      await waitFor(() =>
+        expect(write).toHaveBeenCalledTimes(attemptsBeforeRetry + 1),
+      );
+      expect(write).toHaveBeenLastCalledWith(
+        expect.stringContaining("Unsaved edit"),
+      );
+      await act(async () => reopened.unmount());
+      await waitFor(() =>
+        expect(client.getQueryCache().getAll()).toHaveLength(0),
+      );
 
-    resolvePipeline.mockResolvedValue(file("Saved on server"));
-    render(view(remote));
-    await screen.findByText("Saved on server");
-    expect(resolvePipeline).toHaveBeenCalledTimes(2);
-  });
+      resolvePipeline.mockResolvedValue(file("Saved on server"));
+      render(view(pipelineRef));
+      await screen.findByText("Saved on server");
+      expect(resolvePipeline).toHaveBeenCalledTimes(2);
+    },
+  );
 
   it("keeps undo and redo when reopening a failed edit without stored history", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
@@ -216,30 +226,34 @@ describe("useLoadSpec", () => {
     expect(resolvePipeline).toHaveBeenCalledTimes(1);
   });
 
-  it("keeps an in-flight edit through reopen without duplicating its write", async () => {
-    let finish!: () => void;
-    const write = vi.fn().mockReturnValue(
-      new Promise<void>((resolve) => {
-        finish = resolve;
-      }),
-    );
-    resolvePipeline.mockResolvedValue({ ...file("Original"), write });
-    const first = render(view(remote, true));
-    await screen.findByText("Original");
-    fireEvent.click(screen.getByText("Edit"));
-    fireEvent.click(screen.getByText("Save"));
-    await act(async () => first.unmount());
-    const reopened = render(view(remote, true));
-    await screen.findByText("Unsaved edit");
-    fireEvent.click(screen.getByText("Save"));
-    expect(write).toHaveBeenCalledTimes(1);
-    expect(resolvePipeline).toHaveBeenCalledTimes(1);
-    await act(async () => reopened.unmount());
-    finish();
-    await waitFor(() =>
-      expect(client.getQueryCache().getAll()).toHaveLength(0),
-    );
-  });
+  it.each([remote, draft])(
+    "keeps an in-flight $source edit through reopen without duplicating its write",
+    async (pipelineRef) => {
+      let finish!: () => void;
+      const write = vi.fn().mockReturnValue(
+        new Promise<void>((resolve) => {
+          finish = resolve;
+        }),
+      );
+      resolvePipeline.mockResolvedValue({ ...file("Original"), write });
+      const first = render(view(pipelineRef, true));
+      await screen.findByText("Original");
+      fireEvent.click(screen.getByText("Edit"));
+      fireEvent.click(screen.getByText("Save"));
+      await act(async () => first.unmount());
+      const reopened = render(view(pipelineRef, true));
+      await screen.findByText("Unsaved edit");
+      fireEvent.click(screen.getByText("Save"));
+      expect(write).toHaveBeenCalledTimes(1);
+      expect(resolvePipeline).toHaveBeenCalledTimes(1);
+      expect(discardRemoteDraft).not.toHaveBeenCalled();
+      await act(async () => reopened.unmount());
+      finish();
+      await waitFor(() =>
+        expect(client.getQueryCache().getAll()).toHaveLength(0),
+      );
+    },
+  );
 
   it("does not evict a newer failed edit when an older write succeeds", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
