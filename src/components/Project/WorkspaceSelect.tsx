@@ -31,6 +31,8 @@ export function WorkspaceSelect({
   disabled,
   className,
 }: WorkspaceSelectProps) {
+  if (!choice.offersChoice) return null;
+
   return (
     <Select
       value={choice.selected?.id ?? ""}
@@ -63,6 +65,8 @@ interface WorkspaceFieldProps {
 export function WorkspaceField({ choice }: WorkspaceFieldProps) {
   const id = useId();
   const hintId = `${id}-hint`;
+
+  if (!choice.offersChoice) return null;
 
   return (
     <BlockStack gap="2">

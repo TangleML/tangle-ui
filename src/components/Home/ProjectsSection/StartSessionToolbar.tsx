@@ -83,15 +83,13 @@ export function StartSessionToolbar({
         </SelectContent>
       </Select>
 
-      {workspaceChoice.offersChoice && (
-        <WorkspaceSelect
-          choice={workspaceChoice}
-          aria-label="Workspace"
-          placeholder="Workspace"
-          disabled={disabled}
-          className="h-8 w-auto max-w-48 text-xs"
-        />
-      )}
+      <WorkspaceSelect
+        choice={workspaceChoice}
+        aria-label="Workspace"
+        placeholder="Workspace"
+        disabled={disabled}
+        className="h-8 w-auto max-w-48 text-xs"
+      />
 
       <div className="flex-1" />
 

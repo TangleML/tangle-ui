@@ -135,9 +135,7 @@ export function CreateProjectDialog({
               )}
             </BlockStack>
 
-            {workspaceChoice.offersChoice && (
-              <WorkspaceField choice={workspaceChoice} />
-            )}
+            <WorkspaceField choice={workspaceChoice} />
 
             <BlockStack gap="2">
               <Label htmlFor="create-project-description">
