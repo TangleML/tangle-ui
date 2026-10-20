@@ -111,7 +111,7 @@ const PipelineEditor = withSuspenseWrapper(
     useWindowPersistence(tourMode ? TOUR_WINDOW_LAYOUT_ID : "editor");
     useDockAreaAccordion();
     useSpecLifecycle(rootSpec, file, restoredUndoStore, saveState);
-    useRemoteDraftPromotion(pipelineRef, rootSpec, file);
+    useRemoteDraftPromotion(pipelineRef, file);
     useSelectionWindowSync();
     usePropertiesWindowPositioning();
     useLinkedWindowCleanup();

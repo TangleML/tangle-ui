@@ -6,7 +6,7 @@ import {
   RouterContextProvider,
 } from "@tanstack/react-router";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PipelineSpecApiError } from "@/services/pipelineSpecService";
@@ -29,6 +29,7 @@ const backend = vi.hoisted(() => ({
 const loadLegacy = vi.hoisted(() => vi.fn());
 const loadV2 = vi.hoisted(() => vi.fn());
 const initializeEditing = vi.hoisted(() => vi.fn());
+const mountEditor = vi.hoisted(() => vi.fn());
 const pendingSpec = new Promise<never>(() => {});
 
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
@@ -77,8 +78,10 @@ vi.mock("./v2/pages/Editor/components/EditorMenuBar/EditorMenuBar", () => ({
   EditorMenuBar: () => <nav aria-label="Editor navigation" />,
 }));
 vi.mock("./v2/pages/Editor/components/DriverPermissionGate", () => ({
-  DriverPermissionGate: ({ children }: { children: ReactNode }) =>
-    permission.granted ? children : <div>Grant Access</div>,
+  DriverPermissionGate: ({ children }: { children: ReactNode }) => {
+    useState(() => mountEditor());
+    return permission.granted ? children : <div>Grant Access</div>;
+  },
 }));
 vi.mock("./v2/pages/Editor/components/EmptyEditorState", () => ({
   EmptyEditorState: () => <div>Open local pipeline</div>,
@@ -150,6 +153,40 @@ function renderEditor(children: ReactNode, basepath = "", hash = false) {
 }
 
 describe("remote pipeline editor entry", () => {
+  it("keeps the mounted editor session when a workarea draft becomes remote", () => {
+    permission.granted = false;
+    loadV2.mockReturnValue({
+      data: {
+        spec: { name: "Draft" },
+        file: { folder: { driver: { canEdit: true } } },
+      },
+    });
+    const opened = render(
+      <EmbeddedPipelineEditor
+        pipelineRef={{
+          source: "draft",
+          backendUrl: backend.backendUrl,
+          draftId: "draft-1",
+          name: "Draft",
+        }}
+        isActive
+        projectId="project-1"
+      />,
+    );
+    expect(mountEditor).toHaveBeenCalledOnce();
+    opened.rerender(
+      <EmbeddedPipelineEditor
+        pipelineRef={{
+          source: "remote",
+          backendUrl: backend.backendUrl,
+          pipelineId: "remote-1",
+        }}
+        isActive
+        projectId="project-1"
+      />,
+    );
+    expect(mountEditor).toHaveBeenCalledOnce();
+  });
   it("requests local file permission before reading an embedded pipeline", () => {
     permission.granted = false;
     render(

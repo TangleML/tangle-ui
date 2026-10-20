@@ -422,6 +422,47 @@ describe("remote drafts and project attachment", () => {
     );
   });
 
+  it("retains a closed draft until its final workarea owner releases it", async () => {
+    const file = await storage.resolvePipeline(draft);
+    const first = storage.retainRemoteDraft(draft.draftId)!;
+    const second = storage.retainRemoteDraft(draft.draftId)!;
+    storage.discardRemoteDraft(draft);
+    expect(storage.getRemoteDraftRef(draft.draftId, draft.backendUrl)).toBe(
+      draft,
+    );
+    expect(first.file).toBe(file);
+    first.release();
+    first.release();
+    await Promise.resolve();
+    expect(storage.getRemoteDraftRef(draft.draftId, draft.backendUrl)).toBe(
+      draft,
+    );
+    second.release();
+    await Promise.resolve();
+    expect(() =>
+      storage.getRemoteDraftRef(draft.draftId, draft.backendUrl),
+    ).toThrow("no longer available");
+  });
+
+  it("survives an ownership reconnect and waits for the reopened editor to save", async () => {
+    const file = await storage.resolvePipeline(draft);
+    const first = storage.retainRemoteDraft(draft.draftId)!;
+    storage.discardRemoteDraft(draft);
+    first.release();
+    const second = storage.retainRemoteDraft(draft.draftId)!;
+    await Promise.resolve();
+    expect(await storage.resolvePipeline(draft)).toBe(file);
+    second.release();
+    await Promise.resolve();
+    expect(storage.getRemoteDraftRef(draft.draftId, draft.backendUrl)).toBe(
+      draft,
+    );
+    storage.discardRemoteDraft(draft);
+    expect(() =>
+      storage.getRemoteDraftRef(draft.draftId, draft.backendUrl),
+    ).toThrow("no longer available");
+  });
+
   it("keeps drafts in memory, then serializes edits into one remote record", async () => {
     const file = await storage.resolvePipeline(draft);
     expect(await storage.resolvePipeline(draft)).toBe(file);
@@ -487,7 +528,13 @@ describe("remote drafts and project attachment", () => {
       expect(pipelineFileTarget(file).identity).toBe(`draft/${file.initialId}`);
       expect(attach).not.toHaveBeenCalled();
       expect(client.put).not.toHaveBeenCalled();
-      if (fail) await expect(file.write(content)).rejects.toThrow("Refused");
+      if (fail) {
+        await expect(file.write(content)).rejects.toThrow("Refused");
+        expect(file.isDraft).toBe(true);
+        expect(pipelineFileTarget(file).identity).toBe(
+          `draft/${file.initialId}`,
+        );
+      }
       await file.write(content);
       await file.write(content);
       expect(pipelineFileTarget(file).identity).toBe(

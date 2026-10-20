@@ -324,6 +324,21 @@ export class TangentProjectStore {
     this.#putSlice(next, this.activeWorkareaTabId);
   }
 
+  @action replaceWorkareaTabTarget(
+    sessionId: string,
+    tabId: string,
+    target: WorkareaTarget,
+  ) {
+    const slice = this.workareaBySession.get(sessionId);
+    if (!slice?.tabs.some((tab) => tab.id === tabId)) return;
+    this.workareaBySession.set(sessionId, {
+      ...slice,
+      tabs: slice.tabs.map((tab) =>
+        tab.id === tabId ? { ...tab, target } : tab,
+      ),
+    });
+  }
+
   @action selectWorkareaTab(id: string) {
     const tabs = this.workareaTabs;
     if (!tabs.some((tab) => tab.id === id)) return;

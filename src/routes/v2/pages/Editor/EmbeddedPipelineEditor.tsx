@@ -28,6 +28,7 @@ import { DockArea } from "@/routes/v2/shared/windows/DockArea";
 import { WindowContainer } from "@/routes/v2/shared/windows/WindowContainer";
 import {
   type EditorPipelineRef,
+  isRemotePipelineDraftRef,
   isRemotePipelineRef,
 } from "@/services/pipelineStorage/types";
 
@@ -237,7 +238,8 @@ const RemoteEmbeddedPipelineEditor = withSuspenseWrapper(
 );
 
 export function EmbeddedPipelineEditor(props: EmbeddedPipelineEditorProps) {
-  return isRemotePipelineRef(props.pipelineRef) ? (
+  return isRemotePipelineRef(props.pipelineRef) ||
+    isRemotePipelineDraftRef(props.pipelineRef) ? (
     <RemoteEmbeddedPipelineEditor {...props} />
   ) : (
     <EditableEmbeddedPipelineEditor {...props} />

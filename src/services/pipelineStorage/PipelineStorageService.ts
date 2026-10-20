@@ -30,7 +30,12 @@ const ROOT_DRIVER_CONFIG = {
 export class PipelineStorageService {
   private readonly remoteDrafts = new Map<
     string,
-    { ref: RemotePipelineDraftRef; file: PipelineFile }
+    {
+      ref: RemotePipelineDraftRef;
+      file: PipelineFile;
+      owners: number;
+      discardRequested: boolean;
+    }
   >();
   @observable accessor rootFolder: PipelineFolder;
 
@@ -43,10 +48,13 @@ export class PipelineStorageService {
 
   async resolvePipeline(ref: EditorPipelineRef): Promise<PipelineFile> {
     if (isRemotePipelineDraftRef(ref)) {
-      return (
+      const file =
         this.remoteDrafts.get(getEditorPipelineIdentity(ref))?.file ??
-        this.createRemoteDraft(ref)
-      );
+        this.createRemoteDraft(ref);
+      // A reopened editor owns cleanup until its current edits are saved.
+      this.remoteDrafts.get(getEditorPipelineIdentity(ref))!.discardRequested =
+        false;
+      return file;
     }
     if (isRemotePipelineRef(ref)) {
       return remoteFile(await RemotePipelineStorageDriver.open(ref));
@@ -69,8 +77,8 @@ export class PipelineStorageService {
     onCreated?: (remote: RemotePipelineRef) => Promise<unknown>,
   ): PipelineFile {
     const driver = new RemotePipelineDraftStorageDriver(ref, async (remote) => {
-      file.promoteToRemote(remote);
       await onCreated?.(remote);
+      file.promoteToRemote(remote);
     });
     const file = new PipelineFile({
       id: ref.draftId,
@@ -83,7 +91,12 @@ export class PipelineStorageService {
         driver,
       }),
     });
-    this.remoteDrafts.set(getEditorPipelineIdentity(ref), { ref, file });
+    this.remoteDrafts.set(getEditorPipelineIdentity(ref), {
+      ref,
+      file,
+      owners: 0,
+      discardRequested: true,
+    });
     return file;
   }
 
@@ -100,7 +113,42 @@ export class PipelineStorageService {
   }
 
   discardRemoteDraft(ref: RemotePipelineDraftRef): void {
-    this.remoteDrafts.delete(getEditorPipelineIdentity(ref));
+    const identity = getEditorPipelineIdentity(ref);
+    const draft = this.remoteDrafts.get(identity);
+    if (!draft) return;
+    draft.discardRequested = true;
+    if (!draft.owners) this.remoteDrafts.delete(identity);
+  }
+
+  /** Retained workarea tabs outlive their mounted editor when sessions change. */
+  retainRemoteDraft(draftId: string) {
+    const draft = [...this.remoteDrafts.values()].find(
+      ({ ref }) => ref.draftId === draftId,
+    );
+    if (!draft) return;
+    draft.owners += 1;
+    let released = false;
+    return {
+      ref: draft.ref,
+      file: draft.file,
+      release: () => {
+        if (released) return;
+        released = true;
+        draft.owners -= 1;
+        // Effect cleanup may be followed by a StrictMode reconnect. Dirty
+        // documents stay available until their editor requests clean disposal.
+        queueMicrotask(() => {
+          const identity = getEditorPipelineIdentity(draft.ref);
+          if (
+            !draft.owners &&
+            draft.discardRequested &&
+            this.remoteDrafts.get(identity) === draft
+          ) {
+            this.remoteDrafts.delete(identity);
+          }
+        });
+      },
+    };
   }
 
   async createRemotePipeline(

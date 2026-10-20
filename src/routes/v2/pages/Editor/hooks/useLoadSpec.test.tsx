@@ -13,7 +13,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AutoSaveStore } from "@/routes/v2/pages/Editor/store/autoSaveStore";
 import { UndoStore } from "@/routes/v2/pages/Editor/store/undoStore";
-import type { EditorPipelineRef } from "@/services/pipelineStorage/types";
+import { promoteRemoteDraftQuery } from "@/routes/v2/pages/Editor/utils/promoteRemoteDraftQuery";
+import {
+  type EditorPipelineRef,
+  getEditorPipelineIdentity,
+} from "@/services/pipelineStorage/types";
 
 import { EDITOR_SPEC_QUERY_KEY, useLoadSpec } from "./useLoadSpec";
 
@@ -130,6 +134,44 @@ afterEach(() => {
 });
 
 describe("useLoadSpec", () => {
+  it("keeps new draft undo history when a promoted document starts another editor session", async () => {
+    const draft = {
+      source: "draft",
+      backendUrl: remote.backendUrl,
+      draftId: "draft-undo",
+      name: "Untouched",
+    } as const;
+    resolvePipeline.mockResolvedValue({ ...file(draft.name), isDraft: true });
+    const opened = render(view(draft));
+    await screen.findByText(draft.name);
+    const loaded = client.getQueryData<ReturnType<typeof useLoadSpec>["data"]>([
+      "editor-v2-spec",
+      getEditorPipelineIdentity(draft),
+    ])!;
+    const firstUndo = new UndoStore();
+    firstUndo.init(loaded.spec, loaded.restoredUndoStore);
+    await act(async () => loaded.spec.setName("Edited"));
+    expect(firstUndo.canUndo).toBe(true);
+    firstUndo.dispose();
+
+    promoteRemoteDraftQuery(client, draft, remote);
+    opened.rerender(view(remote));
+    await screen.findByText("Edited");
+    const promoted = client.getQueryData<
+      ReturnType<typeof useLoadSpec>["data"]
+    >(["editor-v2-spec", getEditorPipelineIdentity(remote)])!;
+    expect(promoted).toBe(loaded);
+    const nextUndo = new UndoStore();
+    nextUndo.init(promoted.spec, promoted.restoredUndoStore);
+    try {
+      expect(nextUndo.canUndo).toBe(true);
+      await act(async () => nextUndo.undo());
+      expect(promoted.spec.name).toBe(draft.name);
+    } finally {
+      nextUndo.dispose();
+    }
+  });
+
   it("keeps an open StrictMode draft in memory and discards it on close", async () => {
     const draft = {
       source: "draft",
