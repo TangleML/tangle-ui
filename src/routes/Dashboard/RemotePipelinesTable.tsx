@@ -1,5 +1,5 @@
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
-import { type PointerEvent, useEffect, useRef, useState } from "react";
+import { type PointerEvent, useRef, useState } from "react";
 
 import { CopyText } from "@/components/shared/CopyText/CopyText";
 import { PaginationControls } from "@/components/shared/PaginationControls";
@@ -44,7 +44,7 @@ interface RemotePipelinesTableProps {
 
 interface RemotePipelinesPagination {
   backendUrl: string;
-  filterQuery: string | undefined;
+  filterQuery?: string;
   tokens: string[];
 }
 
@@ -79,21 +79,21 @@ export function RemotePipelinesTable({
   const { backendUrl, configured, available, ready } = useBackend();
   const filterQuery = getRemotePipelinesFilterQuery(filters);
   const invalidId = isInvalidPipelineId(filters.id);
-  const [debouncedQuery, setDebouncedQuery] = useState(filterQuery);
-  const isDebouncing =
-    !invalidId && Boolean(filterQuery) && filterQuery !== debouncedQuery;
+  const [isEditingFilters, setIsEditingFilters] = useState(false);
   const [pagination, setPagination] = useState<RemotePipelinesPagination>({
     backendUrl,
     filterQuery,
     tokens: [],
   });
-  const searchChanged =
-    pagination.backendUrl !== backendUrl ||
-    pagination.filterQuery !== filterQuery;
-  const pageTokens = searchChanged ? [] : pagination.tokens;
-  if (searchChanged) {
+  const hasCurrentPagination =
+    pagination.backendUrl === backendUrl &&
+    pagination.filterQuery === filterQuery;
+  const pageTokens = hasCurrentPagination ? pagination.tokens : [];
+  if (!hasCurrentPagination) {
     setPagination({ backendUrl, filterQuery, tokens: [] });
   }
+  const currentPage = pageTokens.length + 1;
+  const pageToken = pageTokens.at(-1);
   const [columnWidths, setColumnWidths] = useState(INITIAL_COLUMN_WIDTHS);
   const tableRef = useRef<HTMLTableElement>(null);
   const dragRef = useRef<{
@@ -102,30 +102,16 @@ export function RemotePipelinesTable({
     tableWidth: number;
     widths: number[];
   } | null>(null);
-  const pageToken = pageTokens.at(-1);
   const canFetch =
-    ready && configured && available && !isDebouncing && !invalidId;
+    ready && configured && available && !isEditingFilters && !invalidId;
   const {
     data,
     isLoading,
     isFetching: isQueryFetching,
     error,
   } = useRemotePipelinesPage(backendUrl, pageToken, canFetch, filterQuery);
-  const isFetching = isQueryFetching || isDebouncing;
+  const isFetching = isQueryFetching || isEditingFilters;
   const pipelines = data?.pipelines ?? [];
-
-  useEffect(() => {
-    if (invalidId) return;
-    if (!filterQuery) {
-      setDebouncedQuery(undefined);
-      return;
-    }
-    const timeout = window.setTimeout(
-      () => setDebouncedQuery(filterQuery),
-      200,
-    );
-    return () => window.clearTimeout(timeout);
-  }, [filterQuery, invalidId]);
 
   function changePage(tokens: string[]) {
     setPagination({ backendUrl, filterQuery, tokens });
@@ -135,6 +121,7 @@ export function RemotePipelinesTable({
   if (!ready) message = "Loading pipelines…";
   else if (!configured) message = "Configure a backend to view pipelines.";
   else if (!available) message = "Pipelines are unavailable.";
+  else if (invalidId) message = "Enter a complete pipeline ID to search.";
   else if (isLoading) message = "Loading pipelines…";
   else if (error) message = "Failed to load pipelines.";
   else if (pipelines.length === 0) message = "No pipelines found.";
@@ -145,7 +132,12 @@ export function RemotePipelinesTable({
 
   return (
     <BlockStack gap="4" className="w-full">
-      <RemotePipelinesFilters filters={filters} onChange={onFiltersChange} />
+      <RemotePipelinesFilters
+        key={backendUrl}
+        filters={filters}
+        onChange={onFiltersChange}
+        onPendingChange={setIsEditingFilters}
+      />
       <Table
         ref={tableRef}
         aria-label="Remote Pipelines"
@@ -310,11 +302,11 @@ export function RemotePipelinesTable({
           )}
         </TableBody>
       </Table>
-      {(pageTokens.length > 0 || data?.nextPageToken) && (
+      {(currentPage > 1 || data?.nextPageToken) && (
         <nav aria-label="Remote pipelines pagination" className="w-full">
           <PaginationControls
-            currentPage={pageTokens.length + 1}
-            hasPreviousPage={pageTokens.length > 0}
+            currentPage={currentPage}
+            hasPreviousPage={currentPage > 1}
             hasNextPage={Boolean(data?.nextPageToken)}
             disabled={!canFetch || isFetching}
             onPreviousPage={() => changePage(pageTokens.slice(0, -1))}

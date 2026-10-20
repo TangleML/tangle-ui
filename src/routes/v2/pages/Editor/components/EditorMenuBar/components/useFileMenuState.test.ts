@@ -19,6 +19,7 @@ const state = vi.hoisted(() => ({
     write: vi.fn(),
     deleteFile: vi.fn(),
   },
+  configured: true,
   storage: {
     rootFolder: { addFile: vi.fn() },
     copyRemotePipeline: vi.fn(),
@@ -42,14 +43,14 @@ vi.mock("@/components/shared/Settings/useFlags", () => ({
 vi.mock("@/providers/BackendProvider", () => ({
   useBackend: () => ({
     backendUrl: remote.backendUrl,
-    configured: true,
+    configured: state.configured,
     ready: true,
   }),
 }));
 vi.mock("@/utils/localforage", () => ({
   getUseEnv: async () => false,
   getUseRelativePath: async () => false,
-  getUserBackendUrl: async () => remote.backendUrl,
+  getUserBackendUrl: async () => (state.configured ? remote.backendUrl : ""),
 }));
 vi.mock("@/routes/router", async () => import("@/routes/appRoutes"));
 vi.mock("@/hooks/useToastNotification", () => ({
@@ -93,6 +94,7 @@ beforeEach(() => {
   state.file.isDraft = false;
   state.file.draftBackendUrl = undefined;
   vi.stubEnv("VITE_LOCAL_PIPELINES", undefined);
+  state.configured = true;
   state.save.mockResolvedValue(undefined);
   state.navigate.mockResolvedValue(undefined);
   const copy = { id: "copy-id", storageKey: "Copy" };
@@ -129,16 +131,19 @@ describe("editor file actions", () => {
     expect(state.storage.rootFolder.addFile).not.toHaveBeenCalled();
   });
   it.each([
-    { sourceRemote: false, local: false },
-    { sourceRemote: true, local: false },
-    { sourceRemote: false, local: true },
-    { sourceRemote: true, local: true },
+    { sourceRemote: false, local: false, configured: true },
+    { sourceRemote: true, local: false, configured: true },
+    { sourceRemote: false, local: true, configured: true },
+    { sourceRemote: true, local: true, configured: true },
+    { sourceRemote: false, local: false, configured: false },
+    { sourceRemote: true, local: false, configured: false },
   ])(
     "copies content using the deployment policy: %j",
-    async ({ sourceRemote, local }) => {
+    async ({ sourceRemote, local, configured }) => {
+      state.configured = configured;
       vi.stubEnv("VITE_LOCAL_PIPELINES", String(local));
       if (sourceRemote) state.file.remote = remote;
-      const isRemote = !local;
+      const isRemote = !local && configured;
       const { result } = renderHook(useFileMenuState);
       await result.current.handleSavePipelineAs("Copy");
       const target = isRemote

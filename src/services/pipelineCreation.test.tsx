@@ -146,11 +146,17 @@ it.each([
   expect(await getPipelineCreationBackendUrl()).toBe(expected);
 });
 
-it.each([undefined, "false", "true"])(
-  "uses the deployment policy for imports, copies, and run clones (%s)",
-  async (override) => {
+it.each([
+  { override: undefined, configured: true },
+  { override: "false", configured: true },
+  { override: "true", configured: true },
+  { override: undefined, configured: false },
+])(
+  "uses the storage policy for imports, copies, and run clones (%j)",
+  async ({ override, configured }) => {
     vi.stubEnv("VITE_LOCAL_PIPELINES", override);
-    const local = override === "true";
+    settings.relative = configured;
+    const local = override === "true" || !configured;
     const results = [
       await importPipelineFromYaml(storage, componentSpecToYaml(spec)),
       await useSavePipeline(spec).savePipeline("Copy"),
@@ -211,53 +217,55 @@ it.each([false, true])(
   },
 );
 
-it.each(["remote", "existing local", "local override", "read-only"])(
-  "saves legacy editor content: %s",
-  async (mode) => {
-    if (mode === "existing local")
-      vi.mocked(getComponentFileFromList).mockResolvedValue({} as never);
-    if (mode === "local override") vi.stubEnv("VITE_LOCAL_PIPELINES", "true");
-    const { result } = renderHook(useComponentSpec, {
-      wrapper: ({ children }) => (
-        <ComponentSpecProvider spec={spec} readOnly={mode === "read-only"}>
-          {children}
-        </ComponentSpecProvider>
-      ),
-    });
-    await act(async () => {
-      await Promise.all([
-        result.current.saveComponentSpec("Renamed"),
-        result.current.saveComponentSpec("Renamed"),
-      ]);
-    });
-    expect(localWrites).toHaveLength(mode.includes("local") ? 2 : 0);
-    expect(client.put).toHaveBeenCalledTimes(mode === "remote" ? 2 : 0);
-    if (mode === "remote") {
-      expect(result.current.componentSpec.name).toBe("Example");
-      expect(remoteSpec(1).name).toBe("Renamed");
-      expect(
-        new Set(
-          vi
-            .mocked(client.put)
-            .mock.calls.map(([options]) => options?.query?.file_path),
-        ).size,
-      ).toBe(1);
-    }
-  },
-);
-
-it.each(["backend configuration", "remote response"])(
-  "reports %s failure without a local fallback",
-  async (failure) => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
-    if (failure === "backend configuration") settings.relative = false;
-    else vi.mocked(client.put).mockRejectedValueOnce(new Error("Unavailable"));
+it.each([
+  "remote",
+  "existing local",
+  "local override",
+  "no backend",
+  "read-only",
+])("saves legacy editor content: %s", async (mode) => {
+  if (mode === "existing local")
+    vi.mocked(getComponentFileFromList).mockResolvedValue({} as never);
+  if (mode === "local override") vi.stubEnv("VITE_LOCAL_PIPELINES", "true");
+  if (mode === "no backend") settings.relative = false;
+  const { result } = renderHook(useComponentSpec, {
+    wrapper: ({ children }) => (
+      <ComponentSpecProvider spec={spec} readOnly={mode === "read-only"}>
+        {children}
+      </ComponentSpecProvider>
+    ),
+  });
+  await act(async () => {
+    await Promise.all([
+      result.current.saveComponentSpec("Renamed"),
+      result.current.saveComponentSpec("Renamed"),
+    ]);
+  });
+  expect(localWrites).toHaveLength(
+    mode.includes("local") || mode === "no backend" ? 2 : 0,
+  );
+  expect(client.put).toHaveBeenCalledTimes(mode === "remote" ? 2 : 0);
+  if (mode === "remote") {
+    expect(result.current.componentSpec.name).toBe("Example");
+    expect(remoteSpec(1).name).toBe("Renamed");
     expect(
-      await importPipelineFromYaml(storage, componentSpecToYaml(spec)),
-    ).toMatchObject({ successful: false });
-    expect(localWrites).toHaveLength(0);
-  },
-);
+      new Set(
+        vi
+          .mocked(client.put)
+          .mock.calls.map(([options]) => options?.query?.file_path),
+      ).size,
+    ).toBe(1);
+  }
+});
+
+it("reports a configured backend failure without a local fallback", async () => {
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  vi.mocked(client.put).mockRejectedValueOnce(new Error("Unavailable"));
+  expect(
+    await importPipelineFromYaml(storage, componentSpecToYaml(spec)),
+  ).toMatchObject({ successful: false });
+  expect(localWrites).toHaveLength(0);
+});
 
 it("honors the runtime browser-storage preference for imports", async () => {
   setBrowserPipelineStorage(true);

@@ -1,6 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 
 import { LocalPipelinesQueryKeys } from "@/services/localPipelines/types";
+import { RemotePipelineQueryKeys } from "@/services/remotePipelineQueryKeys";
 
 export function invalidatePipelineQueries(
   queryClient: QueryClient,
@@ -8,8 +9,7 @@ export function invalidatePipelineQueries(
 ) {
   for (const queryKey of [
     LocalPipelinesQueryKeys.All(),
-    ["remote-pipelines-page", backendUrl],
-    ["remote-pipelines", backendUrl],
+    RemotePipelineQueryKeys.All(backendUrl),
   ]) {
     void queryClient.invalidateQueries({ queryKey });
   }

@@ -2,9 +2,10 @@ import { getBackendSettings, selectBackendUrl } from "@/utils/backendSettings";
 
 import type { PipelineStorageService } from "./PipelineStorageService";
 
-export const createsLocalPipelines = () =>
+export const createsLocalPipelines = (backendConfigured = true) =>
   import.meta.env.VITE_LOCAL_PIPELINES === "true" ||
-  prefersBrowserPipelineStorage();
+  prefersBrowserPipelineStorage() ||
+  !backendConfigured;
 
 const STORAGE_PREFERENCE_KEY = "pipelines:save-in-browser";
 
@@ -16,27 +17,23 @@ export function setBrowserPipelineStorage(enabled: boolean): void {
   localStorage.setItem(STORAGE_PREFERENCE_KEY, String(enabled));
 }
 
-export async function getPipelineCreationBackendUrl(): Promise<string> {
+export async function getPipelineCreationBackendUrl(): Promise<
+  string | undefined
+> {
+  if (createsLocalPipelines()) return undefined;
   const { useEnv, useRelativePath, userBackendUrl } =
     await getBackendSettings();
   const url = selectBackendUrl(useEnv, useRelativePath, userBackendUrl);
-  if (!url.trim()) {
-    throw new Error("Configure a backend in Settings to create pipelines.");
-  }
-  return url;
+  return createsLocalPipelines(Boolean(url.trim())) ? undefined : url;
 }
 
-/** Imports and copies already contain content, so they can be saved immediately. */
 export async function createPipelineFromContent(
   storage: PipelineStorageService,
   name: string,
   content: string,
 ) {
-  return createsLocalPipelines()
-    ? storage.rootFolder.addFile(name, content)
-    : storage.createRemotePipeline(
-        await getPipelineCreationBackendUrl(),
-        name,
-        content,
-      );
+  const backendUrl = await getPipelineCreationBackendUrl();
+  return backendUrl
+    ? storage.createRemotePipeline(backendUrl, name, content)
+    : storage.rootFolder.addFile(name, content);
 }

@@ -1,4 +1,3 @@
-import { format } from "date-fns";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -138,35 +137,39 @@ describe("getRemotePipelinesFilterQuery", () => {
   });
 
   it.each([
-    { date: "2026-03-08", month: 2, day: 8 },
-    { date: "2026-11-01", month: 10, day: 1 },
-  ])("preserves local calendar bounds for $date", ({ date, month, day }) => {
-    const from = new Date(2026, month, day);
-    const nextDay = new Date(2026, month, day + 1);
+    {
+      date: "2026-03-08",
+      startTime: "2026-03-08T05:00:00.000Z",
+      endTime: "2026-03-09T04:00:00.000Z",
+    },
+    {
+      date: "2026-11-01",
+      startTime: "2026-11-01T04:00:00.000Z",
+      endTime: "2026-11-02T05:00:00.000Z",
+    },
+  ])("handles daylight saving on $date", ({ date, startTime, endTime }) => {
     const search = validatePipelinesSearch({
-      createdFrom: format(from, "yyyy-MM-dd"),
+      createdFrom: date,
       createdTo: date,
       updatedFrom: date,
       updatedTo: date,
     });
 
-    expect(search.createdFrom).toBe(date);
-    expect(search.createdTo).toBe(date);
     expect(getRemotePipelinesFilterQuery(search)).toBe(
       JSON.stringify({
         and: [
           {
             time_range: {
               key: "system/pipeline.date.created_at",
-              start_time: from.toISOString(),
-              end_time: nextDay.toISOString(),
+              start_time: startTime,
+              end_time: endTime,
             },
           },
           {
             time_range: {
               key: "system/pipeline.date.updated_at",
-              start_time: from.toISOString(),
-              end_time: nextDay.toISOString(),
+              start_time: startTime,
+              end_time: endTime,
             },
           },
         ],

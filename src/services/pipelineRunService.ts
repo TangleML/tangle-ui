@@ -10,7 +10,7 @@ import {
 } from "@/routes/editorRoutes";
 import {
   createPipelineFromContent,
-  createsLocalPipelines,
+  getPipelineCreationBackendUrl,
 } from "@/services/pipelineStorage/pipelineCreation";
 import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
 import type { PipelineRun } from "@/types/pipelineRun";
@@ -141,7 +141,7 @@ export const copyRunToPipeline = async (
   const originalName = cleanComponentSpec.name || "Unnamed Pipeline";
   let newName = name || originalName;
 
-  if (!createsLocalPipelines()) {
+  if (await getPipelineCreationBackendUrl()) {
     const file = await createPipelineFromContent(
       storage,
       newName,

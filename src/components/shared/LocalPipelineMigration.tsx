@@ -127,8 +127,7 @@ function MigrateLocalPipeline({
   const driver = file?.folder.driver.type;
   const shouldMigrate = Boolean(
     file &&
-    !createsLocalPipelines() &&
-    backendUrl.trim() &&
+    !createsLocalPipelines(Boolean(backendUrl.trim())) &&
     (driver === "root-indexdb" || driver === "folder-indexdb"),
   );
   useEffect(() => {

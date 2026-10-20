@@ -1,6 +1,6 @@
 import { createNewPipeline } from "@/routes/v2/pages/Editor/components/EditorMenuBar/components/fileMenu.actions";
 import { availablePipelineName } from "@/services/localPipelines/localPipelinesService";
-import { createsLocalPipelines } from "@/services/pipelineStorage/pipelineCreation";
+import { getPipelineCreationBackendUrl } from "@/services/pipelineStorage/pipelineCreation";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
 
@@ -27,9 +27,10 @@ export async function createAndAttachPipeline({
   provisionalName = false,
   attach,
 }: CreateAndAttachOptions): Promise<PipelineFile> {
+  const backendUrl = await getPipelineCreationBackendUrl();
   const file: PipelineFile = await createNewPipeline(
     storage,
-    name && createsLocalPipelines() ? await availablePipelineName(name) : name,
+    name && !backendUrl ? await availablePipelineName(name) : name,
     {
       provisionalName,
       onRemoteCreated: (remote) =>

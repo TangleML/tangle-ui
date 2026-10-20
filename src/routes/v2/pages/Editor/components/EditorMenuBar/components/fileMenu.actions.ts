@@ -6,11 +6,7 @@ import {
   serializeComponentSpecToYaml,
 } from "@/models/componentSpec";
 import type { NavigationStore } from "@/routes/v2/shared/store/navigationStore";
-import {
-  createPipelineFromContent,
-  createsLocalPipelines,
-  getPipelineCreationBackendUrl,
-} from "@/services/pipelineStorage/pipelineCreation";
+import { getPipelineCreationBackendUrl } from "@/services/pipelineStorage/pipelineCreation";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
 import type { RemotePipelineRef } from "@/services/pipelineStorage/types";
@@ -28,11 +24,12 @@ export async function createNewPipeline(
     onRemoteCreated?: (ref: RemotePipelineRef) => Promise<unknown>;
   } = {},
 ): Promise<PipelineFile> {
-  if (!createsLocalPipelines()) {
+  const backendUrl = await getPipelineCreationBackendUrl();
+  if (backendUrl) {
     return storage.createRemoteDraft(
       {
         source: "draft",
-        backendUrl: await getPipelineCreationBackendUrl(),
+        backendUrl,
         draftId: crypto.randomUUID(),
         name,
         provisionalName,
@@ -60,15 +57,14 @@ export async function savePipelineAs(
   };
   const componentText = componentSpecToYaml(serialized);
 
-  if (createsLocalPipelines())
+  const configuredBackendUrl = await getPipelineCreationBackendUrl();
+  if (!configuredBackendUrl)
     return storage.rootFolder.addFile(newName, componentText);
+
   if (sourceFile?.remote)
     return storage.copyRemotePipeline(sourceFile, newName, componentText);
-  const backendUrl = sourceFile?.draftBackendUrl;
-  if (backendUrl) {
-    return storage.createRemotePipeline(backendUrl, newName, componentText);
-  }
-  return createPipelineFromContent(storage, newName, componentText);
+  const backendUrl = sourceFile?.draftBackendUrl ?? configuredBackendUrl;
+  return storage.createRemotePipeline(backendUrl, newName, componentText);
 }
 
 export function exportCurrentPipeline(navigation: NavigationStore): void {

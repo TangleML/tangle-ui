@@ -7,7 +7,7 @@ import {
 } from "@/routes/editorRoutes";
 import {
   createPipelineFromContent,
-  createsLocalPipelines,
+  getPipelineCreationBackendUrl,
 } from "@/services/pipelineStorage/pipelineCreation";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
@@ -59,8 +59,9 @@ export const useSavePipeline = (componentSpec: ComponentSpec) => {
 
     const componentSpecAsYaml = componentSpecToYaml(componentSpecWithNewName);
 
+    const backendUrl = await getPipelineCreationBackendUrl();
     const existingLocal =
-      (createsLocalPipelines() || name === undefined) &&
+      (!backendUrl || name === undefined) &&
       (await getComponentFileFromList(
         USER_PIPELINES_LIST_NAME,
         componentSpecWithNewName.name,
@@ -242,7 +243,7 @@ export async function importPipelineFromYaml(
     let pipelineName = componentSpec.name || "Imported Pipeline";
     let wasRenamed = false;
 
-    if (!createsLocalPipelines()) {
+    if (await getPipelineCreationBackendUrl()) {
       const file = await createPipelineFromContent(
         storage,
         pipelineName,

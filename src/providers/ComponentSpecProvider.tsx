@@ -10,10 +10,7 @@ import {
 
 import { type UndoRedo, useUndoRedo } from "@/hooks/useUndoRedo";
 import { loadPipelineByName } from "@/services/pipelineService";
-import {
-  createsLocalPipelines,
-  getPipelineCreationBackendUrl,
-} from "@/services/pipelineStorage/pipelineCreation";
+import { getPipelineCreationBackendUrl } from "@/services/pipelineStorage/pipelineCreation";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import { emitPipelineFileChanged } from "@/services/pipelineStorage/pipelineFileEvents";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
@@ -223,22 +220,23 @@ export const ComponentSpecProvider = ({
       const specWithName = { ...componentSpec, name };
 
       const componentText = componentSpecToYaml(specWithName);
+      const backendUrl = await getPipelineCreationBackendUrl();
       const existingLocal =
-        !createsLocalPipelines() &&
+        backendUrl &&
         ((await getComponentFileFromList(USER_PIPELINES_LIST_NAME, name)) ||
           (componentSpec.name &&
             (await getComponentFileFromList(
               USER_PIPELINES_LIST_NAME,
               componentSpec.name,
             ))));
-      if (!createsLocalPipelines() && !existingLocal) {
+      if (backendUrl && !existingLocal) {
         if (
           !remoteSave.current ||
           remoteSave.current.sourceName !== componentSpec.name
         ) {
           remoteSave.current = {
             sourceName: componentSpec.name,
-            file: getPipelineCreationBackendUrl().then((backendUrl) =>
+            file: Promise.resolve(
               storage.createRemoteDraft({
                 source: "draft",
                 backendUrl,
