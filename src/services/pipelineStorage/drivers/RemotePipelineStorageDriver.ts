@@ -24,6 +24,15 @@ import {
 // Writes survive editor navigation; reopening waits for the last write to this ID.
 const pendingWrites = new Map<string, Promise<SavedPipelineDocument>>();
 
+export async function waitForPendingRemotePipelineWrites(
+  ref: RemotePipelineRef,
+): Promise<void> {
+  const key = getEditorPipelineIdentity(ref);
+  while (pendingWrites.has(key)) {
+    await pendingWrites.get(key);
+  }
+}
+
 /** One editor document, bound to its backend and stable server identity. */
 export class RemotePipelineStorageDriver implements PipelineStorageDriver {
   readonly type = "remote-pipeline";
@@ -55,10 +64,7 @@ export class RemotePipelineStorageDriver implements PipelineStorageDriver {
   static async open(
     ref: RemotePipelineRef,
   ): Promise<RemotePipelineStorageDriver> {
-    const key = getEditorPipelineIdentity(ref);
-    while (pendingWrites.has(key)) {
-      await pendingWrites.get(key);
-    }
+    await waitForPendingRemotePipelineWrites(ref);
     const [document, userId] = await Promise.all([
       getPipelineDocument(ref.pipelineId, ref.backendUrl),
       // Failure to verify write access must not prevent reading the document.

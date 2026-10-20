@@ -1,3 +1,4 @@
+import { useMutationState } from "@tanstack/react-query";
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { type PointerEvent, useRef, useState } from "react";
 
@@ -24,6 +25,7 @@ import {
   isInvalidPipelineId,
   type RemotePipelineSearchFilters,
 } from "./pipelinesSearch";
+import { RemotePipelineActions } from "./RemotePipelineActions";
 import { RemotePipelinesFilters } from "./RemotePipelinesFilters";
 
 const COLUMN_NAMES = [
@@ -77,6 +79,13 @@ export function RemotePipelinesTable({
   const navigate = useNavigate();
   const router = useRouter();
   const { backendUrl, configured, available, ready } = useBackend();
+  const deletingIds = useMutationState({
+    filters: {
+      mutationKey: ["delete-remote-pipeline", backendUrl],
+      status: "pending",
+    },
+    select: (mutation) => mutation.options.mutationKey?.[2],
+  });
   const filterQuery = getRemotePipelinesFilterQuery(filters);
   const invalidId = isInvalidPipelineId(filters.id);
   const [isEditingFilters, setIsEditingFilters] = useState(false);
@@ -96,6 +105,7 @@ export function RemotePipelinesTable({
   const pageToken = pageTokens.at(-1);
   const [columnWidths, setColumnWidths] = useState(INITIAL_COLUMN_WIDTHS);
   const tableRef = useRef<HTMLTableElement>(null);
+  const actionsHeaderRef = useRef<HTMLTableCellElement>(null);
   const dragRef = useRef<{
     pointerId: number;
     startX: number;
@@ -173,8 +183,10 @@ export function RemotePipelinesTable({
                     onPointerDown={(event) => {
                       if (event.button !== 0 || dragRef.current) return;
                       const tableWidth =
-                        tableRef.current?.getBoundingClientRect().width;
-                      if (!tableWidth) return;
+                        (tableRef.current?.getBoundingClientRect().width ?? 0) -
+                        (actionsHeaderRef.current?.getBoundingClientRect()
+                          .width ?? 0);
+                      if (tableWidth <= 0) return;
                       event.preventDefault();
                       event.currentTarget.setPointerCapture(event.pointerId);
                       dragRef.current = {
@@ -223,12 +235,18 @@ export function RemotePipelinesTable({
                 )}
               </TableHead>
             ))}
+            <TableHead ref={actionsHeaderRef} scope="col" className="w-20">
+              <span className="sr-only">Actions</span>
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {message ? (
             <TableRow>
-              <TableCell colSpan={6} className="whitespace-normal text-center">
+              <TableCell
+                colSpan={COLUMN_NAMES.length + 1}
+                className="whitespace-normal text-center"
+              >
                 <Text size="sm" tone="subdued">
                   {message}
                 </Text>
@@ -240,6 +258,7 @@ export function RemotePipelinesTable({
                 key={pipeline.id}
                 className="cursor-pointer text-xs"
                 onClick={(event) => {
+                  if (deletingIds.includes(pipeline.id)) return;
                   const destination = {
                     to: getDefaultRemoteEditorPath(pipeline.id),
                   };
@@ -264,6 +283,7 @@ export function RemotePipelinesTable({
                   >
                     <Link
                       to={getDefaultRemoteEditorPath(pipeline.id)}
+                      disabled={deletingIds.includes(pipeline.id)}
                       onClick={(event) => event.stopPropagation()}
                       className="block truncate hover:underline"
                       title={pipeline.pipeline_name ?? "Untitled Pipeline"}
@@ -297,6 +317,16 @@ export function RemotePipelinesTable({
                 <TruncatedTableCell>
                   {pipeline.current_version}
                 </TruncatedTableCell>
+                <TableCell
+                  className="w-20"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <RemotePipelineActions
+                    key={backendUrl}
+                    backendUrl={backendUrl}
+                    pipeline={pipeline}
+                  />
+                </TableCell>
               </TableRow>
             ))
           )}
