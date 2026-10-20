@@ -1,49 +1,32 @@
 import type { ThinkingLevel } from "@tangent/shared/contracts.ts";
 import {
-  AVAILABLE_MODELS,
   DEFAULT_MODEL_ID,
   DEFAULT_THINKING_LEVEL,
-  THINKING_LEVELS,
 } from "@tangent/shared/contracts.ts";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
-import { Button } from "@/components/ui/button";
+import { WorkspaceNotice } from "@/components/Project/WorkspaceNotice";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Text } from "@/components/ui/typography";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
-import useToastNotification from "@/hooks/useToastNotification";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
+import { useBackend } from "@/providers/BackendProvider";
 import { APP_ROUTES } from "@/routes/appRoutes";
 import { TANGENT_AI_REQUIRED } from "@/routes/v2/shared/components/AiChat/components/aiSetupCopy";
+import { rememberLastUsedWorkspace } from "@/services/projects/defaultWorkspace";
 import { nameFromPrompt } from "@/services/projects/nameFromPrompt";
-import { createProject } from "@/services/projects/projectsService";
 import { provisionalNameMetadata } from "@/services/projects/provisionalName";
 import { startingSessionMetadata } from "@/services/projects/startingSession";
-import { ProjectsQueryKeys } from "@/services/projects/types";
+import { useCreateProject } from "@/services/projects/useProjects";
 import { useWorkspaces } from "@/services/projects/useWorkspaces";
-import { getErrorMessage } from "@/utils/string";
-import { tracking } from "@/utils/tracking";
 
 import { nextProjectName } from "./nextProjectName";
+import { StartSessionToolbar } from "./StartSessionToolbar";
 import { useMyProjects } from "./useMyProjects";
-
-const THINKING_LABELS: Partial<Record<ThinkingLevel, string>> = {
-  xhigh: "Extra high",
-};
-
-const thinkingLabel = (level: ThinkingLevel) =>
-  THINKING_LABELS[level] ?? level.charAt(0).toUpperCase() + level.slice(1);
+import { useWorkspaceChoice } from "./useWorkspaceChoice";
 
 export function StartSessionPrompt() {
   const [prompt, setPrompt] = useState("");
@@ -54,24 +37,43 @@ export function StartSessionPrompt() {
   const composer = useRef<HTMLTextAreaElement>(null);
   const hasFocused = useRef(false);
   const navigate = useNavigate();
-  const notify = useToastNotification();
-  const queryClient = useQueryClient();
+  const { mutate: startProject, isPending: isStarting } = useCreateProject();
   const { track } = useAnalytics();
+  const { configured, available, ready } = useBackend();
   const { data: workspaces, isPending: isFindingWorkspace } = useWorkspaces();
+  const workspaceChoice = useWorkspaceChoice(workspaces);
   const { projects } = useMyProjects();
   const { isConfigured: isAiConfigured } = useAiProviderSettings();
 
-  const workspace = workspaces?.find((w) => w.isActive) ?? workspaces?.[0];
+  const workspace = workspaceChoice.selected;
 
-  const { mutate: start, isPending } = useMutation({
-    mutationFn: async (startingPrompt: string) => {
-      if (!workspace) {
-        throw new Error("No workspace is available to create a project.");
-      }
-      // The prompt rides on the project rather than the url, so arriving at
-      // Tangent starts a session and runs it as the opening turn. The name is
-      // marked as nobody's choice, so the agent may replace it with a real one.
-      return createProject({
+  const isEmpty = prompt.trim() === "";
+  // The box is the point of the page, so what stops it working leaves it
+  // standing and disabled rather than taking it away.
+  const isUnavailable = isFindingWorkspace || !workspace || !isAiConfigured;
+  const isBusy = isStarting || isUnavailable;
+  const isBackendMissing = ready && !(configured && available);
+
+  // Once, as soon as it can take input: arriving here is the act of wanting to
+  // type, but the box is disabled until the backend says where a project would
+  // go, and focusing again later would move the caret off whatever came next.
+  useEffect(() => {
+    if (hasFocused.current || isUnavailable) return;
+    hasFocused.current = true;
+    composer.current?.focus();
+  }, [isUnavailable]);
+
+  const submit = () => {
+    if (isEmpty || isBusy || !workspace) return;
+
+    const startingPrompt = prompt.trim();
+    const workspaceChanged = workspaceChoice.changedFromDefault;
+
+    // The prompt rides on the project rather than the url, so arriving at
+    // Tangent starts a session and runs it as the opening turn. The name is
+    // marked as nobody's choice, so the agent may replace it with a real one.
+    startProject(
+      {
         workspaceId: workspace.id,
         name:
           nameFromPrompt(startingPrompt) ??
@@ -84,42 +86,23 @@ export function StartSessionPrompt() {
             thinkingDepth,
           }),
         ),
-      });
-    },
-    onSuccess: (project) => {
-      track("projects.start_session_completed", { model, thinkingDepth });
-      setPrompt("");
-      void queryClient.invalidateQueries({ queryKey: ProjectsQueryKeys.All() });
-      void navigate({
-        to: APP_ROUTES.TANGENT_PROJECT,
-        params: { projectId: project.id },
-      });
-    },
-    onError: (error) => {
-      notify(getErrorMessage(error), "error");
-    },
-  });
-
-  const isEmpty = prompt.trim() === "";
-  // The box is the point of the page, so what stops it working leaves it
-  // standing and disabled rather than taking it away.
-  const isUnavailable = isFindingWorkspace || !workspace || !isAiConfigured;
-  const isBusy = isPending || isUnavailable;
-  // Said while the lookup runs, this would accuse a backend about to answer.
-  const hasNoBackend = !isFindingWorkspace && !workspace;
-
-  // Once, as soon as it can take input: arriving here is the act of wanting to
-  // type, but the box is disabled until the backend says where a project would
-  // go, and focusing again later would move the caret off whatever came next.
-  useEffect(() => {
-    if (hasFocused.current || isUnavailable) return;
-    hasFocused.current = true;
-    composer.current?.focus();
-  }, [isUnavailable]);
-
-  const submit = () => {
-    if (isEmpty || isBusy) return;
-    start(prompt.trim());
+      },
+      {
+        onSuccess: (project) => {
+          rememberLastUsedWorkspace(workspace.id);
+          track("projects.start_session_completed", {
+            model,
+            thinkingDepth,
+            workspace_changed: workspaceChanged,
+          });
+          setPrompt("");
+          void navigate({
+            to: APP_ROUTES.TANGENT_PROJECT,
+            params: { projectId: project.id },
+          });
+        },
+      },
+    );
   };
 
   return (
@@ -158,55 +141,16 @@ export function StartSessionPrompt() {
           />
         </InlineStack>
 
-        <InlineStack gap="2" blockAlign="center" className="w-full pt-2">
-          <Select value={model} onValueChange={setModel} disabled={isBusy}>
-            <SelectTrigger aria-label="Model" className="h-8 w-auto text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {AVAILABLE_MODELS.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select
-            value={thinkingDepth}
-            onValueChange={(value) => {
-              const level = THINKING_LEVELS.find(
-                (candidate) => candidate === value,
-              );
-              if (level) setThinkingDepth(level);
-            }}
-            disabled={isBusy}
-          >
-            <SelectTrigger aria-label="Thinking" className="h-8 w-auto text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {THINKING_LEVELS.map((level) => (
-                <SelectItem key={level} value={level}>
-                  {thinkingLabel(level)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <div className="flex-1" />
-
-          <Button
-            size="icon"
-            className="bg-brand-accent text-white hover:bg-brand-accent/90 disabled:opacity-40 dark:text-slate-950"
-            aria-label="Start session"
-            disabled={isEmpty || isBusy}
-            onClick={submit}
-            {...tracking("projects.start_session_submit")}
-          >
-            <Icon name="ArrowUp" size="sm" />
-          </Button>
-        </InlineStack>
+        <StartSessionToolbar
+          model={model}
+          onModelChange={setModel}
+          thinkingDepth={thinkingDepth}
+          onThinkingDepthChange={setThinkingDepth}
+          workspaceChoice={workspaceChoice}
+          disabled={isBusy}
+          canStart={!isEmpty}
+          onStart={submit}
+        />
       </div>
 
       {/* The AI provider comes first: it is a setting the user can change
@@ -220,12 +164,12 @@ export function StartSessionPrompt() {
             Open AI settings
           </Link>
         </InlineStack>
+      ) : isBackendMissing ? (
+        <Text size="sm" tone="subdued">
+          Connect a backend to enable agentic features in Tangle
+        </Text>
       ) : (
-        hasNoBackend && (
-          <Text size="sm" tone="subdued">
-            Connect a backend to enable agentic features in Tangle
-          </Text>
-        )
+        <WorkspaceNotice />
       )}
     </BlockStack>
   );

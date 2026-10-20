@@ -2,6 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { Workspace } from "@/services/projects/types";
 import { useCreateProject } from "@/services/projects/useProjects";
 
 import { CreateProjectDialog } from "./CreateProjectDialog";
@@ -38,11 +39,23 @@ function mockCreateProject({ isPending = false } = {}) {
   } as unknown as ReturnType<typeof useCreateProject>);
 }
 
-async function openDialog(workspaceId = "workspace-1") {
+const workspace = (id: string, name: string, createdAt: string): Workspace => ({
+  id,
+  name,
+  description: null,
+  isActive: true,
+  metadata: null,
+  createdAt: new Date(createdAt),
+});
+
+const research = workspace("workspace-1", "Research", "2026-01-01T00:00:00Z");
+const analytics = workspace("workspace-2", "Analytics", "2026-06-01T00:00:00Z");
+
+async function openDialog(workspaces: Workspace[] = [analytics, research]) {
   const user = userEvent.setup();
   render(
     <CreateProjectDialog
-      workspaceId={workspaceId}
+      workspaces={workspaces}
       trigger={<button>New Project</button>}
     />,
   );
@@ -51,6 +64,14 @@ async function openDialog(workspaceId = "workspace-1") {
 }
 
 const submitButton = () => screen.getByRole("button", { name: "Create" });
+
+async function pickWorkspace(
+  user: ReturnType<typeof userEvent.setup>,
+  name: string,
+) {
+  await user.click(screen.getByLabelText("Workspace"));
+  await user.click(screen.getByRole("option", { name }));
+}
 
 describe("CreateProjectDialog", () => {
   beforeEach(() => {
@@ -82,15 +103,83 @@ describe("CreateProjectDialog", () => {
     expect(mutate).not.toHaveBeenCalled();
   });
 
-  it("never asks which workspace to use", async () => {
+  it("files the project in the only workspace without asking", async () => {
+    const user = await openDialog([research]);
+
+    expect(screen.queryByLabelText("Workspace")).not.toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("Name"), "Churn model");
+    await user.click(submitButton());
+
+    expect(mutate).toHaveBeenCalledWith(
+      expect.objectContaining({ workspaceId: "workspace-1" }),
+      expect.anything(),
+    );
+  });
+
+  it("warns that the workspace is permanent", async () => {
+    await openDialog();
+
+    expect(screen.getByLabelText("Workspace")).toHaveAccessibleDescription(
+      "The workspace cannot be changed after the project is created.",
+    );
+  });
+
+  it("files the project in the workspace that was picked", async () => {
     const user = await openDialog();
 
     await user.type(screen.getByLabelText("Name"), "Churn model");
+    await pickWorkspace(user, "Analytics");
+    await user.click(submitButton());
 
-    expect(screen.queryByLabelText("Workspace")).toBeNull();
-    expect(screen.queryByRole("combobox")).toBeNull();
-    expect(screen.queryByText(/workspace/i)).toBeNull();
-    expect(submitButton()).toBeEnabled();
+    expect(mutate).toHaveBeenCalledWith(
+      expect.objectContaining({ workspaceId: "workspace-2" }),
+      expect.anything(),
+    );
+  });
+
+  it("remembers the workspace for the next project", async () => {
+    const user = await openDialog();
+
+    await user.type(screen.getByLabelText("Name"), "Churn model");
+    await pickWorkspace(user, "Analytics");
+    await user.click(submitButton());
+
+    const [, options] = mutate.mock.calls[0];
+    options.onSuccess({ id: "project-9" });
+
+    expect(localStorage.getItem("tangle.projects.lastUsedWorkspaceId")).toBe(
+      JSON.stringify("workspace-2"),
+    );
+  });
+
+  it("forgets a pick that was cancelled", async () => {
+    const user = await openDialog();
+
+    await pickWorkspace(user, "Analytics");
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    await user.click(screen.getByRole("button", { name: /New Project/ }));
+
+    expect(screen.getByLabelText("Workspace")).toHaveTextContent("Research");
+    expect(
+      localStorage.getItem("tangle.projects.lastUsedWorkspaceId"),
+    ).toBeNull();
+  });
+
+  it("records whether the preselected workspace was changed", async () => {
+    const user = await openDialog();
+
+    await user.type(screen.getByLabelText("Name"), "Churn model");
+    await pickWorkspace(user, "Analytics");
+    await user.click(submitButton());
+
+    const [, options] = mutate.mock.calls[0];
+    options.onSuccess({ id: "project-9" });
+
+    expect(track).toHaveBeenCalledWith("projects.create_project_completed", {
+      has_description: false,
+      workspace_changed: true,
+    });
   });
 
   it("creates a project with a trimmed name and no description", async () => {
@@ -109,8 +198,8 @@ describe("CreateProjectDialog", () => {
     );
   });
 
-  it("files the project in whichever workspace it was handed", async () => {
-    const user = await openDialog("workspace-from-backend");
+  it("creates a project with its description", async () => {
+    const user = await openDialog();
 
     await user.type(screen.getByLabelText("Name"), "Churn model");
     await user.type(
@@ -121,7 +210,7 @@ describe("CreateProjectDialog", () => {
 
     expect(mutate).toHaveBeenCalledWith(
       {
-        workspaceId: "workspace-from-backend",
+        workspaceId: "workspace-1",
         name: "Churn model",
         description: "Q3 churn work",
       },
@@ -141,6 +230,7 @@ describe("CreateProjectDialog", () => {
     expect(notify).toHaveBeenCalledWith("Project created", "success");
     expect(track).toHaveBeenCalledWith("projects.create_project_completed", {
       has_description: false,
+      workspace_changed: false,
     });
     await waitFor(() => {
       expect(screen.queryByLabelText("Name")).toBeNull();
