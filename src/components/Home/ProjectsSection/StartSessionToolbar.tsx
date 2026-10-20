@@ -4,6 +4,7 @@ import {
   THINKING_LEVELS,
 } from "@tangent/shared/contracts.ts";
 
+import { WorkspaceSelect } from "@/components/Project/WorkspaceSelect";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
@@ -14,9 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { WorkspaceChoice } from "@/services/projects/useWorkspaceChoice";
 import { tracking } from "@/utils/tracking";
-
-import type { WorkspaceChoice } from "./useWorkspaceChoice";
 
 const THINKING_LABELS: Partial<Record<ThinkingLevel, string>> = {
   xhigh: "Extra high",
@@ -83,27 +83,13 @@ export function StartSessionToolbar({
         </SelectContent>
       </Select>
 
-      {workspaceChoice.offersChoice && (
-        <Select
-          value={workspaceChoice.selected?.id ?? ""}
-          onValueChange={workspaceChoice.choose}
-          disabled={disabled}
-        >
-          <SelectTrigger
-            aria-label="Workspace"
-            className="h-8 w-auto max-w-48 text-xs"
-          >
-            <SelectValue placeholder="Workspace" />
-          </SelectTrigger>
-          <SelectContent>
-            {workspaceChoice.workspaces.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      )}
+      <WorkspaceSelect
+        choice={workspaceChoice}
+        aria-label="Workspace"
+        placeholder="Workspace"
+        disabled={disabled}
+        className="h-8 w-auto max-w-48 text-xs"
+      />
 
       <div className="flex-1" />
 

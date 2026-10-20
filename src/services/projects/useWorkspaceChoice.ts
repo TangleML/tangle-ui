@@ -5,8 +5,8 @@ import {
   pickDefaultWorkspace,
   readLastUsedWorkspaceId,
   subscribeToLastUsedWorkspace,
-} from "@/services/projects/defaultWorkspace";
-import type { Workspace } from "@/services/projects/types";
+} from "./defaultWorkspace";
+import type { Workspace } from "./types";
 
 export interface WorkspaceChoice {
   workspaces: Workspace[];
