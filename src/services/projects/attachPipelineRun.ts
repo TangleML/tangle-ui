@@ -38,8 +38,7 @@ async function holdsPipelineRun(projectId: string, runId: string) {
 
 export async function attachPipelineRunOnce(
   projectId: string,
-  runId: string,
-  pipelineName: string,
+  { runId, pipelineName }: { runId: string; pipelineName: string },
 ) {
   if (await holdsPipelineRun(projectId, runId)) return;
   await createProjectResource(

@@ -5,25 +5,35 @@ import {
   createProjectResource,
   listProjectResources,
 } from "./projectResourcesService";
-import type { ProjectResourcePage } from "./types";
+import type { ProjectResourcePage, ProjectResourceSummary } from "./types";
 
 vi.mock("./projectResourcesService", () => ({
   createProjectResource: vi.fn(),
   listProjectResources: vi.fn(),
 }));
 
-function page(
+const runResource = (identity: string): ProjectResourceSummary => ({
+  id: `resource-${identity}`,
+  projectId: "project-1",
+  entity: "document",
+  name: "Churn",
+  entityId: null,
+  metadata: { type: "pipeline_run", identity },
+  createdBy: null,
+  createdAt: new Date("2026-09-09T10:00:00Z"),
+  updatedAt: new Date("2026-09-09T10:00:00Z"),
+});
+
+const page = (
   identities: string[],
   nextPageToken: string | null = null,
-): ProjectResourcePage {
-  return {
-    items: identities.map((identity) => ({
-      metadata: { type: "pipeline_run", identity },
-    })),
-    nextPageToken,
-    totalCount: identities.length,
-  } as unknown as ProjectResourcePage;
-}
+): ProjectResourcePage => ({
+  items: identities.map(runResource),
+  nextPageToken,
+  totalCount: identities.length,
+});
+
+const churnRun = { runId: "run-7", pipelineName: "Churn" };
 
 describe("attachPipelineRunOnce", () => {
   afterEach(() => vi.resetAllMocks());
@@ -31,7 +41,7 @@ describe("attachPipelineRunOnce", () => {
   it("attaches a run the project does not hold", async () => {
     vi.mocked(listProjectResources).mockResolvedValue(page(["run://id/run-1"]));
 
-    await attachPipelineRunOnce("project-1", "run-7", "Churn");
+    await attachPipelineRunOnce("project-1", churnRun);
 
     expect(createProjectResource).toHaveBeenCalledWith(
       "project-1",
@@ -45,7 +55,7 @@ describe("attachPipelineRunOnce", () => {
   it("leaves a run the project already holds alone", async () => {
     vi.mocked(listProjectResources).mockResolvedValue(page(["run://id/run-7"]));
 
-    await attachPipelineRunOnce("project-1", "run-7", "Churn");
+    await attachPipelineRunOnce("project-1", churnRun);
 
     expect(createProjectResource).not.toHaveBeenCalled();
   });
@@ -55,7 +65,7 @@ describe("attachPipelineRunOnce", () => {
       .mockResolvedValueOnce(page(["run://id/run-1"], "page-2"))
       .mockResolvedValueOnce(page(["run://id/run-7"]));
 
-    await attachPipelineRunOnce("project-1", "run-7", "Churn");
+    await attachPipelineRunOnce("project-1", churnRun);
 
     expect(listProjectResources).toHaveBeenLastCalledWith(
       "project-1",

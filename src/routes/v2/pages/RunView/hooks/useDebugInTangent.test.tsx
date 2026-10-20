@@ -15,6 +15,7 @@ import {
   getProject,
   updateProject,
 } from "@/services/projects/projectsService";
+import type { ProjectResourceSummary } from "@/services/projects/types";
 import { useWorkspaces } from "@/services/projects/useWorkspaces";
 
 import { useDebugInTangent } from "./useDebugInTangent";
@@ -62,6 +63,18 @@ function debugRun(projectId?: string) {
   );
   return result;
 }
+
+const heldRun = (identity: string): ProjectResourceSummary => ({
+  id: "resource-1",
+  projectId: "project-3",
+  entity: "document",
+  name: "Churn",
+  entityId: null,
+  metadata: { type: "pipeline_run", identity },
+  createdBy: null,
+  createdAt: new Date("2026-09-09T10:00:00Z"),
+  updatedAt: new Date("2026-09-09T10:00:00Z"),
+});
 
 function runBelongsTo(...projectIds: string[]) {
   vi.mocked(useRerunProjectIds).mockReturnValue(
@@ -209,14 +222,10 @@ describe("useDebugInTangent", () => {
     /** Debugging the same run twice is one run in the project, not two. */
     it("does not attach a run the project already holds", async () => {
       vi.mocked(listProjectResources).mockResolvedValue({
-        items: [
-          {
-            metadata: { type: "pipeline_run", identity: "run://id/run-7" },
-          },
-        ],
+        items: [heldRun("run://id/run-7")],
         nextPageToken: null,
         totalCount: 1,
-      } as unknown as Awaited<ReturnType<typeof listProjectResources>>);
+      });
 
       debugRun();
 

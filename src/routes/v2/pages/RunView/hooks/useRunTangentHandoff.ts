@@ -86,7 +86,7 @@ export function useRunTangentHandoff(handoff: RunTangentHandoff) {
   };
 
   const intoExistingProject = async (project: Project, run: RunInTangent) => {
-    await attachPipelineRunOnce(project.id, run.runId, run.pipelineName);
+    await attachPipelineRunOnce(project.id, run);
 
     const session = handoff.startingSession?.(run);
     if (session) {
