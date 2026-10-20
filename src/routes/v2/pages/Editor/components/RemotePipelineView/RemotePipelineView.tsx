@@ -13,6 +13,7 @@ import { ReadOnlyFlowCanvas } from "@/routes/v2/shared/components/ReadOnlyFlowCa
 import { useReadOnlySpecLifecycle } from "@/routes/v2/shared/hooks/useReadOnlySpecLifecycle";
 import { NodeRegistryProvider } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { SpecProvider } from "@/routes/v2/shared/providers/SpecContext";
+import { useShortcutListener } from "@/routes/v2/shared/shortcuts/useShortcutListener";
 import {
   SharedStoreProvider,
   useSharedStores,
@@ -22,11 +23,14 @@ import { remotePipelineViewRegistry } from "./remotePipelineViewRegistry";
 
 const RemotePipelineContent = observer(function RemotePipelineContent({
   spec,
+  isActive,
 }: {
   spec: ComponentSpec;
+  isActive: boolean;
 }) {
   const { navigation } = useSharedStores();
   useReadOnlySpecLifecycle(spec);
+  useShortcutListener(isActive);
 
   const activeSpec = navigation.activeSpec;
 
@@ -77,13 +81,19 @@ const RemotePipelineContent = observer(function RemotePipelineContent({
   );
 });
 
-export function RemotePipelineView({ spec }: { spec: ComponentSpec }) {
+export function RemotePipelineView({
+  spec,
+  isActive = true,
+}: {
+  spec: ComponentSpec;
+  isActive?: boolean;
+}) {
   return (
     <ComponentLibraryProvider>
       <SharedStoreProvider>
         <ReactFlowProvider>
           <NodeRegistryProvider registry={remotePipelineViewRegistry}>
-            <RemotePipelineContent spec={spec} />
+            <RemotePipelineContent spec={spec} isActive={isActive} />
           </NodeRegistryProvider>
         </ReactFlowProvider>
       </SharedStoreProvider>

@@ -8,7 +8,7 @@ import {
 import type { ReactFlowProps } from "@xyflow/react";
 import { isRootStore } from "mobx-keystone";
 import { type PropsWithChildren, StrictMode } from "react";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, expect, it, onTestFinished, vi } from "vitest";
 
 import {
   IncrementingIdGenerator,
@@ -92,4 +92,62 @@ it("shows a read-only graph and navigates subgraphs without changing the spec", 
   expect(serializeComponentSpecToText(spec)).toBe(initialYaml);
   unmount();
   expect(isRootStore(spec)).toBe(false);
+});
+
+it("copies the selected task only while the view is active", async () => {
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  const originalClipboard = Object.getOwnPropertyDescriptor(
+    navigator,
+    "clipboard",
+  );
+  Object.defineProperty(navigator, "clipboard", {
+    configurable: true,
+    value: { writeText },
+  });
+  onTestFinished(() => {
+    if (originalClipboard) {
+      Object.defineProperty(navigator, "clipboard", originalClipboard);
+    } else {
+      Reflect.deleteProperty(navigator, "clipboard");
+    }
+  });
+
+  const spec = new YamlDeserializer(new IncrementingIdGenerator()).deserialize({
+    name: "Remote pipeline",
+    implementation: {
+      graph: {
+        tasks: {
+          "First task": {
+            componentRef: {
+              spec: { name: "Child", implementation: { graph: { tasks: {} } } },
+            },
+          },
+        },
+      },
+    },
+  });
+  const { rerender, unmount } = render(<RemotePipelineView spec={spec} />);
+  await screen.findByText("First task");
+  const node = canvas.nodes![0];
+  act(() => canvas.onSelectionChange?.({ nodes: [node], edges: [] }));
+
+  fireEvent.keyDown(window, { key: "c", metaKey: true });
+  expect(writeText).toHaveBeenCalledTimes(1);
+  expect(JSON.parse(writeText.mock.calls[0][0])).toMatchObject({
+    _type: "tangle-pipeline-nodes",
+    snapshots: [{ $type: "task", entityId: node.id, name: "First task" }],
+    bindings: [],
+  });
+
+  rerender(<RemotePipelineView spec={spec} isActive={false} />);
+  fireEvent.keyDown(window, { key: "c", metaKey: true });
+  expect(writeText).toHaveBeenCalledTimes(1);
+
+  rerender(<RemotePipelineView spec={spec} isActive />);
+  fireEvent.keyDown(window, { key: "c", metaKey: true });
+  expect(writeText).toHaveBeenCalledTimes(2);
+
+  unmount();
+  fireEvent.keyDown(window, { key: "c", metaKey: true });
+  expect(writeText).toHaveBeenCalledTimes(2);
 });
