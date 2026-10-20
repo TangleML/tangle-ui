@@ -22,7 +22,10 @@ import {
   type RunInspectDeps,
 } from "@/routes/v2/pages/Tangent/services/createWorkareaRemoteTools";
 import { createRemoteEnvAgentWorker } from "@/routes/v2/pages/Tangent/services/remoteEnvAgentWorker";
-import { createRemoteEnvHost } from "@/routes/v2/pages/Tangent/services/remoteEnvHost";
+import {
+  createRemoteEnvHost,
+  describeBrowserEnv,
+} from "@/routes/v2/pages/Tangent/services/remoteEnvHost";
 import { createDebugBridgeHandlers } from "@/routes/v2/shared/components/AiChat/toolBridge/debugBridge";
 import { createRunBridgeHandlers } from "@/routes/v2/shared/components/AiChat/toolBridge/runBridge";
 import type { BridgeDeps } from "@/routes/v2/shared/components/AiChat/toolBridge/utils";
@@ -292,6 +295,7 @@ export function TangentProjectAgentProvider({
       tools,
       sessionId: activeSessionId,
       agentTargets,
+      metadata: describeBrowserEnv({ mode: "editor" }),
     });
 
     const stop = connectRemoteEnvWithRefresh({
