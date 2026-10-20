@@ -1,5 +1,6 @@
 import {
   action,
+  computed,
   makeObservable,
   observable,
   reaction,
@@ -16,20 +17,33 @@ import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import { AUTOSAVE_DEBOUNCE_TIME_MS } from "@/utils/constants";
 import { debounce } from "@/utils/debounce";
 
+import { DocumentSaveState } from "./documentSaveState";
 import type { UndoStore } from "./undoStore";
 
 const AUTOSAVE_MIN_SAVING_INDICATOR_MS = 600;
 
 export class AutoSaveStore {
-  @observable accessor isSaving = false;
-  @observable accessor lastSavedAt: Date | null = null;
-  @observable accessor error: string | null = null;
+  @observable.ref private accessor document: DocumentSaveState | null = null;
+
+  @computed get isSaving(): boolean {
+    return this.document?.isSaving ?? false;
+  }
+
+  @computed get lastSavedAt(): Date | null {
+    return this.document?.lastSavedAt ?? null;
+  }
+
+  @computed get error(): string | null {
+    return this.document?.error ?? null;
+  }
+
+  @computed get hasUnsavedChanges(): boolean {
+    return this.document?.hasUnsavedChanges ?? false;
+  }
 
   private spec: ComponentSpec | null = null;
   private file: PipelineFile | null = null;
   private disposeReaction: (() => void) | null = null;
-  private lastSavedYaml: string | null = null;
-  private pendingSave: { yaml: string; promise: Promise<void> } | null = null;
   private debouncedSave = debounce((yaml: string) => {
     void this.performSave(yaml).catch(() => {});
   }, AUTOSAVE_DEBOUNCE_TIME_MS);
@@ -41,17 +55,21 @@ export class AutoSaveStore {
     makeObservable(this);
   }
 
-  @action init(spec: ComponentSpec, file: PipelineFile) {
+  @action init(
+    spec: ComponentSpec,
+    file: PipelineFile,
+    document?: DocumentSaveState,
+  ) {
     this.dispose();
     this.spec = spec;
     this.file = file;
-    this.isSaving = false;
-    this.lastSavedAt = null;
-    this.error = null;
-    this.lastSavedYaml = this.serializeSpec();
+    this.document = document ?? new DocumentSaveState(this.serializeSpec());
     this.disposeReaction = reaction(
       () => this.serializeSpec(),
       (yaml) => {
+        runInAction(() => {
+          if (this.document) this.document.currentYaml = yaml;
+        });
         if (yaml === null) this.debouncedSave.cancel();
         else this.debouncedSave(yaml);
       },
@@ -69,8 +87,7 @@ export class AutoSaveStore {
     this.disposeReaction = null;
     this.spec = null;
     this.file = null;
-    this.pendingSave = null;
-    this.isSaving = false;
+    this.document = null;
   }
 
   async save(): Promise<void> {
@@ -87,36 +104,40 @@ export class AutoSaveStore {
     try {
       return serializeComponentSpecToText(this.spec);
     } catch (error) {
-      this.recordError(error);
+      this.document?.recordError(error);
       return null;
     }
-  }
-
-  @action private recordError(error: unknown) {
-    this.error = error instanceof Error ? error.message : String(error);
   }
 
   private performSave(yaml: string): Promise<void> {
     const spec = this.spec;
     const file = this.file;
+    const document = this.document;
     const manager = this.undoStore.undoManager;
-    if (!spec || !file) return Promise.resolve();
-    if (this.pendingSave?.yaml === yaml) return this.pendingSave.promise;
-    if (!this.pendingSave && yaml === this.lastSavedYaml) {
+    if (!spec || !file || !document) return Promise.resolve();
+    if (document.pendingSave?.yaml === yaml)
+      return document.pendingSave.promise;
+    runInAction(() => {
+      document.currentYaml = yaml;
+    });
+    if (!document.isSaving && yaml === document.lastSavedYaml) {
       runInAction(() => {
-        this.error = null;
+        document.error = null;
       });
+      document.releaseIfSaved();
       return Promise.resolve();
     }
 
     const job = { yaml, promise: Promise.resolve() };
-    this.pendingSave = job;
+    document.pendingSave = job;
     runInAction(() => {
-      this.isSaving = true;
+      document.pendingCount += 1;
     });
     const write = async () => {
       await file.write(yaml);
-      if (this.spec === spec && this.file === file) this.lastSavedYaml = yaml;
+      runInAction(() => {
+        document.lastSavedYaml = yaml;
+      });
       if (!file.remote && manager) {
         await saveUndoHistory(
           file.storageKey,
@@ -134,23 +155,22 @@ export class AutoSaveStore {
       ),
     ])
       .then(() => {
-        if (this.pendingSave !== job) return;
+        if (document.pendingSave !== job) return;
         runInAction(() => {
-          this.lastSavedAt = new Date();
-          this.error = null;
+          document.lastSavedAt = new Date();
+          document.error = null;
         });
       })
       .catch((error) => {
-        if (this.pendingSave === job) this.recordError(error);
+        if (document.pendingSave === job) document.recordError(error);
         throw error;
       })
       .finally(() => {
-        if (this.pendingSave === job) {
-          this.pendingSave = null;
-          runInAction(() => {
-            this.isSaving = false;
-          });
-        }
+        if (document.pendingSave === job) document.pendingSave = null;
+        runInAction(() => {
+          document.pendingCount -= 1;
+        });
+        document.releaseIfSaved();
       });
     return job.promise;
   }

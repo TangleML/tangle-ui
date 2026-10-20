@@ -104,14 +104,14 @@ const PipelineLoadError = ({ error, resetErrorBoundary }: FallbackProps) => (
 const PipelineEditor = withSuspenseWrapper(
   observer(({ pipelineRef }: PipelineEditorProps) => {
     const {
-      data: { spec: rootSpec, file, restoredUndoStore },
+      data: { spec: rootSpec, file, restoredUndoStore, saveState },
     } = useLoadSpec(pipelineRef);
     const { navigation } = useSharedStores();
     const tourMode = useTourMode();
 
     useWindowPersistence(tourMode ? TOUR_WINDOW_LAYOUT_ID : "editor");
     useDockAreaAccordion();
-    useSpecLifecycle(rootSpec, file, restoredUndoStore);
+    useSpecLifecycle(rootSpec, file, restoredUndoStore, saveState);
     useSelectionWindowSync();
     usePropertiesWindowPositioning();
     useLinkedWindowCleanup();

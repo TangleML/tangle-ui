@@ -11,8 +11,10 @@ import {
   type IdGenerator,
   IncrementingIdGenerator,
   ReplayIdGenerator,
+  serializeComponentSpecToText,
   YamlDeserializer,
 } from "@/models/componentSpec";
+import { DocumentSaveState } from "@/routes/v2/pages/Editor/store/documentSaveState";
 import { hydrateLoadedSpecRefs } from "@/routes/v2/pages/Editor/utils/hydrateSpecRefs";
 import {
   createUndoStoreWithEvents,
@@ -34,6 +36,7 @@ import { PIPELINE_YAML_LOAD_OPTIONS } from "@/utils/yaml";
 interface LoadedSpec {
   spec: ComponentSpec;
   file: PipelineFile;
+  saveState: DocumentSaveState;
   restoredUndoStore?: MobxUndoStore;
 }
 
@@ -69,12 +72,18 @@ export function useLoadSpec(ref: EditorPipelineRef) {
       const loadedSpec = deserializeSpecData(specData, undoHistory);
       await hydrateLoadedSpecRefs(loadedSpec.spec);
 
-      return { ...loadedSpec, file };
+      return {
+        ...loadedSpec,
+        file,
+        saveState: new DocumentSaveState(
+          serializeComponentSpecToText(loadedSpec.spec),
+        ),
+      };
     },
     // Mutable MobX models must not be replaced by background refetches. Remote
-    // documents leave the cache on close, so reopening reads the server again.
+    // documents remain recoverable until every edit has reached the server.
     staleTime: Infinity,
-    gcTime: remote ? 0 : undefined,
+    gcTime: remote ? Infinity : undefined,
     retry: false,
   });
 
@@ -89,10 +98,16 @@ export function useLoadSpec(ref: EditorPipelineRef) {
         // StrictMode reconnects observers after replaying effect cleanup.
         // Wait for that before evicting a genuinely closed document.
         queueMicrotask(() => {
-          queryClient.removeQueries({
-            queryKey: [EDITOR_SPEC_QUERY_KEY, identity],
-            exact: true,
-            type: "inactive",
+          const key = [EDITOR_SPEC_QUERY_KEY, identity];
+          const cached = queryClient
+            .getQueryCache()
+            .find({ queryKey: key, exact: true });
+          if (!cached || cached.getObserversCount()) return;
+          query.data.saveState.releaseWhenSaved(() => {
+            if (cached.getObserversCount()) return;
+            if (queryClient.getQueryCache().get(cached.queryHash) !== cached)
+              return;
+            queryClient.removeQueries({ queryKey: key, exact: true });
           });
         });
       };
@@ -123,7 +138,7 @@ export function useLoadSpec(ref: EditorPipelineRef) {
       if (storageKey !== localName && storageKey !== localFileId) return;
       queryClient.invalidateQueries({ queryKey: matchKey });
     });
-  }, [queryClient, identity, localFileId, localName, remote]);
+  }, [queryClient, identity, localFileId, localName, remote, query.data]);
 
   return query;
 }
@@ -131,7 +146,7 @@ export function useLoadSpec(ref: EditorPipelineRef) {
 function deserializeSpecData(
   specData: unknown,
   undoHistory: Awaited<ReturnType<typeof loadUndoHistory>> | null,
-): Omit<LoadedSpec, "file"> {
+): Omit<LoadedSpec, "file" | "saveState"> {
   if (undoHistory) {
     try {
       const replayIdGen = new ReplayIdGenerator(undoHistory.idStack);

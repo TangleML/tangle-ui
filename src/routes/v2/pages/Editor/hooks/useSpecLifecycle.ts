@@ -9,6 +9,7 @@ import { useEffect, useRef } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 import { collectIdStack } from "@/models/componentSpec";
+import type { DocumentSaveState } from "@/routes/v2/pages/Editor/store/documentSaveState";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { saveIdStack } from "@/routes/v2/pages/Editor/utils/undoHistoryStorage";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
@@ -18,6 +19,7 @@ export function useSpecLifecycle(
   rootSpec: ComponentSpec,
   file: PipelineFile,
   restoredUndoStore?: MobxUndoStore,
+  saveState?: DocumentSaveState,
 ) {
   const { editor, navigation, windows: windowStore } = useSharedStores();
   const {
@@ -38,7 +40,7 @@ export function useSpecLifecycle(
     else undo.init(rootSpec, restoredUndoStore);
 
     pipelineFileStore.init(file);
-    autoSave.init(rootSpec, file);
+    autoSave.init(rootSpec, file, saveState);
     if (!file.remote) {
       void saveIdStack(file.storageKey, collectIdStack(rootSpec)).catch(
         (error) => console.warn("Failed to persist pipeline id stack", error),
@@ -87,6 +89,7 @@ export function useSpecLifecycle(
     rootSpec,
     file,
     restoredUndoStore,
+    saveState,
     editor,
     navigation,
     windowStore,
