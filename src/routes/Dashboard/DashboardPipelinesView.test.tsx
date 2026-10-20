@@ -223,8 +223,8 @@ describe("DashboardPipelinesView remote pipelines", () => {
   it("keeps filter edits local without changing rows, pagination, or requests", async () => {
     vi.mocked(listRemotePipelines).mockImplementation(async (_, pageToken) =>
       pageToken
-        ? createPage(11, 10, 20, null)
-        : createPage(1, 10, 20, "page-two"),
+        ? createPage(11, 10, null)
+        : createPage(1, 10, "page-two"),
     );
     const { user, searchParams } = await renderDashboard(
       `${APP_ROUTES.DASHBOARD_PIPELINES}?tab=remote&page=2&panel=compact`,
@@ -275,7 +275,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
 
     const expectUnchangedResults = () => {
       expect(table.textContent).toBe(initialRows);
-      expect(screen.getByText("Page 2 of 2")).toBeInTheDocument();
+      expect(screen.getByText("Page 2")).toBeInTheDocument();
       expect(searchParams().toString()).toBe(initialSearch);
       expect(vi.mocked(listRemotePipelines).mock.calls).toEqual(
         initialRequests,
