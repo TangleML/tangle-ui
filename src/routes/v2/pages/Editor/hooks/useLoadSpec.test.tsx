@@ -297,6 +297,38 @@ describe("useLoadSpec", () => {
     },
   );
 
+  it("releases both draft and remote aliases when a promoted pending save closes", async () => {
+    let finish!: () => void;
+    const write = vi.fn().mockReturnValue(
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+    );
+    resolvePipeline.mockResolvedValue({
+      ...file(draft.name),
+      isDraft: true,
+      write,
+    });
+    const opened = render(view(draft, true));
+    await screen.findByText(draft.name);
+    fireEvent.click(screen.getByText("Edit"));
+    fireEvent.click(screen.getByText("Save"));
+
+    promoteRemoteDraftQuery(client, draft, remote);
+    await act(async () => opened.rerender(view(remote, true)));
+    expect(client.getQueryCache().getAll()).toHaveLength(2);
+    await act(async () => opened.unmount());
+    expect(client.getQueryCache().getAll()).toHaveLength(2);
+    expect(write).toHaveBeenCalledOnce();
+    expect(discardRemoteDraft).not.toHaveBeenCalled();
+
+    finish();
+    await waitFor(() =>
+      expect(client.getQueryCache().getAll()).toHaveLength(0),
+    );
+    expect(discardRemoteDraft).toHaveBeenCalledExactlyOnceWith(draft);
+  });
+
   it("does not evict a newer failed edit when an older write succeeds", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     let finish!: () => void;

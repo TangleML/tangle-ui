@@ -12,7 +12,7 @@ export class DocumentSaveState {
   @observable accessor error: string | null = null;
   @observable accessor pendingCount = 0;
   pendingSave: PendingSave | null = null;
-  private release: (() => void) | undefined;
+  private readonly releases = new Set<() => void>();
   private activeEditors = 0;
   private disposeUnloadReaction: (() => void) | undefined;
   private readonly preventUnload = (event: BeforeUnloadEvent) => {
@@ -52,7 +52,7 @@ export class DocumentSaveState {
   }
 
   releaseWhenSaved(release: () => void): void {
-    this.release = release;
+    this.releases.add(release);
     this.releaseIfSaved();
   }
 
@@ -63,9 +63,9 @@ export class DocumentSaveState {
       this.disposeUnloadReaction = undefined;
       window.removeEventListener("beforeunload", this.preventUnload);
     }
-    const release = this.release;
-    this.release = undefined;
-    release?.();
+    const releases = [...this.releases];
+    this.releases.clear();
+    for (const release of releases) release();
   }
 
   @action recordError(error: unknown): void {
