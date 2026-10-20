@@ -3,6 +3,7 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
+import useToastNotification from "@/hooks/useToastNotification";
 import {
   readTangentOpenParam,
   readTangentSessionParam,
@@ -32,6 +33,7 @@ import {
   useProjectResources,
 } from "@/services/projects/useProjectResources";
 import { useProject, useUpdateProject } from "@/services/projects/useProjects";
+import { getErrorMessage } from "@/utils/string";
 
 import { PROJECT_DETAILS_WINDOW_ID } from "./tangentProjectWindowOrder";
 
@@ -83,6 +85,7 @@ export function usePrepareProjectArrival(
   const storage = usePipelineStorage();
   const search = useSearch({ strict: false });
   const navigate = useNavigate();
+  const notify = useToastNotification();
   const { windows } = useSharedStores();
   const { data: project, isFetching: isProjectFetching } =
     useProject(projectId);
@@ -167,6 +170,7 @@ export function usePrepareProjectArrival(
       };
       await store.openWorkareaTarget(target, file.storageKey);
     },
+    onError: (error) => notify(getErrorMessage(error), "error"),
   });
 
   const knowsWhetherToArrive =

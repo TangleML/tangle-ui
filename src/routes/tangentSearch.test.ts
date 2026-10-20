@@ -56,6 +56,7 @@ describe("readTangentOpenParam", () => {
 
   it("ignores anything that is not a view Tangent can open", () => {
     expect(readTangentOpenParam({ open: "run://name/x" })).toBeUndefined();
+    expect(readTangentOpenParam({ open: "run://id/" })).toBeUndefined();
     expect(readTangentOpenParam({ open: "nonsense" })).toBeUndefined();
     expect(readTangentOpenParam({ open: 42 })).toBeUndefined();
     expect(readTangentOpenParam(undefined)).toBeUndefined();

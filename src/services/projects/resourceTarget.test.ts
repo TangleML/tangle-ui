@@ -104,6 +104,11 @@ describe("workareaTarget", () => {
     expect(isWorkareaTargetString("run://run-123")).toBe(false);
   });
 
+  it("rejects a target that names nothing", () => {
+    expect(isWorkareaTargetString("run://id/")).toBe(false);
+    expect(isWorkareaTargetString("pipeline://name/")).toBe(false);
+  });
+
   /**
    * Only a pipeline can be addressed by name. Passing this guard has to mean
    * the parse will succeed, or a caller told the string was fine crashes on it.

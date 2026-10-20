@@ -91,7 +91,7 @@ function isIdentityKey(value: string): value is IdentityKey {
 }
 
 function isWorkareaIdentity(value: string): value is WorkareaIdentity {
-  return /^(id|name)\//.test(value);
+  return /^(id|name)\/./.test(value);
 }
 
 function splitIdentity(identity: string): ParsedIdentity {

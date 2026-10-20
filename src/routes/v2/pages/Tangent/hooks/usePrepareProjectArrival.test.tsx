@@ -17,6 +17,7 @@ import { useProject } from "@/services/projects/useProjects";
 import { usePrepareProjectArrival } from "./usePrepareProjectArrival";
 
 const navigate = vi.fn();
+const notify = vi.fn();
 let search: Record<string, unknown> = {};
 
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
@@ -28,6 +29,8 @@ vi.mock("@tanstack/react-router", async (importOriginal) => ({
 vi.mock("@/hooks/useAiProviderSettings", () => ({
   useAiProviderSettings: vi.fn(),
 }));
+
+vi.mock("@/hooks/useToastNotification", () => ({ default: () => notify }));
 
 vi.mock("@/services/projects/useProjects", () => ({
   useProject: vi.fn(),
@@ -552,6 +555,20 @@ describe("usePrepareProjectArrival", () => {
       expect(store.startSession).toHaveBeenCalledTimes(1);
       expect(createNewPipeline).not.toHaveBeenCalled();
       expect(minimize).toHaveBeenCalled();
+    });
+
+    it("says why the view it names could not be opened", async () => {
+      search = { open: "run://id/run-7" };
+      const store = makeStore();
+      vi.mocked(store.openWorkareaTarget).mockRejectedValue(
+        new Error("Run run-7 was not found"),
+      );
+
+      prepare(store);
+
+      await waitFor(() =>
+        expect(notify).toHaveBeenCalledWith("Run run-7 was not found", "error"),
+      );
     });
 
     it("opens it alongside the prompt a debug project carries", async () => {
