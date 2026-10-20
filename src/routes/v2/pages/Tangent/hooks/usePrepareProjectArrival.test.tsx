@@ -593,6 +593,32 @@ describe("usePrepareProjectArrival", () => {
       );
     });
 
+    it("starts the empty session it asks for, dropping a prompt left waiting", async () => {
+      search = { session: "new", open: "run://id/run-7" };
+      given({
+        projectOverrides: {
+          metadata: startingSessionMetadata({
+            prompt: "Find out why run-3 failed.",
+          }),
+        },
+      });
+      const store = makeStore();
+
+      prepare(store, 2);
+
+      await waitFor(() =>
+        expect(store.openWorkareaTarget).toHaveBeenCalledWith({
+          type: "run",
+          identity: "id/run-7",
+        }),
+      );
+      expect(store.startSession).toHaveBeenCalledWith(undefined);
+      expect(updateProject).toHaveBeenCalledWith({
+        id: "project-1",
+        input: { metadata: {} },
+      });
+    });
+
     it("waits for a cached project to be read again before deciding", async () => {
       search = { open: "run://id/run-7" };
       navigate.mockImplementation(({ search: rewrite }) => {

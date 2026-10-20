@@ -66,7 +66,9 @@ function oldestAttached(
  * Tangent, a link asking for one — is started however many sessions the project
  * already holds: the ask was made once, and would otherwise be dropped on every
  * project but an empty one. Only the rest of the arrival is gated on emptiness,
- * so a project someone has worked in comes up as they left it.
+ * so a project someone has worked in comes up as they left it. A link's ask is
+ * for an empty session, so it drops a prompt still waiting on the project
+ * rather than running a request that was never made through the link.
  *
  * A session nobody typed into is detached again on unmount, so an untouched new
  * project arrives session-less a second time. Reusing the pipeline or run
@@ -98,10 +100,11 @@ export function usePrepareProjectArrival(
   const { isConfigured: isAiConfigured } = useAiProviderSettings();
   const prepared = useRef(false);
 
-  const starting = readStartingSession(project?.metadata);
+  const linkAsksForSession = readTangentSessionParam(search)?.kind === "new";
+  const waiting = readStartingSession(project?.metadata);
+  const starting = linkAsksForSession ? undefined : waiting;
   const askedFor = starting ? nameFromPrompt(starting.prompt) : undefined;
   const isEmpty = sessionCount === 0;
-  const linkAsksForSession = readTangentSessionParam(search)?.kind === "new";
   const linkAsksToOpen = readTangentOpenParam(search);
 
   const { mutate, isIdle } = useMutation({
@@ -111,11 +114,12 @@ export function usePrepareProjectArrival(
       );
       if (!started) return;
 
-      // Taking the ask back off the project is housekeeping that stops the next
-      // arrival repeating it. The session it asked for has already started, so
-      // a refusal here must not cost the caller the pipeline and the workarea
-      // they came for — it is left for the next arrival to try again.
-      if (starting) {
+      // Taking the ask back off the project, whether it ran or a link dropped
+      // it, is housekeeping that stops the next arrival repeating it. The
+      // session has already started, so a refusal here must not cost the
+      // caller the pipeline and the workarea they came for — it is left for
+      // the next arrival to try again.
+      if (waiting) {
         try {
           await updateProject({
             id: projectId,
