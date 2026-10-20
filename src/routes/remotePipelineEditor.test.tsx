@@ -98,10 +98,8 @@ vi.mock("./v2/pages/Editor/components/EditorMenuBar/EditorMenuBar", () => ({
   EditorMenuBar: () => <nav aria-label="Editor navigation" />,
 }));
 vi.mock("./v2/pages/Editor/components/DriverPermissionGate", () => ({
-  DriverPermissionGate: ({ children }: { children: ReactNode }) => {
-    useState(() => mountEditor());
-    return permission.granted ? children : <div>Grant Access</div>;
-  },
+  DriverPermissionGate: ({ children }: { children: ReactNode }) =>
+    permission.granted ? children : <div>Grant Access</div>,
 }));
 vi.mock("./v2/pages/Editor/components/EmptyEditorState", () => ({
   EmptyEditorState: () => <div>Open local pipeline</div>,
@@ -117,7 +115,13 @@ vi.mock("@/components/shared/ComponentEditor/ComponentEditorProvider", () => ({
 }));
 vi.mock("./v2/pages/Editor/components/QuickRunSubmitterContext", () => ({
   QuickRunSubmitterProvider: ({ children }: { children: ReactNode }) =>
-    children,
+    permission.granted ? children : null,
+}));
+vi.mock("@/routes/v2/shared/store/SharedStoreRegistrar", () => ({
+  SharedStoreRegistrar: () => {
+    useState(() => mountEditor());
+    return null;
+  },
 }));
 vi.mock("@/routes/v2/shared/components/AiChat/AiChatStoreContext", () => ({
   useAiChatStore: () => ({ threads: [] }),
