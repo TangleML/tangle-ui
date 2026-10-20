@@ -5,13 +5,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useRerunProjectIds } from "@/hooks/useRerunProjectIds";
 import { ProjectsApiError } from "@/services/projects/errors";
-import { createProjectResource } from "@/services/projects/projectResourcesService";
+import {
+  createProjectResource,
+  listProjectResources,
+} from "@/services/projects/projectResourcesService";
 import {
   createProject,
   deleteProject,
   getProject,
   updateProject,
 } from "@/services/projects/projectsService";
+import type { ProjectResourceSummary } from "@/services/projects/types";
 import { useWorkspaces } from "@/services/projects/useWorkspaces";
 
 import { useDebugInTangent } from "./useDebugInTangent";
@@ -38,6 +42,7 @@ vi.mock("@/services/projects/projectsService", () => ({
 
 vi.mock("@/services/projects/projectResourcesService", () => ({
   createProjectResource: vi.fn(),
+  listProjectResources: vi.fn(),
 }));
 
 vi.mock("@/services/projects/useWorkspaces", () => ({
@@ -54,10 +59,22 @@ function wrapper({ children }: { children: ReactNode }) {
 function debugRun(projectId?: string) {
   const { result } = renderHook(() => useDebugInTangent(), { wrapper });
   act(() =>
-    result.current.debug({ runId: "run-7", pipelineName: "Churn", projectId }),
+    result.current.start({ runId: "run-7", pipelineName: "Churn", projectId }),
   );
   return result;
 }
+
+const heldRun = (identity: string): ProjectResourceSummary => ({
+  id: "resource-1",
+  projectId: "project-3",
+  entity: "document",
+  name: "Churn",
+  entityId: null,
+  metadata: { type: "pipeline_run", identity },
+  createdBy: null,
+  createdAt: new Date("2026-09-09T10:00:00Z"),
+  updatedAt: new Date("2026-09-09T10:00:00Z"),
+});
 
 function runBelongsTo(...projectIds: string[]) {
   vi.mocked(useRerunProjectIds).mockReturnValue(
@@ -85,6 +102,11 @@ describe("useDebugInTangent", () => {
     vi.mocked(createProjectResource).mockResolvedValue(
       {} as unknown as Awaited<ReturnType<typeof createProjectResource>>,
     );
+    vi.mocked(listProjectResources).mockResolvedValue({
+      items: [],
+      nextPageToken: null,
+      totalCount: 0,
+    });
     vi.mocked(deleteProject).mockResolvedValue(
       undefined as unknown as Awaited<ReturnType<typeof deleteProject>>,
     );
@@ -195,6 +217,21 @@ describe("useDebugInTangent", () => {
       expect(vi.mocked(createProjectResource).mock.calls[0][1]).toMatchObject({
         metadata: { type: "pipeline_run" },
       });
+    });
+
+    /** Debugging the same run twice is one run in the project, not two. */
+    it("does not attach a run the project already holds", async () => {
+      vi.mocked(listProjectResources).mockResolvedValue({
+        items: [heldRun("run://id/run-7")],
+        nextPageToken: null,
+        totalCount: 1,
+      });
+
+      debugRun();
+
+      await waitFor(() => expect(navigate).toHaveBeenCalled());
+      expect(createProjectResource).not.toHaveBeenCalled();
+      expect(updateProject).toHaveBeenCalled();
     });
 
     it("carries the brief in on the session it asks for", async () => {
