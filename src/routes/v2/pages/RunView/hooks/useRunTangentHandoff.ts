@@ -69,6 +69,75 @@ async function projectsStillThere(projectIds: readonly string[]) {
   return found.filter((project) => project !== undefined);
 }
 
+async function intoExistingProject(
+  handoff: RunTangentHandoff,
+  project: Project,
+  run: RunInTangent,
+) {
+  await attachPipelineRunOnce(project.id, run);
+
+  const session = handoff.startingSession?.(run);
+  if (session) {
+    await updateProject(project.id, {
+      metadata: {
+        ...(project.metadata ?? {}),
+        ...startingSessionMetadata(session),
+      },
+    });
+  }
+  return project;
+}
+
+async function intoNewProject(
+  handoff: RunTangentHandoff,
+  { workspaceId, name }: { workspaceId: string; name: string },
+  run: RunInTangent,
+) {
+  const session = handoff.startingSession?.(run);
+  const project = await createProject({
+    workspaceId,
+    name,
+    origin: "agent",
+    metadata: session ? startingSessionMetadata(session) : {},
+  });
+
+  try {
+    for (const document of handoff.newProjectDocuments?.(project, run) ?? []) {
+      await createProjectResource(project.id, document);
+    }
+    await createProjectResource(
+      project.id,
+      pipelineRunResourceInput(run.runId, run.pipelineName),
+    );
+  } catch (error) {
+    await deleteProject(project.id).catch((rollbackError) =>
+      console.error(
+        "Failed to roll back the project made for a run",
+        rollbackError,
+      ),
+    );
+    throw error;
+  }
+
+  rememberLastUsedWorkspace(workspaceId);
+  return project;
+}
+
+async function intoDestination(
+  handoff: RunTangentHandoff,
+  destination: HandoffDestination,
+  run: RunInTangent,
+) {
+  if (destination.kind === "new") {
+    return intoNewProject(handoff, destination, run);
+  }
+  const project =
+    destination.kind === "attributed"
+      ? destination.project
+      : await getProject(destination.projectId);
+  return intoExistingProject(handoff, project, run);
+}
+
 export function useRunTangentHandoff(handoff: RunTangentHandoff) {
   const navigate = useNavigate();
   const notify = useToastNotification();
@@ -76,71 +145,14 @@ export function useRunTangentHandoff(handoff: RunTangentHandoff) {
   const rerunProjectIds = useRerunProjectIds();
   const [choosing, setChoosing] = useState<ChoosingDestination>();
 
-  const intoExistingProject = async (project: Project, run: RunInTangent) => {
-    await attachPipelineRunOnce(project.id, run);
-
-    const session = handoff.startingSession?.(run);
-    if (session) {
-      await updateProject(project.id, {
-        metadata: {
-          ...(project.metadata ?? {}),
-          ...startingSessionMetadata(session),
-        },
-      });
-    }
-    return project;
-  };
-
-  const intoNewProject = async (
-    { workspaceId, name }: { workspaceId: string; name: string },
-    run: RunInTangent,
-  ) => {
-    const session = handoff.startingSession?.(run);
-    const project = await createProject({
-      workspaceId,
-      name,
-      origin: "agent",
-      metadata: session ? startingSessionMetadata(session) : {},
-    });
-
-    try {
-      for (const document of handoff.newProjectDocuments?.(project, run) ??
-        []) {
-        await createProjectResource(project.id, document);
-      }
-      await createProjectResource(
-        project.id,
-        pipelineRunResourceInput(run.runId, run.pipelineName),
-      );
-    } catch (error) {
-      await deleteProject(project.id).catch((rollbackError) =>
-        console.error(
-          "Failed to roll back the project made for a run",
-          rollbackError,
-        ),
-      );
-      throw error;
-    }
-
-    rememberLastUsedWorkspace(workspaceId);
-    return project;
-  };
-
-  const send = useMutation({
-    mutationFn: async ({
+  const { mutate: send, isPending: isSending } = useMutation({
+    mutationFn: ({
       run,
       destination,
     }: {
       run: RunInTangent;
       destination: HandoffDestination;
-    }) => {
-      if (destination.kind === "new") return intoNewProject(destination, run);
-      const project =
-        destination.kind === "attributed"
-          ? destination.project
-          : await getProject(destination.projectId);
-      return intoExistingProject(project, run);
-    },
+    }) => intoDestination(handoff, destination, run),
     onSuccess: (project, { run }) => {
       void queryClient.invalidateQueries({ queryKey: ProjectsQueryKeys.All() });
       void navigate({
@@ -154,12 +166,12 @@ export function useRunTangentHandoff(handoff: RunTangentHandoff) {
     },
   });
 
-  const lookUp = useMutation({
+  const { mutate: start, isPending: isLookingUp } = useMutation({
     mutationFn: async (run: RunInTangent) =>
       projectsStillThere(await rerunProjectIds(run.runId)),
     onSuccess: (attributed, run) => {
       if (attributed.length === 1) {
-        send.mutate({
+        send({
           run,
           destination: { kind: "attributed", project: attributed[0] },
         });
@@ -179,12 +191,12 @@ export function useRunTangentHandoff(handoff: RunTangentHandoff) {
   const choose = (destination: TangentDestination) => {
     if (!choosing) return;
     setChoosing(undefined);
-    send.mutate({ run: choosing.run, destination });
+    send({ run: choosing.run, destination });
   };
 
   return {
-    start: lookUp.mutate,
-    isPending: lookUp.isPending || send.isPending,
+    start,
+    isPending: isLookingUp || isSending,
     choosing,
     choose,
     dismiss: () => setChoosing(undefined),

@@ -23,6 +23,7 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80",
         ghost:
           "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
+        row: "w-full justify-start text-left hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 aria-pressed:bg-accent",
         link: "text-primary underline-offset-4 hover:underline",
         "link-info": "text-info underline decoration-dotted",
         nav: "bg-stone-700 text-white text-xs font-semibold hover:bg-stone-600 hover:text-white",

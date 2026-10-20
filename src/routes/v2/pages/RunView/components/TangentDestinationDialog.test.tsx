@@ -35,7 +35,18 @@ const project = (
   id: string,
   name: string,
   workspaceId = "ws-1",
-): ProjectSummary => ({ id, name, workspaceId }) as unknown as ProjectSummary;
+): ProjectSummary => ({
+  id,
+  workspaceId,
+  name,
+  description: null,
+  createdBy: null,
+  origin: "user",
+  metadata: null,
+  createdAt: new Date("2026-09-09T10:00:00Z"),
+  updatedAt: new Date("2026-09-09T10:00:00Z"),
+  resourceCounts: {},
+});
 
 function given({
   reachable = [] as ProjectSummary[],
