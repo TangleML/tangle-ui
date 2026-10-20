@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { client } from "@/api/client.gen";
 import { getCurrentUserApiUsersMeGet } from "@/api/sdk.gen";
+import { RemotePipelineDraftStorageDriver } from "@/services/pipelineStorage/drivers/RemotePipelineDraftStorageDriver";
 import { RemotePipelineStorageDriver } from "@/services/pipelineStorage/drivers/RemotePipelineStorageDriver";
 import { componentSpecToYaml } from "@/utils/yaml";
 
@@ -152,6 +153,32 @@ describe("listRemotePipelines", () => {
 
 describe("deleteRemotePipeline", () => {
   const owner = { id: pipeline.user_id, permissions: ["read", "write"] };
+  const spec = { name: "Edited", implementation: { graph: { tasks: {} } } };
+  const document = {
+    ...pipeline,
+    pipeline_run_annotations: {},
+    root_pipeline_task: { componentRef: { spec } },
+  };
+
+  function createDraft(onCreated: () => Promise<void> = async () => {}) {
+    return new RemotePipelineDraftStorageDriver(
+      {
+        source: "draft",
+        backendUrl: BACKEND_URL,
+        draftId: "draft-1",
+        name: spec.name,
+      },
+      pipeline.file_path,
+      (content) =>
+        RemotePipelineStorageDriver.create(
+          BACKEND_URL,
+          spec.name,
+          content,
+          pipeline.file_path,
+        ),
+      onCreated,
+    );
+  }
 
   beforeEach(() => {
     vi.mocked(getCurrentUserApiUsersMeGet).mockResolvedValue(response(owner));
@@ -229,12 +256,6 @@ describe("deleteRemotePipeline", () => {
   });
 
   it("waits for an in-flight editor save before checking ownership and deleting", async () => {
-    const spec = { name: "Edited", implementation: { graph: { tasks: {} } } };
-    const document = {
-      ...pipeline,
-      pipeline_run_annotations: {},
-      root_pipeline_task: { componentRef: { spec } },
-    };
     vi.mocked(client.get).mockResolvedValue(response(document));
     const driver = await RemotePipelineStorageDriver.open({
       source: "remote",
@@ -259,6 +280,93 @@ describe("deleteRemotePipeline", () => {
     await Promise.all([saving, deleting]);
     expect(client.delete).toHaveBeenCalledOnce();
   });
+
+  it.each(["creation response", "project attachment"])(
+    "waits for a draft's %s and every queued edit before deleting",
+    async (blockedPhase) => {
+      const pendingCreation = Promise.withResolvers<void>();
+      const pendingAttachment = Promise.withResolvers<void>();
+      vi.mocked(client.put).mockImplementation(async () => {
+        await pendingCreation.promise;
+        return response(document);
+      });
+      const attach = vi.fn(() => pendingAttachment.promise);
+      const draft = createDraft(attach);
+      if (blockedPhase === "project attachment") pendingCreation.resolve();
+      else pendingAttachment.resolve();
+
+      const firstSave = draft.write(spec.name, componentSpecToYaml(spec));
+      await vi.waitFor(() => expect(client.put).toHaveBeenCalledOnce());
+      if (blockedPhase === "project attachment") {
+        await vi.waitFor(() => expect(attach).toHaveBeenCalledOnce());
+      }
+      const nextSave = draft.write(
+        spec.name,
+        componentSpecToYaml({ ...spec, description: "Latest edit" }),
+      );
+      const rename = draft.rename(spec.name, "Renamed");
+      const deleting = deleteRemotePipeline(BACKEND_URL, pipeline);
+
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect(client.delete).not.toHaveBeenCalled();
+      } finally {
+        pendingCreation.resolve();
+        pendingAttachment.resolve();
+        await Promise.all([firstSave, nextSave, rename, deleting]);
+      }
+      expect(client.put).toHaveBeenCalledTimes(3);
+      expect(client.delete).toHaveBeenCalledOnce();
+      expect(
+        vi.mocked(client.delete).mock.invocationCallOrder[0],
+      ).toBeGreaterThan(
+        Math.max(...vi.mocked(client.put).mock.invocationCallOrder),
+      );
+    },
+  );
+
+  it("allows deletion after a draft's attachment fails", async () => {
+    vi.mocked(client.put).mockResolvedValue(response(document));
+    const draft = createDraft(async () => {
+      throw new Error("Attachment failed");
+    });
+    await expect(
+      draft.write(spec.name, componentSpecToYaml(spec)),
+    ).rejects.toThrow("Attachment failed");
+
+    await expect(
+      deleteRemotePipeline(BACKEND_URL, pipeline),
+    ).resolves.toBeUndefined();
+    expect(client.delete).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    { backendUrl: "https://other.example.com", filePath: pipeline.file_path },
+    { backendUrl: BACKEND_URL, filePath: "pipelines/other.yaml" },
+  ])(
+    "does not wait for unrelated draft writes: %o",
+    async ({ backendUrl, filePath }) => {
+      const pendingCreation = Promise.withResolvers<void>();
+      vi.mocked(client.put).mockImplementation(async () => {
+        await pendingCreation.promise;
+        return response(document);
+      });
+      const draft = createDraft();
+      const saving = draft.write(spec.name, componentSpecToYaml(spec));
+      await vi.waitFor(() => expect(client.put).toHaveBeenCalledOnce());
+
+      try {
+        await deleteRemotePipeline(backendUrl, {
+          ...pipeline,
+          file_path: filePath,
+        });
+        expect(client.delete).toHaveBeenCalledOnce();
+      } finally {
+        pendingCreation.resolve();
+        await saving;
+      }
+    },
+  );
 });
 
 describe("remotePipelineFiltersToQuery", () => {

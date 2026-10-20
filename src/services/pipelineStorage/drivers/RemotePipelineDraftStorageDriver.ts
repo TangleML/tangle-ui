@@ -8,6 +8,18 @@ import type {
 } from "../types";
 import type { RemotePipelineStorageDriver } from "./RemotePipelineStorageDriver";
 
+const pendingDraftWrites = new Map<string, Promise<void>>();
+
+export async function waitForPendingRemotePipelineDraftWrites(
+  backendUrl: string,
+  filePath: string,
+): Promise<void> {
+  const key = JSON.stringify([backendUrl, filePath]);
+  while (pendingDraftWrites.has(key)) {
+    await pendingDraftWrites.get(key);
+  }
+}
+
 /** An in-memory document; only its first write creates a server record. */
 export class RemotePipelineDraftStorageDriver implements PipelineStorageDriver {
   readonly type = "remote-pipeline-draft";
@@ -31,6 +43,7 @@ export class RemotePipelineDraftStorageDriver implements PipelineStorageDriver {
 
   constructor(
     private ref: RemotePipelineDraftRef,
+    private filePath: string,
     private createRemote: (
       content: string,
     ) => Promise<RemotePipelineStorageDriver>,
@@ -84,6 +97,15 @@ export class RemotePipelineDraftStorageDriver implements PipelineStorageDriver {
 
   private enqueue(operation: () => Promise<void>): Promise<void> {
     this.pending = this.pending.catch(() => {}).then(operation);
+    const key = JSON.stringify([this.ref.backendUrl, this.filePath]);
+    // The outer draft queue must not join the remote write queue it awaits.
+    const settled = this.pending
+      .catch(() => {})
+      .finally(() => {
+        if (pendingDraftWrites.get(key) === settled)
+          pendingDraftWrites.delete(key);
+      });
+    pendingDraftWrites.set(key, settled);
     return this.pending;
   }
 

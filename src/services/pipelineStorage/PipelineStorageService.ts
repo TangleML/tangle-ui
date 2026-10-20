@@ -93,6 +93,7 @@ export class PipelineStorageService {
     const filePath = `pipelines/${crypto.randomUUID()}.yaml`;
     const driver = new RemotePipelineDraftStorageDriver(
       ref,
+      filePath,
       (content) =>
         this.createRemoteDriver(
           ref.backendUrl,
