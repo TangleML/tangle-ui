@@ -5,7 +5,10 @@ import { useState } from "react";
 import { useRerunProjectIds } from "@/hooks/useRerunProjectIds";
 import useToastNotification from "@/hooks/useToastNotification";
 import { APP_ROUTES } from "@/routes/appRoutes";
-import { tangentOpenSearch } from "@/routes/tangentSearch";
+import {
+  newTangentSessionSearch,
+  tangentOpenSearch,
+} from "@/routes/tangentSearch";
 import { attachPipelineRunOnce } from "@/services/projects/attachPipelineRun";
 import { rememberLastUsedWorkspace } from "@/services/projects/defaultWorkspace";
 import { isProjectGone } from "@/services/projects/errors";
@@ -16,6 +19,7 @@ import {
   getProject,
   updateProject,
 } from "@/services/projects/projectsService";
+import { provisionalNameMetadata } from "@/services/projects/provisionalName";
 import { pipelineRunResourceInput } from "@/services/projects/resourceDescriptor";
 import { runTarget } from "@/services/projects/resourceTarget";
 import type { StartingSession } from "@/services/projects/startingSession";
@@ -35,11 +39,13 @@ export type TangentDestination =
 
 export interface RunTangentHandoff {
   newProjectName: (run: RunInTangent) => string;
+  provisionalNewProjectName?: boolean;
   newProjectDocuments?: (
     project: Project,
     run: RunInTangent,
   ) => CreateResourceInput[];
   startingSession?: (run: RunInTangent) => StartingSession;
+  startsEmptySession?: boolean;
 }
 
 type HandoffDestination =
@@ -94,11 +100,16 @@ async function intoNewProject(
   run: RunInTangent,
 ) {
   const session = handoff.startingSession?.(run);
+  const sessionMetadata = session ? startingSessionMetadata(session) : {};
+  const keptSuggestedName =
+    handoff.provisionalNewProjectName && name === handoff.newProjectName(run);
   const project = await createProject({
     workspaceId,
     name,
     origin: "agent",
-    metadata: session ? startingSessionMetadata(session) : {},
+    metadata: keptSuggestedName
+      ? provisionalNameMetadata(sessionMetadata)
+      : sessionMetadata,
   });
 
   try {
@@ -158,7 +169,10 @@ export function useRunTangentHandoff(handoff: RunTangentHandoff) {
       void navigate({
         to: APP_ROUTES.TANGENT_PROJECT,
         params: { projectId: project.id },
-        search: tangentOpenSearch(runTarget(run.runId)),
+        search: {
+          ...tangentOpenSearch(runTarget(run.runId)),
+          ...(handoff.startsEmptySession ? newTangentSessionSearch : {}),
+        },
       });
     },
     onError: (error) => {

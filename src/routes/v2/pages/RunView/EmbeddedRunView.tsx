@@ -86,7 +86,7 @@ const EmbeddedRunViewLayout = observer(function EmbeddedRunViewLayout({
 
   useRunViewSpecLifecycle(spec);
   useShortcutListener(isActive);
-  useRunViewWindows();
+  useRunViewWindows({ offersTangentHandoff: false });
   useEmbeddedRunViewInitialDockLayout();
   useRunViewSelectionSync({
     contextPanel: {
