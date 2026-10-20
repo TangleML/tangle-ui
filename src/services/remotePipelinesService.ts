@@ -1,6 +1,11 @@
 import { client } from "@/api/client.gen";
-import { searchPipelinesApiPipelinesSearchPost } from "@/api/remotePipelines/sdk.gen";
+import {
+  deletePipelineApiUsersMePipelinesDelete,
+  searchPipelinesApiPipelinesSearchPost,
+} from "@/api/remotePipelines/sdk.gen";
 import type { PipelineSummaryResponse } from "@/api/remotePipelines/types.gen";
+import { waitForPendingRemotePipelineWrites } from "@/services/pipelineStorage/drivers/RemotePipelineStorageDriver";
+import { getRemotePipelineWriter } from "@/services/remotePipelineEditorService";
 import type { FilterQueryPredicate } from "@/utils/pipelineRunFilterUtils";
 
 export type RemotePipeline = PipelineSummaryResponse;
@@ -80,4 +85,26 @@ export async function listRemotePipelines(
     pipelines: result.data.pipelines,
     nextPageToken: result.data.next_page_token ?? null,
   };
+}
+
+export async function deleteRemotePipeline(
+  backendUrl: string,
+  pipeline: RemotePipeline,
+): Promise<void> {
+  await waitForPendingRemotePipelineWrites({
+    source: "remote",
+    backendUrl,
+    pipelineId: pipeline.id,
+  });
+  if ((await getRemotePipelineWriter(backendUrl)) !== pipeline.user_id) {
+    throw new Error("You can only delete pipelines that you own.");
+  }
+  const result = await deletePipelineApiUsersMePipelinesDelete({
+    client,
+    baseUrl: backendUrl,
+    query: { file_path: pipeline.file_path },
+  });
+  if (!result.response.ok) {
+    throw new Error(`Failed to delete pipeline (${result.response.status})`);
+  }
 }

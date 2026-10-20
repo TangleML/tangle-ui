@@ -1,3 +1,4 @@
+import { useMutationState } from "@tanstack/react-query";
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { type PointerEvent, useRef, useState } from "react";
 
@@ -24,6 +25,7 @@ import {
   isInvalidPipelineId,
   type RemotePipelineSearchFilters,
 } from "./pipelinesSearch";
+import { RemotePipelineActions } from "./RemotePipelineActions";
 import { RemotePipelinesFilters } from "./RemotePipelinesFilters";
 
 const COLUMN_NAMES = [
@@ -77,6 +79,13 @@ export function RemotePipelinesTable({
   const navigate = useNavigate();
   const router = useRouter();
   const { backendUrl, configured, available, ready } = useBackend();
+  const deletingIds = useMutationState({
+    filters: {
+      mutationKey: ["delete-remote-pipeline", backendUrl],
+      status: "pending",
+    },
+    select: (mutation) => mutation.options.mutationKey?.[2],
+  });
   const filterQuery = getRemotePipelinesFilterQuery(filters);
   const invalidId = isInvalidPipelineId(filters.id);
   const [isEditingFilters, setIsEditingFilters] = useState(false);
@@ -240,6 +249,7 @@ export function RemotePipelinesTable({
                 key={pipeline.id}
                 className="cursor-pointer text-xs"
                 onClick={(event) => {
+                  if (deletingIds.includes(pipeline.id)) return;
                   const destination = {
                     to: getDefaultRemoteEditorPath(pipeline.id),
                   };
@@ -264,12 +274,18 @@ export function RemotePipelinesTable({
                   >
                     <Link
                       to={getDefaultRemoteEditorPath(pipeline.id)}
+                      disabled={deletingIds.includes(pipeline.id)}
                       onClick={(event) => event.stopPropagation()}
-                      className="block truncate hover:underline"
+                      className="min-w-0 flex-1 truncate hover:underline"
                       title={pipeline.pipeline_name ?? "Untitled Pipeline"}
                     >
                       {pipeline.pipeline_name ?? "Untitled Pipeline"}
                     </Link>
+                    <RemotePipelineActions
+                      key={backendUrl}
+                      backendUrl={backendUrl}
+                      pipeline={pipeline}
+                    />
                   </InlineStack>
                 </TableCell>
                 <TableCell onClick={(event) => event.stopPropagation()}>
