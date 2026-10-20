@@ -1,4 +1,4 @@
-import { type PointerEvent, useEffect, useRef, useState } from "react";
+import { type PointerEvent, useRef, useState } from "react";
 
 import { PaginationControls } from "@/components/shared/PaginationControls";
 import { BlockStack } from "@/components/ui/layout";
@@ -25,9 +25,9 @@ const COLUMN_NAMES = [
 const INITIAL_COLUMN_WIDTHS = [25, 15, 20, 12, 12, 16];
 const MIN_COLUMN_WIDTH = 8;
 
-interface RemotePipelinesTableProps {
-  page: number;
-  onPageChange: (page: number, replace?: boolean) => Promise<void>;
+interface RemotePipelinesPagination {
+  backendUrl: string;
+  tokens: string[];
 }
 
 function resizeColumnWidths(widths: number[], index: number, delta: number) {
@@ -46,13 +46,17 @@ function resizeColumnWidths(widths: number[], index: number, delta: number) {
   });
 }
 
-export function RemotePipelinesTable({
-  page,
-  onPageChange,
-}: RemotePipelinesTableProps) {
+export function RemotePipelinesTable() {
   const { backendUrl, configured, available, ready } = useBackend();
-  const [previousBackendUrl, setPreviousBackendUrl] = useState(backendUrl);
-  const currentPage = previousBackendUrl === backendUrl ? page : 1;
+  const [pagination, setPagination] = useState<RemotePipelinesPagination>({
+    backendUrl,
+    tokens: [],
+  });
+  const pageTokens =
+    pagination.backendUrl === backendUrl ? pagination.tokens : [];
+  if (pagination.backendUrl !== backendUrl) {
+    setPagination({ backendUrl, tokens: [] });
+  }
   const [columnWidths, setColumnWidths] = useState(INITIAL_COLUMN_WIDTHS);
   const tableRef = useRef<HTMLTableElement>(null);
   const dragRef = useRef<{
@@ -61,27 +65,18 @@ export function RemotePipelinesTable({
     tableWidth: number;
     widths: number[];
   } | null>(null);
+  const pageToken = pageTokens.at(-1);
   const canFetch = ready && configured && available;
-  const { data, isLoading, isFetching, isPlaceholderData, error } =
-    useRemotePipelinesPage(backendUrl, currentPage, canFetch);
+  const { data, isLoading, isFetching, error } = useRemotePipelinesPage(
+    backendUrl,
+    pageToken,
+    canFetch,
+  );
   const pipelines = data?.pipelines ?? [];
 
-  useEffect(() => {
-    if (previousBackendUrl === backendUrl) return;
-    if (page === 1) setPreviousBackendUrl(backendUrl);
-    else void onPageChange(1, true);
-  }, [backendUrl, previousBackendUrl, page, onPageChange]);
-
-  useEffect(() => {
-    if (
-      data &&
-      !isFetching &&
-      !isPlaceholderData &&
-      data.page !== currentPage
-    ) {
-      void onPageChange(data.page, true);
-    }
-  }, [data, isFetching, isPlaceholderData, currentPage, onPageChange]);
+  function changePage(tokens: string[]) {
+    setPagination({ backendUrl, tokens });
+  }
 
   let message: string | undefined;
   if (!ready) message = "Loading pipelines…";
@@ -220,17 +215,17 @@ export function RemotePipelinesTable({
       </Table>
       <nav aria-label="Remote pipelines pagination" className="w-full">
         <PaginationControls
-          currentPage={currentPage}
-          hasPreviousPage={currentPage > 1}
+          currentPage={pageTokens.length + 1}
+          hasPreviousPage={pageTokens.length > 0}
           hasNextPage={Boolean(data?.nextPageToken)}
           disabled={!canFetch || isFetching}
-          onPreviousPage={() => void onPageChange(currentPage - 1)}
+          onPreviousPage={() => changePage(pageTokens.slice(0, -1))}
           onNextPage={() => {
             if (data?.nextPageToken) {
-              void onPageChange(currentPage + 1);
+              changePage([...pageTokens, data.nextPageToken]);
             }
           }}
-          onReset={() => void onPageChange(1)}
+          onReset={() => changePage([])}
         />
       </nav>
     </BlockStack>

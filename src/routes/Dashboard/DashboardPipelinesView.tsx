@@ -13,17 +13,7 @@ import { RemotePipelinesTable } from "./RemotePipelinesTable";
 export function DashboardPipelinesView() {
   const navigate = useNavigate();
   const search = validatePipelinesSearch(useSearch({ strict: false }));
-  const tab = search.tab ?? (search.page ? "remote" : "local");
-  const page = search.page ?? 1;
-
-  function changePage(page: number, replace = false) {
-    return navigate({
-      to: APP_ROUTES.DASHBOARD_PIPELINES,
-      search: (previous) => ({ ...previous, tab: "remote", page }),
-      resetScroll: false,
-      replace,
-    });
-  }
+  const tab = search.tab ?? "local";
 
   return (
     <BlockStack gap="6">
@@ -41,7 +31,10 @@ export function DashboardPipelinesView() {
             if (tab !== "local" && tab !== "remote") return;
             void navigate({
               to: APP_ROUTES.DASHBOARD_PIPELINES,
-              search: (previous) => ({ ...previous, tab }),
+              search: (previous) => ({
+                ...validatePipelinesSearch(previous),
+                tab,
+              }),
               resetScroll: false,
             });
           }}
@@ -55,7 +48,7 @@ export function DashboardPipelinesView() {
             <PipelineSection />
           </TabsContent>
           <TabsContent value="remote">
-            <RemotePipelinesTable page={page} onPageChange={changePage} />
+            <RemotePipelinesTable />
           </TabsContent>
         </Tabs>
       </BlockStack>
