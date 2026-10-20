@@ -41,11 +41,19 @@ const buttonVariants = cva(
         default: "",
         pill: "rounded-full",
       },
+      align: {
+        center: "",
+        start: "justify-start text-left",
+      },
+      fullWidth: {
+        true: "w-full",
+      },
     },
     defaultVariants: {
       variant: "default",
       size: "default",
       shape: "default",
+      align: "center",
     },
   },
 );
@@ -60,6 +68,8 @@ function Button({
   variant,
   size,
   shape,
+  align,
+  fullWidth,
   asChild = false,
   ...props
 }: ButtonProps) {
@@ -68,7 +78,9 @@ function Button({
   return (
     <Comp
       data-slot="button"
-      className={cn(buttonVariants({ variant, size, shape, className }))}
+      className={cn(
+        buttonVariants({ variant, size, shape, align, fullWidth, className }),
+      )}
       {...props}
     />
   );
