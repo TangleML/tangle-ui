@@ -1,8 +1,10 @@
 import {
   createMemoryHistory,
   createRootRoute,
+  createRoute,
   createRouter,
   RouterContextProvider,
+  RouterProvider,
 } from "@tanstack/react-router";
 import {
   act,
@@ -10,6 +12,7 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
 } from "@testing-library/react";
 import type { ReactFlowProps } from "@xyflow/react";
 import { isRootStore } from "mobx-keystone";
@@ -17,31 +20,44 @@ import { type PropsWithChildren, StrictMode } from "react";
 import { afterEach, expect, it, onTestFinished, vi } from "vitest";
 
 import {
+  type ComponentSpec,
   IncrementingIdGenerator,
   serializeComponentSpecToText,
   YamlDeserializer,
 } from "@/models/componentSpec";
+import { APP_ROUTES } from "@/routes/appRoutes";
+import {
+  type RemotePipelineNodeType,
+  validateRemotePipelineSearch,
+} from "@/routes/remotePipelineSearch";
+import type { EditorStore } from "@/routes/v2/shared/store/editorStore";
 
 import { RemotePipelineView } from "./RemotePipelineView";
 
 let canvas: ReactFlowProps;
-vi.mock("@xyflow/react", async (original) => ({
-  ...(await original<typeof import("@xyflow/react")>()),
-  ReactFlow: (props: ReactFlowProps) => {
-    canvas = props;
-    return (
-      <>
-        {props.nodes?.map((node) => (
-          <span key={node.id}>{String(node.data.name ?? "")}</span>
-        ))}
-        {props.children}
-      </>
-    );
-  },
-  Controls: () => <button>Fit view</button>,
-  Background: () => null,
-  useNodesInitialized: () => false,
-}));
+let editor: EditorStore;
+vi.mock("@xyflow/react", async (original) => {
+  const { useSharedStores } =
+    await import("@/routes/v2/shared/store/SharedStoreContext");
+  return {
+    ...(await original<typeof import("@xyflow/react")>()),
+    ReactFlow: (props: ReactFlowProps) => {
+      canvas = props;
+      editor = useSharedStores().editor;
+      return (
+        <>
+          {props.nodes?.map((node) => (
+            <span key={node.id}>{String(node.data.name ?? "")}</span>
+          ))}
+          {props.children}
+        </>
+      );
+    },
+    Controls: () => <button>Fit view</button>,
+    Background: () => null,
+    useNodesInitialized: () => false,
+  };
+});
 vi.mock("@/routes/v2/shared/components/AppMenuActions", () => ({
   AppMenuActions: () => null,
 }));
@@ -60,7 +76,10 @@ vi.mock("@/routes/v2/shared/components/SubgraphBreadcrumbs", async () => {
     },
   };
 });
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 function RouterWrapper({ children }: PropsWithChildren) {
   const router = createRouter({
@@ -169,4 +188,162 @@ it("copies the selected task only while the view is active", async () => {
   unmount();
   fireEvent.keyDown(window, { key: "c", metaKey: true });
   expect(writeText).toHaveBeenCalledTimes(2);
+});
+
+function nestedPipeline() {
+  return new YamlDeserializer(new IncrementingIdGenerator()).deserialize({
+    name: "Remote pipeline",
+    implementation: {
+      graph: {
+        tasks: {
+          "Nested / graph": {
+            componentRef: {
+              spec: {
+                name: "Nested graph",
+                inputs: [{ name: "shared" }],
+                outputs: [{ name: "shared" }],
+                implementation: {
+                  graph: {
+                    tasks: {
+                      shared: {
+                        componentRef: {
+                          spec: {
+                            name: "Worker",
+                            implementation: { container: {} },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+}
+
+async function openRoutedView(
+  spec: ComponentSpec,
+  search: string,
+  embedded = false,
+) {
+  vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+  const root = createRootRoute();
+  const route = createRoute({
+    getParentRoute: () => root,
+    path: APP_ROUTES.EDITOR_V2_REMOTE_PIPELINE,
+    validateSearch: validateRemotePipelineSearch,
+    component: () => (
+      <RemotePipelineView
+        spec={spec}
+        pipelineId={embedded ? undefined : "pipeline-id"}
+      />
+    ),
+  });
+  const history = createMemoryHistory({
+    initialEntries: [`/editor-v2/pipeline/pipeline-id?${search}`],
+  });
+  const router = createRouter({
+    routeTree: root.addChildren([route]),
+    history,
+  });
+  await router.load();
+  render(<RouterProvider router={router} />);
+  return { router, history };
+}
+
+it.each<RemotePipelineNodeType>(["task", "input", "output"])(
+  "opens and shares a nested read-only %s and tracks breadcrumb navigation",
+  async (nodeType) => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const originalClipboard = Object.getOwnPropertyDescriptor(
+      navigator,
+      "clipboard",
+    );
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+    onTestFinished(() => {
+      if (originalClipboard) {
+        Object.defineProperty(navigator, "clipboard", originalClipboard);
+      } else {
+        Reflect.deleteProperty(navigator, "clipboard");
+      }
+    });
+    const spec = nestedPipeline();
+    const initialYaml = serializeComponentSpecToText(spec);
+    const child = spec.tasks[0].subgraphSpec!;
+    const node =
+      nodeType === "task"
+        ? child.tasks[0]
+        : nodeType === "input"
+          ? child.inputs[0]
+          : child.outputs[0];
+    const search = new URLSearchParams({
+      subgraphPath: JSON.stringify(["Nested / graph"]),
+      nodeId: "shared",
+      nodeType,
+      projectId: "project-1",
+    }).toString();
+    const { router, history } = await openRoutedView(spec, search);
+
+    await waitFor(() => expect(editor.selectedNodeId).toBe(node.$id));
+    expect(editor.selectedNodeType).toBe(nodeType);
+    expect(canvas.nodes?.some((item) => item.id === node.$id)).toBe(true);
+    expect(screen.getByText("View only")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(router.state.location.search.nodeId).toBeUndefined(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Copy node link" }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
+    const link = new URL(writeText.mock.calls[0][0]);
+    expect(link.pathname).toBe("/editor-v2/pipeline/pipeline-id");
+    expect(link.searchParams.get("nodeId")).toBe("shared");
+    expect(link.searchParams.get("nodeType")).toBe(nodeType);
+    expect(JSON.parse(link.searchParams.get("subgraphPath")!)).toEqual([
+      "Nested / graph",
+    ]);
+    expect(link.searchParams.get("projectId")).toBe("project-1");
+
+    fireEvent.click(screen.getByRole("button", { name: "Root" }));
+    await screen.findByText("Nested / graph");
+    await waitFor(() =>
+      expect(router.state.location.search.subgraphPath).toBeUndefined(),
+    );
+    expect(screen.queryByRole("button", { name: "Copy node link" })).toBeNull();
+    await act(async () => {
+      history.back();
+      await router.load();
+    });
+    await waitFor(() =>
+      expect(canvas.nodes?.some((item) => item.id === node.$id)).toBe(true),
+    );
+    expect(router.state.location.search.subgraphPath).toEqual([
+      "Nested / graph",
+    ]);
+    expect(serializeComponentSpecToText(spec)).toBe(initialYaml);
+  },
+);
+
+it("keeps an embedded view independent from the enclosing remote pipeline URL", async () => {
+  const spec = nestedPipeline();
+  const search = new URLSearchParams({
+    subgraphPath: JSON.stringify(["Unrelated graph"]),
+    nodeId: "Unrelated task",
+  }).toString();
+  const { router, history } = await openRoutedView(spec, search, true);
+  await screen.findByText("Nested / graph");
+  const initialLocation = history.location.href;
+  const node = canvas.nodes![0];
+  act(() => canvas.onNodeDoubleClick?.({} as never, node));
+  await waitFor(() =>
+    expect(canvas.nodes?.some((item) => item.id === node.id)).toBe(false),
+  );
+  expect(history.location.href).toBe(initialLocation);
+  expect(router.state.location.search.nodeId).toBe("Unrelated task");
+  expect(screen.queryByRole("button", { name: "Copy node link" })).toBeNull();
 });

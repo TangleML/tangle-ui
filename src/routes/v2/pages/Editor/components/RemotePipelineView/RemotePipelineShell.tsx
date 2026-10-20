@@ -1,4 +1,4 @@
-import type { PropsWithChildren } from "react";
+import type { PropsWithChildren, ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -11,8 +11,9 @@ import {
 
 export function RemotePipelineShell({
   name = "Remote pipeline",
+  actions,
   children,
-}: PropsWithChildren<{ name?: string }>) {
+}: PropsWithChildren<{ name?: string; actions?: ReactNode }>) {
   return (
     <BlockStack
       fill
@@ -40,7 +41,10 @@ export function RemotePipelineShell({
             View only
           </Badge>
         </InlineStack>
-        <AppMenuActions />
+        <InlineStack gap="2" blockAlign="center">
+          {actions}
+          <AppMenuActions />
+        </InlineStack>
       </CanvasMenuBar>
       {children}
     </BlockStack>

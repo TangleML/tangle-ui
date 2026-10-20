@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Text } from "@/components/ui/typography";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { InputLabel } from "@/routes/v2/pages/Editor/components/InputLabel/InputLabel";
+import { EditorNodeLinkButton } from "@/routes/v2/pages/Editor/components/RemotePipelineNodeLinkButton";
 import { useIOActions } from "@/routes/v2/pages/Editor/store/actions/useIOActions";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 
@@ -44,6 +45,7 @@ export const OutputDetails = observer(function OutputDetails({
   return (
     <BlockStack>
       <BlockStack gap="4" className="p-3">
+        <EditorNodeLinkButton entityId={entityId} nodeType="output" />
         <BlockStack gap="2">
           <InputLabel htmlFor="output-name" onCopy={() => output.name}>
             Name

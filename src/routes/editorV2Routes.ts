@@ -4,6 +4,7 @@ import { generate } from "random-words";
 import { isFlagEnabled } from "@/components/shared/Settings/useFlags";
 
 import { APP_ROUTES } from "./appRoutes";
+import { validateRemotePipelineSearch } from "./remotePipelineSearch";
 import { EditorV2 } from "./v2/pages/Editor/EditorV2";
 
 declare module "@tanstack/react-router" {
@@ -67,6 +68,7 @@ export function createEditorV2Routes<TParent extends AnyRoute>(
   const remotePipeline = createRoute({
     getParentRoute: () => layout,
     path: APP_ROUTES.EDITOR_V2_REMOTE_PIPELINE,
+    validateSearch: validateRemotePipelineSearch,
   });
   return layout.addChildren([index, pipeline, newPipeline, remotePipeline]);
 }

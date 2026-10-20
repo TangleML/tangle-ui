@@ -85,6 +85,7 @@ import { usePipelineTreeWindow } from "./hooks/usePipelineTreeWindow";
 import { usePropertiesWindowPositioning } from "./hooks/usePropertiesWindowPositioning";
 import { useRecentRunsWindow } from "./hooks/useRecentRunsWindow";
 import { useRemoteDraftPromotion } from "./hooks/useRemoteDraftPromotion";
+import { useRemotePipelineUrlSync } from "./hooks/useRemotePipelineUrlSync";
 import { useRunsAndSubmissionWindow } from "./hooks/useRunsAndSubmissionWindow";
 import { useSeedInitialDockLayoutFromPreset } from "./hooks/useSeedInitialDockLayoutFromPreset";
 import { useSelectionWindowSync } from "./hooks/useSelectionWindowSync";
@@ -126,6 +127,7 @@ const PipelineEditor = withSuspenseWrapper(
     useSpecLifecycle(rootSpec, file, restoredUndoStore, saveState);
     useRemoteDraftPromotion(pipelineRef, file);
     useSelectionWindowSync();
+    useRemotePipelineUrlSync(rootSpec, file.remote?.pipelineId);
     usePropertiesWindowPositioning();
     useLinkedWindowCleanup();
 
@@ -279,7 +281,7 @@ const RemotePipelineDocumentView = withSuspenseWrapper(
     return file.folder.driver.canEdit === true ? (
       <EditorV2Document key={file.initialId} pipelineRef={pipelineRef} />
     ) : (
-      <RemotePipelineView spec={spec} />
+      <RemotePipelineView spec={spec} pipelineId={file.remote?.pipelineId} />
     );
   },
   RemotePipelineSkeleton,

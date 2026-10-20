@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import { APP_ROUTES } from "@/routes/appRoutes";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { promoteRemoteDraftQuery } from "@/routes/v2/pages/Editor/utils/promoteRemoteDraftQuery";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import {
   type EditorPipelineRef,
@@ -17,6 +18,7 @@ export function useRemoteDraftPromotion(
   file: PipelineFile,
 ) {
   const { autoSave } = useEditorSession();
+  const { navigation } = useSharedStores();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const draft = isRemotePipelineDraftRef(ref) ? ref : undefined;
@@ -42,11 +44,19 @@ export function useRemoteDraftPromotion(
         void navigate({
           to: APP_ROUTES.EDITOR_V2_REMOTE_PIPELINE,
           params: { pipelineId: remote.pipelineId },
+          search: (previous) => ({
+            ...previous,
+            subgraphPath: navigation.canNavigateBack
+              ? navigation.navigationPath
+                  .slice(1)
+                  .map((entry) => entry.displayName)
+              : undefined,
+          }),
           replace: true,
           resetScroll: false,
         });
       },
       { fireImmediately: true },
     );
-  }, [draft, autoSave, file, queryClient, navigate]);
+  }, [draft, autoSave, file, queryClient, navigate, navigation]);
 }

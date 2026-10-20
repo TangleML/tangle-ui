@@ -21,6 +21,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { client } from "@/api/client.gen";
 import { getCurrentUserApiUsersMeGet } from "@/api/sdk.gen";
+import { ComponentSpec, Task } from "@/models/componentSpec";
 import { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
 import { defaultPipelineYamlWithName } from "@/utils/constants";
@@ -28,11 +29,13 @@ import { defaultPipelineYamlWithName } from "@/utils/constants";
 import { APP_ROUTES } from "./appRoutes";
 import { createEditorV2Routes } from "./editorV2Routes";
 import type { useEditorSession } from "./v2/pages/Editor/store/EditorSessionContext";
+import type { SharedUIStore } from "./v2/shared/store/SharedStoreContext";
 
 const canvas = vi.hoisted(() => ({ mounts: 0, unmounts: 0 }));
 const flags = vi.hoisted(() => ({ v2Editor: true }));
 const chat = vi.hoisted(() => ({ mounts: 0, threads: [{ abort: vi.fn() }] }));
 let session: ReturnType<typeof useEditorSession>;
+let stores: SharedUIStore;
 const storage = new PipelineStorageService();
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
@@ -88,6 +91,8 @@ vi.mock("./v2/pages/Editor/components/FlowCanvas/FlowCanvas", async () => {
   const { useEffect } = await import("react");
   const { useEditorSession } =
     await import("./v2/pages/Editor/store/EditorSessionContext");
+  const { useSharedStores } =
+    await import("./v2/shared/store/SharedStoreContext");
   return {
     FlowCanvas: function Canvas({
       spec,
@@ -95,6 +100,7 @@ vi.mock("./v2/pages/Editor/components/FlowCanvas/FlowCanvas", async () => {
       spec: import("@/models/componentSpec").ComponentSpec;
     }) {
       session = useEditorSession();
+      stores = useSharedStores();
       useEffect(() => {
         canvas.mounts++;
         return () => {
@@ -272,6 +278,95 @@ it("retains a failed draft edit and changes its URL only after retry succeeds", 
   );
   expect(client.put).toHaveBeenCalledTimes(2);
   expect(canvas.mounts).toBe(1);
+});
+
+it("keeps the current subgraph and selection when a draft becomes remote", async () => {
+  const { router } = await open();
+  const root = stores.navigation.rootSpec;
+  if (!root) throw new Error("Missing draft graph");
+  const child = new Task({
+    name: "Inner task",
+    componentRef: { name: "Child" },
+  });
+  const nested = new ComponentSpec({ name: "Nested", tasks: [child] });
+  const parent = new Task({
+    name: "Prepare / data",
+    componentRef: { name: "Nested" },
+    subgraphSpec: nested,
+  });
+
+  act(() => {
+    root.addTask(parent);
+    stores.navigation.navigateToSubgraph(root, parent.$id);
+    stores.editor.selectNode(child.$id, "task");
+  });
+
+  await waitFor(() => {
+    expect(router.state.location.pathname).toBe(
+      `/editor-v2/pipeline/${pipelineId}`,
+    );
+    expect(router.state.location.search.subgraphPath).toEqual([
+      "Prepare / data",
+    ]);
+    expect(stores.navigation.activeSpec).toBe(nested);
+    expect(stores.editor.selectedNodeId).toBe(child.$id);
+  });
+  expect(client.put).toHaveBeenCalledOnce();
+});
+
+it("loads a remote link into its nested graph and selects the named node without saving", async () => {
+  vi.mocked(client.get).mockResolvedValue({
+    data: {
+      id: pipelineId,
+      user_id: "user",
+      file_path: "pipelines/remote.yaml",
+      root_pipeline_task: {
+        componentRef: {
+          spec: {
+            name: "Remote pipeline",
+            implementation: {
+              graph: {
+                tasks: {
+                  "Prepare / data": {
+                    componentRef: {
+                      spec: {
+                        name: "Nested",
+                        inputs: [{ name: "data" }],
+                        implementation: { graph: { tasks: {} } },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      pipeline_run_annotations: {},
+    },
+    response: new Response(null, { status: 200 }),
+  } as Awaited<ReturnType<typeof client.get>>);
+  const search = new URLSearchParams({
+    subgraphPath: JSON.stringify(["Prepare / data"]),
+    nodeId: "data",
+    nodeType: "input",
+    projectId: "project-1",
+  });
+  const { router } = await open(`/editor-v2/pipeline/${pipelineId}?${search}`);
+
+  await waitFor(() => {
+    expect(stores.navigation.activeSpec?.name).toBe("Nested");
+    expect(stores.editor.selectedNodeType).toBe("input");
+    expect(stores.editor.selectedNodeId).toBe(
+      stores.navigation.activeSpec?.inputs[0].$id,
+    );
+    expect(router.state.location.search).toEqual({
+      subgraphPath: ["Prepare / data"],
+      projectId: "project-1",
+    });
+  });
+  expect(session.undo.canUndo).toBe(false);
+  expect(client.put).not.toHaveBeenCalled();
 });
 
 it("starts a separate unsaved pipeline when New is used again at the same URL", async () => {
