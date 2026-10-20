@@ -1,24 +1,14 @@
 import type { ThinkingLevel } from "@tangent/shared/contracts.ts";
 import {
-  AVAILABLE_MODELS,
   DEFAULT_MODEL_ID,
   DEFAULT_THINKING_LEVEL,
-  THINKING_LEVELS,
 } from "@tangent/shared/contracts.ts";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
 import { WorkspaceNotice } from "@/components/Project/WorkspaceNotice";
-import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Text } from "@/components/ui/typography";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
@@ -32,18 +22,11 @@ import { provisionalNameMetadata } from "@/services/projects/provisionalName";
 import { startingSessionMetadata } from "@/services/projects/startingSession";
 import { useCreateProject } from "@/services/projects/useProjects";
 import { useWorkspaces } from "@/services/projects/useWorkspaces";
-import { tracking } from "@/utils/tracking";
 
 import { nextProjectName } from "./nextProjectName";
+import { StartSessionToolbar } from "./StartSessionToolbar";
 import { useMyProjects } from "./useMyProjects";
 import { useWorkspaceChoice } from "./useWorkspaceChoice";
-
-const THINKING_LABELS: Partial<Record<ThinkingLevel, string>> = {
-  xhigh: "Extra high",
-};
-
-const thinkingLabel = (level: ThinkingLevel) =>
-  THINKING_LABELS[level] ?? level.charAt(0).toUpperCase() + level.slice(1);
 
 export function StartSessionPrompt() {
   const [prompt, setPrompt] = useState("");
@@ -54,7 +37,7 @@ export function StartSessionPrompt() {
   const composer = useRef<HTMLTextAreaElement>(null);
   const hasFocused = useRef(false);
   const navigate = useNavigate();
-  const createProject = useCreateProject();
+  const { mutate: startProject, isPending: isStarting } = useCreateProject();
   const { track } = useAnalytics();
   const { configured, available, ready } = useBackend();
   const { data: workspaces, isPending: isFindingWorkspace } = useWorkspaces();
@@ -68,7 +51,7 @@ export function StartSessionPrompt() {
   // The box is the point of the page, so what stops it working leaves it
   // standing and disabled rather than taking it away.
   const isUnavailable = isFindingWorkspace || !workspace || !isAiConfigured;
-  const isBusy = createProject.isPending || isUnavailable;
+  const isBusy = isStarting || isUnavailable;
   const isBackendMissing = ready && !(configured && available);
 
   // Once, as soon as it can take input: arriving here is the act of wanting to
@@ -89,7 +72,7 @@ export function StartSessionPrompt() {
     // The prompt rides on the project rather than the url, so arriving at
     // Tangent starts a session and runs it as the opening turn. The name is
     // marked as nobody's choice, so the agent may replace it with a real one.
-    createProject.mutate(
+    startProject(
       {
         workspaceId: workspace.id,
         name:
@@ -158,75 +141,16 @@ export function StartSessionPrompt() {
           />
         </InlineStack>
 
-        <InlineStack gap="2" blockAlign="center" className="w-full pt-2">
-          <Select value={model} onValueChange={setModel} disabled={isBusy}>
-            <SelectTrigger aria-label="Model" className="h-8 w-auto text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {AVAILABLE_MODELS.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select
-            value={thinkingDepth}
-            onValueChange={(value) => {
-              const level = THINKING_LEVELS.find(
-                (candidate) => candidate === value,
-              );
-              if (level) setThinkingDepth(level);
-            }}
-            disabled={isBusy}
-          >
-            <SelectTrigger aria-label="Thinking" className="h-8 w-auto text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {THINKING_LEVELS.map((level) => (
-                <SelectItem key={level} value={level}>
-                  {thinkingLabel(level)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select
-            value={workspace?.id ?? ""}
-            onValueChange={workspaceChoice.choose}
-            disabled={isBusy}
-          >
-            <SelectTrigger
-              aria-label="Workspace"
-              className="h-8 w-auto max-w-48 text-xs"
-            >
-              <SelectValue placeholder="Workspace" />
-            </SelectTrigger>
-            <SelectContent>
-              {workspaceChoice.workspaces.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <div className="flex-1" />
-
-          <Button
-            size="icon"
-            className="bg-brand-accent text-white hover:bg-brand-accent/90 disabled:opacity-40 dark:text-slate-950"
-            aria-label="Start session"
-            disabled={isEmpty || isBusy}
-            onClick={submit}
-            {...tracking("projects.start_session_submit")}
-          >
-            <Icon name="ArrowUp" size="sm" />
-          </Button>
-        </InlineStack>
+        <StartSessionToolbar
+          model={model}
+          onModelChange={setModel}
+          thinkingDepth={thinkingDepth}
+          onThinkingDepthChange={setThinkingDepth}
+          workspaceChoice={workspaceChoice}
+          disabled={isBusy}
+          canStart={!isEmpty}
+          onStart={submit}
+        />
       </div>
 
       {/* The AI provider comes first: it is a setting the user can change

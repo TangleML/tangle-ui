@@ -38,6 +38,12 @@ describe("useWorkspaceChoice", () => {
     expect(choice.current.workspaces).toEqual([analytics, research]);
   });
 
+  it("offers a choice only when more than one workspace takes projects", () => {
+    expect(choiceAmong([analytics, research]).current.offersChoice).toBe(true);
+    expect(choiceAmong([legacy, research]).current.offersChoice).toBe(false);
+    expect(choiceAmong([]).current.offersChoice).toBe(false);
+  });
+
   it("starts on the default workspace", () => {
     expect(choiceAmong([analytics, research]).current.selected).toBe(research);
   });

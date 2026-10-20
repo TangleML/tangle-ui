@@ -103,10 +103,18 @@ describe("CreateProjectDialog", () => {
     expect(mutate).not.toHaveBeenCalled();
   });
 
-  it("asks for a workspace even when there is only one", async () => {
-    await openDialog([research]);
+  it("files the project in the only workspace without asking", async () => {
+    const user = await openDialog([research]);
 
-    expect(screen.getByLabelText("Workspace")).toHaveTextContent("Research");
+    expect(screen.queryByLabelText("Workspace")).not.toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("Name"), "Churn model");
+    await user.click(submitButton());
+
+    expect(mutate).toHaveBeenCalledWith(
+      expect.objectContaining({ workspaceId: "workspace-1" }),
+      expect.anything(),
+    );
   });
 
   it("warns that the workspace is permanent", async () => {

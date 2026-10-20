@@ -8,8 +8,9 @@ import {
 } from "@/services/projects/defaultWorkspace";
 import type { Workspace } from "@/services/projects/types";
 
-interface WorkspaceChoice {
+export interface WorkspaceChoice {
   workspaces: Workspace[];
+  offersChoice: boolean;
   selected: Workspace | undefined;
   changedFromDefault: boolean;
   choose: (workspaceId: string) => void;
@@ -35,6 +36,7 @@ export function useWorkspaceChoice(
 
   return {
     workspaces: offered,
+    offersChoice: offered.length > 1,
     selected,
     changedFromDefault: selected?.id !== defaultWorkspace?.id,
     choose: setChosenId,

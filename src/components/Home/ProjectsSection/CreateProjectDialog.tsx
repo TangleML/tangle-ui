@@ -143,31 +143,37 @@ export function CreateProjectDialog({
               )}
             </BlockStack>
 
-            <BlockStack gap="2">
-              <Label htmlFor="create-project-workspace">Workspace</Label>
-              <Select
-                value={workspaceChoice.selected?.id ?? ""}
-                onValueChange={workspaceChoice.choose}
-              >
-                <SelectTrigger
-                  id="create-project-workspace"
-                  aria-describedby="create-project-workspace-hint"
-                  className="w-full"
+            {workspaceChoice.offersChoice && (
+              <BlockStack gap="2">
+                <Label htmlFor="create-project-workspace">Workspace</Label>
+                <Select
+                  value={workspaceChoice.selected?.id ?? ""}
+                  onValueChange={workspaceChoice.choose}
                 >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {workspaceChoice.workspaces.map((workspace) => (
-                    <SelectItem key={workspace.id} value={workspace.id}>
-                      {workspace.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Text id="create-project-workspace-hint" size="xs" tone="subdued">
-                The workspace cannot be changed after the project is created.
-              </Text>
-            </BlockStack>
+                  <SelectTrigger
+                    id="create-project-workspace"
+                    aria-describedby="create-project-workspace-hint"
+                    className="w-full"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {workspaceChoice.workspaces.map((workspace) => (
+                      <SelectItem key={workspace.id} value={workspace.id}>
+                        {workspace.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Text
+                  id="create-project-workspace-hint"
+                  size="xs"
+                  tone="subdued"
+                >
+                  The workspace cannot be changed after the project is created.
+                </Text>
+              </BlockStack>
+            )}
 
             <BlockStack gap="2">
               <Label htmlFor="create-project-description">

@@ -236,6 +236,12 @@ describe("StartSessionPrompt", () => {
     });
   });
 
+  it("offers no workspace to pick when there is only one", () => {
+    renderPrompt();
+
+    expect(screen.queryByLabelText("Workspace")).not.toBeInTheDocument();
+  });
+
   describe("choosing a workspace", () => {
     beforeEach(() => mockWorkspaces([analytics, research]));
 
