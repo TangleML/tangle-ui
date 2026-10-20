@@ -29,7 +29,7 @@ vi.mock(
       typeof import("@/routes/v2/pages/Editor/utils/undoHistoryStorage")
     >()),
     loadUndoHistory,
-    createUndoStoreWithEvents: vi.fn(),
+    saveUndoHistory: vi.fn().mockResolvedValue(undefined),
   }),
 );
 vi.mock("@/routes/v2/pages/Editor/utils/hydrateSpecRefs", () => ({
@@ -65,11 +65,16 @@ const EditingChild = observer(function EditingChild({
   pipelineRef: EditorPipelineRef;
 }) {
   const { data } = useLoadSpec(pipelineRef);
-  const [autoSave] = useState(() => new AutoSaveStore(new UndoStore()));
+  const [undo] = useState(() => new UndoStore());
+  const [autoSave] = useState(() => new AutoSaveStore(undo));
   useEffect(() => {
+    undo.init(data.spec, data.restoredUndoStore);
     autoSave.init(data.spec, data.file, data.saveState);
-    return () => autoSave.dispose();
-  }, [autoSave, data]);
+    return () => {
+      autoSave.dispose();
+      undo.dispose();
+    };
+  }, [autoSave, data, undo]);
   return (
     <>
       <span>{data.spec.name}</span>
@@ -83,6 +88,12 @@ const EditingChild = observer(function EditingChild({
         Edit again
       </button>
       <button onClick={() => void autoSave.save().catch(() => {})}>Save</button>
+      <button onClick={() => undo.undo()} disabled={!undo.canUndo}>
+        Undo
+      </button>
+      <button onClick={() => undo.redo()} disabled={!undo.canRedo}>
+        Redo
+      </button>
     </>
   );
 });
@@ -162,6 +173,30 @@ describe("useLoadSpec", () => {
     render(view(remote));
     await screen.findByText("Saved on server");
     expect(resolvePipeline).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps undo and redo when reopening a failed edit without stored history", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const write = vi.fn().mockRejectedValue(new Error("Save unavailable"));
+    resolvePipeline.mockResolvedValue({ ...file("Original", remote), write });
+    const first = render(view(remote, true));
+    await screen.findByText("Original");
+    fireEvent.click(screen.getByText("Edit"));
+    fireEvent.click(screen.getByText("Save"));
+    await screen.findByText("Save unavailable");
+    await act(async () => first.unmount());
+
+    render(view(remote, true));
+    await screen.findByText("Unsaved edit");
+    const undo = screen.getByRole("button", { name: "Undo" });
+    expect(undo).toBeEnabled();
+    fireEvent.click(undo);
+    expect(screen.queryByText("Unsaved edit")).not.toBeInTheDocument();
+    const redo = screen.getByRole("button", { name: "Redo" });
+    expect(redo).toBeEnabled();
+    fireEvent.click(redo);
+    expect(screen.getByText("Unsaved edit")).toBeInTheDocument();
+    expect(resolvePipeline).toHaveBeenCalledTimes(1);
   });
 
   it("keeps an in-flight edit through reopen without duplicating its write", async () => {

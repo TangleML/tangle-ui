@@ -162,5 +162,8 @@ function deserializeSpecData(
     }
   }
 
-  return { spec: deserializeSpec(specData) };
+  return {
+    spec: deserializeSpec(specData),
+    restoredUndoStore: createUndoStoreWithEvents([]),
+  };
 }
