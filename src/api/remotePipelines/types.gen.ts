@@ -120,36 +120,6 @@ export type HttpValidationError = {
     detail?: Array<ValidationError>;
 };
 
-export type DeletePipelineApiUsersMePipelinesDeleteData = {
-    body?: never;
-    path?: never;
-    query: {
-        /**
-         * File Path
-         */
-        file_path: string;
-    };
-    url: '/api/users/me/pipelines';
-};
-
-export type DeletePipelineApiUsersMePipelinesDeleteErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type DeletePipelineApiUsersMePipelinesDeleteError = DeletePipelineApiUsersMePipelinesDeleteErrors[keyof DeletePipelineApiUsersMePipelinesDeleteErrors];
-
-export type DeletePipelineApiUsersMePipelinesDeleteResponses = {
-    /**
-     * Successful Response
-     */
-    204: void;
-};
-
-export type DeletePipelineApiUsersMePipelinesDeleteResponse = DeletePipelineApiUsersMePipelinesDeleteResponses[keyof DeletePipelineApiUsersMePipelinesDeleteResponses];
-
 export type SearchPipelinesApiPipelinesSearchPostData = {
     body: PipelineSearchRequest;
     path?: never;

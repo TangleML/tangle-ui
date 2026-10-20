@@ -22,9 +22,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useBackend } from "@/providers/BackendProvider";
 import { APP_ROUTES } from "@/routes/appRoutes";
-import { getRemotePipelineWriter } from "@/services/remotePipelineEditorService";
 import {
-  deleteRemotePipeline,
   listRemotePipelines,
   type RemotePipeline,
   type RemotePipelinesPage,
@@ -68,26 +66,6 @@ vi.mock("./FavoritesPreview", () => ({
   FavoritesPreview: () => <div>Favorite Pipelines</div>,
 }));
 
-vi.mock("@/hooks/useFavorites", () => ({
-  useFavorites: () => ({
-    isFavorite: () => false,
-    toggleFavorite: vi.fn(),
-    removeFavorite: vi.fn().mockResolvedValue(undefined),
-  }),
-}));
-
-vi.mock("@/hooks/useRecentlyViewed", () => ({
-  removeRecentlyViewed: vi.fn(),
-}));
-
-vi.mock("@/hooks/useToastNotification", () => ({
-  default: () => vi.fn(),
-}));
-
-vi.mock("@/services/remotePipelineEditorService", () => ({
-  getRemotePipelineWriter: vi.fn(),
-}));
-
 type Backend = ReturnType<typeof useBackend>;
 
 function createBackend(overrides: Partial<Backend> = {}): Backend {
@@ -117,7 +95,6 @@ vi.mock("@/services/remotePipelinesService", async (importOriginal) => ({
   ...(await importOriginal<
     typeof import("@/services/remotePipelinesService")
   >()),
-  deleteRemotePipeline: vi.fn(),
   listRemotePipelines: vi.fn(),
 }));
 
@@ -288,8 +265,6 @@ async function renderResizableTable() {
 beforeEach(() => {
   editorFlags.v2Enabled = true;
   vi.spyOn(window, "scrollTo").mockImplementation(() => {});
-  vi.mocked(getRemotePipelineWriter).mockResolvedValue(pipeline.user_id);
-  vi.mocked(deleteRemotePipeline).mockResolvedValue(undefined);
   vi.mocked(listRemotePipelines).mockResolvedValue({
     pipelines: [pipeline],
     nextPageToken: null,
@@ -305,72 +280,6 @@ afterEach(() => {
 });
 
 describe("DashboardPipelinesView remote pipelines", () => {
-  it("blocks row and name navigation during deletion and restores them after failure", async () => {
-    const deletion = Promise.withResolvers<void>();
-    vi.mocked(deleteRemotePipeline).mockReturnValue(deletion.promise);
-    const open = vi.spyOn(window, "open").mockReturnValue(null);
-    const { user, router } = await renderDashboard(
-      `${APP_ROUTES.DASHBOARD_PIPELINES}?tab=remote`,
-    );
-    const row = await screen.findByRole("row", { name: /Example pipeline/ });
-    const link = within(row).getByRole("link", { name: "Example pipeline" });
-    const ownerCell = within(row).getByRole("cell", { name: pipeline.user_id });
-    await user.click(
-      await within(row).findByRole("button", { name: "Delete pipeline" }),
-    );
-    await user.click(screen.getByRole("button", { name: "Continue" }));
-    await waitFor(() => expect(link).toHaveAttribute("aria-disabled", "true"));
-
-    await user.click(ownerCell);
-    await user.click(link);
-    fireEvent.click(ownerCell, { metaKey: true });
-    expect(open).not.toHaveBeenCalled();
-    expect(router.state.location.pathname).toBe(APP_ROUTES.DASHBOARD_PIPELINES);
-    expect(
-      screen.queryByText("Remote editor destination"),
-    ).not.toBeInTheDocument();
-
-    await act(async () => deletion.reject(new Error("Delete failed")));
-    await waitFor(() =>
-      expect(link).not.toHaveAttribute("aria-disabled", "true"),
-    );
-    expect(link).toHaveAttribute("href", "/editor-v2/pipeline/pipeline-1");
-    await user.click(ownerCell);
-    await screen.findByText("Remote editor destination");
-    expect(router.state.location.pathname).toBe(
-      "/editor-v2/pipeline/pipeline-1",
-    );
-  });
-
-  it("returns to the previous page after deleting the final row without opening the editor", async () => {
-    let deleted = false;
-    vi.mocked(listRemotePipelines).mockImplementation(async (_, pageToken) =>
-      pageToken
-        ? createPage(11, deleted ? 0 : 1, null)
-        : createPage(1, 10, deleted ? null : "page-2"),
-    );
-    vi.mocked(deleteRemotePipeline).mockImplementation(async () => {
-      deleted = true;
-    });
-    const { user, router, searchParams } = await renderDashboard(
-      `${APP_ROUTES.DASHBOARD_PIPELINES}?tab=remote&page=2&panel=compact`,
-    );
-    const row = await screen.findByRole("row", { name: /Pipeline 11/ });
-    await user.click(
-      await within(row).findByRole("button", { name: "Delete pipeline" }),
-    );
-    await user.click(screen.getByRole("button", { name: "Continue" }));
-
-    await screen.findByRole("link", { name: "Pipeline 1" });
-    await waitFor(() => expect(searchParams().get("page")).toBe("1"));
-    expect(
-      screen.queryByRole("link", { name: "Pipeline 11" }),
-    ).not.toBeInTheDocument();
-    expect(searchParams().get("panel")).toBe("compact");
-    expect(router.state.location.pathname).toBe(APP_ROUTES.DASHBOARD_PIPELINES);
-    expectNoPaginationControls();
-  });
-
   it.each([
     { v2Enabled: true, editorPath: "/editor-v2/pipeline/pipeline-1" },
     { v2Enabled: false, editorPath: "/editor/pipeline/pipeline-1" },
