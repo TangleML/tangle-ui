@@ -26,7 +26,9 @@ export function PickerOption({
   return (
     <Button
       type="button"
-      variant="row"
+      variant={isSelected ? "secondary" : "ghost"}
+      align="start"
+      fullWidth
       aria-pressed={isSelected}
       disabled={disabled}
       onClick={onClick}
