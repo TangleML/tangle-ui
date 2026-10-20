@@ -49,6 +49,22 @@ describe("PaginationControls", () => {
     expect(props.onNextPage).toHaveBeenCalledOnce();
   });
 
+  it("disables every navigation action while a page is pending", () => {
+    const props = renderControls({
+      currentPage: 2,
+      hasPreviousPage: true,
+      disabled: true,
+    });
+
+    for (const button of screen.getAllByRole("button")) {
+      expect(button).toBeDisabled();
+      fireEvent.click(button);
+    }
+    expect(props.onReset).not.toHaveBeenCalled();
+    expect(props.onPreviousPage).not.toHaveBeenCalled();
+    expect(props.onNextPage).not.toHaveBeenCalled();
+  });
+
   it("shows the first page's Next button without a total", () => {
     const props = renderControls();
 

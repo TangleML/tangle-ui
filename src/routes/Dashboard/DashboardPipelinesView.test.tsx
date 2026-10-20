@@ -20,6 +20,7 @@ import { format } from "date-fns";
 import { createContext, type ReactNode, useContext } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { useBackend } from "@/providers/BackendProvider";
 import { APP_ROUTES } from "@/routes/appRoutes";
 import {
   listRemotePipelines,
@@ -56,16 +57,29 @@ vi.mock("./FavoritesPreview", () => ({
   FavoritesPreview: () => <div>Favorite Pipelines</div>,
 }));
 
-let backend = {
-  backendUrl: "https://backend.example.com",
-  configured: true,
-  available: true,
-  ready: true,
-};
-const BackendContext = createContext(backend);
+type Backend = ReturnType<typeof useBackend>;
+
+function createBackend(overrides: Partial<Backend> = {}): Backend {
+  return {
+    backendUrl: "https://backend.example.com",
+    configured: true,
+    available: true,
+    ready: true,
+    isConfiguredFromEnv: false,
+    isConfiguredFromRelativePath: false,
+    setEnvConfig: vi.fn(),
+    setRelativePathConfig: vi.fn(),
+    setBackendUrl: vi.fn(),
+    ping: vi.fn().mockResolvedValue(true),
+    ...overrides,
+  };
+}
+
+const backend = createBackend();
+const BackendContext = createContext<Backend>(backend);
 
 vi.mock("@/providers/BackendProvider", () => ({
-  useBackend: () => useContext(BackendContext),
+  useBackend: (): Backend => useContext(BackendContext),
 }));
 
 vi.mock("@/services/remotePipelinesService", async (importOriginal) => ({
@@ -89,17 +103,11 @@ const pipeline: RemotePipeline = {
 const clients: QueryClient[] = [];
 
 function createDeferredPage() {
-  let resolvePage: ((page: RemotePipelinesPage) => void) | undefined;
-  const promise = new Promise<RemotePipelinesPage>((resolve) => {
-    resolvePage = resolve;
-  });
-  return {
-    promise,
-    resolve(page: RemotePipelinesPage) {
-      if (!resolvePage) throw new Error("Page resolver was not initialized");
-      resolvePage(page);
-    },
-  };
+  return Promise.withResolvers<RemotePipelinesPage>();
+}
+
+function flushQueryNotifications() {
+  return act(() => vi.advanceTimersByTimeAsync(0));
 }
 
 function createPage(
@@ -117,7 +125,19 @@ function createPage(
   };
 }
 
+function mockCursorPages(entries: [string | undefined, RemotePipelinesPage][]) {
+  const pages = new Map(entries);
+  vi.mocked(listRemotePipelines).mockImplementation(async (_, pageToken) => {
+    const page = pages.get(pageToken);
+    if (!page) throw new Error(`Unexpected page token: ${pageToken}`);
+    return page;
+  });
+}
+
 function expectNoPaginationControls() {
+  expect(
+    screen.queryByRole("navigation", { name: "Remote pipelines pagination" }),
+  ).not.toBeInTheDocument();
   expect(
     screen.queryByRole("button", { name: "First page" }),
   ).not.toBeInTheDocument();
@@ -131,14 +151,16 @@ function expectNoPaginationControls() {
 
 async function renderDashboard(
   initialEntry: string = APP_ROUTES.DASHBOARD_PIPELINES,
+  initialBackend: Backend = createBackend(),
 ) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   clients.push(client);
+  let currentBackend = initialBackend;
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>
-      <BackendContext.Provider value={backend}>
+      <BackendContext.Provider value={currentBackend}>
         {children}
       </BackendContext.Provider>
     </QueryClientProvider>
@@ -185,7 +207,10 @@ async function renderDashboard(
   const rendered = render(<RouterProvider router={router} />, { wrapper });
   return {
     ...rendered,
-    rerender: () => rendered.rerender(<RouterProvider router={router} />),
+    setBackend(next: Backend) {
+      currentBackend = next;
+      rendered.rerender(<RouterProvider router={router} />);
+    },
     router,
     searchParams: () =>
       new URL(history.location.href, "http://localhost").searchParams,
@@ -231,12 +256,6 @@ async function renderResizableTable() {
 beforeEach(() => {
   editorFlags.v2Enabled = true;
   vi.spyOn(window, "scrollTo").mockImplementation(() => {});
-  backend = {
-    backendUrl: "https://backend.example.com",
-    configured: true,
-    available: true,
-    ready: true,
-  };
   vi.mocked(listRemotePipelines).mockResolvedValue({
     pipelines: [pipeline],
     nextPageToken: null,
@@ -373,6 +392,9 @@ describe("DashboardPipelinesView remote pipelines", () => {
     const { user } = await renderDashboard();
 
     expect(screen.getByText("Local pipeline list")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Example Pipelines" }),
+    ).toHaveAttribute("href", APP_ROUTES.LEARN_EXAMPLES);
     expect(listRemotePipelines).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
@@ -396,6 +418,9 @@ describe("DashboardPipelinesView remote pipelines", () => {
       undefined,
     );
     expectNoPaginationControls();
+    expect(
+      screen.getByRole("link", { name: "Example Pipelines" }),
+    ).toHaveAttribute("href", APP_ROUTES.LEARN_EXAMPLES);
     expect(screen.getByText("Favorite Pipelines")).toBeInTheDocument();
     expect(screen.queryByText("Local pipeline list")).not.toBeInTheDocument();
 
@@ -618,6 +643,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
   });
 
   it("restores an invalid ID link without sending a search request", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     await renderDashboard(
       `${APP_ROUTES.DASHBOARD_PIPELINES}?id=not-a-uuid&name=shared`,
     );
@@ -627,7 +653,6 @@ describe("DashboardPipelinesView remote pipelines", () => {
     expect(idInput).toHaveAccessibleDescription(
       "Enter a complete pipeline ID (UUID) to search.",
     );
-    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     await act(() => vi.advanceTimersByTimeAsync(250));
     expect(listRemotePipelines).not.toHaveBeenCalled();
   });
@@ -787,9 +812,12 @@ describe("DashboardPipelinesView remote pipelines", () => {
     fireEvent.change(nameInput, { target: { value: "newer" } });
     expect(await screen.findByText("Pipeline 201")).toBeInTheDocument();
 
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     await act(async () => {
       olderPage.resolve(createPage(101, 1, null));
     });
+    await flushQueryNotifications();
+    vi.useRealTimers();
     expect(screen.getByText("Pipeline 201")).toBeInTheDocument();
     expect(screen.queryByText("Pipeline 101")).not.toBeInTheDocument();
     expect(nameInput).toHaveValue("newer");
@@ -838,8 +866,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
     [{ configured: false }, "Configure a backend to view pipelines."],
     [{ available: false }, "Pipelines are unavailable."],
   ])("does not fetch when the backend state is %o", async (state, message) => {
-    backend = { ...backend, ...state };
-    const { user } = await renderDashboard();
+    const { user } = await renderDashboard(undefined, createBackend(state));
 
     await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
 
@@ -862,18 +889,17 @@ describe("DashboardPipelinesView remote pipelines", () => {
   });
 
   it("opens another backend without reusing the previous backend's rows", async () => {
-    const { user, rerender } = await renderDashboard();
+    const { user, setBackend } = await renderDashboard();
     await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
     await screen.findByText("Example pipeline");
 
-    backend = { ...backend, backendUrl: "https://other.example.com" };
     vi.mocked(listRemotePipelines).mockResolvedValue({
       pipelines: [
         { ...pipeline, id: "pipeline-2", pipeline_name: "Other pipeline" },
       ],
       nextPageToken: null,
     });
-    rerender();
+    setBackend(createBackend({ backendUrl: "https://other.example.com" }));
 
     expect(await screen.findByText("Other pipeline")).toBeInTheDocument();
     expect(screen.queryByText("Example pipeline")).not.toBeInTheDocument();
@@ -885,16 +911,11 @@ describe("DashboardPipelinesView remote pipelines", () => {
   });
 
   it("navigates cursor pages without totals, including a partial final page", async () => {
-    const pages = new Map<string | undefined, RemotePipelinesPage>([
+    mockCursorPages([
       [undefined, createPage(1, 10, "page-two")],
       ["page-two", createPage(11, 10, "page-three")],
       ["page-three", createPage(21, 5, null)],
     ]);
-    vi.mocked(listRemotePipelines).mockImplementation(async (_, pageToken) => {
-      const page = pages.get(pageToken);
-      if (!page) throw new Error(`Unexpected page token: ${pageToken}`);
-      return page;
-    });
     const { user } = await renderDashboard();
     await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
 
@@ -1229,8 +1250,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
       router.history.forward();
     });
     await act(() => vi.advanceTimersByTimeAsync(250));
-    // Flush the query notification queued after the debounce render.
-    await act(() => vi.advanceTimersByTimeAsync(0));
+    await flushQueryNotifications();
     vi.useRealTimers();
     expect(nameInput).toHaveValue("pending");
     expect(searchParams().has("page")).toBe(false);
@@ -1288,13 +1308,10 @@ describe("DashboardPipelinesView remote pipelines", () => {
   });
 
   it("disables navigation until the next page request settles", async () => {
-    let resolveNextPage: ((page: RemotePipelinesPage) => void) | undefined;
-    const nextPage = new Promise<RemotePipelinesPage>((resolve) => {
-      resolveNextPage = resolve;
-    });
+    const nextPage = createDeferredPage();
     vi.mocked(listRemotePipelines)
       .mockResolvedValueOnce(createPage(1, 10, "page-two"))
-      .mockReturnValueOnce(nextPage);
+      .mockReturnValueOnce(nextPage.promise);
     const { user } = await renderDashboard();
     await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
     await screen.findByText("Pipeline 1");
@@ -1315,10 +1332,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
     expect(listRemotePipelines).toHaveBeenCalledTimes(2);
 
     await act(async () => {
-      if (!resolveNextPage) {
-        throw new Error("Next-page resolver was not initialized");
-      }
-      resolveNextPage(createPage(11, 10, null));
+      nextPage.resolve(createPage(11, 10, null));
     });
     expect(await screen.findByText("Pipeline 11")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "First page" })).toBeEnabled();
@@ -1390,14 +1404,13 @@ describe("DashboardPipelinesView remote pipelines", () => {
         ? createPage(11, 10, "page-three")
         : createPage(1, 10, "page-two"),
     );
-    const { user, rerender } = await renderDashboard();
+    const { user, setBackend } = await renderDashboard();
     await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
     await screen.findByText("Pipeline 1");
     await user.click(screen.getByRole("button", { name: "Next" }));
     await screen.findByText("Pipeline 11");
 
-    backend = { ...backend, available: false };
-    rerender();
+    setBackend(createBackend({ available: false }));
 
     expect(screen.getByText("Pipelines are unavailable.")).toBeInTheDocument();
     expect(screen.getByText("Page 2")).toBeInTheDocument();
@@ -1420,25 +1433,24 @@ describe("DashboardPipelinesView remote pipelines", () => {
           : createPage(1, 10, "original-page-two");
       },
     );
-    const { user, rerender } = await renderDashboard();
+    const { user, setBackend } = await renderDashboard();
     await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
     await screen.findByText("Pipeline 1");
     await user.click(screen.getByRole("button", { name: "Next" }));
     await screen.findByText("Pipeline 11");
 
-    backend = { ...backend, backendUrl: "https://other.example.com" };
-    rerender();
+    setBackend(createBackend({ backendUrl: "https://other.example.com" }));
 
     expect(await screen.findByText("Pipeline 101")).toBeInTheDocument();
     expect(screen.queryByText("Pipeline 11")).not.toBeInTheDocument();
     expectNoPaginationControls();
     expect(listRemotePipelines).toHaveBeenLastCalledWith(
-      backend.backendUrl,
+      "https://other.example.com",
       undefined,
       undefined,
     );
     expect(listRemotePipelines).not.toHaveBeenCalledWith(
-      backend.backendUrl,
+      "https://other.example.com",
       "original-page-two",
       undefined,
     );
@@ -1449,11 +1461,19 @@ describe("DashboardPipelinesView remote pipelines", () => {
       await renderResizableTable();
 
     expect(within(table).getAllByRole("separator")).toHaveLength(5);
+    expect(handle).toHaveAttribute("aria-valuenow", "20");
+    expect(handle).toHaveAttribute("aria-valuemin", "8");
+    expect(handle).toHaveAttribute("aria-valuemax", "32");
     startDrag();
     expect(handle.setPointerCapture).toHaveBeenCalledWith(1);
     dragTo(690);
 
     expect(widths()).toEqual([25, 15, 29, 9, 9, 13]);
+    expect(handle).toHaveAttribute("aria-valuenow", "29");
+    expect(handle).toHaveAttribute("aria-valuemax", "32");
+    for (const date of [pipeline.created_at, pipeline.updated_at]) {
+      expect(screen.getByTitle(date)).toHaveTextContent(formatDate(date));
+    }
     expect(widths().reduce((total, width) => total + width, 0)).toBe(100);
     expect(screen.getByText(pipeline.user_id)).toHaveAttribute(
       "title",
@@ -1465,14 +1485,18 @@ describe("DashboardPipelinesView remote pipelines", () => {
   });
 
   it("keeps columns above their minimum width during large drags", async () => {
-    const { widths, startDrag, dragTo } = await renderResizableTable();
+    const { handle, widths, startDrag, dragTo } = await renderResizableTable();
 
     startDrag();
     dragTo(1600);
     expect(widths()).toEqual([25, 15, 32, 8, 8, 12]);
+    expect(handle).toHaveAttribute("aria-valuenow", "32");
+    expect(handle).toHaveAttribute("aria-valuemax", "32");
 
     dragTo(-400);
     expect(widths()).toEqual([25, 15, 8, 16, 16, 20]);
+    expect(handle).toHaveAttribute("aria-valuenow", "8");
+    expect(handle).toHaveAttribute("aria-valuemin", "8");
   });
 
   it.each<"pointerUp" | "pointerCancel" | "lostPointerCapture">([

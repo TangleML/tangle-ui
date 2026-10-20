@@ -55,6 +55,16 @@ export function validatePipelinesSearch(search: unknown): PipelinesSearch {
   };
 }
 
+export function hasRemotePipelineFilters(filters: RemotePipelineSearchFilters) {
+  return Boolean(
+    filters.name ||
+    filters.id ||
+    filters.user ||
+    filters.createdFrom ||
+    filters.updatedFrom,
+  );
+}
+
 export function isInvalidPipelineId(id: string | undefined): boolean {
   return Boolean(
     id?.trim() &&

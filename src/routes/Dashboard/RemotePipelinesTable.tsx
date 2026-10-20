@@ -3,7 +3,7 @@ import { type PointerEvent, useEffect, useRef, useState } from "react";
 
 import { CopyText } from "@/components/shared/CopyText/CopyText";
 import { PaginationControls } from "@/components/shared/PaginationControls";
-import { BlockStack } from "@/components/ui/layout";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
 import {
   Table,
   TableBody,
@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Text } from "@/components/ui/typography";
 import { useRemotePipelinesPage } from "@/hooks/useRemotePipelinesPage";
 import { useBackend } from "@/providers/BackendProvider";
 import { getDefaultRemoteEditorPath } from "@/routes/editorRoutes";
@@ -34,7 +35,7 @@ const COLUMN_NAMES = [
   "Current version",
 ];
 const INITIAL_COLUMN_WIDTHS = [25, 15, 20, 12, 12, 16];
-const MIN_COLUMN_WIDTH = 8;
+const MIN_COLUMN_WIDTH_PERCENT = 8;
 
 interface RemotePipelinesTableProps {
   filters: RemotePipelineSearchFilters;
@@ -47,12 +48,18 @@ interface RemotePipelinesPagination {
   tokens: string[];
 }
 
+function maxColumnWidthIncrease(widths: number[], index: number) {
+  return (
+    (Math.min(...widths.slice(index + 1)) - MIN_COLUMN_WIDTH_PERCENT) *
+    (widths.length - index - 1)
+  );
+}
+
 function resizeColumnWidths(widths: number[], index: number, delta: number) {
   const remaining = widths.length - index - 1;
-  const maxDelta =
-    (Math.min(...widths.slice(index + 1)) - MIN_COLUMN_WIDTH) * remaining;
+  const maxDelta = maxColumnWidthIncrease(widths, index);
   const change = Math.max(
-    MIN_COLUMN_WIDTH - widths[index],
+    MIN_COLUMN_WIDTH_PERCENT - widths[index],
     Math.min(delta, maxDelta),
   );
 
@@ -162,17 +169,15 @@ export function RemotePipelinesTable({
                     role="separator"
                     aria-label={`Resize ${name} column`}
                     aria-orientation="vertical"
-                    aria-valuemin={MIN_COLUMN_WIDTH}
+                    aria-valuemin={MIN_COLUMN_WIDTH_PERCENT}
                     aria-valuemax={
                       columnWidths[index] +
-                      (Math.min(...columnWidths.slice(index + 1)) -
-                        MIN_COLUMN_WIDTH) *
-                        (COLUMN_NAMES.length - index - 1)
+                      maxColumnWidthIncrease(columnWidths, index)
                     }
                     aria-valuenow={columnWidths[index]}
                     tabIndex={0}
                     title={`Drag or use arrow keys to resize ${name}`}
-                    className="absolute inset-y-0 right-0 w-2 cursor-col-resize touch-none select-none hover:bg-muted focus-visible:bg-muted focus-visible:outline-ring"
+                    className="absolute inset-y-0 right-0 w-2 cursor-col-resize touch-none select-none hover:bg-muted focus-visible:bg-muted focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:border-ring"
                     onPointerDown={(event) => {
                       if (event.button !== 0 || dragRef.current) return;
                       const tableWidth =
@@ -231,11 +236,10 @@ export function RemotePipelinesTable({
         <TableBody>
           {message ? (
             <TableRow>
-              <TableCell
-                colSpan={6}
-                className="whitespace-normal text-center text-muted-foreground"
-              >
-                {message}
+              <TableCell colSpan={6} className="whitespace-normal text-center">
+                <Text size="sm" tone="subdued">
+                  {message}
+                </Text>
               </TableCell>
             </TableRow>
           ) : (
@@ -261,7 +265,11 @@ export function RemotePipelinesTable({
                 }}
               >
                 <TableCell className="text-sm">
-                  <div className="flex min-h-9 items-center">
+                  <InlineStack
+                    blockAlign="center"
+                    wrap="nowrap"
+                    className="min-h-9"
+                  >
                     <Link
                       to={getDefaultRemoteEditorPath(pipeline.id)}
                       onClick={(event) => event.stopPropagation()}
@@ -270,10 +278,14 @@ export function RemotePipelinesTable({
                     >
                       {pipeline.pipeline_name ?? "Untitled Pipeline"}
                     </Link>
-                  </div>
+                  </InlineStack>
                 </TableCell>
                 <TableCell onClick={(event) => event.stopPropagation()}>
-                  <div className="flex min-h-9 items-center">
+                  <InlineStack
+                    blockAlign="center"
+                    wrap="nowrap"
+                    className="min-h-9"
+                  >
                     <CopyText
                       size="xs"
                       className="truncate"
@@ -281,7 +293,7 @@ export function RemotePipelinesTable({
                     >
                       {pipeline.id}
                     </CopyText>
-                  </div>
+                  </InlineStack>
                 </TableCell>
                 <TruncatedTableCell>{pipeline.user_id}</TruncatedTableCell>
                 <TruncatedTableCell title={pipeline.created_at}>
@@ -298,21 +310,23 @@ export function RemotePipelinesTable({
           )}
         </TableBody>
       </Table>
-      <nav aria-label="Remote pipelines pagination" className="w-full">
-        <PaginationControls
-          currentPage={pageTokens.length + 1}
-          hasPreviousPage={pageTokens.length > 0}
-          hasNextPage={Boolean(data?.nextPageToken)}
-          disabled={!canFetch || isFetching}
-          onPreviousPage={() => changePage(pageTokens.slice(0, -1))}
-          onNextPage={() => {
-            if (data?.nextPageToken) {
-              changePage([...pageTokens, data.nextPageToken]);
-            }
-          }}
-          onReset={() => changePage([])}
-        />
-      </nav>
+      {(pageTokens.length > 0 || data?.nextPageToken) && (
+        <nav aria-label="Remote pipelines pagination" className="w-full">
+          <PaginationControls
+            currentPage={pageTokens.length + 1}
+            hasPreviousPage={pageTokens.length > 0}
+            hasNextPage={Boolean(data?.nextPageToken)}
+            disabled={!canFetch || isFetching}
+            onPreviousPage={() => changePage(pageTokens.slice(0, -1))}
+            onNextPage={() => {
+              if (data?.nextPageToken) {
+                changePage([...pageTokens, data.nextPageToken]);
+              }
+            }}
+            onReset={() => changePage([])}
+          />
+        </nav>
+      )}
     </BlockStack>
   );
 }
@@ -328,11 +342,11 @@ function TruncatedTableCell({
 }) {
   return (
     <TableCell className={className}>
-      <div className="flex min-h-9 items-center">
+      <InlineStack blockAlign="center" wrap="nowrap" className="min-h-9">
         <span className="block truncate" title={title}>
           {children}
         </span>
-      </div>
+      </InlineStack>
     </TableCell>
   );
 }

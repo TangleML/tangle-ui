@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   getRemotePipelinesFilterQuery,
+  isInvalidPipelineId,
   validatePipelinesSearch,
 } from "./pipelinesSearch";
 
@@ -25,6 +26,14 @@ describe("validatePipelinesSearch", () => {
       });
     },
   );
+
+  it.each(["local", "remote"])("accepts the %s tab", (tab) => {
+    expect(validatePipelinesSearch({ tab }).tab).toBe(tab);
+  });
+
+  it.each(["unknown", [], 1])("discards invalid tab %s", (tab) => {
+    expect(validatePipelinesSearch({ tab }).tab).toBeUndefined();
+  });
 
   it("discards malformed text and date parameter types", () => {
     const search = validatePipelinesSearch({
@@ -93,7 +102,41 @@ describe("validatePipelinesSearch", () => {
   });
 });
 
+describe("isInvalidPipelineId", () => {
+  it.each([
+    undefined,
+    "",
+    "   ",
+    "123E4567-E89B-12D3-A456-426614174000",
+    " 123e4567-e89b-12d3-a456-426614174000 ",
+  ])("accepts an empty or complete ID %s", (id) => {
+    expect(isInvalidPipelineId(id)).toBe(false);
+  });
+
+  it.each(["123e4567", "not-a-uuid"])("rejects incomplete ID %s", (id) => {
+    expect(isInvalidPipelineId(id)).toBe(true);
+  });
+});
+
 describe("getRemotePipelinesFilterQuery", () => {
+  it("trims name, ID and user values", () => {
+    const filters = {
+      name: "shared",
+      id: "123e4567-e89b-12d3-a456-426614174000",
+      user: "me",
+    };
+    expect(
+      getRemotePipelinesFilterQuery({
+        name: ` ${filters.name} `,
+        id: ` ${filters.id} `,
+        user: ` ${filters.user} `,
+      }),
+    ).toBe(getRemotePipelinesFilterQuery(filters));
+    expect(
+      getRemotePipelinesFilterQuery({ name: " ", id: " ", user: " " }),
+    ).toBeUndefined();
+  });
+
   it.each([
     { date: "2026-03-08", month: 2, day: 8 },
     { date: "2026-11-01", month: 10, day: 1 },

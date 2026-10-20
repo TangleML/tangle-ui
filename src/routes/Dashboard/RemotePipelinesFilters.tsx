@@ -10,6 +10,7 @@ import { InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 
 import {
+  hasRemotePipelineFilters,
   isInvalidPipelineId,
   type RemotePipelineSearchFilters,
 } from "./pipelinesSearch";
@@ -37,7 +38,6 @@ export function RemotePipelinesFilters({
         to: updatedTo ? parseISO(updatedTo) : undefined,
       }
     : undefined;
-  const hasFilters = name || id || user || createdAt?.from || updatedAt?.from;
   const idErrorId = useId();
   const invalidId = isInvalidPipelineId(id);
 
@@ -54,7 +54,7 @@ export function RemotePipelinesFilters({
   }
 
   return (
-    <search aria-label="Remote pipeline filters" className="w-full">
+    <div role="search" aria-label="Remote pipeline filters" className="w-full">
       <InlineStack gap="2">
         <div className="relative w-44">
           <Icon
@@ -113,7 +113,7 @@ export function RemotePipelinesFilters({
             placeholder="Updated at"
           />
         </fieldset>
-        {hasFilters && (
+        {hasRemotePipelineFilters(filters) && (
           <Button
             variant="ghost"
             size="sm"
@@ -130,6 +130,6 @@ export function RemotePipelinesFilters({
           Enter a complete pipeline ID (UUID) to search.
         </Text>
       )}
-    </search>
+    </div>
   );
 }

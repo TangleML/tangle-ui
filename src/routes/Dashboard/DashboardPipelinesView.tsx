@@ -10,6 +10,7 @@ import { APP_ROUTES } from "@/routes/appRoutes";
 
 import { FavoritesPreview } from "./FavoritesPreview";
 import {
+  hasRemotePipelineFilters,
   type RemotePipelineSearchFilters,
   validatePipelinesSearch,
 } from "./pipelinesSearch";
@@ -18,12 +19,7 @@ import { RemotePipelinesTable } from "./RemotePipelinesTable";
 export function DashboardPipelinesView() {
   const navigate = useNavigate();
   const search = validatePipelinesSearch(useSearch({ strict: false }));
-  const hasFilters =
-    search.name ||
-    search.id ||
-    search.user ||
-    search.createdFrom ||
-    search.updatedFrom;
+  const hasFilters = hasRemotePipelineFilters(search);
   const tab = search.tab ?? (hasFilters ? "remote" : "local");
 
   function changeFilters(filters: RemotePipelineSearchFilters) {
