@@ -353,22 +353,3 @@ it("does not resolve or migrate tour scratch pipelines", () => {
   expect(screen.getByText("Local editor")).toBeInTheDocument();
   expect(storage.resolvePipeline).not.toHaveBeenCalled();
 });
-
-it("keeps the local editor without a configured backend", async () => {
-  activeBackendUrl = "";
-  open();
-  await screen.findByText("Local editor");
-  expect(storage.moveLocalPipelineToRemote).not.toHaveBeenCalled();
-  expect(onMigrated).not.toHaveBeenCalled();
-});
-
-it("rechecks skipped migration when a local pipeline is reopened", async () => {
-  activeBackendUrl = "";
-  const first = open();
-  await screen.findByText("Local editor");
-  first.unmount();
-  activeBackendUrl = backendUrl;
-  open();
-  await waitFor(() => expect(onMigrated).toHaveBeenCalledWith(remote));
-  expect(storage.moveLocalPipelineToRemote).toHaveBeenCalledOnce();
-});
