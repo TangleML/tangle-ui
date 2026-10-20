@@ -1,6 +1,17 @@
 import { pipelineStorageDb } from "./db";
 import type { PipelineRef, RemotePipelineRef } from "./types";
 
+export function assertPipelineMigrationBackend(
+  remote: Pick<RemotePipelineRef, "backendUrl">,
+  backendUrl: string,
+): void {
+  if (remote.backendUrl !== backendUrl) {
+    throw new Error(
+      `This pipeline was moved to ${remote.backendUrl}. Select that backend in Settings to open it.`,
+    );
+  }
+}
+
 export function findPipelineMigration(ref: PipelineRef) {
   return pipelineStorageDb.pipeline_migrations.get(
     ref.fileId ? `id:${ref.fileId}` : `name:${ref.name}`,

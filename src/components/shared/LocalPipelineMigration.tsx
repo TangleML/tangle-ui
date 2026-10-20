@@ -4,6 +4,7 @@ import { type ReactNode, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { BlockStack } from "@/components/ui/layout";
 import { Paragraph } from "@/components/ui/typography";
+import { useBackend } from "@/providers/BackendProvider";
 import { useTourMode } from "@/providers/TourProvider/TourModeContext";
 import { invalidatePipelineQueries } from "@/services/pipelineStorage/invalidatePipelineQueries";
 import {
@@ -11,6 +12,7 @@ import {
   getPipelineCreationBackendUrl,
 } from "@/services/pipelineStorage/pipelineCreation";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
+import { assertPipelineMigrationBackend } from "@/services/pipelineStorage/pipelineMigrations";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import {
   getEditorPipelineIdentity,
@@ -42,14 +44,20 @@ function MigrateLocalPipeline({
 }: LocalPipelineMigrationProps) {
   const storage = usePipelineStorage();
   const queryClient = useQueryClient();
+  const { backendUrl: activeBackendUrl, ready } = useBackend();
   const { data, isPending, error, refetch } = useQuery({
     queryKey: [
       "local-pipeline-migration",
       getEditorPipelineIdentity(pipelineRef),
       projectId,
+      activeBackendUrl,
     ],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const local = await storage.resolvePipeline(pipelineRef);
+      signal.throwIfAborted();
+      if (local.remote) {
+        assertPipelineMigrationBackend(local.remote, activeBackendUrl);
+      }
       const driver = local.folder.driver.type;
       if (
         !local.remote &&
@@ -60,16 +68,30 @@ function MigrateLocalPipeline({
       }
       const backendUrl =
         local.remote?.backendUrl ?? (await getPipelineCreationBackendUrl());
+      signal.throwIfAborted();
       const remote = local.remote
         ? local
         : await storage.moveLocalPipelineToRemote(
             local,
             backendUrl,
             projectId
-              ? (file) =>
-                  moveLocalPipelineResourceToRemote(projectId, local, file)
+              ? async (file) => {
+                  signal.throwIfAborted();
+                  if (file.remote) {
+                    assertPipelineMigrationBackend(
+                      file.remote,
+                      activeBackendUrl,
+                    );
+                  }
+                  await moveLocalPipelineResourceToRemote(
+                    projectId,
+                    local,
+                    file,
+                  );
+                }
               : undefined,
           );
+      signal.throwIfAborted();
       if (local.remote && projectId) {
         await moveLocalPipelineResourceToRemote(
           projectId,
@@ -83,6 +105,13 @@ function MigrateLocalPipeline({
       }
       return remote;
     },
+    select: (file) => {
+      if (file?.remote) {
+        assertPipelineMigrationBackend(file.remote, activeBackendUrl);
+      }
+      return file;
+    },
+    enabled: ready,
     staleTime: Infinity,
     retry: false,
     refetchOnWindowFocus: false,
@@ -90,8 +119,8 @@ function MigrateLocalPipeline({
   });
 
   useEffect(() => {
-    if (data) onMigrated(data);
-  }, [data, onMigrated]);
+    if (data && data.remote?.backendUrl === activeBackendUrl) onMigrated(data);
+  }, [activeBackendUrl, data, onMigrated]);
 
   if (error) {
     return (

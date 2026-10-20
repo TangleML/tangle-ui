@@ -782,9 +782,23 @@ describe("moving local pipelines to remote storage", () => {
         },
       }),
     );
+    const onCreated = vi.fn();
+    await expect(
+      storage.moveLocalPipelineToRemote(
+        local,
+        "https://other.example.com",
+        onCreated,
+      ),
+    ).rejects.toThrow(
+      `This pipeline was moved to ${ref.backendUrl}. Select that backend in Settings to open it.`,
+    );
+    expect(client.get).not.toHaveBeenCalled();
+    expect(onCreated).not.toHaveBeenCalled();
+    expect(local.deleteFile).not.toHaveBeenCalled();
+
     const remote = await storage.moveLocalPipelineToRemote(
       local,
-      "https://other.example.com",
+      ref.backendUrl,
     );
     expect(componentSpecFromYaml(await remote.read()).description).toBe(
       "Remote edit",
@@ -802,6 +816,25 @@ describe("moving local pipelines to remote storage", () => {
         .mocked(client.put)
         .mock.calls.map(([options]) => options?.query?.file_path),
     ).toEqual([`pipelines/${local.id}.yaml`]);
+  });
+
+  it("rejects an already migrated file from another backend before updating links", async () => {
+    const remote = await storage.moveLocalPipelineToRemote(
+      local,
+      ref.backendUrl,
+    );
+    const onCreated = vi.fn();
+
+    await expect(
+      storage.moveLocalPipelineToRemote(
+        remote,
+        "https://other.example.com",
+        onCreated,
+      ),
+    ).rejects.toThrow("Select that backend in Settings");
+    expect(onCreated).not.toHaveBeenCalled();
+    expect(client.put).toHaveBeenCalledOnce();
+    expect(local.deleteFile).toHaveBeenCalledOnce();
   });
 
   it("resolves old project IDs and names after migration and a fresh service instance", async () => {

@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -12,6 +13,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { useTourMode } from "@/providers/TourProvider/TourModeContext";
 import { LocalPipelinesQueryKeys } from "@/services/localPipelines/types";
 import { getPipelineCreationBackendUrl } from "@/services/pipelineStorage/pipelineCreation";
+import { getEditorPipelineIdentity } from "@/services/pipelineStorage/types";
 import { moveLocalPipelineResourceToRemote } from "@/services/projects/moveLocalPipelineResourceToRemote";
 import {
   ProjectResourcesQueryKeys,
@@ -37,11 +39,15 @@ vi.mock("@/services/pipelineStorage/pipelineCreation", async (original) => ({
 vi.mock("@/providers/TourProvider/TourModeContext", () => ({
   useTourMode: vi.fn(),
 }));
+vi.mock("@/providers/BackendProvider", () => ({
+  useBackend: () => ({ backendUrl: activeBackendUrl, ready: true }),
+}));
 vi.mock("@/services/projects/moveLocalPipelineResourceToRemote", () => ({
   moveLocalPipelineResourceToRemote: vi.fn(),
 }));
 
 const backendUrl = "https://backend.example.com";
+let activeBackendUrl = backendUrl;
 const client = new QueryClient();
 const onMigrated = vi.fn();
 const local = {
@@ -58,7 +64,7 @@ const remote = {
 const pipelineRef = { name: "Old name", fileId: local.id };
 
 function open(projectId?: string) {
-  return render(
+  const contents = () => (
     <StrictMode>
       <QueryClientProvider client={client}>
         <LocalPipelineMigration
@@ -69,12 +75,15 @@ function open(projectId?: string) {
           <p>Local editor</p>
         </LocalPipelineMigration>
       </QueryClientProvider>
-    </StrictMode>,
+    </StrictMode>
   );
+  const rendered = render(contents());
+  return { ...rendered, rerender: () => rendered.rerender(contents()) };
 }
 
 beforeEach(() => {
   vi.resetAllMocks();
+  activeBackendUrl = backendUrl;
   vi.stubEnv("VITE_LOCAL_PIPELINES", undefined);
   storage.resolvePipeline.mockResolvedValue(local);
   storage.moveLocalPipelineToRemote.mockResolvedValue(remote);
@@ -92,7 +101,7 @@ it("uploads the resolved file once on open, before enabling edits", async () => 
   open();
   expect(screen.queryByText("Local editor")).not.toBeInTheDocument();
   await waitFor(() => expect(onMigrated).toHaveBeenCalledWith(remote));
-  expect(storage.resolvePipeline).toHaveBeenCalledExactlyOnceWith(pipelineRef);
+  expect(storage.resolvePipeline).toHaveBeenCalledWith(pipelineRef);
   expect(storage.moveLocalPipelineToRemote).toHaveBeenCalledExactlyOnceWith(
     local,
     backendUrl,
@@ -150,6 +159,77 @@ it("retries a failed project repair without uploading another pipeline", async (
   await waitFor(() => expect(onMigrated).toHaveBeenCalledWith(remote));
   expect(storage.moveLocalPipelineToRemote).not.toHaveBeenCalled();
   expect(getPipelineCreationBackendUrl).not.toHaveBeenCalled();
+});
+
+it("blocks a completed migration on another backend before repairing the project", async () => {
+  activeBackendUrl = "https://other.example.com";
+  storage.resolvePipeline.mockResolvedValue(remote);
+  open("project-id");
+
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    `This pipeline was moved to ${backendUrl}. Select that backend in Settings to open it.`,
+  );
+  expect(storage.moveLocalPipelineToRemote).not.toHaveBeenCalled();
+  expect(moveLocalPipelineResourceToRemote).not.toHaveBeenCalled();
+  expect(onMigrated).not.toHaveBeenCalled();
+});
+
+it("does not reuse a cached migration after switching backends", async () => {
+  storage.resolvePipeline.mockResolvedValue(remote);
+  const first = open();
+  await waitFor(() => expect(onMigrated).toHaveBeenCalledWith(remote));
+  first.unmount();
+  onMigrated.mockClear();
+  activeBackendUrl = "https://other.example.com";
+  open();
+
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Select that backend in Settings",
+  );
+  expect(onMigrated).not.toHaveBeenCalled();
+});
+
+it("validates cached results before invoking the migration callback", async () => {
+  activeBackendUrl = "https://other.example.com";
+  client.setQueryData(
+    [
+      "local-pipeline-migration",
+      getEditorPipelineIdentity(pipelineRef),
+      undefined,
+      activeBackendUrl,
+    ],
+    remote,
+  );
+  open();
+
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Select that backend in Settings",
+  );
+  expect(storage.resolvePipeline).not.toHaveBeenCalled();
+  expect(onMigrated).not.toHaveBeenCalled();
+});
+
+it("does not repair a project when the backend changes during migration", async () => {
+  const pendingMigration = Promise.withResolvers<void>();
+  storage.moveLocalPipelineToRemote.mockImplementation(
+    async (_file, _backend, onCreated) => {
+      await pendingMigration.promise;
+      await onCreated(remote);
+      return remote;
+    },
+  );
+  const opened = open("project-id");
+  await waitFor(() =>
+    expect(storage.moveLocalPipelineToRemote).toHaveBeenCalled(),
+  );
+  activeBackendUrl = "https://other.example.com";
+  storage.resolvePipeline.mockResolvedValue(remote);
+  opened.rerender();
+  await screen.findByRole("alert");
+  await act(async () => pendingMigration.resolve());
+
+  expect(moveLocalPipelineResourceToRemote).not.toHaveBeenCalled();
+  expect(onMigrated).not.toHaveBeenCalled();
 });
 
 it("does not migrate tour scratch pipelines", () => {

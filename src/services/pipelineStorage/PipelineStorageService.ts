@@ -11,6 +11,7 @@ import { movePipelineAssociationsToRemote } from "./pipelineAssociations";
 import { PipelineFile } from "./PipelineFile";
 import { PipelineFolder } from "./PipelineFolder";
 import {
+  assertPipelineMigrationBackend,
   findPipelineMigration,
   rememberPipelineMigration,
 } from "./pipelineMigrations";
@@ -238,6 +239,7 @@ export class PipelineStorageService {
         ? await this.resolvePipeline({ name: pipeline })
         : pipeline;
     if (local.remote) {
+      assertPipelineMigrationBackend(local.remote, backendUrl);
       await onCreated?.(local);
       return local;
     }
@@ -245,6 +247,7 @@ export class PipelineStorageService {
       name: local.storageKey,
       fileId: local.id,
     });
+    if (migration) assertPipelineMigrationBackend(migration.remote, backendUrl);
     const remote = migration
       ? remoteFile(await RemotePipelineStorageDriver.open(migration.remote))
       : await this.createRemotePipeline(
