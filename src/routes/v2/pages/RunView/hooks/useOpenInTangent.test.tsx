@@ -13,6 +13,7 @@ import {
   getProject,
   updateProject,
 } from "@/services/projects/projectsService";
+import type { Project, ProjectResource } from "@/services/projects/types";
 
 import { useOpenInTangent } from "./useOpenInTangent";
 
@@ -60,6 +61,32 @@ async function openRunInNewProject(name: string) {
   await waitFor(() => expect(navigate).toHaveBeenCalled());
 }
 
+const project = (id: string): Project => ({
+  id,
+  workspaceId: "ws-1",
+  name: "Churn",
+  description: null,
+  createdBy: null,
+  origin: "agent",
+  metadata: null,
+  createdAt: new Date("2026-09-09T10:00:00Z"),
+  updatedAt: new Date("2026-09-09T10:00:00Z"),
+  resourceCounts: {},
+});
+
+const attachedRun: ProjectResource = {
+  id: "resource-1",
+  projectId: "project-9",
+  entity: "document",
+  name: "Churn",
+  entityId: null,
+  metadata: { type: "pipeline_run", identity: "run://id/run-7" },
+  createdBy: null,
+  createdAt: new Date("2026-09-09T10:00:00Z"),
+  updatedAt: new Date("2026-09-09T10:00:00Z"),
+  payload: null,
+};
+
 function runBelongsTo(...projectIds: string[]) {
   vi.mocked(useRerunProjectIds).mockReturnValue(
     vi.fn().mockResolvedValue(projectIds),
@@ -69,16 +96,9 @@ function runBelongsTo(...projectIds: string[]) {
 describe("useOpenInTangent", () => {
   beforeEach(() => {
     runBelongsTo();
-    vi.mocked(getProject).mockResolvedValue({
-      id: "project-3",
-      metadata: null,
-    } as unknown as Awaited<ReturnType<typeof getProject>>);
-    vi.mocked(createProject).mockResolvedValue({
-      id: "project-9",
-    } as unknown as Awaited<ReturnType<typeof createProject>>);
-    vi.mocked(createProjectResource).mockResolvedValue(
-      {} as unknown as Awaited<ReturnType<typeof createProjectResource>>,
-    );
+    vi.mocked(getProject).mockResolvedValue(project("project-3"));
+    vi.mocked(createProject).mockResolvedValue(project("project-9"));
+    vi.mocked(createProjectResource).mockResolvedValue(attachedRun);
     vi.mocked(listProjectResources).mockResolvedValue({
       items: [],
       nextPageToken: null,
