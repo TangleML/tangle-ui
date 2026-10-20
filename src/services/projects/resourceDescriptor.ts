@@ -7,6 +7,7 @@ import {
   isWorkareaTargetString,
   nameIdentity,
   parseWorkareaTarget,
+  runTarget,
 } from "./resourceTarget";
 import type { CreateResourceInput, ProjectResourceSummary } from "./types";
 
@@ -185,10 +186,7 @@ export function pipelineRunResourceInput(
     payload: {},
     metadata: {
       type: PIPELINE_RUN,
-      identity: formatWorkareaTarget({
-        type: "run",
-        identity: idIdentity(runId),
-      }),
+      identity: formatWorkareaTarget(runTarget(runId)),
     },
   };
 }

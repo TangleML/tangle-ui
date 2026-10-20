@@ -72,6 +72,10 @@ export function nameIdentity(value: string): `name/${string}` {
   return `name/${value}`;
 }
 
+export function runTarget(runId: string): RunTarget {
+  return { type: "run", identity: idIdentity(runId) };
+}
+
 export function formatWorkareaTarget(
   target: WorkareaTarget,
 ): WorkareaTargetString {
@@ -87,7 +91,7 @@ function isIdentityKey(value: string): value is IdentityKey {
 }
 
 function isWorkareaIdentity(value: string): value is WorkareaIdentity {
-  return /^(id|name)\//.test(value);
+  return /^(id|name)\/./.test(value);
 }
 
 function splitIdentity(identity: string): ParsedIdentity {
