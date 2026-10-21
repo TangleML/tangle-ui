@@ -26,6 +26,7 @@ import { createComponentSearchTools } from "../tools/componentSearchTools";
 import { createCsomTools } from "../tools/csomTools";
 import { createDebugTools } from "../tools/debugTools";
 import { createRunTools } from "../tools/runTools";
+import { createSessionResourceTools } from "../tools/sessionResourceTools";
 import type { AgentContext } from "../types";
 
 export interface RemoteAgentSpec {
@@ -111,7 +112,9 @@ export function selectRemoteEditorTools(
   return registry.filter((toolDef) => allowed.has(toolDef.name));
 }
 
-function formatToolAvailabilitySection(tools: RemoteEditorTool[]): string {
+function formatToolAvailabilitySection(
+  tools: readonly { name: string }[],
+): string {
   const names = tools.map((toolDef) => `\`${toolDef.name}\``).join(", ");
   const available = names || "none";
   return `\n\n## Available tools\n\nYou have exactly these tools: ${available}. Do not attempt workflow steps that require a tool outside this list. If a missing tool prevents the requested work, state that limitation clearly.`;
@@ -150,7 +153,7 @@ function formatCurrentRunSection(context: AgentContext): string {
 function buildInstructions(
   session: AgentSession,
   spec: RemoteAgentSpec,
-  tools: RemoteEditorTool[],
+  tools: readonly { name: string }[],
 ): string {
   const base =
     session.context.mode === "runView" ? remoteRunPrompt : remoteEditorPrompt;
@@ -173,7 +176,17 @@ export function buildRemoteEditorAgent(
     model,
     reasoningEffort: getInheritedReasoningEffort(session.aiConfig, model),
   });
-  const tools = selectRemoteEditorTools(session, spec.tools);
+  // Session-resource tools are a host capability, not a server-granted CSOM
+  // tool, so they are always attached (outside the spawn allowlist) — mirroring
+  // the pi host, whose resource extension is likewise always registered. They
+  // appear only when the host wired a resource bridge for this turn.
+  const resourceTools = session.resources
+    ? createSessionResourceTools(session.resources).allTools
+    : [];
+  const tools = [
+    ...selectRemoteEditorTools(session, spec.tools),
+    ...resourceTools,
+  ];
   const effort = reasoningEffort(spec.thinkingDepth);
   const agent = new Agent({
     name: "tangle-remote-editor",

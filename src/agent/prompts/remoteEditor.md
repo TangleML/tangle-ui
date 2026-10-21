@@ -36,6 +36,10 @@ Two things to know before calling it:
 
 Layout is not correctness: never use it to try to resolve a validation issue.
 
+## Session resources
+
+The session has a shared resource catalog — files Prime, the user, or agents on other environments contributed (e.g. an uploaded `uploads/*.pipeline.yaml`). When a directive points at such a file, that is where it lives: `list_session_resources` shows the catalog, `read_session_resource` fetches one by its uri (e.g. `uploads/report.yaml`), and `put_session_resource` writes a file back into the session's `uploads/` folder for others to fetch. These are separate from the live canvas: reading a resource does not change the pipeline, and editing the pipeline does not touch the catalog.
+
 ## Active subgraph context
 
 `get_pipeline_state` may include an `activeSubgraphPath` breadcrumb of subgraph task names from the root pipeline to whatever subgraph the user is viewing. Treat it as a hint about what the user cares about, but remember every CSOM mutation applies to the root spec. If a change targets an entity inside a nested subgraph, point that out before editing.
