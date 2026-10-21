@@ -189,6 +189,7 @@ afterEach(() => {
   cleanup();
   queryClient.clear();
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
 });
 
 async function open(initialEntry: string = APP_ROUTES.EDITOR_V2_NEW_PIPELINE) {
@@ -339,6 +340,7 @@ it("reopens the saved pipeline after leaving during creation and going Back", as
 });
 
 it("keeps local chat mounted while replacing document undo and save state", async () => {
+  vi.stubEnv("VITE_LOCAL_PIPELINES", "true");
   const first = new PipelineFile({
     id: "local-first",
     storageKey: "First",
@@ -402,4 +404,14 @@ it("opens remote pipelines when the V2 editor flag is disabled", async () => {
   const { history } = await open(`/editor-v2/pipeline/${pipelineId}`);
   expect(history.location.pathname).toBe(`/editor-v2/pipeline/${pipelineId}`);
   expect(client.get).toHaveBeenCalledOnce();
+});
+
+it("creates and promotes a new pipeline when the V2 flag is disabled", async () => {
+  flags.v2Editor = false;
+  const { history } = await open();
+  fireEvent.click(screen.getByRole("button", { name: "Edit pipeline" }));
+  await waitFor(() =>
+    expect(history.location.pathname).toBe(`/editor-v2/pipeline/${pipelineId}`),
+  );
+  expect(client.put).toHaveBeenCalledOnce();
 });
