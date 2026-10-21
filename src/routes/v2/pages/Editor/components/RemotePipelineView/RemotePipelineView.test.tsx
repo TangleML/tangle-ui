@@ -296,7 +296,7 @@ it.each<RemotePipelineNodeType>(["task", "input", "output"])(
     expect(canvas.nodes?.some((item) => item.id === node.$id)).toBe(true);
     expect(screen.getByText("View only")).toBeInTheDocument();
     await waitFor(() =>
-      expect(router.state.location.search.nodeId).toBeUndefined(),
+      expect(router.state.location.search.nodeId).toBe("shared"),
     );
     fireEvent.click(screen.getByRole("button", { name: "Copy node link" }));
     await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
@@ -345,5 +345,9 @@ it("keeps an embedded view independent from the enclosing remote pipeline URL", 
   );
   expect(history.location.href).toBe(initialLocation);
   expect(router.state.location.search.nodeId).toBe("Unrelated task");
+  act(() =>
+    editor.selectNode(spec.tasks[0].subgraphSpec!.inputs[0].$id, "input"),
+  );
+  expect(editor.selectedNodeId).not.toBeNull();
   expect(screen.queryByRole("button", { name: "Copy node link" })).toBeNull();
 });

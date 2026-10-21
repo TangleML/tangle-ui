@@ -1,7 +1,8 @@
 import { useRouter, useRouterState } from "@tanstack/react-router";
 import { reaction } from "mobx";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
+import useToastNotification from "@/hooks/useToastNotification";
 import type { ComponentSpec } from "@/models/componentSpec";
 import { APP_ROUTES } from "@/routes/appRoutes";
 import {
@@ -37,6 +38,8 @@ export function useRemotePipelineUrlSync(
   pipelineId: string | undefined,
 ): void {
   const router = useRouter();
+  const notify = useToastNotification();
+  const notifiedHref = useRef<string | null>(null);
   const match = useRouterState({ select: (state) => state.matches.at(-1) });
   const { navigation, editor } = useSharedStores();
 
@@ -70,12 +73,13 @@ export function useRemotePipelineUrlSync(
     }
 
     const validPath = path.length === requestedPath.length;
+    const node =
+      validPath && search.nodeId !== undefined
+        ? resolveNode(spec, search.nodeId, search.nodeType)
+        : undefined;
     if (search.nodeId !== undefined) {
       editor.clearSelection();
       editor.setPendingFocusNode(null);
-      const node = validPath
-        ? resolveNode(spec, search.nodeId, search.nodeType)
-        : undefined;
       if (node) {
         editor.selectNode(node.id, node.type);
         editor.setPendingFocusNode(node.id);
@@ -100,10 +104,21 @@ export function useRemotePipelineUrlSync(
 
     if (
       !validPath ||
-      search.nodeId !== undefined ||
-      search.nodeType !== undefined
+      (search.nodeId !== undefined && !node) ||
+      (search.nodeType !== undefined && search.nodeId === undefined)
     ) {
+      if (notifiedHref.current !== router.state.location.href) {
+        notifiedHref.current = router.state.location.href;
+        notify(
+          !validPath
+            ? "The linked subgraph is no longer in this pipeline. Opened its nearest available parent."
+            : "The linked node is no longer in this pipeline.",
+          "warning",
+        );
+      }
       navigateToPath(path, true);
+    } else {
+      notifiedHref.current = null;
     }
 
     return reaction(
@@ -116,8 +131,14 @@ export function useRemotePipelineUrlSync(
           JSON.stringify(nestedPath) === JSON.stringify(previousPath.slice(1))
         )
           return;
-        navigateToPath(nestedPath, false);
+        let previousSpec: ComponentSpec | undefined = rootSpec;
+        for (const name of previousPath.slice(1)) {
+          previousSpec = previousSpec?.tasks.find(
+            (task) => task.name === name,
+          )?.subgraphSpec;
+        }
+        navigateToPath(nestedPath, !previousSpec);
       },
     );
-  }, [router, match, rootSpec, pipelineId, navigation, editor]);
+  }, [router, match, rootSpec, pipelineId, navigation, editor, notify]);
 }

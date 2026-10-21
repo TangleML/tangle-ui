@@ -18,7 +18,7 @@ export function useAutoLayoutShortcut(
   applyLayout: (layoutedNodes: Node[]) => void,
 ): void {
   const { getNodes, getEdges, fitView } = useReactFlow();
-  const { keyboard } = useSharedStores();
+  const { keyboard, editor } = useSharedStores();
 
   useEffect(() => {
     const handleAutoLayout = (
@@ -34,6 +34,7 @@ export function useAutoLayoutShortcut(
       onLaidOut?.();
 
       requestAnimationFrame(() => {
+        if (editor.pendingFocusNodeId) return;
         fitView({ maxZoom: 1, duration: 300 });
       });
     };
@@ -51,5 +52,5 @@ export function useAutoLayoutShortcut(
     });
 
     return unregister;
-  }, [getNodes, getEdges, fitView, applyLayout, keyboard]);
+  }, [getNodes, getEdges, fitView, applyLayout, keyboard, editor]);
 }

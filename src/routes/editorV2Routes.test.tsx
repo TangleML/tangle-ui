@@ -392,6 +392,8 @@ it("loads a remote link into its nested graph and selects the named node without
     expect(router.state.location.search).toEqual({
       subgraphPath: ["Prepare / data"],
       projectId: "project-1",
+      nodeId: "data",
+      nodeType: "input",
     });
   });
   expect(session.undo.canUndo).toBe(false);

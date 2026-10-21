@@ -1,4 +1,4 @@
-import { useRouter } from "@tanstack/react-router";
+import { useRouter, useRouterState } from "@tanstack/react-router";
 import { observer } from "mobx-react-lite";
 
 import { ActionButton } from "@/components/shared/Buttons/ActionButton";
@@ -13,18 +13,21 @@ interface RemotePipelineNodeLinkButtonProps {
   pipelineId: string;
   nodeName: string;
   nodeType: RemotePipelineNodeType;
+  disabled?: boolean;
 }
 
 export function RemotePipelineNodeLinkButton({
   pipelineId,
   nodeName,
   nodeType,
+  disabled = false,
 }: RemotePipelineNodeLinkButtonProps) {
   const router = useRouter();
   const { navigation } = useSharedStores();
   const notify = useToastNotification();
 
   const copyLink = async () => {
+    if (disabled) return;
     const subgraphPath = navigation.navigationPath
       .slice(1)
       .map((entry) => entry.displayName);
@@ -53,7 +56,12 @@ export function RemotePipelineNodeLinkButton({
 
   return (
     <ActionButton
-      tooltip="Copy node link"
+      tooltip={
+        disabled
+          ? "Node links are available once changes are saved"
+          : "Copy node link"
+      }
+      disabled={disabled}
       aria-label="Copy node link"
       icon="Link"
       onClick={() => void copyLink()}
@@ -70,7 +78,10 @@ export const EditorNodeLinkButton = observer(function EditorNodeLinkButton({
   entityId,
   nodeType,
 }: EditorNodeLinkButtonProps) {
-  const { pipelineFile } = useEditorSession();
+  const { pipelineFile, autoSave } = useEditorSession();
+  const params = useRouterState({
+    select: (state) => state.matches.at(-1)?.params,
+  });
   const { navigation } = useSharedStores();
   const file = pipelineFile.activePipelineFile;
   const spec = navigation.activeSpec;
@@ -82,11 +93,23 @@ export const EditorNodeLinkButton = observer(function EditorNodeLinkButton({
         : spec?.outputs;
   const node = nodes?.find((entity) => entity.$id === entityId);
 
-  if (!file?.remote || !node) return null;
+  if (
+    !file?.remote ||
+    !node ||
+    !params ||
+    !("pipelineId" in params) ||
+    params.pipelineId !== file.id
+  )
+    return null;
 
   return (
     <RemotePipelineNodeLinkButton
       pipelineId={file.id}
+      disabled={
+        autoSave.isSaving ||
+        autoSave.hasUnsavedChanges ||
+        Boolean(autoSave.error)
+      }
       nodeName={node.name}
       nodeType={nodeType}
     />

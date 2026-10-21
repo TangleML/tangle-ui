@@ -6,6 +6,16 @@ export interface RemotePipelineSearch extends Record<string, unknown> {
   nodeType?: RemotePipelineNodeType;
 }
 
+function readNodeName(value: unknown): string | undefined {
+  if (typeof value === "string") return value;
+  if (
+    typeof value === "boolean" ||
+    (typeof value === "number" && Number.isFinite(value))
+  )
+    return String(value);
+  return undefined;
+}
+
 export function validateRemotePipelineSearch(
   search: Record<string, unknown>,
 ): RemotePipelineSearch {
@@ -13,12 +23,10 @@ export function validateRemotePipelineSearch(
     ...search,
     subgraphPath:
       Array.isArray(search.subgraphPath) &&
-      search.subgraphPath.every(
-        (name): name is string => typeof name === "string",
-      )
-        ? search.subgraphPath
+      search.subgraphPath.every((name) => readNodeName(name) !== undefined)
+        ? search.subgraphPath.map((name) => String(name))
         : undefined,
-    nodeId: typeof search.nodeId === "string" ? search.nodeId : undefined,
+    nodeId: readNodeName(search.nodeId),
     nodeType:
       search.nodeType === "task" ||
       search.nodeType === "input" ||

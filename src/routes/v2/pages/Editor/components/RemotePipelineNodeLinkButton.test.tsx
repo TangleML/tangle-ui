@@ -38,6 +38,11 @@ const clipboardDescriptor = Object.getOwnPropertyDescriptor(
   "clipboard",
 );
 const navigation = new NavigationStore(new EditorStore());
+const autoSave = observable({
+  isSaving: false,
+  hasUnsavedChanges: false,
+  error: null as string | null,
+});
 const file = observable<{
   id: string;
   remote?: { pipelineId: string; backendUrl: string };
@@ -48,7 +53,10 @@ vi.mock("@/routes/v2/shared/store/SharedStoreContext", () => ({
   useSharedStores: () => ({ navigation }),
 }));
 vi.mock("@/routes/v2/pages/Editor/store/EditorSessionContext", () => ({
-  useEditorSession: () => ({ pipelineFile: { activePipelineFile: file } }),
+  useEditorSession: () => ({
+    pipelineFile: { activePipelineFile: file },
+    autoSave,
+  }),
 }));
 
 beforeEach(() => {
@@ -61,6 +69,9 @@ beforeEach(() => {
   });
   runInAction(() => {
     file.remote = undefined;
+    autoSave.isSaving = false;
+    autoSave.hasUnsavedChanges = false;
+    autoSave.error = null;
   });
   const child = {
     name: "Nested graph",
@@ -101,17 +112,21 @@ afterEach(() => {
   }
 });
 
-async function open(button: ReactElement, basepath = "/") {
+async function open(button: ReactElement, basepath = "/", embedded = false) {
   const root = createRootRoute();
   const route = createRoute({
     getParentRoute: () => root,
-    path: APP_ROUTES.EDITOR_V2_REMOTE_PIPELINE,
+    path: embedded
+      ? APP_ROUTES.TANGENT_PROJECT
+      : APP_ROUTES.EDITOR_V2_REMOTE_PIPELINE,
     component: () => button,
   });
   const prefix = basepath === "/" ? "" : basepath;
   const history = createMemoryHistory({
     initialEntries: [
-      `${prefix}/editor-v2/pipeline/remote-id?projectId=project-1&nodeId=old&unrelated=value`,
+      embedded
+        ? "/tangent/project-1"
+        : `${prefix}/editor-v2/pipeline/remote-id?projectId=project-1&nodeId=old&unrelated=value`,
     ],
   });
   const router = createRouter({
@@ -236,4 +251,81 @@ it("uses the history URL when the app is deployed with hash routing", async () =
   const route = new URL(link.hash.slice(1), link.origin);
   expect(route.pathname).toBe("/editor-v2/pipeline/remote-id");
   expect(route.searchParams.get("nodeId")).toBe("Task with spaces");
+});
+
+it.each(["input", "output"] as const)(
+  "finds the editable %s by its own entity list",
+  async (nodeType) => {
+    const root = navigation.rootSpec;
+    if (!root) throw new Error("Missing root");
+    navigation.navigateToSubgraph(root, root.tasks[0].$id);
+    const spec = navigation.activeSpec;
+    const node = nodeType === "input" ? spec?.inputs[0] : spec?.outputs[0];
+    if (!node) throw new Error("Missing node");
+    runInAction(() => {
+      file.remote = {
+        pipelineId: file.id,
+        backendUrl: "https://backend.example.com",
+      };
+    });
+    await open(
+      <EditorNodeLinkButton entityId={node.$id} nodeType={nodeType} />,
+    );
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Copy node link" }),
+    );
+    await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
+    expect(
+      new URL(writeText.mock.calls[0][0]).searchParams.get("nodeType"),
+    ).toBe(nodeType);
+  },
+);
+
+it.each(["saving", "dirty", "error"])(
+  "waits for persisted node names (%s)",
+  async (state) => {
+    const task = navigation.rootSpec?.tasks[0];
+    if (!task) throw new Error("Missing task");
+    runInAction(() => {
+      file.remote = {
+        pipelineId: file.id,
+        backendUrl: "https://backend.example.com",
+      };
+      autoSave.isSaving = state === "saving";
+      autoSave.hasUnsavedChanges = state === "dirty";
+      autoSave.error = state === "error" ? "Save failed" : null;
+    });
+    await open(<EditorNodeLinkButton entityId={task.$id} nodeType="task" />);
+    const button = await screen.findByRole("button", {
+      name: "Copy node link",
+    });
+    expect(button).toBeDisabled();
+    fireEvent.click(button);
+    expect(writeText).not.toHaveBeenCalled();
+    act(() =>
+      runInAction(() => {
+        autoSave.isSaving = false;
+        autoSave.hasUnsavedChanges = false;
+        autoSave.error = null;
+      }),
+    );
+    expect(button).toBeEnabled();
+  },
+);
+
+it("keeps the copy action hidden in embedded editors, matching embedded view-only tabs", async () => {
+  const task = navigation.rootSpec?.tasks[0];
+  if (!task) throw new Error("Missing task");
+  runInAction(() => {
+    file.remote = {
+      pipelineId: file.id,
+      backendUrl: "https://backend.example.com",
+    };
+  });
+  await open(
+    <EditorNodeLinkButton entityId={task.$id} nodeType="task" />,
+    "/",
+    true,
+  );
+  expect(screen.queryByRole("button", { name: "Copy node link" })).toBeNull();
 });
