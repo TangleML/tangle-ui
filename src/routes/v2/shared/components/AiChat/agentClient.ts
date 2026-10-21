@@ -76,11 +76,13 @@ export class AgentClient {
     options: AskOptions,
     signal?: AbortSignal,
   ): Promise<AgentResponse> {
+    signal?.throwIfAborted();
     const remote = await this.ensureInit(deps);
+    signal?.throwIfAborted();
     const params = { ...options, threadId: this.threadId };
-    return signal
-      ? remote.ask(params, Comlink.proxy(signal))
-      : remote.ask(params);
+    const response = await remote.ask(params, Comlink.proxy(deps.bridge));
+    signal?.throwIfAborted();
+    return response;
   }
 
   terminate(): void {

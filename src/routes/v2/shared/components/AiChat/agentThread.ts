@@ -35,7 +35,7 @@ function isProviderConversationStateError(message: string): boolean {
 }
 
 interface SendMessageOptions {
-  bridge: ToolBridgeApi;
+  createBridge: (signal: AbortSignal) => ToolBridgeApi;
   aiConfig: AiProviderConfig;
   recentRuns?: RecentPipelineRun[];
 }
@@ -96,7 +96,7 @@ export class AgentThread {
     try {
       const response = await this.client.ask(
         {
-          bridge: options.bridge,
+          bridge: options.createBridge(abortController.signal),
           onStatus: (status) => {
             runInAction(() => {
               this.thinkingText = status.text;
@@ -135,7 +135,9 @@ export class AgentThread {
           {
             id: generateMessageId(),
             role: "assistant",
-            content: formatAssistantError(error),
+            content: abortController.signal.aborted
+              ? "The request was stopped. Send a new message to continue."
+              : formatAssistantError(error),
             prompt,
           },
         ];

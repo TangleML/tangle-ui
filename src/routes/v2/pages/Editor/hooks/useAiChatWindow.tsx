@@ -54,6 +54,7 @@ export function useAiChatWindow(enabled: boolean) {
                   replace: true,
                 });
               },
+              deps.assertCurrentDocument,
             ),
           })
         }

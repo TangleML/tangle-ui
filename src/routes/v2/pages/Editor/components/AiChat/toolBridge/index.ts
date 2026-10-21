@@ -30,11 +30,20 @@ export type EditorToolBridgeDeps = CsomBridgeDeps;
 export function createEditorToolBridge(
   deps: EditorToolBridgeDeps,
 ): ToolBridgeApi {
+  const scopedDeps = {
+    ...deps,
+    undo: {
+      withGroup<T>(label: string, fn: () => T): T {
+        deps.assertCurrentDocument?.();
+        return deps.undo.withGroup(label, fn);
+      },
+    },
+  };
   return {
-    ...createCsomBridgeHandlers(deps),
-    ...createSubgraphBridgeHandlers(deps),
-    ...createComponentSearchBridgeHandlers(deps),
-    ...createRunBridgeHandlers(deps),
-    ...createDebugBridgeHandlers(deps),
+    ...createCsomBridgeHandlers(scopedDeps),
+    ...createSubgraphBridgeHandlers(scopedDeps),
+    ...createComponentSearchBridgeHandlers(scopedDeps),
+    ...createRunBridgeHandlers(scopedDeps),
+    ...createDebugBridgeHandlers(scopedDeps),
   };
 }

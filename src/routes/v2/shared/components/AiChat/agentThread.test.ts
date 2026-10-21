@@ -39,7 +39,7 @@ describe("AgentThread", () => {
     const thread = createThread();
 
     await thread.sendMessage("Fix validation", {
-      bridge: {} as ToolBridgeApi,
+      createBridge: () => ({}) as ToolBridgeApi,
       aiConfig,
     });
 
@@ -53,6 +53,50 @@ describe("AgentThread", () => {
       content:
         "I ran into a model conversation-state error while processing that request. Please try again in this chat, or start a new chat if it keeps happening.",
     });
+    expect(thread.isPending).toBe(false);
+  });
+
+  it("scopes each turn to its abort signal while keeping the conversation", async () => {
+    let finish = () => {};
+    const pending = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    askMock.mockImplementationOnce(
+      async (_deps: unknown, _options: unknown, signal: AbortSignal) => {
+        await pending;
+        signal.throwIfAborted();
+      },
+    );
+    const thread = createThread();
+    const createBridge = vi.fn((_signal: AbortSignal) => ({}) as ToolBridgeApi);
+    const asking = thread.sendMessage("Edit this pipeline", {
+      createBridge,
+      aiConfig,
+    });
+    const firstSignal = createBridge.mock.calls[0][0];
+    expect(firstSignal.aborted).toBe(false);
+    thread.abort();
+    expect(firstSignal.aborted).toBe(true);
+    finish();
+    await asking;
+
+    expect(thread.messages[1].content).toBe(
+      "The request was stopped. Send a new message to continue.",
+    );
+    askMock.mockResolvedValueOnce({
+      answer: "Ready",
+      componentReferences: {},
+    });
+    await thread.sendMessage("Continue here", { createBridge, aiConfig });
+    const nextSignal = createBridge.mock.calls[1][0];
+    expect(nextSignal).not.toBe(firstSignal);
+    expect(nextSignal.aborted).toBe(false);
+    expect(thread.messages.map((message) => message.content)).toEqual([
+      "Edit this pipeline",
+      "The request was stopped. Send a new message to continue.",
+      "Continue here",
+      "Ready",
+    ]);
     expect(thread.isPending).toBe(false);
   });
 });

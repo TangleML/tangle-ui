@@ -34,7 +34,7 @@ export interface AgentWorkerApi {
     context: AgentContext,
   ): void;
   ping(): Promise<"pong">;
-  ask(params: AskParams, signal?: AbortSignal): Promise<AgentResponse>;
+  ask(params: AskParams, turnBridge?: ToolBridgeApi): Promise<AgentResponse>;
 }
 
 function generateThreadId(): string {
@@ -73,9 +73,7 @@ export function createWorkerApi(
       return "pong";
     },
 
-    async ask({ message, threadId, recentRuns, aiConfig }, _signal) {
-      // todo: add logic to handle the signal
-
+    async ask({ message, threadId, recentRuns, aiConfig }, turnBridge) {
       if (!dispatcher || !bridge || !context) {
         throw new Error(
           "Agent worker not initialized. Call init() before ask().",
@@ -91,7 +89,7 @@ export function createWorkerApi(
         threadId: resolvedThreadId,
         emitStatus,
         proxyClient,
-        bridge,
+        bridge: turnBridge ?? bridge,
         skillsLoader,
         aiConfig,
         recentRuns,

@@ -115,4 +115,28 @@ describe("renamePipelineFileFor", () => {
 
     expect(onRenamed).not.toHaveBeenCalled();
   });
+
+  it.each(["name lookup", "file rename"])(
+    "does not navigate to an old pipeline when cancellation interrupts %s",
+    async (stage) => {
+      const controller = new AbortController();
+      vi.mocked(availablePipelineName).mockImplementation(async () => {
+        if (stage === "name lookup") controller.abort();
+        return "Renamed";
+      });
+      rename.mockImplementation(async () => {
+        controller.abort();
+      });
+      const onRenamed = vi.fn();
+      const renameFile = renamePipelineFileFor(
+        store("Original"),
+        onRenamed,
+        () => controller.signal.throwIfAborted(),
+      );
+
+      await expect(renameFile("Renamed")).rejects.toThrow();
+      expect(rename).toHaveBeenCalledTimes(stage === "file rename" ? 1 : 0);
+      expect(onRenamed).not.toHaveBeenCalled();
+    },
+  );
 });
