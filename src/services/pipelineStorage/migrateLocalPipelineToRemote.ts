@@ -1,3 +1,4 @@
+import { PipelineSpecApiError } from "@/services/pipelineSpecService";
 import { findRemotePipelineDocumentByPath } from "@/services/remotePipelineEditorService";
 
 import { pipelineStorageDb } from "./db";
@@ -10,6 +11,7 @@ import {
 } from "./pipelineMigrations";
 import { findById } from "./pipelineRegistry";
 import type { PipelineStorageService } from "./PipelineStorageService";
+import type { RemotePipelineRef } from "./types";
 
 export class PipelineMigrationRecoveryError extends Error {
   constructor(
@@ -83,8 +85,13 @@ async function migrate(
   let attempt = await pipelineStorageDb.pipeline_migration_attempts.get(
     local.id,
   );
-  if (attempt) assertPipelineMigrationBackend(attempt, backendUrl);
-  if (!attempt && !migration) {
+  if (attempt && attempt.backendUrl !== backendUrl) {
+    throw new Error(
+      `An upload to ${attempt.backendUrl} may have completed. Reconnect to that backend to check before uploading elsewhere.`,
+    );
+  }
+  const newAttempt = !attempt && !migration;
+  if (newAttempt) {
     attempt = { localId: local.id, backendUrl, content: await local.read() };
     await pipelineStorageDb.pipeline_migration_attempts.put(attempt);
   }
@@ -100,16 +107,23 @@ async function migrate(
     await pipelineStorageDb.pipeline_migration_attempts.put(attempt);
   }
   const filePath = `pipelines/${local.id}.yaml`;
-  const existing = migration
-    ? migration.remote
-    : await findRemotePipelineDocumentByPath(backendUrl, filePath).then(
-        (document) =>
-          document && {
-            source: "remote" as const,
-            backendUrl,
-            pipelineId: document.id,
-          },
-      );
+  let existing: RemotePipelineRef | undefined;
+  try {
+    existing = migration
+      ? migration.remote
+      : await findRemotePipelineDocumentByPath(backendUrl, filePath).then(
+          (document) =>
+            document && {
+              source: "remote" as const,
+              backendUrl,
+              pipelineId: document.id,
+            },
+        );
+  } catch (error) {
+    if (newAttempt)
+      await pipelineStorageDb.pipeline_migration_attempts.delete(local.id);
+    throw error;
+  }
   if (!existing) {
     attempt = {
       ...attempt,
@@ -119,14 +133,27 @@ async function migrate(
     };
     await pipelineStorageDb.pipeline_migration_attempts.put(attempt);
   }
-  const remote = existing
-    ? await storage.resolvePipeline(existing)
-    : await storage.createRemotePipeline(
-        backendUrl,
-        local.storageKey,
-        attempt?.content ?? (await local.read()),
-        filePath,
-      );
+  let remote: PipelineFile;
+  try {
+    remote = existing
+      ? await storage.resolvePipeline(existing)
+      : await storage.createRemotePipeline(
+          backendUrl,
+          local.storageKey,
+          attempt?.content ?? (await local.read()),
+          filePath,
+        );
+  } catch (error) {
+    if (
+      !existing &&
+      error instanceof PipelineSpecApiError &&
+      ((error.status >= 400 && error.status < 500 && error.status !== 408) ||
+        error.status === 501)
+    ) {
+      await pipelineStorageDb.pipeline_migration_attempts.delete(local.id);
+    }
+    throw error;
+  }
   try {
     await rememberPipelineMigration(
       local,
@@ -145,15 +172,15 @@ async function migrate(
       }
       return remote;
     }
+    await movePipelineAssociationsToRemote(local, remote);
     if ((await local.read()) !== attempt.content) {
       throw new PipelineMigrationRecoveryError(
-        "The pipeline was uploaded, but this browser's copy changed during the move. Both copies were kept.",
+        "These local changes were not uploaded. Both the saved pipeline and this browser's copy were kept. Use Save as to save the local changes as a separate pipeline.",
         remote,
         undefined,
         true,
       );
     }
-    await movePipelineAssociationsToRemote(local, remote);
     if (attempt.keepLocalCopy) {
       throw new PipelineMigrationRecoveryError(
         "Pipeline uploaded. Its browser copy was kept because some project links may still need it. Open the pipeline from a project to update that project's link.",

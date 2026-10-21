@@ -1,4 +1,5 @@
 import { getBackendSettings, selectBackendUrl } from "@/utils/backendSettings";
+import { getStorage } from "@/utils/typedStorage";
 
 import type { PipelineStorageService } from "./PipelineStorageService";
 
@@ -12,13 +13,17 @@ export const createsLocalPipelines = (backendConfigured = true) =>
   prefersBrowserPipelineStorage();
 
 const STORAGE_PREFERENCE_KEY = "pipelines:save-in-browser";
+const storagePreference = getStorage<
+  typeof STORAGE_PREFERENCE_KEY,
+  { [STORAGE_PREFERENCE_KEY]: boolean }
+>();
 
 export function prefersBrowserPipelineStorage(): boolean {
-  return localStorage.getItem(STORAGE_PREFERENCE_KEY) === "true";
+  return storagePreference.getItem(STORAGE_PREFERENCE_KEY) === true;
 }
 
 export function setBrowserPipelineStorage(enabled: boolean): void {
-  localStorage.setItem(STORAGE_PREFERENCE_KEY, String(enabled));
+  storagePreference.setItem(STORAGE_PREFERENCE_KEY, enabled);
 }
 
 export async function getPipelineCreationBackendUrl(): Promise<
