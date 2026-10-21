@@ -4,6 +4,13 @@ import * as vscode from "vscode";
 import { OktaSsoAuthProvider } from "./auth/oktaSsoAuth.ts";
 import { isOktaSsoEnabled } from "./auth/oktaSsoConfig.ts";
 import { checkForUpdate, scheduleUpdateCheck } from "./autoUpdate.ts";
+import { createRunStatusSource } from "./cli/runStatusSource.ts";
+import { TangleDeployCli } from "./cli/tangleDeployCli.ts";
+import { componentCommands } from "./commands/components.ts";
+import { opsCommands } from "./commands/ops.ts";
+import { pipelineRunCommands } from "./commands/pipelineRun.ts";
+import { savedPipelineCommands } from "./commands/savedPipelines.ts";
+import { transformCommands } from "./commands/transforms.ts";
 import { ExtensionConfig } from "./config.ts";
 import { TangentController } from "./controller.ts";
 import { CurrentProjectState } from "./currentProject.ts";
@@ -19,6 +26,7 @@ import {
 import { resourceWebPath } from "./resourceKinds.ts";
 import type { ResourceNode } from "./resourcesTree.ts";
 import type { RunNode } from "./runsTree.ts";
+import { SavedPipelinesTreeProvider } from "./savedPipelinesTree.ts";
 import type { SessionNode } from "./sessionsTree.ts";
 import { normalizeBaseUrl, TangleRestClient } from "./tangleRestClient.ts";
 import { SessionChatPanels } from "./webview/chatPanel.ts";
@@ -219,6 +227,39 @@ function tangleClientFactory(
     );
 }
 
+function configChangeHandler(
+  views: ProjectViews,
+  refreshCliViews: () => void,
+): (event: vscode.ConfigurationChangeEvent) => void {
+  return (event) => {
+    if (event.affectsConfiguration("tangent.tangleApiUrl")) views.refreshAll();
+    if (event.affectsConfiguration("tangent.tangleDeployBin"))
+      refreshCliViews();
+  };
+}
+
+function buildCommandMap(
+  context: vscode.ExtensionContext,
+  services: Services,
+  controller: TangentController,
+  cli: TangleDeployCli,
+  savedPipelines: SavedPipelinesTreeProvider,
+): CommandMap {
+  return {
+    ...projectCommands(services),
+    ...tangentCommands(controller, services.sessions),
+    ...pipelineRunCommands(cli),
+    ...componentCommands(cli),
+    ...savedPipelineCommands(cli),
+    ...transformCommands(cli),
+    ...opsCommands(cli),
+    "tangle.cli.showInstallHelp": () => cli.showInstallHelp(),
+    "tangle.savedPipelines.refresh": () => savedPipelines.refresh(),
+    "tangent.checkForUpdates": () =>
+      checkForUpdate(context, services.config, { interactive: true }),
+  };
+}
+
 export function activate(context: vscode.ExtensionContext): void {
   const config = new ExtensionConfig(context);
   const oktaSso = isOktaSsoEnabled()
@@ -226,11 +267,13 @@ export function activate(context: vscode.ExtensionContext): void {
     : undefined;
   const controller = new TangentController(config, oktaSso);
   const currentProject = new CurrentProjectState(config);
+  const cli = new TangleDeployCli(config, (line) => controller.log(line));
   const createTangleClient = tangleClientFactory(config, oktaSso);
   const views = createProjectViews({
     currentProject,
     createClient: createTangleClient,
     activeSessionId: () => config.activeSessionId,
+    statusFor: createRunStatusSource(cli, createTangleClient),
   });
   const chats = new SessionChatPanels(
     context.extensionUri,
@@ -254,29 +297,33 @@ export function activate(context: vscode.ExtensionContext): void {
     sessions,
     createTangleClient,
   };
+  const savedPipelines = new SavedPipelinesTreeProvider(cli);
+  const refreshCliViews = () =>
+    void cli.refreshAvailability().then(() => savedPipelines.refresh());
 
   context.subscriptions.push(
     controller,
     currentProject,
     views,
     chats,
+    cli,
+    savedPipelines,
+    vscode.window.createTreeView("tangle.savedPipelines", {
+      treeDataProvider: savedPipelines,
+    }),
     vscode.window.registerUriHandler(uriHandler(services, controller)),
     controller.onDidAttach(() => views.sessions.showActiveSessionChanged()),
     currentProject.onDidChange(() => controller.reconnectForCurrentProject()),
-    vscode.workspace.onDidChangeConfiguration((event) => {
-      if (event.affectsConfiguration("tangent.tangleApiUrl")) {
-        views.refreshAll();
-      }
-    }),
-    ...registerCommands({
-      ...projectCommands(services),
-      ...tangentCommands(controller, sessions),
-      "tangent.checkForUpdates": () =>
-        checkForUpdate(context, config, { interactive: true }),
-    }),
+    vscode.workspace.onDidChangeConfiguration(
+      configChangeHandler(views, refreshCliViews),
+    ),
+    ...registerCommands(
+      buildCommandMap(context, services, controller, cli, savedPipelines),
+    ),
   );
   controller.autoConnect();
   void refreshProjectName(services);
+  refreshCliViews();
   scheduleUpdateCheck(context, config);
 }
 
