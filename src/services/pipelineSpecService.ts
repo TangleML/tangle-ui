@@ -5,6 +5,8 @@ import {
   type TaskSpec,
 } from "@/utils/componentSpec";
 
+import { normalizePipelineId } from "./pipelineId";
+
 export class PipelineSpecApiError extends Error {
   readonly status: number;
 
@@ -15,12 +17,7 @@ export class PipelineSpecApiError extends Error {
   }
 }
 
-/**
- * `GET /api/pipelines/{id}` is absent from the generated client, whose
- * checked-in copy predates it. Regenerating pulls in every operation of
- * whatever backend happens to be running, so this one call is written out by
- * hand against the `client` that `BackendProvider` already configures.
- */
+// The generated clients do not yet include the saved-pipeline GET endpoint.
 export interface SavedPipelineDocument {
   id: string;
   file_path: string;
@@ -37,10 +34,11 @@ export async function getPipelineDocument(
   pipelineId: string,
   backendUrl?: string,
 ): Promise<SavedPipelineDocument> {
+  const normalizedId = normalizePipelineId(pipelineId);
   const result = await client.get<{ 200: SavedPipelineDocument }>({
     ...(backendUrl ? { baseUrl: backendUrl } : {}),
     url: "/api/pipelines/{pipeline_id}",
-    path: { pipeline_id: pipelineId },
+    path: { pipeline_id: normalizedId },
   });
 
   if (!result.data) {
@@ -59,7 +57,10 @@ export async function getPipelineDocument(
     );
   }
 
-  if (result.data.id !== pipelineId) {
+  if (
+    typeof result.data.id !== "string" ||
+    normalizePipelineId(result.data.id) !== normalizedId
+  ) {
     throw new PipelineSpecApiError(
       "The backend returned a different pipeline.",
       result.response.status,

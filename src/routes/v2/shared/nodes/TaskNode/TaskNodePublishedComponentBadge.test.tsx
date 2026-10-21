@@ -73,11 +73,7 @@ afterEach(cleanup);
 
 describe("TaskNodeCard published component badge", () => {
   it("wraps the digest in a read-only published badge for run views", () => {
-    render(
-      <TaskNodeCard
-        {...buildProps({ publishedComponentBadgeReadOnly: true })}
-      />,
-    );
+    render(<TaskNodeCard {...buildProps({ readOnly: true })} />);
 
     const badge = screen.getByTestId("published-component-badge");
     expect(badge).toHaveAttribute("data-component-digest", componentRef.digest);

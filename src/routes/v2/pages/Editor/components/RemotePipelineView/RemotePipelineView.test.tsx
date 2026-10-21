@@ -1,4 +1,10 @@
 import {
+  createMemoryHistory,
+  createRootRoute,
+  createRouter,
+  RouterContextProvider,
+} from "@tanstack/react-router";
+import {
   act,
   cleanup,
   fireEvent,
@@ -56,6 +62,16 @@ vi.mock("@/routes/v2/shared/components/SubgraphBreadcrumbs", async () => {
 });
 afterEach(cleanup);
 
+function RouterWrapper({ children }: PropsWithChildren) {
+  const router = createRouter({
+    routeTree: createRootRoute(),
+    history: createMemoryHistory(),
+  });
+  return (
+    <RouterContextProvider router={router}>{children}</RouterContextProvider>
+  );
+}
+
 it("shows a read-only graph and navigates subgraphs without changing the spec", async () => {
   const child = { name: "Child", implementation: { graph: { tasks: {} } } };
   const spec = new YamlDeserializer(new IncrementingIdGenerator()).deserialize({
@@ -69,6 +85,7 @@ it("shows a read-only graph and navigates subgraphs without changing the spec", 
     <StrictMode>
       <RemotePipelineView spec={spec} />
     </StrictMode>,
+    { wrapper: RouterWrapper },
   );
   await screen.findByText("First task");
   expect(screen.getByText("View only")).toBeInTheDocument();
@@ -126,7 +143,9 @@ it("copies the selected task only while the view is active", async () => {
       },
     },
   });
-  const { rerender, unmount } = render(<RemotePipelineView spec={spec} />);
+  const { rerender, unmount } = render(<RemotePipelineView spec={spec} />, {
+    wrapper: RouterWrapper,
+  });
   await screen.findByText("First task");
   const node = canvas.nodes![0];
   act(() => canvas.onSelectionChange?.({ nodes: [node], edges: [] }));

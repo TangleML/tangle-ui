@@ -1,7 +1,11 @@
 import "@xyflow/react/dist/style.css";
 import "@/styles/editor.css";
 
-import { useParams, useSearch } from "@tanstack/react-router";
+import {
+  Link as RouterLink,
+  useParams,
+  useSearch,
+} from "@tanstack/react-router";
 import { ReactFlowProvider } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
 import { type ReactNode, useEffect } from "react";
@@ -11,9 +15,8 @@ import { ComponentEditorProvider } from "@/components/shared/ComponentEditor/Com
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
-import { Button } from "@/components/ui/button";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
-import { Link } from "@/components/ui/link";
+import { Paragraph } from "@/components/ui/typography";
 import { useBackend } from "@/providers/BackendProvider";
 import { ComponentLibraryProvider } from "@/providers/ComponentLibraryProvider";
 import { ForcedSearchProvider } from "@/providers/ComponentLibraryProvider/ForcedSearchProvider";
@@ -21,6 +24,7 @@ import { DialogProvider } from "@/providers/DialogProvider/DialogProvider";
 import { useTourMode } from "@/providers/TourProvider/TourModeContext";
 import { TourSaveExploreDialog } from "@/providers/TourProvider/TourSaveExploreDialog";
 import { TourSecretsDialog } from "@/providers/TourProvider/TourSecretsDialog";
+import { APP_ROUTES } from "@/routes/appRoutes";
 import { QuickRunSubmitterProvider } from "@/routes/v2/pages/Editor/components/QuickRunSubmitterContext";
 import { AiChatStoreProvider } from "@/routes/v2/shared/components/AiChat/AiChatStoreContext";
 import { useCanvasControlsWindow } from "@/routes/v2/shared/components/MiniMap/useCanvasControlsWindow";
@@ -52,6 +56,8 @@ import { EditorMenuBar } from "./components/EditorMenuBar/EditorMenuBar";
 import { EditorTourBridge } from "./components/EditorTourBridge/EditorTourBridge";
 import { EmptyEditorState } from "./components/EmptyEditorState";
 import { FlowCanvas } from "./components/FlowCanvas/FlowCanvas";
+import { RemotePipelineError } from "./components/RemotePipelineView/RemotePipelineError";
+import { RemotePipelineShell } from "./components/RemotePipelineView/RemotePipelineShell";
 import { RemotePipelineView } from "./components/RemotePipelineView/RemotePipelineView";
 import { useAiChatWindow } from "./hooks/useAiChatWindow";
 import { useComponentLibraryWindow } from "./hooks/useComponentLibraryWindow";
@@ -190,6 +196,14 @@ function EditorV2Content({ pipelineRef }: { pipelineRef: PipelineRef | null }) {
   );
 }
 
+function RemotePipelineSkeleton() {
+  return (
+    <RemotePipelineShell>
+      <PipelineEditorSkeleton />
+    </RemotePipelineShell>
+  );
+}
+
 const RemotePipelineDocumentView = withSuspenseWrapper(
   ({ pipelineRef }: { pipelineRef: RemotePipelineRef }) => {
     const {
@@ -197,28 +211,27 @@ const RemotePipelineDocumentView = withSuspenseWrapper(
     } = useLoadSpec(pipelineRef);
     return <RemotePipelineView spec={spec} />;
   },
-  PipelineEditorSkeleton,
+  RemotePipelineSkeleton,
   ({ error, resetErrorBoundary }: FallbackProps) => (
-    <BlockStack fill align="center" inlineAlign="center" gap="3">
-      <p role="alert">
-        {error instanceof Error ? error.message : "Unable to load pipeline."}
-      </p>
-      <Button variant="outline" onClick={resetErrorBoundary}>
-        Retry
-      </Button>
-    </BlockStack>
+    <RemotePipelineError error={error} onRetry={resetErrorBoundary} />
   ),
 );
 
 function RemotePipelineEditor({ pipelineId }: { pipelineId: string }) {
   const { backendUrl, ready, configured } = useBackend();
-  if (!ready) return <PipelineEditorSkeleton />;
+  if (!ready) return <RemotePipelineSkeleton />;
   if (!configured) {
     return (
-      <BlockStack gap="3" className="p-6">
-        <p role="alert">Configure a backend to open pipelines.</p>
-        <Link href="/settings/backend">Backend settings</Link>
-      </BlockStack>
+      <RemotePipelineShell>
+        <BlockStack gap="3" className="p-6">
+          <Paragraph role="alert">
+            Configure a backend to open pipelines.
+          </Paragraph>
+          <RouterLink to={APP_ROUTES.SETTINGS_BACKEND}>
+            Backend settings
+          </RouterLink>
+        </BlockStack>
+      </RemotePipelineShell>
     );
   }
   const pipelineRef: RemotePipelineRef = {
@@ -243,8 +256,12 @@ export function EditorV2({
 } = {}) {
   const params = useParams({ strict: false });
   const search = useSearch({ strict: false });
-  if (pipelineRefProp === undefined && "pipelineId" in params) {
-    return <RemotePipelineEditor pipelineId={params.pipelineId!} />;
+  if (
+    pipelineRefProp === undefined &&
+    "pipelineId" in params &&
+    typeof params.pipelineId === "string"
+  ) {
+    return <RemotePipelineEditor pipelineId={params.pipelineId} />;
   }
 
   const fileId =

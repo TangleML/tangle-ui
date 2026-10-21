@@ -1,5 +1,4 @@
 import { type Node, type NodeProps } from "@xyflow/react";
-import { cva } from "class-variance-authority";
 import { observer } from "mobx-react-lite";
 import { type MouseEvent } from "react";
 
@@ -10,72 +9,14 @@ import {
 } from "@/routes/v2/pages/Editor/nodes/FlexNode/flexNode.actions";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { useIsDetailedView } from "@/routes/v2/shared/hooks/useIsDetailedView";
+import { FlexNodeCard } from "@/routes/v2/shared/nodes/FlexNode/FlexNodeCard";
+import { FlexNodeSimplified } from "@/routes/v2/shared/nodes/FlexNode/FlexNodeSimplified";
+import type { FlexNodeViewProps } from "@/routes/v2/shared/nodes/FlexNode/flexNodeView";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { isEditorVisualNodeSelected } from "@/routes/v2/shared/store/isEditorVisualNodeSelected";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
-import { FlexNodeCard } from "./FlexNodeCard";
-import { FlexNodeSimplified } from "./FlexNodeSimplified";
-
 type FlexNodeProps = NodeProps<Node<FlexNodeData, "flex">>;
-
-export const flexNodeVariants = cva("p-1 rounded-lg h-full w-full group", {
-  variants: {
-    readOnlySelected: { true: "ring-2 ring-ring", false: "" },
-    locked: { true: "cursor-grab", false: "" },
-    transparent: { true: "", false: "" },
-    hasContent: { true: "", false: "" },
-    borderTransparent: { true: "", false: "" },
-  },
-  compoundVariants: [
-    {
-      transparent: true,
-      hasContent: true,
-      className: "border-2 border-solid",
-    },
-    {
-      transparent: true,
-      hasContent: false,
-      borderTransparent: false,
-      className: "border-2 border-solid",
-    },
-    {
-      transparent: true,
-      hasContent: false,
-      borderTransparent: true,
-      className: "border-2 border-dashed border-warning!",
-    },
-  ],
-  defaultVariants: {
-    readOnlySelected: false,
-    locked: false,
-    transparent: false,
-    hasContent: true,
-    borderTransparent: false,
-  },
-});
-
-export interface FlexNodeViewProps {
-  id: string;
-  title: string;
-  content: string;
-  color: string;
-  borderColor?: string;
-  titleFontSize: number;
-  contentFontSize: number;
-  locked: boolean;
-  readOnly: boolean;
-  selected: boolean;
-  isTransparent: boolean;
-  isBorderTransparent: boolean;
-  hasContent: boolean;
-  onNodeClick: (e: MouseEvent) => void;
-  onUpdateProperties: (
-    propertyUpdates: Partial<FlexNodeData["properties"]>,
-  ) => void;
-  onUpdateNode: (updates: Partial<FlexNodeData>) => void;
-  onToggleLock: () => void;
-}
 
 export const EditorV2FlexNode = observer(function EditorV2FlexNode({
   data,

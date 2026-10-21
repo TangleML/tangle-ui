@@ -1,9 +1,13 @@
 import type { Node, NodeProps } from "@xyflow/react";
 
 import type { FlexNodeData } from "@/components/shared/ReactFlow/FlowCanvas/FlexNode/types";
-import { cn } from "@/lib/utils";
+import { useIsDetailedView } from "@/routes/v2/shared/hooks/useIsDetailedView";
+import { FlexNodeCard } from "@/routes/v2/shared/nodes/FlexNode/FlexNodeCard";
+import { FlexNodeSimplified } from "@/routes/v2/shared/nodes/FlexNode/FlexNodeSimplified";
+import type { FlexNodeViewProps } from "@/routes/v2/shared/nodes/FlexNode/flexNodeView";
 
-export function RemoteFlexNode({ data }: NodeProps<Node<FlexNodeData>>) {
+export function RemoteFlexNode({ data, id }: NodeProps<Node<FlexNodeData>>) {
+  const showContent = useIsDetailedView();
   const {
     title,
     content,
@@ -12,30 +16,25 @@ export function RemoteFlexNode({ data }: NodeProps<Node<FlexNodeData>>) {
     titleFontSize = 12,
     contentFontSize = 10,
   } = data.properties;
-  return (
-    <div
-      className={cn(
-        "h-full w-full rounded-lg p-2 overflow-hidden",
-        color === "transparent" ? "border-2 text-foreground" : "text-ink-fixed",
-      )}
-      style={{ backgroundColor: color, borderColor }}
-    >
-      {title && (
-        <p
-          className="font-bold whitespace-pre-wrap"
-          style={{ fontSize: titleFontSize }}
-        >
-          {title}
-        </p>
-      )}
-      {content && (
-        <p
-          className="whitespace-pre-wrap"
-          style={{ fontSize: contentFontSize }}
-        >
-          {content}
-        </p>
-      )}
-    </div>
+  const viewProps: FlexNodeViewProps = {
+    id,
+    title,
+    content,
+    color,
+    borderColor,
+    titleFontSize,
+    contentFontSize,
+    locked: data.locked ?? false,
+    readOnly: true,
+    selected: false,
+    isTransparent: color === "transparent",
+    isBorderTransparent: borderColor === "transparent",
+    hasContent: !!title || !!content,
+  };
+
+  return showContent ? (
+    <FlexNodeCard {...viewProps} />
+  ) : (
+    <FlexNodeSimplified {...viewProps} />
   );
 }
