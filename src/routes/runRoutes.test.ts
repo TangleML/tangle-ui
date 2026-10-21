@@ -1,39 +1,16 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
-import { isFlagEnabled } from "@/components/shared/Settings/useFlags";
+import { describe, expect, it } from "vitest";
 
 import { getDefaultRunPath, getRunPath } from "./runRoutes";
 
-vi.mock("@/components/shared/Settings/useFlags", () => {
-  const isFlagEnabled = vi.fn();
-  return {
-    isFlagEnabled,
-    isProjectsEnabled: () => isFlagEnabled("projects"),
-    isTangentEnabled: () => isFlagEnabled("tangent-shell"),
-  };
-});
-
 describe("run routes", () => {
-  beforeEach(() => {
-    vi.mocked(isFlagEnabled).mockReset();
-  });
-
-  it("builds V1 and V2 paths, including subgraph executions", () => {
-    expect(getRunPath("run 1", "v1")).toBe("/runs/run%201");
-    expect(getRunPath("run 1", "v2", "subgraph 1")).toBe(
-      "/runs-v2/run%201/subgraph%201",
+  it("builds run paths, including subgraph executions", () => {
+    expect(getRunPath("run 1")).toBe("/runs/run%201");
+    expect(getRunPath("run 1", "subgraph 1")).toBe(
+      "/runs/run%201/subgraph%201",
     );
   });
 
-  it("uses the V2 run view when the V2 experience flag is enabled", () => {
-    vi.mocked(isFlagEnabled).mockReturnValue(true);
-
-    expect(getDefaultRunPath("run-1")).toBe("/runs-v2/run-1");
-  });
-
-  it("uses the V1 run view when the V2 experience flag is disabled", () => {
-    vi.mocked(isFlagEnabled).mockReturnValue(false);
-
+  it("opens runs in the run view", () => {
     expect(getDefaultRunPath("run-1")).toBe("/runs/run-1");
   });
 });

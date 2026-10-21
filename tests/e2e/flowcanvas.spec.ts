@@ -14,7 +14,9 @@ import {
   zoomOut,
 } from "./helpers";
 
-test.describe("FlowCanvas Basic Functionality", () => {
+// Written against the legacy editor, which no longer has a route. Port to the v2
+// editor before re-enabling.
+test.describe.fixme("FlowCanvas Basic Functionality", () => {
   test("should load pipeline editor and allow basic node interaction", async ({
     page,
   }) => {

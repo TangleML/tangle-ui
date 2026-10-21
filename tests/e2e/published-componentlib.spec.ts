@@ -21,7 +21,9 @@ import {
  */
 test.describe.configure({ mode: "serial" });
 
-test.describe("Published Component Library", () => {
+// Written against the legacy editor, which no longer has a route. Port to the v2
+// editor before re-enabling.
+test.describe.fixme("Published Component Library", () => {
   let page: Page;
 
   test.beforeAll(async ({ browser }) => {

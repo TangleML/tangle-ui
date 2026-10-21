@@ -77,7 +77,7 @@ interface EmbeddedPipelineEditorCanvasProps extends EmbeddedEditorAgentBoundaryP
 
 /**
  * Hosts the Tangent editor sub-agent only when this editor is embedded in a
- * Tangent session. The standalone `/editor-v2` route renders without a
+ * Tangent session. The standalone `/editor` route renders without a
  * `sessionId`, so it stays entirely agent-free.
  */
 function EmbeddedEditorAgentBoundary({

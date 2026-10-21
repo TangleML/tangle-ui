@@ -7,7 +7,8 @@ type TitleConfig = {
 
 const defaultTitles: TitleConfig = {
   "/": "Tangle - Pipeline Studio",
-  "/editor/$name": (params) => `Tangle - ${params.name || "New Pipeline"}`,
+  "/editor/$pipelineName": (params) =>
+    `Tangle - ${params.pipelineName || "New Pipeline"}`,
   "/runs/$id": (params) => `Tangle - ${params.id}`,
 };
 

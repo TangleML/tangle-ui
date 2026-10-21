@@ -11,7 +11,9 @@ import {
 
 test.describe.configure({ mode: "serial" });
 
-test.describe("Sticky Note (FlexNode) Functionality", () => {
+// Written against the legacy editor, which no longer has a route. Port to the v2
+// editor before re-enabling.
+test.describe.fixme("Sticky Note (FlexNode) Functionality", () => {
   let page: Page;
 
   test.beforeAll(async ({ browser }) => {

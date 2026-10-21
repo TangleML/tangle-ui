@@ -230,7 +230,7 @@ export function FileMenu() {
         }
         onImportComplete={(pipeline) => {
           navigate({
-            to: APP_ROUTES.EDITOR_V2_PIPELINE,
+            to: APP_ROUTES.PIPELINE_EDITOR,
             params: { pipelineName: pipeline.name },
             search: { fileId: pipeline.fileId },
           });

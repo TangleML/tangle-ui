@@ -40,10 +40,8 @@ import { LearnHomeView } from "./Dashboard/Learn/LearnHomeView";
 import { LearnTipsView } from "./Dashboard/Learn/LearnTipsView";
 import { LearnToursView } from "./Dashboard/Learn/LearnToursView";
 import { TourPage } from "./Dashboard/Learn/Tour";
-import Editor from "./Editor";
 import { ImportPage } from "./Import";
 import NotFoundPage from "./NotFoundPage";
-import PipelineRun from "./PipelineRun";
 import ArtifactPreviewPage from "./PipelineRun/ArtifactPreview";
 import ExecutionLogsPage from "./PipelineRun/ExecutionLogs";
 import { AgentSettings } from "./Settings/sections/AgentSettings";
@@ -291,12 +289,14 @@ const importRoute = createRoute({
 
 const editorRoute = createRoute({
   getParentRoute: () => mainLayout,
+  path: APP_ROUTES.EDITOR,
+  component: EditorV2,
+});
+
+const pipelineEditorRoute = createRoute({
+  getParentRoute: () => mainLayout,
   path: APP_ROUTES.PIPELINE_EDITOR,
-  component: Editor,
-  beforeLoad: ({ search }: { search: { name?: string } }) => {
-    const name = search.name || "";
-    return { name };
-  },
+  component: EditorV2,
 });
 
 const githubAuthCallbackRoute = createRoute({
@@ -314,13 +314,13 @@ const huggingFaceAuthCallbackRoute = createRoute({
 const runDetailRoute = createRoute({
   getParentRoute: () => mainLayout,
   path: APP_ROUTES.RUN_DETAIL,
-  component: PipelineRun,
+  component: RunViewV2,
 });
 
 const runDetailWithSubgraphRoute = createRoute({
   getParentRoute: () => mainLayout,
   path: APP_ROUTES.RUN_DETAIL_WITH_SUBGRAPH,
-  component: PipelineRun,
+  component: RunViewV2,
 });
 
 const secretsRouteTree = settingsSecretsRoute.addChildren([
@@ -338,61 +338,52 @@ const settingsRouteTree = settingsLayoutRoute.addChildren([
   secretsRouteTree,
 ]);
 
-const editorV2Route = createRoute({
+// The v2 editor and run view used to live under their own paths; links to them
+// are still out there in bookmarks, docs and agent transcripts.
+const editorV2RedirectRoute = createRoute({
   getParentRoute: () => mainLayout,
   path: APP_ROUTES.EDITOR_V2,
-  component: EditorV2,
   beforeLoad: () => {
-    if (!isFlagEnabled("v2_editor")) {
-      throw redirect({ to: APP_ROUTES.DASHBOARD_PIPELINES });
-    }
+    throw redirect({ to: APP_ROUTES.EDITOR, search: (previous) => previous });
   },
 });
 
-const editorV2PipelineRoute = createRoute({
+const editorV2PipelineRedirectRoute = createRoute({
   getParentRoute: () => mainLayout,
   path: APP_ROUTES.EDITOR_V2_PIPELINE,
-  component: EditorV2,
   beforeLoad: ({ params }) => {
-    if (!isFlagEnabled("v2_editor")) {
-      throw redirect({
-        to: APP_ROUTES.PIPELINE_EDITOR,
-        params: { name: params.pipelineName },
-      });
-    }
+    throw redirect({
+      to: APP_ROUTES.PIPELINE_EDITOR,
+      params: { pipelineName: params.pipelineName },
+      search: (previous) => previous,
+    });
   },
 });
 
-const runV2Route = createRoute({
+const runV2RedirectRoute = createRoute({
   getParentRoute: () => mainLayout,
   path: APP_ROUTES.RUN_DETAIL_V2,
-  component: RunViewV2,
   beforeLoad: ({ params }) => {
-    if (!isFlagEnabled("v2_editor")) {
-      throw redirect({
-        to: APP_ROUTES.RUN_DETAIL,
-        params: { id: params.id },
-        search: (previous) => previous,
-      });
-    }
+    throw redirect({
+      to: APP_ROUTES.RUN_DETAIL,
+      params: { id: params.id },
+      search: (previous) => previous,
+    });
   },
 });
 
-const runV2WithSubgraphRoute = createRoute({
+const runV2WithSubgraphRedirectRoute = createRoute({
   getParentRoute: () => mainLayout,
   path: APP_ROUTES.RUN_DETAIL_V2_WITH_SUBGRAPH,
-  component: RunViewV2,
   beforeLoad: ({ params }) => {
-    if (!isFlagEnabled("v2_editor")) {
-      throw redirect({
-        to: APP_ROUTES.RUN_DETAIL_WITH_SUBGRAPH,
-        params: {
-          id: params.id,
-          subgraphExecutionId: params.subgraphExecutionId,
-        },
-        search: (previous) => previous,
-      });
-    }
+    throw redirect({
+      to: APP_ROUTES.RUN_DETAIL_WITH_SUBGRAPH,
+      params: {
+        id: params.id,
+        subgraphExecutionId: params.subgraphExecutionId,
+      },
+      search: (previous) => previous,
+    });
   },
 });
 
@@ -470,12 +461,13 @@ const appRouteTree = mainLayout.addChildren([
   settingsRouteTree,
   importRoute,
   editorRoute,
+  pipelineEditorRoute,
   runDetailRoute,
   runDetailWithSubgraphRoute,
-  editorV2Route,
-  editorV2PipelineRoute,
-  runV2Route,
-  runV2WithSubgraphRoute,
+  editorV2RedirectRoute,
+  editorV2PipelineRedirectRoute,
+  runV2RedirectRoute,
+  runV2WithSubgraphRedirectRoute,
   compareRoute,
   tangentProjectRoute,
   pipelineFoldersRoute,

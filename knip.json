@@ -4,7 +4,9 @@
   "entry": [
     "src/agent/editorWorker.ts",
     "src/agent/runViewWorker.ts",
-    "src/agent/remoteEnvWorker.ts"
+    "src/agent/remoteEnvWorker.ts",
+    "src/routes/Editor/index.ts",
+    "src/routes/PipelineRun/index.ts"
   ],
   "ignore": [
     "src/api/**",

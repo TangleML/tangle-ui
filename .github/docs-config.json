@@ -7,12 +7,12 @@
     {
       "id": "visual-pipeline-editor",
       "description": "Drag-and-drop pipeline construction in the V2 editor — adding/connecting components, configuring inputs/outputs, YAML editing mode",
-      "routes": ["/editor-v2", "/editor-v2/$pipelineName"]
+      "routes": ["/editor", "/editor/$pipelineName"]
     },
     {
       "id": "pipeline-execution",
       "description": "Submitting pipeline runs, monitoring run status, viewing logs and outputs, subgraph execution drill-down",
-      "routes": ["/run-v2/$id", "/run-v2/$id/$subgraphExecutionId", "/runs/$id"]
+      "routes": ["/runs/$id", "/runs/$id/$subgraphExecutionId"]
     },
     {
       "id": "component-libraries",

@@ -10,10 +10,8 @@ import { OnboardingNavPill } from "@/components/Onboarding/OnboardingNavPill";
 import { isAuthorizationRequired } from "@/components/shared/Authentication/helpers";
 import { TopBarAuthentication } from "@/components/shared/Authentication/TopBarAuthentication";
 import { CopyText } from "@/components/shared/CopyText/CopyText";
-import { EditorVersionToggle } from "@/components/shared/EditorVersionToggle";
 import ImportPipeline from "@/components/shared/ImportPipeline";
 import { NoticeInbox } from "@/components/shared/Notices/NoticeInbox";
-import { RunVersionToggle } from "@/components/shared/RunVersionToggle";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -57,7 +55,6 @@ const DefaultAppMenu = () => {
   const showAiModelQuickSelect =
     location.pathname.startsWith(APP_ROUTES.DASHBOARD_COMPONENTS) ||
     location.pathname.startsWith(APP_ROUTES.DASHBOARD_COMPONENTS_V2) ||
-    location.pathname.startsWith(APP_ROUTES.EDITOR_V2) ||
     location.pathname.startsWith(APP_ROUTES.SETTINGS_AGENT);
 
   return (
@@ -127,8 +124,6 @@ const DefaultAppMenu = () => {
 
           {showAiModelQuickSelect && <AiModelQuickSelect />}
 
-          <EditorVersionToggle />
-          <RunVersionToggle />
           <NoticeInbox />
 
           {/* Settings & status */}
@@ -208,11 +203,11 @@ const DefaultAppMenu = () => {
 const AppMenu = () => {
   const { pathname } = useLocation();
 
-  if (pathname.startsWith(APP_ROUTES.EDITOR_V2)) {
+  if (pathname.startsWith(APP_ROUTES.EDITOR)) {
     return null;
   }
 
-  if (pathname.startsWith(APP_ROUTES.RUNS_V2)) {
+  if (pathname.startsWith(`${APP_ROUTES.RUNS}/`)) {
     return null;
   }
 

@@ -181,7 +181,7 @@ function EditorV2Content({ pipelineRef }: { pipelineRef: PipelineRef | null }) {
   );
 }
 
-// Non-editor-v2 routes (e.g. `/tour/$tourId`) pass `pipelineRef` directly.
+// Non-editor routes (e.g. `/tour/$tourId`) pass `pipelineRef` directly.
 // Without a prop, we fall back to reading the route's params/search.
 export function EditorV2({
   pipelineRef: pipelineRefProp,

@@ -2,15 +2,14 @@ import { useRouterState } from "@tanstack/react-router";
 import { observer } from "mobx-react-lite";
 
 import { SubgraphBreadcrumbsView } from "@/components/shared/SubgraphBreadcrumbsView";
+import { RUNS_BASE_PATH } from "@/routes/appRoutes";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { tracking } from "@/utils/tracking";
-
-const RUNS_V2_PATH_PREFIX = "/runs-v2";
 
 export const SubgraphBreadcrumbs = observer(function SubgraphBreadcrumbs() {
   const { navigation } = useSharedStores();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const isRunView = pathname.startsWith(RUNS_V2_PATH_PREFIX);
+  const isRunView = pathname.startsWith(`${RUNS_BASE_PATH}/`);
 
   const path = navigation.navigationPath.map((entry, i) =>
     i === 0 ? "Root" : entry.displayName,
