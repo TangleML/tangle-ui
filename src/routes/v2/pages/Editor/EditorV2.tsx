@@ -255,9 +255,11 @@ function RemotePipelineEditor({ pipelineId }: { pipelineId: string }) {
           <Paragraph role="alert">
             Configure a backend to open pipelines.
           </Paragraph>
-          <RouterLink to={APP_ROUTES.SETTINGS_BACKEND}>
-            Backend settings
-          </RouterLink>
+          <Button asChild variant="outline">
+            <RouterLink to={APP_ROUTES.SETTINGS_BACKEND}>
+              Backend settings
+            </RouterLink>
+          </Button>
         </BlockStack>
       </RemotePipelineShell>
     );
