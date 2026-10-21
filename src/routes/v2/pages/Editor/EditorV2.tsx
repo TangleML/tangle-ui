@@ -23,7 +23,10 @@ import { TourSaveExploreDialog } from "@/providers/TourProvider/TourSaveExploreD
 import { TourSecretsDialog } from "@/providers/TourProvider/TourSecretsDialog";
 import { APP_ROUTES } from "@/routes/appRoutes";
 import { QuickRunSubmitterProvider } from "@/routes/v2/pages/Editor/components/QuickRunSubmitterContext";
-import { AiChatStoreProvider } from "@/routes/v2/shared/components/AiChat/AiChatStoreContext";
+import {
+  AiChatStoreProvider,
+  useAiChatStore,
+} from "@/routes/v2/shared/components/AiChat/AiChatStoreContext";
 import { useCanvasControlsWindow } from "@/routes/v2/shared/components/MiniMap/useCanvasControlsWindow";
 import { useDockAreaAccordion } from "@/routes/v2/shared/hooks/useDockAreaAccordion";
 import { useFocusMode } from "@/routes/v2/shared/hooks/useFocusMode";
@@ -340,12 +343,7 @@ export function EditorV2({
         ? { name: pipelineName, fileId }
         : null;
 
-  return (
-    <EditorV2Document
-      key={pipelineRef ? getEditorPipelineIdentity(pipelineRef) : "empty"}
-      pipelineRef={pipelineRef}
-    />
-  );
+  return <EditorV2Document key="local-editor" pipelineRef={pipelineRef} />;
 }
 
 function EditorV2Document({
@@ -361,6 +359,7 @@ function EditorV2Document({
             createWorker={createEditorAgentWorker}
             context={{ mode: "editor" }}
           >
+            <ChatDocumentLifecycle pipelineRef={pipelineRef} />
             <DialogProvider>
               <EditorV2Content pipelineRef={pipelineRef} />
             </DialogProvider>
@@ -369,4 +368,25 @@ function EditorV2Document({
       </SharedStoreProvider>
     </div>
   );
+}
+
+function ChatDocumentLifecycle({
+  pipelineRef,
+}: {
+  pipelineRef: EditorPipelineRef | null;
+}) {
+  const chat = useAiChatStore();
+  const identity =
+    pipelineRef && !("source" in pipelineRef)
+      ? getEditorPipelineIdentity(pipelineRef)
+      : "remote-or-empty";
+  useEffect(
+    () => () => {
+      // Stop in-flight tools before the stable local editor stores load another
+      // document. Keep the conversation and its bindings to those live stores.
+      for (const thread of chat.threads) thread.abort();
+    },
+    [chat, identity],
+  );
+  return null;
 }

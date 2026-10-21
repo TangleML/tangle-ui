@@ -1,6 +1,7 @@
 import type { ComponentProps } from "react";
 
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
+import { Paragraph } from "@/components/ui/typography";
 import { useBackend } from "@/providers/BackendProvider";
 import { EmbeddedPipelineEditor } from "@/routes/v2/pages/Editor/EmbeddedPipelineEditor";
 import { findById } from "@/services/pipelineStorage/pipelineRegistry";
@@ -27,14 +28,25 @@ function PipelineWorkareaEditor({
     if (!configured)
       return <p role="alert">Configure a backend to open pipelines.</p>;
   }
-  const pipelineRef: EditorPipelineRef =
-    key === "remote"
-      ? { source: "remote", backendUrl, pipelineId: value }
-      : key === "draft"
-        ? storage.getRemoteDraftRef(value, backendUrl)
-        : key === "id"
-          ? { fileId: value, name: title }
-          : { name: value };
+  let pipelineRef: EditorPipelineRef;
+  try {
+    pipelineRef =
+      key === "remote"
+        ? { source: "remote", backendUrl, pipelineId: value }
+        : key === "draft"
+          ? storage.getRemoteDraftRef(value, backendUrl)
+          : key === "id"
+            ? { fileId: value, name: title }
+            : { name: value };
+  } catch (error) {
+    return (
+      <Paragraph role="alert">
+        {error instanceof Error
+          ? error.message
+          : "This pipeline is unavailable. Close this tab and reopen the pipeline."}
+      </Paragraph>
+    );
+  }
   return <EmbeddedPipelineEditor pipelineRef={pipelineRef} {...props} />;
 }
 

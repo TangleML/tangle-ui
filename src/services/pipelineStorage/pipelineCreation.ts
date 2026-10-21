@@ -6,7 +6,18 @@ import type { PipelineStorageService } from "./PipelineStorageService";
 import type { RemotePipelineRef } from "./types";
 
 export const createsLocalPipelines = () =>
-  import.meta.env.VITE_LOCAL_PIPELINES === "true";
+  import.meta.env.VITE_LOCAL_PIPELINES === "true" ||
+  prefersBrowserPipelineStorage();
+
+const STORAGE_PREFERENCE_KEY = "pipelines:save-in-browser";
+
+export function prefersBrowserPipelineStorage(): boolean {
+  return localStorage.getItem(STORAGE_PREFERENCE_KEY) === "true";
+}
+
+export function setBrowserPipelineStorage(enabled: boolean): void {
+  localStorage.setItem(STORAGE_PREFERENCE_KEY, String(enabled));
+}
 
 export async function getPipelineCreationBackendUrl(): Promise<string> {
   const { useEnv, useRelativePath, userBackendUrl } =

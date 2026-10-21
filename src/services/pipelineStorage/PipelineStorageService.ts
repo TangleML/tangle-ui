@@ -28,6 +28,7 @@ const ROOT_DRIVER_CONFIG = {
 } as const;
 
 export class PipelineStorageService {
+  private readonly savedDrafts = new Map<string, RemotePipelineRef>();
   private readonly remoteDrafts = new Map<
     string,
     {
@@ -48,12 +49,16 @@ export class PipelineStorageService {
 
   async resolvePipeline(ref: EditorPipelineRef): Promise<PipelineFile> {
     if (isRemotePipelineDraftRef(ref)) {
-      const file =
-        this.remoteDrafts.get(getEditorPipelineIdentity(ref))?.file ??
-        this.createRemoteDraft(ref);
-      // A reopened editor owns cleanup until its current edits are saved.
-      this.remoteDrafts.get(getEditorPipelineIdentity(ref))!.discardRequested =
-        false;
+      const draft = this.remoteDrafts.get(getEditorPipelineIdentity(ref));
+      if (draft) {
+        draft.discardRequested = false;
+        return draft.file;
+      }
+      const saved = this.getSavedDraft(ref.draftId, ref.backendUrl);
+      if (saved) return this.resolvePipeline(saved);
+      const file = this.createRemoteDraft(ref);
+      const created = this.remoteDrafts.get(getEditorPipelineIdentity(ref));
+      if (created) created.discardRequested = false;
       return file;
     }
     if (isRemotePipelineRef(ref)) {
@@ -77,8 +82,22 @@ export class PipelineStorageService {
     onCreated?: (remote: RemotePipelineRef) => Promise<unknown>,
   ): PipelineFile {
     const driver = new RemotePipelineDraftStorageDriver(ref, async (remote) => {
-      await onCreated?.(remote);
       file.promoteToRemote(remote);
+      const key = getEditorPipelineIdentity(ref);
+      this.savedDrafts.set(key, remote);
+      try {
+        sessionStorage.setItem(`saved-draft:${key}`, JSON.stringify(remote));
+      } catch {
+        // In-memory history recovery still works when browser storage is full.
+      }
+      try {
+        await onCreated?.(remote);
+      } catch (cause) {
+        throw new Error(
+          "Pipeline saved, but it could not be attached to the project. Retry to attach the saved pipeline.",
+          { cause },
+        );
+      }
     });
     const file = new PipelineFile({
       id: ref.draftId,
@@ -103,13 +122,45 @@ export class PipelineStorageService {
   getRemoteDraftRef(
     draftId: string,
     backendUrl: string,
-  ): RemotePipelineDraftRef {
+  ): RemotePipelineDraftRef | RemotePipelineRef {
     const draft = [...this.remoteDrafts.values()].find(
       ({ ref }) => ref.draftId === draftId && ref.backendUrl === backendUrl,
     );
-    if (!draft)
-      throw new Error("This unsaved pipeline draft is no longer available.");
-    return draft.ref;
+    if (draft) return draft.ref;
+    const saved = this.getSavedDraft(draftId, backendUrl);
+    if (saved) return saved;
+    throw new Error(
+      "This unsaved pipeline draft is no longer available. Close this tab and create a new pipeline.",
+    );
+  }
+
+  private getSavedDraft(
+    draftId: string,
+    backendUrl: string,
+  ): RemotePipelineRef | undefined {
+    const key = getEditorPipelineIdentity({
+      source: "draft",
+      draftId,
+      backendUrl,
+      name: "",
+    });
+    const saved = this.savedDrafts.get(key);
+    if (saved) return saved;
+    try {
+      const value = JSON.parse(
+        sessionStorage.getItem(`saved-draft:${key}`) ?? "null",
+      );
+      if (
+        value?.source === "remote" &&
+        value.backendUrl === backendUrl &&
+        typeof value.pipelineId === "string"
+      ) {
+        this.savedDrafts.set(key, value);
+        return value;
+      }
+    } catch {
+      // Ignore unavailable storage or stale malformed history entries.
+    }
   }
 
   discardRemoteDraft(ref: RemotePipelineDraftRef): void {

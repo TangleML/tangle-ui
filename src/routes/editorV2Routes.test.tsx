@@ -21,13 +21,16 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { client } from "@/api/client.gen";
 import { getCurrentUserApiUsersMeGet } from "@/api/sdk.gen";
+import { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
+import { defaultPipelineYamlWithName } from "@/utils/constants";
 
 import { APP_ROUTES } from "./appRoutes";
 import { createEditorV2Routes } from "./editorV2Routes";
 import type { useEditorSession } from "./v2/pages/Editor/store/EditorSessionContext";
 
 const canvas = vi.hoisted(() => ({ mounts: 0, unmounts: 0 }));
+const chat = vi.hoisted(() => ({ mounts: 0, threads: [{ abort: vi.fn() }] }));
 let session: ReturnType<typeof useEditorSession>;
 const storage = new PipelineStorageService();
 const queryClient = new QueryClient({
@@ -115,9 +118,22 @@ vi.mock("./v2/shared/windows/DockArea", () => ({ DockArea: () => null }));
 vi.mock("./v2/shared/windows/WindowContainer", () => ({
   WindowContainer: () => null,
 }));
-vi.mock("./v2/shared/components/AiChat/AiChatStoreContext", () => ({
-  AiChatStoreProvider: ({ children }: { children: ReactNode }) => children,
-}));
+vi.mock("./v2/shared/components/AiChat/AiChatStoreContext", async () => {
+  const { useEffect } = await import("react");
+  return {
+    useAiChatStore: () => chat,
+    AiChatStoreProvider: function Provider({
+      children,
+    }: {
+      children: ReactNode;
+    }) {
+      useEffect(() => {
+        chat.mounts++;
+      }, []);
+      return children;
+    },
+  };
+});
 vi.mock("@/providers/ComponentLibraryProvider", () => ({
   ComponentLibraryProvider: ({ children }: { children: ReactNode }) => children,
 }));
@@ -148,6 +164,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(window, "scrollTo").mockImplementation(() => {});
   canvas.mounts = 0;
+  chat.mounts = 0;
   canvas.unmounts = 0;
   vi.mocked(getCurrentUserApiUsersMeGet).mockResolvedValue({
     data: { id: "user", permissions: ["read", "write"] },
@@ -172,7 +189,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-async function open(initialEntry = APP_ROUTES.EDITOR_V2_NEW_PIPELINE) {
+async function open(initialEntry: string = APP_ROUTES.EDITOR_V2_NEW_PIPELINE) {
   const root = createRootRoute();
   const dashboard = createRoute({
     getParentRoute: () => root,
@@ -272,4 +289,92 @@ it("starts a separate unsaved pipeline when New is used again at the same URL", 
     expect(history.location.pathname).toBe(`/editor-v2/pipeline/${pipelineId}`),
   );
   expect(client.put).toHaveBeenCalledOnce();
+});
+
+it("reopens the saved pipeline after leaving during creation and going Back", async () => {
+  const { router, history } = await open();
+  const draftId = history.location.state.newPipeline?.draftId;
+  expect(draftId).toMatch(/^[0-9a-f-]{36}$/);
+  const put = vi.mocked(client.put).getMockImplementation()!;
+  let finish = () => {};
+  const pending = new Promise<void>((resolve) => {
+    finish = resolve;
+  });
+  vi.mocked(client.put).mockImplementation(async (...args) => {
+    await pending;
+    const saved = await put(...args);
+    vi.mocked(client.get).mockResolvedValue(saved);
+    return saved;
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Edit pipeline" }));
+  await waitFor(() => expect(client.put).toHaveBeenCalledOnce());
+  await act(async () => {
+    await router.navigate({ to: APP_ROUTES.DASHBOARD_PIPELINES });
+  });
+  await screen.findByText("Dashboard");
+  await act(async () => {
+    finish();
+    await pending;
+  });
+  await waitFor(() =>
+    expect(
+      queryClient.getQueryCache().findAll({ queryKey: ["editor-v2-spec"] }),
+    ).toHaveLength(0),
+  );
+  await act(async () => {
+    history.back();
+    await router.load();
+  });
+  await screen.findByRole("button", { name: "Edit pipeline" });
+  await waitFor(() =>
+    expect(history.location.pathname).toBe(`/editor-v2/pipeline/${pipelineId}`),
+  );
+  expect(session.pipelineFile.activePipelineFile?.remote?.pipelineId).toBe(
+    pipelineId,
+  );
+  expect(client.put).toHaveBeenCalledOnce();
+  expect(client.get).toHaveBeenCalledOnce();
+});
+
+it("keeps local chat mounted while replacing document undo and save state", async () => {
+  const first = new PipelineFile({
+    id: "local-first",
+    storageKey: "First",
+    folder: storage.rootFolder,
+  });
+  const second = new PipelineFile({
+    id: "local-second",
+    storageKey: "Second",
+    folder: storage.rootFolder,
+  });
+  vi.spyOn(first, "read").mockResolvedValue(
+    defaultPipelineYamlWithName("First"),
+  );
+  vi.spyOn(second, "read").mockResolvedValue(
+    defaultPipelineYamlWithName("Second"),
+  );
+  const writeFirst = vi.spyOn(first, "write").mockResolvedValue();
+  const writeSecond = vi.spyOn(second, "write").mockResolvedValue();
+  vi.spyOn(storage, "resolvePipelineByName").mockImplementation(async (name) =>
+    name === "First" ? first : second,
+  );
+  const { router } = await open("/editor-v2/First");
+  fireEvent.click(screen.getByRole("button", { name: "Edit pipeline" }));
+  expect(session.undo.canUndo).toBe(true);
+  await act(async () => {
+    await router.navigate({
+      to: APP_ROUTES.EDITOR_V2_PIPELINE,
+      params: { pipelineName: "Second" },
+    });
+  });
+  await waitFor(() =>
+    expect(session.pipelineFile.activePipelineFile).toBe(second),
+  );
+  expect(session.undo.canUndo).toBe(false);
+  expect(session.autoSave.hasUnsavedChanges).toBe(false);
+  expect(session.autoSave.lastSavedAt).toBeNull();
+  expect(writeFirst).toHaveBeenCalledOnce();
+  expect(writeSecond).not.toHaveBeenCalled();
+  expect(chat.mounts).toBe(1);
+  expect(chat.threads[0].abort).toHaveBeenCalled();
 });

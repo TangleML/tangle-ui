@@ -26,7 +26,6 @@ export function useRemoteDraftPromotion(
     return reaction(
       () =>
         file.remote &&
-        autoSave.lastSavedAt &&
         !autoSave.isSaving &&
         !autoSave.error &&
         !autoSave.hasUnsavedChanges

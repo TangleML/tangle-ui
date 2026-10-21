@@ -71,6 +71,18 @@ describe("listRemotePipelines", () => {
     expect(client.post).toHaveBeenCalledTimes(1);
   });
 
+  it("ignores a total count from older responses", async () => {
+    mockResponse({
+      pipelines: [pipeline],
+      total_count: 50,
+      next_page_token: "page-2",
+    });
+    expect(await listRemotePipelines(BACKEND_URL)).toEqual({
+      pipelines: [pipeline],
+      nextPageToken: "page-2",
+    });
+  });
+
   it("requests ten more pipelines with the supplied continuation token", async () => {
     mockResponse({
       pipelines: [pipeline],

@@ -20,7 +20,9 @@ import { importPipelineFromYaml, useSavePipeline } from "./pipelineService";
 import type { SavedPipelineDocument } from "./pipelineSpecService";
 import {
   createPipelineFromContent,
+  createsLocalPipelines,
   getPipelineCreationBackendUrl,
+  setBrowserPipelineStorage,
 } from "./pipelineStorage/pipelineCreation";
 import { PipelineStorageService } from "./pipelineStorage/PipelineStorageService";
 import { editorSpecFromRemoteTask } from "./pipelineStorage/remotePipelineTask";
@@ -68,6 +70,7 @@ const remoteSpec = (index: number) =>
 
 beforeEach(() => {
   vi.resetAllMocks();
+  localStorage.clear();
   vi.stubEnv("VITE_LOCAL_PIPELINES", undefined);
   Object.assign(settings, {
     apiUrl: "",
@@ -234,3 +237,26 @@ it.each(["backend configuration", "remote response"])(
     expect(writeComponentToFileListFromText).not.toHaveBeenCalled();
   },
 );
+
+it("honors the runtime browser-storage preference for imports", async () => {
+  setBrowserPipelineStorage(true);
+  expect(createsLocalPipelines()).toBe(true);
+  const storage = new PipelineStorageService();
+  const addFile = vi
+    .spyOn(storage.rootFolder, "addFile")
+    .mockResolvedValue({} as never);
+  await createPipelineFromContent(
+    storage,
+    "Example",
+    componentSpecToYaml(spec),
+  );
+  expect(addFile).toHaveBeenCalledOnce();
+  expect(client.put).not.toHaveBeenCalled();
+  setBrowserPipelineStorage(false);
+  expect(createsLocalPipelines()).toBe(false);
+});
+
+it("propagates remote clone failures to the caller", async () => {
+  vi.mocked(client.put).mockRejectedValueOnce(new Error("Backend unavailable"));
+  await expect(copyRunToPipeline(spec)).rejects.toThrow("Backend unavailable");
+});

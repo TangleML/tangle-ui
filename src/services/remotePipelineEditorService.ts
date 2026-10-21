@@ -9,6 +9,11 @@ type RemotePipelineWrite = Pick<
 >;
 
 function apiError(action: string, status: number, error: unknown): Error {
+  if ([404, 405, 501].includes(status)) {
+    return new Error(
+      `${action} (${status}). This backend does not support saving pipelines. In Settings → Preferences, enable “Save new pipelines in this browser” to create local pipelines.`,
+    );
+  }
   const detail =
     error && typeof error === "object" && "detail" in error
       ? error.detail
@@ -36,7 +41,9 @@ export async function getRemotePipelineWriter(
     );
   }
   if (!result.data.permissions.includes("write")) {
-    throw new Error("You do not have permission to edit pipelines.");
+    throw new Error(
+      "You do not have permission to edit pipelines. In Settings → Preferences, enable “Save new pipelines in this browser” to create local pipelines.",
+    );
   }
   return result.data.id;
 }

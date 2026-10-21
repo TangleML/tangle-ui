@@ -18,6 +18,8 @@ export class RemotePipelineDraftStorageDriver implements PipelineStorageDriver {
   private remote?: RemotePipelineStorageDriver;
   private pending: Promise<void> = Promise.resolve();
   private notified = false;
+  private savedContent?: string;
+  private readonly filePath = `pipelines/${crypto.randomUUID()}.yaml`;
 
   get remoteRef(): RemotePipelineRef | undefined {
     return (
@@ -54,18 +56,23 @@ export class RemotePipelineDraftStorageDriver implements PipelineStorageDriver {
     this.pending = this.pending
       .catch(() => {})
       .then(async () => {
-        if (this.remote) {
+        if (this.remote && (this.notified || content !== this.savedContent)) {
           await this.remote.write(storageKey, content);
-        } else {
+        } else if (!this.remote) {
           this.remote = await RemotePipelineStorageDriver.create(
             this.ref.backendUrl,
             componentSpecFromYaml(content).name ?? this.ref.name,
             content,
-            `pipelines/${this.ref.draftId}.yaml`,
+            this.filePath,
           );
         }
+        this.savedContent = content;
         if (!this.notified) {
-          await this.onCreated(this.remoteRef!);
+          await this.onCreated({
+            source: "remote",
+            backendUrl: this.ref.backendUrl,
+            pipelineId: this.remote.pipelineId,
+          });
           this.notified = true;
         }
       });

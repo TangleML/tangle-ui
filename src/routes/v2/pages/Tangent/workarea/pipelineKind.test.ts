@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { WorkareaIdentity } from "./types";
@@ -109,4 +109,34 @@ describe("pipelineKind resolveTitle", () => {
       expect(mocks.findById).not.toHaveBeenCalled();
     },
   );
+});
+
+it("shows a recoverable message when an old draft target is unavailable", () => {
+  mocks.draft.mockImplementationOnce(() => {
+    throw new Error(
+      "This draft is unavailable. Close this tab and create a new pipeline.",
+    );
+  });
+  const kind = getWorkareaKind("pipeline")!;
+  render(
+    kind.render(
+      {
+        id: "missing",
+        title: "Old draft",
+        target: { type: "pipeline", identity: "draft/missing" },
+      } as Parameters<typeof kind.render>[0],
+      {
+        isActive: true,
+        projectId: "project-1",
+        tabEnvironmentId: () => undefined,
+        registerTabStore: vi.fn(),
+        unregisterTabStore: vi.fn(),
+        registerTabEnvironment: vi.fn(),
+        unregisterTabEnvironment: vi.fn(),
+        registerTabBridge: vi.fn(),
+        unregisterTabBridge: vi.fn(),
+      } as Parameters<typeof kind.render>[1],
+    ),
+  );
+  expect(screen.getByRole("alert")).toHaveTextContent("Close this tab");
 });

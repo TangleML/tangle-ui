@@ -46,28 +46,27 @@ export function createEditorV2Routes<TParent extends AnyRoute>(
     getParentRoute: () => layout,
     path: APP_ROUTES.EDITOR_V2_NEW_PIPELINE,
     beforeLoad: ({ location }) => {
-      if (!isFlagEnabled("v2_editor")) {
-        throw redirect({ to: APP_ROUTES.DASHBOARD_PIPELINES });
+      if (!location.state.newPipeline) {
+        throw redirect({
+          to: APP_ROUTES.EDITOR_V2_NEW_PIPELINE,
+          replace: true,
+          state: {
+            ...location.state,
+            newPipeline: {
+              name: generate({ exactly: 4, join: " " }),
+              draftId: crypto.randomUUID(),
+            },
+          },
+        });
       }
       return {
-        newPipeline: location.state.newPipeline ?? {
-          name: generate({ exactly: 4, join: " " }),
-          draftId: location.state.__TSR_key!,
-        },
+        newPipeline: location.state.newPipeline,
       };
     },
   });
   const remotePipeline = createRoute({
     getParentRoute: () => layout,
     path: APP_ROUTES.EDITOR_V2_REMOTE_PIPELINE,
-    beforeLoad: ({ params }) => {
-      if (!isFlagEnabled("v2_editor")) {
-        throw redirect({
-          to: APP_ROUTES.REMOTE_PIPELINE_EDITOR,
-          params: { pipelineId: params.pipelineId },
-        });
-      }
-    },
   });
   return layout.addChildren([index, pipeline, newPipeline, remotePipeline]);
 }

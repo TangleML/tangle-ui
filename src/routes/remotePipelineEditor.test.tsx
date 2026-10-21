@@ -100,6 +100,7 @@ vi.mock("./v2/pages/Editor/components/QuickRunSubmitterContext", () => ({
     children,
 }));
 vi.mock("@/routes/v2/shared/components/AiChat/AiChatStoreContext", () => ({
+  useAiChatStore: () => ({ threads: [] }),
   AiChatStoreProvider: ({ children }: { children: ReactNode }) => children,
 }));
 vi.mock("./v2/pages/Editor/components/AiChat/editorAgentWorker", () => ({
