@@ -79,6 +79,16 @@ export class RemotePipelineDraftStorageDriver implements PipelineStorageDriver {
     return this.pending;
   }
 
+  async copy(
+    name: string,
+    content: string,
+  ): Promise<RemotePipelineStorageDriver> {
+    await this.pending.catch(() => {});
+    if (!this.remote)
+      throw new Error("Save the pipeline before making a remote copy.");
+    return this.remote.copy(name, content);
+  }
+
   async rename(_oldStorageKey: string, _newStorageKey: string): Promise<void> {
     // The editor changes spec.name and autosave persists that content.
   }

@@ -630,9 +630,12 @@ describe("usePrepareProjectArrival", () => {
       );
     });
 
-    it("starts the empty session it asks for, dropping a prompt left waiting", async () => {
+    it("opens a requested run in a populated remote project and clears a waiting prompt", async () => {
       search = { session: "new", open: "run://id/run-7" };
       given({
+        documents: [
+          { ...document(null), entity: "pipeline", entityId: "remote-1" },
+        ],
         projectOverrides: {
           metadata: startingSessionMetadata({
             prompt: "Find out why run-3 failed.",
@@ -649,11 +652,16 @@ describe("usePrepareProjectArrival", () => {
           identity: "id/run-7",
         }),
       );
+      expect(store.openWorkareaTarget).toHaveBeenCalledTimes(1);
+      expect(store.startSession).toHaveBeenCalledTimes(1);
       expect(store.startSession).toHaveBeenCalledWith(undefined);
       expect(updateProject).toHaveBeenCalledWith({
         id: "project-1",
         input: { metadata: {} },
       });
+      expect(createNewPipeline).not.toHaveBeenCalled();
+      expect(createResource).not.toHaveBeenCalled();
+      expect(minimize).not.toHaveBeenCalled();
     });
 
     it("waits for a cached project to be read again before deciding", async () => {

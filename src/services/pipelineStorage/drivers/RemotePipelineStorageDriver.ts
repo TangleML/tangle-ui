@@ -76,7 +76,7 @@ export class RemotePipelineStorageDriver implements PipelineStorageDriver {
     content: string,
     filePath = `pipelines/${crypto.randomUUID()}.yaml`,
   ): Promise<RemotePipelineStorageDriver> {
-    return this.createCopy({ backendUrl, name, content });
+    return this.createCopy({ backendUrl, name, content, filePath });
   }
 
   private static async createCopy({
@@ -84,11 +84,13 @@ export class RemotePipelineStorageDriver implements PipelineStorageDriver {
     name,
     content,
     source,
+    filePath = `pipelines/${crypto.randomUUID()}.yaml`,
   }: {
     backendUrl: string;
     name: string;
     content: string;
     source?: SavedPipelineDocument;
+    filePath?: string;
   }): Promise<RemotePipelineStorageDriver> {
     const spec = { ...componentSpecFromYaml(content), name };
     const userId = await getRemotePipelineWriter(backendUrl);

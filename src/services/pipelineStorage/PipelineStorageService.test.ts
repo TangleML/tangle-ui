@@ -25,9 +25,6 @@ vi.mock("@/api/sdk.gen", () => ({ getCurrentUserApiUsersMeGet: vi.fn() }));
 vi.mock("./pipelineFileEvents", () => ({ emitPipelineFileChanged: vi.fn() }));
 vi.mock("./createDriver", () => ({ createDriver: () => ({}) }));
 vi.mock("./pipelineRegistry");
-vi.mock("@/providers/BackendProvider", () => ({
-  useBackend: () => ({ backendUrl: "https://backend.example.com" }),
-}));
 vi.mock("@/utils/localforage", () => ({
   getUseEnv: async () => false,
   getUseRelativePath: async () => false,
@@ -40,6 +37,9 @@ vi.mock(
   "@/components/shared/ReactFlow/FlowSidebar/sections/components/ExportPipelineButton",
   () => ({ exportPipeline: vi.fn() }),
 );
+vi.mock("@/providers/BackendProvider", () => ({
+  useBackend: () => ({ backendUrl: "https://backend.example.com" }),
+}));
 
 const ref = {
   source: "remote",
@@ -509,6 +509,19 @@ describe("remote drafts and project attachment", () => {
     const reopened = await restored.resolvePipeline(draft);
     expect(reopened.remote?.pipelineId).toBe(ref.pipelineId);
     expect(client.put).toHaveBeenCalledOnce();
+  });
+
+  it("copies a promoted draft through its retained driver", async () => {
+    const file = await storage.resolvePipeline(draft);
+    await file.write(content);
+    const copy = await storage.copyRemotePipeline(
+      file,
+      "Copied draft",
+      content,
+    );
+    expect(copy.remote).toBeDefined();
+    expect(new Set(paths()).size).toBe(2);
+    expect(componentSpecFromYaml(await copy.read()).name).toBe("Copied draft");
   });
 
   it("allocates a fresh server path if an abandoned draft is recreated", async () => {

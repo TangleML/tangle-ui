@@ -62,11 +62,8 @@ export async function savePipelineAs(
 
   if (createsLocalPipelines())
     return storage.rootFolder.addFile(newName, componentText);
-
-  if (sourceFile?.remote) {
+  if (sourceFile?.remote)
     return storage.copyRemotePipeline(sourceFile, newName, componentText);
-  }
-
   const backendUrl = sourceFile?.draftBackendUrl;
   if (backendUrl) {
     return storage.createRemotePipeline(backendUrl, newName, componentText);

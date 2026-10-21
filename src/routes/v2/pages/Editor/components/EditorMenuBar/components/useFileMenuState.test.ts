@@ -19,7 +19,11 @@ const state = vi.hoisted(() => ({
     write: vi.fn(),
     deleteFile: vi.fn(),
   },
-  storage: { rootFolder: { addFile: vi.fn() }, copyRemotePipeline: vi.fn() },
+  storage: {
+    rootFolder: { addFile: vi.fn() },
+    copyRemotePipeline: vi.fn(),
+    createRemotePipeline: vi.fn(),
+  },
   save: vi.fn(),
   navigate: vi.fn(),
   notify: vi.fn(),
@@ -93,6 +97,10 @@ beforeEach(() => {
   state.navigate.mockResolvedValue(undefined);
   const copy = { id: "copy-id", storageKey: "Copy" };
   state.storage.rootFolder.addFile.mockResolvedValue(copy);
+  state.storage.createRemotePipeline.mockResolvedValue({
+    ...copy,
+    remote: { ...remote, pipelineId: copy.id },
+  });
   state.storage.copyRemotePipeline.mockResolvedValue({
     ...copy,
     remote: { ...remote, pipelineId: copy.id },
@@ -134,13 +142,15 @@ describe("editor file actions", () => {
       const { result } = renderHook(useFileMenuState);
       await result.current.handleSavePipelineAs("Copy");
       const target = isRemote
-        ? state.storage.copyRemotePipeline
+        ? sourceRemote
+          ? state.storage.copyRemotePipeline
+          : state.storage.createRemotePipeline
         : state.storage.rootFolder.addFile;
       const other = isRemote
         ? state.storage.rootFolder.addFile
         : state.storage.copyRemotePipeline;
       expect(target).toHaveBeenCalledExactlyOnceWith(
-        ...(isRemote ? [state.file] : []),
+        ...(isRemote ? [sourceRemote ? state.file : remote.backendUrl] : []),
         "Copy",
         expect.any(String),
       );

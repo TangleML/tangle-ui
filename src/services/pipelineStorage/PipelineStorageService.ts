@@ -249,6 +249,9 @@ export class PipelineStorageService {
     content: string,
   ): Promise<PipelineFile> {
     const driver = source.folder.driver;
+    if (driver instanceof RemotePipelineDraftStorageDriver && source.remote) {
+      return remoteFile(await driver.copy(name, content));
+    }
     if (!(driver instanceof RemotePipelineStorageDriver)) {
       throw new Error("The source pipeline is not a remote document.");
     }

@@ -32,17 +32,31 @@ const initializeEditing = vi.hoisted(() => vi.fn());
 const mountEditor = vi.hoisted(() => vi.fn());
 const pendingSpec = new Promise<never>(() => {});
 
-vi.mock("@tanstack/react-router", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@tanstack/react-router")>()),
-  useParams: () => route.params,
-  useSearch: () => route.search,
-  useRouterState: ({ select }: { select: (state: unknown) => unknown }) =>
-    select({
-      matches: [
-        { params: route.params, search: route.search, context: route.context },
-      ],
-    }),
-}));
+vi.mock("@tanstack/react-router", async (importOriginal) => {
+  const original =
+    await importOriginal<typeof import("@tanstack/react-router")>();
+  return {
+    ...original,
+    useParams: () => route.params,
+    useSearch: () => route.search,
+    useRouterState: ({ select }: { select: (state: unknown) => unknown }) =>
+      original.useRouterState({
+        select: (state) =>
+          select({
+            ...state,
+            matches: [
+              ...state.matches.slice(0, -1),
+              {
+                ...state.matches.at(-1),
+                params: route.params,
+                search: route.search,
+                context: route.context,
+              },
+            ],
+          }),
+      }),
+  };
+});
 vi.mock("@/providers/BackendProvider", () => ({ useBackend: () => backend }));
 vi.mock("@/services/errorManagement/bugsnag", () => ({ reportError: vi.fn() }));
 vi.mock("@/routes/v2/shared/components/AppMenuActions", () => ({
@@ -148,9 +162,11 @@ function renderEditor(children: ReactNode, basepath = "", hash = false) {
     history,
     basepath,
   });
-  return render(
-    <RouterContextProvider router={router}>{children}</RouterContextProvider>,
-  );
+  return render(children, {
+    wrapper: ({ children }) => (
+      <RouterContextProvider router={router}>{children}</RouterContextProvider>
+    ),
+  });
 }
 
 describe("remote pipeline editor entry", () => {
@@ -162,7 +178,7 @@ describe("remote pipeline editor entry", () => {
         file: { folder: { driver: { canEdit: true } } },
       },
     });
-    const opened = render(
+    const opened = renderEditor(
       <EmbeddedPipelineEditor
         pipelineRef={{
           source: "draft",
@@ -190,7 +206,7 @@ describe("remote pipeline editor entry", () => {
   });
   it("requests local file permission before reading an embedded pipeline", () => {
     permission.granted = false;
-    render(
+    renderEditor(
       <EmbeddedPipelineEditor
         pipelineRef={{ name: "Local pipeline", fileId: "local-1" }}
         isActive
@@ -207,7 +223,7 @@ describe("remote pipeline editor entry", () => {
         file: { folder: { driver: { canEdit: false } } },
       },
     });
-    render(
+    renderEditor(
       <EmbeddedPipelineEditor
         pipelineRef={{
           source: "remote",
@@ -229,7 +245,7 @@ describe("remote pipeline editor entry", () => {
       },
     };
     backend.configured = false;
-    render(<EditorV2 />);
+    renderEditor(<EditorV2 />);
     expect(loadV2).not.toHaveBeenCalled();
     expect(screen.getByRole("alert")).toHaveTextContent("Configure a backend");
   });
@@ -340,8 +356,10 @@ describe("remote pipeline editor entry", () => {
       .spyOn(console, "error")
       .mockImplementation(() => {});
     try {
-      const { rerender } = render(<EditorV2 />);
-      expect(screen.getByRole("alert")).toHaveTextContent("Pipeline not found");
+      const { rerender } = renderEditor(<EditorV2 />);
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Unable to load pipeline. Please try again.",
+      );
       route.params = { pipelineId: "available" };
       loadV2.mockReturnValue({
         data: {

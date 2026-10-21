@@ -58,14 +58,14 @@ export class DocumentSaveState {
 
   releaseIfSaved(): void {
     if (this.hasUnsavedChanges || this.isSaving) return;
+    const releases = [...this.releases];
+    this.releases.clear();
+    for (const release of releases) release();
     if (this.activeEditors === 0) {
       this.disposeUnloadReaction?.();
       this.disposeUnloadReaction = undefined;
       window.removeEventListener("beforeunload", this.preventUnload);
     }
-    const releases = [...this.releases];
-    this.releases.clear();
-    for (const release of releases) release();
   }
 
   @action recordError(error: unknown): void {
