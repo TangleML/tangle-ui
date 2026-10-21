@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   collectIdStack,
   ComponentSpec,
+  Input,
   ReplayIdGenerator,
   serializeComponentSpecToText,
   Task,
@@ -106,7 +107,12 @@ describe("remote browser history", () => {
   });
 
   it("restores working undo/redo after deserializing a saved remote document", async () => {
-    const spec = new ComponentSpec({ $id: "remote_spec", name: "Pipeline" });
+    const spec = new ComponentSpec({
+      $id: "remote_spec",
+      name: "Pipeline",
+      description: "Saved description",
+      inputs: [new Input({ name: "Greeting", optional: false })],
+    });
     const recording = undoMiddleware(spec);
     spec.addTask(
       new Task({ $id: "remote_task", name: "Train", componentRef: {} }),
@@ -115,8 +121,21 @@ describe("remote browser history", () => {
     await saveUndoHistory(key, collectIdStack(spec), recording, yaml);
     recording.dispose();
 
-    // Formatting changes in the server YAML do not invalidate the history.
-    const stored = await loadUndoHistory(key, `# Remote document\n${yaml}`);
+    const { name, description, metadata, inputs, outputs, implementation } =
+      componentSpecFromYaml(yaml);
+    const serverYaml = componentSpecToYaml({
+      name,
+      description,
+      metadata,
+      inputs,
+      outputs,
+      implementation,
+    });
+    expect(serverYaml).not.toBe(yaml);
+    const stored = await loadUndoHistory(
+      key,
+      `# Remote document\n${serverYaml}`,
+    );
     expect(stored).not.toBeNull();
     if (!stored) throw new Error("Expected saved remote undo history");
     const restored = new YamlDeserializer(

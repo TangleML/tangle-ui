@@ -11,6 +11,7 @@ import type { ComponentType } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { getAllComponentFilesFromList } from "@/utils/componentStore";
+import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 
 import { PipelineSection } from "./PipelineSection";
 
@@ -146,13 +147,21 @@ it("prevents duplicate uploads while pending and refreshes the list and selectio
     "https://example.com",
   );
 
-  vi.mocked(getAllComponentFilesFromList).mockResolvedValue(new Map());
+  const files = await getAllComponentFilesFromList(USER_PIPELINES_LIST_NAME);
+  const remaining = files.get("Example");
+  if (!remaining) throw new Error("Missing pipeline fixture");
+  vi.mocked(getAllComponentFilesFromList).mockResolvedValue(
+    new Map([["Remaining", { ...remaining, name: "Remaining" }]]),
+  );
   await act(async () => pending.resolve());
   await waitFor(() =>
     expect(
       screen.queryByRole("button", { name: "Upload Example" }),
     ).not.toBeInTheDocument(),
   );
+  expect(
+    await screen.findByRole("button", { name: "Upload Remaining" }),
+  ).toBeInTheDocument();
   expect(screen.queryByText("Selected: 1")).not.toBeInTheDocument();
   expect(notify).toHaveBeenCalledWith("Pipeline uploaded.", "success");
 });

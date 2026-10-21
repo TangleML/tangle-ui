@@ -28,12 +28,7 @@ export function RemotePipelineShell({
           className="min-w-0"
         >
           <CanvasHomeLink trackingId="v2.pipeline_editor.menubar.home" />
-          <Text
-            size="sm"
-            weight="semibold"
-            tone="inverted"
-            className="truncate"
-          >
+          <Text size="sm" weight="semibold" className="text-white truncate">
             {name}
           </Text>
           <Badge size="sm" className="shrink-0">
