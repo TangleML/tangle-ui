@@ -287,7 +287,6 @@ describe("usePrepareProjectArrival", () => {
     );
   });
 
-  /** Somebody is working in it: it is not theirs to rearrange. */
   /**
    * An ask left on the project and never arrived for would otherwise open
    * whichever session is started there next, days later or by someone else.
@@ -310,6 +309,7 @@ describe("usePrepareProjectArrival", () => {
     expect(updateProject).not.toHaveBeenCalled();
   });
 
+  /** Somebody is working in it: it is not theirs to rearrange. */
   it("leaves a busy project's window and pipelines as they are", async () => {
     given({
       projectOverrides: {
@@ -615,7 +615,9 @@ describe("usePrepareProjectArrival", () => {
       search = { open: "run://id/run-7" };
       given({
         projectOverrides: {
-          metadata: { startingPrompt: "Find out why run-7 failed." },
+          metadata: startingSessionMetadata({
+            prompt: "Find out why run-7 failed.",
+          }),
         },
       });
       const store = makeStore();
