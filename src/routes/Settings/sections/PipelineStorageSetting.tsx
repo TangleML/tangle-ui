@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Switch } from "@/components/ui/switch";
 import { Paragraph } from "@/components/ui/typography";
@@ -26,9 +27,9 @@ export function PipelineStorageSetting() {
         aria-describedby="browser-pipeline-storage-description"
       />
       <BlockStack>
-        <label htmlFor="browser-pipeline-storage">
+        <Label htmlFor="browser-pipeline-storage">
           Save new pipelines in this browser
-        </label>
+        </Label>
         <Paragraph
           id="browser-pipeline-storage-description"
           size="sm"
