@@ -14,6 +14,8 @@ import { InlineStack } from "@/components/ui/layout";
 import { useFavorites } from "@/hooks/useFavorites";
 import { removeRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import useToastNotification from "@/hooks/useToastNotification";
+import { reconcileDeletedRemotePipeline } from "@/routes/v2/pages/Editor/hooks/deletedRemotePipelineCache";
+import { RemotePipelineDeletionUncertainError } from "@/services/pipelineStorage/remotePipelineDeletion";
 import { getRemotePipelineWriter } from "@/services/remotePipelineEditorService";
 import { RemotePipelineQueryKeys } from "@/services/remotePipelineQueryKeys";
 import {
@@ -53,6 +55,11 @@ export function RemotePipelineActions({
         document.activeElement === triggerRef.current ||
         document.activeElement === document.body;
       const restoreFocus = canRestoreFocus();
+      await reconcileDeletedRemotePipeline(queryClient, {
+        source: "remote",
+        backendUrl,
+        pipelineId: pipeline.id,
+      });
       const cleanup = await Promise.allSettled([
         Promise.resolve().then(() =>
           removeRecentlyViewed("remote-pipeline", pipeline.id, backendUrl),
@@ -70,7 +77,16 @@ export function RemotePipelineActions({
       });
       onDeleted?.(restoreFocus && canRestoreFocus());
     },
-    onError: (error) => notify(error.message, "error"),
+    onError: async (error, { backendUrl, pipeline }) => {
+      if (error instanceof RemotePipelineDeletionUncertainError) {
+        await reconcileDeletedRemotePipeline(
+          queryClient,
+          { source: "remote", backendUrl, pipelineId: pipeline.id },
+          error,
+        );
+      }
+      notify(error.message, "error");
+    },
   });
 
   return (

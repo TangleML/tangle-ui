@@ -3,6 +3,9 @@ import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { EDITOR_SPEC_QUERY_KEY } from "@/routes/v2/pages/Editor/hooks/deletedRemotePipelineCache";
+import { DocumentSaveState } from "@/routes/v2/pages/Editor/store/documentSaveState";
+import { RemotePipelineDeletionUncertainError } from "@/services/pipelineStorage/remotePipelineDeletion";
 import { getRemotePipelineWriter } from "@/services/remotePipelineEditorService";
 import { RemotePipelineQueryKeys } from "@/services/remotePipelineQueryKeys";
 import {
@@ -294,6 +297,37 @@ describe("RemotePipelineActions", () => {
       ).toHaveFocus(),
     );
   });
+
+  it.each([false, true])(
+    "reconciles the cached editor after deletion (uncertain: %s)",
+    async (uncertain) => {
+      if (uncertain)
+        vi.mocked(deleteRemotePipeline).mockRejectedValue(
+          new RemotePipelineDeletionUncertainError(),
+        );
+      const { user, client } = renderActions();
+      const key = [EDITOR_SPEC_QUERY_KEY, "cached-pipeline"];
+      const cached = {
+        file: {
+          remote: { source: "remote", backendUrl, pipelineId: pipeline.id },
+        },
+        saveState: new DocumentSaveState("saved content"),
+      };
+      client.setQueryData(key, cached);
+
+      await confirmDelete(user);
+      await waitFor(() => expect(client.isMutating()).toBe(0));
+
+      if (uncertain) {
+        expect(client.getQueryData(key)).toBe(cached);
+        expect(cached.saveState.error).toContain("deletion result is unknown");
+        expect(cached.saveState.hasUnsavedChanges).toBe(true);
+        expect(favorites.removeFavorite).not.toHaveBeenCalled();
+      } else {
+        expect(client.getQueryData(key)).toBeUndefined();
+      }
+    },
+  );
 
   it("rechecks write access on backend changes without retargeting a pending delete", async () => {
     const deletion = Promise.withResolvers<void>();
