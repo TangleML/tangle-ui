@@ -83,7 +83,7 @@ function renderActions() {
 
 async function confirmDelete(user: ReturnType<typeof userEvent.setup>) {
   await user.click(
-    await screen.findByRole("button", { name: "Delete pipeline" }),
+    await screen.findByRole("button", { name: "Delete Saved pipeline" }),
   );
   await user.click(screen.getByRole("button", { name: "Continue" }));
 }
@@ -140,7 +140,7 @@ describe("RemotePipelineActions", () => {
       vi.mocked(getRemotePipelineWriter).mockReturnValue(permission.promise);
       const { client } = renderActions();
       expect(
-        screen.queryByRole("button", { name: "Delete pipeline" }),
+        screen.queryByRole("button", { name: "Delete Saved pipeline" }),
       ).not.toBeInTheDocument();
 
       await act(async () => {
@@ -152,7 +152,7 @@ describe("RemotePipelineActions", () => {
       });
       await waitFor(() => expect(client.isFetching()).toBe(0));
       expect(
-        screen.queryByRole("button", { name: "Delete pipeline" }),
+        screen.queryByRole("button", { name: "Delete Saved pipeline" }),
       ).not.toBeInTheDocument();
       expect(
         screen.getByRole("button", { name: "Add Saved pipeline to favorites" }),
@@ -163,7 +163,7 @@ describe("RemotePipelineActions", () => {
   it("cancels deletion without opening the row or changing saved associations", async () => {
     const { user, openPipeline } = renderActions();
     await user.click(
-      await screen.findByRole("button", { name: "Delete pipeline" }),
+      await screen.findByRole("button", { name: "Delete Saved pipeline" }),
     );
     expect(
       screen.getByRole("alertdialog", {
@@ -203,9 +203,9 @@ describe("RemotePipelineActions", () => {
 
     await confirmDelete(user);
     const deleteButton = screen.getByRole("button", {
-      name: "Delete pipeline",
+      name: "Delete Saved pipeline",
     });
-    expect(deleteButton).toBeDisabled();
+    expect(deleteButton).toHaveAttribute("aria-disabled", "true");
     expect(
       screen.getByRole("button", { name: "Add Saved pipeline to favorites" }),
     ).toBeDisabled();
@@ -232,6 +232,27 @@ describe("RemotePipelineActions", () => {
       pipeline.id,
     );
     expect(openPipeline).not.toHaveBeenCalled();
+  });
+
+  it("keeps actions guarded after the row remounts during deletion", async () => {
+    const deletion = Promise.withResolvers<void>();
+    vi.mocked(deleteRemotePipeline).mockReturnValue(deletion.promise);
+    const { user, rerender } = renderActions();
+    await confirmDelete(user);
+    rerender(otherBackendUrl);
+    await screen.findByRole("button", { name: "Delete Saved pipeline" });
+    rerender(backendUrl);
+    const trigger = await screen.findByRole("button", {
+      name: "Delete Saved pipeline",
+    });
+    expect(trigger).toHaveAttribute("aria-disabled", "true");
+    expect(
+      screen.getByRole("button", { name: "Add Saved pipeline to favorites" }),
+    ).toBeDisabled();
+    await user.click(trigger);
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    expect(deleteRemotePipeline).toHaveBeenCalledOnce();
+    await act(async () => deletion.resolve());
   });
 
   it("preserves favorites and history and reports a failed delete", async () => {
@@ -263,8 +284,13 @@ describe("RemotePipelineActions", () => {
       }),
     ).toHaveAttribute("aria-pressed", "true");
     expect(
-      screen.getByRole("button", { name: "Delete pipeline" }),
-    ).toBeEnabled();
+      screen.getByRole("button", { name: "Delete Saved pipeline" }),
+    ).toHaveAttribute("aria-disabled", "false");
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Delete Saved pipeline" }),
+      ).toHaveFocus(),
+    );
   });
 
   it("rechecks write access on backend changes without retargeting a pending delete", async () => {
@@ -293,7 +319,7 @@ describe("RemotePipelineActions", () => {
       expect(getRemotePipelineWriter).toHaveBeenCalledWith(otherBackendUrl),
     );
     expect(
-      screen.queryByRole("button", { name: "Delete pipeline" }),
+      screen.queryByRole("button", { name: "Delete Saved pipeline" }),
     ).not.toBeInTheDocument();
     await act(async () => deletion.resolve());
     await waitFor(() =>

@@ -84,7 +84,7 @@ export function RemotePipelinesTable({
   const { backendUrl, configured, available, ready } = useBackend();
   const deletingIds = useMutationState({
     filters: {
-      mutationKey: ["delete-remote-pipeline", backendUrl],
+      mutationKey: RemotePipelineQueryKeys.Deletions(backendUrl),
       status: "pending",
     },
     select: (mutation) => mutation.options.mutationKey?.[2],
@@ -130,7 +130,8 @@ export function RemotePipelinesTable({
     setPagination({ backendUrl, filterQuery, tokens });
   }
 
-  function recoverAfterDeletion() {
+  function recoverAfterDeletion(restoreFocus: boolean) {
+    if (restoreFocus) tableRef.current?.focus();
     if (currentPage === 1) return;
     const refreshed = queryClient.getQueryState<RemotePipelinesPage>(
       RemotePipelineQueryKeys.Cursor(backendUrl, filterQuery, pageToken),
@@ -172,6 +173,7 @@ export function RemotePipelinesTable({
       />
       <Table
         ref={tableRef}
+        tabIndex={-1}
         aria-label="Remote Pipelines"
         aria-busy={isFetching}
         className="table-fixed"

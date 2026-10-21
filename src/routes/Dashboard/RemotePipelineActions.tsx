@@ -1,4 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useIsMutating,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { useRef } from "react";
 
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
 import { FavoriteToggle } from "@/components/shared/FavoriteToggle";
@@ -18,7 +24,7 @@ import {
 interface RemotePipelineActionsProps {
   backendUrl: string;
   pipeline: RemotePipeline;
-  onDeleted?: () => void;
+  onDeleted?: (restoreFocus: boolean) => void;
 }
 
 export function RemotePipelineActions({
@@ -30,20 +36,29 @@ export function RemotePipelineActions({
   const notify = useToastNotification();
   const { removeFavorite } = useFavorites();
   const name = pipeline.pipeline_name ?? "Untitled Pipeline";
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const mutationKey = RemotePipelineQueryKeys.Deletion(backendUrl, pipeline.id);
+  const isDeleting = useIsMutating({ mutationKey, exact: true }) > 0;
   const { data: writerId, error: permissionError } = useQuery({
     queryKey: ["remote-pipeline-writer", backendUrl],
     queryFn: () => getRemotePipelineWriter(backendUrl),
     retry: false,
   });
   const deletion = useMutation({
-    mutationKey: ["delete-remote-pipeline", backendUrl, pipeline.id],
+    mutationKey,
     mutationFn: ({ backendUrl, pipeline }: RemotePipelineActionsProps) =>
       deleteRemotePipeline(backendUrl, pipeline),
     onSuccess: async (_, { backendUrl, pipeline, onDeleted }) => {
-      try {
-        removeRecentlyViewed("remote-pipeline", pipeline.id);
-        await removeFavorite("remote-pipeline", pipeline.id);
-      } catch {
+      const restoreFocus =
+        document.activeElement === triggerRef.current ||
+        document.activeElement === document.body;
+      const cleanup = await Promise.allSettled([
+        Promise.resolve().then(() =>
+          removeRecentlyViewed("remote-pipeline", pipeline.id),
+        ),
+        removeFavorite("remote-pipeline", pipeline.id),
+      ]);
+      if (cleanup.some((result) => result.status === "rejected")) {
         notify(
           "Pipeline deleted, but its local favorites or history could not be updated.",
           "warning",
@@ -52,7 +67,7 @@ export function RemotePipelineActions({
       await queryClient.invalidateQueries({
         queryKey: RemotePipelineQueryKeys.All(backendUrl),
       });
-      onDeleted?.();
+      onDeleted?.(restoreFocus);
     },
     onError: (error) => notify(error.message, "error"),
   });
@@ -64,7 +79,7 @@ export function RemotePipelineActions({
           type="remote-pipeline"
           id={pipeline.id}
           name={name}
-          disabled={deletion.isPending}
+          disabled={isDeleting}
         />
         {!permissionError && writerId === pipeline.user_id && (
           <ConfirmationDialog
@@ -72,19 +87,25 @@ export function RemotePipelineActions({
             description="This deletes the saved pipeline. Existing pipeline runs will not be impacted. This action cannot be undone."
             trigger={
               <Button
+                ref={triggerRef}
                 variant="ghost"
                 size="icon"
-                aria-label="Delete pipeline"
-                title="Delete pipeline"
+                aria-label={`Delete ${name}`}
+                title={`Delete ${name}`}
                 className="text-foreground hover:text-destructive-foreground"
-                disabled={deletion.isPending}
+                aria-disabled={isDeleting}
+                onClick={(event) => {
+                  if (queryClient.isMutating({ mutationKey, exact: true }))
+                    event.preventDefault();
+                }}
               >
                 <Icon name="Trash" />
               </Button>
             }
-            onConfirm={() =>
-              deletion.mutate({ backendUrl, pipeline, onDeleted })
-            }
+            onConfirm={() => {
+              if (queryClient.isMutating({ mutationKey, exact: true })) return;
+              deletion.mutate({ backendUrl, pipeline, onDeleted });
+            }}
           />
         )}
       </InlineStack>
