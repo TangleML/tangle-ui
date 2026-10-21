@@ -33,6 +33,7 @@ export async function createAndAttachPipeline({
     name && !backendUrl ? await availablePipelineName(name) : name,
     {
       provisionalName,
+      destination: { backendUrl },
       onRemoteCreated: (remote) =>
         attach(remotePipelineResourceInput(remote.pipelineId, file.storageKey)),
     },

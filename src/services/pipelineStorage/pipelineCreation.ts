@@ -2,10 +2,14 @@ import { getBackendSettings, selectBackendUrl } from "@/utils/backendSettings";
 
 import type { PipelineStorageService } from "./PipelineStorageService";
 
+export interface PipelineCreationDestination {
+  backendUrl: string | undefined;
+}
+
 export const createsLocalPipelines = (backendConfigured = true) =>
   import.meta.env.VITE_LOCAL_PIPELINES === "true" ||
-  prefersBrowserPipelineStorage() ||
-  !backendConfigured;
+  !backendConfigured ||
+  prefersBrowserPipelineStorage();
 
 const STORAGE_PREFERENCE_KEY = "pipelines:save-in-browser";
 
@@ -31,8 +35,11 @@ export async function createPipelineFromContent(
   storage: PipelineStorageService,
   name: string,
   content: string,
+  destination?: PipelineCreationDestination,
 ) {
-  const backendUrl = await getPipelineCreationBackendUrl();
+  const backendUrl = destination
+    ? destination.backendUrl
+    : await getPipelineCreationBackendUrl();
   return backendUrl
     ? storage.createRemotePipeline(backendUrl, name, content)
     : storage.rootFolder.addFile(name, content);

@@ -1,6 +1,6 @@
 import "fake-indexeddb/auto";
 
-import { act, renderHook } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { client } from "@/api/client.gen";
@@ -9,7 +9,11 @@ import {
   ComponentSpecProvider,
   useComponentSpec,
 } from "@/providers/ComponentSpecProvider";
-import { getComponentFileFromList } from "@/utils/componentStore";
+import * as backendSettings from "@/utils/backendSettings";
+import {
+  getComponentFileFromList,
+  getComponentFileNamesFromList,
+} from "@/utils/componentStore";
 import { componentSpecFromYaml, componentSpecToYaml } from "@/utils/yaml";
 
 import { copyRunToPipeline } from "./pipelineRunService";
@@ -22,8 +26,10 @@ import {
   setBrowserPipelineStorage,
 } from "./pipelineStorage/pipelineCreation";
 import type { PipelineFile } from "./pipelineStorage/PipelineFile";
+import { registeredStorageKeys } from "./pipelineStorage/pipelineRegistry";
 import { PipelineStorageService } from "./pipelineStorage/PipelineStorageService";
 import { editorSpecFromRemoteTask } from "./pipelineStorage/remotePipelineTask";
+import { createAndAttachPipeline } from "./projects/createAndAttachPipeline";
 
 const settings = vi.hoisted(() => ({
   apiUrl: "",
@@ -45,7 +51,16 @@ vi.mock("@/utils/localforage", () => ({
 vi.mock("@/utils/componentStore", () => ({
   generateDigest: async () => "digest",
   getComponentFileFromList: vi.fn(),
+  getComponentFileNamesFromList: vi.fn(),
 }));
+vi.mock("./pipelineStorage/pipelineRegistry");
+vi.mock("@/providers/BackendProvider", () => ({
+  useBackend: () => ({ backendUrl: "https://backend.example.com" }),
+}));
+vi.mock(
+  "@/components/shared/ReactFlow/FlowSidebar/sections/components/ExportPipelineButton",
+  () => ({ exportPipeline: vi.fn() }),
+);
 vi.mock("@/api/client.gen", () => ({ client: { put: vi.fn() } }));
 vi.mock("@/api/sdk.gen", () => ({ getCurrentUserApiUsersMeGet: vi.fn() }));
 vi.mock("@/components/shared/Settings/useFlags", () => ({
@@ -81,7 +96,6 @@ const remoteSpec = (index: number) =>
 
 beforeEach(() => {
   vi.resetAllMocks();
-  localStorage.clear();
   storage = new PipelineStorageService();
   localWrites = [];
   vi.spyOn(storage.rootFolder, "addFile").mockImplementation(
@@ -96,6 +110,7 @@ beforeEach(() => {
   vi.spyOn(storage, "resolvePipelineByName").mockImplementation(async (name) =>
     localFile(name),
   );
+  localStorage.clear();
   vi.stubEnv("VITE_LOCAL_PIPELINES", undefined);
   Object.assign(settings, {
     apiUrl: "",
@@ -104,6 +119,8 @@ beforeEach(() => {
     userUrl: "",
   });
   vi.mocked(getComponentFileFromList).mockResolvedValue(null);
+  vi.mocked(getComponentFileNamesFromList).mockResolvedValue([]);
+  vi.mocked(registeredStorageKeys).mockResolvedValue([]);
   vi.mocked(getCurrentUserApiUsersMeGet).mockResolvedValue({
     data: { id: "user", permissions: ["read", "write"] },
     response: new Response(null, { status: 200 }),
@@ -188,9 +205,10 @@ it("keeps local collision handling and existing local edits", async () => {
   vi.mocked(getComponentFileFromList)
     .mockResolvedValueOnce({} as never)
     .mockResolvedValueOnce({} as never);
+  vi.mocked(getComponentFileNamesFromList).mockResolvedValue(["Example"]);
   expect(
     await importPipelineFromYaml(storage, componentSpecToYaml(spec)),
-  ).toMatchObject({ name: "Example (1)", successful: true });
+  ).toMatchObject({ name: "Example 2", successful: true });
   vi.stubEnv("VITE_LOCAL_PIPELINES", undefined);
   vi.mocked(getComponentFileFromList).mockResolvedValue({} as never);
   await useSavePipeline(spec).savePipeline();
@@ -267,6 +285,201 @@ it("reports a configured backend failure without a local fallback", async () => 
   expect(localWrites).toHaveLength(0);
 });
 
+it.each(["import", "save", "clone", "project"])(
+  "keeps the resolved destination for %s when settings change",
+  async (operation) => {
+    const readSettings = vi.spyOn(backendSettings, "getBackendSettings");
+    for (const local of [false, true]) {
+      readSettings
+        .mockClear()
+        .mockResolvedValueOnce({
+          useEnv: false,
+          useRelativePath: false,
+          userBackendUrl: local ? "" : "https://initial.example.com",
+        })
+        .mockResolvedValue({
+          useEnv: false,
+          useRelativePath: false,
+          userBackendUrl: local ? "https://changed.example.com" : "",
+        });
+      localWrites = [];
+      vi.mocked(client.put).mockClear();
+      const expectedUrl = local
+        ? "/editor-v2/Example"
+        : `/editor-v2/pipeline/${remoteId}`;
+
+      if (operation === "import") {
+        const result = await importPipelineFromYaml(
+          storage,
+          componentSpecToYaml(spec),
+        );
+        expect(result.successful).toBe(true);
+        expect(result.remote?.backendUrl).toBe(
+          local ? undefined : "https://initial.example.com",
+        );
+      } else if (operation === "save") {
+        expect((await useSavePipeline(spec).savePipeline("Example"))?.url).toBe(
+          expectedUrl,
+        );
+      } else if (operation === "clone") {
+        expect((await copyRunToPipeline(storage, spec, "run-1")).url).toBe(
+          expectedUrl,
+        );
+      } else {
+        const file = await createAndAttachPipeline({
+          storage,
+          name: "Example",
+          attach: async () => {},
+        });
+        expect(file.draftBackendUrl).toBe(
+          local ? undefined : "https://initial.example.com",
+        );
+      }
+
+      expect(readSettings).toHaveBeenCalledTimes(1);
+      expect(localWrites).toHaveLength(local ? 1 : 0);
+      expect(client.put).toHaveBeenCalledTimes(
+        local || operation === "project" ? 0 : 1,
+      );
+    }
+  },
+);
+
+it.each(["clone", "save"])(
+  "creates a %s beside a registry-only name",
+  async (operation) => {
+    vi.stubEnv("VITE_LOCAL_PIPELINES", "true");
+    vi.mocked(registeredStorageKeys).mockResolvedValue(["Example"]);
+
+    const result =
+      operation === "clone"
+        ? await copyRunToPipeline(storage, spec, "run-1")
+        : await useSavePipeline(spec).savePipeline("Example");
+
+    expect(result?.url).toBe("/editor-v2/Example%202");
+    expect(localWrites).toHaveLength(1);
+    expect(localWrites[0][0]).toBe("Example 2");
+    expect(componentSpecFromYaml(localWrites[0][1]).name).toBe("Example 2");
+  },
+);
+
+function renderLegacyEditor() {
+  return renderHook(useComponentSpec, {
+    wrapper: ({ children }) => (
+      <ComponentSpecProvider spec={spec}>{children}</ComponentSpecProvider>
+    ),
+  });
+}
+
+it.each(["clear", "unmount", "replace"])(
+  "disposes a legacy editor draft after %s",
+  async (action) => {
+    const createDraft = vi.spyOn(storage, "createRemoteDraft");
+    const { result, unmount } = renderLegacyEditor();
+    await act(async () => {
+      await result.current.saveComponentSpec("Saved");
+    });
+    const [ref] = createDraft.mock.calls[0];
+    expect(storage.getRemoteDraftRef(ref.draftId, ref.backendUrl)).toEqual(ref);
+
+    await act(async () => {
+      if (action === "clear") result.current.clearComponentSpec();
+      else if (action === "replace")
+        result.current.setComponentSpec({ ...spec, name: "Another" });
+      else unmount();
+    });
+
+    expect(storage.retainRemoteDraft(ref.draftId)).toBeUndefined();
+  },
+);
+
+it("keeps an abandoned legacy draft until its pending write settles", async () => {
+  let finish = () => {};
+  const pending = new Promise<void>((resolve) => {
+    finish = resolve;
+  });
+  const createDraft = storage.createRemoteDraft.bind(storage);
+  const create = vi
+    .spyOn(storage, "createRemoteDraft")
+    .mockImplementation((ref) => {
+      const file = createDraft(ref);
+      vi.spyOn(file, "write").mockReturnValue(pending);
+      return file;
+    });
+  const { result } = renderLegacyEditor();
+  const saving = result.current.saveComponentSpec("Saved");
+  await waitFor(() => expect(create).toHaveBeenCalledOnce());
+  const [ref] = create.mock.calls[0];
+
+  await act(async () => result.current.clearComponentSpec());
+  expect(storage.getRemoteDraftRef(ref.draftId, ref.backendUrl)).toEqual(ref);
+  await act(async () => {
+    finish();
+    await saving;
+  });
+  expect(() => storage.getRemoteDraftRef(ref.draftId, ref.backendUrl)).toThrow(
+    "no longer available",
+  );
+});
+
+it("does not create a legacy draft after clearing during settings lookup", async () => {
+  let finish = () => {};
+  const pending = new Promise<void>((resolve) => {
+    finish = resolve;
+  });
+  vi.spyOn(backendSettings, "getBackendSettings").mockImplementation(
+    async () => {
+      await pending;
+      return { useEnv: false, useRelativePath: true, userBackendUrl: "" };
+    },
+  );
+  const create = vi.spyOn(storage, "createRemoteDraft");
+  const { result } = renderLegacyEditor();
+  const saving = result.current.saveComponentSpec("Saved");
+  await act(async () => result.current.clearComponentSpec());
+  await act(async () => {
+    finish();
+    await saving;
+  });
+  expect(create).not.toHaveBeenCalled();
+});
+
+it("starts a new legacy save draft when the backend changes", async () => {
+  const create = vi.spyOn(storage, "createRemoteDraft");
+  const { result } = renderLegacyEditor();
+  await act(async () => {
+    await result.current.saveComponentSpec("Saved");
+    Object.assign(settings, {
+      useEnv: false,
+      relative: false,
+      userUrl: "https://other.example.com",
+    });
+    await result.current.saveComponentSpec("Saved");
+  });
+  expect(create).toHaveBeenCalledTimes(2);
+  const [original] = create.mock.calls[0];
+  const [replacement] = create.mock.calls[1];
+  expect(storage.retainRemoteDraft(original.draftId)).toBeUndefined();
+  expect(replacement.backendUrl).toBe("https://other.example.com");
+});
+
+it("retries a synchronous legacy draft creation failure", async () => {
+  const create = vi
+    .spyOn(storage, "createRemoteDraft")
+    .mockImplementationOnce(() => {
+      throw new Error("Draft unavailable");
+    });
+  const { result } = renderLegacyEditor();
+  await act(async () => {
+    await expect(result.current.saveComponentSpec("Saved")).rejects.toThrow(
+      "Draft unavailable",
+    );
+    await result.current.saveComponentSpec("Saved");
+  });
+  expect(create).toHaveBeenCalledTimes(2);
+  expect(client.put).toHaveBeenCalledOnce();
+});
+
 it("honors the runtime browser-storage preference for imports", async () => {
   setBrowserPipelineStorage(true);
   expect(createsLocalPipelines()).toBe(true);
@@ -287,5 +500,7 @@ it("honors the runtime browser-storage preference for imports", async () => {
 
 it("propagates remote clone failures to the caller", async () => {
   vi.mocked(client.put).mockRejectedValueOnce(new Error("Backend unavailable"));
-  await expect(copyRunToPipeline(storage, spec)).rejects.toThrow("Backend unavailable");
+  await expect(copyRunToPipeline(storage, spec)).rejects.toThrow(
+    "Backend unavailable",
+  );
 });

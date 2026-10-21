@@ -14,7 +14,10 @@ import { getPipelineCreationBackendUrl } from "@/services/pipelineStorage/pipeli
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import { emitPipelineFileChanged } from "@/services/pipelineStorage/pipelineFileEvents";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
-import type { RemotePipelineRef } from "@/services/pipelineStorage/types";
+import type {
+  RemotePipelineDraftRef,
+  RemotePipelineRef,
+} from "@/services/pipelineStorage/types";
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 import { prepareComponentRefForEditor } from "@/utils/prepareComponentRefForEditor";
 import {
@@ -98,8 +101,28 @@ export const ComponentSpecProvider = ({
   const [digest, setDigest] = useState<string>("");
   const remoteSave = useRef<{
     sourceName?: string;
-    file: Promise<PipelineFile>;
+    ref: RemotePipelineDraftRef;
+    file: PipelineFile;
+    pending?: Promise<void>;
   } | null>(null);
+  const saveGeneration = useRef(0);
+
+  const discardRemoteSave = useCallback(() => {
+    const saving = remoteSave.current;
+    remoteSave.current = null;
+    if (!saving) return;
+    const discard = () => storage.discardRemoteDraft(saving.ref);
+    // Queued writes must settle before releasing their draft's storage entry.
+    if (saving.pending) void saving.pending.then(discard, discard);
+    else discard();
+  }, [storage]);
+
+  const resetRemoteSave = useCallback(() => {
+    saveGeneration.current += 1;
+    discardRemoteSave();
+  }, [discardRemoteSave]);
+
+  useEffect(() => resetRemoteSave, [componentSpec.name, resetRemoteSave]);
 
   const [isLoading, setIsLoading] = useState(!!spec);
 
@@ -157,12 +180,12 @@ export const ComponentSpecProvider = ({
   }, [componentSpec]);
 
   const clearComponentSpec = useCallback(() => {
-    remoteSave.current = null;
+    resetRemoteSave();
     setComponentSpec(EMPTY_GRAPH_COMPONENT_SPEC);
     setIsLoading(false);
     setCurrentSubgraphPath(["root"]);
     undoRedoRef.current.clearHistory();
-  }, []);
+  }, [resetRemoteSave]);
 
   const graphSpec = useMemo(() => {
     if (isGraphImplementation(componentSpec.implementation)) {
@@ -216,6 +239,7 @@ export const ComponentSpecProvider = ({
       if (readOnly) {
         return;
       }
+      const generation = saveGeneration.current;
 
       const specWithName = { ...componentSpec, name };
 
@@ -230,29 +254,34 @@ export const ComponentSpecProvider = ({
               componentSpec.name,
             ))));
       if (backendUrl && !existingLocal) {
+        if (generation !== saveGeneration.current) return;
         if (
           !remoteSave.current ||
-          remoteSave.current.sourceName !== componentSpec.name
+          remoteSave.current.sourceName !== componentSpec.name ||
+          remoteSave.current.ref.backendUrl !== backendUrl
         ) {
+          discardRemoteSave();
+          const ref: RemotePipelineDraftRef = {
+            source: "draft",
+            backendUrl,
+            name,
+            draftId: crypto.randomUUID(),
+          };
           remoteSave.current = {
             sourceName: componentSpec.name,
-            file: Promise.resolve(
-              storage.createRemoteDraft({
-                source: "draft",
-                backendUrl,
-                name,
-                draftId: crypto.randomUUID(),
-              }),
-            ),
+            ref,
+            file: storage.createRemoteDraft(ref),
           };
         }
         const saving = remoteSave.current;
-        const file = await saving.file.catch((error) => {
-          if (remoteSave.current === saving) remoteSave.current = null;
-          throw error;
-        });
-        await file.write(componentText);
-        return file.remote && { source: "remote" as const, ...file.remote };
+        saving.pending = saving.file.write(componentText);
+        await saving.pending;
+        return (
+          saving.file.remote && {
+            source: "remote" as const,
+            ...saving.file.remote,
+          }
+        );
       }
       const file =
         (await storage.resolvePipelineByName(name)) ??
@@ -260,7 +289,7 @@ export const ComponentSpecProvider = ({
       await file.write(componentText);
       emitPipelineFileChanged({ storageKey: name, source: "v1" });
     },
-    [componentSpec, readOnly, storage],
+    [componentSpec, discardRemoteSave, readOnly, storage],
   );
 
   const updateGraphSpec = useCallback(

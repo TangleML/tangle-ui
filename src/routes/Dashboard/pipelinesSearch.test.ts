@@ -8,7 +8,7 @@ import {
 
 describe("validatePipelinesSearch", () => {
   it.each([1, "2", 1000000, 0, -2, 1.5, "invalid", "9007199254740992"])(
-    "discards obsolete page value %s while preserving filters and other parameters",
+    "discards the obsolete page parameter %s",
     (page) => {
       const search = validatePipelinesSearch({
         page,
@@ -16,7 +16,6 @@ describe("validatePipelinesSearch", () => {
         name: "shared",
         panel: "compact",
       });
-
       expect(search).not.toHaveProperty("page");
       expect(search).toMatchObject({
         tab: "remote",

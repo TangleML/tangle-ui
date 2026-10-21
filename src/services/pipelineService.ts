@@ -5,6 +5,7 @@ import {
   getDefaultEditorPath,
   getDefaultRemoteEditorPath,
 } from "@/routes/editorRoutes";
+import { availablePipelineName } from "@/services/localPipelines/localPipelinesService";
 import {
   createPipelineFromContent,
   getPipelineCreationBackendUrl,
@@ -57,8 +58,6 @@ export const useSavePipeline = (componentSpec: ComponentSpec) => {
       name: name ?? componentSpec.name ?? "Untitled Pipeline",
     };
 
-    const componentSpecAsYaml = componentSpecToYaml(componentSpecWithNewName);
-
     const backendUrl = await getPipelineCreationBackendUrl();
     const existingLocal =
       (!backendUrl || name === undefined) &&
@@ -70,14 +69,20 @@ export const useSavePipeline = (componentSpec: ComponentSpec) => {
       const file = await storage.resolvePipeline({
         name: componentSpecWithNewName.name,
       });
-      await file.write(componentSpecAsYaml);
+      await file.write(componentSpecToYaml(componentSpecWithNewName));
       return { url: getDefaultEditorPath(componentSpecWithNewName.name) };
     }
 
+    if (!backendUrl) {
+      componentSpecWithNewName.name = await availablePipelineName(
+        componentSpecWithNewName.name,
+      );
+    }
     const file = await createPipelineFromContent(
       storage,
       componentSpecWithNewName.name,
-      componentSpecAsYaml,
+      componentSpecToYaml(componentSpecWithNewName),
+      { backendUrl },
     );
     return file.remote
       ? {
@@ -180,35 +185,6 @@ export interface ImportResult {
 }
 
 /**
- * Generates a unique pipeline name by adding a numbered suffix when a collision occurs
- * @param baseName The original pipeline name
- * @returns A promise resolving to a unique pipeline name
- */
-async function generateUniquePipelineName(baseName: string): Promise<string> {
-  // First check if the base name is available
-  const existingPipeline = await getComponentFileFromList(
-    USER_PIPELINES_LIST_NAME,
-    baseName,
-  );
-
-  if (!existingPipeline) {
-    return baseName; // Base name is available
-  }
-
-  // Base name exists, try adding numbers
-  let counter = 1;
-  let newName = `${baseName} (${counter})`;
-
-  // Keep checking until we find an available name
-  while (await getComponentFileFromList(USER_PIPELINES_LIST_NAME, newName)) {
-    counter++;
-    newName = `${baseName} (${counter})`;
-  }
-
-  return newName;
-}
-
-/**
  * Imports a pipeline from YAML content and saves it to the user's pipeline library
  * @param yamlContent The YAML content to import as a string
  * @param overwrite Optional. Whether to overwrite if a pipeline with the same name exists
@@ -243,11 +219,13 @@ export async function importPipelineFromYaml(
     let pipelineName = componentSpec.name || "Imported Pipeline";
     let wasRenamed = false;
 
-    if (await getPipelineCreationBackendUrl()) {
+    const backendUrl = await getPipelineCreationBackendUrl();
+    if (backendUrl) {
       const file = await createPipelineFromContent(
         storage,
         pipelineName,
         componentSpecToYaml({ ...componentSpec, name: pipelineName }),
+        { backendUrl },
       );
       return {
         name: pipelineName,
@@ -264,14 +242,11 @@ export async function importPipelineFromYaml(
       pipelineName,
     );
 
-    // If exists and we're not overwriting, generate a unique name
-    if (existingPipeline && !overwrite) {
+    if (!existingPipeline || !overwrite) {
       const originalName = pipelineName;
-      pipelineName = await generateUniquePipelineName(pipelineName);
+      pipelineName = await availablePipelineName(pipelineName);
       wasRenamed = pipelineName !== originalName;
-
-      // Update the component spec name to match the new name
-      componentSpec.name = pipelineName;
+      if (wasRenamed) componentSpec.name = pipelineName;
     }
 
     // Standardize the YAML to ensure consistent format
@@ -282,7 +257,9 @@ export async function importPipelineFromYaml(
       const file = await storage.resolvePipeline({ name: pipelineName });
       await file.write(standardizedYaml);
     } else {
-      await createPipelineFromContent(storage, pipelineName, standardizedYaml);
+      await createPipelineFromContent(storage, pipelineName, standardizedYaml, {
+        backendUrl,
+      });
     }
 
     return {

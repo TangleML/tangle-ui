@@ -1,10 +1,15 @@
 import * as yaml from "js-yaml";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { registeredStorageKeys } from "@/services/pipelineStorage/pipelineRegistry";
 import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
 import * as componentStore from "@/utils/componentStore";
 
 import { importPipelineFromYaml } from "./pipelineService";
+
+vi.mock("@/services/pipelineStorage/pipelineRegistry", () => ({
+  registeredStorageKeys: vi.fn(),
+}));
 
 const addFile = vi.fn();
 const write = vi.fn();
@@ -42,6 +47,10 @@ describe("importPipelineFromYaml", () => {
     vi.spyOn(componentStore, "getComponentFileFromList").mockResolvedValue(
       null,
     );
+    vi.spyOn(componentStore, "getComponentFileNamesFromList").mockResolvedValue(
+      [],
+    );
+    vi.mocked(registeredStorageKeys).mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -66,7 +75,9 @@ describe("importPipelineFromYaml", () => {
   });
 
   it("should generate a unique name when a name collision occurs", async () => {
-    // Mock existing pipeline with the same name, but not with "(1)" suffix
+    vi.mocked(componentStore.getComponentFileNamesFromList).mockResolvedValue([
+      "Test Pipeline",
+    ]);
     vi.mocked(componentStore.getComponentFileFromList).mockImplementation(
       async (_, name) => {
         if (name === "Test Pipeline") {
@@ -84,23 +95,27 @@ describe("importPipelineFromYaml", () => {
 
     // Since we're now renaming rather than erroring, expect a successful result
     expect(result.successful).toBe(true);
-    expect(result.name).toBe("Test Pipeline (1)");
+    expect(result.name).toBe("Test Pipeline 2");
     expect(result.errorMessage).toContain("was renamed");
 
     expect(addFile).toHaveBeenCalledWith(
-      "Test Pipeline (1)",
-      expect.stringContaining("name: Test Pipeline (1)"),
+      "Test Pipeline 2",
+      expect.stringContaining("name: Test Pipeline 2"),
     );
   });
 
   it("should increment counter when multiple name collisions occur", async () => {
-    // Mock existing pipelines with the name and first two numbered variants
+    vi.mocked(componentStore.getComponentFileNamesFromList).mockResolvedValue([
+      "Test Pipeline",
+      "Test Pipeline 2",
+    ]);
+    vi.mocked(registeredStorageKeys).mockResolvedValue(["Test Pipeline 3"]);
     vi.mocked(componentStore.getComponentFileFromList).mockImplementation(
       async (_, name) => {
         if (
           name === "Test Pipeline" ||
-          name === "Test Pipeline (1)" ||
-          name === "Test Pipeline (2)"
+          name === "Test Pipeline 2" ||
+          name === "Test Pipeline 3"
         ) {
           return {} as any;
         }
@@ -114,15 +129,14 @@ describe("importPipelineFromYaml", () => {
       false,
     );
 
-    // Expect a successful result with the name incremented to (3)
     expect(result.successful).toBe(true);
-    expect(result.name).toBe("Test Pipeline (3)");
+    expect(result.name).toBe("Test Pipeline 4");
 
     expect(addFile).toHaveBeenCalledWith(
-      "Test Pipeline (3)",
+      "Test Pipeline 4",
       yaml.dump({
         ...validYamlObject,
-        name: "Test Pipeline (3)",
+        name: "Test Pipeline 4",
       }),
     );
   });
@@ -138,6 +152,30 @@ describe("importPipelineFromYaml", () => {
     expect(result.errorMessage).toBeDefined();
     expect(result.name).toBe("");
   });
+
+  it.each([false, true])(
+    "avoids a registry-only name even when overwrite is %s",
+    async (overwrite) => {
+      vi.mocked(registeredStorageKeys).mockResolvedValue(["Test Pipeline"]);
+
+      const result = await importPipelineFromYaml(
+        storage,
+        validYamlContent,
+        overwrite,
+      );
+
+      expect(result).toMatchObject({
+        name: "Test Pipeline 2",
+        overwritten: false,
+        successful: true,
+      });
+      expect(addFile).toHaveBeenCalledWith(
+        "Test Pipeline 2",
+        expect.stringContaining("name: Test Pipeline 2"),
+      );
+      expect(resolvePipeline).not.toHaveBeenCalled();
+    },
+  );
 
   it("should handle non-graph pipelines", async () => {
     const containerPipelineObj = {

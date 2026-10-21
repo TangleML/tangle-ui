@@ -18,7 +18,6 @@ export class RemotePipelineDraftStorageDriver implements PipelineStorageDriver {
   private pending: Promise<void> = Promise.resolve();
   private notified = false;
   private savedContent?: string;
-  private readonly filePath = `pipelines/${crypto.randomUUID()}.yaml`;
 
   get remoteRef(): RemotePipelineRef | undefined {
     return (
@@ -34,7 +33,6 @@ export class RemotePipelineDraftStorageDriver implements PipelineStorageDriver {
     private ref: RemotePipelineDraftRef,
     private createRemote: (
       content: string,
-      filePath: string,
     ) => Promise<RemotePipelineStorageDriver>,
     private onCreated: (
       remote: RemotePipelineRef,
@@ -60,24 +58,18 @@ export class RemotePipelineDraftStorageDriver implements PipelineStorageDriver {
       if (this.remote && (this.notified || content !== this.savedContent)) {
         await this.remote.write(storageKey, content);
       } else if (!this.remote) {
-        this.remote = await this.createRemote(content, this.filePath);
+        this.remote = await this.createRemote(content);
       }
       this.savedContent = content;
       if (!this.notified) {
-        await this.onCreated(this.remoteRef!);
+        await this.onCreated({
+          source: "remote",
+          backendUrl: this.ref.backendUrl,
+          pipelineId: this.remote.pipelineId,
+        });
         this.notified = true;
       }
     });
-  }
-
-  async copy(
-    name: string,
-    content: string,
-  ): Promise<RemotePipelineStorageDriver> {
-    await this.pending.catch(() => {});
-    if (!this.remote)
-      throw new Error("Save the pipeline before making a remote copy.");
-    return this.remote.copy(name, content);
   }
 
   rename(oldStorageKey: string, newStorageKey: string): Promise<void> {
@@ -93,6 +85,16 @@ export class RemotePipelineDraftStorageDriver implements PipelineStorageDriver {
   private enqueue(operation: () => Promise<void>): Promise<void> {
     this.pending = this.pending.catch(() => {}).then(operation);
     return this.pending;
+  }
+
+  async copy(
+    name: string,
+    content: string,
+  ): Promise<RemotePipelineStorageDriver> {
+    await this.pending.catch(() => {});
+    if (!this.remote)
+      throw new Error("Save the pipeline before making a remote copy.");
+    return this.remote.copy(name, content);
   }
 
   async delete(_storageKey: string): Promise<void> {

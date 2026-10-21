@@ -553,16 +553,17 @@ describe("remote drafts and project attachment", () => {
       name: "Renamed after saving",
       description: "Third",
     });
-    expect(paths().at(-1)).toBe("pipelines/draft-1.yaml");
+    expect(paths().at(-1)).toBe(paths()[0]);
     expect(registry.addEntry).not.toHaveBeenCalled();
     expect(registry.updateEntry).not.toHaveBeenCalled();
     storage.discardRemoteDraft(draft);
     expect(storage.getRemoteDraftRef(draft.draftId, ref.backendUrl)).toEqual(
       ref,
     );
+    const writesBeforeReopen = paths().length;
     const reopened = await storage.resolvePipeline(draft);
     expect(reopened.remote?.pipelineId).toBe(ref.pipelineId);
-    expect(client.put).toHaveBeenCalledTimes(3);
+    expect(client.put).toHaveBeenCalledTimes(writesBeforeReopen);
   });
 
   it("recovers a saved draft alias after recreating the storage service", async () => {

@@ -6,7 +6,10 @@ import {
   serializeComponentSpecToYaml,
 } from "@/models/componentSpec";
 import type { NavigationStore } from "@/routes/v2/shared/store/navigationStore";
-import { getPipelineCreationBackendUrl } from "@/services/pipelineStorage/pipelineCreation";
+import {
+  getPipelineCreationBackendUrl,
+  type PipelineCreationDestination,
+} from "@/services/pipelineStorage/pipelineCreation";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
 import type { RemotePipelineRef } from "@/services/pipelineStorage/types";
@@ -19,12 +22,16 @@ export async function createNewPipeline(
   {
     provisionalName = false,
     onRemoteCreated,
+    destination,
   }: {
     provisionalName?: boolean;
     onRemoteCreated?: (ref: RemotePipelineRef) => Promise<unknown>;
+    destination?: PipelineCreationDestination;
   } = {},
 ): Promise<PipelineFile> {
-  const backendUrl = await getPipelineCreationBackendUrl();
+  const backendUrl = destination
+    ? destination.backendUrl
+    : await getPipelineCreationBackendUrl();
   if (backendUrl) {
     return storage.createRemoteDraft(
       {
@@ -60,7 +67,6 @@ export async function savePipelineAs(
   const configuredBackendUrl = await getPipelineCreationBackendUrl();
   if (!configuredBackendUrl)
     return storage.rootFolder.addFile(newName, componentText);
-
   if (sourceFile?.remote)
     return storage.copyRemotePipeline(sourceFile, newName, componentText);
   const backendUrl = sourceFile?.draftBackendUrl ?? configuredBackendUrl;

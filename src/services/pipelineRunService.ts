@@ -8,6 +8,7 @@ import {
   getDefaultEditorPath,
   getDefaultRemoteEditorPath,
 } from "@/routes/editorRoutes";
+import { availablePipelineName } from "@/services/localPipelines/localPipelinesService";
 import {
   createPipelineFromContent,
   getPipelineCreationBackendUrl,
@@ -20,12 +21,7 @@ import {
   type ComponentSpec,
   isGraphImplementation,
 } from "@/utils/componentSpec";
-import { getComponentFileFromList } from "@/utils/componentStore";
-import {
-  DB_NAME,
-  PIPELINE_RUNS_STORE_NAME,
-  USER_PIPELINES_LIST_NAME,
-} from "@/utils/constants";
+import { DB_NAME, PIPELINE_RUNS_STORE_NAME } from "@/utils/constants";
 import { fetchWithErrorHandling } from "@/utils/fetchWithErrorHandling";
 import { componentSpecToYaml } from "@/utils/yaml";
 
@@ -141,11 +137,13 @@ export const copyRunToPipeline = async (
   const originalName = cleanComponentSpec.name || "Unnamed Pipeline";
   let newName = name || originalName;
 
-  if (await getPipelineCreationBackendUrl()) {
+  const backendUrl = await getPipelineCreationBackendUrl();
+  if (backendUrl) {
     const file = await createPipelineFromContent(
       storage,
       newName,
       componentSpecToYaml({ ...cleanComponentSpec, name: newName }),
+      { backendUrl },
     );
     return {
       name: newName,
@@ -154,29 +152,13 @@ export const copyRunToPipeline = async (
     };
   }
 
-  // Check if the name already exists and append a number if needed
-  let nameExists = true;
-  let counter = 1;
-
-  while (nameExists) {
-    const existingFile = await getComponentFileFromList(
-      USER_PIPELINES_LIST_NAME,
-      newName,
-    );
-
-    if (existingFile === null) {
-      nameExists = false;
-    } else {
-      const countNumber = counter > 1 ? " " + counter : "";
-      newName = `${originalName} (Copy${countNumber})`;
-      counter++;
-    }
-  }
-
+  newName = await availablePipelineName(newName);
   cleanComponentSpec.name = newName;
 
   const componentText = componentSpecToYaml(cleanComponentSpec);
-  await createPipelineFromContent(storage, newName, componentText);
+  await createPipelineFromContent(storage, newName, componentText, {
+    backendUrl,
+  });
 
   return {
     url: getDefaultEditorPath(newName),
