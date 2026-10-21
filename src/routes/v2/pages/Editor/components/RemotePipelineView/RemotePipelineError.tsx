@@ -14,20 +14,25 @@ function describeError(error: unknown) {
   if (error instanceof PipelineSpecApiError) {
     switch (error.status) {
       case 401:
-        return { message: "Sign in to view this pipeline.", retryable: false };
+        return {
+          message: "Sign in, then retry to view this pipeline.",
+          retryable: true,
+        };
       case 403:
         return {
-          message: "You don't have access to this pipeline.",
-          retryable: false,
+          message:
+            "You don't have access to this pipeline. Check your sign-in, then retry.",
+          retryable: true,
         };
       case 404:
+      case 422:
         return { message: "Pipeline not found.", retryable: false };
       default:
         return {
           message:
             error.status >= 500
               ? "The server couldn't load this pipeline. Try again."
-              : error.message,
+              : "The server couldn't load this pipeline. Check the link or try again.",
           retryable:
             error.status >= 500 || error.status === 408 || error.status === 429,
         };
@@ -81,9 +86,11 @@ export function RemotePipelineError({
             Retry
           </Button>
         )}
-        <RouterLink to={APP_ROUTES.DASHBOARD_PIPELINES}>
-          Back to pipelines
-        </RouterLink>
+        <Button asChild variant="outline">
+          <RouterLink to={APP_ROUTES.DASHBOARD_PIPELINES}>
+            Back to pipelines
+          </RouterLink>
+        </Button>
       </BlockStack>
     </RemotePipelineShell>
   );
