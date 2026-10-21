@@ -6,6 +6,7 @@ import { client } from "@/api/client.gen";
 import { getCurrentUserApiUsersMeGet } from "@/api/sdk.gen";
 import { LibraryDB } from "@/providers/ComponentLibraryProvider/libraries/storage";
 import type { SavedPipelineDocument } from "@/services/pipelineSpecService";
+import { getRemotePipelineSavedId } from "@/services/remotePipelineSavedLinks";
 import { componentSpecFromYaml, componentSpecToYaml } from "@/utils/yaml";
 
 import { RootFolderDbStorageDriver } from "./drivers/RootFolderDbStorageDriver";
@@ -22,6 +23,9 @@ vi.mock("@/api/sdk.gen", () => ({ getCurrentUserApiUsersMeGet: vi.fn() }));
 vi.mock("./pipelineFileEvents", () => ({ emitPipelineFileChanged: vi.fn() }));
 vi.mock("./createDriver", () => ({ createDriver: () => ({}) }));
 vi.mock("./pipelineRegistry");
+vi.mock("@/providers/BackendProvider", () => ({
+  useBackend: () => ({ backendUrl: "https://backend.example.com" }),
+}));
 
 const ref = {
   source: "remote",
@@ -436,8 +440,8 @@ describe("moving local pipelines to remote storage", () => {
     expect(local.deleteFile).toHaveBeenCalledExactlyOnceWith();
     expect(await LibraryDB.favorites.toArray()).toEqual([
       {
-        type: "remote-pipeline",
-        id: remote.id,
+        type: "pipeline",
+        id: getRemotePipelineSavedId(ref.backendUrl, remote.id),
         name: "Original",
         sortKey: 0,
       },
@@ -475,8 +479,8 @@ describe("moving local pipelines to remote storage", () => {
       for (const key of ["Home/recently_viewed", "Home/recently_used"]) {
         expect(JSON.parse(localStorage.getItem(key)!)).toEqual([
           {
-            type: "remote-pipeline",
-            id: ref.pipelineId,
+            type: "pipeline",
+            id: getRemotePipelineSavedId(ref.backendUrl, ref.pipelineId),
             name: "Original",
             timestamp: 30,
           },
@@ -490,8 +494,8 @@ describe("moving local pipelines to remote storage", () => {
     expect(await LibraryDB.favorites.toArray()).toEqual([
       { type: "pipeline", id: "Other", name: "Other pipeline", sortKey: 1 },
       {
-        type: "remote-pipeline",
-        id: ref.pipelineId,
+        type: "pipeline",
+        id: getRemotePipelineSavedId(ref.backendUrl, ref.pipelineId),
         name: "Original",
         sortKey: 0,
       },
@@ -595,8 +599,8 @@ describe("moving local pipelines to remote storage", () => {
     expect(client.put).toHaveBeenCalledTimes(1);
     expect(await LibraryDB.favorites.toArray()).toEqual([
       {
-        type: "remote-pipeline",
-        id: ref.pipelineId,
+        type: "pipeline",
+        id: getRemotePipelineSavedId(ref.backendUrl, ref.pipelineId),
         name: "Original",
         sortKey: 0,
       },

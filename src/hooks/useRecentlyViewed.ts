@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
 
+import { useBackend } from "@/providers/BackendProvider";
+import {
+  getRemotePipelineSavedId,
+  isSavedPipelineForBackend,
+} from "@/services/remotePipelineSavedLinks";
 import { getStorage } from "@/utils/typedStorage";
 
 const RECENTLY_VIEWED_KEY = "Home/recently_viewed";
@@ -92,6 +97,7 @@ function removeRecent(key: RecentKey, type: RecentItemType, id: string) {
 }
 
 function useRecent(key: RecentKey): RecentItem[] {
+  const { backendUrl } = useBackend();
   const [items, setItems] = useState<RecentItem[]>(() => readRecent(key));
 
   useEffect(() => {
@@ -111,30 +117,52 @@ function useRecent(key: RecentKey): RecentItem[] {
     };
   }, [key]);
 
-  return items;
+  return items.filter((item) => isSavedPipelineForBackend(item, backendUrl));
 }
 
 export function useRecentlyViewed() {
   return { recentlyViewed: useRecent(RECENTLY_VIEWED_KEY) };
 }
 
-export function addRecentlyViewed(item: Omit<RecentItem, "timestamp">) {
-  addRecent(RECENTLY_VIEWED_KEY, item);
+export function addRecentlyViewed(
+  item: Omit<RecentItem, "timestamp">,
+  backendUrl?: string,
+) {
+  addRecent(
+    RECENTLY_VIEWED_KEY,
+    item.type === "remote-pipeline" && backendUrl
+      ? {
+          ...item,
+          type: "pipeline",
+          id: getRemotePipelineSavedId(backendUrl, item.id),
+        }
+      : item,
+  );
 }
 
 /**
  * A recent entry is a link, and a link to a deleted thing is worse than no
  * link: it is offered, clicked, and lands nowhere.
  */
-export function removeRecentlyViewed(type: RecentItemType, id: string) {
+export function removeRecentlyViewed(
+  type: RecentItemType,
+  id: string,
+  backendUrl?: string,
+) {
   removeRecent(RECENTLY_VIEWED_KEY, type, id);
   removeRecent(RECENTLY_USED_KEY, type, id);
+  if (type === "remote-pipeline" && backendUrl) {
+    const storedId = getRemotePipelineSavedId(backendUrl, id);
+    removeRecent(RECENTLY_VIEWED_KEY, "pipeline", storedId);
+    removeRecent(RECENTLY_USED_KEY, "pipeline", storedId);
+  }
 }
 
 export function moveRecentPipelineToRemote(
   localIds: readonly string[],
-  remote: { id: string; name: string },
+  remote: { id: string; name: string; backendUrl: string },
 ) {
+  const remoteId = getRemotePipelineSavedId(remote.backendUrl, remote.id);
   for (const key of [RECENTLY_VIEWED_KEY, RECENTLY_USED_KEY] as const) {
     const items = readRecent(key);
     const isLocal = (item: RecentItem) =>
@@ -144,6 +172,7 @@ export function moveRecentPipelineToRemote(
     const matches = items.filter(
       (item) =>
         isLocal(item) ||
+        (item.type === "pipeline" && item.id === remoteId) ||
         (item.type === "remote-pipeline" && item.id === remote.id),
     );
     const latest = matches.reduce((a, b) =>
@@ -154,7 +183,14 @@ export function moveRecentPipelineToRemote(
       items.flatMap((item) => {
         if (!matches.includes(item)) return [item];
         return item === latest
-          ? [{ type: "remote-pipeline", ...remote, timestamp: item.timestamp }]
+          ? [
+              {
+                type: "pipeline",
+                id: remoteId,
+                name: remote.name,
+                timestamp: item.timestamp,
+              },
+            ]
           : [];
       }),
       // A failed migration must keep the local pipeline available.

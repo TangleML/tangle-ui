@@ -1,4 +1,5 @@
 import { isFlagEnabled } from "@/components/shared/Settings/useFlags";
+import { parseRemotePipelineSavedId } from "@/services/remotePipelineSavedLinks";
 
 import { APP_ROUTES, EDITOR_PATH } from "./appRoutes";
 
@@ -21,18 +22,7 @@ export function getDefaultEditorPath(pipelineName: string): string {
 
 /** Older saved links stored the remote identity in the local pipeline ID. */
 export function getLegacyRemotePipelineId(id: string): string | undefined {
-  const match = /^remote:([^:]+):(.+)$/.exec(id);
-  if (!match) return undefined;
-
-  try {
-    const backend = new URL(decodeURIComponent(match[1]));
-    if (backend.protocol === "http:" || backend.protocol === "https:") {
-      return match[2];
-    }
-  } catch {
-    // Ordinary local names and malformed saved IDs remain local.
-  }
-  return undefined;
+  return parseRemotePipelineSavedId(id)?.pipelineId;
 }
 
 export function getDefaultRemoteEditorPath(pipelineId: string): string {

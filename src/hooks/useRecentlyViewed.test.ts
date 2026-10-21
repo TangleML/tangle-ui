@@ -1,5 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { getRemotePipelineSavedId } from "@/services/remotePipelineSavedLinks";
 
 import {
   addRecentlyViewed,
@@ -10,6 +12,12 @@ import {
   useRecentlyUsed,
   useRecentlyViewed,
 } from "./useRecentlyViewed";
+
+const backend = vi.hoisted(() => ({ backendUrl: "https://example.com" }));
+vi.mock("@/providers/BackendProvider", () => ({ useBackend: () => backend }));
+beforeEach(() => {
+  backend.backendUrl = "https://example.com";
+});
 
 describe("parseRecent", () => {
   it("keeps well-formed items", () => {
@@ -86,14 +94,15 @@ describe("moveRecentPipelineToRemote", () => {
         moveRecentPipelineToRemote(["Original", "local-id"], {
           id: "remote-id",
           name: "Original",
+          backendUrl: backend.backendUrl,
         }),
       );
 
       const expected = [
         items[0],
         {
-          type: "remote-pipeline",
-          id: "remote-id",
+          type: "pipeline",
+          id: getRemotePipelineSavedId(backend.backendUrl, "remote-id"),
           name: "Original",
           timestamp: Math.max(30, timestamp),
         },
@@ -105,6 +114,7 @@ describe("moveRecentPipelineToRemote", () => {
         moveRecentPipelineToRemote(["Original", "local-id"], {
           id: "remote-id",
           name: "Original",
+          backendUrl: backend.backendUrl,
         }),
       );
       expect(result.current.recentlyViewed).toEqual(expected);
@@ -115,6 +125,36 @@ describe("moveRecentPipelineToRemote", () => {
 describe("removeRecentlyViewed", () => {
   beforeEach(() => {
     localStorage.clear();
+  });
+
+  it("scopes remote history and deletion to its original backend", () => {
+    const item = {
+      type: "remote-pipeline",
+      id: "same-id",
+      name: "Remote",
+    } as const;
+    addRecentlyViewed(item, backend.backendUrl);
+    addRecentlyViewed(item, "https://other.example.com");
+    const { result, rerender } = renderHook(() => useRecentlyViewed());
+    expect(result.current.recentlyViewed.map((entry) => entry.id)).toEqual([
+      getRemotePipelineSavedId(backend.backendUrl, item.id),
+    ]);
+    expect(
+      parseRecent(localStorage.getItem("Home/recently_viewed")!).every(
+        (entry) => entry.type === "pipeline",
+      ),
+    ).toBe(true);
+
+    backend.backendUrl = "https://other.example.com";
+    rerender();
+    expect(result.current.recentlyViewed.map((entry) => entry.id)).toEqual([
+      getRemotePipelineSavedId(backend.backendUrl, item.id),
+    ]);
+    act(() => removeRecentlyViewed(item.type, item.id, backend.backendUrl));
+    expect(result.current.recentlyViewed).toEqual([]);
+    backend.backendUrl = "https://example.com";
+    rerender();
+    expect(result.current.recentlyViewed).toHaveLength(1);
   });
 
   /** A link to a deleted project is offered, clicked, and lands nowhere. */
