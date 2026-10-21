@@ -18,6 +18,10 @@ vi.stubGlobal("ResizeObserver", ResizeObserverMock);
 const updateProject = vi.fn();
 const share = vi.fn();
 
+vi.mock("@/providers/BackendProvider", () => ({
+  useBackend: () => ({ backendUrl: "https://backend.example.com" }),
+}));
+
 /** `useShareProjectAction` reaches the router through `@/utils/URL`. */
 vi.mock("@/components/Project/useShareProjectAction", () => ({
   useShareProjectAction: () => share,
