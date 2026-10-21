@@ -46,6 +46,16 @@ vi.mock("@/services/pipelineStorage/PipelineStorageProvider", () => ({
   usePipelineStorage: () => storage,
 }));
 
+vi.mock(
+  "@/services/pipelineStorage/pipelineCreation",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("@/services/pipelineStorage/pipelineCreation")
+    >()),
+    getPipelineCreationBackendUrl: async () => "https://backend.example.com",
+  }),
+);
+
 vi.mock("@/routes/v2/shared/store/SharedStoreContext", () => ({
   useSharedStores: () => ({ windows }),
 }));
@@ -212,6 +222,7 @@ describe("usePrepareProjectArrival", () => {
     await waitFor(() => expect(createNewPipeline).toHaveBeenCalled());
     expect(createNewPipeline).toHaveBeenCalledWith(storage, undefined, {
       provisionalName: true,
+      destination: { backendUrl: "https://backend.example.com" },
       onRemoteCreated: expect.any(Function),
     });
     expect(createResource).toHaveBeenCalledWith(
@@ -505,7 +516,11 @@ describe("usePrepareProjectArrival", () => {
       expect(createNewPipeline).toHaveBeenCalledWith(
         storage,
         "Build a churn model for Q3",
-        { provisionalName: true, onRemoteCreated: expect.any(Function) },
+        {
+          provisionalName: true,
+          destination: { backendUrl: "https://backend.example.com" },
+          onRemoteCreated: expect.any(Function),
+        },
       ),
     );
   });
