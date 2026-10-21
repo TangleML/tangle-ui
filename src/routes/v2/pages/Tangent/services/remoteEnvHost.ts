@@ -186,6 +186,7 @@ export type RemoteEnvHostOptions = RemoteEnvHostBaseOptions &
 export interface RemoteEnvHost {
   connect(token: string, environmentId: string): Promise<void>;
   disconnect(): void;
+  readResource(uri: string): Promise<{ content: string; contentType: string }>;
 }
 
 interface AgentLifecycle {
@@ -283,7 +284,8 @@ export function createRemoteEnvHost(
         ? {
             list: () => turnClient.listResources(turnSessionId),
             read: (uri) => turnClient.readResource(turnSessionId, uri),
-            put: (input) => turnClient.addResource(turnSessionId, agentId, input),
+            put: (input) =>
+              turnClient.addResource(turnSessionId, agentId, input),
           }
         : undefined;
       const { answer } = await worker.runTurn(
@@ -492,6 +494,22 @@ export function createRemoteEnvHost(
       agentLifecycles.clear();
       client?.disconnect();
       client = null;
+    },
+
+    // A session-scoped read so a host tool can pull a resource by its handle
+    // (e.g. a pipeline another agent contributed) without holding the socket
+    // itself. Unlike the per-turn worker bridge this needs no agentId: reading
+    // the session catalog is not attributed to any one sub-agent.
+    readResource(uri) {
+      if (!client) {
+        throw new Error(
+          "Cannot read a session resource before the environment connects.",
+        );
+      }
+      if (sessionId === undefined) {
+        throw new Error("This environment has no session to read resources.");
+      }
+      return client.readResource(sessionId, uri);
     },
   };
 }

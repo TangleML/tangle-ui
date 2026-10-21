@@ -12,18 +12,16 @@ import { tool } from "@openai/agents";
 import type { Resource } from "@tangent/shared/contracts.ts";
 import { z } from "zod";
 
-import type { SessionResourceBridge } from "../sessionResourceBridge";
+import { decodeBase64Utf8 } from "@/utils/string";
 
-function decodeBase64Utf8(base64: string): string {
-  const binary = atob(base64);
-  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-  return new TextDecoder().decode(bytes);
-}
+import type { SessionResourceBridge } from "../sessionResourceBridge";
 
 function renderResourceList(resources: Resource[]): string {
   if (resources.length === 0) return "(no session resources)";
   return resources
-    .map((resource) => `- ${resource.name} (${resource.uri}) [${resource.kind}]`)
+    .map(
+      (resource) => `- ${resource.name} (${resource.uri}) [${resource.kind}]`,
+    )
     .join("\n");
 }
 

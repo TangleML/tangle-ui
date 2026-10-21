@@ -12,6 +12,7 @@ function makeHost(): RemoteEnvHost {
   return {
     connect: vi.fn().mockResolvedValue(undefined),
     disconnect: vi.fn(),
+    readResource: vi.fn(),
   };
 }
 

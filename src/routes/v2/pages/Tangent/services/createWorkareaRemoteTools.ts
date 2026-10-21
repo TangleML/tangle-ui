@@ -50,6 +50,11 @@ export interface WorkareaToolDeps {
     fileId: string;
     target?: WorkareaTarget;
   }>;
+  importPipeline: (
+    yaml: string,
+    name?: string,
+  ) => Promise<{ pipelineName: string; fileId: string }>;
+  readSessionResource: (uri: string) => Promise<string>;
   clonePipeline: (
     runId: string,
   ) => Promise<{ pipelineName: string; target?: WorkareaTarget }>;
@@ -137,6 +142,33 @@ function requireName(args: unknown): string {
     throw new Error(`\`name\` must be at most ${NAME_LIMIT} characters.`);
   }
   return name;
+}
+
+function optionalYaml(args: unknown): string | undefined {
+  if (!isRecord(args) || !("yaml" in args) || args.yaml === undefined) {
+    return undefined;
+  }
+  if (typeof args.yaml !== "string" || args.yaml.trim().length === 0) {
+    throw new Error("`yaml` must be a non-empty string when provided.");
+  }
+  return args.yaml;
+}
+
+function optionalResourceUri(args: unknown): string | undefined {
+  if (
+    !isRecord(args) ||
+    !("resourceUri" in args) ||
+    args.resourceUri === undefined
+  ) {
+    return undefined;
+  }
+  if (
+    typeof args.resourceUri !== "string" ||
+    args.resourceUri.trim().length === 0
+  ) {
+    throw new Error("`resourceUri` must be a non-empty string when provided.");
+  }
+  return args.resourceUri.trim();
 }
 
 function optionalRunId(args: unknown): string | undefined {
@@ -284,6 +316,68 @@ export function createWorkareaRemoteTools(
           target: createdTarget,
         } = await getDeps().createPipeline(optionalName(args));
         const target: WorkareaTarget = createdTarget ?? {
+          type: "pipeline",
+          identity: idIdentity(fileId),
+        };
+        const tab = await openAndSummarize(getDeps, target, pipelineName);
+        return { ...tab, name: pipelineName };
+      },
+    },
+    import_pipeline: {
+      description:
+        "Import a complete pipeline and open it in the Dynamic Workarea, rather " +
+        "than rebuilding it node by node. Give it either `resourceUri` — the " +
+        "handle of a Tangent session resource holding the pipeline YAML, which " +
+        "is how you bring in a pipeline another agent contributed — or inline " +
+        "`yaml`. The content must be a graph pipeline spec. `name` is optional " +
+        "and is made unique if it is already taken; otherwise the name from the " +
+        "YAML is used. The pipeline is attached to the project automatically " +
+        "(it shows up in Resources). Returns the tab summary plus the pipeline " +
+        "`name` and its `pipeline://id/<fileId>` `target`, including the " +
+        "`environmentId` and `ready` flag for that tab's sub-agent host, so a " +
+        "spawn can follow straight on.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          resourceUri: {
+            type: "string",
+            description:
+              "Handle of a session resource holding the pipeline YAML (its `uri`, e.g. `uploads/pipeline.yaml`). Preferred for content contributed to the session.",
+          },
+          yaml: {
+            type: "string",
+            description:
+              "Inline pipeline YAML content, as an alternative to `resourceUri`.",
+          },
+          name: {
+            type: "string",
+            description:
+              "Optional name for the imported pipeline. Defaults to the name in the YAML.",
+          },
+        },
+      },
+      execute: async (args) => {
+        const resourceUri = optionalResourceUri(args);
+        const inlineYaml = optionalYaml(args);
+        if (resourceUri && inlineYaml) {
+          throw new Error("Provide either `resourceUri` or `yaml`, not both.");
+        }
+        const deps = getDeps();
+        let pipelineYaml: string;
+        if (resourceUri) {
+          pipelineYaml = await deps.readSessionResource(resourceUri);
+        } else if (inlineYaml) {
+          pipelineYaml = inlineYaml;
+        } else {
+          throw new Error(
+            "Provide a `resourceUri` to a session resource, or inline `yaml`.",
+          );
+        }
+        const { pipelineName, fileId } = await deps.importPipeline(
+          pipelineYaml,
+          optionalName(args),
+        );
+        const target: WorkareaTarget = {
           type: "pipeline",
           identity: idIdentity(fileId),
         };

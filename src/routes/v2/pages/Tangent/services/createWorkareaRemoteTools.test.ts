@@ -61,6 +61,8 @@ function makeDeps(overrides: Partial<WorkareaToolDeps> = {}): WorkareaToolDeps {
     waitForEnvironment: vi.fn().mockResolvedValue(undefined),
     runInspect: makeRunInspect(),
     createPipeline: vi.fn(),
+    importPipeline: vi.fn(),
+    readSessionResource: vi.fn(),
     clonePipeline: vi.fn(),
     refreshResources: vi.fn().mockResolvedValue(undefined),
     renameProject: vi.fn().mockResolvedValue({ renamed: true }),
@@ -394,6 +396,102 @@ describe("createWorkareaRemoteTools", () => {
       /non-empty string/,
     );
     expect(createPipeline).not.toHaveBeenCalled();
+  });
+
+  it("import_pipeline imports the YAML, opens it, and reports the tab it can spawn into", async () => {
+    const importPipeline = vi
+      .fn()
+      .mockResolvedValue({ pipelineName: "Imported DAG", fileId: "file-7" });
+    const tab = { ...pipelineTab("tab-imp", "file-7"), title: "Imported DAG" };
+    const openTarget = vi.fn().mockResolvedValue(tab);
+    const tools = createWorkareaRemoteTools(() =>
+      makeDeps({
+        importPipeline,
+        openTarget,
+        getTabs: () => [tab],
+        getActiveTabId: () => "tab-imp",
+        waitForEnvironment: vi.fn().mockResolvedValue("env-7"),
+      }),
+    );
+
+    const result = await tools.import_pipeline.execute({
+      yaml: "name: Imported DAG\nimplementation:\n  graph:\n    tasks: {}\n",
+      name: "Imported DAG",
+    });
+
+    expect(importPipeline).toHaveBeenCalledWith(
+      "name: Imported DAG\nimplementation:\n  graph:\n    tasks: {}\n",
+      "Imported DAG",
+    );
+    expect(openTarget).toHaveBeenCalledWith(
+      { type: "pipeline", identity: "id/file-7" },
+      "Imported DAG",
+    );
+    expect(result).toEqual({
+      id: "tab-imp",
+      kind: "pipeline",
+      name: "Imported DAG",
+      title: "Imported DAG",
+      target: "pipeline://id/file-7",
+      active: true,
+      environmentId: "env-7",
+      ready: true,
+    });
+  });
+
+  it("import_pipeline reads a session resource handle and imports its YAML", async () => {
+    const yaml =
+      "name: From Resource\nimplementation:\n  graph:\n    tasks: {}\n";
+    const readSessionResource = vi.fn().mockResolvedValue(yaml);
+    const importPipeline = vi
+      .fn()
+      .mockResolvedValue({ pipelineName: "From Resource", fileId: "file-r" });
+    const tab = { ...pipelineTab("tab-r", "file-r"), title: "From Resource" };
+    const tools = createWorkareaRemoteTools(() =>
+      makeDeps({
+        readSessionResource,
+        importPipeline,
+        openTarget: vi.fn().mockResolvedValue(tab),
+        getTabs: () => [tab],
+        getActiveTabId: () => "tab-r",
+        waitForEnvironment: vi.fn().mockResolvedValue("env-r"),
+      }),
+    );
+
+    const result = await tools.import_pipeline.execute({
+      resourceUri: "uploads/pipeline.yaml",
+    });
+
+    expect(readSessionResource).toHaveBeenCalledWith("uploads/pipeline.yaml");
+    expect(importPipeline).toHaveBeenCalledWith(yaml, undefined);
+    expect(result).toMatchObject({
+      id: "tab-r",
+      name: "From Resource",
+      ready: true,
+    });
+  });
+
+  it("import_pipeline refuses when neither a resource handle nor YAML is given", async () => {
+    const importPipeline = vi.fn();
+    const readSessionResource = vi.fn();
+    const tools = createWorkareaRemoteTools(() =>
+      makeDeps({ importPipeline, readSessionResource }),
+    );
+
+    await expect(tools.import_pipeline.execute({})).rejects.toThrow(
+      /resourceUri/,
+    );
+    await expect(
+      tools.import_pipeline.execute({ yaml: "   " }),
+    ).rejects.toThrow(/non-empty string/);
+    await expect(
+      tools.import_pipeline.execute({
+        resourceUri: "uploads/a.yaml",
+        yaml: "name: x",
+      }),
+    ).rejects.toThrow(/not both/);
+    expect(importPipeline).not.toHaveBeenCalled();
+    expect(readSessionResource).not.toHaveBeenCalled();
   });
 
   it("clone_pipeline clones the resolved run tab and returns the new pipeline target", async () => {
