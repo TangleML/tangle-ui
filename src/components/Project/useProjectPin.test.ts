@@ -11,6 +11,10 @@ const notify = vi.fn();
 
 vi.mock("@/hooks/useToastNotification", () => ({ default: () => notify }));
 
+vi.mock("@/providers/BackendProvider", () => ({
+  useBackend: () => ({ backendUrl: "https://backend.example.com" }),
+}));
+
 const project = { id: "p-1", name: "Churn model" };
 
 afterEach(async () => {
