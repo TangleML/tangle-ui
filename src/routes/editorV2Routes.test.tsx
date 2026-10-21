@@ -39,6 +39,13 @@ const queryClient = new QueryClient({
 const pipelineId = "remote-id";
 
 vi.mock("@/routes/router", async () => import("./appRoutes"));
+vi.mock("@/routes/v2/shared/components/AppMenuActions", () => ({
+  AppMenuActions: () => (
+    <nav aria-label="Application actions">
+      <button>Sign in</button>
+    </nav>
+  ),
+}));
 vi.mock("@/api/client.gen", () => ({ client: { get: vi.fn(), put: vi.fn() } }));
 vi.mock("@/api/sdk.gen", () => ({ getCurrentUserApiUsersMeGet: vi.fn() }));
 vi.mock("@/utils/componentStore", () => ({}));
