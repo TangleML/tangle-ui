@@ -176,6 +176,7 @@ vi.mock("./v2/pages/Editor/hooks/useAiChatWindow", () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  localStorage.clear();
   vi.spyOn(window, "scrollTo").mockImplementation(() => {});
   canvas.mounts = 0;
   chat.mounts = 0;
@@ -278,6 +279,34 @@ it("retains a failed draft edit and changes its URL only after retry succeeds", 
   );
   expect(client.put).toHaveBeenCalledTimes(2);
   expect(canvas.mounts).toBe(1);
+});
+
+it("retains a failed draft when browser storage is enabled before returning to it", async () => {
+  const { router, history } = await open();
+  vi.mocked(client.put).mockRejectedValue(new Error("Backend unavailable"));
+  fireEvent.click(screen.getByRole("button", { name: "Edit pipeline" }));
+  await waitFor(() =>
+    expect(session.autoSave.error).toBe("Backend unavailable"),
+  );
+  const originalFile = session.pipelineFile.activePipelineFile;
+  const originalSpec = stores.navigation.rootSpec;
+  expect(history.location.state.newPipeline?.storage).toBe("remote");
+  await act(async () => {
+    history.back();
+    await router.load();
+  });
+  await screen.findByText("Dashboard");
+  localStorage.setItem("pipelines:save-in-browser", "true");
+  await act(async () => {
+    history.forward();
+    await router.load();
+  });
+  await screen.findByRole("button", { name: "Edit pipeline" });
+  expect(history.location.pathname).toBe(APP_ROUTES.EDITOR_V2_NEW_PIPELINE);
+  expect(session.pipelineFile.activePipelineFile).toBe(originalFile);
+  expect(stores.navigation.rootSpec).toBe(originalSpec);
+  expect(stores.navigation.rootSpec?.description).toBe("First edit");
+  expect(session.autoSave.hasUnsavedChanges).toBe(true);
 });
 
 it("keeps the current subgraph and selection when a draft becomes remote", async () => {

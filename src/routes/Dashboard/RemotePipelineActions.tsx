@@ -109,7 +109,7 @@ export function RemotePipelineActions({
                 size="icon"
                 aria-label={`Delete ${name}`}
                 title={`Delete ${name}`}
-                className="text-foreground hover:text-destructive-foreground"
+                className="text-foreground hover:text-destructive-foreground aria-disabled:opacity-50 aria-disabled:cursor-not-allowed"
                 aria-disabled={isDeleting}
                 onClick={(event) => {
                   if (queryClient.isMutating({ mutationKey, exact: true }))

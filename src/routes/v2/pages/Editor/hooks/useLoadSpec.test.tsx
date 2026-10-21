@@ -167,6 +167,7 @@ describe("useLoadSpec", () => {
     );
     expect(screen.getByText("Unsaved edit")).toBeInTheDocument();
     await act(async () => opened.unmount());
+    addRecentlyViewed.mockClear();
 
     render(view(ref, true));
     await screen.findByText("Unsaved edit");
@@ -174,6 +175,7 @@ describe("useLoadSpec", () => {
       "This pipeline was deleted. Save a copy to keep your changes.",
     );
     expect(resolvePipeline).toHaveBeenCalledExactlyOnceWith(ref);
+    expect(addRecentlyViewed).not.toHaveBeenCalled();
   });
 
   it("keeps new draft undo history when a promoted document starts another editor session", async () => {

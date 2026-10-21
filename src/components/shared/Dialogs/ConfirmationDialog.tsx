@@ -27,6 +27,7 @@ type ConfirmationDialogProps = {
   content?: ReactNode;
   confirmLabel?: string;
   dismissForeverKey?: string;
+  dismissForeverLabel?: string;
   onConfirm: () => void;
   onCancel?: () => void;
 } & (
@@ -44,6 +45,7 @@ const ConfirmationDialog = ({
   content,
   confirmLabel = "Continue",
   dismissForeverKey,
+  dismissForeverLabel = "Don't show this again",
   isOpen,
   onConfirm,
   onCancel = () => {},
@@ -114,7 +116,7 @@ const ConfirmationDialog = ({
               checked={dismissForever}
               onCheckedChange={(checked) => setDismissForever(checked === true)}
             />
-            <Label htmlFor={checkboxId}>Don&apos;t show this again</Label>
+            <Label htmlFor={checkboxId}>{dismissForeverLabel}</Label>
           </InlineStack>
         )}
         <AlertDialogFooter>

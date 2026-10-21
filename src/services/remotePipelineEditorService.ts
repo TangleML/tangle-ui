@@ -1,6 +1,9 @@
 import { client } from "@/api/client.gen";
 import { getCurrentUserApiUsersMeGet } from "@/api/sdk.gen";
-import type { SavedPipelineDocument } from "@/services/pipelineSpecService";
+import {
+  PipelineSpecApiError,
+  type SavedPipelineDocument,
+} from "@/services/pipelineSpecService";
 import { isValidComponentSpec } from "@/utils/componentSpec";
 
 type RemotePipelineWrite = Pick<
@@ -8,18 +11,24 @@ type RemotePipelineWrite = Pick<
   "root_pipeline_task" | "pipeline_run_annotations"
 >;
 
-function apiError(action: string, status: number, error: unknown): Error {
+function apiError(
+  action: string,
+  status: number,
+  error: unknown,
+): PipelineSpecApiError {
   if ([404, 405, 501].includes(status)) {
-    return new Error(
+    return new PipelineSpecApiError(
       `${action} (${status}). This backend does not support saving pipelines. In Settings → Preferences, enable “Save new pipelines in this browser” to create local pipelines.`,
+      status,
     );
   }
   const detail =
     error && typeof error === "object" && "detail" in error
       ? error.detail
       : undefined;
-  return new Error(
+  return new PipelineSpecApiError(
     `${action} (${status})${typeof detail === "string" ? `: ${detail}` : ""}`,
+    status,
   );
 }
 
@@ -41,8 +50,9 @@ export async function getRemotePipelineWriter(
     );
   }
   if (!result.data.permissions.includes("write")) {
-    throw new Error(
+    throw new PipelineSpecApiError(
       "You do not have permission to edit pipelines. In Settings → Preferences, enable “Save new pipelines in this browser” to create local pipelines.",
+      403,
     );
   }
   return result.data.id;

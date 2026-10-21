@@ -1780,3 +1780,16 @@ describe("DashboardPipelinesView remote pipelines", () => {
     });
   });
 });
+
+it("keeps saved remote pipelines reachable when new pipelines are saved in the browser", async () => {
+  localStorage.setItem("pipelines:save-in-browser", "true");
+  try {
+    const { user } = await renderDashboard();
+    expect(screen.getByText("Local pipeline list")).toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
+    expect(await screen.findByText("Example pipeline")).toBeInTheDocument();
+    expect(listRemotePipelines).toHaveBeenCalled();
+  } finally {
+    localStorage.removeItem("pipelines:save-in-browser");
+  }
+});

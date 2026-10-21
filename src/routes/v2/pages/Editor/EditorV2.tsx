@@ -339,11 +339,20 @@ function RemotePipelineEditor({
 }: {
   pipeline:
     | { source: "remote"; pipelineId: string }
-    | { source: "draft"; name: string; draftId: string };
+    | {
+        source: "draft";
+        name: string;
+        draftId: string;
+        storage?: "local" | "remote";
+      };
 }) {
   const { backendUrl, ready, configured } = useBackend();
   if (!ready) return <RemotePipelineSkeleton />;
-  if (pipeline.source === "draft" && createsLocalPipelines(configured)) {
+  if (
+    pipeline.source === "draft" &&
+    (pipeline.storage === "local" ||
+      (pipeline.storage === undefined && createsLocalPipelines(configured)))
+  ) {
     return (
       <CreateLocalPipeline name={pipeline.name} draftId={pipeline.draftId} />
     );
@@ -355,9 +364,11 @@ function RemotePipelineEditor({
           <Paragraph role="alert">
             Configure a backend to open pipelines.
           </Paragraph>
-          <RouterLink to={APP_ROUTES.SETTINGS_BACKEND}>
-            Backend settings
-          </RouterLink>
+          <Button asChild variant="outline">
+            <RouterLink to={APP_ROUTES.SETTINGS_BACKEND}>
+              Backend settings
+            </RouterLink>
+          </Button>
         </BlockStack>
       </RemotePipelineShell>
     );

@@ -12,6 +12,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { useTourMode } from "@/providers/TourProvider/TourModeContext";
 import { PipelineMigrationRecoveryError } from "@/services/pipelineStorage/migrateLocalPipelineToRemote";
+import { revokePipelineMigrationConsent } from "@/services/pipelineStorage/pipelineMigrationConsent";
 import { findPipelineMigration } from "@/services/pipelineStorage/pipelineMigrations";
 import {
   getEditorPipelineIdentity,
@@ -118,12 +119,60 @@ it("asks before uploading and cancellation opens the unchanged local editor", as
 it("uploads only after confirmation when consent was not remembered", async () => {
   localStorage.removeItem(consentKey);
   open();
-  fireEvent.click(await screen.findByRole("button", { name: "Continue" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Move" }));
   await waitFor(() => expect(onMigrated).toHaveBeenCalledWith(remote));
   expect(storage.moveLocalPipelineToRemote).toHaveBeenCalledExactlyOnceWith(
     local,
     backendUrl,
     undefined,
+  );
+});
+
+it.each([false, true])(
+  "keeps inactive tabs from prompting or uploading (remembered: %s)",
+  async (remembered) => {
+    if (!remembered) localStorage.removeItem(consentKey);
+    const view = (active: boolean) => (
+      <QueryClientProvider client={client}>
+        <LocalPipelineMigration
+          pipelineRef={pipelineRef}
+          isActive={active}
+          onMigrated={onMigrated}
+        >
+          <p>Local editor</p>
+        </LocalPipelineMigration>
+      </QueryClientProvider>
+    );
+    const { rerender } = render(view(false));
+    await waitFor(() => expect(storage.resolvePipeline).toHaveBeenCalled());
+    await act(async () => {});
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(storage.moveLocalPipelineToRemote).not.toHaveBeenCalled();
+    rerender(view(true));
+    if (remembered)
+      await waitFor(() => expect(onMigrated).toHaveBeenCalledWith(remote));
+    else expect(await screen.findByRole("alertdialog")).toBeInTheDocument();
+  },
+);
+
+it("makes remembered consent explicit and names the destination after a later automatic move", async () => {
+  localStorage.removeItem(consentKey);
+  const first = open();
+  fireEvent.click(
+    await screen.findByRole("checkbox", {
+      name: `Move pipelines I open to ${backendUrl} without asking`,
+    }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Move" }));
+  await waitFor(() => expect(onMigrated).toHaveBeenCalledWith(remote));
+  expect(localStorage.getItem(consentKey)).toBe("true");
+  first.unmount();
+  open(undefined, { name: "Another pipeline", fileId: "another-local-id" });
+  await waitFor(() => expect(onMigrated).toHaveBeenCalledTimes(2));
+  expect(screen.queryByRole("alertdialog")).toBeNull();
+  expect(notify).toHaveBeenCalledWith(
+    `Pipeline moved to ${backendUrl}.`,
+    "success",
   );
 });
 
@@ -352,4 +401,24 @@ it("does not resolve or migrate tour scratch pipelines", () => {
   open();
   expect(screen.getByText("Local editor")).toBeInTheDocument();
   expect(storage.resolvePipeline).not.toHaveBeenCalled();
+});
+
+it("honors revoked consent before an already-mounted inactive tab becomes active", async () => {
+  const view = (active: boolean) => (
+    <QueryClientProvider client={client}>
+      <LocalPipelineMigration
+        pipelineRef={pipelineRef}
+        isActive={active}
+        onMigrated={onMigrated}
+      >
+        <p>Local editor</p>
+      </LocalPipelineMigration>
+    </QueryClientProvider>
+  );
+  const { rerender } = render(view(false));
+  await waitFor(() => expect(storage.resolvePipeline).toHaveBeenCalled());
+  act(() => revokePipelineMigrationConsent(backendUrl));
+  rerender(view(true));
+  expect(await screen.findByRole("alertdialog")).toBeInTheDocument();
+  expect(storage.moveLocalPipelineToRemote).not.toHaveBeenCalled();
 });

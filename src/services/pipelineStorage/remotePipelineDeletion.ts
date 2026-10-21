@@ -97,17 +97,30 @@ function publish(deletion: RemotePipelineDeletion): void {
   }
 }
 
+export class RemotePipelineDeletionError extends Error {
+  constructor(
+    readonly state: "pending" | "deleted" | "uncertain",
+    message: string,
+    cause?: unknown,
+  ) {
+    super(message, { cause });
+    this.name = "RemotePipelineDeletionError";
+  }
+}
+
 export function remotePipelineDeletionError(): Error {
-  return new Error(
+  return new RemotePipelineDeletionError(
+    "deleted",
     "This pipeline was deleted. Save a copy to keep your changes.",
   );
 }
 
-export class RemotePipelineDeletionUncertainError extends Error {
+export class RemotePipelineDeletionUncertainError extends RemotePipelineDeletionError {
   constructor(cause?: unknown) {
     super(
+      "uncertain",
       "The deletion result is unknown. Delete again to confirm, or save a copy to keep your changes.",
-      { cause },
+      cause,
     );
   }
 }
@@ -120,7 +133,8 @@ function assertDeletionAvailable(
   if (deletion?.state === "uncertain")
     throw new RemotePipelineDeletionUncertainError();
   if (deletion?.state === "pending" && !allowPending) {
-    throw new Error(
+    throw new RemotePipelineDeletionError(
+      "pending",
       "This pipeline is being deleted. Save a copy to keep your changes.",
     );
   }

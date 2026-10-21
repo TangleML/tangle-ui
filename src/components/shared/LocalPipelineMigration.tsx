@@ -1,5 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
 import { Button } from "@/components/ui/button";
@@ -11,6 +17,11 @@ import { useTourMode } from "@/providers/TourProvider/TourModeContext";
 import { invalidatePipelineQueries } from "@/services/pipelineStorage/invalidatePipelineQueries";
 import { createsLocalPipelines } from "@/services/pipelineStorage/pipelineCreation";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
+import {
+  hasPipelineMigrationConsent,
+  pipelineMigrationConsentKey,
+  subscribePipelineMigrationConsent,
+} from "@/services/pipelineStorage/pipelineMigrationConsent";
 import { assertPipelineMigrationBackend } from "@/services/pipelineStorage/pipelineMigrations";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import {
@@ -25,6 +36,7 @@ import { migrateLocalPipelineOnOpen } from "./migrateLocalPipelineOnOpen";
 interface LocalPipelineMigrationProps {
   pipelineRef: PipelineRef;
   projectId?: string;
+  isActive?: boolean;
   onMigrated: (file: PipelineFile, clearProjectContext?: boolean) => void;
   children: ReactNode;
 }
@@ -46,6 +58,7 @@ export function LocalPipelineMigration(props: LocalPipelineMigrationProps) {
 function MigrateLocalPipeline({
   pipelineRef,
   projectId,
+  isActive = true,
   onMigrated,
   children,
   backendUrl,
@@ -57,14 +70,11 @@ function MigrateLocalPipeline({
   const mounted = useRef(false);
   const started = useRef(false);
   const [keepLocal, setKeepLocal] = useState(false);
-  const consentKey = `local-pipeline-migration-consent-v1:${backendUrl}`;
-  const [hasConsent] = useState(() => {
-    try {
-      return localStorage.getItem(consentKey) === "true";
-    } catch {
-      return false;
-    }
-  });
+  const consentKey = pipelineMigrationConsentKey(backendUrl);
+  const hasConsent = useSyncExternalStore(
+    subscribePipelineMigrationConsent,
+    () => hasPipelineMigrationConsent(backendUrl),
+  );
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -120,6 +130,8 @@ function MigrateLocalPipeline({
       if (projectId) invalidateProjectResources(queryClient, projectId);
       if (!mounted.current || hasLocalChanges) return;
       if (warning) notify(warning, "warning");
+      else if (hasConsent && !file?.remote)
+        notify(`Pipeline moved to ${backendUrl}.`, "success");
       if (projectUnavailable) onMigrated(remote, true);
       else onMigrated(remote);
     },
@@ -133,6 +145,7 @@ function MigrateLocalPipeline({
   );
   useEffect(() => {
     if (
+      !isActive ||
       !file ||
       isFetching ||
       started.current ||
@@ -141,7 +154,7 @@ function MigrateLocalPipeline({
       return;
     started.current = true;
     migration.mutate(file);
-  }, [file, hasConsent, isFetching, migration, shouldMigrate]);
+  }, [file, hasConsent, isFetching, isActive, migration, shouldMigrate]);
 
   if (error)
     return (
@@ -198,6 +211,7 @@ function MigrateLocalPipeline({
       </BlockStack>
     );
   if (!shouldMigrate || keepLocal) return children;
+  if (!isActive) return <LoadingScreen message="Opening pipeline..." />;
   return (
     <>
       <LoadingScreen message="Choose where to open this pipeline" />
@@ -205,7 +219,9 @@ function MigrateLocalPipeline({
         isOpen
         title={`Move "${file.storageKey}" to the backend?`}
         description={`This saves the pipeline and its configured input values to ${backendUrl}. Other users with read access to that backend can see them. The browser copy is removed only after a successful move. Folder placement and edit history are not transferred. Cancel keeps editing in this browser.`}
+        confirmLabel="Move"
         dismissForeverKey={consentKey}
+        dismissForeverLabel={`Move pipelines I open to ${backendUrl} without asking`}
         onConfirm={() => migration.mutate(file)}
         onCancel={() => setKeepLocal(true)}
       />
