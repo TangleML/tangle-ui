@@ -226,10 +226,12 @@ describe("RemotePipelineActions", () => {
     expect(favorites.removeFavorite).toHaveBeenCalledExactlyOnceWith(
       "remote-pipeline",
       pipeline.id,
+      backendUrl,
     );
     expect(removeRecent).toHaveBeenCalledExactlyOnceWith(
       "remote-pipeline",
       pipeline.id,
+      backendUrl,
     );
     expect(openPipeline).not.toHaveBeenCalled();
   });
@@ -326,6 +328,16 @@ describe("RemotePipelineActions", () => {
       expect(client.getQueryState(oldKey)?.isInvalidated).toBe(true),
     );
     expect(client.getQueryState(newKey)?.isInvalidated).toBe(false);
+    expect(favorites.removeFavorite).toHaveBeenCalledWith(
+      "remote-pipeline",
+      pipeline.id,
+      backendUrl,
+    );
+    expect(removeRecent).toHaveBeenCalledWith(
+      "remote-pipeline",
+      pipeline.id,
+      backendUrl,
+    );
     expect(deleteRemotePipeline).toHaveBeenCalledExactlyOnceWith(
       backendUrl,
       pipeline,
@@ -360,7 +372,11 @@ describe("RemotePipelineActions", () => {
         "Pipeline deleted, but its local favorites or history could not be updated.",
         "warning",
       );
-      expect(removeRecent).toHaveBeenCalledWith("remote-pipeline", pipeline.id);
+      expect(removeRecent).toHaveBeenCalledWith(
+        "remote-pipeline",
+        pipeline.id,
+        backendUrl,
+      );
     },
   );
 });

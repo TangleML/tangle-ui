@@ -49,14 +49,15 @@ export function RemotePipelineActions({
     mutationFn: ({ backendUrl, pipeline }: RemotePipelineActionsProps) =>
       deleteRemotePipeline(backendUrl, pipeline),
     onSuccess: async (_, { backendUrl, pipeline, onDeleted }) => {
-      const restoreFocus =
+      const canRestoreFocus = () =>
         document.activeElement === triggerRef.current ||
         document.activeElement === document.body;
+      const restoreFocus = canRestoreFocus();
       const cleanup = await Promise.allSettled([
         Promise.resolve().then(() =>
-          removeRecentlyViewed("remote-pipeline", pipeline.id),
+          removeRecentlyViewed("remote-pipeline", pipeline.id, backendUrl),
         ),
-        removeFavorite("remote-pipeline", pipeline.id),
+        removeFavorite("remote-pipeline", pipeline.id, backendUrl),
       ]);
       if (cleanup.some((result) => result.status === "rejected")) {
         notify(
@@ -67,7 +68,7 @@ export function RemotePipelineActions({
       await queryClient.invalidateQueries({
         queryKey: RemotePipelineQueryKeys.All(backendUrl),
       });
-      onDeleted?.(restoreFocus);
+      onDeleted?.(restoreFocus && canRestoreFocus());
     },
     onError: (error) => notify(error.message, "error"),
   });

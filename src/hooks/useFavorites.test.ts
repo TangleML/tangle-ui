@@ -76,6 +76,29 @@ describe("useFavorites", () => {
     expect(await LibraryDB.favorites.count()).toBe(1);
   });
 
+  it("cleans up the captured backend after the active backend changes", async () => {
+    const item: FavoriteItem = {
+      type: "remote-pipeline",
+      id: "same-id",
+      name: "Remote",
+    };
+    const originalBackend = backend.backendUrl;
+    const { result, rerender } = renderHook(() => useFavorites());
+    await result.current.addFavorite(item);
+    backend.backendUrl = "https://other.example.com";
+    rerender();
+    await result.current.addFavorite(item);
+
+    await result.current.removeFavorite(item.type, item.id, originalBackend);
+
+    await waitFor(() =>
+      expect(result.current.isFavorite(item.type, item.id)).toBe(true),
+    );
+    expect(await LibraryDB.favorites.toArray()).toEqual([
+      { ...scoped(item), sortKey: -1 },
+    ]);
+  });
+
   it("starts with no favorites", async () => {
     const { result } = renderHook(() => useFavorites());
     await waitFor(() => {

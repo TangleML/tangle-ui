@@ -380,6 +380,28 @@ describe("DashboardPipelinesView remote pipelines", () => {
     ).toHaveFocus();
   });
 
+  it("keeps focus on a control selected while the deleted list refreshes", async () => {
+    const refreshed = createDeferredPage();
+    vi.mocked(listRemotePipelines)
+      .mockResolvedValueOnce(createPage(1, 2, null))
+      .mockReturnValue(refreshed.promise);
+    const { user, client } = await renderDashboard(
+      `${APP_ROUTES.DASHBOARD_PIPELINES}?tab=remote`,
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "Delete Pipeline 1" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await waitFor(() => expect(listRemotePipelines).toHaveBeenCalledTimes(2));
+    const filter = screen.getByRole("textbox", { name: "Search by name" });
+    await user.click(filter);
+
+    await act(async () => refreshed.resolve(createPage(2, 1, null)));
+
+    await waitFor(() => expect(client.isMutating()).toBe(0));
+    expect(filter).toHaveFocus();
+  });
+
   it("returns to the previous page after deleting the final row without opening the editor", async () => {
     let deleted = false;
     vi.mocked(listRemotePipelines).mockImplementation(async (_, pageToken) =>

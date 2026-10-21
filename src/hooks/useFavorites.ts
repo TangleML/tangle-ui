@@ -32,9 +32,13 @@ export function useFavorites() {
     isSavedPipelineForBackend(item, backendUrl),
   );
 
-  const storedKey = (type: FavoriteType, id: string): [FavoriteType, string] =>
+  const storedKey = (
+    type: FavoriteType,
+    id: string,
+    targetBackendUrl = backendUrl,
+  ): [FavoriteType, string] =>
     type === "remote-pipeline"
-      ? ["pipeline", getRemotePipelineSavedId(backendUrl, id)]
+      ? ["pipeline", getRemotePipelineSavedId(targetBackendUrl, id)]
       : [type, id];
 
   const addFavorite = async (item: FavoriteItem) => {
@@ -60,8 +64,15 @@ export function useFavorites() {
     });
   };
 
-  const removeFavorite = async (type: FavoriteType, id: string) => {
-    await LibraryDB.favorites.bulkDelete([storedKey(type, id), [type, id]]);
+  const removeFavorite = async (
+    type: FavoriteType,
+    id: string,
+    targetBackendUrl = backendUrl,
+  ) => {
+    await LibraryDB.favorites.bulkDelete([
+      storedKey(type, id, targetBackendUrl),
+      [type, id],
+    ]);
   };
 
   const isFavorite = (type: FavoriteType, id: string) => {
