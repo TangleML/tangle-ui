@@ -572,11 +572,11 @@ describe("deleteRemotePipeline", () => {
   });
 
   it.each([
-    { backendUrl: "https://other.example.com", filePath: pipeline.file_path },
-    { backendUrl: BACKEND_URL, filePath: "pipelines/other.yaml" },
+    { backendUrl: "https://other.example.com", samePath: true },
+    { backendUrl: BACKEND_URL, samePath: false },
   ])(
     "does not wait for unrelated draft writes: %o",
-    async ({ backendUrl, filePath }) => {
+    async ({ backendUrl, samePath }) => {
       const pendingCreation = Promise.withResolvers<void>();
       vi.mocked(client.put).mockImplementation(async () => {
         await pendingCreation.promise;
@@ -589,7 +589,7 @@ describe("deleteRemotePipeline", () => {
       try {
         await deleteRemotePipeline(backendUrl, {
           ...pipeline,
-          file_path: filePath,
+          file_path: samePath ? pipeline.file_path : "pipelines/other.yaml",
         });
         expect(client.delete).toHaveBeenCalledOnce();
       } finally {

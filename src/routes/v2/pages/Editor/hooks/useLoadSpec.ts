@@ -123,7 +123,11 @@ export function useLoadSpec(ref: EditorPipelineRef) {
   useEffect(
     () =>
       autorun(() => {
-        if (!file.remote) return;
+        if (
+          !file.remote ||
+          getRemotePipelineDeletionError({ source: "remote", ...file.remote })
+        )
+          return;
         addRecentlyViewed(
           {
             type: "remote-pipeline",

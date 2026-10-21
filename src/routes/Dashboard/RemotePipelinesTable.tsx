@@ -176,7 +176,7 @@ export function RemotePipelinesTable({
         tabIndex={-1}
         aria-label="Remote Pipelines"
         aria-busy={isFetching}
-        className="table-fixed"
+        className="table-fixed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       >
         <TableHeader>
           <TableRow className="text-xs">

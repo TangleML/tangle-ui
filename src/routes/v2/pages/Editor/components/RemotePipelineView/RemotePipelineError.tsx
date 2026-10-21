@@ -7,10 +7,22 @@ import { BlockStack } from "@/components/ui/layout";
 import { Paragraph } from "@/components/ui/typography";
 import { APP_ROUTES } from "@/routes/appRoutes";
 import { PipelineSpecApiError } from "@/services/pipelineSpecService";
+import { RemotePipelineDeletionError } from "@/services/pipelineStorage/remotePipelineDeletion";
 
 import { RemotePipelineShell } from "./RemotePipelineShell";
 
 function describeError(error: unknown) {
+  if (error instanceof RemotePipelineDeletionError) {
+    return {
+      message:
+        error.state === "deleted"
+          ? "This pipeline was deleted."
+          : error.state === "pending"
+            ? "This pipeline is being deleted."
+            : "The deletion result is unknown. Return to pipelines and delete it again to confirm.",
+      retryable: error.state === "pending",
+    };
+  }
   if (error instanceof PipelineSpecApiError) {
     switch (error.status) {
       case 401:

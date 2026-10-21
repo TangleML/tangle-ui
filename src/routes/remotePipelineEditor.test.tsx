@@ -18,6 +18,7 @@ import { type ReactNode, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PipelineSpecApiError } from "@/services/pipelineSpecService";
+import { RemotePipelineDeletionError } from "@/services/pipelineStorage/remotePipelineDeletion";
 
 import Editor from "./Editor/Editor";
 import { EditorV2 } from "./v2/pages/Editor/EditorV2";
@@ -513,6 +514,29 @@ describe("remote pipeline editor entry", () => {
       consoleError.mockRestore();
     }
   });
+
+  it.each([
+    ["deleted", "This pipeline was deleted.", false],
+    ["pending", "This pipeline is being deleted.", true],
+    ["uncertain", "The deletion result is unknown.", false],
+  ] as const)(
+    "shows the %s storage barrier with appropriate recovery",
+    (state, message, retryable) => {
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      route.params = { pipelineId: "pipeline-123" };
+      loadV2.mockImplementation(() => {
+        throw new RemotePipelineDeletionError(state, "Storage barrier");
+      });
+      renderEditor(<EditorV2 />);
+      expect(screen.getByRole("alert")).toHaveTextContent(message);
+      expect(Boolean(screen.queryByRole("button", { name: "Retry" }))).toBe(
+        retryable,
+      );
+      expect(
+        screen.getByRole("link", { name: "Back to pipelines" }),
+      ).toBeInTheDocument();
+    },
+  );
 
   it("clears a failed read when navigating to another remote pipeline", () => {
     route.params = { pipelineId: "missing" };
