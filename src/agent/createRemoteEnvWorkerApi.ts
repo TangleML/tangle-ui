@@ -37,6 +37,7 @@ import {
 } from "./middleware/agentTrace";
 import { recordTurnReasoning } from "./middleware/recordTurnReasoning";
 import { createSession, type RecentPipelineRun } from "./session";
+import type { SessionResourceBridge } from "./sessionResourceBridge";
 import { SkillsLoader } from "./skills/loader";
 import type { ToolBridgeApi } from "./toolBridgeApi";
 import type { AgentContext, StatusCallback } from "./types";
@@ -71,6 +72,7 @@ export interface RemoteEnvWorkerApi {
   runTurn(
     params: RemoteRunTurnParams,
     onStatus: StatusCallback,
+    resources?: SessionResourceBridge,
   ): Promise<RemoteRunTurnResult>;
   abortAgent(agentId: string): void;
   killAgent(agentId: string): void;
@@ -153,7 +155,7 @@ export function createRemoteEnvWorkerApi(): RemoteEnvWorkerApi {
       });
     },
 
-    async runTurn({ agentId, message, recentRuns }, onStatus) {
+    async runTurn({ agentId, message, recentRuns }, onStatus, resources) {
       const hosted = agents.get(agentId);
       if (!hosted) {
         throw new Error(
@@ -185,6 +187,7 @@ export function createRemoteEnvWorkerApi(): RemoteEnvWorkerApi {
         recentRuns,
         context,
         componentCatalog: hosted.componentCatalog,
+        ...(resources ? { resources } : {}),
       });
 
       // Once per spawn, not per turn: the allowlist is fixed when the agent is
