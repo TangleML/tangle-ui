@@ -23,6 +23,7 @@ import { componentSpecFromYaml, componentSpecToYaml } from "@/utils/yaml";
 
 import { pipelineStorageDb } from "./db";
 import { RootFolderDbStorageDriver } from "./drivers/RootFolderDbStorageDriver";
+import * as pipelineAssociations from "./pipelineAssociations";
 import { PipelineFile } from "./PipelineFile";
 import { emitPipelineFileChanged } from "./pipelineFileEvents";
 import { findPipelineMigration } from "./pipelineMigrations";
@@ -929,6 +930,63 @@ describe("moving local pipelines to remote storage", () => {
     });
     expect(local.deleteFile).not.toHaveBeenCalled();
     expect(client.put).toHaveBeenCalledOnce();
+  });
+
+  it.each([403, 404, 405, 422, 501])(
+    "allows another backend after a rejected upload (%s)",
+    async (status) => {
+      vi.mocked(client.put).mockResolvedValueOnce(response(undefined, status));
+      await expect(
+        storage.moveLocalPipelineToRemote(local, ref.backendUrl),
+      ).rejects.toThrow();
+      expect(
+        await pipelineStorageDb.pipeline_migration_attempts.get(local.id),
+      ).toBeUndefined();
+      await storage.moveLocalPipelineToRemote(
+        local,
+        "https://other.example.com",
+      );
+      expect(local.deleteFile).toHaveBeenCalledOnce();
+    },
+  );
+
+  it("allows another backend when checking for an earlier upload failed before any PUT", async () => {
+    vi.mocked(findRemotePipelineDocumentByPath).mockRejectedValueOnce(
+      new Error("Lookup unavailable"),
+    );
+    await expect(
+      storage.moveLocalPipelineToRemote(local, ref.backendUrl),
+    ).rejects.toThrow("Lookup unavailable");
+    expect(client.put).not.toHaveBeenCalled();
+    await storage.moveLocalPipelineToRemote(local, "https://other.example.com");
+    expect(local.deleteFile).toHaveBeenCalledOnce();
+  });
+
+  it("describes an uncertain upload without claiming that the pipeline was moved", async () => {
+    vi.mocked(client.put).mockRejectedValueOnce(new Error("Response lost"));
+    await expect(
+      storage.moveLocalPipelineToRemote(local, ref.backendUrl),
+    ).rejects.toThrow();
+    await expect(
+      storage.moveLocalPipelineToRemote(local, "https://other.example.com"),
+    ).rejects.toThrow("may have completed");
+    expect(client.put).toHaveBeenCalledOnce();
+    expect(local.deleteFile).not.toHaveBeenCalled();
+  });
+
+  it("keeps edits written while saved links are being moved", async () => {
+    vi.spyOn(
+      pipelineAssociations,
+      "movePipelineAssociationsToRemote",
+    ).mockImplementationOnce(async () => {
+      vi.mocked(local.read).mockResolvedValue(
+        componentSpecToYaml({ ...spec, description: "Other tab edit" }),
+      );
+    });
+    await expect(
+      storage.moveLocalPipelineToRemote(local, ref.backendUrl),
+    ).rejects.toThrow("local changes were not uploaded");
+    expect(local.deleteFile).not.toHaveBeenCalled();
   });
 
   it("uploads the latest local edits if a previous failed attempt saved nothing", async () => {

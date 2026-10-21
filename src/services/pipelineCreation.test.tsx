@@ -504,3 +504,17 @@ it("propagates remote clone failures to the caller", async () => {
     "Backend unavailable",
   );
 });
+
+it("keeps creation usable when browser preference storage is restricted", async () => {
+  vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+    throw new DOMException("Storage is unavailable", "SecurityError");
+  });
+  vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    throw new DOMException("Storage is unavailable", "SecurityError");
+  });
+  await expect(getPipelineCreationBackendUrl()).resolves.toBe(
+    window.location.origin,
+  );
+  expect(createsLocalPipelines()).toBe(false);
+  expect(() => setBrowserPipelineStorage(true)).not.toThrow();
+});

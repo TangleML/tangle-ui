@@ -5,6 +5,11 @@ import Dexie, { type EntityTable } from "dexie";
 import type { UndoEvent, UndoManager } from "mobx-keystone";
 import { frozen, FrozenCheckMode, UndoStore } from "mobx-keystone";
 
+import {
+  IncrementingIdGenerator,
+  serializeComponentSpecToText,
+  YamlDeserializer,
+} from "@/models/componentSpec";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import { getEditorPipelineIdentity } from "@/services/pipelineStorage/types";
 import { componentSpecFromYaml } from "@/utils/yaml";
@@ -80,8 +85,12 @@ export async function loadUndoHistory(
   if (
     yaml !== undefined &&
     (!data.yaml ||
-      JSON.stringify(componentSpecFromYaml(data.yaml)) !==
-        JSON.stringify(componentSpecFromYaml(yaml)))
+      data.yaml !==
+        serializeComponentSpecToText(
+          new YamlDeserializer(new IncrementingIdGenerator()).deserialize(
+            componentSpecFromYaml(yaml),
+          ),
+        ))
   ) {
     return null;
   }

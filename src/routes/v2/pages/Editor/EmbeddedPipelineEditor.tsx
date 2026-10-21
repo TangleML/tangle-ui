@@ -250,6 +250,7 @@ export function EmbeddedPipelineEditor(props: EmbeddedPipelineEditorProps) {
       <LocalPipelineMigration
         pipelineRef={props.pipelineRef}
         projectId={props.projectId}
+        isActive={props.isActive}
         onMigrated={(file) => props.onMigrated?.(file)}
       >
         <EditableEmbeddedPipelineEditor {...props} />

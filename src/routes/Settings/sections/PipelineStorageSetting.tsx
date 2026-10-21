@@ -1,14 +1,21 @@
 import { useState } from "react";
 
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Switch } from "@/components/ui/switch";
 import { Paragraph } from "@/components/ui/typography";
+import useToastNotification from "@/hooks/useToastNotification";
+import { useBackend } from "@/providers/BackendProvider";
 import {
   prefersBrowserPipelineStorage,
   setBrowserPipelineStorage,
 } from "@/services/pipelineStorage/pipelineCreation";
+import { revokePipelineMigrationConsent } from "@/services/pipelineStorage/pipelineMigrationConsent";
 
 export function PipelineStorageSetting() {
+  const { backendUrl } = useBackend();
+  const notify = useToastNotification();
   const localOnly = import.meta.env.VITE_LOCAL_PIPELINES === "true";
   const [enabled, setEnabled] = useState(
     () => localOnly || prefersBrowserPipelineStorage(),
@@ -26,9 +33,9 @@ export function PipelineStorageSetting() {
         aria-describedby="browser-pipeline-storage-description"
       />
       <BlockStack>
-        <label htmlFor="browser-pipeline-storage">
+        <Label htmlFor="browser-pipeline-storage">
           Save new pipelines in this browser
-        </label>
+        </Label>
         <Paragraph
           id="browser-pipeline-storage-description"
           size="sm"
@@ -38,6 +45,26 @@ export function PipelineStorageSetting() {
           backend does not support saving or your account cannot write. Existing
           remote pipelines keep their current location.
         </Paragraph>
+        <Button
+          variant="outline"
+          disabled={!backendUrl}
+          onClick={() => {
+            try {
+              revokePipelineMigrationConsent(backendUrl);
+              notify(
+                "You'll be asked before moving pipelines to this backend.",
+                "success",
+              );
+            } catch {
+              notify(
+                "Unable to update the browser's migration preference.",
+                "error",
+              );
+            }
+          }}
+        >
+          Ask before moving pipelines to this backend
+        </Button>
       </BlockStack>
     </InlineStack>
   );
