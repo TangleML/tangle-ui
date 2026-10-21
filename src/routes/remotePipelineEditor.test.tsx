@@ -223,7 +223,9 @@ describe("remote pipeline editor entry", () => {
       .mockImplementation(() => {});
     try {
       renderEditor(<EditorV2 />);
-      expect(screen.getByRole("alert")).toHaveTextContent("Pipeline not found");
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Unable to load pipeline. Please try again.",
+      );
       expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
       expect(initializeEditing).not.toHaveBeenCalled();
       expect(
@@ -322,7 +324,12 @@ describe("remote pipeline editor entry", () => {
     });
     renderEditor(<EditorV2 />);
     expect(screen.getByRole("alert")).toBeInTheDocument();
-    loadV2.mockReturnValue({ data: { spec: { name: "Recovered pipeline" } } });
+    loadV2.mockReturnValue({
+      data: {
+        spec: { name: "Recovered pipeline" },
+        file: { folder: { driver: { canEdit: false } } },
+      },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
     expect(screen.getByText("Recovered pipeline")).toBeInTheDocument();
     expect(initializeEditing).not.toHaveBeenCalled();
@@ -338,7 +345,10 @@ describe("remote pipeline editor entry", () => {
     expect(screen.getByRole("alert")).toBeInTheDocument();
 
     loadV2.mockReturnValue({
-      data: { spec: { name: "Authenticated pipeline" } },
+      data: {
+        spec: { name: "Authenticated pipeline" },
+        file: { folder: { driver: { canEdit: false } } },
+      },
     });
     localStorage.setItem(
       "jwtToken",
@@ -367,7 +377,10 @@ describe("remote pipeline editor entry", () => {
     expect(screen.getByRole("alert")).toBeInTheDocument();
 
     loadV2.mockReturnValue({
-      data: { spec: { name: "Reauthenticated pipeline" } },
+      data: {
+        spec: { name: "Reauthenticated pipeline" },
+        file: { folder: { driver: { canEdit: false } } },
+      },
     });
     localStorage.setItem("jwtToken", storedAuth);
     fireEvent(window, new StorageEvent("storage", { key: "jwtToken" }));
