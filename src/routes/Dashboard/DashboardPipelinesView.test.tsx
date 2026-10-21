@@ -225,8 +225,10 @@ describe("DashboardPipelinesView remote pipelines", () => {
       pageToken ? createPage(11, 10, null) : createPage(1, 10, "page-two"),
     );
     const { user, searchParams } = await renderDashboard(
-      `${APP_ROUTES.DASHBOARD_PIPELINES}?tab=remote&page=2&panel=compact`,
+      `${APP_ROUTES.DASHBOARD_PIPELINES}?tab=remote&panel=compact`,
     );
+    await screen.findByText("Pipeline 1");
+    await user.click(screen.getByRole("button", { name: "Next" }));
     await screen.findByText("Pipeline 11");
     const table = screen.getByRole("table", { name: "Remote Pipelines" });
     const initialRows = table.textContent;
