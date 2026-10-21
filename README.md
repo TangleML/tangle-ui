@@ -79,13 +79,14 @@ Add these to a `.env` file at the root of `tangle-ui`.
 Vite reads these values at development server startup or build time. Restart the
 development server after changes, or rebuild the frontend for deployment.
 
-| Variable                       | Required             | Description                                                                                                                                                                             |
-| ------------------------------ | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `VITE_BACKEND_API_URL`         | For backend features | URL of your Tangle backend (e.g. `http://127.0.0.1:8000`).                                                                                                                              |
-| `VITE_LOCAL_PIPELINES`         | No                   | `false` by default: use remote storage when a backend is configured; otherwise use local storage. Set to `true` for backends without saved-pipeline support or to keep pipelines local. |
-| `VITE_ARTIFACT_RETENTION_DAYS` | No                   | Number of days artifacts are stored by your backend. When set, the UI shows artifact expiry dates and warns when artifacts may no longer be available.                                  |
-| `VITE_BUGSNAG_API_KEY`         | No                   | Bugsnag API key. Required alongside `VITE_TANGLE_ENV` to enable error reporting.                                                                                                        |
-| `VITE_TANGLE_ENV`              | No                   | Release stage passed to Bugsnag (e.g. `development`, `staging`, `production`).                                                                                                          |
+| Variable                       | Required             | Description                                                                                                                                                                                                                                  |
+| ------------------------------ | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `VITE_BACKEND_API_URL`         | For backend features | URL of your Tangle backend (e.g. `http://127.0.0.1:8000`).                                                                                                                                                                                   |
+| `VITE_REMOTE_PIPELINES`        | No                   | Opt in to remote pipeline storage with `true` on a backend that supports saved pipelines. Unset or `false` keeps new pipelines, imports, and copies in browser storage. Without a configured backend, storage stays local even when enabled. |
+| `VITE_LOCAL_PIPELINES`         | No                   | Legacy override: `true` keeps new pipelines local and hides the remote list, including when `VITE_REMOTE_PIPELINES=true`. Prefer leaving remote storage disabled for local-only deployments.                                                 |
+| `VITE_ARTIFACT_RETENTION_DAYS` | No                   | Number of days artifacts are stored by your backend. When set, the UI shows artifact expiry dates and warns when artifacts may no longer be available.                                                                                       |
+| `VITE_BUGSNAG_API_KEY`         | No                   | Bugsnag API key. Required alongside `VITE_TANGLE_ENV` to enable error reporting.                                                                                                                                                             |
+| `VITE_TANGLE_ENV`              | No                   | Release stage passed to Bugsnag (e.g. `development`, `staging`, `production`).                                                                                                                                                               |
 
 ## App features:
 

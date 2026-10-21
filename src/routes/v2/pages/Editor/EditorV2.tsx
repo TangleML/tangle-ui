@@ -70,6 +70,7 @@ import { EditorMenuBar } from "./components/EditorMenuBar/EditorMenuBar";
 import { EditorTourBridge } from "./components/EditorTourBridge/EditorTourBridge";
 import { EmptyEditorState } from "./components/EmptyEditorState";
 import { FlowCanvas } from "./components/FlowCanvas/FlowCanvas";
+import { RemotePipelineSaveRecovery } from "./components/RemotePipelineSaveRecovery";
 import { RemotePipelineError } from "./components/RemotePipelineView/RemotePipelineError";
 import { RemotePipelineShell } from "./components/RemotePipelineView/RemotePipelineShell";
 import { RemotePipelineView } from "./components/RemotePipelineView/RemotePipelineView";
@@ -250,6 +251,7 @@ function EditorV2Content({
         <ReactFlowProvider>
           <QuickRunSubmitterProvider>
             <EditorMenuBar />
+            <RemotePipelineSaveRecovery />
             <EditorTourBridge />
             <TourSaveExploreDialog />
             <TourSecretsDialog />
@@ -281,7 +283,11 @@ const RemotePipelineDocumentView = withSuspenseWrapper(
     return file.folder.driver.canEdit === true ? (
       <EditorV2Document key={file.initialId} pipelineRef={pipelineRef} />
     ) : (
-      <RemotePipelineView spec={spec} pipelineId={file.remote?.pipelineId} />
+      <RemotePipelineView
+        spec={spec}
+        file={file}
+        pipelineId={file.remote?.pipelineId}
+      />
     );
   },
   RemotePipelineSkeleton,

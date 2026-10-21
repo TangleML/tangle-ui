@@ -140,3 +140,32 @@ describe("getPipelineSpec", () => {
     );
   });
 });
+
+it.each([
+  [404, { detail: "Not Found" }, "unsupported"],
+  [404, { detail: "Pipeline with id pipeline-1 was not found." }, "notFound"],
+  [405, { detail: "Method Not Allowed" }, "unsupported"],
+  [501, undefined, "unsupported"],
+  [503, { detail: "Unavailable" }, "unavailable"],
+])(
+  "distinguishes saved-pipeline failures for HTTP %s",
+  async (status, error, kind) => {
+    vi.mocked(client.get).mockResolvedValue({
+      data: undefined,
+      error,
+      response: new Response(null, { status }),
+    } as never);
+    await expect(getPipelineSpec("pipeline-1")).rejects.toMatchObject({
+      status,
+      kind,
+    });
+  },
+);
+
+it("describes network failures as unavailable rather than unsupported", async () => {
+  vi.mocked(client.get).mockRejectedValue(new TypeError("Failed to fetch"));
+  await expect(getPipelineSpec("pipeline-1")).rejects.toMatchObject({
+    status: 0,
+    kind: "unavailable",
+  });
+});

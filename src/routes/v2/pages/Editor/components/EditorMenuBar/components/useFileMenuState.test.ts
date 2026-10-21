@@ -94,6 +94,7 @@ beforeEach(() => {
   state.file.isDraft = false;
   state.file.draftBackendUrl = undefined;
   vi.stubEnv("VITE_LOCAL_PIPELINES", undefined);
+  vi.stubEnv("VITE_REMOTE_PIPELINES", "true");
   state.configured = true;
   state.save.mockResolvedValue(undefined);
   state.navigate.mockResolvedValue(undefined);

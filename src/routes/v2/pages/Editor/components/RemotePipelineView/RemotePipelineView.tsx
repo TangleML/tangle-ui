@@ -1,6 +1,9 @@
 import { Controls, ReactFlowProvider } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
+import { useEffect, useState } from "react";
 
+import { Button } from "@/components/ui/button";
+import { InlineStack } from "@/components/ui/layout";
 import type { ComponentSpec } from "@/models/componentSpec";
 import { ComponentLibraryProvider } from "@/providers/ComponentLibraryProvider";
 import { RemotePipelineNodeLinkButton } from "@/routes/v2/pages/Editor/components/RemotePipelineNodeLinkButton";
@@ -14,7 +17,10 @@ import {
   SharedStoreProvider,
   useSharedStores,
 } from "@/routes/v2/shared/store/SharedStoreContext";
+import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 
+import { RemotePipelineActions } from "./RemotePipelineActions";
+import { RemotePipelineDetails } from "./RemotePipelineDetails";
 import { RemotePipelineShell } from "./RemotePipelineShell";
 import { remotePipelineViewRegistry } from "./remotePipelineViewRegistry";
 
@@ -62,12 +68,18 @@ const RemotePipelineContent = observer(function RemotePipelineContent({
   spec,
   isActive,
   pipelineId,
+  file,
 }: {
   spec: ComponentSpec;
   isActive: boolean;
   pipelineId?: string;
+  file?: PipelineFile;
 }) {
-  const { navigation } = useSharedStores();
+  const { navigation, editor } = useSharedStores();
+  const [showDetails, setShowDetails] = useState(true);
+  useEffect(() => {
+    if (editor.selectedNodeId) setShowDetails(true);
+  }, [editor.selectedNodeId, editor.contextPanelRevealCount]);
   useReadOnlySpecLifecycle(spec);
   useShortcutListener(isActive);
 
@@ -76,21 +88,42 @@ const RemotePipelineContent = observer(function RemotePipelineContent({
   return (
     <RemotePipelineShell
       name={spec.name || "Untitled pipeline"}
-      actions={pipelineId && <SelectedNodeLink pipelineId={pipelineId} />}
+      actions={
+        <>
+          {pipelineId && <SelectedNodeLink pipelineId={pipelineId} />}
+          <Button
+            variant="header"
+            aria-pressed={showDetails}
+            onClick={() => setShowDetails((shown) => !shown)}
+          >
+            Details
+          </Button>
+          {file && <RemotePipelineActions file={file} />}
+        </>
+      }
     >
       {pipelineId && navigation.rootSpec === spec && (
         <RemotePipelineUrlSync spec={spec} pipelineId={pipelineId} />
       )}
       {activeSpec && (
         <SpecProvider spec={activeSpec}>
-          <ReadOnlyFlowCanvas
-            key={activeSpec.$id}
-            spec={activeSpec}
-            nodesDraggable={false}
-            className="flex-1 min-h-0"
+          <InlineStack
+            className="flex-1 min-h-0 w-full"
+            blockAlign="stretch"
+            wrap="nowrap"
           >
-            <Controls showInteractive={false} />
-          </ReadOnlyFlowCanvas>
+            <ReadOnlyFlowCanvas
+              key={activeSpec.$id}
+              spec={activeSpec}
+              nodesDraggable={false}
+              className="flex-1 min-h-0"
+            >
+              <Controls showInteractive={false} />
+            </ReadOnlyFlowCanvas>
+            {showDetails && (
+              <RemotePipelineDetails ownerId={file?.folder.driver.ownerId} />
+            )}
+          </InlineStack>
         </SpecProvider>
       )}
     </RemotePipelineShell>
@@ -101,10 +134,12 @@ export function RemotePipelineView({
   spec,
   isActive = true,
   pipelineId,
+  file,
 }: {
   spec: ComponentSpec;
   isActive?: boolean;
   pipelineId?: string;
+  file?: PipelineFile;
 }) {
   return (
     <ComponentLibraryProvider>
@@ -115,6 +150,7 @@ export function RemotePipelineView({
               spec={spec}
               isActive={isActive}
               pipelineId={pipelineId}
+              file={file}
             />
           </NodeRegistryProvider>
         </ReactFlowProvider>

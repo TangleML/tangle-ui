@@ -42,6 +42,7 @@ vi.mock("random-words", () => ({ generate: () => ["New", "pipeline"] }));
 beforeEach(() => {
   vi.resetAllMocks();
   vi.stubEnv("VITE_LOCAL_PIPELINES", undefined);
+  vi.stubEnv("VITE_REMOTE_PIPELINES", "true");
   state.v2Enabled = true;
   state.configured = true;
   state.ready = true;

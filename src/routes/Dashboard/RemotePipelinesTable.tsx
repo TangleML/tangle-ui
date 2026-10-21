@@ -17,6 +17,7 @@ import { Text } from "@/components/ui/typography";
 import { useRemotePipelinesPage } from "@/hooks/useRemotePipelinesPage";
 import { useBackend } from "@/providers/BackendProvider";
 import { getDefaultRemoteEditorPath } from "@/routes/editorRoutes";
+import { PipelineSpecApiError } from "@/services/pipelineSpecService";
 import { RemotePipelineQueryKeys } from "@/services/remotePipelineQueryKeys";
 import type { RemotePipelinesPage } from "@/services/remotePipelinesService";
 import { formatDate } from "@/utils/date";
@@ -156,7 +157,11 @@ export function RemotePipelinesTable({
   else if (!available) message = "Pipelines are unavailable.";
   else if (invalidId) message = "Enter a complete pipeline ID to search.";
   else if (isLoading) message = "Loading pipelines…";
-  else if (error) message = "Failed to load pipelines.";
+  else if (error)
+    message =
+      error instanceof PipelineSpecApiError
+        ? error.message
+        : "Failed to load pipelines.";
   else if (pipelines.length === 0) message = "No pipelines found.";
 
   function stopResizing(event: PointerEvent<HTMLDivElement>) {
