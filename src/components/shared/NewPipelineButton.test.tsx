@@ -21,7 +21,7 @@ vi.mock("@tanstack/react-router", () => ({
 }));
 vi.mock("@/components/shared/Settings/useFlags", () => ({
   useFlagValue: () => state.v2Enabled,
-  isFlagEnabled: () => true,
+  isFlagEnabled: () => state.v2Enabled,
 }));
 vi.mock("@/providers/BackendProvider", () => ({
   useBackend: () => ({
@@ -101,15 +101,21 @@ it("requires backend configuration when remote creation is enabled", async () =>
   expect(state.navigate).not.toHaveBeenCalled();
 });
 
-it("requires the V2 editor when remote creation is enabled", () => {
+it("creates a remote draft when the V2 editor flag is disabled", async () => {
   vi.stubEnv("VITE_LOCAL_PIPELINES", undefined);
   state.v2Enabled = false;
   render(<NewPipelineButton />);
   fireEvent.click(screen.getByRole("button"));
-  expect(state.notify).toHaveBeenCalledWith(
-    "Enable the V2 editor to create pipelines.",
-    "error",
-  );
+  await waitFor(() => expect(state.navigate).toHaveBeenCalledOnce());
+  expect(state.notify).not.toHaveBeenCalled();
   expect(state.write).not.toHaveBeenCalled();
-  expect(state.navigate).not.toHaveBeenCalled();
+  expect(state.navigate).toHaveBeenCalledWith({
+    to: "/editor-v2/new/pipeline",
+    state: {
+      newPipeline: {
+        name: "New pipeline",
+        draftId: expect.stringMatching(/^[0-9a-f-]{36}$/),
+      },
+    },
+  });
 });
