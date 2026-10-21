@@ -48,6 +48,18 @@ it("allows a new upload only when the owner path is absent", async () => {
   ).resolves.toBeUndefined();
 });
 
+it("does not start an upload when the lookup route is unsupported", async () => {
+  vi.mocked(client.get).mockResolvedValue({
+    data: undefined,
+    error: { detail: "Not Found" },
+    request: new Request(backendUrl),
+    response: new Response(null, { status: 404 }),
+  });
+  await expect(
+    findRemotePipelineDocumentByPath(backendUrl, filePath),
+  ).rejects.toMatchObject({ kind: "unsupported", status: 404 });
+});
+
 it("preserves non-missing lookup errors instead of proceeding to overwrite", async () => {
   vi.mocked(client.get).mockResolvedValue({
     data: undefined,

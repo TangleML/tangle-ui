@@ -52,7 +52,9 @@ vi.mock("@/routes/v2/shared/components/AppMenuActions", () => ({
 }));
 vi.mock("@/api/client.gen", () => ({ client: { get: vi.fn(), put: vi.fn() } }));
 vi.mock("@/api/sdk.gen", () => ({ getCurrentUserApiUsersMeGet: vi.fn() }));
-vi.mock("@/utils/componentStore", () => ({}));
+vi.mock("@/utils/componentStore", () => ({
+  getAllComponentFilesFromList: async () => [],
+}));
 vi.mock("@/hooks/useToastNotification", () => ({ default: () => vi.fn() }));
 vi.mock("@/providers/BackendProvider", () => ({
   useBackend: () => ({
@@ -175,6 +177,7 @@ vi.mock("./v2/pages/Editor/hooks/useAiChatWindow", () => ({
 }));
 
 beforeEach(() => {
+  vi.stubEnv("VITE_REMOTE_PIPELINES", "true");
   vi.clearAllMocks();
   localStorage.clear();
   vi.spyOn(window, "scrollTo").mockImplementation(() => {});
@@ -268,7 +271,7 @@ it("retains a failed draft edit and changes its URL only after retry succeeds", 
   vi.mocked(client.put).mockRejectedValueOnce(new Error("Backend unavailable"));
   fireEvent.click(screen.getByRole("button", { name: "Edit pipeline" }));
   await waitFor(() =>
-    expect(session.autoSave.error).toBe("Backend unavailable"),
+    expect(session.autoSave.error).toContain("The backend is unavailable"),
   );
   expect(history.location.pathname).toBe(APP_ROUTES.EDITOR_V2_NEW_PIPELINE);
   expect(history.location.search).toBe("");
@@ -286,7 +289,7 @@ it("retains a failed draft when browser storage is enabled before returning to i
   vi.mocked(client.put).mockRejectedValue(new Error("Backend unavailable"));
   fireEvent.click(screen.getByRole("button", { name: "Edit pipeline" }));
   await waitFor(() =>
-    expect(session.autoSave.error).toBe("Backend unavailable"),
+    expect(session.autoSave.error).toContain("The backend is unavailable"),
   );
   const originalFile = session.pipelineFile.activePipelineFile;
   const originalSpec = stores.navigation.rootSpec;

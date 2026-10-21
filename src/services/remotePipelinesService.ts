@@ -4,6 +4,7 @@ import {
   searchPipelinesApiPipelinesSearchPost,
 } from "@/api/remotePipelines/sdk.gen";
 import type { PipelineSummaryResponse } from "@/api/remotePipelines/types.gen";
+import { pipelineApiError } from "@/services/pipelineSpecService";
 import { waitForPendingRemotePipelineDraftWrites } from "@/services/pipelineStorage/drivers/RemotePipelineDraftStorageDriver";
 import { waitForPendingRemotePipelineWrites } from "@/services/pipelineStorage/drivers/RemotePipelineStorageDriver";
 import {
@@ -81,10 +82,16 @@ export async function listRemotePipelines(
       page_token: pageToken,
       ...(filterQuery !== undefined && { filter_query: filterQuery }),
     },
+  }).catch(() => {
+    throw pipelineApiError("Failed to load pipelines", 0);
   });
 
   if (!result.data) {
-    throw new Error(`Failed to load pipelines (${result.response.status})`);
+    throw pipelineApiError(
+      "Failed to load pipelines",
+      result.response?.status ?? 0,
+      result.error,
+    );
   }
 
   return {
