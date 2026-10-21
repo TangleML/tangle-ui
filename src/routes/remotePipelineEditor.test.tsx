@@ -233,12 +233,17 @@ describe("remote pipeline editor entry", () => {
   });
 
   it.each([
-    [401, "Sign in to view this pipeline."],
-    [403, "You don't have access to this pipeline."],
-    [404, "Pipeline not found."],
+    [401, "Sign in, then retry to view this pipeline.", true],
+    [
+      403,
+      "You don't have access to this pipeline. Check your sign-in, then retry.",
+      true,
+    ],
+    [404, "Pipeline not found.", false],
+    [422, "Pipeline not found.", false],
   ])(
-    "keeps navigation available for HTTP %s without offering a futile retry",
-    (status, message) => {
+    "keeps navigation and appropriate recovery available for HTTP %s",
+    (status, message, retryable) => {
       vi.spyOn(console, "error").mockImplementation(() => {});
       route.params = { pipelineId: "pipeline-123" };
       loadV2.mockImplementation(() => {
@@ -253,9 +258,9 @@ describe("remote pipeline editor entry", () => {
       expect(
         screen.getByRole("link", { name: "Back to pipelines" }),
       ).toHaveAttribute("href", "/pipelines");
-      expect(
-        screen.queryByRole("button", { name: "Retry" }),
-      ).not.toBeInTheDocument();
+      expect(Boolean(screen.queryByRole("button", { name: "Retry" }))).toBe(
+        retryable,
+      );
       expect(initializeEditing).not.toHaveBeenCalled();
     },
   );

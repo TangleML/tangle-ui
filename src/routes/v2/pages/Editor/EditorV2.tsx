@@ -15,6 +15,7 @@ import { ComponentEditorProvider } from "@/components/shared/ComponentEditor/Com
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
+import { Button } from "@/components/ui/button";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Paragraph } from "@/components/ui/typography";
 import { useBackend } from "@/providers/BackendProvider";
@@ -227,9 +228,11 @@ function RemotePipelineEditor({ pipelineId }: { pipelineId: string }) {
           <Paragraph role="alert">
             Configure a backend to open pipelines.
           </Paragraph>
-          <RouterLink to={APP_ROUTES.SETTINGS_BACKEND}>
-            Backend settings
-          </RouterLink>
+          <Button asChild variant="outline">
+            <RouterLink to={APP_ROUTES.SETTINGS_BACKEND}>
+              Backend settings
+            </RouterLink>
+          </Button>
         </BlockStack>
       </RemotePipelineShell>
     );
