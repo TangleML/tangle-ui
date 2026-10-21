@@ -337,11 +337,20 @@ function RemotePipelineEditor({
 }: {
   pipeline:
     | { source: "remote"; pipelineId: string }
-    | { source: "draft"; name: string; draftId: string };
+    | {
+        source: "draft";
+        name: string;
+        draftId: string;
+        storage?: "local" | "remote";
+      };
 }) {
   const { backendUrl, ready, configured } = useBackend();
   if (!ready) return <RemotePipelineSkeleton />;
-  if (pipeline.source === "draft" && createsLocalPipelines(configured)) {
+  if (
+    pipeline.source === "draft" &&
+    (pipeline.storage === "local" ||
+      (pipeline.storage === undefined && createsLocalPipelines(configured)))
+  ) {
     return (
       <CreateLocalPipeline name={pipeline.name} draftId={pipeline.draftId} />
     );
