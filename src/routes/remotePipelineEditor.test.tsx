@@ -333,7 +333,7 @@ describe("remote pipeline editor entry", () => {
           </button>
         ),
       );
-      render(<View />);
+      renderEditor(<View />);
       fireEvent.click(screen.getByRole("button", { name: "Finish migration" }));
       expect(navigate).toHaveBeenCalledWith(
         expect.objectContaining({
