@@ -37,11 +37,7 @@ export async function savePipelineAs(
   const componentText = componentSpecToYaml(serialized);
 
   if (sourceFile?.remote) {
-    return storage.createRemotePipeline(
-      sourceFile.remote.backendUrl,
-      newName,
-      componentText,
-    );
+    return storage.copyRemotePipeline(sourceFile, newName, componentText);
   }
   return storage.rootFolder.addFile(newName, componentText);
 }

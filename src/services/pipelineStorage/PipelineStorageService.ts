@@ -57,6 +57,18 @@ export class PipelineStorageService {
     );
   }
 
+  async copyRemotePipeline(
+    source: PipelineFile,
+    name: string,
+    content: string,
+  ): Promise<PipelineFile> {
+    const driver = source.folder.driver;
+    if (!(driver instanceof RemotePipelineStorageDriver)) {
+      throw new Error("The source pipeline is not a remote document.");
+    }
+    return remoteFile(await driver.copy(name, content));
+  }
+
   async findPipelineById(id: string): Promise<PipelineFile> {
     const entry = await findById(id);
     if (!entry) {

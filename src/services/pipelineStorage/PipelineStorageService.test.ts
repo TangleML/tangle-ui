@@ -246,6 +246,60 @@ describe("PipelineStorageService editor resolution", () => {
     });
   });
 
+  it.each([owner.id, "another-author@example.com"])(
+    "copies remote task and run metadata while applying current edits (source owner: %s)",
+    async (sourceOwner) => {
+      const sourceDocument = {
+        ...structuredClone(document),
+        user_id: sourceOwner,
+        root_pipeline_task: {
+          ...structuredClone(document.root_pipeline_task),
+          arguments: {
+            greeting: "hello",
+            token: { secret: { name: "example-token" } },
+          },
+          executionOptions: { retryStrategy: { maxRetries: 2 } },
+        },
+      };
+      vi.mocked(client.get).mockResolvedValue(response(sourceDocument));
+      const source = await storage.resolvePipeline(ref);
+      const copiedTask = {
+        ...sourceDocument.root_pipeline_task,
+        componentRef: { spec: { ...editedSpec, name: "Copy" } },
+      };
+      vi.mocked(client.put).mockImplementation(async (options) => {
+        const filePath = options?.query?.file_path;
+        if (typeof filePath !== "string") throw new Error("Missing file path");
+        return response({
+          ...document,
+          id: "copied-pipeline",
+          file_path: filePath,
+          root_pipeline_task: copiedTask,
+        });
+      });
+
+      const copy = await storage.copyRemotePipeline(source, "Copy", content);
+
+      expect(copy.id).toBe("copied-pipeline");
+      expect(copy.folder.driver.canEdit).toBe(true);
+      expect(client.put).toHaveBeenCalledExactlyOnceWith({
+        baseUrl: ref.backendUrl,
+        url: "/api/users/me/pipelines",
+        query: { file_path: expect.not.stringContaining("original") },
+        body: {
+          root_pipeline_task: copiedTask,
+          pipeline_run_annotations: sourceDocument.pipeline_run_annotations,
+        },
+      });
+      expect(componentSpecFromYaml(await source.read())).toEqual(spec);
+      expect(componentSpecFromYaml(await copy.read())).toEqual({
+        ...editedSpec,
+        name: "Copy",
+      });
+      expect(registry.addEntry).not.toHaveBeenCalled();
+    },
+  );
+
   it("propagates remote errors without resolving a local namesake", async () => {
     vi.mocked(client.get).mockRejectedValue(new Error("Remote unavailable"));
     const legacy = vi.spyOn(RootFolderDbStorageDriver.prototype, "hasKey");

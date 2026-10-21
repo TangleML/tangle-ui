@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { Icon } from "@/components/ui/icon";
 import { Spinner } from "@/components/ui/spinner";
+import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { tracking } from "@/utils/tracking";
@@ -64,34 +65,34 @@ export const AutoSaveIndicator = observer(function AutoSaveIndicator() {
   };
 
   return (
-    <TooltipButton
-      tooltip={tooltipText}
-      aria-label={tooltipText}
-      variant="header"
-      disabled={isSaving}
-      onClick={handleClick}
-      data-testid="auto-save-button"
-      {...tracking("v2.pipeline_editor.auto_save_indicator")}
-    >
-      <div
-        data-saving={isSaving ? "true" : "false"}
-        className="group relative isolate size-4"
+    <>
+      <TooltipButton
+        tooltip={tooltipText}
+        aria-label={tooltipText}
+        variant="header"
+        disabled={isSaving}
+        onClick={handleClick}
+        data-testid="auto-save-button"
+        {...tracking("v2.pipeline_editor.auto_save_indicator")}
       >
-        <SavingLayer>
-          <Spinner size={16} />
-        </SavingLayer>
-        <IdleLayer>
-          <Icon
-            name={error ? "CloudAlert" : "CloudCheck"}
-            className={error ? "text-red-400" : undefined}
-          />
-        </IdleLayer>
-      </div>
-      {error && (
-        <span role="status" className="sr-only">
-          Save failed: {error}
-        </span>
-      )}
-    </TooltipButton>
+        <div
+          data-saving={isSaving ? "true" : "false"}
+          className="group relative isolate size-4"
+        >
+          <SavingLayer>
+            <Spinner size={16} />
+          </SavingLayer>
+          <IdleLayer>
+            <Icon
+              name={error ? "CloudAlert" : "CloudCheck"}
+              className={error ? "text-red-400" : undefined}
+            />
+          </IdleLayer>
+        </div>
+      </TooltipButton>
+      <Text role="status" className="sr-only">
+        {error ? `Save failed: ${error}` : ""}
+      </Text>
+    </>
   );
 });

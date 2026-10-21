@@ -153,20 +153,31 @@ it("keeps a pending save bound to its file without changing the next document's 
 });
 
 it.each(["Original", "Saved intermediate"])(
-  "clears a failed debounced save after restoring %s",
+  "writes restored %s after an uncertain save failure",
   async (restoredName) => {
     const current = pipeline();
     let finish!: () => void;
     const firstWrite = new Promise<void>((resolve) => {
       finish = resolve;
     });
+    let serverYaml = "";
     current.write
-      .mockReturnValueOnce(firstWrite)
-      .mockImplementationOnce(async () => {
+      .mockImplementation(async (yaml) => {
+        serverYaml = yaml;
+      })
+      .mockImplementationOnce(async (yaml) => {
         await firstWrite;
+        serverYaml = yaml;
+      })
+      .mockImplementationOnce(async (yaml) => {
+        await firstWrite;
+        serverYaml = yaml;
         throw new Error("Storage unavailable");
       });
     render(<Editor {...current} />, { wrapper: StrictMode });
+    const status = screen.getByRole("status");
+    expect(status).toBeEmptyDOMElement();
+    expect(screen.getByRole("button")).not.toContainElement(status);
     act(() => current.spec.setName("Saved intermediate"));
     fireEvent.click(screen.getByRole("button"));
     expect(screen.getByRole("button", { name: "Saving..." })).toBeDisabled();
@@ -184,18 +195,16 @@ it.each(["Original", "Saved intermediate"])(
     act(() => current.spec.setName(restoredName));
     fireEvent.click(screen.getByRole("button", { name: /Click to retry/ }));
     await act(() => vi.runAllTimersAsync());
-    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toBe(status);
+    expect(status).toBeEmptyDOMElement();
     expect(
       screen.getByRole("button", { name: /Last saved at|Auto-save enabled/ }),
     ).toBeEnabled();
-    expect(current.write).toHaveBeenCalledTimes(
-      restoredName === "Original" ? 3 : 2,
+    expect(current.write).toHaveBeenCalledTimes(3);
+    expect(current.write).toHaveBeenLastCalledWith(
+      expect.stringContaining(restoredName),
     );
-    if (restoredName === "Original") {
-      expect(current.write).toHaveBeenLastCalledWith(
-        expect.stringContaining("Original"),
-      );
-    }
+    expect(serverYaml).toContain(`name: ${restoredName}`);
   },
 );
 

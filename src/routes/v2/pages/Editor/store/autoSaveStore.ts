@@ -44,6 +44,7 @@ export class AutoSaveStore {
   private spec: ComponentSpec | null = null;
   private file: PipelineFile | null = null;
   private disposeReaction: (() => void) | null = null;
+  private releaseUnloadProtection: (() => void) | null = null;
   private debouncedSave = debounce((yaml: string) => {
     void this.performSave(yaml).catch(() => {});
   }, AUTOSAVE_DEBOUNCE_TIME_MS);
@@ -64,6 +65,7 @@ export class AutoSaveStore {
     this.spec = spec;
     this.file = file;
     this.document = document ?? new DocumentSaveState(this.serializeSpec());
+    this.releaseUnloadProtection = this.document.protectUnsavedChanges();
     this.disposeReaction = reaction(
       () => this.serializeSpec(),
       (yaml) => {
@@ -85,6 +87,8 @@ export class AutoSaveStore {
     });
     this.disposeReaction?.();
     this.disposeReaction = null;
+    this.releaseUnloadProtection?.();
+    this.releaseUnloadProtection = null;
     this.spec = null;
     this.file = null;
     this.document = null;
@@ -134,7 +138,15 @@ export class AutoSaveStore {
       document.pendingCount += 1;
     });
     const write = async () => {
-      await file.write(yaml);
+      try {
+        await file.write(yaml);
+      } catch (error) {
+        // A failed response does not prove that the server rejected the write.
+        runInAction(() => {
+          document.lastSavedYaml = null;
+        });
+        throw error;
+      }
       runInAction(() => {
         document.lastSavedYaml = yaml;
       });

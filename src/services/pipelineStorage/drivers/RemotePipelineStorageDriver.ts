@@ -71,16 +71,45 @@ export class RemotePipelineStorageDriver implements PipelineStorageDriver {
     name: string,
     content: string,
   ): Promise<RemotePipelineStorageDriver> {
+    return this.createCopy({ backendUrl, name, content });
+  }
+
+  private static async createCopy({
+    backendUrl,
+    name,
+    content,
+    source,
+  }: {
+    backendUrl: string;
+    name: string;
+    content: string;
+    source?: SavedPipelineDocument;
+  }): Promise<RemotePipelineStorageDriver> {
     const spec = { ...componentSpecFromYaml(content), name };
     const userId = await getRemotePipelineWriter(backendUrl);
     // Names are labels; a new random path prevents Save As replacing a namesake.
     const filePath = `pipelines/${crypto.randomUUID()}.yaml`;
     const document = await writeRemotePipelineDocument(backendUrl, filePath, {
-      root_pipeline_task: { componentRef: { spec } },
-      pipeline_run_annotations: {},
+      root_pipeline_task: {
+        ...source?.root_pipeline_task,
+        componentRef: { spec },
+      },
+      pipeline_run_annotations: source?.pipeline_run_annotations ?? {},
     });
     assertRemotePipelineOwner(document, userId);
     return new RemotePipelineStorageDriver(backendUrl, document, true);
+  }
+
+  async copy(
+    name: string,
+    content: string,
+  ): Promise<RemotePipelineStorageDriver> {
+    return RemotePipelineStorageDriver.createCopy({
+      backendUrl: this.backendUrl,
+      name,
+      content,
+      source: this.document,
+    });
   }
 
   get name(): string {
