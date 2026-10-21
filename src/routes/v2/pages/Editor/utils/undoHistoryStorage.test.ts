@@ -11,7 +11,8 @@ import {
   Task,
   YamlDeserializer,
 } from "@/models/componentSpec";
-import { componentSpecFromYaml } from "@/utils/yaml";
+import { isGraphImplementation } from "@/utils/componentSpec";
+import { componentSpecFromYaml, componentSpecToYaml } from "@/utils/yaml";
 
 import {
   createUndoStoreWithEvents,
@@ -117,12 +118,13 @@ describe("remote browser history", () => {
     // Formatting changes in the server YAML do not invalidate the history.
     const stored = await loadUndoHistory(key, `# Remote document\n${yaml}`);
     expect(stored).not.toBeNull();
+    if (!stored) throw new Error("Expected saved remote undo history");
     const restored = new YamlDeserializer(
-      new ReplayIdGenerator(stored!.idStack),
+      new ReplayIdGenerator(stored.idStack),
     ).deserialize(componentSpecFromYaml(yaml));
     const manager = undoMiddleware(
       restored,
-      createUndoStoreWithEvents(stored!.undoEvents),
+      createUndoStoreWithEvents(stored.undoEvents),
     );
     manager.undo();
     expect(restored.tasks).toHaveLength(0);
@@ -145,5 +147,32 @@ describe("remote browser history", () => {
     ).toBeNull();
     expect(await loadUndoHistory(key, yaml)).not.toBeNull();
     manager.dispose();
+  });
+
+  it("rejects reordered task maps before restoring positional undo patches", async () => {
+    const spec = new ComponentSpec({ name: "Pipeline" });
+    spec.addTask(new Task({ name: "eval", componentRef: {} }));
+    spec.addTask(new Task({ name: "train", componentRef: {} }));
+    const manager = undoMiddleware(spec);
+    spec.addTask(new Task({ name: "a_new", componentRef: {} }));
+    const yaml = serializeComponentSpecToText(spec);
+    await saveUndoHistory(key, collectIdStack(spec), manager, yaml);
+    manager.dispose();
+
+    const reordered = componentSpecFromYaml(yaml);
+    if (!isGraphImplementation(reordered.implementation))
+      throw new Error("Expected graph implementation");
+    const tasks = reordered.implementation.graph.tasks;
+    reordered.implementation.graph.tasks = Object.fromEntries(
+      Object.entries(tasks).sort(([a], [b]) => a.localeCompare(b)),
+    );
+
+    expect(Object.keys(reordered.implementation.graph.tasks)).not.toEqual(
+      Object.keys(tasks),
+    );
+    expect(await loadUndoHistory(key, yaml)).not.toBeNull();
+    expect(
+      await loadUndoHistory(key, componentSpecToYaml(reordered)),
+    ).toBeNull();
   });
 });

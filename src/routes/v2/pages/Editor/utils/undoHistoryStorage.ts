@@ -2,7 +2,6 @@
  * Todo: move this file to "persistence" layer.
  */
 import Dexie, { type EntityTable } from "dexie";
-import equal from "fast-deep-equal";
 import type { UndoEvent, UndoManager } from "mobx-keystone";
 import { frozen, FrozenCheckMode, UndoStore } from "mobx-keystone";
 
@@ -76,11 +75,12 @@ export async function loadUndoHistory(
   // optional (a pipeline opened but never edited has none).
   if (!data.idStack?.length) return null;
   if (!data.undoEvents) return null;
-  // Another browser may have edited the remote document since this history.
+  // Replay IDs and patches follow task insertion order, even for equal specs.
   if (
     yaml !== undefined &&
     (!data.yaml ||
-      !equal(componentSpecFromYaml(data.yaml), componentSpecFromYaml(yaml)))
+      JSON.stringify(componentSpecFromYaml(data.yaml)) !==
+        JSON.stringify(componentSpecFromYaml(yaml)))
   ) {
     return null;
   }
