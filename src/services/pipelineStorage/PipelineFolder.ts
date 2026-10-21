@@ -255,6 +255,14 @@ async function resolveOrCreateRegistryEntry(
   }
 
   const id = crypto.randomUUID();
-  await addEntry({ id, storageKey, folderId: folder.id });
+  const migration = await pipelineStorageDb.pipeline_migrations.get(
+    `name:${storageKey}`,
+  );
+  await addEntry({
+    id,
+    storageKey,
+    folderId: folder.id,
+    ...(migration && { recreatedAfterMigration: true }),
+  });
   return new PipelineFile({ id, storageKey, folder, ...metadata });
 }

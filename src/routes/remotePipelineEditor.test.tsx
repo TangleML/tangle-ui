@@ -310,6 +310,40 @@ describe("remote pipeline editor entry", () => {
     },
   );
 
+  it.each(["legacy", "V2"])(
+    "clears inaccessible project context after %s migration",
+    (editor) => {
+      const View = editor === "legacy" ? Editor : EditorV2;
+      route.params =
+        editor === "legacy"
+          ? { name: "Local pipeline" }
+          : { pipelineName: "Local pipeline" };
+      route.search = { fileId: "local-1", projectId: "removed-project" };
+      migrateLocal.mockImplementation(
+        ({
+          onMigrated,
+        }: {
+          onMigrated: (
+            file: { id: string },
+            clearProjectContext?: boolean,
+          ) => void;
+        }) => (
+          <button onClick={() => onMigrated({ id: "remote-1" }, true)}>
+            Finish migration
+          </button>
+        ),
+      );
+      render(<View />);
+      fireEvent.click(screen.getByRole("button", { name: "Finish migration" }));
+      expect(navigate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          params: { pipelineId: "remote-1" },
+          search: { projectId: undefined },
+        }),
+      );
+    },
+  );
+
   it("requests legacy local file permission before migration", () => {
     route.params = { name: "Local pipeline" };
     permission.granted = false;

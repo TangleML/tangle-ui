@@ -124,11 +124,12 @@ function mockLocalPipeline(
     spec: unknown;
     remote?: RemotePipelineRef;
   } | null,
+  error: Error | null = null,
 ) {
   vi.mocked(useLocalPipeline).mockReturnValue({
     data: pipeline,
     isPending: false,
-    error: null,
+    error,
   } as unknown as ReturnType<typeof useLocalPipeline>);
 }
 
@@ -322,6 +323,17 @@ describe("ProjectResourcePreview", () => {
         fallbackName: "Churn model",
       },
     } satisfies Partial<ProjectResource>;
+
+    it("shows remote load errors without claiming the pipeline is absent from the browser", () => {
+      mockResource(pointerResource);
+      mockLocalPipeline(null, new Error("Saved pipeline is unavailable"));
+      renderPreview("resource-1");
+      expect(screen.getByText("Cannot show this pipeline")).toBeInTheDocument();
+      expect(
+        screen.getByText("Saved pipeline is unavailable"),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("Not in this browser")).toBeNull();
+    });
 
     it("shows the pipeline as it is stored, not a copy of it", () => {
       mockResource(pointerResource);

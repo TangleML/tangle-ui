@@ -29,8 +29,8 @@ export async function rememberPipelineMigration(
     pipelineStorageDb.pipeline_migrations,
     () =>
       pipelineStorageDb.pipeline_migrations.bulkPut([
-        { key: `id:${local.id}`, remote, name },
-        { key: `name:${local.storageKey}`, remote, name },
+        { key: `id:${local.id}`, localId: local.id, remote, name },
+        { key: `name:${local.storageKey}`, localId: local.id, remote, name },
       ]),
   );
 }

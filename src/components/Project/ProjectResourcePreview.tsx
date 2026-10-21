@@ -206,10 +206,18 @@ function LocalPipelinePreview({
   resource,
   pointer,
 }: LocalPipelinePreviewProps) {
-  const { data: pipeline, isPending } = useLocalPipeline(pointer);
+  const { data: pipeline, isPending, error } = useLocalPipeline(pointer);
 
   if (isPending) {
     return <Loading />;
+  }
+
+  if (error) {
+    return (
+      <InfoBox title="Cannot show this pipeline" variant="warning">
+        {error.message}
+      </InfoBox>
+    );
   }
 
   if (!pipeline) {

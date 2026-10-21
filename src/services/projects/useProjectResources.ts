@@ -34,6 +34,9 @@ export function invalidateProjectResources(
     queryKey: ProjectResourcesQueryKeys.All(projectId),
   });
   void queryClient.invalidateQueries({
+    queryKey: ["projects", "list"],
+  });
+  void queryClient.invalidateQueries({
     queryKey: ProjectsQueryKeys.Id(projectId),
     exact: true,
   });

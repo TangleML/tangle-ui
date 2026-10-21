@@ -7,14 +7,10 @@ import { pipelineStorageDb } from "./db";
 import { RemotePipelineDraftStorageDriver } from "./drivers/RemotePipelineDraftStorageDriver";
 import { RemotePipelineStorageDriver } from "./drivers/RemotePipelineStorageDriver";
 import { RootFolderDbStorageDriver } from "./drivers/RootFolderDbStorageDriver";
-import { movePipelineAssociationsToRemote } from "./pipelineAssociations";
+import { migrateLocalPipelineToRemote } from "./migrateLocalPipelineToRemote";
 import { PipelineFile } from "./PipelineFile";
 import { PipelineFolder } from "./PipelineFolder";
-import {
-  assertPipelineMigrationBackend,
-  findPipelineMigration,
-  rememberPipelineMigration,
-} from "./pipelineMigrations";
+import { findPipelineMigration } from "./pipelineMigrations";
 import { findById, findByStorageKey } from "./pipelineRegistry";
 import {
   type EditorPipelineRef,
@@ -238,51 +234,7 @@ export class PipelineStorageService {
       typeof pipeline === "string"
         ? await this.resolvePipeline({ name: pipeline })
         : pipeline;
-    if (local.remote) {
-      assertPipelineMigrationBackend(local.remote, backendUrl);
-      await onCreated?.(local);
-      return local;
-    }
-    const migration = await findPipelineMigration({
-      name: local.storageKey,
-      fileId: local.id,
-    });
-    if (migration) assertPipelineMigrationBackend(migration.remote, backendUrl);
-    const remote = migration
-      ? remoteFile(await RemotePipelineStorageDriver.open(migration.remote))
-      : await this.createRemotePipeline(
-          backendUrl,
-          local.storageKey,
-          await local.read(),
-          `pipelines/${local.id}.yaml`,
-        );
-    try {
-      await rememberPipelineMigration(
-        local,
-        migration?.remote ?? {
-          source: "remote",
-          backendUrl,
-          pipelineId: remote.id,
-        },
-        remote.storageKey,
-      );
-      await onCreated?.(remote);
-      await movePipelineAssociationsToRemote(local, remote);
-    } catch (cause) {
-      throw new Error(
-        "Pipeline was uploaded, but its saved links could not be updated. The copy in this browser was kept.",
-        { cause },
-      );
-    }
-    try {
-      await local.deleteFile();
-    } catch (cause) {
-      throw new Error(
-        "Pipeline was uploaded, but the copy in this browser could not be removed.",
-        { cause },
-      );
-    }
-    return remote;
+    return migrateLocalPipelineToRemote(this, local, backendUrl, onCreated);
   }
 
   async copyRemotePipeline(

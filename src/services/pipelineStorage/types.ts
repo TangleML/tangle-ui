@@ -40,6 +40,7 @@ export type DriverConfig =
   | GoogleDriveDriverConfig; // google-drive
 
 export interface PipelineRegistryEntry {
+  recreatedAfterMigration?: boolean;
   id: string;
   storageKey: string;
   folderId: string;
@@ -63,7 +64,14 @@ export interface RemotePipelineRef {
   pipelineId: string;
 }
 
+export interface PipelineMigrationAttempt {
+  localId: string;
+  backendUrl: string;
+  content: string;
+}
+
 export interface PipelineMigration {
+  localId?: string;
   key: string;
   remote: RemotePipelineRef;
   name: string;

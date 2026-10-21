@@ -1,5 +1,8 @@
 import { getPipelineDocument } from "@/services/pipelineSpecService";
-import { findPipelineMigration } from "@/services/pipelineStorage/pipelineMigrations";
+import {
+  assertPipelineMigrationBackend,
+  findPipelineMigration,
+} from "@/services/pipelineStorage/pipelineMigrations";
 import {
   findById,
   findByStorageKey,
@@ -76,6 +79,7 @@ async function resolvePointer(
 
 export async function readLocalPipeline(
   pointer: LocalPipelinePointer,
+  backendUrl?: string,
 ): Promise<LocalPipeline | undefined> {
   const names = new Set(
     await getComponentFileNamesFromList(USER_PIPELINES_LIST_NAME),
@@ -101,6 +105,8 @@ export async function readLocalPipeline(
     fileId: pointer.localId,
   });
   if (!migration) return undefined;
+  if (backendUrl !== undefined)
+    assertPipelineMigrationBackend(migration.remote, backendUrl);
   const document = await getPipelineDocument(
     migration.remote.pipelineId,
     migration.remote.backendUrl,

@@ -88,11 +88,11 @@ const Editor = () => {
       <LocalPipelineMigration
         pipelineRef={pipelineRef}
         projectId={projectId}
-        onMigrated={(file) => {
+        onMigrated={(file, clearProjectContext) => {
           void navigate({
             to: APP_ROUTES.EDITOR_V2_REMOTE_PIPELINE,
             params: { pipelineId: file.id },
-            search: { projectId },
+            search: { projectId: clearProjectContext ? undefined : projectId },
             replace: true,
           });
         }}

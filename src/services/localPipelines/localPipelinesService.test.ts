@@ -16,7 +16,10 @@ import {
 
 vi.mock("@/utils/componentStore");
 vi.mock("@/services/pipelineStorage/pipelineRegistry");
-vi.mock("@/services/pipelineStorage/pipelineMigrations", () => ({
+vi.mock("@/services/pipelineStorage/pipelineMigrations", async (original) => ({
+  ...(await original<
+    typeof import("@/services/pipelineStorage/pipelineMigrations")
+  >()),
   findPipelineMigration: vi.fn(),
 }));
 vi.mock("@/services/pipelineSpecService", () => ({
@@ -197,6 +200,18 @@ describe("readLocalPipeline", () => {
       expect(found?.yaml).toContain("value: kept");
     },
   );
+
+  it("rejects a migrated preview on another backend before requesting its document", async () => {
+    held();
+    vi.mocked(findPipelineMigration).mockResolvedValue(migration);
+    await expect(
+      readLocalPipeline(
+        { localName: "Churn model", localId: "id-9" },
+        "https://other.example.com",
+      ),
+    ).rejects.toThrow("Select that backend in Settings");
+    expect(getPipelineDocument).not.toHaveBeenCalled();
+  });
 
   it("keeps a live name-only pipeline ahead of an older migration", async () => {
     held("Churn model");

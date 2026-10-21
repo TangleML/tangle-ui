@@ -1,5 +1,6 @@
 import { beforeEach, expect, it, vi } from "vitest";
 
+import { ProjectResourcesApiError } from "./errors";
 import { moveLocalPipelineResourceToRemote } from "./moveLocalPipelineResourceToRemote";
 import { PIPELINE_RESOURCE_PARAMS } from "./pipelineProjects";
 import {
@@ -48,7 +49,7 @@ beforeEach(() => {
   });
 });
 
-it("replaces matching ID and name references after creating the remote resource with the project label", async () => {
+it("replaces only matching ID references and preserves ambiguous name-only references", async () => {
   vi.mocked(listProjectResources).mockResolvedValue({
     items: [
       localResource,
@@ -74,14 +75,17 @@ it("replaces matching ID and name references after creating the remote resource 
 
   await moveLocalPipelineResourceToRemote("project-1", local, remote);
 
-  expect(createProjectResource).toHaveBeenCalledExactlyOnceWith("project-1", {
-    entity: "pipeline",
-    entityId: remote.id,
-    name: "Project label",
-  });
+  expect(createProjectResource).toHaveBeenCalledExactlyOnceWith(
+    "project-1",
+    {
+      entity: "pipeline",
+      entityId: remote.id,
+      name: "Project label",
+    },
+    undefined,
+  );
   expect(vi.mocked(deleteProjectResource).mock.calls).toEqual([
-    ["project-1", localResource.id],
-    ["project-1", "name-reference"],
+    ["project-1", localResource.id, undefined],
   ]);
 });
 
@@ -100,14 +104,20 @@ it("reuses an existing remote association on a later page", async () => {
 
   await moveLocalPipelineResourceToRemote("project-1", local, remote);
 
-  expect(listProjectResources).toHaveBeenNthCalledWith(2, "project-1", {
-    ...PIPELINE_RESOURCE_PARAMS,
-    pageToken: "page-2",
-  });
+  expect(listProjectResources).toHaveBeenNthCalledWith(
+    2,
+    "project-1",
+    {
+      ...PIPELINE_RESOURCE_PARAMS,
+      pageToken: "page-2",
+    },
+    undefined,
+  );
   expect(createProjectResource).not.toHaveBeenCalled();
   expect(deleteProjectResource).toHaveBeenCalledExactlyOnceWith(
     "project-1",
     localResource.id,
+    undefined,
   );
 });
 
@@ -134,4 +144,69 @@ it("does not attach a pipeline that was not part of the project", async () => {
 
   expect(createProjectResource).not.toHaveBeenCalled();
   expect(deleteProjectResource).not.toHaveBeenCalled();
+});
+
+it("does not delete any resources for an unknown local ID", async () => {
+  await moveLocalPipelineResourceToRemote(
+    "project-1",
+    { id: "", storageKey: local.storageKey },
+    remote,
+  );
+  expect(listProjectResources).not.toHaveBeenCalled();
+  expect(deleteProjectResource).not.toHaveBeenCalled();
+});
+
+it("recovers a concurrent create conflict only after verifying the same remote resource", async () => {
+  vi.mocked(createProjectResource).mockRejectedValue(
+    new ProjectResourcesApiError("Already exists", 409),
+  );
+  vi.mocked(listProjectResources)
+    .mockResolvedValueOnce({
+      items: [localResource],
+      nextPageToken: null,
+      totalCount: 1,
+    })
+    .mockResolvedValueOnce({
+      items: [
+        localResource,
+        resource({ entity: "pipeline", entityId: remote.id }),
+      ],
+      nextPageToken: null,
+      totalCount: 2,
+    });
+  await moveLocalPipelineResourceToRemote(
+    "project-1",
+    local,
+    remote,
+    "https://backend.example.com",
+  );
+  expect(deleteProjectResource).toHaveBeenCalledWith(
+    "project-1",
+    localResource.id,
+    "https://backend.example.com",
+  );
+  expect(listProjectResources).toHaveBeenCalledWith(
+    "project-1",
+    expect.anything(),
+    "https://backend.example.com",
+  );
+});
+
+it("keeps local pointers for an unrelated conflict", async () => {
+  vi.mocked(createProjectResource).mockRejectedValue(
+    new ProjectResourcesApiError("Conflict", 409),
+  );
+  await expect(
+    moveLocalPipelineResourceToRemote("project-1", local, remote),
+  ).rejects.toThrow("Conflict");
+  expect(deleteProjectResource).not.toHaveBeenCalled();
+});
+
+it("accepts an already-removed local pointer when another repair finished first", async () => {
+  vi.mocked(deleteProjectResource).mockRejectedValue(
+    new ProjectResourcesApiError("Gone", 404),
+  );
+  await expect(
+    moveLocalPipelineResourceToRemote("project-1", local, remote),
+  ).resolves.toBeUndefined();
 });
