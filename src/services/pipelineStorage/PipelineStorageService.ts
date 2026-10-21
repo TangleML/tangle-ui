@@ -43,6 +43,7 @@ export class PipelineStorageService {
     {
       ref: RemotePipelineDraftRef;
       file: PipelineFile;
+      filePath: string;
       owners: number;
       discardRequested: boolean;
     }
@@ -60,12 +61,10 @@ export class PipelineStorageService {
     if (isRemotePipelineDraftRef(ref)) {
       const draft = this.remoteDrafts.get(getEditorPipelineIdentity(ref));
       if (draft) {
-        if (draft.file.remote) {
-          assertRemotePipelineAvailable(
-            draft.file.remote.backendUrl,
-            draft.file.remote,
-          );
-        }
+        assertRemotePipelineAvailable(
+          ref.backendUrl,
+          draft.file.remote ?? { filePath: draft.filePath },
+        );
         draft.discardRequested = false;
         return draft.file;
       }
@@ -145,6 +144,7 @@ export class PipelineStorageService {
     this.remoteDrafts.set(getEditorPipelineIdentity(ref), {
       ref,
       file,
+      filePath,
       owners: 0,
       discardRequested: true,
     });

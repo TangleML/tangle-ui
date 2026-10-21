@@ -28,6 +28,7 @@ import { emitPipelineFileChanged } from "./pipelineFileEvents";
 import { findPipelineMigration } from "./pipelineMigrations";
 import * as registry from "./pipelineRegistry";
 import { PipelineStorageService } from "./PipelineStorageService";
+import { withRemotePipelineDeletion } from "./remotePipelineDeletion";
 import { getEditorPipelineIdentity } from "./types";
 
 vi.mock("@/api/client.gen", () => ({
@@ -597,6 +598,29 @@ describe("remote drafts and project attachment", () => {
     const second = storage.createRemoteDraft(draft);
     await second.write(content);
     expect(new Set(paths()).size).toBe(2);
+  });
+
+  it("blocks reopening a draft whose lost creation response is being deleted", async () => {
+    const file = await storage.resolvePipeline(draft);
+    vi.mocked(client.put).mockRejectedValueOnce(new Error("Response lost"));
+    await expect(file.write(content)).rejects.toThrow("Response lost");
+    expect(file.remote).toBeUndefined();
+    const removal = Promise.withResolvers<void>();
+    const deleting = withRemotePipelineDeletion(
+      { ...ref, pipelineId: "unacknowledged-draft" },
+      String(paths()[0]),
+      () => removal.promise,
+    );
+    const failed = expect(deleting).rejects.toThrow("Delete refused");
+    try {
+      await expect(storage.resolvePipeline(draft)).rejects.toThrow(
+        "being deleted",
+      );
+    } finally {
+      removal.reject(new Error("Delete refused"));
+      await failed;
+    }
+    await expect(storage.resolvePipeline(draft)).resolves.toBe(file);
   });
 
   it.each(["response", "permission"])(
