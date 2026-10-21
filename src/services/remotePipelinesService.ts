@@ -6,6 +6,11 @@ import {
 import type { PipelineSummaryResponse } from "@/api/remotePipelines/types.gen";
 import { waitForPendingRemotePipelineDraftWrites } from "@/services/pipelineStorage/drivers/RemotePipelineDraftStorageDriver";
 import { waitForPendingRemotePipelineWrites } from "@/services/pipelineStorage/drivers/RemotePipelineStorageDriver";
+import {
+  RemotePipelineDeletionUncertainError,
+  withRemotePipelineDeletion,
+} from "@/services/pipelineStorage/remotePipelineDeletion";
+import type { RemotePipelineRef } from "@/services/pipelineStorage/types";
 import { getRemotePipelineWriter } from "@/services/remotePipelineEditorService";
 import type { FilterQueryPredicate } from "@/utils/pipelineRunFilterUtils";
 
@@ -92,23 +97,44 @@ export async function deleteRemotePipeline(
   backendUrl: string,
   pipeline: RemotePipeline,
 ): Promise<void> {
-  await Promise.all([
-    waitForPendingRemotePipelineWrites({
-      source: "remote",
-      backendUrl,
-      pipelineId: pipeline.id,
-    }),
-    waitForPendingRemotePipelineDraftWrites(backendUrl, pipeline.file_path),
-  ]);
-  if ((await getRemotePipelineWriter(backendUrl)) !== pipeline.user_id) {
-    throw new Error("You can only delete pipelines that you own.");
-  }
-  const result = await deletePipelineApiUsersMePipelinesDelete({
-    client,
-    baseUrl: backendUrl,
-    query: { file_path: pipeline.file_path },
+  const ref = {
+    source: "remote",
+    backendUrl,
+    pipelineId: pipeline.id,
+  } satisfies RemotePipelineRef;
+  return withRemotePipelineDeletion(ref, pipeline.file_path, async () => {
+    await Promise.all([
+      waitForPendingRemotePipelineWrites(ref, pipeline.file_path),
+      waitForPendingRemotePipelineDraftWrites(backendUrl, pipeline.file_path),
+    ]);
+    if ((await getRemotePipelineWriter(backendUrl)) !== pipeline.user_id) {
+      throw new Error("You can only delete pipelines that you own.");
+    }
+    const result = await deletePipelineApiUsersMePipelinesDelete({
+      client,
+      baseUrl: backendUrl,
+      query: { file_path: pipeline.file_path },
+    }).catch((error) => {
+      throw new RemotePipelineDeletionUncertainError(error);
+    });
+    if (result.response.status === 404) {
+      const current = await listRemotePipelines(
+        backendUrl,
+        undefined,
+        remotePipelineFiltersToQuery({ id: pipeline.id }),
+      ).catch((error) => {
+        throw new RemotePipelineDeletionUncertainError(error);
+      });
+      if (!current.pipelines.length && !current.nextPageToken) return;
+      throw new RemotePipelineDeletionUncertainError();
+    }
+    if (result.response.status >= 500) {
+      throw new RemotePipelineDeletionUncertainError(
+        new Error(`Failed to delete pipeline (${result.response.status})`),
+      );
+    }
+    if (!result.response.ok) {
+      throw new Error(`Failed to delete pipeline (${result.response.status})`);
+    }
   });
-  if (!result.response.ok) {
-    throw new Error(`Failed to delete pipeline (${result.response.status})`);
-  }
 }

@@ -17,6 +17,10 @@ import { PipelineFolder } from "./PipelineFolder";
 import { findPipelineMigration } from "./pipelineMigrations";
 import { findById, findByStorageKey } from "./pipelineRegistry";
 import {
+  assertRemotePipelineAvailable,
+  type RemotePipelineWriteAdmission,
+} from "./remotePipelineDeletion";
+import {
   type EditorPipelineRef,
   getEditorPipelineIdentity,
   isRemotePipelineDraftRef,
@@ -56,6 +60,12 @@ export class PipelineStorageService {
     if (isRemotePipelineDraftRef(ref)) {
       const draft = this.remoteDrafts.get(getEditorPipelineIdentity(ref));
       if (draft) {
+        if (draft.file.remote) {
+          assertRemotePipelineAvailable(
+            draft.file.remote.backendUrl,
+            draft.file.remote,
+          );
+        }
         draft.discardRequested = false;
         return draft.file;
       }
@@ -94,12 +104,13 @@ export class PipelineStorageService {
     const driver = new RemotePipelineDraftStorageDriver(
       ref,
       filePath,
-      (content) =>
+      (content, admission) =>
         this.createRemoteDriver(
           ref.backendUrl,
           componentSpecFromYaml(content).name ?? ref.name,
           content,
           filePath,
+          admission,
         ),
       async (remote) => {
         file.promoteToRemote(remote);
@@ -241,12 +252,14 @@ export class PipelineStorageService {
     name: string,
     content: string,
     filePath?: string,
+    admission?: RemotePipelineWriteAdmission,
   ): Promise<RemotePipelineStorageDriver> {
     return RemotePipelineStorageDriver.create(
       backendUrl,
       name,
       content,
       filePath,
+      admission,
     );
   }
 

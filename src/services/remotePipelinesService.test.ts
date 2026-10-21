@@ -4,6 +4,7 @@ import { client } from "@/api/client.gen";
 import { getCurrentUserApiUsersMeGet } from "@/api/sdk.gen";
 import { RemotePipelineDraftStorageDriver } from "@/services/pipelineStorage/drivers/RemotePipelineDraftStorageDriver";
 import { RemotePipelineStorageDriver } from "@/services/pipelineStorage/drivers/RemotePipelineStorageDriver";
+import type { RemotePipelineRef } from "@/services/pipelineStorage/types";
 import { componentSpecToYaml } from "@/utils/yaml";
 
 import {
@@ -152,6 +153,7 @@ describe("listRemotePipelines", () => {
 });
 
 describe("deleteRemotePipeline", () => {
+  let sequence = 0;
   const owner = { id: pipeline.user_id, permissions: ["read", "write"] };
   const spec = { name: "Edited", implementation: { graph: { tasks: {} } } };
   const document = {
@@ -169,18 +171,24 @@ describe("deleteRemotePipeline", () => {
         name: spec.name,
       },
       pipeline.file_path,
-      (content) =>
+      (content, admission) =>
         RemotePipelineStorageDriver.create(
           BACKEND_URL,
           spec.name,
           content,
           pipeline.file_path,
+          admission,
         ),
       onCreated,
     );
   }
 
   beforeEach(() => {
+    sequence += 1;
+    pipeline.id = `pipeline-${sequence}`;
+    pipeline.file_path = `pipelines/example-${sequence}.yaml`;
+    document.id = pipeline.id;
+    document.file_path = pipeline.file_path;
     vi.mocked(getCurrentUserApiUsersMeGet).mockResolvedValue(response(owner));
     vi.mocked(client.delete).mockResolvedValue(response(undefined, 204));
   });
@@ -197,7 +205,7 @@ describe("deleteRemotePipeline", () => {
       client,
       baseUrl: BACKEND_URL,
       url: "/api/users/me/pipelines",
-      query: { file_path: "pipelines/example.yaml" },
+      query: { file_path: pipeline.file_path },
     });
     expect(client.get).not.toHaveBeenCalled();
   });
@@ -235,7 +243,7 @@ describe("deleteRemotePipeline", () => {
     expect(client.delete).not.toHaveBeenCalled();
   });
 
-  it.each([403, 404, 500])(
+  it.each([403, 422])(
     "reports a failed deletion with HTTP %s",
     async (status) => {
       vi.mocked(client.delete).mockResolvedValue(response(undefined, status));
@@ -246,13 +254,146 @@ describe("deleteRemotePipeline", () => {
     },
   );
 
-  it("propagates a connection failure", async () => {
-    const error = new Error("Connection failed");
-    vi.mocked(client.delete).mockRejectedValue(error);
+  it.each([500, 502, 503, 504])(
+    "keeps writes blocked after an ambiguous HTTP %s deletion response",
+    async (status) => {
+      vi.mocked(client.get).mockResolvedValue(response(document));
+      const driver = await RemotePipelineStorageDriver.open({
+        source: "remote",
+        backendUrl: BACKEND_URL,
+        pipelineId: pipeline.id,
+      });
+      vi.mocked(client.delete).mockResolvedValueOnce(
+        response(undefined, status),
+      );
+      await expect(deleteRemotePipeline(BACKEND_URL, pipeline)).rejects.toThrow(
+        "deletion result is unknown",
+      );
+      await expect(
+        driver.write(spec.name, componentSpecToYaml(spec)),
+      ).rejects.toThrow("deletion result is unknown");
+      expect(client.put).not.toHaveBeenCalled();
+    },
+  );
 
-    await expect(deleteRemotePipeline(BACKEND_URL, pipeline)).rejects.toBe(
-      error,
+  it("confirms absence through active search when DELETE returns 404", async () => {
+    vi.mocked(client.delete).mockResolvedValueOnce(response(undefined, 404));
+    vi.mocked(client.post).mockResolvedValueOnce(
+      response({ pipelines: [], next_page_token: null }),
     );
+    await expect(
+      deleteRemotePipeline(BACKEND_URL, pipeline),
+    ).resolves.toBeUndefined();
+    expect(client.post).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseUrl: BACKEND_URL,
+        body: expect.objectContaining({
+          filter_query: remotePipelineFiltersToQuery({ id: pipeline.id }),
+        }),
+      }),
+    );
+    await expect(
+      RemotePipelineStorageDriver.create(
+        BACKEND_URL,
+        spec.name,
+        componentSpecToYaml(spec),
+        pipeline.file_path,
+      ),
+    ).rejects.toThrow("was deleted");
+  });
+
+  it.each(["still present", "search unavailable"])(
+    "retains uncertainty after DELETE404 when the pipeline is %s",
+    async (reason) => {
+      vi.mocked(client.get).mockResolvedValue(response(document));
+      const driver = await RemotePipelineStorageDriver.open({
+        source: "remote",
+        backendUrl: BACKEND_URL,
+        pipelineId: pipeline.id,
+      });
+      vi.mocked(client.delete).mockResolvedValueOnce(response(undefined, 404));
+      if (reason === "still present")
+        vi.mocked(client.post).mockResolvedValueOnce(
+          response({ pipelines: [pipeline], next_page_token: null }),
+        );
+      else
+        vi.mocked(client.post).mockResolvedValueOnce(response(undefined, 503));
+      await expect(deleteRemotePipeline(BACKEND_URL, pipeline)).rejects.toThrow(
+        "deletion result is unknown",
+      );
+      await expect(
+        driver.write(spec.name, componentSpecToYaml(spec)),
+      ).rejects.toThrow("deletion result is unknown");
+      expect(client.put).not.toHaveBeenCalled();
+    },
+  );
+
+  it("blocks writes after a lost DELETE response and permits a retry to confirm absence", async () => {
+    vi.mocked(client.get).mockResolvedValue(response(document));
+    const driver = await RemotePipelineStorageDriver.open({
+      source: "remote",
+      backendUrl: BACKEND_URL,
+      pipelineId: pipeline.id,
+    });
+    const error = new Error("Connection failed");
+    vi.mocked(client.delete).mockRejectedValueOnce(error);
+
+    await expect(
+      deleteRemotePipeline(BACKEND_URL, pipeline),
+    ).rejects.toMatchObject({
+      message: expect.stringContaining("deletion result is unknown"),
+      cause: error,
+    });
+    await expect(
+      driver.write(spec.name, componentSpecToYaml(spec)),
+    ).rejects.toThrow("deletion result is unknown");
+    vi.mocked(client.delete).mockResolvedValueOnce(response(undefined, 503));
+    await expect(deleteRemotePipeline(BACKEND_URL, pipeline)).rejects.toThrow(
+      "deletion result is unknown",
+    );
+    await expect(
+      driver.write(spec.name, componentSpecToYaml(spec)),
+    ).rejects.toThrow("deletion result is unknown");
+    vi.mocked(client.delete).mockResolvedValueOnce(response(undefined, 404));
+    vi.mocked(client.post).mockResolvedValueOnce(
+      response({ pipelines: [], next_page_token: null }),
+    );
+    await expect(
+      deleteRemotePipeline(BACKEND_URL, pipeline),
+    ).resolves.toBeUndefined();
+    await expect(
+      driver.write(spec.name, componentSpecToYaml(spec)),
+    ).rejects.toThrow("was deleted");
+    expect(client.put).not.toHaveBeenCalled();
+  });
+
+  it("waits for an admitted fixed-path creation retry before deleting", async () => {
+    const permission =
+      Promise.withResolvers<ReturnType<typeof response<typeof owner>>>();
+    vi.mocked(getCurrentUserApiUsersMeGet).mockReturnValueOnce(
+      permission.promise,
+    );
+    vi.mocked(client.put).mockResolvedValue(response(document));
+    const creation = RemotePipelineStorageDriver.create(
+      BACKEND_URL,
+      spec.name,
+      componentSpecToYaml(spec),
+      pipeline.file_path,
+    );
+    const deleting = deleteRemotePipeline(BACKEND_URL, pipeline);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(client.put).not.toHaveBeenCalled();
+      expect(client.delete).not.toHaveBeenCalled();
+    } finally {
+      permission.resolve(response(owner));
+      await Promise.all([creation, deleting]);
+    }
+    expect(client.put).toHaveBeenCalledOnce();
+    expect(client.delete).toHaveBeenCalledOnce();
+    expect(
+      vi.mocked(client.delete).mock.invocationCallOrder[0],
+    ).toBeGreaterThan(vi.mocked(client.put).mock.invocationCallOrder[0]);
   });
 
   it("waits for an in-flight editor save before checking ownership and deleting", async () => {
@@ -264,14 +405,23 @@ describe("deleteRemotePipeline", () => {
     });
     const pendingSave =
       Promise.withResolvers<ReturnType<typeof response<typeof document>>>();
+    let saveCompleted = false;
+    vi.mocked(client.delete).mockImplementation(async () => {
+      expect(saveCompleted).toBe(true);
+      return response(undefined, 204);
+    });
     vi.mocked(client.put).mockReturnValue(pendingSave.promise);
-    const saving = driver.write("Edited", componentSpecToYaml(spec));
+    const saving = driver
+      .write("Edited", componentSpecToYaml(spec))
+      .then(() => {
+        saveCompleted = true;
+      });
     await vi.waitFor(() => expect(client.put).toHaveBeenCalledOnce());
     vi.mocked(getCurrentUserApiUsersMeGet).mockClear();
     const deleting = deleteRemotePipeline(BACKEND_URL, pipeline);
 
     try {
-      await Promise.resolve();
+      await new Promise((resolve) => setTimeout(resolve, 0));
       expect(getCurrentUserApiUsersMeGet).not.toHaveBeenCalled();
       expect(client.delete).not.toHaveBeenCalled();
     } finally {
@@ -279,6 +429,78 @@ describe("deleteRemotePipeline", () => {
     }
     await Promise.all([saving, deleting]);
     expect(client.delete).toHaveBeenCalledOnce();
+  });
+
+  it("blocks new opens, saves, renames, and duplicate deletes while draining an admitted save", async () => {
+    vi.mocked(client.get).mockResolvedValue(response(document));
+    const ref = {
+      source: "remote",
+      backendUrl: BACKEND_URL,
+      pipelineId: pipeline.id,
+    } satisfies RemotePipelineRef;
+    const driver = await RemotePipelineStorageDriver.open(ref);
+    const pending =
+      Promise.withResolvers<ReturnType<typeof response<typeof document>>>();
+    vi.mocked(client.put).mockReturnValue(pending.promise);
+    const saving = driver.write(spec.name, componentSpecToYaml(spec));
+    await vi.waitFor(() => expect(client.put).toHaveBeenCalledOnce());
+    const deleting = deleteRemotePipeline(BACKEND_URL, pipeline);
+    try {
+      await expect(RemotePipelineStorageDriver.open(ref)).rejects.toThrow(
+        "being deleted",
+      );
+      await expect(
+        driver.write(spec.name, componentSpecToYaml(spec)),
+      ).rejects.toThrow("being deleted");
+      await expect(driver.rename(spec.name, "Renamed")).rejects.toThrow(
+        "being deleted",
+      );
+      await expect(deleteRemotePipeline(BACKEND_URL, pipeline)).rejects.toThrow(
+        "being deleted",
+      );
+      expect(client.get).toHaveBeenCalledOnce();
+      expect(client.put).toHaveBeenCalledOnce();
+      expect(client.delete).not.toHaveBeenCalled();
+    } finally {
+      pending.resolve(response(document));
+      await Promise.all([saving, deleting]);
+    }
+    await expect(
+      driver.write(spec.name, componentSpecToYaml(spec)),
+    ).rejects.toThrow("was deleted");
+    await expect(RemotePipelineStorageDriver.open(ref)).rejects.toThrow(
+      "was deleted",
+    );
+    await expect(
+      RemotePipelineStorageDriver.create(
+        BACKEND_URL,
+        spec.name,
+        componentSpecToYaml(spec),
+        pipeline.file_path,
+      ),
+    ).rejects.toThrow("was deleted");
+    expect(client.put).toHaveBeenCalledOnce();
+    expect(client.delete).toHaveBeenCalledOnce();
+  });
+
+  it("releases the write barrier after deletion fails", async () => {
+    vi.mocked(client.get).mockResolvedValue(response(document));
+    vi.mocked(client.put).mockResolvedValue(response(document));
+    const driver = await RemotePipelineStorageDriver.open({
+      source: "remote",
+      backendUrl: BACKEND_URL,
+      pipelineId: pipeline.id,
+    });
+    vi.mocked(client.delete).mockResolvedValueOnce(response(undefined, 403));
+    await expect(deleteRemotePipeline(BACKEND_URL, pipeline)).rejects.toThrow(
+      "403",
+    );
+    await expect(
+      driver.write(spec.name, componentSpecToYaml(spec)),
+    ).resolves.toBeUndefined();
+    await expect(
+      deleteRemotePipeline(BACKEND_URL, pipeline),
+    ).resolves.toBeUndefined();
   });
 
   it.each(["creation response", "project attachment"])(
@@ -308,6 +530,12 @@ describe("deleteRemotePipeline", () => {
       const deleting = deleteRemotePipeline(BACKEND_URL, pipeline);
 
       try {
+        await expect(
+          draft.write(spec.name, componentSpecToYaml(spec)),
+        ).rejects.toThrow("being deleted");
+        await expect(draft.rename(spec.name, "Too late")).rejects.toThrow(
+          "being deleted",
+        );
         await new Promise((resolve) => setTimeout(resolve, 0));
         expect(client.delete).not.toHaveBeenCalled();
       } finally {
@@ -317,6 +545,9 @@ describe("deleteRemotePipeline", () => {
       }
       expect(client.put).toHaveBeenCalledTimes(3);
       expect(client.delete).toHaveBeenCalledOnce();
+      await expect(
+        draft.write(spec.name, componentSpecToYaml(spec)),
+      ).rejects.toThrow("was deleted");
       expect(
         vi.mocked(client.delete).mock.invocationCallOrder[0],
       ).toBeGreaterThan(

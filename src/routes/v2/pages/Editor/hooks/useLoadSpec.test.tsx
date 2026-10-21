@@ -16,6 +16,10 @@ import { AutoSaveStore } from "@/routes/v2/pages/Editor/store/autoSaveStore";
 import { UndoStore } from "@/routes/v2/pages/Editor/store/undoStore";
 import { promoteRemoteDraftQuery } from "@/routes/v2/pages/Editor/utils/promoteRemoteDraftQuery";
 import {
+  assertRemotePipelineAvailable,
+  withRemotePipelineDeletion,
+} from "@/services/pipelineStorage/remotePipelineDeletion";
+import {
   type EditorPipelineRef,
   getEditorPipelineIdentity,
 } from "@/services/pipelineStorage/types";
@@ -137,6 +141,41 @@ afterEach(() => {
 });
 
 describe("useLoadSpec", () => {
+  it("keeps a deleted document's unsaved model available when its editor reopens", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const ref = { ...remote, pipelineId: "deleted-dirty-editor" };
+    const write = vi.fn(async () => {
+      assertRemotePipelineAvailable(ref.backendUrl, ref);
+      throw new Error("Save unavailable");
+    });
+    resolvePipeline.mockResolvedValue({ ...file("Original", ref), write });
+    const opened = render(view(ref, true));
+    await screen.findByText("Original");
+    fireEvent.click(screen.getByText("Edit"));
+    fireEvent.click(screen.getByText("Save"));
+    await screen.findByText("Save unavailable");
+
+    await act(async () => {
+      await withRemotePipelineDeletion(
+        ref,
+        "pipelines/deleted-dirty-editor.yaml",
+        async () => {},
+      );
+    });
+    await screen.findByText(
+      "This pipeline was deleted. Save a copy to keep your changes.",
+    );
+    expect(screen.getByText("Unsaved edit")).toBeInTheDocument();
+    await act(async () => opened.unmount());
+
+    render(view(ref, true));
+    await screen.findByText("Unsaved edit");
+    await screen.findByText(
+      "This pipeline was deleted. Save a copy to keep your changes.",
+    );
+    expect(resolvePipeline).toHaveBeenCalledExactlyOnceWith(ref);
+  });
+
   it("keeps new draft undo history when a promoted document starts another editor session", async () => {
     const draft = {
       source: "draft",

@@ -1,5 +1,9 @@
 import { defaultPipelineYamlWithName } from "@/utils/constants";
 
+import {
+  admitRemotePipelineWrite,
+  type RemotePipelineWriteAdmission,
+} from "../remotePipelineDeletion";
 import type {
   PipelineFileDescriptor,
   PipelineStorageDriver,
@@ -46,6 +50,7 @@ export class RemotePipelineDraftStorageDriver implements PipelineStorageDriver {
     private filePath: string,
     private createRemote: (
       content: string,
+      admission: RemotePipelineWriteAdmission,
     ) => Promise<RemotePipelineStorageDriver>,
     private onCreated: (
       remote: RemotePipelineRef,
@@ -67,11 +72,11 @@ export class RemotePipelineDraftStorageDriver implements PipelineStorageDriver {
   write(storageKey: string, content: string): Promise<void> {
     // Keep the same path across failures, including a lost creation response.
     // Serialize all writes, even ones queued while creation is in flight.
-    return this.enqueue(async () => {
+    return this.enqueue(async (admission) => {
       if (this.remote && (this.notified || content !== this.savedContent)) {
-        await this.remote.write(storageKey, content);
+        await this.remote.write(storageKey, content, admission);
       } else if (!this.remote) {
-        this.remote = await this.createRemote(content);
+        this.remote = await this.createRemote(content, admission);
       }
       this.savedContent = content;
       if (!this.notified) {
@@ -86,17 +91,28 @@ export class RemotePipelineDraftStorageDriver implements PipelineStorageDriver {
   }
 
   rename(oldStorageKey: string, newStorageKey: string): Promise<void> {
-    return this.enqueue(async () => {
+    return this.enqueue(async (admission) => {
       if (this.remote) {
-        await this.remote.rename(oldStorageKey, newStorageKey);
+        await this.remote.rename(oldStorageKey, newStorageKey, admission);
       } else {
         this.ref = { ...this.ref, name: newStorageKey };
       }
     });
   }
 
-  private enqueue(operation: () => Promise<void>): Promise<void> {
-    this.pending = this.pending.catch(() => {}).then(operation);
+  private async enqueue(
+    operation: (admission: RemotePipelineWriteAdmission) => Promise<void>,
+  ): Promise<void> {
+    const admission = admitRemotePipelineWrite(
+      this.ref.backendUrl,
+      this.remote ?? { filePath: this.filePath },
+    );
+    this.pending = this.pending
+      .catch(() => {})
+      .then(() => {
+        admission.assertWritable();
+        return operation(admission);
+      });
     const key = JSON.stringify([this.ref.backendUrl, this.filePath]);
     // The outer draft queue must not join the remote write queue it awaits.
     const settled = this.pending
