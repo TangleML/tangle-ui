@@ -10,6 +10,8 @@ import {
 import type { ComponentType } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
+import { PipelineMigrationRecoveryError } from "@/services/pipelineStorage/migrateLocalPipelineToRemote";
+import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import { getAllComponentFilesFromList } from "@/utils/componentStore";
 
 import { PipelineSection } from "./PipelineSection";
@@ -144,6 +146,8 @@ it("prevents duplicate uploads while pending and refreshes the list and selectio
   expect(upload).toHaveBeenCalledExactlyOnceWith(
     "Example",
     "https://example.com",
+    undefined,
+    { keepLocalCopy: true },
   );
 
   vi.mocked(getAllComponentFilesFromList).mockResolvedValue(new Map());
@@ -171,4 +175,22 @@ it("keeps the local row and selection available after upload fails", async () =>
   ).toBeEnabled();
   expect(screen.getByLabelText("Select Example")).toBeChecked();
   expect(notify).toHaveBeenCalledWith("Upload failed", "error");
+});
+
+it("reports a completed upload with retained project links as a warning and keeps the browser row", async () => {
+  const error = new PipelineMigrationRecoveryError(
+    "Pipeline uploaded. Its browser copy was kept because some project links may still need it.",
+    {} as PipelineFile,
+  );
+  upload.mockRejectedValue(error);
+  const button = await renderSection();
+  fireEvent.click(button);
+
+  await waitFor(() =>
+    expect(notify).toHaveBeenCalledWith(error.message, "warning"),
+  );
+  expect(
+    await screen.findByRole("button", { name: "Upload Example" }),
+  ).toBeEnabled();
+  expect(notify).not.toHaveBeenCalledWith("Pipeline uploaded.", "success");
 });

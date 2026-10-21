@@ -30,8 +30,8 @@ import { createEditorV2Routes } from "./editorV2Routes";
 import type { useEditorSession } from "./v2/pages/Editor/store/EditorSessionContext";
 
 const canvas = vi.hoisted(() => ({ mounts: 0, unmounts: 0 }));
-const chat = vi.hoisted(() => ({ mounts: 0, threads: [{ abort: vi.fn() }] }));
 const flags = vi.hoisted(() => ({ v2Editor: true }));
+const chat = vi.hoisted(() => ({ mounts: 0, threads: [{ abort: vi.fn() }] }));
 let session: ReturnType<typeof useEditorSession>;
 const storage = new PipelineStorageService();
 const queryClient = new QueryClient({
@@ -294,6 +294,29 @@ it("starts a separate unsaved pipeline when New is used again at the same URL", 
   expect(client.put).toHaveBeenCalledOnce();
 });
 
+it("opens remote pipelines when the V2 editor flag is disabled", async () => {
+  flags.v2Editor = false;
+  vi.mocked(client.get).mockResolvedValue({
+    data: {
+      id: pipelineId,
+      user_id: "user",
+      file_path: "pipelines/remote.yaml",
+      root_pipeline_task: {
+        componentRef: {
+          spec: {
+            name: "Remote pipeline",
+            implementation: { graph: { tasks: {} } },
+          },
+        },
+      },
+      pipeline_run_annotations: {},
+    },
+    response: new Response(null, { status: 200 }),
+  } as Awaited<ReturnType<typeof client.get>>);
+  const { history } = await open(`/editor-v2/pipeline/${pipelineId}`);
+  expect(history.location.pathname).toBe(`/editor-v2/pipeline/${pipelineId}`);
+  expect(client.get).toHaveBeenCalledOnce();
+});
 it("reopens the saved pipeline after leaving during creation and going Back", async () => {
   const { router, history } = await open();
   const draftId = history.location.state.newPipeline?.draftId;
@@ -381,29 +404,6 @@ it("keeps local chat mounted while replacing document undo and save state", asyn
   expect(writeSecond).not.toHaveBeenCalled();
   expect(chat.mounts).toBe(1);
   expect(chat.threads[0].abort).toHaveBeenCalled();
-});
-it("opens remote pipelines when the V2 editor flag is disabled", async () => {
-  flags.v2Editor = false;
-  vi.mocked(client.get).mockResolvedValue({
-    data: {
-      id: pipelineId,
-      user_id: "user",
-      file_path: "pipelines/remote.yaml",
-      root_pipeline_task: {
-        componentRef: {
-          spec: {
-            name: "Remote pipeline",
-            implementation: { graph: { tasks: {} } },
-          },
-        },
-      },
-      pipeline_run_annotations: {},
-    },
-    response: new Response(null, { status: 200 }),
-  } as Awaited<ReturnType<typeof client.get>>);
-  const { history } = await open(`/editor-v2/pipeline/${pipelineId}`);
-  expect(history.location.pathname).toBe(`/editor-v2/pipeline/${pipelineId}`);
-  expect(client.get).toHaveBeenCalledOnce();
 });
 
 it("creates and promotes a new pipeline when the V2 flag is disabled", async () => {

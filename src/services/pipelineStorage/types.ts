@@ -68,6 +68,7 @@ export interface PipelineMigrationAttempt {
   localId: string;
   backendUrl: string;
   content: string;
+  keepLocalCopy?: boolean;
 }
 
 export interface PipelineMigration {

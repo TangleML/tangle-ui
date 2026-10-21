@@ -23,6 +23,10 @@ export class PipelineMigrationRecoveryError extends Error {
   }
 }
 
+export interface PipelineMigrationOptions {
+  keepLocalCopy?: boolean;
+}
+
 const pendingMigrations = new Map<string, Promise<unknown>>();
 
 export async function migrateLocalPipelineToRemote(
@@ -30,6 +34,7 @@ export async function migrateLocalPipelineToRemote(
   local: PipelineFile,
   backendUrl: string,
   onCreated?: (remote: PipelineFile) => Promise<unknown>,
+  options: PipelineMigrationOptions = {},
 ): Promise<PipelineFile> {
   if (local.remote) {
     assertPipelineMigrationBackend(local.remote, backendUrl);
@@ -41,7 +46,7 @@ export async function migrateLocalPipelineToRemote(
   const operation = previous
     .catch(() => undefined)
     .then(() => {
-      const run = () => migrate(storage, local, backendUrl, onCreated);
+      const run = () => migrate(storage, local, backendUrl, onCreated, options);
       return globalThis.navigator?.locks
         ? navigator.locks.request(key, run)
         : run();
@@ -59,6 +64,7 @@ async function migrate(
   local: PipelineFile,
   backendUrl: string,
   onCreated?: (remote: PipelineFile) => Promise<unknown>,
+  options: PipelineMigrationOptions = {},
 ): Promise<PipelineFile> {
   const registration = await findById(local.id);
   if (
@@ -82,6 +88,17 @@ async function migrate(
     attempt = { localId: local.id, backendUrl, content: await local.read() };
     await pipelineStorageDb.pipeline_migration_attempts.put(attempt);
   }
+  if (options.keepLocalCopy && !attempt?.keepLocalCopy) {
+    // Project membership cannot be exhaustively discovered. Keep this policy
+    // across retries and repairs of individual project links.
+    attempt = {
+      localId: local.id,
+      backendUrl,
+      content: attempt?.content ?? (await local.read()),
+      keepLocalCopy: true,
+    };
+    await pipelineStorageDb.pipeline_migration_attempts.put(attempt);
+  }
   const filePath = `pipelines/${local.id}.yaml`;
   const existing = migration
     ? migration.remote
@@ -94,7 +111,12 @@ async function migrate(
           },
       );
   if (!existing) {
-    attempt = { localId: local.id, backendUrl, content: await local.read() };
+    attempt = {
+      ...attempt,
+      localId: local.id,
+      backendUrl,
+      content: await local.read(),
+    };
     await pipelineStorageDb.pipeline_migration_attempts.put(attempt);
   }
   const remote = existing
@@ -132,6 +154,12 @@ async function migrate(
       );
     }
     await movePipelineAssociationsToRemote(local, remote);
+    if (attempt.keepLocalCopy) {
+      throw new PipelineMigrationRecoveryError(
+        "Pipeline uploaded. Its browser copy was kept because some project links may still need it. Open the pipeline from a project to update that project's link.",
+        remote,
+      );
+    }
   } catch (cause) {
     if (cause instanceof PipelineMigrationRecoveryError) throw cause;
     throw new PipelineMigrationRecoveryError(

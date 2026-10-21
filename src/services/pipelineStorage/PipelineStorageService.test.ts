@@ -4,13 +4,21 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { client } from "@/api/client.gen";
 import { getCurrentUserApiUsersMeGet } from "@/api/sdk.gen";
+import { migrateLocalPipelineOnOpen } from "@/components/shared/migrateLocalPipelineOnOpen";
 import { LibraryDB } from "@/providers/ComponentLibraryProvider/libraries/storage";
 import { TourPipelineStorageService } from "@/providers/TourProvider/tourPipelineStorage/TourPipelineStorageService";
 import type { SavedPipelineDocument } from "@/services/pipelineSpecService";
 import { createAndAttachPipeline } from "@/services/projects/createAndAttachPipeline";
 import { pipelineFileTarget } from "@/services/projects/pipelineResource";
-import { getRemotePipelineSavedId } from "@/services/remotePipelineSavedLinks";
+import {
+  createProjectResource,
+  deleteProjectResource,
+  listProjectResources,
+} from "@/services/projects/projectResourcesService";
+import { localPipelineResourceInput } from "@/services/projects/resourceDescriptor";
+import type { ProjectResource } from "@/services/projects/types";
 import { findRemotePipelineDocumentByPath } from "@/services/remotePipelineEditorService";
+import { getRemotePipelineSavedId } from "@/services/remotePipelineSavedLinks";
 import { componentSpecFromYaml, componentSpecToYaml } from "@/utils/yaml";
 
 import { pipelineStorageDb } from "./db";
@@ -37,6 +45,7 @@ vi.mock("@/services/remotePipelineEditorService", async (original) => ({
   findRemotePipelineDocumentByPath: vi.fn(),
 }));
 vi.mock("./pipelineRegistry");
+vi.mock("@/services/projects/projectResourcesService");
 vi.mock("@/utils/localforage", () => ({
   getUseEnv: async () => false,
   getUseRelativePath: async () => false,
@@ -664,6 +673,155 @@ describe("moving local pipelines to remote storage", () => {
         ...(options?.body as Partial<typeof document>),
       }),
     );
+  });
+
+  it("keeps the browser copy when manual Upload cannot establish project coverage", async () => {
+    await expect(
+      storage.moveLocalPipelineToRemote(local, ref.backendUrl, undefined, {
+        keepLocalCopy: true,
+      }),
+    ).rejects.toMatchObject({
+      name: "PipelineMigrationRecoveryError",
+      message: expect.stringContaining("some project links may still need it"),
+      remote: expect.objectContaining({ id: ref.pipelineId }),
+      hasLocalChanges: false,
+    });
+
+    expect(client.put).toHaveBeenCalledOnce();
+    expect(local.deleteFile).not.toHaveBeenCalled();
+    expect(listProjectResources).not.toHaveBeenCalled();
+    expect(createProjectResource).not.toHaveBeenCalled();
+    expect(deleteProjectResource).not.toHaveBeenCalled();
+    expect(
+      await pipelineStorageDb.pipeline_migration_attempts.get(local.id),
+    ).toMatchObject({
+      keepLocalCopy: true,
+      content,
+    });
+  });
+
+  it("retains the browser copy after restart and retries without overwriting the upload", async () => {
+    await expect(
+      storage.moveLocalPipelineToRemote(local, ref.backendUrl, undefined, {
+        keepLocalCopy: true,
+      }),
+    ).rejects.toThrow("browser copy was kept");
+    await pipelineStorageDb.pipeline_registry.put({
+      id: local.id,
+      storageKey: local.storageKey,
+      folderId: local.folder.id,
+    });
+    pipelineStorageDb.close();
+    await pipelineStorageDb.open();
+    const reopened = new PipelineStorageService();
+    const reopenedLocal = new PipelineFile({
+      id: local.id,
+      storageKey: local.storageKey,
+      folder: reopened.rootFolder,
+    });
+    vi.spyOn(reopenedLocal, "read").mockResolvedValue(content);
+    vi.spyOn(reopenedLocal, "deleteFile").mockResolvedValue();
+    vi.mocked(client.get).mockResolvedValue(
+      response({
+        ...document,
+        root_pipeline_task: {
+          componentRef: { spec: { ...spec, description: "Edited remotely" } },
+        },
+      }),
+    );
+
+    const recovered = await migrateLocalPipelineOnOpen(
+      reopened,
+      reopenedLocal,
+      { name: local.storageKey, fileId: local.id },
+      ref.backendUrl,
+    );
+
+    expect(recovered.warning).toContain("browser copy was kept");
+    expect(componentSpecFromYaml(await recovered.file.read()).description).toBe(
+      "Edited remotely",
+    );
+    expect(reopenedLocal.deleteFile).not.toHaveBeenCalled();
+    expect(client.put).toHaveBeenCalledOnce();
+    expect(
+      await pipelineStorageDb.pipeline_migration_attempts.get(local.id),
+    ).toMatchObject({
+      keepLocalCopy: true,
+    });
+  });
+
+  it("repairs one known project without deleting the copy needed by undiscovered project links", async () => {
+    const localResource: ProjectResource = {
+      id: "local-resource",
+      projectId: "known-project",
+      name: local.storageKey,
+      entityId: null,
+      metadata: null,
+      payload: null,
+      createdBy: null,
+      createdAt: new Date(0),
+      updatedAt: new Date(0),
+      ...localPipelineResourceInput({
+        localId: local.id,
+        localName: local.storageKey,
+      }),
+    };
+    const undiscovered = { ...localResource, projectId: "unlisted-project" };
+    const resources = new Map([
+      ["known-project", [localResource]],
+      ["unlisted-project", [undiscovered]],
+    ]);
+    vi.mocked(listProjectResources).mockImplementation(async (projectId) => ({
+      items: resources.get(projectId) ?? [],
+      nextPageToken: null,
+      totalCount: resources.get(projectId)?.length ?? 0,
+    }));
+    vi.mocked(createProjectResource).mockImplementation(
+      async (projectId, input) => {
+        const remoteResource: ProjectResource = {
+          ...localResource,
+          ...input,
+          id: "remote-resource",
+          projectId,
+        };
+        resources.get(projectId)!.push(remoteResource);
+        return remoteResource;
+      },
+    );
+    vi.mocked(deleteProjectResource).mockImplementation(
+      async (projectId, resourceId) => {
+        resources.set(
+          projectId,
+          resources.get(projectId)!.filter(({ id }) => id !== resourceId),
+        );
+      },
+    );
+    await expect(
+      storage.moveLocalPipelineToRemote(local, ref.backendUrl, undefined, {
+        keepLocalCopy: true,
+      }),
+    ).rejects.toThrow("browser copy was kept");
+
+    const recovered = await migrateLocalPipelineOnOpen(
+      storage,
+      local,
+      { name: local.storageKey, fileId: local.id },
+      ref.backendUrl,
+      "known-project",
+    );
+
+    expect(recovered.warning).toContain("browser copy was kept");
+    expect(resources.get("known-project")).toEqual([
+      expect.objectContaining({ entity: "pipeline", entityId: ref.pipelineId }),
+    ]);
+    expect(resources.get("unlisted-project")).toEqual([undiscovered]);
+    expect(listProjectResources).toHaveBeenCalledExactlyOnceWith(
+      "known-project",
+      expect.any(Object),
+      ref.backendUrl,
+    );
+    expect(local.deleteFile).not.toHaveBeenCalled();
+    expect(client.put).toHaveBeenCalledOnce();
   });
 
   it("recovers a lost upload response without overwriting remote edits", async () => {

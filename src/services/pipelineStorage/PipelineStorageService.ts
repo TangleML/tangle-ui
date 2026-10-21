@@ -7,7 +7,10 @@ import { pipelineStorageDb } from "./db";
 import { RemotePipelineDraftStorageDriver } from "./drivers/RemotePipelineDraftStorageDriver";
 import { RemotePipelineStorageDriver } from "./drivers/RemotePipelineStorageDriver";
 import { RootFolderDbStorageDriver } from "./drivers/RootFolderDbStorageDriver";
-import { migrateLocalPipelineToRemote } from "./migrateLocalPipelineToRemote";
+import {
+  migrateLocalPipelineToRemote,
+  type PipelineMigrationOptions,
+} from "./migrateLocalPipelineToRemote";
 import { PipelineFile } from "./PipelineFile";
 import { PipelineFolder } from "./PipelineFolder";
 import { findPipelineMigration } from "./pipelineMigrations";
@@ -229,12 +232,19 @@ export class PipelineStorageService {
     pipeline: string | PipelineFile,
     backendUrl: string,
     onCreated?: (remote: PipelineFile) => Promise<unknown>,
+    options?: PipelineMigrationOptions,
   ): Promise<PipelineFile> {
     const local =
       typeof pipeline === "string"
         ? await this.resolvePipeline({ name: pipeline })
         : pipeline;
-    return migrateLocalPipelineToRemote(this, local, backendUrl, onCreated);
+    return migrateLocalPipelineToRemote(
+      this,
+      local,
+      backendUrl,
+      onCreated,
+      options,
+    );
   }
 
   async copyRemotePipeline(
