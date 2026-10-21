@@ -4,9 +4,12 @@ import type {
   TaskSpec,
 } from "@/utils/componentSpec";
 import { isGraphImplementation } from "@/utils/componentSpec";
+import { normalizeMetadataAnnotations } from "@/utils/normalizeMetadataAnnotations";
 
 type EmbeddedTask = TaskSpec & { componentRef: { spec: ComponentSpec } };
 
+function normalizeTask(task: EmbeddedTask): EmbeddedTask;
+function normalizeTask(task: TaskSpec): TaskSpec;
 function normalizeTask(task: TaskSpec): TaskSpec {
   // Local library records also carry UI and storage metadata. Send only the
   // component reference fields accepted by the backend, even without a spec.
@@ -20,9 +23,9 @@ function normalizeTask(task: TaskSpec): TaskSpec {
 
   // Input values are editor state; configured values belong to the task.
   const values = Object.fromEntries(
-    (spec.inputs ?? [])
-      .filter((input) => input.value !== undefined)
-      .map((input) => [input.name, input.value!]),
+    (spec.inputs ?? []).flatMap((input) =>
+      input.value === undefined ? [] : [[input.name, input.value]],
+    ),
   );
   const args = { ...values, ...task.arguments };
   return {
@@ -34,6 +37,14 @@ function normalizeTask(task: TaskSpec): TaskSpec {
       ...componentRef,
       spec: {
         ...spec,
+        ...(spec.metadata?.annotations && {
+          metadata: {
+            ...spec.metadata,
+            annotations: normalizeMetadataAnnotations(
+              spec.metadata.annotations,
+            ),
+          },
+        }),
         ...(spec.inputs && {
           inputs: spec.inputs.map(({ value: _value, ...input }) => input),
         }),
@@ -76,7 +87,7 @@ export function remotePipelineTaskFromSpec(
     ...(Object.keys(args).length > 0 || previous?.arguments !== undefined
       ? { arguments: args }
       : {}),
-  }) as EmbeddedTask;
+  });
 }
 
 export function editorSpecFromRemoteTask(task: EmbeddedTask): ComponentSpec {

@@ -25,6 +25,7 @@ type ConfirmationDialogProps = {
   title?: string;
   description?: string;
   content?: ReactNode;
+  confirmLabel?: string;
   dismissForeverKey?: string;
   onConfirm: () => void;
   onCancel?: () => void;
@@ -41,6 +42,7 @@ const ConfirmationDialog = ({
   title = defaultTitle,
   description = defaultDescription,
   content,
+  confirmLabel = "Continue",
   dismissForeverKey,
   isOpen,
   onConfirm,
@@ -118,7 +120,7 @@ const ConfirmationDialog = ({
         <AlertDialogFooter>
           <AlertDialogCancel onClick={handleCancel}>Cancel</AlertDialogCancel>
           <AlertDialogAction onClick={handleConfirm} autoFocus>
-            Continue
+            {confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

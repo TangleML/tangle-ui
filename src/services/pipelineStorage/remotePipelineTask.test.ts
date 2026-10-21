@@ -18,6 +18,52 @@ const spec: ComponentSpec = {
 };
 
 describe("remote pipeline task conversion", () => {
+  it("normalizes root and nested annotations without changing the editor spec", () => {
+    const annotations = {
+      revision: 3,
+      enabled: false,
+      tags: ["example"],
+      details: { count: 2 },
+      text: "unchanged",
+      empty: null,
+      missing: undefined,
+    };
+    const input: ComponentSpec = {
+      metadata: { annotations },
+      implementation: {
+        graph: {
+          tasks: {
+            Nested: {
+              componentRef: {
+                spec: {
+                  metadata: { annotations },
+                  implementation: { container: { image: "example:latest" } },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const original = structuredClone(input);
+
+    const saved = remotePipelineTaskFromSpec(input).componentRef.spec;
+    const expected = {
+      revision: "3",
+      enabled: "false",
+      tags: '["example"]',
+      details: '{"count":2}',
+      text: "unchanged",
+    };
+    expect(saved.metadata?.annotations).toEqual(expected);
+    if (!("graph" in saved.implementation)) throw new Error("Expected graph");
+    expect(
+      saved.implementation.graph.tasks.Nested.componentRef.spec?.metadata
+        ?.annotations,
+    ).toEqual(expected);
+    expect(input).toEqual(original);
+  });
+
   it("stores configured values as task arguments and restores them for the editor", () => {
     const original = structuredClone(spec);
     const task = remotePipelineTaskFromSpec(spec);

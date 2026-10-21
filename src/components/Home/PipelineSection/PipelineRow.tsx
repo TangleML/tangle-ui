@@ -250,8 +250,8 @@ const PipelineRow = withSuspenseWrapper(
                   </Button>
                 }
                 title={`Upload "${name}"?`}
-                dismissForeverKey="skip-save-as-remote-pipeline-confirmation"
-                description="After uploading, this pipeline moves to Remote Pipelines."
+                confirmLabel="Upload"
+                description="This pipeline and its configured input values will be saved to the selected backend. Other users with read access to that backend can see them. After uploading, this pipeline moves to Remote Pipelines and its browser copy is removed."
                 onConfirm={onSaveAsRemote}
               />
             )}
