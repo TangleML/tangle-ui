@@ -7,12 +7,8 @@ export interface PipelineCreationDestination {
   backendUrl: string | undefined;
 }
 
-export const remotePipelinesEnabled = () =>
-  import.meta.env.VITE_REMOTE_PIPELINES === "true" &&
-  import.meta.env.VITE_LOCAL_PIPELINES !== "true";
-
 export const createsLocalPipelines = (backendConfigured = true) =>
-  !remotePipelinesEnabled() ||
+  import.meta.env.VITE_LOCAL_PIPELINES === "true" ||
   !backendConfigured ||
   prefersBrowserPipelineStorage();
 

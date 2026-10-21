@@ -91,7 +91,6 @@ beforeEach(() => {
   vi.resetAllMocks();
   activeBackendUrl = backendUrl;
   vi.stubEnv("VITE_LOCAL_PIPELINES", undefined);
-  vi.stubEnv("VITE_REMOTE_PIPELINES", "true");
   localStorage.clear();
   localStorage.setItem(consentKey, "true");
   storage.resolvePipeline.mockResolvedValue(local);

@@ -9,22 +9,23 @@ import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
 import {
   prefersBrowserPipelineStorage,
-  remotePipelinesEnabled,
   setBrowserPipelineStorage,
 } from "@/services/pipelineStorage/pipelineCreation";
 import { revokePipelineMigrationConsent } from "@/services/pipelineStorage/pipelineMigrationConsent";
 
 export function PipelineStorageSetting() {
-  const { backendUrl, configured } = useBackend();
+  const { backendUrl } = useBackend();
   const notify = useToastNotification();
-  const localOnly = !remotePipelinesEnabled();
-  const [enabled, setEnabled] = useState(() => prefersBrowserPipelineStorage());
+  const localOnly = import.meta.env.VITE_LOCAL_PIPELINES === "true";
+  const [enabled, setEnabled] = useState(
+    () => localOnly || prefersBrowserPipelineStorage(),
+  );
   return (
     <InlineStack gap="2" blockAlign="center" wrap="nowrap">
       <Switch
         id="browser-pipeline-storage"
-        checked={localOnly || !configured || enabled}
-        disabled={localOnly || !configured}
+        checked={enabled}
+        disabled={localOnly}
         onCheckedChange={(value) => {
           setBrowserPipelineStorage(value);
           setEnabled(value);
@@ -40,11 +41,9 @@ export function PipelineStorageSetting() {
           size="sm"
           tone="subdued"
         >
-          {localOnly
-            ? "Remote pipeline storage is not enabled for this deployment. New pipelines, imports, and copies are saved in this browser."
-            : !configured
-              ? "New pipelines, imports, and copies are saved in this browser until a backend is configured."
-              : "Use browser storage for new pipelines, imports, and copies when your backend does not support saving or your account cannot write. Existing remote pipelines keep their current location."}
+          Use browser storage for new pipelines, imports, and copies when your
+          backend does not support saving or your account cannot write. Existing
+          remote pipelines keep their current location.
         </Paragraph>
         <Button
           variant="outline"

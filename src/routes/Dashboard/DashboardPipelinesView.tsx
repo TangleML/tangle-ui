@@ -10,7 +10,6 @@ import { Heading, Paragraph } from "@/components/ui/typography";
 import { useBackend } from "@/providers/BackendProvider";
 import { APP_ROUTES } from "@/routes/appRoutes";
 import { useLocalPipelineNames } from "@/services/localPipelines/useLocalPipelines";
-import { remotePipelinesEnabled } from "@/services/pipelineStorage/pipelineCreation";
 
 import { FavoritesPreview } from "./FavoritesPreview";
 import {
@@ -30,7 +29,7 @@ export function DashboardPipelinesView() {
     error,
     refetch,
   } = useLocalPipelineNames();
-  const localBuild = !remotePipelinesEnabled();
+  const localBuild = import.meta.env.VITE_LOCAL_PIPELINES === "true";
   const localOnly = localBuild || !configured;
   const hasLocalPipelines = localNames?.length !== 0;
   const showTabs = !localOnly && hasLocalPipelines;

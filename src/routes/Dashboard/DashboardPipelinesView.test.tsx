@@ -294,7 +294,6 @@ async function renderResizableTable() {
 }
 
 beforeEach(() => {
-  vi.stubEnv("VITE_REMOTE_PIPELINES", "true");
   editorFlags.v2Enabled = true;
   vi.spyOn(window, "scrollTo").mockImplementation(() => {});
   vi.mocked(getRemotePipelineWriter).mockResolvedValue(pipeline.user_id);
@@ -307,7 +306,6 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
-  vi.unstubAllEnvs();
   clients.splice(0).forEach((client) => client.clear());
   vi.restoreAllMocks();
   vi.resetAllMocks();

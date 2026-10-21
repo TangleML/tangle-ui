@@ -54,7 +54,6 @@ function openDashboard() {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.stubEnv("VITE_LOCAL_PIPELINES", undefined);
-  vi.stubEnv("VITE_REMOTE_PIPELINES", "true");
   state.backend = { configured: true, ready: true, available: true };
   state.search = {};
   vi.mocked(listLocalPipelineNames).mockResolvedValue(["Local pipeline"]);
@@ -66,12 +65,11 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-it.each(["local flag", "no backend", "no opt-in"])(
+it.each(["local flag", "no backend"])(
   "shows only local pipelines for %s, even with a remote URL selection",
   async (mode) => {
     if (mode === "local flag") vi.stubEnv("VITE_LOCAL_PIPELINES", "true");
-    else if (mode === "no backend") state.backend.configured = false;
-    else vi.stubEnv("VITE_REMOTE_PIPELINES", undefined);
+    else state.backend.configured = false;
     state.search = { tab: "remote", page: 2, name: "Missing pipeline" };
     openDashboard();
     expect(await screen.findByText("Local pipeline list")).toBeInTheDocument();

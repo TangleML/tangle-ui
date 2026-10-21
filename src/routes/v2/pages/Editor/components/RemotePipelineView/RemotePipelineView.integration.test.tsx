@@ -26,15 +26,6 @@ import { FLEX_NODES_ANNOTATION } from "@/utils/annotationKeys";
 import { RemotePipelineView } from "./RemotePipelineView";
 
 vi.mock("@/routes/router", async () => import("@/routes/appRoutes"));
-vi.mock("@monaco-editor/react", () => ({
-  default: ({
-    defaultValue,
-    options,
-  }: {
-    defaultValue: string;
-    options: { readOnly: boolean };
-  }) => <pre data-read-only={options.readOnly}>{defaultValue}</pre>,
-}));
 vi.mock("@/routes/v2/shared/components/AppMenuActions", () => ({
   AppMenuActions: () => null,
 }));
@@ -128,36 +119,6 @@ it("mounts real task, input, output, and note nodes without an editor session", 
     within(note).getByText("Check the pipeline output."),
   ).toBeInTheDocument();
   expect(within(note).queryByRole("button")).not.toBeInTheDocument();
-
-  const details = screen.getByRole("complementary", {
-    name: "Pipeline details",
-  });
-  await waitFor(() => expect(details).toHaveTextContent("example/processor"));
-  expect(details.querySelector("pre")).toHaveAttribute(
-    "data-read-only",
-    "true",
-  );
-  fireEvent.click(screen.getByRole("button", { name: "Details" }));
-  expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
-  for (const [nodeName, type, config] of [
-    ["Process", "task", "example/processor"],
-    ["Source", "input", "String"],
-    ["Result", "output", "String"],
-  ]) {
-    const node = container.querySelector(
-      `[data-id="${type === "task" ? spec.tasks[0].$id : type === "input" ? spec.inputs[0].$id : spec.outputs[0].$id}"]`,
-    );
-    if (!node) throw new Error(`${type} node did not mount`);
-    fireEvent.click(node);
-    const panel = await screen.findByRole("complementary", {
-      name: "Pipeline details",
-    });
-    expect(within(panel).getByRole("heading")).toHaveTextContent(
-      `${nodeName} — ${type} details`,
-    );
-    await waitFor(() => expect(panel).toHaveTextContent(config));
-    expect(within(panel).queryByRole("textbox")).not.toBeInTheDocument();
-  }
 
   fireEvent.doubleClick(within(note).getByText("Review note"));
   fireEvent.doubleClick(within(note).getByText("Check the pipeline output."));

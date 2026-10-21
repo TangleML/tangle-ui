@@ -1,7 +1,6 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  readonly VITE_REMOTE_PIPELINES?: string;
   readonly VITE_LOCAL_PIPELINES?: string;
   readonly VITE_ENABLE_TANGENT?: string;
   readonly VITE_TANGENT_REMOTE_ENV_TOKEN?: string;

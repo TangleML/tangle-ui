@@ -54,7 +54,6 @@ export async function savePipelineAs(
   newName: string,
   storage: PipelineStorageService,
   sourceFile?: PipelineFile | null,
-  destination?: PipelineCreationDestination,
 ): Promise<PipelineFile | undefined> {
   const componentSpec = navigation.rootSpec;
   if (!componentSpec) return undefined;
@@ -65,9 +64,7 @@ export async function savePipelineAs(
   };
   const componentText = componentSpecToYaml(serialized);
 
-  const configuredBackendUrl = destination
-    ? destination.backendUrl
-    : await getPipelineCreationBackendUrl();
+  const configuredBackendUrl = await getPipelineCreationBackendUrl();
   if (!configuredBackendUrl)
     return storage.rootFolder.addFile(newName, componentText);
   if (sourceFile?.remote)

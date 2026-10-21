@@ -36,7 +36,6 @@ import {
 
 import { DriverPermissionGate } from "./components/DriverPermissionGate";
 import { FlowCanvas } from "./components/FlowCanvas/FlowCanvas";
-import { RemotePipelineSaveRecovery } from "./components/RemotePipelineSaveRecovery";
 import { RemotePipelineView } from "./components/RemotePipelineView/RemotePipelineView";
 import { useComponentLibraryWindow } from "./hooks/useComponentLibraryWindow";
 import { useComponentSearchV2Window } from "./hooks/useComponentSearchV2Window";
@@ -203,7 +202,6 @@ const EditableEmbeddedPipelineEditor = ({
                 <ComponentEditorProvider>
                   <ReactFlowProvider>
                     <ForcedSearchProvider>
-                      <RemotePipelineSaveRecovery />
                       <EmbeddedPipelineEditorCanvas
                         pipelineRef={pipelineRef}
                         isActive={isActive}
@@ -232,9 +230,7 @@ const RemoteEmbeddedPipelineEditor = withSuspenseWrapper(
       data: { spec, file },
     } = useLoadSpec(props.pipelineRef);
     return file.folder.driver.canEdit !== true ? (
-      <RunSubmissionScopeProvider projectId={props.projectId}>
-        <RemotePipelineView spec={spec} file={file} isActive={props.isActive} />
-      </RunSubmissionScopeProvider>
+      <RemotePipelineView spec={spec} isActive={props.isActive} />
     ) : (
       <EditableEmbeddedPipelineEditor {...props} />
     );

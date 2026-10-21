@@ -168,7 +168,6 @@ beforeEach(() => {
   vi.clearAllMocks();
   localStorage.removeItem("jwtToken");
   vi.stubEnv("VITE_LOCAL_PIPELINES", undefined);
-  vi.stubEnv("VITE_REMOTE_PIPELINES", "true");
   route.params = { pipelineName: "pipeline-123" };
   route.search = {};
   route.context = {};
@@ -638,8 +637,6 @@ describe("remote pipeline editor entry", () => {
     ],
     [404, "Pipeline not found.", false],
     [422, "Pipeline not found.", false],
-    [501, "This backend does not support saved pipelines.", false],
-    [503, "The backend is unavailable. Check your connection and retry.", true],
   ])(
     "keeps navigation and appropriate recovery available for HTTP %s",
     (status, message, retryable) => {

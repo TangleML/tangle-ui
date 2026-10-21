@@ -112,7 +112,6 @@ beforeEach(() => {
   );
   localStorage.clear();
   vi.stubEnv("VITE_LOCAL_PIPELINES", undefined);
-  vi.stubEnv("VITE_REMOTE_PIPELINES", "true");
   Object.assign(settings, {
     apiUrl: "",
     useEnv: true,
@@ -142,29 +141,6 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllEnvs();
   vi.restoreAllMocks();
-});
-
-it.each([undefined, "false", "TRUE", "1"])(
-  "keeps creation local unless remote storage is explicitly enabled (%s)",
-  async (flag) => {
-    vi.stubEnv("VITE_REMOTE_PIPELINES", flag);
-    expect(createsLocalPipelines(true)).toBe(true);
-    expect(await getPipelineCreationBackendUrl()).toBeUndefined();
-    await createPipelineFromContent(
-      storage,
-      "Local default",
-      componentSpecToYaml(spec),
-    );
-    expect(localWrites).toHaveLength(1);
-    expect(client.put).not.toHaveBeenCalled();
-    expect(getCurrentUserApiUsersMeGet).not.toHaveBeenCalled();
-  },
-);
-
-it("keeps storage local without a backend even after opting in", async () => {
-  settings.relative = false;
-  expect(createsLocalPipelines(false)).toBe(true);
-  expect(await getPipelineCreationBackendUrl()).toBeUndefined();
 });
 
 it.each([
@@ -524,10 +500,9 @@ it("honors the runtime browser-storage preference for imports", async () => {
 
 it("propagates remote clone failures to the caller", async () => {
   vi.mocked(client.put).mockRejectedValueOnce(new Error("Backend unavailable"));
-  await expect(copyRunToPipeline(storage, spec)).rejects.toMatchObject({
-    kind: "unavailable",
-    status: 0,
-  });
+  await expect(copyRunToPipeline(storage, spec)).rejects.toThrow(
+    "Backend unavailable",
+  );
 });
 
 it("keeps creation usable when browser preference storage is restricted", async () => {
