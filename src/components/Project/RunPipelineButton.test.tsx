@@ -54,7 +54,11 @@ vi.mock(
       showCopyFromRun,
       team,
     }: {
-      onConfirm: (args: Record<string, ArgumentType>, notes: string) => void;
+      onConfirm: (
+        args: Record<string, ArgumentType>,
+        notes: string,
+        teamId: string | undefined,
+      ) => void;
       showCopyFromRun?: boolean;
       team: TeamResolution;
     }) => (
@@ -65,10 +69,22 @@ vi.mock(
       >
         <button
           type="button"
-          onClick={() => onConfirm({ name: "Morgan" }, "why this run")}
+          onClick={() =>
+            onConfirm({ name: "Morgan" }, "why this run", undefined)
+          }
         >
           Submit Run
         </button>
+        {team.status === "active" && (
+          <button
+            type="button"
+            onClick={() =>
+              onConfirm({ name: "Morgan" }, "why this run", team.team.id)
+            }
+          >
+            Submit as the workspace
+          </button>
+        )}
       </div>
     ),
   }),
@@ -178,6 +194,32 @@ describe("RunPipelineButton", () => {
       "42",
       "https://backend.test",
       expect.objectContaining({ notes: "why this run" }),
+      undefined,
+    );
+  });
+
+  it("starts the run as the identity chosen in the dialog", async () => {
+    vi.mocked(useTeamForSubmission).mockReturnValue({
+      status: "active",
+      team: { id: "ml-team@example.com", label: "ML Research", canWrite: true },
+    });
+    renderButton({});
+    const user = userEvent.setup();
+
+    await user.click(runButton());
+    await user.click(
+      screen.getByRole("button", { name: "Submit as the workspace" }),
+    );
+    submit.mock.calls[0][0].onSuccess({ id: 42 });
+
+    expect(submit).toHaveBeenCalledWith(
+      expect.objectContaining({ teamId: "ml-team@example.com" }),
+    );
+    expect(saveAnnotations).toHaveBeenCalledWith(
+      "42",
+      "https://backend.test",
+      expect.objectContaining({ notes: "why this run" }),
+      "ml-team@example.com",
     );
   });
 
