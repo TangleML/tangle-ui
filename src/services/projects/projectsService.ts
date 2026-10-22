@@ -5,6 +5,7 @@ import {
   listProjectsApiProjectsGet,
   updateProjectApiProjectsProjectIdPatch,
 } from "@/api/sdk.gen";
+import { describeErrorBody } from "@/services/requestFailureMessage";
 
 import { ProjectsApiError } from "./errors";
 import { mapDeleteResult, mapProject, mapProjectSummary } from "./mappers";
@@ -67,8 +68,11 @@ export async function createProject(
     },
   });
   if (!result.data) {
+    const reason = describeErrorBody(result.error);
     throw new ProjectsApiError(
-      "Failed to create project",
+      reason
+        ? `Failed to create project: ${reason}`
+        : "Failed to create project",
       result.response.status,
     );
   }

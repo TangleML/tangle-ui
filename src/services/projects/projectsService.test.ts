@@ -233,6 +233,33 @@ describe("projectsService", () => {
     });
   });
 
+  it("says why the backend refused a project", async () => {
+    vi.mocked(apiSdk.createProjectApiProjectsPost).mockResolvedValue({
+      ...createMockApiErrorResponse(422),
+      error: {
+        detail: "Workspace 'Legacy' is no longer accepting new projects.",
+      } as never,
+    });
+
+    await expect(
+      createProject({ workspaceId: "w-retired", name: "P" }),
+    ).rejects.toMatchObject({
+      status: 422,
+      message:
+        "Failed to create project: Workspace 'Legacy' is no longer accepting new projects.",
+    });
+  });
+
+  it("falls back to a plain failure when the refusal explains nothing", async () => {
+    vi.mocked(apiSdk.createProjectApiProjectsPost).mockResolvedValue(
+      createMockApiErrorResponse(503),
+    );
+
+    await expect(
+      createProject({ workspaceId: "w1", name: "P" }),
+    ).rejects.toMatchObject({ message: "Failed to create project" });
+  });
+
   it("throws ProjectsApiError with status on non-2xx", async () => {
     vi.mocked(apiSdk.getProjectApiProjectsProjectIdGet).mockResolvedValue(
       createMockApiErrorResponse(404),
