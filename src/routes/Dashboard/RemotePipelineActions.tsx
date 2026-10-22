@@ -123,6 +123,15 @@ export function RemotePipelineActions({
               if (queryClient.isMutating({ mutationKey, exact: true })) return;
               deletion.mutate({ backendUrl, pipeline, onDeleted });
             }}
+            onCloseAutoFocus={(event) => {
+              // Keep focus recovered by the table or moved by the user.
+              if (
+                !triggerRef.current?.isConnected ||
+                (document.activeElement !== document.body &&
+                  document.activeElement !== triggerRef.current)
+              )
+                event.preventDefault();
+            }}
           />
         )}
       </InlineStack>

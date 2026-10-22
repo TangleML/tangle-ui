@@ -180,6 +180,11 @@ describe("RemotePipelineActions", () => {
     expect(favorites.removeFavorite).not.toHaveBeenCalled();
     expect(removeRecent).not.toHaveBeenCalled();
     expect(openPipeline).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Delete Saved pipeline" }),
+      ).toHaveFocus(),
+    );
   });
 
   it("blocks repeat actions while deleting and refreshes only this backend after cleanup", async () => {
