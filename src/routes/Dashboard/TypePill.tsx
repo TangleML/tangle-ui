@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import {
   getDefaultEditorPath,
   getDefaultRemoteEditorPath,
-  getLegacyRemotePipelineId,
+  getSavedRemotePipelineId,
 } from "@/routes/editorRoutes";
 import { getProjectHomePath } from "@/routes/projectRoutes";
 import { APP_ROUTES } from "@/routes/router";
@@ -63,7 +63,7 @@ export const TypePill = ({
   className?: string;
 }) => {
   const displayType =
-    type === "pipeline" && id && getLegacyRemotePipelineId(id)
+    type === "pipeline" && id && getSavedRemotePipelineId(id)
       ? "remote-pipeline"
       : type;
   const config = TYPE_CONFIG[displayType];

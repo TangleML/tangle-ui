@@ -1,3 +1,5 @@
+import { normalizeBackendUrl } from "@/utils/backendIdentity";
+
 import type { GoogleDriveDriverConfig } from "../googleDrive/types"; // google-drive
 import { normalizePipelineId } from "../pipelineId";
 import type { FolderIndexDbDriverConfig } from "./drivers/FolderIndexDbStorageDriver";
@@ -75,7 +77,7 @@ export function getEditorPipelineIdentity(ref: EditorPipelineRef): string {
   return isRemotePipelineRef(ref)
     ? JSON.stringify([
         "remote-pipeline",
-        ref.backendUrl,
+        normalizeBackendUrl(ref.backendUrl),
         normalizePipelineId(ref.pipelineId),
       ])
     : (ref.fileId ?? ref.name);
