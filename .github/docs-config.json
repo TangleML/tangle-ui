@@ -46,7 +46,7 @@
     {
       "id": "subgraphs",
       "description": "Nested pipeline composition — creating and navigating into subgraph components",
-      "routes": ["/run-v2/$id/$subgraphExecutionId"]
+      "routes": ["/runs/$id/$subgraphExecutionId"]
     },
     {
       "id": "quick-start",
