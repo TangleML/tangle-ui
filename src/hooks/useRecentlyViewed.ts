@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
 
+import { useBackend } from "@/providers/BackendProvider";
+import {
+  getRemotePipelineSavedId,
+  isSavedPipelineForBackend,
+  normalizeRemotePipelineSavedId,
+} from "@/services/remotePipelineSavedLinks";
 import { getStorage } from "@/utils/typedStorage";
 
 const RECENTLY_VIEWED_KEY = "Home/recently_viewed";
@@ -10,6 +16,7 @@ type RecentKey = typeof RECENTLY_VIEWED_KEY | typeof RECENTLY_USED_KEY;
 
 const RECENT_ITEM_TYPES = [
   "pipeline",
+  "remote-pipeline",
   "run",
   "component",
   "tour",
@@ -55,14 +62,21 @@ export function parseRecent(json: string): RecentItem[] {
 
 function readRecent(key: RecentKey): RecentItem[] {
   const json = localStorage.getItem(key);
-  return json ? parseRecent(json) : [];
+  return json
+    ? parseRecent(json).map((item) =>
+        item.type === "pipeline"
+          ? { ...item, id: normalizeRemotePipelineSavedId(item.id) }
+          : item,
+      )
+    : [];
 }
 
 // `storage` events only reach the other tabs, so a write here tells this one.
 const listeners = new Set<(key: RecentKey) => void>();
 
-function writeRecent(key: RecentKey, items: RecentItem[]) {
-  storage.setItem(key, items);
+function writeRecent(key: RecentKey, items: RecentItem[], required = false) {
+  if (required) localStorage.setItem(key, JSON.stringify(items));
+  else storage.setItem(key, items);
   listeners.forEach((listener) => listener(key));
 }
 
@@ -90,6 +104,7 @@ function removeRecent(key: RecentKey, type: RecentItemType, id: string) {
 }
 
 function useRecent(key: RecentKey): RecentItem[] {
+  const { backendUrl } = useBackend();
   const [items, setItems] = useState<RecentItem[]>(() => readRecent(key));
 
   useEffect(() => {
@@ -109,24 +124,103 @@ function useRecent(key: RecentKey): RecentItem[] {
     };
   }, [key]);
 
-  return items;
+  return items.filter((item) => isSavedPipelineForBackend(item, backendUrl));
 }
 
 export function useRecentlyViewed() {
   return { recentlyViewed: useRecent(RECENTLY_VIEWED_KEY) };
 }
 
-export function addRecentlyViewed(item: Omit<RecentItem, "timestamp">) {
-  addRecent(RECENTLY_VIEWED_KEY, item);
+type RecentInput = Omit<RecentItem, "timestamp">;
+type LocalRecentType = Exclude<RecentItemType, "remote-pipeline">;
+
+export function addRecentlyViewed(
+  item: RecentInput & { type: "remote-pipeline" },
+  backendUrl: string,
+): void;
+export function addRecentlyViewed(
+  item: RecentInput & { type: LocalRecentType },
+): void;
+export function addRecentlyViewed(item: RecentInput, backendUrl?: string) {
+  if (item.type === "remote-pipeline" && !backendUrl?.trim())
+    throw new Error("A backend is required for remote pipeline history.");
+  addRecent(
+    RECENTLY_VIEWED_KEY,
+    item.type === "remote-pipeline" && backendUrl
+      ? {
+          ...item,
+          type: "pipeline",
+          id: getRemotePipelineSavedId(backendUrl, item.id),
+        }
+      : item,
+  );
 }
 
 /**
  * A recent entry is a link, and a link to a deleted thing is worse than no
  * link: it is offered, clicked, and lands nowhere.
  */
-export function removeRecentlyViewed(type: RecentItemType, id: string) {
+export function removeRecentlyViewed(
+  type: "remote-pipeline",
+  id: string,
+  backendUrl: string,
+): void;
+export function removeRecentlyViewed(type: LocalRecentType, id: string): void;
+export function removeRecentlyViewed(
+  type: RecentItemType,
+  id: string,
+  backendUrl?: string,
+) {
+  if (type === "remote-pipeline" && !backendUrl?.trim())
+    throw new Error("A backend is required for remote pipeline history.");
   removeRecent(RECENTLY_VIEWED_KEY, type, id);
   removeRecent(RECENTLY_USED_KEY, type, id);
+  if (type === "remote-pipeline" && backendUrl) {
+    const storedId = getRemotePipelineSavedId(backendUrl, id);
+    removeRecent(RECENTLY_VIEWED_KEY, "pipeline", storedId);
+    removeRecent(RECENTLY_USED_KEY, "pipeline", storedId);
+  }
+}
+
+export function moveRecentPipelineToRemote(
+  localIds: readonly string[],
+  remote: { id: string; name: string; backendUrl: string },
+) {
+  const remoteId = getRemotePipelineSavedId(remote.backendUrl, remote.id);
+  for (const key of [RECENTLY_VIEWED_KEY, RECENTLY_USED_KEY] as const) {
+    const items = readRecent(key);
+    const isLocal = (item: RecentItem) =>
+      item.type === "pipeline" && localIds.includes(item.id);
+    if (!items.some(isLocal)) continue;
+
+    const matches = items.filter(
+      (item) =>
+        isLocal(item) ||
+        (item.type === "pipeline" && item.id === remoteId) ||
+        (item.type === "remote-pipeline" && item.id === remote.id),
+    );
+    const latest = matches.reduce((a, b) =>
+      a.timestamp >= b.timestamp ? a : b,
+    );
+    writeRecent(
+      key,
+      items.flatMap((item) => {
+        if (!matches.includes(item)) return [item];
+        return item === latest
+          ? [
+              {
+                type: "pipeline",
+                id: remoteId,
+                name: remote.name,
+                timestamp: item.timestamp,
+              },
+            ]
+          : [];
+      }),
+      // A failed migration must keep the local pipeline available.
+      true,
+    );
+  }
 }
 
 export function useRecentlyUsed() {

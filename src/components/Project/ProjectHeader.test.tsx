@@ -6,6 +6,10 @@ import type { Project } from "@/services/projects/types";
 
 import { ProjectHeader } from "./ProjectHeader";
 
+vi.mock("@/providers/BackendProvider", () => ({
+  useBackend: () => ({ backendUrl: "https://backend.example.com" }),
+}));
+
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@tanstack/react-router")>()),
   Link: ({ children, to }: { children: ReactNode; to: string }) => (

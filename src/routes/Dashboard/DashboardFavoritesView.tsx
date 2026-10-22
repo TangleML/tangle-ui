@@ -38,7 +38,7 @@ const FavoriteCard = ({
       <Icon name="X" size="sm" />
     </Button>
 
-    <TypePill type={item.type} className="self-start" />
+    <TypePill type={item.type} id={item.id} className="self-start" />
 
     <Text size="sm" weight="semibold" className="truncate pr-4 leading-tight">
       {item.name}
