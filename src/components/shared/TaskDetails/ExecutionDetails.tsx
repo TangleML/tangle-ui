@@ -1,6 +1,7 @@
 import type { GetContainerExecutionStateResponse } from "@/api/types.gen";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useLauncherAnnotationSchema } from "@/hooks/useLauncherCapabilities";
 import { useBackend } from "@/providers/BackendProvider";
 import { useFetchContainerExecutionState } from "@/services/executionService";
 import {
@@ -14,6 +15,7 @@ import type { AttributeProps } from "../ContextPanel/Blocks/Attribute";
 import { ContentBlock } from "../ContextPanel/Blocks/ContentBlock";
 import { KeyValueList } from "../ContextPanel/Blocks/KeyValueList";
 import { InfoBox } from "../InfoBox";
+import { launcherDisplayName } from "../ReactFlow/FlowCanvas/TaskNode/AnnotationsEditor/utils";
 
 interface ExecutionDetailsProps {
   executionId: string;
@@ -29,6 +31,7 @@ export const ExecutionDetails = ({
   className,
 }: ExecutionDetailsProps) => {
   const { backendUrl } = useBackend();
+  const { schema: launcherSchema } = useLauncherAnnotationSchema();
 
   const isSubgraph =
     componentSpec && isGraphImplementation(componentSpec.implementation);
@@ -79,6 +82,14 @@ export const ExecutionDetails = ({
           containerState.started_at,
           containerState.ended_at,
         )} (${formatDate(containerState.ended_at)})`,
+      });
+    }
+
+    const launcherKey = executionLauncherKey(containerState);
+    if (launcherKey) {
+      items.push({
+        label: "Cluster",
+        value: launcherDisplayName(launcherSchema, launcherKey),
       });
     }
 
@@ -197,6 +208,25 @@ function executionPodName(
     typeof debugInfo.kubernetes.pod_name === "string"
   ) {
     return debugInfo.kubernetes.pod_name;
+  }
+
+  return null;
+}
+
+function executionLauncherKey(
+  containerState?: GetContainerExecutionStateResponse,
+): string | null {
+  if (!containerState || !("debug_info" in containerState)) {
+    return null;
+  }
+
+  const debugInfo = containerState.debug_info;
+
+  if (
+    isRecord(debugInfo) &&
+    typeof debugInfo.tangle_launcher_key === "string"
+  ) {
+    return debugInfo.tangle_launcher_key;
   }
 
   return null;
