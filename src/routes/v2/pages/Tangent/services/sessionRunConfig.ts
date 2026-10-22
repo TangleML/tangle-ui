@@ -6,18 +6,21 @@ import { projectRunAnnotations } from "@/utils/projectRunAnnotation";
 const ROOT_CONFIG_FILENAME = "tangle-deploy-root-config.yaml";
 
 interface RootConfigSeed {
-  resource: HostResourceInput;
+  resource: Extract<HostResourceInput, { kind: "file" }>;
   env: Record<string, string>;
 }
 
 function rootConfigContent(projectId: string): string {
   const annotations = projectRunAnnotations([projectId]);
-  return yaml.dump({
-    commands: {
-      "tangle-deploy pipeline-run submit": { annotations },
-      "tangle-deploy pipeline-run submit-from-python": { annotations },
+  return yaml.dump(
+    {
+      commands: {
+        "tangle-deploy pipeline-run submit": { annotations },
+        "tangle-deploy pipeline-run submit-from-python": { annotations },
+      },
     },
-  });
+    { noRefs: true },
+  );
 }
 
 /**

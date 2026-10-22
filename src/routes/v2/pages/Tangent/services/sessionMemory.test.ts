@@ -63,6 +63,7 @@ describe("sessionMemorySeed", () => {
     expect(seed).toContain("TANGLE_ROOT_CONFIG");
     expect(seed).toContain("tangle-deploy pipeline-run submit");
     expect(seed).toContain("submit-from-python");
+    expect(seed).toContain("`-a`/`--annotations`");
     expect(seed).toContain("--config");
   });
 
