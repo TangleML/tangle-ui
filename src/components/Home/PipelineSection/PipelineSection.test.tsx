@@ -155,14 +155,15 @@ it("prevents duplicate uploads while pending and refreshes the list and selectio
   const remaining = files.get("Example");
   if (!remaining) throw new Error("Missing pipeline fixture");
   vi.mocked(getAllComponentFilesFromList).mockResolvedValue(
-    new Map([["Remaining", { ...remaining, name: "Remaining" }]]),
+    new Map([
+      ["Example", remaining],
+      ["Remaining", { ...remaining, name: "Remaining" }],
+    ]),
   );
   await act(async () => pending.resolve());
-  await waitFor(() =>
-    expect(
-      screen.queryByRole("button", { name: "Upload Example" }),
-    ).not.toBeInTheDocument(),
-  );
+  expect(
+    await screen.findByRole("button", { name: "Upload Example" }),
+  ).toBeEnabled();
   expect(
     await screen.findByRole("button", { name: "Upload Remaining" }),
   ).toBeInTheDocument();
@@ -186,9 +187,9 @@ it("keeps the local row and selection available after upload fails", async () =>
   expect(notify).toHaveBeenCalledWith("Upload failed", "error");
 });
 
-it("reports a completed upload with retained project links as a warning and keeps the browser row", async () => {
+it("reports an incomplete link repair as a warning and keeps the browser row", async () => {
   const error = new PipelineMigrationRecoveryError(
-    "Pipeline uploaded. Its browser copy was kept because some project links may still need it.",
+    "Pipeline was uploaded, but its saved links could not be updated. The copy in this browser was kept.",
     {} as PipelineFile,
   );
   upload.mockRejectedValue(error);

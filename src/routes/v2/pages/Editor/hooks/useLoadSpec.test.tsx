@@ -199,11 +199,14 @@ describe("useLoadSpec", () => {
     const first = render(view(remote));
     await screen.findByText("Before");
     expect(resolvePipeline).toHaveBeenCalledExactlyOnceWith(remote);
-    expect(addRecentlyViewed).toHaveBeenLastCalledWith({
-      type: "remote-pipeline",
-      id: remote.pipelineId,
-      name: "Before",
-    });
+    expect(addRecentlyViewed).toHaveBeenLastCalledWith(
+      {
+        type: "remote-pipeline",
+        id: remote.pipelineId,
+        name: "Before",
+      },
+      remote.backendUrl,
+    );
     expect(loadUndoHistory).toHaveBeenCalledExactlyOnceWith(
       JSON.stringify(["remote-pipeline", remote.backendUrl, remote.pipelineId]),
       expect.stringContaining("Before"),
@@ -213,11 +216,14 @@ describe("useLoadSpec", () => {
     render(view(remote));
     await screen.findByText("After");
     expect(resolvePipeline).toHaveBeenCalledTimes(2);
-    expect(addRecentlyViewed).toHaveBeenLastCalledWith({
-      type: "remote-pipeline",
-      id: remote.pipelineId,
-      name: "After",
-    });
+    expect(addRecentlyViewed).toHaveBeenLastCalledWith(
+      {
+        type: "remote-pipeline",
+        id: remote.pipelineId,
+        name: "After",
+      },
+      remote.backendUrl,
+    );
   });
 
   it("records a draft only after it becomes a remote pipeline without navigation", async () => {
@@ -240,11 +246,14 @@ describe("useLoadSpec", () => {
       });
     });
 
-    expect(addRecentlyViewed).toHaveBeenLastCalledWith({
-      type: "remote-pipeline",
-      id: remote.pipelineId,
-      name: draft.name,
-    });
+    expect(addRecentlyViewed).toHaveBeenLastCalledWith(
+      {
+        type: "remote-pipeline",
+        id: remote.pipelineId,
+        name: draft.name,
+      },
+      remote.backendUrl,
+    );
   });
 
   it.each([remote, draft])(

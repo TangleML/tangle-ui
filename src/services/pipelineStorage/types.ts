@@ -43,7 +43,6 @@ export type DriverConfig =
   | GoogleDriveDriverConfig; // google-drive
 
 export interface PipelineRegistryEntry {
-  recreatedAfterMigration?: boolean;
   id: string;
   storageKey: string;
   folderId: string;

@@ -98,11 +98,14 @@ export function useLoadSpec(ref: EditorPipelineRef) {
     () =>
       autorun(() => {
         if (!file.remote) return;
-        addRecentlyViewed({
-          type: "remote-pipeline",
-          id: file.remote.pipelineId,
-          name: file.storageKey,
-        });
+        addRecentlyViewed(
+          {
+            type: "remote-pipeline",
+            id: file.remote.pipelineId,
+            name: file.storageKey,
+          },
+          file.remote.backendUrl,
+        );
       }),
     [file],
   );
