@@ -20,6 +20,7 @@ import type {
   ComponentSpec,
 } from "./componentSpec";
 import { deepClone } from "./deepClone";
+import { normalizeMetadataAnnotations } from "./normalizeMetadataAnnotations";
 import { runPreSubmitHooks } from "./runPreSubmitHooks";
 import { componentSpecFromYaml } from "./yaml";
 
@@ -239,17 +240,8 @@ const parseComponentYaml = (text: string): ComponentSpec => {
  */
 const coerceMetadataAnnotations = (spec: ComponentSpec): void => {
   const annotations = spec.metadata?.annotations;
-  if (annotations) {
-    for (const key of Object.keys(annotations)) {
-      const value = annotations[key];
-      if (typeof value === "string") continue;
-      if (value === null || value === undefined) {
-        delete annotations[key];
-        continue;
-      }
-      annotations[key] =
-        typeof value === "object" ? JSON.stringify(value) : String(value);
-    }
+  if (annotations && spec.metadata) {
+    spec.metadata.annotations = normalizeMetadataAnnotations(annotations);
   }
 
   if (!spec.implementation || !("graph" in spec.implementation)) return;

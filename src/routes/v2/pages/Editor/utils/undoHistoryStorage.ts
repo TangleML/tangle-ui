@@ -11,6 +11,10 @@ import {
   YamlDeserializer,
 } from "@/models/componentSpec";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
+import {
+  editorSpecFromRemoteTask,
+  remotePipelineTaskFromSpec,
+} from "@/services/pipelineStorage/remotePipelineTask";
 import { getEditorPipelineIdentity } from "@/services/pipelineStorage/types";
 import { componentSpecFromYaml } from "@/utils/yaml";
 
@@ -64,7 +68,16 @@ export async function saveUndoHistory(
     version: CURRENT_VERSION,
     idStack,
     undoEvents: clonedEvents,
-    yaml,
+    yaml:
+      yaml === undefined
+        ? undefined
+        : serializeComponentSpecToText(
+            new YamlDeserializer(new IncrementingIdGenerator()).deserialize(
+              editorSpecFromRemoteTask(
+                remotePipelineTaskFromSpec(componentSpecFromYaml(yaml)),
+              ),
+            ),
+          ),
   });
 }
 

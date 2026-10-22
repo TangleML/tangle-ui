@@ -57,6 +57,27 @@ export class PipelineStorageService {
     );
   }
 
+  async moveLocalPipelineToRemote(
+    name: string,
+    backendUrl: string,
+  ): Promise<PipelineFile> {
+    const local = await this.resolvePipeline({ name });
+    const remote = await this.createRemotePipeline(
+      backendUrl,
+      name,
+      await local.read(),
+    );
+    try {
+      await local.deleteFile();
+    } catch (cause) {
+      throw new Error(
+        "Pipeline was uploaded, but the copy in this browser could not be removed.",
+        { cause },
+      );
+    }
+    return remote;
+  }
+
   async copyRemotePipeline(
     source: PipelineFile,
     name: string,
