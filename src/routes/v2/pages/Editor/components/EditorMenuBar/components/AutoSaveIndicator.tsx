@@ -1,5 +1,5 @@
 import { observer } from "mobx-react-lite";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { Icon } from "@/components/ui/icon";
@@ -56,8 +56,10 @@ function getTooltipText(
 }
 
 export const AutoSaveIndicator = observer(function AutoSaveIndicator() {
-  const { autoSave } = useEditorSession();
+  const { autoSave, pipelineFile } = useEditorSession();
   const { isSaving, lastSavedAt, error } = autoSave;
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const tooltipText = getTooltipText(isSaving, lastSavedAt, error);
 
   const handleClick = () => {
@@ -66,32 +68,40 @@ export const AutoSaveIndicator = observer(function AutoSaveIndicator() {
 
   return (
     <>
-      <TooltipButton
-        tooltip={tooltipText}
-        aria-label={tooltipText}
-        variant="header"
-        disabled={isSaving}
-        onClick={handleClick}
-        data-testid="auto-save-button"
-        {...tracking("v2.pipeline_editor.auto_save_indicator")}
-      >
-        <div
-          data-saving={isSaving ? "true" : "false"}
-          className="group relative isolate size-4"
+      {pipelineFile.activePipelineFile && (
+        <TooltipButton
+          tooltip={tooltipText}
+          aria-label={tooltipText}
+          variant="header"
+          disabled={isSaving}
+          onClick={handleClick}
+          data-testid="auto-save-button"
+          {...tracking("v2.pipeline_editor.auto_save_indicator")}
         >
-          <SavingLayer>
-            <Spinner size={16} />
-          </SavingLayer>
-          <IdleLayer>
-            <Icon
-              name={error ? "CloudAlert" : "CloudCheck"}
-              className={error ? "text-red-400" : undefined}
-            />
-          </IdleLayer>
-        </div>
-      </TooltipButton>
+          <div
+            data-saving={isSaving ? "true" : "false"}
+            className="group relative isolate size-4"
+          >
+            <SavingLayer>
+              <Spinner size={16} />
+            </SavingLayer>
+            <IdleLayer>
+              <Icon
+                name={error ? "CloudAlert" : "CloudCheck"}
+                className={error ? "text-red-400" : undefined}
+              />
+            </IdleLayer>
+          </div>
+        </TooltipButton>
+      )}
       <Text role="status" className="sr-only">
-        {error ? `Save failed: ${error}` : ""}
+        {mounted
+          ? isSaving
+            ? "Saving..."
+            : error
+              ? `Save failed: ${error}`
+              : ""
+          : ""}
       </Text>
     </>
   );

@@ -155,10 +155,10 @@ export const EditorMenuBar = observer(function EditorMenuBar() {
               <ProjectPicker pipelineName={activePipeline?.storageKey} />
             )}
             <QuickRunButton />
-            <AutoSaveIndicator />
             <div className="w-px h-5 bg-stone-700" />
           </>
         )}
+        <AutoSaveIndicator />
         <AppMenuActions />
       </InlineStack>
     </CanvasMenuBar>
