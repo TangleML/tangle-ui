@@ -55,12 +55,26 @@ function SecretsListInternal({
             data-testid="secret-item"
             data-secret-name={secret.name}
           >
-            <InlineStack gap="2" blockAlign="center" wrap="nowrap">
+            <InlineStack
+              gap="2"
+              blockAlign="center"
+              wrap="nowrap"
+              className="min-w-0 flex-1"
+            >
               <Icon name="Lock" size="lg" className="shrink-0" />
-              <BlockStack>
+              <BlockStack className="min-w-0">
                 <Text size="sm" weight="semibold">
                   {secret.name}
                 </Text>
+                {secret.description && (
+                  <Text
+                    size="xs"
+                    className="max-w-full truncate"
+                    title={secret.description}
+                  >
+                    {secret.description}
+                  </Text>
+                )}
                 <Text size="xs" tone="subdued">
                   Added {formatRelativeTime(secret.createdAt)}
                 </Text>

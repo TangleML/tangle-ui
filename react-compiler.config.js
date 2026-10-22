@@ -96,6 +96,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/components/shared/Dialogs/PipelineNameDialog.tsx",
   "src/components/shared/Dialogs/RenameDialog.tsx",
   "src/components/shared/SecretsManagement/components/SecretsBackendUnavailable.tsx",
+  "src/components/shared/SecretsManagement/components/ExpiryDatePicker.tsx",
   "src/components/shared/HighlightText.tsx",
   "src/components/shared/Notices",
   "src/components/shared/Markdown",
