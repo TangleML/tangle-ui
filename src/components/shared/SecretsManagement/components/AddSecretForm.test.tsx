@@ -4,8 +4,10 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { TeamImpersonationError } from "@/services/teams/errors";
+
 import { addSecret, updateSecret } from "../secretsStorage";
-import type { Secret } from "../types";
+import { type Secret, SecretsQueryKeys } from "../types";
 import { AddSecretForm, lastWholeSecondOfDayUTC } from "./AddSecretForm";
 
 vi.mock("../secretsStorage", () => ({
@@ -13,7 +15,14 @@ vi.mock("../secretsStorage", () => ({
   updateSecret: vi.fn(),
 }));
 
-vi.mock("@/hooks/useToastNotification", () => ({ default: () => vi.fn() }));
+const { notify } = vi.hoisted(() => ({ notify: vi.fn() }));
+
+vi.mock("@/hooks/useToastNotification", () => ({ default: () => notify }));
+
+const REFUSAL =
+  "Impersonation error: alice@example.com is not a member of ml-team@example.com";
+
+const TEAM_ID = "ml-team@example.com";
 
 const existing: Secret = {
   id: "API_KEY",
@@ -23,14 +32,19 @@ const existing: Secret = {
   updatedAt: new Date("2026-10-02T09:00:00Z"),
 };
 
-function renderForm(existingSecret?: Secret) {
+function renderForm({
+  existingSecret,
+  teamId,
+}: { existingSecret?: Secret; teamId?: string } = {}) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
+  const invalidateQueries = vi.spyOn(queryClient, "invalidateQueries");
   const onSuccess = vi.fn();
   render(
     <AddSecretForm
       existingSecret={existingSecret}
+      teamId={teamId}
       onSuccess={onSuccess}
       onCancel={vi.fn()}
     />,
@@ -42,7 +56,7 @@ function renderForm(existingSecret?: Secret) {
       ),
     },
   );
-  return { user: userEvent.setup(), onSuccess };
+  return { user: userEvent.setup(), onSuccess, invalidateQueries };
 }
 
 const field = (label: string) => screen.getByLabelText(label);
@@ -68,12 +82,47 @@ describe("AddSecretForm", () => {
       await user.click(screen.getByRole("button", { name: "Add Secret" }));
 
       await waitFor(() => expect(onSuccess).toHaveBeenCalled());
-      expect(addSecret).toHaveBeenCalledWith({
-        name: "API_KEY",
-        value: "s3cret",
-        description: "Model access",
-        expiresAt: undefined,
+      expect(addSecret).toHaveBeenCalledWith(
+        {
+          name: "API_KEY",
+          value: "s3cret",
+          description: "Model access",
+          expiresAt: undefined,
+        },
+        undefined,
+      );
+    });
+
+    it("adds a secret to the team it is given", async () => {
+      const { user, onSuccess, invalidateQueries } = renderForm({
+        teamId: TEAM_ID,
       });
+
+      await user.type(field("Secret Name"), "API_KEY");
+      await user.type(field("Secret Value"), "s3cret");
+      await user.click(screen.getByRole("button", { name: "Add Secret" }));
+
+      await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+      expect(addSecret).toHaveBeenCalledWith(expect.anything(), TEAM_ID);
+      expect(invalidateQueries).toHaveBeenCalledWith({
+        queryKey: SecretsQueryKeys.All(TEAM_ID),
+      });
+    });
+
+    it("shows the backend's reason when adding as the team is refused", async () => {
+      vi.mocked(addSecret).mockRejectedValue(
+        new TeamImpersonationError(REFUSAL, 403),
+      );
+      const { user, onSuccess } = renderForm({ teamId: TEAM_ID });
+
+      await user.type(field("Secret Name"), "API_KEY");
+      await user.type(field("Secret Value"), "s3cret");
+      await user.click(screen.getByRole("button", { name: "Add Secret" }));
+
+      await waitFor(() =>
+        expect(notify).toHaveBeenCalledWith(REFUSAL, "error"),
+      );
+      expect(onSuccess).not.toHaveBeenCalled();
     });
 
     it("leaves out a description that was never written", async () => {
@@ -86,6 +135,7 @@ describe("AddSecretForm", () => {
       await waitFor(() =>
         expect(addSecret).toHaveBeenCalledWith(
           expect.objectContaining({ description: undefined }),
+          undefined,
         ),
       );
     });
@@ -163,6 +213,7 @@ describe("AddSecretForm", () => {
           expect.objectContaining({
             expiresAt: new Date("2026-11-15T23:59:59.000Z"),
           }),
+          undefined,
         ),
       );
     });
@@ -176,7 +227,7 @@ describe("AddSecretForm", () => {
 
   describe("replacing", () => {
     it("starts from the secret's description", () => {
-      renderForm(existing);
+      renderForm({ existingSecret: existing });
 
       expect(field("Secret Name")).toBeDisabled();
       expect(field("Description (optional)")).toHaveValue("Model access");
@@ -186,22 +237,46 @@ describe("AddSecretForm", () => {
     });
 
     it("sends only the new value when nothing else changed", async () => {
-      const { user, onSuccess } = renderForm(existing);
+      const { user, onSuccess } = renderForm({ existingSecret: existing });
 
       await user.type(field("New Secret Value"), "n3w");
       await user.click(screen.getByRole("button", { name: "Update Secret" }));
 
       await waitFor(() => expect(onSuccess).toHaveBeenCalled());
-      expect(updateSecret).toHaveBeenCalledWith("API_KEY", {
-        id: "API_KEY",
-        value: "n3w",
-        description: undefined,
-        expiresAt: undefined,
+      expect(updateSecret).toHaveBeenCalledWith(
+        "API_KEY",
+        {
+          id: "API_KEY",
+          value: "n3w",
+          description: undefined,
+          expiresAt: undefined,
+        },
+        undefined,
+      );
+    });
+
+    it("replaces a team's secret as the team", async () => {
+      const { user, onSuccess, invalidateQueries } = renderForm({
+        existingSecret: existing,
+        teamId: TEAM_ID,
+      });
+
+      await user.type(field("New Secret Value"), "n3w");
+      await user.click(screen.getByRole("button", { name: "Update Secret" }));
+
+      await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+      expect(updateSecret).toHaveBeenCalledWith(
+        "API_KEY",
+        expect.anything(),
+        TEAM_ID,
+      );
+      expect(invalidateQueries).toHaveBeenCalledWith({
+        queryKey: SecretsQueryKeys.All(TEAM_ID),
       });
     });
 
     it("sends a description that was changed", async () => {
-      const { user } = renderForm(existing);
+      const { user } = renderForm({ existingSecret: existing });
 
       await user.type(field("New Secret Value"), "n3w");
       await user.clear(field("Description (optional)"));
@@ -212,14 +287,17 @@ describe("AddSecretForm", () => {
         expect(updateSecret).toHaveBeenCalledWith(
           "API_KEY",
           expect.objectContaining({ description: "Agent model access" }),
+          undefined,
         ),
       );
     });
 
     it("names the current expiry by its UTC day and keeps it when left empty", async () => {
       const { user } = renderForm({
-        ...existing,
-        expiresAt: new Date("2027-03-03T02:00:00Z"),
+        existingSecret: {
+          ...existing,
+          expiresAt: new Date("2027-03-03T02:00:00Z"),
+        },
       });
 
       expect(field("Expires (optional)")).toHaveAccessibleDescription(
@@ -233,12 +311,31 @@ describe("AddSecretForm", () => {
         expect(updateSecret).toHaveBeenCalledWith(
           "API_KEY",
           expect.objectContaining({ expiresAt: undefined }),
+          undefined,
         ),
       );
     });
 
+    it("shows the backend's reason when replacing as the team is refused", async () => {
+      vi.mocked(updateSecret).mockRejectedValue(
+        new TeamImpersonationError(REFUSAL, 403),
+      );
+      const { user, onSuccess } = renderForm({
+        existingSecret: existing,
+        teamId: TEAM_ID,
+      });
+
+      await user.type(field("New Secret Value"), "n3w");
+      await user.click(screen.getByRole("button", { name: "Update Secret" }));
+
+      await waitFor(() =>
+        expect(notify).toHaveBeenCalledWith(REFUSAL, "error"),
+      );
+      expect(onSuccess).not.toHaveBeenCalled();
+    });
+
     it("still needs a new value", () => {
-      renderForm(existing);
+      renderForm({ existingSecret: existing });
 
       expect(
         screen.getByRole("button", { name: "Update Secret" }),
