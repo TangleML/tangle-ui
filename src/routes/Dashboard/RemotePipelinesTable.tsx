@@ -15,6 +15,8 @@ import { useRemotePipelinesPage } from "@/hooks/useRemotePipelinesPage";
 import { useBackend } from "@/providers/BackendProvider";
 import { formatDate } from "@/utils/date";
 
+import { RemotePipelinesFilters } from "./RemotePipelinesFilters";
+
 const COLUMN_NAMES = [
   "Name",
   "ID",
@@ -28,6 +30,7 @@ const MIN_COLUMN_WIDTH = 8;
 
 interface RemotePipelinesPagination {
   backendUrl: string;
+  filterQuery: string | undefined;
   tokens: string[];
 }
 
@@ -49,14 +52,18 @@ function resizeColumnWidths(widths: number[], index: number, delta: number) {
 
 export function RemotePipelinesTable() {
   const { backendUrl, configured, available, ready } = useBackend();
+  const [filterQuery, setFilterQuery] = useState<string>();
   const [pagination, setPagination] = useState<RemotePipelinesPagination>({
     backendUrl,
+    filterQuery,
     tokens: [],
   });
-  const pageTokens =
-    pagination.backendUrl === backendUrl ? pagination.tokens : [];
-  if (pagination.backendUrl !== backendUrl) {
-    setPagination({ backendUrl, tokens: [] });
+  const searchChanged =
+    pagination.backendUrl !== backendUrl ||
+    pagination.filterQuery !== filterQuery;
+  const pageTokens = searchChanged ? [] : pagination.tokens;
+  if (searchChanged) {
+    setPagination({ backendUrl, filterQuery, tokens: [] });
   }
   const [columnWidths, setColumnWidths] = useState(INITIAL_COLUMN_WIDTHS);
   const tableRef = useRef<HTMLTableElement>(null);
@@ -72,11 +79,12 @@ export function RemotePipelinesTable() {
     backendUrl,
     pageToken,
     canFetch,
+    filterQuery,
   );
   const pipelines = data?.pipelines ?? [];
 
   function changePage(tokens: string[]) {
-    setPagination({ backendUrl, tokens });
+    setPagination({ backendUrl, filterQuery, tokens });
   }
 
   let message: string | undefined;
@@ -93,6 +101,7 @@ export function RemotePipelinesTable() {
 
   return (
     <BlockStack gap="4" className="w-full">
+      <RemotePipelinesFilters onSearch={setFilterQuery} />
       <Table
         ref={tableRef}
         aria-label="Remote Pipelines"

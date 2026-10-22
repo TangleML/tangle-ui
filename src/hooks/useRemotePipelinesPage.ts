@@ -6,10 +6,11 @@ export function useRemotePipelinesPage(
   backendUrl: string,
   pageToken: string | undefined,
   enabled: boolean,
+  filterQuery?: string,
 ) {
   return useQuery({
-    queryKey: ["remote-pipelines", backendUrl, pageToken],
-    queryFn: () => listRemotePipelines(backendUrl, pageToken),
+    queryKey: ["remote-pipelines", backendUrl, filterQuery, pageToken],
+    queryFn: () => listRemotePipelines(backendUrl, pageToken, filterQuery),
     enabled,
     placeholderData: (previous, previousQuery) =>
       previousQuery?.queryKey[1] === backendUrl ? previous : undefined,

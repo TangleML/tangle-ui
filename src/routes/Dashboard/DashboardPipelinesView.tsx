@@ -8,7 +8,6 @@ import { APP_ROUTES } from "@/routes/appRoutes";
 
 import { FavoritesPreview } from "./FavoritesPreview";
 import { validatePipelinesSearch } from "./pipelinesSearch";
-import { RemotePipelinesFilters } from "./RemotePipelinesFilters";
 import { RemotePipelinesTable } from "./RemotePipelinesTable";
 
 export function DashboardPipelinesView() {
@@ -48,8 +47,7 @@ export function DashboardPipelinesView() {
           <TabsContent value="local">
             <PipelineSection />
           </TabsContent>
-          <TabsContent value="remote" className="space-y-3">
-            <RemotePipelinesFilters />
+          <TabsContent value="remote">
             <RemotePipelinesTable />
           </TabsContent>
         </Tabs>
