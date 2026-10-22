@@ -1,7 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 
 import { TOUR_PIPELINE_PREFIX } from "@/providers/TourProvider/tourPipelineLifecycle";
-import { EDITOR_SPEC_QUERY_KEY } from "@/routes/v2/pages/Editor/hooks/useLoadSpec";
+import { EDITOR_SPEC_QUERY_KEY } from "@/routes/v2/pages/Editor/hooks/deletedRemotePipelineCache";
 
 import { SESSION_KEY_PREFIX } from "./constants";
 

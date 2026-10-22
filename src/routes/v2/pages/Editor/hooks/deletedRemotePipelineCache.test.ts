@@ -35,7 +35,7 @@ function document(ref = remote) {
 afterEach(() => client.clear());
 
 describe("reconcileDeletedRemotePipeline", () => {
-  it("retains even a clean document when the DELETE result is unknown", async () => {
+  it("does not turn a clean document into unsaved changes when the DELETE result is unknown", async () => {
     const uncertain = document();
     client.setQueryData(queryKey, uncertain);
 
@@ -45,9 +45,8 @@ describe("reconcileDeletedRemotePipeline", () => {
       new RemotePipelineDeletionUncertainError(),
     );
 
-    expect(client.getQueryData(queryKey)).toBe(uncertain);
-    expect(uncertain.saveState.hasUnsavedChanges).toBe(true);
-    expect(uncertain.saveState.error).toContain("deletion result is unknown");
+    expect(client.getQueryData(queryKey)).toBeUndefined();
+    expect(uncertain.saveState.hasUnsavedChanges).toBe(false);
   });
 
   it("removes a clean inactive editor without affecting another backend", async () => {

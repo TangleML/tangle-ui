@@ -21,6 +21,7 @@ import { findPipelineMigration } from "./pipelineMigrations";
 import { findById, findByStorageKey } from "./pipelineRegistry";
 import {
   assertRemotePipelineAvailable,
+  RemotePipelineDeletionError,
   type RemotePipelineWriteAdmission,
 } from "./remotePipelineDeletion";
 import {
@@ -90,7 +91,11 @@ export class PipelineStorageService {
         try {
           return await this.resolvePipeline(saved.remote);
         } catch (error) {
-          if (error instanceof PipelineSpecApiError && error.status === 404) {
+          if (
+            (error instanceof PipelineSpecApiError && error.status === 404) ||
+            (error instanceof RemotePipelineDeletionError &&
+              error.state === "deleted")
+          ) {
             this.storeSavedDraft(getEditorPipelineIdentity(ref), {
               ...saved,
               unavailable: true,

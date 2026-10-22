@@ -303,7 +303,7 @@ describe("deleteRemotePipeline", () => {
   });
 
   it.each(["still present", "search unavailable"])(
-    "retains uncertainty after DELETE404 when the pipeline is %s",
+    "checks whether DELETE404 is a definite failure when the pipeline is %s",
     async (reason) => {
       vi.mocked(client.get).mockResolvedValue(response(document));
       const driver = await RemotePipelineStorageDriver.open({
@@ -319,12 +319,22 @@ describe("deleteRemotePipeline", () => {
       else
         vi.mocked(client.post).mockResolvedValueOnce(response(undefined, 503));
       await expect(deleteRemotePipeline(BACKEND_URL, pipeline)).rejects.toThrow(
-        "deletion result is unknown",
+        reason === "still present"
+          ? "pipeline is still available"
+          : "deletion result is unknown",
       );
-      await expect(
-        driver.write(spec.name, componentSpecToYaml(spec)),
-      ).rejects.toThrow("deletion result is unknown");
-      expect(client.put).not.toHaveBeenCalled();
+      if (reason === "still present") {
+        vi.mocked(client.put).mockResolvedValue(response(document));
+        await expect(
+          driver.write(spec.name, componentSpecToYaml(spec)),
+        ).resolves.toBeUndefined();
+        expect(client.put).toHaveBeenCalledOnce();
+      } else {
+        await expect(
+          driver.write(spec.name, componentSpecToYaml(spec)),
+        ).rejects.toThrow("deletion result is unknown");
+        expect(client.put).not.toHaveBeenCalled();
+      }
     },
   );
 

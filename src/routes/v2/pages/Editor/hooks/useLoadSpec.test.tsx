@@ -12,9 +12,9 @@ import { observer } from "mobx-react-lite";
 import { StrictMode, Suspense, useEffect, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { DriverPermissionGate } from "@/routes/v2/pages/Editor/components/DriverPermissionGate";
 import { AutoSaveStore } from "@/routes/v2/pages/Editor/store/autoSaveStore";
 import { UndoStore } from "@/routes/v2/pages/Editor/store/undoStore";
-import { DriverPermissionGate } from "@/routes/v2/pages/Editor/components/DriverPermissionGate";
 import { preserveRenamedPipelineQuery } from "@/routes/v2/pages/Editor/utils/preserveRenamedPipelineQuery";
 import { promoteRemoteDraftQuery } from "@/routes/v2/pages/Editor/utils/promoteRemoteDraftQuery";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
@@ -27,7 +27,8 @@ import {
   getEditorPipelineIdentity,
 } from "@/services/pipelineStorage/types";
 
-import { EDITOR_SPEC_QUERY_KEY, useLoadSpec } from "./useLoadSpec";
+import { EDITOR_SPEC_QUERY_KEY } from "./deletedRemotePipelineCache";
+import { useLoadSpec } from "./useLoadSpec";
 
 const resolvePipeline = vi.hoisted(() => vi.fn());
 const discardRemoteDraft = vi.hoisted(() => vi.fn());
