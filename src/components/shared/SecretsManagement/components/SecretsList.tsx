@@ -12,8 +12,8 @@ import { useTourMockBackend } from "@/providers/TourProvider/tourMockBackend";
 import { formatRelativeTime } from "@/utils/date";
 
 import { withSuspenseWrapper } from "../../SuspenseWrapper";
-import { fetchSecretsList } from "../secretsStorage";
-import { type Secret, SecretsQueryKeys } from "../types";
+import { secretsListQuery } from "../secretsStorage";
+import type { Secret } from "../types";
 import { RemoveSecretButton } from "./RemoveSecretButton";
 import { SecretsBackendUnavailable } from "./SecretsBackendUnavailable";
 
@@ -26,10 +26,7 @@ function SecretsListInternal({
   onRemoveSuccess,
   onEditSecret,
 }: SecretsListProps) {
-  const { data: secrets } = useSuspenseQuery({
-    queryKey: SecretsQueryKeys.All(),
-    queryFn: fetchSecretsList,
-  });
+  const { data: secrets } = useSuspenseQuery(secretsListQuery());
 
   if (secrets.length === 0) {
     return (
