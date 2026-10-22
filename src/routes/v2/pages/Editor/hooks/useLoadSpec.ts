@@ -46,9 +46,7 @@ import {
   reconcileDeletedRemotePipeline,
 } from "./deletedRemotePipelineCache";
 
-export { EDITOR_SPEC_QUERY_KEY } from "./deletedRemotePipelineCache";
-
-interface LoadedSpec {
+export interface LoadedSpec {
   spec: ComponentSpec;
   file: PipelineFile;
   saveState: DocumentSaveState;

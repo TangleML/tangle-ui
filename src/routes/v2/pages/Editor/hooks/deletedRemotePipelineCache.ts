@@ -1,13 +1,10 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { runInAction } from "mobx";
 
 import type { DocumentSaveState } from "@/routes/v2/pages/Editor/store/documentSaveState";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
-import {
-  remotePipelineDeletionError,
-  RemotePipelineDeletionUncertainError,
-} from "@/services/pipelineStorage/remotePipelineDeletion";
+import { remotePipelineDeletionError } from "@/services/pipelineStorage/remotePipelineDeletion";
 import type { RemotePipelineRef } from "@/services/pipelineStorage/types";
+import { getEditorPipelineIdentity } from "@/services/pipelineStorage/types";
 
 export const EDITOR_SPEC_QUERY_KEY = "editor-v2-spec";
 
@@ -29,19 +26,15 @@ export async function reconcileDeletedRemotePipeline(
       const remote = document?.file.remote;
       if (
         !document ||
-        remote?.backendUrl !== ref.backendUrl ||
-        remote.pipelineId !== ref.pipelineId
+        !remote ||
+        getEditorPipelineIdentity({ source: "remote", ...remote }) !==
+          getEditorPipelineIdentity(ref)
       )
         return;
       // A completed server write can still be finishing the saving indicator.
       // Let it settle before deciding whether this editor has recoverable edits.
       await document.saveState.pendingSave?.promise.catch(() => {});
       if (queryClient.getQueryData(queryKey) !== document) return;
-      if (error instanceof RemotePipelineDeletionUncertainError) {
-        runInAction(() => {
-          document.saveState.lastSavedYaml = null;
-        });
-      }
       if (document.saveState.hasUnsavedChanges) {
         document.saveState.recordError(error);
         return;

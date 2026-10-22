@@ -158,6 +158,10 @@ export class RemotePipelineStorageDriver implements PipelineStorageDriver {
     });
   }
 
+  get ownerId(): string {
+    return this.document.user_id;
+  }
+
   get name(): string {
     return this.displayName;
   }

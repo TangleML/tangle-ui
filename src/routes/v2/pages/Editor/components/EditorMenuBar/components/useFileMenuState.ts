@@ -4,6 +4,7 @@ import { type RefObject, useEffect, useRef, useState } from "react";
 
 import { useNewPipelineDraft } from "@/hooks/useNewPipelineDraft";
 import useToastNotification from "@/hooks/useToastNotification";
+import { serializeComponentSpecToText } from "@/models/componentSpec";
 import { useTourMode } from "@/providers/TourProvider/TourModeContext";
 import { APP_ROUTES } from "@/routes/router";
 import { usePipelineRename } from "@/routes/v2/pages/Editor/hooks/usePipelineRename";
@@ -116,13 +117,13 @@ export function useFileMenuState(): FileMenuState {
 
   const handleSavePipelineAs = async (name: string) => {
     try {
-      const file = await savePipelineAs(
-        navigation,
-        name,
-        storage,
-        pipelineFileStore.activePipelineFile,
-      );
+      const source = pipelineFileStore.activePipelineFile;
+      const snapshot =
+        navigation.rootSpec &&
+        serializeComponentSpecToText(navigation.rootSpec);
+      const file = await savePipelineAs(navigation, name, storage, source);
       if (!file) return;
+      if (source && snapshot) autoSave.releaseRecoveredCopy(source, snapshot);
       notify(`Pipeline saved as "${name}"`, "success");
       if (file.remote) {
         await navigate({

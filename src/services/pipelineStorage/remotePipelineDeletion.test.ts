@@ -9,7 +9,10 @@ import {
 } from "./remotePipelineDeletion";
 import type { RemotePipelineRef } from "./types";
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.useRealTimers();
+});
 
 describe("remote pipeline deletion signaling", () => {
   it("accepts cooperating tab notices, preserves tombstones, and ignores malformed messages", async () => {
@@ -85,4 +88,51 @@ describe("remote pipeline deletion signaling", () => {
       unsubscribe();
     }
   });
+});
+
+it("expires abandoned foreign notices and preserves uncertainty across a later failed attempt", async () => {
+  vi.resetModules();
+  vi.useFakeTimers();
+  const channels: EventTarget[] = [];
+  class FakeChannel extends EventTarget {
+    constructor() {
+      super();
+      channels.push(this);
+    }
+    postMessage() {}
+  }
+  vi.stubGlobal("BroadcastChannel", FakeChannel);
+  const api = await import("./remotePipelineDeletion");
+  const ref = {
+    source: "remote",
+    backendUrl: "https://backend.example.com",
+    pipelineId: "abandoned",
+  } as const;
+  const notice = {
+    ...ref,
+    filePath: "pipelines/abandoned.yaml",
+    attemptId: "first",
+    state: "pending",
+  };
+  const unsubscribe = api.subscribeRemotePipelineDeletion(() => {});
+  const send = (data: object) =>
+    channels[0]?.dispatchEvent(new MessageEvent("message", { data }));
+  send(notice);
+  expect(() => api.assertRemotePipelineAvailable(ref.backendUrl, ref)).toThrow(
+    "being deleted",
+  );
+  await vi.advanceTimersByTimeAsync(30_000);
+  expect(() => api.assertRemotePipelineAvailable(ref.backendUrl, ref)).toThrow(
+    "result is unknown",
+  );
+  send({ ...notice, attemptId: "second" });
+  send({ ...notice, attemptId: "second", state: "failed" });
+  expect(() => api.assertRemotePipelineAvailable(ref.backendUrl, ref)).toThrow(
+    "result is unknown",
+  );
+  send({ ...notice, attemptId: "third", state: "deleted" });
+  expect(() => api.assertRemotePipelineAvailable(ref.backendUrl, ref)).toThrow(
+    "was deleted",
+  );
+  unsubscribe();
 });

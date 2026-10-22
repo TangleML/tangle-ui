@@ -31,7 +31,7 @@ it("recognizes stale raw files while rebuilding an empty registry after restart"
     expect(await pipelineStorageDb.pipeline_registry.toArray()).toEqual([
       expect.objectContaining({
         storageKey: "Original",
-        recreatedAfterMigration: true,
+        id: expect.not.stringMatching(/^old-local-id$/),
       }),
     ]);
   } finally {

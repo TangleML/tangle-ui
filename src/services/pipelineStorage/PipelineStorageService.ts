@@ -1,5 +1,8 @@
 import { makeObservable, observable } from "mobx";
 
+import { PipelineSpecApiError } from "@/services/pipelineSpecService";
+import { getRemotePipelineWriter } from "@/services/remotePipelineEditorService";
+import { normalizeBackendUrl } from "@/utils/backendIdentity";
 import { emitUserPipelineWritten } from "@/utils/userPipelineWriteEvents";
 import { componentSpecFromYaml } from "@/utils/yaml";
 
@@ -18,6 +21,7 @@ import { findPipelineMigration } from "./pipelineMigrations";
 import { findById, findByStorageKey } from "./pipelineRegistry";
 import {
   assertRemotePipelineAvailable,
+  RemotePipelineDeletionError,
   type RemotePipelineWriteAdmission,
 } from "./remotePipelineDeletion";
 import {
@@ -36,8 +40,14 @@ const ROOT_DRIVER_CONFIG = {
   folderId: ROOT_FOLDER_ID,
 } as const;
 
+interface SavedDraftAlias {
+  remote: RemotePipelineRef;
+  ownerId: string;
+  unavailable?: boolean;
+}
+
 export class PipelineStorageService {
-  private readonly savedDrafts = new Map<string, RemotePipelineRef>();
+  private readonly savedDrafts = new Map<string, SavedDraftAlias>();
   private readonly remoteDrafts = new Map<
     string,
     {
@@ -65,11 +75,35 @@ export class PipelineStorageService {
           ref.backendUrl,
           draft.file.remote ?? { filePath: draft.filePath },
         );
+        const ownerId = draft.file.folder.driver.ownerId;
+        if (draft.file.remote && ownerId)
+          await this.assertDraftOwner(ref.backendUrl, ownerId);
         draft.discardRequested = false;
         return draft.file;
       }
       const saved = this.getSavedDraft(ref.draftId, ref.backendUrl);
-      if (saved) return this.resolvePipeline(saved);
+      if (saved) {
+        if (saved.unavailable)
+          throw new Error(
+            "This saved pipeline is no longer available. Open the dashboard or create a new pipeline.",
+          );
+        await this.assertDraftOwner(ref.backendUrl, saved.ownerId);
+        try {
+          return await this.resolvePipeline(saved.remote);
+        } catch (error) {
+          if (
+            (error instanceof PipelineSpecApiError && error.status === 404) ||
+            (error instanceof RemotePipelineDeletionError &&
+              error.state === "deleted")
+          ) {
+            this.storeSavedDraft(getEditorPipelineIdentity(ref), {
+              ...saved,
+              unavailable: true,
+            });
+          }
+          throw error;
+        }
+      }
       const file = this.createRemoteDraft(ref);
       const created = this.remoteDrafts.get(getEditorPipelineIdentity(ref));
       if (created) created.discardRequested = false;
@@ -114,12 +148,8 @@ export class PipelineStorageService {
       async (remote) => {
         file.promoteToRemote(remote);
         const key = getEditorPipelineIdentity(ref);
-        this.savedDrafts.set(key, remote);
-        try {
-          sessionStorage.setItem(`saved-draft:${key}`, JSON.stringify(remote));
-        } catch {
-          // In-memory history recovery still works when browser storage is full.
-        }
+        const ownerId = driver.ownerId;
+        if (ownerId) this.storeSavedDraft(key, { remote, ownerId });
         try {
           await onCreated?.(remote);
         } catch (cause) {
@@ -156,11 +186,14 @@ export class PipelineStorageService {
     backendUrl: string,
   ): RemotePipelineDraftRef | RemotePipelineRef {
     const draft = [...this.remoteDrafts.values()].find(
-      ({ ref }) => ref.draftId === draftId && ref.backendUrl === backendUrl,
+      ({ ref }) =>
+        ref.draftId === draftId &&
+        normalizeBackendUrl(ref.backendUrl) === normalizeBackendUrl(backendUrl),
     );
     if (draft) return draft.ref;
     const saved = this.getSavedDraft(draftId, backendUrl);
-    if (saved) return saved;
+    if (saved)
+      return { source: "draft", draftId, backendUrl, name: "Saved pipeline" };
     throw new Error(
       "This unsaved pipeline draft is no longer available. Close this tab and create a new pipeline.",
     );
@@ -169,7 +202,7 @@ export class PipelineStorageService {
   private getSavedDraft(
     draftId: string,
     backendUrl: string,
-  ): RemotePipelineRef | undefined {
+  ): SavedDraftAlias | undefined {
     const key = getEditorPipelineIdentity({
       source: "draft",
       draftId,
@@ -179,19 +212,62 @@ export class PipelineStorageService {
     const saved = this.savedDrafts.get(key);
     if (saved) return saved;
     try {
-      const value = JSON.parse(
+      const value: unknown = JSON.parse(
         sessionStorage.getItem(`saved-draft:${key}`) ?? "null",
       );
       if (
-        value?.source === "remote" &&
-        value.backendUrl === backendUrl &&
-        typeof value.pipelineId === "string"
-      ) {
-        this.savedDrafts.set(key, value);
-        return value;
-      }
+        !value ||
+        typeof value !== "object" ||
+        !("remote" in value) ||
+        !("ownerId" in value)
+      )
+        return;
+      const remote = value.remote;
+      if (
+        !remote ||
+        typeof remote !== "object" ||
+        !("source" in remote) ||
+        remote.source !== "remote" ||
+        !("backendUrl" in remote) ||
+        typeof remote.backendUrl !== "string" ||
+        normalizeBackendUrl(remote.backendUrl) !==
+          normalizeBackendUrl(backendUrl) ||
+        !("pipelineId" in remote) ||
+        typeof remote.pipelineId !== "string" ||
+        !remote.pipelineId.trim() ||
+        typeof value.ownerId !== "string" ||
+        !value.ownerId
+      )
+        return;
+      const alias: SavedDraftAlias = {
+        remote: { source: "remote", backendUrl, pipelineId: remote.pipelineId },
+        ownerId: value.ownerId,
+        unavailable: "unavailable" in value && value.unavailable === true,
+      };
+      this.savedDrafts.set(key, alias);
+      return alias;
     } catch {
       // Ignore unavailable storage or stale malformed history entries.
+    }
+  }
+
+  private storeSavedDraft(key: string, value: SavedDraftAlias): void {
+    this.savedDrafts.set(key, value);
+    try {
+      sessionStorage.setItem(`saved-draft:${key}`, JSON.stringify(value));
+    } catch {
+      // The current session still retains the alias when storage is unavailable.
+    }
+  }
+
+  private async assertDraftOwner(
+    backendUrl: string,
+    ownerId: string,
+  ): Promise<void> {
+    if ((await getRemotePipelineWriter(backendUrl)) !== ownerId) {
+      throw new Error(
+        "This draft was saved under another account. Switch back to that account or open a pipeline from the dashboard.",
+      );
     }
   }
 

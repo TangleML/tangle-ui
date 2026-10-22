@@ -4,6 +4,7 @@ import { useBackend } from "@/providers/BackendProvider";
 import {
   getRemotePipelineSavedId,
   isSavedPipelineForBackend,
+  normalizeRemotePipelineSavedId,
 } from "@/services/remotePipelineSavedLinks";
 import { getStorage } from "@/utils/typedStorage";
 
@@ -61,7 +62,13 @@ export function parseRecent(json: string): RecentItem[] {
 
 function readRecent(key: RecentKey): RecentItem[] {
   const json = localStorage.getItem(key);
-  return json ? parseRecent(json) : [];
+  return json
+    ? parseRecent(json).map((item) =>
+        item.type === "pipeline"
+          ? { ...item, id: normalizeRemotePipelineSavedId(item.id) }
+          : item,
+      )
+    : [];
 }
 
 // `storage` events only reach the other tabs, so a write here tells this one.
@@ -124,10 +131,19 @@ export function useRecentlyViewed() {
   return { recentlyViewed: useRecent(RECENTLY_VIEWED_KEY) };
 }
 
+type RecentInput = Omit<RecentItem, "timestamp">;
+type LocalRecentType = Exclude<RecentItemType, "remote-pipeline">;
+
 export function addRecentlyViewed(
-  item: Omit<RecentItem, "timestamp">,
-  backendUrl?: string,
-) {
+  item: RecentInput & { type: "remote-pipeline" },
+  backendUrl: string,
+): void;
+export function addRecentlyViewed(
+  item: RecentInput & { type: LocalRecentType },
+): void;
+export function addRecentlyViewed(item: RecentInput, backendUrl?: string) {
+  if (item.type === "remote-pipeline" && !backendUrl?.trim())
+    throw new Error("A backend is required for remote pipeline history.");
   addRecent(
     RECENTLY_VIEWED_KEY,
     item.type === "remote-pipeline" && backendUrl
@@ -145,10 +161,18 @@ export function addRecentlyViewed(
  * link: it is offered, clicked, and lands nowhere.
  */
 export function removeRecentlyViewed(
+  type: "remote-pipeline",
+  id: string,
+  backendUrl: string,
+): void;
+export function removeRecentlyViewed(type: LocalRecentType, id: string): void;
+export function removeRecentlyViewed(
   type: RecentItemType,
   id: string,
   backendUrl?: string,
 ) {
+  if (type === "remote-pipeline" && !backendUrl?.trim())
+    throw new Error("A backend is required for remote pipeline history.");
   removeRecent(RECENTLY_VIEWED_KEY, type, id);
   removeRecent(RECENTLY_USED_KEY, type, id);
   if (type === "remote-pipeline" && backendUrl) {

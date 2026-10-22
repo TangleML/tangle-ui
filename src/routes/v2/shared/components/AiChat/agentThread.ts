@@ -81,6 +81,7 @@ export class AgentThread {
   }
 
   async sendMessage(prompt: string, options: SendMessageOptions) {
+    if (this.isPending) return;
     const abortController = new AbortController();
     this.abortController = abortController;
 
