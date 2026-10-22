@@ -84,7 +84,11 @@ export function useFavorites() {
     });
   };
 
-  const removeFavorite = async (type: FavoriteType, id: string, targetBackendUrl = backendUrl) => {
+  const removeFavorite = async (
+    type: FavoriteType,
+    id: string,
+    targetBackendUrl = backendUrl,
+  ) => {
     const [storedType, storedId] = storedKey(type, id, targetBackendUrl);
     await LibraryDB.favorites
       .filter(
