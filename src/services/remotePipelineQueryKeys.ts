@@ -1,6 +1,10 @@
 export const RemotePipelineQueryKeys = {
   Writer: (backendUrl: string) =>
     ["remote-pipeline-writer", backendUrl] as const,
+  Deletions: (backendUrl: string) =>
+    ["delete-remote-pipeline", backendUrl] as const,
+  Deletion: (backendUrl: string, pipelineId: string) =>
+    ["delete-remote-pipeline", backendUrl, pipelineId] as const,
   All: (backendUrl: string) => ["remote-pipelines", backendUrl] as const,
   Cursor: (
     backendUrl: string,

@@ -28,6 +28,7 @@ const state = vi.hoisted(() => ({
     createRemotePipeline: vi.fn(),
   },
   save: vi.fn(),
+  releaseRecoveredCopy: vi.fn(),
   navigate: vi.fn(),
   notify: vi.fn(),
 }));
@@ -63,7 +64,10 @@ vi.mock("@/providers/TourProvider/TourModeContext", () => ({
 }));
 vi.mock("@/routes/v2/pages/Editor/store/EditorSessionContext", () => ({
   useEditorSession: () => ({
-    autoSave: { save: state.save },
+    autoSave: {
+      save: state.save,
+      releaseRecoveredCopy: state.releaseRecoveredCopy,
+    },
     pipelineFile: { activePipelineFile: state.file },
   }),
 }));
@@ -251,6 +255,7 @@ describe("editor file actions", () => {
       else await result.current.renamePipeline("Renamed");
       expect(state.notify).toHaveBeenCalledWith("Write failed", "error");
       expect(state.navigate).not.toHaveBeenCalled();
+      expect(state.releaseRecoveredCopy).not.toHaveBeenCalled();
       expect(state.file.rename).toHaveBeenCalledTimes(
         action === "rename" ? 1 : 0,
       );
@@ -259,5 +264,23 @@ describe("editor file actions", () => {
         action === "rename" ? "Renamed" : "Original",
       );
     },
+  );
+});
+
+it("acknowledges the captured source only after its copy succeeds", async () => {
+  state.file.remote = remote;
+  const pending = Promise.withResolvers<{ id: string; storageKey: string }>();
+  state.storage.copyRemotePipeline.mockReturnValue(pending.promise);
+  const { result } = renderFileMenu();
+  const saving = result.current.handleSavePipelineAs("Copy");
+  await vi.waitFor(() =>
+    expect(state.storage.copyRemotePipeline).toHaveBeenCalledOnce(),
+  );
+  expect(state.releaseRecoveredCopy).not.toHaveBeenCalled();
+  pending.resolve({ id: "copy-id", storageKey: "Copy" });
+  await saving;
+  expect(state.releaseRecoveredCopy).toHaveBeenCalledWith(
+    state.file,
+    expect.stringContaining("Preserve the full pipeline content"),
   );
 });

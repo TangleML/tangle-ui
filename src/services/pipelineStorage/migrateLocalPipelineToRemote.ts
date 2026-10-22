@@ -12,6 +12,10 @@ import {
   rememberPipelineMigration,
 } from "./pipelineMigrations";
 import type { PipelineStorageService } from "./PipelineStorageService";
+import {
+  releaseDeletedPipelineForMigration,
+  RemotePipelineDeletionError,
+} from "./remotePipelineDeletion";
 import type { RemotePipelineRef } from "./types";
 
 export class PipelineMigrationRecoveryError extends Error {
@@ -137,7 +141,13 @@ async function migrate(
     try {
       remote = await storage.resolvePipeline(migration.remote);
     } catch (error) {
-      if (!(error instanceof PipelineSpecApiError) || error.status !== 404)
+      if (
+        !(error instanceof PipelineSpecApiError && error.status === 404) &&
+        !(
+          error instanceof RemotePipelineDeletionError &&
+          error.state === "deleted"
+        )
+      )
         throw error;
       // Confirm the former path is absent before retiring a stale alias. A
       // missing GET route must not cause a duplicate upload.
@@ -145,6 +155,8 @@ async function migrate(
         backendUrl,
         filePath,
       );
+      if (!recovered)
+        releaseDeletedPipelineForMigration(migration.remote, filePath);
       await forgetPipelineMigration(local.id, migration.remote);
       existing = recovered
         ? { source: "remote", backendUrl, pipelineId: recovered.id }

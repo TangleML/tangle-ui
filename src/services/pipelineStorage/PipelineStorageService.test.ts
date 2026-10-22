@@ -32,6 +32,7 @@ import {
 } from "./pipelineMigrations";
 import * as registry from "./pipelineRegistry";
 import { PipelineStorageService } from "./PipelineStorageService";
+import { withRemotePipelineDeletion } from "./remotePipelineDeletion";
 import { getEditorPipelineIdentity } from "./types";
 
 vi.mock("@/api/client.gen", () => ({
@@ -657,6 +658,29 @@ describe("remote drafts and project attachment", () => {
     expect(new Set(paths()).size).toBe(2);
   });
 
+  it("blocks reopening a draft whose lost creation response is being deleted", async () => {
+    const file = await storage.resolvePipeline(draft);
+    vi.mocked(client.put).mockRejectedValueOnce(new Error("Response lost"));
+    await expect(file.write(content)).rejects.toThrow("Response lost");
+    expect(file.remote).toBeUndefined();
+    const removal = Promise.withResolvers<void>();
+    const deleting = withRemotePipelineDeletion(
+      { ...ref, pipelineId: "unacknowledged-draft" },
+      String(paths()[0]),
+      () => removal.promise,
+    );
+    const failed = expect(deleting).rejects.toThrow("Delete refused");
+    try {
+      await expect(storage.resolvePipeline(draft)).rejects.toThrow(
+        "being deleted",
+      );
+    } finally {
+      removal.reject(new Error("Delete refused"));
+      await failed;
+    }
+    await expect(storage.resolvePipeline(draft)).resolves.toBe(file);
+  });
+
   it.each(["response", "permission"])(
     "retries a failed %s without changing identity",
     async (failure) => {
@@ -1106,6 +1130,31 @@ describe("moving local pipelines to remote storage", () => {
       }),
     ).resolves.toMatchObject({ id: ref.pipelineId });
     expect(client.put).toHaveBeenCalledTimes(2);
+    expect(local.deleteFile).not.toHaveBeenCalled();
+  });
+
+  it("reopens and saves the same ID after explicitly reuploading a known-deleted retained copy", async () => {
+    const filePath = `pipelines/${local.id}.yaml`;
+    await storage.moveLocalPipelineToRemote(local, ref.backendUrl, undefined, {
+      keepLocalCopy: true,
+    });
+    await withRemotePipelineDeletion(ref, filePath, async () => {});
+    await expect(
+      storage.moveLocalPipelineToRemote(local, ref.backendUrl, undefined, {
+        keepLocalCopy: true,
+      }),
+    ).resolves.toMatchObject({ id: ref.pipelineId });
+
+    const restored = { ...document, file_path: filePath };
+    vi.mocked(client.get).mockResolvedValue(response(restored));
+    vi.mocked(client.put).mockResolvedValue(response(restored));
+    const reopened = await storage.resolvePipeline(ref);
+    await expect(reopened.write(content)).resolves.toBeUndefined();
+    expect(client.put).toHaveBeenCalledTimes(3);
+    expect(vi.mocked(client.put).mock.lastCall?.[0]).toMatchObject({
+      url: "/api/pipelines/{pipeline_id}",
+      path: { pipeline_id: ref.pipelineId },
+    });
     expect(local.deleteFile).not.toHaveBeenCalled();
   });
 

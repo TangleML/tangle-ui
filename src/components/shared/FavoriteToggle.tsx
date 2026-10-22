@@ -11,6 +11,7 @@ interface FavoriteToggleProps {
   id: string;
   name: string;
   analyticsActionType?: string;
+  disabled?: boolean;
 }
 
 export const FavoriteToggle = ({
@@ -18,6 +19,7 @@ export const FavoriteToggle = ({
   id,
   name,
   analyticsActionType,
+  disabled,
 }: FavoriteToggleProps) => {
   const { isFavorite, toggleFavorite } = useFavorites();
   const active = isFavorite(type, id);
@@ -30,6 +32,11 @@ export const FavoriteToggle = ({
   return (
     <Button
       onClick={handleClick}
+      aria-label={
+        active ? `Remove ${name} from favorites` : `Add ${name} to favorites`
+      }
+      aria-pressed={active}
+      disabled={disabled}
       data-testid="favorite-toggle"
       className={cn(
         "w-fit h-fit p-1 hover:text-warning",

@@ -12,6 +12,11 @@ import type { ComponentSpec } from "@/utils/componentSpec";
 import { componentSpecFromYaml, componentSpecToYaml } from "@/utils/yaml";
 
 import {
+  admitRemotePipelineWrite,
+  assertRemotePipelineAvailable,
+  type RemotePipelineWriteAdmission,
+} from "../remotePipelineDeletion";
+import {
   editorSpecFromRemoteTask,
   remotePipelineTaskFromSpec,
 } from "../remotePipelineTask";
@@ -24,6 +29,21 @@ import {
 
 // Writes survive editor navigation; reopening waits for the last write to this ID.
 const pendingWrites = new Map<string, Promise<SavedPipelineDocument>>();
+const pendingCreations = new Map<string, Set<Promise<void>>>();
+
+export async function waitForPendingRemotePipelineWrites(
+  ref: RemotePipelineRef,
+  filePath?: string,
+): Promise<void> {
+  const key = getEditorPipelineIdentity(ref);
+  const pathKey = JSON.stringify([ref.backendUrl, filePath]);
+  while (pendingWrites.has(key) || pendingCreations.has(pathKey)) {
+    await Promise.all([
+      pendingWrites.get(key),
+      ...(pendingCreations.get(pathKey) ?? []),
+    ]);
+  }
+}
 
 export class RemotePipelineStorageDriver implements PipelineStorageDriver {
   readonly type = "remote-pipeline";
@@ -56,10 +76,8 @@ export class RemotePipelineStorageDriver implements PipelineStorageDriver {
   static async open(
     ref: RemotePipelineRef,
   ): Promise<RemotePipelineStorageDriver> {
-    const key = getEditorPipelineIdentity(ref);
-    while (pendingWrites.has(key)) {
-      await pendingWrites.get(key);
-    }
+    assertRemotePipelineAvailable(ref.backendUrl, ref);
+    await waitForPendingRemotePipelineWrites(ref);
     const [document, userId] = await Promise.all([
       getPipelineDocument(ref.pipelineId, ref.backendUrl),
       // Failure to verify write access must not prevent reading the document.
@@ -69,6 +87,7 @@ export class RemotePipelineStorageDriver implements PipelineStorageDriver {
         return error instanceof Error ? error : new Error(String(error));
       }),
     ]);
+    assertRemotePipelineAvailable(ref.backendUrl, ref);
     return new RemotePipelineStorageDriver(
       ref.backendUrl,
       document,
@@ -82,8 +101,9 @@ export class RemotePipelineStorageDriver implements PipelineStorageDriver {
     name: string,
     content: string,
     filePath = `pipelines/${crypto.randomUUID()}.yaml`,
+    admission = admitRemotePipelineWrite(backendUrl, { filePath }),
   ): Promise<RemotePipelineStorageDriver> {
-    return this.createCopy({ backendUrl, name, content, filePath });
+    return this.createCopy({ backendUrl, name, content, filePath, admission });
   }
 
   private static async createCopy({
@@ -92,25 +112,44 @@ export class RemotePipelineStorageDriver implements PipelineStorageDriver {
     content,
     source,
     filePath = `pipelines/${crypto.randomUUID()}.yaml`,
+    admission = admitRemotePipelineWrite(backendUrl, { filePath }),
   }: {
     backendUrl: string;
     name: string;
     content: string;
     source?: SavedPipelineDocument;
     filePath?: string;
+    admission?: RemotePipelineWriteAdmission;
   }): Promise<RemotePipelineStorageDriver> {
+    admission.assertWritable();
     const spec = { ...componentSpecFromYaml(content), name };
-    const userId = await getRemotePipelineWriter(backendUrl);
-    // Names are labels; a new random path prevents Save As replacing a namesake.
-    const document = await writeRemotePipelineDocument(backendUrl, filePath, {
-      root_pipeline_task: remotePipelineTaskFromSpec(
-        spec,
-        source?.root_pipeline_task,
-      ),
-      pipeline_run_annotations: source?.pipeline_run_annotations ?? {},
+    const creation = Promise.resolve().then(async () => {
+      const userId = await getRemotePipelineWriter(backendUrl);
+      admission.assertWritable();
+      const document = await writeRemotePipelineDocument(backendUrl, filePath, {
+        root_pipeline_task: remotePipelineTaskFromSpec(
+          spec,
+          source?.root_pipeline_task,
+        ),
+        pipeline_run_annotations: source?.pipeline_run_annotations ?? {},
+      });
+      assertRemotePipelineOwner(document, userId);
+      return new RemotePipelineStorageDriver(backendUrl, document, true);
     });
-    assertRemotePipelineOwner(document, userId);
-    return new RemotePipelineStorageDriver(backendUrl, document, true);
+    const pathKey = JSON.stringify([backendUrl, filePath]);
+    const pending = pendingCreations.get(pathKey) ?? new Set<Promise<void>>();
+    const settled = creation.then(
+      () => {},
+      () => {},
+    );
+    pending.add(settled);
+    pendingCreations.set(pathKey, pending);
+    try {
+      return await creation;
+    } finally {
+      pending.delete(settled);
+      if (!pending.size) pendingCreations.delete(pathKey);
+    }
   }
 
   async copy(
@@ -143,18 +182,26 @@ export class RemotePipelineStorageDriver implements PipelineStorageDriver {
     );
   }
 
-  async write(_storageKey: string, content: string): Promise<void> {
+  async write(
+    _storageKey: string,
+    content: string,
+    admission?: RemotePipelineWriteAdmission,
+  ): Promise<void> {
     const spec = componentSpecFromYaml(content);
-    await this.updateSpec(() => spec);
+    await this.updateSpec(() => spec, admission);
   }
 
-  async rename(_oldStorageKey: string, newStorageKey: string): Promise<void> {
+  async rename(
+    _oldStorageKey: string,
+    newStorageKey: string,
+    admission?: RemotePipelineWriteAdmission,
+  ): Promise<void> {
     await this.updateSpec((document) => {
       const spec = editorSpecFromRemoteTask(document.root_pipeline_task);
       return spec.name === newStorageKey
         ? undefined
         : { ...spec, name: newStorageKey };
-    });
+    }, admission);
     this.displayName = newStorageKey;
   }
 
@@ -168,7 +215,9 @@ export class RemotePipelineStorageDriver implements PipelineStorageDriver {
 
   private async updateSpec(
     getSpec: (document: SavedPipelineDocument) => ComponentSpec | undefined,
+    admission = admitRemotePipelineWrite(this.backendUrl, this),
   ): Promise<void> {
+    admission.assertWritable();
     if (!this.canEdit) {
       throw (
         this.editingError ??
@@ -180,6 +229,7 @@ export class RemotePipelineStorageDriver implements PipelineStorageDriver {
       pendingWrites.get(key) ?? Promise.resolve(this.document)
     ).then(async (current) => {
       this.document = current;
+      admission.assertWritable();
       const spec = getSpec(current);
       if (!spec) return current;
       const document = await writeRemotePipelineDocument(

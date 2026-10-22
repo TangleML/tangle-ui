@@ -30,11 +30,21 @@ import {
 } from "@/services/pipelineStorage/pipelineFileEvents";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import {
+  getRemotePipelineDeletionError,
+  subscribeRemotePipelineDeletion,
+} from "@/services/pipelineStorage/remotePipelineDeletion";
+import {
   type EditorPipelineRef,
   getEditorPipelineIdentity,
   isRemotePipelineDraftRef,
+  type RemotePipelineRef,
 } from "@/services/pipelineStorage/types";
 import { PIPELINE_YAML_LOAD_OPTIONS } from "@/utils/yaml";
+
+import {
+  EDITOR_SPEC_QUERY_KEY,
+  reconcileDeletedRemotePipeline,
+} from "./deletedRemotePipelineCache";
 
 export interface LoadedSpec {
   spec: ComponentSpec;
@@ -50,8 +60,6 @@ function deserializeSpec(data: unknown, idGen?: IdGenerator): ComponentSpec {
   registerRootStore(spec);
   return spec;
 }
-
-export const EDITOR_SPEC_QUERY_KEY = "editor-v2-spec";
 
 export function useLoadSpec(ref: EditorPipelineRef) {
   const storage = usePipelineStorage();
@@ -94,10 +102,30 @@ export function useLoadSpec(ref: EditorPipelineRef) {
   });
 
   const { file } = query.data;
+  useEffect(() => {
+    function reconcile() {
+      const remote =
+        file.remote &&
+        ({ source: "remote", ...file.remote } satisfies RemotePipelineRef);
+      const error = remote && getRemotePipelineDeletionError(remote);
+      if (remote && error) {
+        void reconcileDeletedRemotePipeline(queryClient, remote, error);
+      }
+    }
+    reconcile();
+    return subscribeRemotePipelineDeletion((deletion) => {
+      if (deletion.state === "deleted" || deletion.state === "uncertain")
+        reconcile();
+    });
+  }, [file, queryClient]);
   useEffect(
     () =>
       autorun(() => {
-        if (!file.remote) return;
+        if (
+          !file.remote ||
+          getRemotePipelineDeletionError({ source: "remote", ...file.remote })
+        )
+          return;
         addRecentlyViewed(
           {
             type: "remote-pipeline",

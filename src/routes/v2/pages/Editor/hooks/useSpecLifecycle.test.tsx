@@ -5,6 +5,7 @@ import { runInAction } from "mobx";
 import { StrictMode } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
+import { serializeComponentSpecToText } from "@/models/componentSpec";
 import { ComponentSpec } from "@/models/componentSpec";
 import { AutoSaveIndicator } from "@/routes/v2/pages/Editor/components/EditorMenuBar/components/AutoSaveIndicator";
 import { AutoSaveStore } from "@/routes/v2/pages/Editor/store/autoSaveStore";
@@ -17,6 +18,7 @@ import {
 import { RootFolderDbStorageDriver } from "@/services/pipelineStorage/drivers/RootFolderDbStorageDriver";
 import { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import { PipelineFolder } from "@/services/pipelineStorage/PipelineFolder";
+import { withRemotePipelineDeletion } from "@/services/pipelineStorage/remotePipelineDeletion";
 
 import { useSpecLifecycle } from "./useSpecLifecycle";
 
@@ -327,3 +329,32 @@ it("persists the undo steps for the saved remote version while more edits are pe
   expect(calls[1][2].undoQueue).toHaveLength(2);
   expect(calls[1][3]).toContain("Second edit");
 });
+
+it.each([false, true])(
+  "keeps deleted source edits until an unchanged copy succeeds (edited during copy: %s)",
+  async (editedDuringCopy) => {
+    const current = pipeline(`deleted-copy-${editedDuringCopy}`);
+    const view = render(<Editor {...current} />);
+    const removedListener = vi.spyOn(window, "removeEventListener");
+    act(() => current.spec.setDescription("Recover this content"));
+    const snapshot = serializeComponentSpecToText(current.spec);
+    await withRemotePipelineDeletion(
+      { source: "remote", ...current.file.remote! },
+      `pipelines/${current.file.id}.yaml`,
+      async () => {},
+    );
+    if (editedDuringCopy)
+      act(() => current.spec.setDescription("A later edit"));
+    act(() => session.autoSave.releaseRecoveredCopy(current.file, snapshot));
+    expect(session.autoSave.hasUnsavedChanges).toBe(editedDuringCopy);
+    if (!editedDuringCopy)
+      expect(removedListener).toHaveBeenCalledWith(
+        "beforeunload",
+        expect.any(Function),
+      );
+    view.unmount();
+    await act(() => vi.runAllTimersAsync());
+    expect(current.write).not.toHaveBeenCalled();
+    expect(notify).not.toHaveBeenCalled();
+  },
+);
