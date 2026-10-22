@@ -201,3 +201,24 @@ describe("removeRecentlyViewed", () => {
     expect(result.current.recentlyViewed).toHaveLength(1);
   });
 });
+
+it("deduplicates and removes history recorded with an equivalent backend URL", () => {
+  const oldId = `remote:${encodeURIComponent("https://EXAMPLE.com:443/")}:pipeline-id`;
+  localStorage.setItem(
+    "Home/recently_viewed",
+    JSON.stringify([
+      { type: "pipeline", id: oldId, name: "Old", timestamp: 1 },
+    ]),
+  );
+  addRecentlyViewed(
+    { type: "remote-pipeline", id: "pipeline-id", name: "Saved" },
+    backend.backendUrl,
+  );
+  expect(
+    JSON.parse(localStorage.getItem("Home/recently_viewed") ?? "[]"),
+  ).toHaveLength(1);
+  removeRecentlyViewed("remote-pipeline", "pipeline-id", backend.backendUrl);
+  expect(
+    JSON.parse(localStorage.getItem("Home/recently_viewed") ?? "[]"),
+  ).toEqual([]);
+});
