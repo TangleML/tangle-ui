@@ -5,14 +5,25 @@ type TitleConfig = {
   [key: string]: string | ((params: Record<string, string>) => string);
 };
 
+// No /runs patterns: only the run view knows the pipeline name, so it sets its
+// own title, and a default here would overwrite it on every router change.
 const defaultTitles: TitleConfig = {
   "/": "Tangle - Pipeline Studio",
-  "/editor/$name": (params) => `Tangle - ${params.name || "New Pipeline"}`,
-  "/runs/$id": (params) => `Tangle - ${params.id}`,
+  "/editor": "Tangle - Open Pipeline",
+  "/editor/$pipelineName": (params) =>
+    `Tangle - ${params.pipelineName || "New Pipeline"}`,
 };
 
 function setDocumentTitle(title: string, suffix?: string) {
   document.title = suffix ? `${title} ${suffix}` : title;
+}
+
+function decodePathParam(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
 }
 
 /**
@@ -39,7 +50,7 @@ export function useDocumentTitle(titles: TitleConfig = {}, suffix?: string) {
           route.match(/\$(\w+)/g)?.map((p) => p.substring(1)) || [];
         const paramValues = currentRoute.match(regex)?.slice(1) || [];
         const params = Object.fromEntries(
-          paramNames.map((name, i) => [name, paramValues[i]]),
+          paramNames.map((name, i) => [name, decodePathParam(paramValues[i])]),
         );
 
         title =

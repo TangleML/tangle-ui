@@ -176,7 +176,7 @@ export function TourPage() {
     try {
       const file = await storage.rootFolder.addFile(newName, yamlContent);
       await navigate({
-        to: APP_ROUTES.EDITOR_V2_PIPELINE,
+        to: APP_ROUTES.PIPELINE_EDITOR,
         params: { pipelineName: newName },
         search: { fileId: file.id },
       });

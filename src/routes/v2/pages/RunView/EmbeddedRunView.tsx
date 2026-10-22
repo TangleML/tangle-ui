@@ -62,7 +62,7 @@ interface RunAgentBoundaryProps {
 
 /**
  * Hosts the Tangent run-inspector sub-agent only when this run view is embedded
- * in a Tangent session. The standalone `/runs-v2` route renders without a
+ * in a Tangent session. The standalone `/runs` route renders without a
  * `sessionId`, so it stays entirely agent-free.
  */
 function RunAgentBoundary({ sessionId, ...rest }: RunAgentBoundaryProps) {

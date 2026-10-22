@@ -17,7 +17,9 @@ import {
  */
 test.describe.configure({ mode: "serial" });
 
-test.describe("Published Component Library - Lifecycle", () => {
+// Written against the legacy editor, which no longer has a route. Port to the v2
+// editor before re-enabling: https://github.com/TangleML/tangle-ui/issues/2925
+test.describe.fixme("Published Component Library - Lifecycle", () => {
   let page: Page;
 
   const componentName = Math.random().toString(36).substring(2, 15);

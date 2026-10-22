@@ -42,7 +42,7 @@ const RenamePipeline = () => {
     await saveComponentSpec(name);
 
     const urlName = encodeURIComponent(name);
-    const url = APP_ROUTES.PIPELINE_EDITOR.replace("$name", urlName);
+    const url = APP_ROUTES.PIPELINE_EDITOR.replace("$pipelineName", urlName);
 
     navigate({ to: url });
   };

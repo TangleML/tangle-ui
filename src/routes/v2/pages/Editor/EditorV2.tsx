@@ -11,6 +11,7 @@ import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { InlineStack } from "@/components/ui/layout";
+import { useTrackRecentlyViewedPipeline } from "@/hooks/useTrackRecentlyViewedPipeline";
 import { ComponentLibraryProvider } from "@/providers/ComponentLibraryProvider";
 import { ForcedSearchProvider } from "@/providers/ComponentLibraryProvider/ForcedSearchProvider";
 import { DialogProvider } from "@/providers/DialogProvider/DialogProvider";
@@ -81,6 +82,7 @@ const PipelineEditor = withSuspenseWrapper(
     const tourMode = useTourMode();
 
     useWindowPersistence(tourMode ? TOUR_WINDOW_LAYOUT_ID : "editor");
+    useTrackRecentlyViewedPipeline(tourMode ? null : pipelineRef.name);
     useDockAreaAccordion();
     useSpecLifecycle(rootSpec, pipelineRef, restoredUndoStore);
     useSelectionWindowSync();
@@ -181,7 +183,7 @@ function EditorV2Content({ pipelineRef }: { pipelineRef: PipelineRef | null }) {
   );
 }
 
-// Non-editor-v2 routes (e.g. `/tour/$tourId`) pass `pipelineRef` directly.
+// Non-editor routes (e.g. `/tour/$tourId`) pass `pipelineRef` directly.
 // Without a prop, we fall back to reading the route's params/search.
 export function EditorV2({
   pipelineRef: pipelineRefProp,

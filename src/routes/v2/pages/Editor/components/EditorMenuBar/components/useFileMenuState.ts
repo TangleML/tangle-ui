@@ -78,7 +78,7 @@ export function useFileMenuState(): FileMenuState {
   const handleNewPipeline = async () => {
     const file = await createNewPipeline(storage);
     navigate({
-      to: APP_ROUTES.EDITOR_V2_PIPELINE,
+      to: APP_ROUTES.PIPELINE_EDITOR,
       params: { pipelineName: file.storageKey },
       search: { fileId: file.id },
     });
@@ -86,7 +86,7 @@ export function useFileMenuState(): FileMenuState {
 
   const handlePipelineClick = (pipeline: PipelineRef) => {
     navigate({
-      to: APP_ROUTES.EDITOR_V2_PIPELINE,
+      to: APP_ROUTES.PIPELINE_EDITOR,
       params: { pipelineName: pipeline.name },
       search: { fileId: pipeline.fileId },
     });
@@ -97,7 +97,7 @@ export function useFileMenuState(): FileMenuState {
     const file = await savePipelineAs(navigation, name, storage);
     notify(`Pipeline saved as "${name}"`, "success");
     navigate({
-      to: APP_ROUTES.EDITOR_V2_PIPELINE,
+      to: APP_ROUTES.PIPELINE_EDITOR,
       params: { pipelineName: name },
       search: { fileId: file?.id },
     });

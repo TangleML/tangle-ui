@@ -21,7 +21,7 @@ export function EmptyEditorState() {
 
   const handlePipelineClick = (pipeline: PipelineRef) => {
     navigate({
-      to: APP_ROUTES.EDITOR_V2_PIPELINE,
+      to: APP_ROUTES.PIPELINE_EDITOR,
       params: { pipelineName: pipeline.name },
       search: { fileId: pipeline.fileId },
     });

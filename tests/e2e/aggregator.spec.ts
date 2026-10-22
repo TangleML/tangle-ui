@@ -10,7 +10,9 @@ import {
 const INPUT_AGGREGATOR_URL =
   "https://raw.githubusercontent.com/TangleML/tangle-ui/refs/heads/master/public/assets/components/input_aggregator.component.yaml";
 
-test.describe("Input Aggregator Component", () => {
+// Written against the legacy editor, which no longer has a route. Port to the v2
+// editor before re-enabling: https://github.com/TangleML/tangle-ui/issues/2925
+test.describe.fixme("Input Aggregator Component", () => {
   test.beforeEach(async ({ page }) => {
     await setBetaFlag(page, "input-aggregator", true);
     // The component is served from GitHub raw in production, but that URL isn't

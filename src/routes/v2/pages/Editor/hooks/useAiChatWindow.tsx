@@ -48,7 +48,7 @@ export function useAiChatWindow(enabled: boolean) {
               editorSession.pipelineFile,
               (fileId, name) =>
                 void navigate({
-                  to: APP_ROUTES.EDITOR_V2_PIPELINE,
+                  to: APP_ROUTES.PIPELINE_EDITOR,
                   params: { pipelineName: name },
                   search: { fileId },
                   replace: true,
