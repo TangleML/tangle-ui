@@ -42,11 +42,13 @@ export function issueTypeLabel(type: string): string {
 interface ValidationSummaryProps {
   spec: ComponentSpec;
   className?: string;
+  readOnly?: boolean;
 }
 
 export const ValidationSummary = observer(function ValidationSummary({
   spec,
   className,
+  readOnly = false,
 }: ValidationSummaryProps) {
   const { track } = useAnalytics();
   const [isExpanded, setIsExpanded] = useState(false);
@@ -102,15 +104,17 @@ export const ValidationSummary = observer(function ValidationSummary({
             {summaryParts.join(", ")}
           </Text>
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="shrink-0 h-auto py-1.5"
-          onClick={handleOpenFixWindow}
-          data-testid="validation-summary-fix-button"
-        >
-          Fix
-        </Button>
+        {!readOnly && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="shrink-0 h-auto py-1.5"
+            onClick={handleOpenFixWindow}
+            data-testid="validation-summary-fix-button"
+          >
+            Fix
+          </Button>
+        )}
       </InlineStack>
 
       {isExpanded && (

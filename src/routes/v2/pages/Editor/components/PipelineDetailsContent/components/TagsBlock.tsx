@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Tag } from "@/components/Editor/Context/Tags/Tag";
 import { TagEditor } from "@/components/Editor/Context/Tags/TagEditor";
 import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlock";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -17,8 +18,10 @@ import { tracking } from "@/utils/tracking";
 
 export const TagsBlock = observer(function TagsBlock({
   spec,
+  readOnly = false,
 }: {
   spec: ComponentSpec;
+  readOnly?: boolean;
 }) {
   const { updatePipelineTags } = usePipelineActions();
   const { track } = useAnalytics();
@@ -31,6 +34,7 @@ export const TagsBlock = observer(function TagsBlock({
   const tags = spec.annotations.get(PIPELINE_TAGS_ANNOTATION);
 
   const saveTags = (updatedTags: string[]) => {
+    if (readOnly) return;
     updatePipelineTags(spec, updatedTags);
   };
 
@@ -84,7 +88,7 @@ export const TagsBlock = observer(function TagsBlock({
   return (
     <ContentBlock title="Tags">
       <BlockStack gap="2">
-        {tags.length >= TAG_LIMIT ? (
+        {readOnly ? null : tags.length >= TAG_LIMIT ? (
           <Paragraph size="xs" tone="subdued">
             Tag limit reached ({TAG_LIMIT})
           </Paragraph>
@@ -111,7 +115,11 @@ export const TagsBlock = observer(function TagsBlock({
         {tags.length > 0 && (
           <InlineStack gap="2" wrap="wrap">
             {tags.map((tag, index) =>
-              editingIndex === index ? (
+              readOnly ? (
+                <Badge key={tag} size="sm" shape="rounded" variant="outline">
+                  {tag}
+                </Badge>
+              ) : editingIndex === index ? (
                 <TagEditor
                   key={index}
                   value={editValue}

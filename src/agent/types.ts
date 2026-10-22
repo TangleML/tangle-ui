@@ -8,7 +8,7 @@
  * crosses the Comlink boundary via structured clone.
  */
 export type AgentContext =
-  | { mode: "editor" }
+  | { mode: "editor"; readOnly?: boolean }
   | { mode: "runView"; runId: string; subgraphExecutionId?: string };
 
 export interface AgentResponse {

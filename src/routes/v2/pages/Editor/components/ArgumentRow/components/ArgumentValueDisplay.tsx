@@ -12,6 +12,7 @@ type DynamicDataDisplayInfo = NonNullable<
 
 interface ArgumentValueDisplayProps {
   editing: boolean;
+  readOnly?: boolean;
   externalEditor?: boolean;
   isDynamic: boolean;
   dynamicDisplayInfo: DynamicDataDisplayInfo | null;
@@ -27,6 +28,7 @@ interface ArgumentValueDisplayProps {
 
 export function ArgumentValueDisplay({
   editing,
+  readOnly = false,
   externalEditor,
   isDynamic,
   dynamicDisplayInfo,
@@ -70,7 +72,8 @@ export function ArgumentValueDisplay({
       key={`${task.$id}-${inputSpec.name}-${String(currentValue ?? "")}`}
       defaultValue={typeof currentValue === "string" ? currentValue : ""}
       expandDialogTitle={`Value for ${inputSpec.name}`}
-      onChangeComplete={onChangeComplete}
+      onChangeComplete={readOnly ? undefined : onChangeComplete}
+      readOnly={readOnly}
       onBlur={onBlur}
       highlightSyntax
       placeholder={isBound ? bindingLabel || "" : placeholder}

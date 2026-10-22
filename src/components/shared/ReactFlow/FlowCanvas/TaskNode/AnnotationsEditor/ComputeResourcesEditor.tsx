@@ -2,6 +2,7 @@ import { useCallback } from "react";
 
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { Icon } from "@/components/ui/icon";
+import { Input } from "@/components/ui/input";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import {
   Popover,
@@ -21,6 +22,7 @@ interface ComputeResourcesEditorProps {
   cloudProviderConfig: AnnotationConfig | null;
   onSave: (key: string, value: string) => void;
   providerValue?: string;
+  readOnly?: boolean;
 }
 
 export const ComputeResourcesEditor = ({
@@ -29,6 +31,7 @@ export const ComputeResourcesEditor = ({
   cloudProviderConfig,
   onSave,
   providerValue,
+  readOnly = false,
 }: ComputeResourcesEditorProps) => {
   return (
     <BlockStack gap="2">
@@ -56,6 +59,7 @@ export const ComputeResourcesEditor = ({
                 ),
             }}
             onSave={onSave}
+            readOnly={readOnly}
           />
         )}
 
@@ -65,6 +69,7 @@ export const ComputeResourcesEditor = ({
             resource={resource}
             annotations={annotations}
             onSave={onSave}
+            readOnly={readOnly}
           />
         ))}
       </BlockStack>
@@ -76,12 +81,14 @@ interface ComputeResourceFieldProps {
   resource: AnnotationConfig;
   annotations: Annotations;
   onSave: (key: string, value: string) => void;
+  readOnly?: boolean;
 }
 
 const ComputeResourceField = ({
   resource,
   annotations,
   onSave,
+  readOnly = false,
 }: ComputeResourceFieldProps) => {
   const handleValueBlur = useCallback(
     (value: string) => {
@@ -133,13 +140,25 @@ const ComputeResourceField = ({
         )}
       </InlineStack>
 
-      <AnnotationsInput
-        value={value}
-        config={resource}
-        onBlur={handleValueBlur}
-        annotations={annotations}
-        className="mr-8"
-      />
+      {readOnly ? (
+        <Input
+          value={
+            resource.options?.find((option) => option.value === value)?.name ??
+            value
+          }
+          aria-label={label}
+          readOnly
+          className="mr-8"
+        />
+      ) : (
+        <AnnotationsInput
+          value={value}
+          config={resource}
+          onBlur={handleValueBlur}
+          annotations={annotations}
+          className="mr-8"
+        />
+      )}
     </BlockStack>
   );
 };

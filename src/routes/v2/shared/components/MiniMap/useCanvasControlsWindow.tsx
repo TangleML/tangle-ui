@@ -8,12 +8,18 @@ import { CanvasControlsContent } from "./CanvasControlsContent";
 const CANVAS_CONTROLS_WINDOW_ID = "canvas-controls";
 const CANVAS_CONTROLS_WINDOW_HEIGHT = 150;
 
-export function useCanvasControlsWindow(trackingSpace: string) {
+export function useCanvasControlsWindow(
+  trackingSpace: string,
+  showInteractive = true,
+) {
   const { windows } = useSharedStores();
   useEffect(() => {
     if (!windows.getWindowById(CANVAS_CONTROLS_WINDOW_ID)) {
       windows.openWindow(
-        <CanvasControlsContent trackingSpace={trackingSpace} />,
+        <CanvasControlsContent
+          trackingSpace={trackingSpace}
+          showInteractive={showInteractive}
+        />,
         {
           id: CANVAS_CONTROLS_WINDOW_ID,
           title: "Minimap",
@@ -32,5 +38,5 @@ export function useCanvasControlsWindow(trackingSpace: string) {
         },
       );
     }
-  }, [windows]);
+  }, [windows, trackingSpace, showInteractive]);
 }

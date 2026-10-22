@@ -98,6 +98,7 @@ function ensureContextPanelVisible(
   windows: WindowStoreImpl,
   deselectAll: () => void,
   placement: ContextPanelPlacement,
+  readOnly: boolean,
 ) {
   const existing = windows.getWindowById(CONTEXT_PANEL_WINDOW_ID);
 
@@ -110,7 +111,7 @@ function ensureContextPanelVisible(
     return;
   }
 
-  windows.openWindow(<ContextPanelContent />, {
+  windows.openWindow(<ContextPanelContent readOnly={readOnly} />, {
     id: CONTEXT_PANEL_WINDOW_ID,
     title: "Properties",
     position: placement.getInitialPosition?.() ?? {
@@ -162,10 +163,12 @@ function isSelectionStale(
 
 export function useSelectionWindowSync(options?: {
   contextPanel?: ContextPanelPlacement;
+  readOnly?: boolean;
 }) {
   const { editor, navigation, windows } = useSharedStores();
   const deselectAll = useDeselectAll();
   const placement = options?.contextPanel ?? DEFAULT_CONTEXT_PANEL_PLACEMENT;
+  const readOnly = options?.readOnly ?? false;
   const placementRef = useRef(placement);
 
   useEffect(() => {
@@ -200,7 +203,7 @@ export function useSelectionWindowSync(options?: {
           return;
         }
 
-        if (lastSelectionWasShiftClick && lastShiftClickEntityId) {
+        if (!readOnly && lastSelectionWasShiftClick && lastShiftClickEntityId) {
           handleShiftClickPin(
             navigation,
             windows,
@@ -220,7 +223,12 @@ export function useSelectionWindowSync(options?: {
 
         if (editor.draggedSincePointerDown) return;
 
-        ensureContextPanelVisible(windows, deselectAll, placementRef.current);
+        ensureContextPanelVisible(
+          windows,
+          deselectAll,
+          placementRef.current,
+          readOnly,
+        );
       },
     );
 
@@ -231,7 +239,12 @@ export function useSelectionWindowSync(options?: {
         if (!editor.selectedNodeId && editor.multiSelection.length === 0) {
           return;
         }
-        ensureContextPanelVisible(windows, deselectAll, placementRef.current);
+        ensureContextPanelVisible(
+          windows,
+          deselectAll,
+          placementRef.current,
+          readOnly,
+        );
       },
     );
 
@@ -239,5 +252,5 @@ export function useSelectionWindowSync(options?: {
       disposeSelectionWatcher();
       disposeRevealWatcher();
     };
-  }, [editor, navigation, windows, deselectAll]);
+  }, [editor, navigation, windows, deselectAll, readOnly]);
 }

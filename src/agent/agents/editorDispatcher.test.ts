@@ -1,12 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AgentSession } from "../session";
+import type { AgentContext } from "../types";
 
 const agentCtor = vi.hoisted(() => vi.fn());
 const memorySessionCtor = vi.hoisted(() => vi.fn());
 const runMock = vi.hoisted(() => vi.fn());
 const attachObservabilityHooks = vi.hoisted(() => vi.fn());
 const providerCtor = vi.hoisted(() => vi.fn());
+const createPipelineRepair = vi.hoisted(() => vi.fn());
+const createPipelineArchitect = vi.hoisted(() => vi.fn());
 
 vi.mock("@openai/agents", () => {
   class FakeAgent {
@@ -56,11 +59,17 @@ vi.mock("./subagents/generalHelp", () => ({
 }));
 
 vi.mock("./subagents/pipelineRepair", () => ({
-  createPipelineRepairAgent: () => fakeSubAgent,
+  createPipelineRepairAgent: () => {
+    createPipelineRepair();
+    return fakeSubAgent;
+  },
 }));
 
 vi.mock("./subagents/pipelineArchitect", () => ({
-  createPipelineArchitectAgent: () => Promise.resolve(fakeSubAgent),
+  createPipelineArchitectAgent: () => {
+    createPipelineArchitect();
+    return Promise.resolve(fakeSubAgent);
+  },
 }));
 
 vi.mock("./subagents/debugAssistant", () => ({
@@ -69,7 +78,7 @@ vi.mock("./subagents/debugAssistant", () => ({
 
 const { createEditorDispatcher } = await import("./editorDispatcher");
 
-function makeSession(): AgentSession {
+function makeSession(context: AgentContext = { mode: "editor" }): AgentSession {
   const session = {
     threadId: "thread-1",
     emitStatus: vi.fn(),
@@ -85,6 +94,7 @@ function makeSession(): AgentSession {
       model: "gpt-5.5",
     },
     recentRuns: [],
+    context,
   };
 
   // ProxyClient has private fields, so a duck-typed test double cannot satisfy
@@ -100,6 +110,8 @@ describe("createEditorDispatcher", () => {
     runMock.mockReset();
     attachObservabilityHooks.mockClear();
     providerCtor.mockClear();
+    createPipelineRepair.mockClear();
+    createPipelineArchitect.mockClear();
     runMock.mockResolvedValue({ finalOutput: "Done" });
   });
 
@@ -151,4 +163,33 @@ describe("createEditorDispatcher", () => {
     "preserves Responses continuity and selected config %j without a catalog request",
     assertDispatcher,
   );
+
+  it("only exposes inspection tools for a read-only pipeline", async () => {
+    const session = makeSession({ mode: "editor", readOnly: true });
+    await createEditorDispatcher().invoke({
+      message: "Explain this pipeline and its validation issues",
+      threadId: session.threadId,
+      aiConfig: session.aiConfig,
+      session,
+    });
+
+    const agentConfig = agentCtor.mock.calls.at(-1)?.[0];
+    expect(
+      agentConfig.tools.map(
+        ({ config }: { config: { name?: string; toolName?: string } }) =>
+          config.name ?? config.toolName,
+      ),
+    ).toEqual([
+      "get_pipeline_state",
+      "get_subgraph_state",
+      "validate_pipeline",
+      "ask_general_help",
+      "ask_debug_assistant",
+    ]);
+    expect(agentConfig.instructions).toContain(
+      "cannot edit its specification or submit runs",
+    );
+    expect(createPipelineRepair).not.toHaveBeenCalled();
+    expect(createPipelineArchitect).not.toHaveBeenCalled();
+  });
 });

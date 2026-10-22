@@ -3,7 +3,10 @@ import { useEffect } from "react";
 
 import { CMDALT } from "@/routes/v2/shared/shortcuts/keys";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
-import { VIEW_PRESETS } from "@/routes/v2/shared/windows/viewPresets";
+import {
+  DEFAULT_VIEW_PRESET,
+  type ViewPreset,
+} from "@/routes/v2/shared/windows/viewPresets";
 
 class FocusModeStore {
   @observable accessor active = false;
@@ -33,7 +36,9 @@ export const focusModeStore = new FocusModeStore();
  *               mutating window layout state)
  * - Cmd+Alt+D : Default layout (apply the Default view preset)
  */
-export function useFocusMode(): void {
+export function useFocusMode(
+  defaultPreset: ViewPreset = DEFAULT_VIEW_PRESET,
+): void {
   const { keyboard, windows } = useSharedStores();
 
   useEffect(() => {
@@ -49,9 +54,7 @@ export function useFocusMode(): void {
       keys: [CMDALT, "D"],
       label: "Default layout",
       action: () => {
-        const preset = VIEW_PRESETS.find((p) => p.label === "Default");
-        if (!preset) return;
-        windows.applyViewPreset(preset);
+        windows.applyViewPreset(defaultPreset);
       },
     });
 
@@ -59,5 +62,5 @@ export function useFocusMode(): void {
       unregisterFocusMode();
       unregisterDefault();
     };
-  }, [keyboard, windows]);
+  }, [keyboard, windows, defaultPreset]);
 }

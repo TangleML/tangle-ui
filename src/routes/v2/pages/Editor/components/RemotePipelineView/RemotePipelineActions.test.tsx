@@ -21,22 +21,17 @@ import { client } from "@/api/client.gen";
 import { getCurrentUserApiUsersMeGet } from "@/api/sdk.gen";
 import {
   IncrementingIdGenerator,
-  serializeComponentSpecToText,
   YamlDeserializer,
 } from "@/models/componentSpec";
-import { RunSubmissionScopeProvider } from "@/providers/RunSubmissionScopeProvider";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { EditorStore } from "@/routes/v2/shared/store/editorStore";
 import { NavigationStore } from "@/routes/v2/shared/store/navigationStore";
 import type { SavedPipelineDocument } from "@/services/pipelineSpecService";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
-import { buildProjectRunAnnotationKey } from "@/utils/annotations";
-import { submitPipelineRun } from "@/utils/submitPipeline";
 import { componentSpecFromYaml } from "@/utils/yaml";
 
 import { RemotePipelineActions } from "./RemotePipelineActions";
-import { RemotePipelineDetails } from "./RemotePipelineDetails";
 
 let storage: PipelineStorageService;
 let navigation: NavigationStore;
@@ -66,14 +61,7 @@ vi.mock("@/utils/backendSettings", () => ({
   getBackendSettings: async () => ({}),
   selectBackendUrl: () => "https://backend.example.com",
 }));
-vi.mock("@/components/shared/Authentication/useAwaitAuthorization", () => ({
-  useAwaitAuthorization: () => ({ isAuthorized: true }),
-}));
-vi.mock("@/components/Project/useRunProjectContext", () => ({
-  useRunProjectContext: () => ({ projectIds: [] }),
-}));
 vi.mock("@/hooks/useToastNotification", () => ({ default: () => notify }));
-vi.mock("@/utils/submitPipeline", () => ({ submitPipelineRun: vi.fn() }));
 vi.mock("@/api/client.gen", () => ({ client: { get: vi.fn(), put: vi.fn() } }));
 vi.mock("@/api/sdk.gen", () => ({ getCurrentUserApiUsersMeGet: vi.fn() }));
 vi.mock(
@@ -184,47 +172,22 @@ function renderActions() {
     <RouterContextProvider router={router}>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
-          <RunSubmissionScopeProvider projectId="project-7">
-            <RemotePipelineActions file={file} />
-            <RemotePipelineDetails ownerId={file.folder.driver.ownerId} />
-          </RunSubmissionScopeProvider>
+          <RemotePipelineActions file={file} />
         </ThemeProvider>
       </QueryClientProvider>
     </RouterContextProvider>,
   );
 }
 
-it("runs the full read-only pipeline while viewing a subgraph and preserves project attribution", async () => {
-  const initial = serializeComponentSpecToText(navigation.rootSpec!);
-  navigation.navigateToSubgraph(
-    navigation.rootSpec!,
-    navigation.rootSpec!.tasks[0].$id,
-  );
-  renderActions();
-  expect(screen.getByRole("complementary")).toHaveTextContent(
-    "Owner: another-user",
-  );
-  const button = screen.getByRole("button", { name: "Submit Run" });
-  expect(button).toBeEnabled();
-  fireEvent.click(button);
-  await waitFor(() => expect(submitPipelineRun).toHaveBeenCalledOnce());
-  const [spec, backend, options] = vi.mocked(submitPipelineRun).mock.calls[0];
-  expect(spec.name).toBe(navigation.rootSpec!.name);
-  expect(spec.implementation).toHaveProperty("graph.tasks.Nested");
-  expect(backend).toBe("https://backend.example.com");
-  expect(options?.runAnnotations).toEqual({
-    [buildProjectRunAnnotationKey("project-7")]: "true",
-  });
-  expect(file.folder.driver.canEdit).toBe(false);
-  expect(serializeComponentSpecToText(navigation.rootSpec!)).toBe(initial);
-  expect(client.put).not.toHaveBeenCalled();
-});
-
 it.each([false, true])(
-  "clones another user's pipeline with remote storage %s without changing its source",
+  "clones the full pipeline from a subgraph with remote storage %s without changing its source",
   async (remote) => {
     vi.stubEnv("VITE_REMOTE_PIPELINES", String(remote));
     const initial = await file.read();
+    navigation.navigateToSubgraph(
+      navigation.rootSpec!,
+      navigation.rootSpec!.tasks[0].$id,
+    );
     renderActions();
     fireEvent.click(screen.getByRole("button", { name: "Clone pipeline" }));
     const dialog = await screen.findByRole("dialog");
@@ -242,6 +205,9 @@ it.each([false, true])(
       expect(body.root_pipeline_task.componentRef.spec.name).toBe(
         `${navigation.rootSpec!.name} (Copy)`,
       );
+      expect(
+        body.root_pipeline_task.componentRef.spec.implementation,
+      ).toHaveProperty("graph.tasks.Nested");
       expect(body.pipeline_run_annotations).toEqual({ shared: "true" });
       expect(navigate).toHaveBeenCalledWith(
         expect.objectContaining({ params: { pipelineId: "copy" } }),

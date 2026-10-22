@@ -56,6 +56,7 @@ interface ArgumentCodeEditorProps {
   currentValue: unknown;
   task: Task;
   spec: ComponentSpec;
+  readOnly?: boolean;
 }
 
 export function ArgumentCodeEditor({
@@ -63,6 +64,7 @@ export function ArgumentCodeEditor({
   currentValue,
   task,
   spec,
+  readOnly = false,
 }: ArgumentCodeEditorProps) {
   const { track } = useAnalytics();
   const { setArgument, removeArgument } = useArgumentActions();
@@ -93,6 +95,7 @@ export function ArgumentCodeEditor({
   };
 
   const handleChange = (value: string | undefined) => {
+    if (readOnly) return;
     const text = value ?? "";
     setEditorValue(text);
 
@@ -142,9 +145,9 @@ export function ArgumentCodeEditor({
           language={language}
           theme={monacoTheme}
           value={editorValue}
-          onChange={handleChange}
+          onChange={readOnly ? undefined : handleChange}
           onMount={handleMount}
-          options={DEFAULT_MONACO_OPTIONS}
+          options={{ ...DEFAULT_MONACO_OPTIONS, readOnly }}
         />
       </BlockStack>
     </BlockStack>

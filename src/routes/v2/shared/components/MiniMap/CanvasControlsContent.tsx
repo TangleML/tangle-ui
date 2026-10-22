@@ -5,8 +5,10 @@ import { useAnalytics } from "@/providers/AnalyticsProvider";
 
 export function CanvasControlsContent({
   trackingSpace = "v2.pipeline_canvas",
+  showInteractive = true,
 }: {
   trackingSpace: string;
+  showInteractive?: boolean;
 }) {
   const { track } = useAnalytics();
 
@@ -27,7 +29,7 @@ export function CanvasControlsContent({
         <Controls
           showZoom
           showFitView
-          showInteractive
+          showInteractive={showInteractive}
           onZoomIn={() => track(`${trackingSpace}.controls.zoom_in.click`)}
           onZoomOut={() => track(`${trackingSpace}.controls.zoom_out.click`)}
           onFitView={() => track(`${trackingSpace}.controls.fit_view.click`)}

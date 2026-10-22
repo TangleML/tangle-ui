@@ -11,9 +11,9 @@ import {
 
 export function RemotePipelineShell({
   name = "Remote pipeline",
-  actions,
+  menus,
   children,
-}: PropsWithChildren<{ name?: string; actions?: ReactNode }>) {
+}: PropsWithChildren<{ name?: string; menus?: ReactNode }>) {
   return (
     <BlockStack
       fill
@@ -29,15 +29,32 @@ export function RemotePipelineShell({
           className="min-w-0"
         >
           <CanvasHomeLink trackingId="v2.pipeline_editor.menubar.home" />
-          <Text size="sm" weight="semibold" className="text-white truncate">
-            {name}
-          </Text>
-          <Badge size="sm" className="shrink-0">
-            View only
-          </Badge>
+          <BlockStack className="min-w-0">
+            <InlineStack
+              gap="2"
+              blockAlign="center"
+              wrap="nowrap"
+              className="ml-1 min-w-0"
+            >
+              <Text
+                size="sm"
+                weight="semibold"
+                className="text-white truncate max-w-64 lg:max-w-md leading-tight"
+              >
+                {name}
+              </Text>
+              <Badge size="sm" className="shrink-0">
+                View only
+              </Badge>
+            </InlineStack>
+            {menus && (
+              <InlineStack wrap="nowrap" blockAlign="center">
+                {menus}
+              </InlineStack>
+            )}
+          </BlockStack>
         </InlineStack>
         <InlineStack gap="2" blockAlign="center">
-          {actions}
           <AppMenuActions />
         </InlineStack>
       </CanvasMenuBar>

@@ -50,6 +50,30 @@ describe("selectRemoteEditorTools", () => {
     expect(names).toEqual(["debug_pipeline_run", "get_run_status"]);
   });
 
+  it("withholds mutations and submission from a read-only pipeline", () => {
+    const session = makeSession({ mode: "editor", readOnly: true });
+    const requested = describeToolGrant(makeSession(), []).withheld;
+    expect(toolNames(session, requested)).toEqual([
+      "debug_pipeline_run",
+      "get_container_log",
+      "get_container_state",
+      "get_execution_details",
+      "get_execution_state",
+      "get_pipeline_state",
+      "get_run_status",
+      "get_subgraph_state",
+      "validate_pipeline",
+    ]);
+
+    const agent = buildRemoteEditorAgent(session, {
+      tools: requested,
+      systemPrompt: "",
+    });
+    expect(agent.instructions).toContain(
+      "cannot edit its specification or submit runs",
+    );
+  });
+
   it("grants only the allowlisted subset", () => {
     const names = toolNames(makeSession(), ["add_task", "search_components"]);
     expect(names).toEqual(["add_task", "search_components"]);

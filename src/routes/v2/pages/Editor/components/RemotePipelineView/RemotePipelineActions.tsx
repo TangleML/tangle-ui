@@ -2,14 +2,15 @@ import { useNavigate } from "@tanstack/react-router";
 import { observer } from "mobx-react-lite";
 import { useRef, useState } from "react";
 
+import { ActionButton } from "@/components/shared/Buttons/ActionButton";
+import { ViewYamlButton } from "@/components/shared/Buttons/ViewYamlButton";
 import { PipelineNameDialog } from "@/components/shared/Dialogs";
-import TangleSubmitter from "@/components/shared/Submitters/Tangle/TangleSubmitter";
-import { Button } from "@/components/ui/button";
 import useToastNotification from "@/hooks/useToastNotification";
 import { serializeComponentSpec } from "@/models/componentSpec";
 import { useBackend } from "@/providers/BackendProvider";
 import { APP_ROUTES } from "@/routes/appRoutes";
 import { savePipelineAs } from "@/routes/v2/pages/Editor/components/EditorMenuBar/components/fileMenu.actions";
+import { ToolsPanel } from "@/routes/v2/shared/components/ToolsPanel";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { createsLocalPipelines } from "@/services/pipelineStorage/pipelineCreation";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
@@ -17,8 +18,10 @@ import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStoragePr
 
 export const RemotePipelineActions = observer(function RemotePipelineActions({
   file,
+  layout,
 }: {
-  file: PipelineFile;
+  file?: PipelineFile;
+  layout?: "rail";
 }) {
   const { navigation } = useSharedStores();
   const { configured } = useBackend();
@@ -31,12 +34,9 @@ export const RemotePipelineActions = observer(function RemotePipelineActions({
   const root = navigation.rootSpec;
   if (!root) return null;
   const spec = serializeComponentSpec(root);
-  const hasErrors = root.allValidationIssues.some(
-    (issue) => issue.severity === "error",
-  );
 
   async function clone(name: string) {
-    if (pending.current) return;
+    if (!file || pending.current) return;
     pending.current = true;
     setCopying(true);
     try {
@@ -67,26 +67,47 @@ export const RemotePipelineActions = observer(function RemotePipelineActions({
 
   return (
     <>
-      <Button variant="header" disabled={copying} onClick={() => setOpen(true)}>
-        Clone pipeline
-      </Button>
-      <div className="text-white">
-        <TangleSubmitter
-          componentSpec={spec}
-          isComponentTreeValid={root.isValid}
-          onlyFixableIssues={!hasErrors && root.allValidationIssues.length > 0}
+      <ToolsPanel layout={layout}>
+        {({ isRail, className, wrapperClassName, tooltipSide }) => (
+          <>
+            <ViewYamlButton
+              componentSpec={spec}
+              displayLabel={isRail ? undefined : "View YAML"}
+              aria-label="View YAML"
+              showTooltip={isRail}
+              tooltipSide={tooltipSide}
+              className={className}
+              wrapperClassName={wrapperClassName}
+            />
+            {file && (
+              <ActionButton
+                icon="CopyPlus"
+                {...(isRail
+                  ? { tooltip: "Clone pipeline" }
+                  : { label: "Clone pipeline" })}
+                aria-label="Clone pipeline"
+                tooltipSide={tooltipSide}
+                className={className}
+                wrapperClassName={wrapperClassName}
+                disabled={copying}
+                onClick={() => setOpen(true)}
+              />
+            )}
+          </>
+        )}
+      </ToolsPanel>
+      {file && (
+        <PipelineNameDialog
+          open={open}
+          onOpenChange={setOpen}
+          title="Clone pipeline"
+          initialName={`${root.name || "Untitled pipeline"} (Copy)`}
+          validateLocalName={createsLocalPipelines(configured)}
+          onSubmit={(name) => void clone(name)}
+          submitButtonText="Clone pipeline"
+          isSubmitDisabled={() => copying}
         />
-      </div>
-      <PipelineNameDialog
-        open={open}
-        onOpenChange={setOpen}
-        title="Clone pipeline"
-        initialName={`${root.name || "Untitled pipeline"} (Copy)`}
-        validateLocalName={createsLocalPipelines(configured)}
-        onSubmit={(name) => void clone(name)}
-        submitButtonText="Clone pipeline"
-        isSubmitDisabled={() => copying}
-      />
+      )}
     </>
   );
 });
