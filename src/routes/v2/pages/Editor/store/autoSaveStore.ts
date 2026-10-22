@@ -143,7 +143,7 @@ export class AutoSaveStore {
     });
     const idStack = collectIdStack(spec);
     const history = manager && { undoQueue: manager.undoQueue.slice() };
-    const historyKey = getUndoHistoryKey(file);
+    const historyKey = file.isDraft ? undefined : getUndoHistoryKey(file);
     const write = async () => {
       try {
         await file.write(yaml);
@@ -159,7 +159,7 @@ export class AutoSaveStore {
       });
       if (history) {
         await saveUndoHistory(
-          historyKey,
+          historyKey ?? getUndoHistoryKey(file),
           idStack,
           history,
           file.remote ? yaml : undefined,

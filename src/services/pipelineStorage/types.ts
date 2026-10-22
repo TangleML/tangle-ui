@@ -22,6 +22,7 @@ export interface DriverPermissions {
 }
 
 export interface PipelineStorageDriver {
+  readonly ownerId?: string;
   readonly type: string;
   readonly permissions?: DriverPermissions;
   readonly allowsMoveIn: boolean;
@@ -66,7 +67,22 @@ export interface RemotePipelineRef {
   pipelineId: string;
 }
 
-export type EditorPipelineRef = PipelineRef | RemotePipelineRef;
+export interface RemotePipelineDraftRef {
+  source: "draft";
+  backendUrl: string;
+  draftId: string;
+  name: string;
+  provisionalName?: boolean;
+}
+
+export type EditorPipelineRef =
+  PipelineRef | RemotePipelineRef | RemotePipelineDraftRef;
+
+export function isRemotePipelineDraftRef(
+  ref: EditorPipelineRef,
+): ref is RemotePipelineDraftRef {
+  return "source" in ref && ref.source === "draft";
+}
 
 export function isRemotePipelineRef(
   ref: EditorPipelineRef,
@@ -75,6 +91,13 @@ export function isRemotePipelineRef(
 }
 
 export function getEditorPipelineIdentity(ref: EditorPipelineRef): string {
+  if (isRemotePipelineDraftRef(ref)) {
+    return JSON.stringify([
+      "remote-pipeline-draft",
+      normalizeBackendUrl(ref.backendUrl),
+      ref.draftId,
+    ]);
+  }
   return isRemotePipelineRef(ref)
     ? JSON.stringify([
         "remote-pipeline",

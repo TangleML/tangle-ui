@@ -20,8 +20,6 @@ export const entityIcon = (entity: string): IconName => {
   return concept ? resourceMeta(concept).icon : UNKNOWN_ENTITY_ICON;
 };
 
-const LOCAL_PIPELINE_LABEL = "Local pipeline";
-
 const LABEL_LIMIT = 24;
 
 function humanize(value: string) {
@@ -42,7 +40,8 @@ export function resourceKindLabel(
   resource: ResourceRowShape,
 ): string | undefined {
   if (namesLocalPipeline(resource)) {
-    return LOCAL_PIPELINE_LABEL;
+    const label = resourceMeta("pipeline").label;
+    return sameAs(label, resource.entity) ? undefined : label;
   }
 
   const type = resource.metadata?.type;

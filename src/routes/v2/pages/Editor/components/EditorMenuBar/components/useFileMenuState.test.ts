@@ -1,5 +1,7 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createElement } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ComponentSpec } from "@/models/componentSpec";
 import { APP_ROUTES } from "@/routes/appRoutes";
@@ -13,11 +15,17 @@ const state = vi.hoisted(() => ({
     id: "pipeline-1",
     storageKey: "Original",
     remote: undefined as { backendUrl: string; pipelineId: string } | undefined,
+    isDraft: false,
+    draftBackendUrl: undefined as string | undefined,
     rename: vi.fn(),
     write: vi.fn(),
     deleteFile: vi.fn(),
   },
-  storage: { rootFolder: { addFile: vi.fn() }, copyRemotePipeline: vi.fn() },
+  storage: {
+    rootFolder: { addFile: vi.fn() },
+    copyRemotePipeline: vi.fn(),
+    createRemotePipeline: vi.fn(),
+  },
   save: vi.fn(),
   navigate: vi.fn(),
   notify: vi.fn(),
@@ -29,6 +37,21 @@ const remote = {
 
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => state.navigate,
+}));
+vi.mock("@/components/shared/Settings/useFlags", () => ({
+  useFlagValue: () => true,
+}));
+vi.mock("@/providers/BackendProvider", () => ({
+  useBackend: () => ({
+    backendUrl: remote.backendUrl,
+    configured: true,
+    ready: true,
+  }),
+}));
+vi.mock("@/utils/localforage", () => ({
+  getUseEnv: async () => false,
+  getUseRelativePath: async () => false,
+  getUserBackendUrl: async () => remote.backendUrl,
 }));
 vi.mock("@/routes/router", async () => import("@/routes/appRoutes"));
 vi.mock("@/hooks/useToastNotification", () => ({
@@ -64,36 +87,80 @@ vi.mock(
   }),
 );
 
+function renderFileMenu() {
+  const client = new QueryClient();
+  return renderHook(useFileMenuState, {
+    wrapper: ({ children }) =>
+      createElement(QueryClientProvider, { client }, children),
+  });
+}
+
 beforeEach(() => {
   vi.resetAllMocks();
   state.spec = new ComponentSpec({ $id: "root", name: "Original" });
   state.spec.setDescription("Preserve the full pipeline content");
   state.file.remote = undefined;
+  state.file.isDraft = false;
+  state.file.draftBackendUrl = undefined;
+  vi.stubEnv("VITE_LOCAL_PIPELINES", undefined);
   state.save.mockResolvedValue(undefined);
   state.navigate.mockResolvedValue(undefined);
   const copy = { id: "copy-id", storageKey: "Copy" };
   state.storage.rootFolder.addFile.mockResolvedValue(copy);
+  state.storage.createRemotePipeline.mockResolvedValue({
+    ...copy,
+    remote: { ...remote, pipelineId: copy.id },
+  });
   state.storage.copyRemotePipeline.mockResolvedValue({
     ...copy,
     remote: { ...remote, pipelineId: copy.id },
   });
 });
 
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
 describe("editor file actions", () => {
-  it.each([false, true])(
-    "copies content to the matching storage and opens the copy (remote: %s)",
-    async (isRemote) => {
-      if (isRemote) state.file.remote = remote;
-      const { result } = renderHook(useFileMenuState);
+  it("renames a draft as a content edit and saves copies remotely", async () => {
+    state.file.isDraft = true;
+    state.file.draftBackendUrl = remote.backendUrl;
+    const { result } = renderFileMenu();
+    await result.current.renamePipeline("Renamed draft");
+    expect(state.save).toHaveBeenCalledOnce();
+    expect(state.spec?.name).toBe("Renamed draft");
+    expect(state.navigate).not.toHaveBeenCalled();
+    await result.current.handleSavePipelineAs("Copy");
+    expect(state.storage.createRemotePipeline).toHaveBeenCalledWith(
+      remote.backendUrl,
+      "Copy",
+      expect.any(String),
+    );
+    expect(state.storage.rootFolder.addFile).not.toHaveBeenCalled();
+  });
+  it.each([
+    { sourceRemote: false, local: false },
+    { sourceRemote: true, local: false },
+    { sourceRemote: false, local: true },
+    { sourceRemote: true, local: true },
+  ])(
+    "copies content using the deployment policy: %j",
+    async ({ sourceRemote, local }) => {
+      vi.stubEnv("VITE_LOCAL_PIPELINES", String(local));
+      if (sourceRemote) state.file.remote = remote;
+      const isRemote = !local;
+      const { result } = renderFileMenu();
       await result.current.handleSavePipelineAs("Copy");
       const target = isRemote
-        ? state.storage.copyRemotePipeline
+        ? sourceRemote
+          ? state.storage.copyRemotePipeline
+          : state.storage.createRemotePipeline
         : state.storage.rootFolder.addFile;
       const other = isRemote
         ? state.storage.rootFolder.addFile
         : state.storage.copyRemotePipeline;
       expect(target).toHaveBeenCalledExactlyOnceWith(
-        ...(isRemote ? [state.file] : []),
+        ...(isRemote ? [sourceRemote ? state.file : remote.backendUrl] : []),
         "Copy",
         expect.any(String),
       );
@@ -125,7 +192,7 @@ describe("editor file actions", () => {
     "persists rename and only changes a local route (remote: %s)",
     async (isRemote) => {
       if (isRemote) state.file.remote = remote;
-      const { result } = renderHook(useFileMenuState);
+      const { result } = renderFileMenu();
       await result.current.renamePipeline("Renamed");
       expect(state.file.rename).toHaveBeenCalledWith("Renamed");
       expect(state.spec?.name).toBe("Renamed");
@@ -151,7 +218,7 @@ describe("editor file actions", () => {
         finishRename = resolve;
       }),
     );
-    const { result, unmount } = renderHook(useFileMenuState);
+    const { result, unmount } = renderFileMenu();
     const rename = result.current.renamePipeline("Renamed");
     await Promise.resolve();
     unmount();
@@ -172,7 +239,7 @@ describe("editor file actions", () => {
       state.storage.copyRemotePipeline.mockRejectedValue(
         new Error("Write failed"),
       );
-      const { result } = renderHook(useFileMenuState);
+      const { result } = renderFileMenu();
       if (action === "save") await result.current.handleSave();
       else if (action === "copy")
         await result.current.handleSavePipelineAs("Copy");

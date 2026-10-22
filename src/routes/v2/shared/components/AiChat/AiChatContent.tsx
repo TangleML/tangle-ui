@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { observer } from "mobx-react-lite";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
 import type { RecentPipelineRun } from "@/agent/session";
 import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
@@ -26,6 +26,7 @@ import { useAiChatStore } from "./AiChatStoreContext";
 import { AiProviderSetup } from "./components/AiProviderSetup";
 import { ChatInput } from "./components/ChatInput";
 import { ChatMessageList } from "./components/ChatMessageList";
+import { createDocumentScopedBridge } from "./toolBridge/documentScopedBridge";
 import type { BridgeDeps } from "./toolBridge/utils";
 import type { SuggestedPrompt } from "./types";
 
@@ -68,9 +69,8 @@ export const AiChatContent = observer(function AiChatContent({
   const { config: aiConfig, isConfigured: isAiConfigured } =
     useAiProviderSettings();
 
-  // Refs keep the bridge closure honest about the latest backend/auth
-  // values without rebuilding the bridge. Updated on every render so
-  // tool calls always read the most recent configuration.
+  // Keep each turn's bridge reading the latest backend and auth values
+  // while the request is running.
   const backendUrlRef = useRef(backendUrl);
   const authToken = authStorage.getToken();
   const authTokenRef = useRef(authToken);
@@ -80,25 +80,6 @@ export const AiChatContent = observer(function AiChatContent({
   useEffect(() => {
     authTokenRef.current = authToken;
   }, [authToken]);
-
-  // The bridge closes over the navigation store plus the
-  // backend/auth/queryClient deps captured via refs. A single instance
-  // per AiChatContent mount is correct: each method call re-reads
-  // `navigation.rootSpec`, the active path, and the latest backend
-  // values lazily so navigation / backend changes are picked up
-  // without rebuilding the bridge.
-  const [bridge] = useState(() =>
-    createBridge({
-      getSpec: () => navigation.rootSpec,
-      getActiveSpec: () => navigation.activeSpec,
-      getActiveSubgraphPath: () =>
-        navigation.navigationPath.slice(1).map((e) => e.displayName),
-      getActiveSubgraphTaskId: () => navigation.parentContext?.taskId,
-      getBackendUrl: () => backendUrlRef.current,
-      getAuthToken: () => authTokenRef.current,
-      queryClient,
-    }),
-  );
 
   const pipelineName = navigation.rootSpec?.name;
   const { data: recentRunsData } = useQuery({
@@ -127,7 +108,21 @@ export const AiChatContent = observer(function AiChatContent({
     });
 
     await thread.sendMessage(prompt, {
-      bridge,
+      createBridge: (signal) =>
+        createDocumentScopedBridge(
+          createBridge,
+          {
+            getSpec: () => navigation.rootSpec,
+            getActiveSpec: () => navigation.activeSpec,
+            getActiveSubgraphPath: () =>
+              navigation.navigationPath.slice(1).map((e) => e.displayName),
+            getActiveSubgraphTaskId: () => navigation.parentContext?.taskId,
+            getBackendUrl: () => backendUrlRef.current,
+            getAuthToken: () => authTokenRef.current,
+            queryClient,
+          },
+          signal,
+        ),
       aiConfig,
       ...(recentRuns && { recentRuns }),
     });

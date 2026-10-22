@@ -13,14 +13,23 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AutoSaveStore } from "@/routes/v2/pages/Editor/store/autoSaveStore";
 import { UndoStore } from "@/routes/v2/pages/Editor/store/undoStore";
-import type { EditorPipelineRef } from "@/services/pipelineStorage/types";
+import { DriverPermissionGate } from "@/routes/v2/pages/Editor/components/DriverPermissionGate";
+import { preserveRenamedPipelineQuery } from "@/routes/v2/pages/Editor/utils/preserveRenamedPipelineQuery";
+import { promoteRemoteDraftQuery } from "@/routes/v2/pages/Editor/utils/promoteRemoteDraftQuery";
+import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
+import {
+  type EditorPipelineRef,
+  getEditorPipelineIdentity,
+} from "@/services/pipelineStorage/types";
 
 import { EDITOR_SPEC_QUERY_KEY, useLoadSpec } from "./useLoadSpec";
 
 const resolvePipeline = vi.hoisted(() => vi.fn());
+const discardRemoteDraft = vi.hoisted(() => vi.fn());
+const storage = { resolvePipeline, discardRemoteDraft };
 const loadUndoHistory = vi.hoisted(() => vi.fn().mockResolvedValue(null));
 vi.mock("@/services/pipelineStorage/PipelineStorageProvider", () => ({
-  usePipelineStorage: () => ({ resolvePipeline }),
+  usePipelineStorage: () => storage,
 }));
 vi.mock(
   "@/routes/v2/pages/Editor/utils/undoHistoryStorage",
@@ -43,6 +52,13 @@ const remote = {
   pipelineId: "pipeline-1",
 } as const;
 const local = { name: "Original", fileId: "local-1" };
+const draft = {
+  source: "draft",
+  backendUrl: remote.backendUrl,
+  draftId: "draft-1",
+  name: "Draft",
+} as const;
+
 const file = (
   name: string,
   ref?: { backendUrl: string; pipelineId: string },
@@ -124,6 +140,59 @@ afterEach(() => {
 });
 
 describe("useLoadSpec", () => {
+  it("keeps new draft undo history when a promoted document starts another editor session", async () => {
+    const draft = {
+      source: "draft",
+      backendUrl: remote.backendUrl,
+      draftId: "draft-undo",
+      name: "Untouched",
+    } as const;
+    resolvePipeline.mockResolvedValue({ ...file(draft.name), isDraft: true });
+    const opened = render(view(draft));
+    await screen.findByText(draft.name);
+    const loaded = client.getQueryData<ReturnType<typeof useLoadSpec>["data"]>([
+      "editor-v2-spec",
+      getEditorPipelineIdentity(draft),
+    ])!;
+    const firstUndo = new UndoStore();
+    firstUndo.init(loaded.spec, loaded.restoredUndoStore);
+    await act(async () => loaded.spec.setName("Edited"));
+    expect(firstUndo.canUndo).toBe(true);
+    firstUndo.dispose();
+
+    promoteRemoteDraftQuery(client, draft, remote);
+    opened.rerender(view(remote));
+    await screen.findByText("Edited");
+    const promoted = client.getQueryData<
+      ReturnType<typeof useLoadSpec>["data"]
+    >(["editor-v2-spec", getEditorPipelineIdentity(remote)])!;
+    expect(promoted).toBe(loaded);
+    const nextUndo = new UndoStore();
+    nextUndo.init(promoted.spec, promoted.restoredUndoStore);
+    try {
+      expect(nextUndo.canUndo).toBe(true);
+      await act(async () => nextUndo.undo());
+      expect(promoted.spec.name).toBe(draft.name);
+    } finally {
+      nextUndo.dispose();
+    }
+  });
+
+  it("keeps an open StrictMode draft in memory and discards it on close", async () => {
+    const draft = {
+      source: "draft",
+      backendUrl: remote.backendUrl,
+      draftId: "draft-1",
+      name: "Untouched",
+    } as const;
+    resolvePipeline.mockResolvedValue({ ...file(draft.name), isDraft: true });
+    const opened = render(view(draft));
+    await screen.findByText(draft.name);
+    expect(loadUndoHistory).not.toHaveBeenCalled();
+    expect(discardRemoteDraft).not.toHaveBeenCalled();
+    await act(async () => opened.unmount());
+    expect(discardRemoteDraft).toHaveBeenCalledWith(draft);
+  });
   it("keeps nested StrictMode observers stable, then reloads a closed remote document", async () => {
     resolvePipeline.mockResolvedValue(file("Before", remote));
     const first = render(view(remote));
@@ -140,8 +209,9 @@ describe("useLoadSpec", () => {
     expect(resolvePipeline).toHaveBeenCalledTimes(2);
   });
 
-  it.each([remote, local])(
+  it.each([remote, draft, local])(
     "retains failed edits after unmount and retries them from the saved baseline: %j",
+
     async (pipelineRef) => {
       vi.spyOn(console, "error").mockImplementation(() => {});
       const write = vi.fn().mockRejectedValue(new Error("Save unavailable"));
@@ -157,12 +227,15 @@ describe("useLoadSpec", () => {
         await act(async () => vi.advanceTimersByTimeAsync(6 * 60_000));
         vi.useRealTimers();
       }
+
       await waitFor(() => expect(write).toHaveBeenCalledTimes(2));
 
       const reopened = render(view(pipelineRef, true));
       await screen.findByText("Unsaved edit");
       await screen.findByText("Save unavailable");
       expect(resolvePipeline).toHaveBeenCalledTimes(1);
+      expect(discardRemoteDraft).not.toHaveBeenCalled();
+
       await screen.findByText("Idle");
       const attemptsBeforeRetry = write.mock.calls.length;
       write.mockResolvedValue(undefined);
@@ -215,8 +288,9 @@ describe("useLoadSpec", () => {
     },
   );
 
-  it.each([remote, local])(
+  it.each([remote, draft, local])(
     "keeps an in-flight edit through reopen without duplicating its write: %j",
+
     async (pipelineRef) => {
       let finish!: () => void;
       const write = vi.fn().mockReturnValue(
@@ -235,6 +309,8 @@ describe("useLoadSpec", () => {
       fireEvent.click(screen.getByText("Save"));
       expect(write).toHaveBeenCalledTimes(1);
       expect(resolvePipeline).toHaveBeenCalledTimes(1);
+      expect(discardRemoteDraft).not.toHaveBeenCalled();
+
       await act(async () => reopened.unmount());
       finish();
       await waitFor(() =>
@@ -242,6 +318,38 @@ describe("useLoadSpec", () => {
       );
     },
   );
+
+  it("releases both draft and remote aliases when a promoted pending save closes", async () => {
+    let finish!: () => void;
+    const write = vi.fn().mockReturnValue(
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+    );
+    resolvePipeline.mockResolvedValue({
+      ...file(draft.name),
+      isDraft: true,
+      write,
+    });
+    const opened = render(view(draft, true));
+    await screen.findByText(draft.name);
+    fireEvent.click(screen.getByText("Edit"));
+    fireEvent.click(screen.getByText("Save"));
+
+    promoteRemoteDraftQuery(client, draft, remote);
+    await act(async () => opened.rerender(view(remote, true)));
+    expect(client.getQueryCache().getAll()).toHaveLength(2);
+    await act(async () => opened.unmount());
+    expect(client.getQueryCache().getAll()).toHaveLength(2);
+    expect(write).toHaveBeenCalledOnce();
+    expect(discardRemoteDraft).not.toHaveBeenCalled();
+
+    finish();
+    await waitFor(() =>
+      expect(client.getQueryCache().getAll()).toHaveLength(0),
+    );
+    expect(discardRemoteDraft).toHaveBeenCalledExactlyOnceWith(draft);
+  });
 
   it("does not evict a newer failed edit when an older write succeeds", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
@@ -298,4 +406,34 @@ describe("useLoadSpec", () => {
       undefined,
     );
   });
+});
+
+it("preserves the mounted local document and undo when rename adds its file ID to the URL", async () => {
+  const local = {
+    ...file("Original"),
+    id: "local-1",
+    write: vi.fn(async () => {}),
+  } as unknown as PipelineFile;
+  resolvePipeline.mockResolvedValue(local);
+  const wrap = (pipelineRef: EditorPipelineRef) => (
+    <QueryClientProvider client={client}>
+      <Suspense fallback={<div>Loading</div>}>
+        <DriverPermissionGate pipelineRef={pipelineRef}>
+          <EditingChild pipelineRef={pipelineRef} />
+        </DriverPermissionGate>
+      </Suspense>
+    </QueryClientProvider>
+  );
+  const view = render(wrap({ name: "Original" }));
+  await screen.findByText("Original");
+  fireEvent.click(screen.getByText("Edit"));
+  const previous = client.getQueryData([EDITOR_SPEC_QUERY_KEY, "Original"]);
+  act(() => preserveRenamedPipelineQuery(client, local));
+  view.rerender(wrap({ name: "Renamed", fileId: local.id }));
+  expect(screen.queryByText("Loading")).not.toBeInTheDocument();
+  expect(screen.getByText("Unsaved edit")).toBeInTheDocument();
+  expect(client.getQueryData([EDITOR_SPEC_QUERY_KEY, local.id])).toBe(previous);
+  expect(resolvePipeline).toHaveBeenCalledOnce();
+  fireEvent.click(screen.getByText("Undo"));
+  expect(screen.queryByText("Unsaved edit")).not.toBeInTheDocument();
 });

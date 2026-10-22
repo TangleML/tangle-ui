@@ -1,11 +1,7 @@
 import "@xyflow/react/dist/style.css";
 import "@/styles/editor.css";
 
-import {
-  Link as RouterLink,
-  useParams,
-  useSearch,
-} from "@tanstack/react-router";
+import { Link as RouterLink, useRouterState } from "@tanstack/react-router";
 import { ReactFlowProvider } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
 import { type ReactNode, useEffect } from "react";
@@ -28,7 +24,10 @@ import { TourSaveExploreDialog } from "@/providers/TourProvider/TourSaveExploreD
 import { TourSecretsDialog } from "@/providers/TourProvider/TourSecretsDialog";
 import { APP_ROUTES } from "@/routes/appRoutes";
 import { QuickRunSubmitterProvider } from "@/routes/v2/pages/Editor/components/QuickRunSubmitterContext";
-import { AiChatStoreProvider } from "@/routes/v2/shared/components/AiChat/AiChatStoreContext";
+import {
+  AiChatStoreProvider,
+  useAiChatStore,
+} from "@/routes/v2/shared/components/AiChat/AiChatStoreContext";
 import { useCanvasControlsWindow } from "@/routes/v2/shared/components/MiniMap/useCanvasControlsWindow";
 import { useDockAreaAccordion } from "@/routes/v2/shared/hooks/useDockAreaAccordion";
 import { useFocusMode } from "@/routes/v2/shared/hooks/useFocusMode";
@@ -45,11 +44,14 @@ import {
   TOUR_WINDOW_LAYOUT_ID,
   useWindowPersistence,
 } from "@/routes/v2/shared/windows/windowPersistence";
+import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import {
   type EditorPipelineRef,
   getEditorPipelineIdentity,
+  isRemotePipelineDraftRef,
   isRemotePipelineRef,
   type PipelineRef,
+  type RemotePipelineDraftRef,
   type RemotePipelineRef,
 } from "@/services/pipelineStorage/types";
 
@@ -74,6 +76,7 @@ import { usePipelineDetailsWindow } from "./hooks/usePipelineDetailsWindow";
 import { usePipelineTreeWindow } from "./hooks/usePipelineTreeWindow";
 import { usePropertiesWindowPositioning } from "./hooks/usePropertiesWindowPositioning";
 import { useRecentRunsWindow } from "./hooks/useRecentRunsWindow";
+import { useRemoteDraftPromotion } from "./hooks/useRemoteDraftPromotion";
 import { useRunsAndSubmissionWindow } from "./hooks/useRunsAndSubmissionWindow";
 import { useSeedInitialDockLayoutFromPreset } from "./hooks/useSeedInitialDockLayoutFromPreset";
 import { useSelectionWindowSync } from "./hooks/useSelectionWindowSync";
@@ -116,6 +119,8 @@ const PipelineEditor = withSuspenseWrapper(
     );
     useDockAreaAccordion();
     useSpecLifecycle(rootSpec, file, restoredUndoStore, saveState);
+    useRemoteDraftPromotion(pipelineRef, file);
+    useChatDocumentLifecycle(file);
     useSelectionWindowSync();
     usePropertiesWindowPositioning();
     useLinkedWindowCleanup();
@@ -186,7 +191,11 @@ function EditorV2Content({
   const tourMode = useTourMode();
 
   const requestedName =
-    pipelineRef && !isRemotePipelineRef(pipelineRef) ? pipelineRef.name : null;
+    pipelineRef &&
+    !isRemotePipelineRef(pipelineRef) &&
+    !isRemotePipelineDraftRef(pipelineRef)
+      ? pipelineRef.name
+      : null;
   useEffect(() => {
     navigation.setRequestedPipelineName(requestedName);
   }, [navigation, requestedName]);
@@ -195,10 +204,7 @@ function EditorV2Content({
   if (pipelineRef) {
     body = (
       <DriverPermissionGate pipelineRef={pipelineRef}>
-        <PipelineEditor
-          key={getEditorPipelineIdentity(pipelineRef)}
-          pipelineRef={pipelineRef}
-        />
+        <PipelineEditor pipelineRef={pipelineRef} />
       </DriverPermissionGate>
     );
   } else if (tourMode) {
@@ -233,12 +239,16 @@ function RemotePipelineSkeleton() {
 }
 
 const RemotePipelineDocumentView = withSuspenseWrapper(
-  ({ pipelineRef }: { pipelineRef: RemotePipelineRef }) => {
+  ({
+    pipelineRef,
+  }: {
+    pipelineRef: RemotePipelineRef | RemotePipelineDraftRef;
+  }) => {
     const {
       data: { spec, file },
     } = useLoadSpec(pipelineRef);
     return file.folder.driver.canEdit === true ? (
-      <EditorV2Document pipelineRef={pipelineRef} />
+      <EditorV2Document key={file.initialId} pipelineRef={pipelineRef} />
     ) : (
       <RemotePipelineView spec={spec} />
     );
@@ -247,9 +257,16 @@ const RemotePipelineDocumentView = withSuspenseWrapper(
   ({ error, resetErrorBoundary }: FallbackProps) => (
     <RemotePipelineError error={error} onRetry={resetErrorBoundary} />
   ),
+  ({ pipelineRef }) => [getEditorPipelineIdentity(pipelineRef)],
 );
 
-function RemotePipelineEditor({ pipelineId }: { pipelineId: string }) {
+function RemotePipelineEditor({
+  pipeline,
+}: {
+  pipeline:
+    | { source: "remote"; pipelineId: string }
+    | { source: "draft"; name: string; draftId: string };
+}) {
   const { backendUrl, ready, configured } = useBackend();
   if (!ready) return <RemotePipelineSkeleton />;
   if (!configured) {
@@ -268,34 +285,36 @@ function RemotePipelineEditor({ pipelineId }: { pipelineId: string }) {
       </RemotePipelineShell>
     );
   }
-  const pipelineRef: RemotePipelineRef = {
-    source: "remote",
-    backendUrl,
-    pipelineId,
-  };
   return (
-    <RemotePipelineDocumentView
-      key={getEditorPipelineIdentity(pipelineRef)}
-      pipelineRef={pipelineRef}
-    />
+    <RemotePipelineDocumentView pipelineRef={{ ...pipeline, backendUrl }} />
   );
 }
 
 // Non-editor routes (e.g. `/tour/$tourId`) pass `pipelineRef` directly.
-// Without a prop, we fall back to reading the route's params/search.
+// Without a prop, we fall back to the committed route match.
 export function EditorV2({
   pipelineRef: pipelineRefProp,
 }: {
   pipelineRef?: PipelineRef | null;
 } = {}) {
-  const params = useParams({ strict: false });
-  const search = useSearch({ strict: false });
+  // The editor lives on a shared layout so changing a draft's URL does not
+  // unmount it. Read the leaf match rather than the layout's empty params.
+  const match = useRouterState({
+    select: (state) => state.matches.at(-1),
+  });
+  const params = match?.params;
+  const search = match?.search ?? {};
   if (
     pipelineRefProp === undefined &&
+    params &&
     "pipelineId" in params &&
     typeof params.pipelineId === "string"
   ) {
-    return <RemotePipelineEditor pipelineId={params.pipelineId} />;
+    return (
+      <RemotePipelineEditor
+        pipeline={{ source: "remote", pipelineId: params.pipelineId }}
+      />
+    );
   }
 
   const fileId =
@@ -304,9 +323,26 @@ export function EditorV2({
       : undefined;
 
   const pipelineName =
-    "pipelineName" in params && typeof params.pipelineName === "string"
+    params &&
+    "pipelineName" in params &&
+    typeof params.pipelineName === "string"
       ? params.pipelineName
       : null;
+
+  const draft =
+    match?.context && "newPipeline" in match.context
+      ? match.context.newPipeline
+      : undefined;
+  if (pipelineRefProp === undefined && draft) {
+    return (
+      <RemotePipelineEditor
+        pipeline={{
+          source: "draft",
+          ...draft,
+        }}
+      />
+    );
+  }
 
   const pipelineRef: PipelineRef | null =
     pipelineRefProp !== undefined
@@ -315,7 +351,7 @@ export function EditorV2({
         ? { name: pipelineName, fileId }
         : null;
 
-  return <EditorV2Document pipelineRef={pipelineRef} />;
+  return <EditorV2Document key="local-editor" pipelineRef={pipelineRef} />;
 }
 
 function EditorV2Document({
@@ -338,5 +374,17 @@ function EditorV2Document({
         </EditorSessionProvider>
       </SharedStoreProvider>
     </div>
+  );
+}
+
+function useChatDocumentLifecycle(file: PipelineFile) {
+  const chat = useAiChatStore();
+  useEffect(
+    () => () => {
+      // Stop in-flight tools before the stable local editor stores load another
+      // document. Keep the conversation and its bindings to those live stores.
+      for (const thread of chat.threads) thread.abort();
+    },
+    [chat, file],
   );
 }

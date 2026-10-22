@@ -1,6 +1,6 @@
 export type WorkareaViewKindName = "artifact" | "document" | "pipeline" | "run";
 
-type IdentityKey = "id" | "name";
+type IdentityKey = "id" | "name" | "remote" | "draft";
 
 export type WorkareaIdentity = `${IdentityKey}/${string}`;
 
@@ -53,7 +53,7 @@ const IDENTITY_KEYS_BY_TYPE: Record<
 > = {
   artifact: ["id"],
   document: ["id"],
-  pipeline: ["id", "name"],
+  pipeline: ["id", "name", "remote", "draft"],
   run: ["id"],
 };
 
@@ -76,6 +76,14 @@ export function runTarget(runId: string): RunTarget {
   return { type: "run", identity: idIdentity(runId) };
 }
 
+export function remotePipelineIdentity(value: string): `remote/${string}` {
+  return `remote/${value}`;
+}
+
+export function draftPipelineIdentity(value: string): `draft/${string}` {
+  return `draft/${value}`;
+}
+
 export function formatWorkareaTarget(
   target: WorkareaTarget,
 ): WorkareaTargetString {
@@ -87,11 +95,16 @@ function isWorkareaViewKindName(value: string): value is WorkareaViewKindName {
 }
 
 function isIdentityKey(value: string): value is IdentityKey {
-  return value === "id" || value === "name";
+  return (
+    value === "id" ||
+    value === "name" ||
+    value === "remote" ||
+    value === "draft"
+  );
 }
 
 function isWorkareaIdentity(value: string): value is WorkareaIdentity {
-  return /^(id|name)\/./.test(value);
+  return /^(id|name|remote|draft)\/./.test(value);
 }
 
 function splitIdentity(identity: string): ParsedIdentity {
@@ -115,6 +128,10 @@ function buildTarget(
   if (type === "pipeline" && key === "name") {
     return { type, identity: nameIdentity(value) };
   }
+  if (type === "pipeline" && key === "remote")
+    return { type, identity: remotePipelineIdentity(value) };
+  if (type === "pipeline" && key === "draft")
+    return { type, identity: draftPipelineIdentity(value) };
   return { type, identity: idIdentity(value) };
 }
 

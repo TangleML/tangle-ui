@@ -13,7 +13,7 @@ export class DocumentSaveState {
   @observable accessor pendingCount = 0;
   @observable accessor inFlightCount = 0;
   pendingSave: PendingSave | null = null;
-  private release: (() => void) | undefined;
+  private readonly releases = new Set<() => void>();
   private activeEditors = 0;
   private disposeUnloadReaction: (() => void) | undefined;
   private readonly preventUnload = (event: BeforeUnloadEvent) => {
@@ -57,20 +57,20 @@ export class DocumentSaveState {
   }
 
   releaseWhenSaved(release: () => void): void {
-    this.release = release;
+    this.releases.add(release);
     this.releaseIfSaved();
   }
 
   releaseIfSaved(): void {
     if (this.hasUnsavedChanges || this.hasPendingWrites) return;
+    const releases = [...this.releases];
+    this.releases.clear();
+    for (const release of releases) release();
     if (this.activeEditors === 0) {
       this.disposeUnloadReaction?.();
       this.disposeUnloadReaction = undefined;
       window.removeEventListener("beforeunload", this.preventUnload);
     }
-    const release = this.release;
-    this.release = undefined;
-    release?.();
   }
 
   @action recordError(error: unknown): void {

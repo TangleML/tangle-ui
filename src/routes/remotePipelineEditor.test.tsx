@@ -6,18 +6,21 @@ import {
   RouterContextProvider,
 } from "@tanstack/react-router";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PipelineSpecApiError } from "@/services/pipelineSpecService";
 
 import Editor from "./Editor/Editor";
 import { EditorV2 } from "./v2/pages/Editor/EditorV2";
+import { EmbeddedPipelineEditor } from "./v2/pages/Editor/EmbeddedPipelineEditor";
 
 const route = vi.hoisted(() => ({
   params: {} as Record<string, unknown>,
   search: {} as Record<string, string>,
+  context: {} as { newPipeline?: { name: string; draftId: string } },
 }));
+const permission = vi.hoisted(() => ({ granted: true }));
 const backend = vi.hoisted(() => ({
   backendUrl: "https://backend.example.com",
   ready: true,
@@ -26,13 +29,34 @@ const backend = vi.hoisted(() => ({
 const loadLegacy = vi.hoisted(() => vi.fn());
 const loadV2 = vi.hoisted(() => vi.fn());
 const initializeEditing = vi.hoisted(() => vi.fn());
+const mountEditor = vi.hoisted(() => vi.fn());
 const pendingSpec = new Promise<never>(() => {});
 
-vi.mock("@tanstack/react-router", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@tanstack/react-router")>()),
-  useParams: () => route.params,
-  useSearch: () => route.search,
-}));
+vi.mock("@tanstack/react-router", async (importOriginal) => {
+  const original =
+    await importOriginal<typeof import("@tanstack/react-router")>();
+  return {
+    ...original,
+    useParams: () => route.params,
+    useSearch: () => route.search,
+    useRouterState: ({ select }: { select: (state: unknown) => unknown }) =>
+      original.useRouterState({
+        select: (state) =>
+          select({
+            ...state,
+            matches: [
+              ...state.matches.slice(0, -1),
+              {
+                ...state.matches.at(-1),
+                params: route.params,
+                search: route.search,
+                context: route.context,
+              },
+            ],
+          }),
+      }),
+  };
+});
 vi.mock("@/providers/BackendProvider", () => ({ useBackend: () => backend }));
 vi.mock("@/services/errorManagement/bugsnag", () => ({ reportError: vi.fn() }));
 vi.mock("@/routes/v2/shared/components/AppMenuActions", () => ({
@@ -68,7 +92,10 @@ vi.mock("./v2/pages/Editor/components/EditorMenuBar/EditorMenuBar", () => ({
   EditorMenuBar: () => <nav aria-label="Editor navigation" />,
 }));
 vi.mock("./v2/pages/Editor/components/DriverPermissionGate", () => ({
-  DriverPermissionGate: ({ children }: { children: ReactNode }) => children,
+  DriverPermissionGate: ({ children }: { children: ReactNode }) => {
+    useState(() => mountEditor());
+    return permission.granted ? children : <div>Grant Access</div>;
+  },
 }));
 vi.mock("./v2/pages/Editor/components/EmptyEditorState", () => ({
   EmptyEditorState: () => <div>Open local pipeline</div>,
@@ -87,6 +114,7 @@ vi.mock("./v2/pages/Editor/components/QuickRunSubmitterContext", () => ({
     children,
 }));
 vi.mock("@/routes/v2/shared/components/AiChat/AiChatStoreContext", () => ({
+  useAiChatStore: () => ({ threads: [] }),
   AiChatStoreProvider: ({ children }: { children: ReactNode }) => children,
 }));
 vi.mock("./v2/pages/Editor/components/AiChat/editorAgentWorker", () => ({
@@ -110,6 +138,8 @@ beforeEach(() => {
   localStorage.removeItem("jwtToken");
   route.params = { pipelineName: "pipeline-123" };
   route.search = {};
+  route.context = {};
+  permission.granted = true;
   backend.ready = true;
   backend.configured = true;
   backend.backendUrl = "https://backend.example.com";
@@ -132,12 +162,93 @@ function renderEditor(children: ReactNode, basepath = "", hash = false) {
     history,
     basepath,
   });
-  return render(
-    <RouterContextProvider router={router}>{children}</RouterContextProvider>,
-  );
+  return render(children, {
+    wrapper: ({ children }) => (
+      <RouterContextProvider router={router}>{children}</RouterContextProvider>
+    ),
+  });
 }
 
 describe("remote pipeline editor entry", () => {
+  it("keeps the mounted editor session when a workarea draft becomes remote", () => {
+    permission.granted = false;
+    loadV2.mockReturnValue({
+      data: {
+        spec: { name: "Draft" },
+        file: { folder: { driver: { canEdit: true } } },
+      },
+    });
+    const opened = renderEditor(
+      <EmbeddedPipelineEditor
+        pipelineRef={{
+          source: "draft",
+          backendUrl: backend.backendUrl,
+          draftId: "draft-1",
+          name: "Draft",
+        }}
+        isActive
+        projectId="project-1"
+      />,
+    );
+    expect(mountEditor).toHaveBeenCalledOnce();
+    opened.rerender(
+      <EmbeddedPipelineEditor
+        pipelineRef={{
+          source: "remote",
+          backendUrl: backend.backendUrl,
+          pipelineId: "remote-1",
+        }}
+        isActive
+        projectId="project-1"
+      />,
+    );
+    expect(mountEditor).toHaveBeenCalledOnce();
+  });
+  it("requests local file permission before reading an embedded pipeline", () => {
+    permission.granted = false;
+    renderEditor(
+      <EmbeddedPipelineEditor
+        pipelineRef={{ name: "Local pipeline", fileId: "local-1" }}
+        isActive
+        projectId="project-1"
+      />,
+    );
+    expect(screen.getByText("Grant Access")).toBeInTheDocument();
+    expect(loadV2).not.toHaveBeenCalled();
+  });
+  it("keeps remote project pipelines read-only without starting editing tools", () => {
+    loadV2.mockReturnValue({
+      data: {
+        spec: { name: "Shared project graph" },
+        file: { folder: { driver: { canEdit: false } } },
+      },
+    });
+    renderEditor(
+      <EmbeddedPipelineEditor
+        pipelineRef={{
+          source: "remote",
+          backendUrl: backend.backendUrl,
+          pipelineId: "shared-1",
+        }}
+        isActive
+        projectId="project-1"
+      />,
+    );
+    expect(screen.getByText("Shared project graph")).toBeInTheDocument();
+    expect(initializeEditing).not.toHaveBeenCalled();
+  });
+  it("requires a configured backend to open a remote draft", () => {
+    route.context = {
+      newPipeline: {
+        name: "pipeline-123",
+        draftId: "12345678-1234-4234-8234-123456789abc",
+      },
+    };
+    backend.configured = false;
+    renderEditor(<EditorV2 />);
+    expect(loadV2).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent("Configure a backend");
+  });
   it("keeps the legacy editor from looking up a remote ID locally", () => {
     route.params = { pipelineId: "pipeline-123" };
     renderEditor(<Editor />);
@@ -231,6 +342,34 @@ describe("remote pipeline editor entry", () => {
       expect(
         screen.queryByRole("navigation", { name: "Editor navigation" }),
       ).not.toBeInTheDocument();
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  it("clears a failed read when navigating to another remote pipeline", () => {
+    route.params = { pipelineId: "missing" };
+    loadV2.mockImplementation(() => {
+      throw new Error("Pipeline not found");
+    });
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    try {
+      const { rerender } = renderEditor(<EditorV2 />);
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Unable to load pipeline. Please try again.",
+      );
+      route.params = { pipelineId: "available" };
+      loadV2.mockReturnValue({
+        data: {
+          spec: { name: "Available pipeline" },
+          file: { folder: { driver: { canEdit: false } } },
+        },
+      });
+      rerender(<EditorV2 />);
+      expect(screen.getByText("Available pipeline")).toBeInTheDocument();
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     } finally {
       consoleError.mockRestore();
     }

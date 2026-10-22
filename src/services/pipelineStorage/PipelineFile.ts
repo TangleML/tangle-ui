@@ -14,13 +14,24 @@ interface PipelineFileInit {
   createdAt?: Date;
   modifiedAt?: Date;
   remote?: Omit<RemotePipelineRef, "source">;
+  draftBackendUrl?: string;
 }
 
 export class PipelineFile {
-  readonly id: string;
+  readonly initialId: string;
   readonly createdAt?: Date;
   readonly modifiedAt?: Date;
-  readonly remote?: Readonly<Omit<RemotePipelineRef, "source">>;
+  readonly draftBackendUrl?: string;
+  @observable.ref accessor remote:
+    Readonly<Omit<RemotePipelineRef, "source">> | undefined;
+
+  get id(): string {
+    return this.remote?.pipelineId ?? this.initialId;
+  }
+
+  get isDraft(): boolean {
+    return Boolean(this.draftBackendUrl && !this.remote);
+  }
 
   get editingError(): Error | undefined {
     return this.folder.driver.editingError;
@@ -30,7 +41,8 @@ export class PipelineFile {
   @observable accessor folder: PipelineFolder;
 
   constructor(options: PipelineFileInit) {
-    this.id = options.id;
+    this.initialId = options.id;
+    this.draftBackendUrl = options.draftBackendUrl;
     this.storageKey = options.storageKey;
     this.folder = options.folder;
     this.createdAt = options.createdAt;
@@ -38,6 +50,14 @@ export class PipelineFile {
     this.remote = options.remote && Object.freeze({ ...options.remote });
 
     makeObservable(this);
+  }
+
+  @action
+  promoteToRemote(remote: Omit<RemotePipelineRef, "source">): void {
+    this.remote = Object.freeze({
+      backendUrl: remote.backendUrl,
+      pipelineId: remote.pipelineId,
+    });
   }
 
   async read(): Promise<string> {
@@ -58,7 +78,8 @@ export class PipelineFile {
   @action
   async rename(newName: string): Promise<void> {
     await this.folder.driver.rename(this.storageKey, newName);
-    if (!this.remote) await updateEntry(this.id, { storageKey: newName });
+    if (!this.remote && !this.isDraft)
+      await updateEntry(this.id, { storageKey: newName });
 
     runInAction(() => {
       this.storageKey = newName;

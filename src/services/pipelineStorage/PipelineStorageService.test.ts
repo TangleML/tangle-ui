@@ -1,11 +1,13 @@
 import "fake-indexeddb/auto";
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { client } from "@/api/client.gen";
 import { getCurrentUserApiUsersMeGet } from "@/api/sdk.gen";
 import { LibraryDB } from "@/providers/ComponentLibraryProvider/libraries/storage";
 import type { SavedPipelineDocument } from "@/services/pipelineSpecService";
+import { createAndAttachPipeline } from "@/services/projects/createAndAttachPipeline";
+import { pipelineFileTarget } from "@/services/projects/pipelineResource";
 import { getRemotePipelineSavedId } from "@/services/remotePipelineSavedLinks";
 import { componentSpecFromYaml, componentSpecToYaml } from "@/utils/yaml";
 
@@ -23,6 +25,18 @@ vi.mock("@/api/sdk.gen", () => ({ getCurrentUserApiUsersMeGet: vi.fn() }));
 vi.mock("./pipelineFileEvents", () => ({ emitPipelineFileChanged: vi.fn() }));
 vi.mock("./createDriver", () => ({ createDriver: () => ({}) }));
 vi.mock("./pipelineRegistry");
+vi.mock("@/utils/localforage", () => ({
+  getUseEnv: async () => false,
+  getUseRelativePath: async () => false,
+  getUserBackendUrl: async () => "https://backend.example.com",
+}));
+vi.mock("@/services/localPipelines/localPipelinesService", () => ({
+  availablePipelineName: async (name: string) => name,
+}));
+vi.mock(
+  "@/components/shared/ReactFlow/FlowSidebar/sections/components/ExportPipelineButton",
+  () => ({ exportPipeline: vi.fn() }),
+);
 vi.mock("@/providers/BackendProvider", () => ({
   useBackend: () => ({ backendUrl: "https://backend.example.com" }),
 }));
@@ -69,11 +83,13 @@ beforeEach(async () => {
   vi.resetAllMocks();
   await LibraryDB.favorites.clear();
   localStorage.clear();
+  sessionStorage.clear();
   storage = new PipelineStorageService();
   vi.mocked(client.get).mockResolvedValue(response(structuredClone(document)));
   vi.mocked(client.put).mockResolvedValue(response(document));
   vi.mocked(getCurrentUserApiUsersMeGet).mockResolvedValue(response(owner));
 });
+afterEach(() => vi.unstubAllEnvs());
 
 describe("PipelineStorageService editor resolution", () => {
   it("uploads, reopens, and edits pipeline input values using backend task arguments", async () => {
@@ -420,6 +436,240 @@ describe("PipelineStorageService editor resolution", () => {
   });
 });
 
+describe("remote drafts and project attachment", () => {
+  const draft = {
+    source: "draft",
+    backendUrl: ref.backendUrl,
+    draftId: "draft-1",
+    name: "Draft",
+  } as const;
+  const paths = () =>
+    vi
+      .mocked(client.put)
+      .mock.calls.map(([options]) => options?.query?.file_path);
+  beforeEach(() => {
+    vi.stubEnv("VITE_LOCAL_PIPELINES", undefined);
+    let filePath = document.file_path;
+    vi.mocked(client.put).mockImplementation(async (options) => {
+      filePath = String(options?.query?.file_path ?? filePath);
+      return response({
+        ...document,
+        file_path: filePath,
+        ...(options?.body as object),
+      });
+    });
+  });
+
+  it("retains a closed draft until its final workarea owner releases it", async () => {
+    const file = await storage.resolvePipeline(draft);
+    const first = storage.retainRemoteDraft(draft.draftId)!;
+    const second = storage.retainRemoteDraft(draft.draftId)!;
+    storage.discardRemoteDraft(draft);
+    expect(storage.getRemoteDraftRef(draft.draftId, draft.backendUrl)).toBe(
+      draft,
+    );
+    expect(first.file).toBe(file);
+    first.release();
+    first.release();
+    await Promise.resolve();
+    expect(storage.getRemoteDraftRef(draft.draftId, draft.backendUrl)).toBe(
+      draft,
+    );
+    second.release();
+    await Promise.resolve();
+    expect(() =>
+      storage.getRemoteDraftRef(draft.draftId, draft.backendUrl),
+    ).toThrow("no longer available");
+  });
+
+  it("survives an ownership reconnect and waits for the reopened editor to save", async () => {
+    const file = await storage.resolvePipeline(draft);
+    const first = storage.retainRemoteDraft(draft.draftId)!;
+    storage.discardRemoteDraft(draft);
+    first.release();
+    const second = storage.retainRemoteDraft(draft.draftId)!;
+    await Promise.resolve();
+    expect(await storage.resolvePipeline(draft)).toBe(file);
+    second.release();
+    await Promise.resolve();
+    expect(storage.getRemoteDraftRef(draft.draftId, draft.backendUrl)).toBe(
+      draft,
+    );
+    storage.discardRemoteDraft(draft);
+    expect(() =>
+      storage.getRemoteDraftRef(draft.draftId, draft.backendUrl),
+    ).toThrow("no longer available");
+  });
+
+  it("keeps drafts in memory, then serializes edits into one remote record", async () => {
+    const file = await storage.resolvePipeline(draft);
+    expect(await storage.resolvePipeline(draft)).toBe(file);
+    expect(componentSpecFromYaml(await file.read()).name).toBe(draft.name);
+    expect(client.put).not.toHaveBeenCalled();
+    expect(client.get).not.toHaveBeenCalled();
+    expect(getCurrentUserApiUsersMeGet).not.toHaveBeenCalled();
+    await file.rename("Edited");
+    const first = file.write(content);
+    const second = file.write(
+      componentSpecToYaml({ ...editedSpec, description: "Second" }),
+    );
+    await first;
+    const third = file.write(
+      componentSpecToYaml({ ...editedSpec, description: "Third" }),
+    );
+    await Promise.all([second, third]);
+    expect(paths().slice(1)).toEqual([undefined, undefined]);
+    expect(client.put).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        url: "/api/pipelines/{pipeline_id}",
+        path: { pipeline_id: ref.pipelineId },
+      }),
+    );
+    expect(paths()[0]).not.toBe("pipelines/draft-1.yaml");
+    expect(file.id).toBe(ref.pipelineId);
+    expect(file.initialId).toBe(draft.draftId);
+    expect(file.storageKey).toBe("Edited");
+    expect(file.isDraft).toBe(false);
+    expect(componentSpecFromYaml(await file.read()).description).toBe("Third");
+    expect(registry.addEntry).not.toHaveBeenCalled();
+    expect(registry.updateEntry).not.toHaveBeenCalled();
+    storage.discardRemoteDraft(draft);
+    expect(
+      storage.getRemoteDraftRef(draft.draftId, ref.backendUrl),
+    ).toMatchObject({
+      source: "draft",
+      draftId: draft.draftId,
+    });
+    const reopened = await storage.resolvePipeline(draft);
+    expect(reopened.remote?.pipelineId).toBe(ref.pipelineId);
+    expect(client.put).toHaveBeenCalledTimes(3);
+  });
+
+  it("recovers a saved draft alias after recreating the storage service", async () => {
+    const file = await storage.resolvePipeline(draft);
+    await file.write(content);
+    const restored = new PipelineStorageService();
+    expect(
+      restored.getRemoteDraftRef(draft.draftId, draft.backendUrl),
+    ).toMatchObject({
+      source: "draft",
+      draftId: draft.draftId,
+    });
+    const reopened = await restored.resolvePipeline(draft);
+    expect(reopened.remote?.pipelineId).toBe(ref.pipelineId);
+    expect(client.put).toHaveBeenCalledOnce();
+  });
+
+  it("copies a promoted draft through its retained driver", async () => {
+    const file = await storage.resolvePipeline(draft);
+    await file.write(content);
+    const copy = await storage.copyRemotePipeline(
+      file,
+      "Copied draft",
+      content,
+    );
+    expect(copy.remote).toBeDefined();
+    expect(new Set(paths()).size).toBe(2);
+    expect(componentSpecFromYaml(await copy.read()).name).toBe("Copied draft");
+  });
+
+  it("allocates a fresh server path if an abandoned draft is recreated", async () => {
+    const first = storage.createRemoteDraft(draft);
+    await first.write(content);
+    const second = storage.createRemoteDraft(draft);
+    await second.write(content);
+    expect(new Set(paths()).size).toBe(2);
+  });
+
+  it.each(["response", "permission"])(
+    "retries a failed %s without changing identity",
+    async (failure) => {
+      const file = await storage.resolvePipeline(draft);
+      if (failure === "response")
+        vi.mocked(client.put).mockRejectedValueOnce(
+          new Error("Connection lost"),
+        );
+      else
+        vi.mocked(getCurrentUserApiUsersMeGet).mockResolvedValueOnce(
+          response({ ...owner, permissions: ["read"] }),
+        );
+      await expect(file.write(content)).rejects.toThrow();
+      expect(file.isDraft).toBe(true);
+      await file.write(content);
+      expect(file.isDraft).toBe(false);
+      expect(new Set(paths()).size).toBe(1);
+    },
+  );
+
+  it.each([false, true])(
+    "attaches on first save and retries attachment failures (failure: %s)",
+    async (fail) => {
+      const attach = vi.fn().mockResolvedValue({});
+      if (fail) attach.mockRejectedValueOnce(new Error("Refused"));
+      const file = await createAndAttachPipeline({
+        storage,
+        name: "Project",
+        provisionalName: true,
+        attach,
+      });
+      expect(pipelineFileTarget(file).identity).toBe(`draft/${file.initialId}`);
+      expect(attach).not.toHaveBeenCalled();
+      expect(client.put).not.toHaveBeenCalled();
+      if (fail) {
+        await expect(file.write(content)).rejects.toThrow(
+          "Pipeline saved, but it could not be attached",
+        );
+        expect(file.isDraft).toBe(false);
+        expect(pipelineFileTarget(file).identity).toBe(
+          `remote/${ref.pipelineId}`,
+        );
+      }
+      await file.write(content);
+      await file.write(content);
+      expect(pipelineFileTarget(file).identity).toBe(
+        `remote/${ref.pipelineId}`,
+      );
+      expect(attach).toHaveBeenCalledTimes(fail ? 2 : 1);
+      expect(client.put).toHaveBeenCalledTimes(2);
+      expect(attach).toHaveBeenLastCalledWith({
+        entity: "pipeline",
+        entityId: ref.pipelineId,
+        name: "Project",
+      });
+      expect(paths()[0]).toEqual(expect.any(String));
+      expect(paths()[1]).toBeUndefined();
+      expect(client.put).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          url: "/api/pipelines/{pipeline_id}",
+          path: { pipeline_id: ref.pipelineId },
+        }),
+      );
+      expect(registry.addEntry).not.toHaveBeenCalled();
+    },
+  );
+
+  it("rolls back a local pipeline when attachment is refused", async () => {
+    vi.stubEnv("VITE_LOCAL_PIPELINES", "true");
+    const deleteFile = vi.fn().mockResolvedValue(undefined);
+    vi.spyOn(storage.rootFolder, "addFile").mockResolvedValue({
+      id: "local-1",
+      storageKey: "Local",
+      deleteFile,
+    } as unknown as PipelineFile);
+    await expect(
+      createAndAttachPipeline({
+        storage,
+        name: "Local",
+        attach: async () => {
+          throw new Error("Refused");
+        },
+      }),
+    ).rejects.toThrow("Refused");
+    expect(deleteFile).toHaveBeenCalledOnce();
+    expect(client.put).not.toHaveBeenCalled();
+  });
+});
+
 describe("moving local pipelines to remote storage", () => {
   let local: PipelineFile;
 
@@ -640,5 +890,95 @@ describe("moving local pipelines to remote storage", () => {
         sortKey: 0,
       },
     ]);
+  });
+});
+
+describe("saved draft history safety", () => {
+  beforeEach(() => {
+    let filePath = document.file_path;
+    vi.mocked(client.put).mockImplementation(async (options) => {
+      filePath = String(options?.query?.file_path ?? filePath);
+      return response({
+        ...document,
+        file_path: filePath,
+        ...(options?.body as object),
+      });
+    });
+  });
+  const draft = {
+    source: "draft",
+    backendUrl: ref.backendUrl,
+    draftId: "history-draft",
+    name: "History",
+  } as const;
+  it.each([
+    ["malformed JSON", "{"],
+    ["missing owner", JSON.stringify({ remote: ref })],
+    [
+      "blank pipeline ID",
+      JSON.stringify({
+        remote: { ...ref, pipelineId: " " },
+        ownerId: owner.id,
+      }),
+    ],
+    [
+      "another backend",
+      JSON.stringify({
+        remote: { ...ref, backendUrl: "https://other.example.com" },
+        ownerId: owner.id,
+      }),
+    ],
+  ])("ignores a saved draft alias with %s", (_label, value) => {
+    sessionStorage.setItem(
+      `saved-draft:${getEditorPipelineIdentity(draft)}`,
+      value,
+    );
+    expect(() =>
+      storage.getRemoteDraftRef(draft.draftId, draft.backendUrl),
+    ).toThrow("no longer available");
+    expect(client.get).not.toHaveBeenCalled();
+    expect(client.put).not.toHaveBeenCalled();
+  });
+  it("does not reopen another account's saved draft or overwrite its retained contents", async () => {
+    const file = await storage.resolvePipeline(draft);
+    await file.write(content);
+    vi.mocked(getCurrentUserApiUsersMeGet).mockResolvedValue(
+      response({ ...owner, id: "other@example.com" }),
+    );
+    await expect(storage.resolvePipeline(draft)).rejects.toThrow(
+      "another account",
+    );
+    const restored = new PipelineStorageService();
+    await expect(restored.resolvePipeline(draft)).rejects.toThrow(
+      "another account",
+    );
+    expect(client.put).toHaveBeenCalledOnce();
+    vi.mocked(getCurrentUserApiUsersMeGet).mockResolvedValue(response(owner));
+    await expect(restored.resolvePipeline(draft)).resolves.toMatchObject({
+      remote: { pipelineId: ref.pipelineId },
+    });
+  });
+  it("remembers that a history alias is unavailable after a missing saved pipeline", async () => {
+    const file = await storage.resolvePipeline(draft);
+    await file.write(content);
+    const restored = new PipelineStorageService();
+    vi.mocked(client.get).mockResolvedValue(response(undefined, 404));
+    await expect(restored.resolvePipeline(draft)).rejects.toThrow("404");
+    vi.mocked(client.get).mockClear();
+    await expect(
+      new PipelineStorageService().resolvePipeline(draft),
+    ).rejects.toThrow("no longer available");
+    expect(client.get).not.toHaveBeenCalled();
+    expect(client.put).toHaveBeenCalledOnce();
+  });
+  it("retains the saved alias after a temporary backend error", async () => {
+    const file = await storage.resolvePipeline(draft);
+    await file.write(content);
+    const restored = new PipelineStorageService();
+    vi.mocked(client.get).mockResolvedValueOnce(response(undefined, 503));
+    await expect(restored.resolvePipeline(draft)).rejects.toThrow("503");
+    await expect(restored.resolvePipeline(draft)).resolves.toMatchObject({
+      remote: { pipelineId: ref.pipelineId },
+    });
   });
 });

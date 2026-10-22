@@ -3,7 +3,7 @@ import "@/styles/editor.css";
 
 import { ReactFlowProvider } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 
 import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import { ComponentEditorProvider } from "@/components/shared/ComponentEditor/ComponentEditorProvider";
@@ -26,10 +26,15 @@ import {
 import { SharedStoreRegistrar } from "@/routes/v2/shared/store/SharedStoreRegistrar";
 import { DockArea } from "@/routes/v2/shared/windows/DockArea";
 import { WindowContainer } from "@/routes/v2/shared/windows/WindowContainer";
-import type { PipelineRef } from "@/services/pipelineStorage/types";
+import {
+  type EditorPipelineRef,
+  isRemotePipelineDraftRef,
+  isRemotePipelineRef,
+} from "@/services/pipelineStorage/types";
 
 import { DriverPermissionGate } from "./components/DriverPermissionGate";
 import { FlowCanvas } from "./components/FlowCanvas/FlowCanvas";
+import { RemotePipelineView } from "./components/RemotePipelineView/RemotePipelineView";
 import { useComponentLibraryWindow } from "./hooks/useComponentLibraryWindow";
 import { useComponentSearchV2Window } from "./hooks/useComponentSearchV2Window";
 import { useEditorEscapeShortcut } from "./hooks/useEditorEscapeShortcut";
@@ -48,9 +53,10 @@ import { EditorSessionProvider } from "./store/EditorSessionContext";
 import { TangentEditorAgentProvider } from "./TangentEditorAgentProvider";
 
 interface EmbeddedPipelineEditorProps {
-  pipelineRef: PipelineRef;
+  pipelineRef: EditorPipelineRef;
   isActive: boolean;
   projectId: string;
+  onTitleChange?: (title: string) => void;
   onStoreReady?: (store: SharedUIStore) => void;
   onStoreClosed?: () => void;
   sessionId?: string;
@@ -71,8 +77,9 @@ interface EmbeddedEditorAgentBoundaryProps {
 }
 
 interface EmbeddedPipelineEditorCanvasProps extends EmbeddedEditorAgentBoundaryProps {
-  pipelineRef: PipelineRef;
+  pipelineRef: EditorPipelineRef;
   isActive: boolean;
+  onTitleChange?: (title: string) => void;
 }
 
 /**
@@ -97,6 +104,7 @@ const EmbeddedPipelineEditorCanvas = withSuspenseWrapper(
     ({
       pipelineRef,
       isActive,
+      onTitleChange,
       ...agentBoundaryProps
     }: EmbeddedPipelineEditorCanvasProps) => {
       const {
@@ -104,6 +112,8 @@ const EmbeddedPipelineEditorCanvas = withSuspenseWrapper(
       } = useLoadSpec(pipelineRef);
       const { navigation } = useSharedStores();
       const canvasRef = useRef<HTMLDivElement | null>(null);
+      const title = rootSpec.name || "Untitled pipeline";
+      useEffect(() => onTitleChange?.(title), [onTitleChange, title]);
 
       useSpecLifecycle(rootSpec, file, restoredUndoStore, saveState);
       useSelectionWindowSync({
@@ -167,19 +177,20 @@ const EmbeddedPipelineEditorCanvas = withSuspenseWrapper(
   EmbeddedPipelineEditorSkeleton,
 );
 
-export function EmbeddedPipelineEditor({
+const EditableEmbeddedPipelineEditor = ({
   pipelineRef,
   isActive,
   projectId,
   onStoreReady,
   onStoreClosed,
+  onTitleChange,
   sessionId,
   environmentId,
   onEnvironmentReady,
   onEnvironmentClosed,
   onBridgeReady,
   onBridgeClosed,
-}: EmbeddedPipelineEditorProps) {
+}: EmbeddedPipelineEditorProps) => {
   return (
     <RunSubmissionScopeProvider projectId={projectId}>
       <div className="h-full w-full flex flex-col bg-slate-100 dark:bg-background select-none">
@@ -198,6 +209,7 @@ export function EmbeddedPipelineEditor({
                         <EmbeddedPipelineEditorCanvas
                           pipelineRef={pipelineRef}
                           isActive={isActive}
+                          onTitleChange={onTitleChange}
                           sessionId={sessionId}
                           environmentId={environmentId}
                           onEnvironmentReady={onEnvironmentReady}
@@ -215,5 +227,33 @@ export function EmbeddedPipelineEditor({
         </SharedStoreProvider>
       </div>
     </RunSubmissionScopeProvider>
+  );
+};
+
+const RemoteEmbeddedPipelineEditor = withSuspenseWrapper(
+  observer((props: EmbeddedPipelineEditorProps) => {
+    const {
+      data: { spec, file },
+    } = useLoadSpec(props.pipelineRef);
+    const readOnly = file.folder.driver.canEdit !== true;
+    const title = spec.name || "Untitled pipeline";
+    useEffect(() => {
+      if (readOnly) props.onTitleChange?.(title);
+    }, [props.onTitleChange, readOnly, title]);
+    return readOnly ? (
+      <RemotePipelineView spec={spec} isActive={props.isActive} />
+    ) : (
+      <EditableEmbeddedPipelineEditor {...props} />
+    );
+  }),
+  EmbeddedPipelineEditorSkeleton,
+);
+
+export function EmbeddedPipelineEditor(props: EmbeddedPipelineEditorProps) {
+  return isRemotePipelineRef(props.pipelineRef) ||
+    isRemotePipelineDraftRef(props.pipelineRef) ? (
+    <RemoteEmbeddedPipelineEditor {...props} />
+  ) : (
+    <EditableEmbeddedPipelineEditor {...props} />
   );
 }

@@ -228,20 +228,18 @@ describe("ResourcesWindowContent", () => {
     expect(screen.queryByText("Broken")).toBeNull();
   });
 
-  /**
-   * A project holding a backend pipeline read as though it held nothing, and
-   * the fetch that would open one is coming from elsewhere.
-   */
-  it("lists a pipeline the backend holds, saying it cannot be opened yet", () => {
+  it("opens an attached remote pipeline by its server identity", async () => {
     given(backendPipeline("r-5", "Hello World"));
 
     render(<ResourcesWindowContent />);
 
     expect(screen.getByText("Hello World")).toBeInTheDocument();
-    expect(
-      screen.getByText("Backend pipeline — not supported yet"),
-    ).toBeInTheDocument();
-    expect(screen.getByTestId("open-resource-r-5")).toBeDisabled();
+    expect(screen.getByText("Pipeline")).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByTestId("open-resource-r-5"));
+    expect(openWorkareaTarget).toHaveBeenCalledWith(
+      { type: "pipeline", identity: "remote/uuid-1" },
+      "Hello World",
+    );
   });
 
   /** Unopenable is not unremovable — it can still be taken out of the project. */

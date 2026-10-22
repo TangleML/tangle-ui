@@ -26,6 +26,7 @@ describe("importPipelineFromYaml", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubEnv("VITE_LOCAL_PIPELINES", "true");
     vi.spyOn(console, "error").mockImplementation(() => {});
 
     vi.spyOn(componentStore, "getComponentFileFromList").mockResolvedValue(
@@ -36,6 +37,7 @@ describe("importPipelineFromYaml", () => {
 
   afterEach(() => {
     vi.resetAllMocks();
+    vi.unstubAllEnvs();
   });
 
   it("should successfully import a valid pipeline", async () => {

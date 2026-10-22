@@ -1,6 +1,8 @@
 import { useNavigate } from "@tanstack/react-router";
+import { generate } from "random-words";
 import { type RefObject, useEffect, useRef, useState } from "react";
 
+import { useNewPipelineDraft } from "@/hooks/useNewPipelineDraft";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useTourMode } from "@/providers/TourProvider/TourModeContext";
 import { APP_ROUTES } from "@/routes/router";
@@ -44,6 +46,7 @@ export function useFileMenuState(): FileMenuState {
   const { autoSave, pipelineFile: pipelineFileStore } = useEditorSession();
   const renamePipeline = usePipelineRename();
   const storage = usePipelineStorage();
+  const newDraft = useNewPipelineDraft();
   const tourMode = useTourMode();
   const navigate = useNavigate();
   const notify = useToastNotification();
@@ -84,12 +87,22 @@ export function useFileMenuState(): FileMenuState {
   };
 
   const handleNewPipeline = async () => {
-    const file = await createNewPipeline(storage);
-    navigate({
-      to: APP_ROUTES.PIPELINE_EDITOR,
-      params: { pipelineName: file.storageKey },
-      search: { fileId: file.id },
-    });
+    try {
+      const name = (generate(4) as string[]).join(" ");
+      const draft = newDraft(name);
+      if (draft) {
+        await navigate(draft);
+        return;
+      }
+      const file = await createNewPipeline(storage, name);
+      navigate({
+        to: APP_ROUTES.PIPELINE_EDITOR,
+        params: { pipelineName: file.storageKey },
+        search: { fileId: file.id },
+      });
+    } catch (error) {
+      notifyFailure(error, "Unable to create pipeline");
+    }
   };
 
   const handlePipelineClick = (pipeline: PipelineRef) => {
@@ -136,7 +149,7 @@ export function useFileMenuState(): FileMenuState {
 
   const handleDeletePipeline = async () => {
     const file = pipelineFileStore.activePipelineFile;
-    if (!file || file.remote) return;
+    if (!file || file.remote || file.isDraft) return;
     await file.deleteFile();
     void navigate({ to: APP_ROUTES.HOME });
   };

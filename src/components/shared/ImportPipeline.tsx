@@ -20,18 +20,25 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Heading, Paragraph } from "@/components/ui/typography";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
-import { getDefaultEditorPath } from "@/routes/editorRoutes";
+import {
+  getDefaultEditorPath,
+  getDefaultRemoteEditorPath,
+} from "@/routes/editorRoutes";
 import {
   importPipelineFromFile,
   importPipelineFromYaml,
   type ImportResult,
 } from "@/services/pipelineService";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
-import type { PipelineRef } from "@/services/pipelineStorage/types";
+import {
+  isRemotePipelineRef,
+  type PipelineRef,
+  type RemotePipelineRef,
+} from "@/services/pipelineStorage/types";
 
 interface ImportPipelineProps {
   triggerComponent?: ReactElement<{ onClick?: () => void }>;
-  onImportComplete?: (pipeline: PipelineRef) => void;
+  onImportComplete?: (pipeline: PipelineRef | RemotePipelineRef) => void;
 }
 
 const ImportPipeline = ({
@@ -40,9 +47,9 @@ const ImportPipeline = ({
 }: ImportPipelineProps) => {
   const { track } = useAnalytics();
   const [isOpen, setIsOpen] = useState(false);
-  const [importedPipeline, setImportedPipeline] = useState<PipelineRef | null>(
-    null,
-  );
+  const [importedPipeline, setImportedPipeline] = useState<
+    PipelineRef | RemotePipelineRef | null
+  >(null);
   const [yamlContent, setYamlContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,7 +71,9 @@ const ImportPipeline = ({
       onImportComplete(importedPipeline);
     } else {
       navigate({
-        to: getDefaultEditorPath(importedPipeline.name),
+        to: isRemotePipelineRef(importedPipeline)
+          ? getDefaultRemoteEditorPath(importedPipeline.pipelineId)
+          : getDefaultEditorPath(importedPipeline.name),
       });
     }
   };
@@ -83,8 +92,11 @@ const ImportPipeline = ({
       setSuccessMessage(`Pipeline "${result.name}" imported successfully.`);
     }
 
-    const file = await storage.rootFolder.assignFile(result.name);
-    setImportedPipeline({ name: result.name, fileId: file.id });
+    if (result.remote) setImportedPipeline(result.remote);
+    else {
+      const file = await storage.rootFolder.assignFile(result.name);
+      setImportedPipeline({ name: result.name, fileId: file.id });
+    }
   };
 
   const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {

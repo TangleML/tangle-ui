@@ -29,6 +29,7 @@ const POSITION_OFFSET = 200;
 const ANCHOR_GAP = 140;
 
 export interface BridgeDeps {
+  assertCurrentDocument?: () => void;
   getSpec: () => ComponentSpec | null;
   getActiveSpec?: () => ComponentSpec | null;
   getActiveSubgraphPath: () => string[];

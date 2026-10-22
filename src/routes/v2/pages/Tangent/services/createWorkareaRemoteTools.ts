@@ -45,10 +45,14 @@ export interface WorkareaToolDeps {
   getEnvironmentId: (tabId: string) => string | undefined;
   waitForEnvironment: (tabId: string) => Promise<string | undefined>;
   runInspect: RunInspectDeps;
-  createPipeline: (
-    name?: string,
-  ) => Promise<{ pipelineName: string; fileId: string }>;
-  clonePipeline: (runId: string) => Promise<{ pipelineName: string }>;
+  createPipeline: (name?: string) => Promise<{
+    pipelineName: string;
+    fileId: string;
+    target?: WorkareaTarget;
+  }>;
+  clonePipeline: (
+    runId: string,
+  ) => Promise<{ pipelineName: string; target?: WorkareaTarget }>;
   refreshResources: () => Promise<void>;
   renameProject: (name: string) => Promise<{ renamed: boolean }>;
   nameSession: (name: string) => Promise<void>;
@@ -178,7 +182,7 @@ function resolveRunId(deps: WorkareaToolDeps, explicit?: string): string {
 
 const TARGET_DESCRIPTION =
   "A `type://identity` target: `artifact://id/<url>`, " +
-  "`pipeline://id/<fileId>`, `pipeline://name/<name>`, or `run://id/<runId>`. " +
+  "`pipeline://id/<fileId>`, `pipeline://name/<name>`, `pipeline://remote/<pipelineId>`, `pipeline://draft/<draftId>`, or `run://id/<runId>`. " +
   "A run url is also accepted, from any origin, and names the run this " +
   "environment holds under that id.";
 
@@ -257,10 +261,10 @@ export function createWorkareaRemoteTools(
         "ready to build on. Use this when asked to build a pipeline and none " +
         "is open — there is no other way to get a canvas from nothing, and the " +
         "canvas editing tools only exist once a pipeline tab is open. `name` is " +
-        "optional and is made unique if it is already taken. The pipeline is " +
-        "attached to the project automatically (it shows up in Resources). " +
+        "optional. With remote storage, the empty draft is saved and attached " +
+        "to the project on its first edit. " +
         "Returns the tab summary plus the pipeline `name` and its " +
-        "`pipeline://id/<fileId>` `target`, including the `environmentId` and " +
+        "`target`, including the `environmentId` and " +
         "`ready` flag for that tab's sub-agent host, so a spawn can follow " +
         "straight on.",
       inputSchema: {
@@ -274,10 +278,12 @@ export function createWorkareaRemoteTools(
         },
       },
       execute: async (args) => {
-        const { pipelineName, fileId } = await getDeps().createPipeline(
-          optionalName(args),
-        );
-        const target: WorkareaTarget = {
+        const {
+          pipelineName,
+          fileId,
+          target: createdTarget,
+        } = await getDeps().createPipeline(optionalName(args));
+        const target: WorkareaTarget = createdTarget ?? {
           type: "pipeline",
           identity: idIdentity(fileId),
         };
@@ -287,24 +293,26 @@ export function createWorkareaRemoteTools(
     },
     clone_pipeline: {
       description:
-        "Clone the pipeline behind a failed run into a new editable local " +
+        "Clone the pipeline behind a failed run into a new editable " +
         "pipeline so it can be fixed without touching the original. `runId` is " +
         "optional and defaults to the active or only open run tab. The clone is " +
         "attached to the project automatically (it shows up in Resources), so " +
         "you do not need to attach or refresh it yourself. Returns the new " +
-        "pipeline `name` and a `pipeline://name/<name>` `target` to open with " +
+        "pipeline `name` and its `target` to open with " +
         "open_workarea_target.",
       inputSchema: RUN_ID_SCHEMA,
       execute: async (args) => {
         const deps = getDeps();
         const runId = resolveRunId(deps, optionalRunId(args));
-        const { pipelineName } = await deps.clonePipeline(runId);
+        const { pipelineName, target } = await deps.clonePipeline(runId);
         return {
           name: pipelineName,
-          target: formatWorkareaTarget({
-            type: "pipeline",
-            identity: nameIdentity(pipelineName),
-          }),
+          target: formatWorkareaTarget(
+            target ?? {
+              type: "pipeline",
+              identity: nameIdentity(pipelineName),
+            },
+          ),
         };
       },
     },
