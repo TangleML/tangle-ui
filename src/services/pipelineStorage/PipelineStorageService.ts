@@ -47,6 +47,28 @@ export class PipelineStorageService {
     throw new Error(`Pipeline "${ref.name}" not found`);
   }
 
+  async createRemotePipeline(
+    backendUrl: string,
+    name: string,
+    content: string,
+  ): Promise<PipelineFile> {
+    return remoteFile(
+      await RemotePipelineStorageDriver.create(backendUrl, name, content),
+    );
+  }
+
+  async copyRemotePipeline(
+    source: PipelineFile,
+    name: string,
+    content: string,
+  ): Promise<PipelineFile> {
+    const driver = source.folder.driver;
+    if (!(driver instanceof RemotePipelineStorageDriver)) {
+      throw new Error("The source pipeline is not a remote document.");
+    }
+    return remoteFile(await driver.copy(name, content));
+  }
+
   async findPipelineById(id: string): Promise<PipelineFile> {
     const entry = await findById(id);
     if (!entry) {

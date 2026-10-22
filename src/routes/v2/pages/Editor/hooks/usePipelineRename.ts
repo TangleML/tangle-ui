@@ -1,5 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 
+import useToastNotification from "@/hooks/useToastNotification";
 import { APP_ROUTES } from "@/routes/router";
 import { usePipelineActions } from "@/routes/v2/pages/Editor/store/actions/usePipelineActions";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
@@ -10,17 +11,32 @@ export function usePipelineRename() {
   const { autoSave, pipelineFile: pipelineFileStore } = useEditorSession();
   const { renamePipeline } = usePipelineActions();
   const navigate = useNavigate();
+  const notify = useToastNotification();
 
   return async (newName: string) => {
     const spec = navigation.rootSpec;
     if (!spec) return;
-    await pipelineFileStore.activePipelineFile?.rename(newName);
-    renamePipeline(spec, newName);
-    await autoSave.save();
-    await navigate({
-      to: APP_ROUTES.PIPELINE_EDITOR,
-      params: { pipelineName: newName },
-      search: { fileId: pipelineFileStore.activePipelineFile?.id },
-    });
+    const file = pipelineFileStore.activePipelineFile;
+    try {
+      if (file?.remote) {
+        renamePipeline(spec, newName);
+        await Promise.all([autoSave.save(), file.rename(newName)]);
+        return;
+      }
+      await autoSave.save();
+      await file?.rename(newName);
+      renamePipeline(spec, newName);
+      await autoSave.save();
+      await navigate({
+        to: APP_ROUTES.PIPELINE_EDITOR,
+        params: { pipelineName: newName },
+        search: { fileId: file?.id },
+      });
+    } catch (error) {
+      notify(
+        error instanceof Error ? error.message : "Failed to rename pipeline",
+        "error",
+      );
+    }
   };
 }

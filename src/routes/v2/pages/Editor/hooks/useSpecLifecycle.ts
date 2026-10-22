@@ -1,34 +1,25 @@
 import { autorun, reaction } from "mobx";
 import type { UndoStore as MobxUndoStore } from "mobx-keystone";
-import { isRootStore, unregisterRootStore } from "mobx-keystone";
+import {
+  isRootStore,
+  registerRootStore,
+  unregisterRootStore,
+} from "mobx-keystone";
 import { useEffect, useRef } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 import { collectIdStack } from "@/models/componentSpec";
+import type { DocumentSaveState } from "@/routes/v2/pages/Editor/store/documentSaveState";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { saveIdStack } from "@/routes/v2/pages/Editor/utils/undoHistoryStorage";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
-import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
-import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
-import type { PipelineRef } from "@/services/pipelineStorage/types";
-
-/**
- * todo: make public and export to re-use
- */
-async function resolvePipelineFile(
-  ref: PipelineRef,
-  storage: PipelineStorageService,
-) {
-  if (ref.fileId) {
-    return storage.findPipelineById(ref.fileId);
-  }
-  return storage.resolvePipelineByName(ref.name);
-}
+import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 
 export function useSpecLifecycle(
   rootSpec: ComponentSpec,
-  pipelineRef: PipelineRef,
+  file: PipelineFile,
   restoredUndoStore?: MobxUndoStore,
+  saveState?: DocumentSaveState,
 ) {
   const { editor, navigation, windows: windowStore } = useSharedStores();
   const {
@@ -36,30 +27,25 @@ export function useSpecLifecycle(
     autoSave,
     pipelineFile: pipelineFileStore,
   } = useEditorSession();
-  const storage = usePipelineStorage();
   const prevTaskEntityIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (!rootSpec) return;
 
+    autoSave.dispose();
+    if (!isRootStore(rootSpec)) registerRootStore(rootSpec);
     editor.resetState();
     navigation.initNavigation(rootSpec);
-    undo.init(rootSpec, restoredUndoStore);
+    if (file.remote) undo.dispose();
+    else undo.init(rootSpec, restoredUndoStore);
 
-    const saveName = pipelineRef.name ?? rootSpec.name;
-
-    void (async () => {
-      if (saveName) {
-        const file = await resolvePipelineFile(pipelineRef, storage);
-        pipelineFileStore.init(file ?? null);
-        autoSave.init(rootSpec, saveName);
-        // Persist the id ordering up front so a reload replays the same `$id`s
-        // even if the user never edits — keeps chat entity links resolvable.
-        await saveIdStack(saveName, collectIdStack(rootSpec)).catch((error) =>
-          console.warn("Failed to persist pipeline id stack", error),
-        );
-      }
-    })();
+    pipelineFileStore.init(file);
+    autoSave.init(rootSpec, file, saveState);
+    if (!file.remote) {
+      void saveIdStack(file.storageKey, collectIdStack(rootSpec)).catch(
+        (error) => console.warn("Failed to persist pipeline id stack", error),
+      );
+    }
 
     prevTaskEntityIdsRef.current = new Set(rootSpec.tasks.map((t) => t.$id));
 
@@ -101,14 +87,14 @@ export function useSpecLifecycle(
     };
   }, [
     rootSpec,
-    pipelineRef,
+    file,
     restoredUndoStore,
+    saveState,
     editor,
     navigation,
     windowStore,
     undo,
     autoSave,
     pipelineFileStore,
-    storage,
   ]);
 }

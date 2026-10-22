@@ -5,7 +5,7 @@ import { emitUserPipelineWritten } from "@/utils/userPipelineWriteEvents";
 import { emitPipelineFileChanged } from "./pipelineFileEvents";
 import type { PipelineFolder } from "./PipelineFolder";
 import { deleteEntry, updateEntry } from "./pipelineRegistry";
-import type { RemotePipelineRef } from "./types";
+import { getEditorPipelineIdentity, type RemotePipelineRef } from "./types";
 
 interface PipelineFileInit {
   id: string;
@@ -21,6 +21,10 @@ export class PipelineFile {
   readonly createdAt?: Date;
   readonly modifiedAt?: Date;
   readonly remote?: Readonly<Omit<RemotePipelineRef, "source">>;
+
+  get editingError(): Error | undefined {
+    return this.folder.driver.editingError;
+  }
 
   @observable accessor storageKey: string;
   @observable accessor folder: PipelineFolder;
@@ -42,14 +46,19 @@ export class PipelineFile {
 
   async write(content: string): Promise<void> {
     await this.folder.driver.write(this.storageKey, content);
-    emitPipelineFileChanged({ storageKey: this.storageKey, source: "v2" });
+    emitPipelineFileChanged({
+      storageKey: this.remote
+        ? getEditorPipelineIdentity({ source: "remote", ...this.remote })
+        : this.storageKey,
+      source: "v2",
+    });
     emitUserPipelineWritten();
   }
 
   @action
   async rename(newName: string): Promise<void> {
     await this.folder.driver.rename(this.storageKey, newName);
-    await updateEntry(this.id, { storageKey: newName });
+    if (!this.remote) await updateEntry(this.id, { storageKey: newName });
 
     runInAction(() => {
       this.storageKey = newName;

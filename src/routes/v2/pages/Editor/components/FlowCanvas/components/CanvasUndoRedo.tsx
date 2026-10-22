@@ -14,7 +14,8 @@ import { ShortcutBadge } from "@/routes/v2/shared/components/ShortcutBadge";
 
 export const CanvasUndoRedo = observer(function CanvasUndoRedo() {
   const { track } = useAnalytics();
-  const { undo } = useEditorSession();
+  const { undo, pipelineFile } = useEditorSession();
+  if (pipelineFile.activePipelineFile?.remote) return null;
 
   const handleUndo = () => {
     track("v2.pipeline_canvas.controls.undo.click");

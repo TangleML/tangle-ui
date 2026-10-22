@@ -174,15 +174,66 @@ describe("remote pipeline editor entry", () => {
     expect(screen.queryByText("Open local pipeline")).not.toBeInTheDocument();
   });
 
-  it("shows the loaded remote graph without initializing editor sessions or autosave", () => {
+  it.each([false, undefined])(
+    "preserves viewing without an editing session when write access is %s",
+    (canEdit) => {
+      route.params = { pipelineId: "pipeline-123" };
+      loadV2.mockReturnValue({
+        data: {
+          spec: { name: "Remote graph" },
+          file: { folder: { driver: { canEdit } } },
+        },
+      });
+      renderEditor(<EditorV2 />);
+      expect(screen.getByText("Remote graph")).toBeInTheDocument();
+      expect(initializeEditing).not.toHaveBeenCalled();
+      expect(
+        screen.queryByRole("navigation", { name: "Editor navigation" }),
+      ).not.toBeInTheDocument();
+    },
+  );
+
+  it("opens the editor after the remote driver verifies write access", () => {
     route.params = { pipelineId: "pipeline-123" };
-    loadV2.mockReturnValue({ data: { spec: { name: "Remote graph" } } });
+    loadV2.mockReturnValueOnce({
+      data: {
+        spec: { name: "Remote graph" },
+        file: { folder: { driver: { canEdit: true } } },
+      },
+    });
     renderEditor(<EditorV2 />);
-    expect(screen.getByText("Remote graph")).toBeInTheDocument();
-    expect(initializeEditing).not.toHaveBeenCalled();
     expect(
-      screen.queryByRole("navigation", { name: "Editor navigation" }),
-    ).not.toBeInTheDocument();
+      screen.getByRole("navigation", { name: "Editor navigation" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Remote graph")).not.toBeInTheDocument();
+    expect(loadV2).toHaveBeenCalledWith({
+      source: "remote",
+      backendUrl: backend.backendUrl,
+      pipelineId: "pipeline-123",
+    });
+  });
+
+  it("shows failed remote reads without entering the editor", () => {
+    route.params = { pipelineId: "pipeline-123" };
+    loadV2.mockImplementation(() => {
+      throw new Error("Pipeline not found");
+    });
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    try {
+      renderEditor(<EditorV2 />);
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Unable to load pipeline. Please try again.",
+      );
+      expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+      expect(initializeEditing).not.toHaveBeenCalled();
+      expect(
+        screen.queryByRole("navigation", { name: "Editor navigation" }),
+      ).not.toBeInTheDocument();
+    } finally {
+      consoleError.mockRestore();
+    }
   });
 
   it("waits for backend settings before resolving a remote pipeline", () => {
@@ -278,7 +329,12 @@ describe("remote pipeline editor entry", () => {
     });
     renderEditor(<EditorV2 />);
     expect(screen.getByRole("alert")).toBeInTheDocument();
-    loadV2.mockReturnValue({ data: { spec: { name: "Recovered pipeline" } } });
+    loadV2.mockReturnValue({
+      data: {
+        spec: { name: "Recovered pipeline" },
+        file: { folder: { driver: { canEdit: false } } },
+      },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
     expect(screen.getByText("Recovered pipeline")).toBeInTheDocument();
     expect(initializeEditing).not.toHaveBeenCalled();
@@ -294,7 +350,10 @@ describe("remote pipeline editor entry", () => {
     expect(screen.getByRole("alert")).toBeInTheDocument();
 
     loadV2.mockReturnValue({
-      data: { spec: { name: "Authenticated pipeline" } },
+      data: {
+        spec: { name: "Authenticated pipeline" },
+        file: { folder: { driver: { canEdit: false } } },
+      },
     });
     localStorage.setItem(
       "jwtToken",
@@ -323,7 +382,10 @@ describe("remote pipeline editor entry", () => {
     expect(screen.getByRole("alert")).toBeInTheDocument();
 
     loadV2.mockReturnValue({
-      data: { spec: { name: "Reauthenticated pipeline" } },
+      data: {
+        spec: { name: "Reauthenticated pipeline" },
+        file: { folder: { driver: { canEdit: false } } },
+      },
     });
     localStorage.setItem("jwtToken", storedAuth);
     fireEvent(window, new StorageEvent("storage", { key: "jwtToken" }));
