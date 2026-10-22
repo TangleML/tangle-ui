@@ -375,9 +375,11 @@ describe("DashboardPipelinesView remote pipelines", () => {
     );
     expect(screen.getByText("Pipeline 12")).toBeInTheDocument();
     expect(screen.getByText("Page 2")).toBeInTheDocument();
-    expect(
-      screen.getByRole("table", { name: "Remote Pipelines" }),
-    ).toHaveFocus();
+    await waitFor(() =>
+      expect(
+        screen.getByRole("table", { name: "Remote Pipelines" }),
+      ).toHaveFocus(),
+    );
   });
 
   it("keeps focus on a control selected while the deleted list refreshes", async () => {
