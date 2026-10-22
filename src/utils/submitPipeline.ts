@@ -30,6 +30,7 @@ export async function submitPipelineRun(
   options?: {
     taskArguments?: Record<string, ArgumentType>;
     authorizationToken?: string;
+    teamId?: string;
     canonicalName?: string;
     runAnnotations?: Record<string, string>;
     runSource?: string;
@@ -116,6 +117,7 @@ export async function submitPipelineRun(
       payload as BodyCreateApiPipelineRunsPost,
       backendUrl,
       options?.authorizationToken,
+      options?.teamId,
     );
 
     if (responseData.id) {

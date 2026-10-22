@@ -14,6 +14,7 @@ import {
   getPipelineCreationBackendUrl,
 } from "@/services/pipelineStorage/pipelineCreation";
 import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
+import { teamRequestHeaders } from "@/services/teams/teamRequestHeaders";
 import type { PipelineRun } from "@/types/pipelineRun";
 import { EDITOR_FLOW_DIRECTION_ANNOTATION } from "@/utils/annotations";
 import { removeCachingStrategyFromSpec } from "@/utils/cache";
@@ -31,6 +32,7 @@ export const createPipelineRun = async (
   payload: BodyCreateApiPipelineRunsPost,
   backendUrl: string,
   authorizationToken?: string,
+  teamId?: string,
 ) => {
   const authorizationHeader = authorizationToken
     ? { Authorization: `Bearer ${authorizationToken}` }
@@ -41,6 +43,7 @@ export const createPipelineRun = async (
     headers: {
       "Content-Type": "application/json",
       ...authorizationHeader,
+      ...teamRequestHeaders(teamId),
     },
     body: JSON.stringify(payload),
   });
@@ -200,11 +203,16 @@ export const fetchPipelineRuns = async (
   }
 };
 
-export const cancelPipelineRun = async (runId: string, backendUrl: string) => {
+export const cancelPipelineRun = async (
+  runId: string,
+  backendUrl: string,
+  teamId?: string,
+) => {
   await fetchWithErrorHandling(
     `${backendUrl}/api/pipeline_runs/${runId}/cancel`,
     {
       method: "POST",
+      headers: teamRequestHeaders(teamId),
     },
   );
 };
@@ -224,6 +232,7 @@ export const updateRunAnnotation = async (
     key: string;
     value: string;
   },
+  teamId?: string,
 ) => {
   const url = new URL(
     `${backendUrl}/api/pipeline_runs/${runId}/annotations/${annotation.key}`,
@@ -232,5 +241,6 @@ export const updateRunAnnotation = async (
 
   await fetchWithErrorHandling(url.toString(), {
     method: "PUT",
+    headers: teamRequestHeaders(teamId),
   });
 };
