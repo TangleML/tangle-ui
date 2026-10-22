@@ -10,6 +10,7 @@ import {
   getCloudProviderConfig,
   getProviderSchema,
   type LauncherConfig,
+  launcherDisplayName,
   type LauncherNebiusCluster,
   listedOptions,
   parseSchemaToAnnotationConfig,
@@ -1024,5 +1025,30 @@ describe("aliases as picker entries", () => {
 
     expect(lt3?.["x-alias-of"]).toBeUndefined();
     expect(lt3?.["x-provider"]).toBe("GKE");
+  });
+});
+
+describe("launcherDisplayName", () => {
+  const schema = makeSchema({
+    kubernetes_google_cluster_a: { title: "Cluster A", "x-provider": "GKE" },
+    batch_platform: { title: "Batch Platform" },
+  });
+
+  it("qualifies a cluster with its provider", () => {
+    expect(launcherDisplayName(schema, "kubernetes_google_cluster_a")).toBe(
+      "GKE: Cluster A",
+    );
+  });
+
+  it("names a platform target on its own", () => {
+    expect(launcherDisplayName(schema, "batch_platform")).toBe(
+      "Batch Platform",
+    );
+  });
+
+  it("falls back to the raw key for an unknown launcher", () => {
+    expect(launcherDisplayName(schema, "kubernetes_google_removed")).toBe(
+      "kubernetes_google_removed",
+    );
   });
 });
