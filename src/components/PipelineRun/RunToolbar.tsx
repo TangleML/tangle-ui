@@ -88,11 +88,7 @@ export const RunToolbar = () => {
       )}
 
       {isComplete && (
-        <RerunPipelineButton
-          componentSpec={componentSpec}
-          runId={runId}
-          showLabel
-        />
+        <RerunPipelineButton componentSpec={componentSpec} showLabel />
       )}
     </InlineStack>
   );

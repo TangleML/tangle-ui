@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 
 import { Textarea } from "@/components/ui/textarea";
 import { Paragraph } from "@/components/ui/typography";
+import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
 import { updateRunAnnotation } from "@/services/pipelineRunService";
 import { runAnnotationsQueryOptions } from "@/services/runAnnotations";
@@ -14,10 +15,16 @@ import {
 interface RunNotesEditorProps {
   runId: string;
   readOnly?: boolean;
+  teamId?: string;
 }
 
-export const RunNotesEditor = ({ runId, readOnly }: RunNotesEditorProps) => {
+export const RunNotesEditor = ({
+  runId,
+  readOnly,
+  teamId,
+}: RunNotesEditorProps) => {
   const { backendUrl } = useBackend();
+  const notify = useToastNotification();
 
   const {
     data: annotations,
@@ -29,12 +36,20 @@ export const RunNotesEditor = ({ runId, readOnly }: RunNotesEditorProps) => {
 
   const { mutate: saveRunNotes, isPending } = useMutation({
     mutationFn: (runId: string) =>
-      updateRunAnnotation(runId, backendUrl, {
-        key: PIPELINE_RUN_NOTES_ANNOTATION,
-        value: value,
-      }),
+      updateRunAnnotation(
+        runId,
+        backendUrl,
+        {
+          key: PIPELINE_RUN_NOTES_ANNOTATION,
+          value: value,
+        },
+        teamId,
+      ),
     onSuccess: () => {
       refetch();
+    },
+    onError: (error) => {
+      notify(error.message, "error");
     },
   });
 

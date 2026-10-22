@@ -1,9 +1,16 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { Annotations } from "@/models/componentSpec/annotations";
+import { useRunTeam } from "@/services/teams/useRunTeam";
 
 import { RunDetailsContent } from "./RunDetailsContent";
 
@@ -21,8 +28,13 @@ const mockMetadata = {
 };
 
 const fetchRunAnnotations = vi.fn();
+const updateRunAnnotation = vi.fn();
+const notify = vi.fn();
 let tangentEnabled = false;
 let runStats: Record<string, number> | undefined;
+let runCreatedBy = mockMetadata.created_by;
+
+const ML_TEAM = { id: "ml-team@example.com", label: "ML Research" };
 
 vi.mock("@/routes/v2/shared/providers/SpecContext", () => ({
   useSpec: () => mockSpec,
@@ -32,7 +44,11 @@ vi.mock("@/providers/ExecutionDataProvider", () => ({
   useExecutionData: () => ({
     rootDetails: { task_spec: { arguments: {} } },
     rootState: { child_execution_status_stats: {} },
-    metadata: { ...mockMetadata, execution_status_stats: runStats },
+    metadata: {
+      ...mockMetadata,
+      created_by: runCreatedBy,
+      execution_status_stats: runStats,
+    },
     isLoading: false,
     error: undefined,
   }),
@@ -50,9 +66,15 @@ vi.mock("@/hooks/useUserDetails", () => ({
   useUserDetails: () => ({ data: { id: "user-1" } }),
 }));
 
+vi.mock("@/hooks/useToastNotification", () => ({ default: () => notify }));
+
 vi.mock("@/services/pipelineRunService", () => ({
   fetchRunAnnotations: (...args: unknown[]) => fetchRunAnnotations(...args),
-  updateRunAnnotation: vi.fn(),
+  updateRunAnnotation: (...args: unknown[]) => updateRunAnnotation(...args),
+}));
+
+vi.mock("@/services/teams/useRunTeam", () => ({
+  useRunTeam: vi.fn(),
 }));
 
 vi.mock("@/components/shared/Execution/PipelineIO", () => ({
@@ -99,10 +121,12 @@ const openDetailsSection = async () => {
 beforeEach(() => {
   queryClient.clear();
   vi.clearAllMocks();
+  vi.mocked(useRunTeam).mockReturnValue({ status: "none" });
 });
 
 afterEach(() => {
   cleanup();
+  runCreatedBy = mockMetadata.created_by;
 });
 
 describe("<RunDetailsContent/>", () => {
@@ -136,6 +160,75 @@ describe("<RunDetailsContent/>", () => {
     await openDetailsSection();
 
     expect(screen.queryByText("Run Annotations")).not.toBeInTheDocument();
+  });
+
+  describe("run notes", () => {
+    beforeEach(() => {
+      fetchRunAnnotations.mockResolvedValue({ notes: "First try" });
+      updateRunAnnotation.mockResolvedValue(undefined);
+    });
+
+    it("lets you edit the notes of a run you created", async () => {
+      renderPanel(<RunDetailsContent offersTangentHandoff />);
+      await openDetailsSection();
+
+      expect(await screen.findByDisplayValue("First try")).toBeInTheDocument();
+    });
+
+    it("saves a team's run notes as the team", async () => {
+      runCreatedBy = ML_TEAM.id;
+      vi.mocked(useRunTeam).mockReturnValue({
+        status: "active",
+        team: { ...ML_TEAM, canWrite: true },
+      });
+      renderPanel(<RunDetailsContent offersTangentHandoff />);
+      await openDetailsSection();
+
+      const notes = await screen.findByDisplayValue("First try");
+      fireEvent.change(notes, { target: { value: "Second try" } });
+      fireEvent.blur(notes);
+
+      await waitFor(() =>
+        expect(updateRunAnnotation).toHaveBeenCalledWith(
+          "run-1",
+          "http://backend",
+          { key: "notes", value: "Second try" },
+          ML_TEAM.id,
+        ),
+      );
+    });
+
+    it("says why the notes couldn't be saved", async () => {
+      updateRunAnnotation.mockRejectedValue(
+        new Error("Failed to update run annotation: run is locked"),
+      );
+      renderPanel(<RunDetailsContent offersTangentHandoff />);
+      await openDetailsSection();
+
+      const notes = await screen.findByDisplayValue("First try");
+      fireEvent.change(notes, { target: { value: "Second try" } });
+      fireEvent.blur(notes);
+
+      await waitFor(() =>
+        expect(notify).toHaveBeenCalledWith(
+          "Failed to update run annotation: run is locked",
+          "error",
+        ),
+      );
+    });
+
+    it("shows a team's run notes read-only outside the team", async () => {
+      runCreatedBy = ML_TEAM.id;
+      vi.mocked(useRunTeam).mockReturnValue({
+        status: "not-member",
+        team: ML_TEAM,
+      });
+      renderPanel(<RunDetailsContent offersTangentHandoff />);
+      await openDetailsSection();
+
+      expect(await screen.findByText("First try")).toBeInTheDocument();
+      expect(screen.queryByRole("textbox")).toBeNull();
+    });
   });
 
   describe("with Tangent", () => {
