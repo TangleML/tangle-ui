@@ -10,7 +10,11 @@ import {
 
 import type { BodyCreateApiPipelineRunsPost } from "@/api/types.gen";
 
-import { createPipelineRun } from "./pipelineRunService";
+import {
+  cancelPipelineRun,
+  createPipelineRun,
+  updateRunAnnotation,
+} from "./pipelineRunService";
 
 const BACKEND_URL = "https://api.example.com";
 const PAYLOAD = {} as BodyCreateApiPipelineRunsPost;
@@ -88,5 +92,68 @@ describe("createPipelineRun", () => {
     await expect(createPipelineRun(PAYLOAD, BACKEND_URL)).rejects.toThrow(
       "<html>502 Bad Gateway</html>",
     );
+  });
+});
+
+describe("acting as a team", () => {
+  const TEAM_ID = "ml-team@project.iam.gserviceaccount.com";
+  const HEADER_NAME = "x-tangle-impersonate-team-id";
+  let mockFetch: Mock;
+
+  const sentHeaders = () => {
+    const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    return init.headers;
+  };
+
+  beforeEach(() => {
+    mockFetch = vi.fn().mockResolvedValue(jsonResponse(200, { id: 123 }));
+    global.fetch = mockFetch;
+    window.__TANGLE_TEAM_IMPERSONATION__ = { headerName: HEADER_NAME };
+  });
+
+  afterEach(() => {
+    delete window.__TANGLE_TEAM_IMPERSONATION__;
+    vi.restoreAllMocks();
+  });
+
+  it("creates the run as the team", async () => {
+    await createPipelineRun(PAYLOAD, BACKEND_URL, "token", TEAM_ID);
+
+    expect(sentHeaders()).toEqual({
+      "Content-Type": "application/json",
+      Authorization: "Bearer token",
+      [HEADER_NAME]: TEAM_ID,
+    });
+  });
+
+  it("creates the run as the user without a team", async () => {
+    await createPipelineRun(PAYLOAD, BACKEND_URL);
+
+    expect(sentHeaders()).toEqual({ "Content-Type": "application/json" });
+  });
+
+  it("cancels the run as the team", async () => {
+    await cancelPipelineRun("42", BACKEND_URL, TEAM_ID);
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      `${BACKEND_URL}/api/pipeline_runs/42/cancel`,
+      expect.objectContaining({ method: "POST" }),
+    );
+    expect(sentHeaders()).toEqual({ [HEADER_NAME]: TEAM_ID });
+  });
+
+  it("sets an annotation as the team", async () => {
+    await updateRunAnnotation(
+      "42",
+      BACKEND_URL,
+      { key: "notes", value: "Rerun with more memory" },
+      TEAM_ID,
+    );
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      `${BACKEND_URL}/api/pipeline_runs/42/annotations/notes?value=Rerun+with+more+memory`,
+      expect.objectContaining({ method: "PUT" }),
+    );
+    expect(sentHeaders()).toEqual({ [HEADER_NAME]: TEAM_ID });
   });
 });

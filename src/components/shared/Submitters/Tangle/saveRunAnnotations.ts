@@ -22,6 +22,7 @@ export async function saveRunAnnotations(
   runId: string,
   backendUrl: string,
   { notes, componentSpec }: RunAnnotationsFromSubmission,
+  teamId?: string,
 ) {
   const writes: { key: string; value: string }[] = [];
 
@@ -37,7 +38,9 @@ export async function saveRunAnnotations(
   // Neither annotation depends on the other, so one being refused must not take
   // the other down with it.
   const settled = await Promise.allSettled(
-    writes.map((write) => updateRunAnnotation(runId, backendUrl, write)),
+    writes.map((write) =>
+      updateRunAnnotation(runId, backendUrl, write, teamId),
+    ),
   );
 
   const failed = settled.filter((result) => result.status === "rejected");
