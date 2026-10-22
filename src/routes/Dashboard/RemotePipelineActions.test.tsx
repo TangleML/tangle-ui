@@ -89,7 +89,7 @@ async function confirmDelete(user: ReturnType<typeof userEvent.setup>) {
   await user.click(
     await screen.findByRole("button", { name: "Delete Saved pipeline" }),
   );
-  await user.click(screen.getByRole("button", { name: "Continue" }));
+  await user.click(screen.getByRole("button", { name: "Delete" }));
 }
 
 beforeEach(() => {

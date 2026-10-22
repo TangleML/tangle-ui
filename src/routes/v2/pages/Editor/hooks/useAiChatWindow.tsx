@@ -7,9 +7,10 @@ import { createEditorToolBridge } from "@/routes/v2/pages/Editor/components/AiCh
 import { invokeAutoLayoutVia } from "@/routes/v2/pages/Editor/components/AiChat/toolBridge/invokeAutoLayoutVia";
 import { renamePipelineFileFor } from "@/routes/v2/pages/Editor/hooks/renamePipelineFileFor";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
-import { AiChatContent } from "@/routes/v2/shared/components/AiChat/AiChatContent";
-import type { SuggestedPrompt } from "@/routes/v2/shared/components/AiChat/types";
 import { preserveRenamedPipelineQuery } from "@/routes/v2/pages/Editor/utils/preserveRenamedPipelineQuery";
+import { AiChatContent } from "@/routes/v2/shared/components/AiChat/AiChatContent";
+import { createReadOnlyToolBridge } from "@/routes/v2/shared/components/AiChat/toolBridge/readOnlyToolBridge";
+import type { SuggestedPrompt } from "@/routes/v2/shared/components/AiChat/types";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { WindowMiniButton } from "@/routes/v2/shared/windows/WindowMiniButton";
 
@@ -25,7 +26,19 @@ const SUGGESTED_PROMPTS_EDITOR: SuggestedPrompt[] = [
   },
 ];
 
-export function useAiChatWindow(enabled: boolean) {
+const SUGGESTED_PROMPTS_READ_ONLY: SuggestedPrompt[] = [
+  SUGGESTED_PROMPTS_EDITOR[0],
+  {
+    label: "Explain this pipeline's inputs and outputs",
+    icon: "ArrowLeftRight",
+  },
+  { label: "Check this pipeline for validation issues", icon: "HeartPulse" },
+];
+
+export function useAiChatWindow(
+  enabled: boolean,
+  { readOnly = false }: { readOnly?: boolean } = {},
+) {
   const { windows, keyboard } = useSharedStores();
   const editorSession = useEditorSession();
   const navigate = useNavigate();
@@ -41,28 +54,33 @@ export function useAiChatWindow(enabled: boolean) {
     windows.openWindow(
       <AiChatContent
         createBridge={(deps) =>
-          createEditorToolBridge({
-            ...deps,
-            undo: editorSession.undo,
-            invokeAutoLayout: invokeAutoLayoutVia(keyboard),
-            renamePipelineFile: renamePipelineFileFor(
-              editorSession.pipelineFile,
-              (fileId, name) => {
-                const file = editorSession.pipelineFile.activePipelineFile;
-                if (file?.remote || file?.isDraft) return;
-                if (file) preserveRenamedPipelineQuery(queryClient, file);
-                void navigate({
-                  to: APP_ROUTES.PIPELINE_EDITOR,
-                  params: { pipelineName: name },
-                  search: { fileId },
-                  replace: true,
-                });
-              },
-              deps.assertCurrentDocument,
-            ),
-          })
+          readOnly
+            ? createReadOnlyToolBridge(deps)
+            : createEditorToolBridge({
+                ...deps,
+                undo: editorSession.undo,
+                invokeAutoLayout: invokeAutoLayoutVia(keyboard),
+                renamePipelineFile: renamePipelineFileFor(
+                  editorSession.pipelineFile,
+                  (fileId, name) => {
+                    const file = editorSession.pipelineFile.activePipelineFile;
+                    if (file?.remote || file?.isDraft) return;
+                    if (file) preserveRenamedPipelineQuery(queryClient, file);
+                    void navigate({
+                      to: APP_ROUTES.PIPELINE_EDITOR,
+                      params: { pipelineName: name },
+                      search: { fileId },
+                      replace: true,
+                    });
+                  },
+                  deps.assertCurrentDocument,
+                ),
+              })
         }
-        suggestedPrompts={SUGGESTED_PROMPTS_EDITOR}
+        suggestedPrompts={
+          readOnly ? SUGGESTED_PROMPTS_READ_ONLY : SUGGESTED_PROMPTS_EDITOR
+        }
+        includeRecentRuns={!readOnly}
       />,
       {
         id: AI_CHAT_WINDOW_ID,
@@ -82,5 +100,13 @@ export function useAiChatWindow(enabled: boolean) {
         ),
       },
     );
-  }, [enabled, windows, editorSession, keyboard, navigate, queryClient]);
+  }, [
+    enabled,
+    windows,
+    editorSession,
+    keyboard,
+    navigate,
+    queryClient,
+    readOnly,
+  ]);
 }

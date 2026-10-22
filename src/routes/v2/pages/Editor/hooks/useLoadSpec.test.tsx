@@ -59,14 +59,13 @@ const remote = {
   backendUrl: "https://backend.example.com",
   pipelineId: "pipeline-1",
 } as const;
-const local = { name: "Original", fileId: "local-1" };
 const draft = {
   source: "draft",
   backendUrl: remote.backendUrl,
   draftId: "draft-1",
   name: "Draft",
 } as const;
-
+const local = { name: "Original", fileId: "local-1" };
 const file = (
   name: string,
   ref?: { backendUrl: string; pipelineId: string },
@@ -303,7 +302,6 @@ describe("useLoadSpec", () => {
 
   it.each([remote, draft, local])(
     "retains failed edits after unmount and retries them from the saved baseline: %j",
-
     async (pipelineRef) => {
       vi.spyOn(console, "error").mockImplementation(() => {});
       const write = vi.fn().mockRejectedValue(new Error("Save unavailable"));
@@ -319,7 +317,6 @@ describe("useLoadSpec", () => {
         await act(async () => vi.advanceTimersByTimeAsync(6 * 60_000));
         vi.useRealTimers();
       }
-
       await waitFor(() => expect(write).toHaveBeenCalledTimes(2));
 
       const reopened = render(view(pipelineRef, true));
@@ -327,7 +324,6 @@ describe("useLoadSpec", () => {
       await screen.findByText("Save unavailable");
       expect(resolvePipeline).toHaveBeenCalledTimes(1);
       expect(discardRemoteDraft).not.toHaveBeenCalled();
-
       await screen.findByText("Idle");
       const attemptsBeforeRetry = write.mock.calls.length;
       write.mockResolvedValue(undefined);
@@ -356,7 +352,7 @@ describe("useLoadSpec", () => {
       vi.spyOn(console, "error").mockImplementation(() => {});
       const write = vi.fn().mockRejectedValue(new Error("Save unavailable"));
       resolvePipeline.mockResolvedValue({
-        ...file("Original", "source" in pipelineRef ? pipelineRef : undefined),
+        ...file("Original", "source" in pipelineRef ? remote : undefined),
         write,
       });
       const first = render(view(pipelineRef, true));
@@ -382,7 +378,6 @@ describe("useLoadSpec", () => {
 
   it.each([remote, draft, local])(
     "keeps an in-flight edit through reopen without duplicating its write: %j",
-
     async (pipelineRef) => {
       let finish!: () => void;
       const write = vi.fn().mockReturnValue(
@@ -402,7 +397,6 @@ describe("useLoadSpec", () => {
       expect(write).toHaveBeenCalledTimes(1);
       expect(resolvePipeline).toHaveBeenCalledTimes(1);
       expect(discardRemoteDraft).not.toHaveBeenCalled();
-
       await act(async () => reopened.unmount());
       finish();
       await waitFor(() =>

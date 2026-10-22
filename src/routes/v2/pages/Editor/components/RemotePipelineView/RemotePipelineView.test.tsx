@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   createMemoryHistory,
   createRootRoute,
@@ -17,7 +18,7 @@ import {
 import type { ReactFlowProps } from "@xyflow/react";
 import { isRootStore } from "mobx-keystone";
 import { type PropsWithChildren, StrictMode } from "react";
-import { afterEach, expect, it, onTestFinished, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, onTestFinished, vi } from "vitest";
 
 import {
   type ComponentSpec,
@@ -30,12 +31,59 @@ import {
   type RemotePipelineNodeType,
   validateRemotePipelineSearch,
 } from "@/routes/remotePipelineSearch";
+import { EditorNodeLinkButton } from "@/routes/v2/pages/Editor/components/RemotePipelineNodeLinkButton";
 import type { EditorStore } from "@/routes/v2/shared/store/editorStore";
+import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 
 import { RemotePipelineView } from "./RemotePipelineView";
 
 let canvas: ReactFlowProps;
 let editor: EditorStore;
+vi.mock("@tanstack/react-router", async (original) => ({
+  ...(await original<typeof import("@tanstack/react-router")>()),
+  useSearch: () => ({}),
+}));
+vi.mock("@/routes/router", async () => import("@/routes/appRoutes"));
+vi.mock("@/providers/AnalyticsProvider", () => ({
+  useAnalytics: () => ({ track: vi.fn() }),
+}));
+vi.mock(
+  "@/routes/v2/pages/Editor/components/PipelineDetailsContent/PipelineDetailsContent",
+  () => ({ PipelineDetailsContent: () => null }),
+);
+vi.mock("./RemotePipelineActions", () => ({
+  RemotePipelineActions: () => null,
+}));
+vi.mock("@/routes/v2/pages/Editor/hooks/useAiChatWindow", () => ({
+  useAiChatWindow: () => {},
+}));
+vi.mock("@/routes/v2/shared/components/MiniMap/CanvasControlsContent", () => ({
+  CanvasControlsContent: () => <button>Fit view</button>,
+}));
+vi.mock(
+  "@/routes/v2/pages/Editor/nodes/TaskNode/context/TaskDetails/TaskDetails",
+  () => {
+    return {
+      TaskDetails: ({ entityId }: { entityId: string }) => (
+        <EditorNodeLinkButton entityId={entityId} nodeType="task" />
+      ),
+    };
+  },
+);
+vi.mock("@/routes/v2/pages/Editor/nodes/IONode/context/InputDetails", () => {
+  return {
+    InputDetails: ({ entityId }: { entityId: string }) => (
+      <EditorNodeLinkButton entityId={entityId} nodeType="input" />
+    ),
+  };
+});
+vi.mock("@/routes/v2/pages/Editor/nodes/IONode/context/OutputDetails", () => {
+  return {
+    OutputDetails: ({ entityId }: { entityId: string }) => (
+      <EditorNodeLinkButton entityId={entityId} nodeType="output" />
+    ),
+  };
+});
 vi.mock("@xyflow/react", async (original) => {
   const { useSharedStores } =
     await import("@/routes/v2/shared/store/SharedStoreContext");
@@ -76,9 +124,30 @@ vi.mock("@/routes/v2/shared/components/SubgraphBreadcrumbs", async () => {
     },
   };
 });
+beforeEach(() => {
+  localStorage.clear();
+  const observer = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+  vi.stubGlobal("ResizeObserver", observer);
+  vi.stubGlobal("IntersectionObserver", observer);
+  vi.stubGlobal("matchMedia", (query: string) => ({
+    matches: false,
+    media: query,
+    addEventListener() {},
+    removeEventListener() {},
+  }));
+  Object.defineProperty(Element.prototype, "scrollTo", {
+    configurable: true,
+    value: vi.fn(),
+  });
+});
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 function RouterWrapper({ children }: PropsWithChildren) {
@@ -87,7 +156,9 @@ function RouterWrapper({ children }: PropsWithChildren) {
     history: createMemoryHistory(),
   });
   return (
-    <RouterContextProvider router={router}>{children}</RouterContextProvider>
+    <QueryClientProvider client={new QueryClient()}>
+      <RouterContextProvider router={router}>{children}</RouterContextProvider>
+    </QueryClientProvider>
   );
 }
 
@@ -240,6 +311,18 @@ async function openRoutedView(
       <RemotePipelineView
         spec={spec}
         pipelineId={embedded ? undefined : "pipeline-id"}
+        file={
+          embedded
+            ? undefined
+            : ({
+                id: "pipeline-id",
+                remote: {
+                  pipelineId: "pipeline-id",
+                  backendUrl: "https://backend.example.com",
+                },
+                folder: { driver: { ownerId: "other-user" } },
+              } as PipelineFile)
+        }
       />
     ),
   });
@@ -251,7 +334,11 @@ async function openRoutedView(
     history,
   });
   await router.load();
-  render(<RouterProvider router={router} />);
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>,
+  );
   return { router, history };
 }
 

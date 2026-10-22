@@ -35,6 +35,7 @@ interface ComponentRefBarProps {
   yamlText: string;
   taskName: string;
   pythonCode: string | undefined;
+  readOnly?: boolean;
 }
 
 export function ComponentRefBar({
@@ -42,6 +43,7 @@ export function ComponentRefBar({
   yamlText,
   taskName,
   pythonCode,
+  readOnly = false,
 }: ComponentRefBarProps) {
   const { track } = useAnalytics();
   const notify = useToastNotification();
@@ -82,6 +84,7 @@ export function ComponentRefBar({
         <ComponentDetailsDialog
           component={componentRef}
           displayName={displayName}
+          readOnly={readOnly}
           trigger={
             <button
               type="button"
@@ -177,15 +180,19 @@ export function ComponentRefBar({
                 Copy YAML
               </DropdownMenuItem>
 
-              <DropdownMenuItem
-                onClick={() => {
-                  track("v2.pipeline_editor.task_details.edit_component.click");
-                  openComponentEditor({ text: yamlText });
-                }}
-              >
-                <Icon name="FilePenLine" size="sm" />
-                Edit Component
-              </DropdownMenuItem>
+              {!readOnly && (
+                <DropdownMenuItem
+                  onClick={() => {
+                    track(
+                      "v2.pipeline_editor.task_details.edit_component.click",
+                    );
+                    openComponentEditor({ text: yamlText });
+                  }}
+                >
+                  <Icon name="FilePenLine" size="sm" />
+                  Edit Component
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </InlineStack>

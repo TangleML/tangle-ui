@@ -48,6 +48,7 @@ interface ArgumentRowProps {
   task: Task;
   spec: ComponentSpec;
   externalEditor?: boolean;
+  readOnly?: boolean;
   onSelectionChanged?: (name: string) => void;
 }
 
@@ -59,6 +60,7 @@ export const ArgumentRow = observer(function ArgumentRow({
   task,
   spec,
   externalEditor,
+  readOnly = false,
   onSelectionChanged,
 }: ArgumentRowProps) {
   const { track } = useAnalytics();
@@ -92,10 +94,10 @@ export const ArgumentRow = observer(function ArgumentRow({
 
   useEffect(() => {
     if (isFocused) {
-      if (!externalEditor) setEditing(true);
+      if (!externalEditor && !readOnly) setEditing(true);
       rowRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
-  }, [isFocused, externalEditor]);
+  }, [isFocused, externalEditor, readOnly]);
 
   const handleClick = () => {
     if (isDynamic) return;
@@ -105,7 +107,7 @@ export const ArgumentRow = observer(function ArgumentRow({
       editor.setFocusedArgument(inputSpec.name);
       return;
     }
-    setEditing(true);
+    if (!readOnly) setEditing(true);
   };
 
   const handleBlur = () => {
@@ -116,6 +118,7 @@ export const ArgumentRow = observer(function ArgumentRow({
   };
 
   const handleChangeComplete = (value: string) => {
+    if (readOnly) return;
     const trimmed = value.trim();
     const action = resolveArgumentChange(trimmed, currentValue, isSet, isBound);
     if (action === "remove") {
@@ -193,23 +196,26 @@ export const ArgumentRow = observer(function ArgumentRow({
           inputName={inputSpec.name}
         />
         <div className="flex-1" />
-        <ThunderMenu
-          inputName={inputSpec.name}
-          inputType={inputSpec.type}
-          canReset={canReset}
-          canUnset={canUnset}
-          excludeEntityIds={[task.$id]}
-          taskAnnotations={taskAnnotations}
-          onResetToDefault={handleResetToDefault}
-          onUnset={handleUnset}
-          onSelectDynamicData={handleSelectDynamicData}
-          onQuickConnect={handleQuickConnect}
-          onCreateInputAndConnect={handleCreateInputAndConnect}
-        />
+        {!readOnly && (
+          <ThunderMenu
+            inputName={inputSpec.name}
+            inputType={inputSpec.type}
+            canReset={canReset}
+            canUnset={canUnset}
+            excludeEntityIds={[task.$id]}
+            taskAnnotations={taskAnnotations}
+            onResetToDefault={handleResetToDefault}
+            onUnset={handleUnset}
+            onSelectDynamicData={handleSelectDynamicData}
+            onQuickConnect={handleQuickConnect}
+            onCreateInputAndConnect={handleCreateInputAndConnect}
+          />
+        )}
       </InlineStack>
 
       <ArgumentValueDisplay
         editing={editing}
+        readOnly={readOnly}
         externalEditor={externalEditor}
         isDynamic={isDynamic}
         dynamicDisplayInfo={dynamicDisplayInfo}

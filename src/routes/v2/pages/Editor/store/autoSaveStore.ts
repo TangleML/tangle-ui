@@ -106,23 +106,23 @@ export class AutoSaveStore {
     this.document = null;
   }
 
-  @action releaseRecoveredCopy(file: PipelineFile, yaml: string): void {
+  @action releaseRecoveredCopy(file: PipelineFile, yaml: string): boolean {
     const document = this.document;
     if (
       this.file !== file ||
-      !file.remote ||
+      (!file.remote && !file.isDraft) ||
       !document ||
       document.hasPendingWrites ||
-      this.serializeSpec() !== yaml ||
-      !getRemotePipelineDeletionError({ source: "remote", ...file.remote })
+      this.serializeSpec() !== yaml
     )
-      return;
+      return false;
     this.debouncedSave.cancel();
-    // The source is unavailable, but this exact content is now durable in the
-    // successful copy. Later edits still become dirty and remain recoverable.
+    // This exact content is now durable in the successful recovery copy.
+    // Later edits still become dirty and remain recoverable.
     document.lastSavedYaml = yaml;
     document.error = null;
     document.releaseIfSaved();
+    return true;
   }
 
   async save(): Promise<void> {

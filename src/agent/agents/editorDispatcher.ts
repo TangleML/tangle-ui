@@ -18,8 +18,10 @@ import { Agent } from "@openai/agents";
 import { getAgentModelConfig } from "../config";
 import { attachObservabilityHooks } from "../middleware/observability";
 import dispatcherPrompt from "../prompts/dispatcher.md?raw";
+import readOnlyPipelinePrompt from "../prompts/readOnlyPipeline.md?raw";
 import type { AgentSession } from "../session";
 import { createComponentSearchTools } from "../tools/componentSearchTools";
+import { createCsomTools } from "../tools/csomTools";
 import {
   createDispatcherRuntime,
   type TangleDispatcher,
@@ -31,9 +33,38 @@ import { createPipelineRepairAgent } from "./subagents/pipelineRepair";
 
 async function buildEditorAgent(session: AgentSession): Promise<Agent> {
   const generalHelp = createGeneralHelpAgent(session);
+  const debugAssistant = createDebugAssistantAgent(session);
+  const generalHelpTool = generalHelp.asTool({
+    toolName: "ask_general_help",
+    toolDescription:
+      "Ask the general-help specialist a question about Tangle concepts, features, how things work, best practices, getting started, or documentation lookups. Input: the user's question phrased as a clear, standalone question.",
+  });
+  const debugAssistantTool = debugAssistant.asTool({
+    toolName: "ask_debug_assistant",
+    toolDescription:
+      "Ask the debug-assistant specialist to diagnose a failed pipeline run from execution details, container state, and logs. Read-only — cannot edit the spec or submit runs. Input: a clear question, e.g. 'Investigate the latest failed run and identify the root cause and the specific fix needed.' or 'Why did run 12345 fail?'.",
+  });
+
+  if (session.context.mode === "editor" && session.context.readOnly) {
+    const csom = createCsomTools(session.bridge, session.componentCatalog);
+    const agent = new Agent({
+      name: "tangle-dispatcher",
+      ...getAgentModelConfig(session.aiConfig),
+      instructions: readOnlyPipelinePrompt,
+      tools: [
+        csom.getPipelineState,
+        csom.getSubgraphState,
+        csom.validatePipeline,
+        generalHelpTool,
+        debugAssistantTool,
+      ],
+    });
+    attachObservabilityHooks(agent, session.emitStatus);
+    return agent;
+  }
+
   const pipelineRepair = createPipelineRepairAgent(session);
   const pipelineArchitect = await createPipelineArchitectAgent(session);
-  const debugAssistant = createDebugAssistantAgent(session);
   const componentSearch = createComponentSearchTools(session);
 
   const agent = new Agent({
@@ -42,11 +73,7 @@ async function buildEditorAgent(session: AgentSession): Promise<Agent> {
     instructions: dispatcherPrompt,
     tools: [
       componentSearch.searchComponents,
-      generalHelp.asTool({
-        toolName: "ask_general_help",
-        toolDescription:
-          "Ask the general-help specialist a question about Tangle concepts, features, how things work, best practices, getting started, or documentation lookups. Input: the user's question phrased as a clear, standalone question.",
-      }),
+      generalHelpTool,
       pipelineRepair.asTool({
         toolName: "ask_pipeline_repair",
         toolDescription:
@@ -57,11 +84,7 @@ async function buildEditorAgent(session: AgentSession): Promise<Agent> {
         toolDescription:
           "Ask the pipeline-architect specialist to design or build new pipeline structure — a whole pipeline from scratch, a new stage in an existing pipeline, or a multi-task subgraph. Can mutate the pipeline via CSOM tools and submit a run after a successful build when the user asked. NOT for fixing validation errors or single-task tweaks (use `ask_pipeline_repair`). Input: a clear design directive, e.g. 'Build a pipeline that loads a CSV, trains an XGBoost model on the `tips` column, and exposes the trained model as a pipeline output.'. Add 'and submit the run' to the input only if the user explicitly asked to run.",
       }),
-      debugAssistant.asTool({
-        toolName: "ask_debug_assistant",
-        toolDescription:
-          "Ask the debug-assistant specialist to diagnose a failed pipeline run from execution details, container state, and logs. Read-only — cannot edit the spec or submit runs. Input: a clear question, e.g. 'Investigate the latest failed run and identify the root cause and the specific fix needed.' or 'Why did run 12345 fail?'.",
-      }),
+      debugAssistantTool,
     ],
   });
   attachObservabilityHooks(agent, session.emitStatus);

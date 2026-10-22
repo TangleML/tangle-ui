@@ -58,7 +58,7 @@ function mountEditor(spec: ComponentSpec) {
   const wrapper = ({ children }: { children: ReactNode }) => (
     <SharedStoreProvider>{children}</SharedStoreProvider>
   );
-  render(
+  const { unmount } = render(
     <Editor
       spec={spec}
       onStores={(s) => {
@@ -67,7 +67,7 @@ function mountEditor(spec: ComponentSpec) {
     />,
     { wrapper },
   );
-  return stores!;
+  return { ...stores!, unmount };
 }
 
 function makeSpec() {
@@ -79,6 +79,26 @@ function makeSpec() {
 }
 
 describe("useSelectionWindowSync", () => {
+  it("cancels delayed properties scrolling when the editor unmounts", () => {
+    vi.useFakeTimers();
+    const querySelector = vi.spyOn(document, "querySelector");
+    try {
+      const { editor, unmount } = mountEditor(makeSpec());
+      act(() => editor.selectNode("task_1", "task"));
+      unmount();
+      querySelector.mockClear();
+
+      act(() => vi.advanceTimersByTime(100));
+
+      expect(querySelector).not.toHaveBeenCalledWith(
+        `[data-dock-window="${CONTEXT_PANEL_WINDOW_ID}"]`,
+      );
+    } finally {
+      querySelector.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
   it("opens the properties panel for a selected task", () => {
     const spec = makeSpec();
     const { editor, windows } = mountEditor(spec);

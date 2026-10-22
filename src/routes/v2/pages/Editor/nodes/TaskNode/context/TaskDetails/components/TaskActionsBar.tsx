@@ -7,16 +7,24 @@ import { UnpackSubgraphButton } from "./actions/UnpackSubgraphButton";
 
 interface TaskActionsBarProps {
   entityId: string;
+  readOnly?: boolean;
 }
 
-export function TaskActionsBar({ entityId }: TaskActionsBarProps) {
+export function TaskActionsBar({
+  entityId,
+  readOnly = false,
+}: TaskActionsBarProps) {
   return (
     <ActionBlock
       actions={[
         <EditorNodeLinkButton key="link" entityId={entityId} nodeType="task" />,
-        <UnpackSubgraphButton key="unpack" entityId={entityId} />,
-        <DuplicateTaskButton key="duplicate" entityId={entityId} />,
-        <DeleteTaskButton key="delete" entityId={entityId} />,
+        ...(!readOnly
+          ? [
+              <UnpackSubgraphButton key="unpack" entityId={entityId} />,
+              <DuplicateTaskButton key="duplicate" entityId={entityId} />,
+              <DeleteTaskButton key="delete" entityId={entityId} />,
+            ]
+          : []),
       ]}
       className="w-fit"
     />

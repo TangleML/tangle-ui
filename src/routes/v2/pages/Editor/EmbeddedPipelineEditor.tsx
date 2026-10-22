@@ -36,6 +36,7 @@ import {
 
 import { DriverPermissionGate } from "./components/DriverPermissionGate";
 import { FlowCanvas } from "./components/FlowCanvas/FlowCanvas";
+import { RemotePipelineSaveRecovery } from "./components/RemotePipelineSaveRecovery";
 import { RemotePipelineView } from "./components/RemotePipelineView/RemotePipelineView";
 import { useComponentLibraryWindow } from "./hooks/useComponentLibraryWindow";
 import { useComponentSearchV2Window } from "./hooks/useComponentSearchV2Window";
@@ -58,8 +59,8 @@ interface EmbeddedPipelineEditorProps {
   pipelineRef: EditorPipelineRef;
   isActive: boolean;
   projectId: string;
-  onTitleChange?: (title: string) => void;
   onMigrated?: (file: PipelineFile) => void;
+  onTitleChange?: (title: string) => void;
   onStoreReady?: (store: SharedUIStore) => void;
   onStoreClosed?: () => void;
   sessionId?: string;
@@ -208,19 +209,18 @@ const EditableEmbeddedPipelineEditor = ({
                 <ComponentEditorProvider>
                   <ReactFlowProvider>
                     <ForcedSearchProvider>
-                      <DriverPermissionGate pipelineRef={pipelineRef}>
-                        <EmbeddedPipelineEditorCanvas
-                          pipelineRef={pipelineRef}
-                          isActive={isActive}
-                          onTitleChange={onTitleChange}
-                          sessionId={sessionId}
-                          environmentId={environmentId}
-                          onEnvironmentReady={onEnvironmentReady}
-                          onEnvironmentClosed={onEnvironmentClosed}
-                          onBridgeReady={onBridgeReady}
-                          onBridgeClosed={onBridgeClosed}
-                        />
-                      </DriverPermissionGate>
+                      <RemotePipelineSaveRecovery />
+                      <EmbeddedPipelineEditorCanvas
+                        pipelineRef={pipelineRef}
+                        isActive={isActive}
+                        onTitleChange={onTitleChange}
+                        sessionId={sessionId}
+                        environmentId={environmentId}
+                        onEnvironmentReady={onEnvironmentReady}
+                        onEnvironmentClosed={onEnvironmentClosed}
+                        onBridgeReady={onBridgeReady}
+                        onBridgeClosed={onBridgeClosed}
+                      />
                     </ForcedSearchProvider>
                   </ReactFlowProvider>
                 </ComponentEditorProvider>
@@ -244,7 +244,7 @@ const RemoteEmbeddedPipelineEditor = withSuspenseWrapper(
       if (readOnly) props.onTitleChange?.(title);
     }, [props.onTitleChange, readOnly, title]);
     return readOnly ? (
-      <RemotePipelineView spec={spec} isActive={props.isActive} />
+      <RemotePipelineView spec={spec} file={file} isActive={props.isActive} />
     ) : (
       <EditableEmbeddedPipelineEditor {...props} />
     );

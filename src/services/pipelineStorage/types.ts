@@ -22,13 +22,13 @@ export interface DriverPermissions {
 }
 
 export interface PipelineStorageDriver {
-  readonly ownerId?: string;
   readonly type: string;
   readonly permissions?: DriverPermissions;
   readonly allowsMoveIn: boolean;
   readonly allowsMoveOut: boolean;
   readonly canEdit?: boolean;
   readonly editingError?: Error;
+  readonly ownerId?: string;
   list(): Promise<PipelineFileDescriptor[]>;
   read(storageKey: string): Promise<string>;
   write(storageKey: string, content: string): Promise<void>;

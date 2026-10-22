@@ -2,6 +2,7 @@ import { observer } from "mobx-react-lite";
 
 import { ProjectDetailsSection } from "@/components/Project/ProjectDetailsSection";
 import { useRunProjectContext } from "@/components/Project/useRunProjectContext";
+import { KeyValueList } from "@/components/shared/ContextPanel/Blocks/KeyValueList";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
@@ -29,8 +30,13 @@ import { PipelineDetailsHeader } from "./components/PipelineDetailsHeader";
 import { PipelineDetailsTextField } from "./components/PipelineDetailsTextField";
 import { TagsBlock } from "./components/TagsBlock";
 
-export const PipelineDetailsContent = observer(
-  function PipelineDetailsContent() {
+interface PipelineDetailsContentProps {
+  readOnly?: boolean;
+  ownerId?: string;
+}
+
+export const PipelineDetailsContent = observer<PipelineDetailsContentProps>(
+  function PipelineDetailsContent({ readOnly = false, ownerId }) {
     const { track } = useAnalytics();
     const { navigation } = useSharedStores();
     const pipelineSpec = useSpec();
@@ -62,6 +68,7 @@ export const PipelineDetailsContent = observer(
     };
 
     const handleDescriptionCommit = (value: string | undefined) => {
+      if (readOnly) return;
       if (value !== pipelineSpec.description) {
         updatePipelineDescription(pipelineSpec, value);
         track("v2.pipeline_editor.configuration_panel.description.updated");
@@ -69,6 +76,7 @@ export const PipelineDetailsContent = observer(
     };
 
     const handleNotesCommit = (value: string | undefined) => {
+      if (readOnly) return;
       const currentNotes =
         pipelineSpec.annotations.get(PIPELINE_NOTES_ANNOTATION) || undefined;
       if (value !== currentNotes) {
@@ -78,6 +86,7 @@ export const PipelineDetailsContent = observer(
     };
 
     const handleRunNameTemplateCommit = (value: string | undefined) => {
+      if (readOnly) return;
       const currentTemplate =
         pipelineSpec.annotations.get(RUN_NAME_TEMPLATE_ANNOTATION) || undefined;
       if (value !== currentTemplate) {
@@ -110,7 +119,7 @@ export const PipelineDetailsContent = observer(
           isNestedSubgraph={isNestedSubgraph}
           pipelineName={pipelineSpec.name}
           yamlText={yamlText}
-          onRenameSubgraph={handleRenameSubgraph}
+          onRenameSubgraph={readOnly ? undefined : handleRenameSubgraph}
         />
 
         <Separator />
@@ -124,6 +133,12 @@ export const PipelineDetailsContent = observer(
             openDefault
           >
             <BlockStack gap="4">
+              {readOnly && ownerId && (
+                <>
+                  <KeyValueList items={[{ label: "Owner", value: ownerId }]} />
+                  <Separator />
+                </>
+              )}
               <PipelineDetailsTextField
                 title="Description"
                 id="pipeline-description"
@@ -131,6 +146,7 @@ export const PipelineDetailsContent = observer(
                 onCommit={handleDescriptionCommit}
                 placeholder="Add a pipeline description..."
                 testId="pipeline-description-input"
+                readOnly={readOnly}
               />
               <Separator />
               <PipelineDetailsTextField
@@ -142,6 +158,7 @@ export const PipelineDetailsContent = observer(
                 onCommit={handleNotesCommit}
                 placeholder="Share context about this pipeline..."
                 testId="pipeline-notes-input"
+                readOnly={readOnly}
               />
               <Separator />
               <PipelineDetailsTextField
@@ -153,9 +170,10 @@ export const PipelineDetailsContent = observer(
                 onCommit={handleRunNameTemplateCommit}
                 placeholder="e.g. ${arguments.dataset}-${date.timestamp}"
                 testId="pipeline-run-name-template-input"
+                readOnly={readOnly}
               />
               <Separator />
-              <TagsBlock spec={pipelineSpec} />
+              <TagsBlock spec={pipelineSpec} readOnly={readOnly} />
             </BlockStack>
           </PipelineDetailsCollapsibleSection>
 
@@ -165,11 +183,16 @@ export const PipelineDetailsContent = observer(
             openDefault={false}
           >
             <BlockStack gap="4">
-              <MetadataBlock spec={pipelineSpec} />
-              <Separator />
+              {!readOnly && (
+                <>
+                  <MetadataBlock spec={pipelineSpec} />
+                  <Separator />
+                </>
+              )}
               <AnnotationsBlock
                 annotations={pipelineSpec.annotations}
                 systemAnnotationKeys={SYSTEM_ANNOTATIONS}
+                readonly={readOnly}
               />
             </BlockStack>
           </PipelineDetailsCollapsibleSection>
@@ -197,7 +220,7 @@ export const PipelineDetailsContent = observer(
           >
             <BlockStack gap="2">
               {pipelineSpec.hasValidationIssues ? (
-                <ValidationSummary spec={pipelineSpec} />
+                <ValidationSummary spec={pipelineSpec} readOnly={readOnly} />
               ) : (
                 <InfoBox
                   variant="success"

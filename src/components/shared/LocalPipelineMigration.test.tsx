@@ -101,7 +101,7 @@ beforeEach(async () => {
   await pipelineStorageDb.pipeline_migration_attempts.clear();
   vi.resetAllMocks();
   activeBackendUrl = backendUrl;
-  vi.stubEnv("VITE_LOCAL_PIPELINES", "false");
+  vi.stubEnv("VITE_REMOTE_PIPELINES", "true");
   localStorage.clear();
   localStorage.setItem(consentKey, "true");
   storage.resolvePipeline.mockResolvedValue(local);
@@ -243,7 +243,7 @@ it("uses the active backend and remembered consent without reading other-tab set
 it.each(["deployment", "unconfigured", "external"])(
   "opens local storage for %s",
   async (mode) => {
-    if (mode === "deployment") vi.stubEnv("VITE_LOCAL_PIPELINES", "true");
+    if (mode === "deployment") vi.stubEnv("VITE_REMOTE_PIPELINES", "false");
     if (mode === "unconfigured") activeBackendUrl = "";
     if (mode === "external")
       storage.resolvePipeline.mockResolvedValue({

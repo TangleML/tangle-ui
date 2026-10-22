@@ -1,6 +1,7 @@
 import { client } from "@/api/client.gen";
 import { getCurrentUserApiUsersMeGet } from "@/api/sdk.gen";
 import {
+  pipelineApiError,
   PipelineSpecApiError,
   type SavedPipelineDocument,
 } from "@/services/pipelineSpecService";
@@ -11,28 +12,6 @@ type RemotePipelineWrite = Pick<
   "root_pipeline_task" | "pipeline_run_annotations"
 >;
 
-function apiError(
-  action: string,
-  status: number,
-  error: unknown,
-): PipelineSpecApiError {
-  if ([404, 405, 501].includes(status)) {
-    return new PipelineSpecApiError(
-      `${action} (${status}). This backend does not support saving pipelines. In Settings → Preferences, enable “Save new pipelines in this browser” to create local pipelines.`,
-      status,
-    );
-  }
-
-  const detail =
-    error && typeof error === "object" && "detail" in error
-      ? error.detail
-      : undefined;
-  return new PipelineSpecApiError(
-    `${action} (${status})${typeof detail === "string" ? `: ${detail}` : ""}`,
-    status,
-  );
-}
-
 function validateDocument(document: SavedPipelineDocument): void {
   if (!isValidComponentSpec(document.root_pipeline_task?.componentRef?.spec)) {
     throw new Error("This pipeline has no embedded component spec to edit.");
@@ -42,17 +21,21 @@ function validateDocument(document: SavedPipelineDocument): void {
 export async function getRemotePipelineWriter(
   backendUrl: string,
 ): Promise<string> {
-  const result = await getCurrentUserApiUsersMeGet({ baseUrl: backendUrl });
-  if (!result.response.ok || !result.data?.id) {
-    throw apiError(
+  const result = await getCurrentUserApiUsersMeGet({
+    baseUrl: backendUrl,
+  }).catch(() => {
+    throw pipelineApiError("Unable to verify your editing permissions", 0);
+  });
+  if (!result.response?.ok || !result.data?.id) {
+    throw pipelineApiError(
       "Unable to verify your editing permissions",
-      result.response.status,
+      result.response?.status ?? 0,
       result.error,
     );
   }
   if (!result.data.permissions.includes("write")) {
     throw new PipelineSpecApiError(
-      "You do not have permission to edit pipelines. In Settings → Preferences, enable “Save new pipelines in this browser” to create local pipelines.",
+      "You do not have permission to edit pipelines.",
       403,
     );
   }
@@ -75,20 +58,27 @@ export async function writeRemotePipelineDocument(
   pipelineId?: string,
 ): Promise<SavedPipelineDocument> {
   // Omit versioning_mode so an ordinary save preserves the server's policy.
-  const result = await client.put<{ 200: SavedPipelineDocument }>({
-    baseUrl: backendUrl,
-    ...(pipelineId
-      ? {
-          url: "/api/pipelines/{pipeline_id}",
-          path: { pipeline_id: pipelineId },
-        }
-      : { url: "/api/users/me/pipelines", query: { file_path: filePath } }),
-    body: content,
-  });
-  if (!result.response.ok || !result.data) {
-    throw apiError(
+  const result = await client
+    .put<{ 200: SavedPipelineDocument }>({
+      baseUrl: backendUrl,
+      ...(pipelineId
+        ? {
+            url: "/api/pipelines/{pipeline_id}",
+            path: { pipeline_id: pipelineId },
+          }
+        : {
+            url: "/api/users/me/pipelines",
+            query: { file_path: filePath },
+          }),
+      body: content,
+    })
+    .catch(() => {
+      throw pipelineApiError("Failed to save pipeline", 0);
+    });
+  if (!result.response?.ok || !result.data) {
+    throw pipelineApiError(
       "Failed to save pipeline",
-      result.response.status,
+      result.response?.status ?? 0,
       result.error,
     );
   }
@@ -105,18 +95,23 @@ export async function findRemotePipelineDocumentByPath(
   backendUrl: string,
   filePath: string,
 ): Promise<SavedPipelineDocument | undefined> {
-  const result = await client.get<{ 200: SavedPipelineDocument }>({
-    baseUrl: backendUrl,
-    url: "/api/users/me/pipelines",
-    query: { file_path: filePath },
-  });
-  if (result.response.status === 404) return undefined;
-  if (!result.response.ok || !result.data) {
-    throw apiError(
+  const result = await client
+    .get<{ 200: SavedPipelineDocument }>({
+      baseUrl: backendUrl,
+      url: "/api/users/me/pipelines",
+      query: { file_path: filePath },
+    })
+    .catch(() => {
+      throw pipelineApiError("Failed to check for an earlier upload", 0);
+    });
+  if (!result.response?.ok || !result.data) {
+    const error = pipelineApiError(
       "Failed to check for an earlier upload",
-      result.response.status,
+      result.response?.status ?? 0,
       result.error,
     );
+    if (error.kind === "notFound") return undefined;
+    throw error;
   }
   validateDocument(result.data);
   if (result.data.file_path !== filePath) {

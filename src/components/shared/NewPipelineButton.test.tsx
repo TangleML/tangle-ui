@@ -41,7 +41,7 @@ vi.mock("random-words", () => ({ generate: () => ["New", "pipeline"] }));
 
 beforeEach(() => {
   vi.resetAllMocks();
-  vi.stubEnv("VITE_LOCAL_PIPELINES", undefined);
+  vi.stubEnv("VITE_REMOTE_PIPELINES", "true");
   state.v2Enabled = true;
   state.configured = true;
   state.ready = true;
@@ -53,10 +53,10 @@ afterEach(() => {
 });
 
 it.each([undefined, "false", "true"])(
-  "uses VITE_LOCAL_PIPELINES=%s for the shared New Pipeline button",
+  "uses VITE_REMOTE_PIPELINES=%s for the shared New Pipeline button",
   async (value) => {
-    vi.stubEnv("VITE_LOCAL_PIPELINES", value);
-    const enabled = value !== "true";
+    vi.stubEnv("VITE_REMOTE_PIPELINES", value);
+    const enabled = value === "true";
     render(<NewPipelineButton />);
     fireEvent.click(screen.getByRole("button"));
     await waitFor(() => expect(state.navigate).toHaveBeenCalledOnce());
@@ -80,7 +80,6 @@ it.each([undefined, "false", "true"])(
 it.each(["ctrlKey", "metaKey"])(
   "opens a draft in a new tab with %s",
   async (key) => {
-    vi.stubEnv("VITE_LOCAL_PIPELINES", undefined);
     const open = vi.spyOn(window, "open").mockReturnValue(null);
     render(<NewPipelineButton />);
     fireEvent.click(screen.getByRole("button"), { [key]: true });
@@ -115,7 +114,6 @@ it("waits for backend settings before choosing storage", () => {
 });
 
 it("creates a remote draft when the V2 editor flag is disabled", async () => {
-  vi.stubEnv("VITE_LOCAL_PIPELINES", undefined);
   state.v2Enabled = false;
   render(<NewPipelineButton />);
   fireEvent.click(screen.getByRole("button"));

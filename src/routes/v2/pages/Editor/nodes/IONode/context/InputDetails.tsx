@@ -15,10 +15,12 @@ import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 
 interface InputDetailsProps {
   entityId: string;
+  readOnly?: boolean;
 }
 
 export const InputDetails = observer(function InputDetails({
   entityId,
+  readOnly = false,
 }: InputDetailsProps) {
   const { track } = useAnalytics();
   const ioActions = useIOActions();
@@ -28,6 +30,7 @@ export const InputDetails = observer(function InputDetails({
   if (!spec || !input) return null;
 
   const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
+    if (readOnly) return;
     const newName = event.target.value;
     if (newName && newName !== input.name) {
       ioActions.renameInput(spec, entityId, newName);
@@ -36,6 +39,7 @@ export const InputDetails = observer(function InputDetails({
   };
 
   const handleDescriptionChange = (event: FocusEvent<HTMLTextAreaElement>) => {
+    if (readOnly) return;
     const value = event.target.value;
     const newDescription = value || undefined;
     if (newDescription !== input.description) {
@@ -45,6 +49,7 @@ export const InputDetails = observer(function InputDetails({
   };
 
   const handleTypeChange = (event: ChangeEvent<HTMLInputElement>) => {
+    if (readOnly) return;
     const value = event.target.value;
     const newType = value || undefined;
     if (newType !== input.type) {
@@ -56,6 +61,7 @@ export const InputDetails = observer(function InputDetails({
   const effectiveValue = input.value ?? input.defaultValue;
 
   const handleValueChange = (value: string) => {
+    if (readOnly) return;
     const newValue = value || undefined;
     if (newValue !== effectiveValue) {
       ioActions.setInputValue(spec, entityId, newValue);
@@ -75,6 +81,7 @@ export const InputDetails = observer(function InputDetails({
             key={`${entityId}-name`}
             id="input-name"
             defaultValue={input.name}
+            readOnly={readOnly}
             onBlur={handleNameChange}
             className="font-mono text-xs!"
           />
@@ -91,6 +98,7 @@ export const InputDetails = observer(function InputDetails({
             key={`${entityId}-type`}
             id="input-type"
             defaultValue={input.type ? String(input.type) : ""}
+            readOnly={readOnly}
             placeholder="e.g. String, Integer, Float"
             onBlur={handleTypeChange}
             className="font-mono text-xs!"
@@ -108,6 +116,7 @@ export const InputDetails = observer(function InputDetails({
             key={`${entityId}-desc`}
             id="input-description"
             defaultValue={input.description ?? ""}
+            readOnly={readOnly}
             placeholder="Describe this input..."
             onBlur={handleDescriptionChange}
             className="text-xs!"
@@ -143,7 +152,8 @@ export const InputDetails = observer(function InputDetails({
             expandDialogTitle="Value"
             highlightSyntax={true}
             defaultValue={effectiveValue}
-            onChangeComplete={handleValueChange}
+            readOnly={readOnly}
+            onChangeComplete={readOnly ? undefined : handleValueChange}
             placeholder="Value"
             className="h-4 min-h-4 text-xs font-mono"
             data-testid="input-value"

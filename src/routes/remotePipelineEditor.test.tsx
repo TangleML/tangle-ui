@@ -167,7 +167,7 @@ vi.mock("@/providers/TourProvider/TourSecretsDialog", () => ({
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.removeItem("jwtToken");
-  vi.stubEnv("VITE_LOCAL_PIPELINES", undefined);
+  vi.stubEnv("VITE_REMOTE_PIPELINES", "true");
   route.params = { pipelineName: "pipeline-123" };
   route.search = {};
   route.context = {};
@@ -274,20 +274,21 @@ describe("remote pipeline editor entry", () => {
     expect(screen.getByText("Shared project graph")).toBeInTheDocument();
     expect(initializeEditing).not.toHaveBeenCalled();
   });
-  it.each(["no backend", "local flag"])(
+  it.each(["no backend", "remote disabled"])(
     "creates locally from a direct new-pipeline URL with %s",
     async (mode) => {
       route.context = {
         newPipeline: { name: "New local pipeline", draftId: "draft-1" },
       };
       route.search = { projectId: "project-1" };
-      if (mode === "local flag") vi.stubEnv("VITE_LOCAL_PIPELINES", "true");
+      if (mode === "remote disabled")
+        vi.stubEnv("VITE_REMOTE_PIPELINES", "false");
       else backend.configured = false;
       const created = Promise.withResolvers<{
         id: string;
         storageKey: string;
       }>();
-      if (mode === "local flag") {
+      if (mode === "remote disabled") {
         localCreation.create.mockRejectedValueOnce(
           new Error("Local storage unavailable"),
         );
@@ -300,7 +301,7 @@ describe("remote pipeline editor entry", () => {
           <EditorV2 />
         </QueryClientProvider>,
       );
-      if (mode === "local flag") {
+      if (mode === "remote disabled") {
         expect(await screen.findByRole("alert")).toHaveTextContent(
           "Local storage unavailable",
         );
@@ -308,7 +309,7 @@ describe("remote pipeline editor entry", () => {
       }
       await waitFor(() =>
         expect(localCreation.create).toHaveBeenCalledTimes(
-          mode === "local flag" ? 2 : 1,
+          mode === "remote disabled" ? 2 : 1,
         ),
       );
       expect(localCreation.create).toHaveBeenLastCalledWith(
@@ -544,6 +545,7 @@ describe("remote pipeline editor entry", () => {
       });
       renderEditor(<EditorV2 />);
       expect(screen.getByRole("alert")).toHaveTextContent(message);
+      expect(screen.queryByText("View only")).not.toBeInTheDocument();
       expect(Boolean(screen.queryByRole("button", { name: "Retry" }))).toBe(
         retryable,
       );
@@ -637,6 +639,8 @@ describe("remote pipeline editor entry", () => {
     ],
     [404, "Pipeline not found.", false],
     [422, "Pipeline not found.", false],
+    [501, "This backend does not support saved pipelines.", false],
+    [503, "The backend is unavailable. Check your connection and retry.", true],
   ])(
     "keeps navigation and appropriate recovery available for HTTP %s",
     (status, message, retryable) => {
@@ -647,6 +651,7 @@ describe("remote pipeline editor entry", () => {
       });
       renderEditor(<EditorV2 />);
       expect(screen.getByRole("alert")).toHaveTextContent(message);
+      expect(screen.queryByText("View only")).not.toBeInTheDocument();
       expect(screen.getByRole("link", { name: "Home" })).toBeInTheDocument();
       expect(
         screen.getByRole("button", { name: "Sign in" }),

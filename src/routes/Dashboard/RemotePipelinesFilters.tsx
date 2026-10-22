@@ -45,7 +45,7 @@ export function RemotePipelinesFilters({
     id ?? "",
   );
   const [userInput, setUserInput, resetUser] = useDebouncedSearchValue(
-    (user) => onChange({ user: user || undefined }),
+    (user) => onChange({ user }),
     undefined,
     user ?? "",
   );
@@ -88,7 +88,7 @@ export function RemotePipelinesFilters({
     onChange({
       name: undefined,
       id: undefined,
-      user: undefined,
+      user: "",
       createdFrom: undefined,
       createdTo: undefined,
       updatedFrom: undefined,
@@ -126,7 +126,7 @@ export function RemotePipelinesFilters({
           onChange={(user) => setUserInput(user ?? "")}
           onClear={() => {
             resetUser("");
-            onChange({ user: undefined });
+            onChange({ user: "" });
           }}
           onSetMe={() => {
             resetUser("me");

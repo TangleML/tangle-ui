@@ -9,6 +9,7 @@ import { EditorV2 } from "./v2/pages/Editor/EditorV2";
 
 declare module "@tanstack/react-router" {
   interface HistoryState {
+    recoveryLocalFileId?: string;
     newPipeline?: {
       name: string;
       draftId: string;

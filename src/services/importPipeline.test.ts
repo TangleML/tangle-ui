@@ -39,7 +39,7 @@ describe("importPipelineFromYaml", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubEnv("VITE_LOCAL_PIPELINES", "true");
+    vi.stubEnv("VITE_REMOTE_PIPELINES", "false");
     vi.spyOn(console, "error").mockImplementation(() => {});
     addFile.mockResolvedValue({ id: "local-1" });
     resolvePipeline.mockResolvedValue({ write });

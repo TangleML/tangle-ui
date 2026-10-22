@@ -20,8 +20,8 @@ import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { Button } from "@/components/ui/button";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Paragraph } from "@/components/ui/typography";
-import { useBackend } from "@/providers/BackendProvider";
 import { useTrackRecentlyViewedPipeline } from "@/hooks/useTrackRecentlyViewedPipeline";
+import { useBackend } from "@/providers/BackendProvider";
 import { ComponentLibraryProvider } from "@/providers/ComponentLibraryProvider";
 import { ForcedSearchProvider } from "@/providers/ComponentLibraryProvider/ForcedSearchProvider";
 import { DialogProvider } from "@/providers/DialogProvider/DialogProvider";
@@ -51,8 +51,8 @@ import {
   TOUR_WINDOW_LAYOUT_ID,
   useWindowPersistence,
 } from "@/routes/v2/shared/windows/windowPersistence";
-import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import { createsLocalPipelines } from "@/services/pipelineStorage/pipelineCreation";
+import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import {
   type EditorPipelineRef,
@@ -72,6 +72,7 @@ import { EditorMenuBar } from "./components/EditorMenuBar/EditorMenuBar";
 import { EditorTourBridge } from "./components/EditorTourBridge/EditorTourBridge";
 import { EmptyEditorState } from "./components/EmptyEditorState";
 import { FlowCanvas } from "./components/FlowCanvas/FlowCanvas";
+import { RemotePipelineSaveRecovery } from "./components/RemotePipelineSaveRecovery";
 import { RemotePipelineError } from "./components/RemotePipelineView/RemotePipelineError";
 import { RemotePipelineShell } from "./components/RemotePipelineView/RemotePipelineShell";
 import { RemotePipelineView } from "./components/RemotePipelineView/RemotePipelineView";
@@ -205,6 +206,9 @@ function EditorV2Content({
   const projectId = useRouterState({
     select: (state) => readProjectIdParam(state.matches.at(-1)?.search),
   });
+  const recoveryLocalFileId = useRouterState({
+    select: (state) => state.location.state.recoveryLocalFileId,
+  });
 
   const requestedName =
     pipelineRef &&
@@ -221,7 +225,8 @@ function EditorV2Content({
     const editor = <PipelineEditor pipelineRef={pipelineRef} />;
     body = (
       <DriverPermissionGate pipelineRef={pipelineRef}>
-        {"source" in pipelineRef ? (
+        {"source" in pipelineRef ||
+        (pipelineRef.fileId && pipelineRef.fileId === recoveryLocalFileId) ? (
           editor
         ) : (
           <LocalPipelineMigration
@@ -256,6 +261,7 @@ function EditorV2Content({
         <ReactFlowProvider>
           <QuickRunSubmitterProvider>
             <EditorMenuBar />
+            <RemotePipelineSaveRecovery />
             <EditorTourBridge />
             <TourSaveExploreDialog />
             <TourSecretsDialog />
@@ -287,7 +293,11 @@ const RemotePipelineDocumentView = withSuspenseWrapper(
     return file.folder.driver.canEdit === true ? (
       <EditorV2Document key={file.initialId} pipelineRef={pipelineRef} />
     ) : (
-      <RemotePipelineView spec={spec} pipelineId={file.remote?.pipelineId} />
+      <RemotePipelineView
+        spec={spec}
+        file={file}
+        pipelineId={file.remote?.pipelineId}
+      />
     );
   },
   RemotePipelineSkeleton,

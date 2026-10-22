@@ -363,6 +363,19 @@ const editorV2RemotePipelineRoute = createRoute({
   },
 });
 
+const editorV2DraftRedirectRoute = createRoute({
+  getParentRoute: () => mainLayout,
+  path: APP_ROUTES.EDITOR_V2_NEW_PIPELINE,
+  beforeLoad: ({ location }) => {
+    throw redirect({
+      to: APP_ROUTES.EDITOR_NEW_PIPELINE,
+      state: location.state,
+      search: (previous) => previous,
+      replace: true,
+    });
+  },
+});
+
 const runV2RedirectRoute = createRoute({
   getParentRoute: () => mainLayout,
   path: APP_ROUTES.RUN_DETAIL_V2,
@@ -469,6 +482,7 @@ const appRouteTree = mainLayout.addChildren([
   runDetailRoute,
   runDetailWithSubgraphRoute,
   editorV2RedirectRoute,
+  editorV2DraftRedirectRoute,
   editorV2PipelineRedirectRoute,
   runV2RedirectRoute,
   runV2WithSubgraphRedirectRoute,

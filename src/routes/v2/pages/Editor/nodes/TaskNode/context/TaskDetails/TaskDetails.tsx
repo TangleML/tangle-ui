@@ -28,12 +28,14 @@ import { useTask } from "./hooks/useTask";
 
 interface TaskDetailsProps {
   entityId: string;
+  readOnly?: boolean;
 }
 
 type DetailsTab = "arguments" | "configuration" | "annotations";
 
 export const TaskDetails = observer(function TaskDetails({
   entityId,
+  readOnly = false,
 }: TaskDetailsProps) {
   const { track } = useAnalytics();
   const { editor } = useSharedStores();
@@ -75,12 +77,14 @@ export const TaskDetails = observer(function TaskDetails({
   const isSubgraphTask = task.subgraphSpec !== undefined;
 
   const handleZIndexChange = (newZIndex: number) => {
+    if (readOnly) return;
     undo.withGroup("Update task z-index", () => {
       task.annotations.set(ZINDEX_ANNOTATION, newZIndex);
     });
   };
 
   const handleRenameSubmit = () => {
+    if (readOnly) return;
     const newName = renameInputRef.current?.value.trim();
     setIsRenaming(false);
     if (newName && newName !== task.name) {
@@ -120,7 +124,7 @@ export const TaskDetails = observer(function TaskDetails({
             {isSubgraphTask && (
               <Icon name="Workflow" size="sm" className="shrink-0" />
             )}
-            {isRenaming ? (
+            {!readOnly && isRenaming ? (
               <Input
                 ref={renameInputRef}
                 defaultValue={task.name}
@@ -140,15 +144,19 @@ export const TaskDetails = observer(function TaskDetails({
                 >
                   {task.name}
                 </Text>
-                <Button
-                  variant="ghost"
-                  size="inline-xs"
-                  className="shrink-0 p-0 text-muted-foreground hover:bg-transparent hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={startRename}
-                  {...tracking("v2.pipeline_editor.task_details.rename_start")}
-                >
-                  <Icon name="Pencil" size="xs" />
-                </Button>
+                {!readOnly && (
+                  <Button
+                    variant="ghost"
+                    size="inline-xs"
+                    className="shrink-0 p-0 text-muted-foreground hover:bg-transparent hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={startRename}
+                    {...tracking(
+                      "v2.pipeline_editor.task_details.rename_start",
+                    )}
+                  >
+                    <Icon name="Pencil" size="xs" />
+                  </Button>
+                )}
               </div>
             )}
           </InlineStack>
@@ -159,6 +167,7 @@ export const TaskDetails = observer(function TaskDetails({
           yamlText={yamlText}
           taskName={task.name}
           pythonCode={pythonCode}
+          readOnly={readOnly}
         />
       </BlockStack>
 
@@ -200,14 +209,14 @@ export const TaskDetails = observer(function TaskDetails({
           value="arguments"
           className="mt-0 min-h-0 min-w-0 flex-1 overflow-y-auto py-3"
         >
-          <TaskArgumentsEditor task={task} />
+          <TaskArgumentsEditor task={task} readOnly={readOnly} />
         </TabsContent>
 
         <TabsContent
           value="configuration"
           className="mt-0 min-h-0 min-w-0 flex-1 overflow-y-auto py-3"
         >
-          <ConfigurationSection task={task} />
+          <ConfigurationSection task={task} readOnly={readOnly} />
         </TabsContent>
 
         <TabsContent
@@ -217,6 +226,7 @@ export const TaskDetails = observer(function TaskDetails({
           <AnnotationsBlock
             annotations={task.annotations}
             systemAnnotationKeys={SYSTEM_ANNOTATIONS}
+            readonly={readOnly}
           />
         </TabsContent>
       </Tabs>
@@ -224,9 +234,11 @@ export const TaskDetails = observer(function TaskDetails({
       <BlockStack className="px-4 pt-4">
         <Heading level={2}>Actions</Heading>
         <InlineStack gap="2" blockAlign="center" className="shrink-0 py-2">
-          <StackingControls nodeId={entityId} onChange={handleZIndexChange} />
+          {!readOnly && (
+            <StackingControls nodeId={entityId} onChange={handleZIndexChange} />
+          )}
 
-          <TaskActionsBar entityId={entityId} />
+          <TaskActionsBar entityId={entityId} readOnly={readOnly} />
         </InlineStack>
       </BlockStack>
     </BlockStack>

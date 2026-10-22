@@ -6,31 +6,37 @@ import { WindowMiniButton } from "@/routes/v2/shared/windows/WindowMiniButton";
 
 const PIPELINE_DETAILS_WINDOW_ID = "pipeline-details";
 
-export function usePipelineDetailsWindow() {
+export function usePipelineDetailsWindow({
+  readOnly = false,
+  ownerId,
+}: { readOnly?: boolean; ownerId?: string } = {}) {
   const { windows, navigation } = useSharedStores();
   const isNestedSubgraph = navigation.navigationDepth > 0;
   const title = isNestedSubgraph ? "Subgraph Details" : "Pipeline Details";
 
   useEffect(() => {
     if (!windows.getWindowById(PIPELINE_DETAILS_WINDOW_ID)) {
-      windows.openWindow(<PipelineDetailsContent />, {
-        id: PIPELINE_DETAILS_WINDOW_ID,
-        title,
-        position: { x: 0, y: 460 },
-        size: { width: 280, height: 350 },
-        disabledActions: ["close"],
-        persisted: true,
-        defaultDockState: "right",
-        miniContent: (
-          <WindowMiniButton
-            tooltip="View Pipeline Details"
-            label="Pipeline Details"
-            icon="Info"
-          />
-        ),
-      });
+      windows.openWindow(
+        <PipelineDetailsContent readOnly={readOnly} ownerId={ownerId} />,
+        {
+          id: PIPELINE_DETAILS_WINDOW_ID,
+          title,
+          position: { x: 0, y: 460 },
+          size: { width: 280, height: 350 },
+          disabledActions: ["close"],
+          persisted: true,
+          defaultDockState: "right",
+          miniContent: (
+            <WindowMiniButton
+              tooltip="View Pipeline Details"
+              label="Pipeline Details"
+              icon="Info"
+            />
+          ),
+        },
+      );
     }
-  }, [windows, title]);
+  }, [windows, title, readOnly, ownerId]);
 
   useEffect(() => {
     windows.getWindowById(PIPELINE_DETAILS_WINDOW_ID)?.setTitle(title);

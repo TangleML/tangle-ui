@@ -17,6 +17,7 @@ interface PipelineDetailsTextFieldProps {
   testId: string;
   initialValue: string;
   onCommit: (value: string | undefined) => void;
+  readOnly?: boolean;
 }
 
 export function PipelineDetailsTextField({
@@ -26,6 +27,7 @@ export function PipelineDetailsTextField({
   testId,
   initialValue,
   onCommit,
+  readOnly = false,
 }: PipelineDetailsTextFieldProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [value, setValue] = useState(initialValue);
@@ -42,7 +44,7 @@ export function PipelineDetailsTextField({
   };
 
   const handleBlur = (event: FocusEvent<HTMLTextAreaElement>) => {
-    onCommit(event.currentTarget.value || undefined);
+    if (!readOnly) onCommit(event.currentTarget.value || undefined);
   };
 
   return (
@@ -52,6 +54,7 @@ export function PipelineDetailsTextField({
         ref={textareaRef}
         id={id}
         value={value}
+        readOnly={readOnly}
         onChange={handleChange}
         onBlur={handleBlur}
         placeholder={placeholder}

@@ -48,7 +48,7 @@ const BASE_SIDEBAR_ITEMS: SidebarItem[] = [
     icon: "LayoutDashboard",
     exact: true,
   },
-  { to: "/pipelines", label: "My Pipelines", icon: "GitBranch" },
+  { to: "/pipelines", label: "All Pipelines", icon: "GitBranch" },
   { to: ALL_RUNS_PATH, label: "All Runs", icon: "Play" },
   { to: "/components", label: "Components", icon: "Package" },
   { to: "/favorites", label: "Favorites", icon: "Star" },

@@ -13,10 +13,12 @@ import { useOptionalWindowContext } from "@/routes/v2/shared/windows/ContentWind
 
 interface TaskArgumentsEditorProps {
   task: Task;
+  readOnly?: boolean;
 }
 
 export const TaskArgumentsEditor = observer(function TaskArgumentsEditor({
   task,
+  readOnly = false,
 }: TaskArgumentsEditorProps) {
   const { editor, keyboard } = useSharedStores();
   const spec = useSpec();
@@ -77,6 +79,7 @@ export const TaskArgumentsEditor = observer(function TaskArgumentsEditor({
         task={task}
         spec={spec}
         externalEditor={isMaximized}
+        readOnly={readOnly}
         onSelectionChanged={handleSelectionChanged}
       />
     );
@@ -122,6 +125,7 @@ export const TaskArgumentsEditor = observer(function TaskArgumentsEditor({
             currentValue={focusedArg?.value}
             task={task}
             spec={spec}
+            readOnly={readOnly}
           />
         ) : (
           <BlockStack
@@ -130,7 +134,7 @@ export const TaskArgumentsEditor = observer(function TaskArgumentsEditor({
             className="h-full text-gray-400"
           >
             <Text size="xs" tone="subdued">
-              Select an argument to edit
+              Select an argument to {readOnly ? "view" : "edit"}
             </Text>
           </BlockStack>
         )}

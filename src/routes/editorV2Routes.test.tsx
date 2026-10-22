@@ -16,14 +16,17 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
+import { runInAction } from "mobx";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { client } from "@/api/client.gen";
 import { getCurrentUserApiUsersMeGet } from "@/api/sdk.gen";
-import { DialogProvider } from "@/providers/DialogProvider/DialogProvider";
 import { ComponentSpec, Task } from "@/models/componentSpec";
+import { DialogProvider } from "@/providers/DialogProvider/DialogProvider";
+import { RootFolderDbStorageDriver } from "@/services/pipelineStorage/drivers/RootFolderDbStorageDriver";
 import { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
+import { PipelineFolder } from "@/services/pipelineStorage/PipelineFolder";
 import { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
 import { defaultPipelineYamlWithName } from "@/utils/constants";
 
@@ -95,6 +98,8 @@ vi.mock("./v2/pages/Editor/components/FlowCanvas/FlowCanvas", async () => {
   const { useEffect } = await import("react");
   const { useEditorSession } =
     await import("./v2/pages/Editor/store/EditorSessionContext");
+  const { usePipelineRename } =
+    await import("./v2/pages/Editor/hooks/usePipelineRename");
   const { useSharedStores } =
     await import("./v2/shared/store/SharedStoreContext");
   return {
@@ -105,6 +110,7 @@ vi.mock("./v2/pages/Editor/components/FlowCanvas/FlowCanvas", async () => {
     }) {
       session = useEditorSession();
       stores = useSharedStores();
+      const rename = usePipelineRename();
       useEffect(() => {
         canvas.mounts++;
         return () => {
@@ -116,6 +122,9 @@ vi.mock("./v2/pages/Editor/components/FlowCanvas/FlowCanvas", async () => {
           <input aria-label="Canvas state" defaultValue="initial" />
           <button onClick={() => spec.setDescription("First edit")}>
             Edit pipeline
+          </button>
+          <button onClick={() => void rename("Renamed")}>
+            Rename pipeline
           </button>
         </>
       );
@@ -185,6 +194,7 @@ vi.mock("./v2/pages/Editor/hooks/useAiChatWindow", () => ({
 }));
 
 beforeEach(() => {
+  vi.stubEnv("VITE_REMOTE_PIPELINES", "true");
   vi.clearAllMocks();
   localStorage.clear();
   vi.spyOn(window, "scrollTo").mockImplementation(() => {});
@@ -196,19 +206,18 @@ beforeEach(() => {
     data: { id: "user", permissions: ["read", "write"] },
     response: new Response(null, { status: 200 }),
   } as Awaited<ReturnType<typeof getCurrentUserApiUsersMeGet>>);
-  let filePath = "";
-  vi.mocked(client.put).mockImplementation(async (options) => {
-    filePath = String(options?.query?.file_path ?? filePath);
-    return {
-      data: {
-        id: pipelineId,
-        user_id: "user",
-        file_path: filePath,
-        ...(options?.body as object),
-      },
-      response: new Response(null, { status: 200 }),
-    } as Awaited<ReturnType<typeof client.put>>;
-  });
+  vi.mocked(client.put).mockImplementation(
+    async (options) =>
+      ({
+        data: {
+          id: pipelineId,
+          user_id: "user",
+          file_path: options?.query?.file_path,
+          ...(options?.body as object),
+        },
+        response: new Response(null, { status: 200 }),
+      }) as Awaited<ReturnType<typeof client.put>>,
+  );
 });
 afterEach(() => {
   cleanup();
@@ -217,7 +226,11 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-async function open(initialEntry: string = APP_ROUTES.EDITOR_NEW_PIPELINE) {
+async function open(
+  initialEntry: string = APP_ROUTES.EDITOR_NEW_PIPELINE,
+  initialState?: { recoveryLocalFileId: string },
+  waitForEditor = true,
+) {
   const root = createRootRoute();
   const dashboard = createRoute({
     getParentRoute: () => root,
@@ -227,6 +240,7 @@ async function open(initialEntry: string = APP_ROUTES.EDITOR_NEW_PIPELINE) {
   const history = createMemoryHistory({
     initialEntries: [APP_ROUTES.DASHBOARD_PIPELINES, initialEntry],
   });
+  if (initialState) history.replace(initialEntry, initialState);
   const router = createRouter({
     routeTree: root.addChildren([createEditorV2Routes(root), dashboard]),
     history,
@@ -237,9 +251,53 @@ async function open(initialEntry: string = APP_ROUTES.EDITOR_NEW_PIPELINE) {
       <RouterProvider router={router} />
     </QueryClientProvider>,
   );
-  await screen.findByRole("button", { name: "Edit pipeline" });
+  if (waitForEditor)
+    await screen.findByRole("button", { name: "Edit pipeline" });
   return { router, history };
 }
+
+it.each([true, false])(
+  "bypasses local migration only for the recovered file (matching: %s)",
+  async (matching) => {
+    const file = new PipelineFile({
+      id: "recovered-local",
+      storageKey: "Recovered",
+      folder: new PipelineFolder({
+        id: storage.rootFolder.id,
+        name: "Browser pipelines",
+        parentId: null,
+        driver: new RootFolderDbStorageDriver(),
+      }),
+    });
+    vi.spyOn(file, "read").mockResolvedValue(
+      defaultPipelineYamlWithName("Recovered"),
+    );
+    vi.spyOn(storage, "resolvePipeline").mockResolvedValue(file);
+    const move = vi.spyOn(storage, "moveLocalPipelineToRemote");
+    if (matching)
+      localStorage.setItem(
+        "local-pipeline-migration-consent-v1:https://backend.example.com",
+        "true",
+      );
+    const { history } = await open(
+      "/editor/Recovered?fileId=recovered-local",
+      { recoveryLocalFileId: matching ? file.id : "another-file" },
+      matching,
+    );
+    expect(history.location.pathname).toBe("/editor/Recovered");
+    expect(client.put).not.toHaveBeenCalled();
+    expect(move).not.toHaveBeenCalled();
+    if (matching) {
+      expect(session.pipelineFile.activePipelineFile).toBe(file);
+      expect(screen.queryByRole("alertdialog")).toBeNull();
+    } else {
+      expect(await screen.findByRole("alertdialog")).toHaveTextContent("Move");
+      expect(
+        screen.queryByRole("button", { name: "Edit pipeline" }),
+      ).toBeNull();
+    }
+  },
+);
 
 it.each([true, false])(
   "reports the loaded embedded pipeline name (editable: %s)",
@@ -333,7 +391,7 @@ it("retains a failed draft edit and changes its URL only after retry succeeds", 
   vi.mocked(client.put).mockRejectedValueOnce(new Error("Backend unavailable"));
   fireEvent.click(screen.getByRole("button", { name: "Edit pipeline" }));
   await waitFor(() =>
-    expect(session.autoSave.error).toBe("Backend unavailable"),
+    expect(session.autoSave.error).toContain("The backend is unavailable"),
   );
   expect(history.location.pathname).toBe(APP_ROUTES.EDITOR_NEW_PIPELINE);
   expect(history.location.search).toBe("");
@@ -351,7 +409,7 @@ it("retains a failed draft when browser storage is enabled before returning to i
   vi.mocked(client.put).mockRejectedValue(new Error("Backend unavailable"));
   fireEvent.click(screen.getByRole("button", { name: "Edit pipeline" }));
   await waitFor(() =>
-    expect(session.autoSave.error).toBe("Backend unavailable"),
+    expect(session.autoSave.error).toContain("The backend is unavailable"),
   );
   const originalFile = session.pipelineFile.activePipelineFile;
   const originalSpec = stores.navigation.rootSpec;
@@ -560,8 +618,57 @@ it("reopens the saved pipeline after leaving during creation and going Back", as
   expect(client.get).toHaveBeenCalledOnce();
 });
 
+it("keeps the local editor and active chat mounted through rename and project navigation", async () => {
+  vi.stubEnv("VITE_REMOTE_PIPELINES", "false");
+  const file = new PipelineFile({
+    id: "rename-local",
+    storageKey: "Original",
+    folder: storage.rootFolder,
+  });
+  vi.spyOn(file, "read").mockResolvedValue(
+    defaultPipelineYamlWithName("Original"),
+  );
+  vi.spyOn(file, "write").mockResolvedValue();
+  vi.spyOn(file, "rename").mockImplementation(async (name) => {
+    runInAction(() => {
+      file.storageKey = name;
+    });
+  });
+  vi.spyOn(storage, "resolvePipeline").mockResolvedValue(file);
+  const { router, history } = await open("/editor/Original");
+  const spec = stores.navigation.rootSpec;
+  const undo = session.undo.undoManager;
+  fireEvent.change(screen.getByLabelText("Canvas state"), {
+    target: { value: "kept" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Edit pipeline" }));
+  fireEvent.click(screen.getByRole("button", { name: "Rename pipeline" }));
+  await waitFor(
+    () =>
+      expect(history.location.href).toBe("/editor/Renamed?fileId=rename-local"),
+    { timeout: 5000 },
+  );
+  await act(async () => {
+    await router.navigate({
+      to: APP_ROUTES.PIPELINE_EDITOR,
+      params: { pipelineName: "Renamed" },
+      search: { fileId: file.id, projectId: "another-project" },
+    });
+  });
+  expect(screen.getByLabelText("Canvas state")).toHaveValue("kept");
+  expect(stores.navigation.rootSpec).toBe(spec);
+  expect(spec?.description).toBe("First edit");
+  expect(session.undo.undoManager).toBe(undo);
+  expect(session.undo.canUndo).toBe(true);
+  expect(session.pipelineFile.activePipelineFile).toBe(file);
+  expect(canvas.mounts).toBe(1);
+  expect(canvas.unmounts).toBe(0);
+  expect(chat.mounts).toBe(1);
+  expect(chat.threads[0].abort).not.toHaveBeenCalled();
+});
+
 it("keeps local chat mounted while replacing document undo and save state", async () => {
-  vi.stubEnv("VITE_LOCAL_PIPELINES", "true");
+  vi.stubEnv("VITE_REMOTE_PIPELINES", "false");
   const first = new PipelineFile({
     id: "local-first",
     storageKey: "First",

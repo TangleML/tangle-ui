@@ -111,7 +111,7 @@ beforeEach(() => {
     localFile(name),
   );
   localStorage.clear();
-  vi.stubEnv("VITE_LOCAL_PIPELINES", undefined);
+  vi.stubEnv("VITE_REMOTE_PIPELINES", "true");
   Object.assign(settings, {
     apiUrl: "",
     useEnv: true,
@@ -145,6 +145,29 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+it.each([undefined, "false", "TRUE", "1"])(
+  "keeps creation local unless remote storage is explicitly enabled (%s)",
+  async (flag) => {
+    vi.stubEnv("VITE_REMOTE_PIPELINES", flag);
+    expect(createsLocalPipelines(true)).toBe(true);
+    expect(await getPipelineCreationBackendUrl()).toBeUndefined();
+    await createPipelineFromContent(
+      storage,
+      "Local default",
+      componentSpecToYaml(spec),
+    );
+    expect(localWrites).toHaveLength(1);
+    expect(client.put).not.toHaveBeenCalled();
+    expect(getCurrentUserApiUsersMeGet).not.toHaveBeenCalled();
+  },
+);
+
+it("keeps storage local without a backend even after opting in", async () => {
+  settings.relative = false;
+  expect(createsLocalPipelines(false)).toBe(true);
+  expect(await getPipelineCreationBackendUrl()).toBeUndefined();
+});
+
 it.each([
   [{}, window.location.origin],
   [{ apiUrl: "https://deployed.example.com" }, "https://deployed.example.com"],
@@ -166,16 +189,16 @@ it.each([
 });
 
 it.each([
-  { override: undefined, configured: true },
-  { override: "false", configured: true },
-  { override: "true", configured: true },
-  { override: undefined, configured: false },
+  { flag: undefined, configured: true },
+  { flag: "false", configured: true },
+  { flag: "true", configured: true },
+  { flag: "true", configured: false },
 ])(
   "uses the storage policy for imports, copies, and run clones (%j)",
-  async ({ override, configured }) => {
-    vi.stubEnv("VITE_LOCAL_PIPELINES", override);
+  async ({ flag, configured }) => {
+    vi.stubEnv("VITE_REMOTE_PIPELINES", flag);
     settings.relative = configured;
-    const local = override === "true" || !configured;
+    const local = flag !== "true" || !configured;
     const results = [
       await importPipelineFromYaml(storage, componentSpecToYaml(spec)),
       await useSavePipeline(spec).savePipeline("Copy"),
@@ -203,7 +226,7 @@ it.each([
 );
 
 it("keeps local collision handling and existing local edits", async () => {
-  vi.stubEnv("VITE_LOCAL_PIPELINES", "true");
+  vi.stubEnv("VITE_REMOTE_PIPELINES", "false");
   vi.mocked(getComponentFileFromList)
     .mockResolvedValueOnce({} as never)
     .mockResolvedValueOnce({} as never);
@@ -211,7 +234,7 @@ it("keeps local collision handling and existing local edits", async () => {
   expect(
     await importPipelineFromYaml(storage, componentSpecToYaml(spec)),
   ).toMatchObject({ name: "Example 2", successful: true });
-  vi.stubEnv("VITE_LOCAL_PIPELINES", undefined);
+  vi.stubEnv("VITE_REMOTE_PIPELINES", "true");
   vi.mocked(getComponentFileFromList).mockResolvedValue({} as never);
   await useSavePipeline(spec).savePipeline();
   expect(localWrites).toHaveLength(2);
@@ -219,9 +242,9 @@ it("keeps local collision handling and existing local edits", async () => {
 });
 
 it.each([false, true])(
-  "creates populated editor copies with local override %s",
-  async (local) => {
-    vi.stubEnv("VITE_LOCAL_PIPELINES", String(local));
+  "creates populated editor copies with remote storage enabled: %s",
+  async (remote) => {
+    vi.stubEnv("VITE_REMOTE_PIPELINES", String(remote));
     const storage = new PipelineStorageService();
     const add = vi
       .spyOn(storage.rootFolder, "addFile")
@@ -231,22 +254,22 @@ it.each([false, true])(
       spec.name,
       componentSpecToYaml(spec),
     );
-    expect(file.id).toBe(local ? "local-1" : remoteId);
-    expect(add).toHaveBeenCalledTimes(local ? 1 : 0);
-    expect(client.put).toHaveBeenCalledTimes(local ? 0 : 1);
+    expect(file.id).toBe(remote ? remoteId : "local-1");
+    expect(add).toHaveBeenCalledTimes(remote ? 0 : 1);
+    expect(client.put).toHaveBeenCalledTimes(remote ? 1 : 0);
   },
 );
 
 it.each([
   "remote",
   "existing local",
-  "local override",
+  "local deployment",
   "no backend",
   "read-only",
 ])("saves legacy editor content: %s", async (mode) => {
   if (mode === "existing local")
     vi.mocked(getComponentFileFromList).mockResolvedValue({} as never);
-  if (mode === "local override") vi.stubEnv("VITE_LOCAL_PIPELINES", "true");
+  if (mode === "local deployment") vi.stubEnv("VITE_REMOTE_PIPELINES", "false");
   if (mode === "no backend") settings.relative = false;
   const { result } = renderHook(useComponentSpec, {
     wrapper: ({ children }) => (
@@ -350,7 +373,7 @@ it.each(["import", "save", "clone", "project"])(
 it.each(["clone", "save"])(
   "creates a %s beside a registry-only name",
   async (operation) => {
-    vi.stubEnv("VITE_LOCAL_PIPELINES", "true");
+    vi.stubEnv("VITE_REMOTE_PIPELINES", "false");
     vi.mocked(registeredStorageKeys).mockResolvedValue(["Example"]);
 
     const result =
@@ -502,9 +525,10 @@ it("honors the runtime browser-storage preference for imports", async () => {
 
 it("propagates remote clone failures to the caller", async () => {
   vi.mocked(client.put).mockRejectedValueOnce(new Error("Backend unavailable"));
-  await expect(copyRunToPipeline(storage, spec)).rejects.toThrow(
-    "Backend unavailable",
-  );
+  await expect(copyRunToPipeline(storage, spec)).rejects.toMatchObject({
+    kind: "unavailable",
+    status: 0,
+  });
 });
 
 it("keeps creation usable when browser preference storage is restricted", async () => {

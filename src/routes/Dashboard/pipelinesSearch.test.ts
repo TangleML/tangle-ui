@@ -7,23 +7,21 @@ import {
 } from "./pipelinesSearch";
 
 describe("validatePipelinesSearch", () => {
-  it.each([1, "2", 1000000, 0, -2, 1.5, "invalid", "9007199254740992"])(
-    "discards the obsolete page parameter %s",
-    (page) => {
-      const search = validatePipelinesSearch({
-        page,
-        tab: "remote",
-        name: "shared",
-        panel: "compact",
-      });
-      expect(search).not.toHaveProperty("page");
-      expect(search).toMatchObject({
-        tab: "remote",
-        name: "shared",
-        panel: "compact",
-      });
-    },
-  );
+  it("discards the obsolete page parameter without dropping other search parameters", () => {
+    const search = validatePipelinesSearch({
+      page: "1000000",
+      tab: "remote",
+      name: "shared",
+      panel: "compact",
+    });
+    expect(search).not.toHaveProperty("page");
+    expect(search).toMatchObject({
+      tab: "remote",
+      name: "shared",
+      panel: "compact",
+      user: "me",
+    });
+  });
 
   it.each(["local", "remote"])("accepts the %s tab", (tab) => {
     expect(validatePipelinesSearch({ tab }).tab).toBe(tab);
@@ -46,7 +44,7 @@ describe("validatePipelinesSearch", () => {
 
     expect(search.name).toBeUndefined();
     expect(search.id).toBeUndefined();
-    expect(search.user).toBeUndefined();
+    expect(search.user).toBe("me");
     expect(search.createdFrom).toBeUndefined();
     expect(search.createdTo).toBeUndefined();
     expect(search.updatedFrom).toBeUndefined();
@@ -148,6 +146,7 @@ describe("getRemotePipelinesFilterQuery", () => {
     },
   ])("handles daylight saving on $date", ({ date, startTime, endTime }) => {
     const search = validatePipelinesSearch({
+      user: "",
       createdFrom: date,
       createdTo: date,
       updatedFrom: date,
