@@ -80,9 +80,19 @@ export class AgentClient {
     const remote = await this.ensureInit(deps);
     signal?.throwIfAborted();
     const params = { ...options, threadId: this.threadId };
-    const response = await remote.ask(params, Comlink.proxy(deps.bridge));
-    signal?.throwIfAborted();
-    return response;
+    const cancel = () => {
+      // Keep the worker and its conversation; wait for cooperative cancellation
+      // before allowing another turn to use the dispatcher.
+      void remote.cancel().catch(() => {});
+    };
+    signal?.addEventListener("abort", cancel, { once: true });
+    try {
+      const response = await remote.ask(params, Comlink.proxy(deps.bridge));
+      signal?.throwIfAborted();
+      return response;
+    } finally {
+      signal?.removeEventListener("abort", cancel);
+    }
   }
 
   terminate(): void {

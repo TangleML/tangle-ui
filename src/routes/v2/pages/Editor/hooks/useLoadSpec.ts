@@ -36,7 +36,7 @@ import {
 } from "@/services/pipelineStorage/types";
 import { PIPELINE_YAML_LOAD_OPTIONS } from "@/utils/yaml";
 
-interface LoadedSpec {
+export interface LoadedSpec {
   spec: ComponentSpec;
   file: PipelineFile;
   saveState: DocumentSaveState;
