@@ -23,7 +23,10 @@ import {
   isGraphImplementation,
 } from "@/utils/componentSpec";
 import { DB_NAME, PIPELINE_RUNS_STORE_NAME } from "@/utils/constants";
-import { fetchWithErrorHandling } from "@/utils/fetchWithErrorHandling";
+import {
+  fetchWithErrorHandling,
+  RemoteAuthError,
+} from "@/utils/fetchWithErrorHandling";
 import { componentSpecToYaml } from "@/utils/yaml";
 
 import { requestFailureMessage } from "./requestFailureMessage";
@@ -203,17 +206,26 @@ export const fetchPipelineRuns = async (
   }
 };
 
+async function changeRun(url: string, init: RequestInit, failure: string) {
+  const response = await fetch(url, { redirect: "manual", ...init });
+
+  if (response.type === "opaqueredirect") {
+    throw new RemoteAuthError(url);
+  }
+  if (!response.ok) {
+    throw new Error(await requestFailureMessage(response, failure));
+  }
+}
+
 export const cancelPipelineRun = async (
   runId: string,
   backendUrl: string,
   teamId?: string,
 ) => {
-  await fetchWithErrorHandling(
+  await changeRun(
     `${backendUrl}/api/pipeline_runs/${runId}/cancel`,
-    {
-      method: "POST",
-      headers: teamRequestHeaders(teamId),
-    },
+    { method: "POST", headers: teamRequestHeaders(teamId) },
+    "Failed to cancel the run",
   );
 };
 
@@ -239,8 +251,9 @@ export const updateRunAnnotation = async (
   );
   url.searchParams.append("value", annotation.value);
 
-  await fetchWithErrorHandling(url.toString(), {
-    method: "PUT",
-    headers: teamRequestHeaders(teamId),
-  });
+  await changeRun(
+    url.toString(),
+    { method: "PUT", headers: teamRequestHeaders(teamId) },
+    `Failed to save the run's ${annotation.key}`,
+  );
 };
