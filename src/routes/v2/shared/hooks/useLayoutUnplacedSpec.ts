@@ -11,7 +11,7 @@ import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
  * the first measure pass because dagre needs React Flow's measured sizes.
  */
 export function useLayoutUnplacedSpec(spec: ComponentSpec | null): void {
-  const { keyboard } = useSharedStores();
+  const { keyboard, editor } = useSharedStores();
   const nodesInitialized = useNodesInitialized();
   const laidOut = useRef<ComponentSpec | null>(null);
 
@@ -21,6 +21,11 @@ export function useLayoutUnplacedSpec(spec: ComponentSpec | null): void {
     if (hasPlacedEntities(spec)) return;
 
     laidOut.current = spec;
-    keyboard.invokeShortcut("auto-layout");
-  }, [spec, nodesInitialized, keyboard]);
+    const focusNodeId = editor.pendingFocusNodeId ?? editor.selectedNodeId;
+    keyboard.invokeShortcut("auto-layout", {
+      onLaidOut: () => {
+        if (focusNodeId) editor.setPendingFocusNode(focusNodeId);
+      },
+    });
+  }, [spec, nodesInitialized, keyboard, editor]);
 }
