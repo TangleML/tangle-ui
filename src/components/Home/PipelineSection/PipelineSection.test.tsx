@@ -98,6 +98,8 @@ vi.mock("./PipelineRow", () => ({
 let queryClient: QueryClient;
 
 beforeEach(() => {
+  vi.stubEnv("VITE_REMOTE_PIPELINES", "true");
+  vi.stubEnv("VITE_LOCAL_PIPELINES", undefined);
   vi.clearAllMocks();
   queryClient = new QueryClient({
     defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
@@ -125,6 +127,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   queryClient.clear();
+  vi.unstubAllEnvs();
 });
 
 function renderSection() {
