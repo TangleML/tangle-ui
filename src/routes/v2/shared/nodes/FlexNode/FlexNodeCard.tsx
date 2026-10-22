@@ -10,7 +10,7 @@ import LockToggle from "@/components/shared/ReactFlow/FlowCanvas/FlexNode/LockTo
 import { BlockStack } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
 
-import { flexNodeVariants, type FlexNodeViewProps } from "./FlexNode";
+import { flexNodeVariants, type FlexNodeViewProps } from "./flexNodeView";
 
 const MIN_SIZE = { width: 50, height: 50 };
 
@@ -134,18 +134,17 @@ export function FlexNodeCard({
 
   const handleDoubleClickTitle = (e: MouseEvent<HTMLParagraphElement>) => {
     e.stopPropagation();
+    if (readOnly) return;
     if (locked) {
-      onToggleLock();
+      onToggleLock?.();
       return;
     }
-    if (!readOnly) {
-      setIsInlineEditingContent(false);
-      setIsInlineEditingTitle(true);
-    }
+    setIsInlineEditingContent(false);
+    setIsInlineEditingTitle(true);
   };
 
   const handleResizeEnd = (_: ResizeDragEvent, params: ResizeParams) => {
-    onUpdateNode({
+    onUpdateNode?.({
       size: {
         width: Math.max(params.width, MIN_SIZE.width),
         height: Math.max(params.height, MIN_SIZE.height),
@@ -197,13 +196,15 @@ export function FlexNodeCard({
           )}
         >
           <BlockStack gap="1" className="w-full">
-            <LockToggle
-              size="xs"
-              locked={locked}
-              onToggleLock={onToggleLock}
-              showOnlyOnHover
-              className="absolute top-1 right-1"
-            />
+            {!readOnly && onToggleLock && (
+              <LockToggle
+                size="xs"
+                locked={locked}
+                onToggleLock={onToggleLock}
+                showOnlyOnHover
+                className="absolute top-1 right-1"
+              />
+            )}
 
             <FlexNodeTitle
               title={title}
@@ -212,7 +213,7 @@ export function FlexNodeCard({
               locked={locked}
               inkClass={inkClass}
               onSave={(newTitle) => {
-                onUpdateProperties({ title: newTitle });
+                onUpdateProperties?.({ title: newTitle });
                 setIsInlineEditingTitle(false);
               }}
               onCancel={() => setIsInlineEditingTitle(false)}
@@ -226,7 +227,7 @@ export function FlexNodeCard({
               editing={isInlineEditingContent}
               inkClass={inkClass}
               onSave={(newContent) => {
-                onUpdateProperties({ content: newContent });
+                onUpdateProperties?.({ content: newContent });
                 setIsInlineEditingContent(false);
               }}
               onCancel={() => setIsInlineEditingContent(false)}

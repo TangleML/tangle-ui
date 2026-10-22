@@ -5,7 +5,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
-import { flexNodeVariants, type FlexNodeViewProps } from "./FlexNode";
+import { flexNodeVariants, type FlexNodeViewProps } from "./flexNodeView";
 
 const PERCEIVED_FONT_SIZE = "28px";
 const s = "var(--simplified-scale, 1)";

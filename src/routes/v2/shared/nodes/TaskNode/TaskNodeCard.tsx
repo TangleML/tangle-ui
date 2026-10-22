@@ -299,7 +299,7 @@ export const TaskNodeCard = observer(function TaskNodeCard({
   conditionDisplayValue,
   componentRef,
   digest,
-  publishedComponentBadgeReadOnly,
+  readOnly,
   isAggregator,
   outputType,
   subgraphExecutionStats,
@@ -454,7 +454,7 @@ export const TaskNodeCard = observer(function TaskNodeCard({
             {digestMarkup && componentRef ? (
               <PublishedComponentBadge
                 componentRef={componentRef}
-                readOnly={publishedComponentBadgeReadOnly}
+                readOnly={readOnly}
               >
                 {digestMarkup}
               </PublishedComponentBadge>
@@ -563,6 +563,7 @@ export const TaskNodeCard = observer(function TaskNodeCard({
                   <OutputTypeSelector
                     value={outputType}
                     onChange={onOutputTypeChange}
+                    disabled={readOnly}
                   />
                 </div>
               )}

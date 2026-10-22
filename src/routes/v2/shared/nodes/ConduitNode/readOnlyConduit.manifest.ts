@@ -8,7 +8,7 @@ import { ConduitNode } from "@/routes/v2/shared/nodes/ConduitNode/ConduitNode";
 import { ConduitEdge } from "@/routes/v2/shared/nodes/ConduitNode/edges/ConduitEdge";
 import type { NodeTypeManifest } from "@/routes/v2/shared/nodes/types";
 
-export const conduitManifest: NodeTypeManifest = {
+export const readOnlyConduitManifest: NodeTypeManifest = {
   type: "conduit",
   idPrefix: "conduit_",
   entityType: "conduit",

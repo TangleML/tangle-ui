@@ -6,7 +6,7 @@ import { hasPlacedEntities } from "@/routes/v2/shared/nodes/buildUtils";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 /**
- * Lays out a run whose pipeline carries no positions — authored as YAML, say —
+ * Lays out a pipeline that carries no positions — authored as YAML, say —
  * which the canvas would otherwise pile up on index-based defaults. Waits for
  * the first measure pass because dagre needs React Flow's measured sizes.
  */

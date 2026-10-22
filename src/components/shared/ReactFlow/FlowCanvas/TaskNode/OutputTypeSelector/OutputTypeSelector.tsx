@@ -10,14 +10,16 @@ import { AggregatorOutputType } from "@/types/aggregator";
 interface OutputTypeSelectorProps {
   value: AggregatorOutputType;
   onChange: (value: AggregatorOutputType) => void;
+  disabled?: boolean;
 }
 
 export const OutputTypeSelector = ({
   value,
   onChange,
+  disabled = false,
 }: OutputTypeSelectorProps) => {
   return (
-    <Select value={value} onValueChange={onChange}>
+    <Select value={value} onValueChange={onChange} disabled={disabled}>
       <SelectTrigger>
         <SelectValue />
       </SelectTrigger>
