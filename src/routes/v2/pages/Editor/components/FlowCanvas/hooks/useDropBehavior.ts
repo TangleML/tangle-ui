@@ -14,11 +14,13 @@ import type {
   NodeTypeManifest,
   UndoGroupable,
 } from "@/routes/v2/shared/nodes/types";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import type { TaskSpec } from "@/utils/componentSpec";
 import { componentMetadata } from "@/utils/componentTracking";
 
 import { useFileDropHandler } from "./useFileDropHandler";
 import { useReplaceDropHandler } from "./useReplaceDropHandler";
+import { useValidateComponentDrop } from "./useValidateComponentDrop";
 
 interface DropPayload {
   task?: TaskSpec;
@@ -67,6 +69,8 @@ export function useDropBehavior(
   const registry = useNodeRegistry();
   const { undo } = useEditorSession();
   const { track } = useAnalytics();
+  const { navigation } = useSharedStores();
+  const validateComponentDrop = useValidateComponentDrop();
   const handleFileDrop = useFileDropHandler();
   const { detectReplaceTarget, flushReplaceState, performReplaceDrop } =
     useReplaceDropHandler(spec, reactFlowInstance);
@@ -102,6 +106,12 @@ export function useDropBehavior(
     if (isFileDrop(event)) {
       await handleFileDrop(event.dataTransfer.files[0], spec, position);
       return;
+    }
+
+    if (droppedTaskComponentRef && payload?.task) {
+      const componentRef = await validateComponentDrop(droppedTaskComponentRef);
+      if (!componentRef || navigation.activeSpec !== spec) return;
+      payload.task = { ...payload.task, componentRef };
     }
 
     if (isReplaceTargetDrop(replaceTarget, payload)) {

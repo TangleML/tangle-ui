@@ -14,6 +14,10 @@ import { saveComponent } from "@/utils/localforage";
 
 import { ComponentEditorDialog } from "./ComponentEditorDialog";
 
+vi.mock("./useComponentSpecValidator", () => ({
+  useComponentSpecValidator: () => () => ({ valid: true }),
+}));
+
 // Mock only what's necessary
 vi.mock("@/hooks/useToastNotification", () => ({
   default: vi.fn(),
