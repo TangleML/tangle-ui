@@ -90,7 +90,7 @@ export const EMBEDDED_VIEW_PRESET: ViewPreset = {
   dockAreas: EMBEDDED_DOCK_AREAS,
 };
 
-export const VIEW_PRESETS: ViewPreset[] = [
+const VIEW_PRESETS: ViewPreset[] = [
   DEFAULT_VIEW_PRESET,
   {
     label: "All",
