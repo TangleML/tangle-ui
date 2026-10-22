@@ -74,6 +74,17 @@ describe("importPipelineFromYaml", () => {
     });
   });
 
+  it("describes an adjusted non-colliding name without claiming a conflict", async () => {
+    const result = await importPipelineFromYaml(
+      storage,
+      yaml.dump({ ...validYamlObject, name: "Test Pipeline " }),
+    );
+    expect(result.successful).toBe(true);
+    expect(result.name).toBe("Test Pipeline");
+    expect(result.errorMessage).toContain("during import");
+    expect(result.errorMessage).not.toContain("conflict");
+  });
+
   it("should generate a unique name when a name collision occurs", async () => {
     vi.mocked(componentStore.getComponentFileNamesFromList).mockResolvedValue([
       "Test Pipeline",

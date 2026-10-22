@@ -1,3 +1,5 @@
+import "fake-indexeddb/auto";
+
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   act,
@@ -11,9 +13,13 @@ import { StrictMode } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { useTourMode } from "@/providers/TourProvider/TourModeContext";
+import { pipelineStorageDb } from "@/services/pipelineStorage/db";
 import { PipelineMigrationRecoveryError } from "@/services/pipelineStorage/migrateLocalPipelineToRemote";
 import { revokePipelineMigrationConsent } from "@/services/pipelineStorage/pipelineMigrationConsent";
-import { findPipelineMigration } from "@/services/pipelineStorage/pipelineMigrations";
+import {
+  findPipelineMigration,
+  PipelineMovedToBackendError,
+} from "@/services/pipelineStorage/pipelineMigrations";
 import {
   getEditorPipelineIdentity,
   type PipelineRef,
@@ -87,7 +93,8 @@ function open(projectId?: string, ref: PipelineRef = pipelineRef) {
   return { ...view, rerender: () => view.rerender(contents()) };
 }
 
-beforeEach(() => {
+beforeEach(async () => {
+  await pipelineStorageDb.pipeline_migration_attempts.clear();
   vi.resetAllMocks();
   activeBackendUrl = backendUrl;
   vi.stubEnv("VITE_LOCAL_PIPELINES", undefined);
@@ -327,7 +334,7 @@ it("waits for a cached local file to be re-resolved before starting migration", 
       undefined,
       backendUrl,
     ],
-    local,
+    { file: local, keepLocalCopy: false },
   );
   const pending = Promise.withResolvers<typeof remote>();
   storage.resolvePipeline.mockReturnValue(pending.promise);
@@ -348,7 +355,7 @@ it("rejects a cached migration from a different backend before navigation", asyn
       undefined,
       activeBackendUrl,
     ],
-    remote,
+    { file: remote, keepLocalCopy: false },
   );
   storage.resolvePipeline.mockResolvedValue(remote);
   open();
@@ -422,4 +429,34 @@ it("honors revoked consent before an already-mounted inactive tab becomes active
   rerender(view(true));
   expect(await screen.findByRole("alertdialog")).toBeInTheDocument();
   expect(storage.moveLocalPipelineToRemote).not.toHaveBeenCalled();
+});
+
+it("keeps a manually uploaded browser copy editable without prompting again", async () => {
+  await pipelineStorageDb.pipeline_migration_attempts.put({
+    localId: local.id,
+    backendUrl,
+    content: "saved",
+    keepLocalCopy: true,
+  });
+  localStorage.removeItem(consentKey);
+  open();
+  await screen.findByText("Local editor");
+  expect(screen.queryByRole("alertdialog")).toBeNull();
+  expect(storage.moveLocalPipelineToRemote).not.toHaveBeenCalled();
+});
+
+it("does not offer a nonexistent local editor when a queued move completed on another backend", async () => {
+  storage.moveLocalPipelineToRemote.mockRejectedValue(
+    new PipelineMovedToBackendError(
+      "This pipeline was moved to another backend. Select that backend in Settings to open it.",
+    ),
+  );
+  open();
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Select that backend",
+  );
+  expect(screen.queryByText("Local editor")).not.toBeInTheDocument();
+  expect(
+    screen.queryByText(/local copy is still available/),
+  ).not.toBeInTheDocument();
 });

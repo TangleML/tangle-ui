@@ -77,13 +77,22 @@ export function RemotePipelineActions({
       });
       onDeleted?.(restoreFocus && canRestoreFocus());
     },
-    onError: async (error, { backendUrl, pipeline }) => {
+    onError: async (error, { backendUrl, pipeline, onDeleted }) => {
       if (error instanceof RemotePipelineDeletionUncertainError) {
         await reconcileDeletedRemotePipeline(
           queryClient,
           { source: "remote", backendUrl, pipelineId: pipeline.id },
           error,
         );
+        await queryClient.invalidateQueries({
+          queryKey: RemotePipelineQueryKeys.All(backendUrl),
+        });
+        onDeleted?.(false);
+        notify(
+          "Could not confirm whether the pipeline was deleted. Refresh the list or delete again to confirm.",
+          "error",
+        );
+        return;
       }
       notify(error.message, "error");
     },

@@ -1,5 +1,6 @@
 import { PipelineSpecApiError } from "@/services/pipelineSpecService";
 import { findRemotePipelineDocumentByPath } from "@/services/remotePipelineEditorService";
+import { normalizeBackendUrl } from "@/utils/backendIdentity";
 
 import { pipelineStorageDb } from "./db";
 import { movePipelineAssociationsToRemote } from "./pipelineAssociations";
@@ -7,9 +8,9 @@ import type { PipelineFile } from "./PipelineFile";
 import {
   assertPipelineMigrationBackend,
   findPipelineMigration,
+  forgetPipelineMigration,
   rememberPipelineMigration,
 } from "./pipelineMigrations";
-import { findById } from "./pipelineRegistry";
 import type { PipelineStorageService } from "./PipelineStorageService";
 import type { RemotePipelineRef } from "./types";
 
@@ -68,11 +69,9 @@ async function migrate(
   onCreated?: (remote: PipelineFile) => Promise<unknown>,
   options: PipelineMigrationOptions = {},
 ): Promise<PipelineFile> {
-  const registration = await findById(local.id);
-  if (
-    registration?.recreatedAfterMigration &&
-    (await findPipelineMigration({ name: local.storageKey }))
-  ) {
+  backendUrl = normalizeBackendUrl(backendUrl);
+  const nameMigration = await findPipelineMigration({ name: local.storageKey });
+  if (nameMigration && nameMigration.localId !== local.id) {
     throw new Error(
       "This browser recreated a local copy after this pipeline was moved. Your local changes were kept. Rename this copy before uploading it as a separate pipeline.",
     );
@@ -85,7 +84,7 @@ async function migrate(
   let attempt = await pipelineStorageDb.pipeline_migration_attempts.get(
     local.id,
   );
-  if (attempt && attempt.backendUrl !== backendUrl) {
+  if (attempt && normalizeBackendUrl(attempt.backendUrl) !== backendUrl) {
     throw new Error(
       `An upload to ${attempt.backendUrl} may have completed. Reconnect to that backend to check before uploading elsewhere.`,
     );
@@ -133,9 +132,30 @@ async function migrate(
     };
     await pipelineStorageDb.pipeline_migration_attempts.put(attempt);
   }
-  let remote: PipelineFile;
+  let remote: PipelineFile | undefined;
+  if (migration) {
+    try {
+      remote = await storage.resolvePipeline(migration.remote);
+    } catch (error) {
+      if (!(error instanceof PipelineSpecApiError) || error.status !== 404)
+        throw error;
+      // Confirm the former path is absent before retiring a stale alias. A
+      // missing GET route must not cause a duplicate upload.
+      if (await findRemotePipelineDocumentByPath(backendUrl, filePath))
+        throw error;
+      await forgetPipelineMigration(local.id, migration.remote);
+      existing = undefined;
+      attempt = {
+        ...attempt,
+        localId: local.id,
+        backendUrl,
+        content: await local.read(),
+      };
+      await pipelineStorageDb.pipeline_migration_attempts.put(attempt);
+    }
+  }
   try {
-    remote = existing
+    remote ??= existing
       ? await storage.resolvePipeline(existing)
       : await storage.createRemotePipeline(
           backendUrl,
@@ -181,12 +201,7 @@ async function migrate(
         true,
       );
     }
-    if (attempt.keepLocalCopy) {
-      throw new PipelineMigrationRecoveryError(
-        "Pipeline uploaded. Its browser copy was kept because some project links may still need it. Open the pipeline from a project to update that project's link.",
-        remote,
-      );
-    }
+    if (attempt.keepLocalCopy) return remote;
   } catch (cause) {
     if (cause instanceof PipelineMigrationRecoveryError) throw cause;
     throw new PipelineMigrationRecoveryError(

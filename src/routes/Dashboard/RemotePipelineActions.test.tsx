@@ -3,6 +3,7 @@ import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import * as Dialogs from "@/components/shared/Dialogs";
 import { EDITOR_SPEC_QUERY_KEY } from "@/routes/v2/pages/Editor/hooks/deletedRemotePipelineCache";
 import { DocumentSaveState } from "@/routes/v2/pages/Editor/store/documentSaveState";
 import { RemotePipelineDeletionUncertainError } from "@/services/pipelineStorage/remotePipelineDeletion";
@@ -323,13 +324,14 @@ describe("RemotePipelineActions", () => {
       await confirmDelete(user);
       await waitFor(() => expect(client.isMutating()).toBe(0));
 
+      expect(client.getQueryData(key)).toBeUndefined();
+      expect(cached.saveState.hasUnsavedChanges).toBe(false);
       if (uncertain) {
-        expect(client.getQueryData(key)).toBe(cached);
-        expect(cached.saveState.error).toContain("deletion result is unknown");
-        expect(cached.saveState.hasUnsavedChanges).toBe(true);
         expect(favorites.removeFavorite).not.toHaveBeenCalled();
-      } else {
-        expect(client.getQueryData(key)).toBeUndefined();
+        expect(notify).toHaveBeenCalledWith(
+          expect.stringContaining("Refresh the list or delete again"),
+          "error",
+        );
       }
     },
   );
@@ -418,4 +420,36 @@ describe("RemotePipelineActions", () => {
       );
     },
   );
+});
+
+it("prevents overlapping onConfirm callbacks from issuing two deletes", async () => {
+  const confirms: (() => void)[] = [];
+  const dialog = vi
+    .spyOn(Dialogs, "ConfirmationDialog")
+    .mockImplementation(({ onConfirm }) => {
+      confirms.push(onConfirm);
+      return <></>;
+    });
+  const pending = Promise.withResolvers<void>();
+  vi.mocked(deleteRemotePipeline).mockReturnValue(pending.promise);
+  const client = new QueryClient();
+  clients.push(client);
+  try {
+    render(
+      <QueryClientProvider client={client}>
+        <RemotePipelineActions backendUrl={backendUrl} pipeline={pipeline} />
+        <RemotePipelineActions backendUrl={backendUrl} pipeline={pipeline} />
+      </QueryClientProvider>,
+    );
+    await waitFor(() => expect(confirms.length).toBeGreaterThanOrEqual(2));
+    act(() => {
+      confirms[0]();
+      confirms[1]();
+    });
+    await waitFor(() => expect(deleteRemotePipeline).toHaveBeenCalledOnce());
+    await act(async () => pending.resolve());
+    await waitFor(() => expect(client.isMutating()).toBe(0));
+  } finally {
+    dialog.mockRestore();
+  }
 });

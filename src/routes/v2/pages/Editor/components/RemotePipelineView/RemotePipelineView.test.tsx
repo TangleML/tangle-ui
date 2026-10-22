@@ -313,7 +313,10 @@ async function openRoutedView(
             ? undefined
             : ({
                 id: "pipeline-id",
-                remote: { pipelineId: "pipeline-id" },
+                remote: {
+                  pipelineId: "pipeline-id",
+                  backendUrl: "https://backend.example.com",
+                },
                 folder: { driver: { ownerId: "other-user" } },
               } as PipelineFile)
         }

@@ -57,6 +57,7 @@ describe("AgentThread", () => {
   });
 
   it("scopes each turn to its abort signal while keeping the conversation", async () => {
+    askMock.mockClear();
     let finish = () => {};
     const pending = new Promise<void>((resolve) => {
       finish = resolve;
@@ -77,6 +78,9 @@ describe("AgentThread", () => {
     expect(firstSignal.aborted).toBe(false);
     thread.abort();
     expect(firstSignal.aborted).toBe(true);
+    expect(thread.isPending).toBe(true);
+    await thread.sendMessage("Overlapping turn", { createBridge, aiConfig });
+    expect(askMock).toHaveBeenCalledTimes(1);
     finish();
     await asking;
 

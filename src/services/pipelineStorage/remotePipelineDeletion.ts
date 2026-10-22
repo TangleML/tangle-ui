@@ -1,3 +1,6 @@
+import { normalizePipelineId } from "@/services/pipelineId";
+import { normalizeBackendUrl } from "@/utils/backendIdentity";
+
 import type { RemotePipelineRef } from "./types";
 
 export interface RemotePipelineDeletion extends RemotePipelineRef {
@@ -6,12 +9,20 @@ export interface RemotePipelineDeletion extends RemotePipelineRef {
   state: "pending" | "deleted" | "failed" | "uncertain";
 }
 
-const deletions = new Map<string, RemotePipelineDeletion>();
+const deletions = new Map<
+  string,
+  RemotePipelineDeletion & { wasUncertain?: boolean }
+>();
+const FOREIGN_PENDING_TIMEOUT_MS = 30_000;
 const listeners = new Set<(deletion: RemotePipelineDeletion) => void>();
 let channel: BroadcastChannel | undefined;
 
 function key(backendUrl: string, kind: string, value: string): string {
-  return JSON.stringify([backendUrl, kind, value]);
+  return JSON.stringify([
+    normalizeBackendUrl(backendUrl),
+    kind,
+    kind === "id" ? normalizePipelineId(value) : value,
+  ]);
 }
 
 function applyDeletion(deletion: RemotePipelineDeletion): void {
@@ -24,15 +35,30 @@ function applyDeletion(deletion: RemotePipelineDeletion): void {
       if (
         current?.state === "pending" &&
         current.attemptId === deletion.attemptId
-      )
-        deletions.delete(entry);
+      ) {
+        if (current.wasUncertain) {
+          deletions.set(entry, { ...current, state: "uncertain" });
+        } else deletions.delete(entry);
+      }
     } else if (current?.state !== "deleted") {
-      deletions.set(entry, deletion);
+      deletions.set(entry, {
+        ...deletion,
+        wasUncertain:
+          deletion.state === "pending" &&
+          (current?.state === "uncertain" || current?.wasUncertain),
+      });
     }
   }
   for (const listener of listeners) {
     try {
-      listener(deletion);
+      const effective = deletions.get(
+        key(deletion.backendUrl, "id", deletion.pipelineId),
+      );
+      listener(
+        deletion.state === "failed" && effective?.state === "uncertain"
+          ? { ...deletion, state: "uncertain" }
+          : deletion,
+      );
     } catch (error) {
       console.warn(
         "Failed to update a deleted pipeline's editor state:",
@@ -76,14 +102,26 @@ function connectChannel(): void {
         data.state !== "uncertain")
     )
       return;
-    applyDeletion({
+    const deletion: RemotePipelineDeletion = {
       source: "remote",
       backendUrl: data.backendUrl,
       pipelineId: data.pipelineId,
       filePath: data.filePath,
       attemptId: data.attemptId,
       state: data.state,
-    });
+    };
+    applyDeletion(deletion);
+    if (deletion.state === "pending")
+      setTimeout(() => {
+        const current = deletions.get(
+          key(deletion.backendUrl, "id", deletion.pipelineId),
+        );
+        if (
+          current?.state === "pending" &&
+          current.attemptId === deletion.attemptId
+        )
+          applyDeletion({ ...deletion, state: "uncertain" });
+      }, FOREIGN_PENDING_TIMEOUT_MS);
   });
 }
 
@@ -161,6 +199,11 @@ export function getRemotePipelineDeletionError(
   const state = deletions.get(key(ref.backendUrl, "id", ref.pipelineId))?.state;
   if (state === "deleted") return remotePipelineDeletionError();
   if (state === "uncertain") return new RemotePipelineDeletionUncertainError();
+  if (state === "pending")
+    return new RemotePipelineDeletionError(
+      "pending",
+      "This pipeline is being deleted. Save a copy to keep your changes.",
+    );
 }
 
 export interface RemotePipelineWriteAdmission {

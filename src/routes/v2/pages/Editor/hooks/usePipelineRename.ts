@@ -1,9 +1,11 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 
 import useToastNotification from "@/hooks/useToastNotification";
 import { APP_ROUTES } from "@/routes/router";
 import { usePipelineActions } from "@/routes/v2/pages/Editor/store/actions/usePipelineActions";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
+import { preserveRenamedPipelineQuery } from "@/routes/v2/pages/Editor/utils/preserveRenamedPipelineQuery";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 export function usePipelineRename() {
@@ -11,6 +13,7 @@ export function usePipelineRename() {
   const { autoSave, pipelineFile: pipelineFileStore } = useEditorSession();
   const { renamePipeline } = usePipelineActions();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const notify = useToastNotification();
 
   return async (newName: string) => {
@@ -27,6 +30,7 @@ export function usePipelineRename() {
       await file?.rename(newName);
       renamePipeline(spec, newName);
       await autoSave.save();
+      if (file) preserveRenamedPipelineQuery(queryClient, file);
       await navigate({
         to: APP_ROUTES.EDITOR_V2_PIPELINE,
         params: { pipelineName: newName },

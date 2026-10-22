@@ -34,7 +34,6 @@ pipelineStorageDb.on("ready", async (db) => {
   // The ready callback's connection stays usable across the dynamic import
   // while ordinary callers wait for registry hydration to finish.
   const registry = db.table<PipelineRegistryEntry>("pipeline_registry");
-  const migrations = db.table<PipelineMigration>("pipeline_migrations");
   const count = await registry.count();
   if (count > 0) return;
 
@@ -46,16 +45,11 @@ pipelineStorageDb.on("ready", async (db) => {
 
   if (knownPipelines.size === 0) return;
 
-  const pipelineForRegistry = await Promise.all(
-    [...knownPipelines.keys()].map(async (storageKey) => ({
-      id: crypto.randomUUID(),
-      storageKey,
-      folderId: ROOT_FOLDER_ID,
-      ...((await migrations.get(`name:${storageKey}`)) && {
-        recreatedAfterMigration: true,
-      }),
-    })),
-  );
+  const pipelineForRegistry = [...knownPipelines.keys()].map((storageKey) => ({
+    id: crypto.randomUUID(),
+    storageKey,
+    folderId: ROOT_FOLDER_ID,
+  }));
 
   try {
     await registry.bulkPut(pipelineForRegistry);

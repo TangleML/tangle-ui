@@ -1,3 +1,4 @@
+import { useNavigate } from "@tanstack/react-router";
 import { observer } from "mobx-react-lite";
 import { useRef, useState } from "react";
 
@@ -6,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Paragraph } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
+import { serializeComponentSpecToText } from "@/models/componentSpec";
+import { APP_ROUTES } from "@/routes/appRoutes";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
@@ -18,6 +21,7 @@ export const RemotePipelineSaveRecovery = observer(
     const { navigation } = useSharedStores();
     const storage = usePipelineStorage();
     const notify = useToastNotification();
+    const navigate = useNavigate();
     const [open, setOpen] = useState(false);
     const [saving, setSaving] = useState(false);
     const pending = useRef(false);
@@ -29,14 +33,26 @@ export const RemotePipelineSaveRecovery = observer(
       pending.current = true;
       setSaving(true);
       try {
+        const snapshot =
+          navigation.rootSpec &&
+          serializeComponentSpecToText(navigation.rootSpec);
         const copy = await savePipelineAs(navigation, name, storage, file, {
           backendUrl: undefined,
         });
         if (!copy) throw new Error("No pipeline is open to copy.");
-        notify(
-          `Saved "${name}" in this browser. Find it under Local Pipelines.`,
-          "success",
-        );
+        if (file && snapshot && autoSave.releaseRecoveredCopy(file, snapshot)) {
+          await navigate({
+            to: APP_ROUTES.EDITOR_V2_PIPELINE,
+            params: { pipelineName: copy.storageKey },
+            search: { fileId: copy.id },
+          });
+          notify(`Saved "${name}" in this browser.`, "success");
+        } else {
+          notify(
+            `Saved "${name}" in this browser. Newer changes remain in this tab.`,
+            "success",
+          );
+        }
       } catch (error) {
         notify(
           error instanceof Error

@@ -17,6 +17,10 @@ import {
   saveUndoHistory,
 } from "@/routes/v2/pages/Editor/utils/undoHistoryStorage";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
+import {
+  getRemotePipelineDeletionError,
+  RemotePipelineDeletionError,
+} from "@/services/pipelineStorage/remotePipelineDeletion";
 import { AUTOSAVE_DEBOUNCE_TIME_MS } from "@/utils/constants";
 import { debounce } from "@/utils/debounce";
 
@@ -82,12 +86,17 @@ export class AutoSaveStore {
   }
 
   @action dispose() {
-    void this.save().catch((error) => {
-      console.error("Auto-save flush on dispose failed:", error);
-      this.onSaveError?.(
-        error instanceof Error ? error : new Error(String(error)),
-      );
-    });
+    this.debouncedSave.cancel();
+    const blocked =
+      this.file?.remote &&
+      getRemotePipelineDeletionError({ source: "remote", ...this.file.remote });
+    if (!blocked)
+      void this.save().catch((error) => {
+        console.error("Auto-save flush on dispose failed:", error);
+        this.onSaveError?.(
+          error instanceof Error ? error : new Error(String(error)),
+        );
+      });
     this.disposeReaction?.();
     this.disposeReaction = null;
     this.releaseUnloadProtection?.();
@@ -95,6 +104,25 @@ export class AutoSaveStore {
     this.spec = null;
     this.file = null;
     this.document = null;
+  }
+
+  @action releaseRecoveredCopy(file: PipelineFile, yaml: string): boolean {
+    const document = this.document;
+    if (
+      this.file !== file ||
+      (!file.remote && !file.isDraft) ||
+      !document ||
+      document.hasPendingWrites ||
+      this.serializeSpec() !== yaml
+    )
+      return false;
+    this.debouncedSave.cancel();
+    // This exact content is now durable in the successful recovery copy.
+    // Later edits still become dirty and remain recoverable.
+    document.lastSavedYaml = yaml;
+    document.error = null;
+    document.releaseIfSaved();
+    return true;
   }
 
   async save(): Promise<void> {
@@ -127,7 +155,7 @@ export class AutoSaveStore {
     runInAction(() => {
       document.currentYaml = yaml;
     });
-    if (!document.isSaving && yaml === document.lastSavedYaml) {
+    if (!document.hasPendingWrites && yaml === document.lastSavedYaml) {
       runInAction(() => {
         document.error = null;
       });
@@ -139,6 +167,7 @@ export class AutoSaveStore {
     document.pendingSave = job;
     runInAction(() => {
       document.pendingCount += 1;
+      document.inFlightCount += 1;
     });
     const idStack = collectIdStack(spec);
     const history = manager && { undoQueue: manager.undoQueue.slice() };
@@ -148,9 +177,10 @@ export class AutoSaveStore {
         await file.write(yaml);
       } catch (error) {
         // A failed response does not prove that the server rejected the write.
-        runInAction(() => {
-          document.lastSavedYaml = null;
-        });
+        if (!(error instanceof RemotePipelineDeletionError))
+          runInAction(() => {
+            document.lastSavedYaml = null;
+          });
         throw error;
       }
       runInAction(() => {
@@ -168,7 +198,12 @@ export class AutoSaveStore {
       }
     };
     job.promise = Promise.all([
-      write(),
+      write().finally(() => {
+        runInAction(() => {
+          document.inFlightCount -= 1;
+        });
+        document.releaseIfSaved();
+      }),
       new Promise((resolve) =>
         setTimeout(resolve, AUTOSAVE_MIN_SAVING_INDICATOR_MS),
       ),

@@ -267,7 +267,7 @@ export async function importPipelineFromYaml(
       overwritten: Boolean(existingPipeline && overwrite),
       successful: true,
       errorMessage: wasRenamed
-        ? `Pipeline was renamed to "${pipelineName}" to avoid name conflict.`
+        ? `Pipeline was renamed to "${pipelineName}" during import.`
         : undefined,
     };
   } catch (error) {

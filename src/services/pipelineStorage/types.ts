@@ -1,3 +1,5 @@
+import { normalizeBackendUrl } from "@/utils/backendIdentity";
+
 import type { GoogleDriveDriverConfig } from "../googleDrive/types"; // google-drive
 import { normalizePipelineId } from "../pipelineId";
 import type { FolderIndexDbDriverConfig } from "./drivers/FolderIndexDbStorageDriver";
@@ -41,7 +43,6 @@ export type DriverConfig =
   | GoogleDriveDriverConfig; // google-drive
 
 export interface PipelineRegistryEntry {
-  recreatedAfterMigration?: boolean;
   id: string;
   storageKey: string;
   folderId: string;
@@ -106,14 +107,14 @@ export function getEditorPipelineIdentity(ref: EditorPipelineRef): string {
   if (isRemotePipelineDraftRef(ref)) {
     return JSON.stringify([
       "remote-pipeline-draft",
-      ref.backendUrl,
+      normalizeBackendUrl(ref.backendUrl),
       ref.draftId,
     ]);
   }
   return isRemotePipelineRef(ref)
     ? JSON.stringify([
         "remote-pipeline",
-        ref.backendUrl,
+        normalizeBackendUrl(ref.backendUrl),
         normalizePipelineId(ref.pipelineId),
       ])
     : (ref.fileId ?? ref.name);
