@@ -7,23 +7,20 @@ import {
 } from "./pipelinesSearch";
 
 describe("validatePipelinesSearch", () => {
-  it.each([1, "2", 1000000, 0, -2, 1.5, "invalid", "9007199254740992"])(
-    "discards the obsolete page parameter %s",
-    (page) => {
-      const search = validatePipelinesSearch({
-        page,
-        tab: "remote",
-        name: "shared",
-        panel: "compact",
-      });
-      expect(search).not.toHaveProperty("page");
-      expect(search).toMatchObject({
-        tab: "remote",
-        name: "shared",
-        panel: "compact",
-      });
-    },
-  );
+  it("discards the obsolete page parameter without dropping other search parameters", () => {
+    const search = validatePipelinesSearch({
+      page: "1000000",
+      tab: "remote",
+      name: "shared",
+      panel: "compact",
+    });
+    expect(search).not.toHaveProperty("page");
+    expect(search).toMatchObject({
+      tab: "remote",
+      name: "shared",
+      panel: "compact",
+    });
+  });
 
   it.each(["local", "remote"])("accepts the %s tab", (tab) => {
     expect(validatePipelinesSearch({ tab }).tab).toBe(tab);

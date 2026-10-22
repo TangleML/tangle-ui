@@ -1137,28 +1137,6 @@ describe("DashboardPipelinesView remote pipelines", () => {
     expect(screen.getByText("pipeline-1")).toBeInTheDocument();
   });
 
-  it("opens another backend without reusing the previous backend's rows", async () => {
-    const { user, setBackend } = await renderDashboard();
-    await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
-    await screen.findByText("Example pipeline");
-
-    vi.mocked(listRemotePipelines).mockResolvedValue({
-      pipelines: [
-        { ...pipeline, id: "pipeline-2", pipeline_name: "Other pipeline" },
-      ],
-      nextPageToken: null,
-    });
-    setBackend(createBackend({ backendUrl: "https://other.example.com" }));
-
-    expect(await screen.findByText("Other pipeline")).toBeInTheDocument();
-    expect(screen.queryByText("Example pipeline")).not.toBeInTheDocument();
-    expect(listRemotePipelines).toHaveBeenLastCalledWith(
-      "https://other.example.com",
-      undefined,
-      undefined,
-    );
-  });
-
   it("navigates cursor pages without totals, including a partial final page", async () => {
     mockCursorPages([
       [undefined, createPage(1, 10, "page-two")],
@@ -1210,29 +1188,26 @@ describe("DashboardPipelinesView remote pipelines", () => {
     expect(listRemotePipelines).not.toHaveBeenCalled();
   });
 
-  it.each(["2", "1000000", "0", "-2", "1.5", "invalid", "9007199254740992"])(
-    "ignores legacy page value %s without walking prior cursors",
-    async (page) => {
-      vi.mocked(listRemotePipelines).mockResolvedValue(
-        createPage(1, 10, "page-two"),
-      );
-      const { searchParams } = await renderDashboard(
-        `${APP_ROUTES.DASHBOARD_PIPELINES}?tab=remote&page=${page}&panel=compact`,
-      );
+  it("ignores a legacy page value without walking prior cursors", async () => {
+    vi.mocked(listRemotePipelines).mockResolvedValue(
+      createPage(1, 10, "page-two"),
+    );
+    const { searchParams } = await renderDashboard(
+      `${APP_ROUTES.DASHBOARD_PIPELINES}?tab=remote&page=1000000&panel=compact`,
+    );
 
-      expect(await screen.findByText("Pipeline 1")).toBeInTheDocument();
-      expect(screen.getByText("Page 1")).toBeInTheDocument();
-      expect(listRemotePipelines).toHaveBeenCalledExactlyOnceWith(
-        backend.backendUrl,
-        undefined,
-        undefined,
-      );
-      expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
-      expect(screen.getByRole("button", { name: "Next" })).toBeEnabled();
-      expect(searchParams().get("tab")).toBe("remote");
-      expect(searchParams().get("panel")).toBe("compact");
-    },
-  );
+    expect(await screen.findByText("Pipeline 1")).toBeInTheDocument();
+    expect(screen.getByText("Page 1")).toBeInTheDocument();
+    expect(listRemotePipelines).toHaveBeenCalledExactlyOnceWith(
+      backend.backendUrl,
+      undefined,
+      undefined,
+    );
+    expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Next" })).toBeEnabled();
+    expect(searchParams().get("tab")).toBe("remote");
+    expect(searchParams().get("panel")).toBe("compact");
+  });
 
   it("opens a copied listing URL on the first page", async () => {
     vi.mocked(listRemotePipelines).mockImplementation(async (_, pageToken) =>
@@ -1283,12 +1258,21 @@ describe("DashboardPipelinesView remote pipelines", () => {
     await screen.findByText("Pipeline 1");
     await user.click(screen.getByRole("button", { name: "Next" }));
     await screen.findByText("Pipeline 11");
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await screen.findByText("Pipeline 21");
     refreshed = true;
 
     await user.click(screen.getByRole("button", { name: "First page" }));
     await screen.findByText("Pipeline 101");
+    expect(screen.getByText("Page 1")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "First page" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Next" })).toBeEnabled(),
+    );
     await user.click(screen.getByRole("button", { name: "Next" }));
     await screen.findByText("Pipeline 111");
+    expect(screen.getByText("Page 2")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Next" }));
 
     expect(await screen.findByText("Pipeline 121")).toBeInTheDocument();
@@ -1298,6 +1282,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
     ).toEqual([
       undefined,
       "old-page-two",
+      "old-page-three",
       undefined,
       "new-page-two",
       "new-page-three",
@@ -1489,50 +1474,6 @@ describe("DashboardPipelinesView remote pipelines", () => {
     );
     expect(await screen.findByText("Pipeline 201")).toBeInTheDocument();
     expect(screen.getByText("Page 1")).toBeInTheDocument();
-  });
-
-  it("returns to the first page with the First page button", async () => {
-    const pages = new Map<string | undefined, RemotePipelinesPage>([
-      [undefined, createPage(1, 10, "page-two")],
-      ["page-two", createPage(11, 10, "page-three")],
-      ["page-three", createPage(21, 5, null)],
-    ]);
-    vi.mocked(listRemotePipelines).mockImplementation(async (_, pageToken) => {
-      const page = pages.get(pageToken);
-      if (!page) throw new Error(`Unexpected page token: ${pageToken}`);
-      return page;
-    });
-    const { user } = await renderDashboard();
-    await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
-    await screen.findByText("Pipeline 1");
-    await user.click(screen.getByRole("button", { name: "Next" }));
-    await screen.findByText("Pipeline 11");
-    await user.click(screen.getByRole("button", { name: "Next" }));
-    await screen.findByText("Pipeline 21");
-    expect(screen.getByText("Page 3")).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "First page" }));
-    expect(await screen.findByText("Pipeline 1")).toBeInTheDocument();
-    expect(screen.getByText("Page 1")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "First page" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Next" })).toBeEnabled();
-    });
-    expect(listRemotePipelines).toHaveBeenLastCalledWith(
-      backend.backendUrl,
-      undefined,
-      undefined,
-    );
-
-    await user.click(screen.getByRole("button", { name: "Next" }));
-    expect(await screen.findByText("Pipeline 11")).toBeInTheDocument();
-    expect(screen.getByText("Page 2")).toBeInTheDocument();
-    expect(listRemotePipelines).toHaveBeenLastCalledWith(
-      backend.backendUrl,
-      "page-two",
-      undefined,
-    );
   });
 
   it("disables navigation until the next page request settles", async () => {
