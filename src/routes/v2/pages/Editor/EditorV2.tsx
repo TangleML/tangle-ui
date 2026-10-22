@@ -11,6 +11,7 @@ import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { InlineStack } from "@/components/ui/layout";
+import { useTrackRecentlyViewedPipeline } from "@/hooks/useTrackRecentlyViewedPipeline";
 import { ComponentLibraryProvider } from "@/providers/ComponentLibraryProvider";
 import { ForcedSearchProvider } from "@/providers/ComponentLibraryProvider/ForcedSearchProvider";
 import { DialogProvider } from "@/providers/DialogProvider/DialogProvider";
@@ -81,6 +82,7 @@ const PipelineEditor = withSuspenseWrapper(
     const tourMode = useTourMode();
 
     useWindowPersistence(tourMode ? TOUR_WINDOW_LAYOUT_ID : "editor");
+    useTrackRecentlyViewedPipeline(tourMode ? null : pipelineRef.name);
     useDockAreaAccordion();
     useSpecLifecycle(rootSpec, pipelineRef, restoredUndoStore);
     useSelectionWindowSync();
