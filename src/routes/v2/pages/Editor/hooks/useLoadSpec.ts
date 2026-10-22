@@ -36,7 +36,7 @@ import {
 } from "@/services/pipelineStorage/types";
 import { PIPELINE_YAML_LOAD_OPTIONS } from "@/utils/yaml";
 
-interface LoadedSpec {
+export interface LoadedSpec {
   spec: ComponentSpec;
   file: PipelineFile;
   saveState: DocumentSaveState;
@@ -98,11 +98,14 @@ export function useLoadSpec(ref: EditorPipelineRef) {
     () =>
       autorun(() => {
         if (!file.remote) return;
-        addRecentlyViewed({
-          type: "remote-pipeline",
-          id: file.remote.pipelineId,
-          name: file.storageKey,
-        });
+        addRecentlyViewed(
+          {
+            type: "remote-pipeline",
+            id: file.remote.pipelineId,
+            name: file.storageKey,
+          },
+          file.remote.backendUrl,
+        );
       }),
     [file],
   );

@@ -21,13 +21,13 @@ describe("unsaved document unload protection", () => {
     expect(unloadIsPrevented()).toBe(true);
 
     runInAction(() => {
-      document.pendingCount = 1;
+      document.inFlightCount = 1;
       document.currentYaml = "Original";
     });
     expect(unloadIsPrevented()).toBe(true);
 
     runInAction(() => {
-      document.pendingCount = 0;
+      document.inFlightCount = 0;
     });
     expect(unloadIsPrevented()).toBe(false);
     release();
@@ -45,7 +45,7 @@ describe("unsaved document unload protection", () => {
 
     const releaseReopened = document.protectUnsavedChanges();
     runInAction(() => {
-      document.pendingCount = 1;
+      document.inFlightCount = 1;
     });
     releaseReopened();
     expect(unloadIsPrevented()).toBe(true);
@@ -53,7 +53,7 @@ describe("unsaved document unload protection", () => {
     runInAction(() => {
       document.lastSavedYaml = "Unsaved";
       document.error = null;
-      document.pendingCount = 0;
+      document.inFlightCount = 0;
     });
     document.releaseIfSaved();
     expect(unloadIsPrevented()).toBe(false);

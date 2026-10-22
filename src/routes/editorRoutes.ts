@@ -12,7 +12,7 @@ function getEditorV2Path(pipelineName: string): string {
 }
 
 export function getDefaultEditorPath(pipelineName: string): string {
-  const remoteId = getLegacyRemotePipelineId(pipelineName);
+  const remoteId = getSavedRemotePipelineId(pipelineName);
   if (remoteId) return getDefaultRemoteEditorPath(remoteId);
 
   return isFlagEnabled("v2_editor")
@@ -20,8 +20,7 @@ export function getDefaultEditorPath(pipelineName: string): string {
     : getLegacyEditorPath(pipelineName);
 }
 
-/** Older saved links stored the remote identity in the local pipeline ID. */
-export function getLegacyRemotePipelineId(id: string): string | undefined {
+export function getSavedRemotePipelineId(id: string): string | undefined {
   return parseRemotePipelineSavedId(id)?.pipelineId;
 }
 

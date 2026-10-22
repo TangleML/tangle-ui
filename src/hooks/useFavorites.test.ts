@@ -1,6 +1,6 @@
 import "fake-indexeddb/auto";
 
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LibraryDB } from "@/providers/ComponentLibraryProvider/libraries/storage";
@@ -281,4 +281,24 @@ describe("useFavorites", () => {
       ]),
     );
   });
+});
+
+it("recognizes and removes an existing favorite after equivalent backend URL spelling changes", async () => {
+  const oldId = `remote:${encodeURIComponent("https://EXAMPLE.com:443/")}:pipeline-id`;
+  await LibraryDB.favorites.put({ type: "pipeline", id: oldId, name: "Saved" });
+  const { result } = renderHook(() => useFavorites());
+  await waitFor(() =>
+    expect(result.current.isFavorite("remote-pipeline", "pipeline-id")).toBe(
+      true,
+    ),
+  );
+  await act(() =>
+    result.current.toggleFavorite({
+      type: "remote-pipeline",
+      id: "pipeline-id",
+      name: "Saved",
+    }),
+  );
+  await waitFor(() => expect(result.current.favorites).toHaveLength(0));
+  expect(await LibraryDB.favorites.count()).toBe(0);
 });
