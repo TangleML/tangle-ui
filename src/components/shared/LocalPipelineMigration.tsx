@@ -14,7 +14,9 @@ import { Paragraph } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
 import { useTourMode } from "@/providers/TourProvider/TourModeContext";
+import { pipelineStorageDb } from "@/services/pipelineStorage/db";
 import { invalidatePipelineQueries } from "@/services/pipelineStorage/invalidatePipelineQueries";
+import { migrateLocalPipelineOnOpen } from "@/services/pipelineStorage/migrateLocalPipelineOnOpen";
 import { createsLocalPipelines } from "@/services/pipelineStorage/pipelineCreation";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import {
@@ -22,7 +24,10 @@ import {
   pipelineMigrationConsentKey,
   subscribePipelineMigrationConsent,
 } from "@/services/pipelineStorage/pipelineMigrationConsent";
-import { assertPipelineMigrationBackend } from "@/services/pipelineStorage/pipelineMigrations";
+import {
+  assertPipelineMigrationBackend,
+  PipelineMovedToBackendError,
+} from "@/services/pipelineStorage/pipelineMigrations";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import {
   getEditorPipelineIdentity,
@@ -31,7 +36,6 @@ import {
 import { invalidateProjectResources } from "@/services/projects/useProjectResources";
 
 import { LoadingScreen } from "./LoadingScreen";
-import { migrateLocalPipelineOnOpen } from "./migrateLocalPipelineOnOpen";
 
 interface LocalPipelineMigrationProps {
   pipelineRef: PipelineRef;
@@ -82,7 +86,7 @@ function MigrateLocalPipeline({
     };
   }, []);
   const {
-    data: file,
+    data: resolved,
     isPending,
     isFetching,
     error,
@@ -98,11 +102,14 @@ function MigrateLocalPipeline({
       const resolved = await storage.resolvePipeline(pipelineRef);
       if (resolved.remote)
         assertPipelineMigrationBackend(resolved.remote, backendUrl);
-      return resolved;
+      const attempt = await pipelineStorageDb.pipeline_migration_attempts.get(
+        resolved.id,
+      );
+      return { file: resolved, keepLocalCopy: attempt?.keepLocalCopy === true };
     },
     select: (resolved) => {
-      if (resolved.remote)
-        assertPipelineMigrationBackend(resolved.remote, backendUrl);
+      if (resolved.file.remote)
+        assertPipelineMigrationBackend(resolved.file.remote, backendUrl);
       return resolved;
     },
     enabled: ready,
@@ -111,6 +118,7 @@ function MigrateLocalPipeline({
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
+  const file = resolved?.file;
   const migration = useMutation({
     mutationFn: (local: PipelineFile) =>
       migrateLocalPipelineOnOpen(
@@ -141,6 +149,7 @@ function MigrateLocalPipeline({
     file &&
     !createsLocalPipelines() &&
     backendUrl.trim() &&
+    (!resolved?.keepLocalCopy || projectId) &&
     (driver === "root-indexdb" || driver === "folder-indexdb"),
   );
   useEffect(() => {
@@ -160,6 +169,15 @@ function MigrateLocalPipeline({
     return (
       <BlockStack fill align="center" inlineAlign="center" gap="3">
         <Paragraph role="alert">{error.message}</Paragraph>
+        <Button variant="outline" onClick={() => void refetch()}>
+          Retry
+        </Button>
+      </BlockStack>
+    );
+  if (migration.error instanceof PipelineMovedToBackendError)
+    return (
+      <BlockStack fill align="center" inlineAlign="center" gap="3">
+        <Paragraph role="alert">{migration.error.message}</Paragraph>
         <Button variant="outline" onClick={() => void refetch()}>
           Retry
         </Button>

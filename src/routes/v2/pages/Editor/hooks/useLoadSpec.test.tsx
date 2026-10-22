@@ -14,7 +14,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AutoSaveStore } from "@/routes/v2/pages/Editor/store/autoSaveStore";
 import { UndoStore } from "@/routes/v2/pages/Editor/store/undoStore";
+import { DriverPermissionGate } from "@/routes/v2/pages/Editor/components/DriverPermissionGate";
+import { preserveRenamedPipelineQuery } from "@/routes/v2/pages/Editor/utils/preserveRenamedPipelineQuery";
 import { promoteRemoteDraftQuery } from "@/routes/v2/pages/Editor/utils/promoteRemoteDraftQuery";
+import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import {
   assertRemotePipelineAvailable,
   withRemotePipelineDeletion,
@@ -476,4 +479,34 @@ describe("useLoadSpec", () => {
     );
     expect(addRecentlyViewed).not.toHaveBeenCalled();
   });
+});
+
+it("preserves the mounted local document and undo when rename adds its file ID to the URL", async () => {
+  const local = {
+    ...file("Original"),
+    id: "local-1",
+    write: vi.fn(async () => {}),
+  } as unknown as PipelineFile;
+  resolvePipeline.mockResolvedValue(local);
+  const wrap = (pipelineRef: EditorPipelineRef) => (
+    <QueryClientProvider client={client}>
+      <Suspense fallback={<div>Loading</div>}>
+        <DriverPermissionGate pipelineRef={pipelineRef}>
+          <EditingChild pipelineRef={pipelineRef} />
+        </DriverPermissionGate>
+      </Suspense>
+    </QueryClientProvider>
+  );
+  const view = render(wrap({ name: "Original" }));
+  await screen.findByText("Original");
+  fireEvent.click(screen.getByText("Edit"));
+  const previous = client.getQueryData([EDITOR_SPEC_QUERY_KEY, "Original"]);
+  act(() => preserveRenamedPipelineQuery(client, local));
+  view.rerender(wrap({ name: "Renamed", fileId: local.id }));
+  expect(screen.queryByText("Loading")).not.toBeInTheDocument();
+  expect(screen.getByText("Unsaved edit")).toBeInTheDocument();
+  expect(client.getQueryData([EDITOR_SPEC_QUERY_KEY, local.id])).toBe(previous);
+  expect(resolvePipeline).toHaveBeenCalledOnce();
+  fireEvent.click(screen.getByText("Undo"));
+  expect(screen.queryByText("Unsaved edit")).not.toBeInTheDocument();
 });

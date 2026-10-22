@@ -1,8 +1,10 @@
+import { normalizeBackendUrl } from "@/utils/backendIdentity";
+
 export function getRemotePipelineSavedId(
   backendUrl: string,
   pipelineId: string,
 ) {
-  return `remote:${encodeURIComponent(backendUrl.replace(/\/+$/, ""))}:${pipelineId}`;
+  return `remote:${encodeURIComponent(normalizeBackendUrl(backendUrl))}:${pipelineId}`;
 }
 
 export function parseRemotePipelineSavedId(
@@ -14,7 +16,10 @@ export function parseRemotePipelineSavedId(
     const backendUrl = decodeURIComponent(match[1]);
     const backend = new URL(backendUrl);
     if (backend.protocol === "http:" || backend.protocol === "https:") {
-      return { backendUrl, pipelineId: match[2] };
+      return {
+        backendUrl: normalizeBackendUrl(backendUrl),
+        pipelineId: match[2],
+      };
     }
   } catch {
     // Ordinary local names and malformed saved IDs remain local.
@@ -30,6 +35,13 @@ export function isSavedPipelineForBackend(
     item.type === "pipeline" && parseRemotePipelineSavedId(item.id);
   return (
     !remote ||
-    remote.backendUrl.replace(/\/+$/, "") === backendUrl.replace(/\/+$/, "")
+    normalizeBackendUrl(remote.backendUrl) === normalizeBackendUrl(backendUrl)
   );
+}
+
+export function normalizeRemotePipelineSavedId(id: string): string {
+  const remote = parseRemotePipelineSavedId(id);
+  return remote
+    ? getRemotePipelineSavedId(remote.backendUrl, remote.pipelineId)
+    : id;
 }

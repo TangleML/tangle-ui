@@ -287,3 +287,43 @@ it("persists the undo steps for the saved remote version while more edits are pe
   expect(calls[1][2].undoQueue).toHaveLength(2);
   expect(calls[1][3]).toContain("Second edit");
 });
+
+it("does not block unloading after the write finishes while the indicator settles", async () => {
+  const current = pipeline();
+  const addListener = vi.spyOn(window, "addEventListener");
+  const removeListener = vi.spyOn(window, "removeEventListener");
+  const view = render(<Editor {...current} />);
+  act(() => current.spec.setName("Saved"));
+  const unloadGuard = addListener.mock.calls.find(
+    ([type]) => type === "beforeunload",
+  )?.[1];
+  expect(unloadGuard).toBeTypeOf("function");
+  fireEvent.click(screen.getByRole("button"));
+  await act(async () => {
+    await Promise.resolve();
+  });
+  expect(session.autoSave.isSaving).toBe(true);
+  expect(session.autoSave.hasUnsavedChanges).toBe(false);
+  expect(removeListener).toHaveBeenCalledWith("beforeunload", unloadGuard);
+  await act(() => vi.runAllTimersAsync());
+  view.unmount();
+});
+
+it("announces a retry that fails with the same message", async () => {
+  const current = pipeline();
+  current.write.mockRejectedValue(new Error("Unavailable"));
+  const view = render(<Editor {...current} />);
+  act(() => current.spec.setName("Unsaved"));
+  fireEvent.click(screen.getByRole("button"));
+  await act(() => vi.runAllTimersAsync());
+  const status = screen.getByRole("status");
+  expect(status).toHaveTextContent("Save failed: Unavailable");
+  fireEvent.click(screen.getByRole("button", { name: /Click to retry/ }));
+  expect(status).toHaveTextContent("Saving...");
+  await act(() => vi.runAllTimersAsync());
+  expect(status).toHaveTextContent("Save failed: Unavailable");
+  current.write.mockResolvedValue(undefined);
+  fireEvent.click(screen.getByRole("button", { name: /Click to retry/ }));
+  await act(() => vi.runAllTimersAsync());
+  view.unmount();
+});
