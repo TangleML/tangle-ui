@@ -3,6 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useSubmitPipeline } from "@/components/shared/Submitters/Tangle/useSubmitPipeline";
+import type { TeamResolution } from "@/services/teams/types";
+import { useTeamForSubmission } from "@/services/teams/useTeamForSubmission";
 import type { ArgumentType, ComponentSpec } from "@/utils/componentSpec";
 
 import { RunPipelineButton } from "./RunPipelineButton";
@@ -18,6 +20,10 @@ vi.mock("@/components/shared/Submitters/Tangle/useSubmitPipeline", () => ({
 
 vi.mock("@/components/shared/Submitters/Tangle/saveRunAnnotations", () => ({
   saveRunAnnotations: (...args: unknown[]) => saveAnnotations(...args),
+}));
+
+vi.mock("@/services/teams/useTeamForSubmission", () => ({
+  useTeamForSubmission: vi.fn(),
 }));
 
 vi.mock("@/hooks/useToastNotification", () => ({
@@ -46,11 +52,17 @@ vi.mock(
     SubmitTaskArgumentsDialog: ({
       onConfirm,
       showCopyFromRun,
+      team,
     }: {
       onConfirm: (args: Record<string, ArgumentType>, notes: string) => void;
       showCopyFromRun?: boolean;
+      team: TeamResolution;
     }) => (
-      <div role="dialog" data-copy-from-run={String(showCopyFromRun)}>
+      <div
+        role="dialog"
+        data-copy-from-run={String(showCopyFromRun)}
+        data-team-status={team.status}
+      >
         <button
           type="button"
           onClick={() => onConfirm({ name: "Morgan" }, "why this run")}
@@ -97,6 +109,7 @@ const runButton = () => screen.getByRole("button", { name: /Run pipeline/ });
 
 describe("RunPipelineButton", () => {
   beforeEach(() => {
+    vi.mocked(useTeamForSubmission).mockReturnValue({ status: "none" });
     vi.mocked(useSubmitPipeline).mockReturnValue({
       mutate: submit,
       isPending: false,
@@ -132,6 +145,23 @@ describe("RunPipelineButton", () => {
         taskArguments: { name: "Morgan" },
         projectIds: ["project-1"],
       }),
+    );
+  });
+
+  it("offers the secrets of the project's team", async () => {
+    vi.mocked(useTeamForSubmission).mockReturnValue({
+      status: "active",
+      team: { id: "ml-team@example.com", label: "ML Research", canWrite: true },
+    });
+    renderButton({});
+    const user = userEvent.setup();
+
+    await user.click(runButton());
+
+    expect(useTeamForSubmission).toHaveBeenCalledWith(["project-1"]);
+    expect(screen.getByRole("dialog")).toHaveAttribute(
+      "data-team-status",
+      "active",
     );
   });
 
