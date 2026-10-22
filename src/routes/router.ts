@@ -41,6 +41,7 @@ import { LearnTipsView } from "./Dashboard/Learn/LearnTipsView";
 import { LearnToursView } from "./Dashboard/Learn/LearnToursView";
 import { TourPage } from "./Dashboard/Learn/Tour";
 import { ImportPage } from "./Import";
+import { createLegacyRemoteEditorRoutes } from "./legacyRemoteEditorRoutes";
 import NotFoundPage from "./NotFoundPage";
 import ArtifactPreviewPage from "./PipelineRun/ArtifactPreview";
 import ExecutionLogsPage from "./PipelineRun/ExecutionLogs";
@@ -299,6 +300,14 @@ const pipelineEditorRoute = createRoute({
   component: EditorV2,
 });
 
+const remoteEditorRoute = createRoute({
+  getParentRoute: () => mainLayout,
+  path: APP_ROUTES.REMOTE_PIPELINE_EDITOR,
+  component: EditorV2,
+});
+
+const legacyRemoteEditorRoutes = createLegacyRemoteEditorRoutes(mainLayout);
+
 const githubAuthCallbackRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: APP_ROUTES.GITHUB_AUTH_CALLBACK,
@@ -355,6 +364,18 @@ const editorV2PipelineRedirectRoute = createRoute({
     throw redirect({
       to: APP_ROUTES.PIPELINE_EDITOR,
       params: { pipelineName: params.pipelineName },
+      search: (previous) => previous,
+    });
+  },
+});
+
+const editorV2RemotePipelineRoute = createRoute({
+  getParentRoute: () => mainLayout,
+  path: APP_ROUTES.EDITOR_V2_REMOTE_PIPELINE,
+  beforeLoad: ({ params }) => {
+    throw redirect({
+      to: APP_ROUTES.REMOTE_PIPELINE_EDITOR,
+      params: { pipelineId: params.pipelineId },
       search: (previous) => previous,
     });
   },
@@ -462,6 +483,9 @@ const appRouteTree = mainLayout.addChildren([
   importRoute,
   editorRoute,
   pipelineEditorRoute,
+  remoteEditorRoute,
+  editorV2RemotePipelineRoute,
+  ...legacyRemoteEditorRoutes,
   runDetailRoute,
   runDetailWithSubgraphRoute,
   editorV2RedirectRoute,
