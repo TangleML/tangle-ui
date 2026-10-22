@@ -1,4 +1,3 @@
-export { collectIdStack } from "./collectIdStack";
 export {
   serializeComponentSpec,
   serializeComponentSpecToText,

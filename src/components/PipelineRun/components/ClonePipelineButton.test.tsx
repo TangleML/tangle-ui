@@ -30,8 +30,13 @@ describe("<ClonePipelineButton/>", () => {
     vi.restoreAllMocks();
     vi.mocked(useToastNotification).mockReturnValue(mockNotify);
     vi.mocked(pipelineRunService.copyRunToPipeline).mockResolvedValue({
-      url: "/editor/cloned-pipeline",
+      url: "/editor/pipeline/cloned-pipeline",
       name: "Cloned Pipeline",
+      remote: {
+        source: "remote",
+        pipelineId: "cloned-pipeline",
+        backendUrl: "http://backend",
+      },
     });
   });
 

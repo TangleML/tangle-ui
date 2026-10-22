@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import { createNewPipeline } from "@/routes/v2/pages/Editor/components/EditorMenuBar/components/fileMenu.actions";
 import type { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
+import { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import { startingSessionMetadata } from "@/services/projects/startingSession";
 import type {
   Project,
@@ -67,7 +68,6 @@ vi.mock(
 
 const updateProject = vi.fn();
 const createResource = vi.fn();
-const deleteFile = vi.fn();
 const storage = {};
 const minimize = vi.fn();
 const windows = { getWindowById: vi.fn(() => ({ minimize })) };
@@ -153,8 +153,9 @@ describe("usePrepareProjectArrival", () => {
     windows.getWindowById.mockReturnValue({ minimize });
     vi.mocked(createNewPipeline).mockResolvedValue({
       id: "file-1",
-      storageKey: "Churn model",
-      deleteFile,
+      name: "Churn model",
+      initialId: "file-1",
+      isDraft: true,
     } as unknown as Awaited<ReturnType<typeof createNewPipeline>>);
   });
   afterEach(() => vi.resetAllMocks());
@@ -214,7 +215,7 @@ describe("usePrepareProjectArrival", () => {
     expect(createNewPipeline).not.toHaveBeenCalled();
   });
 
-  it("creates a pipeline the ordinary way and attaches it", async () => {
+  it("attaches a new pipeline only after its first remote save", async () => {
     const store = makeStore();
 
     prepare(store);
@@ -225,9 +226,19 @@ describe("usePrepareProjectArrival", () => {
       destination: { backendUrl: "https://backend.example.com" },
       onRemoteCreated: expect.any(Function),
     });
-    expect(createResource).toHaveBeenCalledWith(
-      expect.objectContaining({ entity: "document", name: "Churn model" }),
-    );
+    expect(createResource).not.toHaveBeenCalled();
+    const created =
+      vi.mocked(createNewPipeline).mock.calls[0][2]?.onRemoteCreated;
+    await created?.({
+      source: "remote",
+      backendUrl: "https://backend.example.com",
+      pipelineId: "remote-1",
+    });
+    expect(createResource).toHaveBeenCalledWith({
+      entity: "pipeline",
+      entityId: "remote-1",
+      name: "Churn model",
+    });
   });
 
   it("opens the pipeline it created", async () => {
@@ -237,19 +248,23 @@ describe("usePrepareProjectArrival", () => {
 
     await waitFor(() =>
       expect(store.openWorkareaTarget).toHaveBeenCalledWith(
-        { type: "pipeline", identity: "id/file-1" },
+        { type: "pipeline", identity: "draft/file-1" },
         "Churn model",
       ),
     );
   });
 
   it("opens a remote draft without attaching an empty pipeline", async () => {
-    vi.mocked(createNewPipeline).mockResolvedValue({
-      id: "draft-1",
-      initialId: "draft-1",
-      storageKey: "Churn model",
-      isDraft: true,
-    } as Awaited<ReturnType<typeof createNewPipeline>>);
+    vi.mocked(createNewPipeline).mockResolvedValue(
+      new PipelineFile({
+        ref: {
+          source: "draft",
+          backendUrl: "https://backend.example.com",
+          draftId: "draft-1",
+          name: "Churn model",
+        },
+      }),
+    );
     const store = makeStore();
     prepare(store);
     await waitFor(() =>
@@ -368,51 +383,6 @@ describe("usePrepareProjectArrival", () => {
     expect(createNewPipeline).not.toHaveBeenCalled();
   });
 
-  it("opens the pipeline a project already has rather than adding another", async () => {
-    given({
-      documents: [
-        document({ type: "local_pipeline", identity: "pipeline://id/file-7" }),
-      ],
-    });
-    const store = makeStore();
-
-    prepare(store);
-
-    await waitFor(() =>
-      expect(store.openWorkareaTarget).toHaveBeenCalledWith(
-        { type: "pipeline", identity: "id/file-7" },
-        "Churn model",
-      ),
-    );
-    expect(createNewPipeline).not.toHaveBeenCalled();
-    expect(createResource).not.toHaveBeenCalled();
-  });
-
-  /** A pipeline cloned from a run has no registry row, so it is named, not id'd. */
-  it("recognises a pipeline addressed by name rather than by id", async () => {
-    given({
-      documents: [
-        document({
-          type: "local_pipeline",
-          storage: "browser",
-          identity: "pipeline://name/Cloned from run 42",
-          fallbackName: "Cloned from run 42",
-        }),
-      ],
-    });
-    const store = makeStore();
-
-    prepare(store);
-
-    await waitFor(() =>
-      expect(store.openWorkareaTarget).toHaveBeenCalledWith(
-        { type: "pipeline", identity: "name/Cloned from run 42" },
-        "Churn model",
-      ),
-    );
-    expect(createNewPipeline).not.toHaveBeenCalled();
-  });
-
   it("ignores documents that are not pipelines", async () => {
     given({ documents: [document({ type: "notes" })] });
     const store = makeStore();
@@ -425,14 +395,16 @@ describe("usePrepareProjectArrival", () => {
   it("opens the oldest pipeline when the project has several", async () => {
     given({
       documents: [
-        document(
-          { type: "local_pipeline", identity: "pipeline://id/newer" },
-          "2026-09-20T10:00:00Z",
-        ),
-        document(
-          { type: "local_pipeline", identity: "pipeline://id/older" },
-          "2026-09-02T10:00:00Z",
-        ),
+        {
+          ...document(null, "2026-09-20T10:00:00Z"),
+          entity: "pipeline",
+          entityId: "newer",
+        },
+        {
+          ...document(null, "2026-09-02T10:00:00Z"),
+          entity: "pipeline",
+          entityId: "older",
+        },
       ],
     });
     const store = makeStore();
@@ -441,7 +413,7 @@ describe("usePrepareProjectArrival", () => {
 
     await waitFor(() =>
       expect(store.openWorkareaTarget).toHaveBeenCalledWith(
-        { type: "pipeline", identity: "id/older" },
+        { type: "pipeline", identity: "remote/older" },
         "Churn model",
       ),
     );
@@ -480,20 +452,6 @@ describe("usePrepareProjectArrival", () => {
     prepare(store);
 
     await waitFor(() => expect(store.openWorkareaTarget).toHaveBeenCalled());
-  });
-
-  /**
-   * Nothing lists a pipeline by the project it is not attached to, so one left
-   * behind here is invisible as well as unasked for.
-   */
-  it("removes the pipeline again when the project refuses it", async () => {
-    createResource.mockRejectedValueOnce(new Error("refused"));
-    const store = makeStore();
-
-    prepare(store);
-
-    await waitFor(() => expect(deleteFile).toHaveBeenCalled());
-    expect(store.openWorkareaTarget).not.toHaveBeenCalled();
   });
 
   /** All three are what the prompt asked for, so all three say so. */
@@ -547,7 +505,7 @@ describe("usePrepareProjectArrival", () => {
 
     expect(store.startSession).toHaveBeenCalledTimes(1);
     expect(createNewPipeline).toHaveBeenCalledTimes(1);
-    expect(createResource).toHaveBeenCalledTimes(1);
+    expect(createResource).not.toHaveBeenCalled();
   });
 
   it("does not go on to a pipeline when the session could not start", async () => {

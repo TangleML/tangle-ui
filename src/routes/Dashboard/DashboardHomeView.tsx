@@ -34,7 +34,7 @@ const RecentlyViewedPreviewRow = ({ item }: { item: RecentItem }) => (
       {...tracking("homepage.recently_viewed_pipelines.item")}
       className="flex w-full items-center gap-3 px-4 py-3 hover:bg-muted/50 no-underline"
     >
-      <TypePill type={item.type} id={item.id} />
+      <TypePill type={item.type} />
       <Tooltip>
         <TooltipTrigger className="flex-1 min-w-0 overflow-hidden text-left">
           <Text size="sm" className="truncate block">

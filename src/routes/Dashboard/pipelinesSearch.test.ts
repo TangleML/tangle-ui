@@ -16,19 +16,17 @@ describe("validatePipelinesSearch", () => {
     });
     expect(search).not.toHaveProperty("page");
     expect(search).toMatchObject({
-      tab: "remote",
       name: "shared",
       panel: "compact",
     });
   });
 
-  it.each(["local", "remote"])("accepts the %s tab", (tab) => {
-    expect(validatePipelinesSearch({ tab }).tab).toBe(tab);
-  });
-
-  it.each(["unknown", [], 1])("discards invalid tab %s", (tab) => {
-    expect(validatePipelinesSearch({ tab }).tab).toBeUndefined();
-  });
+  it.each(["local", "remote", "unknown"])(
+    "discards the removed %s tab",
+    (tab) => {
+      expect(validatePipelinesSearch({ tab })).not.toHaveProperty("tab");
+    },
+  );
 
   it("discards malformed text and date parameter types", () => {
     const search = validatePipelinesSearch({

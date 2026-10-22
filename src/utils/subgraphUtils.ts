@@ -434,7 +434,3 @@ export const updateSubgraphSpec = (
     },
   };
 };
-
-export const isViewingSubgraph = (subgraphPath: string[]): boolean => {
-  return subgraphPath.length > 1;
-};

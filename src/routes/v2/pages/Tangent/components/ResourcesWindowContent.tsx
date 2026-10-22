@@ -26,8 +26,6 @@ import {
   idIdentity,
 } from "@/services/projects/resourceTarget";
 import type { ProjectResourceSummary } from "@/services/projects/types";
-import type { LocalPipelineStatus } from "@/services/projects/useLocalPipelineStatus";
-import { useLocalPipelineStatus } from "@/services/projects/useLocalPipelineStatus";
 import { useProjectInstructions } from "@/services/projects/useProjectInstructions";
 import {
   useDeleteProjectResource,
@@ -52,11 +50,6 @@ const BACKEND_PIPELINE_META = {
   description: resourceMeta("pipeline").label,
 };
 
-const ABSENT_PIPELINE_META = {
-  icon: resourceMeta("pipeline").icon,
-  description: "Pipeline — not in this browser",
-};
-
 const OTHER_META = {
   icon: "Box" as IconName,
   description: "Not something this version can open",
@@ -78,15 +71,13 @@ function targetOf(
 }
 
 /**
- * Remote pipelines open by their backend identity. Local pipelines belonging
- * to another browser remain listed, but cannot be opened here.
+ * Pipelines open by their backend identity.
  *
  * Instructions are the one row deliberately left out: they have a box of their
  * own above this list, and a second way in would offer a Remove that wipes them.
  */
 function toResourceItem(
   resource: ProjectResourceSummary,
-  { unavailable, currentNames }: LocalPipelineStatus,
 ): ProjectResourceItem | undefined {
   if (resource.entity === "pipeline") {
     return resource.entityId
@@ -127,16 +118,7 @@ function toResourceItem(
   const target = targetOf(resource, described.type, described.target);
   if (!target) return undefined;
 
-  // What the pipeline is called now, falling back to the name the row recorded
-  // when it was added — which is all there is to go on once it is out of reach.
-  const name =
-    currentNames.get(resource.id) ??
-    resource.name ??
-    formatWorkareaTarget(target);
-
-  if (unavailable.has(resource.id)) {
-    return { id: resource.id, name, ...ABSENT_PIPELINE_META };
-  }
+  const name = resource.name ?? formatWorkareaTarget(target);
 
   const meta = resourceMeta(concept);
   return {
@@ -162,10 +144,9 @@ export function ResourcesWindowContent() {
     useDeleteProjectResource(store.projectId);
 
   const items = resourcesPage?.items ?? [];
-  const localPipelines = useLocalPipelineStatus(items);
 
   const resources: ProjectResourceItem[] = items.flatMap(
-    (resource) => toResourceItem(resource, localPipelines) ?? [],
+    (resource) => toResourceItem(resource) ?? [],
   );
 
   async function handleOpenResource(resource: ProjectResourceItem) {

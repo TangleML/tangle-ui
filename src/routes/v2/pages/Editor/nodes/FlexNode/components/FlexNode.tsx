@@ -13,15 +13,13 @@ import { FlexNodeCard } from "@/routes/v2/shared/nodes/FlexNode/FlexNodeCard";
 import { FlexNodeSimplified } from "@/routes/v2/shared/nodes/FlexNode/FlexNodeSimplified";
 import type { FlexNodeViewProps } from "@/routes/v2/shared/nodes/FlexNode/flexNodeView";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
-import { isEditorVisualNodeSelected } from "@/routes/v2/shared/store/isEditorVisualNodeSelected";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 type FlexNodeProps = NodeProps<Node<FlexNodeData, "flex">>;
 
-export const EditorV2FlexNode = observer(function EditorV2FlexNode({
+export const EditorFlexNode = observer(function EditorFlexNode({
   data,
   id,
-  selected,
 }: FlexNodeProps) {
   const { editor } = useSharedStores();
   const { undo } = useEditorSession();
@@ -55,7 +53,8 @@ export const EditorV2FlexNode = observer(function EditorV2FlexNode({
   };
 
   const handleClick = (e: MouseEvent) => {
-    editor.selectNode(id, "flex", { shiftKey: e.shiftKey, entityId: id });
+    if (locked || e.shiftKey)
+      editor.selectNode(id, "flex", { shiftKey: e.shiftKey, entityId: id });
     if (locked) {
       e.stopPropagation();
     }
@@ -65,7 +64,7 @@ export const EditorV2FlexNode = observer(function EditorV2FlexNode({
   const isBorderTransparent = borderColor === "transparent";
   const hasContent = !!title || !!content;
 
-  const isSelected = isEditorVisualNodeSelected(editor, id, !!selected);
+  const isSelected = editor.isNodeSelected(id);
 
   const viewProps: FlexNodeViewProps = {
     id,

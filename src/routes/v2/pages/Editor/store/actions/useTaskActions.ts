@@ -35,7 +35,6 @@ export function useTaskActions() {
     ) => {
       deleteSelectedNodes(undo, spec, selectedNodes, navigation.parentContext);
       editor.clearSelection();
-      editor.clearMultiSelection();
     },
     batchSetTaskColor: batchSetTaskColor.bind(null, undo),
     applyAutoLayoutPositions: applyAutoLayoutPositions.bind(null, undo),

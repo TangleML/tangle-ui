@@ -1,6 +1,5 @@
 import { generate } from "random-words";
 
-import { exportPipeline } from "@/components/shared/ReactFlow/FlowSidebar/sections/components/ExportPipelineButton";
 import {
   serializeComponentSpec,
   serializeComponentSpecToYaml,
@@ -13,8 +12,7 @@ import {
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
 import type { RemotePipelineRef } from "@/services/pipelineStorage/types";
-import { defaultPipelineYamlWithName } from "@/utils/constants";
-import { componentSpecToYaml } from "@/utils/yaml";
+import { downloadStringAsFile } from "@/utils/URL";
 
 export async function createNewPipeline(
   storage: PipelineStorageService,
@@ -32,21 +30,16 @@ export async function createNewPipeline(
   const backendUrl = destination
     ? destination.backendUrl
     : await getPipelineCreationBackendUrl();
-  if (backendUrl) {
-    return storage.createRemoteDraft(
-      {
-        source: "draft",
-        backendUrl,
-        draftId: crypto.randomUUID(),
-        name,
-        provisionalName,
-      },
-      onRemoteCreated,
-    );
-  }
-  const componentText = defaultPipelineYamlWithName(name, { provisionalName });
-
-  return storage.rootFolder.addFile(name, componentText);
+  return storage.createRemoteDraft(
+    {
+      source: "draft",
+      backendUrl,
+      draftId: crypto.randomUUID(),
+      name,
+      provisionalName,
+    },
+    onRemoteCreated,
+  );
 }
 
 export async function savePipelineAs(
@@ -63,17 +56,14 @@ export async function savePipelineAs(
     ...serializeComponentSpec(componentSpec),
     name: newName,
   };
-  const componentText = componentSpecToYaml(serialized);
 
   const configuredBackendUrl = destination
     ? destination.backendUrl
     : await getPipelineCreationBackendUrl();
-  if (!configuredBackendUrl)
-    return storage.rootFolder.addFile(newName, componentText);
   if (sourceFile?.remote)
-    return storage.copyRemotePipeline(sourceFile, newName, componentText);
-  const backendUrl = sourceFile?.draftBackendUrl ?? configuredBackendUrl;
-  return storage.createRemotePipeline(backendUrl, newName, componentText);
+    return storage.copyRemotePipeline(sourceFile, newName, serialized);
+  const backendUrl = sourceFile?.backendUrl ?? configuredBackendUrl;
+  return storage.createRemotePipeline(backendUrl, newName, serialized);
 }
 
 export function exportCurrentPipeline(navigation: NavigationStore): void {
@@ -81,5 +71,9 @@ export function exportCurrentPipeline(navigation: NavigationStore): void {
   if (!componentSpec) return;
 
   const componentText = serializeComponentSpecToYaml(componentSpec);
-  exportPipeline(componentSpec.name ?? "Untitled Pipeline", componentText);
+  downloadStringAsFile(
+    componentText,
+    `${componentSpec.name ?? "Untitled Pipeline"}.pipeline.component.yaml`,
+    "text/yaml",
+  );
 }

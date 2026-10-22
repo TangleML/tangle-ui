@@ -7,7 +7,7 @@ import { registerLibraryFactory } from "./factory";
  * Idempotent registration of library factories. The provider already registers
  * the same factories at module load, but the dashboard search page reads
  * libraries from Dexie directly (without mounting `ComponentLibraryProvider`,
- * which is editor-scoped and depends on `ComponentSpecProvider`). Anywhere
+ * which is scoped to a canvas workspace). Anywhere
  * that needs to instantiate a stored library can call this first.
  */
 let registered = false;

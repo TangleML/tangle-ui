@@ -22,7 +22,6 @@ import {
 import { MAX_PAGE_SIZE } from "@/services/projects/queryDefaults";
 import {
   describeResource,
-  LOCAL_PIPELINE,
   PIPELINE_RUN,
 } from "@/services/projects/resourceDescriptor";
 import type { WorkareaTarget } from "@/services/projects/resourceTarget";
@@ -59,7 +58,7 @@ function oldestAttached(
   return oldestFirst(resources).flatMap((resource) => {
     const described = describeResource(resource);
     const remote =
-      type === LOCAL_PIPELINE ? remoteResourceTarget(resource) : undefined;
+      type === "pipeline" ? remoteResourceTarget(resource) : undefined;
     if (remote) return [{ resource, target: remote }];
     return described?.type === type && described.target
       ? [{ resource, target: described.target }]
@@ -153,7 +152,7 @@ export function usePrepareProjectArrival(
       if (!isEmpty) return;
 
       const attached =
-        oldestAttached(documents?.items ?? [], LOCAL_PIPELINE) ??
+        oldestAttached(documents?.items ?? [], "pipeline") ??
         oldestAttached(documents?.items ?? [], PIPELINE_RUN);
 
       if (attached) {
@@ -175,7 +174,7 @@ export function usePrepareProjectArrival(
       });
 
       const target: WorkareaTarget = pipelineFileTarget(file);
-      await store.openWorkareaTarget(target, file.storageKey);
+      await store.openWorkareaTarget(target, file.name);
     },
     onError: (error) => notify(getErrorMessage(error), "error"),
   });

@@ -10,18 +10,12 @@ import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
 import { Heading, Text } from "@/components/ui/typography";
-import {
-  getDefaultEditorPath,
-  getDefaultRemoteEditorPath,
-} from "@/routes/editorRoutes";
+import { getDefaultRemoteEditorPath } from "@/routes/editorRoutes";
 import { PROJECT_ID_SEARCH_PARAM } from "@/routes/projectRunSearch";
-import { getDefaultRunPath } from "@/routes/runRoutes";
-import type { LocalPipelinePointer } from "@/services/localPipelines/types";
-import { useLocalPipeline } from "@/services/localPipelines/useLocalPipelines";
+import { getRunPath } from "@/routes/runRoutes";
 import { UNTITLED } from "@/services/projects/placeholderNames";
 import {
   describeResource,
-  localPipelinePointerOf,
   PIPELINE_RUN,
 } from "@/services/projects/resourceDescriptor";
 import { resourceMeta } from "@/services/projects/resourceMeta";
@@ -130,17 +124,6 @@ function SelectedResource({ projectId, resourceId }: SelectedResourceProps) {
     );
   }
 
-  const pointer = localPipelinePointerOf(resource);
-  if (pointer) {
-    return (
-      <LocalPipelinePreview
-        projectId={projectId}
-        resource={resource}
-        pointer={pointer}
-      />
-    );
-  }
-
   if (resource.entity === "pipeline" && resource.entityId) {
     return (
       <PipelinePreview
@@ -182,7 +165,7 @@ function RunPreview({ runId }: { runId: string | null }) {
         {runId && (
           <Button variant="outline" size="sm" asChild>
             <Link
-              to={getDefaultRunPath(runId)}
+              to={getRunPath(runId)}
               {...tracking("projects.open_pipeline_run")}
             >
               <Icon name={resourceMeta("run").icon} size="xs" />
@@ -192,74 +175,6 @@ function RunPreview({ runId }: { runId: string | null }) {
         )}
       </BlockStack>
     </Placeholder>
-  );
-}
-
-interface LocalPipelinePreviewProps {
-  projectId: string;
-  resource: ProjectResource;
-  pointer: LocalPipelinePointer;
-}
-
-function LocalPipelinePreview({
-  projectId,
-  resource,
-  pointer,
-}: LocalPipelinePreviewProps) {
-  const { data: pipeline, isPending, error } = useLocalPipeline(pointer);
-
-  if (isPending) {
-    return <Loading />;
-  }
-
-  if (error) {
-    return (
-      <InfoBox title="Cannot show this pipeline" variant="warning">
-        {error.message}
-      </InfoBox>
-    );
-  }
-
-  if (!pipeline) {
-    return (
-      <Placeholder>
-        <EmptyState
-          icon="MonitorOff"
-          title="Not in this browser"
-          description={`A pipeline lives in the browser it was made in, and this one is not in this browser. ${resource.createdBy ?? "Whoever added it"} added it to the project.`}
-        />
-      </Placeholder>
-    );
-  }
-
-  return (
-    <BlockStack gap="2">
-      <Code code={pipeline.yaml} language="yaml" filename={pipeline.name} />
-      <InlineStack gap="3" blockAlign="center" className="w-full">
-        <RunPipelineButton
-          projectId={projectId}
-          spec={pipeline.spec}
-          heldInThisBrowser={!pipeline.remote}
-        />
-        <Button variant="outline" size="sm" asChild>
-          {/* The original local route follows the alias and repairs this project's resource. */}
-          <Link
-            to={getDefaultEditorPath(
-              pipeline.remote ? pointer.localName : pipeline.name,
-            )}
-            search={{
-              [PROJECT_ID_SEARCH_PARAM]: projectId,
-              ...(pipeline.remote && { fileId: pointer.localId }),
-            }}
-            {...tracking("projects.open_local_pipeline")}
-          >
-            <Icon name="PencilRuler" size="xs" />
-            Open in the editor
-          </Link>
-        </Button>
-        <ValidityBadge validity={pipelineValidity(pipeline.spec)} />
-      </InlineStack>
-    </BlockStack>
   );
 }
 

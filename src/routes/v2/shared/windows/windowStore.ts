@@ -1,11 +1,12 @@
 import { action, makeObservable, observable } from "mobx";
 import type { ReactNode } from "react";
 
-import { emitDockAreaEvent } from "./dockAreaPlugins";
+import { createDockAreaAccordion } from "./dockAreaAccordion";
 import {
   CASCADE_OFFSET,
   DEFAULT_DOCK_AREA_WIDTH,
   type DockAreaConfig,
+  type DockAreaEvent,
   type DockState,
   isDockSide,
   type Position,
@@ -15,6 +16,7 @@ import {
 import { getFloatingViewportBounds } from "./viewportUtils";
 import { dockSideByWindowId, type ViewPreset } from "./viewPresets";
 import { WindowModel, type WindowStoreRef } from "./windowModel";
+import { loadWindowLayout } from "./windowPersistence";
 import { buildWindowModelInit } from "./windowStore.utils";
 
 function generateWindowId(): string {
@@ -28,6 +30,12 @@ export class WindowStoreImpl implements WindowStoreRef {
    */
   private contentMap = new Map<string, ReactNode>();
   private miniContentMap = new Map<string, ReactNode>();
+  private accordions = new Map<string, (event: DockAreaEvent) => void>();
+  layoutId: string | null = null;
+  readonly dockAreaElements: Record<"left" | "right", HTMLElement | null> = {
+    left: null,
+    right: null,
+  };
   @observable.shallow accessor windows: Record<string, WindowModel> = {};
   @observable.shallow accessor windowOrder: string[] = [];
   @observable accessor dockAreas: {
@@ -49,6 +57,10 @@ export class WindowStoreImpl implements WindowStoreRef {
 
   constructor() {
     makeObservable(this);
+  }
+
+  setLayoutId(layoutId: string | null): void {
+    this.layoutId = layoutId;
   }
 
   private calculateNewPosition(): Position {
@@ -78,7 +90,11 @@ export class WindowStoreImpl implements WindowStoreRef {
     if (!dockArea.windowOrder.includes(id)) {
       dockArea.windowOrder.push(id);
     }
-    emitDockAreaEvent({ type: "window-docked", side: dockState, windowId: id });
+    this.emitDockAreaEvent({
+      type: "window-docked",
+      side: dockState,
+      windowId: id,
+    });
   }
 
   /** Open a new window or focus existing window with same ID */
@@ -99,6 +115,7 @@ export class WindowStoreImpl implements WindowStoreRef {
       options,
       this.calculateNewPosition(),
       getFloatingViewportBounds(this),
+      loadWindowLayout(this.layoutId),
     );
     const model = new WindowModel(init, this);
 
@@ -115,7 +132,7 @@ export class WindowStoreImpl implements WindowStoreRef {
     if (!win) return;
 
     if (win.isDocked && isDockSide(win.dockState)) {
-      emitDockAreaEvent({
+      this.emitDockAreaEvent({
         type: "window-closing",
         side: win.dockState,
         windowId: id,
@@ -197,6 +214,18 @@ export class WindowStoreImpl implements WindowStoreRef {
 
   // -- Docking --
 
+  enableDockAreaAccordion(side: "left" | "right"): () => void {
+    const handler = createDockAreaAccordion(side, this);
+    this.accordions.set(side, handler);
+    return () => {
+      if (this.accordions.get(side) === handler) this.accordions.delete(side);
+    };
+  }
+
+  emitDockAreaEvent(event: DockAreaEvent): void {
+    this.accordions.get(event.side)?.(event);
+  }
+
   @action dockWindow(id: string, side: DockState, insertIndex?: number): void {
     if (side === "none" || !this.enabledDockSides.has(side)) return;
     const win = this.windows[id];
@@ -215,7 +244,7 @@ export class WindowStoreImpl implements WindowStoreRef {
     }
     dockArea.collapsed = false;
 
-    emitDockAreaEvent({ type: "window-docked", side, windowId: id });
+    this.emitDockAreaEvent({ type: "window-docked", side, windowId: id });
   }
 
   @action undockWindow(id: string): void {
@@ -311,7 +340,7 @@ export class WindowStoreImpl implements WindowStoreRef {
 
   /**
    * First-visit only: align dock sides and stack order with `preset.dockAreas`.
-   * Call only when there is no persisted layout (e.g. gated on `hasPersistedLayout()`).
+   * Call only when this store has no persisted layout.
    */
   @action seedInitialDockLayoutFromPreset(preset: ViewPreset): void {
     const areas = preset.dockAreas;

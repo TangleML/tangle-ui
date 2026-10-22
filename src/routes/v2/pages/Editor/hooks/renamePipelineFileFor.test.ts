@@ -1,142 +1,70 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import type { PipelineFileStore } from "@/routes/v2/pages/Editor/store/pipelineFileStore";
-import { availablePipelineName } from "@/services/localPipelines/localPipelinesService";
+import { AutoSaveStore } from "@/routes/v2/pages/Editor/store/autoSaveStore";
+import { PipelineFileStore } from "@/routes/v2/pages/Editor/store/pipelineFileStore";
+import { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 
 import { renamePipelineFileFor } from "./renamePipelineFileFor";
 
-vi.mock("@/services/localPipelines/localPipelinesService", () => ({
-  availablePipelineName: vi.fn(),
-}));
-
-const rename = vi.fn().mockResolvedValue(undefined);
-
-function store(
-  storageKey: string | undefined,
-  remote = false,
-  isDraft = false,
-): PipelineFileStore {
-  return {
-    activePipelineFile:
-      storageKey === undefined
-        ? undefined
-        : {
-            id: "file-1",
-            storageKey,
-            rename,
-            isDraft,
-            remote: remote
-              ? {
-                  backendUrl: "https://backend.example.com",
-                  pipelineId: "file-1",
-                }
-              : undefined,
-          },
-  } as unknown as PipelineFileStore;
+function setup() {
+  const autoSave = new AutoSaveStore();
+  const save = vi.spyOn(autoSave, "save").mockResolvedValue();
+  const pipelineFile = new PipelineFileStore();
+  const file = new PipelineFile({
+    ref: {
+      source: "draft",
+      backendUrl: "https://example.com",
+      draftId: "draft",
+      name: "Original",
+    },
+  });
+  pipelineFile.init(file);
+  const onRenamed = vi.fn();
+  return { autoSave, pipelineFile, file, save, onRenamed };
 }
 
 describe("renamePipelineFileFor", () => {
-  it("keeps a remote draft name without checking local names", async () => {
-    const applied = await renamePipelineFileFor(store("Draft", false, true))(
-      "Example pipeline",
-    );
-    expect(availablePipelineName).not.toHaveBeenCalled();
-    expect(rename).toHaveBeenCalledWith("Example pipeline");
-    expect(applied).toBe("Example pipeline");
-  });
-  it("keeps a remote name even when a local pipeline already uses it", async () => {
-    const onRenamed = vi.fn();
-    const applied = await renamePipelineFileFor(
-      store("Draft", true),
+  it("saves the model and updates the tab only after success", async () => {
+    const { autoSave, pipelineFile, file, save, onRenamed } = setup();
+    const pending = Promise.withResolvers<void>();
+    save.mockReturnValue(pending.promise);
+    const renaming = renamePipelineFileFor(
+      autoSave,
+      pipelineFile,
       onRenamed,
-    )("Churn model");
-
-    expect(availablePipelineName).not.toHaveBeenCalled();
-    expect(rename).toHaveBeenCalledWith("Churn model");
-    expect(applied).toBe("Churn model");
-    expect(onRenamed).toHaveBeenCalledWith("file-1", "Churn model");
+    )("Renamed");
+    expect(onRenamed).not.toHaveBeenCalled();
+    pending.resolve();
+    await renaming;
+    expect(save).toHaveBeenCalledOnce();
+    expect(onRenamed).toHaveBeenCalledWith(file.id, "Renamed");
   });
 
-  afterEach(() => vi.resetAllMocks());
-
-  it("renames the file the pipeline is saved as", async () => {
-    vi.mocked(availablePipelineName).mockResolvedValue("Churn model");
-
-    const applied = await renamePipelineFileFor(store("Draft"))("Churn model");
-
-    expect(rename).toHaveBeenCalledWith("Churn model");
-    expect(applied).toBe("Churn model");
-  });
-
-  /** An agent picks a name without knowing what else this browser holds. */
-  it("answers with the adjusted name when one is already taken", async () => {
-    vi.mocked(availablePipelineName).mockResolvedValue("Churn model 2");
-
-    const applied = await renamePipelineFileFor(store("Draft"))("Churn model");
-
-    expect(rename).toHaveBeenCalledWith("Churn model 2");
-    expect(applied).toBe("Churn model 2");
-  });
-
-  /** Otherwise renaming a pipeline to its own name bumps it to "… 2". */
-  it("does nothing when the name is the one it already has", async () => {
-    const applied = await renamePipelineFileFor(store("Churn model"))(
-      "Churn model",
-    );
-
-    expect(rename).not.toHaveBeenCalled();
-    expect(availablePipelineName).not.toHaveBeenCalled();
-    expect(applied).toBe("Churn model");
-  });
-
-  it("leaves the caller its name when no pipeline is open", async () => {
-    const applied = await renamePipelineFileFor(store(undefined))(
-      "Churn model",
-    );
-
-    expect(rename).not.toHaveBeenCalled();
-    expect(applied).toBe("Churn model");
-  });
-
-  /** A tab resolves its title once, when it opens, and never again. */
-  it("reports the name it applied so the open tab can follow", async () => {
-    vi.mocked(availablePipelineName).mockResolvedValue("Churn model 2");
-    const onRenamed = vi.fn();
-
-    await renamePipelineFileFor(store("Draft"), onRenamed)("Churn model");
-
-    expect(onRenamed).toHaveBeenCalledWith("file-1", "Churn model 2");
-  });
-
-  it("reports nothing when there was nothing to rename", async () => {
-    const onRenamed = vi.fn();
-
-    await renamePipelineFileFor(store("Churn model"), onRenamed)("Churn model");
-
+  it("preserves the tab title when saving fails", async () => {
+    const { autoSave, pipelineFile, save, onRenamed } = setup();
+    save.mockRejectedValue(new Error("Unavailable"));
+    await expect(
+      renamePipelineFileFor(autoSave, pipelineFile, onRenamed)("Renamed"),
+    ).rejects.toThrow("Unavailable");
     expect(onRenamed).not.toHaveBeenCalled();
   });
 
-  it.each(["name lookup", "file rename"])(
-    "does not navigate to an old pipeline when cancellation interrupts %s",
-    async (stage) => {
-      const controller = new AbortController();
-      vi.mocked(availablePipelineName).mockImplementation(async () => {
-        if (stage === "name lookup") controller.abort();
-        return "Renamed";
-      });
-      rename.mockImplementation(async () => {
-        controller.abort();
-      });
-      const onRenamed = vi.fn();
-      const renameFile = renamePipelineFileFor(
-        store("Original"),
-        onRenamed,
-        () => controller.signal.throwIfAborted(),
-      );
+  it("does not retitle another document after navigation", async () => {
+    const { autoSave, pipelineFile, save, onRenamed } = setup();
+    save.mockImplementation(async () => pipelineFile.dispose());
+    await renamePipelineFileFor(autoSave, pipelineFile, onRenamed)("Renamed");
+    expect(onRenamed).not.toHaveBeenCalled();
+  });
 
-      await expect(renameFile("Renamed")).rejects.toThrow();
-      expect(rename).toHaveBeenCalledTimes(stage === "file rename" ? 1 : 0);
-      expect(onRenamed).not.toHaveBeenCalled();
-    },
-  );
+  it("checks cancellation before reporting a saved name", async () => {
+    const { autoSave, pipelineFile, save, onRenamed } = setup();
+    const controller = new AbortController();
+    save.mockImplementation(async () => controller.abort());
+    await expect(
+      renamePipelineFileFor(autoSave, pipelineFile, onRenamed, () =>
+        controller.signal.throwIfAborted(),
+      )("Renamed"),
+    ).rejects.toThrow();
+    expect(onRenamed).not.toHaveBeenCalled();
+  });
 });

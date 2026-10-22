@@ -1,6 +1,6 @@
 export type WorkareaViewKindName = "artifact" | "document" | "pipeline" | "run";
 
-type IdentityKey = "id" | "name" | "remote" | "draft";
+type IdentityKey = "id" | "remote" | "draft";
 
 export type WorkareaIdentity = `${IdentityKey}/${string}`;
 
@@ -29,7 +29,7 @@ export interface DocumentTarget {
 
 export interface PipelineTarget {
   type: "pipeline";
-  identity: WorkareaIdentity;
+  identity: `remote/${string}` | `draft/${string}`;
 }
 
 export interface RunTarget {
@@ -53,7 +53,7 @@ const IDENTITY_KEYS_BY_TYPE: Record<
 > = {
   artifact: ["id"],
   document: ["id"],
-  pipeline: ["id", "name", "remote", "draft"],
+  pipeline: ["remote", "draft"],
   run: ["id"],
 };
 
@@ -66,10 +66,6 @@ export interface ParsedIdentity {
 
 export function idIdentity(value: string): `id/${string}` {
   return `id/${value}`;
-}
-
-export function nameIdentity(value: string): `name/${string}` {
-  return `name/${value}`;
 }
 
 export function runTarget(runId: string): RunTarget {
@@ -95,16 +91,11 @@ function isWorkareaViewKindName(value: string): value is WorkareaViewKindName {
 }
 
 function isIdentityKey(value: string): value is IdentityKey {
-  return (
-    value === "id" ||
-    value === "name" ||
-    value === "remote" ||
-    value === "draft"
-  );
+  return value === "id" || value === "remote" || value === "draft";
 }
 
 function isWorkareaIdentity(value: string): value is WorkareaIdentity {
-  return /^(id|name|remote|draft)\/./.test(value);
+  return /^(id|remote|draft)\/./.test(value);
 }
 
 function splitIdentity(identity: string): ParsedIdentity {
@@ -125,13 +116,15 @@ function buildTarget(
   key: IdentityKey,
   value: string,
 ): WorkareaTarget {
-  if (type === "pipeline" && key === "name") {
-    return { type, identity: nameIdentity(value) };
+  if (type === "pipeline") {
+    return {
+      type,
+      identity:
+        key === "remote"
+          ? remotePipelineIdentity(value)
+          : draftPipelineIdentity(value),
+    };
   }
-  if (type === "pipeline" && key === "remote")
-    return { type, identity: remotePipelineIdentity(value) };
-  if (type === "pipeline" && key === "draft")
-    return { type, identity: draftPipelineIdentity(value) };
   return { type, identity: idIdentity(value) };
 }
 

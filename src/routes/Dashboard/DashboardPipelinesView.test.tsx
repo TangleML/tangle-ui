@@ -33,33 +33,6 @@ import { formatDate } from "@/utils/date";
 
 import { DashboardPipelinesView } from "./DashboardPipelinesView";
 
-const editorFlags = vi.hoisted(() => ({ v2Enabled: true }));
-
-vi.mock("@/components/shared/Settings/useFlags", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("@/components/shared/Settings/useFlags")
-    >();
-  return {
-    ...actual,
-    isFlagEnabled: (flag: Parameters<typeof actual.isFlagEnabled>[0]) =>
-      flag === "v2_editor" ? editorFlags.v2Enabled : actual.isFlagEnabled(flag),
-  };
-});
-
-vi.mock("@/components/Home/PipelineSection/PipelineSection", () => ({
-  PipelineSection: () => <div>Local pipeline list</div>,
-}));
-
-vi.mock("@/services/localPipelines/useLocalPipelines", () => ({
-  useLocalPipelineNames: () => ({
-    data: ["Local pipeline"],
-    isPending: false,
-    error: null,
-    refetch: vi.fn(),
-  }),
-}));
-
 vi.mock("@/providers/AnalyticsProvider", () => ({
   useAnalytics: () => ({ track: vi.fn() }),
 }));
@@ -203,35 +176,14 @@ async function renderDashboard(
     path: APP_ROUTES.DASHBOARD_PIPELINES,
     component: DashboardPipelinesView,
   });
-  const editorRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: APP_ROUTES.PIPELINE_EDITOR,
-    component: () => <div>Editor destination</div>,
-  });
-  const editorV2Route = createRoute({
-    getParentRoute: () => rootRoute,
-    path: APP_ROUTES.EDITOR_V2_PIPELINE,
-    component: () => <div>Editor destination</div>,
-  });
   const remoteEditorRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: APP_ROUTES.REMOTE_PIPELINE_EDITOR,
     component: () => <div>Remote editor destination</div>,
   });
-  const remoteEditorV2Route = createRoute({
-    getParentRoute: () => rootRoute,
-    path: APP_ROUTES.EDITOR_V2_REMOTE_PIPELINE,
-    component: () => <div>Remote editor destination</div>,
-  });
   const history = createMemoryHistory({ initialEntries: [initialEntry] });
   const router = createRouter({
-    routeTree: rootRoute.addChildren([
-      pipelinesRoute,
-      editorRoute,
-      editorV2Route,
-      remoteEditorRoute,
-      remoteEditorV2Route,
-    ]),
+    routeTree: rootRoute.addChildren([pipelinesRoute, remoteEditorRoute]),
     history,
     scrollRestoration: true,
   });
@@ -252,8 +204,7 @@ async function renderDashboard(
 }
 
 async function renderResizableTable() {
-  const { user } = await renderDashboard();
-  await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
+  await renderDashboard();
   await screen.findByText("Example pipeline");
 
   const table = screen.getByRole("table", { name: "Remote Pipelines" });
@@ -294,8 +245,6 @@ async function renderResizableTable() {
 }
 
 beforeEach(() => {
-  vi.stubEnv("VITE_REMOTE_PIPELINES", "true");
-  editorFlags.v2Enabled = true;
   vi.spyOn(window, "scrollTo").mockImplementation(() => {});
   vi.mocked(getRemotePipelineWriter).mockResolvedValue(pipeline.user_id);
   vi.mocked(deleteRemotePipeline).mockResolvedValue(undefined);
@@ -320,7 +269,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
     vi.mocked(deleteRemotePipeline).mockReturnValue(deletion.promise);
     const open = vi.spyOn(window, "open").mockReturnValue(null);
     const { user, router } = await renderDashboard(
-      `${APP_ROUTES.DASHBOARD_PIPELINES}?tab=remote`,
+      `${APP_ROUTES.DASHBOARD_PIPELINES}`,
     );
     const row = await screen.findByRole("row", { name: /Example pipeline/ });
     const link = within(row).getByRole("link", { name: "Example pipeline" });
@@ -344,12 +293,10 @@ describe("DashboardPipelinesView remote pipelines", () => {
     await waitFor(() =>
       expect(link).not.toHaveAttribute("aria-disabled", "true"),
     );
-    expect(link).toHaveAttribute("href", "/editor-v2/pipeline/pipeline-1");
+    expect(link).toHaveAttribute("href", "/editor/pipeline/pipeline-1");
     await user.click(ownerCell);
     await screen.findByText("Remote editor destination");
-    expect(router.state.location.pathname).toBe(
-      "/editor-v2/pipeline/pipeline-1",
-    );
+    expect(router.state.location.pathname).toBe("/editor/pipeline/pipeline-1");
   });
 
   it("keeps page two and restores focus when deletion leaves another row", async () => {
@@ -362,9 +309,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
     vi.mocked(deleteRemotePipeline).mockImplementation(async () => {
       deleted = true;
     });
-    const { user } = await renderDashboard(
-      `${APP_ROUTES.DASHBOARD_PIPELINES}?tab=remote`,
-    );
+    const { user } = await renderDashboard(`${APP_ROUTES.DASHBOARD_PIPELINES}`);
     await screen.findByText("Pipeline 1");
     await user.click(screen.getByRole("button", { name: "Next" }));
     await screen.findByText("Pipeline 11");
@@ -390,7 +335,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
       .mockResolvedValueOnce(createPage(1, 2, null))
       .mockReturnValue(refreshed.promise);
     const { user, client } = await renderDashboard(
-      `${APP_ROUTES.DASHBOARD_PIPELINES}?tab=remote`,
+      `${APP_ROUTES.DASHBOARD_PIPELINES}`,
     );
     await user.click(
       await screen.findByRole("button", { name: "Delete Pipeline 1" }),
@@ -417,7 +362,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
       deleted = true;
     });
     const { user, router, searchParams } = await renderDashboard(
-      `${APP_ROUTES.DASHBOARD_PIPELINES}?tab=remote&panel=compact`,
+      `${APP_ROUTES.DASHBOARD_PIPELINES}?panel=compact`,
     );
     await screen.findByRole("link", { name: "Pipeline 1" });
     await user.click(screen.getByRole("button", { name: "Next" }));
@@ -457,7 +402,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
         deleted = true;
       });
       const { user, router, setBackend, client } = await renderDashboard(
-        `${APP_ROUTES.DASHBOARD_PIPELINES}?tab=remote`,
+        `${APP_ROUTES.DASHBOARD_PIPELINES}`,
       );
       await screen.findByText("Pipeline 1");
       await user.click(screen.getByRole("button", { name: "Next" }));
@@ -474,7 +419,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
         await act(async () => {
           await router.navigate({
             to: APP_ROUTES.DASHBOARD_PIPELINES,
-            search: { tab: "remote", name: "new" },
+            search: { name: "new" },
           });
         });
       }
@@ -490,47 +435,39 @@ describe("DashboardPipelinesView remote pipelines", () => {
     },
   );
 
-  it.each([
-    { v2Enabled: true, editorPath: "/editor-v2/pipeline/pipeline-1" },
-    { v2Enabled: false, editorPath: "/editor/pipeline/pipeline-1" },
-  ])(
-    "opens remote pipeline names and rows at $editorPath",
-    async ({ v2Enabled, editorPath }) => {
-      editorFlags.v2Enabled = v2Enabled;
-      const { user, router, searchParams } = await renderDashboard(
-        `${APP_ROUTES.DASHBOARD_PIPELINES}?tab=remote`,
-      );
-      const nameLink = await screen.findByRole("link", {
-        name: "Example pipeline",
-      });
-      expect(nameLink).toHaveAttribute("href", editorPath);
+  it("opens pipeline names and rows in the editor", async () => {
+    const editorPath = "/editor/pipeline/pipeline-1";
+    const { user, router, searchParams } = await renderDashboard(
+      `${APP_ROUTES.DASHBOARD_PIPELINES}`,
+    );
+    const nameLink = await screen.findByRole("link", {
+      name: "Example pipeline",
+    });
+    expect(nameLink).toHaveAttribute("href", editorPath);
 
-      await user.click(nameLink);
-      await screen.findByText("Remote editor destination");
-      expect(router.state.location.pathname).toBe(editorPath);
-      expect(searchParams().get("source")).toBeNull();
+    await user.click(nameLink);
+    await screen.findByText("Remote editor destination");
+    expect(router.state.location.pathname).toBe(editorPath);
+    expect(searchParams().get("source")).toBeNull();
 
-      await act(async () => {
-        await router.navigate({
-          to: APP_ROUTES.DASHBOARD_PIPELINES,
-          search: { tab: "remote" },
-        });
+    await act(async () => {
+      await router.navigate({
+        to: APP_ROUTES.DASHBOARD_PIPELINES,
+        search: {},
       });
-      const row = await screen.findByRole("row", {
-        name: /Example pipeline/,
-      });
-      await user.click(
-        within(row).getByRole("cell", { name: pipeline.user_id }),
-      );
-      await screen.findByText("Remote editor destination");
-      expect(router.state.location.pathname).toBe(editorPath);
-      expect(searchParams().get("source")).toBeNull();
-    },
-  );
+    });
+    const row = await screen.findByRole("row", {
+      name: /Example pipeline/,
+    });
+    await user.click(within(row).getByRole("cell", { name: pipeline.user_id }));
+    await screen.findByText("Remote editor destination");
+    expect(router.state.location.pathname).toBe(editorPath);
+    expect(searchParams().get("source")).toBeNull();
+  });
 
   it("copies the full ID from its text and keyboard button without opening the editor", async () => {
     const { user, router, searchParams } = await renderDashboard(
-      `${APP_ROUTES.DASHBOARD_PIPELINES}?tab=remote`,
+      `${APP_ROUTES.DASHBOARD_PIPELINES}`,
     );
     const writeText = vi
       .spyOn(navigator.clipboard, "writeText")
@@ -548,7 +485,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
     expect(writeText).toHaveBeenNthCalledWith(1, pipeline.id);
     expect(writeText).toHaveBeenNthCalledWith(2, pipeline.id);
     expect(router.state.location.pathname).toBe(APP_ROUTES.DASHBOARD_PIPELINES);
-    expect(searchParams().get("tab")).toBe("remote");
+    expect(searchParams().has("tab")).toBe(false);
     expect(screen.queryByText(/editor destination/i)).not.toBeInTheDocument();
   });
 
@@ -557,7 +494,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
     async (modifier) => {
       const open = vi.spyOn(window, "open").mockReturnValue(null);
       const { router } = await renderDashboard(
-        `${APP_ROUTES.DASHBOARD_PIPELINES}?tab=remote`,
+        `${APP_ROUTES.DASHBOARD_PIPELINES}`,
       );
       const row = await screen.findByRole("row", { name: /Example pipeline/ });
 
@@ -573,7 +510,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
       expect(open).toHaveBeenCalledOnce();
       const [href, target] = open.mock.calls[0];
       const openedUrl = new URL(String(href), "http://localhost");
-      expect(openedUrl.pathname).toBe("/editor-v2/pipeline/pipeline-1");
+      expect(openedUrl.pathname).toBe("/editor/pipeline/pipeline-1");
       expect(openedUrl.searchParams.get("source")).toBeNull();
       expect(target).toBe("_blank");
       expect(router.state.location.pathname).toBe(
@@ -585,7 +522,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
   it("preserves a deployment's hash prefix when opening a remote pipeline in a new tab", async () => {
     const open = vi.spyOn(window, "open").mockReturnValue(null);
     const { router } = await renderDashboard(
-      `${APP_ROUTES.DASHBOARD_PIPELINES}?tab=remote`,
+      `${APP_ROUTES.DASHBOARD_PIPELINES}`,
     );
     const row = await screen.findByRole("row", { name: /Example pipeline/ });
     vi.spyOn(router.history, "createHref").mockImplementation(
@@ -600,23 +537,19 @@ describe("DashboardPipelinesView remote pipelines", () => {
     });
 
     expect(open).toHaveBeenCalledExactlyOnceWith(
-      "/tangle-ui/#/editor-v2/pipeline/pipeline-1",
+      "/tangle-ui/#/editor/pipeline/pipeline-1",
       "_blank",
       "noopener,noreferrer",
     );
     expect(router.state.location.pathname).toBe(APP_ROUTES.DASHBOARD_PIPELINES);
   });
 
-  it("fetches only when the remote tab opens and displays the returned metadata", async () => {
-    const { user } = await renderDashboard();
+  it("loads saved pipelines and displays their metadata", async () => {
+    await renderDashboard();
 
-    expect(screen.getByText("Local pipeline list")).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "Example Pipelines" }),
     ).toHaveAttribute("href", APP_ROUTES.LEARN_EXAMPLES);
-    expect(listRemotePipelines).not.toHaveBeenCalled();
-
-    await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
 
     const row = await screen.findByRole("row", { name: /Example pipeline/ });
     const cells = within(row).getAllByRole("cell");
@@ -648,15 +581,12 @@ describe("DashboardPipelinesView remote pipelines", () => {
       screen.getByRole("link", { name: "Example Pipelines" }),
     ).toHaveAttribute("href", APP_ROUTES.LEARN_EXAMPLES);
     expect(screen.getByText("Favorite Pipelines")).toBeInTheDocument();
-    expect(screen.queryByText("Local pipeline list")).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole("tab", { name: "Local Pipelines" }));
-    expect(screen.getByText("Local pipeline list")).toBeInTheDocument();
+    expect(screen.queryByRole("tab")).not.toBeInTheDocument();
   });
 
   it("round-trips text filters through a shared URL", async () => {
     const { user, router, searchParams, unmount } = await renderDashboard(
-      `${APP_ROUTES.DASHBOARD_PIPELINES}?tab=remote&panel=compact`,
+      `${APP_ROUTES.DASHBOARD_PIPELINES}?panel=compact`,
     );
     await screen.findByText("Example pipeline");
     const fields = [
@@ -718,7 +648,6 @@ describe("DashboardPipelinesView remote pipelines", () => {
       screen.getByRole("button", { name: "Updated at" }),
     ).toBeInTheDocument();
     expect(Object.fromEntries(searchParams())).toEqual({
-      tab: "remote",
       panel: "compact",
     });
     await waitFor(() =>
@@ -737,7 +666,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date(2026, 9, 20, 12));
     const { user, router, searchParams, unmount } = await renderDashboard(
-      `${APP_ROUTES.DASHBOARD_PIPELINES}?tab=remote`,
+      `${APP_ROUTES.DASHBOARD_PIPELINES}`,
     );
     await screen.findByText("Example pipeline");
     const group = within(screen.getByRole("group", { name: field }));
@@ -787,9 +716,6 @@ describe("DashboardPipelinesView remote pipelines", () => {
     );
 
     expect(await screen.findByText("Pipeline 101")).toBeInTheDocument();
-    expect(
-      screen.getByRole("tab", { name: "Remote Pipelines" }),
-    ).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("textbox", { name: "Search by name" })).toHaveValue(
       "shared",
     );
@@ -798,25 +724,6 @@ describe("DashboardPipelinesView remote pipelines", () => {
     expect(vi.mocked(listRemotePipelines).mock.calls).toEqual([
       [backend.backendUrl, undefined, query],
     ]);
-  });
-
-  it("keeps an explicit local tab when a link contains remote filters", async () => {
-    const { user } = await renderDashboard(
-      `${APP_ROUTES.DASHBOARD_PIPELINES}?tab=local&name=shared`,
-    );
-    expect(screen.getByText("Local pipeline list")).toBeInTheDocument();
-    expect(listRemotePipelines).not.toHaveBeenCalled();
-
-    await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
-    await screen.findByText("Example pipeline");
-    expect(screen.getByRole("textbox", { name: "Search by name" })).toHaveValue(
-      "shared",
-    );
-    expect(listRemotePipelines).toHaveBeenCalledExactlyOnceWith(
-      backend.backendUrl,
-      undefined,
-      expect.stringContaining('"value_substring":"shared"'),
-    );
   });
 
   it("restores an invalid ID link without sending a search request", async () => {
@@ -896,7 +803,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
     "cancels an uncommitted user draft with %s",
     async (label) => {
       const { searchParams } = await renderDashboard(
-        `${APP_ROUTES.DASHBOARD_PIPELINES}?tab=remote`,
+        `${APP_ROUTES.DASHBOARD_PIPELINES}`,
       );
       await screen.findByText("Example pipeline");
       const input = screen.getByRole("textbox", { name: "Search by user" });
@@ -919,7 +826,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
 
   it("pauses a successful search when the ID becomes incomplete", async () => {
     const { searchParams } = await renderDashboard(
-      `${APP_ROUTES.DASHBOARD_PIPELINES}?tab=remote`,
+      `${APP_ROUTES.DASHBOARD_PIPELINES}`,
     );
     await screen.findByText("Example pipeline");
     const input = screen.getByRole("textbox", { name: "Search by ID" });
@@ -949,7 +856,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
       },
     );
     const { user, searchParams } = await renderDashboard(
-      `${APP_ROUTES.DASHBOARD_PIPELINES}?tab=remote&panel=compact`,
+      `${APP_ROUTES.DASHBOARD_PIPELINES}?panel=compact`,
     );
     await screen.findByText("Pipeline 1");
     await user.click(screen.getByRole("button", { name: "Next" }));
@@ -1043,7 +950,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
         return query ? createPage(201, 1, null) : createPage(1, 1, null);
       },
     );
-    await renderDashboard(`${APP_ROUTES.DASHBOARD_PIPELINES}?tab=remote`);
+    await renderDashboard(`${APP_ROUTES.DASHBOARD_PIPELINES}`);
     await screen.findByText("Pipeline 1");
     const nameInput = screen.getByRole("textbox", { name: "Search by name" });
 
@@ -1071,9 +978,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
 
   it("shows a loading message while the request is pending", async () => {
     vi.mocked(listRemotePipelines).mockReturnValue(new Promise(() => {}));
-    const { user } = await renderDashboard();
-
-    await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
+    await renderDashboard();
 
     expect(screen.getByText("Loading pipelines…")).toBeInTheDocument();
     expectNoPaginationControls();
@@ -1085,9 +990,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
       pipelines: [],
       nextPageToken: null,
     });
-    const { user } = await renderDashboard();
-
-    await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
+    await renderDashboard();
 
     expect(
       await screen.findByRole("cell", { name: "No pipelines found." }),
@@ -1099,9 +1002,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
     vi.mocked(listRemotePipelines).mockRejectedValue(
       new Error("Request failed"),
     );
-    const { user } = await renderDashboard();
-
-    await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
+    await renderDashboard();
 
     expect(
       await screen.findByText("Failed to load pipelines."),
@@ -1111,11 +1012,11 @@ describe("DashboardPipelinesView remote pipelines", () => {
 
   it.each([
     [{ ready: false }, "Loading pipelines…"],
-    [{ configured: false }, "Local pipeline list"],
+    [{ configured: false }, "Configure a backend to view pipelines."],
     [{ available: false }, "Pipelines are unavailable."],
   ])("does not fetch when the backend state is %o", async (state, message) => {
     await renderDashboard(
-      `${APP_ROUTES.DASHBOARD_PIPELINES}?tab=remote`,
+      `${APP_ROUTES.DASHBOARD_PIPELINES}`,
       createBackend(state),
     );
 
@@ -1129,9 +1030,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
       pipelines: [{ ...pipeline, pipeline_name: null }],
       nextPageToken: null,
     });
-    const { user } = await renderDashboard();
-
-    await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
+    await renderDashboard();
 
     expect(await screen.findByText("Untitled Pipeline")).toBeInTheDocument();
     expect(screen.getByText("pipeline-1")).toBeInTheDocument();
@@ -1144,7 +1043,6 @@ describe("DashboardPipelinesView remote pipelines", () => {
       ["page-three", createPage(21, 5, null)],
     ]);
     const { user } = await renderDashboard();
-    await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
 
     await screen.findByText("Pipeline 1");
     expect(screen.getByText("Page 1")).toBeInTheDocument();
@@ -1181,19 +1079,12 @@ describe("DashboardPipelinesView remote pipelines", () => {
     expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
   });
 
-  it("ignores a legacy page number when deciding which tab to open", async () => {
-    await renderDashboard(`${APP_ROUTES.DASHBOARD_PIPELINES}?page=1000000`);
-
-    expect(screen.getByText("Local pipeline list")).toBeInTheDocument();
-    expect(listRemotePipelines).not.toHaveBeenCalled();
-  });
-
   it("ignores a legacy page value without walking prior cursors", async () => {
     vi.mocked(listRemotePipelines).mockResolvedValue(
       createPage(1, 10, "page-two"),
     );
     const { searchParams } = await renderDashboard(
-      `${APP_ROUTES.DASHBOARD_PIPELINES}?tab=remote&page=1000000&panel=compact`,
+      `${APP_ROUTES.DASHBOARD_PIPELINES}?page=1000000&panel=compact`,
     );
 
     expect(await screen.findByText("Pipeline 1")).toBeInTheDocument();
@@ -1205,7 +1096,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
     );
     expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Next" })).toBeEnabled();
-    expect(searchParams().get("tab")).toBe("remote");
+    expect(searchParams().has("tab")).toBe(false);
     expect(searchParams().get("panel")).toBe("compact");
   });
 
@@ -1214,7 +1105,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
       pageToken ? createPage(11, 5, null) : createPage(1, 10, "page-two"),
     );
     const { user, router, unmount } = await renderDashboard(
-      `${APP_ROUTES.DASHBOARD_PIPELINES}?tab=remote`,
+      `${APP_ROUTES.DASHBOARD_PIPELINES}`,
     );
     await screen.findByText("Pipeline 1");
     await user.click(screen.getByRole("button", { name: "Next" }));
@@ -1252,9 +1143,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
       if (!result) throw new Error(`Unexpected page token: ${pageToken}`);
       return result;
     });
-    const { user } = await renderDashboard(
-      `${APP_ROUTES.DASHBOARD_PIPELINES}?tab=remote`,
-    );
+    const { user } = await renderDashboard(`${APP_ROUTES.DASHBOARD_PIPELINES}`);
     await screen.findByText("Pipeline 1");
     await user.click(screen.getByRole("button", { name: "Next" }));
     await screen.findByText("Pipeline 11");
@@ -1298,12 +1187,11 @@ describe("DashboardPipelinesView remote pipelines", () => {
     const { user, router, searchParams } = await renderDashboard(
       `${APP_ROUTES.DASHBOARD_PIPELINES}?panel=compact`,
     );
-    await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
     await screen.findByText("Pipeline 1");
     const table = screen.getByRole("table", { name: "Remote Pipelines" });
     const initialUrl = router.history.location.href;
     const historyLength = router.history.length;
-    expect(searchParams().get("tab")).toBe("remote");
+    expect(searchParams().has("tab")).toBe(false);
     vi.mocked(window.scrollTo).mockClear();
 
     await user.click(screen.getByRole("button", { name: "Next" }));
@@ -1347,44 +1235,6 @@ describe("DashboardPipelinesView remote pipelines", () => {
     );
   });
 
-  it("restores tabs through browser Back and Forward with fresh cursor history", async () => {
-    vi.mocked(listRemotePipelines).mockImplementation(async (_, pageToken) =>
-      pageToken ? createPage(11, 10, null) : createPage(1, 10, "page-two"),
-    );
-    const { user, router, searchParams } = await renderDashboard();
-    await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
-    await screen.findByText("Pipeline 1");
-    await user.click(screen.getByRole("button", { name: "Next" }));
-    await screen.findByText("Pipeline 11");
-    await user.click(screen.getByRole("tab", { name: "Local Pipelines" }));
-    expect(screen.getByText("Local pipeline list")).toBeInTheDocument();
-
-    await act(async () => {
-      router.history.back();
-    });
-    expect(await screen.findByText("Pipeline 1")).toBeInTheDocument();
-    expect(screen.getByText("Page 1")).toBeInTheDocument();
-    expect(searchParams().get("tab")).toBe("remote");
-    expect(searchParams().has("page")).toBe(false);
-
-    await act(async () => {
-      router.history.back();
-    });
-    expect(await screen.findByText("Local pipeline list")).toBeInTheDocument();
-
-    await act(async () => {
-      router.history.forward();
-    });
-    expect(await screen.findByText("Pipeline 1")).toBeInTheDocument();
-    expect(screen.getByText("Page 1")).toBeInTheDocument();
-
-    await act(async () => {
-      router.history.forward();
-    });
-    expect(await screen.findByText("Local pipeline list")).toBeInTheDocument();
-    expect(searchParams().get("tab")).toBe("local");
-  });
-
   it("restores filters at the first page through history and cancels a pending search on Back", async () => {
     vi.mocked(listRemotePipelines).mockImplementation(
       async (_, token, query) => {
@@ -1404,7 +1254,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
     await act(async () => {
       await router.navigate({
         to: APP_ROUTES.DASHBOARD_PIPELINES,
-        search: { tab: "remote", name: "second", panel: "compact" },
+        search: { name: "second", panel: "compact" },
         resetScroll: false,
       });
     });
@@ -1482,7 +1332,6 @@ describe("DashboardPipelinesView remote pipelines", () => {
       .mockResolvedValueOnce(createPage(1, 10, "page-two"))
       .mockReturnValueOnce(nextPage.promise);
     const { user } = await renderDashboard();
-    await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
     await screen.findByText("Pipeline 1");
 
     await user.click(screen.getByRole("button", { name: "Next" }));
@@ -1515,7 +1364,6 @@ describe("DashboardPipelinesView remote pipelines", () => {
       .mockResolvedValueOnce(createPage(11, 0, null))
       .mockResolvedValueOnce(createPage(1, 8, null));
     const { user } = await renderDashboard();
-    await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
     await screen.findByText("Pipeline 1");
 
     await user.click(screen.getByRole("button", { name: "Next" }));
@@ -1541,7 +1389,6 @@ describe("DashboardPipelinesView remote pipelines", () => {
       return createPage(1, 10, "page-two");
     });
     const { user } = await renderDashboard();
-    await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
     await screen.findByText("Pipeline 1");
 
     await user.click(screen.getByRole("button", { name: "Next" }));
@@ -1568,7 +1415,6 @@ describe("DashboardPipelinesView remote pipelines", () => {
         : createPage(1, 10, "page-two"),
     );
     const { user, setBackend } = await renderDashboard();
-    await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
     await screen.findByText("Pipeline 1");
     await user.click(screen.getByRole("button", { name: "Next" }));
     await screen.findByText("Pipeline 11");
@@ -1597,7 +1443,6 @@ describe("DashboardPipelinesView remote pipelines", () => {
       },
     );
     const { user, setBackend } = await renderDashboard();
-    await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
     await screen.findByText("Pipeline 1");
     await user.click(screen.getByRole("button", { name: "Next" }));
     await screen.findByText("Pipeline 11");
@@ -1724,17 +1569,4 @@ describe("DashboardPipelinesView remote pipelines", () => {
       expect(width).toBeCloseTo([25, 15, 20, 12, 12, 16][index]);
     });
   });
-});
-
-it("keeps saved remote pipelines reachable when new pipelines are saved in the browser", async () => {
-  localStorage.setItem("pipelines:save-in-browser", "true");
-  try {
-    const { user } = await renderDashboard();
-    expect(screen.getByText("Local pipeline list")).toBeInTheDocument();
-    await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
-    expect(await screen.findByText("Example pipeline")).toBeInTheDocument();
-    expect(listRemotePipelines).toHaveBeenCalled();
-  } finally {
-    localStorage.removeItem("pipelines:save-in-browser");
-  }
 });

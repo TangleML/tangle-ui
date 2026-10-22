@@ -44,10 +44,7 @@ export const EditorMenuBar = observer(function EditorMenuBar() {
     tourMode?.tour.displayName ?? tourMode?.tour.id ?? pipelineNameFromSpec;
 
   const activePipeline = pipelineFile.activePipelineFile;
-  const displayMenu = Boolean(activePipeline);
-  const isRemote = Boolean(
-    activePipeline?.remote || activePipeline?.draftBackendUrl,
-  );
+  const displayMenu = Boolean(navigation.rootSpec);
   const [renameOpen, setRenameOpen] = useState(false);
 
   const handleExitTour = () => {
@@ -114,8 +111,6 @@ export const EditorMenuBar = observer(function EditorMenuBar() {
                 onSubmit={handlePipelineRename}
                 submitButtonText="Rename"
                 isSubmitDisabled={(name) => name === pipelineNameFromSpec}
-                excludeNames={[pipelineNameFromSpec]}
-                validateLocalName={!isRemote}
               />
             )}
 
@@ -158,14 +153,17 @@ export const EditorMenuBar = observer(function EditorMenuBar() {
       >
         {displayMenu && (
           <>
-            {!isRemote && (
-              <ProjectPicker pipelineName={activePipeline?.storageKey} />
+            {!tourMode && (
+              <ProjectPicker
+                pipelineName={pipelineNameFromSpec}
+                pipelineId={activePipeline?.remote?.pipelineId}
+              />
             )}
             <QuickRunButton />
             <div className="w-px h-5 bg-stone-700" />
           </>
         )}
-        <AutoSaveIndicator />
+        {!tourMode && <AutoSaveIndicator />}
         <AppMenuActions />
       </InlineStack>
     </CanvasMenuBar>

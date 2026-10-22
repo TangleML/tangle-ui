@@ -14,7 +14,7 @@ describe("WindowStoreImpl view preset dock layout", () => {
     store.enableDockSide("right");
 
     store.openWindow(stubContent, {
-      id: "component-library",
+      id: "component-search",
       title: "Components",
       defaultDockState: "left",
     });
@@ -30,7 +30,7 @@ describe("WindowStoreImpl view preset dock layout", () => {
     });
 
     expect(store.getDockAreaWindowIds("left")).toEqual([
-      "component-library",
+      "component-search",
       "runs-and-submission",
       "ai-assistant-chat",
     ]);
@@ -48,7 +48,7 @@ describe("WindowStoreImpl view preset dock layout", () => {
     store.enableDockSide("right");
 
     store.openWindow(stubContent, {
-      id: "component-library",
+      id: "component-search",
       title: "Components",
       defaultDockState: "left",
     });
@@ -60,7 +60,7 @@ describe("WindowStoreImpl view preset dock layout", () => {
 
     runInAction(() => {
       store.dockAreas.left.windowOrder = [
-        "component-library",
+        "component-search",
         "runs-and-submission",
       ];
     });
@@ -68,7 +68,7 @@ describe("WindowStoreImpl view preset dock layout", () => {
     store.applyViewPreset(DEFAULT_VIEW_PRESET);
 
     expect(store.getDockAreaWindowIds("left")).toEqual([
-      "component-library",
+      "component-search",
       "runs-and-submission",
     ]);
   });

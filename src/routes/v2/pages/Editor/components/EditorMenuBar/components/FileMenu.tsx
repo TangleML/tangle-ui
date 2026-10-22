@@ -1,11 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { observer } from "mobx-react-lite";
-import { useState } from "react";
 
-import {
-  ConfirmationDialog,
-  PipelineNameDialog,
-} from "@/components/shared/Dialogs";
+import { PipelineNameDialog } from "@/components/shared/Dialogs";
 import ImportPipeline from "@/components/shared/ImportPipeline";
 import {
   DropdownMenu,
@@ -19,49 +15,31 @@ import { Icon } from "@/components/ui/icon";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useTourMode } from "@/providers/TourProvider/TourModeContext";
 import { APP_ROUTES } from "@/routes/router";
-import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButton";
-import { MovePipelineDialog } from "@/routes/v2/shared/components/MovePipelineDialog";
 import { ShortcutBadge } from "@/routes/v2/shared/components/ShortcutBadge";
-import { isRemotePipelineRef } from "@/services/pipelineStorage/types";
 import { tracking } from "@/utils/tracking";
 
-import { OpenPipelineDialog } from "./OpenPipelineDialog";
 import { useFileMenuState } from "./useFileMenuState";
 
 export const FileMenu = observer(function FileMenu() {
   const { track } = useAnalytics();
   const {
     importTriggerRef,
-    openDialogOpen,
-    setOpenDialogOpen,
     saveAsDialogOpen,
     setSaveAsDialogOpen,
     renameDialogOpen,
     setRenameDialogOpen,
-    deleteDialogOpen,
-    setDeleteDialogOpen,
     renamePipeline,
     getRenameInitialName,
     setImportOpen,
     handleSave,
     handleNewPipeline,
-    handlePipelineClick,
     handleSavePipelineAs,
     handleExport,
     getSaveAsInitialName,
-    handleDeletePipeline,
   } = useFileMenuState();
 
   const navigate = useNavigate();
-  const { pipelineFile: pipelineFileStore } = useEditorSession();
-  const activePipeline = pipelineFileStore.activePipelineFile;
-  const [moveDialogOpen, setMoveDialogOpen] = useState(false);
-  const isRemote = Boolean(
-    activePipeline?.remote || activePipeline?.draftBackendUrl,
-  );
-  const canMove =
-    !isRemote && (activePipeline?.folder.canMoveFilesOut ?? false);
   const tourMode = useTourMode();
 
   const isTour = !!tourMode;
@@ -79,7 +57,7 @@ export const FileMenu = observer(function FileMenu() {
             disabled={isTour}
             onClick={() => {
               track("v2.pipeline_editor.file_menu.open.click");
-              setOpenDialogOpen(true);
+              void navigate({ to: APP_ROUTES.DASHBOARD_PIPELINES });
             }}
           >
             <Icon name="FolderOpen" size="sm" />
@@ -90,6 +68,7 @@ export const FileMenu = observer(function FileMenu() {
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
+            disabled={isTour}
             onClick={() => {
               track("v2.pipeline_editor.file_menu.save.click");
               void handleSave();
@@ -148,44 +127,8 @@ export const FileMenu = observer(function FileMenu() {
             <Icon name="FileDown" size="sm" />
             Export
           </DropdownMenuItem>
-          {canMove && (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => {
-                  track("v2.pipeline_editor.file_menu.move_to_folder.click");
-                  setMoveDialogOpen(true);
-                }}
-              >
-                <Icon name="Folder" size="sm" />
-                Move to folder
-              </DropdownMenuItem>
-            </>
-          )}
-          {!isRemote && (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                disabled={isTour}
-                onClick={() => {
-                  track("v2.pipeline_editor.file_menu.delete_pipeline.click");
-                  setDeleteDialogOpen(true);
-                }}
-                className="text-destructive focus:text-destructive"
-              >
-                <Icon name="Trash" size="sm" />
-                Delete pipeline
-              </DropdownMenuItem>
-            </>
-          )}
         </DropdownMenuContent>
       </DropdownMenu>
-
-      <OpenPipelineDialog
-        open={openDialogOpen}
-        onOpenChange={setOpenDialogOpen}
-        onPipelineClick={handlePipelineClick}
-      />
 
       <PipelineNameDialog
         open={saveAsDialogOpen}
@@ -195,7 +138,6 @@ export const FileMenu = observer(function FileMenu() {
         initialName={getSaveAsInitialName()}
         onSubmit={handleSavePipelineAs}
         submitButtonText="Save"
-        validateLocalName={!isRemote}
       />
 
       <PipelineNameDialog
@@ -206,29 +148,6 @@ export const FileMenu = observer(function FileMenu() {
         onSubmit={renamePipeline}
         submitButtonText="Rename"
         isSubmitDisabled={(name) => name === getRenameInitialName()}
-        excludeNames={[getRenameInitialName()]}
-        validateLocalName={!isRemote}
-      />
-
-      {canMove && activePipeline && (
-        <MovePipelineDialog
-          open={moveDialogOpen}
-          onOpenChange={setMoveDialogOpen}
-          pipelineIds={[activePipeline.id]}
-          currentFolderId={activePipeline.folder.id}
-          onMoveComplete={() => setMoveDialogOpen(false)}
-        />
-      )}
-
-      <ConfirmationDialog
-        isOpen={deleteDialogOpen}
-        title="Delete pipeline?"
-        description={`"${activePipeline?.storageKey ?? "This pipeline"}" will be permanently deleted. This action cannot be undone.`}
-        onConfirm={() => {
-          void handleDeletePipeline();
-          setDeleteDialogOpen(false);
-        }}
-        onCancel={() => setDeleteDialogOpen(false)}
       />
 
       <ImportPipeline
@@ -241,17 +160,9 @@ export const FileMenu = observer(function FileMenu() {
           />
         }
         onImportComplete={(pipeline) => {
-          if (isRemotePipelineRef(pipeline)) {
-            navigate({
-              to: APP_ROUTES.EDITOR_V2_REMOTE_PIPELINE,
-              params: { pipelineId: pipeline.pipelineId },
-            });
-            return;
-          }
           navigate({
-            to: APP_ROUTES.EDITOR_V2_PIPELINE,
-            params: { pipelineName: pipeline.name },
-            search: { fileId: pipeline.fileId },
+            to: APP_ROUTES.REMOTE_PIPELINE_EDITOR,
+            params: { pipelineId: pipeline.pipelineId },
           });
         }}
       />

@@ -4,11 +4,8 @@ import type {
   PipelineRunResponse,
 } from "@/api/types.gen";
 import { buildTaskSpecShape } from "@/components/shared/PipelineRunNameTemplate/types";
-import { useCheckComponentSpecFromPath } from "@/hooks/useCheckComponentSpecFromPath";
 import { useUserDetails } from "@/hooks/useUserDetails";
-import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
-import { getDefaultEditorPath } from "@/routes/editorRoutes";
 import { extractCanonicalName } from "@/utils/canonicalPipelineName";
 import type { ComponentSpec } from "@/utils/componentSpec";
 import {
@@ -21,7 +18,6 @@ interface RunViewActionsReady {
   ready: true;
   componentSpec: ComponentSpec;
   runId: string | null | undefined;
-  canAccessEditorSpec: boolean;
   isRunCreator: boolean | "" | undefined;
   isInProgress: boolean;
   isComplete: boolean;
@@ -41,7 +37,6 @@ function resolveActions(
   metadata: PipelineRunResponse | undefined,
   details: GetExecutionInfoResponse | undefined,
   currentUserId: string | undefined,
-  canAccessEditorSpec: boolean,
 ): RunViewActionsReady {
   const isRunCreator =
     !!currentUserId && metadata?.created_by === currentUserId;
@@ -62,7 +57,6 @@ function resolveActions(
     ready: true,
     componentSpec,
     runId,
-    canAccessEditorSpec,
     isRunCreator,
     isInProgress,
     isComplete,
@@ -71,7 +65,6 @@ function resolveActions(
 }
 
 export function useRunViewActions(): RunViewActions {
-  const { componentSpec } = useComponentSpec();
   const {
     rootState: state,
     runId,
@@ -80,14 +73,8 @@ export function useRunViewActions(): RunViewActions {
   } = useExecutionData();
   const { data: currentUserDetails } = useUserDetails();
 
-  const editorRoute = componentSpec?.name
-    ? getDefaultEditorPath(componentSpec.name)
-    : "";
-
-  const canAccessEditorSpec = useCheckComponentSpecFromPath(
-    editorRoute,
-    componentSpec,
-  );
+  const componentSpec = details?.task_spec.componentRef.spec as
+    ComponentSpec | undefined;
 
   if (!componentSpec || !state) {
     return { ready: false };
@@ -100,6 +87,5 @@ export function useRunViewActions(): RunViewActions {
     metadata,
     details,
     currentUserDetails?.id,
-    canAccessEditorSpec,
   );
 }

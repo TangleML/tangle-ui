@@ -1,155 +1,294 @@
-import { makeObservable, observable } from "mobx";
+import {
+  isRootStore,
+  registerRootStore,
+  type UndoManager,
+  undoMiddleware,
+  unregisterRootStore,
+} from "mobx-keystone";
 
+import {
+  type ComponentSpec,
+  IncrementingIdGenerator,
+  YamlDeserializer,
+} from "@/models/componentSpec";
+import { DocumentSaveState } from "@/routes/v2/pages/Editor/store/documentSaveState";
+import { hydrateLoadedSpecRefs } from "@/routes/v2/pages/Editor/utils/hydrateSpecRefs";
 import { PipelineSpecApiError } from "@/services/pipelineSpecService";
 import { getRemotePipelineWriter } from "@/services/remotePipelineEditorService";
 import { normalizeBackendUrl } from "@/utils/backendIdentity";
-import { emitUserPipelineWritten } from "@/utils/userPipelineWriteEvents";
-import { componentSpecFromYaml } from "@/utils/yaml";
+import type { ComponentSpec as SerializedSpec } from "@/utils/componentSpec";
 
-import { createDriver } from "./createDriver";
-import { pipelineStorageDb } from "./db";
-import { RemotePipelineDraftStorageDriver } from "./drivers/RemotePipelineDraftStorageDriver";
-import { RemotePipelineStorageDriver } from "./drivers/RemotePipelineStorageDriver";
-import { RootFolderDbStorageDriver } from "./drivers/RootFolderDbStorageDriver";
-import {
-  migrateLocalPipelineToRemote,
-  type PipelineMigrationOptions,
-} from "./migrateLocalPipelineToRemote";
 import { PipelineFile } from "./PipelineFile";
-import { PipelineFolder } from "./PipelineFolder";
-import { findPipelineMigration } from "./pipelineMigrations";
-import { findById, findByStorageKey } from "./pipelineRegistry";
 import {
   assertRemotePipelineAvailable,
+  getRemotePipelineDeletionError,
   RemotePipelineDeletionError,
-  type RemotePipelineWriteAdmission,
+  subscribeRemotePipelineDeletion,
 } from "./remotePipelineDeletion";
 import {
   type EditorPipelineRef,
   getEditorPipelineIdentity,
-  isRemotePipelineDraftRef,
-  isRemotePipelineRef,
-  type PipelineStorageDriver,
   type RemotePipelineDraftRef,
   type RemotePipelineRef,
-  ROOT_FOLDER_ID,
 } from "./types";
 
-const ROOT_DRIVER_CONFIG = {
-  driverType: "folder-indexdb",
-  folderId: ROOT_FOLDER_ID,
-} as const;
+export interface LoadedSpec {
+  spec: ComponentSpec;
+  file: PipelineFile;
+  saveState: DocumentSaveState;
+  undoManager: UndoManager;
+}
 
+interface DocumentEntry {
+  ref: EditorPipelineRef;
+  file?: PipelineFile;
+  opening?: Promise<PipelineFile>;
+  loading?: Promise<LoadedSpec>;
+  document?: LoadedSpec;
+  error?: unknown;
+  owners: number;
+  releaseRequested?: boolean;
+}
 interface SavedDraftAlias {
   remote: RemotePipelineRef;
   ownerId: string;
   unavailable?: boolean;
 }
 
+/** Owns every open document, independently of routes, editor mounts, and query caches. */
 export class PipelineStorageService {
+  private readonly documents = new Map<string, DocumentEntry>();
   private readonly savedDrafts = new Map<string, SavedDraftAlias>();
-  private readonly remoteDrafts = new Map<
-    string,
-    {
-      ref: RemotePipelineDraftRef;
-      file: PipelineFile;
-      filePath: string;
-      owners: number;
-      discardRequested: boolean;
-    }
-  >();
-  @observable accessor rootFolder: PipelineFolder;
+  private readonly listeners = new Set<() => void>();
+  private stopDeletion?: () => void;
+  private connections = 0;
 
-  constructor() {
-    this.rootFolder = createRoot({
-      driver: createDriver(ROOT_DRIVER_CONFIG),
+  connect = (): (() => void) => {
+    this.connections += 1;
+    this.stopDeletion ??= subscribeRemotePipelineDeletion((deletion) => {
+      if (deletion.state !== "deleted" && deletion.state !== "uncertain")
+        return;
+      for (const entry of new Set(this.documents.values()))
+        void this.reconcile(entry);
     });
-    makeObservable(this);
+    return () => {
+      this.connections -= 1;
+      if (!this.connections) {
+        this.stopDeletion?.();
+        this.stopDeletion = undefined;
+      }
+    };
+  };
+  subscribe = (listener: () => void): (() => void) => {
+    this.listeners.add(listener);
+    const disconnect = this.connect();
+    return () => {
+      this.listeners.delete(listener);
+      disconnect();
+    };
+  };
+  private changed() {
+    for (const listener of this.listeners) listener();
+  }
+
+  private entry(ref: EditorPipelineRef): DocumentEntry {
+    const key = getEditorPipelineIdentity(ref);
+    const cached = this.documents.get(key);
+    if (cached) return cached;
+    if (ref.source === "draft") {
+      const saved = this.getSavedDraft(ref.draftId, ref.backendUrl);
+      if (saved) {
+        const entry = this.entry(saved.remote);
+        this.documents.set(key, entry);
+        return entry;
+      }
+      this.createRemoteDraft(ref);
+      return this.documents.get(key)!;
+    }
+    const entry: DocumentEntry = { ref, owners: 0 };
+    this.documents.set(key, entry);
+    return entry;
   }
 
   async resolvePipeline(ref: EditorPipelineRef): Promise<PipelineFile> {
-    if (isRemotePipelineDraftRef(ref)) {
-      const draft = this.remoteDrafts.get(getEditorPipelineIdentity(ref));
-      if (draft) {
-        assertRemotePipelineAvailable(
-          ref.backendUrl,
-          draft.file.remote ?? { filePath: draft.filePath },
-        );
-        const ownerId = draft.file.folder.driver.ownerId;
-        if (draft.file.remote && ownerId)
-          await this.assertDraftOwner(ref.backendUrl, ownerId);
-        draft.discardRequested = false;
-        return draft.file;
-      }
+    const entry = this.entry(ref);
+    if (ref.source === "draft") {
       const saved = this.getSavedDraft(ref.draftId, ref.backendUrl);
-      if (saved) {
-        if (saved.unavailable)
-          throw new Error(
-            "This saved pipeline is no longer available. Open the dashboard or create a new pipeline.",
-          );
-        await this.assertDraftOwner(ref.backendUrl, saved.ownerId);
-        try {
-          return await this.resolvePipeline(saved.remote);
-        } catch (error) {
-          if (
-            (error instanceof PipelineSpecApiError && error.status === 404) ||
+      if (saved?.unavailable)
+        throw new Error(
+          "This saved pipeline is no longer available. Open the dashboard or create a new pipeline.",
+        );
+      if (saved) await this.assertDraftOwner(ref.backendUrl, saved.ownerId);
+    }
+    if (entry.file) {
+      assertRemotePipelineAvailable(
+        ref.backendUrl,
+        entry.file.remote ?? { filePath: entry.file.filePath },
+      );
+      return entry.file;
+    }
+    if (entry.ref.source !== "remote")
+      throw new Error("Pipeline draft is unavailable.");
+    entry.opening ??= PipelineFile.open(entry.ref)
+      .then((file) => {
+        entry.file = file;
+        return file;
+      })
+      .catch((error) => {
+        entry.opening = undefined;
+        if (
+          ref.source === "draft" &&
+          ((error instanceof PipelineSpecApiError && error.status === 404) ||
             (error instanceof RemotePipelineDeletionError &&
-              error.state === "deleted")
-          ) {
+              error.state === "deleted"))
+        ) {
+          const saved = this.getSavedDraft(ref.draftId, ref.backendUrl);
+          if (saved)
             this.storeSavedDraft(getEditorPipelineIdentity(ref), {
               ...saved,
               unavailable: true,
             });
-          }
+        }
+        throw error;
+      });
+    return entry.opening;
+  }
+
+  loadDocument(ref: EditorPipelineRef): Promise<LoadedSpec> {
+    const entry = this.entry(ref);
+    if (entry.document) {
+      const remote = entry.file?.remote;
+      const blocked =
+        remote &&
+        getRemotePipelineDeletionError({ source: "remote", ...remote });
+      if (
+        blocked &&
+        !entry.document.saveState.hasUnsavedChanges &&
+        !entry.document.saveState.hasPendingWrites
+      )
+        this.invalidate(entry, blocked);
+      else if (blocked) entry.document.saveState.recordError(blocked);
+    }
+    entry.loading ??= this.resolvePipeline(ref)
+      .then(async (file) => {
+        const spec = new YamlDeserializer(
+          new IncrementingIdGenerator(),
+        ).deserialize(file.read());
+        registerRootStore(spec);
+        try {
+          await hydrateLoadedSpecRefs(spec);
+        } catch (error) {
+          unregisterRootStore(spec);
           throw error;
         }
-      }
-      const file = this.createRemoteDraft(ref);
-      const created = this.remoteDrafts.get(getEditorPipelineIdentity(ref));
-      if (created) created.discardRequested = false;
-      return file;
-    }
-    if (isRemotePipelineRef(ref)) {
-      return remoteFile(await RemotePipelineStorageDriver.open(ref));
-    }
+        const document = {
+          spec,
+          file,
+          undoManager: undoMiddleware(spec),
+          saveState: new DocumentSaveState(spec, file, () =>
+            this.releaseIfSaved(entry),
+          ),
+        };
+        entry.document = document;
+        if (entry.releaseRequested) this.releaseIfSaved(entry);
+        return document;
+      })
+      .catch((error) => {
+        entry.error = error;
+        if (entry.releaseRequested) this.releaseIfSaved(entry);
+        throw error;
+      });
+    return entry.loading;
+  }
 
-    const file = ref.fileId
-      ? await this.findPipelineById(ref.fileId)
-      : await this.resolvePipelineByName(ref.name);
-    if (file) return file;
+  retryDocument(ref: EditorPipelineRef): void {
+    const entry = this.documents.get(getEditorPipelineIdentity(ref));
+    if (!entry?.error) return;
+    this.disposeDocument(entry);
+    entry.file = undefined;
+    entry.opening = undefined;
+    entry.loading = undefined;
+    entry.error = undefined;
+  }
 
-    const legacyDriver = new RootFolderDbStorageDriver();
-    if (await legacyDriver.hasKey(ref.name)) {
-      return this.rootFolder.assignFile(ref.name);
-    }
-    const migration = await findPipelineMigration(ref);
-    if (migration) {
-      return this.resolvePipeline(migration.remote);
-    }
-    throw new Error(`Pipeline "${ref.name}" not found`);
+  retainDocument(ref: EditorPipelineRef): () => void {
+    const entry = this.entry(ref);
+    entry.owners += 1;
+    entry.releaseRequested = false;
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      entry.owners -= 1;
+      queueMicrotask(() => {
+        if (entry.owners) return;
+        entry.releaseRequested = true;
+        if (entry.document)
+          void entry.document.saveState.flush().catch(() => {});
+        this.releaseIfSaved(entry);
+      });
+    };
+  }
+
+  private releaseIfSaved(entry: DocumentEntry): void {
+    if (entry.loading && !entry.document && !entry.error) return;
+    if (
+      entry.owners ||
+      entry.document?.saveState.hasUnsavedChanges ||
+      entry.document?.saveState.hasPendingWrites
+    )
+      return;
+    this.remove(entry);
+  }
+  private remove(entry: DocumentEntry): void {
+    for (const [key, candidate] of this.documents)
+      if (candidate === entry) this.documents.delete(key);
+    this.disposeDocument(entry);
+  }
+  private disposeDocument(entry: DocumentEntry): void {
+    entry.document?.saveState.dispose();
+    entry.document?.undoManager.dispose();
+    if (entry.document && isRootStore(entry.document.spec))
+      unregisterRootStore(entry.document.spec);
+    entry.document = undefined;
+  }
+  private invalidate(entry: DocumentEntry, error: Error): void {
+    if (
+      entry.error === error ||
+      entry.error instanceof RemotePipelineDeletionError
+    )
+      return;
+    entry.error = error;
+    entry.loading = Promise.reject(error);
+    void entry.loading.catch(() => {});
+  }
+  private async reconcile(entry: DocumentEntry): Promise<void> {
+    await entry.document?.saveState.pendingSave?.promise.catch(() => {});
+    const remote = entry.file?.remote;
+    const error =
+      remote && getRemotePipelineDeletionError({ source: "remote", ...remote });
+    if (!error || !entry.document) return;
+    if (entry.document.saveState.hasUnsavedChanges)
+      entry.document.saveState.recordError(error);
+    else this.invalidate(entry, error);
+    this.changed();
   }
 
   createRemoteDraft(
     ref: RemotePipelineDraftRef,
     onCreated?: (remote: RemotePipelineRef) => Promise<unknown>,
   ): PipelineFile {
-    const filePath = `pipelines/${crypto.randomUUID()}.yaml`;
-    const driver = new RemotePipelineDraftStorageDriver(
+    const entry: DocumentEntry = { ref, owners: 0 };
+    const file = new PipelineFile({
       ref,
-      filePath,
-      (content, admission) =>
-        this.createRemoteDriver(
-          ref.backendUrl,
-          componentSpecFromYaml(content).name ?? ref.name,
-          content,
-          filePath,
-          admission,
-        ),
-      async (remote) => {
-        file.promoteToRemote(remote);
-        const key = getEditorPipelineIdentity(ref);
-        const ownerId = driver.ownerId;
-        if (ownerId) this.storeSavedDraft(key, { remote, ownerId });
+      onCreated: async (remote) => {
+        entry.ref = remote;
+        this.documents.set(getEditorPipelineIdentity(remote), entry);
+        if (file.ownerId)
+          this.storeSavedDraft(getEditorPipelineIdentity(ref), {
+            remote,
+            ownerId: file.ownerId,
+          });
         try {
           await onCreated?.(remote);
         } catch (cause) {
@@ -159,46 +298,67 @@ export class PipelineStorageService {
           );
         }
       },
-    );
-    const file = new PipelineFile({
-      id: ref.draftId,
-      storageKey: ref.name,
-      draftBackendUrl: ref.backendUrl,
-      folder: new PipelineFolder({
-        id: getEditorPipelineIdentity(ref),
-        name: "Remote pipelines",
-        parentId: null,
-        driver,
-      }),
     });
-    this.remoteDrafts.set(getEditorPipelineIdentity(ref), {
-      ref,
-      file,
-      filePath,
-      owners: 0,
-      discardRequested: true,
-    });
+    entry.file = file;
+    this.documents.set(getEditorPipelineIdentity(ref), entry);
     return file;
   }
 
   getRemoteDraftRef(
     draftId: string,
     backendUrl: string,
-  ): RemotePipelineDraftRef | RemotePipelineRef {
-    const draft = [...this.remoteDrafts.values()].find(
-      ({ ref }) =>
-        ref.draftId === draftId &&
-        normalizeBackendUrl(ref.backendUrl) === normalizeBackendUrl(backendUrl),
-    );
-    if (draft) return draft.ref;
-    const saved = this.getSavedDraft(draftId, backendUrl);
-    if (saved)
+  ): RemotePipelineDraftRef {
+    const key = getEditorPipelineIdentity({
+      source: "draft",
+      draftId,
+      backendUrl,
+      name: "",
+    });
+    const entry = this.documents.get(key);
+    if (entry?.ref.source === "draft") return entry.ref;
+    if (this.getSavedDraft(draftId, backendUrl))
       return { source: "draft", draftId, backendUrl, name: "Saved pipeline" };
     throw new Error(
       "This unsaved pipeline draft is no longer available. Close this tab and create a new pipeline.",
     );
   }
 
+  getFile(ref: EditorPipelineRef): PipelineFile | undefined {
+    return this.documents.get(getEditorPipelineIdentity(ref))?.file;
+  }
+
+  discardRemoteDraft(ref: RemotePipelineDraftRef): void {
+    const entry = this.documents.get(getEditorPipelineIdentity(ref));
+    if (entry && !entry.owners) {
+      entry.releaseRequested = true;
+      this.releaseIfSaved(entry);
+    }
+  }
+
+  async createRemotePipeline(
+    backendUrl: string,
+    name: string,
+    spec: SerializedSpec,
+  ): Promise<PipelineFile> {
+    const file = await PipelineFile.create(backendUrl, name, spec);
+    this.documents.set(
+      getEditorPipelineIdentity({ source: "remote", ...file.remote! }),
+      { ref: { source: "remote", ...file.remote! }, file, owners: 0 },
+    );
+    return file;
+  }
+  async copyRemotePipeline(
+    source: PipelineFile,
+    name: string,
+    spec: SerializedSpec,
+  ): Promise<PipelineFile> {
+    const file = await source.copy(name, spec);
+    this.documents.set(
+      getEditorPipelineIdentity({ source: "remote", ...file.remote! }),
+      { ref: { source: "remote", ...file.remote! }, file, owners: 0 },
+    );
+    return file;
+  }
   private getSavedDraft(
     draftId: string,
     backendUrl: string,
@@ -270,182 +430,4 @@ export class PipelineStorageService {
       );
     }
   }
-
-  discardRemoteDraft(ref: RemotePipelineDraftRef): void {
-    const identity = getEditorPipelineIdentity(ref);
-    const draft = this.remoteDrafts.get(identity);
-    if (!draft) return;
-    draft.discardRequested = true;
-    if (!draft.owners) this.remoteDrafts.delete(identity);
-  }
-
-  /** Retained workarea tabs outlive their mounted editor when sessions change. */
-  retainRemoteDraft(draftId: string) {
-    const draft = [...this.remoteDrafts.values()].find(
-      ({ ref }) => ref.draftId === draftId,
-    );
-    if (!draft) return;
-    draft.owners += 1;
-    let released = false;
-    return {
-      ref: draft.ref,
-      file: draft.file,
-      release: () => {
-        if (released) return;
-        released = true;
-        draft.owners -= 1;
-        // Effect cleanup may be followed by a StrictMode reconnect. Dirty
-        // documents stay available until their editor requests clean disposal.
-        queueMicrotask(() => {
-          const identity = getEditorPipelineIdentity(draft.ref);
-          if (
-            !draft.owners &&
-            draft.discardRequested &&
-            this.remoteDrafts.get(identity) === draft
-          ) {
-            this.remoteDrafts.delete(identity);
-          }
-        });
-      },
-    };
-  }
-
-  async createRemotePipeline(
-    backendUrl: string,
-    name: string,
-    content: string,
-    filePath?: string,
-  ): Promise<PipelineFile> {
-    const file = remoteFile(
-      await this.createRemoteDriver(backendUrl, name, content, filePath),
-    );
-    emitUserPipelineWritten();
-    return file;
-  }
-
-  private createRemoteDriver(
-    backendUrl: string,
-    name: string,
-    content: string,
-    filePath?: string,
-    admission?: RemotePipelineWriteAdmission,
-  ): Promise<RemotePipelineStorageDriver> {
-    return RemotePipelineStorageDriver.create(
-      backendUrl,
-      name,
-      content,
-      filePath,
-      admission,
-    );
-  }
-
-  async moveLocalPipelineToRemote(
-    pipeline: string | PipelineFile,
-    backendUrl: string,
-    onCreated?: (remote: PipelineFile) => Promise<unknown>,
-    options?: PipelineMigrationOptions,
-  ): Promise<PipelineFile> {
-    const local =
-      typeof pipeline === "string"
-        ? await this.resolvePipeline({ name: pipeline })
-        : pipeline;
-    return migrateLocalPipelineToRemote(
-      this,
-      local,
-      backendUrl,
-      onCreated,
-      options,
-    );
-  }
-
-  async copyRemotePipeline(
-    source: PipelineFile,
-    name: string,
-    content: string,
-  ): Promise<PipelineFile> {
-    const driver = source.folder.driver;
-    if (driver instanceof RemotePipelineDraftStorageDriver && source.remote) {
-      return remoteFile(await driver.copy(name, content));
-    }
-    if (!(driver instanceof RemotePipelineStorageDriver)) {
-      throw new Error("The source pipeline is not a remote document.");
-    }
-    return remoteFile(await driver.copy(name, content));
-  }
-
-  async findPipelineById(id: string): Promise<PipelineFile> {
-    const entry = await findById(id);
-    if (!entry) {
-      const migration = await findPipelineMigration({ name: id, fileId: id });
-      if (migration) return this.resolvePipeline(migration.remote);
-      throw new Error(`Pipeline not found: ${id}`);
-    }
-
-    return new PipelineFile({
-      id: entry.id,
-      storageKey: entry.storageKey,
-      folder: await this.findFolderById(entry.folderId),
-    });
-  }
-
-  async resolvePipelineByName(name: string): Promise<PipelineFile | undefined> {
-    const existing = await findByStorageKey(name);
-
-    if (!existing) return this.rootFolder.findFile(name);
-
-    const folder = await this.findFolderById(existing.folderId);
-
-    return folder.findFile(name);
-  }
-
-  async findFolderById(id: string): Promise<PipelineFolder> {
-    if (id === ROOT_FOLDER_ID) {
-      return this.rootFolder;
-    }
-
-    return PipelineFolder.resolveById(id);
-  }
-
-  async getAllFolders(): Promise<PipelineFolder[]> {
-    const entries = await pipelineStorageDb.folders.toArray();
-    return entries.map((entry) => PipelineFolder.fromEntry(entry));
-  }
-
-  async getFavoriteFolders(): Promise<PipelineFolder[]> {
-    const entries = await pipelineStorageDb.folders
-      .filter((f) => f.favorite === true)
-      .toArray();
-    return entries
-      .map((entry) => PipelineFolder.fromEntry(entry))
-      .sort((a, b) =>
-        a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
-      );
-  }
-}
-
-function createRoot(options?: { driver: PipelineStorageDriver }) {
-  return new PipelineFolder({
-    id: ROOT_FOLDER_ID,
-    name: "Root",
-    parentId: null,
-    driver: options?.driver ?? createDriver({ driverType: "root-indexdb" }),
-  });
-}
-
-function remoteFile(driver: RemotePipelineStorageDriver): PipelineFile {
-  const remote = {
-    backendUrl: driver.backendUrl,
-    pipelineId: driver.pipelineId,
-  };
-  return new PipelineFile({
-    id: driver.pipelineId,
-    storageKey: driver.name,
-    remote,
-    folder: new PipelineFolder({
-      id: getEditorPipelineIdentity({ source: "remote", ...remote }),
-      name: "Remote pipelines",
-      parentId: null,
-      driver,
-    }),
-  });
 }

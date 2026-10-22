@@ -21,7 +21,7 @@ vi.mock("@/services/projects/useProjectRuns", () => ({
 }));
 
 vi.mock("@/routes/runRoutes", () => ({
-  getDefaultRunPath: (id: string) => `/runs/${id}`,
+  getRunPath: (id: string) => `/runs/${id}`,
 }));
 
 vi.mock("./ProjectRunStatus", () => ({

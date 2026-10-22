@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  createDashboardComponentsV2SearchParams,
+  createDashboardComponentsSearchParams,
   readComponentSearchQuery,
   readDisabledSourceKeys,
   readSelectedComponentDigest,
@@ -65,10 +65,10 @@ describe("readDisabledSourceKeys", () => {
   });
 });
 
-describe("createDashboardComponentsV2SearchParams", () => {
+describe("createDashboardComponentsSearchParams", () => {
   it("omits empty values", () => {
     expect(
-      createDashboardComponentsV2SearchParams({
+      createDashboardComponentsSearchParams({
         q: "  ",
         disabledSourceKeys: [],
       }),
@@ -77,7 +77,7 @@ describe("createDashboardComponentsV2SearchParams", () => {
 
   it("preserves search query whitespace so URL sync does not rewrite active input", () => {
     expect(
-      createDashboardComponentsV2SearchParams({
+      createDashboardComponentsSearchParams({
         component: "abc123",
         q: "  train model  ",
         disabledSourceKeys: ["registered", "unknown"],

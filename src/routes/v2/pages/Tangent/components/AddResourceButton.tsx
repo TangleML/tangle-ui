@@ -1,3 +1,6 @@
+import { useState } from "react";
+
+import { AddPipelineDialog } from "@/components/Project/AddPipelineDialog";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,10 +15,7 @@ import { useDialog } from "@/providers/DialogProvider/hooks/useDialog";
 import type { DialogConfig } from "@/providers/DialogProvider/types";
 import { convertCancelErrorTo } from "@/providers/DialogProvider/utils";
 import { AddDocumentDialog } from "@/routes/v2/pages/Tangent/components/AddDocumentDialog";
-import { AddPipelineDialog } from "@/routes/v2/pages/Tangent/components/AddPipelineDialog";
 import { AddPipelineRunDialog } from "@/routes/v2/pages/Tangent/components/AddPipelineRunDialog";
-import type { LocalPipelinePointer } from "@/services/localPipelines/types";
-import { localPipelinePointerOf } from "@/services/projects/resourceDescriptor";
 import type {
   CreateResourceInput,
   ProjectResourceSummary,
@@ -35,30 +35,11 @@ function identityOf(metadata: Record<string, unknown> | null | undefined) {
   return typeof identity === "string" ? identity : undefined;
 }
 
-function samePipeline(a: LocalPipelinePointer, b: LocalPipelinePointer) {
-  return a.localId && b.localId
-    ? a.localId === b.localId
-    : a.localName === b.localName;
-}
-
-/**
- * A pipeline attached before it had a registry row is recorded by name, so
- * comparing identity strings alone reads the picker's id as a different
- * pipeline and attaches the same one a second time.
- */
 function alreadyHolds(
   resources: ProjectResourceSummary[],
   pick: CreateResourceInput,
 ): boolean {
   const metadata = pick.metadata ?? null;
-
-  const pointer = localPipelinePointerOf({ metadata });
-  if (pointer) {
-    return resources.some((resource) => {
-      const attached = localPipelinePointerOf(resource);
-      return attached !== undefined && samePipeline(attached, pointer);
-    });
-  }
 
   const identity = identityOf(metadata);
   return (
@@ -71,6 +52,7 @@ export function AddResourceButton({
   projectId,
   resources,
 }: AddResourceButtonProps) {
+  const [pipelinePickerOpen, setPipelinePickerOpen] = useState(false);
   const { open } = useDialog();
   const notify = useToastNotification();
   const { mutate: createResource, isPending } =
@@ -98,7 +80,7 @@ export function AddResourceButton({
   }
 
   function handleAddPipeline() {
-    void openResourceDialog(AddPipelineDialog, "add-pipeline");
+    setPipelinePickerOpen(true);
   }
 
   function handleAddPipelineRun() {
@@ -112,53 +94,62 @@ export function AddResourceButton({
   }
 
   return (
-    <InlineStack fill>
-      <Button
-        variant="outline"
-        className="flex-1 gap-2 rounded-r-none border-r-0"
-        disabled={isPending}
-        onClick={handleAddPipeline}
-        {...tracking("projects.add_pipeline_open")}
-      >
-        <Icon name="Plus" size="xs" />
-        Add a pipeline
-      </Button>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="outline"
-            className="rounded-l-none px-1.5"
-            disabled={isPending}
-            aria-label="More resource types"
-            {...tracking("projects.add_resource_menu")}
-          >
-            <Icon name="ChevronDown" size="sm" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem
-            onClick={handleAddPipeline}
-            {...tracking("projects.add_pipeline_open")}
-          >
-            <Icon name="Plus" size="sm" />
-            Add a pipeline
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={handleAddPipelineRun}
-            {...tracking("projects.add_pipeline_run_open")}
-          >
-            <Icon name="Play" size="sm" />
-            Add pipeline run
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={handleAddDocument}
-            {...tracking("projects.add_document_open")}
-          >
-            <Icon name="FileText" size="sm" />
-            Add a document
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </InlineStack>
+    <>
+      {pipelinePickerOpen && (
+        <AddPipelineDialog
+          projectId={projectId}
+          resources={resources}
+          onOpenChange={setPipelinePickerOpen}
+        />
+      )}
+      <InlineStack fill>
+        <Button
+          variant="outline"
+          className="flex-1 gap-2 rounded-r-none border-r-0"
+          disabled={isPending}
+          onClick={handleAddPipeline}
+          {...tracking("projects.add_pipeline_open")}
+        >
+          <Icon name="Plus" size="xs" />
+          Add a pipeline
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              className="rounded-l-none px-1.5"
+              disabled={isPending}
+              aria-label="More resource types"
+              {...tracking("projects.add_resource_menu")}
+            >
+              <Icon name="ChevronDown" size="sm" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={handleAddPipeline}
+              {...tracking("projects.add_pipeline_open")}
+            >
+              <Icon name="Plus" size="sm" />
+              Add a pipeline
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={handleAddPipelineRun}
+              {...tracking("projects.add_pipeline_run_open")}
+            >
+              <Icon name="Play" size="sm" />
+              Add pipeline run
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={handleAddDocument}
+              {...tracking("projects.add_document_open")}
+            >
+              <Icon name="FileText" size="sm" />
+              Add a document
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </InlineStack>
+    </>
   );
 }

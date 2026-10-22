@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Heading, Text } from "@/components/ui/typography";
-import { getDefaultRunPath } from "@/routes/runRoutes";
+import { getRunPath } from "@/routes/runRoutes";
 import { UNNAMED_PIPELINE } from "@/services/projects/placeholderNames";
 import { useProjectRuns } from "@/services/projects/useProjectRuns";
 import { formatDate } from "@/utils/date";
@@ -86,7 +86,7 @@ export function ProjectRuns({ projectId }: ProjectRunsProps) {
               <TableRow key={run.id}>
                 <TableCell className="max-w-0 overflow-hidden">
                   <Link
-                    to={getDefaultRunPath(run.id)}
+                    to={getRunPath(run.id)}
                     className="block max-w-full truncate underline"
                     title={run.pipelineName ?? UNNAMED_PIPELINE}
                     {...tracking("projects.project_runs.open_run")}

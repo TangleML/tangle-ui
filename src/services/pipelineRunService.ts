@@ -4,15 +4,8 @@ import type {
   BodyCreateApiPipelineRunsPost,
   ListAnnotationsApiPipelineRunsIdAnnotationsGetResponse,
 } from "@/api/types.gen";
-import {
-  getDefaultEditorPath,
-  getDefaultRemoteEditorPath,
-} from "@/routes/editorRoutes";
-import { availablePipelineName } from "@/services/localPipelines/localPipelinesService";
-import {
-  createPipelineFromContent,
-  getPipelineCreationBackendUrl,
-} from "@/services/pipelineStorage/pipelineCreation";
+import { getDefaultRemoteEditorPath } from "@/routes/editorRoutes";
+import { createPipelineFromSpec } from "@/services/pipelineStorage/pipelineCreation";
 import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
 import type { PipelineRun } from "@/types/pipelineRun";
 import { EDITOR_FLOW_DIRECTION_ANNOTATION } from "@/utils/annotations";
@@ -23,7 +16,6 @@ import {
 } from "@/utils/componentSpec";
 import { DB_NAME, PIPELINE_RUNS_STORE_NAME } from "@/utils/constants";
 import { fetchWithErrorHandling } from "@/utils/fetchWithErrorHandling";
-import { componentSpecToYaml } from "@/utils/yaml";
 
 import { requestFailureMessage } from "./requestFailureMessage";
 
@@ -135,34 +127,16 @@ export const copyRunToPipeline = async (
 
   // Generate a name for the copied pipeline
   const originalName = cleanComponentSpec.name || "Unnamed Pipeline";
-  let newName = name || originalName;
-
-  const backendUrl = await getPipelineCreationBackendUrl();
-  if (backendUrl) {
-    const file = await createPipelineFromContent(
-      storage,
-      newName,
-      componentSpecToYaml({ ...cleanComponentSpec, name: newName }),
-      { backendUrl },
-    );
-    return {
-      name: newName,
-      url: getDefaultRemoteEditorPath(file.id),
-      remote: file.remote && { source: "remote" as const, ...file.remote },
-    };
-  }
-
-  newName = await availablePipelineName(newName);
-  cleanComponentSpec.name = newName;
-
-  const componentText = componentSpecToYaml(cleanComponentSpec);
-  await createPipelineFromContent(storage, newName, componentText, {
-    backendUrl,
+  const newName = name || originalName;
+  const file = await createPipelineFromSpec(storage, newName, {
+    ...cleanComponentSpec,
+    name: newName,
   });
 
   return {
-    url: getDefaultEditorPath(newName),
     name: newName,
+    url: getDefaultRemoteEditorPath(file.id),
+    remote: file.remote && { source: "remote" as const, ...file.remote },
   };
 };
 

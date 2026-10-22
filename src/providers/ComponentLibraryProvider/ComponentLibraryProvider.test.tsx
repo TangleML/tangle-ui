@@ -30,7 +30,8 @@ vi.mock("@/components/shared/Dialogs/ComponentDuplicateDialog", () => ({
   },
 }));
 
-import { ComponentSpecProvider } from "../ComponentSpecProvider";
+import { SharedStoreProvider } from "@/routes/v2/shared/store/SharedStoreContext";
+
 import { ComponentLibraryProvider, useComponentLibrary } from ".";
 
 vi.mock("@/providers/BackendProvider", () => ({
@@ -62,9 +63,6 @@ const mockFetchAndStoreComponentLibrary = vi.mocked(
 );
 const mockFetchUserComponents = vi.mocked(
   componentLibraryUtils.fetchUserComponents,
-);
-const mockFetchUsedComponents = vi.mocked(
-  componentLibraryUtils.fetchUsedComponents,
 );
 const mockPopulateComponentRefs = vi.mocked(
   componentLibraryUtils.populateComponentRefs,
@@ -139,9 +137,9 @@ describe("ComponentLibraryProvider - Component Management", () => {
     return (
       <QueryClientProvider client={queryClient}>
         <PipelineStorageProvider>
-          <ComponentSpecProvider spec={mockComponentSpec}>
+          <SharedStoreProvider>
             <ComponentLibraryProvider>{children}</ComponentLibraryProvider>
-          </ComponentSpecProvider>
+          </SharedStoreProvider>
         </PipelineStorageProvider>
       </QueryClientProvider>
     );
@@ -153,11 +151,6 @@ describe("ComponentLibraryProvider - Component Management", () => {
     // Setup default mock implementations
     mockFetchAndStoreComponentLibrary.mockResolvedValue(mockComponentLibrary);
     mockFetchUserComponents.mockResolvedValue(mockUserComponentsFolder);
-    mockFetchUsedComponents.mockReturnValue({
-      name: "Used Components",
-      components: [],
-      folders: [],
-    });
     mockPopulateComponentRefs.mockImplementation((lib) => Promise.resolve(lib));
     mockFlattenFolders.mockImplementation((folder) => {
       if ("folders" in folder) {

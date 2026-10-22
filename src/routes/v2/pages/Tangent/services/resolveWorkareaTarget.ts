@@ -1,4 +1,4 @@
-import { RUNS_BASE_PATH, RUNS_V2_BASE_PATH } from "@/routes/appRoutes";
+import { RUNS_BASE_PATH } from "@/routes/appRoutes";
 import { getWorkareaKind } from "@/routes/v2/pages/Tangent/workarea/registry";
 import type {
   ResolvedWorkareaView,
@@ -14,9 +14,7 @@ export interface ResolveWorkareaTargetOptions {
   title?: string;
 }
 
-const RUN_PATH_SEGMENTS = [RUNS_BASE_PATH, RUNS_V2_BASE_PATH].map((path) =>
-  path.replace("/", ""),
-);
+const RUN_PATH_SEGMENT = RUNS_BASE_PATH.slice(1);
 
 function runIdFromUrl(raw: string): string | undefined {
   let path: string;
@@ -27,9 +25,7 @@ function runIdFromUrl(raw: string): string | undefined {
   }
 
   const segments = path.split("/").filter((segment) => segment !== "");
-  const runsAt = segments.findIndex((segment) =>
-    RUN_PATH_SEGMENTS.includes(segment),
-  );
+  const runsAt = segments.findIndex((segment) => segment === RUN_PATH_SEGMENT);
   const id = runsAt === -1 ? undefined : segments[runsAt + 1];
   return id ? decodeURIComponent(id) : undefined;
 }
@@ -49,8 +45,7 @@ export function coerceWorkareaTarget(raw: string): WorkareaTarget {
 
 /**
  * Resolves a caller-constructed `WorkareaTarget` into a view ready to become a
- * tab. The only work left is title resolution, which each kind owns (a pipeline
- * looks its name up in the registry); the shape is otherwise passed through.
+ * tab. Each kind owns title resolution; the target is passed through.
  */
 export async function resolveWorkareaTarget(
   target: WorkareaTarget,

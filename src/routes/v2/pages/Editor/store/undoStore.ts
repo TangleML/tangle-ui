@@ -1,24 +1,27 @@
 import { action, computed, makeObservable, observable } from "mobx";
 import type { UndoManager } from "mobx-keystone";
-import { undoMiddleware, UndoStore as MobxUndoStore } from "mobx-keystone";
+import { undoMiddleware } from "mobx-keystone";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 
 export class UndoStore {
   @observable.ref accessor undoManager: UndoManager | null = null;
 
+  private ownsManager = false;
+
   constructor() {
     makeObservable(this);
   }
 
-  @action init(spec: ComponentSpec, store?: MobxUndoStore) {
+  @action init(spec: ComponentSpec, manager?: UndoManager) {
     this.dispose();
-    this.undoManager = undoMiddleware(spec, store);
+    this.ownsManager = !manager;
+    this.undoManager = manager ?? undoMiddleware(spec);
   }
 
   @action dispose() {
     if (this.undoManager) {
-      this.undoManager.dispose();
+      if (this.ownsManager) this.undoManager.dispose();
       this.undoManager = null;
     }
   }

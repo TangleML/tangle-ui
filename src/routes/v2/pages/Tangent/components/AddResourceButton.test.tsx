@@ -2,35 +2,31 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { localPipelineResourceInput } from "@/services/projects/resourceDescriptor";
-import type {
-  CreateResourceInput,
-  ProjectResourceSummary,
-} from "@/services/projects/types";
+import { pipelineRunResourceInput } from "@/services/projects/resourceDescriptor";
+import type { ProjectResourceSummary } from "@/services/projects/types";
 
 import { AddResourceButton } from "./AddResourceButton";
 
 const openDialog = vi.fn();
 const createResource = vi.fn();
 const notify = vi.fn();
+const picker = vi.hoisted(() => vi.fn());
 
 vi.mock("@/providers/DialogProvider/hooks/useDialog", () => ({
   useDialog: () => ({ open: openDialog }),
 }));
-
 vi.mock("@/services/projects/useProjectResources", () => ({
   useCreateProjectResource: () => ({
     mutate: createResource,
     isPending: false,
   }),
 }));
-
 vi.mock("@/hooks/useToastNotification", () => ({ default: () => notify }));
-
-// The pickers reach the pipeline and run lists, and through them the whole
-// editor tree, which does not survive being imported on its own.
-vi.mock("@/routes/v2/pages/Tangent/components/AddPipelineDialog", () => ({
-  AddPipelineDialog: () => null,
+vi.mock("@/components/Project/AddPipelineDialog", () => ({
+  AddPipelineDialog: (props: unknown) => {
+    picker(props);
+    return <div>Saved pipeline picker</div>;
+  },
 }));
 vi.mock("@/routes/v2/pages/Tangent/components/AddPipelineRunDialog", () => ({
   AddPipelineRunDialog: () => null,
@@ -39,65 +35,41 @@ vi.mock("@/routes/v2/pages/Tangent/components/AddDocumentDialog", () => ({
   AddDocumentDialog: () => null,
 }));
 
-const PICKED_PIPELINE: CreateResourceInput = localPipelineResourceInput({
-  localName: "Churn model",
-  localId: "file-1",
-});
-
-function attachedRow(identity: string): ProjectResourceSummary {
-  return {
-    id: "resource-1",
-    projectId: "project-1",
-    entity: "document",
-    name: "Churn model",
-    entityId: null,
-    metadata: {
-      type: "local_pipeline",
-      identity,
-      fallbackName: "Churn model",
-    },
-    createdBy: null,
-    createdAt: new Date("2026-09-22T10:00:00Z"),
-    updatedAt: new Date("2026-09-22T10:00:00Z"),
-  };
-}
-
-async function pickAPipeline(resources: ProjectResourceSummary[]) {
-  openDialog.mockResolvedValue(PICKED_PIPELINE);
-  const user = userEvent.setup();
-  render(<AddResourceButton projectId="project-1" resources={resources} />);
-
-  await user.click(screen.getByRole("button", { name: "Add a pipeline" }));
-}
-
 describe("AddResourceButton", () => {
-  afterEach(() => vi.resetAllMocks());
+  afterEach(() => vi.clearAllMocks());
 
-  it("attaches a pipeline the project does not hold yet", async () => {
-    await pickAPipeline([]);
-
-    expect(createResource).toHaveBeenCalledWith(PICKED_PIPELINE);
+  it("opens the shared saved-pipeline picker with the project's resources", async () => {
+    const user = userEvent.setup();
+    const resources: ProjectResourceSummary[] = [];
+    render(<AddResourceButton projectId="project-1" resources={resources} />);
+    await user.click(screen.getByRole("button", { name: "Add a pipeline" }));
+    expect(screen.getByText("Saved pipeline picker")).toBeInTheDocument();
+    expect(picker).toHaveBeenLastCalledWith({
+      projectId: "project-1",
+      resources,
+      onOpenChange: expect.any(Function),
+    });
+    expect(openDialog).not.toHaveBeenCalled();
   });
 
-  it("attaches nothing when the project already holds it", async () => {
-    await pickAPipeline([attachedRow("pipeline://id/file-1")]);
-
+  it("does not attach a run already held by the project", async () => {
+    const picked = pipelineRunResourceInput("run-1", "Run one");
+    openDialog.mockResolvedValue(picked);
+    const resources = [
+      { ...picked, id: "resource-1" },
+    ] as ProjectResourceSummary[];
+    const user = userEvent.setup();
+    render(<AddResourceButton projectId="project-1" resources={resources} />);
+    await user.click(
+      screen.getByRole("button", { name: "More resource types" }),
+    );
+    await user.click(
+      screen.getByRole("menuitem", { name: "Add pipeline run" }),
+    );
     expect(createResource).not.toHaveBeenCalled();
     expect(notify).toHaveBeenCalledWith(
-      "Churn model is already in this project",
+      "Run one is already in this project",
       "info",
     );
-  });
-
-  it("attaches a different pipeline of the same name", async () => {
-    await pickAPipeline([attachedRow("pipeline://id/file-2")]);
-
-    expect(createResource).toHaveBeenCalledWith(PICKED_PIPELINE);
-  });
-
-  it("recognises a pipeline attached under its name, before it had an id", async () => {
-    await pickAPipeline([attachedRow("pipeline://name/Churn model")]);
-
-    expect(createResource).not.toHaveBeenCalled();
   });
 });

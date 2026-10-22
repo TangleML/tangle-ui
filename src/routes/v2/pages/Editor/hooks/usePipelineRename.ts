@@ -1,41 +1,20 @@
-import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
-
 import useToastNotification from "@/hooks/useToastNotification";
-import { APP_ROUTES } from "@/routes/router";
 import { usePipelineActions } from "@/routes/v2/pages/Editor/store/actions/usePipelineActions";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
-import { preserveRenamedPipelineQuery } from "@/routes/v2/pages/Editor/utils/preserveRenamedPipelineQuery";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 export function usePipelineRename() {
   const { navigation } = useSharedStores();
-  const { autoSave, pipelineFile: pipelineFileStore } = useEditorSession();
+  const { autoSave } = useEditorSession();
   const { renamePipeline } = usePipelineActions();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const notify = useToastNotification();
 
   return async (newName: string) => {
     const spec = navigation.rootSpec;
     if (!spec) return;
-    const file = pipelineFileStore.activePipelineFile;
     try {
-      if (file?.remote || file?.isDraft) {
-        renamePipeline(spec, newName);
-        await Promise.all([autoSave.save(), file.rename(newName)]);
-        return;
-      }
-      await autoSave.save();
-      await file?.rename(newName);
       renamePipeline(spec, newName);
       await autoSave.save();
-      if (file) preserveRenamedPipelineQuery(queryClient, file);
-      await navigate({
-        to: APP_ROUTES.EDITOR_V2_PIPELINE,
-        params: { pipelineName: newName },
-        search: { fileId: file?.id },
-      });
     } catch (error) {
       notify(
         error instanceof Error ? error.message : "Failed to rename pipeline",

@@ -1,0 +1,992 @@
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import type { StoredLibrary } from "@/providers/ComponentLibraryProvider/libraries/storage";
+import type { IndexEntry } from "@/services/componentSearchIndex";
+import { registeredLibrariesFingerprint } from "@/services/componentSearchLogic";
+import type { ComponentReference } from "@/utils/componentSpec";
+
+interface DashboardComponentsSearch {
+  component?: string;
+  q?: string;
+  disabled_sources?: string;
+}
+
+const routeMocks = vi.hoisted(() => {
+  const standardSource = {
+    kind: "standard",
+    label: "Standard",
+    id: "standard",
+  } as const;
+  const registeredSource = {
+    kind: "registered",
+    label: "GitHub library",
+    id: "github-lib",
+  } as const;
+  const publishedSource = {
+    kind: "published",
+    label: "Published",
+    id: "published",
+  } as const;
+  const userSource = { kind: "user", label: "User", id: "user" } as const;
+
+  const makeComponent = (digest: string, name: string): ComponentReference => ({
+    digest,
+    name,
+    text: "component yaml",
+    spec: {
+      name,
+      description: `${name} description`,
+      inputs:
+        digest === "registered-digest"
+          ? [{ name: "data", type: "Dataset" }]
+          : [],
+      outputs:
+        digest === "standard-digest" ? [{ name: "data", type: "Dataset" }] : [],
+      implementation: { container: { image: "python:3.11" } },
+    },
+  });
+
+  const search: DashboardComponentsSearch = {};
+  const descriptionErrorState: { current: Error | null } = { current: null };
+
+  const toIndexEntry = (
+    reference: ComponentReference,
+    source:
+      | typeof standardSource
+      | typeof registeredSource
+      | typeof publishedSource
+      | typeof userSource,
+  ): IndexEntry => ({
+    reference,
+    digest: reference.digest!,
+    name: reference.name!,
+    source,
+    searchable: {
+      name: reference.name!.toLowerCase(),
+      description: reference.spec?.description?.toLowerCase() ?? "",
+      io: [
+        ...(reference.spec?.inputs ?? []),
+        ...(reference.spec?.outputs ?? []),
+      ]
+        .map((io) => io.name)
+        .join(" ")
+        .toLowerCase(),
+      implementation: "",
+      metadata: "",
+    },
+  });
+
+  return {
+    standard: makeComponent("standard-digest", "Standard component"),
+    standardSource,
+    registeredSource,
+    publishedSource,
+    userSource,
+    toIndexEntry,
+    registered: makeComponent("registered-digest", "Registered component"),
+    published: {
+      ...makeComponent("published-digest", "Published component"),
+      published_by: "pipeline-components@example.com",
+    },
+    user: makeComponent("user-digest", "User component"),
+    extraStandardComponents: [] as ComponentReference[],
+    navigate: vi.fn(),
+    notify: vi.fn(),
+    track: vi.fn(),
+    refetchDescription: vi.fn(),
+    rerank: vi.fn(),
+    resetRerank: vi.fn(),
+    descriptionErrorState,
+    aiDescriptionsEnabled: false,
+    aiSearchConfigured: false,
+    aiRerankPending: false,
+    aiApiBase: "",
+    aiModel: "",
+    search,
+  };
+});
+
+vi.mock("@tanstack/react-query", () => ({
+  queryOptions: (options: unknown) => options,
+  useQueryClient: () => ({ ensureQueryData: vi.fn() }),
+  useQuery: ({ queryKey }: { queryKey: readonly unknown[] }) => {
+    const key = queryKey[0];
+
+    if (key === "componentLibrary") {
+      return {
+        data: {
+          name: "Standard",
+          components: [
+            routeMocks.standard,
+            ...routeMocks.extraStandardComponents,
+          ],
+          folders: [],
+        },
+        isLoading: false,
+      };
+    }
+
+    if (key === "userComponents") {
+      return {
+        data: { components: [routeMocks.user] },
+        isLoading: false,
+      };
+    }
+
+    if (key === "component-search" && queryKey[1] === "published") {
+      return { data: [routeMocks.published], isLoading: false };
+    }
+
+    if (key === "component-search" && queryKey[1] === "registered-libraries") {
+      return {
+        data: [
+          {
+            reference: routeMocks.registered,
+            source: {
+              kind: "registered",
+              label: "GitHub library",
+              id: "github-lib",
+            },
+          },
+        ],
+        isLoading: false,
+      };
+    }
+
+    if (key === "component-search" && queryKey[1] === "catalog") {
+      const standardSourced = [
+        routeMocks.standard,
+        ...routeMocks.extraStandardComponents,
+      ].map((reference) => ({
+        reference,
+        source: routeMocks.standardSource,
+      }));
+      const sourcedHydrated = [
+        ...standardSourced,
+        {
+          reference: routeMocks.registered,
+          source: routeMocks.registeredSource,
+        },
+        { reference: routeMocks.published, source: routeMocks.publishedSource },
+        { reference: routeMocks.user, source: routeMocks.userSource },
+      ];
+      return {
+        data: {
+          sourcedHydrated,
+          index: sourcedHydrated.map((item) =>
+            routeMocks.toIndexEntry(item.reference, item.source),
+          ),
+        },
+        isLoading: false,
+      };
+    }
+
+    return { data: undefined, isLoading: false };
+  },
+}));
+
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({ children }: { children: React.ReactNode }) => <a>{children}</a>,
+  useNavigate: () => routeMocks.navigate,
+  useSearch: () => routeMocks.search,
+}));
+
+vi.mock("dexie-react-hooks", () => ({
+  useLiveQuery: () => [],
+}));
+
+vi.mock("@/providers/AnalyticsProvider", () => ({
+  useAnalytics: () => ({ track: routeMocks.track }),
+}));
+
+vi.mock("@/providers/BackendProvider", () => ({
+  useBackend: () => ({
+    backendUrl: "https://backend.example",
+    configured: false,
+    available: false,
+  }),
+}));
+
+vi.mock("@/components/shared/Settings/useFlags", () => ({
+  useFlagValue: () => routeMocks.aiDescriptionsEnabled,
+}));
+
+vi.mock("@/hooks/useNaturalLanguageComponentSearch", () => ({
+  useComponentAiDescription: ({
+    reference,
+    enabled,
+  }: {
+    reference: ComponentReference | undefined;
+    enabled: boolean;
+  }) => {
+    const error = routeMocks.descriptionErrorState.current;
+    // Simulate React Query's auto-fetch: when `enabled` is true and we have a
+    // hydrated reference, the query fires on mount/key-change. A pre-seeded
+    // error short-circuits the auto-fetch (retry: false → an errored query
+    // stays errored without re-firing).
+    if (enabled && reference?.digest && reference.spec && !error) {
+      routeMocks.refetchDescription(reference);
+    }
+    return {
+      description: undefined,
+      isFetching: false,
+      error,
+      refetch: () => routeMocks.refetchDescription(reference),
+      isConfigured: true,
+    };
+  },
+  useNaturalLanguageComponentRerank: () => ({
+    mutate: routeMocks.rerank,
+    data: undefined,
+    isPending: routeMocks.aiRerankPending,
+    error: null,
+    reset: routeMocks.resetRerank,
+    isConfigured: routeMocks.aiSearchConfigured,
+  }),
+}));
+
+vi.mock("@/hooks/useToastNotification", () => ({
+  default: () => routeMocks.notify,
+}));
+
+vi.mock("@/hooks/useAiProviderSettings", () => ({
+  useAiProviderSettings: () => ({
+    config: {
+      apiBase: routeMocks.aiApiBase,
+      apiKey: "",
+      model: routeMocks.aiModel,
+    },
+  }),
+}));
+
+vi.mock("@/services/componentSearchEmbeddings", () => ({
+  rankComponentMatchesByEmbeddings: vi.fn(async (index: IndexEntry[]) =>
+    index.length > 0
+      ? [
+          {
+            reference: index[0].reference,
+            digest: index[0].digest,
+            name: index[0].name,
+            source: index[0].source,
+            matchedFields: [],
+          },
+        ]
+      : [],
+  ),
+}));
+
+vi.mock("@/components/shared/ComponentDetail/ComponentDetail", () => ({
+  ComponentDetail: () => <div>Component detail</div>,
+  ComponentDetailSkeleton: () => <div>Loading component detail</div>,
+}));
+
+vi.mock("@/components/shared/SuspenseWrapper", () => ({
+  SuspenseWrapper: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+  withSuspenseWrapper:
+    (Component: React.ComponentType) => (props: Record<string, unknown>) => (
+      <Component {...props} />
+    ),
+}));
+
+vi.mock("../v2/shared/clipboard/copyComponentReferenceToClipboard", () => ({
+  copyComponentReferenceToClipboard: vi.fn(),
+}));
+
+vi.mock("../router", () => ({
+  APP_ROUTES: {
+    DASHBOARD_COMPONENTS: "/components",
+    SETTINGS_AGENT: "/settings/agent",
+  },
+}));
+
+import {
+  createSourceFilterOptions,
+  filterIndexByDisabledSourceKeys,
+  SourceFilterBar,
+  type SourceFilterOption,
+} from "@/components/shared/ComponentSearchSourceFilter";
+
+import {
+  buildComponentCollectionMatches,
+  DashboardComponentsView,
+} from "./DashboardComponentsView";
+
+const options: SourceFilterOption[] = [
+  {
+    source: { kind: "standard", label: "Standard", id: "standard" },
+    count: 2,
+  },
+  {
+    source: {
+      kind: "registered",
+      label: "Registered libraries",
+      id: "registered",
+    },
+    count: 3,
+  },
+  {
+    source: { kind: "user", label: "User generated", id: "user" },
+    count: 1,
+  },
+];
+
+function createIndexEntry(
+  digest: string,
+  source: IndexEntry["source"],
+): IndexEntry {
+  return {
+    digest,
+    source,
+    reference: { digest },
+    name: digest,
+    searchable: {
+      name: digest,
+      description: "",
+      io: "",
+      implementation: "",
+      metadata: "",
+    },
+  };
+}
+
+describe("registeredLibrariesFingerprint", () => {
+  it("excludes secret-bearing library configuration", () => {
+    const libraries: StoredLibrary[] = [
+      {
+        id: "github-lib",
+        name: "GitHub",
+        type: "github",
+        knownDigests: ["digest-1"],
+        configuration: {
+          repo_name: "owner/repo",
+          last_updated_at: "2026-01-01T00:00:00Z",
+          access_token: "ghp_secret-token",
+          auto_update: true,
+        },
+      },
+    ];
+
+    const fingerprint = registeredLibrariesFingerprint(libraries);
+
+    expect(fingerprint).toContain("owner/repo");
+    expect(fingerprint).not.toContain("ghp_secret-token");
+    expect(fingerprint).not.toContain("access_token");
+  });
+
+  it("changes when known digest values change without count changes", () => {
+    const createLibrary = (knownDigests: string[]): StoredLibrary => ({
+      id: "github-lib",
+      name: "GitHub",
+      type: "github",
+      knownDigests,
+      configuration: {
+        repo_name: "owner/repo",
+        last_updated_at: "2026-01-01T00:00:00Z",
+        access_token: "ghp_secret-token",
+        auto_update: true,
+      },
+    });
+
+    expect(
+      registeredLibrariesFingerprint([createLibrary(["a", "b"])]),
+    ).not.toEqual(registeredLibrariesFingerprint([createLibrary(["c", "d"])]));
+  });
+});
+
+describe("createSourceFilterOptions", () => {
+  it("groups multiple registered libraries into one registered filter", () => {
+    const result = createSourceFilterOptions([
+      createIndexEntry("github-component", {
+        kind: "registered",
+        label: "GitHub library",
+        id: "github-lib",
+      }),
+      createIndexEntry("other-registered-component", {
+        kind: "registered",
+        label: "Other registered library",
+        id: "other-lib",
+      }),
+      createIndexEntry("user-component", {
+        kind: "user",
+        label: "User",
+        id: "user",
+      }),
+    ]);
+
+    expect(result).toEqual(
+      expect.arrayContaining([
+        {
+          source: {
+            kind: "registered",
+            label: "Registered libraries",
+            id: "registered",
+          },
+          count: 2,
+        },
+        {
+          source: {
+            kind: "user",
+            label: "User generated",
+            id: "user",
+          },
+          count: 1,
+        },
+      ]),
+    );
+  });
+});
+
+describe("filterIndexByDisabledSourceKeys", () => {
+  it("removes results from disabled source types", () => {
+    const result = filterIndexByDisabledSourceKeys(
+      [
+        createIndexEntry("registered-component", {
+          kind: "registered",
+          label: "Registered library",
+          id: "registered-lib",
+        }),
+        createIndexEntry("user-component", {
+          kind: "user",
+          label: "User",
+          id: "user",
+        }),
+      ],
+      ["registered"],
+    );
+
+    expect(result.map((entry) => entry.digest)).toEqual(["user-component"]);
+  });
+});
+
+describe("SourceFilterBar", () => {
+  it("toggles source type buttons and exposes active state", () => {
+    const onToggle = vi.fn();
+    const onEnableAll = vi.fn();
+
+    render(
+      <SourceFilterBar
+        options={options}
+        disabledSourceKeys={["registered"]}
+        onToggle={onToggle}
+        onEnableAll={onEnableAll}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", {
+        name: "Standard source (2 components)",
+      }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(
+      screen.getByRole("button", {
+        name: "Registered libraries source (3 components)",
+      }),
+    ).toHaveAttribute("aria-pressed", "false");
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Registered libraries source (3 components)",
+      }),
+    );
+    expect(onToggle).toHaveBeenCalledWith("registered");
+
+    fireEvent.click(screen.getByRole("button", { name: "Show all" }));
+    expect(onEnableAll).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("buildComponentCollectionMatches", () => {
+  it("returns registered library collections matching the query", () => {
+    const result = buildComponentCollectionMatches(
+      [
+        createIndexEntry("standard-component", {
+          kind: "standard",
+          label: "Standard",
+          id: "standard",
+        }),
+        createIndexEntry("load-csv", {
+          kind: "registered",
+          label: "Data tools",
+          id: "data-tools",
+        }),
+        createIndexEntry("clean-data", {
+          kind: "registered",
+          label: "Data tools",
+          id: "data-tools",
+        }),
+      ],
+      "data",
+    );
+
+    expect(result).toEqual([
+      {
+        id: "data-tools",
+        label: "Data tools",
+        count: 2,
+        previewNames: ["load-csv", "clean-data"],
+      },
+    ]);
+  });
+
+  it("returns no collections for empty or unmatched queries", () => {
+    const index = [
+      createIndexEntry("load-csv", {
+        kind: "registered",
+        label: "Data tools",
+        id: "data-tools",
+      }),
+    ];
+
+    expect(buildComponentCollectionMatches(index, "")).toEqual([]);
+    expect(buildComponentCollectionMatches(index, "training")).toEqual([]);
+  });
+});
+
+describe("DashboardComponentsView", () => {
+  beforeEach(() => {
+    routeMocks.aiDescriptionsEnabled = false;
+    routeMocks.descriptionErrorState.current = null;
+    routeMocks.search = {};
+    routeMocks.standard.deprecated = false;
+    routeMocks.standard.superseded_by = undefined;
+    routeMocks.extraStandardComponents = [];
+    routeMocks.navigate.mockClear();
+    routeMocks.notify.mockClear();
+    routeMocks.track.mockClear();
+    routeMocks.refetchDescription.mockClear();
+    routeMocks.rerank.mockClear();
+    routeMocks.resetRerank.mockClear();
+    routeMocks.aiSearchConfigured = false;
+    routeMocks.aiRerankPending = false;
+    routeMocks.aiApiBase = "";
+    routeMocks.aiModel = "";
+  });
+
+  it("shows active AI search progress below the search box", () => {
+    routeMocks.aiSearchConfigured = true;
+    routeMocks.aiRerankPending = true;
+    routeMocks.aiModel = "gpt-6-luna";
+
+    render(<DashboardComponentsView />);
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "component candidates with GPT-6 Luna",
+    );
+  });
+
+  it("limits browse rendering and lets users show more results", async () => {
+    routeMocks.extraStandardComponents = Array.from(
+      { length: 105 },
+      (_, idx) => {
+        const paddedIndex = String(idx).padStart(3, "0");
+        return {
+          digest: `browse-${paddedIndex}`,
+          name: `Browse component ${paddedIndex}`,
+          text: "component yaml",
+          spec: {
+            name: `Browse component ${paddedIndex}`,
+            description: `Browse component ${paddedIndex} description`,
+            inputs: [],
+            outputs: [],
+            implementation: { container: { image: "python:3.11" } },
+          },
+        };
+      },
+    );
+
+    render(<DashboardComponentsView />);
+
+    expect(
+      screen.getByText(
+        "Showing 100 of 109 components in selected sources. Start typing to search.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Browse component 099")).toBeInTheDocument();
+    expect(screen.queryByText("Browse component 100")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Show 9 more" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Browse component 104")).toBeInTheDocument();
+    });
+  });
+
+  it("allows long component result titles to wrap inside cards", () => {
+    const longName =
+      "Train regression model using Vowpal Wabbit on VowpalWabbitJsonDatasetWithAnExtremelyLongName";
+    routeMocks.extraStandardComponents = [
+      {
+        digest: "long-title-component",
+        name: longName,
+        text: "component yaml",
+        spec: {
+          name: longName,
+          description: "Long title component description",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "python:3.11" } },
+        },
+      },
+    ];
+
+    render(<DashboardComponentsView />);
+
+    expect(screen.getByText(longName)).toHaveClass(
+      "whitespace-normal",
+      "[overflow-wrap:anywhere]",
+      "line-clamp-2",
+    );
+  });
+
+  it("filters visible component results by source type and restores them", () => {
+    render(<DashboardComponentsView />);
+
+    expect(screen.getByText("Registered component")).toBeInTheDocument();
+    expect(screen.getByText("Standard component")).toBeInTheDocument();
+    expect(screen.getByText("User component")).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Registered libraries source (1 component)",
+      }),
+    );
+
+    expect(screen.queryByText("Registered component")).not.toBeInTheDocument();
+    expect(screen.getByText("Standard component")).toBeInTheDocument();
+    expect(screen.getByText("User component")).toBeInTheDocument();
+    expect(routeMocks.navigate).toHaveBeenLastCalledWith({
+      to: "/components",
+      search: { disabled_sources: "registered" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Show all" }));
+
+    expect(screen.getByText("Registered component")).toBeInTheDocument();
+    expect(routeMocks.navigate).toHaveBeenLastCalledWith({
+      to: "/components",
+      search: {},
+    });
+  });
+
+  it("shows registered library collection results when the query matches", async () => {
+    render(<DashboardComponentsView />);
+
+    fireEvent.change(screen.getByLabelText("Search components"), {
+      target: { value: "github" },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("GitHub library")).toBeInTheDocument();
+    });
+  });
+
+  it("hides collection results from disabled sources", async () => {
+    render(<DashboardComponentsView />);
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Registered libraries source (1 component)",
+      }),
+    );
+    fireEvent.change(screen.getByLabelText("Search components"), {
+      target: { value: "github" },
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText("GitHub library")).not.toBeInTheDocument();
+    });
+  });
+
+  it("shows publisher on published component result cards", async () => {
+    render(<DashboardComponentsView />);
+
+    fireEvent.change(screen.getByLabelText("Search components"), {
+      target: { value: "published" },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("Published component")).toBeInTheDocument();
+    });
+    expect(
+      screen.getByText("Published by pipeline-components@example.com"),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps publisher visible in compact selected-result rows", async () => {
+    routeMocks.search = { component: "published-digest", q: "published" };
+
+    render(<DashboardComponentsView />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Published component")).toBeInTheDocument();
+    });
+    expect(
+      screen.getByText("Published by pipeline-components@example.com"),
+    ).toBeInTheDocument();
+  });
+
+  it("explains why lexical component results matched", async () => {
+    render(<DashboardComponentsView />);
+
+    fireEvent.change(screen.getByLabelText("Search components"), {
+      target: { value: "standard" },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/Why: name/)).toBeInTheDocument();
+    });
+  });
+
+  it("keeps dashboard search result cards summary-only", async () => {
+    render(<DashboardComponentsView />);
+
+    fireEvent.change(screen.getByLabelText("Search components"), {
+      target: { value: "registered" },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/Why: name/)).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText("Inputs")).not.toBeInTheDocument();
+    expect(screen.queryByText("1 required")).not.toBeInTheDocument();
+    expect(screen.queryByText(/data: Dataset/)).not.toBeInTheDocument();
+  });
+
+  it("tracks dashboard component search completions without query text", async () => {
+    render(<DashboardComponentsView />);
+
+    fireEvent.change(screen.getByLabelText("Search components"), {
+      target: { value: "standard" },
+    });
+
+    await waitFor(() => {
+      expect(routeMocks.track).toHaveBeenCalledWith(
+        "component_library.search.completed",
+        expect.objectContaining({
+          surface: "dashboard_v2",
+          search_backend: "frontend_aggregate",
+          query_length: "standard".length,
+          result_count: 1,
+          component_result_count: 1,
+          collection_result_count: 0,
+          ai_ranked: false,
+        }),
+      );
+    });
+
+    expect(routeMocks.track).not.toHaveBeenCalledWith(
+      "component_library.search.completed",
+      expect.objectContaining({ query: "standard" }),
+    );
+  });
+
+  it("shows actionable no-results guidance with clickable suggestions", async () => {
+    render(<DashboardComponentsView />);
+
+    const input = screen.getByLabelText("Search components");
+    fireEvent.change(input, {
+      target: { value: "no-such-component" },
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("No components matched “no-such-component”."),
+      ).toBeInTheDocument();
+    });
+    expect(screen.getByText(/Try a component name/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "csv" }));
+
+    await waitFor(() => {
+      expect(input).toHaveValue("csv");
+    });
+  });
+
+  it("initializes search state from URL params", () => {
+    routeMocks.search = {
+      q: "registered",
+      disabled_sources: "standard,user",
+    };
+
+    render(<DashboardComponentsView />);
+
+    expect(screen.getByLabelText("Search components")).toHaveValue(
+      "registered",
+    );
+    expect(screen.getByText("Registered component")).toBeInTheDocument();
+    expect(screen.queryByText("Standard component")).not.toBeInTheDocument();
+    expect(screen.queryByText("User component")).not.toBeInTheDocument();
+  });
+
+  it("writes search text into URL params after debounce without trimming active input whitespace", async () => {
+    render(<DashboardComponentsView />);
+
+    fireEvent.change(screen.getByLabelText("Search components"), {
+      target: { value: "standard " },
+    });
+
+    await waitFor(() => {
+      expect(routeMocks.navigate).toHaveBeenCalledWith({
+        to: "/components",
+        search: { q: "standard " },
+      });
+    });
+    expect(screen.getByLabelText("Search components")).toHaveValue("standard ");
+  });
+
+  it("does not let URL echo updates rewrite the focused search input", async () => {
+    const { rerender } = render(<DashboardComponentsView />);
+    const input = screen.getByLabelText("Search components");
+
+    input.focus();
+    fireEvent.change(input, { target: { value: "standard " } });
+
+    await waitFor(() => {
+      expect(routeMocks.navigate).toHaveBeenCalled();
+    });
+
+    routeMocks.search = { q: "standard" };
+    rerender(<DashboardComponentsView />);
+
+    expect(input).toHaveValue("standard ");
+  });
+
+  it("copies a shareable link for a selected component", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+    routeMocks.search = { component: "standard-digest", q: "standard" };
+
+    render(<DashboardComponentsView />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Copy component link" }),
+    );
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith(window.location.href);
+    });
+    expect(routeMocks.notify).toHaveBeenCalledWith(
+      "Component link copied to clipboard",
+      "success",
+    );
+  });
+
+  it("shows compatible component suggestions in details", () => {
+    routeMocks.search = { component: "standard-digest" };
+
+    render(<DashboardComponentsView />);
+
+    expect(screen.getByText("Compatible components")).toBeInTheDocument();
+    expect(screen.getAllByText("Registered component")).not.toHaveLength(0);
+    expect(screen.getByText("Can use outputs")).toBeInTheDocument();
+    expect(screen.getByText("Matching type: dataset")).toBeInTheDocument();
+  });
+
+  it("clears only the selected component when closing details", () => {
+    routeMocks.search = {
+      component: "standard-digest",
+      q: "standard",
+      disabled_sources: "registered",
+    };
+
+    render(<DashboardComponentsView />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Close component details" }),
+    );
+
+    expect(routeMocks.navigate).toHaveBeenCalledWith({
+      to: "/components",
+      search: { q: "standard", disabled_sources: "registered" },
+    });
+  });
+
+  it("shows lifecycle badges from component metadata", () => {
+    routeMocks.standard.deprecated = true;
+
+    render(<DashboardComponentsView />);
+
+    expect(screen.getByText("Deprecated")).toBeInTheDocument();
+  });
+
+  it("does not run AI search when literal search has no matches", async () => {
+    routeMocks.aiSearchConfigured = true;
+    render(<DashboardComponentsView />);
+
+    fireEvent.change(screen.getByLabelText("Search components"), {
+      target: { value: "find something semantically relevant" },
+    });
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "AI search" })).toBeDisabled();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "AI search" }));
+
+    expect(routeMocks.rerank).not.toHaveBeenCalled();
+  });
+
+  it("allows AI search with embeddings when literal search has no matches", async () => {
+    routeMocks.aiSearchConfigured = true;
+    routeMocks.aiApiBase = "https://api.example.com/v1";
+    render(<DashboardComponentsView />);
+
+    fireEvent.change(screen.getByLabelText("Search components"), {
+      target: { value: "find something semantically relevant" },
+    });
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "AI search" })).toBeEnabled();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "AI search" }));
+
+    await waitFor(() => expect(routeMocks.rerank).toHaveBeenCalled());
+  });
+
+  it("shows a manual generate button when automatic descriptions are disabled", () => {
+    routeMocks.search = { component: "standard-digest" };
+
+    render(<DashboardComponentsView />);
+
+    // enabled=false → the hook does not auto-fetch.
+    expect(routeMocks.refetchDescription).not.toHaveBeenCalled();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Generate AI description" }),
+    );
+
+    expect(routeMocks.refetchDescription).toHaveBeenCalledWith(
+      routeMocks.standard,
+    );
+  });
+
+  it("generates component descriptions automatically when the flag is enabled", async () => {
+    routeMocks.aiDescriptionsEnabled = true;
+    routeMocks.search = { component: "standard-digest" };
+
+    render(<DashboardComponentsView />);
+
+    // enabled=true → React Query auto-fetches; the mock fires the spy on render.
+    await waitFor(() => {
+      expect(routeMocks.refetchDescription).toHaveBeenCalledWith(
+        routeMocks.standard,
+      );
+    });
+  });
+
+  it("does not automatically retry description generation after an error", () => {
+    routeMocks.aiDescriptionsEnabled = true;
+    routeMocks.descriptionErrorState.current = new Error("provider failed");
+    routeMocks.search = { component: "standard-digest" };
+
+    render(<DashboardComponentsView />);
+
+    // With retry: false the errored query stays errored — no auto-refetch.
+    expect(routeMocks.refetchDescription).not.toHaveBeenCalled();
+    expect(screen.getByText(/provider failed/)).toBeInTheDocument();
+  });
+});

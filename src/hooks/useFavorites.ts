@@ -11,6 +11,7 @@ import {
   getRemotePipelineSavedId,
   isSavedPipelineForBackend,
   normalizeRemotePipelineSavedId,
+  parseRemotePipelineSavedId,
 } from "@/services/remotePipelineSavedLinks";
 
 export type { FavoriteItem, FavoriteType };
@@ -20,66 +21,56 @@ export function useFavorites() {
   const allFavorites =
     useLiveQuery(
       async () =>
-        sortFavorites(await LibraryDB.favorites.toArray()).map(
-          ({ type, id, name }) => ({
+        sortFavorites(await LibraryDB.favorites.toArray())
+          .filter(
+            ({ type }) =>
+              type === "pipeline" || type === "run" || type === "project",
+          )
+          .map(({ type, id, name }) => ({
             type,
             id: type === "pipeline" ? normalizeRemotePipelineSavedId(id) : id,
             name,
-          }),
-        ),
+          })),
       [],
     ) ?? [];
-  const favorites = allFavorites.filter(
-    (item, index) =>
-      isSavedPipelineForBackend(item, backendUrl) &&
-      allFavorites.findIndex(
-        (other) => other.type === item.type && other.id === item.id,
-      ) === index,
+  const favorites = allFavorites.filter((item) =>
+    isSavedPipelineForBackend(item, backendUrl),
   );
 
-  const storedKey = (
+  const storedId = (
     type: FavoriteType,
     id: string,
     targetBackendUrl = backendUrl,
-  ): [FavoriteType, string] =>
-    type === "remote-pipeline"
-      ? ["pipeline", getRemotePipelineSavedId(targetBackendUrl, id)]
-      : [type, id];
+  ) =>
+    type === "pipeline"
+      ? parseRemotePipelineSavedId(id)
+        ? normalizeRemotePipelineSavedId(id)
+        : getRemotePipelineSavedId(targetBackendUrl, id)
+      : id;
 
   const addFavorite = async (item: FavoriteItem) => {
-    const [type, id] = storedKey(item.type, item.id);
+    const id = storedId(item.type, item.id);
     await LibraryDB.transaction("rw", LibraryDB.favorites, async () => {
       const ordered = await persistFavoriteOrder(
         sortFavorites(await LibraryDB.favorites.toArray()),
       );
-      const existing = ordered.find(
+      const existing = ordered.filter(
         (favorite) =>
-          (favorite.type === type &&
-            (type === "pipeline"
-              ? normalizeRemotePipelineSavedId(favorite.id)
-              : favorite.id) === id) ||
-          (favorite.type === item.type && favorite.id === item.id),
+          favorite.type === item.type &&
+          (favorite.type === "pipeline"
+            ? normalizeRemotePipelineSavedId(favorite.id)
+            : favorite.id) === id,
       );
       await LibraryDB.favorites.bulkDelete(
-        ordered
-          .filter(
-            (favorite) =>
-              (favorite.type === type &&
-                (type === "pipeline"
-                  ? normalizeRemotePipelineSavedId(favorite.id)
-                  : favorite.id) === id) ||
-              (favorite.type === item.type && favorite.id === item.id),
-          )
-          .map((favorite): [FavoriteType, string] => [
-            favorite.type,
-            favorite.id,
-          ]),
+        existing.map((favorite): [FavoriteType, string] => [
+          favorite.type,
+          favorite.id,
+        ]),
       );
       await LibraryDB.favorites.put({
         ...item,
-        type,
         id,
-        sortKey: existing?.sortKey ?? -1,
+        sortKey: existing[0]?.sortKey ?? -1,
       });
     });
   };
@@ -89,34 +80,28 @@ export function useFavorites() {
     id: string,
     targetBackendUrl = backendUrl,
   ) => {
-    const [storedType, storedId] = storedKey(type, id, targetBackendUrl);
+    const key = storedId(type, id, targetBackendUrl);
     await LibraryDB.favorites
       .filter(
         (favorite) =>
-          (favorite.type === storedType &&
-            (storedType === "pipeline"
-              ? normalizeRemotePipelineSavedId(favorite.id)
-              : favorite.id) === storedId) ||
-          (favorite.type === type && favorite.id === id),
+          favorite.type === type &&
+          (favorite.type === "pipeline"
+            ? normalizeRemotePipelineSavedId(favorite.id)
+            : favorite.id) === key,
       )
       .delete();
   };
 
-  const isFavorite = (type: FavoriteType, id: string) => {
-    const [storedType, storedId] = storedKey(type, id);
-    return favorites.some(
-      (f) =>
-        (f.type === storedType && f.id === storedId) ||
-        (f.type === type && f.id === id),
+  const isFavorite = (type: FavoriteType, id: string) =>
+    favorites.some(
+      (favorite) =>
+        favorite.type === type && favorite.id === storedId(type, id),
     );
-  };
 
   const toggleFavorite = async (item: FavoriteItem) => {
-    if (isFavorite(item.type, item.id)) {
+    if (isFavorite(item.type, item.id))
       await removeFavorite(item.type, item.id);
-    } else {
-      await addFavorite(item);
-    }
+    else await addFavorite(item);
   };
 
   return { favorites, addFavorite, removeFavorite, toggleFavorite, isFavorite };

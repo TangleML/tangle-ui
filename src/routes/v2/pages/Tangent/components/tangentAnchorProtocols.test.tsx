@@ -16,7 +16,7 @@ vi.mock("@/hooks/useToastNotification", () => ({
 }));
 
 vi.mock("@/routes/runRoutes", () => ({
-  getDefaultRunPath: (runId: string) => `/runs/${runId}`,
+  getRunPath: (runId: string) => `/runs/${runId}`,
 }));
 
 const RunAnchor = tangentAnchorProtocols.run;

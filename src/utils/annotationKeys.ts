@@ -5,7 +5,6 @@
  * hoisting for pure utils — so leaf utils and their tests import from here.
  */
 
-export const TASK_DISPLAY_NAME_ANNOTATION = "display_name";
 export const PIPELINE_NOTES_ANNOTATION = "notes";
 export const PIPELINE_RUN_NOTES_ANNOTATION = "notes";
 export const PIPELINE_TAGS_ANNOTATION = "tags";

@@ -20,7 +20,7 @@ The app is under active development and supported by its maintainers.
 
 ## Installation
 
-**tangle-ui** can be operated and developed independently of the backend.
+**tangle-ui** can be developed independently. Saving pipelines and executing runs require a Tangle backend.
 
 ### Standalone Web App - Instructions
 
@@ -29,7 +29,7 @@ The app is under active development and supported by its maintainers.
 3. Navigate to the forked repo and install dependencies with `pnpm install`
 4. You are now ready to go! Run the app with `pnpm start` 🚀
 
-You can now run tangle-ui as a standalone web app! Pipelines and data will be stored in browser storage. If you want to make use of backend features, such as executing runs you will need to connect to a backend.
+The frontend runs as a standalone web app. Configure a Tangle backend in Settings or with `VITE_BACKEND_API_URL` to save pipelines and execute runs. Pipeline documents are stored on that backend; browser storage holds preferences, favorites, and recently viewed links.
 
 ### Integrated Web App - Instructions
 
@@ -79,14 +79,12 @@ Add these to a `.env` file at the root of `tangle-ui`.
 Vite reads these values at development server startup or build time. Restart the
 development server after changes, or rebuild the frontend for deployment.
 
-| Variable                       | Required             | Description                                                                                                                                                                                                                                  |
-| ------------------------------ | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `VITE_BACKEND_API_URL`         | For backend features | URL of your Tangle backend (e.g. `http://127.0.0.1:8000`).                                                                                                                                                                                   |
-| `VITE_REMOTE_PIPELINES`        | No                   | Opt in to remote pipeline storage with `true` on a backend that supports saved pipelines. Unset or `false` keeps new pipelines, imports, and copies in browser storage. Without a configured backend, storage stays local even when enabled. |
-| `VITE_LOCAL_PIPELINES`         | No                   | Legacy override: `true` keeps new pipelines local and hides the remote list, including when `VITE_REMOTE_PIPELINES=true`. Prefer leaving remote storage disabled for local-only deployments.                                                 |
-| `VITE_ARTIFACT_RETENTION_DAYS` | No                   | Number of days artifacts are stored by your backend. When set, the UI shows artifact expiry dates and warns when artifacts may no longer be available.                                                                                       |
-| `VITE_BUGSNAG_API_KEY`         | No                   | Bugsnag API key. Required alongside `VITE_TANGLE_ENV` to enable error reporting.                                                                                                                                                             |
-| `VITE_TANGLE_ENV`              | No                   | Release stage passed to Bugsnag (e.g. `development`, `staging`, `production`).                                                                                                                                                               |
+| Variable                       | Required             | Description                                                                                                                                            |
+| ------------------------------ | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `VITE_BACKEND_API_URL`         | For backend features | URL of your Tangle backend (e.g. `http://127.0.0.1:8000`).                                                                                             |
+| `VITE_ARTIFACT_RETENTION_DAYS` | No                   | Number of days artifacts are stored by your backend. When set, the UI shows artifact expiry dates and warns when artifacts may no longer be available. |
+| `VITE_BUGSNAG_API_KEY`         | No                   | Bugsnag API key. Required alongside `VITE_TANGLE_ENV` to enable error reporting.                                                                       |
+| `VITE_TANGLE_ENV`              | No                   | Release stage passed to Bugsnag (e.g. `development`, `staging`, `production`).                                                                         |
 
 ## App features:
 

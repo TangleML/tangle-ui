@@ -24,14 +24,13 @@ import type { AgentContext } from "@/agent/types";
 import {
   type ComponentSpec,
   IncrementingIdGenerator,
-  ReplayIdGenerator,
   serializeComponentSpecToText,
   YamlDeserializer,
 } from "@/models/componentSpec";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { APP_ROUTES } from "@/routes/appRoutes";
 import { validateRemotePipelineSearch } from "@/routes/remotePipelineSearch";
-import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
+import { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import { FLEX_NODES_ANNOTATION } from "@/utils/annotationKeys";
 
 import { RemotePipelineView } from "./RemotePipelineView";
@@ -192,7 +191,7 @@ it("navigates into read-only subgraphs from DOM double-clicks and restores their
     const root = createRootRoute();
     const route = createRoute({
       getParentRoute: () => root,
-      path: APP_ROUTES.EDITOR_V2_REMOTE_PIPELINE,
+      path: APP_ROUTES.REMOTE_PIPELINE_EDITOR,
       validateSearch: validateRemotePipelineSearch,
       component: () => (
         <RemotePipelineView spec={spec} pipelineId="shared-pipeline" />
@@ -214,7 +213,7 @@ it("navigates into read-only subgraphs from DOM double-clicks and restores their
     return { ...view, router, history };
   };
   const { router, history, unmount } = await open(
-    "/editor-v2/pipeline/shared-pipeline",
+    "/editor/pipeline/shared-pipeline",
   );
 
   fireEvent.doubleClick(await screen.findByText("Nested / graph"));
@@ -311,14 +310,26 @@ it("reuses the editor docks and rich details while keeping the pipeline and node
     history: createMemoryHistory(),
   });
   await router.load();
-  const sourceFile = {
-    id: "shared-pipeline",
-    remote: {
+  const sourceFile = new PipelineFile({
+    ref: {
+      source: "remote",
       pipelineId: "shared-pipeline",
       backendUrl: "https://first.example.com",
     },
-    folder: { driver: { ownerId: "owner@example.com" } },
-  } as PipelineFile;
+    canEdit: false,
+    document: {
+      pipeline_name: "Shared",
+      id: "shared-pipeline",
+      user_id: "owner@example.com",
+      file_path: "shared.yaml",
+      root_pipeline_task: {
+        componentRef: {
+          spec: { name: spec.name, implementation: { graph: { tasks: {} } } },
+        },
+      },
+      pipeline_run_annotations: {},
+    },
+  });
   const view = (pipeline: ComponentSpec, file: PipelineFile) => (
     <ViewContext value={{ spec: pipeline, file }}>
       <QueryClientProvider client={queryClient}>
@@ -465,23 +476,39 @@ it("reuses the editor docks and rich details while keeping the pipeline and node
   expect(serializeComponentSpecToText(spec)).toBe(initialYaml);
 
   await user.click(screen.getByText("Pipeline Details"));
-  const nextSpec = new YamlDeserializer(
-    new ReplayIdGenerator([spec.$id]),
-  ).deserialize({
+  const nextSpec = new YamlDeserializer({ next: () => spec.$id }).deserialize({
     name: "Other shared pipeline",
     description: "The pipeline on the other backend",
     implementation: { graph: { tasks: {} } },
   });
   expect(nextSpec.$id).toBe(spec.$id);
   rerender(
-    view(nextSpec, {
-      ...sourceFile,
-      remote: {
-        ...sourceFile.remote!,
-        backendUrl: "https://second.example.com",
-      },
-      folder: { driver: { ownerId: "second-owner@example.com" } },
-    } as PipelineFile),
+    view(
+      nextSpec,
+      new PipelineFile({
+        ref: {
+          source: "remote",
+          pipelineId: "shared-pipeline",
+          backendUrl: "https://second.example.com",
+        },
+        canEdit: false,
+        document: {
+          pipeline_name: "Shared",
+          id: "shared-pipeline",
+          user_id: "second-owner@example.com",
+          file_path: "shared.yaml",
+          root_pipeline_task: {
+            componentRef: {
+              spec: {
+                name: nextSpec.name,
+                implementation: { graph: { tasks: {} } },
+              },
+            },
+          },
+          pipeline_run_annotations: {},
+        },
+      }),
+    ),
   );
   const nextDetails = await screen.findByTestId("pipeline-details-content");
   await expect(bridge.getPipelineState()).rejects.toThrow(/changed|aborted/i);

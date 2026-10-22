@@ -1,7 +1,9 @@
 import { useState } from "react";
 
 import { ComponentSearchEmptyStateSuggestions } from "@/components/shared/ComponentSearchEmptyStateSuggestions";
+import { ManageLibrariesDialog } from "@/components/shared/GitHubLibrary/ManageLibrariesDialog";
 import {
+  ComponentItemFromUrl,
   ComponentMarkup,
   IONodeSidebarItem,
   StickyNoteSidebarItem,
@@ -13,19 +15,24 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Paragraph, Text } from "@/components/ui/typography";
+import type { ComponentSearchResult } from "@/services/componentSearchLogic";
 import type { ComponentSearchSuggestion } from "@/services/componentSearchSuggestions";
 import type { UIComponentFolder } from "@/types/componentLibrary";
 import { tracking } from "@/utils/tracking";
 
-import type { ComponentSearchV2Result } from "./componentSearchV2Logic";
+const INPUT_AGGREGATOR_URL =
+  "https://raw.githubusercontent.com/TangleML/tangle-ui/refs/heads/master/public/assets/components/input_aggregator.component.yaml";
 
 const INITIAL_VISIBLE_RESULT_COUNT = 10;
 const RESULT_PAGE_SIZE = 10;
 
 interface ComponentSearchResultsProps {
   query: string;
-  results: ComponentSearchV2Result[];
+  results: ComponentSearchResult[];
   browseFolders: UIComponentFolder[];
+  usedComponentsFolder?: UIComponentFolder;
+  favoritesFolder?: UIComponentFolder;
+  inputAggregatorEnabled?: boolean;
   searchSuggestions: ComponentSearchSuggestion[];
   isLoading: boolean;
   isSearching: boolean;
@@ -81,6 +88,9 @@ export function ComponentSearchResults({
   query,
   results,
   browseFolders,
+  usedComponentsFolder,
+  favoritesFolder,
+  inputAggregatorEnabled = false,
   searchSuggestions,
   isLoading,
   isSearching,
@@ -113,17 +123,53 @@ export function ComponentSearchResults({
           }}
           icon="ToolCase"
         />
+        {Boolean(usedComponentsFolder?.components?.length) && (
+          <FolderItem folder={usedComponentsFolder!} icon="LayoutGrid" />
+        )}
+        {Boolean(favoritesFolder?.components?.length) && (
+          <FolderItem folder={favoritesFolder!} icon="Star" />
+        )}
         <FolderItem
           folder={{
             name: "Inputs & Outputs",
             components: [
               <IONodeSidebarItem key="input" nodeType="input" />,
               <IONodeSidebarItem key="output" nodeType="output" />,
+              ...(inputAggregatorEnabled
+                ? [
+                    <ComponentItemFromUrl
+                      key="input-aggregator"
+                      componentRef={{
+                        url: INPUT_AGGREGATOR_URL,
+                        name: "Input Aggregator",
+                      }}
+                    />,
+                  ]
+                : []),
             ],
           }}
           icon="Cable"
         />
-        {browseFolders.map((folder) => (
+        {browseFolders
+          .filter((folder) => folder.name !== "Connected libraries")
+          .map((folder) => (
+            <FolderItem key={folder.name} folder={folder} />
+          ))}
+        <Separator />
+        <InlineStack
+          className="px-2 py-2"
+          align="space-between"
+          blockAlign="center"
+        >
+          <Text size="sm" tone="subdued">
+            Connected libraries
+          </Text>
+          <ManageLibrariesDialog />
+        </InlineStack>
+        {(
+          browseFolders.find((folder) => folder.name === "Connected libraries")
+            ?.folders ?? []
+        ).map((folder) => (
           <FolderItem key={folder.name} folder={folder} />
         ))}
       </BlockStack>

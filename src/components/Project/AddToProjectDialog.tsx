@@ -2,17 +2,14 @@ import { useEffect } from "react";
 
 import useToastNotification from "@/hooks/useToastNotification";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
-import { pointerTo } from "@/services/localPipelines/localPipelinesService";
-import {
-  DescriptorTooLargeError,
-  localPipelineResourceInput,
-} from "@/services/projects/resourceDescriptor";
+import { remotePipelineResourceInput } from "@/services/projects/pipelineResource";
 import { useAddResourceToProject } from "@/services/projects/useProjectResources";
 import { useReachableProjects } from "@/services/projects/useReachableProjects";
 
 import { PickFromListDialog } from "./PickFromListDialog";
 
 interface AddToProjectDialogProps {
+  pipelineId: string;
   pipelineName: string;
   memberProjectIds: readonly string[];
   onOpenChange: (open: boolean) => void;
@@ -20,6 +17,7 @@ interface AddToProjectDialogProps {
 }
 
 export function AddToProjectDialog({
+  pipelineId,
   pipelineName,
   memberProjectIds,
   onOpenChange,
@@ -42,18 +40,7 @@ export function AddToProjectDialog({
   }));
 
   const add = async (projectId: string) => {
-    let input;
-    try {
-      input = localPipelineResourceInput(await pointerTo(pipelineName));
-    } catch (problem) {
-      notify(
-        problem instanceof DescriptorTooLargeError
-          ? problem.message
-          : "Could not add this pipeline",
-        "error",
-      );
-      return;
-    }
+    const input = remotePipelineResourceInput(pipelineId, pipelineName);
 
     addResource.mutate(
       { projectId, input },

@@ -1,12 +1,4 @@
-import {
-  getAnnotationValue,
-  TASK_DISPLAY_NAME_ANNOTATION,
-} from "./annotations";
-import type {
-  ComponentReference,
-  ComponentSpec,
-  TaskSpec,
-} from "./componentSpec";
+import type { ComponentReference, ComponentSpec } from "./componentSpec";
 import { removeTrailingDateFromTitle } from "./string";
 
 export const getComponentName = (component: ComponentReference): string => {
@@ -25,15 +17,4 @@ export function getInitialName(
   const baseName = canonicalName ?? componentSpec.name ?? "Pipeline";
 
   return `${removeTrailingDateFromTitle(baseName)} (${dateTime})`;
-}
-
-export function getTaskDisplayName(
-  taskId: string,
-  taskSpec?: TaskSpec,
-): string {
-  return (
-    getAnnotationValue(taskSpec?.annotations, TASK_DISPLAY_NAME_ANNOTATION) ||
-    taskSpec?.componentRef?.spec?.name ||
-    taskId
-  );
 }

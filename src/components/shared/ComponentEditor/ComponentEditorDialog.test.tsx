@@ -6,8 +6,6 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import useToastNotification from "@/hooks/useToastNotification";
 import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
-import { ComponentSpecProvider } from "@/providers/ComponentSpecProvider";
-import { ContextPanelProvider } from "@/providers/ContextPanelProvider";
 import { hydrateComponentReference } from "@/services/componentService";
 import { PipelineStorageProvider } from "@/services/pipelineStorage/PipelineStorageProvider";
 import { saveComponent } from "@/utils/localforage";
@@ -62,11 +60,7 @@ describe("<ComponentEditorDialog />", () => {
     return (
       <QueryClientProvider client={queryClient}>
         <ReactFlowProvider>
-          <PipelineStorageProvider>
-            <ComponentSpecProvider>
-              <ContextPanelProvider>{children}</ContextPanelProvider>
-            </ComponentSpecProvider>
-          </PipelineStorageProvider>
+          <PipelineStorageProvider>{children}</PipelineStorageProvider>
         </ReactFlowProvider>
       </QueryClientProvider>
     );
@@ -82,6 +76,10 @@ describe("<ComponentEditorDialog />", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Dialog behavior does not depend on retrieving the external schema.
+    queryClient.setQueryData(["componentSpecValidator"], () => () => ({
+      valid: true,
+    }));
     vi.mocked(useToastNotification).mockReturnValue(mockToast);
     vi.mocked(useComponentLibrary).mockReturnValue({
       addToComponentLibrary: mockAddToComponentLibrary,

@@ -32,8 +32,8 @@
     {
       "selector": "[data-dock-area=\"left\"]",
       "highlightedSelectors": [
-        "[data-dock-window=\"component-library\"]",
-        "[data-dock-window-content=\"component-library\"]",
+        "[data-dock-window=\"component-search\"]",
+        "[data-dock-window-content=\"component-search\"]",
         "[data-dock-window=\"runs-and-submission\"]",
         "[data-dock-window-content=\"runs-and-submission\"]",
         "[data-dock-window=\"recent-runs\"]",

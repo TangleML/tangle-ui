@@ -18,14 +18,9 @@ import { pipelineValidity } from "./pipelineValidity";
 interface RunPipelineButtonProps {
   projectId: string;
   spec: ComponentSpec;
-  heldInThisBrowser?: boolean;
 }
 
-export function RunPipelineButton({
-  projectId,
-  spec,
-  heldInThisBrowser = false,
-}: RunPipelineButtonProps) {
+export function RunPipelineButton({ projectId, spec }: RunPipelineButtonProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const { backendUrl, available } = useBackend();
   const { mutate: submit, isPending } = useSubmitPipeline();
@@ -83,7 +78,7 @@ export function RunPipelineButton({
           onCancel={() => setDialogOpen(false)}
           onConfirm={run}
           componentSpec={spec}
-          showCopyFromRun={heldInThisBrowser}
+          showCopyFromRun={false}
         />
       )}
     </>

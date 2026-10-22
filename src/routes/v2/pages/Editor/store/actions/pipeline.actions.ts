@@ -6,6 +6,7 @@ import {
   type Task,
 } from "@/models/componentSpec";
 import { generateUniqueTaskName } from "@/routes/v2/pages/Editor/store/nameUtils";
+import { resolveEntityPositions } from "@/routes/v2/shared/nodes/buildUtils";
 import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
 import type { NavigationStore } from "@/routes/v2/shared/store/navigationStore";
 import {
@@ -100,9 +101,20 @@ export function createSubgraph(
   spec: ComponentSpec,
   taskIds: string[],
   subgraphName: string,
-  position: XYPosition,
+  position?: XYPosition,
 ): Task | null {
   if (taskIds.length === 0) return null;
+  const positions = resolveEntityPositions(spec);
+  const selectedPositions = taskIds.flatMap((id) => positions.get(id) ?? []);
+  if (selectedPositions.length === 0) return null;
+  const replacementPosition = position ?? {
+    x:
+      selectedPositions.reduce((sum, point) => sum + point.x, 0) /
+      selectedPositions.length,
+    y:
+      selectedPositions.reduce((sum, point) => sum + point.y, 0) /
+      selectedPositions.length,
+  };
 
   const uniqueName = generateUniqueTaskName(spec, subgraphName);
 
@@ -119,7 +131,7 @@ export function createSubgraph(
 
       result.replacementTask.annotations.set(
         EDITOR_POSITION_ANNOTATION,
-        position,
+        replacementPosition,
       );
       return result;
     });

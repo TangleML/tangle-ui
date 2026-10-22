@@ -57,7 +57,7 @@ export function useNaturalLanguageComponentRerank() {
  *     query) aborts the in-flight billed call instead of leaving it running.
  *
  * `enabled` lets callers opt into auto-generation (e.g. when the
- * `component-search-v2-ai-descriptions` flag is on); when disabled, the
+ * `component-search-ai-descriptions` flag is on); when disabled, the
  * description is generated only when the caller invokes `refetch()`.
  */
 export function useComponentAiDescription({

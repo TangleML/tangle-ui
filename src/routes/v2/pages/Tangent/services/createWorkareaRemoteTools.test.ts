@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { WorkareaTab } from "@/routes/v2/pages/Tangent/workarea/types";
-import { idIdentity, nameIdentity } from "@/services/projects/resourceTarget";
+import {
+  draftPipelineIdentity,
+  idIdentity,
+  remotePipelineIdentity,
+} from "@/services/projects/resourceTarget";
 import { getOverallExecutionStatusFromStats } from "@/utils/executionStatus";
 
 import {
@@ -24,7 +28,9 @@ function pipelineTab(id: string, fileId?: string): WorkareaTab {
     title: "Pipeline",
     target: {
       type: "pipeline",
-      identity: fileId ? idIdentity(fileId) : nameIdentity("Draft"),
+      identity: fileId
+        ? remotePipelineIdentity(fileId)
+        : draftPipelineIdentity("draft-1"),
     },
   };
 }
@@ -99,12 +105,12 @@ describe("createWorkareaRemoteTools", () => {
     );
 
     const result = await tools.open_workarea_target.execute({
-      target: "pipeline://id/file-1",
+      target: "pipeline://remote/file-1",
       title: "My pipeline",
     });
 
     expect(openTarget).toHaveBeenCalledWith(
-      { type: "pipeline", identity: "id/file-1" },
+      { type: "pipeline", identity: "remote/file-1" },
       "My pipeline",
     );
     expect(waitForEnvironment).toHaveBeenCalledWith("tab-pipe");
@@ -112,7 +118,7 @@ describe("createWorkareaRemoteTools", () => {
       id: "tab-pipe",
       kind: "pipeline",
       title: "Pipeline",
-      target: "pipeline://id/file-1",
+      target: "pipeline://remote/file-1",
       active: true,
       environmentId: "env-tab-pipe",
       ready: true,
@@ -160,7 +166,7 @@ describe("createWorkareaRemoteTools", () => {
     );
 
     const result = await tools.open_workarea_target.execute({
-      target: "pipeline://id/file-1",
+      target: "pipeline://remote/file-1",
     });
 
     expect(result).toMatchObject({ ready: false });
@@ -182,7 +188,7 @@ describe("createWorkareaRemoteTools", () => {
     );
 
     const resultPromise = tools.open_workarea_target.execute({
-      target: "pipeline://id/file-1",
+      target: "pipeline://remote/file-1",
     });
     activeTabId = otherTab.id;
     environment.resolve("env-1");
@@ -204,7 +210,7 @@ describe("createWorkareaRemoteTools", () => {
     );
 
     const resultPromise = tools.open_workarea_target.execute({
-      target: "pipeline://id/file-1",
+      target: "pipeline://remote/file-1",
     });
     tabs = [];
     environment.resolve(undefined);
@@ -246,7 +252,7 @@ describe("createWorkareaRemoteTools", () => {
         id: "tab-pipe",
         kind: "pipeline",
         title: "Pipeline",
-        target: "pipeline://name/Draft",
+        target: "pipeline://draft/draft-1",
         active: true,
         environmentId: "env-pipe",
         ready: true,
@@ -274,7 +280,7 @@ describe("createWorkareaRemoteTools", () => {
       id: "tab-pipe",
       kind: "pipeline",
       title: "Pipeline",
-      target: "pipeline://id/file-9",
+      target: "pipeline://remote/file-9",
       active: true,
       environmentId: "env-9",
       ready: true,
@@ -313,9 +319,10 @@ describe("createWorkareaRemoteTools", () => {
    * asked to build one with nothing open has only this to start from.
    */
   it("create_pipeline creates one, opens it, and reports the tab it can spawn into", async () => {
-    const createPipeline = vi
-      .fn()
-      .mockResolvedValue({ pipelineName: "Mordor DAG", fileId: "file-9" });
+    const createPipeline = vi.fn().mockResolvedValue({
+      pipelineName: "Mordor DAG",
+      target: { type: "pipeline", identity: "remote/file-9" },
+    });
     const tab = { ...pipelineTab("tab-new", "file-9"), title: "Mordor DAG" };
     const openTarget = vi.fn().mockResolvedValue(tab);
     const tools = createWorkareaRemoteTools(() =>
@@ -332,7 +339,7 @@ describe("createWorkareaRemoteTools", () => {
 
     expect(createPipeline).toHaveBeenCalledWith("Mordor DAG");
     expect(openTarget).toHaveBeenCalledWith(
-      { type: "pipeline", identity: "id/file-9" },
+      { type: "pipeline", identity: "remote/file-9" },
       "Mordor DAG",
     );
     expect(result).toEqual({
@@ -340,7 +347,7 @@ describe("createWorkareaRemoteTools", () => {
       kind: "pipeline",
       name: "Mordor DAG",
       title: "Mordor DAG",
-      target: "pipeline://id/file-9",
+      target: "pipeline://remote/file-9",
       active: true,
       environmentId: "env-1",
       ready: true,
@@ -348,9 +355,10 @@ describe("createWorkareaRemoteTools", () => {
   });
 
   it("create_pipeline leaves the name to the caller's default when none is given", async () => {
-    const createPipeline = vi
-      .fn()
-      .mockResolvedValue({ pipelineName: "Untitled pipeline", fileId: "f-1" });
+    const createPipeline = vi.fn().mockResolvedValue({
+      pipelineName: "Untitled pipeline",
+      target: { type: "pipeline", identity: "remote/f-1" },
+    });
     const tab = pipelineTab("tab-new", "f-1");
     const tools = createWorkareaRemoteTools(() =>
       makeDeps({
@@ -373,7 +381,6 @@ describe("createWorkareaRemoteTools", () => {
       makeDeps({
         createPipeline: vi.fn().mockResolvedValue({
           pipelineName: "Draft",
-          fileId: "draft-1",
           target,
         }),
         openTarget,
@@ -397,9 +404,10 @@ describe("createWorkareaRemoteTools", () => {
   });
 
   it("clone_pipeline clones the resolved run tab and returns the new pipeline target", async () => {
-    const clonePipeline = vi
-      .fn()
-      .mockResolvedValue({ pipelineName: "My Pipeline (Copy)" });
+    const clonePipeline = vi.fn().mockResolvedValue({
+      pipelineName: "My Pipeline (Copy)",
+      target: { type: "pipeline", identity: "remote/clone-1" },
+    });
     const tools = createWorkareaRemoteTools(() =>
       makeDeps({
         getTabs: () => [runTab("tab-run", "run-42")],
@@ -413,12 +421,15 @@ describe("createWorkareaRemoteTools", () => {
     expect(clonePipeline).toHaveBeenCalledWith("run-42");
     expect(result).toEqual({
       name: "My Pipeline (Copy)",
-      target: "pipeline://name/My Pipeline (Copy)",
+      target: "pipeline://remote/clone-1",
     });
   });
 
   it("clone_pipeline prefers an explicit runId over the open tabs", async () => {
-    const clonePipeline = vi.fn().mockResolvedValue({ pipelineName: "P" });
+    const clonePipeline = vi.fn().mockResolvedValue({
+      pipelineName: "P",
+      target: { type: "pipeline", identity: "remote/clone-1" },
+    });
     const tools = createWorkareaRemoteTools(() =>
       makeDeps({
         getTabs: () => [runTab("tab-run", "run-open")],

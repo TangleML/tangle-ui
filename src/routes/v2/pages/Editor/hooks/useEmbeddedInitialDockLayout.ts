@@ -2,10 +2,7 @@ import { reaction } from "mobx";
 import { useEffect, useRef } from "react";
 
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
-import {
-  EMBEDDED_VIEW_PRESET,
-  viewPresetForComponentSearchMode,
-} from "@/routes/v2/shared/windows/viewPresets";
+import { EMBEDDED_VIEW_PRESET } from "@/routes/v2/shared/windows/viewPresets";
 
 /**
  * Embedded editor default layout: dock the panels to the right in the order of
@@ -18,17 +15,12 @@ import {
  * the layout once. The embedded editor does not persist layout, so this replaces
  * the persistence-gated seed used by the full editor.
  */
-export function useEmbeddedInitialDockLayout(
-  componentSearchV2Enabled: boolean,
-): void {
+export function useEmbeddedInitialDockLayout(): void {
   const { windows } = useSharedStores();
   const seeded = useRef(false);
 
   useEffect(() => {
-    const preset = viewPresetForComponentSearchMode(
-      EMBEDDED_VIEW_PRESET,
-      componentSearchV2Enabled,
-    );
+    const preset = EMBEDDED_VIEW_PRESET;
     const rightIds = preset.dockAreas?.right ?? [];
 
     const applyLayout = () => {
@@ -51,5 +43,5 @@ export function useEmbeddedInitialDockLayout(
       },
       { fireImmediately: true },
     );
-  }, [windows, componentSearchV2Enabled]);
+  }, [windows]);
 }

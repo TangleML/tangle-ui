@@ -14,7 +14,7 @@ import type {
 } from "@/routes/v2/shared/nodes/types";
 import { deepClone } from "@/utils/deepClone";
 
-import { EditorV2FlexNode } from "./components/FlexNode";
+import { EditorFlexNode } from "./components/FlexNode";
 import { FlexNodeDetails } from "./context/FlexNodeDetails";
 import {
   addFlexNode,
@@ -46,7 +46,7 @@ export const flexNodeManifest: NodeTypeManifest = {
     return findFlexNode(spec, id) !== undefined;
   },
 
-  component: EditorV2FlexNode,
+  component: EditorFlexNode,
 
   buildNodes(spec) {
     return getFlexNodes(spec).map((flexNode) => createFlexNode(flexNode));

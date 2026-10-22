@@ -4,11 +4,8 @@ import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { Paragraph } from "@/components/ui/typography";
 import { useBackend } from "@/providers/BackendProvider";
 import { EmbeddedPipelineEditor } from "@/routes/v2/pages/Editor/EmbeddedPipelineEditor";
-import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
-import { findById } from "@/services/pipelineStorage/pipelineRegistry";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import type { EditorPipelineRef } from "@/services/pipelineStorage/types";
-import { pipelineFileTarget } from "@/services/projects/pipelineResource";
 import { parseIdentity } from "@/services/projects/resourceTarget";
 
 import { registerWorkareaKind } from "./registry";
@@ -16,31 +13,27 @@ import type { WorkareaTarget } from "./types";
 
 function PipelineWorkareaEditor({
   target,
-  title,
   ...props
 }: Omit<ComponentProps<typeof EmbeddedPipelineEditor>, "pipelineRef"> & {
   target: WorkareaTarget;
-  title: string;
 }) {
   const { backendUrl, ready, configured } = useBackend();
   const storage = usePipelineStorage();
-  const project = useTangentProject();
   const { key, value } = parseIdentity(target.identity);
-  if (key === "remote" || key === "draft") {
-    if (!ready) return <LoadingScreen message="Loading pipeline..." />;
-    if (!configured)
-      return <p role="alert">Configure a backend to open pipelines.</p>;
-  }
+  if (!ready) return <LoadingScreen message="Loading pipeline..." />;
+  if (!configured)
+    return <p role="alert">Configure a backend to open pipelines.</p>;
   let pipelineRef: EditorPipelineRef;
   try {
-    pipelineRef =
-      key === "remote"
-        ? { source: "remote", backendUrl, pipelineId: value }
-        : key === "draft"
-          ? storage.getRemoteDraftRef(value, backendUrl)
-          : key === "id"
-            ? { fileId: value, name: title }
-            : { name: value };
+    if (key === "remote") {
+      pipelineRef = { source: "remote", backendUrl, pipelineId: value };
+    } else if (key === "draft") {
+      pipelineRef = storage.getRemoteDraftRef(value, backendUrl);
+    } else {
+      throw new Error(
+        "This pipeline is unavailable. Open a saved pipeline from the project.",
+      );
+    }
   } catch (error) {
     return (
       <Paragraph role="alert">
@@ -50,32 +43,17 @@ function PipelineWorkareaEditor({
       </Paragraph>
     );
   }
-  return (
-    <EmbeddedPipelineEditor
-      pipelineRef={pipelineRef}
-      {...props}
-      onMigrated={(file) =>
-        project.replaceWorkareaTarget(target, pipelineFileTarget(file))
-      }
-    />
-  );
+  return <EmbeddedPipelineEditor pipelineRef={pipelineRef} {...props} />;
 }
 
 registerWorkareaKind({
   type: "pipeline",
   icon: "GitBranch",
   keepMounted: true,
-  resolveTitle: async (target) => {
-    const { key, value } = parseIdentity(target.identity);
-    if (key === "name") return value;
-    if (key === "remote" || key === "draft") return value;
-    const entry = await findById(value).catch(() => undefined);
-    return entry?.storageKey ?? value;
-  },
+  resolveTitle: (target) => parseIdentity(target.identity).value,
   render: (tab, hostProps) => (
     <PipelineWorkareaEditor
       target={tab.target}
-      title={tab.title}
       isActive={hostProps.isActive}
       projectId={hostProps.projectId}
       onStoreReady={(store) => hostProps.registerTabStore(tab.id, store)}

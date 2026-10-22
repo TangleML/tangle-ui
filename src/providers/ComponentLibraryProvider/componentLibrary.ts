@@ -3,11 +3,7 @@ import type {
   ComponentFolder,
   ComponentLibrary,
 } from "@/types/componentLibrary";
-import type {
-  ComponentReference,
-  GraphSpec,
-  TaskSpec,
-} from "@/utils/componentSpec";
+import type { ComponentReference } from "@/utils/componentSpec";
 import {
   generateDigest,
   getAllComponentFilesFromList,
@@ -49,35 +45,6 @@ export const fetchUserComponents = async (): Promise<ComponentFolder> => {
       isUserFolder: true,
     };
   }
-};
-
-export const fetchUsedComponents = (graphSpec: GraphSpec): ComponentFolder => {
-  if (!graphSpec || !graphSpec.tasks || typeof graphSpec.tasks !== "object") {
-    return {
-      name: "Used in Pipeline",
-      components: [],
-      folders: [],
-      isUserFolder: false,
-    };
-  }
-
-  const usedComponentsMap = new Map<string, ComponentReference>();
-
-  Object.values(graphSpec.tasks).forEach((task: TaskSpec) => {
-    const key = task.componentRef.digest;
-    if (key && !usedComponentsMap.has(key)) {
-      usedComponentsMap.set(key, {
-        ...task.componentRef,
-      });
-    }
-  });
-
-  return {
-    name: "Used in Pipeline",
-    components: Array.from(usedComponentsMap.values()),
-    folders: [],
-    isUserFolder: false,
-  };
 };
 
 export async function isFavoriteComponent(component: ComponentReference) {

@@ -15,7 +15,6 @@ import { APP_ROUTES } from "@/routes/appRoutes";
 import { useCancelPipelineRun } from "@/routes/v2/pages/RunView/hooks/useCancelPipelineRun";
 import { useClonePipelineRun } from "@/routes/v2/pages/RunView/hooks/useClonePipelineRun";
 import { useExportPipelineYaml } from "@/routes/v2/pages/RunView/hooks/useExportPipelineYaml";
-import { useInspectPipeline } from "@/routes/v2/pages/RunView/hooks/useInspectPipeline";
 import { useRerunPipelineRun } from "@/routes/v2/pages/RunView/hooks/useRerunPipelineRun";
 import { useRunViewActions } from "@/routes/v2/pages/RunView/hooks/useRunViewActions";
 import { useYamlViewer } from "@/routes/v2/pages/RunView/hooks/useYamlViewer";
@@ -40,7 +39,6 @@ export function RunMenu() {
     confirmCancel,
     dismissCancel,
   } = useCancelPipelineRun(runId);
-  const { inspect } = useInspectPipeline(pipelineName);
   const { exportYaml } = useExportPipelineYaml(componentSpec, pipelineName);
 
   const handleCompare = () => {
@@ -64,8 +62,7 @@ export function RunMenu() {
     );
   }
 
-  const { canAccessEditorSpec, isRunCreator, isInProgress, isComplete } =
-    actions;
+  const { isRunCreator, isInProgress, isComplete } = actions;
   const showCancel = isInProgress && isRunCreator;
   const showSeparator = showCancel || isComplete;
 
@@ -78,16 +75,6 @@ export function RunMenu() {
           </MenuTriggerButton>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" sideOffset={2}>
-          {canAccessEditorSpec && pipelineName && (
-            <DropdownMenuItem
-              onSelect={inspect}
-              {...tracking("v2.run_view.menu_bar.inspect_pipeline")}
-            >
-              <Icon name="ExternalLink" size="sm" />
-              Inspect Pipeline
-            </DropdownMenuItem>
-          )}
-
           <DropdownMenuItem
             onSelect={openYamlViewer}
             {...tracking("v2.run_view.menu_bar.view_yaml")}

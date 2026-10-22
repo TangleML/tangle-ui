@@ -22,7 +22,7 @@ import {
 import { Text } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
-import { getDefaultRunPath } from "@/routes/runRoutes";
+import { getRunPath } from "@/routes/runRoutes";
 import { runAnnotationsQueryOptions } from "@/services/runAnnotations";
 import {
   getAnnotationValue,
@@ -79,7 +79,7 @@ const RunRow = ({
     run.execution_status_stats ?? undefined,
   );
 
-  const clickThroughUrl = getDefaultRunPath(runId);
+  const clickThroughUrl = getRunPath(runId);
 
   const handleRowClick = (e: MouseEvent<HTMLElement>) => {
     if (e.target instanceof HTMLElement && e.target.closest("button")) {

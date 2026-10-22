@@ -1,433 +1,1488 @@
-import { useQuery } from "@tanstack/react-query";
-import { useNavigate, useSearch } from "@tanstack/react-router";
-import { type ReactNode, useEffect, useState } from "react";
+import { Link, useNavigate, useSearch } from "@tanstack/react-router";
+import {
+  useDeferredValue,
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 
-import type { ListPublishedComponentsResponse } from "@/api/types.gen";
 import {
   ComponentDetail,
   ComponentDetailSkeleton,
 } from "@/components/shared/ComponentDetail/ComponentDetail";
-import { SuspenseWrapper } from "@/components/shared/SuspenseWrapper";
+import { ComponentLifecycleBadges } from "@/components/shared/ComponentLifecycleBadges";
+import { ComponentSearchEmptyStateSuggestions } from "@/components/shared/ComponentSearchEmptyStateSuggestions";
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+  createSourceFilterOptions,
+  filterIndexByDisabledSourceKeys,
+  SourceFilterBar,
+} from "@/components/shared/ComponentSearchSourceFilter";
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
+import { SuspenseWrapper } from "@/components/shared/SuspenseWrapper";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Paragraph, Text } from "@/components/ui/typography";
+import { Spinner } from "@/components/ui/spinner";
+import { QuickTooltip } from "@/components/ui/tooltip";
+import { Heading, Paragraph, Text } from "@/components/ui/typography";
+import { getAiModelLabel, supportsAiEmbeddings } from "@/config/aiConfig";
+import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
+import { useComponentSearchCatalog } from "@/hooks/useComponentSearchCatalog";
+import { useDebouncedSearchValue } from "@/hooks/useDebouncedSearchValue";
+import {
+  useComponentAiDescription,
+  useNaturalLanguageComponentRerank,
+} from "@/hooks/useNaturalLanguageComponentSearch";
 import { addRecentlyViewed } from "@/hooks/useRecentlyViewed";
+import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useBackend } from "@/providers/BackendProvider";
+import { buildCompatibleComponentSuggestions } from "@/services/componentCompatibility";
+import { rankComponentMatchesByEmbeddings } from "@/services/componentSearchEmbeddings";
 import {
-  fetchUserComponents,
-  flattenFolders,
-} from "@/providers/ComponentLibraryProvider/componentLibrary";
-import { APP_ROUTES } from "@/routes/router";
-import { fetchAndStoreComponentLibrary } from "@/services/componentService";
-import type { ComponentFolder } from "@/types/componentLibrary";
+  formatComponentSearchMatchSummary,
+  formatMatchedFieldsExplanation,
+} from "@/services/componentSearchExplanations";
+import {
+  type ComponentSearchSource,
+  type IndexEntry,
+  type LexicalMatch,
+  lexicalSearch,
+  type MatchField,
+  mergeUniqueMatches,
+} from "@/services/componentSearchIndex";
+import { buildComponentSearchSuggestions } from "@/services/componentSearchSuggestions";
+import {
+  componentReferenceToCandidate,
+  NaturalLanguageSearchConfigError,
+  type RerankedMatch,
+} from "@/services/naturalLanguageComponentSearchService";
 import type { ComponentReference } from "@/utils/componentSpec";
 import { componentMetadata } from "@/utils/componentTracking";
-import { fetchWithErrorHandling } from "@/utils/fetchWithErrorHandling";
 import { getComponentName } from "@/utils/getComponentName";
 import { contentHeight } from "@/utils/layout";
 import { tracking } from "@/utils/tracking";
 
-import { readSelectedComponentDigest } from "./searchParams";
+import { APP_ROUTES } from "../router";
+import { CLIPBOARD_COPY_FAILED_MESSAGE } from "../v2/shared/clipboard/clipboardMessages";
+import { copyComponentReferenceToClipboard } from "../v2/shared/clipboard/copyComponentReferenceToClipboard";
+import {
+  createDashboardComponentsSearchParams,
+  readComponentSearchQuery,
+  readDisabledSourceKeys,
+  readSelectedComponentDigest,
+} from "./searchParams";
 
-type ComponentRowSection = "user" | "library" | "published";
+// Repeated Tailwind combos extracted as named constants.
+const PANEL_CLASS = "p-3 rounded-lg bg-card border border-border";
 
-const PUBLISHED_COMPONENTS_URL = "/api/published_components/";
+// Maps V2's richer ComponentSearchSource.kind onto the analytics-tracking taxonomy
+// (see analytics-tracking skill: `component_source` enum is fixed).
+const TRACKING_SOURCE_BY_KIND: Record<
+  ComponentSearchSource["kind"],
+  "library" | "published" | "user"
+> = {
+  standard: "library",
+  registered: "library",
+  published: "published",
+  user: "user",
+};
 
-// ─── Collapsible section header ──────────────────────────────────────────────
+// Source identity is communicated by the package icon's colour instead of a
+// text badge — cleaner card, and the same colour shows up consistently across
+// the list. Hover for the human-readable source name.
+const SOURCE_ICON_TONE_BY_KIND: Record<ComponentSearchSource["kind"], string> =
+  {
+    standard: "text-blue-500",
+    published: "text-emerald-500",
+    registered: "text-violet-500",
+    user: "text-amber-500",
+  };
 
-const CollapsibleSection = ({
-  label,
-  count,
-  defaultOpen = true,
-  children,
-}: {
+function rerankScoreClass(score: number): string {
+  if (score >= 0.9)
+    return "text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-300 dark:bg-emerald-500/15 dark:border-emerald-500/30";
+  if (score >= 0.75)
+    return "text-emerald-600 bg-emerald-50/70 border-emerald-100 dark:text-emerald-300 dark:bg-emerald-500/10 dark:border-emerald-500/25";
+  return "text-emerald-500 bg-white border-emerald-100 dark:bg-emerald-500/15 dark:border-emerald-500/30";
+}
+
+/** How many lexical hits to display before the user asks for AI judgment. */
+const LEXICAL_RESULT_LIMIT = 20;
+/** Bounded pool sent to AI search on click. */
+const AI_CANDIDATE_LIMIT = 80;
+const DASHBOARD_SEARCH_RESULT_DEBOUNCE_MS = 500;
+const BROWSE_RESULT_INITIAL_LIMIT = 100;
+const BROWSE_RESULT_INCREMENT = 100;
+
+interface ComponentCollectionMatch {
+  id: string;
   label: string;
   count: number;
-  defaultOpen?: boolean;
-  children: ReactNode;
-}) => (
-  <Collapsible defaultOpen={defaultOpen}>
-    <CollapsibleTrigger className="group w-full flex items-center gap-1.5 px-3 py-1.5 bg-muted/40 border-b border-border/50 sticky top-0 z-10 hover:bg-muted/60 cursor-pointer">
-      <Icon
-        name="ChevronRight"
-        className="text-muted-foreground transition-transform shrink-0 group-data-[state=open]:rotate-90"
-        size="sm"
-      />
-      <Text
-        size="xs"
-        weight="medium"
-        className="text-muted-foreground uppercase tracking-wide flex-1 text-left"
-      >
-        {label}
-      </Text>
-      <Text size="xs" tone="subdued" className="tabular-nums">
-        {count}
-      </Text>
-    </CollapsibleTrigger>
-    <CollapsibleContent>{children}</CollapsibleContent>
-  </Collapsible>
-);
+  previewNames: string[];
+}
 
-// ─── Shared row ──────────────────────────────────────────────────────────────
+export function buildComponentCollectionMatches(
+  index: IndexEntry[],
+  query: string,
+): ComponentCollectionMatch[] {
+  const trimmedQuery = query.trim().toLowerCase();
+  if (!trimmedQuery) return [];
 
-const ComponentRow = ({
-  component,
-  selectedDigest,
-  onSelect,
-  depth = 0,
-  section,
+  const bySourceId = new Map<string, ComponentCollectionMatch>();
+  for (const entry of index) {
+    if (entry.source.kind !== "registered") continue;
+    const current = bySourceId.get(entry.source.id);
+    if (current) {
+      current.count += 1;
+      if (current.previewNames.length < 3)
+        current.previewNames.push(entry.name);
+    } else {
+      bySourceId.set(entry.source.id, {
+        id: entry.source.id,
+        label: entry.source.label,
+        count: 1,
+        previewNames: [entry.name],
+      });
+    }
+  }
+
+  return Array.from(bySourceId.values())
+    .filter((collection) =>
+      collection.label.toLowerCase().includes(trimmedQuery),
+    )
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
+
+interface ComponentCardProps {
+  reference: ComponentReference;
+  source?: ComponentSearchSource;
+  matchedFields?: MatchField[];
+  reason?: string;
+  rerankScore?: number;
+  isAiRanked?: boolean;
+  isSelected?: boolean;
+  // Position within the current result list — passed to analytics.
+  position?: number;
+  // Whether the user had typed a query when this card was rendered.
+  hadQuery?: boolean;
+  // Whether the detail pane is open, forcing the results list into compact rows.
+  isDetailOpen?: boolean;
+  onSelect: (reference: ComponentReference) => void;
+}
+
+function cleanComponentCardDescription(
+  description: string | undefined,
+): string | undefined {
+  const cleaned = description?.replace(/\s*Annotations:.*$/i, "").trim();
+
+  return cleaned || description;
+}
+
+const ComponentCard = ({
+  reference,
+  source,
+  matchedFields,
+  reason,
+  rerankScore,
+  isAiRanked,
+  isSelected,
   position,
   hadQuery,
-}: {
-  component: ComponentReference;
-  selectedDigest?: string;
-  onSelect: (c: ComponentReference) => void;
-  depth?: number;
-  section: ComponentRowSection;
-  position: number;
-  hadQuery: boolean;
-}) => (
-  <button
-    onClick={() => onSelect(component)}
-    style={{ paddingLeft: `${depth * 12 + 12}px` }}
-    className={cn(
-      "w-full text-left pr-3 py-1.5 border-b border-border/50 hover:bg-muted/50 flex flex-col gap-0 cursor-pointer",
-      selectedDigest === component.digest && "bg-muted",
-    )}
-    {...tracking("component_library.row", {
-      ...componentMetadata(component, section),
-      surface: "dashboard",
-      section,
-      result_position: position,
-      had_query: hadQuery,
-    })}
-  >
-    <Text size="xs" className="truncate">
-      {component.name ?? getComponentName(component)}
-    </Text>
-    {component.published_by && (
-      <Text
-        size="xs"
-        className="text-muted-foreground/70 truncate leading-tight"
-      >
-        {component.published_by}
-      </Text>
-    )}
-  </button>
-);
-
-// ─── Folder node (recursive, for library tree) ───────────────────────────────
-
-const FolderNode = ({
-  folder,
-  depth,
-  selectedDigest,
+  isDetailOpen,
   onSelect,
-  hadQuery,
-}: {
-  folder: ComponentFolder;
-  depth: number;
-  selectedDigest?: string;
-  onSelect: (c: ComponentReference) => void;
-  hadQuery: boolean;
-}) => (
-  <Collapsible defaultOpen>
-    <CollapsibleTrigger
-      aria-label={`${folder.name} folder`}
-      style={{ paddingLeft: `${depth * 12 + 12}px` }}
-      className="group w-full flex items-center gap-1.5 pr-3 py-0.5 border-b border-border/50 bg-muted/10 hover:bg-muted/30 cursor-pointer text-left"
-    >
-      <Icon
-        name="ChevronRight"
-        className="text-muted-foreground transition-transform shrink-0 group-data-[state=open]:rotate-90"
-        size="sm"
-      />
-      <Text size="xs" tone="subdued" weight="medium" className="truncate">
-        {folder.name}
-      </Text>
-    </CollapsibleTrigger>
-    <CollapsibleContent>
-      {folder.components?.map((c, i) => (
-        <ComponentRow
-          key={c.digest ?? c.url ?? c.name}
-          component={c}
-          selectedDigest={selectedDigest}
-          onSelect={onSelect}
-          depth={depth + 1}
-          section="library"
-          position={i}
-          hadQuery={hadQuery}
-        />
-      ))}
-      {folder.folders?.map((sub) => (
-        <FolderNode
-          key={sub.name}
-          folder={sub}
-          depth={depth + 1}
-          selectedDigest={selectedDigest}
-          onSelect={onSelect}
-          hadQuery={hadQuery}
-        />
-      ))}
-    </CollapsibleContent>
-  </Collapsible>
-);
-
-// ─── Component List ─────────────────────────────────────────────────────────
-
-const ComponentList = ({
-  query,
-  selectedDigest,
-  onSelect,
-}: {
-  query: string;
-  selectedDigest?: string;
-  onSelect: (component: ComponentReference) => void;
-}) => {
-  const { backendUrl, configured, available, ready } = useBackend();
-  const { track } = useAnalytics();
-
-  // User components — IndexedDB, no backend needed
-  const { data: userFolder } = useQuery({
-    queryKey: ["userComponents"],
-    queryFn: fetchUserComponents,
-    staleTime: 0,
-    refetchOnMount: "always",
-  });
-
-  // Static library — fetched from a remote YAML, same as editor sidebar
-  const { data: componentLibrary } = useQuery({
-    queryKey: ["componentLibrary"],
-    queryFn: fetchAndStoreComponentLibrary,
-    staleTime: 1000 * 60 * 60,
-  });
-
-  // Published components — from the backend API
-  const { data: publishedData, isLoading: publishedLoading } =
-    useQuery<ListPublishedComponentsResponse>({
-      queryKey: ["published-components", backendUrl],
-      refetchOnWindowFocus: false,
-      enabled: configured && available,
-      queryFn: async () => {
-        const url = new URL(PUBLISHED_COMPONENTS_URL, backendUrl);
-        return fetchWithErrorHandling(url.toString());
-      },
-    });
-
-  const q = query.trim().toLowerCase();
-  const hadQuery = q.length > 0;
-
-  const matches = (name?: string | null, author?: string | null) =>
-    !q || name?.toLowerCase().includes(q) || author?.toLowerCase().includes(q);
-
-  const userComponents = (userFolder?.components ?? []).filter((c) =>
-    matches(c.name, c.published_by),
+}: ComponentCardProps) => {
+  const name = getComponentName(reference);
+  const description = cleanComponentCardDescription(
+    reference.spec?.description,
   );
-
-  const allLibraryComponents = componentLibrary
-    ? flattenFolders(componentLibrary)
-    : [];
-  const filteredLibraryComponents = allLibraryComponents.filter((c) =>
-    matches(c.name, c.published_by),
+  const publishedBy = reference.published_by;
+  const trackingSource = source
+    ? TRACKING_SOURCE_BY_KIND[source.kind]
+    : "unknown";
+  const showLexicalMatchFields = isAiRanked ? undefined : matchedFields;
+  const showDescription = !isDetailOpen ? description : undefined;
+  const matchSummary = formatComponentSearchMatchSummary(
+    reason ?? formatMatchedFieldsExplanation(showLexicalMatchFields),
   );
-
-  const publishedComponents = (publishedData?.published_components ?? [])
-    .filter((c) => matches(c.name, c.published_by))
-    .map((c): ComponentReference => ({
-      digest: c.digest,
-      url: c.url ?? `${backendUrl}/api/components/${c.digest}`,
-      name: c.name ?? undefined,
-      published_by: c.published_by,
-    }));
-
-  const total =
-    userComponents.length +
-    filteredLibraryComponents.length +
-    publishedComponents.length;
-
-  useEffect(() => {
-    if (!ready || publishedLoading || q.length === 0) return;
-    const timeoutId = setTimeout(() => {
-      track("component_library.search.query", {
-        query_length: q.length,
-        result_count: total,
-        surface: "dashboard",
-        search_backend: "frontend_title",
-      });
-    }, 400);
-    return () => clearTimeout(timeoutId);
-  }, [q, total, ready, publishedLoading, track]);
-
-  if (!ready || publishedLoading) {
-    return (
-      <BlockStack gap="2" className="p-3">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <Skeleton key={i} className="h-9 w-full" />
-        ))}
-      </BlockStack>
-    );
-  }
-
-  if (total === 0) {
-    return (
-      <div className="px-4 py-3">
-        <Paragraph tone="subdued" size="sm">
-          {q ? "No components match your search." : "No components found."}
-        </Paragraph>
-      </div>
-    );
-  }
 
   return (
-    <>
-      {userComponents.length > 0 && (
-        <CollapsibleSection
-          label="User Components"
-          count={userComponents.length}
-        >
-          {userComponents.map((c, i) => (
-            <ComponentRow
-              key={c.digest ?? c.url ?? c.name}
-              component={c}
-              selectedDigest={selectedDigest}
-              onSelect={onSelect}
-              section="user"
-              position={i}
-              hadQuery={hadQuery}
-            />
-          ))}
-        </CollapsibleSection>
+    // Raw <button> rather than the <Button> primitive: the primitive's variants
+    // are sized for compact text/icon buttons, not a full-width multi-line card
+    // with an accent bar + selected/hover/focus states. Keeping the native
+    // <button> preserves accessibility (aria-pressed, focus-visible ring) and
+    // lets the card layout grow freely.
+    <button
+      type="button"
+      onClick={() => onSelect(reference)}
+      aria-pressed={isSelected}
+      aria-label={`View details for ${name}`}
+      className={cn(
+        PANEL_CLASS,
+        // Card is a button: align text, full width, subtle hover, focus ring.
+        "w-full text-left cursor-pointer transition-colors",
+        isDetailOpen ? "p-3" : "p-4",
+        "hover:bg-muted/40",
+        "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring",
+        // Selected state: left accent bar + tinted background.
+        isSelected &&
+          cn(
+            "bg-[#5B35F5]/5 border-l-4 border-l-[#5B35F5]",
+            isDetailOpen ? "pl-[calc(0.75rem-3px)]" : "pl-[calc(1rem-3px)]",
+          ),
       )}
-
-      {filteredLibraryComponents.length > 0 && componentLibrary && (
-        <CollapsibleSection
-          label="Library Components"
-          count={filteredLibraryComponents.length}
+      {...tracking("component_library.result_card_v2", {
+        ...componentMetadata(reference, trackingSource),
+        surface: "dashboard_v2",
+        result_position: position,
+        had_query: hadQuery,
+        source_kind: source?.kind,
+      })}
+    >
+      {/* min-w-0 so the flex column can shrink below its content width;
+          without this, long unbroken URLs in the description force the
+          card to grow horizontally. */}
+      <BlockStack gap={isDetailOpen ? "1" : "2"} className="min-w-0">
+        <InlineStack
+          gap="2"
+          blockAlign="center"
+          wrap="wrap"
+          className="min-w-0"
         >
-          {q
-            ? // When searching, show a flat filtered list
-              filteredLibraryComponents.map((c, i) => (
-                <ComponentRow
-                  key={c.digest ?? c.url ?? c.name}
-                  component={c}
-                  selectedDigest={selectedDigest}
-                  onSelect={onSelect}
-                  section="library"
-                  position={i}
-                  hadQuery={hadQuery}
-                />
-              ))
-            : // When not searching, show the folder tree
-              componentLibrary.folders.map((folder) => (
-                <FolderNode
-                  key={folder.name}
-                  folder={folder}
-                  depth={0}
-                  selectedDigest={selectedDigest}
-                  onSelect={onSelect}
-                  hadQuery={hadQuery}
-                />
-              ))}
-        </CollapsibleSection>
-      )}
-
-      {publishedComponents.length > 0 && (
-        <CollapsibleSection
-          label="Published Components"
-          count={publishedComponents.length}
-        >
-          {publishedComponents.map((c, i) => (
-            <ComponentRow
-              key={c.digest}
-              component={c}
-              selectedDigest={selectedDigest}
-              onSelect={onSelect}
-              section="published"
-              position={i}
-              hadQuery={hadQuery}
-            />
-          ))}
-        </CollapsibleSection>
-      )}
-    </>
+          {source ? (
+            <QuickTooltip content={source.label}>
+              <Icon
+                name="Package"
+                size="sm"
+                className={cn(
+                  "shrink-0",
+                  SOURCE_ICON_TONE_BY_KIND[source.kind],
+                )}
+                aria-label={`Source: ${source.label}`}
+              />
+            </QuickTooltip>
+          ) : (
+            <Icon name="Package" size="sm" className="shrink-0" />
+          )}
+          <Text
+            size="sm"
+            weight="semibold"
+            className="block min-w-0 flex-1 basis-0 whitespace-normal [overflow-wrap:anywhere] line-clamp-2"
+          >
+            {name}
+          </Text>
+          {!isDetailOpen && <ComponentLifecycleBadges reference={reference} />}
+          {rerankScore !== undefined && !isDetailOpen && (
+            <Badge
+              variant="secondary"
+              className={cn(
+                "shrink-0 whitespace-nowrap rounded-full px-1.5 py-0.5 font-semibold leading-none",
+                rerankScoreClass(rerankScore),
+              )}
+              aria-label={`${Math.round(rerankScore * 100)} percent relevance`}
+              title={`${Math.round(rerankScore * 100)}% relevance`}
+            >
+              {Math.round(rerankScore * 100)}%
+            </Badge>
+          )}
+        </InlineStack>
+        {publishedBy && (
+          <Text
+            size="xs"
+            tone="subdued"
+            className={cn(isDetailOpen ? "pl-6" : undefined)}
+            title={`Published by ${publishedBy}`}
+          >
+            Published by {publishedBy}
+          </Text>
+        )}
+        {matchSummary && (
+          <Paragraph
+            size="xs"
+            tone="subdued"
+            className={cn("line-clamp-1", isDetailOpen ? "pl-6" : undefined)}
+          >
+            Why: {matchSummary}
+          </Paragraph>
+        )}
+        {showDescription && (
+          // `[overflow-wrap:anywhere]` breaks at any character if needed —
+          // `break-words` only breaks at word boundaries, which doesn't help
+          // for long URLs without spaces. Pair with `min-w-0` on the parent
+          // so the flex container actually allows shrinking.
+          <Paragraph
+            size="sm"
+            tone="subdued"
+            className="[overflow-wrap:anywhere] min-w-0 line-clamp-2"
+          >
+            {description}
+          </Paragraph>
+        )}
+      </BlockStack>
+    </button>
   );
 };
 
-// ─── Main View ──────────────────────────────────────────────────────────────
+interface CollectionCardProps {
+  collection: ComponentCollectionMatch;
+}
 
-export function DashboardComponentsView() {
-  const [query, setQuery] = useState("");
-  const navigate = useNavigate();
-  const { backendUrl } = useBackend();
-  // useSearch strict:false is required here — this route has no validateSearch defined
-  const selectedDigest = readSelectedComponentDigest(
-    useSearch({ strict: false }),
+const CollectionCard = ({ collection }: CollectionCardProps) => (
+  <BlockStack gap="2" className={PANEL_CLASS}>
+    <InlineStack gap="2" blockAlign="center" wrap="wrap">
+      <Icon name="Library" size="sm" className="text-violet-500" />
+      <Text size="sm" weight="semibold">
+        {collection.label}
+      </Text>
+      <Badge variant="secondary">
+        {collection.count} component{collection.count === 1 ? "" : "s"}
+      </Badge>
+    </InlineStack>
+    {collection.previewNames.length > 0 && (
+      <Paragraph size="xs" tone="subdued">
+        Includes {collection.previewNames.join(", ")}
+      </Paragraph>
+    )}
+  </BlockStack>
+);
+
+interface CompatibleComponentsPanelProps {
+  suggestions: ReturnType<typeof buildCompatibleComponentSuggestions>;
+  onSelect: (reference: ComponentReference) => void;
+}
+
+const CompatibleComponentsPanel = ({
+  suggestions,
+  onSelect,
+}: CompatibleComponentsPanelProps) => {
+  if (suggestions.length === 0) return null;
+
+  return (
+    <BlockStack gap="2" align="stretch">
+      <Text
+        size="xs"
+        tone="subdued"
+        weight="semibold"
+        className="uppercase tracking-wide"
+      >
+        Compatible components
+      </Text>
+      <BlockStack gap="2" align="stretch">
+        {suggestions.map((suggestion) => {
+          const name = getComponentName(suggestion.reference);
+          return (
+            <button
+              key={`${suggestion.direction}:${suggestion.reference.digest}`}
+              type="button"
+              onClick={() => onSelect(suggestion.reference)}
+              aria-label={`View details for compatible component ${name}`}
+              className={cn(
+                PANEL_CLASS,
+                "w-full text-left cursor-pointer hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring",
+              )}
+            >
+              <BlockStack gap="1">
+                <InlineStack gap="2" blockAlign="center" wrap="wrap">
+                  <Icon
+                    name={
+                      suggestion.direction === "downstream"
+                        ? "ArrowRight"
+                        : "ArrowLeft"
+                    }
+                    size="sm"
+                  />
+                  <Text size="sm" weight="semibold">
+                    {name}
+                  </Text>
+                  <Badge variant="secondary">
+                    {suggestion.direction === "downstream"
+                      ? "Can use outputs"
+                      : "Can provide inputs"}
+                  </Badge>
+                </InlineStack>
+                <Paragraph size="xs" tone="subdued">
+                  Matching type{suggestion.matchedTypes.length === 1 ? "" : "s"}
+                  : {suggestion.matchedTypes.join(", ")}
+                </Paragraph>
+              </BlockStack>
+            </button>
+          );
+        })}
+      </BlockStack>
+    </BlockStack>
   );
-  const handleSelect = (component: ComponentReference) => {
-    if (component.digest) {
+};
+
+interface ComponentDescriptionPanelProps {
+  prefilledDescription?: string;
+  generatedDescription?: string;
+  isGenerating: boolean;
+  generationError: Error | null;
+  isConfigured: boolean;
+  onGenerate: () => void;
+}
+
+/**
+ * Router-Link styled to read as a clickable link (color + hover underline).
+ * Used wherever we point the user at the Agent settings page — keeps the
+ * affordance consistent and avoids duplicating the link target string.
+ */
+const ConfigureInSettingsLink = () => (
+  <Link
+    to={APP_ROUTES.SETTINGS_AGENT}
+    className="text-sm font-semibold text-primary hover:underline"
+  >
+    Configure in Settings →
+  </Link>
+);
+
+type DescriptionPanelStatus =
+  | { kind: "unconfigured" }
+  | { kind: "error"; message: string }
+  | { kind: "done"; text: string }
+  | { kind: "generating" }
+  | { kind: "idle" };
+
+function getDescriptionPanelStatus({
+  isConfigured,
+  generationError,
+  generatedDescription,
+  isGenerating,
+}: {
+  isConfigured: boolean;
+  generationError: Error | null;
+  generatedDescription?: string;
+  isGenerating: boolean;
+}): DescriptionPanelStatus {
+  if (!isConfigured) return { kind: "unconfigured" };
+  if (generationError)
+    return { kind: "error", message: generationError.message };
+  if (generatedDescription) return { kind: "done", text: generatedDescription };
+  if (isGenerating) return { kind: "generating" };
+  return { kind: "idle" };
+}
+
+const ComponentDescriptionPanel = ({
+  prefilledDescription,
+  generatedDescription,
+  isGenerating,
+  generationError,
+  isConfigured,
+  onGenerate,
+}: ComponentDescriptionPanelProps) => {
+  const status = getDescriptionPanelStatus({
+    isConfigured,
+    generationError,
+    generatedDescription,
+    isGenerating,
+  });
+
+  const renderStatusBody = () => {
+    switch (status.kind) {
+      case "unconfigured":
+        return (
+          <Paragraph size="sm" tone="subdued">
+            Configure AI settings to generate an AI description.
+          </Paragraph>
+        );
+      case "error":
+        return (
+          <BlockStack gap="2" align="start">
+            <Paragraph size="sm" tone="critical">
+              Couldn&apos;t generate a description: {status.message}
+            </Paragraph>
+            <Button type="button" size="sm" onClick={onGenerate}>
+              Try again
+            </Button>
+          </BlockStack>
+        );
+      case "done":
+        return (
+          <Paragraph size="sm" className="[overflow-wrap:anywhere]">
+            {status.text}
+          </Paragraph>
+        );
+      case "generating":
+        return (
+          <Paragraph size="sm" tone="subdued">
+            Generating description…
+          </Paragraph>
+        );
+      case "idle":
+        return (
+          <InlineStack gap="2" blockAlign="center" wrap="wrap">
+            <Button
+              type="button"
+              variant="outline"
+              size="xs"
+              onClick={onGenerate}
+              aria-label="Generate AI description"
+              className="border-border/60 bg-background/60 text-muted-foreground shadow-none hover:bg-muted/50 hover:text-foreground"
+            >
+              <Icon name="Sparkles" size="xs" />
+              Generate with AI
+            </Button>
+            <Text size="xs" tone="subdued">
+              Optional
+            </Text>
+          </InlineStack>
+        );
+    }
+  };
+
+  return (
+    <BlockStack gap="3">
+      <BlockStack gap="1">
+        <Text size="xs" weight="semibold" tone="subdued">
+          Prefilled description
+        </Text>
+        <Paragraph size="sm" className="[overflow-wrap:anywhere]">
+          {prefilledDescription?.trim() || "No prefilled description provided."}
+        </Paragraph>
+      </BlockStack>
+      <BlockStack gap="1">
+        <InlineStack gap="2" blockAlign="center">
+          <Text size="xs" weight="semibold" tone="subdued">
+            AI-generated description
+          </Text>
+          {isGenerating && <Spinner size={14} />}
+        </InlineStack>
+        {renderStatusBody()}
+      </BlockStack>
+      {!isConfigured && <ConfigureInSettingsLink />}
+    </BlockStack>
+  );
+};
+
+const AI_SEARCH_PROGRESS_VERBS = [
+  "Scanning",
+  "Comparing",
+  "Scoring",
+  "Ranking",
+];
+
+function AiSearchProgress({
+  mode,
+  modelLabel,
+}: {
+  mode: "embedding" | "smart";
+  modelLabel: string;
+}) {
+  const [verbIndex, setVerbIndex] = useState(0);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setVerbIndex(
+        (current) => (current + 1) % AI_SEARCH_PROGRESS_VERBS.length,
+      );
+    }, 1200);
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  const verb = AI_SEARCH_PROGRESS_VERBS[verbIndex];
+  const message =
+    mode === "embedding"
+      ? "Finding semantic matches in local embeddings…"
+      : `${verb} component candidates with ${modelLabel}…`;
+
+  return (
+    <InlineStack
+      gap="2"
+      blockAlign="center"
+      className="rounded-md bg-muted/50 px-3 py-2 text-muted-foreground"
+    >
+      <Spinner size={14} />
+      <Text size="xs" tone="subdued" role="status" aria-live="polite">
+        {message}
+      </Text>
+    </InlineStack>
+  );
+}
+
+function DebouncedComponentSearchInput({
+  onCommit,
+  disabled,
+  initialValue,
+  onLocalChange,
+}: {
+  onCommit: (value: string) => void;
+  disabled: boolean;
+  initialValue: string;
+  onLocalChange?: (value: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [localValue, setLocalValue] = useDebouncedSearchValue(
+    onCommit,
+    DASHBOARD_SEARCH_RESULT_DEBOUNCE_MS,
+    initialValue,
+    () => document.activeElement !== inputRef.current,
+  );
+
+  return (
+    <Input
+      ref={inputRef}
+      type="search"
+      placeholder="e.g. train_test_split, pandas, clean up my data"
+      value={localValue}
+      onChange={(event) => {
+        setLocalValue(event.target.value);
+        onLocalChange?.(event.target.value);
+      }}
+      aria-label="Search components"
+      disabled={disabled}
+      className="flex-1"
+    />
+  );
+}
+
+export const DashboardComponentsView = () => {
+  const aiDescriptionsEnabled = useFlagValue(
+    "component-search-ai-descriptions",
+  );
+  const { track } = useAnalytics();
+  const { backendUrl } = useBackend();
+  const { config: aiConfig } = useAiProviderSettings();
+  const dashboardSearch = useSearch({ strict: false });
+  const queryFromUrl = readComponentSearchQuery(dashboardSearch);
+  const disabledSourceKeysFromUrl = readDisabledSourceKeys(dashboardSearch);
+  const disabledSourceKeysParam = disabledSourceKeysFromUrl.join(",");
+  const [query, setQuery] = useState(queryFromUrl);
+  const [isSearching, setIsSearching] = useState(false);
+  const deferredQuery = useDeferredValue(query);
+  const [isSearchPending, startSearchTransition] = useTransition();
+  const [disabledSourceKeys, setDisabledSourceKeys] = useState<string[]>(
+    disabledSourceKeysFromUrl,
+  );
+  const [browseResultLimit, setBrowseResultLimit] = useState(
+    BROWSE_RESULT_INITIAL_LIMIT,
+  );
+
+  // Detail-pane selection lives in the URL so refreshes preserve it and the
+  // selection can be linked-to. The V2 route has no validateSearch defined.
+  const navigate = useNavigate();
+  const selectedDigest = readSelectedComponentDigest(dashboardSearch);
+  const buildSearch = ({
+    component = selectedDigest,
+    q = query,
+    sourceKeys = disabledSourceKeys,
+  }: {
+    component?: string | null;
+    q?: string;
+    sourceKeys?: string[];
+  }) =>
+    createDashboardComponentsSearchParams({
+      component: component ?? undefined,
+      q,
+      disabledSourceKeys: sourceKeys,
+    });
+  const selectComponent = (reference: ComponentReference) => {
+    if (reference.digest) {
       addRecentlyViewed({
         type: "component",
-        id: component.digest,
-        name: component.name ?? getComponentName(component),
+        id: reference.digest,
+        name: getComponentName(reference),
       });
     }
     navigate({
       to: APP_ROUTES.DASHBOARD_COMPONENTS,
-      search: { component: component.digest },
+      search: buildSearch({ component: reference.digest }),
+    });
+  };
+  const closeDetail = () => {
+    navigate({
+      to: APP_ROUTES.DASHBOARD_COMPONENTS,
+      search: buildSearch({ component: null }),
     });
   };
 
+  useEffect(() => {
+    startSearchTransition(() => setQuery(queryFromUrl));
+  }, [queryFromUrl, startSearchTransition]);
+
+  useEffect(() => {
+    setDisabledSourceKeys(disabledSourceKeysFromUrl);
+  }, [disabledSourceKeysParam]);
+
+  // Close detail on Escape — only when something is open, so we don't fight
+  // other Esc handlers (e.g. inside Inputs).
+  useEffect(() => {
+    if (!selectedDigest) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        navigate({
+          to: APP_ROUTES.DASHBOARD_COMPONENTS,
+          search: buildSearch({ component: null }),
+        });
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectedDigest, navigate, buildSearch]);
+
+  const {
+    references: allSourced,
+    sourcedHydrated,
+    index,
+    isLoading: catalogLoading,
+    isHydrating,
+  } = useComponentSearchCatalog(true);
+  const sourceFilterOptions = createSourceFilterOptions(index);
+  const filteredIndex = filterIndexByDisabledSourceKeys(
+    index,
+    disabledSourceKeys,
+  );
+  const total = filteredIndex.length;
+  const totalAcrossSources = index.length;
+  const isSearchUiPending = isSearching || isSearchPending;
+  const activeQuery = isSearchUiPending ? "" : deferredQuery;
+
+  // Alphabetical order for the browse-all view. Predictable scrolling beats
+  // "whatever order the library happened to load in." Skip it while search is
+  // pending because the skeleton is showing and sorting the full index can steal
+  // the keystroke that should reveal the skeleton.
+  const sortedIndex = isSearchUiPending
+    ? []
+    : [...filteredIndex].sort((a, b) => a.name.localeCompare(b.name));
+
+  useEffect(() => {
+    setBrowseResultLimit(BROWSE_RESULT_INITIAL_LIMIT);
+  }, [deferredQuery, disabledSourceKeysParam, total]);
+
+  const trimmedQuery = activeQuery.trim();
+
+  // One lexical pass at the wider AI-candidate limit; the display list is the
+  // top slice of that same scored result, so we never score and sort the index
+  // twice per render. `lexicalSearch` already orders by score desc then name
+  // asc, so slicing is equivalent to a separate narrower search.
+  const broadLexicalMatches: LexicalMatch[] =
+    trimmedQuery.length === 0
+      ? []
+      : lexicalSearch(filteredIndex, activeQuery, {
+          limit: AI_CANDIDATE_LIMIT,
+        });
+
+  const lexicalMatches: LexicalMatch[] = broadLexicalMatches.slice(
+    0,
+    LEXICAL_RESULT_LIMIT,
+  );
+  const collectionMatches = buildComponentCollectionMatches(
+    filteredIndex,
+    activeQuery,
+  );
+  const aiCandidateMatches: LexicalMatch[] = (() => {
+    if (trimmedQuery.length === 0) return [];
+    return broadLexicalMatches;
+  })();
+  const canUseEmbeddingSearch = supportsAiEmbeddings(aiConfig.apiBase);
+
+  const {
+    mutate: rerank,
+    data: rerankData,
+    isPending: isReranking,
+    error: rerankError,
+    reset: resetRerank,
+    isConfigured,
+  } = useNaturalLanguageComponentRerank();
+
+  // Reranked results are tied to the exact query that triggered them. If the
+  // user types more, we drop the rerank rather than show results for an old
+  // query. Tracked here so we can clear on input change.
+  const [rerankedFor, setRerankedFor] = useState<string | null>(null);
+  const [rerankBaseMatches, setRerankBaseMatches] = useState<LexicalMatch[]>(
+    [],
+  );
+  const [isEmbeddingSearchPending, setIsEmbeddingSearchPending] =
+    useState(false);
+
+  const clearRerank = () => {
+    setRerankedFor(null);
+    setRerankBaseMatches([]);
+    resetRerank();
+  };
+
+  const handleQueryCommit = (value: string) => {
+    startSearchTransition(() => {
+      setQuery(value);
+      setIsSearching(false);
+      if (rerankedFor !== null) {
+        clearRerank();
+      }
+    });
+  };
+
+  const handleSuggestedSearch = (value: string) => {
+    startSearchTransition(() => {
+      setQuery(value);
+      setIsSearching(false);
+      if (rerankedFor !== null) {
+        clearRerank();
+      }
+    });
+  };
+
+  const handleLocalQueryChange = (value: string) => {
+    setIsSearching(value.trim() !== query.trim());
+  };
+
+  const buildEmbeddingMatches = async (
+    trimmed: string,
+    limit: number,
+  ): Promise<LexicalMatch[]> => {
+    if (!canUseEmbeddingSearch) return [];
+    setIsEmbeddingSearchPending(true);
+    try {
+      return await rankComponentMatchesByEmbeddings(
+        filteredIndex,
+        trimmed,
+        aiConfig,
+        { limit },
+      );
+    } catch {
+      return [];
+    } finally {
+      setIsEmbeddingSearchPending(false);
+    }
+  };
+
+  const startAiSearch = async (
+    matches: LexicalMatch[],
+    {
+      scoreAllCandidates,
+      limit,
+    }: { scoreAllCandidates: boolean; limit: number },
+  ) => {
+    const trimmed = trimmedQuery;
+    if (trimmed.length === 0) return;
+    if (matches.length === 0 && !canUseEmbeddingSearch) return;
+
+    const embeddingMatches = canUseEmbeddingSearch
+      ? await buildEmbeddingMatches(trimmed, limit)
+      : [];
+    const rerankMatches = mergeUniqueMatches(
+      matches.slice(0, 60),
+      embeddingMatches,
+      matches,
+      limit,
+    );
+
+    const candidates = rerankMatches
+      .map((m) => componentReferenceToCandidate(m.reference, m.source))
+      .filter((c): c is NonNullable<typeof c> => c !== null);
+
+    if (candidates.length === 0) return;
+
+    setRerankBaseMatches(rerankMatches);
+    setRerankedFor(trimmed);
+    rerank({ query: trimmed, candidates, scoreAllCandidates });
+  };
+
+  const handleSmartSearch = () => {
+    void startAiSearch(aiCandidateMatches, {
+      scoreAllCandidates: true,
+      limit: aiCandidateMatches.length || LEXICAL_RESULT_LIMIT,
+    });
+  };
+
+  useEffect(() => {
+    if (query === queryFromUrl) return;
+    const timeout = window.setTimeout(() => {
+      navigate({
+        to: APP_ROUTES.DASHBOARD_COMPONENTS,
+        search: createDashboardComponentsSearchParams({
+          component: selectedDigest,
+          q: query,
+          disabledSourceKeys,
+        }),
+      });
+    }, 400);
+    return () => window.clearTimeout(timeout);
+  }, [query, queryFromUrl, selectedDigest, disabledSourceKeys, navigate]);
+
+  const handleSourceToggle = (sourceKey: string) => {
+    const nextDisabledSourceKeys = disabledSourceKeys.includes(sourceKey)
+      ? disabledSourceKeys.filter((key) => key !== sourceKey)
+      : [...disabledSourceKeys, sourceKey];
+    setDisabledSourceKeys(nextDisabledSourceKeys);
+    navigate({
+      to: APP_ROUTES.DASHBOARD_COMPONENTS,
+      search: buildSearch({ sourceKeys: nextDisabledSourceKeys }),
+    });
+    if (rerankedFor !== null) {
+      clearRerank();
+    }
+  };
+
+  const handleEnableAllSources = () => {
+    setDisabledSourceKeys([]);
+    navigate({
+      to: APP_ROUTES.DASHBOARD_COMPONENTS,
+      search: buildSearch({ sourceKeys: [] }),
+    });
+    if (rerankedFor !== null) {
+      clearRerank();
+    }
+  };
+
+  const handleShowMoreBrowseResults = () => {
+    setBrowseResultLimit((currentLimit) =>
+      Math.min(currentLimit + BROWSE_RESULT_INCREMENT, sortedIndex.length),
+    );
+  };
+
+  const isLoadingLibrary = catalogLoading || isHydrating;
+  const noLibraryData = !isLoadingLibrary && totalAcrossSources === 0;
+  const isEmpty = trimmedQuery.length === 0;
+  const isConfigError = rerankError instanceof NaturalLanguageSearchConfigError;
+  const aiSearchProgressMode = isEmbeddingSearchPending ? "embedding" : "smart";
+  const aiSearchModelLabel = aiConfig.model.trim()
+    ? getAiModelLabel(aiConfig.model)
+    : "the configured model";
+  // Only treat rerank as "active" when the model actually returned matches.
+  // An empty result set (model decided nothing fit, or the response was
+  // malformed and the service degraded it to `{ matches: [] }`) means the
+  // ordering we'd render is plain lexical — labeling that "AI-reranked"
+  // would lie to the user.
+  const rerankActive =
+    rerankedFor !== null &&
+    rerankedFor === trimmedQuery &&
+    rerankData !== undefined &&
+    rerankData.matches.length > 0 &&
+    rerankBaseMatches.length > 0 &&
+    !isReranking &&
+    !isEmbeddingSearchPending;
+
+  // What we actually render. Rerank wins when active; otherwise lexical.
+  const displayedResults: Array<
+    LexicalMatch & { reason?: string; rerankScore?: number }
+  > = rerankActive
+    ? mergeRerankIntoLexical(rerankData.matches, rerankBaseMatches)
+    : lexicalMatches.map((m) => ({
+        ...m,
+        reason: undefined,
+        rerankScore: undefined,
+      }));
+
+  const searchSuggestions =
+    lexicalMatches.length === 0 &&
+    collectionMatches.length === 0 &&
+    !rerankActive
+      ? buildComponentSearchSuggestions(filteredIndex, {
+          query: trimmedQuery,
+        })
+      : [];
+
+  const trackedSearchResultCount =
+    displayedResults.length + collectionMatches.length;
+
+  useEffect(() => {
+    if (isLoadingLibrary || trimmedQuery.length === 0) return;
+
+    const timeout = window.setTimeout(() => {
+      track("component_library.search.completed", {
+        surface: "dashboard_v2",
+        search_backend: rerankActive
+          ? "frontend_aggregate_ai_rerank"
+          : "frontend_aggregate",
+        query_length: trimmedQuery.length,
+        result_count: trackedSearchResultCount,
+        component_result_count: displayedResults.length,
+        collection_result_count: collectionMatches.length,
+        ai_ranked: rerankActive,
+      });
+    }, 400);
+
+    return () => window.clearTimeout(timeout);
+  }, [
+    collectionMatches.length,
+    displayedResults.length,
+    isLoadingLibrary,
+    rerankActive,
+    track,
+    trackedSearchResultCount,
+    trimmedQuery,
+  ]);
+
+  // Resolve the full reference for the selected digest. Prefer the already-
+  // hydrated copy (no extra network), fall back to the un-hydrated index
+  // entry, then to a backend stub. The shared ComponentDetail will suspend on
+  // hydration as needed and shares cache with the rest of the app.
+  const selectedReference: ComponentReference | undefined = (() => {
+    if (!selectedDigest) return undefined;
+    const hydrated = sourcedHydrated.find(
+      (s) => s.reference.digest === selectedDigest,
+    );
+    if (hydrated) return hydrated.reference;
+    const indexed = allSourced.find(
+      (s) => s.reference.digest === selectedDigest,
+    );
+    if (indexed) return indexed.reference;
+    return {
+      digest: selectedDigest,
+      url: `${backendUrl}/api/components/${selectedDigest}`,
+    };
+  })();
+  const isDetailOpen = Boolean(selectedDigest);
+  const compatibleComponentSuggestions = buildCompatibleComponentSuggestions(
+    selectedReference,
+    sourcedHydrated.map((sourced) => sourced.reference),
+  );
+
+  // AI description query. Keyed by digest so each component gets its own
+  // cached result, isolated error/pending, and an AbortSignal that fires
+  // when the user switches components mid-flight (no more uncancellable
+  // billed calls). `enabled` opts into auto-generation when the flag is on;
+  // when off, the panel's "Generate AI description" button calls
+  // `refetchDescription()` manually.
+  const {
+    description: selectedGeneratedDescription,
+    isFetching: isGeneratingDescription,
+    error: descriptionError,
+    refetch: refetchDescription,
+    isConfigured: canGenerateDescription,
+  } = useComponentAiDescription({
+    reference: selectedReference,
+    enabled: aiDescriptionsEnabled,
+  });
+  const notify = useToastNotification();
+
+  const handleGenerateDescription = () => {
+    if (!selectedReference?.digest || !selectedReference.spec) return;
+    if (!canGenerateDescription) return;
+    refetchDescription();
+  };
+
+  const handleCopyLink = async () => {
+    if (!selectedDigest) return;
+    if (!navigator.clipboard) {
+      notify(
+        "Couldn't copy link. Check browser permissions and try again.",
+        "error",
+      );
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      notify("Component link copied to clipboard", "success");
+    } catch {
+      notify(
+        "Couldn't copy link. Check browser permissions and try again.",
+        "error",
+      );
+    }
+  };
+
+  const handleCopyToPipeline = async () => {
+    if (!selectedReference) return;
+    try {
+      await copyComponentReferenceToClipboard(selectedReference);
+      notify(
+        "Component copied. Paste (Cmd/Ctrl+V) into a pipeline to add it.",
+        "success",
+      );
+    } catch {
+      notify(CLIPBOARD_COPY_FAILED_MESSAGE, "error");
+    }
+  };
+
+  // Render helpers — keeps the JSX below tidy. These read the closed-over
+  // state from the surrounding component; React Compiler memoises them.
+  const renderResults = () => {
+    if (isLoadingLibrary || isSearchUiPending) {
+      return (
+        <BlockStack gap="2">
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
+        </BlockStack>
+      );
+    }
+    if (noLibraryData) {
+      return (
+        <Paragraph size="sm" tone="subdued">
+          No components found in your library.
+        </Paragraph>
+      );
+    }
+    if (total === 0) {
+      return (
+        <Paragraph size="sm" tone="subdued">
+          No components in the selected sources.
+        </Paragraph>
+      );
+    }
+    if (isEmpty) {
+      const visibleBrowseEntries = sortedIndex.slice(0, browseResultLimit);
+      const hasMoreBrowseResults =
+        visibleBrowseEntries.length < sortedIndex.length;
+
+      return (
+        <BlockStack gap="2" align="stretch">
+          <Paragraph size="xs" tone="subdued">
+            Showing {visibleBrowseEntries.length} of {total} component
+            {total === 1 ? "" : "s"} in selected sources. Start typing to
+            search.
+          </Paragraph>
+          <div
+            className={cn(
+              "grid gap-2",
+              isDetailOpen
+                ? "grid-cols-1"
+                : "grid-cols-[repeat(auto-fit,minmax(420px,1fr))]",
+            )}
+          >
+            {visibleBrowseEntries.map((entry, idx) => (
+              <ComponentCard
+                key={entry.digest}
+                reference={entry.reference}
+                source={entry.source}
+                isSelected={entry.digest === selectedDigest}
+                position={idx}
+                hadQuery={false}
+                isDetailOpen={isDetailOpen}
+                onSelect={selectComponent}
+              />
+            ))}
+          </div>
+          {hasMoreBrowseResults && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleShowMoreBrowseResults}
+            >
+              Show{" "}
+              {Math.min(
+                BROWSE_RESULT_INCREMENT,
+                sortedIndex.length - visibleBrowseEntries.length,
+              )}{" "}
+              more
+            </Button>
+          )}
+        </BlockStack>
+      );
+    }
+    if (
+      lexicalMatches.length === 0 &&
+      collectionMatches.length === 0 &&
+      !rerankActive
+    ) {
+      return (
+        <BlockStack gap="2">
+          <Paragraph size="sm" tone="subdued">
+            No components matched “{trimmedQuery}”.
+          </Paragraph>
+          <Paragraph size="xs" tone="subdued">
+            Try a component name, input/output type, source term, or task
+            intent. Suggestions below are based on your loaded component
+            sources. AI search reranks matching local candidates when it is
+            configured.
+          </Paragraph>
+          <ComponentSearchEmptyStateSuggestions
+            suggestions={searchSuggestions}
+            surface="dashboard_v2"
+            onSelectSuggestion={handleSuggestedSearch}
+          />
+        </BlockStack>
+      );
+    }
+    return (
+      <BlockStack gap="2" align="stretch">
+        {collectionMatches.length > 0 && (
+          <BlockStack gap="2" align="stretch">
+            <Paragraph size="xs" tone="subdued">
+              Collection{collectionMatches.length === 1 ? "" : "s"}
+            </Paragraph>
+            {collectionMatches.map((collection) => (
+              <CollectionCard key={collection.id} collection={collection} />
+            ))}
+          </BlockStack>
+        )}
+        <InlineStack align="space-between" blockAlign="center" gap="2">
+          <Paragraph size="xs" tone="subdued">
+            {rerankActive
+              ? `AI-ranked ${displayedResults.length} result${displayedResults.length === 1 ? "" : "s"} for “${trimmedQuery}”`
+              : `${displayedResults.length} component result${displayedResults.length === 1 ? "" : "s"} for “${trimmedQuery}”`}
+          </Paragraph>
+          {rerankActive && (
+            <Button
+              type="button"
+              variant="link"
+              size="inline-xs"
+              onClick={clearRerank}
+            >
+              Use lexical ranking
+            </Button>
+          )}
+        </InlineStack>
+        <div
+          className={cn(
+            "grid gap-2",
+            isDetailOpen
+              ? "grid-cols-1"
+              : "grid-cols-[repeat(auto-fit,minmax(420px,1fr))]",
+          )}
+        >
+          {displayedResults.map((result, idx) => (
+            <ComponentCard
+              key={result.digest}
+              reference={result.reference}
+              source={result.source}
+              matchedFields={result.matchedFields}
+              reason={result.reason}
+              rerankScore={result.rerankScore}
+              isAiRanked={rerankActive}
+              isSelected={result.digest === selectedDigest}
+              position={idx}
+              hadQuery={true}
+              isDetailOpen={isDetailOpen}
+              onSelect={selectComponent}
+            />
+          ))}
+        </div>
+      </BlockStack>
+    );
+  };
+
   return (
+    // App-shell layout: escape the dashboard's outer padding (`-mt-4 -mb-6
+    // -mx-8`) so we can paint a fixed-height shell with our own internal
+    // padding per zone. Raw flex-col here (rather than BlockStack) because we
+    // need the inline `style={{ height }}` AND independent vertical-scroll
+    // columns — both BlockStack's typed props and its `items-start` /
+    // `min-height: auto` defaults fight against that flex chain.
     <div
-      className="flex -mt-4 -mb-6 -mx-8 overflow-hidden border-t border-border"
+      className="flex flex-col -mt-4 -mb-6 -mx-8 overflow-hidden"
       style={{ height: contentHeight() }}
     >
-      {/* Left: component list */}
-      <div className="w-64 shrink-0 border-r border-border flex flex-col overflow-hidden">
-        <div className="p-3 border-b border-border shrink-0">
-          <Input
-            placeholder="Search components..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
+      {/* Header zone: page title, description, search input. shrink-0 so it
+          never gets squeezed by the body below. */}
+      <div className="shrink-0 px-8 pt-4 pb-4 border-b border-border">
+        <BlockStack gap="3" align="stretch">
+          <BlockStack gap="1">
+            <Heading level={2}>Components</Heading>
+            <Paragraph size="sm" tone="subdued">
+              Type to search across every component source — standard library,
+              your published components, registered libraries, and local user
+              components. Local results match on name, description,
+              inputs/outputs, metadata, and container command. Optional AI
+              search reranks matching local candidates when configured.
+            </Paragraph>
+          </BlockStack>
+          <InlineStack gap="3" blockAlign="center" wrap="nowrap">
+            <DebouncedComponentSearchInput
+              onCommit={handleQueryCommit}
+              disabled={isLoadingLibrary || noLibraryData}
+              initialValue={query}
+              onLocalChange={handleLocalQueryChange}
+            />
+            <Button
+              variant="secondary"
+              size="icon"
+              onClick={handleSmartSearch}
+              disabled={
+                isReranking ||
+                isEmbeddingSearchPending ||
+                isEmpty ||
+                (aiCandidateMatches.length === 0 && !canUseEmbeddingSearch) ||
+                !isConfigured
+              }
+              aria-label={
+                isReranking || isEmbeddingSearchPending
+                  ? "AI search in progress"
+                  : "AI search"
+              }
+              title="AI search — rerank a bounded set of top candidates with an LLM"
+              {...tracking("component_library.search.ai_rerank", {
+                surface: "dashboard_v2",
+                mode: "smart",
+                query_length: trimmedQuery.length,
+                candidate_count: aiCandidateMatches.length,
+              })}
+            >
+              {isReranking || isEmbeddingSearchPending ? (
+                <Spinner size={16} />
+              ) : (
+                <Icon name="Sparkles" />
+              )}
+            </Button>
+          </InlineStack>
+          {(isReranking || isEmbeddingSearchPending) && (
+            <AiSearchProgress
+              mode={aiSearchProgressMode}
+              modelLabel={aiSearchModelLabel}
+            />
+          )}
+          <SourceFilterBar
+            options={sourceFilterOptions}
+            disabledSourceKeys={disabledSourceKeys}
+            onToggle={handleSourceToggle}
+            onEnableAll={handleEnableAllSources}
           />
-        </div>
-        <div className="flex-1 overflow-y-auto">
-          <ComponentList
-            query={query}
-            selectedDigest={selectedDigest}
-            onSelect={handleSelect}
-          />
-        </div>
+        </BlockStack>
       </div>
 
-      {/* Right: detail panel — single scroll, source sticky on right */}
-      <div className="flex-1 min-w-0 overflow-y-auto p-6">
-        {selectedDigest ? (
-          <SuspenseWrapper fallback={<ComponentDetailSkeleton />}>
-            <ComponentDetail
-              reference={{
-                digest: selectedDigest,
-                url: `${backendUrl}/api/components/${selectedDigest}`,
-              }}
-            />
-          </SuspenseWrapper>
-        ) : (
-          <InlineStack fill>
-            <Paragraph tone="subdued" size="sm">
-              Select a component to view its details.
+      {/* Body zone: two scroll columns. Raw flex-row (rather than
+          InlineStack) because InlineStack's `items-start` default would
+          collapse each column to its content height and break the inner
+          `overflow-y-auto`. `min-h-0` lets the row shrink below content so
+          its children's overflow can clip. */}
+      <div className="flex flex-1 min-h-0">
+        {/* Results column — own scroll. When detail is open, narrows to a
+              fixed width with a divider; otherwise fills the whole body.
+              `min-h-0` is critical: flex items default to `min-height: auto`
+              which lets content push the column past the parent's height and
+              breaks the `overflow-y-auto` clip. */}
+        <div
+          className={cn(
+            "min-h-0 min-w-0 overflow-y-auto px-8 py-4",
+            isDetailOpen
+              ? "w-[420px] shrink-0 border-r border-border"
+              : "flex-1",
+          )}
+        >
+          {/* AI-search-unavailable banner and rerank error live in the
+              results column — they describe what just happened to the
+              search the user is looking at. */}
+          {!isConfigured && !isEmpty && aiCandidateMatches.length > 0 && (
+            <BlockStack gap="1" className={cn(PANEL_CLASS, "mb-3")}>
+              <Text size="sm" weight="semibold">
+                AI search unavailable
+              </Text>
+              <Paragraph size="sm" tone="subdued">
+                Configure an OpenAI-compatible provider to use AI search. Search
+                results are unaffected.
+              </Paragraph>
+              <ConfigureInSettingsLink />
+            </BlockStack>
+          )}
+          {rerankError && !isConfigError && rerankError instanceof Error && (
+            <Paragraph size="sm" tone="subdued" className="mb-3">
+              AI search failed: {rerankError.message}
             </Paragraph>
-          </InlineStack>
+          )}
+          {renderResults()}
+        </div>
+
+        {/* Detail column — own scroll. Close button sticky to the top of
+              this column's scroll viewport so it stays reachable.
+              Same `min-h-0` rule as the results column above. */}
+        {isDetailOpen && selectedReference && (
+          <div
+            role="region"
+            aria-label="Component details"
+            className="flex-1 min-h-0 min-w-0 overflow-y-auto px-8 py-4 relative"
+          >
+            {/* Sticky action row: copy + close. `float-right` here is
+                intentional — it lets the row sit above the content without
+                taking flow space, and the detail's first heading flows up
+                next to it. Outer div handles sticky/positioning; inner
+                InlineStack handles the button row's layout. */}
+            <div className="sticky top-0 float-right z-10 bg-background/80 backdrop-blur-sm rounded-md">
+              <InlineStack gap="1">
+                <QuickTooltip content="Copy link" side="bottom">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleCopyLink}
+                    aria-label="Copy component link"
+                    {...tracking(
+                      "component_library.result_detail_v2.copy_link_button",
+                      {
+                        surface: "dashboard_v2",
+                      },
+                    )}
+                  >
+                    <Icon name="Link" />
+                  </Button>
+                </QuickTooltip>
+                <QuickTooltip content="Copy to clipboard" side="bottom">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleCopyToPipeline}
+                    aria-label="Copy component to clipboard"
+                    {...tracking(
+                      "component_library.result_detail_v2.copy_button",
+                      {
+                        surface: "dashboard_v2",
+                      },
+                    )}
+                  >
+                    <Icon name="Copy" />
+                  </Button>
+                </QuickTooltip>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={closeDetail}
+                  aria-label="Close component details"
+                  {...tracking(
+                    "component_library.result_detail_v2.close_button",
+                    {
+                      surface: "dashboard_v2",
+                    },
+                  )}
+                >
+                  <Icon name="X" />
+                </Button>
+              </InlineStack>
+            </div>
+            <BlockStack gap="6" align="stretch">
+              <ComponentDescriptionPanel
+                prefilledDescription={selectedReference.spec?.description}
+                generatedDescription={selectedGeneratedDescription}
+                isGenerating={
+                  isGeneratingDescription && !selectedGeneratedDescription
+                }
+                generationError={descriptionError}
+                isConfigured={canGenerateDescription}
+                onGenerate={handleGenerateDescription}
+              />
+              <SuspenseWrapper fallback={<ComponentDetailSkeleton />}>
+                <ComponentDetail
+                  key={selectedDigest}
+                  reference={selectedReference}
+                  layout="stacked"
+                  sourcePanelHeight="480px"
+                  hideDescription
+                />
+              </SuspenseWrapper>
+              <CompatibleComponentsPanel
+                suggestions={compatibleComponentSuggestions}
+                onSelect={selectComponent}
+              />
+            </BlockStack>
+          </div>
         )}
       </div>
     </div>
   );
+};
+
+/**
+ * Merge LLM rerank results back into the lexical match metadata. AI search
+ * keeps unranked lexical matches after the model-ranked set.
+ */
+function mergeRerankIntoLexical(
+  reranked: RerankedMatch[],
+  lexical: LexicalMatch[],
+): Array<LexicalMatch & { reason?: string; rerankScore?: number }> {
+  const lexicalByDigest = new Map(lexical.map((m) => [m.digest, m]));
+  const out: Array<LexicalMatch & { reason?: string; rerankScore?: number }> =
+    [];
+
+  for (const r of reranked) {
+    const lex = lexicalByDigest.get(r.id);
+    if (!lex) continue;
+    out.push({ ...lex, reason: r.reason, rerankScore: r.score });
+    lexicalByDigest.delete(r.id);
+  }
+  for (const lex of lexicalByDigest.values()) {
+    out.push({ ...lex });
+  }
+  return out;
 }

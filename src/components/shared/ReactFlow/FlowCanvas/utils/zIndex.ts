@@ -1,14 +1,12 @@
 import { type Node } from "@xyflow/react";
 
-import { isDefinedNode, type NodeType } from "../types";
-
 type ZIndexDefinition = {
   min: number;
   max: number;
   default: number;
 };
 
-export const Z_INDEX_RANGES: Record<NodeType, ZIndexDefinition> = {
+const Z_INDEX_RANGES: Record<string, ZIndexDefinition> = {
   task: {
     min: -100,
     max: 100,
@@ -36,15 +34,11 @@ export const Z_INDEX_RANGES: Record<NodeType, ZIndexDefinition> = {
   },
 };
 
-export const getNodeTypeZIndexDefault = (nodeType: NodeType): number => {
-  return Z_INDEX_RANGES[nodeType].default;
-};
-
 const getNodeZIndexProp = (
   node: Node,
   prop: keyof ZIndexDefinition,
 ): number => {
-  if (!isDefinedNode(node)) {
+  if (!node.type || !(node.type in Z_INDEX_RANGES)) {
     return 0;
   }
 

@@ -33,13 +33,6 @@ vi.mock("@/services/projects/useProjectResources", () => ({
   useCreateProjectResource: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
-vi.mock("@/services/projects/useLocalPipelineStatus", () => ({
-  useLocalPipelineStatus: () => ({
-    unavailable: new Set(),
-    currentNames: new Map(),
-  }),
-}));
-
 vi.mock("@/hooks/useToastNotification", () => ({
   default: () => notify,
 }));
@@ -348,99 +341,6 @@ describe("ProjectResources", () => {
     renderResources();
 
     expect(groupHeadings()).toEqual(["Documents (1)", "Widgets (1)"]);
-  });
-
-  /**
-   * The project's tile counts by entity, straight from the API, and cannot tell
-   * a browser-held pipeline from any other document. The page counts the same
-   * way so the two never contradict each other.
-   */
-  it("counts a browser-held pipeline the way the project's tile does", () => {
-    mockResources({
-      items: [
-        resource({
-          id: "a",
-          entity: "pipeline",
-          name: "on the backend",
-          entityId: "pipeline-9",
-        }),
-        resource({
-          id: "b",
-          entity: "document",
-          name: "in this browser",
-          entityId: null,
-          metadata: {
-            type: "local_pipeline",
-            storage: "browser",
-            identity: "pipeline://name/in this browser",
-            fallbackName: "in this browser",
-          },
-        }),
-        resource({ id: "c", entity: "document", name: "Model card" }),
-      ],
-      totalCount: 3,
-    });
-    renderResources();
-
-    expect(groupHeadings()).toEqual(["Pipelines (1)", "Documents (2)"]);
-  });
-
-  it("keeps a browser-held pipeline in the order the project gave it", () => {
-    mockResources({
-      items: [
-        resource({
-          id: "a",
-          entity: "document",
-          name: "in this browser",
-          entityId: null,
-          metadata: {
-            type: "local_pipeline",
-            storage: "browser",
-            identity: "pipeline://name/in this browser",
-            fallbackName: "in this browser",
-          },
-        }),
-        resource({ id: "b", entity: "document", name: "Model card" }),
-      ],
-      totalCount: 2,
-    });
-    renderResources();
-
-    const names = [
-      ...document.querySelectorAll("tbody td:first-child button"),
-    ].map((button) => button.textContent);
-    expect(names).toEqual(["in this browser", "Model card"]);
-  });
-
-  it("promises a pipeline it only names is left in this browser", async () => {
-    mockResources({
-      items: [
-        resource({
-          entity: "document",
-          name: "Churn model",
-          entityId: null,
-          metadata: {
-            type: "local_pipeline",
-            storage: "browser",
-            identity: "pipeline://name/Churn model",
-            fallbackName: "Churn model",
-          },
-        }),
-      ],
-      totalCount: 1,
-    });
-    renderResources();
-    const user = userEvent.setup();
-
-    await user.click(
-      screen.getByRole("button", {
-        name: "Remove Churn model from this project",
-      }),
-    );
-
-    const dialog = await screen.findByRole("alertdialog");
-    expect(dialog).toHaveTextContent("stays in the browser that holds it");
-    expect(dialog).not.toHaveTextContent(/only copy/);
   });
 
   it("gives the columns headings of their own", () => {

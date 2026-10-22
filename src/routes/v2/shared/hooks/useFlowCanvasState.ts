@@ -1,13 +1,7 @@
-import type {
-  Edge,
-  Node,
-  OnEdgesChange,
-  OnNodesChange,
-  ReactFlowProps,
-} from "@xyflow/react";
-import { useEdgesState, useNodesState } from "@xyflow/react";
-import type { MouseEvent } from "react";
-import { useLayoutEffect } from "react";
+import type { Edge, Node, OnEdgesChange, OnNodesChange } from "@xyflow/react";
+import { SelectionMode, useEdgesState, useNodesState } from "@xyflow/react";
+import { autorun, untracked } from "mobx";
+import { useEffect } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
@@ -15,8 +9,6 @@ import { useEdgeSelectionHighlightOverlay } from "@/routes/v2/shared/overlays/ed
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 import { useCanvasEnhancements } from "./useCanvasEnhancements";
-import { useSelectionBehavior } from "./useSelectionBehavior";
-import { useSpecToNodesEdges } from "./useSpecToNodesEdges";
 
 interface UseFlowCanvasStateParams {
   spec: ComponentSpec | null;
@@ -24,53 +16,92 @@ interface UseFlowCanvasStateParams {
   isConnecting?: boolean;
 }
 
-interface UseFlowCanvasStateResult {
-  displayNodes: Node[];
-  displayEdges: Edge[];
-  onEdgeClick: ((event: MouseEvent, edge: { id: string }) => void) | undefined;
-  rfOnNodesChange: OnNodesChange;
-  rfOnEdgesChange: OnEdgesChange;
-  selectionBehavior: Required<Pick<ReactFlowProps, "onSelectionChange">>;
-}
-
-function preserveSelection<T extends { id: string; selected?: boolean }>(
-  currentItems: T[],
-  newItems: T[],
-): T[] {
-  const selectedIds = new Set(
-    currentItems.filter((item) => item.selected).map((item) => item.id),
-  );
-  if (selectedIds.size === 0) return newItems;
-  return newItems.map((item) =>
-    selectedIds.has(item.id) ? { ...item, selected: true } : item,
-  );
-}
-
-/**
- * Aggregates the common flow canvas state setup shared by Editor and RunView:
- * spec-to-nodes conversion, React Flow state, MobX-driven sync,
- * canvas enhancements, and selection behavior.
- */
+/** The document owns graph content; React Flow owns transient geometry. */
 export function useFlowCanvasState({
   spec,
   metaKeyPressed = false,
   isConnecting = false,
-}: UseFlowCanvasStateParams): UseFlowCanvasStateResult {
+}: UseFlowCanvasStateParams) {
   const registry = useNodeRegistry();
-  const { canvasOverlay } = useSharedStores();
-  const { nodes: specNodes, edges: specEdges } = useSpecToNodesEdges(spec);
+  const { editor, canvasOverlay } = useSharedStores();
+  const [nodes, setNodes, updateNodes] = useNodesState<Node>([]);
+  const [edges, setEdges, updateEdges] = useEdgesState<Edge>([]);
 
-  const [nodes, setNodes, rfOnNodesChange] = useNodesState(specNodes);
-  const [edges, setEdges, rfOnEdgesChange] = useEdgesState(specEdges);
+  useEffect(() => {
+    if (!spec) {
+      setNodes([]);
+      setEdges([]);
+      return;
+    }
+    return autorun(() => {
+      const nextNodes = registry.buildAllNodes(spec);
+      const nextEdges = registry.buildAllEdges(spec);
+      setNodes(nextNodes);
+      setEdges(nextEdges);
+      // Selection cannot keep entities removed by undo, grouping, or tools.
+      // Do not make selection changes rebuild transient drag geometry.
+      untracked(() => {
+        const nodeIds = new Set(nextNodes.map((node) => node.id));
+        const edgeIds = new Set(nextEdges.map((edge) => edge.id));
+        editor.setSelectedNodes(
+          editor.selectedNodes.filter((node) => nodeIds.has(node.id)),
+        );
+        editor.setSelectedEdges(
+          editor.selectedEdgeIds.filter((id) => edgeIds.has(id)),
+        );
+      });
+    });
+  }, [spec, registry, editor, setNodes, setEdges]);
 
-  useLayoutEffect(() => {
-    setNodes((current) => preserveSelection(current, specNodes));
-  }, [specNodes, setNodes]);
+  const rfOnNodesChange: OnNodesChange = (changes) => {
+    const selectionChanges = changes.filter(
+      (change) => change.type === "select",
+    );
+    if (selectionChanges.length > 0) {
+      const selected = new Map(
+        editor.selectedNodes.map((node) => [node.id, node]),
+      );
+      for (const change of selectionChanges) {
+        if (!change.selected) {
+          selected.delete(change.id);
+          continue;
+        }
+        const node = nodes.find((item) => item.id === change.id);
+        const manifest = registry.getByNodeId(spec, change.id);
+        const item =
+          node && manifest?.selectable ? manifest.toSelectedNode?.(node) : null;
+        if (item) selected.set(change.id, item);
+      }
+      editor.setSelectedNodes([...selected.values()]);
+    }
+    updateNodes(changes.filter((change) => change.type !== "select"));
+  };
 
-  useLayoutEffect(() => {
-    setEdges((current) => preserveSelection(current, specEdges));
-  }, [specEdges, setEdges]);
+  const rfOnEdgesChange: OnEdgesChange = (changes) => {
+    const selectionChanges = changes.filter(
+      (change) => change.type === "select",
+    );
+    if (selectionChanges.length > 0) {
+      const selected = new Set(editor.selectedEdgeIds);
+      for (const change of selectionChanges) {
+        if (change.selected) selected.add(change.id);
+        else selected.delete(change.id);
+      }
+      editor.setSelectedEdges([...selected]);
+    }
+    updateEdges(changes.filter((change) => change.type !== "select"));
+  };
 
+  const selectedNodeIds = new Set(editor.selectedNodes.map((node) => node.id));
+  const selectedEdgeIds = new Set(editor.selectedEdgeIds);
+  const selectedNodes = nodes.map((node) => ({
+    ...node,
+    selected: selectedNodeIds.has(node.id),
+  }));
+  const selectedEdges = edges.map((edge) => ({
+    ...edge,
+    selected: selectedEdgeIds.has(edge.id),
+  }));
   const {
     nodes: displayNodes,
     edges: displayEdges,
@@ -79,17 +110,15 @@ export function useFlowCanvasState({
     registry,
     {
       spec,
-      nodes,
-      edges,
+      nodes: selectedNodes,
+      edges: selectedEdges,
       metaKeyPressed,
       isConnecting,
     },
     canvasOverlay,
   );
 
-  useEdgeSelectionHighlightOverlay();
-
-  const selectionBehavior = useSelectionBehavior(spec, metaKeyPressed);
+  useEdgeSelectionHighlightOverlay(selectedNodes, selectedEdges);
 
   return {
     displayNodes,
@@ -97,6 +126,10 @@ export function useFlowCanvasState({
     onEdgeClick,
     rfOnNodesChange,
     rfOnEdgesChange,
-    selectionBehavior,
+    selectionBehavior: {
+      selectionMode: metaKeyPressed
+        ? SelectionMode.Partial
+        : SelectionMode.Full,
+    },
   };
 }

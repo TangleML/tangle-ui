@@ -8,9 +8,9 @@ import type {
   Task,
   TypeSpecType,
 } from "@/models/componentSpec";
+import { specNameIsProvisional } from "@/models/componentSpec/provisionalPipelineName";
 import { getFlexNodes } from "@/models/componentSpec/queries/flexNodes";
 import { resolveEntityPositions } from "@/routes/v2/shared/nodes/buildUtils";
-import { specNameIsProvisional } from "@/services/localPipelines/provisionalPipelineName";
 import {
   PIPELINE_NOTES_ANNOTATION,
   PIPELINE_TAGS_ANNOTATION,

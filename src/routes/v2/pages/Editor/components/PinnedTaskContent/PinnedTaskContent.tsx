@@ -81,7 +81,6 @@ export const PinnedTaskContent = observer(function PinnedTaskContent({
                   typeof TaskDetails
                 >[0]["componentRef"]
               }
-              readOnly
               options={{ descriptionExpanded: true }}
             />
           </TabsContent>

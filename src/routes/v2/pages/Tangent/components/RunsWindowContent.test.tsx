@@ -24,7 +24,7 @@ vi.mock("@/services/projects/useProjectRuns", () => ({
 vi.mock("@/hooks/useToastNotification", () => ({ default: () => vi.fn() }));
 
 vi.mock("@/routes/runRoutes", () => ({
-  getDefaultRunPath: (runId: string) => `/runs/${runId}`,
+  getRunPath: (runId: string) => `/runs/${runId}`,
 }));
 
 function run(id: string, pipelineName: string | null): ProjectRun {

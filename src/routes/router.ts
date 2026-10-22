@@ -25,7 +25,6 @@ import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
 
 import RootLayout from "../components/layout/RootLayout";
 import { APP_ROUTES } from "./appRoutes";
-import { DashboardComponentsV2View } from "./Dashboard/DashboardComponentsV2View";
 import { DashboardComponentsView } from "./Dashboard/DashboardComponentsView";
 import { DashboardFavoritesView } from "./Dashboard/DashboardFavoritesView";
 import { DashboardHomeView } from "./Dashboard/DashboardHomeView";
@@ -40,12 +39,9 @@ import { LearnHomeView } from "./Dashboard/Learn/LearnHomeView";
 import { LearnTipsView } from "./Dashboard/Learn/LearnTipsView";
 import { LearnToursView } from "./Dashboard/Learn/LearnToursView";
 import { TourPage } from "./Dashboard/Learn/Tour";
-import Editor from "./Editor";
-import { createEditorV2Routes } from "./editorV2Routes";
+import { createEditorRoutes } from "./editorRouteTree";
 import { ImportPage } from "./Import";
-import { createLegacyRemoteEditorRoutes } from "./legacyRemoteEditorRoutes";
 import NotFoundPage from "./NotFoundPage";
-import PipelineRun from "./PipelineRun";
 import ArtifactPreviewPage from "./PipelineRun/ArtifactPreview";
 import ExecutionLogsPage from "./PipelineRun/ExecutionLogs";
 import { AgentSettings } from "./Settings/sections/AgentSettings";
@@ -55,13 +51,12 @@ import { PreferencesSettings } from "./Settings/sections/PreferencesSettings";
 import { SecretsSettings } from "./Settings/sections/SecretsSettings";
 import { SettingsLayout } from "./Settings/SettingsLayout";
 import { CompareView } from "./v2/pages/CompareView/CompareView";
-import { PipelineFoldersPage } from "./v2/pages/PipelineFolders/PipelineFoldersPage";
-import { RunViewV2 } from "./v2/pages/RunView/RunViewV2";
+import { RunView } from "./v2/pages/RunView/RunView";
 import { TangentProjectPage } from "./v2/pages/Tangent/TangentProjectPage";
 
 // Re-exported so existing `@/routes/router` import paths keep working after the
 // constants moved to the dependency-free `./appRoutes` leaf module.
-export { APP_ROUTES, EDITOR_PATH, RUNS_BASE_PATH } from "./appRoutes";
+export { APP_ROUTES } from "./appRoutes";
 
 declare module "@tanstack/react-router" {
   interface Register {
@@ -121,24 +116,8 @@ const dashboardPipelinesRoute = createRoute({
 
 const dashboardComponentsRoute = createRoute({
   getParentRoute: () => dashboardRoute,
-  path: "/components",
+  path: APP_ROUTES.DASHBOARD_COMPONENTS,
   component: DashboardComponentsView,
-  beforeLoad: ({ search }) => {
-    if (isFlagEnabled("component-search-v2")) {
-      throw redirect({ to: APP_ROUTES.DASHBOARD_COMPONENTS_V2, search });
-    }
-  },
-});
-
-const dashboardComponentsV2Route = createRoute({
-  getParentRoute: () => dashboardRoute,
-  path: "/components-v2",
-  component: DashboardComponentsV2View,
-  beforeLoad: ({ search }) => {
-    if (!isFlagEnabled("component-search-v2")) {
-      throw redirect({ to: APP_ROUTES.DASHBOARD_COMPONENTS, search });
-    }
-  },
 });
 
 const dashboardProjectsRoute = createRoute({
@@ -249,15 +228,6 @@ const settingsAgentRoute = createRoute({
   getParentRoute: () => settingsLayoutRoute,
   path: "/agent",
   component: AgentSettings,
-  beforeLoad: () => {
-    if (
-      !isFlagEnabled("component-search-v2") &&
-      !isFlagEnabled("ai-assistant") &&
-      !isTangentEnabled()
-    ) {
-      throw redirect({ to: APP_ROUTES.SETTINGS_BACKEND });
-    }
-  },
 });
 
 const settingsSecretsRoute = createRoute({
@@ -290,24 +260,6 @@ const importRoute = createRoute({
   component: ImportPage,
 });
 
-const editorRoute = createRoute({
-  getParentRoute: () => mainLayout,
-  path: APP_ROUTES.PIPELINE_EDITOR,
-  component: Editor,
-  beforeLoad: ({ search }: { search: { name?: string } }) => {
-    const name = search.name || "";
-    return { name };
-  },
-});
-
-const remoteEditorRoute = createRoute({
-  getParentRoute: () => mainLayout,
-  path: APP_ROUTES.REMOTE_PIPELINE_EDITOR,
-  component: Editor,
-});
-
-const legacyRemoteEditorRoutes = createLegacyRemoteEditorRoutes(mainLayout);
-
 const githubAuthCallbackRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: APP_ROUTES.GITHUB_AUTH_CALLBACK,
@@ -323,13 +275,13 @@ const huggingFaceAuthCallbackRoute = createRoute({
 const runDetailRoute = createRoute({
   getParentRoute: () => mainLayout,
   path: APP_ROUTES.RUN_DETAIL,
-  component: PipelineRun,
+  component: RunView,
 });
 
 const runDetailWithSubgraphRoute = createRoute({
   getParentRoute: () => mainLayout,
   path: APP_ROUTES.RUN_DETAIL_WITH_SUBGRAPH,
-  component: PipelineRun,
+  component: RunView,
 });
 
 const secretsRouteTree = settingsSecretsRoute.addChildren([
@@ -346,39 +298,6 @@ const settingsRouteTree = settingsLayoutRoute.addChildren([
   settingsAgentRoute,
   secretsRouteTree,
 ]);
-
-const runV2Route = createRoute({
-  getParentRoute: () => mainLayout,
-  path: APP_ROUTES.RUN_DETAIL_V2,
-  component: RunViewV2,
-  beforeLoad: ({ params }) => {
-    if (!isFlagEnabled("v2_editor")) {
-      throw redirect({
-        to: APP_ROUTES.RUN_DETAIL,
-        params: { id: params.id },
-        search: (previous) => previous,
-      });
-    }
-  },
-});
-
-const runV2WithSubgraphRoute = createRoute({
-  getParentRoute: () => mainLayout,
-  path: APP_ROUTES.RUN_DETAIL_V2_WITH_SUBGRAPH,
-  component: RunViewV2,
-  beforeLoad: ({ params }) => {
-    if (!isFlagEnabled("v2_editor")) {
-      throw redirect({
-        to: APP_ROUTES.RUN_DETAIL_WITH_SUBGRAPH,
-        params: {
-          id: params.id,
-          subgraphExecutionId: params.subgraphExecutionId,
-        },
-        search: (previous) => previous,
-      });
-    }
-  },
-});
 
 const compareRoute = createRoute({
   getParentRoute: () => mainLayout,
@@ -412,12 +331,6 @@ const tangentProjectRoute = createRoute({
   },
 });
 
-const pipelineFoldersRoute = createRoute({
-  getParentRoute: () => mainLayout,
-  path: APP_ROUTES.PIPELINE_FOLDERS,
-  component: PipelineFoldersPage,
-});
-
 const artifactPreviewRoute = createRoute({
   getParentRoute: () => mainLayout,
   path: APP_ROUTES.ARTIFACT_PREVIEW,
@@ -439,7 +352,6 @@ const dashboardRouteTree = dashboardRoute.addChildren([
   dashboardProjectsRoute,
   dashboardProjectDetailRoute,
   dashboardComponentsRoute,
-  dashboardComponentsV2Route,
   dashboardFavoritesRoute,
   dashboardRecentlyViewedRoute,
   learnIndexRoute,
@@ -453,17 +365,11 @@ const appRouteTree = mainLayout.addChildren([
   quickStartRoute,
   settingsRouteTree,
   importRoute,
-  editorRoute,
-  remoteEditorRoute,
-  ...legacyRemoteEditorRoutes,
   runDetailRoute,
   runDetailWithSubgraphRoute,
-  createEditorV2Routes(mainLayout),
-  runV2Route,
-  runV2WithSubgraphRoute,
+  createEditorRoutes(mainLayout),
   compareRoute,
   tangentProjectRoute,
-  pipelineFoldersRoute,
   artifactPreviewRoute,
   executionLogsRoute,
   tourRoute,

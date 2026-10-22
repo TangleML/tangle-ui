@@ -2,8 +2,6 @@ import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { useLocalPipeline } from "@/services/localPipelines/useLocalPipelines";
-import type { RemotePipelineRef } from "@/services/pipelineStorage/types";
 import type { ProjectResource } from "@/services/projects/types";
 import { useProjectResource } from "@/services/projects/useProjectResources";
 import { usePipelineSpec } from "@/services/usePipelineSpec";
@@ -16,10 +14,6 @@ vi.mock("@/services/projects/useProjectResources", () => ({
 
 vi.mock("@/services/usePipelineSpec", () => ({
   usePipelineSpec: vi.fn(),
-}));
-
-vi.mock("@/services/localPipelines/useLocalPipelines", () => ({
-  useLocalPipeline: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
@@ -117,28 +111,6 @@ function mockSpec(
   } as unknown as ReturnType<typeof usePipelineSpec>);
 }
 
-function mockLocalPipeline(
-  pipeline: {
-    name: string;
-    yaml: string;
-    spec: unknown;
-    remote?: RemotePipelineRef;
-  } | null,
-  error: Error | null = null,
-) {
-  vi.mocked(useLocalPipeline).mockReturnValue({
-    data: pipeline,
-    isPending: false,
-    error,
-  } as unknown as ReturnType<typeof useLocalPipeline>);
-}
-
-const localPipeline = (name: string, spec: unknown = { name }) => ({
-  name,
-  yaml: `name: ${name}\n`,
-  spec,
-});
-
 function mockPipeline() {
   mockResource({
     entity: "pipeline",
@@ -160,7 +132,6 @@ describe("ProjectResourcePreview", () => {
   beforeEach(() => {
     mockResource();
     mockSpec();
-    mockLocalPipeline(localPipeline("churn training"));
   });
 
   afterEach(() => {
@@ -210,9 +181,8 @@ describe("ProjectResourcePreview", () => {
     expect(viewer()).toHaveTextContent("name: Churn training");
   });
 
-  it("opens a backend pipeline by ID even when a local one shares its name", () => {
+  it("opens a pipeline by its remote ID", () => {
     mockPipeline();
-    mockLocalPipeline(localPipeline("churn training"));
     renderPreview("resource-1");
 
     const link = screen.getByRole("link", { name: /Open in the editor/ });
@@ -310,145 +280,11 @@ describe("ProjectResourcePreview", () => {
     expect(screen.queryByRole("button", { name: "Run pipeline" })).toBeNull();
   });
 
-  describe("a pipeline held in this browser", () => {
-    const pointerResource = {
-      entity: "document",
-      name: "Churn model",
-      entityId: null,
-      payload: {},
-      metadata: {
-        type: "local_pipeline",
-        storage: "browser",
-        identity: "pipeline://name/Churn model",
-        fallbackName: "Churn model",
-      },
-    } satisfies Partial<ProjectResource>;
-
-    it("shows remote load errors without claiming the pipeline is absent from the browser", () => {
-      mockResource(pointerResource);
-      mockLocalPipeline(null, new Error("Saved pipeline is unavailable"));
-      renderPreview("resource-1");
-      expect(screen.getByText("Cannot show this pipeline")).toBeInTheDocument();
-      expect(
-        screen.getByText("Saved pipeline is unavailable"),
-      ).toBeInTheDocument();
-      expect(screen.queryByText("Not in this browser")).toBeNull();
-    });
-
-    it("shows the pipeline as it is stored, not a copy of it", () => {
-      mockResource(pointerResource);
-      mockLocalPipeline(localPipeline("Churn model"));
-      renderPreview("resource-1");
-
-      expect(viewer()).toHaveAttribute("data-language", "yaml");
-      expect(viewer()).toHaveTextContent("name: Churn model");
-    });
-
-    it("opens in the editor under the name the pipeline has now", () => {
-      mockResource(pointerResource);
-      mockLocalPipeline(localPipeline("Churn model v2"));
-      renderPreview("resource-1");
-
-      expect(
-        screen.getByRole("link", { name: /Open in the editor/ }),
-      ).toHaveAttribute("href", "/editor/Churn model v2");
-    });
-
-    it("opens a migrated pointer through the route that repairs its project link", () => {
-      mockResource({
-        ...pointerResource,
-        metadata: {
-          ...pointerResource.metadata,
-          identity: "pipeline://id/id-9",
-        },
-      });
-      mockLocalPipeline({
-        ...localPipeline("Renamed remotely"),
-        remote: {
-          source: "remote",
-          backendUrl: "https://backend.example",
-          pipelineId: "remote-id",
-        },
-      });
-      renderPreview("resource-1");
-
-      const link = screen.getByRole("link", { name: /Open in the editor/ });
-      expect(link).toHaveAttribute("href", "/editor/Churn model");
-      expect(JSON.parse(link.getAttribute("data-search")!)).toEqual({
-        projectId: "project-1",
-        fileId: "id-9",
-      });
-      expect(viewer()).toHaveTextContent("name: Renamed remotely");
-    });
-
-    it("offers to run it into this project, from the browser that holds it", () => {
-      mockResource(pointerResource);
-      mockLocalPipeline(localPipeline("Churn model", { name: "Churn model" }));
-      renderPreview("resource-1");
-
-      expect(
-        screen.getByRole("button", { name: "Run pipeline" }),
-      ).toHaveAttribute("data-project", "project-1");
-    });
-
-    /** There is nothing to submit when the pipeline is in another browser. */
-    it("offers no run for a pipeline this browser does not hold", () => {
-      mockResource(pointerResource);
-      mockLocalPipeline(null);
-      renderPreview("resource-1");
-
-      expect(screen.queryByRole("button", { name: "Run pipeline" })).toBeNull();
-    });
-
-    it("says whether it is valid, as it would for any other pipeline", () => {
-      mockResource(pointerResource);
-      mockLocalPipeline(
-        localPipeline("Churn model", {
-          name: "Churn model",
-          implementation: { graph: { tasks: {} } },
-        }),
-      );
-      renderPreview("resource-1");
-
-      expect(screen.getByText("Not valid")).toBeInTheDocument();
-    });
-
-    it("explains itself rather than showing an empty pipeline", () => {
-      mockResource(pointerResource);
-      mockLocalPipeline(null);
-      renderPreview("resource-1");
-
-      expect(screen.getByText("Not in this browser")).toBeInTheDocument();
-      expect(
-        screen.getByText(/alice@example.com added it/),
-      ).toBeInTheDocument();
-    });
-
-    /**
-     * A row that names a pipeline carries an empty payload, which the document
-     * preview would happily render as the two characters "{}".
-     */
-    it("never renders its empty payload as content", () => {
-      mockResource(pointerResource);
-      mockLocalPipeline(null);
-      renderPreview("resource-1");
-
-      expect(screen.queryByTestId("code-viewer")).toBeNull();
-      expect(document.body.textContent).not.toContain("{}");
-    });
-
-    /**
-     * Every row that points at something elsewhere is sent with an empty
-     * payload, because the api insists on one, so "{}" was the preview for a
-     * whole class of rows rather than a quirk of pipelines.
-     */
-    it("says an empty payload holds nothing, whatever kind of row it is", () => {
-      mockResource({ name: "empty.yaml", payload: {} });
-      renderPreview("resource-1");
-
-      expect(screen.getByText("Nothing to preview")).toBeInTheDocument();
-      expect(document.body.textContent).not.toContain("{}");
-    });
+  it("shows an empty document without an empty JSON object", () => {
+    mockResource({ name: "empty.yaml", payload: {} });
+    renderPreview("resource-1");
+    expect(screen.getByText("Nothing to preview")).toBeInTheDocument();
+    expect(document.body.textContent).not.toContain("{}");
   });
 
   it("says a pipeline cannot be shown rather than showing an empty viewer", () => {

@@ -2,14 +2,10 @@ import { Icon, type IconName } from "@/components/ui/icon";
 import type { FavoriteItem } from "@/hooks/useFavorites";
 import type { RecentItem } from "@/hooks/useRecentlyViewed";
 import { cn } from "@/lib/utils";
-import {
-  getDefaultEditorPath,
-  getDefaultRemoteEditorPath,
-  getSavedRemotePipelineId,
-} from "@/routes/editorRoutes";
+import { getDefaultEditorPath } from "@/routes/editorRoutes";
 import { getProjectHomePath } from "@/routes/projectRoutes";
 import { APP_ROUTES } from "@/routes/router";
-import { getDefaultRunPath } from "@/routes/runRoutes";
+import { getRunPath } from "@/routes/runRoutes";
 
 type ItemType = RecentItem["type"];
 
@@ -20,12 +16,6 @@ const TYPE_CONFIG: Record<
   pipeline: {
     className:
       "bg-violet-50 text-violet-700 dark:bg-violet-400/15 dark:text-violet-300",
-    icon: "GitBranch",
-    label: "Pipeline",
-  },
-  "remote-pipeline": {
-    className:
-      "bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300",
     icon: "GitBranch",
     label: "Pipeline",
   },
@@ -55,18 +45,12 @@ const TYPE_CONFIG: Record<
 
 export const TypePill = ({
   type,
-  id,
   className,
 }: {
   type: ItemType;
-  id?: string;
   className?: string;
 }) => {
-  const displayType =
-    type === "pipeline" && id && getSavedRemotePipelineId(id)
-      ? "remote-pipeline"
-      : type;
-  const config = TYPE_CONFIG[displayType];
+  const config = TYPE_CONFIG[type];
   return (
     <span
       className={cn(
@@ -89,9 +73,7 @@ export function getRecentlyViewedUrl(
   item: Pick<RecentItem, "type" | "id">,
 ): string {
   if (item.type === "pipeline") return getDefaultEditorPath(item.id);
-  if (item.type === "remote-pipeline")
-    return getDefaultRemoteEditorPath(item.id);
-  if (item.type === "run") return getDefaultRunPath(item.id);
+  if (item.type === "run") return getRunPath(item.id);
   if (item.type === "tour") return `${APP_ROUTES.TOUR}/${item.id}`;
   if (item.type === "project") return getProjectHomePath(item.id);
   return APP_ROUTES.DASHBOARD_COMPONENTS;

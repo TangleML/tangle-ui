@@ -15,7 +15,6 @@ import {
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { BlockStack } from "@/components/ui/layout";
-import useLoadUserPipelines from "@/hooks/useLoadUserPipelines";
 
 interface PipelineNameDialogProps {
   trigger?: ReactNode;
@@ -23,8 +22,6 @@ interface PipelineNameDialogProps {
   title: string;
   description?: string;
   initialName: string;
-  excludeNames?: string[];
-  validateLocalName?: boolean;
   submitButtonText: string;
   submitButtonIcon?: ReactNode;
   onSubmit: (name: string) => void;
@@ -40,8 +37,6 @@ const PipelineNameDialog = ({
   title,
   description = "Please, name your pipeline.",
   initialName,
-  excludeNames,
-  validateLocalName = true,
   submitButtonText,
   submitButtonIcon,
   onSubmit,
@@ -51,29 +46,7 @@ const PipelineNameDialog = ({
   const [name, setName] = useState(initialName);
   const [touched, setTouched] = useState(false);
 
-  const {
-    userPipelines,
-    isLoadingUserPipelines,
-    refetch: refetchUserPipelines,
-  } = useLoadUserPipelines();
-
-  const normalized = name.trim().toLowerCase();
-  const excluded = new Set(
-    (excludeNames ?? []).map((n) => n.trim().toLowerCase()),
-  );
-  const nameIsTaken = Array.from(userPipelines.keys()).some((n) => {
-    const lower = n.toLowerCase();
-    return lower === normalized && !excluded.has(lower);
-  });
-
-  let error: string | null = null;
-  if (!validateLocalName || !isLoadingUserPipelines) {
-    if (normalized === "") {
-      error = "Name cannot be empty";
-    } else if (validateLocalName && nameIsTaken) {
-      error = "Name already exists";
-    }
-  }
+  const error = name.trim() ? null : "Name cannot be empty";
 
   const handleOnChange = (e: ChangeEvent<HTMLInputElement>) => {
     setName(e.target.value);
@@ -84,7 +57,6 @@ const PipelineNameDialog = ({
     if (open) {
       setName(initialName);
       setTouched(false);
-      if (validateLocalName) refetchUserPipelines();
     }
     onOpenChange?.(open);
   };
@@ -96,10 +68,7 @@ const PipelineNameDialog = ({
   };
 
   const isDisabled =
-    (validateLocalName && isLoadingUserPipelines) ||
-    !!error ||
-    !trimmedName ||
-    !!isSubmitDisabled?.(trimmedName, error);
+    !!error || !trimmedName || !!isSubmitDisabled?.(trimmedName, error);
 
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>

@@ -120,7 +120,9 @@ test.describe("Sticky Note (FlexNode) Functionality", () => {
     const stickyNote = locateStickyNote(page);
     await stickyNote.click();
 
-    const contextPanel = page.getByTestId("context-panel-container");
+    const contextPanel = page.locator(
+      '[data-dock-window-content="context-panel"]',
+    );
     await expect(contextPanel).toBeVisible();
 
     await expect(
@@ -252,7 +254,9 @@ test.describe("Sticky Note (FlexNode) Functionality", () => {
     const lastNote = allStickyNotes.last();
     await lastNote.click();
 
-    const contextPanel = page.getByTestId("context-panel-container");
+    const contextPanel = page.locator(
+      '[data-dock-window-content="context-panel"]',
+    );
     await expect(contextPanel.locator('text="Stacking"')).toBeVisible();
 
     const stackingControls = page.getByTestId("stacking-controls");
@@ -328,7 +332,11 @@ test.describe("Sticky Note (FlexNode) Functionality", () => {
   test("should serialize sticky notes in pipeline annotations (YAML export)", async () => {
     await fitToView(page);
 
-    const exportButton = page.getByTestId("action-Export Pipeline");
+    await page.getByRole("button", { name: "File", exact: true }).click();
+    const exportButton = page.getByRole("menuitem", {
+      name: "Export",
+      exact: true,
+    });
     await expect(exportButton).toBeVisible();
 
     const downloadPromise = page.waitForEvent("download");

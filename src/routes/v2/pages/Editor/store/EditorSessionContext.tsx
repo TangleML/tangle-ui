@@ -21,7 +21,7 @@ class EditorSessionStore {
   constructor(onSaveError: (error: Error) => void) {
     this.undo = new UndoStore();
     this.pipelineFile = new PipelineFileStore();
-    this.autoSave = new AutoSaveStore(this.undo, onSaveError);
+    this.autoSave = new AutoSaveStore(onSaveError);
     this.clipboard = new ClipboardStore(this.undo);
   }
 }

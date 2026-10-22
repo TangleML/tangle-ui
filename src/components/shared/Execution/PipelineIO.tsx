@@ -1,88 +1,40 @@
-import { type ReactNode } from "react";
-
 import type { TaskSpecOutput } from "@/api/types.gen";
 import { Attribute } from "@/components/shared/ContextPanel/Blocks/Attribute";
 import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlock";
 import { typeSpecToString } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/ArgumentsEditor/utils";
-import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Paragraph } from "@/components/ui/typography";
-import { useAnalytics } from "@/providers/AnalyticsProvider";
-import { useComponentSpec } from "@/providers/ComponentSpecProvider";
-import { useContextPanel } from "@/providers/ContextPanelProvider";
-import { type InputSpec, type OutputSpec } from "@/utils/componentSpec";
+import {
+  type ComponentSpec,
+  type InputSpec,
+  isGraphImplementation,
+  isTaskOutputArgument,
+  type OutputSpec,
+} from "@/utils/componentSpec";
 import { getArgumentValue } from "@/utils/nodes/taskArguments";
 
-import { InputValueEditor } from "../../Editor/IOEditor/InputValueEditor";
-import { OutputNameEditor } from "../../Editor/IOEditor/OutputNameEditor";
-import { getOutputConnectedDetails } from "../../Editor/utils/getOutputConnectedDetails";
-
 const PipelineIO = ({
+  componentSpec,
   taskArguments,
   section,
 }: {
+  componentSpec?: ComponentSpec;
   taskArguments?: TaskSpecOutput["arguments"] | null;
   // When set, renders only one side (without the wrapping ContentBlock) so the
   // caller can supply its own section header (e.g. a collapsible section).
   // When omitted, renders both Inputs/Arguments and Outputs blocks.
   section?: "inputs" | "outputs";
 }) => {
-  const { setContent } = useContextPanel();
-  const { componentSpec, graphSpec } = useComponentSpec();
-  const { track } = useAnalytics();
-
-  const readOnly = !!taskArguments;
-
-  const handleInputEdit = (input: InputSpec) => {
-    track("pipeline_editor.configuration_panel.io_edit.click", {
-      io_type: "input",
-    });
-    setContent(<InputValueEditor key={input.name} input={input} />);
-  };
-
-  const handleOutputEdit = (output: OutputSpec) => {
-    track("pipeline_editor.configuration_panel.io_edit.click", {
-      io_type: "output",
-    });
-    const outputConnectedDetails = getOutputConnectedDetails(
-      graphSpec,
-      output.name,
-    );
-    setContent(
-      <OutputNameEditor
-        connectedDetails={outputConnectedDetails}
-        key={output.name}
-        output={output}
-      />,
-    );
-  };
-
-  const inputActions: IORowAction[] = [
-    {
-      label: "Edit",
-      icon: <Icon name="Pencil" size="sm" />,
-      hidden: readOnly,
-      onClick: handleInputEdit,
-    },
-  ];
-
-  const outputActions: IORowAction[] = [
-    {
-      label: "Edit",
-      icon: <Icon name="Pencil" size="sm" />,
-      hidden: readOnly,
-      onClick: handleOutputEdit,
-    },
-  ];
-
-  const hasInputs = !!componentSpec.inputs && componentSpec.inputs.length > 0;
-  const hasOutputs =
-    !!componentSpec.outputs && componentSpec.outputs.length > 0;
+  const implementation = componentSpec?.implementation;
+  const graphSpec = isGraphImplementation(implementation)
+    ? implementation.graph
+    : undefined;
+  const hasInputs = !!componentSpec?.inputs?.length;
+  const hasOutputs = !!componentSpec?.outputs?.length;
 
   const inputsContent = hasInputs ? (
     <BlockStack>
-      {componentSpec.inputs?.map((input) => (
+      {componentSpec?.inputs?.map((input) => (
         <IORow
           key={input.name}
           value={
@@ -93,7 +45,6 @@ const PipelineIO = ({
           }
           type={typeSpecToString(input?.type)}
           spec={input}
-          actions={inputActions}
         />
       ))}
     </BlockStack>
@@ -105,19 +56,23 @@ const PipelineIO = ({
 
   const outputsContent = hasOutputs ? (
     <BlockStack>
-      {componentSpec.outputs?.map((output) => {
-        const connectedOutput = getOutputConnectedDetails(
-          graphSpec,
-          output.name,
-        );
+      {componentSpec?.outputs?.map((output) => {
+        const value = graphSpec?.outputValues?.[output.name];
+        const source = isTaskOutputArgument(value)
+          ? value.taskOutput
+          : undefined;
+        const sourceType = source
+          ? graphSpec?.tasks[source.taskId]?.componentRef.spec?.outputs?.find(
+              (port) => port.name === source.outputName,
+            )?.type
+          : undefined;
 
         return (
           <IORow
             key={output.name}
-            value={connectedOutput.outputName ?? "No value"}
-            type={typeSpecToString(connectedOutput.outputType)}
+            value={source?.outputName ?? "No value"}
+            type={typeSpecToString(sourceType)}
             spec={output}
-            actions={outputActions}
           />
         );
       })}
@@ -148,21 +103,13 @@ const PipelineIO = ({
 
 export default PipelineIO;
 
-type IORowAction = {
-  label: string;
-  icon?: ReactNode;
-  hidden?: boolean;
-  onClick: (spec: InputSpec | OutputSpec) => void;
-};
-
 interface IORowProps {
   spec: InputSpec | OutputSpec;
   value: string;
   type: string;
-  actions?: IORowAction[];
 }
 
-function IORow({ spec, value, type, actions }: IORowProps) {
+function IORow({ spec, value, type }: IORowProps) {
   return (
     <InlineStack
       gap="1"
@@ -183,21 +130,6 @@ function IORow({ spec, value, type, actions }: IORowProps) {
         <Paragraph size="xs" tone="subdued">
           ({type})
         </Paragraph>
-        {actions?.map(
-          (action) =>
-            !action.hidden && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => action.onClick(spec)}
-                className="text-xs text-muted-foreground hover:text-foreground hover:bg-transparent"
-                key={action.label}
-              >
-                {action.icon ?? action.label}
-              </Button>
-            ),
-        )}
       </InlineStack>
     </InlineStack>
   );

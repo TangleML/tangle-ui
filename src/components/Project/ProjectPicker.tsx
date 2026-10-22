@@ -25,15 +25,19 @@ import { useConfirmedResourceRemoval } from "./useConfirmedResourceRemoval";
 import { useRunProjectContext } from "./useRunProjectContext";
 
 interface ProjectPickerProps {
+  pipelineId?: string;
   pipelineName: string | undefined;
 }
 
-export function ProjectPicker({ pipelineName }: ProjectPickerProps) {
+export function ProjectPicker({
+  pipelineId,
+  pipelineName,
+}: ProjectPickerProps) {
   const { enabled, projectId, projectName, setProjectId } =
     useRunProjectContext();
   const [open, setOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
-  const { memberships, isPending, error } = usePipelineProjects(pipelineName, {
+  const { memberships, isPending, error } = usePipelineProjects(pipelineId, {
     enabled: open,
   });
   const { confirmAndRemove, confirmation: confirmationProps } =
@@ -118,7 +122,7 @@ export function ProjectPicker({ pipelineName }: ProjectPickerProps) {
             </InlineStack>
           )}
 
-          {pipelineName && (
+          {pipelineId && pipelineName && (
             <>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -146,8 +150,9 @@ export function ProjectPicker({ pipelineName }: ProjectPickerProps) {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {addOpen && pipelineName && (
+      {addOpen && pipelineId && pipelineName && (
         <AddToProjectDialog
+          pipelineId={pipelineId}
           pipelineName={pipelineName}
           memberProjectIds={memberships.map(
             (membership) => membership.project.id,

@@ -2,15 +2,8 @@ import localForage from "localforage";
 
 import { fetchComponentTextFromUrl } from "@/services/componentService";
 
-import type { DownloadDataType } from "./cache";
-import { downloadDataWithCache } from "./cache";
 import type { ComponentReference, ComponentSpec } from "./componentSpec";
-import {
-  USER_COMPONENTS_LIST_NAME,
-  USER_PIPELINES_LIST_NAME,
-} from "./constants";
-import { getIdOrTitleFromPath } from "./URL";
-import { emitUserPipelineWritten } from "./userPipelineWriteEvents";
+import { USER_COMPONENTS_LIST_NAME } from "./constants";
 import { componentSpecFromYaml, componentSpecToYaml } from "./yaml";
 
 // IndexedDB: DB and table names
@@ -65,7 +58,7 @@ const storeComponentSpec = async (
   }
 };
 
-export const loadComponentAsRefFromText = async (
+const loadComponentAsRefFromText = async (
   componentText: string | ArrayBuffer,
 ): Promise<ComponentReferenceWithSpec> => {
   const componentString =
@@ -86,86 +79,6 @@ export const loadComponentAsRefFromText = async (
     text: componentString,
   };
   return componentRef;
-};
-
-const loadComponentFromUrlAsRef = async (
-  url: string,
-  downloadData: DownloadDataType = downloadDataWithCache,
-): Promise<ComponentReferenceWithSpec> => {
-  const componentRef = await downloadData(url, loadComponentAsRefFromText);
-  componentRef.url = url;
-  return componentRef;
-};
-
-export const preloadComponentReferences = async (
-  componentSpec: ComponentSpec,
-  downloadData: DownloadDataType = downloadDataWithCache,
-  componentMap?: Map<string, ComponentSpec>,
-) => {
-  // This map is needed to improve efficiency and handle recursive components.
-  if (componentMap === undefined) {
-    componentMap = new Map<string, ComponentSpec>();
-  }
-  if ("graph" in componentSpec.implementation) {
-    for (const taskSpec of Object.values(
-      componentSpec.implementation.graph.tasks,
-    )) {
-      const componentUrl = taskSpec.componentRef.url;
-      let taskComponentSpec = taskSpec.componentRef.spec;
-
-      if (taskComponentSpec === undefined) {
-        if (taskSpec.componentRef.text !== undefined) {
-          const taskComponentRef = await loadComponentAsRefFromText(
-            taskSpec.componentRef.text,
-          );
-          taskComponentSpec = taskComponentRef.spec;
-        } else if (componentUrl !== undefined) {
-          taskComponentSpec = componentMap.get(componentUrl);
-
-          if (taskComponentSpec === undefined) {
-            const taskComponentRef = await loadComponentFromUrlAsRef(
-              componentUrl,
-              downloadData,
-            );
-            taskComponentSpec = taskComponentRef.spec;
-            componentMap.set(componentUrl, taskComponentSpec);
-          }
-        }
-
-        if (taskComponentSpec === undefined) {
-          // TODO: Print task name here
-          console.error(
-            "Could not get component spec for task: ",
-            taskSpec.componentRef,
-          );
-        } else {
-          taskSpec.componentRef.spec = taskComponentSpec;
-          await preloadComponentReferences(
-            taskSpec.componentRef.spec,
-            downloadData,
-            componentMap,
-          );
-        }
-      }
-    }
-  }
-  return componentSpec;
-};
-
-export const fullyLoadComponentRefFromUrl = async (
-  url: string,
-  downloadData: DownloadDataType = downloadDataWithCache,
-): Promise<ComponentReferenceWithSpec> => {
-  const componentRef = await loadComponentFromUrlAsRef(url, downloadData);
-  const componentSpec = await preloadComponentReferences(
-    componentRef.spec,
-    downloadData,
-  );
-  const newComponentRef: ComponentReferenceWithSpec = {
-    ...componentRef,
-    spec: componentSpec,
-  };
-  return newComponentRef;
 };
 
 const storeComponentText = async (componentText: string | ArrayBuffer) => {
@@ -492,73 +405,6 @@ export const updateComponentInListByText = async (
   return updateComponentRefInList(listName, componentRef, fileName);
 };
 
-export const writeComponentToFileListFromText = async (
-  listName: string,
-  fileName: string,
-  componentText: string | ArrayBuffer,
-) => {
-  const componentRef = await storeComponentText(componentText);
-  const result = await writeComponentRefToFile(
-    listName,
-    fileName,
-    componentRef,
-  );
-  if (listName === USER_PIPELINES_LIST_NAME) emitUserPipelineWritten();
-  return result;
-};
-
-export const renameComponentFileInList = async (
-  listName: string,
-  oldFileName: string,
-  newFileName: string,
-  pathname?: string,
-) => {
-  await upgradeSingleComponentListDb(listName);
-  const tableName = FILE_STORE_DB_TABLE_NAME_PREFIX + listName;
-  const componentListDb = localForage.createInstance({
-    name: DB_NAME,
-    storeName: tableName,
-  });
-
-  let fileEntry =
-    await componentListDb.getItem<ComponentFileEntry>(oldFileName);
-  if (!fileEntry) {
-    // If the old file does not exist and a pathanme is provided, check the url for a filename
-    if (pathname) {
-      const { title } = getIdOrTitleFromPath(pathname);
-      if (title) {
-        fileEntry = await componentListDb.getItem<ComponentFileEntry>(title);
-      }
-      if (!fileEntry) {
-        throw new Error(
-          `Backup file "${title}" does not exist in list "${listName}".`,
-        );
-      }
-    } else {
-      throw new Error(
-        `File "${oldFileName}" does not exist in list "${listName}".`,
-      );
-    }
-  }
-
-  const existingNewFile =
-    await componentListDb.getItem<ComponentFileEntry>(newFileName);
-  if (existingNewFile) {
-    throw new Error(
-      `File "${newFileName}" already exists in list "${listName}".`,
-    );
-  }
-
-  fileEntry.componentRef.spec.name = newFileName;
-
-  const updatedFileEntry = { ...fileEntry, name: newFileName };
-
-  await componentListDb.removeItem(oldFileName);
-  await componentListDb.setItem(newFileName, updatedFileEntry);
-
-  return updatedFileEntry;
-};
-
 export const getAllComponentFilesFromList = async (listName: string) => {
   await upgradeSingleComponentListDb(listName);
   const tableName = FILE_STORE_DB_TABLE_NAME_PREFIX + listName;
@@ -575,34 +421,6 @@ export const getAllComponentFilesFromList = async (listName: string) => {
     },
   );
   return componentFiles;
-};
-
-/**
- * Only the keys, because a full listing deserializes every stored pipeline —
- * spec, text and raw bytes — which is far more than a caller that just needs
- * the names should pay for.
- */
-export const getComponentFileNamesFromList = async (listName: string) => {
-  await upgradeSingleComponentListDb(listName);
-  const tableName = FILE_STORE_DB_TABLE_NAME_PREFIX + listName;
-  const componentListDb = localForage.createInstance({
-    name: DB_NAME,
-    storeName: tableName,
-  });
-  return componentListDb.keys();
-};
-
-export const getComponentFileFromList = async (
-  listName: string,
-  fileName: string,
-) => {
-  await upgradeSingleComponentListDb(listName);
-  const tableName = FILE_STORE_DB_TABLE_NAME_PREFIX + listName;
-  const componentListDb = localForage.createInstance({
-    name: DB_NAME,
-    storeName: tableName,
-  });
-  return componentListDb.getItem<ComponentFileEntry>(fileName);
 };
 
 export const deleteComponentFileFromList = async (
@@ -649,10 +467,8 @@ const upgradeSingleComponentListDb = async (listName: string) => {
       (await componentRefListsDb.getItem(listName)) ?? [];
 
     const existingNames = new Set<string>();
-    const emptyNameReplacement =
-      listName === "user_pipelines" ? "Pipeline" : "Component";
     for (const componentRef of componentRefList) {
-      const fileName = componentRef.spec.name ?? emptyNameReplacement;
+      const fileName = componentRef.spec.name ?? "Component";
       const uniqueFileName = makeNameUniqueByAddingIndex(
         fileName,
         existingNames,

@@ -26,8 +26,7 @@ function describeError(error: unknown) {
   if (error instanceof PipelineSpecApiError) {
     if (error.kind === "unsupported")
       return {
-        message:
-          "This backend does not support saved pipelines. You can create and save pipelines in this browser.",
+        message: "This backend does not support saved pipelines.",
         retryable: false,
       };
     if (error.kind === "unavailable")

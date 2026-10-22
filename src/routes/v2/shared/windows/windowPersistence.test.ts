@@ -1,13 +1,93 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { act, cleanup, renderHook } from "@testing-library/react";
+import { createElement, type PropsWithChildren } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import {
+  SharedStoreProvider,
+  useSharedStores,
+} from "@/routes/v2/shared/store/SharedStoreContext";
 
 import {
   clearLayout,
+  loadWindowLayout,
   migrateLayout,
   TOUR_WINDOW_LAYOUT_ID,
+  useWindowPersistence,
 } from "./windowPersistence";
+import { WindowStoreImpl } from "./windowStore";
 
 afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
   localStorage.clear();
+});
+
+it("isolates saved layout keys, debounced writes, and cleanup across mounted views", () => {
+  vi.useFakeTimers();
+  localStorage.setItem(
+    "window-layout-first",
+    JSON.stringify(
+      createLayout(5, {
+        details: createWindowState({ isHidden: true }),
+      }),
+    ),
+  );
+  localStorage.setItem(
+    "window-layout-second",
+    JSON.stringify(
+      createLayout(5, {
+        details: createWindowState({ isHidden: false }),
+      }),
+    ),
+  );
+
+  const wrapper = ({ children }: PropsWithChildren) =>
+    createElement(SharedStoreProvider, null, children);
+  function usePersistedStore(layoutId: string) {
+    useWindowPersistence(layoutId);
+    return useSharedStores().windows;
+  }
+  const first = renderHook(() => usePersistedStore("first"), { wrapper });
+  const second = renderHook(() => usePersistedStore("second"), { wrapper });
+  const embedded = new WindowStoreImpl();
+  const options = {
+    id: "details",
+    title: "Details",
+    persisted: true,
+    defaultVisible: true,
+  };
+
+  act(() => {
+    first.result.current.openWindow(null, options);
+    second.result.current.openWindow(null, options);
+    embedded.openWindow(null, options);
+  });
+  expect(first.result.current.getWindowById("details")?.state).toBe("hidden");
+  expect(second.result.current.getWindowById("details")?.state).toBe("normal");
+  expect(embedded.getWindowById("details")?.state).toBe("normal");
+  expect(embedded.getWindowById("details")?.dockState).toBe("none");
+
+  act(() => {
+    first.result.current
+      .getWindowById("details")!
+      .updatePosition({ x: 111, y: 100 });
+    second.result.current
+      .getWindowById("details")!
+      .updatePosition({ x: 222, y: 100 });
+    vi.advanceTimersByTime(500);
+  });
+  expect(loadWindowLayout("first")?.windows.details.position.x).toBe(111);
+  expect(loadWindowLayout("second")?.windows.details.position.x).toBe(222);
+
+  act(() => {
+    first.result.current
+      .getWindowById("details")!
+      .updatePosition({ x: 333, y: 100 });
+    second.unmount();
+    vi.advanceTimersByTime(500);
+  });
+  expect(loadWindowLayout("first")?.windows.details.position.x).toBe(333);
+  expect(loadWindowLayout("second")?.windows.details.position.x).toBe(222);
 });
 
 describe("clearLayout", () => {

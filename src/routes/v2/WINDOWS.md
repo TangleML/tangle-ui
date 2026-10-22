@@ -48,13 +48,11 @@ flowchart TB
 
     windowPersistence <-->|"save/load"| WindowStoreImpl
 
-    subgraph plugins ["Plugin System"]
-        dockAreaPlugins["dockAreaPlugins.ts<br/>(pub/sub)"]
+    subgraph accordion ["Instance-owned Accordion"]
         dockAreaAccordion["dockAreaAccordion.ts<br/>(accordion behavior)"]
     end
 
-    WindowStoreImpl -->|"emits events"| dockAreaPlugins
-    dockAreaPlugins -->|"notifies"| dockAreaAccordion
+    WindowStoreImpl -->|"dispatches its events"| dockAreaAccordion
 ```
 
 ## File Inventory
@@ -66,14 +64,14 @@ flowchart TB
 | `types.ts`                      | Shared TypeScript types (`WindowState`, `DockState`, `WindowOptions`, `WindowRef`, etc.) and layout constants (`DEFAULT_WINDOW_SIZE`, thresholds, widths) |
 | `windowModel.ts`                | `WindowModel` class -- per-window MobX observable state with actions for minimize/maximize/hide/restore/dock/undock and snapshot mechanism                |
 | `windowStore.ts`                | `WindowStoreImpl` class -- window registry, z-order, dock area config, open/close/dock/undock, content map, query helpers                                 |
-| `windowPersistence.ts`          | `useWindowPersistence` hook and `getPersistedWindowState` -- debounced localStorage save via MobX reaction, versioned schema                              |
-| `dockAreaPlugins.ts`            | Lightweight pub/sub for dock area lifecycle events (`window-docked`, `window-expanded`, `window-closing`, `window-minimized`)                             |
+| `windowPersistence.ts`          | Instance-scoped layout loading and debounced localStorage saves via MobX reaction, with a versioned schema                                                |
+| `dockAreaAccordion.ts`          | Per-store accordion behavior and restore history for each enabled dock side                                                                               |
 | `Window.tsx`                    | Entry component: resolves model + content from store, provides `WindowContextProvider`, routes to `DockedWindow` or `FloatingWindow`                      |
 | `WindowContainer.tsx`           | Renders all floating (`dockState === "none"`) windows                                                                                                     |
 | `DockArea.tsx`                  | Renders a dock column (left or right): enables dock side on mount, observes width via `ResizeObserver`, lists docked `Window` instances                   |
 | `TaskPanel.tsx`                 | Horizontal bar showing `hidden` windows as chips with restore/close actions                                                                               |
 | `SnapPreview.tsx`               | Visual overlay during drag: edge dock hint or horizontal insert line                                                                                      |
-| `snapUtils.ts`                  | DOM registration for dock areas and snap detection logic (`detectSnapPreview`)                                                                            |
+| `snapUtils.ts`                  | Snap detection using dock elements supplied by the dragging window's store (`detectSnapPreview`)                                                          |
 | `ContentWindowStateContext.tsx` | React context providing `{ model: WindowModel, content: ReactNode }` to the window subtree                                                                |
 
 ### `components/`
@@ -90,12 +88,6 @@ flowchart TB
 | File               | Role                                                                                                                   |
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------- |
 | `useWindowDrag.ts` | Pointer-driven move + snap-to-dock: docked pending-undock threshold, live position updates, snap preview, dock-on-drop |
-
-### `plugins/`
-
-| File                   | Role                                                                                                         |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `dockAreaAccordion.ts` | Accordion behavior plugin: only one expanded window per dock side, auto-collapse stack with restore-on-close |
 
 ## Component Tree
 
@@ -239,7 +231,7 @@ sequenceDiagram
     participant Store as WindowStoreImpl
     participant Persist as windowPersistence
     participant Model as WindowModel
-    participant Plugins as dockAreaPlugins
+    participant Accordion as Store's accordion
 
     Caller->>Store: openWindow(content, options)
     activate Store
@@ -253,9 +245,9 @@ sequenceDiagram
         Store-->>Caller: WindowRef
     else New window
         Store->>Store: Set contentMap.set(id, content)
-        Store->>Persist: getPersistedWindowState(id)
+        Store->>Persist: loadWindowLayout(store.layoutId)
         activate Persist
-        Persist-->>Store: PersistedWindowState | null
+        Persist-->>Store: PersistedWindowLayout | null
         deactivate Persist
 
         Store->>Store: resolveInitialState(persisted, options, dockState)
@@ -268,10 +260,7 @@ sequenceDiagram
 
         alt dockState !== "none"
             Store->>Store: Add to dockAreas[side].windowOrder
-            Store->>Plugins: emitDockAreaEvent("window-docked")
-            activate Plugins
-            Plugins->>Plugins: Notify registered plugins
-            deactivate Plugins
+            Store->>Accordion: emitDockAreaEvent("window-docked")
         end
 
         Store-->>Caller: WindowRef
@@ -356,7 +345,7 @@ sequenceDiagram
     participant Store as WindowStoreImpl
     participant Storage as localStorage
 
-    Component->>Component: Set activeLayoutId
+    Component->>Store: Set this store's layoutId in layout effect
     Component->>Storage: loadWindowLayout(key)
     activate Storage
     Storage-->>Component: PersistedWindowLayout | null
@@ -370,7 +359,7 @@ sequenceDiagram
 
     loop On every store mutation (debounced 500ms)
         Store-->>Component: serialized state changed
-        Component->>Component: saveWindowLayout(store)
+        Component->>Component: saveWindowLayout(store, layoutId)
         activate Component
         Component->>Component: Filter to persisted windows only
         Component->>Storage: storage.setItem(key, layout)
@@ -430,7 +419,7 @@ No persisted entry (first visit):
 | false          | true                             | `"normal"`                    |
 | false          | false                            | `"hidden"` + seed `previous*` |
 
-## Plugin System
+## Dock Accordion
 
 ### Event Types
 
@@ -441,20 +430,18 @@ No persisted entry (first visit):
 | `window-closing`   | A docked window is about to be closed                                                         |
 | `window-minimized` | A docked window is minimized (non-quiet)                                                      |
 
-### Registration
+### Activation
 
 ```typescript
-const unsubscribe = registerDockAreaPlugin("right", (event: DockAreaEvent) => {
-  // event.type, event.side, event.windowId
-});
+const cleanup = windows.enableDockAreaAccordion("right");
 
 // Later:
-unsubscribe();
+cleanup();
 ```
 
-### Accordion Plugin
+### Behavior
 
-The built-in `dockAreaAccordion` plugin enforces that only one window can be expanded at a time within a dock side. It maintains a stack of auto-collapsed window IDs per side:
+Each store dispatches its own dock events to its accordion. The accordion maintains a private stack of auto-collapsed window IDs; other editors and embedded views cannot change it:
 
 ```mermaid
 flowchart TD
@@ -483,7 +470,7 @@ flowchart TD
     restoreFromStack2 --> ensureOneVisible3["ensureOneVisible()"]
 ```
 
-The `quiet` flag on `minimize()` and `restore()` prevents recursive event emission when the accordion plugin itself is collapsing/restoring windows.
+The `quiet` flag on `minimize()` and `restore()` prevents recursive event emission when the accordion itself is collapsing/restoring windows.
 
 ## Context and Content
 
@@ -629,7 +616,7 @@ collapsed area's resize handle is pinned and so gives no visual feedback until i
   });
   ```
 
-- **Use the `quiet` flag in plugins** when programmatically minimizing/restoring to prevent recursive event emission.
+- **Use the `quiet` flag inside accordion handlers** when minimizing/restoring to prevent recursive event emission.
 
   ```typescript
   win.minimize({ quiet: true }); // No "window-minimized" event emitted
@@ -750,31 +737,6 @@ ref.restore();
 ref.hide();
 ref.maximize();
 ref.close();
-```
-
-### Registering a Custom Dock Area Plugin
-
-```typescript
-import { registerDockAreaPlugin, type DockAreaEvent } from "./dockAreaPlugins";
-
-function initMyPlugin(side: "left" | "right"): () => void {
-  return registerDockAreaPlugin(side, (event: DockAreaEvent) => {
-    switch (event.type) {
-      case "window-docked":
-        console.log(`Window ${event.windowId} docked to ${event.side}`);
-        break;
-      case "window-closing":
-        console.log(`Window ${event.windowId} closing from ${event.side}`);
-        break;
-    }
-  });
-}
-
-// Initialize:
-const cleanup = initMyPlugin("right");
-
-// Teardown:
-cleanup();
 ```
 
 ### Opening a Window Re-Focuses If Already Open

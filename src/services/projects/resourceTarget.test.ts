@@ -12,7 +12,6 @@ import {
   formatWorkareaTarget,
   idIdentity,
   isWorkareaTargetString,
-  nameIdentity,
   parseIdentity,
   parseWorkareaTarget,
   remotePipelineIdentity,
@@ -23,24 +22,21 @@ describe("workareaTarget", () => {
   it.each([
     remotePipelineIdentity("pipeline-1"),
     draftPipelineIdentity("draft-1"),
-  ])(
-    "round-trips pipeline identity %s without treating it as local",
-    (identity) => {
-      expect(parseWorkareaTarget(`pipeline://${identity}`)).toEqual({
-        type: "pipeline",
-        identity,
-      });
-      expect(formatWorkareaTarget({ type: "pipeline", identity })).toBe(
-        `pipeline://${identity}`,
+  ])("round-trips pipeline identity %s ", (identity) => {
+    expect(parseWorkareaTarget(`pipeline://${identity}`)).toEqual({
+      type: "pipeline",
+      identity,
+    });
+    expect(formatWorkareaTarget({ type: "pipeline", identity })).toBe(
+      `pipeline://${identity}`,
+    );
+    for (const type of ["run", "artifact", "document"]) {
+      expect(isWorkareaTargetString(`${type}://${identity}`)).toBe(false);
+      expect(() => parseWorkareaTarget(`${type}://${identity}`)).toThrow(
+        /identity/,
       );
-      for (const type of ["run", "artifact", "document"]) {
-        expect(isWorkareaTargetString(`${type}://${identity}`)).toBe(false);
-        expect(() => parseWorkareaTarget(`${type}://${identity}`)).toThrow(
-          /identity/,
-        );
-      }
-    },
-  );
+    }
+  });
   it("round-trips between object and string form", () => {
     const target: WorkareaTarget = {
       type: "artifact",
@@ -55,7 +51,7 @@ describe("workareaTarget", () => {
 
   it("builds sub-key prefixed identities", () => {
     expect(idIdentity("abc")).toBe("id/abc");
-    expect(nameIdentity("My Draft")).toBe("name/My Draft");
+    expect(draftPipelineIdentity("My Draft")).toBe("draft/My Draft");
   });
 
   it("splits an identity into its key and value", () => {
@@ -63,8 +59,8 @@ describe("workareaTarget", () => {
       key: "id",
       value: "https://host/a",
     });
-    expect(parseIdentity("name/My Draft")).toEqual({
-      key: "name",
+    expect(parseIdentity("draft/My Draft")).toEqual({
+      key: "draft",
       value: "My Draft",
     });
   });
@@ -108,7 +104,10 @@ describe("workareaTarget", () => {
       false,
     );
     expect(
-      sameTarget(target, { type: "pipeline", identity: idIdentity("1") }),
+      sameTarget(target, {
+        type: "pipeline",
+        identity: remotePipelineIdentity("1"),
+      }),
     ).toBe(false);
   });
 
@@ -116,12 +115,14 @@ describe("workareaTarget", () => {
     expect(isWorkareaTargetString("artifact://id/https://host/a.txt")).toBe(
       true,
     );
-    expect(isWorkareaTargetString("pipeline://name/My Draft")).toBe(true);
-    expect(isWorkareaTargetString("pipeline://id/p1")).toBe(true);
+    expect(isWorkareaTargetString("pipeline://draft/My Draft")).toBe(true);
+    expect(isWorkareaTargetString("pipeline://remote/p1")).toBe(true);
     expect(isWorkareaTargetString("run://id/1")).toBe(true);
   });
 
   it("rejects malformed target strings", () => {
+    expect(isWorkareaTargetString("pipeline://name/My Draft")).toBe(false);
+    expect(isWorkareaTargetString("pipeline://id/p1")).toBe(false);
     expect(isWorkareaTargetString("no-separator")).toBe(false);
     expect(isWorkareaTargetString("bogus://id/x")).toBe(false);
     expect(isWorkareaTargetString("run://run-123")).toBe(false);
@@ -133,7 +134,7 @@ describe("workareaTarget", () => {
   });
 
   /**
-   * Only a pipeline can be addressed by name. Passing this guard has to mean
+   * Passing this guard has to mean
    * the parse will succeed, or a caller told the string was fine crashes on it.
    */
   it("rejects a kind addressed by an identity it cannot take", () => {
@@ -174,11 +175,11 @@ describe("workareaTarget", () => {
     };
     const pipelineById: PipelineTarget = {
       type: "pipeline",
-      identity: idIdentity("p1"),
+      identity: remotePipelineIdentity("p1"),
     };
     const pipelineByName: PipelineTarget = {
       type: "pipeline",
-      identity: nameIdentity("Draft"),
+      identity: draftPipelineIdentity("Draft"),
     };
     const run: RunTarget = { type: "run", identity: idIdentity("1") };
     const document: DocumentTarget = {
@@ -188,7 +189,7 @@ describe("workareaTarget", () => {
 
     expect(formatWorkareaTarget(artifact)).toBe("artifact://id/a.txt");
     expect(formatWorkareaTarget(document)).toBe("document://id/r1");
-    expect(formatWorkareaTarget(pipelineByName)).toBe("pipeline://name/Draft");
+    expect(formatWorkareaTarget(pipelineByName)).toBe("pipeline://draft/Draft");
     expect(sameTarget(pipelineById, run)).toBe(false);
   });
 });

@@ -22,7 +22,8 @@ import {
   TASK_COLOR_ANNOTATION,
 } from "@/utils/annotationKeys";
 
-vi.mock("@/services/componentService", () => ({
+vi.mock("@/services/componentService", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/services/componentService")>()),
   hydrateComponentReference: vi.fn(async (ref) => ref),
 }));
 

@@ -8,7 +8,6 @@ import { focusModeStore } from "@/routes/v2/shared/hooks/useFocusMode";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 import { CollapsedDockWindowMini } from "./CollapsedDockWindowMini";
-import { registerDockAreaElement } from "./snapUtils";
 import {
   COLLAPSED_DOCK_AREA_WIDTH,
   DOCK_AREA_COLLAPSE_SNAP_THRESHOLD,
@@ -60,9 +59,9 @@ export const DockArea = observer(function DockArea({ side }: DockAreaProps) {
     windows.enableDockSide(side);
     return () => {
       windows.disableDockSide(side);
-      registerDockAreaElement(side, null);
+      windows.dockAreaElements[side] = null;
     };
-  }, [side]);
+  }, [side, windows]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -87,7 +86,7 @@ export const DockArea = observer(function DockArea({ side }: DockAreaProps) {
 
   const setRef = (element: HTMLDivElement | null) => {
     containerRef.current = element;
-    registerDockAreaElement(side, element);
+    windows.dockAreaElements[side] = element;
   };
 
   const handleToggleCollapse = () => {

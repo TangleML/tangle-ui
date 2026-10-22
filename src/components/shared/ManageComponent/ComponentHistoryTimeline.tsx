@@ -1,6 +1,5 @@
 import { type ComponentProps, type PropsWithChildren } from "react";
 
-import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,7 +15,6 @@ import { withSuspenseWrapper } from "../SuspenseWrapper";
 import { ComponentQuickDetailsDialogTrigger } from "./ComponentQuickDetailsDialog";
 import { ComponentUsageCount } from "./ComponentUsageCount";
 import { DeprecatePublishedComponentButton } from "./DeprecatePublishedComponentButton";
-import { useForceUpdateTasks } from "./hooks/useForceUpdateTasks";
 import { PublishComponentButton } from "./PublishComponentButton";
 import { TrimmedDigest } from "./TrimmedDigest";
 
@@ -74,8 +72,6 @@ export const ComponentHistoryTimeline = withSuspenseWrapper(
     currentUserName?: string;
     onChange?: () => void;
   }) => {
-    const onForceUpdate = useForceUpdateTasks(currentComponent);
-
     const lastComponentInHistory =
       history.length === 0 ? undefined : history[history.length - 1];
     const lastHydratedComponent = useHydrateComponentReference(
@@ -137,15 +133,6 @@ export const ComponentHistoryTimeline = withSuspenseWrapper(
                     {(count) => (
                       <Text size="xs" tone="subdued">
                         Used {count} times in this Pipeline.
-                        {isMostRecent ? null : (
-                          <Button
-                            variant="secondary"
-                            size="xs"
-                            onClick={() => onForceUpdate(item.digest)}
-                          >
-                            Review tasks
-                          </Button>
-                        )}
                       </Text>
                     )}
                   </ComponentUsageCount>

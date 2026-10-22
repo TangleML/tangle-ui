@@ -32,7 +32,7 @@ export function RemotePipelineNodeLinkButton({
       .slice(1)
       .map((entry) => entry.displayName);
     const location = router.buildLocation({
-      to: APP_ROUTES.EDITOR_V2_REMOTE_PIPELINE,
+      to: APP_ROUTES.REMOTE_PIPELINE_EDITOR,
       params: { pipelineId },
       search: {
         projectId: readProjectIdParam(router.state.location.search),

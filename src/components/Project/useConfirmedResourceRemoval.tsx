@@ -25,8 +25,8 @@ interface ResourceRemovalOptions {
 /**
  * Detaching a resource is offered from the project's resource table and from
  * the run submitter's project picker, and both have to say the same thing about
- * what it costs — for a browser-held pipeline, detaching is the only record of
- * it going, and for a document the payload goes with the row.
+ * the consequence: linked resources remain available, while a document
+ * stored in the project is deleted with its row.
  *
  * The caller renders `<ConfirmationDialog {...confirmation} />` where its layout
  * suits, and says in `onRemoved` what its own surface has to forget afterwards.

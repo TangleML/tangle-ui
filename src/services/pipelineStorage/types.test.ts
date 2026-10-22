@@ -36,15 +36,9 @@ describe("getEditorPipelineIdentity", () => {
     ).not.toBe(identity);
   });
 
-  it("preserves non-UUID IDs and local pipeline identities", () => {
+  it("preserves non-UUID IDs", () => {
     expect(
       getEditorPipelineIdentity({ ...ref, pipelineId: "Pipeline-1" }),
     ).not.toBe(getEditorPipelineIdentity({ ...ref, pipelineId: "pipeline-1" }));
-    expect(getEditorPipelineIdentity({ name: ref.pipelineId })).toBe(
-      ref.pipelineId,
-    );
-    expect(
-      getEditorPipelineIdentity({ name: "Local", fileId: "Local-ID" }),
-    ).toBe("Local-ID");
   });
 });

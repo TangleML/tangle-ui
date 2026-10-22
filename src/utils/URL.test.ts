@@ -22,10 +22,6 @@ import {
   toAbsoluteHttpUrl,
 } from "./URL";
 
-vi.mock("@/routes/router", () => ({
-  RUNS_BASE_PATH: "/runs",
-}));
-
 // Kept ahead of the download tests, which delete `global.URL` in their teardown.
 describe("toAbsoluteHttpUrl", () => {
   it("accepts absolute http and https urls", () => {
@@ -73,18 +69,8 @@ describe("toAbsoluteHttpUrl", () => {
 });
 
 describe("getRunUrl", () => {
-  afterEach(() => localStorage.clear());
-
   /** The address bar names a Tangent project when a run is open in a tab. */
   it("builds an absolute url from the run id", () => {
-    expect(getRunUrl("01a0fa8aac1ff2ca5211")).toBe(
-      `${window.location.origin}/runs-v2/01a0fa8aac1ff2ca5211`,
-    );
-  });
-
-  it("follows the reader to whichever run view they use", () => {
-    localStorage.setItem("betaFlags", JSON.stringify({ v2_editor: false }));
-
     expect(getRunUrl("01a0fa8aac1ff2ca5211")).toBe(
       `${window.location.origin}/runs/01a0fa8aac1ff2ca5211`,
     );
@@ -92,7 +78,7 @@ describe("getRunUrl", () => {
 
   it("escapes an id that would otherwise change the path", () => {
     expect(getRunUrl("a/../b")).toBe(
-      `${window.location.origin}/runs-v2/a%2F..%2Fb`,
+      `${window.location.origin}/runs/a%2F..%2Fb`,
     );
   });
 });

@@ -1,6 +1,6 @@
 import { action, computed, makeObservable, observable } from "mobx";
 
-import type { ComponentSpec } from "@/models/componentSpec";
+import type { ComponentSpec, Task } from "@/models/componentSpec";
 
 import type { EditorStore } from "./editorStore";
 
@@ -16,7 +16,7 @@ export interface ParentContext {
 
 export class NavigationStore {
   @observable.ref accessor rootSpec: ComponentSpec | null = null;
-  @observable.shallow accessor navigationPath: NavigationEntry[] = [];
+  @observable.shallow private accessor taskPath: string[] = [];
   @observable accessor requestedPipelineName: string | null = null;
 
   constructor(private editorStore: EditorStore) {
@@ -29,21 +29,12 @@ export class NavigationStore {
 
   @action initNavigation(rootSpec: ComponentSpec) {
     this.rootSpec = rootSpec;
-    this.navigationPath = [
-      { specId: rootSpec.$id, displayName: rootSpec.name },
-    ];
+    this.taskPath = [];
   }
 
   @action clearNavigation() {
     this.rootSpec = null;
-    this.navigationPath = [];
-  }
-
-  isTaskSubgraph(_spec: ComponentSpec, taskEntityId: string): boolean {
-    const active = this.activeSpec;
-    if (!active) return false;
-    const task = active.tasks.find((t) => t.$id === taskEntityId);
-    return task?.subgraphSpec !== undefined;
+    this.taskPath = [];
   }
 
   @action navigateToSubgraph(
@@ -55,31 +46,27 @@ export class NavigationStore {
     const task = currentSpec.tasks.find((t) => t.$id === taskEntityId);
     if (!task?.subgraphSpec) return null;
 
-    this.navigationPath = [
-      ...this.navigationPath,
-      { specId: task.subgraphSpec.$id, displayName: task.name },
-    ];
+    this.taskPath = [...this.taskPath, task.$id];
 
     this.editorStore.clearSelection();
     return task.subgraphSpec;
   }
 
   @action navigateBack(): ComponentSpec | null {
-    if (!this.rootSpec || this.navigationPath.length <= 1) return null;
+    if (!this.rootSpec || this.taskPath.length === 0) return null;
 
-    this.navigationPath = this.navigationPath.slice(0, -1);
+    this.taskPath = this.taskPath.slice(0, -1);
     this.editorStore.clearSelection();
 
-    const newDepth = this.navigationPath.length - 1;
-    return this.getSpecAtDepth(newDepth) ?? null;
+    return this.activeSpec;
   }
 
   @action navigateToLevel(index: number): ComponentSpec | null {
-    if (!this.rootSpec || index < 0 || index >= this.navigationPath.length) {
+    if (!this.rootSpec || index < 0 || index > this.taskPath.length) {
       return null;
     }
 
-    this.navigationPath = this.navigationPath.slice(0, index + 1);
+    this.taskPath = this.taskPath.slice(0, index);
     this.editorStore.clearSelection();
     return this.getSpecAtDepth(index) ?? null;
   }
@@ -88,9 +75,7 @@ export class NavigationStore {
     if (!this.rootSpec || pathNames.length === 0) return null;
     if (pathNames[0] !== this.rootSpec.name) return null;
 
-    const newPath: NavigationEntry[] = [
-      { specId: this.rootSpec.$id, displayName: this.rootSpec.name },
-    ];
+    const taskPath: string[] = [];
 
     let currentSpec: ComponentSpec = this.rootSpec;
 
@@ -99,21 +84,34 @@ export class NavigationStore {
       const task = currentSpec.tasks.find((t) => t.name === taskName);
       if (!task?.subgraphSpec) return null;
 
-      newPath.push({
-        specId: task.subgraphSpec.$id,
-        displayName: taskName,
-      });
+      taskPath.push(task.$id);
       currentSpec = task.subgraphSpec;
     }
 
-    this.navigationPath = newPath;
+    this.taskPath = taskPath;
     this.editorStore.clearSelection();
     return currentSpec;
   }
 
+  @computed get navigationPath(): NavigationEntry[] {
+    const rootSpec = this.rootSpec;
+    if (!rootSpec) return [];
+    let spec: ComponentSpec = rootSpec;
+
+    const path = [{ specId: spec.$id, displayName: spec.name }];
+    for (const taskId of this.taskPath) {
+      const task: Task | undefined = spec.tasks.find(
+        (task) => task.$id === taskId,
+      );
+      if (!task?.subgraphSpec) break;
+      spec = task.subgraphSpec;
+      path.push({ specId: spec.$id, displayName: task.name });
+    }
+    return path;
+  }
+
   @computed get activeSpec(): ComponentSpec | null {
-    if (this.navigationPath.length === 0) return null;
-    return this.getSpecAtDepth(this.navigationPath.length - 1) ?? null;
+    return this.getSpecAtDepth(this.taskPath.length) ?? null;
   }
 
   /**
@@ -121,31 +119,30 @@ export class NavigationStore {
    * Returns null when at the root level (no parent exists).
    */
   @computed get parentContext(): ParentContext | null {
-    if (this.navigationPath.length <= 1) return null;
-    const parentSpec = this.getSpecAtDepth(this.navigationPath.length - 2);
+    if (this.taskPath.length === 0) return null;
+    const parentSpec = this.getSpecAtDepth(this.taskPath.length - 1);
     if (!parentSpec) return null;
 
-    const taskName =
-      this.navigationPath[this.navigationPath.length - 1].displayName;
-    const task = parentSpec.tasks.find((t) => t.name === taskName);
+    const taskId = this.taskPath.at(-1);
+    const task = parentSpec.tasks.find((t) => t.$id === taskId);
     if (!task) return null;
 
     return { parentSpec, taskId: task.$id };
   }
 
   @computed get navigationDepth(): number {
-    return this.navigationPath.length - 1;
+    return this.rootSpec ? this.taskPath.length : -1;
   }
 
   @computed get canNavigateBack(): boolean {
-    return this.navigationPath.length > 1;
+    return this.taskPath.length > 0;
   }
 
   /**
    * Renames the subgraph at the current navigation depth (depth >= 1) by
    * renaming the owning task in the parent spec — the same operation a regular
-   * task rename performs. Also re-syncs the nested spec name and the navigation
-   * path key so the subgraph keeps resolving via `getSpecAtDepth`.
+   * task rename performs. Also updates the nested spec's name; navigation
+   * continues to follow the task's stable identity.
    *
    * Returns false when at the root level, the name is empty or unchanged, the
    * owning task can't be found, or the rename collides with a sibling.
@@ -157,14 +154,12 @@ export class NavigationStore {
     const depth = this.navigationDepth;
     if (depth === 0) return false;
 
-    const oldName = this.navigationPath[depth].displayName;
-    if (oldName === trimmed) return false;
-
     const parentSpec = this.getSpecAtDepth(depth - 1);
     if (!parentSpec) return false;
 
-    const task = parentSpec.tasks.find((t) => t.name === oldName);
-    if (!task) return false;
+    const taskId = this.taskPath[depth - 1];
+    const task = parentSpec.tasks.find((t) => t.$id === taskId);
+    if (!task || task.name === trimmed) return false;
 
     const nestedSpec = this.getSpecAtDepth(depth);
 
@@ -172,28 +167,24 @@ export class NavigationStore {
 
     nestedSpec?.setName(trimmed);
 
-    const newPath = [...this.navigationPath];
-    newPath[depth] = { ...newPath[depth], displayName: trimmed };
-    this.navigationPath = newPath;
-
     return true;
   }
 
   /**
-   * Trims navigationPath to the deepest level that still resolves to a valid
+   * Trims the task path to the deepest level that still resolves to a valid
    * spec. Handles cases where undo/redo removes a subgraph the user is viewing.
    */
   @action correctInvalidNavigation(): void {
-    if (this.navigationPath.length <= 1) return;
+    if (this.taskPath.length === 0) return;
 
     let deepestValid = 0;
-    for (let i = 1; i < this.navigationPath.length; i++) {
+    for (let i = 1; i <= this.taskPath.length; i++) {
       if (!this.getSpecAtDepth(i)) break;
       deepestValid = i;
     }
 
-    if (deepestValid < this.navigationPath.length - 1) {
-      this.navigationPath = this.navigationPath.slice(0, deepestValid + 1);
+    if (deepestValid < this.taskPath.length) {
+      this.taskPath = this.taskPath.slice(0, deepestValid);
       this.editorStore.clearSelection();
     }
   }
@@ -202,8 +193,8 @@ export class NavigationStore {
     if (depth === 0) return this.rootSpec ?? undefined;
     let current: ComponentSpec | undefined = this.rootSpec ?? undefined;
     for (let i = 1; i <= depth && current; i++) {
-      const taskName = this.navigationPath[i]?.displayName;
-      const task = current.tasks.find((t) => t.name === taskName);
+      const taskId = this.taskPath[i - 1];
+      const task = current.tasks.find((t) => t.$id === taskId);
       current = task?.subgraphSpec;
     }
     return current;

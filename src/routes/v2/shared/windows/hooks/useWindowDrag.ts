@@ -143,6 +143,7 @@ export function useWindowDrag({
 
       const preview = detectSnapPreview({
         windowId: model.id,
+        dockAreaElements: windows.dockAreaElements,
         mousePosition: { x: moveE.clientX, y: moveE.clientY },
         dockAreaWindowIds: {
           left: [...windows.getDockAreaWindowIds("left")],

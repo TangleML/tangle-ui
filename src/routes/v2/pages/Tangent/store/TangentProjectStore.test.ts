@@ -14,7 +14,10 @@ import { ComponentSpec, Input, Output, Task } from "@/models/componentSpec";
 import { sessionMemorySeed } from "@/routes/v2/pages/Tangent/services/sessionMemory";
 import type { WorkareaTarget } from "@/routes/v2/pages/Tangent/workarea/types";
 import type { SharedUIStore } from "@/routes/v2/shared/store/SharedStoreContext";
-import { idIdentity } from "@/services/projects/resourceTarget";
+import {
+  idIdentity,
+  remotePipelineIdentity,
+} from "@/services/projects/resourceTarget";
 
 import {
   CHAT_TAB_VALUE,
@@ -55,7 +58,7 @@ function asset(id: string): EmbedAsset {
 }
 
 function pipeline(id: string): WorkareaTarget {
-  return { type: "pipeline", identity: idIdentity(id) };
+  return { type: "pipeline", identity: remotePipelineIdentity(id) };
 }
 
 function run(id: string): WorkareaTarget {

@@ -4,7 +4,7 @@ import type { MouseEvent } from "react";
 import { StatusBar, StatusText } from "@/components/shared/Status/";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
-import { getDefaultRunPath } from "@/routes/runRoutes";
+import { getRunPath } from "@/routes/runRoutes";
 import type { PipelineRun, TaskStatusCounts } from "@/types/pipelineRun";
 import { formatDate } from "@/utils/date";
 import { hasNewTabModifier } from "@/utils/dom";
@@ -76,7 +76,7 @@ const RunOverview = ({
     if (onClick) {
       onClick(run);
     } else {
-      const clickThroughUrl = getDefaultRunPath(run.id);
+      const clickThroughUrl = getRunPath(run.id);
 
       if (hasNewTabModifier(e)) {
         window.open(clickThroughUrl, "_blank");

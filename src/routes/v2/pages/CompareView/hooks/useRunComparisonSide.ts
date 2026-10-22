@@ -1,6 +1,6 @@
 import type { ArtifactNodeResponse } from "@/api/types.gen";
 import { useExecutionArtifacts } from "@/hooks/useExecutionArtifacts";
-import { usePipelineRunData } from "@/hooks/usePipelineRunData";
+import { useGraphExecutionData } from "@/hooks/useGraphExecutionData";
 import { useBackend } from "@/providers/BackendProvider";
 import { outputArtifactsOf } from "@/routes/v2/pages/CompareView/utils/compareArtifacts";
 import {
@@ -30,7 +30,7 @@ export interface RunComparisonSide {
 /**
  * Loads a single run's spec, per-task execution status and pipeline-level output
  * artifacts for the comparison view. Safe to call twice in one component (once
- * per side) because `usePipelineRunData` scopes all of its queries by id. Pass
+ * per side) because execution queries are scoped by backend and ID. Pass
  * an empty string for an unselected side — the underlying queries stay disabled.
  *
  * Only the root execution's artifacts are fetched, which is one request per run
@@ -41,14 +41,16 @@ export interface RunComparisonSide {
  */
 export function useRunComparisonSide(runId: string): RunComparisonSide {
   const { configured } = useBackend();
-  const { executionData, rootExecutionId, error } = usePipelineRunData(runId);
-  const { data: runMetadata } = useFetchPipelineRunMetadata(runId || undefined);
+  const metadata = useFetchPipelineRunMetadata(runId || undefined);
+  const runMetadata = metadata.data;
+  const rootExecutionId = runMetadata?.root_execution_id;
+  const execution = useGraphExecutionData(rootExecutionId);
   const { data: artifacts, isSuccess: artifactsLoaded } = useExecutionArtifacts(
     configured ? rootExecutionId : undefined,
   );
 
-  const details = executionData?.details;
-  const state = executionData?.state;
+  const { details, state } = execution;
+  const error = metadata.error ?? execution.error;
 
   const spec =
     (details?.task_spec.componentRef.spec as
@@ -72,7 +74,7 @@ export function useRunComparisonSide(runId: string): RunComparisonSide {
     durationMs: runDurationMs(details),
     runAnnotations: runMetadata?.annotations ?? undefined,
     runArguments: details?.task_spec.arguments ?? undefined,
-    isLoading: Boolean(runId) && !executionData && !error,
+    isLoading: metadata.isLoading || execution.isLoading,
     error: error ?? null,
   };
 }

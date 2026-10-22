@@ -5,7 +5,7 @@ import type {
 import type { MouseEvent } from "react";
 
 import useToastNotification from "@/hooks/useToastNotification";
-import { getDefaultRunPath } from "@/routes/runRoutes";
+import { getRunPath } from "@/routes/runRoutes";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { chatAnchorProtocols } from "@/routes/v2/shared/components/AiChat/components/chatAnchorProtocols";
 import { ChatEntityChip } from "@/routes/v2/shared/components/AiChat/components/ChatEntityChip";
@@ -46,7 +46,7 @@ function RunAnchor({ path, label }: AnchorProtocolProps) {
     if (!target) return;
     if (hasNewTabModifier(event)) {
       const runId = parseIdentity(target.identity).value;
-      window.open(getDefaultRunPath(runId), "_blank");
+      window.open(getRunPath(runId), "_blank");
       return;
     }
     void openRun();

@@ -12,13 +12,11 @@ import { useAiChatWindow } from "./useAiChatWindow";
 import { useRunViewWindows } from "./useRunViewWindows";
 
 const persistenceMocks = vi.hoisted(() => ({
-  getPersistedWindowState: vi.fn(),
-  hasPersistedLayout: vi.fn(),
+  loadWindowLayout: vi.fn(),
 }));
 
 vi.mock("@/routes/v2/shared/windows/windowPersistence", () => ({
-  getPersistedWindowState: persistenceMocks.getPersistedWindowState,
-  hasPersistedLayout: persistenceMocks.hasPersistedLayout,
+  loadWindowLayout: persistenceMocks.loadWindowLayout,
 }));
 
 let windows: WindowStoreImpl;
@@ -53,6 +51,23 @@ function renderRunWindowHooks() {
   });
 }
 
+function hiddenLayout() {
+  return {
+    windows: Object.fromEntries(
+      RUN_WINDOW_IDS.map((id) => [
+        id,
+        {
+          position: { x: 0, y: 0 },
+          size: { width: 320, height: 420 },
+          dockState: "left",
+          isHidden: true,
+          isMinimized: false,
+        },
+      ]),
+    ),
+  };
+}
+
 describe("Run View window visibility persistence", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -62,8 +77,7 @@ describe("Run View window visibility persistence", () => {
   afterEach(cleanup);
 
   it("shows the default Run View windows when no layout is persisted", () => {
-    persistenceMocks.getPersistedWindowState.mockReturnValue(null);
-    persistenceMocks.hasPersistedLayout.mockReturnValue(false);
+    persistenceMocks.loadWindowLayout.mockReturnValue(null);
 
     renderRunWindowHooks();
 
@@ -73,8 +87,7 @@ describe("Run View window visibility persistence", () => {
   });
 
   it("honors default visibility when an existing layout has no state for a window", () => {
-    persistenceMocks.getPersistedWindowState.mockReturnValue(null);
-    persistenceMocks.hasPersistedLayout.mockReturnValue(true);
+    persistenceMocks.loadWindowLayout.mockReturnValue({ windows: {} });
 
     windows.openWindow(null, {
       id: "new-hidden-window",
@@ -87,14 +100,7 @@ describe("Run View window visibility persistence", () => {
   });
 
   it("restores hidden Run View windows from the persisted layout", () => {
-    persistenceMocks.getPersistedWindowState.mockReturnValue({
-      position: { x: 0, y: 0 },
-      size: { width: 320, height: 420 },
-      dockState: "left",
-      isHidden: true,
-      isMinimized: false,
-    });
-    persistenceMocks.hasPersistedLayout.mockReturnValue(true);
+    persistenceMocks.loadWindowLayout.mockReturnValue(hiddenLayout());
 
     renderRunWindowHooks();
 
@@ -104,14 +110,7 @@ describe("Run View window visibility persistence", () => {
   });
 
   it("keeps hidden Run View windows hidden when the hooks remount", () => {
-    persistenceMocks.getPersistedWindowState.mockReturnValue({
-      position: { x: 0, y: 0 },
-      size: { width: 320, height: 420 },
-      dockState: "left",
-      isHidden: true,
-      isMinimized: false,
-    });
-    persistenceMocks.hasPersistedLayout.mockReturnValue(true);
+    persistenceMocks.loadWindowLayout.mockReturnValue(hiddenLayout());
 
     const first = renderRunWindowHooks();
     for (const id of RUN_WINDOW_IDS) {

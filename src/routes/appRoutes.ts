@@ -1,8 +1,6 @@
 export const EDITOR_PATH = "/editor";
 export const RUNS_BASE_PATH = "/runs";
 const LEARN_BASE_PATH = "/learn";
-const EDITOR_V2_BASE_PATH = "/editor-v2";
-export const RUNS_V2_BASE_PATH = "/runs-v2";
 const SETTINGS_PATH = "/settings";
 const IMPORT_PATH = "/app/editor/import-pipeline";
 const TOUR_BASE_PATH = "/tour";
@@ -16,7 +14,6 @@ export const APP_ROUTES = {
   DASHBOARD_RUNS: "/runs",
   DASHBOARD_PIPELINES: "/pipelines",
   DASHBOARD_COMPONENTS: "/components",
-  DASHBOARD_COMPONENTS_V2: "/components-v2",
   DASHBOARD_FAVORITES: "/favorites",
   DASHBOARD_RECENTLY_VIEWED: "/recently-viewed",
   PROJECTS: PROJECTS_BASE_PATH,
@@ -28,9 +25,9 @@ export const APP_ROUTES = {
   TOUR: TOUR_BASE_PATH,
   TOUR_DETAIL: `${TOUR_BASE_PATH}/$tourId`,
   IMPORT: IMPORT_PATH,
-  PIPELINE_EDITOR: `${EDITOR_PATH}/$name`,
+  EDITOR: EDITOR_PATH,
+  NEW_PIPELINE: `${EDITOR_PATH}/new/pipeline`,
   REMOTE_PIPELINE_EDITOR: `${EDITOR_PATH}/pipeline/$pipelineId`,
-  LEGACY_REMOTE_PIPELINE_EDITOR: `${EDITOR_PATH}/remote/$pipelineId`,
   RUN_DETAIL: `${RUNS_BASE_PATH}/$id`,
   RUN_DETAIL_WITH_SUBGRAPH: `${RUNS_BASE_PATH}/$id/$subgraphExecutionId`,
   RUNS: RUNS_BASE_PATH,
@@ -44,16 +41,7 @@ export const APP_ROUTES = {
   SETTINGS_SECRETS_REPLACE: `${SETTINGS_PATH}/secrets/$secretId/replace`,
   GITHUB_AUTH_CALLBACK: "/authorize/github",
   HUGGINGFACE_AUTH_CALLBACK: "/authorize/huggingface",
-  EDITOR_V2: EDITOR_V2_BASE_PATH,
-  EDITOR_V2_NEW_PIPELINE: `${EDITOR_V2_BASE_PATH}/new/pipeline`,
-  EDITOR_V2_PIPELINE: `${EDITOR_V2_BASE_PATH}/$pipelineName`,
-  EDITOR_V2_REMOTE_PIPELINE: `${EDITOR_V2_BASE_PATH}/pipeline/$pipelineId`,
-  LEGACY_EDITOR_V2_REMOTE_PIPELINE: `${EDITOR_V2_BASE_PATH}/remote/$pipelineId`,
-  RUNS_V2: RUNS_V2_BASE_PATH,
-  RUN_DETAIL_V2: `${RUNS_V2_BASE_PATH}/$id`,
-  RUN_DETAIL_V2_WITH_SUBGRAPH: `${RUNS_V2_BASE_PATH}/$id/$subgraphExecutionId`,
   TANGENT_PROJECT: `${TANGENT_BASE_PATH}/$projectId`,
-  PIPELINE_FOLDERS: "/pipeline-folders",
   PLAYGROUND: "/playground",
   ARTIFACT_PREVIEW: "/artifact/$artifactId",
   EXECUTION_LOGS: "/logs/$executionId",

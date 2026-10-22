@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   createRequiredContext,
@@ -8,12 +8,13 @@ import {
 
 import { PipelineStorageService } from "./PipelineStorageService";
 
-export const PipelineStorageCtx = createRequiredContext<PipelineStorageService>(
+const PipelineStorageCtx = createRequiredContext<PipelineStorageService>(
   "PipelineStorageContext",
 );
 
 export function PipelineStorageProvider({ children }: { children: ReactNode }) {
   const [service] = useState(() => new PipelineStorageService());
+  useEffect(() => service.connect(), [service]);
 
   return (
     <PipelineStorageCtx.Provider value={service}>

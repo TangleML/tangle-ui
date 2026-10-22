@@ -50,13 +50,7 @@ export const FloatingSelectionToolbar = observer(
     const handleCreateSubgraph = (name: string) => {
       if (!spec || selectedTasks.length === 0) return;
       const taskIds = selectedTasks.map((n) => n.id);
-      const centerX =
-        selectedTasks.reduce((sum, n) => sum + n.position.x, 0) /
-        selectedTasks.length;
-      const centerY =
-        selectedTasks.reduce((sum, n) => sum + n.position.y, 0) /
-        selectedTasks.length;
-      createSubgraph(spec, taskIds, name, { x: centerX, y: centerY });
+      createSubgraph(spec, taskIds, name);
     };
 
     return (

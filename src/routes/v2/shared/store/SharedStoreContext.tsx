@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useContext, useState } from "react";
 
 import {
   createRequiredContext,
@@ -41,4 +41,8 @@ export function SharedStoreProvider({ children }: { children: ReactNode }) {
 
 export function useSharedStores(): SharedUIStore {
   return useRequiredContext(SharedStoreCtx);
+}
+
+export function useOptionalSharedStores(): SharedUIStore | null | undefined {
+  return useContext(SharedStoreCtx);
 }

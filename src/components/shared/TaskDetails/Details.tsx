@@ -2,26 +2,20 @@ import { type ReactNode } from "react";
 
 import { BlockStack } from "@/components/ui/layout";
 import { useGuaranteedHydrateComponentReference } from "@/hooks/useHydrateComponentReference";
-import type { TaskNodeContextType } from "@/providers/TaskNodeProvider";
 import type { ComponentReference } from "@/utils/componentSpec";
 import { getExecutionStatusLabel } from "@/utils/executionStatus";
 import { buildComponentSourceUrl } from "@/utils/URL";
 
 import { ContentBlock } from "../ContextPanel/Blocks/ContentBlock";
-import { KeyValueList } from "../ContextPanel/Blocks/KeyValueList";
 import { TextBlock } from "../ContextPanel/Blocks/TextBlock";
-import { InlineEditor } from "../InlineEditor/InlineEditor";
 import { withSuspenseWrapper } from "../SuspenseWrapper";
-import { DisplayNameEditor } from "./DisplayNameEditor";
 import { ExecutionDetails } from "./ExecutionDetails";
 import { GithubDetails } from "./GithubDetails";
 
 interface TaskDetailsProps {
-  taskNode?: TaskNodeContextType;
   componentRef: ComponentReference;
   executionId?: string;
   status?: string;
-  readOnly?: boolean;
   options?: {
     descriptionExpanded?: boolean;
   };
@@ -35,11 +29,9 @@ interface TaskDetailsProps {
 const BASE_BLOCK_CLASS = "px-3 py-2";
 
 const TaskDetailsInternal = ({
-  taskNode,
   componentRef,
   executionId,
   status,
-  readOnly = false,
   options,
   additionalSection = [],
 }: TaskDetailsProps) => {
@@ -47,8 +39,6 @@ const TaskDetailsInternal = ({
     useGuaranteedHydrateComponentReference(componentRef);
 
   const { url, digest } = hydratedComponentRef;
-
-  const { displayName, taskSpec, taskId } = taskNode || {};
 
   const canonicalUrl =
     hydratedComponentRef.spec.metadata?.annotations?.canonical_location;
@@ -95,19 +85,6 @@ const TaskDetailsInternal = ({
 
   return (
     <BlockStack className="border rounded-md divide-y overflow-auto hide-scrollbar">
-      {taskId && (
-        <TextBlock title="Task ID" text={taskId} className={BASE_BLOCK_CLASS} />
-      )}
-
-      {!readOnly && taskId && (
-        <ContentBlock title="Display Name" className={BASE_BLOCK_CLASS}>
-          <InlineEditor
-            value={displayName}
-            editor={<DisplayNameEditor taskId={taskId} />}
-          />
-        </ContentBlock>
-      )}
-
       {status && (
         <TextBlock
           title="Execution Status"
@@ -161,25 +138,6 @@ const TaskDetailsInternal = ({
           {section.component}
         </ContentBlock>
       ))}
-
-      {Object.keys(taskSpec?.annotations || {}).length > 0 && (
-        <ContentBlock
-          key="annotations"
-          title="Task Annotations"
-          collapsible
-          defaultOpen={false}
-          className={BASE_BLOCK_CLASS}
-        >
-          <KeyValueList
-            items={Object.entries(taskSpec?.annotations || {}).map(
-              ([key, value]) => ({
-                label: key,
-                value: String(value),
-              }),
-            )}
-          />
-        </ContentBlock>
-      )}
     </BlockStack>
   );
 };

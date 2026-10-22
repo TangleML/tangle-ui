@@ -143,11 +143,6 @@ export default [
               message:
                 "Editor must not import from RunView. Pages cannot depend on each other. See src/routes/v2/ARCHITECTURE.md.",
             },
-            {
-              group: ["@/routes/v2/pages/PipelineFolders/**"],
-              message:
-                "Editor must not import from PipelineFolders. Pages cannot depend on each other. See src/routes/v2/ARCHITECTURE.md.",
-            },
           ],
         },
       ],
@@ -167,36 +162,6 @@ export default [
               group: ["@/routes/v2/pages/Editor/**"],
               message:
                 "RunView must not import from Editor. Pages cannot depend on each other. See src/routes/v2/ARCHITECTURE.md.",
-            },
-            {
-              group: ["@/routes/v2/pages/PipelineFolders/**"],
-              message:
-                "RunView must not import from PipelineFolders. Pages cannot depend on each other. See src/routes/v2/ARCHITECTURE.md.",
-            },
-          ],
-        },
-      ],
-    },
-  },
-  // v2 Architecture boundary: PipelineFolders must not import from other pages
-  {
-    files: ["src/routes/v2/pages/PipelineFolders/**/*.{ts,tsx}"],
-    rules: {
-      "no-restricted-imports": [
-        "error",
-        {
-          paths: baseRestrictedImportPaths,
-          patterns: [
-            ...baseRestrictedImportPatterns,
-            {
-              group: ["@/routes/v2/pages/Editor/**"],
-              message:
-                "PipelineFolders must not import from Editor. Pages cannot depend on each other. See src/routes/v2/ARCHITECTURE.md.",
-            },
-            {
-              group: ["@/routes/v2/pages/RunView/**"],
-              message:
-                "PipelineFolders must not import from RunView. Pages cannot depend on each other. See src/routes/v2/ARCHITECTURE.md.",
             },
           ],
         },

@@ -5,26 +5,16 @@ import type {
   SelectedNode,
 } from "@/routes/v2/shared/store/editorStore";
 
-/**
- * Returns the current effective selection: multiSelection if multiple nodes
- * are selected, or a single-element array built from selectedNodeId when
- * exactly one node is selected.
- */
+/** Resolve current geometry from the document when copying or duplicating. */
 export function getEffectiveSelection(
   registry: NodeTypeRegistry,
   spec: ComponentSpec,
   editor: EditorStore,
 ): SelectedNode[] {
-  const { multiSelection, selectedNodeId, selectedNodeType } = editor;
-  if (multiSelection.length > 0) return multiSelection;
-
-  if (!selectedNodeId || !selectedNodeType) return [];
-
-  const position = registry
-    .getByNodeId(spec, selectedNodeId)
-    ?.getPosition(spec, selectedNodeId);
-
-  if (!position) return [];
-
-  return [{ id: selectedNodeId, type: selectedNodeType, position }];
+  return editor.selectedNodes.flatMap((node) => {
+    const position = registry
+      .getByNodeId(spec, node.id)
+      ?.getPosition(spec, node.id);
+    return position ? [{ ...node, position }] : [];
+  });
 }

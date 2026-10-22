@@ -45,7 +45,6 @@ const createMockComponentLibraryContext = (
     error: null,
     existingComponentLibraries: undefined,
     searchResult: null,
-    searchComponentLibrary: vi.fn(),
     addToComponentLibrary: vi.fn(),
     removeFromComponentLibrary: vi.fn(),
     setComponentFavorite: vi.fn(),

@@ -63,7 +63,7 @@ export const AutoSaveIndicator = observer(function AutoSaveIndicator() {
   const isDraft = pipelineFile.activePipelineFile?.isDraft;
   const tooltipText =
     isDraft && !isSaving && !error
-      ? "Draft — saved after your first edit"
+      ? "Draft — click to save"
       : getTooltipText(isSaving, lastSavedAt, error);
 
   const handleClick = () => {

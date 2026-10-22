@@ -5,8 +5,7 @@ import {
 } from "@/api/remotePipelines/sdk.gen";
 import type { PipelineSummaryResponse } from "@/api/remotePipelines/types.gen";
 import { pipelineApiError } from "@/services/pipelineSpecService";
-import { waitForPendingRemotePipelineDraftWrites } from "@/services/pipelineStorage/drivers/RemotePipelineDraftStorageDriver";
-import { waitForPendingRemotePipelineWrites } from "@/services/pipelineStorage/drivers/RemotePipelineStorageDriver";
+import { waitForPendingPipelineWrites } from "@/services/pipelineStorage/PipelineFile";
 import {
   RemotePipelineDeletionUncertainError,
   withRemotePipelineDeletion,
@@ -110,10 +109,7 @@ export async function deleteRemotePipeline(
     pipelineId: pipeline.id,
   } satisfies RemotePipelineRef;
   return withRemotePipelineDeletion(ref, pipeline.file_path, async () => {
-    await Promise.all([
-      waitForPendingRemotePipelineWrites(ref, pipeline.file_path),
-      waitForPendingRemotePipelineDraftWrites(backendUrl, pipeline.file_path),
-    ]);
+    await waitForPendingPipelineWrites(ref, pipeline.file_path);
     if ((await getRemotePipelineWriter(backendUrl)) !== pipeline.user_id) {
       throw new Error("You can only delete pipelines that you own.");
     }

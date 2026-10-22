@@ -42,9 +42,9 @@ function membership(id: string, name: string): PipelineProjectMembership {
     resource: {
       id: `resource-for-${id}`,
       name: "Churn model",
-      entity: "document",
-      entityId: null,
-      metadata: { type: "local_pipeline" },
+      entity: "pipeline",
+      entityId: "pipeline-1",
+      metadata: null,
     } as unknown as PipelineProjectMembership["resource"],
   };
 }
@@ -93,14 +93,18 @@ describe("ProjectPicker", () => {
   it("shows nothing at all while projects are switched off", () => {
     given({ enabled: false });
 
-    const { container } = render(<ProjectPicker pipelineName="Churn model" />);
+    const { container } = render(
+      <ProjectPicker pipelineId="pipeline-1" pipelineName="Churn model" />,
+    );
 
     expect(container).toBeEmptyDOMElement();
   });
 
   /** The old chip only appeared once a project was set, so there was nothing to click. */
   it("offers itself on a pipeline that belongs to no project", () => {
-    render(<ProjectPicker pipelineName="Churn model" />);
+    render(
+      <ProjectPicker pipelineId="pipeline-1" pipelineName="Churn model" />,
+    );
 
     expect(
       screen.getByRole("button", { name: "Project for runs: No project" }),
@@ -110,7 +114,9 @@ describe("ProjectPicker", () => {
   it("names the project the runs of this tab go to", () => {
     given({ projectId: "project-1", projectName: "Churn work" });
 
-    render(<ProjectPicker pipelineName="Churn model" />);
+    render(
+      <ProjectPicker pipelineId="pipeline-1" pipelineName="Churn model" />,
+    );
 
     expect(
       screen.getByRole("button", { name: "Project for runs: Churn work" }),
@@ -127,7 +133,9 @@ describe("ProjectPicker", () => {
       ],
     });
 
-    render(<ProjectPicker pipelineName="Churn model" />);
+    render(
+      <ProjectPicker pipelineId="pipeline-1" pipelineName="Churn model" />,
+    );
     await open();
 
     expect(
@@ -148,7 +156,9 @@ describe("ProjectPicker", () => {
       ],
     });
 
-    render(<ProjectPicker pipelineName="Churn model" />);
+    render(
+      <ProjectPicker pipelineId="pipeline-1" pipelineName="Churn model" />,
+    );
     await open();
     await userEvent.click(
       screen.getByRole("menuitemradio", { name: "Q3 models" }),
@@ -160,7 +170,9 @@ describe("ProjectPicker", () => {
   it("stops sending them anywhere", async () => {
     given({ projectId: "project-1", projectName: "Churn work" });
 
-    render(<ProjectPicker pipelineName="Churn model" />);
+    render(
+      <ProjectPicker pipelineId="pipeline-1" pipelineName="Churn model" />,
+    );
     await open();
     await userEvent.click(
       screen.getByRole("menuitemradio", { name: "No project" }),
@@ -176,7 +188,9 @@ describe("ProjectPicker", () => {
   it("lists a chosen project the pipeline is not in", async () => {
     given({ projectId: "project-9", projectName: "Somebody else's" });
 
-    render(<ProjectPicker pipelineName="Churn model" />);
+    render(
+      <ProjectPicker pipelineId="pipeline-1" pipelineName="Churn model" />,
+    );
     await open();
 
     expect(
@@ -187,7 +201,9 @@ describe("ProjectPicker", () => {
   it("offers no removal from a project the pipeline is not in", async () => {
     given({ projectId: "project-9", projectName: "Somebody else's" });
 
-    render(<ProjectPicker pipelineName="Churn model" />);
+    render(
+      <ProjectPicker pipelineId="pipeline-1" pipelineName="Churn model" />,
+    );
     await open();
 
     expect(screen.queryByText(/^Remove from/)).not.toBeInTheDocument();
@@ -200,7 +216,9 @@ describe("ProjectPicker", () => {
       memberships: [membership("project-1", "Churn work")],
     });
 
-    render(<ProjectPicker pipelineName="Churn model" />);
+    render(
+      <ProjectPicker pipelineId="pipeline-1" pipelineName="Churn model" />,
+    );
     await open();
     await userEvent.click(screen.getByText("Remove from Churn work"));
     await userEvent.click(
@@ -223,20 +241,24 @@ describe("ProjectPicker", () => {
       memberships: [membership("project-1", "Churn work")],
     });
 
-    render(<ProjectPicker pipelineName="Churn model" />);
+    render(
+      <ProjectPicker pipelineId="pipeline-1" pipelineName="Churn model" />,
+    );
     await open();
     await userEvent.click(screen.getByText("Remove from Churn work"));
 
     expect(
-      await screen.findByText(/stays in the browser that holds it/),
+      await screen.findByText(/stays wherever it lives/),
     ).toBeInTheDocument();
     expect(removeResource).not.toHaveBeenCalled();
   });
 
   it("waits to be asked before reading every project's contents", () => {
-    render(<ProjectPicker pipelineName="Churn model" />);
+    render(
+      <ProjectPicker pipelineId="pipeline-1" pipelineName="Churn model" />,
+    );
 
-    expect(usePipelineProjects).toHaveBeenCalledWith("Churn model", {
+    expect(usePipelineProjects).toHaveBeenCalledWith("pipeline-1", {
       enabled: false,
     });
   });

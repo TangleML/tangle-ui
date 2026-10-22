@@ -118,7 +118,7 @@ async function open(button: ReactElement, basepath = "/", embedded = false) {
     getParentRoute: () => root,
     path: embedded
       ? APP_ROUTES.TANGENT_PROJECT
-      : APP_ROUTES.EDITOR_V2_REMOTE_PIPELINE,
+      : APP_ROUTES.REMOTE_PIPELINE_EDITOR,
     component: () => button,
   });
   const prefix = basepath === "/" ? "" : basepath;
@@ -126,7 +126,7 @@ async function open(button: ReactElement, basepath = "/", embedded = false) {
     initialEntries: [
       embedded
         ? "/tangent/project-1"
-        : `${prefix}/editor-v2/pipeline/remote-id?projectId=project-1&nodeId=old&unrelated=value`,
+        : `${prefix}/editor/pipeline/remote-id?projectId=project-1&nodeId=old&unrelated=value`,
     ],
   });
   const router = createRouter({
@@ -153,7 +153,7 @@ it("copies a root node link with the deployment path and project context", async
   );
   await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
   const link = new URL(writeText.mock.calls[0][0]);
-  expect(link.pathname).toBe("/workspace/editor-v2/pipeline/remote-id");
+  expect(link.pathname).toBe("/workspace/editor/pipeline/remote-id");
   expect(link.searchParams.get("nodeId")).toBe("nested / α & β");
   expect(link.searchParams.get("nodeType")).toBe("task");
   expect(link.searchParams.get("projectId")).toBe("project-1");
@@ -249,7 +249,7 @@ it("uses the history URL when the app is deployed with hash routing", async () =
   const link = new URL(writeText.mock.calls[0][0]);
   expect(link.pathname).toBe("/app/");
   const route = new URL(link.hash.slice(1), link.origin);
-  expect(route.pathname).toBe("/editor-v2/pipeline/remote-id");
+  expect(route.pathname).toBe("/editor/pipeline/remote-id");
   expect(route.searchParams.get("nodeId")).toBe("Task with spaces");
 });
 

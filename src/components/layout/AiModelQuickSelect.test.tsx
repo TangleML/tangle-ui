@@ -6,15 +6,10 @@ import { AI_USE_OWN_KEY_STORAGE_KEY } from "@/hooks/useAiProviderSettings";
 import { AiModelQuickSelect } from "./AiModelQuickSelect";
 
 const STORAGE_KEY = "tangle.aiProvider.config";
-const FLAGS_STORAGE_KEY = "betaFlags";
 
 vi.mock("@/providers/BackendProvider", () => ({
   useBackend: () => ({ backendUrl: "https://backend.example.com" }),
 }));
-
-function enableFlags(flags: Record<string, boolean>) {
-  window.localStorage.setItem(FLAGS_STORAGE_KEY, JSON.stringify(flags));
-}
 
 describe("AiModelQuickSelect", () => {
   beforeEach(() => {
@@ -28,7 +23,6 @@ describe("AiModelQuickSelect", () => {
   });
 
   it("does not render until AI provider settings are configured", () => {
-    enableFlags({ "ai-assistant": true });
     window.localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, "true");
 
     render(<AiModelQuickSelect />);
@@ -38,31 +32,7 @@ describe("AiModelQuickSelect", () => {
     ).toBeNull();
   });
 
-  it("does not render when all features using the model are disabled", () => {
-    enableFlags({
-      "ai-assistant": false,
-      "component-search-v2": false,
-      "tangent-shell": false,
-    });
-    window.localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, "true");
-    window.localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
-        apiBase: "https://api.example.com/v1",
-        apiKey: "",
-        model: "gpt-4.1-mini",
-      }),
-    );
-
-    render(<AiModelQuickSelect />);
-
-    expect(
-      screen.queryByRole("button", { name: /^AI model and thinking:/ }),
-    ).toBeNull();
-  });
-
-  it("shows configured model choices when component search is enabled", () => {
-    enableFlags({ "component-search-v2": true });
+  it("shows configured model choices", () => {
     window.localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, "true");
     window.localStorage.setItem(
       STORAGE_KEY,
@@ -85,43 +55,7 @@ describe("AiModelQuickSelect", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows configured model choices when the AI assistant is enabled", () => {
-    enableFlags({ "ai-assistant": true });
-    window.localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, "true");
-    window.localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
-        apiBase: "https://api.example.com/v1",
-        apiKey: "",
-        model: "gpt-4.1-mini",
-      }),
-    );
-
-    render(<AiModelQuickSelect />);
-
-    expect(
-      screen.getByRole("button", { name: /^AI model and thinking:/ }),
-    ).toBeInTheDocument();
-  });
-
-  it("shows the model picker when only Tangent is enabled", () => {
-    enableFlags({
-      projects: true,
-      "tangent-shell": true,
-      "ai-assistant": false,
-      "component-search-v2": false,
-    });
-    window.localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, "false");
-
-    render(<AiModelQuickSelect />);
-
-    expect(
-      screen.getByRole("button", { name: /^AI model and thinking:/ }),
-    ).toBeInTheDocument();
-  });
-
   it("shows the first model with High thinking in proxy mode by default", () => {
-    enableFlags({ "ai-assistant": true });
     render(<AiModelQuickSelect />);
     expect(
       screen.getByRole("button", {

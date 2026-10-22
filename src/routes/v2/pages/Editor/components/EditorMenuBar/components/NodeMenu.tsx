@@ -84,7 +84,6 @@ export const NodeMenu = observer(function NodeMenu() {
       const removedComponentRef = task?.componentRef;
       deleteTask(spec, entityId);
       editor.clearSelection();
-      editor.clearMultiSelection();
       track("pipeline_editor.component.removed", {
         ...componentMetadata(removedComponentRef),
       });

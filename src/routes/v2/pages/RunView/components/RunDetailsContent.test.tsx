@@ -30,7 +30,7 @@ vi.mock("@/routes/v2/shared/providers/SpecContext", () => ({
 
 vi.mock("@/providers/ExecutionDataProvider", () => ({
   useExecutionData: () => ({
-    rootDetails: { task_spec: { arguments: {} } },
+    rootDetails: { task_spec: { arguments: {}, componentRef: { spec: {} } } },
     rootState: { child_execution_status_stats: {} },
     metadata: { ...mockMetadata, execution_status_stats: runStats },
     isLoading: false,

@@ -40,6 +40,8 @@ interface PickFromListDialogProps {
   cancelTracking: string;
   onPick: (id: string) => void;
   onClose: () => void;
+  search?: { value: string; onChange: (value: string) => void };
+  pagination?: ReactNode;
 }
 
 /** Shared by "pick a pipeline for a project" and its inverse. */
@@ -58,6 +60,8 @@ export function PickFromListDialog({
   cancelTracking,
   onPick,
   onClose,
+  search,
+  pagination,
 }: PickFromListDialogProps) {
   const [query, setQuery] = useState("");
 
@@ -67,9 +71,11 @@ export function PickFromListDialog({
   };
 
   const all = items ?? [];
-  const matches = all.filter((item) =>
-    item.label.toLowerCase().includes(query.trim().toLowerCase()),
-  );
+  const matches = search
+    ? all
+    : all.filter((item) =>
+        item.label.toLowerCase().includes(query.trim().toLowerCase()),
+      );
 
   return (
     <Dialog open onOpenChange={(next) => (next ? undefined : close())}>
@@ -83,11 +89,11 @@ export function PickFromListDialog({
             {helpText}
           </Text>
 
-          {all.length > 0 && (
+          {(search || all.length > 0) && (
             <PickerSearchField
               label={`Search ${noun}s`}
-              value={query}
-              onChange={setQuery}
+              value={search?.value ?? query}
+              onChange={search?.onChange ?? setQuery}
             />
           )}
 
@@ -132,6 +138,8 @@ export function PickFromListDialog({
             ))}
           </BlockStack>
         </BlockStack>
+
+        {pagination}
 
         <DialogFooter className="w-full">
           <InlineStack gap="2" className="w-full" align="end">

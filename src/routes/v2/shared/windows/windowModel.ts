@@ -1,7 +1,7 @@
 import { action, computed, makeObservable, observable } from "mobx";
 
-import { emitDockAreaEvent } from "./dockAreaPlugins";
 import {
+  type DockAreaEvent,
   type DockState,
   isDockSide,
   MIN_DOCKED_HEIGHT,
@@ -16,6 +16,7 @@ import {
  * Defined here to avoid circular runtime imports between windowModel.ts and windowStore.ts.
  */
 export interface WindowStoreRef {
+  emitDockAreaEvent(event: DockAreaEvent): void;
   closeWindow(id: string): void;
   bringToFront(id: string): void;
   dockWindow(id: string, side: DockState, insertIndex?: number): void;
@@ -142,7 +143,7 @@ export class WindowModel {
     this.saveSnapshot();
     this.state = "minimized";
     if (!quiet && this.isDocked && isDockSide(this.dockState)) {
-      emitDockAreaEvent({
+      this.store.emitDockAreaEvent({
         type: "window-minimized",
         side: this.dockState,
         windowId: this.id,
@@ -180,7 +181,7 @@ export class WindowModel {
       (wasMinimized || wasHidden) &&
       isDockSide(this.dockState)
     ) {
-      emitDockAreaEvent({
+      this.store.emitDockAreaEvent({
         type: "window-expanded",
         side: this.dockState,
         windowId: this.id,

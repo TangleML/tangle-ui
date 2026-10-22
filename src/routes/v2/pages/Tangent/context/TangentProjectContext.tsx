@@ -1,5 +1,4 @@
 import { useTangent } from "@tangent/embed-react";
-import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useState } from "react";
 
 import {
@@ -7,6 +6,7 @@ import {
   useRequiredContext,
 } from "@/hooks/useRequiredContext";
 import useToastNotification from "@/hooks/useToastNotification";
+import { useBackend } from "@/providers/BackendProvider";
 import { usePrepareProjectArrival } from "@/routes/v2/pages/Tangent/hooks/usePrepareProjectArrival";
 import { useProjectSessions } from "@/routes/v2/pages/Tangent/hooks/useProjectSessions";
 import { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
@@ -40,11 +40,11 @@ export function TangentProjectProvider({
   } = useProjectSessions(projectId);
   const [store] = useState(() => new TangentProjectStore(projectId));
   const storage = usePipelineStorage();
-  const queryClient = useQueryClient();
+  const { backendUrl } = useBackend();
 
   useEffect(
-    () => observeWorkareaPipelineDrafts(store, storage, queryClient),
-    [store, storage, queryClient],
+    () => observeWorkareaPipelineDrafts(store, storage, backendUrl),
+    [store, storage, backendUrl],
   );
 
   useEffect(() => {

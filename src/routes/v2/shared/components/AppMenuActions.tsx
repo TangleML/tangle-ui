@@ -5,9 +5,7 @@ import { OnboardingNavPill } from "@/components/Onboarding/OnboardingNavPill";
 import { isAuthorizationRequired } from "@/components/shared/Authentication/helpers";
 import { TopBarAuthentication } from "@/components/shared/Authentication/TopBarAuthentication";
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
-import { EditorVersionToggle } from "@/components/shared/EditorVersionToggle";
 import { NoticeInbox } from "@/components/shared/Notices/NoticeInbox";
-import { RunVersionToggle } from "@/components/shared/RunVersionToggle";
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
 import { Link } from "@/components/ui/link";
@@ -29,8 +27,6 @@ export function AppMenuActions() {
     >
       {!tourMode && <OnboardingNavPill />}
       <AiModelQuickSelect />
-      <EditorVersionToggle showWelcomeSpotlight />
-      <RunVersionToggle showWelcomeSpotlight />
       <NoticeInbox />
       {tourMode ? (
         <TooltipButton

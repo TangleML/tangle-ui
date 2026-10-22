@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
 import { Paragraph, Text } from "@/components/ui/typography";
-import { getDefaultEditorPath } from "@/routes/editorRoutes";
 import { importPipelineFromYaml } from "@/services/pipelineService";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 
@@ -197,14 +196,14 @@ export const ImportPage = () => {
       }
 
       setStep(Step.Importing);
-      const result = await importPipelineFromYaml(storage, yamlContent, true);
+      const result = await importPipelineFromYaml(storage, yamlContent);
 
       if (result.successful) {
         importedRef.current = true;
         setPipelineName(result.name);
         setStep(Step.Done);
         navigate({
-          to: result.url ?? getDefaultEditorPath(result.name),
+          to: result.url,
         });
       } else {
         setError(result.errorMessage || "Failed to import pipeline from URL.");
@@ -277,8 +276,7 @@ export const ImportPage = () => {
           </InfoBox>
 
           <Paragraph tone="subdued" size="xs" className="text-center">
-            If a pipeline with the same name already exists, it will be
-            overwritten.
+            This creates a new pipeline.
           </Paragraph>
 
           <InlineStack gap="3" align="center">

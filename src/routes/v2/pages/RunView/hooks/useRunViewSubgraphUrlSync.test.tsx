@@ -7,57 +7,35 @@ import {
   useRunViewSubgraphUrlSync,
 } from "./useRunViewSubgraphUrlSync";
 
-const routerMocks = vi.hoisted(() => ({
+const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
-  params: {} as Record<string, unknown>,
-}));
-
-const executionDataMock = vi.hoisted(() => ({
-  // Loosely typed on purpose: the hook only reads a small slice of the
-  // execution data context, so tests provide just those fields.
-  current: {} as {
-    runId?: string | null;
-    details?: { child_task_execution_ids?: Record<string, string> };
-    segments?: { taskId: string; executionId: string; taskName: string }[];
+  execution: {} as {
+    runId: string;
+    subgraphExecutionId?: string;
+    details: { child_task_execution_ids: Record<string, string> };
+    segments: { taskId: string; executionId: string; taskName: string }[];
+    isLoading?: boolean;
   },
-}));
-
-const sharedStoreMock = vi.hoisted(() => ({
   navigation: undefined as unknown as MockNavigationStore,
 }));
 
-vi.mock("@tanstack/react-router", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("@tanstack/react-router")>();
-  return {
-    ...actual,
-    useNavigate: () => routerMocks.navigate,
-    useParams: () => routerMocks.params,
-  };
-});
-
-vi.mock("@/providers/ExecutionDataProvider", () => ({
-  useExecutionData: () => executionDataMock.current,
+vi.mock("@tanstack/react-router", () => ({
+  useNavigate: () => mocks.navigate,
 }));
-
+vi.mock("@/providers/ExecutionDataProvider", () => ({
+  useExecutionData: () => mocks.execution,
+}));
 vi.mock("@/routes/v2/shared/store/SharedStoreContext", () => ({
-  useSharedStores: () => ({ navigation: sharedStoreMock.navigation }),
+  useSharedStores: () => ({ navigation: mocks.navigation }),
 }));
 
 const ROOT_NAME = "root-pipeline";
 
-/**
- * Minimal observable stand-in for the V2 NavigationStore exposing just the
- * surface the hook touches (`navigationPath`, `rootSpec`, and the navigation
- * actions). Reassigning `navigationPath` triggers the hook's mobx reaction.
- */
 class MockNavigationStore {
-  navigationPath: { specId: string; displayName: string }[];
-  rootSpec: { name: string } | null;
+  rootSpec: { name: string } | null = { name: ROOT_NAME };
+  navigationPath = [{ specId: "root", displayName: ROOT_NAME }];
 
-  constructor(rootName = ROOT_NAME) {
-    this.rootSpec = { name: rootName };
-    this.navigationPath = [{ specId: "root", displayName: rootName }];
+  constructor() {
     makeAutoObservable(this);
   }
 
@@ -80,7 +58,13 @@ class MockNavigationStore {
   }
 
   clearNavigation() {
+    this.rootSpec = null;
     this.navigationPath = [];
+  }
+
+  initNavigation() {
+    this.rootSpec = { name: ROOT_NAME };
+    this.navigationPath = [{ specId: "root", displayName: ROOT_NAME }];
   }
 
   get displayNames() {
@@ -88,195 +72,154 @@ class MockNavigationStore {
   }
 }
 
-const renderSyncHook = () => renderHook(() => useRunViewSubgraphUrlSync());
+const firstSegment = {
+  taskId: "sub-task",
+  executionId: "exec-sub",
+  taskName: "Display name of component",
+};
 
-describe("useRunViewSubgraphUrlSync", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    routerMocks.params = {};
-    sharedStoreMock.navigation = new MockNavigationStore();
-    executionDataMock.current = {
-      runId: "run-1",
-      details: { child_task_execution_ids: {} },
+beforeEach(() => {
+  vi.clearAllMocks();
+  mocks.navigation = new MockNavigationStore();
+  mocks.execution = {
+    runId: "run-1",
+    details: { child_task_execution_ids: { "sub-task": "exec-sub" } },
+    segments: [],
+  };
+});
+afterEach(cleanup);
+
+describe("routed run navigation", () => {
+  it("enters a subgraph using its execution ID", () => {
+    renderHook(() => useRunViewSubgraphUrlSync());
+    act(() => mocks.navigation.navigateToSubgraph("sub-task"));
+    expect(mocks.navigate).toHaveBeenCalledExactlyOnceWith({
+      to: "/runs/run-1/exec-sub",
+    });
+  });
+
+  it("projects a deep link using task IDs without pushing another URL", () => {
+    mocks.execution.subgraphExecutionId = "exec-sub";
+    mocks.execution.segments = [firstSegment];
+    renderHook(() => useRunViewSubgraphUrlSync());
+    expect(mocks.navigation.displayNames).toEqual([ROOT_NAME, "sub-task"]);
+    expect(mocks.navigate).not.toHaveBeenCalled();
+  });
+
+  it("handles browser back and forward without feedback", () => {
+    mocks.execution = {
+      ...mocks.execution,
+      subgraphExecutionId: "exec-sub",
+      segments: [firstSegment],
+    };
+    const { rerender } = renderHook(() => useRunViewSubgraphUrlSync());
+
+    mocks.execution = {
+      ...mocks.execution,
+      subgraphExecutionId: undefined,
       segments: [],
     };
-  });
+    rerender();
+    expect(mocks.navigation.displayNames).toEqual([ROOT_NAME]);
 
-  afterEach(cleanup);
-
-  it("does not navigate on mount at the root level", () => {
-    renderSyncHook();
-
-    expect(routerMocks.navigate).not.toHaveBeenCalled();
-  });
-
-  it("pushes the child execution id onto the URL when entering a subgraph", () => {
-    executionDataMock.current.details = {
-      child_task_execution_ids: { "sub-task": "exec-sub" },
+    mocks.execution = {
+      ...mocks.execution,
+      subgraphExecutionId: "exec-sub",
+      segments: [firstSegment],
     };
+    rerender();
+    expect(mocks.navigation.displayNames).toEqual([ROOT_NAME, "sub-task"]);
+    expect(mocks.navigate).not.toHaveBeenCalled();
+  });
 
-    const navigation = sharedStoreMock.navigation;
-    renderSyncHook();
+  it("keeps the selected execution when the root model is reinitialized", () => {
+    mocks.execution.subgraphExecutionId = "exec-sub";
+    mocks.execution.segments = [firstSegment];
+    renderHook(() => useRunViewSubgraphUrlSync());
 
-    act(() => navigation.navigateToSubgraph("sub-task"));
+    act(() => {
+      mocks.navigation.clearNavigation();
+      mocks.navigation.initNavigation();
+    });
 
-    expect(routerMocks.navigate).toHaveBeenCalledTimes(1);
-    expect(routerMocks.navigate).toHaveBeenCalledWith({
-      to: "/runs-v2/run-1/exec-sub",
+    expect(mocks.navigation.displayNames).toEqual([ROOT_NAME, "sub-task"]);
+    expect(mocks.navigate).not.toHaveBeenCalled();
+  });
+
+  it("waits for the incoming execution before applying its path", () => {
+    mocks.execution = {
+      ...mocks.execution,
+      subgraphExecutionId: "exec-sub",
+      isLoading: true,
+    };
+    const { rerender } = renderHook(() => useRunViewSubgraphUrlSync());
+    expect(mocks.navigation.displayNames).toEqual([ROOT_NAME]);
+
+    mocks.execution = {
+      ...mocks.execution,
+      isLoading: false,
+      segments: [firstSegment],
+    };
+    rerender();
+    expect(mocks.navigation.displayNames).toEqual([ROOT_NAME, "sub-task"]);
+    expect(mocks.navigate).not.toHaveBeenCalled();
+  });
+
+  it("returns to the parent execution from a nested breadcrumb", () => {
+    mocks.execution = {
+      ...mocks.execution,
+      subgraphExecutionId: "exec-deep",
+      segments: [
+        firstSegment,
+        {
+          taskId: "deeper",
+          executionId: "exec-deep",
+          taskName: "Deeper component",
+        },
+      ],
+    };
+    renderHook(() => useRunViewSubgraphUrlSync());
+    act(() => mocks.navigation.navigateToLevel(1));
+    expect(mocks.navigate).toHaveBeenCalledExactlyOnceWith({
+      to: "/runs/run-1/exec-sub",
     });
   });
 
-  it("does not navigate when the child execution id cannot be resolved", () => {
-    executionDataMock.current.details = { child_task_execution_ids: {} };
-
-    const navigation = sharedStoreMock.navigation;
-    renderSyncHook();
-
-    act(() => navigation.navigateToSubgraph("sub-task"));
-
-    expect(routerMocks.navigate).not.toHaveBeenCalled();
-  });
-
-  it("drops the subgraph segment when navigating back to the root", () => {
-    const navigation = sharedStoreMock.navigation;
-    navigation.navigateToSubgraph("sub-task");
-
-    renderSyncHook();
-
-    act(() => navigation.navigateToLevel(0));
-
-    expect(routerMocks.navigate).toHaveBeenCalledTimes(1);
-    expect(routerMocks.navigate).toHaveBeenCalledWith({ to: "/runs-v2/run-1" });
-  });
-
-  it("resolves the target execution id from breadcrumb segments when going shallower", () => {
-    executionDataMock.current.segments = [
-      { taskId: "t-a", executionId: "exec-a", taskName: "a" },
-      { taskId: "t-b", executionId: "exec-b", taskName: "b" },
-    ];
-
-    const navigation = sharedStoreMock.navigation;
-    navigation.navigateToSubgraph("a");
-    navigation.navigateToSubgraph("b");
-
-    renderSyncHook();
-
-    act(() => navigation.navigateToLevel(1));
-
-    expect(routerMocks.navigate).toHaveBeenCalledTimes(1);
-    expect(routerMocks.navigate).toHaveBeenCalledWith({
-      to: "/runs-v2/run-1/exec-a",
+  it("returns to the root execution", () => {
+    mocks.execution.subgraphExecutionId = "exec-sub";
+    mocks.execution.segments = [firstSegment];
+    renderHook(() => useRunViewSubgraphUrlSync());
+    act(() => mocks.navigation.navigateToLevel(0));
+    expect(mocks.navigate).toHaveBeenCalledExactlyOnceWith({
+      to: "/runs/run-1",
     });
   });
 
-  it("syncs the navigation store from an external subgraph URL without pushing back", () => {
-    routerMocks.params = { subgraphExecutionId: "exec-sub" };
-    executionDataMock.current.segments = [
-      { taskId: "t-sub", executionId: "exec-sub", taskName: "sub-task" },
-    ];
-
-    const navigation = sharedStoreMock.navigation;
-    renderSyncHook();
-
-    expect(navigation.displayNames).toEqual([ROOT_NAME, "sub-task"]);
-    // The URL already matches, so direction A must not push a redundant nav.
-    expect(routerMocks.navigate).not.toHaveBeenCalled();
-  });
-
-  it("does not push a root URL when the navigation store is cleared (unmount / StrictMode remount)", () => {
-    executionDataMock.current.segments = [
-      { taskId: "t-sub", executionId: "exec-sub", taskName: "sub-task" },
-    ];
-
-    const navigation = sharedStoreMock.navigation;
-    navigation.navigateToSubgraph("sub-task");
-
-    renderSyncHook();
-
-    // Simulates the spec-lifecycle cleanup emptying the path while the
-    // direction A reaction is still active.
-    act(() => navigation.clearNavigation());
-
-    expect(routerMocks.navigate).not.toHaveBeenCalled();
-  });
-
-  it("does not resync the navigation store while breadcrumb segments are still loading", () => {
-    routerMocks.params = { subgraphExecutionId: "exec-sub" };
-    executionDataMock.current.segments = [];
-
-    const navigation = sharedStoreMock.navigation;
-    renderSyncHook();
-
-    expect(navigation.displayNames).toEqual([ROOT_NAME]);
-    expect(routerMocks.navigate).not.toHaveBeenCalled();
+  it("ignores lifecycle cleanup and unresolved child executions", () => {
+    renderHook(() => useRunViewSubgraphUrlSync());
+    act(() => mocks.navigation.navigateToSubgraph("unresolved"));
+    act(() => mocks.navigation.clearNavigation());
+    expect(mocks.navigate).not.toHaveBeenCalled();
   });
 });
 
-describe("useRunViewSubgraphExecutionSync (callback mode)", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    sharedStoreMock.navigation = new MockNavigationStore();
-    executionDataMock.current = {
-      runId: "run-1",
-      details: { child_task_execution_ids: {} },
-      segments: [],
+describe("embedded run navigation", () => {
+  it("updates only its callback and accepts the resulting execution scope", () => {
+    const onExecutionId = vi.fn();
+    const { rerender } = renderHook(() =>
+      useRunViewSubgraphExecutionSync(onExecutionId),
+    );
+    act(() => mocks.navigation.navigateToSubgraph("sub-task"));
+    expect(onExecutionId).toHaveBeenCalledExactlyOnceWith("exec-sub");
+
+    mocks.execution = {
+      ...mocks.execution,
+      subgraphExecutionId: "exec-sub",
+      segments: [firstSegment],
     };
-  });
-
-  afterEach(cleanup);
-
-  it("emits the child execution id when entering a subgraph, without navigating", () => {
-    executionDataMock.current.details = {
-      child_task_execution_ids: { "sub-task": "exec-sub" },
-    };
-    const onExecutionId = vi.fn();
-    const navigation = sharedStoreMock.navigation;
-
-    renderHook(() => useRunViewSubgraphExecutionSync(onExecutionId));
-
-    act(() => navigation.navigateToSubgraph("sub-task"));
-
-    expect(onExecutionId).toHaveBeenCalledWith("exec-sub");
-    expect(routerMocks.navigate).not.toHaveBeenCalled();
-  });
-
-  it("emits undefined when returning to the root", () => {
-    const onExecutionId = vi.fn();
-    const navigation = sharedStoreMock.navigation;
-    navigation.navigateToSubgraph("sub-task");
-
-    renderHook(() => useRunViewSubgraphExecutionSync(onExecutionId));
-
-    act(() => navigation.navigateToLevel(0));
-
-    expect(onExecutionId).toHaveBeenCalledWith(undefined);
-  });
-
-  it("emits the breadcrumb execution id when going shallower", () => {
-    executionDataMock.current.segments = [
-      { taskId: "t-a", executionId: "exec-a", taskName: "a" },
-      { taskId: "t-b", executionId: "exec-b", taskName: "b" },
-    ];
-    const onExecutionId = vi.fn();
-    const navigation = sharedStoreMock.navigation;
-    navigation.navigateToSubgraph("a");
-    navigation.navigateToSubgraph("b");
-
-    renderHook(() => useRunViewSubgraphExecutionSync(onExecutionId));
-
-    act(() => navigation.navigateToLevel(1));
-
-    expect(onExecutionId).toHaveBeenCalledWith("exec-a");
-  });
-
-  it("does not emit when the child execution id cannot be resolved", () => {
-    const onExecutionId = vi.fn();
-    const navigation = sharedStoreMock.navigation;
-
-    renderHook(() => useRunViewSubgraphExecutionSync(onExecutionId));
-
-    act(() => navigation.navigateToSubgraph("sub-task"));
-
-    expect(onExecutionId).not.toHaveBeenCalled();
+    rerender();
+    expect(mocks.navigation.displayNames).toEqual([ROOT_NAME, "sub-task"]);
+    expect(onExecutionId).toHaveBeenCalledTimes(1);
+    expect(mocks.navigate).not.toHaveBeenCalled();
   });
 });

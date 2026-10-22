@@ -6,7 +6,6 @@ import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
 import { useIsDetailedView } from "@/routes/v2/shared/hooks/useIsDetailedView";
 import type { IONodeData } from "@/routes/v2/shared/nodes/types";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
-import { isEditorVisualNodeSelected } from "@/routes/v2/shared/store/isEditorVisualNodeSelected";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { getArgumentValue } from "@/utils/nodes/taskArguments";
 
@@ -37,11 +36,7 @@ function typeToString(type: unknown): string | undefined {
   return JSON.stringify(type);
 }
 
-export const IONode = observer(function IONode({
-  id,
-  data,
-  selected,
-}: IONodeProps) {
+export const IONode = observer(function IONode({ id, data }: IONodeProps) {
   const { entityId, ioType } = data;
   const { editor } = useSharedStores();
   const showContent = useIsDetailedView();
@@ -55,10 +50,8 @@ export const IONode = observer(function IONode({
     : spec?.outputs.find((o) => o.$id === entityId);
 
   const handleClick = (event: MouseEvent) => {
-    editor.selectNode(id, ioType, {
-      shiftKey: event.shiftKey,
-      entityId,
-    });
+    if (event.shiftKey)
+      editor.selectNode(id, ioType, { shiftKey: true, entityId });
   };
 
   const name = entity?.name ?? entityId;
@@ -96,7 +89,7 @@ export const IONode = observer(function IONode({
       ? (entity.value ?? undefined)
       : undefined;
 
-  const isSelected = isEditorVisualNodeSelected(editor, id, !!selected);
+  const isSelected = editor.isNodeSelected(id);
 
   const viewProps: IONodeViewProps = {
     entityId,

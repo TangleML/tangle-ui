@@ -1,13 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useMemo } from "react";
 
 import { useTrackRecentlyViewedRun } from "@/hooks/useTrackRecentlyViewedRun";
 import type { ComponentSpec } from "@/models/componentSpec";
 import { useBackend } from "@/providers/BackendProvider";
-import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
 import { deserializeRunSpec } from "@/routes/v2/pages/RunView/deserializeRunSpec";
 import { getBackendStatusString } from "@/utils/backend";
-import type { ComponentSpec as DomainComponentSpec } from "@/utils/componentSpec";
 import { RemoteAuthError } from "@/utils/fetchWithErrorHandling";
 
 export type RunViewLoadState =
@@ -20,50 +18,24 @@ export type RunViewLoadState =
   | { status: "empty" };
 
 export function useRunViewLoadState(runId: string): RunViewLoadState {
-  const { setComponentSpec, clearComponentSpec } = useComponentSpec();
   const { configured, available, ready } = useBackend();
-  const { details, state, rootDetails, isLoading, error } = useExecutionData();
+  const { details, state, rootDetails, rootState, isLoading, error } =
+    useExecutionData();
 
   useTrackRecentlyViewedRun(
     runId,
     rootDetails?.task_spec.componentRef.spec?.name,
   );
 
-  const [spec, setSpec] = useState<ComponentSpec | null>(null);
-  const deserializedRunIdRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (rootDetails?.task_spec.componentRef.spec) {
-      // API response uses ComponentSpecOutput (name: string | null | undefined)
-      // while the domain type uses ComponentSpec (name: string | undefined).
-      // The null case is handled at runtime by downstream consumers.
-      setComponentSpec(
-        rootDetails.task_spec.componentRef.spec as DomainComponentSpec,
-      );
-    }
-
-    return () => {
-      clearComponentSpec();
-    };
-  }, [rootDetails, setComponentSpec, clearComponentSpec]);
-
-  useEffect(() => {
-    const rootSpec = rootDetails?.task_spec.componentRef.spec;
-    if (!rootSpec || deserializedRunIdRef.current === runId) return;
-
-    deserializedRunIdRef.current = runId;
-    setSpec(deserializeRunSpec(rootSpec));
-  }, [rootDetails, runId]);
-
-  useEffect(
-    () => () => {
-      deserializedRunIdRef.current = null;
-      setSpec(null);
-    },
-    [runId],
+  const rootSpec = rootDetails?.task_spec.componentRef.spec;
+  // eslint-disable-next-line no-restricted-syntax -- preserve the model identity across execution polling
+  const spec = useMemo(
+    () => (rootSpec ? deserializeRunSpec(rootSpec) : null),
+    [rootSpec],
   );
 
-  if (spec) return { status: "spec", spec };
+  // Keep the canvas during refreshes, once the initial execution state exists.
+  if (spec && rootState) return { status: "spec", spec };
   if (isLoading || !ready) return { status: "loading" };
   if (!configured) return { status: "not-configured" };
   if (!available) return { status: "not-available" };

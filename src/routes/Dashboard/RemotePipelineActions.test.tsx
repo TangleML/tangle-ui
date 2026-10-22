@@ -4,9 +4,6 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as Dialogs from "@/components/shared/Dialogs";
-import { EDITOR_SPEC_QUERY_KEY } from "@/routes/v2/pages/Editor/hooks/deletedRemotePipelineCache";
-import { DocumentSaveState } from "@/routes/v2/pages/Editor/store/documentSaveState";
-import { RemotePipelineDeletionUncertainError } from "@/services/pipelineStorage/remotePipelineDeletion";
 import { getRemotePipelineWriter } from "@/services/remotePipelineEditorService";
 import { RemotePipelineQueryKeys } from "@/services/remotePipelineQueryKeys";
 import {
@@ -118,7 +115,7 @@ describe("RemotePipelineActions", () => {
       });
       expect(button).toHaveAttribute("aria-pressed", String(active));
       expect(favorites.isFavorite).toHaveBeenCalledWith(
-        "remote-pipeline",
+        "pipeline",
         pipeline.id,
       );
 
@@ -129,7 +126,7 @@ describe("RemotePipelineActions", () => {
         await user.click(button);
       }
       expect(favorites.toggleFavorite).toHaveBeenCalledExactlyOnceWith({
-        type: "remote-pipeline",
+        type: "pipeline",
         id: pipeline.id,
         name: pipeline.pipeline_name,
       });
@@ -233,12 +230,12 @@ describe("RemotePipelineActions", () => {
     expect(client.getQueryState(nextCursorKey)?.isInvalidated).toBe(true);
     expect(client.getQueryState(otherKey)?.isInvalidated).toBe(false);
     expect(favorites.removeFavorite).toHaveBeenCalledExactlyOnceWith(
-      "remote-pipeline",
+      "pipeline",
       pipeline.id,
       backendUrl,
     );
     expect(removeRecent).toHaveBeenCalledExactlyOnceWith(
-      "remote-pipeline",
+      "pipeline",
       pipeline.id,
       backendUrl,
     );
@@ -304,38 +301,6 @@ describe("RemotePipelineActions", () => {
     );
   });
 
-  it.each([false, true])(
-    "reconciles the cached editor after deletion (uncertain: %s)",
-    async (uncertain) => {
-      if (uncertain)
-        vi.mocked(deleteRemotePipeline).mockRejectedValue(
-          new RemotePipelineDeletionUncertainError(),
-        );
-      const { user, client } = renderActions();
-      const key = [EDITOR_SPEC_QUERY_KEY, "cached-pipeline"];
-      const cached = {
-        file: {
-          remote: { source: "remote", backendUrl, pipelineId: pipeline.id },
-        },
-        saveState: new DocumentSaveState("saved content"),
-      };
-      client.setQueryData(key, cached);
-
-      await confirmDelete(user);
-      await waitFor(() => expect(client.isMutating()).toBe(0));
-
-      expect(client.getQueryData(key)).toBeUndefined();
-      expect(cached.saveState.hasUnsavedChanges).toBe(false);
-      if (uncertain) {
-        expect(favorites.removeFavorite).not.toHaveBeenCalled();
-        expect(notify).toHaveBeenCalledWith(
-          expect.stringContaining("Refresh the list or delete again"),
-          "error",
-        );
-      }
-    },
-  );
-
   it("rechecks write access on backend changes without retargeting a pending delete", async () => {
     const deletion = Promise.withResolvers<void>();
     vi.mocked(deleteRemotePipeline).mockReturnValue(deletion.promise);
@@ -370,12 +335,12 @@ describe("RemotePipelineActions", () => {
     );
     expect(client.getQueryState(newKey)?.isInvalidated).toBe(false);
     expect(favorites.removeFavorite).toHaveBeenCalledWith(
-      "remote-pipeline",
+      "pipeline",
       pipeline.id,
       backendUrl,
     );
     expect(removeRecent).toHaveBeenCalledWith(
-      "remote-pipeline",
+      "pipeline",
       pipeline.id,
       backendUrl,
     );
@@ -414,7 +379,7 @@ describe("RemotePipelineActions", () => {
         "warning",
       );
       expect(removeRecent).toHaveBeenCalledWith(
-        "remote-pipeline",
+        "pipeline",
         pipeline.id,
         backendUrl,
       );

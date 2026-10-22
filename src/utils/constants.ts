@@ -1,4 +1,6 @@
 import { PROVISIONAL_NAME_ANNOTATION } from "./annotationKeys";
+import type { ComponentSpec } from "./componentSpec";
+import { componentSpecToYaml } from "./yaml";
 
 /* Environment Config */
 export const TANGLE_WEBSITE_URL = "https://tangleml.com/";
@@ -37,24 +39,23 @@ export const ENABLE_GOOGLE_CLOUD_SUBMITTER =
 export const LAUNCHER_CAPABILITIES =
   import.meta.env.VITE_LAUNCHER_CAPABILITIES === "true";
 
-export const USER_PIPELINES_LIST_NAME = "user_pipelines";
-
-export const defaultPipelineYamlWithName = (
+export const defaultPipelineWithName = (
   name: string,
   { provisionalName = false } = {},
-) => `
-name: ${JSON.stringify(name)}
-metadata:
-  annotations:
-    sdk: https://cloud-pipelines.net/pipeline-editor/
-    editor.flow-direction: left-to-right${
-      provisionalName ? `\n    ${PROVISIONAL_NAME_ANNOTATION}: "true"` : ""
-    }
-implementation:
-  graph:
-    tasks: {}
-    outputValues: {}
-`;
+): ComponentSpec => ({
+  name,
+  metadata: {
+    annotations: {
+      sdk: "https://cloud-pipelines.net/pipeline-editor/",
+      "editor.flow-direction": "left-to-right",
+      ...(provisionalName ? { [PROVISIONAL_NAME_ANNOTATION]: "true" } : {}),
+    },
+  },
+  implementation: { graph: { tasks: {}, outputValues: {} } },
+});
+
+export const defaultPipelineYamlWithName = (name: string, options = {}) =>
+  componentSpecToYaml(defaultPipelineWithName(name, options));
 
 // IndexedDB constants
 export const DB_NAME = "components";
@@ -63,34 +64,13 @@ export const PIPELINE_RUNS_STORE_NAME = "pipeline_runs";
 export const USER_COMPONENTS_LIST_NAME = "user_components";
 
 export const TOP_NAV_HEIGHT = 56; // px
-export const BOTTOM_FOOTER_HEIGHT = 0; // px
 
 export const DEFAULT_NODE_DIMENSIONS = { w: 300, h: undefined };
 
 export const FONT_SIZE_MD = 12;
 export const FONT_SIZE_SM = 10;
 
-export enum ComponentSearchFilter {
-  NAME = "Name",
-  INPUTNAME = "Input Name",
-  INPUTTYPE = "Input Type",
-  OUTPUTNAME = "Output Name",
-  OUTPUTTYPE = "Output Type",
-  EXACTMATCH = "Exact Match",
-}
-
-export const COMPONENT_SEARCH_FILTERS = Object.values(ComponentSearchFilter);
-
-export const DEFAULT_FILTERS = [ComponentSearchFilter.NAME];
-
 export const AUTOSAVE_DEBOUNCE_TIME_MS = 300;
-
-export const KEYBOARD_SHORTCUTS = {
-  UNDO: "z",
-  REDO: "y",
-  MAC_META: "⌘",
-  WINDOWS_META: "Ctrl",
-} as const;
 
 // Container exit codes
 export const EXIT_CODE_OOM = 137; // SIGKILL (128 + 9) - Out of Memory

@@ -1,7 +1,6 @@
-import type { Edge, ReactFlowState } from "@xyflow/react";
-import { useStore } from "@xyflow/react";
+import type { Edge, Node } from "@xyflow/react";
 
-import { EdgeColor } from "@/components/shared/ReactFlow/FlowCanvas/Edges/utils";
+import { SELECTED_EDGE_COLOR } from "@/components/shared/ReactFlow/FlowCanvas/Edges/utils";
 import { useCanvasOverlay } from "@/routes/v2/shared/hooks/useCanvasOverlay";
 import type {
   CanvasOverlayConfig,
@@ -24,8 +23,8 @@ const DIMMED_EFFECT: NodeOverlayEffect = {
  * dimmed), into a stable comma-separated key. Returns `null` when no edge
  * is selected, so the overlay is deactivated.
  */
-function selectConnectedKey(state: ReactFlowState): string | null {
-  const selectedEdges = state.edges.filter((e: Edge) => e.selected);
+function selectConnectedKey(nodes: Node[], edges: Edge[]): string | null {
+  const selectedEdges = edges.filter((e: Edge) => e.selected);
   if (selectedEdges.length === 0) return null;
 
   const ids = new Set<string>();
@@ -33,7 +32,7 @@ function selectConnectedKey(state: ReactFlowState): string | null {
     ids.add(edge.source);
     ids.add(edge.target);
   }
-  for (const node of state.nodes) {
+  for (const node of nodes) {
     if (node.selected) ids.add(node.id);
   }
   return [...ids].sort().join(",");
@@ -48,7 +47,7 @@ function buildConfig(connectedIds: ReadonlySet<string>): CanvasOverlayConfig {
       connectedIds.has(edge.source) && connectedIds.has(edge.target)
         ? {
             ...HIGHLIGHT_EFFECT,
-            style: { stroke: EdgeColor.Selected },
+            style: { stroke: SELECTED_EDGE_COLOR },
           }
         : DIMMED_EFFECT,
   };
@@ -58,8 +57,11 @@ function buildConfig(connectedIds: ReadonlySet<string>): CanvasOverlayConfig {
  * Activates a canvas overlay that highlights nodes connected to any
  * selected edge. Deactivates automatically when no edge is selected.
  */
-export function useEdgeSelectionHighlightOverlay(): void {
-  const connectedKey = useStore(selectConnectedKey);
+export function useEdgeSelectionHighlightOverlay(
+  nodes: Node[],
+  edges: Edge[],
+): void {
+  const connectedKey = selectConnectedKey(nodes, edges);
 
   const config: CanvasOverlayConfig | null = connectedKey
     ? buildConfig(new Set(connectedKey.split(",")))

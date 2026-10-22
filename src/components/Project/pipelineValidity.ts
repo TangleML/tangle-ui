@@ -16,8 +16,7 @@ function everyTaskCarriesItsComponent(spec: ComponentSpec) {
     return true;
   }
 
-  // Browser storage holds whatever yaml was written, so a `graph:` key with
-  // nothing under it reaches here.
+  // Imported YAML can contain a `graph:` key with nothing under it.
   const graph: unknown = implementation.graph;
   if (!graph || typeof graph !== "object") {
     return false;
@@ -32,9 +31,8 @@ function everyTaskCarriesItsComponent(spec: ComponentSpec) {
  * The validator reads embedded component specs and never fetches one, so a task
  * whose component was not saved alongside it reads as a real error. Rather than
  * fetch the components to find out, such a spec is reported as unknown and
- * shows no verdict — as is one too malformed to have an implementation at all,
- * since browser storage holds whatever yaml is there and refusing to judge it
- * beats failing the panel it is previewed in.
+ * shows no verdict. A malformed implementation also produces no verdict so
+ * the preview can still display the document.
  */
 export function pipelineValidity(spec: ComponentSpec): PipelineValidity {
   if (!everyTaskCarriesItsComponent(spec)) {

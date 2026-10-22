@@ -1,11 +1,11 @@
 import { createContext, type ReactNode, useContext } from "react";
 
 import type { TourDefinition } from "@/components/Learn/tours/registry";
+import type { ComponentSpec } from "@/utils/componentSpec";
 
 export interface TourModeValue {
   tour: TourDefinition;
-  tempPipelineName: string;
-  promoteToPipeline: (newName: string, yamlContent: string) => Promise<void>;
+  promoteToPipeline: (newName: string, spec: ComponentSpec) => Promise<void>;
 }
 
 const TourModeContext = createContext<TourModeValue | null>(null);
