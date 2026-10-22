@@ -8,7 +8,7 @@ import { updateSecret } from "../secretsStorage";
 import { type Secret, SecretsQueryKeys } from "../types";
 
 interface UpdateSecretButtonProps {
-  secret: Pick<Secret, "id" | "value">;
+  secret: Pick<Secret, "id" | "value" | "description" | "expiresAt">;
   disabled?: boolean;
   onSuccess: () => void;
 }

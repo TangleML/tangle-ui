@@ -386,6 +386,10 @@ export async function removeSecret(
 
   await secretItem.getByTestId("secret-remove-button").click();
 
+  const confirmDialog = page.locator('[role="alertdialog"]');
+  await confirmDialog.getByRole("button", { name: "Continue" }).click();
+  await expect(confirmDialog).toBeHidden();
+
   await expect(
     secretItem,
     `Secret "${secretName}" should be removed from list`,

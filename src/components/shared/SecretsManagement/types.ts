@@ -13,8 +13,10 @@ export interface Secret {
   description?: string;
 }
 
-export function isValidSecretName(name: string): boolean {
-  return name.trim().length > 0;
+export function secretNameProblem(name: string): string | null {
+  if (name.trim().length === 0) return "Secret name cannot be empty";
+  if (name.includes("/")) return "Secret name cannot contain /";
+  return null;
 }
 
 export function isValidSecretValue(value: string): boolean {
