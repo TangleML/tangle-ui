@@ -43,6 +43,7 @@ import {
   TOUR_WINDOW_LAYOUT_ID,
   useWindowPersistence,
 } from "@/routes/v2/shared/windows/windowPersistence";
+import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import {
   type EditorPipelineRef,
   getEditorPipelineIdentity,
@@ -115,6 +116,7 @@ const PipelineEditor = withSuspenseWrapper(
     useDockAreaAccordion();
     useSpecLifecycle(rootSpec, file, restoredUndoStore, saveState);
     useRemoteDraftPromotion(pipelineRef, file);
+    useChatDocumentLifecycle(file);
     useSelectionWindowSync();
     usePropertiesWindowPositioning();
     useLinkedWindowCleanup();
@@ -361,7 +363,6 @@ function EditorV2Document({
             createWorker={createEditorAgentWorker}
             context={{ mode: "editor" }}
           >
-            <ChatDocumentLifecycle pipelineRef={pipelineRef} />
             <DialogProvider>
               <EditorV2Content pipelineRef={pipelineRef} />
             </DialogProvider>
@@ -372,23 +373,14 @@ function EditorV2Document({
   );
 }
 
-function ChatDocumentLifecycle({
-  pipelineRef,
-}: {
-  pipelineRef: EditorPipelineRef | null;
-}) {
+function useChatDocumentLifecycle(file: PipelineFile) {
   const chat = useAiChatStore();
-  const identity =
-    pipelineRef && !("source" in pipelineRef)
-      ? getEditorPipelineIdentity(pipelineRef)
-      : "remote-or-empty";
   useEffect(
     () => () => {
       // Stop in-flight tools before the stable local editor stores load another
       // document. Keep the conversation and its bindings to those live stores.
       for (const thread of chat.threads) thread.abort();
     },
-    [chat, identity],
+    [chat, file],
   );
-  return null;
 }

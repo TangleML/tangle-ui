@@ -22,6 +22,7 @@ export interface DriverPermissions {
 }
 
 export interface PipelineStorageDriver {
+  readonly ownerId?: string;
   readonly type: string;
   readonly permissions?: DriverPermissions;
   readonly allowsMoveIn: boolean;
@@ -92,7 +93,7 @@ export function getEditorPipelineIdentity(ref: EditorPipelineRef): string {
   if (isRemotePipelineDraftRef(ref)) {
     return JSON.stringify([
       "remote-pipeline-draft",
-      ref.backendUrl,
+      normalizeBackendUrl(ref.backendUrl),
       ref.draftId,
     ]);
   }

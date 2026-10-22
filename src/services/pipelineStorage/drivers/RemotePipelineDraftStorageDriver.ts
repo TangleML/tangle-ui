@@ -21,6 +21,10 @@ export class RemotePipelineDraftStorageDriver implements PipelineStorageDriver {
   private savedContent?: string;
   private readonly filePath = `pipelines/${crypto.randomUUID()}.yaml`;
 
+  get ownerId(): string | undefined {
+    return this.remote?.ownerId;
+  }
+
   get remoteRef(): RemotePipelineRef | undefined {
     return (
       this.remote && {

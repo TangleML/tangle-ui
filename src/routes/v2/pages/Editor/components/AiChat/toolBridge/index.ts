@@ -8,9 +8,8 @@
  *
  * The composed object is intended to be exposed to the worker via
  * `Comlink.proxy()`. The bridge owns no React or MobX subscriptions of
- * its own; every method reads the live spec / backend / auth values
- * through `BridgeDeps` callbacks so navigation, backend, and auth
- * changes are picked up without rebuilding the bridge.
+ * its own. Each turn receives a document-scoped bridge; mutation handlers
+ * verify that the captured document is still current before changing it.
  */
 import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import { createComponentSearchBridgeHandlers } from "@/routes/v2/shared/components/AiChat/toolBridge/componentSearchBridge";
