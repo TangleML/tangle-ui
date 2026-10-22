@@ -2,10 +2,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   createMemoryHistory,
   createRootRoute,
+  createRoute,
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -27,6 +29,8 @@ import {
   YamlDeserializer,
 } from "@/models/componentSpec";
 import { ThemeProvider } from "@/providers/ThemeProvider";
+import { APP_ROUTES } from "@/routes/appRoutes";
+import { validateRemotePipelineSearch } from "@/routes/remotePipelineSearch";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import { FLEX_NODES_ANNOTATION } from "@/utils/annotationKeys";
 
@@ -148,6 +152,101 @@ afterEach(() => {
   queryClient.clear();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+});
+
+it("navigates into read-only subgraphs from DOM double-clicks and restores their URLs", async () => {
+  const user = userEvent.setup();
+  const spec = new YamlDeserializer(new IncrementingIdGenerator()).deserialize({
+    name: "Remote pipeline",
+    implementation: {
+      graph: {
+        tasks: {
+          "Nested / graph": {
+            componentRef: {
+              spec: {
+                name: "Nested graph",
+                implementation: {
+                  graph: {
+                    tasks: {
+                      Worker: {
+                        componentRef: {
+                          spec: {
+                            implementation: {
+                              container: { image: "example/worker" },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+  const initialYaml = serializeComponentSpecToText(spec);
+  const open = async (href: string) => {
+    const root = createRootRoute();
+    const route = createRoute({
+      getParentRoute: () => root,
+      path: APP_ROUTES.EDITOR_V2_REMOTE_PIPELINE,
+      validateSearch: validateRemotePipelineSearch,
+      component: () => (
+        <RemotePipelineView spec={spec} pipelineId="shared-pipeline" />
+      ),
+    });
+    const history = createMemoryHistory({ initialEntries: [href] });
+    const router = createRouter({
+      routeTree: root.addChildren([route]),
+      history,
+    });
+    await router.load();
+    const view = render(
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <RouterProvider router={router} />
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    return { ...view, router, history };
+  };
+  const { router, history, unmount } = await open(
+    "/editor-v2/pipeline/shared-pipeline",
+  );
+
+  fireEvent.doubleClick(await screen.findByText("Nested / graph"));
+  expect(await screen.findByText("Worker")).toBeInTheDocument();
+  const breadcrumbs = screen.getByRole("navigation", { name: "breadcrumb" });
+  expect(breadcrumbs).toHaveTextContent("Nested / graph");
+  await waitFor(() =>
+    expect(router.state.location.search.subgraphPath).toEqual([
+      "Nested / graph",
+    ]),
+  );
+  const deepLink = router.state.location.href;
+
+  await user.click(within(breadcrumbs).getByRole("button", { name: "Root" }));
+  expect(await screen.findByText("Nested / graph")).toBeInTheDocument();
+  await waitFor(() =>
+    expect(router.state.location.search.subgraphPath).toBeUndefined(),
+  );
+  await act(async () => {
+    history.back();
+    await router.load();
+  });
+  expect(await screen.findByText("Worker")).toBeInTheDocument();
+  expect(router.state.location.href).toBe(deepLink);
+
+  unmount();
+  await open(deepLink);
+  expect(await screen.findByText("Worker")).toBeInTheDocument();
+  expect(
+    screen.getByRole("navigation", { name: "breadcrumb" }),
+  ).toHaveTextContent("Nested / graph");
+  expect(serializeComponentSpecToText(spec)).toBe(initialYaml);
 });
 
 it("reuses the editor docks and rich details while keeping the pipeline and nodes read-only", async () => {

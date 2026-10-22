@@ -71,8 +71,8 @@ export const taskManifestBase: ManifestPartial = {
   component: TaskNode,
 
   buildNodes(spec) {
-    return [...spec.tasks].map((task, index) =>
-      createEntityNode(
+    return [...spec.tasks].map((task, index) => ({
+      ...createEntityNode(
         task,
         "task",
         taskDefaultPosition(index),
@@ -82,7 +82,9 @@ export const taskManifestBase: ManifestPartial = {
         } satisfies TaskNodeData,
         { "data-task-name": task.name, "data-tour-node": "task" },
       ),
-    );
+      // Non-draggable nodes still need double-clicks to bypass canvas zoom.
+      className: "nopan",
+    }));
   },
 
   getPosition(spec, nodeId) {
