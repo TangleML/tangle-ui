@@ -29,6 +29,7 @@ import { RunViewLoadStateFallback } from "./components/RunViewLoadStateFallback"
 import { RunViewMenuBar } from "./components/RunViewMenuBar/RunViewMenuBar";
 import { useAiChatWindow } from "./hooks/useAiChatWindow";
 import { useFocusTaskFromUrl } from "./hooks/useFocusTaskFromUrl";
+import { useRunViewDocumentTitle } from "./hooks/useRunViewDocumentTitle";
 import { useRunViewLoadState } from "./hooks/useRunViewLoadState";
 import { useRunViewSelectionSync } from "./hooks/useRunViewSelectionSync";
 import { useRunViewSpecLifecycle } from "./hooks/useRunViewSpecLifecycle";
@@ -45,6 +46,10 @@ const RunViewContent = observer(function RunViewContent({
   runId,
 }: RunViewContentProps) {
   const loadState = useRunViewLoadState(runId);
+  useRunViewDocumentTitle(
+    runId,
+    loadState.status === "spec" ? loadState.spec.name : undefined,
+  );
 
   if (loadState.status === "spec") {
     return <RunViewLayout spec={loadState.spec} />;
