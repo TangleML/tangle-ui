@@ -1,3 +1,4 @@
+import { normalizeBackendUrl } from "./backendIdentity";
 import { API_URL } from "./constants";
 import {
   getUseEnv,
@@ -23,6 +24,11 @@ export function selectBackendUrl(
   useRelativePath: boolean,
   userBackendUrl: string,
 ): string {
-  if (useEnv && API_URL) return API_URL;
-  return useRelativePath ? window.location.origin : userBackendUrl;
+  return normalizeBackendUrl(
+    useEnv && API_URL
+      ? API_URL
+      : useRelativePath
+        ? window.location.origin
+        : userBackendUrl,
+  );
 }
