@@ -127,7 +127,7 @@ export class AutoSaveStore {
     runInAction(() => {
       document.currentYaml = yaml;
     });
-    if (!document.isSaving && yaml === document.lastSavedYaml) {
+    if (!document.hasPendingWrites && yaml === document.lastSavedYaml) {
       runInAction(() => {
         document.error = null;
       });
@@ -139,6 +139,7 @@ export class AutoSaveStore {
     document.pendingSave = job;
     runInAction(() => {
       document.pendingCount += 1;
+      document.inFlightCount += 1;
     });
     const idStack = collectIdStack(spec);
     const history = manager && { undoQueue: manager.undoQueue.slice() };
@@ -168,7 +169,12 @@ export class AutoSaveStore {
       }
     };
     job.promise = Promise.all([
-      write(),
+      write().finally(() => {
+        runInAction(() => {
+          document.inFlightCount -= 1;
+        });
+        document.releaseIfSaved();
+      }),
       new Promise((resolve) =>
         setTimeout(resolve, AUTOSAVE_MIN_SAVING_INDICATOR_MS),
       ),
