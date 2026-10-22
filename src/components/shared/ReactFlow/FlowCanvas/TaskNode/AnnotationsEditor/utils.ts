@@ -847,3 +847,12 @@ export function listedOptions(
     (option) => !option.deprecated || option.value === currentValue,
   );
 }
+
+/** The picker's display name for a launcher key, or the key itself when the schema does not know it. */
+export function launcherDisplayName(
+  schema: LauncherAnnotationSchema,
+  key: string,
+): string {
+  const object = schema.launcher_annotation_schemas?.[key];
+  return object ? launcherOptionName(key, object) : key;
+}
