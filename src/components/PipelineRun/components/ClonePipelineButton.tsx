@@ -13,6 +13,7 @@ import { Icon } from "@/components/ui/icon";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
 import { copyRunToPipeline } from "@/services/pipelineRunService";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import { extractCanonicalName } from "@/utils/canonicalPipelineName";
 import {
   type ArgumentType,
@@ -44,6 +45,7 @@ export const ClonePipelineButton = ({
 }: ClonePipelineButtonProps) => {
   const navigate = useNavigate();
   const notify = useToastNotification();
+  const storage = usePipelineStorage();
   const runDetails = useExecutionDataOptional();
 
   const openInNewTabRef = useRef(false);
@@ -59,7 +61,13 @@ export const ClonePipelineButton = ({
       );
 
       const name = getInitialName(componentSpec, canonicalName);
-      return copyRunToPipeline(componentSpec, runId, name, taskArguments);
+      return copyRunToPipeline(
+        storage,
+        componentSpec,
+        runId,
+        name,
+        taskArguments,
+      );
     },
     onSuccess: (result) => {
       if (result?.url) {

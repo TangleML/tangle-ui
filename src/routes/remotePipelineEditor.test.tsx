@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   createHashHistory,
   createMemoryHistory,
@@ -5,7 +6,14 @@ import {
   createRouter,
   RouterContextProvider,
 } from "@tanstack/react-router";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { type ReactNode, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -33,6 +41,18 @@ const mountEditor = vi.hoisted(() => vi.fn());
 const navigate = vi.hoisted(() => vi.fn());
 const migrateLocal = vi.hoisted(() => vi.fn());
 const pendingSpec = new Promise<never>(() => {});
+const localCreation = vi.hoisted(() => ({ storage: {}, create: vi.fn() }));
+const queryClients: QueryClient[] = [];
+
+vi.mock(
+  "./v2/pages/Editor/components/EditorMenuBar/components/fileMenu.actions",
+  () => ({
+    createNewPipeline: localCreation.create,
+  }),
+);
+vi.mock("@/services/pipelineStorage/PipelineStorageProvider", () => ({
+  usePipelineStorage: () => localCreation.storage,
+}));
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const original =
@@ -146,6 +166,7 @@ vi.mock("@/providers/TourProvider/TourSecretsDialog", () => ({
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.removeItem("jwtToken");
+  vi.stubEnv("VITE_LOCAL_PIPELINES", undefined);
   route.params = { pipelineName: "pipeline-123" };
   route.search = {};
   route.context = {};
@@ -166,6 +187,8 @@ afterEach(() => {
   cleanup();
   localStorage.removeItem("jwtToken");
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
+  queryClients.splice(0).forEach((client) => client.clear());
 });
 
 function renderEditor(children: ReactNode, basepath = "", hash = false) {
@@ -250,18 +273,69 @@ describe("remote pipeline editor entry", () => {
     expect(screen.getByText("Shared project graph")).toBeInTheDocument();
     expect(initializeEditing).not.toHaveBeenCalled();
   });
-  it("requires a configured backend to open a remote draft", () => {
-    route.context = {
-      newPipeline: {
-        name: "pipeline-123",
-        draftId: "12345678-1234-4234-8234-123456789abc",
-      },
-    };
-    backend.configured = false;
-    renderEditor(<EditorV2 />);
-    expect(loadV2).not.toHaveBeenCalled();
-    expect(screen.getByRole("alert")).toHaveTextContent("Configure a backend");
-  });
+  it.each(["no backend", "local flag"])(
+    "creates locally from a direct new-pipeline URL with %s",
+    async (mode) => {
+      route.context = {
+        newPipeline: { name: "New local pipeline", draftId: "draft-1" },
+      };
+      route.search = { projectId: "project-1" };
+      if (mode === "local flag") vi.stubEnv("VITE_LOCAL_PIPELINES", "true");
+      else backend.configured = false;
+      const created = Promise.withResolvers<{
+        id: string;
+        storageKey: string;
+      }>();
+      if (mode === "local flag") {
+        localCreation.create.mockRejectedValueOnce(
+          new Error("Local storage unavailable"),
+        );
+      }
+      localCreation.create.mockReturnValueOnce(created.promise);
+      const client = new QueryClient();
+      queryClients.push(client);
+      renderEditor(
+        <QueryClientProvider client={client}>
+          <EditorV2 />
+        </QueryClientProvider>,
+      );
+      if (mode === "local flag") {
+        expect(await screen.findByRole("alert")).toHaveTextContent(
+          "Local storage unavailable",
+        );
+        fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+      }
+      await waitFor(() =>
+        expect(localCreation.create).toHaveBeenCalledTimes(
+          mode === "local flag" ? 2 : 1,
+        ),
+      );
+      expect(localCreation.create).toHaveBeenLastCalledWith(
+        localCreation.storage,
+        "New local pipeline",
+      );
+      expect(loadV2).not.toHaveBeenCalled();
+      expect(navigate).not.toHaveBeenCalled();
+      expect(screen.getByText("Loading pipeline...")).toBeInTheDocument();
+      await act(async () =>
+        created.resolve({ id: "local-1", storageKey: "New local pipeline" }),
+      );
+      await waitFor(() =>
+        expect(navigate).toHaveBeenCalledWith({
+          to: "/editor/$pipelineName",
+          params: { pipelineName: "New local pipeline" },
+          search: expect.any(Function),
+          replace: true,
+          resetScroll: false,
+        }),
+      );
+      expect(navigate.mock.calls[0][0].search(route.search)).toEqual({
+        projectId: "project-1",
+        fileId: "local-1",
+      });
+      expect(loadV2).not.toHaveBeenCalled();
+    },
+  );
   it("redirects legacy remote URLs to the V2 editor", () => {
     route.params = { pipelineId: "pipeline-123" };
     route.search = { projectId: "project-1" };

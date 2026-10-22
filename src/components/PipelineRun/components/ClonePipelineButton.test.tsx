@@ -16,6 +16,10 @@ vi.mock("@tanstack/react-router", async (importOriginal) => ({
 }));
 vi.mock("@/hooks/useToastNotification");
 vi.mock("@/services/pipelineRunService");
+const storage = vi.hoisted(() => ({}));
+vi.mock("@/services/pipelineStorage/PipelineStorageProvider", () => ({
+  usePipelineStorage: () => storage,
+}));
 
 describe("<ClonePipelineButton/>", () => {
   const queryClient = new QueryClient();
@@ -72,6 +76,7 @@ describe("<ClonePipelineButton/>", () => {
 
     await waitFor(() => {
       expect(pipelineRunService.copyRunToPipeline).toHaveBeenCalledWith(
+        storage,
         componentSpec,
         undefined,
         expect.stringContaining("Test Pipeline"),

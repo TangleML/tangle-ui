@@ -84,6 +84,7 @@ export class PipelineFile {
     runInAction(() => {
       this.storageKey = newName;
     });
+    emitUserPipelineWritten();
   }
 
   @action

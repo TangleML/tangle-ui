@@ -1,6 +1,7 @@
 import { client } from "@/api/client.gen";
 import { searchPipelinesApiPipelinesSearchPost } from "@/api/remotePipelines/sdk.gen";
 import type { PipelineSummaryResponse } from "@/api/remotePipelines/types.gen";
+import type { FilterQueryPredicate } from "@/utils/pipelineRunFilterUtils";
 
 export type RemotePipeline = PipelineSummaryResponse;
 
@@ -22,34 +23,36 @@ export interface RemotePipelineFilters {
 export function remotePipelineFiltersToQuery(
   filters: RemotePipelineFilters,
 ): string | undefined {
-  const predicates = [
-    filters.name && {
-      value_contains: {
-        key: "system/pipeline.name",
-        value_substring: filters.name,
+  const predicates = (
+    [
+      filters.name && {
+        value_contains: {
+          key: "system/pipeline.name",
+          value_substring: filters.name,
+        },
       },
-    },
-    filters.id && {
-      value_equals: { key: "system/pipeline.id", value: filters.id },
-    },
-    filters.user && {
-      value_equals: { key: "system/pipeline.user_id", value: filters.user },
-    },
-    (filters.createdAfter || filters.createdBefore) && {
-      time_range: {
-        key: "system/pipeline.date.created_at",
-        start_time: filters.createdAfter || undefined,
-        end_time: filters.createdBefore || undefined,
+      filters.id && {
+        value_equals: { key: "system/pipeline.id", value: filters.id },
       },
-    },
-    (filters.updatedAfter || filters.updatedBefore) && {
-      time_range: {
-        key: "system/pipeline.date.updated_at",
-        start_time: filters.updatedAfter || undefined,
-        end_time: filters.updatedBefore || undefined,
+      filters.user && {
+        value_equals: { key: "system/pipeline.user_id", value: filters.user },
       },
-    },
-  ].filter(Boolean);
+      (filters.createdAfter || filters.createdBefore) && {
+        time_range: {
+          key: "system/pipeline.date.created_at",
+          start_time: filters.createdAfter || undefined,
+          end_time: filters.createdBefore || undefined,
+        },
+      },
+      (filters.updatedAfter || filters.updatedBefore) && {
+        time_range: {
+          key: "system/pipeline.date.updated_at",
+          start_time: filters.updatedAfter || undefined,
+          end_time: filters.updatedBefore || undefined,
+        },
+      },
+    ] satisfies (FilterQueryPredicate | "" | undefined)[]
+  ).filter(Boolean);
 
   return predicates.length ? JSON.stringify({ and: predicates }) : undefined;
 }

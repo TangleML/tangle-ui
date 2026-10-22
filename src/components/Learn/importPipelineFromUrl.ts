@@ -2,6 +2,7 @@ import {
   importPipelineFromYaml,
   type ImportResult,
 } from "@/services/pipelineService";
+import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
 import { ASSETS_BASE } from "@/utils/publicAsset";
 import { isGithubUrl } from "@/utils/URL";
 
@@ -11,6 +12,7 @@ import { isGithubUrl } from "@/utils/URL";
  * @returns The result of the import operation
  */
 export async function importPipelineFromUrl(
+  storage: PipelineStorageService,
   url: string,
 ): Promise<ImportResult> {
   if (!isUrlAllowed(url)) {
@@ -31,7 +33,7 @@ export async function importPipelineFromUrl(
     throw new Error("The fetched pipeline content is empty");
   }
 
-  return await importPipelineFromYaml(yamlContent);
+  return await importPipelineFromYaml(storage, yamlContent);
 }
 
 function isUrlAllowed(url: string) {
