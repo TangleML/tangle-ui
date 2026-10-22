@@ -51,8 +51,8 @@ import {
   useWindowPersistence,
 } from "@/routes/v2/shared/windows/windowPersistence";
 import { createsLocalPipelines } from "@/services/pipelineStorage/pipelineCreation";
-import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import {
   type EditorPipelineRef,
   getEditorPipelineIdentity,

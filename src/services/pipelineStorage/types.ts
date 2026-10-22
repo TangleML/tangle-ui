@@ -22,7 +22,6 @@ export interface DriverPermissions {
 }
 
 export interface PipelineStorageDriver {
-  readonly ownerId?: string;
   readonly type: string;
   readonly permissions?: DriverPermissions;
   readonly allowsMoveIn: boolean;

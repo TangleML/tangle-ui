@@ -166,10 +166,6 @@ export class RemotePipelineStorageDriver implements PipelineStorageDriver {
     return this.displayName;
   }
 
-  get ownerId(): string {
-    return this.document.user_id;
-  }
-
   async list(): Promise<PipelineFileDescriptor[]> {
     return [{ storageKey: this.displayName }];
   }

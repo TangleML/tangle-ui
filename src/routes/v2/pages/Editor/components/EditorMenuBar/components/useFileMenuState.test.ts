@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ComponentSpec } from "@/models/componentSpec";
 import { APP_ROUTES } from "@/routes/appRoutes";
+import * as deletion from "@/services/pipelineStorage/remotePipelineDeletion";
 import { componentSpecFromYaml } from "@/utils/yaml";
 
 import { useFileMenuState } from "./useFileMenuState";
@@ -125,6 +126,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.unstubAllEnvs();
 });
 
@@ -270,6 +272,9 @@ describe("editor file actions", () => {
 
 it("acknowledges the captured source only after its copy succeeds", async () => {
   state.file.remote = remote;
+  vi.spyOn(deletion, "getRemotePipelineDeletionError").mockReturnValue(
+    new Error("This pipeline was deleted"),
+  );
   const pending = Promise.withResolvers<{ id: string; storageKey: string }>();
   state.storage.copyRemotePipeline.mockReturnValue(pending.promise);
   const { result } = renderFileMenu();

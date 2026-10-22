@@ -12,6 +12,7 @@ import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionCo
 import { CTRL } from "@/routes/v2/shared/shortcuts/keys";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
+import { getRemotePipelineDeletionError } from "@/services/pipelineStorage/remotePipelineDeletion";
 import type { PipelineRef } from "@/services/pipelineStorage/types";
 
 import {
@@ -123,7 +124,12 @@ export function useFileMenuState(): FileMenuState {
         serializeComponentSpecToText(navigation.rootSpec);
       const file = await savePipelineAs(navigation, name, storage, source);
       if (!file) return;
-      if (source && snapshot) autoSave.releaseRecoveredCopy(source, snapshot);
+      if (
+        source?.remote &&
+        snapshot &&
+        getRemotePipelineDeletionError({ source: "remote", ...source.remote })
+      )
+        autoSave.releaseRecoveredCopy(source, snapshot);
       notify(`Pipeline saved as "${name}"`, "success");
       if (file.remote) {
         await navigate({

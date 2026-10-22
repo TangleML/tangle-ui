@@ -12,17 +12,24 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import {
   IncrementingIdGenerator,
+  serializeComponentSpecToText,
   YamlDeserializer,
 } from "@/models/componentSpec";
+import { AutoSaveStore } from "@/routes/v2/pages/Editor/store/autoSaveStore";
 import { DocumentSaveState } from "@/routes/v2/pages/Editor/store/documentSaveState";
+import { UndoStore } from "@/routes/v2/pages/Editor/store/undoStore";
 import { EditorStore } from "@/routes/v2/shared/store/editorStore";
 import { NavigationStore } from "@/routes/v2/shared/store/navigationStore";
+import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
 import { componentSpecFromYaml } from "@/utils/yaml";
 
 import { RemotePipelineSaveRecovery } from "./RemotePipelineSaveRecovery";
 
 const notify = vi.hoisted(() => vi.fn());
+const navigate = vi.hoisted(() => vi.fn());
+let autoSave: AutoSaveStore;
+vi.mock("@tanstack/react-router", () => ({ useNavigate: () => navigate }));
 let storage: PipelineStorageService;
 let navigation: NavigationStore;
 let document: DocumentSaveState;
@@ -38,7 +45,7 @@ vi.mock("@/routes/v2/shared/store/SharedStoreContext", () => ({
 }));
 vi.mock("@/routes/v2/pages/Editor/store/EditorSessionContext", () => ({
   useEditorSession: () => ({
-    autoSave: { error: document.error, isSaving: true, save: remoteWrite },
+    autoSave,
     pipelineFile: { activePipelineFile: source },
   }),
 }));
@@ -66,12 +73,23 @@ beforeEach(() => {
   );
   document = new DocumentSaveState("unsaved");
   runInAction(() => {
-    document.currentYaml = "latest edits";
+    document.currentYaml = serializeComponentSpecToText(navigation.rootSpec!);
+    document.pendingCount = 1;
   });
+  autoSave = new AutoSaveStore(new UndoStore());
+  autoSave.init(
+    navigation.rootSpec!,
+    source as unknown as PipelineFile,
+    document,
+  );
   document.recordError(new Error("The backend is unavailable."));
 });
 afterEach(() => {
   cleanup();
+  runInAction(() => {
+    document.lastSavedYaml = document.currentYaml;
+  });
+  autoSave.dispose();
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
 });
@@ -98,7 +116,7 @@ it("persists the current unsaved model in browser storage during a remote retry"
   await requestCopy();
   await waitFor(() =>
     expect(notify).toHaveBeenCalledWith(
-      expect.stringContaining("Find it under Local Pipelines"),
+      expect.stringContaining("in this browser"),
       "success",
     ),
   );
@@ -112,8 +130,14 @@ it("persists the current unsaved model in browser storage during a remote retry"
     inputs: [{ value: "latest value" }],
   });
   expect(remoteWrite).not.toHaveBeenCalled();
-  expect(document.error).toBe("The backend is unavailable.");
-  expect(document.hasUnsavedChanges).toBe(true);
+  expect(document.error).toBeNull();
+  expect(document.hasUnsavedChanges).toBe(false);
+  expect(navigate).toHaveBeenCalledWith(
+    expect.objectContaining({
+      params: { pipelineName: reopened!.storageKey },
+      search: { fileId: reopened!.id },
+    }),
+  );
   expect(navigation.rootSpec!.description).toBe("Unsaved edits");
 });
 
@@ -133,4 +157,30 @@ it("keeps the remote model and reports a failed local copy without claiming succ
   expect(screen.getByRole("alert")).toHaveTextContent(
     "Save a local copy before closing it",
   );
+});
+
+it("keeps newer source edits in the tab when they arrive during a successful copy", async () => {
+  const add = storage.rootFolder.addFile.bind(storage.rootFolder);
+  const pending = Promise.withResolvers<void>();
+  vi.spyOn(storage.rootFolder, "addFile").mockImplementation(
+    async (...args) => {
+      await pending.promise;
+      return add(...args);
+    },
+  );
+  render(<RemotePipelineSaveRecovery />);
+  await requestCopy();
+  runInAction(() =>
+    navigation.rootSpec!.setDescription("Edited while copying"),
+  );
+  pending.resolve();
+  await waitFor(() =>
+    expect(notify).toHaveBeenCalledWith(
+      expect.stringContaining("Newer changes remain"),
+      "success",
+    ),
+  );
+  expect(navigate).not.toHaveBeenCalled();
+  expect(document.hasUnsavedChanges).toBe(true);
+  expect(document.error).toBe("The backend is unavailable.");
 });

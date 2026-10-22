@@ -7,9 +7,9 @@ import { createEditorToolBridge } from "@/routes/v2/pages/Editor/components/AiCh
 import { invokeAutoLayoutVia } from "@/routes/v2/pages/Editor/components/AiChat/toolBridge/invokeAutoLayoutVia";
 import { renamePipelineFileFor } from "@/routes/v2/pages/Editor/hooks/renamePipelineFileFor";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
+import { preserveRenamedPipelineQuery } from "@/routes/v2/pages/Editor/utils/preserveRenamedPipelineQuery";
 import { AiChatContent } from "@/routes/v2/shared/components/AiChat/AiChatContent";
 import type { SuggestedPrompt } from "@/routes/v2/shared/components/AiChat/types";
-import { preserveRenamedPipelineQuery } from "@/routes/v2/pages/Editor/utils/preserveRenamedPipelineQuery";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { WindowMiniButton } from "@/routes/v2/shared/windows/WindowMiniButton";
 
