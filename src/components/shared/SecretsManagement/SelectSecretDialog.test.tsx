@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TeamResolution } from "@/services/teams/types";
 import { useActingTeam } from "@/services/teams/useActingTeam";
 
+import type { RunAs } from "./runIdentity";
 import { addSecret } from "./secretsStorage";
 import { SelectSecretDialog } from "./SelectSecretDialog";
 import type { Secret } from "./types";
@@ -46,7 +47,7 @@ const secret = (name: string): Secret => ({
   updatedAt: new Date("2026-10-02T09:00:00Z"),
 });
 
-function renderDialog(team?: TeamResolution) {
+function renderDialog(team?: TeamResolution, defaultSaveTo?: RunAs) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -57,6 +58,7 @@ function renderDialog(team?: TeamResolution) {
       onOpenChange={vi.fn()}
       onSelect={onSelect}
       team={team}
+      defaultSaveTo={defaultSaveTo}
     />,
     {
       wrapper: ({ children }: { children: ReactNode }) => (
@@ -185,11 +187,23 @@ describe("SelectSecretDialog", () => {
     );
   });
 
+  it("starts on the team's secrets when the run goes as the team", async () => {
+    const { user } = renderDialog(ACTIVE, "team");
+
+    await user.click(await screen.findByTestId("select-secret-add-button"));
+
+    expect(
+      screen.getByRole("radio", {
+        name: "The ML Research workspace's secrets",
+      }),
+    ).toBeChecked();
+  });
+
   it("saves only to your own secrets in a team you can't change", async () => {
-    const { user } = renderDialog({
-      status: "active",
-      team: { ...TEAM, canWrite: false },
-    });
+    const { user } = renderDialog(
+      { status: "active", team: { ...TEAM, canWrite: false } },
+      "team",
+    );
 
     await user.click(await screen.findByTestId("select-secret-add-button"));
     expect(screen.queryByRole("radiogroup")).toBeNull();

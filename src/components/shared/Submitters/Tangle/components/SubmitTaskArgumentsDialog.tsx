@@ -8,11 +8,19 @@ import { PipelineRunsList } from "@/components/shared/PipelineRunDisplay/Pipelin
 import { DynamicDataArgumentInput } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/ArgumentsEditor/DynamicDataArgumentInput";
 import { typeSpecToString } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/ArgumentsEditor/utils";
 import { getArgumentsFromInputs } from "@/components/shared/ReactFlow/FlowCanvas/utils/getArgumentsFromInputs";
+import {
+  type RunAs,
+  teamIdFor,
+} from "@/components/shared/SecretsManagement/runIdentity";
 import { SelectSecretDialog } from "@/components/shared/SecretsManagement/SelectSecretDialog";
 import {
   createSecretArgument,
   extractSecretName,
 } from "@/components/shared/SecretsManagement/types";
+import {
+  useRunAsChoice,
+  useRunIdentity,
+} from "@/components/shared/SecretsManagement/useRunIdentity";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -54,12 +62,18 @@ import {
 import { extractTaskArguments } from "@/utils/nodes/taskArguments";
 import { validateArguments } from "@/utils/validations";
 
+import { RunIdentitySummary } from "./RunIdentitySummary";
+
 type TaskArguments = TaskSpecOutput["arguments"];
 
 interface SubmitTaskArgumentsDialogProps {
   open: boolean;
   onCancel: () => void;
-  onConfirm: (args: Record<string, ArgumentType>, notes: string) => void;
+  onConfirm: (
+    args: Record<string, ArgumentType>,
+    notes: string,
+    teamId: string | undefined,
+  ) => void;
   componentSpec: ComponentSpec;
   team: TeamResolution;
   showCopyFromRun?: boolean;
@@ -95,6 +109,11 @@ export const SubmitTaskArgumentsDialog = ({
     validateArguments(inputs, taskArguments),
   );
 
+  const identity = useRunIdentity(team, [componentSpec, taskArguments]);
+  const { runAs, choose: chooseRunAs } = useRunAsChoice(identity);
+  const isTeamSettled =
+    team.status !== "resolving" && team.status !== "conflict";
+
   const handleCopyFromRun = (args: Record<string, string>) => {
     const diff = Object.entries(args).filter(
       ([key, value]) => taskArguments[key] !== value,
@@ -124,8 +143,9 @@ export const SubmitTaskArgumentsDialog = ({
       setTaskArguments(freshArgs);
       setRunNotes("");
       setHighlightedArgs(new Map());
+      chooseRunAs(undefined);
     }
-  }, [open, componentSpec]);
+  }, [open, componentSpec, chooseRunAs]);
 
   useEffect(() => {
     setIsValidToSubmit(validateArguments(inputs, taskArguments));
@@ -135,7 +155,8 @@ export const SubmitTaskArgumentsDialog = ({
     setRunNotes(value);
   };
 
-  const handleConfirm = () => onConfirm(taskArguments, runNotes);
+  const handleConfirm = () =>
+    onConfirm(taskArguments, runNotes, teamIdFor(identity, runAs));
 
   const handleCancel = () => {
     setTaskArguments(initialArgs);
@@ -201,6 +222,7 @@ export const SubmitTaskArgumentsDialog = ({
                     input={input}
                     value={taskArguments[input.name]}
                     team={team}
+                    runAs={runAs}
                     onChange={handleValueChange}
                     isHighlighted={highlightVersion !== undefined}
                   />
@@ -224,13 +246,25 @@ export const SubmitTaskArgumentsDialog = ({
           />
         </BlockStack>
 
+        <RunIdentitySummary
+          team={team}
+          identity={identity}
+          runAs={runAs}
+          onRunAsChange={chooseRunAs}
+        />
+
         <DialogFooter>
           <Button variant="outline" onClick={handleCancel}>
             Cancel
           </Button>
           <Button
             onClick={handleConfirm}
-            disabled={!isValidToSubmit || mockBackend}
+            disabled={
+              !isValidToSubmit ||
+              mockBackend ||
+              !isTeamSettled ||
+              identity.isChecking
+            }
             data-tour="submit-arguments-confirm"
           >
             Submit Run
@@ -360,6 +394,7 @@ interface ArgumentFieldProps {
   input: InputSpec;
   value: ArgumentType | undefined;
   team: TeamResolution;
+  runAs: RunAs;
   onChange: (name: string, value: ArgumentType) => void;
   isHighlighted?: boolean;
 }
@@ -368,6 +403,7 @@ const ArgumentField = ({
   input,
   value,
   team,
+  runAs,
   onChange,
   isHighlighted,
 }: ArgumentFieldProps) => {
@@ -464,6 +500,7 @@ const ArgumentField = ({
         onOpenChange={setIsSelectSecretDialogOpen}
         onSelect={handleSecretSelect}
         team={team}
+        defaultSaveTo={runAs}
       />
     </>
   );
