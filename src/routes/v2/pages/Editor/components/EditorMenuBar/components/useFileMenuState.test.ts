@@ -1,4 +1,6 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook } from "@testing-library/react";
+import { createElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ComponentSpec } from "@/models/componentSpec";
@@ -85,6 +87,14 @@ vi.mock(
   }),
 );
 
+function renderFileMenu() {
+  const client = new QueryClient();
+  return renderHook(useFileMenuState, {
+    wrapper: ({ children }) =>
+      createElement(QueryClientProvider, { client }, children),
+  });
+}
+
 beforeEach(() => {
   vi.resetAllMocks();
   state.spec = new ComponentSpec({ $id: "root", name: "Original" });
@@ -115,7 +125,7 @@ describe("editor file actions", () => {
   it("renames a draft as a content edit and saves copies remotely", async () => {
     state.file.isDraft = true;
     state.file.draftBackendUrl = remote.backendUrl;
-    const { result } = renderHook(useFileMenuState);
+    const { result } = renderFileMenu();
     await result.current.renamePipeline("Renamed draft");
     expect(state.save).toHaveBeenCalledOnce();
     expect(state.spec?.name).toBe("Renamed draft");
@@ -139,7 +149,7 @@ describe("editor file actions", () => {
       vi.stubEnv("VITE_LOCAL_PIPELINES", String(local));
       if (sourceRemote) state.file.remote = remote;
       const isRemote = !local;
-      const { result } = renderHook(useFileMenuState);
+      const { result } = renderFileMenu();
       await result.current.handleSavePipelineAs("Copy");
       const target = isRemote
         ? sourceRemote
@@ -182,7 +192,7 @@ describe("editor file actions", () => {
     "persists rename and only changes a local route (remote: %s)",
     async (isRemote) => {
       if (isRemote) state.file.remote = remote;
-      const { result } = renderHook(useFileMenuState);
+      const { result } = renderFileMenu();
       await result.current.renamePipeline("Renamed");
       expect(state.file.rename).toHaveBeenCalledWith("Renamed");
       expect(state.spec?.name).toBe("Renamed");
@@ -208,7 +218,7 @@ describe("editor file actions", () => {
         finishRename = resolve;
       }),
     );
-    const { result, unmount } = renderHook(useFileMenuState);
+    const { result, unmount } = renderFileMenu();
     const rename = result.current.renamePipeline("Renamed");
     await Promise.resolve();
     unmount();
@@ -229,7 +239,7 @@ describe("editor file actions", () => {
       state.storage.copyRemotePipeline.mockRejectedValue(
         new Error("Write failed"),
       );
-      const { result } = renderHook(useFileMenuState);
+      const { result } = renderFileMenu();
       if (action === "save") await result.current.handleSave();
       else if (action === "copy")
         await result.current.handleSavePipelineAs("Copy");
