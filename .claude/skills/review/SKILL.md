@@ -143,7 +143,9 @@ Present findings in this format:
 
 After presenting the review, use `AskUserQuestion` with **multi-select** to let the user pick which findings to post as inline PR comments.
 
-Each option should show:
+**Always make "All findings" the first option of the first question**, with the total count (e.g. `All findings (12)`). Selecting it posts every finding, whatever else is selected. `AskUserQuestion` allows at most 4 options per question and 4 questions, so when the findings don't fit in the remaining slots, group related ones into a single option (by severity or shared root cause) rather than leaving any out.
+
+Each finding option should show:
 
 - Severity
 - File path and line number
@@ -152,10 +154,11 @@ Each option should show:
 
 Example options:
 
+- `All findings (12)` → post every finding above
 - `[High] src/utils/api.ts:42 — "Unsafe type cast" → suggest type guard instead of as`
 - `[Medium] src/components/List.tsx:15 — "Missing UI primitive" → use BlockStack instead of div`
 
-The user picks which comments to post. Only proceed with the selected ones.
+The user picks which comments to post. If "All findings" is selected, post every finding; otherwise post only the selected ones.
 
 If the user selects none or there are no findings, skip to the end.
 

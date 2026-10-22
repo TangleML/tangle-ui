@@ -49,7 +49,11 @@ This ensures running the command again won't double-reply to already-addressed c
 
 Before presenting comments to the user, **read the relevant code and think critically about each comment**. Determine whether the suggestion is correct, already addressed, or a bad idea. Form a proposed action for each.
 
-Use the AskUserQuestion tool to show a **multi-select list** of all remaining unresolved, unaddressed comments. Each option should show:
+Use the AskUserQuestion tool to show a **multi-select list** of all remaining unresolved, unaddressed comments.
+
+**Always make "All comments" the first option of the first question**, with the total count (e.g. `All comments (8)`). Selecting it addresses every comment with its proposed action, whatever else is selected. `AskUserQuestion` allows at most 4 options per question and 4 questions, so when the comments don't fit in the remaining slots, group related ones into a single option (by file or shared concern) rather than leaving any out.
+
+Each comment option should show:
 
 - The reviewer's username
 - The file path and line number
@@ -58,11 +62,12 @@ Use the AskUserQuestion tool to show a **multi-select list** of all remaining un
 
 Example options:
 
+- `All comments (8)` → address every comment above with its proposed action
 - `[reviewer] file.ts:42 — "Fix this typo..." → Will fix: rename varName to variableName`
 - `[reviewer] other.ts:10 — "This should use..." → Will push back: current pattern is more performant here`
 - `[reviewer] types.ts:5 — "Why not use...?" → Will answer: explain the tradeoff`
 
-The user picks which comments they want to address. Only proceed with the selected ones.
+The user picks which comments they want to address. If "All comments" is selected, address every comment; otherwise proceed only with the selected ones.
 
 If there are no actionable comments, tell the user everything has been addressed and stop.
 
