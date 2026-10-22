@@ -51,7 +51,9 @@ vi.mock("@/routes/v2/shared/components/AppMenuActions", () => ({
 }));
 vi.mock("@/api/client.gen", () => ({ client: { get: vi.fn(), put: vi.fn() } }));
 vi.mock("@/api/sdk.gen", () => ({ getCurrentUserApiUsersMeGet: vi.fn() }));
-vi.mock("@/utils/componentStore", () => ({}));
+vi.mock("@/utils/componentStore", () => ({
+  getAllComponentFilesFromList: async () => [],
+}));
 vi.mock("@/hooks/useToastNotification", () => ({ default: () => vi.fn() }));
 vi.mock("@/providers/BackendProvider", () => ({
   useBackend: () => ({
