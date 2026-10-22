@@ -1,9 +1,14 @@
 import type { ThinkingLevel } from "@tangent/shared/contracts.ts";
 import { THINKING_LEVELS } from "@tangent/shared/contracts.ts";
 
+import { HOURS } from "@/utils/constants";
+
 const PROMPT = "startingPrompt";
 const MODEL = "startingModel";
 const THINKING_DEPTH = "startingThinkingDepth";
+const REQUESTED_AT = "startingRequestedAt";
+
+const STARTING_SESSION_LIFETIME = 1 * HOURS;
 
 export interface StartingSession {
   prompt: string;
@@ -21,6 +26,7 @@ export function startingSessionMetadata(
 ): Record<string, unknown> {
   return {
     [PROMPT]: session.prompt,
+    [REQUESTED_AT]: new Date().toISOString(),
     ...(session.model ? { [MODEL]: session.model } : {}),
     ...(session.thinkingDepth
       ? { [THINKING_DEPTH]: session.thinkingDepth }
@@ -34,12 +40,17 @@ const asText = (value: unknown) =>
 const asThinkingLevel = (value: unknown) =>
   THINKING_LEVELS.find((level) => level === value);
 
+function isStillWanted(requestedAt: unknown) {
+  const time = typeof requestedAt === "string" ? Date.parse(requestedAt) : NaN;
+  return Date.now() - time < STARTING_SESSION_LIFETIME;
+}
+
 /** Anyone may PATCH a project, so every key here may be anything at all. */
 export function readStartingSession(
   metadata: Record<string, unknown> | null | undefined,
 ): StartingSession | undefined {
   const prompt = asText(metadata?.[PROMPT]);
-  if (!prompt) return undefined;
+  if (!prompt || !isStillWanted(metadata?.[REQUESTED_AT])) return undefined;
 
   return {
     prompt,
@@ -55,5 +66,6 @@ export function withoutStartingSession(
   delete next[PROMPT];
   delete next[MODEL];
   delete next[THINKING_DEPTH];
+  delete next[REQUESTED_AT];
   return next;
 }
