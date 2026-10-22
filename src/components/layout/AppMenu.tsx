@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { APP_ROUTES } from "@/routes/router";
+import { isRunViewPath } from "@/routes/runRoutes";
 import { DOCUMENTATION_URL, TOP_NAV_HEIGHT } from "@/utils/constants";
 import { tracking } from "@/utils/tracking";
 
@@ -207,7 +208,7 @@ const AppMenu = () => {
     return null;
   }
 
-  if (pathname.startsWith(`${APP_ROUTES.RUNS}/`)) {
+  if (isRunViewPath(pathname)) {
     return null;
   }
 

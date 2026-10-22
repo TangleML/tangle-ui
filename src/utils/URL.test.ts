@@ -73,8 +73,6 @@ describe("toAbsoluteHttpUrl", () => {
 });
 
 describe("getRunUrl", () => {
-  afterEach(() => localStorage.clear());
-
   /** The address bar names a Tangent project when a run is open in a tab. */
   it("builds an absolute url from the run id", () => {
     expect(getRunUrl("01a0fa8aac1ff2ca5211")).toBe(

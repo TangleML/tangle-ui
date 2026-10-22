@@ -13,3 +13,7 @@ export function getRunPath(
 export function getDefaultRunPath(runId: string | number): string {
   return getRunPath(runId);
 }
+
+export function isRunViewPath(pathname: string): boolean {
+  return pathname.startsWith(`${APP_ROUTES.RUNS}/`);
+}
