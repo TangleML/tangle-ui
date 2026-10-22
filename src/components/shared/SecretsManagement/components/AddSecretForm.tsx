@@ -100,12 +100,14 @@ function expiryHint(existingSecret?: Secret): string | null {
 
 interface AddSecretFormProps {
   existingSecret?: Secret;
+  teamId?: string;
   onSuccess: () => void;
   onCancel: () => void;
 }
 
 export function AddSecretForm({
   existingSecret,
+  teamId,
   onSuccess,
   onCancel,
 }: AddSecretFormProps) {
@@ -260,6 +262,7 @@ export function AddSecretForm({
               description,
               expiresAt,
             }}
+            teamId={teamId}
             disabled={!isFormValid}
             onSuccess={onSuccess}
           />
@@ -271,6 +274,7 @@ export function AddSecretForm({
               description,
               expiresAt,
             }}
+            teamId={teamId}
             disabled={!isFormValid}
             onSuccess={onSuccess}
           />

@@ -10,12 +10,14 @@ import { SecretsQueryKeys } from "../types";
 
 interface AddSecretButtonProps {
   secret: Pick<Secret, "name" | "value" | "description" | "expiresAt">;
+  teamId?: string;
   disabled?: boolean;
   onSuccess: () => void;
 }
 
 export function AddSecretButton({
   secret,
+  teamId,
   disabled,
   onSuccess,
 }: AddSecretButtonProps) {
@@ -23,13 +25,15 @@ export function AddSecretButton({
   const queryClient = useQueryClient();
 
   const { mutate: saveSecret, isPending } = useMutation({
-    mutationFn: () => addSecret(secret),
+    mutationFn: () => addSecret(secret, teamId),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: SecretsQueryKeys.All() });
+      void queryClient.invalidateQueries({
+        queryKey: SecretsQueryKeys.All(teamId),
+      });
       onSuccess();
     },
-    onError: () => {
-      notify("Failed to add secret", "error");
+    onError: (error) => {
+      notify(error.message, "error");
     },
   });
 
