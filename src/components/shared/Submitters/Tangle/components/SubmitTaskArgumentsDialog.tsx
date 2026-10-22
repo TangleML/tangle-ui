@@ -43,6 +43,7 @@ import {
   fetchExecutionDetails,
   fetchPipelineRun,
 } from "@/services/executionService";
+import type { TeamResolution } from "@/services/teams/types";
 import type { PipelineRun } from "@/types/pipelineRun";
 import {
   type ArgumentType,
@@ -60,6 +61,7 @@ interface SubmitTaskArgumentsDialogProps {
   onCancel: () => void;
   onConfirm: (args: Record<string, ArgumentType>, notes: string) => void;
   componentSpec: ComponentSpec;
+  team: TeamResolution;
   showCopyFromRun?: boolean;
   projectField?: ReactNode;
 }
@@ -69,6 +71,7 @@ export const SubmitTaskArgumentsDialog = ({
   onCancel,
   onConfirm,
   componentSpec,
+  team,
   showCopyFromRun = true,
   projectField,
 }: SubmitTaskArgumentsDialogProps) => {
@@ -197,6 +200,7 @@ export const SubmitTaskArgumentsDialog = ({
                     key={`${input.name}-${highlightVersion ?? "static"}`}
                     input={input}
                     value={taskArguments[input.name]}
+                    team={team}
                     onChange={handleValueChange}
                     isHighlighted={highlightVersion !== undefined}
                   />
@@ -355,6 +359,7 @@ const CopyFromRunPopover = ({
 interface ArgumentFieldProps {
   input: InputSpec;
   value: ArgumentType | undefined;
+  team: TeamResolution;
   onChange: (name: string, value: ArgumentType) => void;
   isHighlighted?: boolean;
 }
@@ -362,6 +367,7 @@ interface ArgumentFieldProps {
 const ArgumentField = ({
   input,
   value,
+  team,
   onChange,
   isHighlighted,
 }: ArgumentFieldProps) => {
@@ -457,6 +463,7 @@ const ArgumentField = ({
         open={isSelectSecretDialogOpen}
         onOpenChange={setIsSelectSecretDialogOpen}
         onSelect={handleSecretSelect}
+        team={team}
       />
     </>
   );

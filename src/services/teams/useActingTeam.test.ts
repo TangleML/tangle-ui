@@ -2,18 +2,13 @@ import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useRunProjectContext } from "@/components/Project/useRunProjectContext";
-import { useRunSubmissionAnnotations } from "@/providers/RunSubmissionScopeProvider";
-import { projectRunAnnotations } from "@/utils/projectRunAnnotation";
 
+import type { TeamResolution } from "./types";
 import { useActingTeam } from "./useActingTeam";
-import { useTeamForProjects } from "./useTeamForProjects";
+import { useTeamForSubmission } from "./useTeamForSubmission";
 
-vi.mock("./useTeamForProjects", () => ({
-  useTeamForProjects: vi.fn(() => ({ status: "none" })),
-}));
-
-vi.mock("@/providers/RunSubmissionScopeProvider", () => ({
-  useRunSubmissionAnnotations: vi.fn(() => ({})),
+vi.mock("./useTeamForSubmission", () => ({
+  useTeamForSubmission: vi.fn(),
 }));
 
 vi.mock("@/components/Project/useRunProjectContext", () => ({
@@ -28,53 +23,38 @@ function linkProjects(projectIds: string[]) {
 
 describe("useActingTeam", () => {
   beforeEach(() => {
-    vi.mocked(useRunSubmissionAnnotations).mockReturnValue({});
-    linkProjects([]);
+    vi.mocked(useTeamForSubmission).mockReturnValue({ status: "none" });
   });
 
-  it("resolves the team of the project the page is scoped to", () => {
-    vi.mocked(useRunSubmissionAnnotations).mockReturnValue(
-      projectRunAnnotations(["tangent-project"]),
-    );
+  it("resolves the team for the projects the page links to", () => {
+    linkProjects(["linked-project", "other-project"]);
 
     renderHook(() => useActingTeam());
 
-    expect(useTeamForProjects).toHaveBeenLastCalledWith(["tangent-project"]);
-  });
-
-  it("resolves the team of the project the page links to", () => {
-    linkProjects(["linked-project"]);
-
-    renderHook(() => useActingTeam());
-
-    expect(useTeamForProjects).toHaveBeenLastCalledWith(["linked-project"]);
-  });
-
-  it("counts a project named by both sources once", () => {
-    vi.mocked(useRunSubmissionAnnotations).mockReturnValue(
-      projectRunAnnotations(["same-project"]),
-    );
-    linkProjects(["same-project", "other-project"]);
-
-    renderHook(() => useActingTeam());
-
-    expect(useTeamForProjects).toHaveBeenLastCalledWith([
-      "same-project",
+    expect(useTeamForSubmission).toHaveBeenLastCalledWith([
+      "linked-project",
       "other-project",
     ]);
   });
 
   it("resolves no projects on a page outside any project", () => {
+    linkProjects([]);
+
     renderHook(() => useActingTeam());
 
-    expect(useTeamForProjects).toHaveBeenLastCalledWith([]);
+    expect(useTeamForSubmission).toHaveBeenLastCalledWith([]);
   });
 
-  it("returns what the team lookup decides", () => {
-    vi.mocked(useTeamForProjects).mockReturnValueOnce({ status: "resolving" });
+  it("returns the team lookup's answer unchanged", () => {
+    const resolution: TeamResolution = {
+      status: "active",
+      team: { id: "ml-team@example.com", label: "ML Research", canWrite: true },
+    };
+    vi.mocked(useTeamForSubmission).mockReturnValue(resolution);
+    linkProjects(["linked-project"]);
 
     const { result } = renderHook(() => useActingTeam());
 
-    expect(result.current).toEqual({ status: "resolving" });
+    expect(result.current).toBe(resolution);
   });
 });
