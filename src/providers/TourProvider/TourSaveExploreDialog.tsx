@@ -2,7 +2,7 @@ import { useEffect } from "react";
 
 import { PipelineNameDialog } from "@/components/shared/Dialogs";
 import useToastNotification from "@/hooks/useToastNotification";
-import { serializeComponentSpecToText } from "@/models/componentSpec";
+import { serializeComponentSpec } from "@/models/componentSpec";
 import { useTourMode } from "@/providers/TourProvider/TourModeContext";
 import { useTourSaveExplore } from "@/providers/TourProvider/TourSaveExploreContext";
 import { usePipelineActions } from "@/routes/v2/pages/Editor/store/actions/usePipelineActions";
@@ -35,8 +35,7 @@ export function TourSaveExploreDialog() {
 
     try {
       renamePipeline(rootSpec, name);
-      const yamlContent = serializeComponentSpecToText(rootSpec);
-      await tourMode.promoteToPipeline(name, yamlContent);
+      await tourMode.promoteToPipeline(name, serializeComponentSpec(rootSpec));
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to save pipeline";

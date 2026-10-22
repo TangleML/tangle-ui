@@ -3,7 +3,6 @@ import { useEffect, useRef } from "react";
 
 import { ContextPanelContent } from "@/routes/v2/pages/Editor/components/ContextPanel/ContextPanel";
 import { PinnedTaskContent } from "@/routes/v2/pages/Editor/components/PinnedTaskContent/PinnedTaskContent";
-import { useDeselectAll } from "@/routes/v2/shared/hooks/useDeselectAll";
 import type {
   EditorStore,
   NodeEntityType,
@@ -166,7 +165,6 @@ export function useSelectionWindowSync(options?: {
   readOnly?: boolean;
 }) {
   const { editor, navigation, windows } = useSharedStores();
-  const deselectAll = useDeselectAll();
   const placement = options?.contextPanel ?? DEFAULT_CONTEXT_PANEL_PLACEMENT;
   const readOnly = options?.readOnly ?? false;
   const placementRef = useRef(placement);
@@ -176,6 +174,12 @@ export function useSelectionWindowSync(options?: {
   }, [placement]);
 
   useEffect(() => {
+    let disposed = false;
+    let selectionVersion = 0;
+    const deselectAll = () => {
+      // Programmatic panel closure after node deselection must preserve edges.
+      if (editor.selectedNodes.length > 0) editor.clearSelection();
+    };
     const disposeSelectionWatcher = reaction(
       () => ({
         selectedNodeId: editor.selectedNodeId,
@@ -197,9 +201,9 @@ export function useSelectionWindowSync(options?: {
         multiSelectionLength,
         selectionStale,
       }) => {
+        const version = ++selectionVersion;
         if (selectionStale) {
           editor.clearSelection();
-          editor.clearMultiSelection();
           return;
         }
 
@@ -221,14 +225,21 @@ export function useSelectionWindowSync(options?: {
           return;
         }
 
-        if (editor.draggedSincePointerDown) return;
-
-        ensureContextPanelVisible(
-          windows,
-          deselectAll,
-          placementRef.current,
-          readOnly,
-        );
+        // React Flow emits selection before drag-start in the same event.
+        queueMicrotask(() => {
+          if (
+            disposed ||
+            version !== selectionVersion ||
+            editor.draggedSincePointerDown
+          )
+            return;
+          ensureContextPanelVisible(
+            windows,
+            deselectAll,
+            placementRef.current,
+            readOnly,
+          );
+        });
       },
     );
 
@@ -249,8 +260,9 @@ export function useSelectionWindowSync(options?: {
     );
 
     return () => {
+      disposed = true;
       disposeSelectionWatcher();
       disposeRevealWatcher();
     };
-  }, [editor, navigation, windows, deselectAll, readOnly]);
+  }, [editor, navigation, windows, readOnly]);
 }

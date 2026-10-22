@@ -14,8 +14,6 @@ import type {
 } from "@/routes/v2/pages/Tangent/workarea/types";
 import {
   formatWorkareaTarget,
-  idIdentity,
-  nameIdentity,
   parseIdentity,
 } from "@/services/projects/resourceTarget";
 import { getOverallExecutionStatusFromStats } from "@/utils/executionStatus";
@@ -47,12 +45,11 @@ export interface WorkareaToolDeps {
   runInspect: RunInspectDeps;
   createPipeline: (name?: string) => Promise<{
     pipelineName: string;
-    fileId: string;
-    target?: WorkareaTarget;
+    target: WorkareaTarget;
   }>;
   clonePipeline: (
     runId: string,
-  ) => Promise<{ pipelineName: string; target?: WorkareaTarget }>;
+  ) => Promise<{ pipelineName: string; target: WorkareaTarget }>;
   refreshResources: () => Promise<void>;
   renameProject: (name: string) => Promise<{ renamed: boolean }>;
   nameSession: (name: string) => Promise<void>;
@@ -182,7 +179,7 @@ function resolveRunId(deps: WorkareaToolDeps, explicit?: string): string {
 
 const TARGET_DESCRIPTION =
   "A `type://identity` target: `artifact://id/<url>`, " +
-  "`pipeline://id/<fileId>`, `pipeline://name/<name>`, `pipeline://remote/<pipelineId>`, `pipeline://draft/<draftId>`, or `run://id/<runId>`. " +
+  "`pipeline://remote/<pipelineId>`, `pipeline://draft/<draftId>`, or `run://id/<runId>`. " +
   "A run url is also accepted, from any origin, and names the run this " +
   "environment holds under that id.";
 
@@ -261,7 +258,7 @@ export function createWorkareaRemoteTools(
         "ready to build on. Use this when asked to build a pipeline and none " +
         "is open — there is no other way to get a canvas from nothing, and the " +
         "canvas editing tools only exist once a pipeline tab is open. `name` is " +
-        "optional. With remote storage, the empty draft is saved and attached " +
+        "optional. The empty draft is saved and attached " +
         "to the project on its first edit. " +
         "Returns the tab summary plus the pipeline `name` and its " +
         "`target`, including the `environmentId` and " +
@@ -278,15 +275,9 @@ export function createWorkareaRemoteTools(
         },
       },
       execute: async (args) => {
-        const {
-          pipelineName,
-          fileId,
-          target: createdTarget,
-        } = await getDeps().createPipeline(optionalName(args));
-        const target: WorkareaTarget = createdTarget ?? {
-          type: "pipeline",
-          identity: idIdentity(fileId),
-        };
+        const { pipelineName, target } = await getDeps().createPipeline(
+          optionalName(args),
+        );
         const tab = await openAndSummarize(getDeps, target, pipelineName);
         return { ...tab, name: pipelineName };
       },
@@ -307,12 +298,7 @@ export function createWorkareaRemoteTools(
         const { pipelineName, target } = await deps.clonePipeline(runId);
         return {
           name: pipelineName,
-          target: formatWorkareaTarget(
-            target ?? {
-              type: "pipeline",
-              identity: nameIdentity(pipelineName),
-            },
-          ),
+          target: formatWorkareaTarget(target),
         };
       },
     },

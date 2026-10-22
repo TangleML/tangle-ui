@@ -50,6 +50,7 @@ export const ReadOnlyFlowCanvas = observer(function ReadOnlyFlowCanvas({
     displayEdges,
     onEdgeClick,
     rfOnNodesChange,
+    rfOnEdgesChange,
     selectionBehavior,
   } = useFlowCanvasState({ spec });
 
@@ -85,6 +86,7 @@ export const ReadOnlyFlowCanvas = observer(function ReadOnlyFlowCanvas({
         nodes={displayNodes}
         edges={displayEdges}
         onNodesChange={onNodesChange}
+        onEdgesChange={rfOnEdgesChange}
         onPaneClick={onPaneClick}
         onEdgeClick={onEdgeClick}
         onPointerDownCapture={() => editor.setDraggedSincePointerDown(false)}

@@ -8,10 +8,11 @@ import { createEditorToolBridge } from ".";
 
 vi.mock("@/services/componentService", () => ({
   hydrateComponentReference: vi.fn(),
+  fetchAndStoreComponentLibrary: vi.fn(),
 }));
 vi.mock("@/utils/submitPipeline", () => ({ submitPipelineRun: vi.fn() }));
 
-function setup(renamePipelineFile?: (name: string) => Promise<string>) {
+function setup(onPipelineRenamed?: (name: string) => Promise<void>) {
   const first = new ComponentSpec({ name: "First" });
   const second = new ComponentSpec({ name: "Second" });
   let active = first;
@@ -22,7 +23,7 @@ function setup(renamePipelineFile?: (name: string) => Promise<string>) {
         createEditorToolBridge({
           ...deps,
           undo: { withGroup: (_label, fn) => fn() },
-          renamePipelineFile,
+          onPipelineRenamed,
         }),
       {
         getSpec: () => active,
@@ -92,19 +93,18 @@ it("rejects a task hydration that completes after navigation", async () => {
   expect(second.tasks).toHaveLength(0);
 });
 
-it("rejects a delayed rename before applying it to the current undo store", async () => {
+it("keeps a saved rename on its original document when navigation interrupts the turn", async () => {
   let finish = () => {};
   const pending = new Promise<void>((resolve) => {
     finish = resolve;
   });
-  const { bridge, first, second, navigate } = setup(async (name) => {
+  const { bridge, first, second, navigate } = setup(async () => {
     await pending;
-    return name;
   });
   const renaming = bridge.setPipelineName("Late name");
   navigate(second);
   finish();
   await expect(renaming).rejects.toThrow("open pipeline changed");
-  expect(first.name).toBe("First");
+  expect(first.name).toBe("Late name");
   expect(second.name).toBe("Second");
 });

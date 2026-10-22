@@ -325,7 +325,7 @@ function buildConfig(connectedIds: ReadonlySet<string>): CanvasOverlayConfig {
       connectedIds.has(nodeId) ? HIGHLIGHT_EFFECT : DIMMED_EFFECT,
     resolveEdgeEffect: (edge) =>
       connectedIds.has(edge.source) && connectedIds.has(edge.target)
-        ? { ...HIGHLIGHT_EFFECT, style: { stroke: EdgeColor.Selected } }
+        ? { ...HIGHLIGHT_EFFECT, style: { stroke: SELECTED_EDGE_COLOR } }
         : DIMMED_EFFECT,
   };
 }

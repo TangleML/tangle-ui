@@ -6,7 +6,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ComponentSpec } from "@/models/componentSpec";
 import { APP_ROUTES } from "@/routes/appRoutes";
 import * as deletion from "@/services/pipelineStorage/remotePipelineDeletion";
-import { componentSpecFromYaml } from "@/utils/yaml";
 
 import { useFileMenuState } from "./useFileMenuState";
 
@@ -14,17 +13,14 @@ const state = vi.hoisted(() => ({
   spec: undefined as ComponentSpec | undefined,
   file: {
     id: "pipeline-1",
-    storageKey: "Original",
+    name: "Original",
     remote: undefined as { backendUrl: string; pipelineId: string } | undefined,
     isDraft: false,
-    draftBackendUrl: undefined as string | undefined,
-    rename: vi.fn(),
+    backendUrl: "https://backend.example.com",
     write: vi.fn(),
-    deleteFile: vi.fn(),
   },
   configured: true,
   storage: {
-    rootFolder: { addFile: vi.fn() },
     copyRemotePipeline: vi.fn(),
     createRemotePipeline: vi.fn(),
   },
@@ -86,12 +82,7 @@ vi.mock("@/routes/v2/pages/Editor/store/actions/usePipelineActions", () => ({
 vi.mock("@/services/pipelineStorage/PipelineStorageProvider", () => ({
   usePipelineStorage: () => state.storage,
 }));
-vi.mock(
-  "@/components/shared/ReactFlow/FlowSidebar/sections/components/ExportPipelineButton",
-  () => ({
-    exportPipeline: vi.fn(),
-  }),
-);
+vi.mock("@/utils/URL", () => ({ downloadStringAsFile: vi.fn() }));
 
 function renderFileMenu() {
   const client = new QueryClient();
@@ -105,16 +96,13 @@ beforeEach(() => {
   vi.resetAllMocks();
   state.spec = new ComponentSpec({ $id: "root", name: "Original" });
   state.spec.setDescription("Preserve the full pipeline content");
-  state.file.remote = undefined;
+  state.file.remote = remote;
   state.file.isDraft = false;
-  state.file.draftBackendUrl = undefined;
-  vi.stubEnv("VITE_LOCAL_PIPELINES", undefined);
-  vi.stubEnv("VITE_REMOTE_PIPELINES", "true");
+  state.file.backendUrl = remote.backendUrl;
   state.configured = true;
   state.save.mockResolvedValue(undefined);
   state.navigate.mockResolvedValue(undefined);
-  const copy = { id: "copy-id", storageKey: "Copy" };
-  state.storage.rootFolder.addFile.mockResolvedValue(copy);
+  const copy = { id: "copy-id", name: "Copy" };
   state.storage.createRemotePipeline.mockResolvedValue({
     ...copy,
     remote: { ...remote, pipelineId: copy.id },
@@ -132,8 +120,9 @@ afterEach(() => {
 
 describe("editor file actions", () => {
   it("renames a draft as a content edit and saves copies remotely", async () => {
+    state.file.remote = undefined;
     state.file.isDraft = true;
-    state.file.draftBackendUrl = remote.backendUrl;
+    state.file.backendUrl = remote.backendUrl;
     const { result } = renderFileMenu();
     await result.current.renamePipeline("Renamed draft");
     expect(state.save).toHaveBeenCalledOnce();
@@ -143,89 +132,41 @@ describe("editor file actions", () => {
     expect(state.storage.createRemotePipeline).toHaveBeenCalledWith(
       remote.backendUrl,
       "Copy",
-      expect.any(String),
+      expect.objectContaining({ name: "Copy" }),
     );
-    expect(state.storage.rootFolder.addFile).not.toHaveBeenCalled();
   });
-  it.each([
-    { sourceRemote: false, local: false, configured: true },
-    { sourceRemote: true, local: false, configured: true },
-    { sourceRemote: false, local: true, configured: true },
-    { sourceRemote: true, local: true, configured: true },
-    { sourceRemote: false, local: false, configured: false },
-    { sourceRemote: true, local: false, configured: false },
-  ])(
-    "copies content using the deployment policy: %j",
-    async ({ sourceRemote, local, configured }) => {
-      state.configured = configured;
-      vi.stubEnv("VITE_LOCAL_PIPELINES", String(local));
-      if (sourceRemote) state.file.remote = remote;
-      const isRemote = !local && configured;
-      const { result } = renderFileMenu();
-      await result.current.handleSavePipelineAs("Copy");
-      const target = isRemote
-        ? sourceRemote
-          ? state.storage.copyRemotePipeline
-          : state.storage.createRemotePipeline
-        : state.storage.rootFolder.addFile;
-      const other = isRemote
-        ? state.storage.rootFolder.addFile
-        : state.storage.copyRemotePipeline;
-      expect(target).toHaveBeenCalledExactlyOnceWith(
-        ...(isRemote ? [sourceRemote ? state.file : remote.backendUrl] : []),
-        "Copy",
-        expect.any(String),
-      );
-      expect(componentSpecFromYaml(target.mock.calls[0].at(-1))).toMatchObject({
-        name: "Copy",
-        description: "Preserve the full pipeline content",
-      });
-      expect(other).not.toHaveBeenCalled();
-      expect(state.file.rename).not.toHaveBeenCalled();
-      expect(state.file.write).not.toHaveBeenCalled();
-      expect(state.save).not.toHaveBeenCalled();
-      expect(state.spec?.name).toBe("Original");
-      expect(state.navigate).toHaveBeenCalledWith(
-        isRemote
-          ? {
-              to: APP_ROUTES.EDITOR_V2_REMOTE_PIPELINE,
-              params: { pipelineId: "copy-id" },
-            }
-          : {
-              to: APP_ROUTES.EDITOR_V2_PIPELINE,
-              params: { pipelineName: "Copy" },
-              search: { fileId: "copy-id" },
-            },
-      );
-    },
-  );
+  it("copies the document remotely without changing the source", async () => {
+    const { result } = renderFileMenu();
+    await result.current.handleSavePipelineAs("Copy");
+    expect(state.storage.copyRemotePipeline).toHaveBeenCalledWith(
+      state.file,
+      "Copy",
+      expect.objectContaining({ name: "Copy" }),
+    );
+    expect(state.storage.copyRemotePipeline.mock.calls[0][2]).toMatchObject({
+      name: "Copy",
+      description: "Preserve the full pipeline content",
+    });
+    expect(state.spec?.name).toBe("Original");
+    expect(state.file.write).not.toHaveBeenCalled();
+    expect(state.navigate).toHaveBeenCalledWith({
+      to: APP_ROUTES.REMOTE_PIPELINE_EDITOR,
+      params: { pipelineId: "copy-id" },
+    });
+  });
 
-  it.each([false, true])(
-    "persists rename and only changes a local route (remote: %s)",
-    async (isRemote) => {
-      if (isRemote) state.file.remote = remote;
-      const { result } = renderFileMenu();
-      await result.current.renamePipeline("Renamed");
-      expect(state.file.rename).toHaveBeenCalledWith("Renamed");
-      expect(state.spec?.name).toBe("Renamed");
-      expect(state.save).toHaveBeenCalledTimes(isRemote ? 1 : 2);
-      expect(state.save.mock.invocationCallOrder[0]).toBeLessThan(
-        state.file.rename.mock.invocationCallOrder[0],
-      );
-      if (isRemote) expect(state.navigate).not.toHaveBeenCalled();
-      else
-        expect(state.navigate).toHaveBeenCalledWith({
-          to: APP_ROUTES.EDITOR_V2_PIPELINE,
-          params: { pipelineName: "Renamed" },
-          search: { fileId: state.file.id },
-        });
-    },
-  );
+  it("persists rename without changing the remote URL", async () => {
+    const { result } = renderFileMenu();
+    await result.current.renamePipeline("Renamed");
+    expect(state.spec?.name).toBe("Renamed");
+    expect(state.save).toHaveBeenCalledOnce();
+    expect(state.navigate).not.toHaveBeenCalled();
+  });
 
   it("queues a remote rename before navigation disposes the editor", async () => {
     state.file.remote = remote;
     let finishRename!: () => void;
-    state.file.rename.mockReturnValueOnce(
+    state.save.mockReturnValueOnce(
       new Promise<void>((resolve) => {
         finishRename = resolve;
       }),
@@ -259,10 +200,6 @@ describe("editor file actions", () => {
       expect(state.notify).toHaveBeenCalledWith("Write failed", "error");
       expect(state.navigate).not.toHaveBeenCalled();
       expect(state.releaseRecoveredCopy).not.toHaveBeenCalled();
-      expect(state.file.rename).toHaveBeenCalledTimes(
-        action === "rename" ? 1 : 0,
-      );
-      expect(state.storage.rootFolder.addFile).not.toHaveBeenCalled();
       expect(state.spec?.name).toBe(
         action === "rename" ? "Renamed" : "Original",
       );
@@ -275,7 +212,7 @@ it("acknowledges the captured source only after its copy succeeds", async () => 
   vi.spyOn(deletion, "getRemotePipelineDeletionError").mockReturnValue(
     new Error("This pipeline was deleted"),
   );
-  const pending = Promise.withResolvers<{ id: string; storageKey: string }>();
+  const pending = Promise.withResolvers<{ id: string; name: string }>();
   state.storage.copyRemotePipeline.mockReturnValue(pending.promise);
   const { result } = renderFileMenu();
   const saving = result.current.handleSavePipelineAs("Copy");
@@ -283,7 +220,7 @@ it("acknowledges the captured source only after its copy succeeds", async () => 
     expect(state.storage.copyRemotePipeline).toHaveBeenCalledOnce(),
   );
   expect(state.releaseRecoveredCopy).not.toHaveBeenCalled();
-  pending.resolve({ id: "copy-id", storageKey: "Copy" });
+  pending.resolve({ id: "copy-id", name: "Copy" });
   await saving;
   expect(state.releaseRecoveredCopy).toHaveBeenCalledWith(
     state.file,

@@ -188,11 +188,7 @@ export function useLibraryDragGate({
     const allow = libraryDragAllow.toLowerCase();
     const handleDragStart = (event: DragEvent) => {
       const target = elementFromEvent(event);
-      if (
-        !target?.closest(
-          '[data-dock-window-content="component-library"], [data-dock-window-content="component-search-v2"]',
-        )
-      ) {
+      if (!target?.closest('[data-dock-window-content="component-search"]')) {
         return;
       }
       const item =
@@ -298,7 +294,7 @@ interface ResetLibrarySearchArgs {
   stepSelector: TourStep["selector"] | undefined;
 }
 
-/** Clear the component-library search box when a step asks for a clean slate. */
+/** Clear the component search box when a step asks for a clean slate. */
 export function useResetLibrarySearch({
   isOpen,
   currentStep,

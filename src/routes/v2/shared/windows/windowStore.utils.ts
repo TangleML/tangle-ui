@@ -10,20 +10,21 @@ import {
 import { bringIntoViewport, type ViewportBounds } from "./viewportUtils";
 import { DEFAULT_VIEW_PRESET } from "./viewPresets";
 import type { WindowModelInit } from "./windowModel";
-import {
-  getPersistedWindowState,
-  hasPersistedLayout,
+import type {
+  PersistedWindowLayout,
+  PersistedWindowState,
 } from "./windowPersistence";
 
-type PersistedState = ReturnType<typeof getPersistedWindowState>;
+type PersistedState = PersistedWindowState | null;
 
 export function buildWindowModelInit(
   id: string,
   options: WindowOptions,
   defaultPosition: Position,
   viewportBounds?: ViewportBounds,
+  layout: PersistedWindowLayout | null = null,
 ): WindowModelInit {
-  const persisted = options.persisted ? getPersistedWindowState(id) : null;
+  const persisted = options.persisted ? (layout?.windows[id] ?? null) : null;
   const docked = resolveDockedOverrides(persisted, options.defaultDockState);
   const geo = resolveGeometry(
     persisted,
@@ -32,7 +33,13 @@ export function buildWindowModelInit(
     docked.dockState,
     viewportBounds,
   );
-  const initial = resolveInitialState(persisted, options, docked.dockState, id);
+  const initial = resolveInitialState(
+    persisted,
+    options,
+    docked.dockState,
+    id,
+    !!layout,
+  );
 
   return {
     id,
@@ -61,6 +68,7 @@ function resolveInitialState(
   options: WindowOptions,
   dockState: DockState,
   id: string,
+  hasPersistedLayout: boolean,
 ): { state: WindowState; needsPreviousState: boolean } {
   if (persisted) {
     // A persisted entry reflects the user's last explicit choice, so honor it on
@@ -84,7 +92,7 @@ function resolveInitialState(
     const shouldStartHidden =
       options.defaultVisible === false ||
       (options.defaultVisible === undefined &&
-        !hasPersistedLayout() &&
+        !hasPersistedLayout &&
         !DEFAULT_VIEW_PRESET.visible.has(id));
     if (shouldStartHidden) {
       return { state: "hidden", needsPreviousState: true };

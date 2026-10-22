@@ -1,11 +1,11 @@
 import { useOutdatedComponents } from "@/components/shared/ManageComponent/hooks/useOutdatedComponents";
 import type { ComponentReference } from "@/models/componentSpec";
+import {
+  collectUsedComponentReferences,
+  EMPTY_USED_COMPONENTS,
+} from "@/models/componentSpec/collectUsedComponentReferences";
 import type { UpgradeCandidate } from "@/routes/v2/pages/Editor/components/UpgradeComponents/types";
 import { buildUpgradeCandidateFromResolved } from "@/routes/v2/pages/Editor/components/UpgradeComponents/utils/buildUpgradeCandidateFromResolved";
-import {
-  collectUsedComponentReferencesFromV2Spec,
-  EMPTY_USED_COMPONENTS,
-} from "@/routes/v2/pages/Editor/components/UpgradeComponents/utils/collectUsedComponentReferencesFromV2Spec";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 
 /**
@@ -20,7 +20,7 @@ export function useUpgradeCandidatesFromOutdated(): UpgradeCandidate[] {
   const spec = useSpec();
 
   const usedComponents = spec
-    ? collectUsedComponentReferencesFromV2Spec(spec)
+    ? collectUsedComponentReferences(spec)
     : EMPTY_USED_COMPONENTS;
 
   const { data: outdatedPairs } = useOutdatedComponents(usedComponents);

@@ -1,24 +1,18 @@
-import "fake-indexeddb/auto";
-
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { runInAction } from "mobx";
 import { StrictMode } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
-import { serializeComponentSpecToText } from "@/models/componentSpec";
+import { serializeComponentSpec } from "@/models/componentSpec";
 import { ComponentSpec } from "@/models/componentSpec";
 import { AutoSaveIndicator } from "@/routes/v2/pages/Editor/components/EditorMenuBar/components/AutoSaveIndicator";
 import { AutoSaveStore } from "@/routes/v2/pages/Editor/store/autoSaveStore";
+import { DocumentSaveState } from "@/routes/v2/pages/Editor/store/documentSaveState";
 import { PipelineFileStore } from "@/routes/v2/pages/Editor/store/pipelineFileStore";
 import { UndoStore } from "@/routes/v2/pages/Editor/store/undoStore";
-import {
-  saveIdStack,
-  saveUndoHistory,
-} from "@/routes/v2/pages/Editor/utils/undoHistoryStorage";
-import { RootFolderDbStorageDriver } from "@/services/pipelineStorage/drivers/RootFolderDbStorageDriver";
 import { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
-import { PipelineFolder } from "@/services/pipelineStorage/PipelineFolder";
 import { withRemotePipelineDeletion } from "@/services/pipelineStorage/remotePipelineDeletion";
+import { componentSpecToText } from "@/utils/yaml";
 
 import { useSpecLifecycle } from "./useSpecLifecycle";
 
@@ -37,7 +31,7 @@ const notify = vi.fn();
 const session = {
   undo,
   pipelineFile: new PipelineFileStore(),
-  autoSave: new AutoSaveStore(undo, notify),
+  autoSave: new AutoSaveStore(notify),
 };
 vi.mock("@/routes/v2/shared/store/SharedStoreContext", () => ({
   useSharedStores: () => shared,
@@ -46,41 +40,36 @@ vi.mock("@/routes/v2/pages/Editor/store/EditorSessionContext", () => ({
   useEditorSession: () => session,
 }));
 vi.mock("@/utils/componentStore", () => ({}));
-vi.mock(
-  "@/routes/v2/pages/Editor/utils/undoHistoryStorage",
-  async (importOriginal) => ({
-    ...(await importOriginal<
-      typeof import("@/routes/v2/pages/Editor/utils/undoHistoryStorage")
-    >()),
-    saveIdStack: vi.fn().mockResolvedValue(undefined),
-    saveUndoHistory: vi.fn().mockResolvedValue(undefined),
-  }),
-);
-
-function pipeline(name = "Original", remote = true) {
+const documents: DocumentSaveState[] = [];
+function pipeline(name = "Original") {
   const spec = new ComponentSpec({ name });
   const file = new PipelineFile({
-    id: name,
-    storageKey: name,
-    folder: new PipelineFolder({
-      id: "folder",
-      name: "Folder",
-      parentId: null,
-      driver: new RootFolderDbStorageDriver(),
-    }),
-    remote: remote
-      ? { backendUrl: "https://example.com", pipelineId: name }
-      : undefined,
+    ref: {
+      source: "remote",
+      backendUrl: "https://example.com",
+      pipelineId: name,
+    },
+    document: {
+      id: name,
+      user_id: "owner",
+      pipeline_name: name,
+      pipeline_run_annotations: {},
+      file_path: `pipelines/${name}.yaml`,
+      root_pipeline_task: {
+        componentRef: {
+          spec: { name, implementation: { graph: { tasks: {} } } },
+        },
+      },
+    },
   });
-  return {
-    spec,
-    file,
-    write: vi.spyOn(file, "write").mockResolvedValue(undefined),
-  };
+  const write = vi.spyOn(file, "write").mockResolvedValue(undefined);
+  const saveState = new DocumentSaveState(spec, file);
+  documents.push(saveState);
+  return { spec, file, write, saveState };
 }
 
-function Editor({ spec, file }: ReturnType<typeof pipeline>) {
-  useSpecLifecycle(spec, file);
+function Editor({ spec, file, saveState }: ReturnType<typeof pipeline>) {
+  useSpecLifecycle(spec, file, saveState);
   return <AutoSaveIndicator />;
 }
 
@@ -89,51 +78,72 @@ beforeEach(() => {
   vi.useFakeTimers();
 });
 afterEach(() => {
+  documents.splice(0).forEach((document) => document.dispose());
   vi.useRealTimers();
   vi.restoreAllMocks();
 });
 
-it.each([false, true])(
-  "preserves undo/redo and deduplicates the disposal flush (remote: %s)",
-  async (remote) => {
-    const current = pipeline("Original", remote);
-    const view = render(<Editor {...current} />, { wrapper: StrictMode });
-    await session.autoSave.save();
-    expect(current.write).not.toHaveBeenCalled();
-    const manager = undo.undoManager;
-    act(() => {
-      undo.withGroup("Rename", () => current.spec.setName("Renamed"));
-      runInAction(() => {
-        current.file.storageKey = "Renamed";
-      });
+it("preserves session undo/redo and deduplicates the disposal flush", async () => {
+  const current = pipeline("Original");
+  const view = render(<Editor {...current} />, { wrapper: StrictMode });
+  await session.autoSave.save();
+  expect(current.write).not.toHaveBeenCalled();
+  const manager = undo.undoManager;
+  act(() => {
+    undo.withGroup("Rename", () => current.spec.setName("Renamed"));
+  });
+  view.rerender(<Editor {...current} />);
+  expect(undo.undoManager).toBe(manager);
+  expect(undo.canUndo).toBe(true);
+  act(() => undo.undo());
+  expect(current.spec.name).toBe("Original");
+  act(() => undo.redo());
+  expect(current.spec.name).toBe("Renamed");
+  fireEvent.click(screen.getByRole("button"));
+  view.unmount();
+  await vi.runAllTimersAsync();
+  expect(current.write).toHaveBeenCalledExactlyOnceWith(
+    expect.objectContaining({ name: "Renamed" }),
+  );
+  expect(session.pipelineFile.activePipelineFile).toBeNull();
+  expect(manager).not.toBeNull();
+  expect(undo.undoManager).toBeNull();
+});
+
+it("creates an untouched draft only on explicit Save, not mount or close", async () => {
+  const current = pipeline("Untouched draft");
+  runInAction(() => {
+    current.file.remote = undefined;
+  });
+  current.write.mockImplementation(async () => {
+    runInAction(() => {
+      current.file.remote = {
+        backendUrl: "https://example.com",
+        pipelineId: "saved-draft",
+      };
     });
-    view.rerender(<Editor {...current} />);
-    expect(undo.undoManager).toBe(manager);
-    expect(undo.canUndo).toBe(true);
-    act(() => undo.undo());
-    expect(current.spec.name).toBe("Original");
-    act(() => undo.redo());
-    expect(current.spec.name).toBe("Renamed");
-    fireEvent.click(screen.getByRole("button"));
-    view.unmount();
-    await vi.runAllTimersAsync();
-    expect(current.write).toHaveBeenCalledExactlyOnceWith(
-      expect.stringContaining("Renamed"),
-    );
-    expect(session.pipelineFile.activePipelineFile).toBeNull();
-    expect(manager).not.toBeNull();
-    expect(undo.undoManager).toBeNull();
-    expect(saveIdStack).toHaveBeenCalledTimes(remote ? 0 : 2);
-    expect(saveUndoHistory).toHaveBeenCalledExactlyOnceWith(
-      remote
-        ? JSON.stringify(["remote-pipeline", "https://example.com", "Original"])
-        : "Renamed",
-      expect.any(Array),
-      { undoQueue: expect.any(Array) },
-      remote ? expect.stringContaining("Renamed") : undefined,
-    );
-  },
-);
+  });
+
+  const firstMount = render(<Editor {...current} />, { wrapper: StrictMode });
+  await act(() => vi.runAllTimersAsync());
+  expect(current.write).not.toHaveBeenCalled();
+  firstMount.unmount();
+  await act(() => vi.runAllTimersAsync());
+  expect(current.write).not.toHaveBeenCalled();
+
+  const reopened = render(<Editor {...current} />, { wrapper: StrictMode });
+  fireEvent.click(
+    screen.getByRole("button", { name: "Draft — click to save" }),
+  );
+  await act(() => vi.runAllTimersAsync());
+  expect(current.write).toHaveBeenCalledExactlyOnceWith(
+    expect.objectContaining({ name: "Untouched draft" }),
+  );
+  expect(current.file.isDraft).toBe(false);
+  reopened.unmount();
+  await act(() => vi.runAllTimersAsync());
+  expect(current.write).toHaveBeenCalledOnce();
+});
 
 it("keeps a pending save bound to its file without changing the next document's status", async () => {
   const old = pipeline();
@@ -155,7 +165,7 @@ it("keeps a pending save bound to its file without changing the next document's 
     await vi.advanceTimersByTimeAsync(600);
   });
   expect(old.write).toHaveBeenCalledExactlyOnceWith(
-    expect.stringContaining("Old edited"),
+    expect.objectContaining({ name: "Old edited" }),
   );
   expect(next.write).not.toHaveBeenCalled();
   expect(
@@ -175,15 +185,15 @@ it.each(["Original", "Saved intermediate"])(
     let serverYaml = "";
     current.write
       .mockImplementation(async (yaml) => {
-        serverYaml = yaml;
+        serverYaml = componentSpecToText(yaml);
       })
       .mockImplementationOnce(async (yaml) => {
         await firstWrite;
-        serverYaml = yaml;
+        serverYaml = componentSpecToText(yaml);
       })
       .mockImplementationOnce(async (yaml) => {
         await firstWrite;
-        serverYaml = yaml;
+        serverYaml = componentSpecToText(yaml);
         throw new Error("Storage unavailable");
       });
     render(<Editor {...current} />, { wrapper: StrictMode });
@@ -214,7 +224,7 @@ it.each(["Original", "Saved intermediate"])(
     ).toBeEnabled();
     expect(current.write).toHaveBeenCalledTimes(3);
     expect(current.write).toHaveBeenLastCalledWith(
-      expect.stringContaining(restoredName),
+      expect.objectContaining({ name: restoredName }),
     );
     expect(serverYaml).toContain(`name: ${restoredName}`);
   },
@@ -233,7 +243,7 @@ it("saves a return to the baseline while another save is pending", async () => {
   });
   expect(current.write).toHaveBeenCalledTimes(2);
   expect(current.write).toHaveBeenLastCalledWith(
-    expect.stringContaining("Original"),
+    expect.objectContaining({ name: "Original" }),
   );
 });
 
@@ -243,21 +253,21 @@ it("autosaves remote undo and redo without carrying history to another document"
   act(() => current.spec.setDescription("Edited"));
   await act(() => vi.runAllTimersAsync());
   expect(current.write).toHaveBeenLastCalledWith(
-    expect.stringContaining("Edited"),
+    expect.objectContaining({ description: "Edited" }),
   );
 
   act(() => undo.undo());
   await act(() => vi.runAllTimersAsync());
   expect(current.spec.description).toBeUndefined();
   expect(current.write).toHaveBeenLastCalledWith(
-    expect.not.stringContaining("Edited"),
+    expect.not.objectContaining({ description: "Edited" }),
   );
 
   act(() => undo.redo());
   await act(() => vi.runAllTimersAsync());
   expect(current.spec.description).toBe("Edited");
   expect(current.write).toHaveBeenLastCalledWith(
-    expect.stringContaining("Edited"),
+    expect.objectContaining({ description: "Edited" }),
   );
   expect(current.write).toHaveBeenCalledTimes(3);
 
@@ -266,31 +276,7 @@ it("autosaves remote undo and redo without carrying history to another document"
   expect(undo.canRedo).toBe(false);
 });
 
-it("persists the undo steps for the saved remote version while more edits are pending", async () => {
-  const current = pipeline();
-  let finish!: () => void;
-  current.write.mockReturnValueOnce(
-    new Promise<void>((resolve) => {
-      finish = resolve;
-    }),
-  );
-  render(<Editor {...current} />, { wrapper: StrictMode });
-  act(() => current.spec.setDescription("First edit"));
-  fireEvent.click(screen.getByRole("button"));
-  act(() => current.spec.setDescription("Second edit"));
-  await act(async () => {
-    finish();
-    await vi.runAllTimersAsync();
-  });
-  const calls = vi.mocked(saveUndoHistory).mock.calls;
-  expect(calls).toHaveLength(2);
-  expect(calls[0][2].undoQueue).toHaveLength(1);
-  expect(calls[0][3]).toContain("First edit");
-  expect(calls[1][2].undoQueue).toHaveLength(2);
-  expect(calls[1][3]).toContain("Second edit");
-});
-
-it("does not block unloading after the write finishes while the indicator settles", async () => {
+it("clears the save indicator and unload guard when the write finishes", async () => {
   const current = pipeline();
   const addListener = vi.spyOn(window, "addEventListener");
   const removeListener = vi.spyOn(window, "removeEventListener");
@@ -304,7 +290,7 @@ it("does not block unloading after the write finishes while the indicator settle
   await act(async () => {
     await Promise.resolve();
   });
-  expect(session.autoSave.isSaving).toBe(true);
+  expect(session.autoSave.isSaving).toBe(false);
   expect(session.autoSave.hasUnsavedChanges).toBe(false);
   expect(removeListener).toHaveBeenCalledWith("beforeunload", unloadGuard);
   await act(() => vi.runAllTimersAsync());
@@ -337,7 +323,7 @@ it.each([false, true])(
     const view = render(<Editor {...current} />);
     const removedListener = vi.spyOn(window, "removeEventListener");
     act(() => current.spec.setDescription("Recover this content"));
-    const snapshot = serializeComponentSpecToText(current.spec);
+    const snapshot = JSON.stringify(serializeComponentSpec(current.spec));
     await withRemotePipelineDeletion(
       { source: "remote", ...current.file.remote! },
       `pipelines/${current.file.id}.yaml`,

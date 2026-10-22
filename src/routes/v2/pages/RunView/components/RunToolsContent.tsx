@@ -2,7 +2,6 @@ import { observer } from "mobx-react-lite";
 
 import { CancelPipelineRunButton } from "@/components/PipelineRun/components/CancelPipelineRunButton";
 import { ClonePipelineButton } from "@/components/PipelineRun/components/ClonePipelineButton";
-import { InspectPipelineButton } from "@/components/PipelineRun/components/InspectPipelineButton";
 import { RerunPipelineButton } from "@/components/PipelineRun/components/RerunPipelineButton";
 import { SharePipelineButton } from "@/components/PipelineRun/components/SharePipelineButton";
 import { ViewYamlButton } from "@/components/shared/Buttons/ViewYamlButton";
@@ -23,15 +22,8 @@ export const RunToolsContent = observer(function RunToolsContent({
   const actions = useRunViewActions();
   if (!actions.ready) return null;
 
-  const {
-    componentSpec,
-    runId,
-    canAccessEditorSpec,
-    isRunCreator,
-    isInProgress,
-    isComplete,
-    pipelineName,
-  } = actions;
+  const { componentSpec, runId, isRunCreator, isInProgress, isComplete } =
+    actions;
 
   return (
     <ToolsPanel layout={layout}>
@@ -58,19 +50,6 @@ export const RunToolsContent = observer(function RunToolsContent({
             wrapperClassName={wrapperClassName}
             {...tracking("v2.run_view.tools.share_pipeline")}
           />
-
-          {canAccessEditorSpec && pipelineName && (
-            <InspectPipelineButton
-              pipelineName={pipelineName}
-              displayLabel={isRail ? undefined : "Inspect pipeline"}
-              aria-label="Inspect pipeline"
-              showTooltip={isRail}
-              tooltipSide={tooltipSide}
-              className={className}
-              wrapperClassName={wrapperClassName}
-              {...tracking("v2.run_view.tools.inspect_pipeline")}
-            />
-          )}
 
           <ClonePipelineButton
             componentSpec={componentSpec}

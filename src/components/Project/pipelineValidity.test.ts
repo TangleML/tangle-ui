@@ -85,7 +85,7 @@ describe("pipelineValidity", () => {
     expect(pipelineValidity(graph(tasks))).toBe("unknown");
   });
 
-  /** A pipeline read out of browser storage is whatever yaml is there. */
+  /** Imported YAML can contain malformed implementations. */
   it("withholds a verdict on a spec too malformed to have an implementation", () => {
     expect(pipelineValidity({ name: "Broken" } as ComponentSpec)).toBe(
       "unknown",

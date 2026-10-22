@@ -11,7 +11,6 @@ export { Binding, ComponentSpec, Input, Output, Task } from "./entities";
 
 // Serialization
 export {
-  collectIdStack,
   serializeComponentSpec,
   serializeComponentSpecToText,
   serializeComponentSpecToYaml,
@@ -19,11 +18,9 @@ export {
 } from "./serialization";
 
 // Factories
-export type { IdGenerator } from "./factories";
 export {
   createTaskFromComponentRef,
   IncrementingIdGenerator,
-  ReplayIdGenerator,
 } from "./factories";
 
 // Actions

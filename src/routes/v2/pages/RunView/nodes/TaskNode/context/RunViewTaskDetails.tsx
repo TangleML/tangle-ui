@@ -1,4 +1,3 @@
-import { useParams } from "@tanstack/react-router";
 import { AmphoraIcon, InfoIcon, LogsIcon } from "lucide-react";
 import { observer } from "mobx-react-lite";
 import { useEffect, useState } from "react";
@@ -47,9 +46,7 @@ export const RunViewTaskDetails = observer(function RunViewTaskDetails({
   const spec = useSpec();
   const executionData = useExecutionDataOptional();
   const { editor, windows } = useSharedStores();
-  const params = useParams({ strict: false });
-  const runId =
-    "id" in params && typeof params.id === "string" ? params.id : undefined;
+  const runId = executionData?.runId;
 
   const task = spec?.tasks.find((t) => t.$id === entityId);
   const isSubgraphTask = task?.subgraphSpec !== undefined;
@@ -215,7 +212,6 @@ export const RunViewTaskDetails = observer(function RunViewTaskDetails({
               componentRef={componentRef}
               executionId={executionId}
               status={status}
-              readOnly
               options={{ descriptionExpanded: true }}
               additionalSection={getTaskAnnotationSections(task.annotations)}
             />

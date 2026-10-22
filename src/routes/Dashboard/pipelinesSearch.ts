@@ -13,10 +13,6 @@ export interface RemotePipelineSearchFilters {
   updatedTo?: string;
 }
 
-interface PipelinesSearch extends RemotePipelineSearchFilters {
-  tab?: "local" | "remote";
-}
-
 function dateParam(value: unknown): string | undefined {
   return typeof value === "string" &&
     /^\d{4}-\d{2}-\d{2}$/.test(value) &&
@@ -26,19 +22,17 @@ function dateParam(value: unknown): string | undefined {
     : undefined;
 }
 
-export function validatePipelinesSearch(search: unknown): PipelinesSearch {
+export function validatePipelinesSearch(
+  search: unknown,
+): RemotePipelineSearchFilters {
   if (!isRecord(search)) return {};
-  const { page: _page, ...rest } = search;
+  const { page: _page, tab: _tab, ...rest } = search;
   const createdFrom = dateParam(search.createdFrom);
   const createdTo = dateParam(search.createdTo);
   const updatedFrom = dateParam(search.updatedFrom);
   const updatedTo = dateParam(search.updatedTo);
   return {
     ...rest,
-    tab:
-      search.tab === "local" || search.tab === "remote"
-        ? search.tab
-        : undefined,
     name: typeof search.name === "string" ? search.name : undefined,
     id: typeof search.id === "string" ? search.id : undefined,
     user: typeof search.user === "string" ? search.user : undefined,

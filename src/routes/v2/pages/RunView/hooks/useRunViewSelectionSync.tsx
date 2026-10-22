@@ -44,7 +44,9 @@ function ensureContextPanelVisible(
     persisted: true,
     fillDockHeight: placement.defaultDockState !== undefined,
     defaultDockState: placement.defaultDockState,
-    onClose: () => editor.clearSelection(),
+    onClose: () => {
+      if (editor.selectedNodeId) editor.clearSelection();
+    },
     miniContent: (
       <WindowMiniButton
         tooltip="View Properties"
@@ -70,6 +72,7 @@ export function useRunViewSelectionSync(options?: {
   });
 
   useEffect(() => {
+    let disposed = false;
     const disposeSelectionWatcher = reaction(
       () => ({
         selectedNodeId: editor.selectedNodeId,
@@ -82,9 +85,17 @@ export function useRunViewSelectionSync(options?: {
           return;
         }
 
-        if (editor.draggedSincePointerDown) return;
-
-        ensureContextPanelVisible(windows, editor, placementRef.current);
+        // React Flow selects a node before its drag-start callback runs.
+        queueMicrotask(() => {
+          if (
+            disposed ||
+            editor.draggedSincePointerDown ||
+            editor.selectedNodeId !== selectedNodeId ||
+            editor.selectedNodeType !== selectedNodeType
+          )
+            return;
+          ensureContextPanelVisible(windows, editor, placementRef.current);
+        });
       },
     );
 
@@ -97,6 +108,7 @@ export function useRunViewSelectionSync(options?: {
     );
 
     return () => {
+      disposed = true;
       disposeSelectionWatcher();
       disposeRevealWatcher();
     };

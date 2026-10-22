@@ -51,9 +51,9 @@ describe("coerceWorkareaTarget", () => {
       type: "run",
       identity: "id/run-123",
     });
-    expect(coerceWorkareaTarget("pipeline://name/Churn")).toEqual({
+    expect(coerceWorkareaTarget("pipeline://remote/churn-id")).toEqual({
       type: "pipeline",
-      identity: "name/Churn",
+      identity: "remote/churn-id",
     });
   });
 
@@ -63,8 +63,8 @@ describe("coerceWorkareaTarget", () => {
     ).toEqual({ type: "run", identity: "id/run-123" });
   });
 
-  it("reads a run url from either run view, and from a bare path", () => {
-    expect(coerceWorkareaTarget("https://host/runs-v2/run-9")).toEqual({
+  it("reads a run URL and a bare path", () => {
+    expect(coerceWorkareaTarget("https://host/runs/run-9")).toEqual({
       type: "run",
       identity: "id/run-9",
     });

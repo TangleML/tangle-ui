@@ -6,10 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { GetExecutionInfoResponse } from "@/api/types.gen";
 import * as executionService from "@/services/executionService";
 
-import {
-  buildExecutionUrl,
-  useSubgraphBreadcrumbs,
-} from "./useSubgraphBreadcrumbs";
+import { useSubgraphBreadcrumbs } from "./useSubgraphBreadcrumbs";
 
 vi.mock("@/providers/BackendProvider", () => ({
   useBackend: () => ({
@@ -48,7 +45,6 @@ describe("useSubgraphBreadcrumbs", () => {
     });
 
     expect(result.current.segments).toEqual([]);
-    expect(result.current.path).toEqual(["root"]);
   });
 
   it("should return empty segments when subgraphExecutionId is undefined", async () => {
@@ -63,7 +59,6 @@ describe("useSubgraphBreadcrumbs", () => {
     });
 
     expect(result.current.segments).toEqual([]);
-    expect(result.current.path).toEqual(["root"]);
   });
 
   it("should traverse backwards to build breadcrumb path", async () => {
@@ -184,30 +179,5 @@ describe("useSubgraphBreadcrumbs", () => {
       executionId: level2ExecutionId,
       taskName: "Subgraph Level 2",
     });
-    expect(result.current.path).toEqual([
-      "root",
-      "Task Level 1",
-      "Task Level 2",
-    ]);
-  });
-});
-
-describe("buildExecutionUrl", () => {
-  it("should return root URL when subgraphExecutionId is undefined", () => {
-    const url = buildExecutionUrl("root-exec-123");
-    expect(url).toBe("/runs/root-exec-123");
-  });
-
-  it("should return root URL when subgraphExecutionId equals rootExecutionId", () => {
-    const runId = "root-exec-123";
-    const url = buildExecutionUrl(runId, runId);
-    expect(url).toBe("/runs/root-exec-123");
-  });
-
-  it("should return nested URL when subgraphExecutionId is different", () => {
-    const runId = "root-exec-123";
-    const subgraphExecutionId = "subgraph-exec-456";
-    const url = buildExecutionUrl(runId, subgraphExecutionId);
-    expect(url).toBe("/runs/root-exec-123/subgraph-exec-456");
   });
 });

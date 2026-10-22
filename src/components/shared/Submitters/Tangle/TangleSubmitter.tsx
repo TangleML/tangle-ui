@@ -14,7 +14,7 @@ import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
 import { useBackend } from "@/providers/BackendProvider";
 import { useTourMockBackend } from "@/providers/TourProvider/tourMockBackend";
-import { getDefaultRunPath } from "@/routes/runRoutes";
+import { getRunPath } from "@/routes/runRoutes";
 import type { PipelineRun } from "@/types/pipelineRun";
 import {
   type ArgumentType,
@@ -31,6 +31,7 @@ import { useRunAttribution } from "./useRunAttribution";
 import { useSubmitPipeline } from "./useSubmitPipeline";
 
 interface TangleSubmitterProps {
+  pipelineId?: string;
   componentSpec?: ComponentSpec;
   onSubmitComplete?: () => void;
   isComponentTreeValid?: boolean;
@@ -38,6 +39,7 @@ interface TangleSubmitterProps {
 }
 
 const TangleSubmitter = ({
+  pipelineId,
   componentSpec,
   onSubmitComplete,
   isComponentTreeValid = true,
@@ -71,7 +73,7 @@ const TangleSubmitter = ({
   };
 
   const handleViewRun = (runId: number, e: MouseEvent) => {
-    const href = getDefaultRunPath(runId);
+    const href = getRunPath(runId);
     if (hasNewTabModifier(e)) {
       window.open(href, "_blank");
     } else {
@@ -105,7 +107,7 @@ const TangleSubmitter = ({
     showSuccessNotification(response.id);
 
     if (isAutoRedirect) {
-      const href = getDefaultRunPath(response.id);
+      const href = getRunPath(response.id);
       window.open(href, "_blank");
     }
   };
@@ -264,7 +266,7 @@ const TangleSubmitter = ({
           componentSpec={componentSpec}
           projectField={
             <RunProjectField
-              pipelineName={componentSpec.name}
+              pipelineId={pipelineId}
               value={attribution.projectId}
               onChange={attribution.setProjectId}
             />

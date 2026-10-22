@@ -2,11 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   describeResource,
-  DescriptorTooLargeError,
   documentResourceInput,
-  localPipelinePointerOf,
-  localPipelineResourceInput,
-  namesLocalPipeline,
   pipelineRunResourceInput,
 } from "./resourceDescriptor";
 import type { ProjectResourceSummary } from "./types";
@@ -29,28 +25,7 @@ function row(
   };
 }
 
-const rowFor = (input: ReturnType<typeof localPipelineResourceInput>) =>
-  row(input.metadata ?? null, { name: input.name ?? null });
-
 describe("describeResource", () => {
-  it("reads back what a browser pipeline was filed as", () => {
-    const described = describeResource(
-      rowFor(
-        localPipelineResourceInput({
-          localName: "Churn model",
-          localId: "file-7",
-        }),
-      ),
-    );
-
-    expect(described).toEqual({
-      type: "local_pipeline",
-      storage: "browser",
-      target: { type: "pipeline", identity: "id/file-7" },
-      fallbackName: "Churn model",
-    });
-  });
-
   it("reads back a run as the run it names, and nothing more", () => {
     const input = pipelineRunResourceInput("42", "Run 42");
 
@@ -77,13 +52,13 @@ describe("describeResource", () => {
 
   it("ignores an identity that is not a target, rather than throwing past it", () => {
     expect(
-      describeResource(row({ type: "local_pipeline", identity: "nonsense" })),
-    ).toEqual({ type: "local_pipeline" });
+      describeResource(row({ type: "pipeline", identity: "nonsense" })),
+    ).toEqual({ type: "pipeline" });
     expect(
       describeResource(
-        row({ type: "local_pipeline", identity: "pipeline://bogus/7" }),
+        row({ type: "pipeline", identity: "pipeline://bogus/7" }),
       ),
-    ).toEqual({ type: "local_pipeline" });
+    ).toEqual({ type: "pipeline" });
   });
 
   /** A run addressed by name is not expressible, so it must not parse as one. */
@@ -91,93 +66,6 @@ describe("describeResource", () => {
     expect(
       describeResource(row({ type: "pipeline_run", identity: "run://name/x" })),
     ).toEqual({ type: "pipeline_run" });
-  });
-});
-
-describe("localPipelinePointerOf", () => {
-  it("prefers the id, so a recycled name cannot mislead it", () => {
-    const pointer = localPipelinePointerOf(
-      rowFor(
-        localPipelineResourceInput({
-          localName: "Churn model",
-          localId: "file-7",
-        }),
-      ),
-    );
-
-    expect(pointer).toEqual({ localName: "Churn model", localId: "file-7" });
-  });
-
-  it("falls back to the name for a pipeline with no registry row", () => {
-    expect(
-      localPipelinePointerOf(
-        rowFor(localPipelineResourceInput({ localName: "Churn model" })),
-      ),
-    ).toEqual({ localName: "Churn model" });
-  });
-
-  /**
-   * The row's `name` is a label anyone may PATCH; `fallbackName` is what the
-   * pipeline was called when it was attached, which is what finds it again.
-   */
-  it("takes the name from the descriptor, not from the row's label", () => {
-    const input = localPipelineResourceInput({
-      localName: "Churn model",
-      localId: "file-7",
-    });
-
-    expect(
-      localPipelinePointerOf(
-        row(input.metadata ?? null, { name: "Renamed by someone" }),
-      ),
-    ).toEqual({ localName: "Churn model", localId: "file-7" });
-  });
-
-  it("finds no pipeline in a row that names something else", () => {
-    expect(
-      localPipelinePointerOf(row({ type: "pipeline_run" })),
-    ).toBeUndefined();
-    expect(localPipelinePointerOf(row(null))).toBeUndefined();
-  });
-
-  it("finds no pipeline in a row whose descriptor points nowhere", () => {
-    expect(
-      localPipelinePointerOf(row({ type: "local_pipeline" })),
-    ).toBeUndefined();
-  });
-});
-
-describe("namesLocalPipeline", () => {
-  it("is true only of a row filed as one", () => {
-    expect(
-      namesLocalPipeline(
-        rowFor(localPipelineResourceInput({ localName: "Churn model" })),
-      ),
-    ).toBe(true);
-    expect(namesLocalPipeline(row({ type: "pipeline_run" }))).toBe(false);
-    expect(namesLocalPipeline(row(null))).toBe(false);
-  });
-});
-
-describe("localPipelineResourceInput", () => {
-  it("files it as a document, which is what the api accepts", () => {
-    const input = localPipelineResourceInput({ localName: "Churn model" });
-
-    expect(input.entity).toBe("document");
-    expect(input.entityId).toBeUndefined();
-  });
-
-  /** A uuid here would read as a backend pipeline to every other client. */
-  it("never invents a backend id", () => {
-    expect(
-      localPipelineResourceInput({ localName: "Churn model" }).entityId,
-    ).toBeUndefined();
-  });
-
-  it("refuses a name too long to record", () => {
-    expect(() =>
-      localPipelineResourceInput({ localName: "p".repeat(2000) }),
-    ).toThrow(DescriptorTooLargeError);
   });
 });
 

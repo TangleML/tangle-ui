@@ -8,6 +8,13 @@ export type DockState = "left" | "right" | "none";
 
 type DockSide = Exclude<DockState, "none">;
 
+export interface DockAreaEvent {
+  type:
+    "window-docked" | "window-expanded" | "window-closing" | "window-minimized";
+  side: DockSide;
+  windowId: string;
+}
+
 export function isDockSide(state: DockState): state is DockSide {
   return state === "left" || state === "right";
 }

@@ -89,7 +89,7 @@ export function useRemotePipelineUrlSync(
     const remotePipelineId = pipelineId;
     function navigateToPath(nextPath: string[], replace: boolean) {
       void router.navigate({
-        to: APP_ROUTES.EDITOR_V2_REMOTE_PIPELINE,
+        to: APP_ROUTES.REMOTE_PIPELINE_EDITOR,
         params: { pipelineId: remotePipelineId },
         search: (previous) => ({
           ...previous,

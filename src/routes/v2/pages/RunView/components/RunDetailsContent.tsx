@@ -45,6 +45,7 @@ import {
   RUN_SOURCE_ANNOTATION,
   SYSTEM_ANNOTATIONS,
 } from "@/utils/annotations";
+import type { ComponentSpec as ComponentSpecData } from "@/utils/componentSpec";
 import {
   flattenExecutionStatusStats,
   getExecutionStatusLabel,
@@ -218,6 +219,9 @@ function RunDetailsContentLoaded({
           openDefault={false}
         >
           <PipelineIO
+            componentSpec={
+              details.task_spec.componentRef.spec as ComponentSpecData
+            }
             section="inputs"
             taskArguments={details.task_spec.arguments}
           />
@@ -229,6 +233,9 @@ function RunDetailsContentLoaded({
           openDefault={false}
         >
           <PipelineIO
+            componentSpec={
+              details.task_spec.componentRef.spec as ComponentSpecData
+            }
             section="outputs"
             taskArguments={details.task_spec.arguments}
           />

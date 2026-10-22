@@ -195,22 +195,6 @@ describe("RunPipelineButton", () => {
     expect(runButton()).toBeDisabled();
   });
 
-  /**
-   * Past runs are looked up by the pipeline's name in this browser, so for a
-   * pipeline the backend holds they would be some other pipeline's runs.
-   */
-  it("offers past runs to copy from only for the pipeline this browser holds", async () => {
-    const user = userEvent.setup();
-
-    renderButton({ heldInThisBrowser: true });
-    await user.click(runButton());
-
-    expect(screen.getByRole("dialog")).toHaveAttribute(
-      "data-copy-from-run",
-      "true",
-    );
-  });
-
   it("does not offer past runs for a pipeline the backend holds", async () => {
     renderButton({});
     const user = userEvent.setup();

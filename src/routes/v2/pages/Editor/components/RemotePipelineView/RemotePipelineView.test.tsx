@@ -32,7 +32,7 @@ import {
 } from "@/routes/remotePipelineSearch";
 import { EditorNodeLinkButton } from "@/routes/v2/pages/Editor/components/RemotePipelineNodeLinkButton";
 import type { EditorStore } from "@/routes/v2/shared/store/editorStore";
-import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
+import { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 
 import { RemotePipelineView } from "./RemotePipelineView";
 
@@ -235,7 +235,9 @@ it("copies the selected task only while the view is active", async () => {
   });
   await screen.findByText("First task");
   const node = canvas.nodes![0];
-  act(() => canvas.onSelectionChange?.({ nodes: [node], edges: [] }));
+  act(() =>
+    canvas.onNodesChange?.([{ type: "select", id: node.id, selected: true }]),
+  );
 
   fireEvent.keyDown(window, { key: "c", metaKey: true });
   expect(writeText).toHaveBeenCalledTimes(1);
@@ -302,7 +304,7 @@ async function openRoutedView(
   const root = createRootRoute();
   const route = createRoute({
     getParentRoute: () => root,
-    path: APP_ROUTES.EDITOR_V2_REMOTE_PIPELINE,
+    path: APP_ROUTES.REMOTE_PIPELINE_EDITOR,
     validateSearch: validateRemotePipelineSearch,
     component: () => (
       <RemotePipelineView
@@ -311,20 +313,35 @@ async function openRoutedView(
         file={
           embedded
             ? undefined
-            : ({
-                id: "pipeline-id",
-                remote: {
+            : new PipelineFile({
+                ref: {
+                  source: "remote",
                   pipelineId: "pipeline-id",
                   backendUrl: "https://backend.example.com",
                 },
-                folder: { driver: { ownerId: "other-user" } },
-              } as PipelineFile)
+                canEdit: false,
+                document: {
+                  pipeline_name: "Shared",
+                  id: "pipeline-id",
+                  user_id: "other-user",
+                  file_path: "shared.yaml",
+                  root_pipeline_task: {
+                    componentRef: {
+                      spec: {
+                        name: spec.name,
+                        implementation: { graph: { tasks: {} } },
+                      },
+                    },
+                  },
+                  pipeline_run_annotations: {},
+                },
+              })
         }
       />
     ),
   });
   const history = createMemoryHistory({
-    initialEntries: [`/editor-v2/pipeline/pipeline-id?${search}`],
+    initialEntries: [`/editor/pipeline/pipeline-id?${search}`],
   });
   const router = createRouter({
     routeTree: root.addChildren([route]),
@@ -381,7 +398,7 @@ it.each<RemotePipelineNodeType>(["task", "input", "output"])(
     fireEvent.click(screen.getByRole("button", { name: "Copy node link" }));
     await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
     const link = new URL(writeText.mock.calls[0][0]);
-    expect(link.pathname).toBe("/editor-v2/pipeline/pipeline-id");
+    expect(link.pathname).toBe("/editor/pipeline/pipeline-id");
     expect(link.searchParams.get("nodeId")).toBe("shared");
     expect(link.searchParams.get("nodeType")).toBe(nodeType);
     expect(JSON.parse(link.searchParams.get("subgraphPath")!)).toEqual([

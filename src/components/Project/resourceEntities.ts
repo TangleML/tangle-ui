@@ -1,5 +1,4 @@
 import type { IconName } from "@/components/ui/icon";
-import { namesLocalPipeline } from "@/services/projects/resourceDescriptor";
 import {
   conceptForEntity,
   resourceMeta,
@@ -30,20 +29,9 @@ function humanize(value: string) {
 const sameAs = (label: string, entity: string) =>
   label.toLowerCase() === humanize(entity).toLowerCase();
 
-/**
- * Groups are headed by the API's `entity`, which puts unlike rows together — a
- * browser-held pipeline is filed as a document. So each row says what its
- * `data` calls itself, unless the group already says it. The text is the
- * backend's and PATCHable, so it is cut to what a badge can hold.
- */
 export function resourceKindLabel(
   resource: ResourceRowShape,
 ): string | undefined {
-  if (namesLocalPipeline(resource)) {
-    const label = resourceMeta("pipeline").label;
-    return sameAs(label, resource.entity) ? undefined : label;
-  }
-
   const type = resource.metadata?.type;
   if (typeof type !== "string") {
     return undefined;
@@ -53,20 +41,10 @@ export function resourceKindLabel(
   return label && !sameAs(label, resource.entity) ? label : undefined;
 }
 
-/**
- * A resource that points at something only borrows it, so removing the row
- * leaves it where it lives. A resource carrying its own content, like a
- * document, is the only copy there is. A row naming a browser-held pipeline
- * counts as a pointer however broken it has become: it never held a pipeline of
- * its own, so removing it cannot destroy one.
- */
 export const removingDestroys = (resource: ResourceRowShape) =>
-  resource.entityId === null && !namesLocalPipeline(resource);
+  resource.entityId === null;
 
 export function removalConsequence(resource: ResourceRowShape) {
-  if (namesLocalPipeline(resource)) {
-    return "This only takes it out of this project. The pipeline itself is not deleted and stays in the browser that holds it.";
-  }
   if (removingDestroys(resource)) {
     return "This is the only copy, so deleting it here deletes it for good.";
   }

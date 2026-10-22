@@ -11,11 +11,10 @@ export interface SelectedNode {
 }
 
 export class EditorStore {
-  @observable accessor selectedNodeId: string | null = null;
-  @observable accessor selectedNodeType: NodeEntityType | null = null;
+  @observable.shallow accessor selectedNodes: SelectedNode[] = [];
+  @observable.shallow accessor selectedEdgeIds: string[] = [];
   @observable accessor lastSelectionWasShiftClick = false;
   @observable accessor lastShiftClickEntityId: string | null = null;
-  @observable.shallow accessor multiSelection: SelectedNode[] = [];
   @observable accessor focusedArgumentName: string | null = null;
   @observable accessor hoveredEntityId: string | null = null;
   @observable accessor pendingFocusNodeId: string | null = null;
@@ -29,6 +28,18 @@ export class EditorStore {
 
   constructor() {
     makeObservable(this);
+  }
+
+  @computed get selectedNodeId(): string | null {
+    return this.selectedNodes.length === 1 ? this.selectedNodes[0].id : null;
+  }
+
+  @computed get selectedNodeType(): NodeEntityType | null {
+    return this.selectedNodes.length === 1 ? this.selectedNodes[0].type : null;
+  }
+
+  @computed get multiSelection(): SelectedNode[] {
+    return this.selectedNodes.length > 1 ? this.selectedNodes : [];
   }
 
   @action setDraggedSincePointerDown(value: boolean) {
@@ -45,11 +56,10 @@ export class EditorStore {
   }
 
   @action resetState() {
-    this.selectedNodeId = null;
-    this.selectedNodeType = null;
+    this.selectedNodes = [];
+    this.selectedEdgeIds = [];
     this.lastSelectionWasShiftClick = false;
     this.lastShiftClickEntityId = null;
-    this.multiSelection = [];
     this.focusedArgumentName = null;
     this.hoveredEntityId = null;
     this.pendingFocusNodeId = null;
@@ -74,8 +84,12 @@ export class EditorStore {
 
     if (isShiftClick) return;
 
-    this.selectedNodeId = nodeId;
-    this.selectedNodeType = nodeType;
+    this.setSelectedNodes(
+      nodeId && nodeType
+        ? [{ id: nodeId, type: nodeType, position: { x: 0, y: 0 } }]
+        : [],
+    );
+    this.selectedEdgeIds = [];
     this.focusedArgumentName = null;
     this.hoveredEntityId = null;
   }
@@ -85,11 +99,10 @@ export class EditorStore {
   }
 
   @action clearSelection() {
-    this.selectedNodeId = null;
-    this.selectedNodeType = null;
+    this.selectedNodes = [];
+    this.selectedEdgeIds = [];
     this.lastSelectionWasShiftClick = false;
     this.lastShiftClickEntityId = null;
-    this.multiSelection = [];
     this.focusedArgumentName = null;
     this.hoveredEntityId = null;
     this.pendingTaskDetailTab = null;
@@ -102,24 +115,39 @@ export class EditorStore {
 
   @computed get hasAnySelection(): boolean {
     return (
-      this.selectedNodeId !== null ||
-      this.selectedNodeType !== null ||
-      this.multiSelection.length > 0 ||
+      this.selectedNodes.length > 0 ||
+      this.selectedEdgeIds.length > 0 ||
       this.selectedValidationIssue !== null ||
       this.focusedArgumentName !== null
     );
   }
 
-  @action setMultiSelection(nodes: SelectedNode[]) {
-    this.multiSelection = nodes;
-    if (nodes.length > 1) {
-      this.selectedNodeId = null;
-      this.selectedNodeType = null;
-    }
+  @action setSelectedNodes(nodes: SelectedNode[]) {
+    if (
+      nodes.length === this.selectedNodes.length &&
+      nodes.every(
+        (node, index) =>
+          node.id === this.selectedNodes[index].id &&
+          node.type === this.selectedNodes[index].type,
+      )
+    )
+      return;
+    this.selectedNodes = nodes;
+    this.focusedArgumentName = null;
+    this.hoveredEntityId = null;
   }
 
-  @action clearMultiSelection() {
-    this.multiSelection = [];
+  @action setSelectedEdges(ids: string[]) {
+    if (
+      ids.length === this.selectedEdgeIds.length &&
+      ids.every((id, index) => id === this.selectedEdgeIds[index])
+    )
+      return;
+    this.selectedEdgeIds = ids;
+  }
+
+  isNodeSelected(id: string): boolean {
+    return this.selectedNodes.some((node) => node.id === id);
   }
 
   @action setHoveredEntity(id: string | null) {
@@ -145,11 +173,6 @@ export class EditorStore {
 
   /** True when this task is the sole selection or part of a canvas multi-selection. */
   isTaskSelected(taskId: string): boolean {
-    if (this.selectedNodeType === "task" && this.selectedNodeId === taskId) {
-      return true;
-    }
-    return this.multiSelection.some(
-      (n) => n.type === "task" && n.id === taskId,
-    );
+    return this.selectedNodes.some((n) => n.type === "task" && n.id === taskId);
   }
 }

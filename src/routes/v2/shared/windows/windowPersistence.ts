@@ -7,7 +7,7 @@
  */
 
 import { reaction } from "mobx";
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { debounce } from "@/utils/debounce";
@@ -16,21 +16,10 @@ import { getStorage } from "@/utils/typedStorage";
 import type { DockState, Position, Size } from "./types";
 import type { WindowStoreImpl } from "./windowStore";
 
-/**
- * Tracks which layout is currently active so that module-level functions
- * (save/load/getPersistedWindowState) use the correct localStorage key.
- */
-let activeLayoutId: string | null = null;
-
 export const TOUR_WINDOW_LAYOUT_ID = "tour";
 
-function getLayoutStorageKey(layoutId: string | null): string {
-  if (!layoutId) return "editorV2-window-layout";
+function getLayoutStorageKey(layoutId: string): string {
   return `window-layout-${layoutId}`;
-}
-
-function getStorageKey(): string {
-  return getLayoutStorageKey(activeLayoutId);
 }
 
 export function clearLayout(layoutId: string): void {
@@ -41,7 +30,7 @@ export function clearLayout(layoutId: string): void {
   }
 }
 
-interface PersistedWindowState {
+export interface PersistedWindowState {
   position: Position;
   size: Size;
   dockState: DockState;
@@ -58,7 +47,7 @@ interface PersistedDockAreaState {
   windowOrder: string[];
 }
 
-interface PersistedWindowLayout {
+export interface PersistedWindowLayout {
   windows: Record<string, PersistedWindowState>;
   windowOrder: string[];
   dockAreas: {
@@ -74,8 +63,8 @@ const storage = getStorage<string, WindowLayoutStorageMap>();
 
 const CURRENT_VERSION = 5;
 
-function saveWindowLayoutImmediate(store: WindowStoreImpl): void {
-  const existingLayout = loadWindowLayout();
+function saveWindowLayout(store: WindowStoreImpl, layoutId: string): void {
+  const existingLayout = loadWindowLayout(layoutId);
 
   const layout: PersistedWindowLayout = {
     windows: existingLayout?.windows ?? {},
@@ -109,7 +98,7 @@ function saveWindowLayoutImmediate(store: WindowStoreImpl): void {
     store.isWindowPersisted(id),
   );
 
-  storage.setItem(getStorageKey(), layout);
+  storage.setItem(getLayoutStorageKey(layoutId), layout);
 }
 
 function serializeDockArea(
@@ -125,8 +114,6 @@ function serializeDockArea(
       .filter((id) => store.isWindowPersisted(id)),
   };
 }
-
-const saveWindowLayout = debounce(saveWindowLayoutImmediate, 500);
 
 function isPersistedLayout(value: unknown): value is PersistedWindowLayout {
   return (
@@ -167,34 +154,18 @@ export function migrateLayout(
   return { ...layout, windows, version: CURRENT_VERSION };
 }
 
-function loadWindowLayout(): PersistedWindowLayout | null {
-  const parsed = storage.getItem(getStorageKey());
+export function loadWindowLayout(
+  layoutId: string | null,
+): PersistedWindowLayout | null {
+  if (!layoutId) return null;
+  const parsed = storage.getItem(getLayoutStorageKey(layoutId));
   if (!isPersistedLayout(parsed)) return null;
 
   return migrateLayout(parsed);
 }
 
-/**
- * Returns true when a valid persisted layout exists in localStorage.
- * Used to distinguish first-time users (no data) from returning users.
- */
-export function hasPersistedLayout(): boolean {
-  return loadWindowLayout() !== null;
-}
-
-export function getPersistedWindowState(
-  id: string,
-): PersistedWindowState | null {
-  const layout = loadWindowLayout();
-  if (!layout) {
-    return null;
-  }
-
-  return layout.windows[id] ?? null;
-}
-
-function restoreDockAreaState(store: WindowStoreImpl): void {
-  const layout = loadWindowLayout();
+function restoreDockAreaState(store: WindowStoreImpl, layoutId: string): void {
+  const layout = loadWindowLayout(layoutId);
   if (!layout?.dockAreas) return;
 
   for (const side of ["left", "right"] as const) {
@@ -210,22 +181,24 @@ function restoreDockAreaState(store: WindowStoreImpl): void {
 
 export function useWindowPersistence(layoutId: string) {
   const { windows: store } = useSharedStores();
-  useEffect(() => {
-    activeLayoutId = layoutId;
+  // Establish this instance's layout before window-registration effects run.
+  useLayoutEffect(() => {
+    store.setLayoutId(layoutId);
 
-    restoreDockAreaState(store);
+    restoreDockAreaState(store, layoutId);
+    const save = debounce(() => saveWindowLayout(store, layoutId), 500);
 
     const unsubscribe = reaction(
       () => store.getSerializedStoreState(),
       () => {
-        saveWindowLayout(store);
+        save();
       },
     );
 
     return () => {
       unsubscribe();
-      saveWindowLayout.cancel();
-      activeLayoutId = null;
+      save.cancel();
+      store.setLayoutId(null);
     };
   }, [layoutId, store]);
 }

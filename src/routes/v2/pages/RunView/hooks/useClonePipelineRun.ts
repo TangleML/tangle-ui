@@ -7,13 +7,9 @@ import { useExecutionData } from "@/providers/ExecutionDataProvider";
 import { copyRunToPipeline } from "@/services/pipelineRunService";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import { extractCanonicalName } from "@/utils/canonicalPipelineName";
-import {
-  type ArgumentType,
-  type ComponentSpec,
-  isSecretArgument,
-} from "@/utils/componentSpec";
+import type { ComponentSpec } from "@/utils/componentSpec";
 import { getInitialName } from "@/utils/getComponentName";
-import { extractTaskArguments } from "@/utils/nodes/taskArguments";
+import { extractCloneableTaskArguments } from "@/utils/nodes/taskArguments";
 
 interface CloneVariables {
   componentSpec: ComponentSpec;
@@ -54,22 +50,7 @@ export function useClonePipelineRun(
 
     const taskSpecArguments = rootDetails?.task_spec.arguments ?? {};
 
-    /**
-     * SecretArguments cannot be converted into strings compatible with inputs,
-     * so drop them from the cloned pipeline's arguments.
-     */
-    const secretArgumentKeys = new Set(
-      Object.entries(taskSpecArguments)
-        .filter(([, value]) => isSecretArgument(value as ArgumentType))
-        .map(([key]) => key),
-    );
-
-    const plainTaskArguments = extractTaskArguments(taskSpecArguments);
-    const taskArguments: Record<string, string> = Object.fromEntries(
-      Object.entries(plainTaskArguments).filter(
-        ([key]) => !secretArgumentKeys.has(key),
-      ),
-    );
+    const taskArguments = extractCloneableTaskArguments(taskSpecArguments);
 
     const canonicalName = extractCanonicalName(
       buildTaskSpecShape(rootDetails?.task_spec, componentSpec),

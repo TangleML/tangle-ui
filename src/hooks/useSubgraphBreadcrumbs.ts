@@ -1,5 +1,4 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo } from "react";
 
 import { useBackend } from "@/providers/BackendProvider";
 import { fetchExecutionDetails } from "@/services/executionService";
@@ -14,7 +13,6 @@ export interface BreadcrumbSegment {
 
 interface SubgraphBreadcrumbsResult {
   segments: BreadcrumbSegment[];
-  path: string[];
   isLoading: boolean;
   error: Error | null;
 }
@@ -24,32 +22,37 @@ interface SubgraphBreadcrumbsResult {
  * by fetching parent execution details recursively until reaching the root.
  */
 export const useSubgraphBreadcrumbs = (
-  runId: string | null | undefined,
+  rootExecutionId: string | undefined,
   subgraphExecutionId: string | undefined,
 ): SubgraphBreadcrumbsResult => {
   const { backendUrl } = useBackend();
   const queryClient = useQueryClient();
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["subgraph-breadcrumbs", runId, subgraphExecutionId],
+    queryKey: [
+      "subgraph-breadcrumbs",
+      backendUrl,
+      rootExecutionId,
+      subgraphExecutionId,
+    ],
     queryFn: async () => {
-      if (!runId || !subgraphExecutionId) {
+      if (!rootExecutionId || !subgraphExecutionId) {
         return { segments: [] };
       }
 
-      if (subgraphExecutionId === runId) {
+      if (subgraphExecutionId === rootExecutionId) {
         return { segments: [] };
       }
 
       const segmentsInReverseOrder: BreadcrumbSegment[] = [];
       let currentExecutionId = subgraphExecutionId;
       let currentDetails = await queryClient.ensureQueryData({
-        queryKey: ["execution-details", currentExecutionId],
+        queryKey: ["execution-details", backendUrl, currentExecutionId],
         queryFn: () => fetchExecutionDetails(currentExecutionId, backendUrl),
         staleTime: ONE_MINUTE_IN_MS,
       });
 
-      while (currentExecutionId && currentExecutionId !== runId) {
+      while (currentExecutionId && currentExecutionId !== rootExecutionId) {
         const parentExecutionId = currentDetails.parent_execution_id;
 
         if (!parentExecutionId) {
@@ -57,7 +60,7 @@ export const useSubgraphBreadcrumbs = (
         }
 
         const parentDetails = await queryClient.ensureQueryData({
-          queryKey: ["execution-details", parentExecutionId],
+          queryKey: ["execution-details", backendUrl, parentExecutionId],
           queryFn: () => fetchExecutionDetails(parentExecutionId, backendUrl),
           staleTime: ONE_MINUTE_IN_MS,
         });
@@ -92,29 +95,17 @@ export const useSubgraphBreadcrumbs = (
 
       return { segments };
     },
-    enabled: !!runId && !!subgraphExecutionId && runId !== subgraphExecutionId,
+    enabled:
+      !!rootExecutionId &&
+      !!subgraphExecutionId &&
+      rootExecutionId !== subgraphExecutionId,
     staleTime: ONE_MINUTE_IN_MS,
     retry: 1,
   });
 
-  const segments = data?.segments || [];
-  const path = useMemo(() => {
-    return ["root", ...segments.map((seg) => seg.taskId)];
-  }, [segments]);
-
   return {
-    segments,
-    path,
+    segments: data?.segments ?? [],
     isLoading,
     error: error as Error | null,
   };
-};
-
-export const buildExecutionUrl = (
-  runId: string,
-  subgraphExecutionId?: string,
-): string => {
-  return !subgraphExecutionId || subgraphExecutionId === runId
-    ? `/runs/${runId}`
-    : `/runs/${runId}/${subgraphExecutionId}`;
 };

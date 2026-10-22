@@ -13,7 +13,7 @@ import { NO_PROJECT, projectOptions } from "./projectOptions";
 import { useRunProjectContext } from "./useRunProjectContext";
 
 interface RunProjectFieldProps {
-  pipelineName: string | undefined;
+  pipelineId?: string;
   value: string | undefined;
   onChange: (projectId: string | undefined) => void;
 }
@@ -24,14 +24,12 @@ interface RunProjectFieldProps {
  * does not disturb the editor's own project context.
  */
 export function RunProjectField({
-  pipelineName,
+  pipelineId,
   value,
   onChange,
 }: RunProjectFieldProps) {
   const { enabled, projectName } = useRunProjectContext();
-  const { memberships } = usePipelineProjects(
-    enabled ? pipelineName : undefined,
-  );
+  const { memberships } = usePipelineProjects(enabled ? pipelineId : undefined);
 
   const options = projectOptions(memberships, value, projectName);
 

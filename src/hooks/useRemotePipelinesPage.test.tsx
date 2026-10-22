@@ -3,7 +3,6 @@ import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { invalidatePipelineQueries } from "@/services/pipelineStorage/invalidatePipelineQueries";
 import { RemotePipelineQueryKeys } from "@/services/remotePipelineQueryKeys";
 import {
   listRemotePipelines,
@@ -235,7 +234,11 @@ describe("useRemotePipelinesPage", () => {
       expect(result.current.data?.pipelines[0].id).toBe("old-second"),
     );
 
-    act(() => invalidatePipelineQueries(queryClient, BACKEND_URL));
+    act(() =>
+      queryClient.invalidateQueries({
+        queryKey: RemotePipelineQueryKeys.All(BACKEND_URL),
+      }),
+    );
     await waitFor(() =>
       expect(result.current.data?.pipelines[0].id).toBe("new-second"),
     );
@@ -266,7 +269,9 @@ describe("useRemotePipelinesPage", () => {
       queryClient.setQueryData(key, createPage("cached"));
     }
 
-    invalidatePipelineQueries(queryClient, BACKEND_URL);
+    queryClient.invalidateQueries({
+      queryKey: RemotePipelineQueryKeys.All(BACKEND_URL),
+    });
 
     for (const key of backendKeys)
       expect(queryClient.getQueryState(key)?.isInvalidated).toBe(true);

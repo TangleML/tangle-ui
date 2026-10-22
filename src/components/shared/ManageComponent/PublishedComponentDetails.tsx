@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
@@ -7,7 +6,6 @@ import type { HydratedComponentReference } from "@/utils/componentSpec";
 
 import { withSuspenseWrapper } from "../SuspenseWrapper";
 import { ComponentUsageCount } from "./ComponentUsageCount";
-import { useForceUpdateTasks } from "./hooks/useForceUpdateTasks";
 import { useHasPublishedComponent } from "./hooks/useHasPublishedComponent";
 import { useOutdatedComponents } from "./hooks/useOutdatedComponents";
 import { TrimmedDigest } from "./TrimmedDigest";
@@ -30,7 +28,6 @@ function PublishedComponentDetailsSkeleton() {
 
 function PublishedComponentDetailsContent({
   component,
-  readOnly,
 }: PublishedComponentDetailsProps) {
   const { data: isPublished } = useHasPublishedComponent(component);
   const { data: outdatedComponents } = useOutdatedComponents([component]);
@@ -38,14 +35,6 @@ function PublishedComponentDetailsContent({
   const outdatedComponentIndex = new Map(
     outdatedComponents.map(([c, m]) => [c.digest, m]),
   );
-
-  const onForceUpdate = useForceUpdateTasks(
-    outdatedComponentIndex.get(component.digest) ?? null,
-  );
-
-  const onUpdateTasks = () => {
-    onForceUpdate(component.digest);
-  };
 
   if (!isPublished) {
     return null;
@@ -85,11 +74,6 @@ function PublishedComponentDetailsContent({
               <Paragraph size="xs" tone="critical">
                 There is a newer version of this component available.
               </Paragraph>
-              {!readOnly && (
-                <Button variant="secondary" size="xs" onClick={onUpdateTasks}>
-                  Review tasks
-                </Button>
-              )}
             </InlineStack>
           )}
         </BlockStack>

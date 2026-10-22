@@ -1,6 +1,6 @@
 import type { IconName } from "@/components/ui/icon";
 
-import { DOCUMENT, LOCAL_PIPELINE, PIPELINE_RUN } from "./resourceDescriptor";
+import { DOCUMENT, PIPELINE_RUN } from "./resourceDescriptor";
 
 export type ResourceConcept = "pipeline" | "run" | "document" | "session";
 
@@ -37,7 +37,6 @@ export const conceptForEntity = (entity: string): ResourceConcept | undefined =>
   ENTITY_CONCEPTS[entity];
 
 const DESCRIPTOR_CONCEPTS: Record<string, ResourceConcept> = {
-  [LOCAL_PIPELINE]: "pipeline",
   [PIPELINE_RUN]: "run",
   [DOCUMENT]: "document",
 };

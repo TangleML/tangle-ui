@@ -79,33 +79,54 @@ function makeSpec() {
 }
 
 describe("useSelectionWindowSync", () => {
-  it("opens the properties panel for a selected task", () => {
+  it("does not reveal Properties when native selection precedes drag-start", async () => {
+    const { editor, windows } = mountEditor(makeSpec());
+    await act(async () => {
+      editor.selectNode("task_1", "task");
+      editor.setDraggedSincePointerDown(true);
+    });
+    expect(editor.selectedNodeId).toBe("task_1");
+    expect(windows.getWindowById(CONTEXT_PANEL_WINDOW_ID)).toBeUndefined();
+  });
+
+  it("preserves selected edges when Properties closes after node deselection", async () => {
+    const { editor, windows } = mountEditor(makeSpec());
+    await act(async () => editor.selectNode("task_1", "task"));
+    expect(windows.getWindowById(CONTEXT_PANEL_WINDOW_ID)).toBeDefined();
+    await act(async () => {
+      editor.setSelectedEdges(["edge_1"]);
+      editor.setSelectedNodes([]);
+    });
+    expect(windows.getWindowById(CONTEXT_PANEL_WINDOW_ID)).toBeUndefined();
+    expect(editor.selectedEdgeIds).toEqual(["edge_1"]);
+  });
+  it("opens the properties panel for a selected task", async () => {
     const spec = makeSpec();
     const { editor, windows } = mountEditor(spec);
 
-    act(() => editor.selectNode("task_1", "task"));
+    await act(async () => editor.selectNode("task_1", "task"));
 
     expect(windows.getWindowById(CONTEXT_PANEL_WINDOW_ID)).toBeDefined();
   });
 
-  it("closes the properties panel when the selected task is deleted", () => {
+  it("closes the properties panel when the selected task is deleted", async () => {
     const spec = makeSpec();
     const { editor, windows } = mountEditor(spec);
 
-    act(() => editor.selectNode("task_1", "task"));
+    await act(async () => editor.selectNode("task_1", "task"));
     expect(windows.getWindowById(CONTEXT_PANEL_WINDOW_ID)).toBeDefined();
 
-    act(() => spec.deleteTaskById("task_1"));
+    await act(async () => spec.deleteTaskById("task_1"));
 
     expect(editor.selectedNodeId).toBeNull();
     expect(windows.getWindowById(CONTEXT_PANEL_WINDOW_ID)).toBeUndefined();
   });
 
-  it("leaves the panel shut for a task selected by dragging it", () => {
+  it("leaves the panel shut for a task selected by dragging it", async () => {
     const spec = makeSpec();
     const { editor, windows } = mountEditor(spec);
 
-    act(() => {
+    await act(async () => {
       editor.setDraggedSincePointerDown(true);
       editor.selectNode("task_1", "task");
     });
@@ -114,15 +135,15 @@ describe("useSelectionWindowSync", () => {
     expect(windows.getWindowById(CONTEXT_PANEL_WINDOW_ID)).toBeUndefined();
   });
 
-  it("opens the panel for the click after a drag", () => {
+  it("opens the panel for the click after a drag", async () => {
     const spec = makeSpec();
     const { editor, windows } = mountEditor(spec);
 
-    act(() => {
+    await act(async () => {
       editor.setDraggedSincePointerDown(true);
       editor.selectNode("task_1", "task");
     });
-    act(() => {
+    await act(async () => {
       editor.setDraggedSincePointerDown(false);
       editor.selectNode(null, null);
       editor.selectNode("task_1", "task");
@@ -131,17 +152,17 @@ describe("useSelectionWindowSync", () => {
     expect(windows.getWindowById(CONTEXT_PANEL_WINDOW_ID)).toBeDefined();
   });
 
-  it("opens the panel for a click on the task just dragged, which selects nothing new", () => {
+  it("opens the panel for a click on the task just dragged, which selects nothing new", async () => {
     const spec = makeSpec();
     const { editor, windows } = mountEditor(spec);
 
-    act(() => {
+    await act(async () => {
       editor.setDraggedSincePointerDown(true);
       editor.selectNode("task_1", "task");
     });
     expect(windows.getWindowById(CONTEXT_PANEL_WINDOW_ID)).toBeUndefined();
 
-    act(() => {
+    await act(async () => {
       editor.setDraggedSincePointerDown(false);
       editor.requestContextPanelReveal();
     });
@@ -149,18 +170,18 @@ describe("useSelectionWindowSync", () => {
     expect(windows.getWindowById(CONTEXT_PANEL_WINDOW_ID)).toBeDefined();
   });
 
-  it("opens nothing for a click on empty canvas", () => {
+  it("opens nothing for a click on empty canvas", async () => {
     const spec = makeSpec();
     const { editor, windows } = mountEditor(spec);
 
-    act(() => {
+    await act(async () => {
       editor.requestContextPanelReveal();
     });
 
     expect(windows.getWindowById(CONTEXT_PANEL_WINDOW_ID)).toBeUndefined();
   });
 
-  it("leaves the panel open when an unselected task is deleted", () => {
+  it("leaves the panel open when an unselected task is deleted", async () => {
     const spec = new ComponentSpec({
       $id: "spec_1",
       name: "Pipeline",
@@ -168,8 +189,8 @@ describe("useSelectionWindowSync", () => {
     });
     const { editor, windows } = mountEditor(spec);
 
-    act(() => editor.selectNode("task_1", "task"));
-    act(() => spec.deleteTaskById("task_2"));
+    await act(async () => editor.selectNode("task_1", "task"));
+    await act(async () => spec.deleteTaskById("task_2"));
 
     expect(editor.selectedNodeId).toBe("task_1");
     expect(windows.getWindowById(CONTEXT_PANEL_WINDOW_ID)).toBeDefined();

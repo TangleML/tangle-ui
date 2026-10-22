@@ -20,25 +20,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Heading, Paragraph } from "@/components/ui/typography";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
-import {
-  getDefaultEditorPath,
-  getDefaultRemoteEditorPath,
-} from "@/routes/editorRoutes";
+import { getDefaultRemoteEditorPath } from "@/routes/editorRoutes";
 import {
   importPipelineFromFile,
   importPipelineFromYaml,
   type ImportResult,
 } from "@/services/pipelineService";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
-import {
-  isRemotePipelineRef,
-  type PipelineRef,
-  type RemotePipelineRef,
-} from "@/services/pipelineStorage/types";
+import { type RemotePipelineRef } from "@/services/pipelineStorage/types";
 
 interface ImportPipelineProps {
   triggerComponent?: ReactElement<{ onClick?: () => void }>;
-  onImportComplete?: (pipeline: PipelineRef | RemotePipelineRef) => void;
+  onImportComplete?: (pipeline: RemotePipelineRef) => void;
 }
 
 const ImportPipeline = ({
@@ -47,9 +40,8 @@ const ImportPipeline = ({
 }: ImportPipelineProps) => {
   const { track } = useAnalytics();
   const [isOpen, setIsOpen] = useState(false);
-  const [importedPipeline, setImportedPipeline] = useState<
-    PipelineRef | RemotePipelineRef | null
-  >(null);
+  const [importedPipeline, setImportedPipeline] =
+    useState<RemotePipelineRef | null>(null);
   const [yamlContent, setYamlContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,9 +63,7 @@ const ImportPipeline = ({
       onImportComplete(importedPipeline);
     } else {
       navigate({
-        to: isRemotePipelineRef(importedPipeline)
-          ? getDefaultRemoteEditorPath(importedPipeline.pipelineId)
-          : getDefaultEditorPath(importedPipeline.name),
+        to: getDefaultRemoteEditorPath(importedPipeline.pipelineId),
       });
     }
   };
@@ -86,17 +76,8 @@ const ImportPipeline = ({
       );
     }
 
-    if (result.errorMessage?.includes("was renamed")) {
-      setSuccessMessage(result.errorMessage);
-    } else {
-      setSuccessMessage(`Pipeline "${result.name}" imported successfully.`);
-    }
-
-    if (result.remote) setImportedPipeline(result.remote);
-    else {
-      const file = await storage.rootFolder.assignFile(result.name);
-      setImportedPipeline({ name: result.name, fileId: file.id });
-    }
+    setSuccessMessage(`Pipeline "${result.name}" imported successfully.`);
+    setImportedPipeline(result.remote);
   };
 
   const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -178,9 +159,7 @@ const ImportPipeline = ({
           <DialogHeader>
             <DialogTitle>Import Pipeline</DialogTitle>
             <DialogDescription>
-              Import a pipeline from a YAML file or by pasting YAML content. If
-              a pipeline with the same name already exists, a unique name will
-              be automatically generated.
+              Import a pipeline from a YAML file or by pasting YAML content.
             </DialogDescription>
           </DialogHeader>
           {isLoading && (

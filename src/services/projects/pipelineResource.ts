@@ -1,9 +1,7 @@
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 
-import { localPipelineResourceInput } from "./resourceDescriptor";
 import {
   draftPipelineIdentity,
-  idIdentity,
   remotePipelineIdentity,
   type WorkareaTarget,
 } from "./resourceTarget";
@@ -14,9 +12,7 @@ export function pipelineFileTarget(file: PipelineFile): WorkareaTarget {
     type: "pipeline",
     identity: file.remote
       ? remotePipelineIdentity(file.id)
-      : file.isDraft
-        ? draftPipelineIdentity(file.initialId)
-        : idIdentity(file.id),
+      : draftPipelineIdentity(file.initialId),
   };
 }
 
@@ -25,17 +21,6 @@ export function remotePipelineResourceInput(
   name: string,
 ): CreateResourceInput {
   return { entity: "pipeline", entityId: pipelineId, name };
-}
-
-export function pipelineFileResourceInput(
-  file: PipelineFile,
-): CreateResourceInput {
-  return file.remote
-    ? remotePipelineResourceInput(file.id, file.storageKey)
-    : localPipelineResourceInput({
-        localId: file.id,
-        localName: file.storageKey,
-      });
 }
 
 export function remoteResourceTarget(

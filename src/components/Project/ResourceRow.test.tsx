@@ -94,27 +94,6 @@ describe("ResourceRow", () => {
     expect(screen.getByRole("row")).toHaveAttribute("data-state", "selected");
   });
 
-  /**
-   * A group is headed by what the API calls its rows, so a browser-held
-   * pipeline is headed as a document. The row itself is the only place it can
-   * say otherwise.
-   */
-  it("says a pipeline it names is one, not the document it is filed as", () => {
-    renderRow({
-      entity: "document",
-      name: "Churn model",
-      entityId: null,
-      metadata: {
-        type: "local_pipeline",
-        storage: "browser",
-        identity: "pipeline://name/Churn model",
-        fallbackName: "Churn model",
-      },
-    });
-
-    expect(screen.getByText("Pipeline")).toBeInTheDocument();
-  });
-
   it("says nothing extra about a document that does not say what kind it is", () => {
     renderRow(ownContent);
 
@@ -135,7 +114,7 @@ describe("ResourceRow", () => {
   });
 
   it("does not label a pipeline the backend holds", () => {
-    renderRow({ metadata: { type: "local_pipeline" } });
+    renderRow({ metadata: { type: "pipeline" } });
 
     expect(screen.queryByText("Pipeline")).toBeNull();
   });
@@ -153,12 +132,7 @@ describe("ResourceRow", () => {
       entity: "document",
       name: "Churn model",
       entityId: null,
-      metadata: {
-        type: "local_pipeline",
-        storage: "browser",
-        identity: "pipeline://name/Churn model",
-        fallbackName: "Churn model",
-      },
+      metadata: { type: "data_sheet" },
     });
 
     expect(
@@ -184,46 +158,6 @@ describe("ResourceRow", () => {
     expect(remove.querySelector("[class*='trash']")).toBeInTheDocument();
     expect(remove.querySelector(".lucide-x")).toBeNull();
     expect(remove.className).toMatch(/text-destructive/);
-  });
-
-  /**
-   * A row naming a pipeline in this browser carries no content of its own, so
-   * offering it as a deletion would suggest the pipeline is about to go.
-   */
-  it("does not offer to delete a pipeline it only names", () => {
-    renderRow({
-      entity: "document",
-      name: "Churn model",
-      entityId: null,
-      metadata: {
-        type: "local_pipeline",
-        storage: "browser",
-        identity: "pipeline://name/Churn model",
-        fallbackName: "Churn model",
-      },
-    });
-
-    const remove = screen.getByRole("button", {
-      name: "Remove Churn model from this project",
-    });
-
-    expect(remove.querySelector(".lucide-x")).toBeInTheDocument();
-    expect(remove.querySelector("[class*='trash']")).toBeNull();
-  });
-
-  it("keeps saying so when the pipeline it names can no longer be worked out", () => {
-    renderRow({
-      entity: "document",
-      name: "Churn model",
-      entityId: null,
-      metadata: { type: "local_pipeline" },
-    });
-
-    expect(
-      screen.getByRole("button", {
-        name: "Remove Churn model from this project",
-      }).className,
-    ).not.toMatch(/text-destructive/);
   });
 
   it("asks to remove the item it belongs to", async () => {

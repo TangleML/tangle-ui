@@ -1,4 +1,4 @@
-import { type ReactNode, useCallback, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useState } from "react";
 
 import {
   Dialog,
@@ -26,7 +26,6 @@ import { useFlagValue } from "../Settings/useFlags";
 import { withSuspenseWrapper } from "../SuspenseWrapper";
 import { TaskDetails, TaskImplementation, TaskIO } from "../TaskDetails";
 import TaskActions from "../TaskDetails/Actions";
-import { DialogContext } from "./dialog.context";
 
 interface ComponentDetailsProps {
   component: ComponentReference;
@@ -178,16 +177,6 @@ const ComponentDetails = ({
   const [open, setOpen] = useState(false);
   const dialogTriggerButton = trigger || <InfoIconButton />;
 
-  const dialogContextValue = useMemo(
-    () => ({
-      name: "ComponentDetails",
-      close: () => {
-        setOpen(false);
-      },
-    }),
-    [],
-  );
-
   const onOpenChange = useCallback(
     (open: boolean) => {
       setOpen(open);
@@ -238,13 +227,11 @@ const ComponentDetails = ({
             </DialogTitle>
           </DialogHeader>
 
-          <DialogContext.Provider value={dialogContextValue}>
-            <ComponentDetailsDialogContent
-              component={component}
-              displayName={displayName}
-              readOnly={readOnly}
-            />
-          </DialogContext.Provider>
+          <ComponentDetailsDialogContent
+            component={component}
+            displayName={displayName}
+            readOnly={readOnly}
+          />
         </DialogContent>
       </DialogPortal>
     </Dialog>

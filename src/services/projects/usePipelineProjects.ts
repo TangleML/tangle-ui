@@ -1,8 +1,6 @@
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useQueries } from "@tanstack/react-query";
 
 import { useBackend } from "@/providers/BackendProvider";
-import { pointerTo } from "@/services/localPipelines/localPipelinesService";
-import { LocalPipelinesQueryKeys } from "@/services/localPipelines/types";
 import { MINUTES } from "@/utils/constants";
 
 import {
@@ -39,20 +37,11 @@ export interface PipelineProjects {
  * answer on demand should pass `enabled: false` until then.
  */
 export function usePipelineProjects(
-  pipelineName: string | undefined,
+  pipelineId: string | undefined,
   { enabled: wanted = true }: { enabled?: boolean } = {},
 ): PipelineProjects {
   const { configured, available } = useBackend();
-  const enabled = wanted && configured && available && Boolean(pipelineName);
-
-  const { data: pointer, error: pointerError } = useQuery({
-    queryKey: LocalPipelinesQueryKeys.Pointer({
-      localName: pipelineName ?? "",
-    }),
-    queryFn: () => pointerTo(pipelineName ?? ""),
-    enabled,
-    staleTime: 1 * MINUTES,
-  });
+  const enabled = wanted && configured && available && Boolean(pipelineId);
 
   const {
     projects,
@@ -77,23 +66,20 @@ export function usePipelineProjects(
   // A lookup that failed is not one still running: reported as pending, the
   // picker would sit on its spinner for as long as it stayed open.
   const error =
-    pointerError ??
-    listError ??
-    resources.find((query) => query.error)?.error ??
-    null;
+    listError ?? resources.find((query) => query.error)?.error ?? null;
 
   const isPending =
     enabled &&
     error === null &&
-    (isListPending || !pointer || resources.some((query) => query.isPending));
+    (isListPending || resources.some((query) => query.isPending));
 
-  if (!pointer) {
+  if (!pipelineId) {
     return { memberships: [], isPending, error };
   }
 
   const memberships = candidates.flatMap((project, index) => {
     const items = resources[index]?.data?.items;
-    const resource = items && pipelineResourceIn(items, pointer);
+    const resource = items && pipelineResourceIn(items, pipelineId);
     return resource ? [{ project, resource }] : [];
   });
 

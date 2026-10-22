@@ -1,43 +1,27 @@
-import { useAnalytics } from "@/providers/AnalyticsProvider";
-import { type TaskNodeContextType } from "@/providers/TaskNodeProvider";
 import type { HydratedComponentReference } from "@/utils/componentSpec";
-import { componentMetadata } from "@/utils/componentTracking";
-import { isSubgraph } from "@/utils/subgraphUtils";
 import { tracking } from "@/utils/tracking";
 
 import { LinkNodeButton } from "../Buttons/LinkNodeButton";
 import { ViewYamlButton } from "../Buttons/ViewYamlButton";
 import { ActionBlock } from "../ContextPanel/Blocks/ActionBlock";
 import { CopyYamlButton } from "./Actions/CopyYamlButton";
-import { DeleteComponentButton } from "./Actions/DeleteComponentButton";
 import { DownloadPythonButton } from "./Actions/DownloadPythonButton";
 import { DownloadYamlButton } from "./Actions/DownloadYamlButton";
-import { DuplicateTaskButton } from "./Actions/DuplicateTaskButton";
 import { EditComponentButton } from "./Actions/EditComponentButton";
-import { NavigateToSubgraphButton } from "./Actions/NavigateToSubgraphButton";
-import { UnpackSubgraphButton } from "./Actions/UnpackSubgraphButton";
-import { UpgradeTaskButton } from "./Actions/UpgradeTaskButton";
 
 interface TaskActionsProps {
   componentRef: HydratedComponentReference;
-  taskNode?: TaskNodeContextType;
+  nodeId?: string;
   readOnly?: boolean;
   className?: string;
 }
 
 const TaskActions = ({
   componentRef,
-  taskNode,
+  nodeId,
   readOnly = false,
   className,
 }: TaskActionsProps) => {
-  const { taskId, nodeId, taskSpec, state, callbacks } = taskNode || {};
-  const { onDuplicate, onUpgrade, onDelete } = callbacks || {};
-  const isCustomComponent = state?.isCustomComponent;
-  const { track } = useAnalytics();
-
-  const isSubgraphNode = taskSpec ? isSubgraph(taskSpec) : false;
-
   const pythonOriginalCode =
     componentRef.spec.metadata?.annotations?.python_original_code;
 
@@ -61,55 +45,13 @@ const TaskActions = ({
 
   // Canvas Actions
   const linkTask = readOnly && nodeId && <LinkNodeButton nodeId={nodeId} />;
-  const duplicateTask = onDuplicate && !readOnly && (
-    <DuplicateTaskButton
-      onDuplicate={() => {
-        onDuplicate();
-        track("pipeline_editor.component.duplicated", {
-          ...componentMetadata(componentRef),
-        });
-      }}
-    />
-  );
-  const upgradeTask = onUpgrade && !isCustomComponent && !readOnly && (
-    <UpgradeTaskButton
-      onUpgrade={() => {
-        onUpgrade();
-        track("pipeline_editor.component.upgraded", {
-          ...componentMetadata(componentRef),
-        });
-      }}
-    />
-  );
-  const navigateToSubgraph = isSubgraphNode && taskId && !readOnly && (
-    <NavigateToSubgraphButton taskId={taskId} />
-  );
-  const unpackSubgraphButton = isSubgraphNode && taskId && !readOnly && (
-    <UnpackSubgraphButton taskId={taskId} />
-  );
-  const deleteComponent = onDelete && !readOnly && (
-    <DeleteComponentButton
-      onDelete={() => {
-        onDelete();
-        track("pipeline_editor.component.removed", {
-          ...componentMetadata(componentRef),
-        });
-      }}
-    />
-  );
-
   const actions = [
     downloadYaml,
     downloadPython,
     copyYaml,
     viewYaml,
     editComponent,
-    duplicateTask,
-    upgradeTask,
-    navigateToSubgraph,
-    unpackSubgraphButton,
     linkTask,
-    deleteComponent,
   ].filter(Boolean);
 
   return (

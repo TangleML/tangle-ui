@@ -2,7 +2,6 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { pointerTo } from "@/services/localPipelines/localPipelinesService";
 import { useAddResourceToProject } from "@/services/projects/useProjectResources";
 import { useReachableProjects } from "@/services/projects/useReachableProjects";
 
@@ -22,10 +21,6 @@ vi.mock("@/services/projects/useReachableProjects", () => ({
   useReachableProjects: vi.fn(),
 }));
 
-vi.mock("@/services/localPipelines/localPipelinesService", () => ({
-  pointerTo: vi.fn(),
-}));
-
 vi.mock("@/hooks/useToastNotification", () => ({ default: () => notify }));
 
 vi.mock("@/providers/AnalyticsProvider", () => ({
@@ -43,6 +38,7 @@ function mockProjects(items = [{ id: "project-1", name: "Churn work" }]) {
 const dialog = (memberProjectIds: string[] = []) =>
   render(
     <AddToProjectDialog
+      pipelineId="pipeline-1"
       pipelineName="Churn model"
       memberProjectIds={memberProjectIds}
       onOpenChange={onOpenChange}
@@ -57,10 +53,6 @@ describe("AddToProjectDialog", () => {
       mutate,
       isPending: false,
     } as unknown as ReturnType<typeof useAddResourceToProject>);
-    vi.mocked(pointerTo).mockResolvedValue({
-      localName: "Churn model",
-      localId: "file-1",
-    });
   });
   afterEach(() => vi.resetAllMocks());
 
@@ -72,7 +64,11 @@ describe("AddToProjectDialog", () => {
     await waitFor(() => expect(mutate).toHaveBeenCalled());
     expect(mutate.mock.calls[0][0]).toMatchObject({
       projectId: "project-1",
-      input: { entity: "document", metadata: { type: "local_pipeline" } },
+      input: {
+        entity: "pipeline",
+        entityId: "pipeline-1",
+        name: "Churn model",
+      },
     });
   });
 

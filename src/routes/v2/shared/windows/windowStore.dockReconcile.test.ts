@@ -11,7 +11,7 @@ describe("WindowStoreImpl dock order reconciliation", () => {
     store.enableDockSide("left");
 
     store.openWindow(stubContent, {
-      id: "component-library",
+      id: "component-search",
       title: "Components",
       defaultDockState: "left",
     });
@@ -25,11 +25,11 @@ describe("WindowStoreImpl dock order reconciliation", () => {
     store.restoreDockArea("left", {
       width: 320,
       collapsed: false,
-      windowOrder: ["component-library"],
+      windowOrder: ["component-search"],
     });
 
     expect(store.getDockAreaWindowIds("left")).toEqual([
-      "component-library",
+      "component-search",
       "tip-of-the-day",
     ]);
   });
@@ -39,7 +39,7 @@ describe("WindowStoreImpl dock order reconciliation", () => {
     store.enableDockSide("left");
 
     store.openWindow(stubContent, {
-      id: "component-library",
+      id: "component-search",
       title: "Components",
       defaultDockState: "left",
     });
@@ -47,12 +47,12 @@ describe("WindowStoreImpl dock order reconciliation", () => {
     store.restoreDockArea("left", {
       width: 320,
       collapsed: false,
-      windowOrder: ["component-library", "ghost-window"],
+      windowOrder: ["component-search", "ghost-window"],
     });
 
     // The read path reconciles against actual window state, so a ghost id with
     // no live window is filtered out (and cleaned up on the next save).
-    expect(store.getDockedWindowOrder("left")).toEqual(["component-library"]);
+    expect(store.getDockedWindowOrder("left")).toEqual(["component-search"]);
   });
 
   it("restoreDockArea preserves persisted order when windows are created afterwards", () => {
@@ -64,12 +64,12 @@ describe("WindowStoreImpl dock order reconciliation", () => {
     store.restoreDockArea("left", {
       width: 320,
       collapsed: false,
-      windowOrder: ["runs-and-submission", "component-library", "history"],
+      windowOrder: ["runs-and-submission", "component-search", "history"],
     });
 
     // Windows are then opened in a different (creation) order.
     store.openWindow(stubContent, {
-      id: "component-library",
+      id: "component-search",
       title: "Components",
       defaultDockState: "left",
     });
@@ -86,12 +86,12 @@ describe("WindowStoreImpl dock order reconciliation", () => {
 
     expect(store.getDockAreaWindowIds("left")).toEqual([
       "runs-and-submission",
-      "component-library",
+      "component-search",
       "history",
     ]);
     expect(store.getDockedWindowOrder("left")).toEqual([
       "runs-and-submission",
-      "component-library",
+      "component-search",
       "history",
     ]);
   });
@@ -101,7 +101,7 @@ describe("WindowStoreImpl dock order reconciliation", () => {
     store.enableDockSide("left");
 
     store.openWindow(stubContent, {
-      id: "component-library",
+      id: "component-search",
       title: "Components",
       defaultDockState: "left",
     });
@@ -112,7 +112,7 @@ describe("WindowStoreImpl dock order reconciliation", () => {
     });
 
     expect(store.getDockedWindowOrder("left")).toEqual([
-      "component-library",
+      "component-search",
       "tip-of-the-day",
     ]);
   });

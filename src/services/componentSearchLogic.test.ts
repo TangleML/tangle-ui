@@ -1,0 +1,339 @@
+import { describe, expect, it } from "vitest";
+
+import type { StoredLibrary } from "@/providers/ComponentLibraryProvider/libraries/storage";
+import {
+  buildSearchIndex,
+  type ComponentSearchSource,
+  type LexicalMatch,
+} from "@/services/componentSearchIndex";
+import {
+  buildAiCandidateMatches,
+  buildLexicalMatches,
+  buildRerankMatchByDigest,
+  buildResultFolders,
+  buildResults,
+  collectAllSourcedReferences,
+  mergeSearchIndexes,
+  PUBLISHED_SOURCE,
+  registeredLibrariesFingerprint,
+  rerankedMatches,
+  USER_SOURCE,
+} from "@/services/componentSearchLogic";
+import type { RerankResult } from "@/services/naturalLanguageComponentSearchService";
+import type { ComponentLibrary } from "@/types/componentLibrary";
+import type { ComponentReference } from "@/utils/componentSpec";
+
+function ref(digest: string, name = digest): ComponentReference {
+  return {
+    digest,
+    name,
+    spec: {
+      name,
+      description: name,
+      inputs: [],
+      outputs: [],
+      implementation: { container: { image: "x" } },
+    },
+  };
+}
+
+function source(
+  kind: ComponentSearchSource["kind"],
+  id: string = kind,
+  label: string = kind,
+): ComponentSearchSource {
+  return { kind, id, label };
+}
+
+function match(
+  digest: string,
+  src: ComponentSearchSource = source("standard"),
+  matchedFields: LexicalMatch["matchedFields"] = [],
+): LexicalMatch {
+  return {
+    reference: ref(digest),
+    digest,
+    name: digest,
+    source: src,
+    matchedFields,
+  };
+}
+
+function library(id: string, knownDigests: string[]): StoredLibrary {
+  return { id, name: id, type: "yaml", knownDigests };
+}
+
+describe("registeredLibrariesFingerprint", () => {
+  it("returns a sentinel while libraries are still loading", () => {
+    expect(registeredLibrariesFingerprint(undefined)).toBe("loading");
+  });
+
+  it("is stable regardless of library or digest ordering", () => {
+    const a = registeredLibrariesFingerprint([
+      library("lib-b", ["d2", "d1"]),
+      library("lib-a", ["d3"]),
+    ]);
+    const b = registeredLibrariesFingerprint([
+      library("lib-a", ["d3"]),
+      library("lib-b", ["d1", "d2"]),
+    ]);
+    expect(a).toBe(b);
+  });
+
+  it("changes when a library's known digests change", () => {
+    const before = registeredLibrariesFingerprint([library("lib-a", ["d1"])]);
+    const after = registeredLibrariesFingerprint([
+      library("lib-a", ["d1", "d2"]),
+    ]);
+    expect(before).not.toBe(after);
+  });
+
+  it("changes when non-secret configuration fields change", () => {
+    const before = registeredLibrariesFingerprint([
+      {
+        ...library("lib-a", ["d1"]),
+        configuration: { repo_name: "old/repo", token: "secret" },
+      },
+    ]);
+    const after = registeredLibrariesFingerprint([
+      {
+        ...library("lib-a", ["d1"]),
+        configuration: { repo_name: "new/repo", token: "secret" },
+      },
+    ]);
+    expect(before).not.toBe(after);
+    expect(before).not.toContain("secret");
+  });
+});
+
+describe("collectAllSourcedReferences", () => {
+  it("dedupes by digest, keeping the first source that introduced it", () => {
+    const result = collectAllSourcedReferences({
+      standardLibrary: undefined,
+      publishedRefs: [ref("dup"), ref("pub-only")],
+      registeredSourced: [
+        { reference: ref("dup"), source: source("registered") },
+      ],
+      userFolder: { components: [ref("dup"), ref("user-only")] },
+    });
+
+    expect(result.map((item) => item.reference.digest)).toEqual([
+      "dup",
+      "pub-only",
+      "user-only",
+    ]);
+    // First writer wins: "dup" came in via the published source.
+    expect(result[0]?.source).toBe(PUBLISHED_SOURCE);
+  });
+
+  it("drops references without a digest", () => {
+    const result = collectAllSourcedReferences({
+      standardLibrary: undefined,
+      publishedRefs: [{ name: "no-digest" }],
+      registeredSourced: [],
+      userFolder: undefined,
+    });
+    expect(result).toEqual([]);
+  });
+});
+
+describe("mergeSearchIndexes", () => {
+  it("overlays hydrated entries by digest, keeps name-only entries, and appends hydrated-only ones", () => {
+    const base = buildSearchIndex(
+      [
+        {
+          reference: { digest: "a", name: "Alpha" },
+          source: source("standard"),
+        },
+        { reference: { digest: "b", name: "Bravo" }, source: USER_SOURCE },
+      ],
+      { includeNameOnly: true },
+    );
+    const hydrated = buildSearchIndex([
+      { reference: ref("a", "Alpha"), source: source("standard") },
+      { reference: ref("c", "Charlie"), source: PUBLISHED_SOURCE },
+    ]);
+
+    const merged = mergeSearchIndexes(base, hydrated);
+
+    const byDigest = new Map(merged.map((entry) => [entry.digest, entry]));
+    expect([...byDigest.keys()].sort()).toEqual(["a", "b", "c"]);
+    expect(byDigest.get("a")?.searchable.description).toContain("alpha");
+    expect(byDigest.get("b")?.searchable.description).toBe("");
+    expect(byDigest.get("c")?.source.kind).toBe("published");
+  });
+
+  it("returns the base untouched when there is nothing hydrated", () => {
+    const base = buildSearchIndex(
+      [
+        {
+          reference: { digest: "a", name: "Alpha" },
+          source: source("standard"),
+        },
+      ],
+      { includeNameOnly: true },
+    );
+
+    expect(mergeSearchIndexes(base, [])).toBe(base);
+  });
+});
+
+describe("rerankedMatches", () => {
+  const base = [match("a"), match("b"), match("c")];
+
+  it("returns the base order untouched when there is no rerank data", () => {
+    expect(rerankedMatches(undefined, base)).toBe(base);
+    expect(rerankedMatches({ matches: [] }, base)).toBe(base);
+  });
+
+  it("orders ranked matches, carries unranked, and pushes excluded to the end", () => {
+    const rerankData: RerankResult = {
+      matches: [
+        { id: "c", score: 0.9, reason: "" },
+        { id: "a", score: 0.005, reason: "" }, // excluded (<= threshold)
+        { id: "ghost", score: 0.8, reason: "" }, // not in base — ignored
+      ],
+    };
+    // c ranked first; b unranked (carried); a excluded (last).
+    expect(rerankedMatches(rerankData, base).map((m) => m.digest)).toEqual([
+      "c",
+      "b",
+      "a",
+    ]);
+  });
+});
+
+describe("buildResults", () => {
+  const displayed = [match("a"), match("b"), match("c")];
+
+  it("carries matched fields for lexical explanations", () => {
+    const results = buildResults(
+      [match("a", source("standard"), ["name", "io"])],
+      new Map(),
+      false,
+    );
+
+    expect(results[0]?.matchedFields).toEqual(["name", "io"]);
+  });
+
+  it("badges only items scored above the exclusion threshold", () => {
+    const rerankMatches = buildRerankMatchByDigest(
+      {
+        matches: [
+          { id: "a", score: 0.9, reason: "Strong match" },
+          { id: "b", score: 0.0, reason: "Weak match" }, // model-excluded
+          // "c" was never scored
+        ],
+      },
+      true,
+    );
+    const results = buildResults(displayed, rerankMatches, true);
+    expect(results.map((r) => r.rerankScore)).toEqual([
+      0.9,
+      undefined,
+      undefined,
+    ]);
+    expect(results.map((r) => r.rerankReason)).toEqual([
+      "Strong match",
+      undefined,
+      undefined,
+    ]);
+  });
+
+  it("never badges when rerank is not active", () => {
+    const rerankMatches = buildRerankMatchByDigest(
+      { matches: [{ id: "a", score: 0.9, reason: "Strong match" }] },
+      true,
+    );
+    const results = buildResults(displayed, rerankMatches, false);
+    expect(results.every((r) => r.rerankScore === undefined)).toBe(true);
+  });
+});
+
+describe("buildResultFolders", () => {
+  it("groups user/published/registered results and includes the standard tree", () => {
+    const standardLibrary: ComponentLibrary = {
+      folders: [{ name: "ML", components: [ref("std-1")] }],
+    };
+    const folders = buildResultFolders({
+      results: [
+        { reference: ref("u1"), source: USER_SOURCE },
+        { reference: ref("p1"), source: PUBLISHED_SOURCE },
+        {
+          reference: ref("r1"),
+          source: source("registered", "lib-z", "Zebra"),
+        },
+        { reference: ref("r2"), source: source("registered", "lib-a", "Acme") },
+      ],
+      standardLibrary,
+    });
+
+    const names = folders.map((f) => f.name);
+    expect(names).toEqual([
+      "User Components",
+      "Published Components",
+      "Standard library",
+      "Connected libraries",
+    ]);
+
+    const connected = folders.find((f) => f.name === "Connected libraries");
+    // Registered libraries are grouped by label, sorted alphabetically.
+    expect(connected?.folders?.map((f) => f.name)).toEqual(["Acme", "Zebra"]);
+  });
+});
+
+describe("buildLexicalMatches / buildAiCandidateMatches", () => {
+  const index = buildSearchIndex([
+    { reference: ref("zebra"), source: source("standard") },
+    { reference: ref("alpha"), source: source("standard") },
+  ]);
+
+  it("returns an alphabetical browse list for an empty query", () => {
+    expect(buildLexicalMatches(index, "").map((m) => m.digest)).toEqual([
+      "alpha",
+      "zebra",
+    ]);
+  });
+
+  it("returns no AI candidates for an empty query", () => {
+    expect(buildAiCandidateMatches(index, "")).toEqual([]);
+  });
+
+  it("returns every lexical match while keeping the AI candidate pool bounded", () => {
+    const broadIndex = buildSearchIndex(
+      Array.from({ length: 100 }, (_, i) => ({
+        reference: ref(`train-${i}`, `train_${i}`),
+        source: source("standard"),
+      })),
+    );
+
+    expect(buildLexicalMatches(broadIndex, "train")).toHaveLength(100);
+    expect(
+      buildAiCandidateMatches(broadIndex, "train").length,
+    ).toBeLessThanOrEqual(80);
+  });
+
+  it("returns no AI candidates when literal search finds nothing", () => {
+    expect(buildAiCandidateMatches(index, "qqzznomatch")).toEqual([]);
+  });
+
+  it("adds source-diverse lexical candidates beyond the top lexical hits", () => {
+    const broadIndex = buildSearchIndex([
+      ...Array.from({ length: 100 }, (_, i) => ({
+        reference: ref(`train-${i}`, `train_${i}`),
+        source: source("standard"),
+      })),
+      {
+        reference: ref("user-upload", "train_user_upload"),
+        source: USER_SOURCE,
+      },
+    ]);
+
+    const candidates = buildAiCandidateMatches(broadIndex, "train");
+
+    expect(candidates.length).toBeLessThanOrEqual(80);
+    expect(candidates.map((candidate) => candidate.digest)).toContain(
+      "user-upload",
+    );
+  });
+});

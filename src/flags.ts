@@ -18,14 +18,6 @@ export const ExistingFlags: ConfigFlags = {
     category: "beta",
   },
 
-  ["github-component-library"]: {
-    name: "GitHub Component Library",
-    description:
-      "Enable the GitHub Component Library. All lib folders will be based on GitHub components",
-    default: false,
-    category: "beta",
-  },
-
   ["redirect-on-new-pipeline-run"]: {
     name: "Redirect on new pipeline run",
     description: "Automatically open a new tab after starting a new execution.",
@@ -49,18 +41,10 @@ export const ExistingFlags: ConfigFlags = {
     category: "beta",
   },
 
-  ["v2_editor"]: {
-    name: "V2 Editor and Run View",
-    description:
-      "Enable the V2 editor and run view. You can switch between the V1 and V2 experiences.",
-    default: true,
-    category: "beta",
-  },
-
   ["ai-assistant"]: {
     name: "AI Assistant",
     description:
-      "Enable the AI Assistant panel in the V2 editor. Lets you chat with an assistant about your pipeline.",
+      "Enable the AI Assistant panel in the editor. Lets you chat with an assistant about your pipeline.",
     default: false,
     category: "beta",
   },
@@ -83,21 +67,12 @@ export const ExistingFlags: ConfigFlags = {
     dependsOn: "projects",
   },
 
-  ["component-search-v2"]: {
-    name: "Component Search",
-    description:
-      "Show the experimental component search that searches across standard, published, registered, and user component sources, with optional AI rerank.",
-    default: true,
-    category: "beta",
-  },
-
-  ["component-search-v2-ai-descriptions"]: {
+  ["component-search-ai-descriptions"]: {
     name: "Auto-generate component search AI descriptions",
     description:
       "Automatically generate an AI description when viewing a component in component search.",
     default: false,
     category: "setting",
-    dependsOn: "component-search-v2",
   },
 
   ["compare-runs"]: {

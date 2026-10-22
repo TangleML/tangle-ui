@@ -12,9 +12,9 @@
     {
       "selector": "[data-folder-name=\"Standard library\"]",
       "mutationObservables": [
-        "[data-dock-window-content=\"component-library\"]"
+        "[data-dock-window-content=\"component-search\"]"
       ],
-      "resizeObservables": ["[data-dock-window-content=\"component-library\"]"],
+      "resizeObservables": ["[data-dock-window-content=\"component-search\"]"],
       "content": "Let's start by opening the **Standard library** folder in the Component Library.",
       "position": "right",
       "stepInteraction": true,
@@ -24,9 +24,9 @@
     {
       "selector": "[data-folder-name=\"Quick start\"]",
       "mutationObservables": [
-        "[data-dock-window-content=\"component-library\"]"
+        "[data-dock-window-content=\"component-search\"]"
       ],
-      "resizeObservables": ["[data-dock-window-content=\"component-library\"]"],
+      "resizeObservables": ["[data-dock-window-content=\"component-search\"]"],
       "content": "Now open **Quick start** to see three premade components.",
       "position": "right",
       "stepInteraction": true,
@@ -36,9 +36,9 @@
     {
       "selector": "[data-component-name=\"Chicago Taxi Trips dataset\"]",
       "mutationObservables": [
-        "[data-dock-window-content=\"component-library\"]"
+        "[data-dock-window-content=\"component-search\"]"
       ],
-      "resizeObservables": ["[data-dock-window-content=\"component-library\"]"],
+      "resizeObservables": ["[data-dock-window-content=\"component-search\"]"],
       "content": "Drag the **Chicago Taxi Trips dataset** onto the canvas. It becomes a **task**, one step in your pipeline.\n\nA task is a unit of execution: it takes inputs, runs some code, and produces outputs.",
       "position": "right",
       "stepInteraction": true,
@@ -48,9 +48,9 @@
     {
       "selector": "[data-tour=\"library-search\"]",
       "mutationObservables": [
-        "[data-dock-window-content=\"component-library\"]"
+        "[data-dock-window-content=\"component-search\"]"
       ],
-      "resizeObservables": ["[data-dock-window-content=\"component-library\"]"],
+      "resizeObservables": ["[data-dock-window-content=\"component-search\"]"],
       "content": "When you know what you're looking for, the **search box** is faster than browsing folders.\n\nType **predict** to filter the library down to matching components.",
       "position": "right",
       "stepInteraction": true,
@@ -60,9 +60,9 @@
     {
       "selector": "[data-component-name*=\"xgboost predict on csv\" i]",
       "mutationObservables": [
-        "[data-dock-window-content=\"component-library\"]"
+        "[data-dock-window-content=\"component-search\"]"
       ],
-      "resizeObservables": ["[data-dock-window-content=\"component-library\"]"],
+      "resizeObservables": ["[data-dock-window-content=\"component-search\"]"],
       "content": "Drag **Xgboost predict on CSV** from the search results onto the canvas.",
       "position": "right",
       "stepInteraction": true,
@@ -70,18 +70,18 @@
       "targetTaskName": "Xgboost predict on CSV"
     },
     {
-      "selector": "[data-dock-window-content=\"component-library\"]",
+      "selector": "[data-dock-window-content=\"component-search\"]",
       "highlightedSelectors": [
-        "[data-dock-window=\"component-library\"]",
-        "[data-dock-window-content=\"component-library\"]"
+        "[data-dock-window=\"component-search\"]",
+        "[data-dock-window-content=\"component-search\"]"
       ],
       "ringSelectors": [
         "[data-component-name*=\"train xgboost model on csv\" i]"
       ],
       "mutationObservables": [
-        "[data-dock-window-content=\"component-library\"]"
+        "[data-dock-window-content=\"component-search\"]"
       ],
-      "resizeObservables": ["[data-dock-window-content=\"component-library\"]"],
+      "resizeObservables": ["[data-dock-window-content=\"component-search\"]"],
       "content": "Now add **Train XGBoost model on CSV** onto the canvas.\n\nFind it however you like. Search for **train**, or clear the search box and browse Quick start.",
       "stepInteraction": true,
       "interaction": "add-task",
@@ -155,23 +155,23 @@
       "selector": "[data-folder-name=\"Inputs & Outputs\"]",
       "highlightedSelectors": ["[data-folder-name=\"Inputs & Outputs\"]"],
       "mutationObservables": [
-        "[data-dock-window-content=\"component-library\"]"
+        "[data-dock-window-content=\"component-search\"]"
       ],
-      "resizeObservables": ["[data-dock-window-content=\"component-library\"]"],
+      "resizeObservables": ["[data-dock-window-content=\"component-search\"]"],
       "content": "Let's expose the model's predictions at the pipeline boundary.\n\nOpen the **Inputs & Outputs** folder in the Component Library.",
       "position": "right",
       "stepInteraction": true,
       "interaction": "expand-folder",
       "targetFolderName": "Inputs & Outputs",
       "resetLibrarySearch": true,
-      "ensureWindowRestored": "component-library"
+      "ensureWindowRestored": "component-search"
     },
     {
       "selector": "[data-component-name=\"Output Node\"]",
       "mutationObservables": [
-        "[data-dock-window-content=\"component-library\"]"
+        "[data-dock-window-content=\"component-search\"]"
       ],
-      "resizeObservables": ["[data-dock-window-content=\"component-library\"]"],
+      "resizeObservables": ["[data-dock-window-content=\"component-search\"]"],
       "content": "Drag an **Output Node** onto the canvas.\n\nOutput nodes capture task results so they're easy to find after the pipeline runs.",
       "position": "right",
       "stepInteraction": true,

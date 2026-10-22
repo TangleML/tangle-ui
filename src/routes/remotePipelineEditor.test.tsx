@@ -6,22 +6,15 @@ import {
   createRouter,
   RouterContextProvider,
 } from "@tanstack/react-router";
-import {
-  act,
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { type ReactNode, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PipelineSpecApiError } from "@/services/pipelineSpecService";
+import { PipelineStorageProvider } from "@/services/pipelineStorage/PipelineStorageProvider";
 import { RemotePipelineDeletionError } from "@/services/pipelineStorage/remotePipelineDeletion";
 
-import Editor from "./Editor/Editor";
-import { EditorV2 } from "./v2/pages/Editor/EditorV2";
+import { Editor } from "./v2/pages/Editor/Editor";
 import { EmbeddedPipelineEditor } from "./v2/pages/Editor/EmbeddedPipelineEditor";
 
 const route = vi.hoisted(() => ({
@@ -35,26 +28,14 @@ const backend = vi.hoisted(() => ({
   ready: true,
   configured: true,
 }));
-const loadLegacy = vi.hoisted(() => vi.fn());
-const loadV2 = vi.hoisted(() => vi.fn());
+const loadSpec = vi.hoisted(() => vi.fn());
 const initializeEditing = vi.hoisted(() => vi.fn());
 const mountEditor = vi.hoisted(() => vi.fn());
 const navigate = vi.hoisted(() => vi.fn());
-const migrateLocal = vi.hoisted(() => vi.fn());
 const pendingSpec = new Promise<never>(() => {});
-const localCreation = vi.hoisted(() => ({ storage: {}, create: vi.fn() }));
-const queryClients: QueryClient[] = [];
-
-vi.mock(
-  "./v2/pages/Editor/components/EditorMenuBar/components/fileMenu.actions",
-  () => ({
-    createNewPipeline: localCreation.create,
-  }),
-);
-vi.mock("@/services/pipelineStorage/PipelineStorageProvider", () => ({
-  usePipelineStorage: () => localCreation.storage,
-}));
-
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false } },
+});
 vi.mock("@tanstack/react-router", async (importOriginal) => {
   const original =
     await importOriginal<typeof import("@tanstack/react-router")>();
@@ -91,18 +72,8 @@ vi.mock("@/routes/v2/shared/components/AppMenuActions", () => ({
   ),
 }));
 vi.mock("@/routes/router", async () => import("./appRoutes"));
-vi.mock("@/hooks/useLoadComponentSpecFromPath", () => ({
-  useLoadComponentSpecFromPath: loadLegacy,
-}));
-vi.mock("@/components/Editor/PipelineEditor", () => ({
-  default: () => <div>Legacy pipeline canvas</div>,
-}));
-vi.mock("@/hooks/useRecentlyViewed", () => ({ addRecentlyViewed: vi.fn() }));
-vi.mock("@/components/shared/LocalPipelineMigration", () => ({
-  LocalPipelineMigration: migrateLocal,
-}));
 vi.mock("./v2/pages/Editor/hooks/useLoadSpec", () => ({
-  useLoadSpec: loadV2,
+  useLoadSpec: loadSpec,
 }));
 vi.mock(
   "./v2/pages/Editor/components/RemotePipelineView/RemotePipelineView",
@@ -118,18 +89,11 @@ vi.mock("./v2/pages/Editor/hooks/useSpecLifecycle", () => ({
 vi.mock("./v2/pages/Editor/components/EditorMenuBar/EditorMenuBar", () => ({
   EditorMenuBar: () => <nav aria-label="Editor navigation" />,
 }));
-vi.mock("./v2/pages/Editor/components/DriverPermissionGate", () => ({
-  DriverPermissionGate: ({ children }: { children: ReactNode }) =>
-    permission.granted ? children : <div>Grant Access</div>,
-}));
 vi.mock("./v2/pages/Editor/components/EmptyEditorState", () => ({
-  EmptyEditorState: () => <div>Open local pipeline</div>,
+  EmptyEditorState: () => <div>Open pipeline</div>,
 }));
 vi.mock("@/providers/ComponentLibraryProvider", () => ({
   ComponentLibraryProvider: ({ children }: { children: ReactNode }) => children,
-}));
-vi.mock("@/providers/ComponentLibraryProvider/ForcedSearchProvider", () => ({
-  ForcedSearchProvider: ({ children }: { children: ReactNode }) => children,
 }));
 vi.mock("@/components/shared/ComponentEditor/ComponentEditorProvider", () => ({
   ComponentEditorProvider: ({ children }: { children: ReactNode }) => children,
@@ -167,30 +131,24 @@ vi.mock("@/providers/TourProvider/TourSecretsDialog", () => ({
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.removeItem("jwtToken");
-  vi.stubEnv("VITE_LOCAL_PIPELINES", undefined);
-  vi.stubEnv("VITE_REMOTE_PIPELINES", "true");
-  route.params = { pipelineName: "pipeline-123" };
+  route.params = { pipelineId: "pipeline-123" };
   route.search = {};
   route.context = {};
   permission.granted = true;
   backend.ready = true;
   backend.configured = true;
   backend.backendUrl = "https://backend.example.com";
-  loadLegacy.mockReturnValue({ componentSpec: null, error: null });
-  migrateLocal.mockImplementation(
-    ({ children }: { children: ReactNode }) => children,
-  );
-  loadV2.mockImplementation(() => {
+  loadSpec.mockImplementation(() => {
     throw pendingSpec;
   });
 });
 
 afterEach(() => {
   cleanup();
+  queryClient.clear();
   localStorage.removeItem("jwtToken");
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
-  queryClients.splice(0).forEach((client) => client.clear());
 });
 
 function renderEditor(children: ReactNode, basepath = "", hash = false) {
@@ -202,7 +160,11 @@ function renderEditor(children: ReactNode, basepath = "", hash = false) {
   });
   return render(children, {
     wrapper: ({ children }) => (
-      <RouterContextProvider router={router}>{children}</RouterContextProvider>
+      <QueryClientProvider client={queryClient}>
+        <RouterContextProvider router={router}>
+          <PipelineStorageProvider>{children}</PipelineStorageProvider>
+        </RouterContextProvider>
+      </QueryClientProvider>
     ),
   });
 }
@@ -210,10 +172,10 @@ function renderEditor(children: ReactNode, basepath = "", hash = false) {
 describe("remote pipeline editor entry", () => {
   it("keeps the mounted editor session when a workarea draft becomes remote", () => {
     permission.granted = false;
-    loadV2.mockReturnValue({
+    loadSpec.mockReturnValue({
       data: {
         spec: { name: "Draft" },
-        file: { folder: { driver: { canEdit: true } } },
+        file: { canEdit: true },
       },
     });
     const opened = renderEditor(
@@ -242,23 +204,11 @@ describe("remote pipeline editor entry", () => {
     );
     expect(mountEditor).toHaveBeenCalledOnce();
   });
-  it("requests local file permission before reading an embedded pipeline", () => {
-    permission.granted = false;
-    renderEditor(
-      <EmbeddedPipelineEditor
-        pipelineRef={{ name: "Local pipeline", fileId: "local-1" }}
-        isActive
-        projectId="project-1"
-      />,
-    );
-    expect(screen.getByText("Grant Access")).toBeInTheDocument();
-    expect(loadV2).not.toHaveBeenCalled();
-  });
   it("keeps remote project pipelines read-only without starting editing tools", () => {
-    loadV2.mockReturnValue({
+    loadSpec.mockReturnValue({
       data: {
         spec: { name: "Shared project graph" },
-        file: { folder: { driver: { canEdit: false } } },
+        file: { canEdit: false },
       },
     });
     renderEditor(
@@ -275,211 +225,33 @@ describe("remote pipeline editor entry", () => {
     expect(screen.getByText("Shared project graph")).toBeInTheDocument();
     expect(initializeEditing).not.toHaveBeenCalled();
   });
-  it.each(["no backend", "local flag"])(
-    "creates locally from a direct new-pipeline URL with %s",
-    async (mode) => {
-      route.context = {
-        newPipeline: { name: "New local pipeline", draftId: "draft-1" },
-      };
-      route.search = { projectId: "project-1" };
-      if (mode === "local flag") vi.stubEnv("VITE_LOCAL_PIPELINES", "true");
-      else backend.configured = false;
-      const created = Promise.withResolvers<{
-        id: string;
-        storageKey: string;
-      }>();
-      if (mode === "local flag") {
-        localCreation.create.mockRejectedValueOnce(
-          new Error("Local storage unavailable"),
-        );
-      }
-      localCreation.create.mockReturnValueOnce(created.promise);
-      const client = new QueryClient();
-      queryClients.push(client);
-      renderEditor(
-        <QueryClientProvider client={client}>
-          <EditorV2 />
-        </QueryClientProvider>,
-      );
-      if (mode === "local flag") {
-        expect(await screen.findByRole("alert")).toHaveTextContent(
-          "Local storage unavailable",
-        );
-        fireEvent.click(screen.getByRole("button", { name: "Retry" }));
-      }
-      await waitFor(() =>
-        expect(localCreation.create).toHaveBeenCalledTimes(
-          mode === "local flag" ? 2 : 1,
-        ),
-      );
-      expect(localCreation.create).toHaveBeenLastCalledWith(
-        localCreation.storage,
-        "New local pipeline",
-      );
-      expect(loadV2).not.toHaveBeenCalled();
-      expect(navigate).not.toHaveBeenCalled();
-      expect(screen.getByText("Loading pipeline...")).toBeInTheDocument();
-      await act(async () =>
-        created.resolve({ id: "local-1", storageKey: "New local pipeline" }),
-      );
-      await waitFor(() =>
-        expect(navigate).toHaveBeenCalledWith({
-          to: "/editor-v2/$pipelineName",
-          params: { pipelineName: "New local pipeline" },
-          search: expect.any(Function),
-          replace: true,
-          resetScroll: false,
-        }),
-      );
-      expect(navigate.mock.calls[0][0].search(route.search)).toEqual({
-        projectId: "project-1",
-        fileId: "local-1",
-      });
-      expect(loadV2).not.toHaveBeenCalled();
-    },
-  );
-  it.each([
-    { name: "pipeline", search: { projectId: "project-1" } },
-    {
-      name: "nested node",
-      search: {
-        projectId: "project-1",
-        subgraphPath: ["Preprocess", "Normalize"],
-        nodeId: "Clean data",
-        nodeType: "task",
-      },
-    },
-  ])(
-    "redirects legacy remote $name URLs to the V2 editor and preserves search parameters",
-    ({ search }) => {
-      route.params = { pipelineId: "pipeline-123" };
-      route.search = search;
-      renderEditor(<Editor />);
-
-      expect(loadLegacy).not.toHaveBeenCalled();
-      expect(navigate).toHaveBeenCalledWith({
-        to: "/editor-v2/pipeline/$pipelineId",
-        params: { pipelineId: "pipeline-123" },
-        search: expect.any(Function),
-        replace: true,
-      });
-      expect(navigate.mock.calls[0][0].search(search)).toEqual(search);
-    },
-  );
-
-  it.each(["legacy", "V2"])(
-    "waits for %s local migration before loading and preserves the project",
-    (editor) => {
-      const View = editor === "legacy" ? Editor : EditorV2;
-      route.params =
-        editor === "legacy"
-          ? { name: "Local pipeline" }
-          : { pipelineName: "Local pipeline" };
-      route.search = { fileId: "local-1", projectId: "project-1" };
-      migrateLocal.mockImplementation(
-        ({ onMigrated }: { onMigrated: (file: { id: string }) => void }) => (
-          <button onClick={() => onMigrated({ id: "remote-1" })}>
-            Finish migration
-          </button>
-        ),
-      );
-      renderEditor(<View />);
-      expect(loadLegacy).not.toHaveBeenCalled();
-      expect(migrateLocal.mock.calls[0][0]).toMatchObject({
-        pipelineRef: { name: "Local pipeline", fileId: "local-1" },
-        projectId: "project-1",
-      });
-      fireEvent.click(screen.getByRole("button", { name: "Finish migration" }));
-      expect(navigate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          to: "/editor-v2/pipeline/$pipelineId",
-          params: { pipelineId: "remote-1" },
-          search: { projectId: "project-1" },
-          replace: true,
-        }),
-      );
-    },
-  );
-
-  it.each(["legacy", "V2"])(
-    "clears inaccessible project context after %s migration",
-    (editor) => {
-      const View = editor === "legacy" ? Editor : EditorV2;
-      route.params =
-        editor === "legacy"
-          ? { name: "Local pipeline" }
-          : { pipelineName: "Local pipeline" };
-      route.search = { fileId: "local-1", projectId: "removed-project" };
-      migrateLocal.mockImplementation(
-        ({
-          onMigrated,
-        }: {
-          onMigrated: (
-            file: { id: string },
-            clearProjectContext?: boolean,
-          ) => void;
-        }) => (
-          <button onClick={() => onMigrated({ id: "remote-1" }, true)}>
-            Finish migration
-          </button>
-        ),
-      );
-      renderEditor(<View />);
-      fireEvent.click(screen.getByRole("button", { name: "Finish migration" }));
-      expect(navigate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          params: { pipelineId: "remote-1" },
-          search: { projectId: undefined },
-        }),
-      );
-    },
-  );
-
-  it("requests legacy local file permission before migration", () => {
-    route.params = { name: "Local pipeline" };
-    permission.granted = false;
-    renderEditor(<Editor />);
-    expect(screen.getByText("Grant Access")).toBeInTheDocument();
-    expect(migrateLocal).not.toHaveBeenCalled();
-    expect(loadLegacy).not.toHaveBeenCalled();
-  });
-
-  it("continues loading a local pipeline named remote in the legacy editor", () => {
-    route.params = { name: "remote" };
-    renderEditor(<Editor />);
-
-    expect(loadLegacy).toHaveBeenCalled();
-    expect(screen.getByText("Loading Pipeline")).toBeInTheDocument();
-  });
-
-  it("loads remote IDs through the backend-scoped V2 storage reference", () => {
+  it("loads remote IDs through the backend-scoped storage reference", () => {
     route.params = { pipelineId: "pipeline-123" };
-    route.search = { fileId: "local-file-id" };
-    renderEditor(<EditorV2 />);
+    renderEditor(<Editor />);
 
     expect(
       screen.queryByRole("navigation", { name: "Editor navigation" }),
     ).not.toBeInTheDocument();
-    expect(loadV2).toHaveBeenCalledWith({
+    expect(loadSpec).toHaveBeenCalledWith({
       source: "remote",
       backendUrl: "https://backend.example.com",
       pipelineId: "pipeline-123",
     });
     expect(initializeEditing).not.toHaveBeenCalled();
-    expect(screen.queryByText("Open local pipeline")).not.toBeInTheDocument();
+    expect(screen.queryByText("Open pipeline")).not.toBeInTheDocument();
   });
 
   it.each([false, undefined])(
     "preserves viewing without an editing session when write access is %s",
     (canEdit) => {
       route.params = { pipelineId: "pipeline-123" };
-      loadV2.mockReturnValue({
+      loadSpec.mockReturnValue({
         data: {
           spec: { name: "Remote graph" },
-          file: { folder: { driver: { canEdit } } },
+          file: { canEdit },
         },
       });
-      renderEditor(<EditorV2 />);
+      renderEditor(<Editor />);
       expect(screen.getByText("Remote graph")).toBeInTheDocument();
       expect(initializeEditing).not.toHaveBeenCalled();
       expect(
@@ -488,20 +260,20 @@ describe("remote pipeline editor entry", () => {
     },
   );
 
-  it("opens the editor after the remote driver verifies write access", () => {
+  it("opens the editor after the remote file verifies write access", async () => {
     route.params = { pipelineId: "pipeline-123" };
-    loadV2.mockReturnValueOnce({
+    loadSpec.mockReturnValue({
       data: {
         spec: { name: "Remote graph" },
-        file: { folder: { driver: { canEdit: true } } },
+        file: { canEdit: true },
       },
     });
-    renderEditor(<EditorV2 />);
+    renderEditor(<Editor />);
     expect(
-      screen.getByRole("navigation", { name: "Editor navigation" }),
+      await screen.findByRole("navigation", { name: "Editor navigation" }),
     ).toBeInTheDocument();
     expect(screen.queryByText("Remote graph")).not.toBeInTheDocument();
-    expect(loadV2).toHaveBeenCalledWith({
+    expect(loadSpec).toHaveBeenCalledWith({
       source: "remote",
       backendUrl: backend.backendUrl,
       pipelineId: "pipeline-123",
@@ -510,14 +282,14 @@ describe("remote pipeline editor entry", () => {
 
   it("shows failed remote reads without entering the editor", () => {
     route.params = { pipelineId: "pipeline-123" };
-    loadV2.mockImplementation(() => {
+    loadSpec.mockImplementation(() => {
       throw new Error("Pipeline not found");
     });
     const consoleError = vi
       .spyOn(console, "error")
       .mockImplementation(() => {});
     try {
-      renderEditor(<EditorV2 />);
+      renderEditor(<Editor />);
       expect(screen.getByRole("alert")).toHaveTextContent(
         "Unable to load pipeline. Please try again.",
       );
@@ -540,10 +312,10 @@ describe("remote pipeline editor entry", () => {
     (state, message, retryable) => {
       vi.spyOn(console, "error").mockImplementation(() => {});
       route.params = { pipelineId: "pipeline-123" };
-      loadV2.mockImplementation(() => {
+      loadSpec.mockImplementation(() => {
         throw new RemotePipelineDeletionError(state, "Storage barrier");
       });
-      renderEditor(<EditorV2 />);
+      renderEditor(<Editor />);
       expect(screen.getByRole("alert")).toHaveTextContent(message);
       expect(Boolean(screen.queryByRole("button", { name: "Retry" }))).toBe(
         retryable,
@@ -556,25 +328,25 @@ describe("remote pipeline editor entry", () => {
 
   it("clears a failed read when navigating to another remote pipeline", () => {
     route.params = { pipelineId: "missing" };
-    loadV2.mockImplementation(() => {
+    loadSpec.mockImplementation(() => {
       throw new Error("Pipeline not found");
     });
     const consoleError = vi
       .spyOn(console, "error")
       .mockImplementation(() => {});
     try {
-      const { rerender } = renderEditor(<EditorV2 />);
+      const { rerender } = renderEditor(<Editor />);
       expect(screen.getByRole("alert")).toHaveTextContent(
         "Unable to load pipeline. Please try again.",
       );
       route.params = { pipelineId: "available" };
-      loadV2.mockReturnValue({
+      loadSpec.mockReturnValue({
         data: {
           spec: { name: "Available pipeline" },
-          file: { folder: { driver: { canEdit: false } } },
+          file: { canEdit: false },
         },
       });
-      rerender(<EditorV2 />);
+      rerender(<Editor />);
       expect(screen.getByText("Available pipeline")).toBeInTheDocument();
       expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     } finally {
@@ -585,8 +357,8 @@ describe("remote pipeline editor entry", () => {
   it("waits for backend settings before resolving a remote pipeline", () => {
     route.params = { pipelineId: "pipeline-123" };
     backend.ready = false;
-    renderEditor(<EditorV2 />);
-    expect(loadV2).not.toHaveBeenCalled();
+    renderEditor(<Editor />);
+    expect(loadSpec).not.toHaveBeenCalled();
     expect(screen.getByText("Loading pipeline...")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Home" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Sign in" })).toBeInTheDocument();
@@ -595,8 +367,8 @@ describe("remote pipeline editor entry", () => {
   it("explains when a remote pipeline has no configured backend", () => {
     route.params = { pipelineId: "pipeline-123" };
     backend.configured = false;
-    renderEditor(<EditorV2 />);
-    expect(loadV2).not.toHaveBeenCalled();
+    renderEditor(<Editor />);
+    expect(loadSpec).not.toHaveBeenCalled();
     expect(screen.getByRole("alert")).toHaveTextContent("Configure a backend");
     expect(screen.getByRole("link", { name: "Home" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Sign in" })).toBeInTheDocument();
@@ -605,7 +377,7 @@ describe("remote pipeline editor entry", () => {
   it("keeps settings and Home links inside a deployment base path", () => {
     route.params = { pipelineId: "pipeline-123" };
     backend.configured = false;
-    renderEditor(<EditorV2 />, "/app");
+    renderEditor(<Editor />, "/app");
     expect(
       screen.getByRole("link", { name: "Backend settings" }),
     ).toHaveAttribute("href", "/app/settings/backend");
@@ -618,7 +390,7 @@ describe("remote pipeline editor entry", () => {
   it("keeps settings and Home links inside hash history", () => {
     route.params = { pipelineId: "pipeline-123" };
     backend.configured = false;
-    renderEditor(<EditorV2 />, "", true);
+    renderEditor(<Editor />, "", true);
     expect(
       screen
         .getByRole("link", { name: "Backend settings" })
@@ -645,10 +417,10 @@ describe("remote pipeline editor entry", () => {
     (status, message, retryable) => {
       vi.spyOn(console, "error").mockImplementation(() => {});
       route.params = { pipelineId: "pipeline-123" };
-      loadV2.mockImplementation(() => {
+      loadSpec.mockImplementation(() => {
         throw new PipelineSpecApiError("Request failed", status);
       });
-      renderEditor(<EditorV2 />);
+      renderEditor(<Editor />);
       expect(screen.getByRole("alert")).toHaveTextContent(message);
       expect(screen.getByRole("link", { name: "Home" })).toBeInTheDocument();
       expect(
@@ -672,15 +444,15 @@ describe("remote pipeline editor entry", () => {
   ])("can recover from a transient load error (%s)", (error) => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     route.params = { pipelineId: "pipeline-123" };
-    loadV2.mockImplementation(() => {
+    loadSpec.mockImplementation(() => {
       throw error;
     });
-    renderEditor(<EditorV2 />);
+    renderEditor(<Editor />);
     expect(screen.getByRole("alert")).toBeInTheDocument();
-    loadV2.mockReturnValue({
+    loadSpec.mockReturnValue({
       data: {
         spec: { name: "Recovered pipeline" },
-        file: { folder: { driver: { canEdit: false } } },
+        file: { canEdit: false },
       },
     });
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
@@ -691,16 +463,16 @@ describe("remote pipeline editor entry", () => {
   it.each([401, 403])("retries an HTTP %s load after signing in", (status) => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     route.params = { pipelineId: "pipeline-123" };
-    loadV2.mockImplementation(() => {
+    loadSpec.mockImplementation(() => {
       throw new PipelineSpecApiError("Authentication required", status);
     });
-    renderEditor(<EditorV2 />);
+    renderEditor(<Editor />);
     expect(screen.getByRole("alert")).toBeInTheDocument();
 
-    loadV2.mockReturnValue({
+    loadSpec.mockReturnValue({
       data: {
         spec: { name: "Authenticated pipeline" },
-        file: { folder: { driver: { canEdit: false } } },
+        file: { canEdit: false },
       },
     });
     localStorage.setItem(
@@ -719,20 +491,20 @@ describe("remote pipeline editor entry", () => {
     const storedAuth = JSON.stringify({ original_token: "session-token" });
     localStorage.setItem("jwtToken", storedAuth);
     route.params = { pipelineId: "pipeline-123" };
-    loadV2.mockImplementation(() => {
+    loadSpec.mockImplementation(() => {
       throw new PipelineSpecApiError("Authentication required", 401);
     });
-    renderEditor(<EditorV2 />);
+    renderEditor(<Editor />);
     expect(screen.getByRole("alert")).toBeInTheDocument();
 
     localStorage.removeItem("jwtToken");
     fireEvent(window, new StorageEvent("storage", { key: "jwtToken" }));
     expect(screen.getByRole("alert")).toBeInTheDocument();
 
-    loadV2.mockReturnValue({
+    loadSpec.mockReturnValue({
       data: {
         spec: { name: "Reauthenticated pipeline" },
-        file: { folder: { driver: { canEdit: false } } },
+        file: { canEdit: false },
       },
     });
     localStorage.setItem("jwtToken", storedAuth);
@@ -744,42 +516,9 @@ describe("remote pipeline editor entry", () => {
     "does not request an invalid remote route ID (%s)",
     (pipelineId) => {
       route.params = { pipelineId };
-      renderEditor(<EditorV2 />);
-      expect(loadV2).not.toHaveBeenCalled();
-      expect(screen.getByText("Open local pipeline")).toBeInTheDocument();
+      renderEditor(<Editor />);
+      expect(loadSpec).not.toHaveBeenCalled();
+      expect(screen.getByText("Open pipeline")).toBeInTheDocument();
     },
   );
-
-  it("continues resolving local names and file IDs in V2", () => {
-    route.search = { fileId: "local-file-id" };
-    renderEditor(<EditorV2 />);
-
-    expect(loadV2).toHaveBeenCalledWith({
-      name: "pipeline-123",
-      fileId: "local-file-id",
-    });
-    expect(screen.getByText("Loading pipeline...")).toBeInTheDocument();
-  });
-
-  it("continues loading a local pipeline named remote in V2", () => {
-    route.params = { pipelineName: "remote" };
-    renderEditor(<EditorV2 />);
-
-    expect(loadV2).toHaveBeenCalledWith({ name: "remote", fileId: undefined });
-  });
-
-  it("honors an explicit pipeline reference even on a remote route", () => {
-    route.params = { pipelineId: "pipeline-123" };
-    renderEditor(<EditorV2 pipelineRef={{ name: "tour-pipeline" }} />);
-
-    expect(loadV2).toHaveBeenCalledWith({ name: "tour-pipeline" });
-  });
-
-  it("honors an explicit empty pipeline reference", () => {
-    route.params = { pipelineId: "pipeline-123" };
-    renderEditor(<EditorV2 pipelineRef={null} />);
-
-    expect(screen.getByText("Open local pipeline")).toBeInTheDocument();
-    expect(loadV2).not.toHaveBeenCalled();
-  });
 });

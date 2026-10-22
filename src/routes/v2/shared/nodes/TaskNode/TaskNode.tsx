@@ -18,7 +18,6 @@ import { useIsDetailedView } from "@/routes/v2/shared/hooks/useIsDetailedView";
 import type { TaskNodeData } from "@/routes/v2/shared/nodes/types";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import type { NodeOverlayEffect } from "@/routes/v2/shared/store/canvasOverlay.types";
-import { isEditorVisualNodeSelected } from "@/routes/v2/shared/store/isEditorVisualNodeSelected";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { AggregatorOutputType } from "@/types/aggregator";
 import {
@@ -235,13 +234,12 @@ function resolveAggregatorOutputType(task: Task): AggregatorOutputType {
 export const TaskNode = observer(function TaskNode({
   id,
   data,
-  selected,
   subgraphExecutionStats,
   readOnly = false,
 }: TaskNodeProps) {
   const { entityId } = data;
   const { editor, canvasOverlay } = useSharedStores();
-  const { getEdges, setEdges } = useReactFlow();
+  const { getEdges } = useReactFlow();
   const showContent = useIsDetailedView();
   const inputAggregatorEnabled = useFlagValue("input-aggregator");
   const publishedComponentBadgeEnabled = useFlagValue(
@@ -265,17 +263,20 @@ export const TaskNode = observer(function TaskNode({
     isPipelineAggregator(componentSpec?.metadata?.annotations);
 
   const handleClick = (event: MouseEvent) => {
-    editor.selectNode(id, "task", { shiftKey: event.shiftKey, entityId });
+    if (event.shiftKey)
+      editor.selectNode(id, "task", { shiftKey: true, entityId });
+    else editor.setFocusedArgument(null);
   };
 
   const selectEdgesByHandle = (handleId: string) => {
-    setEdges(
-      getEdges().map((edge) => ({
-        ...edge,
-        selected:
-          (edge.target === id && edge.targetHandle === handleId) ||
-          (edge.source === id && edge.sourceHandle === handleId),
-      })),
+    editor.setSelectedEdges(
+      getEdges()
+        .filter(
+          (edge) =>
+            (edge.target === id && edge.targetHandle === handleId) ||
+            (edge.source === id && edge.sourceHandle === handleId),
+        )
+        .map((edge) => edge.id),
     );
   };
 
@@ -303,7 +304,7 @@ export const TaskNode = observer(function TaskNode({
 
   const conditionReferenceLabel = inputDisplayData.values[IS_ENABLED_PORT_NAME];
 
-  const isSelected = isEditorVisualNodeSelected(editor, id, !!selected);
+  const isSelected = editor.isNodeSelected(id);
 
   const handleOutputTypeChange = (value: AggregatorOutputType) => {
     if (readOnly) return;

@@ -5,18 +5,12 @@ import type {
   ComponentFolder,
   ComponentLibrary,
 } from "@/types/componentLibrary";
-import type {
-  ComponentReference,
-  ComponentSpec,
-  GraphSpec,
-  TaskSpec,
-} from "@/utils/componentSpec";
+import type { ComponentReference, ComponentSpec } from "@/utils/componentSpec";
 import * as componentStore from "@/utils/componentStore";
 import * as localforage from "@/utils/localforage";
 import * as yamlUtils from "@/utils/yaml";
 
 import {
-  fetchUsedComponents,
   fetchUserComponents,
   filterToUniqueByDigest,
   flattenFolders,
@@ -162,102 +156,6 @@ describe("componentLibrary", () => {
     });
 
     // todo: test edge cases with malformed component files
-  });
-
-  describe("fetchUsedComponents", () => {
-    it("should return components used in pipeline tasks", () => {
-      // Arrange
-      const mockGraphSpec: GraphSpec = {
-        tasks: {
-          task1: {
-            componentRef: {
-              name: "component-1",
-              digest: "digest1",
-              url: "https://example.com/component1.yaml",
-            },
-          } as TaskSpec,
-          task2: {
-            componentRef: {
-              name: "component-2",
-              digest: "digest2",
-              url: "https://example.com/component2.yaml",
-            },
-          } as TaskSpec,
-        },
-      };
-
-      // Act
-      const result = fetchUsedComponents(mockGraphSpec);
-
-      // Assert
-      expect(result).toEqual({
-        name: "Used in Pipeline",
-        components: [
-          {
-            name: "component-1",
-            digest: "digest1",
-            url: "https://example.com/component1.yaml",
-          },
-          {
-            name: "component-2",
-            digest: "digest2",
-            url: "https://example.com/component2.yaml",
-          },
-        ],
-        folders: [],
-        isUserFolder: false,
-      });
-    });
-
-    it("should deduplicate components with same digest", () => {
-      // Arrange
-      const mockGraphSpec: GraphSpec = {
-        tasks: {
-          task1: {
-            componentRef: {
-              name: "component-1",
-              digest: "same-digest",
-              url: "https://example.com/component1.yaml",
-            },
-          } as TaskSpec,
-          task2: {
-            componentRef: {
-              name: "component-1-duplicate",
-              digest: "same-digest",
-              url: "https://example.com/component1.yaml",
-            },
-          } as TaskSpec,
-        },
-      };
-
-      // Act
-      const result = fetchUsedComponents(mockGraphSpec);
-
-      // Assert
-      expect(result.components).toHaveLength(1);
-      expect(result.components?.[0]?.digest).toBe("same-digest");
-    });
-
-    it("should return empty folder when graphSpec is invalid", () => {
-      // Act
-      const result1 = fetchUsedComponents(null as any);
-      const result2 = fetchUsedComponents({} as GraphSpec);
-      const result3 = fetchUsedComponents({ tasks: null } as any);
-
-      // Assert
-      const expectedResult = {
-        name: "Used in Pipeline",
-        components: [],
-        folders: [],
-        isUserFolder: false,
-      };
-      expect(result1).toEqual(expectedResult);
-      expect(result2).toEqual(expectedResult);
-      expect(result3).toEqual(expectedResult);
-    });
-
-    // todo: test with components without digest
-    // todo: test with deeply nested task structures
   });
 
   describe("populateComponentRefs", () => {

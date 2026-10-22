@@ -79,7 +79,7 @@ function remoteLink(search: Record<string, unknown> = {}) {
   for (const [name, value] of Object.entries(search)) {
     query.set(name, typeof value === "string" ? value : JSON.stringify(value));
   }
-  return `/editor-v2/pipeline/remote-1${query.size ? `?${query}` : ""}`;
+  return `/editor/pipeline/remote-1${query.size ? `?${query}` : ""}`;
 }
 
 const Harness = observer(function Harness({
@@ -142,7 +142,7 @@ async function openEditor({
   });
   const pipelineRoute = createRoute({
     getParentRoute: () => rootRoute,
-    path: APP_ROUTES.EDITOR_V2_REMOTE_PIPELINE,
+    path: APP_ROUTES.REMOTE_PIPELINE_EDITOR,
     validateSearch: validateRemotePipelineSearch,
     component: () => (
       <Harness
@@ -449,7 +449,7 @@ describe("useRemotePipelineUrlSync", () => {
 
     await act(async () => {
       await router.navigate({
-        to: APP_ROUTES.EDITOR_V2_REMOTE_PIPELINE,
+        to: APP_ROUTES.REMOTE_PIPELINE_EDITOR,
         params: { pipelineId: "remote-1" },
         search: {
           subgraphPath: [outerName, innerName],

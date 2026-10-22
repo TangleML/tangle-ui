@@ -83,7 +83,6 @@ function applyCanvasDeleteSelection(ctx: CanvasDeleteContext): void {
 
 function clearEditorSelectionAfterDelete(editor: EditorStore): void {
   editor.clearSelection();
-  editor.clearMultiSelection();
 }
 
 const NODE_ENTITY_TYPES = [

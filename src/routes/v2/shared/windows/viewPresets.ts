@@ -13,15 +13,13 @@ export interface ViewPreset {
 }
 
 const AI_ASSISTANT_WINDOW_ID = "ai-assistant-chat";
-const COMPONENT_SEARCH_WINDOW_ID = "component-search-v2";
-const COMPONENT_LIBRARY_WINDOW_ID = "component-library";
+const COMPONENT_SEARCH_WINDOW_ID = "component-search";
 
 export const DEFAULT_DOCK_AREAS: PresetDockAreas = {
   left: [
     "tip-of-the-day",
     "runs-and-submission",
     COMPONENT_SEARCH_WINDOW_ID,
-    COMPONENT_LIBRARY_WINDOW_ID,
     AI_ASSISTANT_WINDOW_ID,
     "pipeline-tree",
     "history",
@@ -53,8 +51,7 @@ export const DEFAULT_VIEW_PRESET: ViewPreset = {
   visible: new Set([
     "runs-and-submission",
     "recent-runs",
-    "component-search-v2",
-    "component-library",
+    "component-search",
     AI_ASSISTANT_WINDOW_ID,
     "pipeline-details",
     "canvas-controls",
@@ -69,7 +66,6 @@ const EMBEDDED_DOCK_AREAS: PresetDockAreas = {
     "pipeline-details",
     "runs-and-submission",
     COMPONENT_SEARCH_WINDOW_ID,
-    COMPONENT_LIBRARY_WINDOW_ID,
     "history",
     "recent-runs",
   ],
@@ -83,14 +79,13 @@ export const EMBEDDED_VIEW_PRESET: ViewPreset = {
     "runs-and-submission",
     "pipeline-details",
     COMPONENT_SEARCH_WINDOW_ID,
-    COMPONENT_LIBRARY_WINDOW_ID,
     "history",
     "recent-runs",
   ]),
   dockAreas: EMBEDDED_DOCK_AREAS,
 };
 
-const VIEW_PRESETS: ViewPreset[] = [
+export const VIEW_PRESETS: ViewPreset[] = [
   DEFAULT_VIEW_PRESET,
   {
     label: "All",
@@ -99,7 +94,6 @@ const VIEW_PRESETS: ViewPreset[] = [
     visible: new Set([
       "runs-and-submission",
       COMPONENT_SEARCH_WINDOW_ID,
-      COMPONENT_LIBRARY_WINDOW_ID,
       AI_ASSISTANT_WINDOW_ID,
       "history",
       "pipeline-tree",
@@ -117,48 +111,3 @@ const VIEW_PRESETS: ViewPreset[] = [
     visible: new Set<string>(),
   },
 ];
-
-function filterWindowIdsForComponentSearchMode(
-  ids: string[],
-  componentSearchV2Enabled: boolean,
-): string[] {
-  const hiddenWindowId = componentSearchV2Enabled
-    ? COMPONENT_LIBRARY_WINDOW_ID
-    : COMPONENT_SEARCH_WINDOW_ID;
-  return ids.filter((id) => id !== hiddenWindowId);
-}
-
-export function viewPresetForComponentSearchMode(
-  preset: ViewPreset,
-  componentSearchV2Enabled: boolean,
-): ViewPreset {
-  const visible = new Set(
-    filterWindowIdsForComponentSearchMode(
-      [...preset.visible],
-      componentSearchV2Enabled,
-    ),
-  );
-
-  const dockAreas = preset.dockAreas
-    ? {
-        left: filterWindowIdsForComponentSearchMode(
-          preset.dockAreas.left,
-          componentSearchV2Enabled,
-        ),
-        right: filterWindowIdsForComponentSearchMode(
-          preset.dockAreas.right,
-          componentSearchV2Enabled,
-        ),
-      }
-    : undefined;
-
-  return { ...preset, visible, dockAreas };
-}
-
-export function viewPresetsForComponentSearchMode(
-  componentSearchV2Enabled: boolean,
-): ViewPreset[] {
-  return VIEW_PRESETS.map((preset) =>
-    viewPresetForComponentSearchMode(preset, componentSearchV2Enabled),
-  );
-}

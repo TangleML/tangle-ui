@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import {
   type Position,
@@ -8,15 +8,13 @@ import {
 } from "./types";
 import type { ViewportBounds } from "./viewportUtils";
 import { DEFAULT_VIEW_PRESET } from "./viewPresets";
+import type { PersistedWindowLayout } from "./windowPersistence";
 import { buildWindowModelInit } from "./windowStore.utils";
 
 // Mirrors CURRENT_VERSION in windowPersistence.ts. If the schema version is
 // bumped there, these fixtures must be updated — loadWindowLayout migrates or
 // discards older versions, so a stale fixture stops exercising what it claims.
 const LAYOUT_VERSION = 5;
-
-// Default storage key used when no active layout id is set (see getStorageKey).
-const STORAGE_KEY = "editorV2-window-layout";
 
 const DEFAULT_POSITION: Position = { x: 100, y: 100 };
 const DEFAULT_SIZE: Size = { width: 320, height: 420 };
@@ -29,8 +27,11 @@ interface SeedWindowState {
   size?: Size;
 }
 
-function seedPersistedWindow(id: string, state: SeedWindowState): void {
-  const layout = {
+function persistedWindow(
+  id: string,
+  state: SeedWindowState,
+): PersistedWindowLayout {
+  return {
     windows: {
       [id]: {
         position: state.position ?? DEFAULT_POSITION,
@@ -47,26 +48,23 @@ function seedPersistedWindow(id: string, state: SeedWindowState): void {
     },
     version: LAYOUT_VERSION,
   };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(layout));
 }
 
 function baseOptions(overrides: Partial<WindowOptions> = {}): WindowOptions {
   return { title: "Test Window", persisted: true, ...overrides };
 }
 
-afterEach(() => {
-  localStorage.clear();
-});
-
 describe("resolveInitialState (via buildWindowModelInit)", () => {
   it("honors persisted hidden state even when startVisible is set", () => {
     const id = "persisted-hidden-window";
-    seedPersistedWindow(id, { isHidden: true });
+    const layout = persistedWindow(id, { isHidden: true });
 
     const init = buildWindowModelInit(
       id,
       baseOptions({ startVisible: true }),
       DEFAULT_POSITION,
+      undefined,
+      layout,
     );
 
     expect(init.state).toBe("hidden");
@@ -95,9 +93,18 @@ describe("resolveInitialState (via buildWindowModelInit)", () => {
 
   it("restores a persisted minimized docked window as minimized", () => {
     const id = "persisted-minimized-docked";
-    seedPersistedWindow(id, { isMinimized: true, dockState: "left" });
+    const layout = persistedWindow(id, {
+      isMinimized: true,
+      dockState: "left",
+    });
 
-    const init = buildWindowModelInit(id, baseOptions(), DEFAULT_POSITION);
+    const init = buildWindowModelInit(
+      id,
+      baseOptions(),
+      DEFAULT_POSITION,
+      undefined,
+      layout,
+    );
 
     expect(init.state).toBe("minimized");
   });
@@ -113,7 +120,7 @@ describe("resolveGeometry viewport clamping (via buildWindowModelInit)", () => {
 
   it("brings an off-viewport persisted floating window back into view", () => {
     const id = "off-screen-floating";
-    seedPersistedWindow(id, {
+    const layout = persistedWindow(id, {
       dockState: "none",
       position: { x: 5000, y: 5000 },
       size: { width: 320, height: 420 },
@@ -124,6 +131,7 @@ describe("resolveGeometry viewport clamping (via buildWindowModelInit)", () => {
       baseOptions(),
       DEFAULT_POSITION,
       VIEWPORT_BOUNDS,
+      layout,
     );
 
     expect(init.position).toEqual({
@@ -135,7 +143,7 @@ describe("resolveGeometry viewport clamping (via buildWindowModelInit)", () => {
   it("leaves an in-viewport persisted floating window untouched", () => {
     const id = "in-view-floating";
     const position: Position = { x: 120, y: 140 };
-    seedPersistedWindow(id, {
+    const layout = persistedWindow(id, {
       dockState: "none",
       position,
       size: { width: 320, height: 420 },
@@ -146,6 +154,7 @@ describe("resolveGeometry viewport clamping (via buildWindowModelInit)", () => {
       baseOptions(),
       DEFAULT_POSITION,
       VIEWPORT_BOUNDS,
+      layout,
     );
 
     expect(init.position).toEqual(position);
@@ -154,7 +163,7 @@ describe("resolveGeometry viewport clamping (via buildWindowModelInit)", () => {
   it("does not clamp the position of a persisted docked window", () => {
     const id = "off-screen-docked";
     const position: Position = { x: 5000, y: 5000 };
-    seedPersistedWindow(id, {
+    const layout = persistedWindow(id, {
       dockState: "left",
       position,
       size: { width: 320, height: 420 },
@@ -165,6 +174,7 @@ describe("resolveGeometry viewport clamping (via buildWindowModelInit)", () => {
       baseOptions(),
       DEFAULT_POSITION,
       VIEWPORT_BOUNDS,
+      layout,
     );
 
     expect(init.position).toEqual(position);

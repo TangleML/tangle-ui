@@ -22,19 +22,6 @@ function detectEdgeSnap(
   return null;
 }
 
-/** DOM element refs for dock areas, set by DockArea components */
-const dockAreaElements: Record<"left" | "right", HTMLElement | null> = {
-  left: null,
-  right: null,
-};
-
-export function registerDockAreaElement(
-  side: "left" | "right",
-  element: HTMLElement | null,
-): void {
-  dockAreaElements[side] = element;
-}
-
 function isMouseInsideDockArea(
   mouseX: number,
   mouseY: number,
@@ -62,6 +49,7 @@ function detectDockAreaSnap(
   mouseY: number,
   windowId: string,
   dockAreaWindowIds: Record<"left" | "right", string[]>,
+  dockAreaElements: Record<"left" | "right", HTMLElement | null>,
   enabledSides: ReadonlySet<"left" | "right">,
 ): SnapPreviewType | null {
   for (const side of ["left", "right"] as const) {
@@ -153,6 +141,7 @@ function calculateInsertPosition(
  */
 interface DetectSnapPreviewOptions {
   windowId: string;
+  dockAreaElements: Record<"left" | "right", HTMLElement | null>;
   mousePosition?: Position;
   dockAreaWindowIds?: Record<"left" | "right", string[]>;
   enabledDockSides?: ReadonlySet<"left" | "right">;
@@ -165,6 +154,7 @@ export function detectSnapPreview(
     windowId,
     mousePosition,
     dockAreaWindowIds,
+    dockAreaElements,
     enabledDockSides = new Set(["left", "right"] as const),
   } = options;
 
@@ -176,6 +166,7 @@ export function detectSnapPreview(
       mousePosition.y,
       windowId,
       dockAreaWindowIds,
+      dockAreaElements,
       enabledDockSides,
     );
     if (dockSnap) return dockSnap;

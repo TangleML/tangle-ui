@@ -1,3 +1,2 @@
-export type { IdGenerator } from "./idGenerator";
-export { IncrementingIdGenerator, ReplayIdGenerator } from "./idGenerator";
+export { IncrementingIdGenerator } from "./idGenerator";
 export { createTaskFromComponentRef } from "./taskFactory";

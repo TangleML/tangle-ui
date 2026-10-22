@@ -24,7 +24,6 @@ import {
 } from "@/utils/annotations";
 
 import { InputsBlock } from "./components/InputsBlock";
-import { MetadataBlock } from "./components/MetadataBlock";
 import { OutputsBlock } from "./components/OutputsBlock";
 import { PipelineDetailsHeader } from "./components/PipelineDetailsHeader";
 import { PipelineDetailsTextField } from "./components/PipelineDetailsTextField";
@@ -177,14 +176,10 @@ export const PipelineDetailsContent = observer<PipelineDetailsContentProps>(
             openDefault={false}
           >
             <BlockStack gap="4">
-              {readOnly ? (
-                <KeyValueList
-                  title="Metadata"
-                  items={ownerId ? [{ label: "Owner", value: ownerId }] : []}
-                />
-              ) : (
-                <MetadataBlock spec={pipelineSpec} />
-              )}
+              <KeyValueList
+                title="Metadata"
+                items={ownerId ? [{ label: "Owner", value: ownerId }] : []}
+              />
               <Separator />
               <AnnotationsBlock
                 annotations={pipelineSpec.annotations}

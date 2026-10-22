@@ -1,186 +1,57 @@
-import "fake-indexeddb/auto";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { beforeEach, expect, it, vi } from "vitest";
 
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
-import { runInAction } from "mobx";
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
-
-import {
-  IncrementingIdGenerator,
-  serializeComponentSpecToText,
-  YamlDeserializer,
-} from "@/models/componentSpec";
-import { AutoSaveStore } from "@/routes/v2/pages/Editor/store/autoSaveStore";
-import { DocumentSaveState } from "@/routes/v2/pages/Editor/store/documentSaveState";
-import { UndoStore } from "@/routes/v2/pages/Editor/store/undoStore";
+import { ComponentSpec } from "@/models/componentSpec";
 import { EditorStore } from "@/routes/v2/shared/store/editorStore";
 import { NavigationStore } from "@/routes/v2/shared/store/navigationStore";
-import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
-import { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
-import { componentSpecFromYaml } from "@/utils/yaml";
+import { downloadStringAsFile } from "@/utils/URL";
 
 import { RemotePipelineSaveRecovery } from "./RemotePipelineSaveRecovery";
 
-const notify = vi.hoisted(() => vi.fn());
-const navigate = vi.hoisted(() => vi.fn());
-let autoSave: AutoSaveStore;
-vi.mock("@tanstack/react-router", () => ({ useNavigate: () => navigate }));
-let storage: PipelineStorageService;
-let navigation: NavigationStore;
-let document: DocumentSaveState;
-const remoteWrite = vi.fn();
-const source = {
-  remote: { pipelineId: "original", backendUrl: "https://backend.example.com" },
-  isDraft: false,
-  write: remoteWrite,
+const autoSave = {
+  error: "The backend is unavailable.",
+  isSaving: false,
+  save: vi.fn(),
 };
-vi.mock("@/routes/router", async () => import("@/routes/appRoutes"));
+const navigation = new NavigationStore(new EditorStore());
+vi.mock("@/routes/v2/pages/Editor/store/EditorSessionContext", () => ({
+  useEditorSession: () => ({ autoSave }),
+}));
 vi.mock("@/routes/v2/shared/store/SharedStoreContext", () => ({
   useSharedStores: () => ({ navigation }),
 }));
-vi.mock("@/routes/v2/pages/Editor/store/EditorSessionContext", () => ({
-  useEditorSession: () => ({
-    autoSave,
-    pipelineFile: { activePipelineFile: source },
-  }),
-}));
-vi.mock("@/services/pipelineStorage/PipelineStorageProvider", () => ({
-  usePipelineStorage: () => storage,
-}));
-vi.mock("@/hooks/useToastNotification", () => ({ default: () => notify }));
-vi.mock(
-  "@/components/shared/ReactFlow/FlowSidebar/sections/components/ExportPipelineButton",
-  () => ({ exportPipeline: vi.fn() }),
-);
+vi.mock("@/utils/URL", () => ({ downloadStringAsFile: vi.fn() }));
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.stubEnv("VITE_REMOTE_PIPELINES", "true");
-  storage = new PipelineStorageService();
-  navigation = new NavigationStore(new EditorStore());
+  autoSave.error = "The backend is unavailable.";
+  autoSave.isSaving = false;
+  autoSave.save.mockResolvedValue(undefined);
   navigation.initNavigation(
-    new YamlDeserializer(new IncrementingIdGenerator()).deserialize({
-      name: `Recovery ${crypto.randomUUID()}`,
-      description: "Unsaved edits",
-      inputs: [{ name: "greeting", type: "String", value: "latest value" }],
-      implementation: { graph: { tasks: {} } },
-    }),
+    new ComponentSpec({ name: "Recovery", description: "Unsaved edits" }),
   );
-  document = new DocumentSaveState("unsaved");
-  runInAction(() => {
-    document.currentYaml = serializeComponentSpecToText(navigation.rootSpec!);
-    document.pendingCount = 1;
-  });
-  autoSave = new AutoSaveStore(new UndoStore());
-  autoSave.init(
-    navigation.rootSpec!,
-    source as unknown as PipelineFile,
-    document,
-  );
-  document.recordError(new Error("The backend is unavailable."));
-});
-afterEach(() => {
-  cleanup();
-  runInAction(() => {
-    document.lastSavedYaml = document.currentYaml;
-  });
-  autoSave.dispose();
-  vi.restoreAllMocks();
-  vi.unstubAllEnvs();
 });
 
-async function requestCopy() {
-  fireEvent.click(screen.getByRole("button", { name: "Save local copy" }));
-  await screen.findByRole("dialog");
-  await waitFor(() =>
-    expect(
-      screen.getAllByRole("button", { name: "Save local copy" }).at(-1),
-    ).toBeEnabled(),
-  );
-  fireEvent.click(
-    screen.getAllByRole("button", { name: "Save local copy" }).at(-1)!,
-  );
-}
-
-it("persists the current unsaved model in browser storage during a remote retry", async () => {
-  const name = `${navigation.rootSpec!.name} (Local copy)`;
+it("exports the unsaved model without clearing the save error", () => {
   render(<RemotePipelineSaveRecovery />);
-  expect(
-    screen.getByRole("button", { name: "Retry remote save" }),
-  ).toBeDisabled();
-  await requestCopy();
-  await waitFor(() =>
-    expect(notify).toHaveBeenCalledWith(
-      expect.stringContaining("in this browser"),
-      "success",
-    ),
+  fireEvent.click(screen.getByRole("button", { name: "Export YAML" }));
+  expect(downloadStringAsFile).toHaveBeenCalledWith(
+    expect.stringContaining("Unsaved edits"),
+    "Recovery.pipeline.component.yaml",
+    "text/yaml",
   );
-  const reopened = await new PipelineStorageService().resolvePipelineByName(
-    name,
-  );
-  expect(reopened).toBeDefined();
-  expect(componentSpecFromYaml(await reopened!.read())).toMatchObject({
-    name,
-    description: "Unsaved edits",
-    inputs: [{ value: "latest value" }],
-  });
-  expect(remoteWrite).not.toHaveBeenCalled();
-  expect(document.error).toBeNull();
-  expect(document.hasUnsavedChanges).toBe(false);
-  expect(navigate).toHaveBeenCalledWith(
-    expect.objectContaining({
-      params: { pipelineName: reopened!.storageKey },
-      search: { fileId: reopened!.id },
-    }),
-  );
-  expect(navigation.rootSpec!.description).toBe("Unsaved edits");
-});
-
-it("keeps the remote model and reports a failed local copy without claiming success", async () => {
-  vi.spyOn(storage.rootFolder, "addFile").mockRejectedValueOnce(
-    new Error("Browser storage is full"),
-  );
-  const spec = navigation.rootSpec;
-  render(<RemotePipelineSaveRecovery />);
-  await requestCopy();
-  await waitFor(() =>
-    expect(notify).toHaveBeenCalledWith("Browser storage is full", "error"),
-  );
-  expect(notify).not.toHaveBeenCalledWith(expect.anything(), "success");
-  expect(navigation.rootSpec).toBe(spec);
-  expect(remoteWrite).not.toHaveBeenCalled();
   expect(screen.getByRole("alert")).toHaveTextContent(
-    "Save a local copy before closing it",
+    "The backend is unavailable.",
   );
+  expect(autoSave.save).not.toHaveBeenCalled();
 });
 
-it("keeps newer source edits in the tab when they arrive during a successful copy", async () => {
-  const add = storage.rootFolder.addFile.bind(storage.rootFolder);
-  const pending = Promise.withResolvers<void>();
-  vi.spyOn(storage.rootFolder, "addFile").mockImplementation(
-    async (...args) => {
-      await pending.promise;
-      return add(...args);
-    },
-  );
+it("retries saving and blocks duplicate retries while saving", () => {
+  const view = render(<RemotePipelineSaveRecovery />);
+  fireEvent.click(screen.getByRole("button", { name: "Retry save" }));
+  expect(autoSave.save).toHaveBeenCalledOnce();
+  autoSave.isSaving = true;
+  view.unmount();
   render(<RemotePipelineSaveRecovery />);
-  await requestCopy();
-  runInAction(() =>
-    navigation.rootSpec!.setDescription("Edited while copying"),
-  );
-  pending.resolve();
-  await waitFor(() =>
-    expect(notify).toHaveBeenCalledWith(
-      expect.stringContaining("Newer changes remain"),
-      "success",
-    ),
-  );
-  expect(navigate).not.toHaveBeenCalled();
-  expect(document.hasUnsavedChanges).toBe(true);
-  expect(document.error).toBe("The backend is unavailable.");
+  expect(screen.getByRole("button", { name: "Retry save" })).toBeDisabled();
 });

@@ -1,10 +1,12 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import { isValidElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
+import type { ComponentSearchResult } from "@/services/componentSearchLogic";
 import type { ComponentSearchSuggestion } from "@/services/componentSearchSuggestions";
+import type { UIComponentFolder } from "@/types/componentLibrary";
 
 import { ComponentSearchResults } from "./ComponentSearchResults";
-import type { ComponentSearchV2Result } from "./componentSearchV2Logic";
 
 vi.mock(
   "@/components/shared/ReactFlow/FlowSidebar/components/ComponentItem",
@@ -26,17 +28,25 @@ vi.mock(
     ),
     IONodeSidebarItem: () => <li>IO node</li>,
     StickyNoteSidebarItem: () => <li>Sticky note</li>,
+    ComponentItemFromUrl: () => <li>Input Aggregator</li>,
   }),
 );
 
 vi.mock(
   "@/components/shared/ReactFlow/FlowSidebar/components/FolderItem",
   () => ({
-    default: ({ folder }: { folder: { name: string } }) => (
-      <div>{folder.name}</div>
+    default: ({ folder }: { folder: UIComponentFolder }) => (
+      <div>
+        {folder.name}
+        <ul>{folder.components?.filter(isValidElement)}</ul>
+      </div>
     ),
   }),
 );
+
+vi.mock("@/components/shared/GitHubLibrary/ManageLibrariesDialog", () => ({
+  ManageLibrariesDialog: () => <button>Manage libraries</button>,
+}));
 
 const baseProps = {
   browseFolders: [],
@@ -52,6 +62,32 @@ const baseProps = {
 };
 
 describe("ComponentSearchResults", () => {
+  it("keeps the existing editor library capabilities in browse mode", () => {
+    render(
+      <ComponentSearchResults
+        {...baseProps}
+        query=""
+        results={[]}
+        usedComponentsFolder={{
+          name: "Used in Pipeline",
+          components: [{ digest: "used" }],
+        }}
+        favoritesFolder={{
+          name: "Favorite Components",
+          components: [{ digest: "favorite" }],
+        }}
+        inputAggregatorEnabled
+      />,
+    );
+
+    expect(screen.getByText("Used in Pipeline")).toBeInTheDocument();
+    expect(screen.getByText("Favorite Components")).toBeInTheDocument();
+    expect(screen.getByText("Input Aggregator")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Manage libraries" }),
+    ).toBeInTheDocument();
+  });
+
   it("shows a skeleton while search is pending", () => {
     render(
       <ComponentSearchResults
@@ -132,12 +168,12 @@ describe("ComponentSearchResults", () => {
   });
 
   it("passes source metadata through for result display", () => {
-    const results: ComponentSearchV2Result[] = [
+    const results: ComponentSearchResult[] = [
       {
         reference: {
           digest: "digest",
           name: "Load CSV",
-          published_by: "pipeline-components@shopify.com",
+          published_by: "pipeline-components@example.com",
         },
         source: { kind: "published", id: "published", label: "Published" },
       },
@@ -151,7 +187,7 @@ describe("ComponentSearchResults", () => {
   });
 
   it("renders matches in a vertically scrollable list", () => {
-    const results: ComponentSearchV2Result[] = [
+    const results: ComponentSearchResult[] = [
       {
         reference: { digest: "digest", name: "Load CSV" },
         source: { kind: "standard", id: "standard", label: "Standard" },
@@ -168,7 +204,7 @@ describe("ComponentSearchResults", () => {
   });
 
   it("shows large result sets progressively", () => {
-    const results: ComponentSearchV2Result[] = Array.from(
+    const results: ComponentSearchResult[] = Array.from(
       { length: 25 },
       (_, index) => ({
         reference: { digest: `digest-${index}`, name: `Component ${index}` },
@@ -225,7 +261,7 @@ describe("ComponentSearchResults", () => {
   });
 
   it("passes matched fields through for result explanations", () => {
-    const results: ComponentSearchV2Result[] = [
+    const results: ComponentSearchResult[] = [
       {
         reference: { digest: "digest", name: "Load CSV" },
         source: { kind: "standard", id: "standard", label: "Standard" },

@@ -34,10 +34,6 @@ export interface ValidationError {
   outputName?: string;
 }
 
-export function isFixableIssue(issue: ComponentValidationIssue): boolean {
-  return issue.type === "argument";
-}
-
 export function validateArguments(
   inputs: InputSpec[],
   taskArguments: Record<string, ArgumentType>,

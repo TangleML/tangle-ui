@@ -53,7 +53,7 @@ export const useFetchExecutionDetails = (
   const { backendUrl } = useBackend();
 
   return useQuery<GetExecutionInfoResponse>({
-    queryKey: ["execution-details", executionId, status],
+    queryKey: ["execution-details", backendUrl, executionId, status],
     queryFn: () => fetchExecutionDetails(executionId!, backendUrl),
     enabled: !!executionId && enabled,
     refetchOnWindowFocus: false,
@@ -73,7 +73,7 @@ export const useFetchPipelineRunMetadata = (runId: string | undefined) => {
   const { backendUrl } = useBackend();
 
   return useQuery<PipelineRunResponse>({
-    queryKey: ["pipeline-run-metadata", runId],
+    queryKey: ["pipeline-run-metadata", backendUrl, runId],
     queryFn: () => fetchPipelineRun(runId!, backendUrl),
     enabled: !!runId,
     refetchOnWindowFocus: false,

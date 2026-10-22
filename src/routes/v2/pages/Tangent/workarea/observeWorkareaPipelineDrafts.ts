@@ -1,63 +1,74 @@
-import type { QueryClient } from "@tanstack/react-query";
 import { autorun, reaction } from "mobx";
 
-import { promoteRemoteDraftQuery } from "@/routes/v2/pages/Editor/utils/promoteRemoteDraftQuery";
 import type { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
 import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
+import type { EditorPipelineRef } from "@/services/pipelineStorage/types";
 import {
   parseIdentity,
   remotePipelineIdentity,
 } from "@/services/projects/resourceTarget";
 
-/** Own drafts for every retained session, even while its editors are unmounted. */
+/** Every retained tab owns its document, including inactive sessions. */
 export function observeWorkareaPipelineDrafts(
   store: TangentProjectStore,
   storage: PipelineStorageService,
-  queryClient: QueryClient,
+  backendUrl: string,
 ) {
-  const retained = new Map<string, () => void>();
+  const retained = new Map<string, { identity: string; release: () => void }>();
   const stop = autorun(() => {
-    const draftTabs = new Set<string>();
+    const pipelineTabs = new Set<string>();
     for (const [sessionId, { tabs }] of store.workareaBySession) {
       for (const tab of tabs) {
         if (tab.target.type !== "pipeline") continue;
+        pipelineTabs.add(tab.id);
+        const previous = retained.get(tab.id);
+        if (previous?.identity === tab.target.identity) continue;
+        previous?.release();
         const { key, value } = parseIdentity(tab.target.identity);
-        if (key !== "draft") continue;
-        draftTabs.add(tab.id);
-        if (retained.has(tab.id)) continue;
-        const draft = storage.retainRemoteDraft(value);
-        if (!draft) continue;
+        let ref: EditorPipelineRef;
+        try {
+          ref =
+            key === "draft"
+              ? storage.getRemoteDraftRef(value, backendUrl)
+              : { source: "remote", backendUrl, pipelineId: value };
+        } catch {
+          continue;
+        }
+        const release = storage.retainDocument(ref);
+        const file = storage.getFile(ref);
         let stopPromotion = () => {};
-        retained.set(tab.id, () => {
-          stopPromotion();
-          draft.release();
-        });
-        stopPromotion = reaction(
-          () => draft.file.remote,
-          (remote) => {
-            if (!remote) return;
-            promoteRemoteDraftQuery(queryClient, draft.ref, {
-              source: "remote",
-              ...remote,
-            });
-            store.replaceWorkareaTabTarget(sessionId, tab.id, {
-              type: "pipeline",
-              identity: remotePipelineIdentity(remote.pipelineId),
-            });
+        const owner = {
+          identity: tab.target.identity,
+          release: () => {
+            stopPromotion();
+            release();
           },
-          { fireImmediately: true },
-        );
+        };
+        retained.set(tab.id, owner);
+        if (key === "draft" && file)
+          stopPromotion = reaction(
+            () => file.remote,
+            (remote) => {
+              if (!remote) return;
+              owner.identity = remotePipelineIdentity(remote.pipelineId);
+              store.replaceWorkareaTabTarget(sessionId, tab.id, {
+                type: "pipeline",
+                identity: remotePipelineIdentity(remote.pipelineId),
+              });
+            },
+            { fireImmediately: true },
+          );
       }
     }
-    for (const [tabId, release] of retained) {
-      if (draftTabs.has(tabId)) continue;
-      release();
+    for (const [tabId, owner] of retained) {
+      if (pipelineTabs.has(tabId)) continue;
+      owner.release();
       retained.delete(tabId);
     }
   });
   return () => {
     stop();
-    for (const release of retained.values()) release();
+    for (const owner of retained.values()) owner.release();
     retained.clear();
   };
 }

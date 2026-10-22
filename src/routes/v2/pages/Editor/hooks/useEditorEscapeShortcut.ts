@@ -1,32 +1,19 @@
-import { useReactFlow } from "@xyflow/react";
 import { useEffect } from "react";
 
 import { useDialog } from "@/providers/DialogProvider/hooks/useDialog";
-import { useDeselectAll } from "@/routes/v2/shared/hooks/useDeselectAll";
 import { ESCAPE } from "@/routes/v2/shared/shortcuts/keys";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
-
-function hasReactFlowSelection(
-  reactFlow: ReturnType<typeof useReactFlow>,
-): boolean {
-  return (
-    reactFlow.getNodes().some((n) => n.selected) ||
-    reactFlow.getEdges().some((e) => e.selected)
-  );
-}
 
 /**
  * Centralized ESC handler for the editor. Priority:
  *   1. If a dialog is open, return false so Radix's portal handler closes it.
  *   2. Restore the front-most maximized window (if any).
- *   3. Otherwise clear ReactFlow + editor selection state.
+ *   3. Otherwise clear the editor selection.
  * Returns false when nothing applies, so the event keeps propagating.
  */
 export function useEditorEscapeShortcut(): void {
   const { stack } = useDialog();
   const { editor, keyboard, windows } = useSharedStores();
-  const reactFlow = useReactFlow();
-  const deselectAll = useDeselectAll();
 
   useEffect(() => {
     const unregister = keyboard.registerShortcut({
@@ -43,13 +30,13 @@ export function useEditorEscapeShortcut(): void {
           return;
         }
 
-        if (!hasReactFlowSelection(reactFlow) && !editor.hasAnySelection) {
+        if (!editor.hasAnySelection) {
           return false;
         }
 
-        deselectAll();
+        editor.clearSelection();
       },
     });
     return unregister;
-  }, [editor, keyboard, reactFlow, stack, windows, deselectAll]);
+  }, [editor, keyboard, stack, windows]);
 }

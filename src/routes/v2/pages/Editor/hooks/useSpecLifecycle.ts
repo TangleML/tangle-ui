@@ -1,25 +1,23 @@
 import { autorun, reaction } from "mobx";
-import type { UndoStore as MobxUndoStore } from "mobx-keystone";
 import {
   isRootStore,
   registerRootStore,
+  type UndoManager,
   unregisterRootStore,
 } from "mobx-keystone";
 import { useEffect, useRef } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
-import { collectIdStack } from "@/models/componentSpec";
 import type { DocumentSaveState } from "@/routes/v2/pages/Editor/store/documentSaveState";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
-import { saveIdStack } from "@/routes/v2/pages/Editor/utils/undoHistoryStorage";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 
 export function useSpecLifecycle(
   rootSpec: ComponentSpec,
-  file: PipelineFile,
-  restoredUndoStore?: MobxUndoStore,
+  file?: PipelineFile,
   saveState?: DocumentSaveState,
+  undoManager?: UndoManager,
 ) {
   const { editor, navigation, windows: windowStore } = useSharedStores();
   const {
@@ -36,16 +34,12 @@ export function useSpecLifecycle(
     if (!isRootStore(rootSpec)) registerRootStore(rootSpec);
     editor.resetState();
     navigation.initNavigation(rootSpec);
-    undo.init(rootSpec, restoredUndoStore);
+    undo.init(rootSpec, undoManager);
 
-    pipelineFileStore.init(file);
-    autoSave.init(rootSpec, file, saveState);
-    if (!file.remote && !file.isDraft) {
-      void saveIdStack(file.storageKey, collectIdStack(rootSpec)).catch(
-        (error) => console.warn("Failed to persist pipeline id stack", error),
-      );
+    if (file) {
+      pipelineFileStore.init(file);
+      if (saveState) autoSave.init(saveState);
     }
-
     prevTaskEntityIdsRef.current = new Set(rootSpec.tasks.map((t) => t.$id));
 
     const disposeTaskWatcher = autorun(() => {
@@ -63,10 +57,10 @@ export function useSpecLifecycle(
     const disposeNavGuard = reaction(
       () => ({
         active: navigation.activeSpec,
-        depth: navigation.navigationPath.length,
+        depth: navigation.navigationDepth,
       }),
       ({ active, depth }) => {
-        if (!active && depth > 1) {
+        if (!active && depth > 0) {
           navigation.correctInvalidNavigation();
         }
       },
@@ -80,15 +74,13 @@ export function useSpecLifecycle(
       editor.clearSelection();
       navigation.clearNavigation();
       undo.dispose();
-      if (isRootStore(rootSpec)) {
-        unregisterRootStore(rootSpec);
-      }
+      if (!file && isRootStore(rootSpec)) unregisterRootStore(rootSpec);
     };
   }, [
     rootSpec,
     file,
-    restoredUndoStore,
     saveState,
+    undoManager,
     editor,
     navigation,
     windowStore,

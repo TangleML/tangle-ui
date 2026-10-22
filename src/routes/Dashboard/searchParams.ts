@@ -1,6 +1,6 @@
 import { isRecord } from "@/utils/typeGuards";
 
-export interface DashboardComponentsV2SearchParams {
+export interface DashboardComponentsSearchParams {
   component?: string;
   q?: string;
   disabled_sources?: string;
@@ -15,8 +15,7 @@ const VALID_SOURCE_KEYS = new Set([
 
 /**
  * Read the `?component=<digest>` search param from a TanStack Router search
- * object. Shared between the V1 and V2 dashboard views so both surfaces parse
- * the same param the same way.
+ * object.
  */
 export function readSelectedComponentDigest(
   search: unknown,
@@ -40,7 +39,7 @@ export function readDisabledSourceKeys(search: unknown): string[] {
     .filter((key) => VALID_SOURCE_KEYS.has(key));
 }
 
-export function createDashboardComponentsV2SearchParams({
+export function createDashboardComponentsSearchParams({
   component,
   q,
   disabledSourceKeys,
@@ -48,7 +47,7 @@ export function createDashboardComponentsV2SearchParams({
   component?: string;
   q: string;
   disabledSourceKeys: string[];
-}): DashboardComponentsV2SearchParams {
+}): DashboardComponentsSearchParams {
   const hasNonWhitespaceQuery = q.trim().length > 0;
   const validDisabledKeys = disabledSourceKeys.filter((key) =>
     VALID_SOURCE_KEYS.has(key),

@@ -9,11 +9,8 @@ import logo from "/Tangle_white.png";
 import { OnboardingNavPill } from "@/components/Onboarding/OnboardingNavPill";
 import { isAuthorizationRequired } from "@/components/shared/Authentication/helpers";
 import { TopBarAuthentication } from "@/components/shared/Authentication/TopBarAuthentication";
-import { CopyText } from "@/components/shared/CopyText/CopyText";
-import { EditorVersionToggle } from "@/components/shared/EditorVersionToggle";
 import ImportPipeline from "@/components/shared/ImportPipeline";
 import { NoticeInbox } from "@/components/shared/Notices/NoticeInbox";
-import { RunVersionToggle } from "@/components/shared/RunVersionToggle";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -31,7 +28,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { APP_ROUTES } from "@/routes/router";
 import { DOCUMENTATION_URL, TOP_NAV_HEIGHT } from "@/utils/constants";
 import { tracking } from "@/utils/tracking";
@@ -44,10 +40,7 @@ const DefaultAppMenu = () => {
   const router = useRouter();
   const location = useLocation();
   const requiresAuthorization = isAuthorizationRequired();
-  const { componentSpec } = useComponentSpec();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  const title = componentSpec?.name;
 
   const handleGoBack = () => {
     router.history.back();
@@ -56,8 +49,8 @@ const DefaultAppMenu = () => {
   const isOnSettingsRoute = location.pathname.startsWith("/settings");
   const showAiModelQuickSelect =
     location.pathname.startsWith(APP_ROUTES.DASHBOARD_COMPONENTS) ||
-    location.pathname.startsWith(APP_ROUTES.DASHBOARD_COMPONENTS_V2) ||
-    location.pathname.startsWith(APP_ROUTES.EDITOR_V2) ||
+    location.pathname.startsWith(APP_ROUTES.DASHBOARD_COMPONENTS) ||
+    location.pathname.startsWith(APP_ROUTES.EDITOR) ||
     location.pathname.startsWith(APP_ROUTES.SETTINGS_AGENT);
 
   return (
@@ -80,12 +73,6 @@ const DefaultAppMenu = () => {
               className="h-8 filter cursor-pointer shrink-0"
             />
           </Link>
-
-          {title && (
-            <CopyText className="text-white text-base font-bold truncate max-w-32 sm:max-w-48 md:max-w-64 lg:max-w-md">
-              {title}
-            </CopyText>
-          )}
         </InlineStack>
 
         <InlineStack
@@ -127,8 +114,6 @@ const DefaultAppMenu = () => {
 
           {showAiModelQuickSelect && <AiModelQuickSelect />}
 
-          <EditorVersionToggle />
-          <RunVersionToggle />
           <NoticeInbox />
 
           {/* Settings & status */}
@@ -208,11 +193,11 @@ const DefaultAppMenu = () => {
 const AppMenu = () => {
   const { pathname } = useLocation();
 
-  if (pathname.startsWith(APP_ROUTES.EDITOR_V2)) {
+  if (pathname.startsWith(APP_ROUTES.EDITOR)) {
     return null;
   }
 
-  if (pathname.startsWith(APP_ROUTES.RUNS_V2)) {
+  if (pathname.startsWith(`${APP_ROUTES.RUNS}/`)) {
     return null;
   }
 

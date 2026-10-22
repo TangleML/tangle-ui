@@ -37,7 +37,6 @@ import {
 } from "@/services/projects/pipelineResource";
 import { UNNAMED_PIPELINE } from "@/services/projects/placeholderNames";
 import { createProjectResource } from "@/services/projects/projectResourcesService";
-import { localPipelineResourceInput } from "@/services/projects/resourceDescriptor";
 import {
   remotePipelineIdentity,
   type WorkareaTarget,
@@ -63,7 +62,7 @@ async function clonePipelineFromRun(
   storage: PipelineStorageService,
   runInspect: RunInspectDeps,
   runId: string,
-): Promise<{ pipelineName: string; remote?: RemotePipelineRef }> {
+): Promise<{ pipelineName: string; remote: RemotePipelineRef }> {
   const run = await runInspect.getRunDetails(runId);
   const rootExecutionId = run.root_execution_id;
   if (!rootExecutionId) {
@@ -94,7 +93,7 @@ async function clonePipelineFromRun(
     taskArguments,
   );
 
-  if (!result.name) {
+  if (!result.name || !result.remote) {
     throw new Error(`Failed to clone the pipeline for run ${runId}.`);
   }
   return { pipelineName: result.name, remote: result.remote };
@@ -222,8 +221,7 @@ export function TangentProjectAgentProvider({
           },
         });
         return {
-          pipelineName: file.storageKey,
-          fileId: file.id,
+          pipelineName: file.name,
           target: pipelineFileTarget(file),
         };
       },
@@ -233,28 +231,16 @@ export function TangentProjectAgentProvider({
           runInspect,
           runId,
         );
-        if (remote) {
-          await createProjectResource(
-            store.projectId,
-            remotePipelineResourceInput(remote.pipelineId, pipelineName),
-          );
-          await refreshProjectResources();
-          const target: WorkareaTarget = {
-            type: "pipeline",
-            identity: remotePipelineIdentity(remote.pipelineId),
-          };
-          return { pipelineName, target };
-        }
-        const registered = await storage.resolvePipelineByName(pipelineName);
         await createProjectResource(
           store.projectId,
-          localPipelineResourceInput({
-            localName: pipelineName,
-            ...(registered ? { localId: registered.id } : undefined),
-          }),
+          remotePipelineResourceInput(remote.pipelineId, pipelineName),
         );
         await refreshProjectResources();
-        return { pipelineName };
+        const target: WorkareaTarget = {
+          type: "pipeline",
+          identity: remotePipelineIdentity(remote.pipelineId),
+        };
+        return { pipelineName, target };
       },
       refreshResources: refreshProjectResources,
       renameProject: naming.renameProject,

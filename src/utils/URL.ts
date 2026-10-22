@@ -1,6 +1,6 @@
 import { RUNS_BASE_PATH } from "@/routes/appRoutes";
 import { getProjectHomePath } from "@/routes/projectRoutes";
-import { getDefaultRunPath } from "@/routes/runRoutes";
+import { getRunPath } from "@/routes/runRoutes";
 import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
 
 const convertGcsUrlToBrowserUrl = (
@@ -265,7 +265,7 @@ const getProjectUrl = (projectId: string): string =>
  * project when the run is open in one of its workarea tabs.
  */
 const getRunUrl = (runId: string | number): string =>
-  buildAbsoluteAppUrl(getDefaultRunPath(runId));
+  buildAbsoluteAppUrl(getRunPath(runId));
 
 export {
   buildComponentSourceUrl,

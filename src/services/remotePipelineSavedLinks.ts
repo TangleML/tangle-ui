@@ -22,7 +22,7 @@ export function parseRemotePipelineSavedId(
       };
     }
   } catch {
-    // Ordinary local names and malformed saved IDs remain local.
+    // Malformed saved IDs do not identify a remote pipeline.
   }
   return undefined;
 }
@@ -31,11 +31,10 @@ export function isSavedPipelineForBackend(
   item: { type: string; id: string },
   backendUrl: string,
 ): boolean {
-  const remote =
-    item.type === "pipeline" && parseRemotePipelineSavedId(item.id);
-  return (
-    !remote ||
-    normalizeBackendUrl(remote.backendUrl) === normalizeBackendUrl(backendUrl)
+  if (item.type !== "pipeline") return true;
+  const remote = parseRemotePipelineSavedId(item.id);
+  return Boolean(
+    remote && remote.backendUrl === normalizeBackendUrl(backendUrl),
   );
 }
 

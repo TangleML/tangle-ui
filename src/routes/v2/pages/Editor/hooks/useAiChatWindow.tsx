@@ -1,13 +1,9 @@
-import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 
-import { APP_ROUTES } from "@/routes/router";
 import { createEditorToolBridge } from "@/routes/v2/pages/Editor/components/AiChat/toolBridge";
 import { invokeAutoLayoutVia } from "@/routes/v2/pages/Editor/components/AiChat/toolBridge/invokeAutoLayoutVia";
 import { renamePipelineFileFor } from "@/routes/v2/pages/Editor/hooks/renamePipelineFileFor";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
-import { preserveRenamedPipelineQuery } from "@/routes/v2/pages/Editor/utils/preserveRenamedPipelineQuery";
 import { AiChatContent } from "@/routes/v2/shared/components/AiChat/AiChatContent";
 import { createReadOnlyToolBridge } from "@/routes/v2/shared/components/AiChat/toolBridge/readOnlyToolBridge";
 import type { SuggestedPrompt } from "@/routes/v2/shared/components/AiChat/types";
@@ -41,8 +37,6 @@ export function useAiChatWindow(
 ) {
   const { windows, keyboard } = useSharedStores();
   const editorSession = useEditorSession();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!enabled) {
@@ -60,19 +54,10 @@ export function useAiChatWindow(
                 ...deps,
                 undo: editorSession.undo,
                 invokeAutoLayout: invokeAutoLayoutVia(keyboard),
-                renamePipelineFile: renamePipelineFileFor(
+                onPipelineRenamed: renamePipelineFileFor(
+                  editorSession.autoSave,
                   editorSession.pipelineFile,
-                  (fileId, name) => {
-                    const file = editorSession.pipelineFile.activePipelineFile;
-                    if (file?.remote || file?.isDraft) return;
-                    if (file) preserveRenamedPipelineQuery(queryClient, file);
-                    void navigate({
-                      to: APP_ROUTES.EDITOR_V2_PIPELINE,
-                      params: { pipelineName: name },
-                      search: { fileId },
-                      replace: true,
-                    });
-                  },
+                  undefined,
                   deps.assertCurrentDocument,
                 ),
               })
@@ -100,13 +85,5 @@ export function useAiChatWindow(
         ),
       },
     );
-  }, [
-    enabled,
-    windows,
-    editorSession,
-    keyboard,
-    navigate,
-    queryClient,
-    readOnly,
-  ]);
+  }, [enabled, windows, editorSession, keyboard, readOnly]);
 }

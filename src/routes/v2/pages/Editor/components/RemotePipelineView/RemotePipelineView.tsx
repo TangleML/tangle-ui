@@ -80,7 +80,7 @@ const RemotePipelineContent = observer(function RemotePipelineContent({
   useDockAreaAccordion();
   usePipelineDetailsWindow({
     readOnly: true,
-    ownerId: file?.folder.driver.ownerId,
+    ownerId: file?.ownerId,
   });
   useSelectionWindowSync({ readOnly: true });
   useCanvasControlsWindow("v2.pipeline_canvas", false);
@@ -168,8 +168,8 @@ export function RemotePipelineView({
     ? getEditorPipelineIdentity({ source: "remote", ...file.remote })
     : (file?.initialId ?? pipelineId ?? spec.$id);
   return (
-    <ComponentLibraryProvider>
-      <SharedStoreProvider key={identity}>
+    <SharedStoreProvider key={identity}>
+      <ComponentLibraryProvider>
         <EditorSessionProvider>
           <AiChatStoreProvider
             createWorker={createEditorAgentWorker}
@@ -191,7 +191,7 @@ export function RemotePipelineView({
             </DialogProvider>
           </AiChatStoreProvider>
         </EditorSessionProvider>
-      </SharedStoreProvider>
-    </ComponentLibraryProvider>
+      </ComponentLibraryProvider>
+    </SharedStoreProvider>
   );
 }

@@ -16,13 +16,22 @@ vi.mock("@/providers/AnalyticsProvider", () => ({
   useAnalytics: () => ({ track: vi.fn() }),
 }));
 
-vi.mock("@/services/localPipelines/useLocalPipelines", () => ({
-  useLocalPipelineNames: () => ({
-    data: ["Churn model"],
+vi.mock("@/hooks/useRemotePipelinesPage", () => ({
+  useRemotePipelinesPage: () => ({
+    data: {
+      pipelines: [{ id: "pipeline-1", pipeline_name: "Churn model" }],
+      nextPageToken: null,
+    },
     isPending: false,
     error: null,
   }),
-  useResolvedPointers: () => ({ data: {} }),
+}));
+vi.mock("@/providers/BackendProvider", () => ({
+  useBackend: () => ({
+    backendUrl: "https://backend.example",
+    configured: true,
+    available: true,
+  }),
 }));
 
 async function openMenu() {

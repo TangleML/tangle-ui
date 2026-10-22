@@ -29,7 +29,6 @@ import { NavigationStore } from "@/routes/v2/shared/store/navigationStore";
 import type { SavedPipelineDocument } from "@/services/pipelineSpecService";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
-import { componentSpecFromYaml } from "@/utils/yaml";
 
 import { RemotePipelineActions } from "./RemotePipelineActions";
 
@@ -78,8 +77,6 @@ beforeEach(async () => {
     removeEventListener() {},
   }));
   localStorage.clear();
-  vi.stubEnv("VITE_REMOTE_PIPELINES", "true");
-  vi.stubEnv("VITE_LOCAL_PIPELINES", undefined);
   vi.stubEnv("VITE_REQUIRE_AUTHORIZATION", "false");
   queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -137,7 +134,7 @@ beforeEach(async () => {
   navigation = new NavigationStore(new EditorStore());
   navigation.initNavigation(
     new YamlDeserializer(new IncrementingIdGenerator()).deserialize(
-      componentSpecFromYaml(await file.read()),
+      file.read(),
     ),
   );
 });
@@ -165,52 +162,34 @@ function renderActions() {
   );
 }
 
-it.each([false, true])(
-  "clones the full pipeline from a subgraph with remote storage %s without changing its source",
-  async (remote) => {
-    vi.stubEnv("VITE_REMOTE_PIPELINES", String(remote));
-    const initial = await file.read();
-    navigation.navigateToSubgraph(
-      navigation.rootSpec!,
-      navigation.rootSpec!.tasks[0].$id,
-    );
-    renderActions();
-    fireEvent.click(screen.getByRole("button", { name: "Clone pipeline" }));
-    const dialog = await screen.findByRole("dialog");
-    const submit = within(dialog).getByRole("button", {
-      name: "Clone pipeline",
-    });
-    await waitFor(() => expect(submit).toBeEnabled());
-    fireEvent.click(submit);
-    await waitFor(() => expect(navigate).toHaveBeenCalledOnce());
-    if (remote) {
-      expect(client.put).toHaveBeenCalledOnce();
-      const options = vi.mocked(client.put).mock.calls[0][0]!;
-      expect(options.query?.file_path).not.toBe("shared.yaml");
-      const body = options.body as SavedPipelineDocument;
-      expect(body.root_pipeline_task.componentRef.spec.name).toBe(
-        `${navigation.rootSpec!.name} (Copy)`,
-      );
-      expect(
-        body.root_pipeline_task.componentRef.spec.implementation,
-      ).toHaveProperty("graph.tasks.Nested");
-      expect(body.pipeline_run_annotations).toEqual({ shared: "true" });
-      expect(navigate).toHaveBeenCalledWith(
-        expect.objectContaining({ params: { pipelineId: "copy" } }),
-      );
-    } else {
-      expect(client.put).not.toHaveBeenCalled();
-      const saved = await new PipelineStorageService().resolvePipelineByName(
-        `${navigation.rootSpec!.name} (Copy)`,
-      );
-      expect(componentSpecFromYaml(await saved!.read())).toMatchObject({
-        description: "A shared pipeline",
-      });
-      expect(navigate).toHaveBeenCalledWith(
-        expect.objectContaining({ search: { fileId: saved!.id } }),
-      );
-    }
-    expect(await file.read()).toBe(initial);
-    expect(file.folder.driver.canEdit).toBe(false);
-  },
-);
+it("clones the full remote pipeline from a subgraph without changing its source", async () => {
+  const initial = await file.read();
+  navigation.navigateToSubgraph(
+    navigation.rootSpec!,
+    navigation.rootSpec!.tasks[0].$id,
+  );
+  renderActions();
+  fireEvent.click(screen.getByRole("button", { name: "Clone pipeline" }));
+  const dialog = await screen.findByRole("dialog");
+  const submit = within(dialog).getByRole("button", { name: "Clone pipeline" });
+  await waitFor(() => expect(submit).toBeEnabled());
+  fireEvent.click(submit);
+  await waitFor(() => expect(navigate).toHaveBeenCalledOnce());
+  expect(client.put).toHaveBeenCalledOnce();
+  const options = vi.mocked(client.put).mock.calls[0][0]!;
+  expect(options.query?.file_path).not.toBe("shared.yaml");
+  const body = options.body as SavedPipelineDocument;
+  expect(body.root_pipeline_task.componentRef.spec.name).toBe(
+    `${navigation.rootSpec!.name} (Copy)`,
+  );
+  expect(
+    body.root_pipeline_task.componentRef.spec.implementation,
+  ).toHaveProperty("graph.tasks.Nested");
+  expect(body.pipeline_run_annotations).toEqual({ shared: "true" });
+  expect(navigate).toHaveBeenCalledWith({
+    to: "/editor/pipeline/$pipelineId",
+    params: { pipelineId: "copy" },
+  });
+  expect(file.read()).toEqual(initial);
+  expect(file.canEdit).toBe(false);
+});

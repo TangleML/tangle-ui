@@ -1,40 +1,22 @@
-import type { LocalPipelinePointer } from "@/services/localPipelines/types";
-
 import type { WorkareaTarget } from "./resourceTarget";
 import {
   formatWorkareaTarget,
-  idIdentity,
   isWorkareaTargetString,
-  nameIdentity,
   parseWorkareaTarget,
   runTarget,
 } from "./resourceTarget";
 import type { CreateResourceInput, ProjectResourceSummary } from "./types";
 
-export const LOCAL_PIPELINE = "local_pipeline";
 export const PIPELINE_RUN = "pipeline_run";
 export const DOCUMENT = "document";
 export const INSTRUCTIONS = "instructions";
 export const AGENT_SESSION = "agent_session";
 
-const BROWSER = "browser";
-
-const METADATA_LIMIT = 1024;
-
 type ResourceRow = Pick<ProjectResourceSummary, "metadata">;
 
 export interface ResourceDescriptor {
   type: string;
-  storage?: string;
   target?: WorkareaTarget;
-  fallbackName?: string;
-}
-
-export class DescriptorTooLargeError extends Error {
-  constructor(name: string) {
-    super(`The name "${name}" is too long to record in a project.`);
-    this.name = "DescriptorTooLargeError";
-  }
 }
 
 /**
@@ -51,95 +33,14 @@ export function describeResource(
   const metadata = resource.metadata;
   if (!metadata) return undefined;
 
-  const { type, identity, storage, fallbackName } = metadata;
+  const { type, identity } = metadata;
   if (typeof type !== "string" || type === "") return undefined;
 
   return {
     type,
-    ...(typeof storage === "string" ? { storage } : undefined),
     ...(typeof identity === "string" && isWorkareaTargetString(identity)
       ? { target: parseWorkareaTarget(identity) }
       : undefined),
-    ...(typeof fallbackName === "string" && fallbackName !== ""
-      ? { fallbackName }
-      : undefined),
-  };
-}
-
-export const namesLocalPipeline = (resource: ResourceRow): boolean =>
-  describeResource(resource)?.type === LOCAL_PIPELINE;
-
-/**
- * The id is tried first because a name can be recycled; the name is the
- * fallback because most pipelines in a browser have no registry row.
- *
- * That name comes from `fallbackName`, not the row's `name`: the row's label is
- * PATCHable, while `fallbackName` records what the pipeline was called when it
- * was attached, which is what still finds it after the label has moved on.
- */
-export function localPipelinePointerOf(
-  resource: ResourceRow,
-): LocalPipelinePointer | undefined {
-  const descriptor = describeResource(resource);
-  if (descriptor?.type !== LOCAL_PIPELINE) return undefined;
-
-  const target = descriptor.target;
-  if (target?.type !== "pipeline") return undefined;
-
-  const [key, value] = splitIdentity(target.identity);
-  const localName = key === "name" ? value : (descriptor.fallbackName ?? "");
-  const localId = key === "id" ? value : undefined;
-
-  if (localName === "" && localId === undefined) return undefined;
-
-  return { localName, ...(localId ? { localId } : undefined) };
-}
-
-function splitIdentity(identity: string): [string, string] {
-  const slash = identity.indexOf("/");
-  return [identity.slice(0, slash), identity.slice(slash + 1)];
-}
-
-function withinLimit(
-  metadata: Record<string, unknown>,
-  name: string,
-): Record<string, unknown> {
-  if (JSON.stringify(metadata).length > METADATA_LIMIT) {
-    throw new DescriptorTooLargeError(name);
-  }
-  return metadata;
-}
-
-/**
- * Filed as `document` rather than `pipeline`: the API accepts only
- * `pipeline | agent_session | document`, and a `pipeline` must name a backend
- * pipeline by uuid. Inventing one would leave a row every other client reads
- * as a backend pipeline and fails to fetch.
- *
- * The descriptor goes in `data`, not `payload`, because the list endpoint
- * omits payloads. The cost is that `?entity=` cannot select these, so filtering
- * by kind happens on the client.
- */
-export function localPipelineResourceInput(
-  pointer: LocalPipelinePointer,
-): CreateResourceInput {
-  const identity = pointer.localId
-    ? idIdentity(pointer.localId)
-    : nameIdentity(pointer.localName);
-
-  return {
-    entity: "document",
-    name: pointer.localName,
-    payload: {},
-    metadata: withinLimit(
-      {
-        type: LOCAL_PIPELINE,
-        storage: BROWSER,
-        identity: formatWorkareaTarget({ type: "pipeline", identity }),
-        fallbackName: pointer.localName,
-      },
-      pointer.localName,
-    ),
   };
 }
 

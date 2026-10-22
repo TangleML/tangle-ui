@@ -1,21 +1,16 @@
-// React Compiler: Directory-based incremental adoption
-// Add directories here as they are cleaned up for compiler compatibility
-// Sorted by useCallback/useMemo count (cleanup effort) - least to most
+// Handwritten source paths opted into React Compiler.
 export const REACT_COMPILER_ENABLED_DIRS = [
-  // ✅ Enabled
+  "src/hooks/useComponentSearchCatalog.ts",
+  "src/hooks/useGraphExecutionData.ts",
+  "src/components/shared/ComponentSearchSourceFilter.tsx",
   "src/components/Home",
   "src/components/Editor",
   "src/components/Learn",
   "src/components/Onboarding",
   "src/components/Project",
-
-  // 0 useCallback/useMemo - ready to enable
   "src/components/layout",
-  "src/components/shared/ArtifactsList",
   "src/components/shared/Buttons",
   "src/components/shared/ContextPanel",
-  "src/components/shared/ExecutionDetails",
-  "src/components/shared/QuickStart",
   "src/components/shared/Status",
   "src/components/shared/CodeViewer",
   "src/components/shared/FullscreenElement",
@@ -25,13 +20,10 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/components/shared/GitHubAuth",
   "src/components/shared/Authentication",
   "src/routes",
-  "src/components/shared/ReactFlow/FlowCanvas/FlowCanvas.tsx",
   "src/components/shared/ComponentEditor",
   "src/components/shared/Settings",
   "src/components/shared/HuggingFaceAuth",
   "src/components/shared/GitHubLibrary",
-  "src/hooks/useHandleEdgeSelection.ts",
-  "src/hooks/useEdgeSelectionHighlight.ts",
   "src/hooks/useRunSearchParams.ts",
   "src/hooks/useNewPipelineDraft.ts",
   "src/hooks/useAiProviderSettings.ts",
@@ -49,77 +41,46 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/hooks/useHiddenNotices.ts",
   "src/hooks/useRerunProjectIds.ts",
   "src/hooks/useTrackRecentlyViewedProject.ts",
-  "src/services/localPipelines/useLocalPipelines.ts",
-  "src/services/projects/useLocalPipelineStatus.ts",
   "src/services/projects/usePipelineProjects.ts",
   "src/services/projects/useProjectInstructions.ts",
   "src/services/projects/useProjectRuns.ts",
   "src/services/projects/useWorkspaceChoice.ts",
   "src/services/usePipelineSpec.ts",
   "src/components/shared/FavoriteToggle.tsx",
-  "src/components/shared/LocalPipelineMigration.tsx",
   "src/components/shared/PageHeader.tsx",
   "src/components/shared/FloatingSelectionBar.tsx",
   "src/components/shared/ComponentLifecycleBadges.tsx",
   "src/components/shared/ComponentSearchEmptyStateSuggestions.tsx",
-  "src/components/shared/EditorV2WelcomeSpotlight.tsx",
-
   "src/components/shared/Tags",
   "src/components/shared/Submitters/Tangle/components",
   "src/components/shared/Submitters/GoogleCloud/ConfigInput.tsx",
   "src/components/shared/Submitters/GoogleCloud/GoogleCloudSubmitter.tsx",
   "src/components/shared/Submitters/GoogleCloud/RegionInput.tsx",
-  "src/components/shared/Submitters/Tangle/components/SubmitTaskArgumentsDialog.tsx",
   "src/components/shared/Submitters/Tangle/TangleSubmitter.tsx",
   "src/components/shared/PipelineRunNameTemplate",
-  "src/components/shared/PipelineDescription",
-  "src/components/shared/InlineEditor",
   "src/components/shared/ManageComponent/PublishComponentButton.tsx",
   "src/components/shared/ManageComponent/DeprecatePublishedComponentButton.tsx",
   "src/components/shared/ManageComponent/PublishComponent.tsx",
   "src/components/shared/ManageComponent/hooks/useComponentCanvasTasks.ts",
   "src/components/shared/ManageComponent/PublishedComponentDetails.tsx",
-  "src/components/shared/ManageComponent/hooks/useForceUpdateTasks.ts",
-  "src/components/shared/TaskDetails/DisplayNameEditor.tsx",
-  "src/components/shared/TaskDetails/Actions/UnpackSubgraphButton.tsx",
   "src/components/shared/ReactFlow/FlowSidebar/components/ComponentHoverPopover.tsx",
   "src/components/shared/ReactFlow/FlowControls/StackingControls.tsx",
   "src/components/shared/ReactFlow/FlowCanvas/TaskNode/StatusIndicator.tsx",
   "src/components/shared/ReactFlow/FlowCanvas/FlexNode",
-  "src/components/shared/ReactFlow/FlowCanvas/TaskNode/TaskOverview/ZIndexEditor.tsx",
-  "src/components/Editor/IOEditor/IOZIndexEditor.tsx",
-  "src/components/shared/ReactFlow/FlowCanvas/TaskNode/ArgumentsEditor/DynamicDataDropdown.tsx",
-  "src/components/shared/ReactFlow/FlowCanvas/Multiselect",
-  "src/components/shared/CodeViewer/CodeEditor.tsx",
   "src/components/shared/Dialogs/MultilineTextInputDialog.tsx",
   "src/components/shared/Dialogs/PipelineNameDialog.tsx",
   "src/components/shared/Dialogs/RenameDialog.tsx",
   "src/components/shared/SecretsManagement/components/SecretsBackendUnavailable.tsx",
-  "src/components/shared/HighlightText.tsx",
   "src/components/shared/Notices",
   "src/components/shared/Markdown",
   "src/components/shared/ReactFlow/FlowCanvas/TaskNode/TaskOverview/IOSection",
   "src/components/shared/ReactFlow/FlowCanvas/TaskNode/TaskOverview/SystemErrorSection.tsx",
   "src/components/ui/typography.tsx",
-
   "src/providers/DialogProvider",
   "src/providers/TourProvider",
   "src/providers/OnboardingProvider",
   "src/providers/ThemeProvider.tsx",
   "src/providers/RunSubmissionScopeProvider.tsx",
-  "src/routes/EditorV2",
-
-  // 11-20 useCallback/useMemo
-  // "src/components/ui",                         // 12
-  // "src/components/PipelineRun",                // 14
-  // "src/components/shared/ManageComponent",     // 15
-  // "src/components/shared/Submitters",          // 16
-
-  // 20+ useCallback/useMemo - significant cleanup needed
-  // "src/components/shared/Dialogs",             // 31
-  // "src/hooks",                                 // 53
-  // "src/providers",                             // 75
-  // "src/components/shared/ReactFlow", // 190
 ];
 
 // Convert to glob patterns for ESLint

@@ -52,17 +52,7 @@ export const MultiSelectionDetails = observer(function MultiSelectionDetails() {
 
     const taskIds = selectedTasks.map((node) => node.id);
 
-    const centerX =
-      selectedTasks.reduce((sum, node) => sum + node.position.x, 0) /
-      selectedTasks.length;
-    const centerY =
-      selectedTasks.reduce((sum, node) => sum + node.position.y, 0) /
-      selectedTasks.length;
-
-    const result = createSubgraph(spec, taskIds, name, {
-      x: centerX,
-      y: centerY,
-    });
+    const result = createSubgraph(spec, taskIds, name);
 
     if (result) {
       track(
@@ -71,7 +61,7 @@ export const MultiSelectionDetails = observer(function MultiSelectionDetails() {
           task_count: selectedTasks.length,
         },
       );
-      editor.clearMultiSelection();
+      editor.clearSelection();
     }
   };
 

@@ -75,7 +75,8 @@ export function TangentEditorAgentProvider({
       queryClient,
       undo: fitViewAfterEdits(editorSession.undo, editor),
       invokeAutoLayout: invokeAutoLayoutVia(keyboard),
-      renamePipelineFile: renamePipelineFileFor(
+      onPipelineRenamed: renamePipelineFileFor(
+        editorSession.autoSave,
         editorSession.pipelineFile,
         (_fileId, title) => {
           const file = editorSession.pipelineFile.activePipelineFile;

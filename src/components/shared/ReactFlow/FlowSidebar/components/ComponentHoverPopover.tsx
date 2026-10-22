@@ -86,7 +86,6 @@ export const ComponentHoverPopover = forwardRef<
         </BlockStack>
         <TaskDetails
           componentRef={component}
-          readOnly
           options={{ descriptionExpanded: true }}
         />
       </PopoverContent>

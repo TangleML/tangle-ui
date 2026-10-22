@@ -7,11 +7,6 @@ import type {
   TourDefinition,
   TourStep,
 } from "@/components/Learn/tours/registry";
-import { ExistingFlags } from "@/flags";
-import {
-  componentWindowIdForFlag,
-  LEGACY_COMPONENT_WINDOW_ID,
-} from "@/providers/TourProvider/resolveComponentWindowSteps";
 import type { TourInteraction } from "@/providers/TourProvider/tourActions";
 
 import { fitToView, locateFlowCanvas } from "../helpers";
@@ -116,18 +111,7 @@ export function loadTour(fileName: string): TourDef {
   );
   assertTourDef(parsed, fileName);
 
-  const componentWindowId = componentWindowIdForFlag(
-    ExistingFlags["component-search-v2"].default,
-  );
-  if (componentWindowId === LEGACY_COMPONENT_WINDOW_ID) return parsed;
-
-  return {
-    ...parsed,
-    steps: resolveTourDriverComponentWindowSteps(
-      parsed.steps,
-      componentWindowId,
-    ),
-  };
+  return parsed;
 }
 
 /**
@@ -175,27 +159,6 @@ type TourStepDef = Pick<
 export type TourDef = Pick<TourDefinition, "id" | "displayName"> & {
   steps: TourStepDef[];
 };
-
-function resolveTourDriverComponentWindowSteps(
-  steps: TourStepDef[],
-  activeWindowId: string,
-): TourStepDef[] {
-  if (activeWindowId === LEGACY_COMPONENT_WINDOW_ID) return steps;
-
-  const rewrite = (value: string) =>
-    value.replaceAll(LEGACY_COMPONENT_WINDOW_ID, activeWindowId);
-  const rewriteList = (list: string[] | undefined) => list?.map(rewrite);
-
-  return steps.map((step) => ({
-    ...step,
-    selector: rewrite(step.selector),
-    highlightedSelectors: rewriteList(step.highlightedSelectors),
-    targetWindowId:
-      typeof step.targetWindowId === "string"
-        ? rewrite(step.targetWindowId)
-        : step.targetWindowId,
-  }));
-}
 
 // Sentinel selector tours use to mean "no spotlight, center the popover". No
 // such element exists in the DOM, so anchor assertions skip it.

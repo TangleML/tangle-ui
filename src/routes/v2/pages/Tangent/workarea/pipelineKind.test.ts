@@ -3,17 +3,13 @@ import type { ComponentProps } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { EmbeddedPipelineEditor } from "@/routes/v2/pages/Editor/EmbeddedPipelineEditor";
-import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
-
-import type { WorkareaIdentity } from "./types";
+import type { PipelineTarget } from "@/services/projects/resourceTarget";
 
 const mocks = vi.hoisted(() => ({
-  findById: vi.fn(),
   editor: vi.fn(
     (_props: ComponentProps<typeof EmbeddedPipelineEditor>) => null,
   ),
   draft: vi.fn(),
-  replaceWorkareaTarget: vi.fn(),
 }));
 
 vi.mock("@/routes/v2/pages/Editor/EmbeddedPipelineEditor", () => ({
@@ -30,28 +26,19 @@ vi.mock("@/services/pipelineStorage/PipelineStorageProvider", () => ({
   usePipelineStorage: () => ({ getRemoteDraftRef: mocks.draft }),
 }));
 
-vi.mock("@/services/pipelineStorage/pipelineRegistry", () => ({
-  findById: mocks.findById,
-}));
-vi.mock("@/routes/v2/pages/Tangent/context/TangentProjectContext", () => ({
-  useTangentProject: () => ({
-    replaceWorkareaTarget: mocks.replaceWorkareaTarget,
-  }),
-}));
-
 import "./pipelineKind";
 
 import { getWorkareaKind } from "./registry";
 
 function resolvePipelineTitle(
-  identity: WorkareaIdentity,
+  identity: PipelineTarget["identity"],
 ): string | Promise<string> {
   const kind = getWorkareaKind("pipeline");
   if (!kind) throw new Error("pipeline kind is not registered");
   return kind.resolveTitle({ type: "pipeline", identity });
 }
 
-function renderPipeline(identity: WorkareaIdentity) {
+function renderPipeline(identity: PipelineTarget["identity"]) {
   const kind = getWorkareaKind("pipeline")!;
   render(
     kind.render(
@@ -80,25 +67,12 @@ describe("pipelineKind resolveTitle", () => {
     vi.clearAllMocks();
   });
 
-  it("uses the registry storageKey for an id target", async () => {
-    mocks.findById.mockResolvedValue({ storageKey: "My Pipeline" });
-
-    await expect(resolvePipelineTitle("id/abc")).resolves.toBe("My Pipeline");
-    expect(mocks.findById).toHaveBeenCalledWith("abc");
-  });
-
-  it("falls back to the fileId when no registry entry exists", async () => {
-    mocks.findById.mockResolvedValue(undefined);
-
-    await expect(resolvePipelineTitle("id/abc")).resolves.toBe("abc");
-  });
-
-  it("uses the name for a name target without a registry lookup", async () => {
-    await expect(resolvePipelineTitle("name/My Draft")).resolves.toBe(
-      "My Draft",
-    );
-    expect(mocks.findById).not.toHaveBeenCalled();
-  });
+  it.each(["remote/pipeline-1", "draft/draft-1"] as const)(
+    "uses the target identity for %s until the caller supplies a title",
+    async (identity) => {
+      expect(await resolvePipelineTitle(identity)).toBe(identity.split("/")[1]);
+    },
+  );
 
   it.each(["remote/pipeline-1", "draft/draft-1"] as const)(
     "opens %s with its backend identity",
@@ -121,25 +95,8 @@ describe("pipelineKind resolveTitle", () => {
               pipelineId: "pipeline-1",
             },
       });
-      expect(mocks.findById).not.toHaveBeenCalled();
     },
   );
-
-  it("replaces the local workarea target after migration", () => {
-    renderPipeline("id/local-1");
-    const props = mocks.editor.mock.calls.at(-1)?.[0];
-    props?.onMigrated?.({
-      id: "remote-1",
-      remote: {
-        backendUrl: "https://backend.example.com",
-        pipelineId: "remote-1",
-      },
-    } as PipelineFile);
-    expect(mocks.replaceWorkareaTarget).toHaveBeenCalledWith(
-      { type: "pipeline", identity: "id/local-1" },
-      { type: "pipeline", identity: "remote/remote-1" },
-    );
-  });
 });
 
 it("shows a recoverable message when an old draft target is unavailable", () => {

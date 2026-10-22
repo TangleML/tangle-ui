@@ -1,13 +1,12 @@
-import { useQueryClient } from "@tanstack/react-query";
 import type { PropsWithChildren } from "react";
-import { useContext, useEffect, useMemo, useRef } from "react";
+import { useContext, useMemo } from "react";
 
 import type {
   GetExecutionInfoResponse,
   GetGraphExecutionStateResponse,
   PipelineRunResponse,
 } from "@/api/types.gen";
-import { usePipelineRunData } from "@/hooks/usePipelineRunData";
+import { useGraphExecutionData } from "@/hooks/useGraphExecutionData";
 import {
   createRequiredContext,
   useRequiredContext,
@@ -17,16 +16,9 @@ import { useSubgraphBreadcrumbs } from "@/hooks/useSubgraphBreadcrumbs";
 import { useFetchPipelineRunMetadata } from "@/services/executionService";
 import { buildTaskExecutionStatusMap } from "@/utils/executionStatus";
 
-import { useComponentSpec } from "./ComponentSpecProvider";
-
-interface CachedExecutionData {
-  executionId: string;
-  details: GetExecutionInfoResponse;
-  state: GetGraphExecutionStateResponse;
-}
-
 interface ExecutionDataContextType {
-  currentExecutionId: string | null | undefined;
+  currentExecutionId: string | undefined;
+  subgraphExecutionId: string | undefined;
   details: GetExecutionInfoResponse | undefined;
   state: GetGraphExecutionStateResponse | undefined;
   rootExecutionId: string | undefined;
@@ -44,65 +36,7 @@ const ExecutionDataContext = createRequiredContext<ExecutionDataContextType>(
   "ExecutionDataProvider",
 );
 
-const PATH_DELIMITER = ".";
-const ROOT_PATH_START_INDEX = 1;
-
-const isAtRootLevel = (path: string[]) => path.length <= 1;
-
-const buildPathKey = (path: string[]) => path.join(PATH_DELIMITER);
-
-const findExecutionIdAtPath = (
-  path: string[],
-  runId: string | null | undefined,
-  rootDetails: GetExecutionInfoResponse | undefined,
-  cache: Map<string, CachedExecutionData>,
-  queryClient: ReturnType<typeof useQueryClient>,
-): string => {
-  if (!runId) {
-    return "";
-  }
-
-  let currentId = runId;
-  let currentDetails = rootDetails;
-
-  for (let i = ROOT_PATH_START_INDEX; i < path.length; i++) {
-    const taskId = path[i];
-    const pathKey = buildPathKey(path.slice(0, i + 1));
-
-    const cachedData = cache.get(pathKey);
-    if (cachedData) {
-      currentId = cachedData.executionId;
-      currentDetails = cachedData.details;
-      continue;
-    }
-
-    const nextExecutionId = currentDetails?.child_task_execution_ids?.[taskId];
-    if (!nextExecutionId) {
-      break;
-    }
-
-    currentId = nextExecutionId;
-
-    const cachedQueryData = queryClient.getQueryData<{
-      details: GetExecutionInfoResponse;
-      state: GetGraphExecutionStateResponse;
-    }>(["pipeline-run", nextExecutionId]);
-
-    if (cachedQueryData) {
-      currentDetails = cachedQueryData.details;
-      cache.set(pathKey, {
-        executionId: nextExecutionId,
-        details: cachedQueryData.details,
-        state: cachedQueryData.state,
-      });
-    } else {
-      currentDetails = undefined;
-    }
-  }
-
-  return currentId;
-};
-
+/** The route or embedded view owns the execution ID; query data is derived from it. */
 export function ExecutionDataProvider({
   pipelineRunId,
   subgraphExecutionId,
@@ -111,139 +45,26 @@ export function ExecutionDataProvider({
   pipelineRunId: string;
   subgraphExecutionId?: string;
 }>) {
-  const queryClient = useQueryClient();
-  const { currentSubgraphPath, navigateToPath } = useComponentSpec();
-
-  const executionDataCache = useRef<Map<string, CachedExecutionData>>(
-    new Map(),
-  );
-
-  const {
-    executionData,
+  const metadata = useFetchPipelineRunMetadata(pipelineRunId);
+  const rootExecutionId = metadata.data?.root_execution_id;
+  const root = useGraphExecutionData(rootExecutionId);
+  const nested = useGraphExecutionData(subgraphExecutionId);
+  const { details: rootDetails, state: rootState } = root;
+  const runId = metadata.data?.id;
+  const current = subgraphExecutionId ? nested : root;
+  const { details, state } = current;
+  const breadcrumbs = useSubgraphBreadcrumbs(
     rootExecutionId,
-    isLoading: isLoadingPipelineRunData,
-    error: pipelineRunError,
-  } = usePipelineRunData(pipelineRunId);
-
-  const { details: rootDetails, state: rootState } = executionData ?? {};
-  const runId = rootDetails?.pipeline_run_id;
-
-  const metadataQueryId =
-    runId ??
-    (rootExecutionId && pipelineRunId === rootExecutionId
-      ? undefined
-      : pipelineRunId);
-
-  const {
-    data: metadata,
-    isLoading: isLoadingPipelineMetadata,
-    error: pipelineMetadataError,
-  } = useFetchPipelineRunMetadata(metadataQueryId);
-
-  const {
-    path: urlDerivedPath,
-    segments,
-    isLoading: isLoadingBreadcrumbs,
-  } = useSubgraphBreadcrumbs(runId, subgraphExecutionId);
-
-  // Wait until rootDetails is loaded so the component spec is available
-  useEffect(() => {
-    // Don't try to navigate until we have the root details loaded
-    // This ensures the component spec is set before we validate paths
-    if (!rootDetails) {
-      return;
-    }
-
-    if (subgraphExecutionId && urlDerivedPath.length > 0) {
-      const pathsAreEqual =
-        currentSubgraphPath.length === urlDerivedPath.length &&
-        currentSubgraphPath.every(
-          (segment, index) => segment === urlDerivedPath[index],
-        );
-
-      if (!pathsAreEqual) {
-        navigateToPath(urlDerivedPath);
-      }
-    } else if (!subgraphExecutionId && currentSubgraphPath.length > 1) {
-      navigateToPath(["root"]);
-    }
-  }, [
     subgraphExecutionId,
-    urlDerivedPath,
-    currentSubgraphPath,
-    navigateToPath,
-    rootDetails,
-  ]);
-
-  const isAtRoot = isAtRootLevel(currentSubgraphPath);
-
-  const currentExecutionId = useMemo(() => {
-    if (subgraphExecutionId) {
-      return subgraphExecutionId;
-    }
-
-    if (isAtRoot) {
-      return runId;
-    }
-
-    return findExecutionIdAtPath(
-      currentSubgraphPath,
-      runId,
-      rootDetails,
-      executionDataCache.current,
-      queryClient,
-    );
-  }, [
-    subgraphExecutionId,
-    currentSubgraphPath,
-    runId,
-    rootDetails,
-    isAtRoot,
-    queryClient,
-  ]);
-
-  const {
-    executionData: nestedExecutionData,
-    isLoading: isNestedLoading,
-    error: nestedError,
-  } = usePipelineRunData(currentExecutionId || "");
-
-  const { details: nestedDetails, state: nestedState } =
-    nestedExecutionData ?? {};
-
-  const details = isAtRoot ? rootDetails : nestedDetails;
-  const state = isAtRoot ? rootState : nestedState;
-
-  // If we have a subgraph execution ID in the URL, we need to wait for breadcrumbs to load
-  // before rendering to avoid flashing the root level
-  const isLoading = isAtRoot
-    ? isLoadingPipelineRunData ||
-      (!!subgraphExecutionId && isLoadingBreadcrumbs) ||
-      isLoadingPipelineMetadata
-    : isNestedLoading || isLoadingBreadcrumbs;
-  const error = isAtRoot
-    ? pipelineRunError || pipelineMetadataError
-    : nestedError;
-
-  useEffect(() => {
-    if (!nestedDetails || !nestedState || isAtRoot) {
-      return;
-    }
-
-    const pathKey = buildPathKey(currentSubgraphPath);
-    executionDataCache.current.set(pathKey, {
-      executionId: currentExecutionId || "",
-      details: nestedDetails,
-      state: nestedState,
-    });
-  }, [
-    nestedDetails,
-    nestedState,
-    currentExecutionId,
-    currentSubgraphPath,
-    isAtRoot,
-  ]);
-
+  );
+  const currentExecutionId = subgraphExecutionId ?? rootExecutionId;
+  const isLoading =
+    root.isLoading ||
+    current.isLoading ||
+    metadata.isLoading ||
+    breadcrumbs.isLoading;
+  const error =
+    root.error ?? current.error ?? metadata.error ?? breadcrumbs.error;
   const taskExecutionStatusMap = useMemo(
     () => buildTaskExecutionStatusMap(details, state),
     [details, state],
@@ -252,31 +73,33 @@ export function ExecutionDataProvider({
   const value = useMemo(
     () => ({
       currentExecutionId,
+      subgraphExecutionId,
       details,
       state,
       rootExecutionId,
       rootDetails,
       rootState,
       runId,
-      metadata,
+      metadata: metadata.data,
       isLoading,
       error,
       taskExecutionStatusMap,
-      segments,
+      segments: breadcrumbs.segments,
     }),
     [
       currentExecutionId,
+      subgraphExecutionId,
       details,
       state,
       rootExecutionId,
       rootDetails,
       rootState,
       runId,
-      metadata,
+      metadata.data,
       isLoading,
       error,
       taskExecutionStatusMap,
-      segments,
+      breadcrumbs.segments,
     ],
   );
 
@@ -291,11 +114,6 @@ export function useExecutionData() {
   return useRequiredContext(ExecutionDataContext);
 }
 
-/**
- * Optional version of useExecutionData that returns undefined if provider is not present.
- * Use in components that work in both editor and run contexts.
- */
 export function useExecutionDataOptional() {
-  const context = useContext(ExecutionDataContext);
-  return context || undefined;
+  return useContext(ExecutionDataContext) ?? undefined;
 }

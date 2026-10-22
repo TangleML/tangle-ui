@@ -128,6 +128,7 @@ describe("ImportPage", () => {
     (importPipelineFromYaml as ReturnType<typeof vi.fn>).mockResolvedValue({
       successful: true,
       name: "Test Pipeline",
+      url: "/editor/pipeline/pipeline-id",
     });
 
     render(<ImportPage />);
@@ -141,16 +142,12 @@ describe("ImportPage", () => {
     });
 
     await waitFor(() => {
-      expect(importPipelineFromYaml).toHaveBeenCalledWith(
-        storage,
-        yamlContent,
-        true,
-      );
+      expect(importPipelineFromYaml).toHaveBeenCalledWith(storage, yamlContent);
     });
 
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith({
-        to: "/editor-v2/Test%20Pipeline",
+        to: "/editor/pipeline/pipeline-id",
       });
     });
   });

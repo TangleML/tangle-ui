@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { userQueryOptions } from "@/hooks/useUserDetails";
 
 /** What the backend answers when it does not identify anyone. */
-export const UNRESOLVED_USER_ID = "Unknown";
+const UNRESOLVED_USER_ID = "Unknown";
 
 interface ProjectAuthor {
   createdBy: string | undefined;

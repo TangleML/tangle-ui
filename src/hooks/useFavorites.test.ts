@@ -4,7 +4,6 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LibraryDB } from "@/providers/ComponentLibraryProvider/libraries/storage";
-import { movePipelineAssociationsToRemote } from "@/services/pipelineStorage/pipelineAssociations";
 import { getRemotePipelineSavedId } from "@/services/remotePipelineSavedLinks";
 
 import { type FavoriteItem, useFavorites } from "./useFavorites";
@@ -23,14 +22,6 @@ function scoped(item: FavoriteItem): FavoriteItem {
   };
 }
 
-function remoteFile(item: FavoriteItem) {
-  return {
-    id: item.id,
-    storageKey: item.name,
-    remote: { backendUrl: backend.backendUrl, pipelineId: item.id },
-  };
-}
-
 const pipeline: FavoriteItem = {
   type: "pipeline",
   id: "p1",
@@ -45,7 +36,7 @@ afterEach(async () => {
 describe("useFavorites", () => {
   it("keeps equal remote IDs separate across backends and removes only the selected backend's favorite", async () => {
     const item: FavoriteItem = {
-      type: "remote-pipeline",
+      type: "pipeline",
       id: "same-id",
       name: "Remote",
     };
@@ -78,7 +69,7 @@ describe("useFavorites", () => {
 
   it("cleans up the captured backend after the active backend changes", async () => {
     const item: FavoriteItem = {
-      type: "remote-pipeline",
+      type: "pipeline",
       id: "same-id",
       name: "Remote",
     };
@@ -110,7 +101,7 @@ describe("useFavorites", () => {
     const { result } = renderHook(() => useFavorites());
     await result.current.addFavorite(pipeline);
     await waitFor(() => {
-      expect(result.current.favorites).toEqual([pipeline]);
+      expect(result.current.favorites).toEqual([scoped(pipeline)]);
     });
   });
 
@@ -137,7 +128,7 @@ describe("useFavorites", () => {
     const { result } = renderHook(() => useFavorites());
     await result.current.toggleFavorite(pipeline);
     await waitFor(() => {
-      expect(result.current.favorites).toEqual([pipeline]);
+      expect(result.current.favorites).toEqual([scoped(pipeline)]);
     });
     await result.current.toggleFavorite(pipeline);
     await waitFor(() => {
@@ -195,114 +186,28 @@ describe("useFavorites", () => {
     });
   });
 
-  it.each(["A", "M", "Z"])(
-    "keeps %s in its exact slot when its local identity becomes remote",
-    async (id) => {
-      const initial: FavoriteItem[] = [
-        { type: "pipeline", id: "A", name: "First pipeline" },
-        { type: "pipeline", id: "M", name: "Middle pipeline" },
-        { type: "pipeline", id: "Z", name: "Last local pipeline" },
-        { type: "remote-pipeline", id: "existing", name: "Existing remote" },
-        run,
-      ];
-      await LibraryDB.favorites.bulkPut(initial);
-      const { result, unmount } = renderHook(() => useFavorites());
-      await waitFor(() => expect(result.current.favorites).toEqual(initial));
-      const original = initial.find((item) => item.id === id)!;
-      const remote = {
-        type: "remote-pipeline",
-        id: "uploaded-id",
-        name: original.name,
-      } satisfies FavoriteItem;
-      const expected = initial.map((item) =>
-        item === original ? scoped(remote) : item,
-      );
-
-      await movePipelineAssociationsToRemote(
-        { id: "local-file-id", storageKey: id },
-        remoteFile(remote),
-      );
-
-      await waitFor(() => expect(result.current.favorites).toEqual(expected));
-      // Updating a favorite's label must also preserve its saved position.
-      await result.current.addFavorite({
-        type: remote.type,
-        id: remote.id,
-        name: remote.name,
-      });
-      await waitFor(() => expect(result.current.favorites).toEqual(expected));
-      unmount();
-      const reopened = renderHook(() => useFavorites());
-      await waitFor(() =>
-        expect(reopened.result.current.favorites).toEqual(expected),
-      );
-    },
-  );
-
-  it("preserves an existing stored order when the pipeline is last", async () => {
+  it("keeps favorite order when updating a saved pipeline's label", async () => {
     await LibraryDB.favorites.bulkPut([
       { ...run, sortKey: 1 },
-      { ...pipeline, sortKey: 2 },
+      { ...scoped(pipeline), sortKey: 2 },
     ]);
     const { result } = renderHook(() => useFavorites());
     await waitFor(() =>
-      expect(result.current.favorites).toEqual([run, pipeline]),
+      expect(result.current.favorites).toEqual([run, scoped(pipeline)]),
     );
-
-    await movePipelineAssociationsToRemote(
-      { id: "local-file-id", storageKey: pipeline.id },
-      remoteFile({ ...pipeline, id: "uploaded-id" }),
-    );
-
+    await result.current.addFavorite({ ...pipeline, name: "Renamed" });
     await waitFor(() =>
       expect(result.current.favorites).toEqual([
         run,
-        scoped({ ...pipeline, id: "uploaded-id" }),
+        { ...scoped(pipeline), name: "Renamed" },
       ]),
     );
   });
 
-  it("keeps both positions when a local name is reused for another upload", async () => {
+  it("omits obsolete local pipeline entries", async () => {
+    await LibraryDB.favorites.bulkPut([pipeline, run]);
     const { result } = renderHook(() => useFavorites());
-    await result.current.addFavorite(run);
-    await result.current.addFavorite(pipeline);
-    await waitFor(() =>
-      expect(result.current.favorites).toEqual([pipeline, run]),
-    );
-
-    const first: FavoriteItem = {
-      ...pipeline,
-      type: "remote-pipeline",
-      id: "first-upload",
-    };
-    await movePipelineAssociationsToRemote(
-      { id: "first-local-id", storageKey: pipeline.id },
-      remoteFile(first),
-    );
-    await waitFor(() =>
-      expect(result.current.favorites).toEqual([scoped(first), run]),
-    );
-
-    await result.current.addFavorite(pipeline);
-    await waitFor(() =>
-      expect(result.current.favorites).toEqual([pipeline, scoped(first), run]),
-    );
-    const second: FavoriteItem = {
-      ...pipeline,
-      type: "remote-pipeline",
-      id: "second-upload",
-    };
-    await movePipelineAssociationsToRemote(
-      { id: "second-local-id", storageKey: pipeline.id },
-      remoteFile(second),
-    );
-    await waitFor(() =>
-      expect(result.current.favorites).toEqual([
-        scoped(second),
-        scoped(first),
-        run,
-      ]),
-    );
+    await waitFor(() => expect(result.current.favorites).toEqual([run]));
   });
 });
 
@@ -311,13 +216,11 @@ it("recognizes and removes an existing favorite after equivalent backend URL spe
   await LibraryDB.favorites.put({ type: "pipeline", id: oldId, name: "Saved" });
   const { result } = renderHook(() => useFavorites());
   await waitFor(() =>
-    expect(result.current.isFavorite("remote-pipeline", "pipeline-id")).toBe(
-      true,
-    ),
+    expect(result.current.isFavorite("pipeline", "pipeline-id")).toBe(true),
   );
   await act(() =>
     result.current.toggleFavorite({
-      type: "remote-pipeline",
+      type: "pipeline",
       id: "pipeline-id",
       name: "Saved",
     }),

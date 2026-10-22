@@ -5,6 +5,7 @@ import {
   useParams,
   useSearch,
 } from "@tanstack/react-router";
+import * as yaml from "js-yaml";
 import { useEffect, useRef, useState } from "react";
 
 import { tours } from "@/components/Learn/tours";
@@ -12,14 +13,13 @@ import {
   getTour,
   type TourDefinition,
 } from "@/components/Learn/tours/registry";
-import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { addRecentlyViewed } from "@/hooks/useRecentlyViewed";
-import useToastNotification from "@/hooks/useToastNotification";
-import { useBackend } from "@/providers/BackendProvider";
 import {
-  componentWindowIdForFlag,
-  resolveComponentWindowSteps,
-} from "@/providers/TourProvider/resolveComponentWindowSteps";
+  type ComponentSpec,
+  IncrementingIdGenerator,
+  YamlDeserializer,
+} from "@/models/componentSpec";
+import { useBackend } from "@/providers/BackendProvider";
 import { TourContent } from "@/providers/TourProvider/TourContent";
 import { setTourMockActive } from "@/providers/TourProvider/tourMockBackend";
 import {
@@ -27,50 +27,20 @@ import {
   type TourModeValue,
   useTourMode,
 } from "@/providers/TourProvider/TourModeContext";
-import {
-  buildTourPipelineYaml,
-  TOUR_PIPELINE_PREFIX,
-} from "@/providers/TourProvider/tourPipelineLifecycle";
-import { TourPipelineStorageProvider } from "@/providers/TourProvider/tourPipelineStorage/TourPipelineStorageProvider";
+import { buildTourPipelineYaml } from "@/providers/TourProvider/tourPipelineLifecycle";
 import { TourCompletionActions } from "@/providers/TourProvider/TourPopover";
 import { TourTelemetryBridge } from "@/providers/TourProvider/TourTelemetryBridge";
 import { APP_ROUTES } from "@/routes/router";
-import { EditorV2 } from "@/routes/v2/pages/Editor/EditorV2";
+import { Editor } from "@/routes/v2/pages/Editor/Editor";
 import {
   clearLayout,
   TOUR_WINDOW_LAYOUT_ID,
 } from "@/routes/v2/shared/windows/windowPersistence";
-import { createPipelineFromContent } from "@/services/pipelineStorage/pipelineCreation";
+import { createPipelineFromSpec } from "@/services/pipelineStorage/pipelineCreation";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
-import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
 import { isRecord } from "@/utils/typeGuards";
 import { waitForSelector } from "@/utils/waitForSelector";
-
-interface ResolvedPipeline {
-  name: string;
-  fileId: string;
-}
-
-function tourPipelineName(tour: TourDefinition): string {
-  return `${TOUR_PIPELINE_PREFIX}${tour.id}`;
-}
-
-async function findOrCreateTourPipeline(
-  tour: TourDefinition,
-  storage: PipelineStorageService,
-): Promise<ResolvedPipeline> {
-  const name = tourPipelineName(tour);
-  const existing = await storage.resolvePipelineByName(name);
-
-  if (existing) {
-    return { name, fileId: existing.id };
-  }
-
-  const yamlContent = await buildTourPipelineYaml(tour, name);
-  const file = await storage.rootFolder.addFile(name, yamlContent);
-
-  return { name, fileId: file.id };
-}
+import { PIPELINE_YAML_LOAD_OPTIONS } from "@/utils/yaml";
 
 function TourReactourBridge({
   tour,
@@ -82,9 +52,6 @@ function TourReactourBridge({
   onUrlStepChange: (step: number) => void;
 }) {
   const { setSteps, setCurrentStep, setIsOpen, currentStep } = useTour();
-  const componentWindowId = componentWindowIdForFlag(
-    useFlagValue("component-search-v2"),
-  );
 
   const lastSyncRef = useRef<number | null>(null);
   const initializedRef = useRef(false);
@@ -104,10 +71,7 @@ function TourReactourBridge({
       }
       initializedRef.current = true;
 
-      const resolvedSteps = resolveComponentWindowSteps(
-        tour.steps,
-        componentWindowId,
-      );
+      const resolvedSteps = tour.steps;
       const lastIdx = resolvedSteps.length - 1;
       const stepsWithMarkdown = resolvedSteps.map((step, idx) => {
         const normalized =
@@ -136,7 +100,7 @@ function TourReactourBridge({
       setIsOpen(true);
     });
     return () => controller.abort();
-  }, [tour, urlStep, componentWindowId, setSteps, setCurrentStep, setIsOpen]);
+  }, [tour, urlStep, setSteps, setCurrentStep, setIsOpen]);
 
   useEffect(() => {
     return () => {
@@ -171,32 +135,16 @@ export function TourPage() {
   const tour = getTour(tourId);
   const navigate = useNavigate();
   const storage = usePipelineStorage();
-  const notify = useToastNotification();
 
-  const promoteToPipeline = async (newName: string, yamlContent: string) => {
-    try {
-      const file = await createPipelineFromContent(
-        storage,
-        newName,
-        yamlContent,
-      );
-      if (file.remote) {
-        await navigate({
-          to: APP_ROUTES.EDITOR_V2_REMOTE_PIPELINE,
-          params: { pipelineId: file.id },
-        });
-        return;
-      }
-      await navigate({
-        to: APP_ROUTES.EDITOR_V2_PIPELINE,
-        params: { pipelineName: newName },
-        search: { fileId: file.id },
-      });
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Failed to save pipeline";
-      notify(message, "error");
-    }
+  const promoteToPipeline: TourModeValue["promoteToPipeline"] = async (
+    newName,
+    spec,
+  ) => {
+    const file = await createPipelineFromSpec(storage, newName, spec);
+    await navigate({
+      to: APP_ROUTES.REMOTE_PIPELINE_EDITOR,
+      params: { pipelineId: file.id },
+    });
   };
 
   if (!tour) {
@@ -204,13 +152,12 @@ export function TourPage() {
   }
 
   return (
-    <TourPipelineStorageProvider>
-      <TourPageBody
-        tour={tour}
-        tourId={tourId}
-        promoteToPipeline={promoteToPipeline}
-      />
-    </TourPipelineStorageProvider>
+    <TourPageBody
+      key={tour.id}
+      tour={tour}
+      tourId={tourId}
+      promoteToPipeline={promoteToPipeline}
+    />
   );
 }
 
@@ -225,8 +172,7 @@ function TourPageBody({
 }) {
   const search = useSearch({ strict: false });
   const navigate = useNavigate();
-  const storage = usePipelineStorage();
-  const [resolved, setResolved] = useState<ResolvedPipeline | null>(null);
+  const [resolved, setResolved] = useState<ComponentSpec | null>(null);
 
   useEffect(() => {
     clearLayout(TOUR_WINDOW_LAYOUT_ID);
@@ -249,7 +195,10 @@ function TourPageBody({
     let cancelled = false;
     void (async () => {
       try {
-        const result = await findOrCreateTourPipeline(tour, storage);
+        const content = await buildTourPipelineYaml(tour, tour.id);
+        const result = new YamlDeserializer(
+          new IncrementingIdGenerator(),
+        ).deserialize(yaml.load(content, PIPELINE_YAML_LOAD_OPTIONS));
         if (cancelled) return;
         setResolved(result);
       } catch (error) {
@@ -259,7 +208,7 @@ function TourPageBody({
     return () => {
       cancelled = true;
     };
-  }, [tour, storage]);
+  }, [tour]);
 
   const handleUrlStepChange = (step: number) => {
     void navigate({
@@ -283,7 +232,6 @@ function TourPageBody({
     <TourModeProvider
       value={{
         tour,
-        tempPipelineName: resolved?.name ?? tourPipelineName(tour),
         promoteToPipeline,
       }}
     >
@@ -299,11 +247,7 @@ function TourPageBody({
           <TourTelemetryBridge key={`telemetry-${tour.id}`} />
         </>
       )}
-      <EditorV2
-        pipelineRef={
-          resolved ? { name: resolved.name, fileId: resolved.fileId } : null
-        }
-      />
+      <Editor spec={resolved ?? undefined} />
     </TourModeProvider>
   );
 }

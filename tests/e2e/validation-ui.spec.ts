@@ -6,14 +6,14 @@ import {
   fitToView,
   openComponentLibFolder,
   panCanvas,
-  waitForContextPanel,
+  waitForEditorWindow,
 } from "./helpers";
 
 const CHICAGO_TAXI_COMPONENT = "Chicago Taxi Trips dataset";
 const XGBOOST_COMPONENT = "Train XGBoost model on CSV";
 
 function locateTaskNode(page: Page, taskName: string): Locator {
-  return page.locator(`[data-testid="rf__node-task_${taskName}"]`);
+  return page.locator(`[data-task-name="${taskName}"]`);
 }
 
 async function assertValidationState(
@@ -21,11 +21,11 @@ async function assertValidationState(
   expectedTitle: string,
 ): Promise<void> {
   await page.keyboard.press("Escape");
-  await waitForContextPanel(page, "pipeline-details");
+  await waitForEditorWindow(page, "pipeline-details");
   await expect(
-    page.getByTestId("info-box-title"),
+    page.getByText(expectedTitle, { exact: true }),
     `Validation should show "${expectedTitle}"`,
-  ).toHaveText(expectedTitle);
+  ).toBeVisible();
 }
 
 test.describe.configure({ mode: "serial" });
@@ -50,12 +50,12 @@ test.describe("Pipeline Validation UI", () => {
       CHICAGO_TAXI_COMPONENT,
     );
 
-    await waitForContextPanel(page, "pipeline-details");
+    await waitForEditorWindow(page, "pipeline-details");
 
     const validationInfoBox = page.getByTestId("info-box-success");
     await expect(validationInfoBox).toBeVisible();
     await expect(page.getByTestId("info-box-title")).toHaveText(
-      "No validation issues found",
+      "No validation issues",
     );
   });
 
@@ -79,38 +79,27 @@ test.describe("Pipeline Validation UI", () => {
       },
     );
 
-    await waitForContextPanel(page, "pipeline-details");
+    await waitForEditorWindow(page, "pipeline-details");
 
-    const validationInfoBox = page.getByTestId("info-box-error");
     await expect(
-      validationInfoBox,
-      "Validation info box should show errors",
+      page.getByRole("button", { name: "2 errors", exact: true }),
     ).toBeVisible();
-    await expect(page.getByTestId("info-box-title")).toHaveText(
-      "2 errors detected",
-    );
   });
 
   test("shows expanded view of validation errors", async () => {
-    const validationGroup = page.getByTestId("validation-group");
-    await expect(validationGroup).toBeVisible();
-
-    const groupTrigger = page.getByTestId("validation-group-trigger");
-    await groupTrigger.click();
-
-    const validationIssues = page.getByTestId("validation-issue");
-    await expect(validationIssues).toHaveCount(2);
-
-    await expect(validationIssues.first()).toHaveAttribute(
-      "data-issue-level",
-      "error",
+    await page.getByRole("button", { name: "2 errors", exact: true }).click();
+    const validationIssues = page.locator(
+      '[data-dock-window-content="pipeline-details"] div[role="button"]',
     );
+    await expect(validationIssues).toHaveCount(2);
   });
 
   test("clicking validation error navigates to task on canvas", async () => {
     const xgboostNode = locateTaskNode(page, XGBOOST_COMPONENT);
 
-    const validationIssues = page.getByTestId("validation-issue");
+    const validationIssues = page.locator(
+      '[data-dock-window-content="pipeline-details"] div[role="button"]',
+    );
     await validationIssues.first().click();
 
     await expect(
@@ -138,12 +127,10 @@ test.describe("Pipeline Validation UI", () => {
     await inputPin.hover();
     await page.mouse.up();
 
-    const edge = page.locator(
-      `[data-testid="rf__edge-${CHICAGO_TAXI_COMPONENT}_Table-${XGBOOST_COMPONENT}_training_data"]`,
-    );
+    const edge = page.locator(".react-flow__edge");
     await expect(edge, "Edge should be created after connection").toBeVisible();
 
-    await assertValidationState(page, "1 error detected");
+    await assertValidationState(page, "1 error");
   });
 
   test("creating input node via CMD+drag changes validation to 1 warning", async () => {
@@ -180,20 +167,24 @@ test.describe("Pipeline Validation UI", () => {
 
     await page.keyboard.up("Meta");
 
-    const inputNode = page.getByTestId("io-node-input-label_column_name");
+    const inputNode = page.locator(
+      '[data-tour-card="input"][data-tour-card-name="label_column_name"]',
+    );
     await expect(
       inputNode,
       "Input node should be created for label_column_name",
     ).toBeVisible();
 
-    await assertValidationState(page, "1 warning detected");
+    await assertValidationState(page, "1 warning");
   });
 
   test("setting input value resolves all validation issues", async () => {
-    const inputNode = page.getByTestId("io-node-input-label_column_name");
+    const inputNode = page.locator(
+      '[data-tour-card="input"][data-tour-card-name="label_column_name"]',
+    );
     await inputNode.click();
 
-    const inputValueField = page.getByTestId("input-value-field");
+    const inputValueField = page.getByTestId("input-value");
     await expect(
       inputValueField,
       "Input value editor should appear in context panel",
@@ -202,6 +193,6 @@ test.describe("Pipeline Validation UI", () => {
     await inputValueField.fill("tips");
     await inputValueField.blur();
 
-    await assertValidationState(page, "No validation issues found");
+    await assertValidationState(page, "No validation issues");
   });
 });

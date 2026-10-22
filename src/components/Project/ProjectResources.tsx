@@ -34,7 +34,6 @@ import {
 } from "@/services/projects/resourceDescriptor";
 import { sessionLabelsById } from "@/services/projects/sessionLabel";
 import type { ProjectResourceSummary } from "@/services/projects/types";
-import { useLocalPipelineStatus } from "@/services/projects/useLocalPipelineStatus";
 import { useProjectResources } from "@/services/projects/useProjectResources";
 import { tracking } from "@/utils/tracking";
 
@@ -146,9 +145,6 @@ export function ProjectResources({
     return tangentEnabled || resource.entity !== AGENT_SESSION;
   });
 
-  const { currentNames: currentPipelineNames } =
-    useLocalPipelineStatus(resources);
-
   const sessionLabels = sessionLabelsById(
     resources
       .filter(
@@ -248,9 +244,7 @@ export function ProjectResources({
                   <ResourceRow
                     key={resource.id}
                     resource={resource}
-                    label={
-                      sessionLabel ?? currentPipelineNames.get(resource.id)
-                    }
+                    label={sessionLabel}
                     opensElsewhere={sessionLabel !== undefined}
                     selected={resource.id === selectedResourceId}
                     onSelect={(picked) => {

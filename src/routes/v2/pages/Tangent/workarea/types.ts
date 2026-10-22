@@ -9,7 +9,6 @@ import type {
 } from "@/services/projects/resourceTarget";
 
 export type {
-  WorkareaIdentity,
   WorkareaTarget,
   WorkareaViewKindName,
 } from "@/services/projects/resourceTarget";

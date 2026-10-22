@@ -61,7 +61,7 @@ function given({
 const field = (value?: string) =>
   render(
     <RunProjectField
-      pipelineName="Churn model"
+      pipelineId="pipeline-1"
       value={value}
       onChange={onChange}
     />,
@@ -86,6 +86,12 @@ describe("RunProjectField", () => {
     }),
   );
   afterEach(() => vi.resetAllMocks());
+
+  it("looks up the document's projects without depending on the current route", () => {
+    field();
+
+    expect(usePipelineProjects).toHaveBeenCalledWith("pipeline-1");
+  });
 
   it("asks for nothing while projects are switched off", () => {
     given({ enabled: false });

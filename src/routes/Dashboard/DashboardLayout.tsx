@@ -5,7 +5,6 @@ import { TipOfTheDay } from "@/components/Learn/TipOfTheDay";
 import { isAuthorizationRequired } from "@/components/shared/Authentication/helpers";
 import { TopBarAuthentication } from "@/components/shared/Authentication/TopBarAuthentication";
 import {
-  useFlagValue,
   useProjectsEnabled,
   useTangentEnabled,
 } from "@/components/shared/Settings/useFlags";
@@ -50,17 +49,11 @@ const BASE_SIDEBAR_ITEMS: SidebarItem[] = [
   },
   { to: "/pipelines", label: "My Pipelines", icon: "GitBranch" },
   { to: ALL_RUNS_PATH, label: "All Runs", icon: "Play" },
-  { to: "/components", label: "Components", icon: "Package" },
+  { to: "/components", label: "Components", icon: "PackageSearch" },
   { to: "/favorites", label: "Favorites", icon: "Star" },
   { to: "/recently-viewed", label: "Recently Viewed", icon: "Clock" },
   { to: "/learn", label: "Learning Hub", icon: "GraduationCap" },
 ];
-
-const COMPONENT_SEARCH_ITEM: SidebarItem = {
-  to: APP_ROUTES.DASHBOARD_COMPONENTS_V2,
-  label: "Components",
-  icon: "PackageSearch",
-};
 
 const TANGENT_ITEM: SidebarItem = {
   to: APP_ROUTES.PROJECTS,
@@ -113,21 +106,12 @@ const navItemClass = (isActive: boolean, highlighted?: boolean) =>
 
 export function DashboardLayout() {
   const requiresAuthorization = isAuthorizationRequired();
-  const isComponentSearchEnabled = useFlagValue("component-search-v2");
   const projectsEnabled = useProjectsEnabled();
   const tangentEnabled = useTangentEnabled();
 
   const { shouldShowOnboarding } = useOnboarding();
 
-  const componentItems = isComponentSearchEnabled
-    ? BASE_SIDEBAR_ITEMS.map((item) =>
-        item.to === APP_ROUTES.DASHBOARD_COMPONENTS
-          ? COMPONENT_SEARCH_ITEM
-          : item,
-      )
-    : BASE_SIDEBAR_ITEMS;
-
-  const baseItems = withProjectsItem(componentItems, {
+  const baseItems = withProjectsItem(BASE_SIDEBAR_ITEMS, {
     projectsEnabled,
     tangentEnabled,
   });

@@ -3,8 +3,6 @@ import * as yaml from "js-yaml";
 import type { TourDefinition } from "@/components/Learn/tours/registry";
 import { defaultPipelineYamlWithName } from "@/utils/constants";
 
-export const TOUR_PIPELINE_PREFIX = "__tour__";
-
 export async function buildTourPipelineYaml(
   tour: TourDefinition,
   fallbackName: string,

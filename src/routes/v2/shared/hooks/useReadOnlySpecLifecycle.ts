@@ -14,14 +14,15 @@ export function useReadOnlySpecLifecycle(rootSpec: ComponentSpec) {
   useEffect(() => {
     if (!rootSpec) return;
 
-    if (!isRootStore(rootSpec)) registerRootStore(rootSpec);
+    const ownsRegistration = !isRootStore(rootSpec);
+    if (ownsRegistration) registerRootStore(rootSpec);
     editor.resetState();
     navigation.initNavigation(rootSpec);
 
     return () => {
       navigation.clearNavigation();
       editor.resetState();
-      if (isRootStore(rootSpec)) {
+      if (ownsRegistration && isRootStore(rootSpec)) {
         unregisterRootStore(rootSpec);
       }
     };

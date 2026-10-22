@@ -1,5 +1,5 @@
-import { exportPipeline } from "@/components/shared/ReactFlow/FlowSidebar/sections/components/ExportPipelineButton";
 import type { ComponentSpec } from "@/utils/componentSpec";
+import { downloadStringAsFile } from "@/utils/URL";
 import { componentSpecToYaml } from "@/utils/yaml";
 
 export function useExportPipelineYaml(
@@ -9,10 +9,8 @@ export function useExportPipelineYaml(
   const exportYaml = () => {
     if (!componentSpec) return;
     const yaml = componentSpecToYaml(componentSpec);
-    exportPipeline(
-      pipelineName ?? componentSpec.name ?? "Untitled Pipeline",
-      yaml,
-    );
+    const name = pipelineName ?? componentSpec.name ?? "Untitled Pipeline";
+    downloadStringAsFile(yaml, `${name}.pipeline.component.yaml`, "text/yaml");
   };
 
   return { exportYaml };

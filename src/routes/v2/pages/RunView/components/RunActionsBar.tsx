@@ -16,7 +16,6 @@ import { Text } from "@/components/ui/typography";
 import { useCancelPipelineRun } from "@/routes/v2/pages/RunView/hooks/useCancelPipelineRun";
 import { useClonePipelineRun } from "@/routes/v2/pages/RunView/hooks/useClonePipelineRun";
 import { useExportPipelineYaml } from "@/routes/v2/pages/RunView/hooks/useExportPipelineYaml";
-import { useInspectPipeline } from "@/routes/v2/pages/RunView/hooks/useInspectPipeline";
 import { useRerunPipelineRun } from "@/routes/v2/pages/RunView/hooks/useRerunPipelineRun";
 import { useRunViewActions } from "@/routes/v2/pages/RunView/hooks/useRunViewActions";
 import { useYamlViewer } from "@/routes/v2/pages/RunView/hooks/useYamlViewer";
@@ -47,7 +46,6 @@ export function RunActionsBar({
     confirmCancel,
     dismissCancel,
   } = useCancelPipelineRun(runId);
-  const { inspect } = useInspectPipeline(pipelineName);
   const { exportYaml } = useExportPipelineYaml(componentSpec, pipelineName);
 
   const status = (
@@ -72,8 +70,7 @@ export function RunActionsBar({
     );
   }
 
-  const { canAccessEditorSpec, isRunCreator, isInProgress, isComplete } =
-    actions;
+  const { isRunCreator, isInProgress, isComplete } = actions;
   const showCancel = isInProgress && isRunCreator;
   const showSeparator = showCancel || isComplete;
 
@@ -106,16 +103,6 @@ export function RunActionsBar({
             </DropdownMenuTrigger>
 
             <DropdownMenuContent align="end">
-              {canAccessEditorSpec && pipelineName && (
-                <DropdownMenuItem
-                  onSelect={inspect}
-                  {...tracking("v2.run_view.menu_bar.inspect_pipeline")}
-                >
-                  <Icon name="ExternalLink" size="sm" />
-                  Inspect Pipeline
-                </DropdownMenuItem>
-              )}
-
               <DropdownMenuItem
                 onSelect={clone}
                 disabled={isCloning}

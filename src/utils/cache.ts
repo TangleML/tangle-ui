@@ -4,59 +4,6 @@ import type { TaskSpec } from "./componentSpec";
 import { ISO8601_DURATION_ZERO_DAYS } from "./constants";
 import { PIPELINE_YAML_LOAD_OPTIONS } from "./yaml";
 
-const httpGetDataWithCache = async <T>(
-  url: string,
-  transformer: (buffer: ArrayBuffer) => T,
-  cacheName: string = "cache",
-  updateIfInCache: boolean = false,
-): Promise<T> => {
-  const cache = await caches.open(cacheName);
-  let response = await cache.match(url);
-  let needToUpdateCache = false;
-  if (response === undefined || updateIfInCache) {
-    try {
-      const newResponse = await fetch(url);
-      if (!newResponse.ok) {
-        throw new Error(
-          `Network response was not OK: ${newResponse.status}: ${newResponse.statusText}`,
-        );
-      }
-      response = newResponse;
-      needToUpdateCache = true;
-    } catch (err) {
-      if (response === undefined) {
-        throw err;
-      }
-    }
-  }
-  // Preventing TypeError: Failed to execute 'put' on 'Cache': Response body is already used
-  const responseForCaching = response.clone();
-  // Need to verify that the transformer executes with error before putting data in cache.
-  const result = transformer(await response.arrayBuffer());
-  if (needToUpdateCache) {
-    await cache.put(url, responseForCaching);
-  }
-  return result;
-};
-
-export type DownloadDataType = <T>(
-  url: string,
-  transformer: (buffer: ArrayBuffer) => T,
-) => Promise<T>;
-
-const IMMUTABLE_URL_REGEXPS = [
-  /^https:\/\/raw.githubusercontent.com\/[-A-Za-z_]+\/[-A-Za-z_]+\/[0-9a-fA-f]{40}\/.*/,
-  /^https:\/\/gitlab.com\/([-A-Za-z_]+\/){2,}-\/raw\/[0-9a-fA-f]{40}\/.*/,
-];
-
-export async function downloadDataWithCache<T>(
-  url: string,
-  transformer: (buffer: ArrayBuffer) => T,
-): Promise<T> {
-  const isImmutable = IMMUTABLE_URL_REGEXPS.some((regexp) => url.match(regexp));
-  return httpGetDataWithCache(url, transformer, "cache", !isImmutable);
-}
-
 // Data transformer functions
 
 function loadTextFromData(buffer: ArrayBuffer): string {
