@@ -11,6 +11,7 @@ import { cancelPipelineRun } from "@/services/pipelineRunService";
 
 type CancelPipelineRunButtonProps = {
   runId: string | null | undefined;
+  teamId?: string;
   showLabel?: boolean;
   displayLabel?: string;
   showTooltip?: boolean;
@@ -21,6 +22,7 @@ type CancelPipelineRunButtonProps = {
 
 export const CancelPipelineRunButton = ({
   runId,
+  teamId,
   showLabel,
   displayLabel,
   showTooltip = true,
@@ -36,12 +38,12 @@ export const CancelPipelineRunButton = ({
     isPending,
     isSuccess,
   } = useMutation({
-    mutationFn: (runId: string) => cancelPipelineRun(runId, backendUrl),
+    mutationFn: (runId: string) => cancelPipelineRun(runId, backendUrl, teamId),
     onSuccess: () => {
       notify(`Pipeline run ${runId} cancelled`, "success");
     },
     onError: (error) => {
-      notify(`Error cancelling run: ${error}`, "error");
+      notify(`Error cancelling run: ${error.message}`, "error");
     },
   });
 

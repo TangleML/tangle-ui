@@ -1,3 +1,4 @@
+import { RerunReviewDialog } from "@/components/PipelineRun/components/RerunReviewDialog";
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import ConfirmationDialog from "@/components/shared/Dialogs/ConfirmationDialog";
 import { StatusBar } from "@/components/shared/Status";
@@ -35,18 +36,20 @@ export function RunActionsBar({
   const actions = useRunViewActions();
   const componentSpec = actions.ready ? actions.componentSpec : undefined;
   const runId = actions.ready ? actions.runId : undefined;
+  const cancelAsTeamId = actions.ready ? actions.management.teamId : undefined;
   const pipelineName = actions.ready ? actions.pipelineName : undefined;
 
   const { yamlViewerOpen, openYamlViewer, closeYamlViewer } = useYamlViewer();
   const { clone, isCloning } = useClonePipelineRun(componentSpec, runId);
-  const { rerun, isRerunning } = useRerunPipelineRun(componentSpec);
+  const { rerun, isRerunning, canRerun, review } =
+    useRerunPipelineRun(componentSpec);
   const {
     cancelDialogOpen,
     isCancelling,
     requestCancel,
     confirmCancel,
     dismissCancel,
-  } = useCancelPipelineRun(runId);
+  } = useCancelPipelineRun(runId, cancelAsTeamId);
   const { inspect } = useInspectPipeline(pipelineName);
   const { exportYaml } = useExportPipelineYaml(componentSpec, pipelineName);
 
@@ -72,9 +75,8 @@ export function RunActionsBar({
     );
   }
 
-  const { canAccessEditorSpec, isRunCreator, isInProgress, isComplete } =
-    actions;
-  const showCancel = isInProgress && isRunCreator;
+  const { canAccessEditorSpec, management, isInProgress, isComplete } = actions;
+  const showCancel = isInProgress && management.canManage;
   const showSeparator = showCancel || isComplete;
 
   return (
@@ -150,7 +152,7 @@ export function RunActionsBar({
               {isComplete && (
                 <DropdownMenuItem
                   onSelect={rerun}
-                  disabled={isRerunning}
+                  disabled={isRerunning || !canRerun}
                   {...tracking("v2.run_view.menu_bar.rerun_pipeline")}
                 >
                   <Icon name="RefreshCcw" size="sm" />
@@ -169,6 +171,8 @@ export function RunActionsBar({
         onConfirm={confirmCancel}
         onCancel={dismissCancel}
       />
+
+      <RerunReviewDialog review={review} />
 
       {yamlViewerOpen && (
         <TaskImplementation

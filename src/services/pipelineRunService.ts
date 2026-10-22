@@ -208,13 +208,19 @@ export const cancelPipelineRun = async (
   backendUrl: string,
   teamId?: string,
 ) => {
-  await fetchWithErrorHandling(
+  const response = await fetch(
     `${backendUrl}/api/pipeline_runs/${runId}/cancel`,
     {
       method: "POST",
       headers: teamRequestHeaders(teamId),
     },
   );
+
+  if (!response.ok) {
+    throw new Error(
+      await requestFailureMessage(response, "Failed to cancel the run"),
+    );
+  }
 };
 
 export const fetchRunAnnotations = async (
@@ -239,8 +245,17 @@ export const updateRunAnnotation = async (
   );
   url.searchParams.append("value", annotation.value);
 
-  await fetchWithErrorHandling(url.toString(), {
+  const response = await fetch(url.toString(), {
     method: "PUT",
     headers: teamRequestHeaders(teamId),
   });
+
+  if (!response.ok) {
+    throw new Error(
+      await requestFailureMessage(
+        response,
+        `Failed to save the run's ${annotation.key}`,
+      ),
+    );
+  }
 };

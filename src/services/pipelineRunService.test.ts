@@ -95,6 +95,41 @@ describe("createPipelineRun", () => {
   });
 });
 
+describe("changing a run", () => {
+  let mockFetch: Mock;
+
+  beforeEach(() => {
+    mockFetch = vi.fn();
+    global.fetch = mockFetch;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("rejects a cancel with the reason the backend gave", async () => {
+    mockFetch.mockResolvedValue(
+      jsonResponse(403, { detail: "Only the run's creator can cancel it." }),
+    );
+
+    await expect(cancelPipelineRun("42", BACKEND_URL)).rejects.toThrow(
+      "Failed to cancel the run (403): Only the run's creator can cancel it.",
+    );
+  });
+
+  it("rejects an annotation with the reason the backend gave", async () => {
+    mockFetch.mockResolvedValue(
+      jsonResponse(403, { detail: "Only the run's creator can annotate it." }),
+    );
+
+    await expect(
+      updateRunAnnotation("42", BACKEND_URL, { key: "notes", value: "Hi" }),
+    ).rejects.toThrow(
+      "Failed to save the run's notes (403): Only the run's creator can annotate it.",
+    );
+  });
+});
+
 describe("acting as a team", () => {
   const TEAM_ID = "ml-team@project.iam.gserviceaccount.com";
   const HEADER_NAME = "x-tangle-impersonate-team-id";

@@ -10,7 +10,9 @@ import {
 import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import { useMissingSecrets } from "@/components/shared/SecretsManagement/useMissingSecrets";
 import { BackendProvider } from "@/providers/BackendProvider";
+import { useRunTeam } from "@/services/teams/useRunTeam";
 
 import { RerunPipelineButton } from "./RerunPipelineButton";
 
@@ -74,6 +76,16 @@ vi.mock("@/providers/ExecutionDataProvider", () => ({
   useExecutionDataOptional: mockUseExecutionDataOptional,
 }));
 
+vi.mock("@/services/teams/useRunTeam", () => ({
+  useRunTeam: vi.fn(),
+}));
+
+vi.mock("@/components/shared/SecretsManagement/useMissingSecrets", () => ({
+  useMissingSecrets: vi.fn(),
+}));
+
+const ML_TEAM = { id: "ml-team@example.com", label: "ML Research" };
+
 const testOrigin = import.meta.env.VITE_BASE_URL || "http://localhost:3000";
 
 Object.defineProperty(window, "location", {
@@ -116,6 +128,11 @@ describe("<RerunPipelineButton/>", () => {
     mockGetToken.mockReturnValue("mock-token");
     mockAwaitAuthorization.mockClear();
     mockUseExecutionDataOptional.mockReturnValue(undefined);
+    vi.mocked(useRunTeam).mockReturnValue({ status: "none" });
+    vi.mocked(useMissingSecrets).mockReturnValue({
+      missing: [],
+      isChecking: false,
+    });
   });
 
   afterEach(async () => {
@@ -417,6 +434,116 @@ describe("<RerunPipelineButton/>", () => {
           onError: expect.any(Function),
         }),
       );
+    });
+  });
+
+  describe("for a run filed under a team's project", () => {
+    const rerunNow = async () => {
+      await act(async () => {
+        renderWithProviders(
+          <RerunPipelineButton componentSpec={componentSpec} />,
+        );
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByTestId("rerun-pipeline-button"));
+      });
+    };
+
+    beforeEach(() => {
+      mockSubmitPipelineRun.mockImplementation(async (_, __, { onSuccess }) => {
+        onSuccess({ id: 123 });
+      });
+    });
+
+    test("reruns as the team", async () => {
+      vi.mocked(useRunTeam).mockReturnValue({
+        status: "active",
+        team: { ...ML_TEAM, canWrite: true },
+      });
+
+      await rerunNow();
+
+      await waitFor(() => {
+        expect(mockSubmitPipelineRun).toHaveBeenCalledWith(
+          componentSpec,
+          expect.any(String),
+          expect.objectContaining({ teamId: ML_TEAM.id }),
+        );
+      });
+    });
+
+    test("asks before rerunning as you instead of the team", async () => {
+      vi.mocked(useRunTeam).mockReturnValue({
+        status: "not-member",
+        team: ML_TEAM,
+      });
+
+      await rerunNow();
+
+      expect(
+        screen.getByRole("alertdialog", { name: "Rerun this pipeline?" }),
+      ).toBeInTheDocument();
+      expect(screen.getByText("Runs as you")).toBeInTheDocument();
+      expect(mockSubmitPipelineRun).not.toHaveBeenCalled();
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+      });
+
+      await waitFor(() => {
+        expect(mockSubmitPipelineRun).toHaveBeenCalledWith(
+          componentSpec,
+          expect.any(String),
+          expect.objectContaining({ teamId: undefined }),
+        );
+      });
+    });
+
+    test("asks before rerunning without the secrets the run uses", async () => {
+      vi.mocked(useRunTeam).mockReturnValue({
+        status: "active",
+        team: { ...ML_TEAM, canWrite: true },
+      });
+      vi.mocked(useMissingSecrets).mockReturnValue({
+        missing: ["API_KEY"],
+        isChecking: false,
+      });
+
+      await rerunNow();
+
+      expect(
+        screen.getByText(
+          "API_KEY isn't one of the ML Research team's secrets, so the run will fail when it starts.",
+        ),
+      ).toBeInTheDocument();
+      expect(mockSubmitPipelineRun).not.toHaveBeenCalled();
+    });
+
+    test("waits for the run's team before rerunning", async () => {
+      vi.mocked(useRunTeam).mockReturnValue({ status: "resolving" });
+
+      await act(async () => {
+        renderWithProviders(
+          <RerunPipelineButton componentSpec={componentSpec} />,
+        );
+      });
+
+      expect(screen.getByTestId("rerun-pipeline-button")).toBeDisabled();
+    });
+
+    test("won't rerun a run whose projects are on different teams", async () => {
+      vi.mocked(useRunTeam).mockReturnValue({
+        status: "conflict",
+        teams: [ML_TEAM, { id: "data@example.com", label: "Data" }],
+      });
+
+      await act(async () => {
+        renderWithProviders(
+          <RerunPipelineButton componentSpec={componentSpec} />,
+        );
+      });
+
+      expect(screen.getByTestId("rerun-pipeline-button")).toBeDisabled();
     });
   });
 });
