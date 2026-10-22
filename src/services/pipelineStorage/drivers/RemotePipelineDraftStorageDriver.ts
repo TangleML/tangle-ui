@@ -35,6 +35,10 @@ export class RemotePipelineDraftStorageDriver implements PipelineStorageDriver {
   private notified = false;
   private savedContent?: string;
 
+  get ownerId(): string | undefined {
+    return this.remote?.ownerId;
+  }
+
   get remoteRef(): RemotePipelineRef | undefined {
     return (
       this.remote && {

@@ -126,6 +126,16 @@ export async function deleteRemotePipeline(
         throw new RemotePipelineDeletionUncertainError(error);
       });
       if (!current.pipelines.length && !current.nextPageToken) return;
+      if (
+        current.pipelines.some(
+          (candidate) =>
+            candidate.id === pipeline.id &&
+            candidate.file_path === pipeline.file_path,
+        )
+      )
+        throw new Error(
+          "This backend did not delete the pipeline (404). The pipeline is still available.",
+        );
       throw new RemotePipelineDeletionUncertainError();
     }
     if (result.response.status >= 500) {

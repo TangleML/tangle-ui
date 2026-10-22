@@ -7,6 +7,7 @@ import { AgentClient } from "./agentClient";
 const remote = vi.hoisted(() => ({
   init: vi.fn(async () => {}),
   ask: vi.fn(),
+  cancel: vi.fn(async () => {}),
 }));
 vi.mock("comlink", () => ({
   wrap: () => remote,
@@ -92,4 +93,46 @@ it("does not start a turn if navigation aborts during worker initialization", as
   finish();
   await expect(asking).rejects.toThrow();
   expect(remote.ask).not.toHaveBeenCalled();
+});
+
+it("forwards cancellation to the worker and reuses its conversation after acknowledgment", async () => {
+  const terminate = vi.fn();
+  const worker = { terminate } as unknown as Worker;
+  const createWorker = vi.fn(() => worker);
+  const client = new AgentClient("thread-1", createWorker, { mode: "editor" });
+  const controller = new AbortController();
+  let rejectTurn = (_reason: unknown) => {};
+  remote.ask.mockImplementationOnce(
+    () =>
+      new Promise((_resolve, reject) => {
+        rejectTurn = reject;
+      }),
+  );
+  remote.cancel.mockImplementationOnce(async () => {
+    rejectTurn(new Error("Cancelled"));
+  });
+  const deps = { bridge: {} as ToolBridgeApi, onStatus: () => {} };
+  const options = {
+    message: "Edit",
+    aiConfig: {
+      apiBase: "https://api.example.com",
+      apiKey: "test",
+      model: "test",
+    },
+  };
+  const asking = client.ask(deps, options, controller.signal);
+  await vi.waitFor(() => expect(remote.ask).toHaveBeenCalledOnce());
+  controller.abort();
+  await expect(asking).rejects.toThrow("Cancelled");
+  expect(remote.cancel).toHaveBeenCalledOnce();
+  remote.ask.mockResolvedValueOnce({
+    answer: "Ready",
+    componentReferences: {},
+  });
+  await expect(client.ask(deps, options)).resolves.toMatchObject({
+    answer: "Ready",
+  });
+  expect(createWorker).toHaveBeenCalledOnce();
+  expect(remote.init).toHaveBeenCalledOnce();
+  expect(terminate).not.toHaveBeenCalled();
 });
