@@ -30,6 +30,7 @@ type ConfirmationDialogProps = {
   dismissForeverLabel?: string;
   onConfirm: () => void;
   onCancel?: () => void;
+  onCloseAutoFocus?: (event: Event) => void;
 } & (
   | { trigger: ReactNode; isOpen?: boolean }
   | { trigger?: ReactNode; isOpen: boolean }
@@ -49,6 +50,7 @@ const ConfirmationDialog = ({
   isOpen,
   onConfirm,
   onCancel = () => {},
+  onCloseAutoFocus,
 }: ConfirmationDialogProps) => {
   const [dismissForever, setDismissForever] = useState(false);
   const checkboxId = useId();
@@ -103,7 +105,7 @@ const ConfirmationDialog = ({
           {trigger}
         </AlertDialogTrigger>
       )}
-      <AlertDialogContent>
+      <AlertDialogContent onCloseAutoFocus={onCloseAutoFocus}>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
