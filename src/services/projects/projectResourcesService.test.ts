@@ -54,6 +54,41 @@ beforeEach(() => {
 });
 
 describe("projectResourcesService", () => {
+  it("keeps every migration resource request on the captured backend", async () => {
+    const backendUrl = "https://backend.example.com";
+    vi.mocked(
+      apiSdk.listResourcesApiProjectsProjectIdResourcesGet,
+    ).mockResolvedValue(
+      createMockApiResponse({
+        resources: [],
+        total_count: 0,
+        next_page_token: null,
+      }),
+    );
+    vi.mocked(
+      apiSdk.createResourceApiProjectsProjectIdResourcesPost,
+    ).mockResolvedValue(createMockApiResponse(resourceDto));
+    vi.mocked(
+      apiSdk.deleteResourceApiProjectsProjectIdResourcesResourceIdDelete,
+    ).mockResolvedValue(createMockApiResponse(undefined, 204));
+    await listProjectResources("p1", {}, backendUrl);
+    await createProjectResource(
+      "p1",
+      { entity: "pipeline", entityId: "pipe-9" },
+      backendUrl,
+    );
+    await deleteProjectResource("p1", "r1", backendUrl);
+    for (const request of [
+      apiSdk.listResourcesApiProjectsProjectIdResourcesGet,
+      apiSdk.createResourceApiProjectsProjectIdResourcesPost,
+      apiSdk.deleteResourceApiProjectsProjectIdResourcesResourceIdDelete,
+    ]) {
+      expect(request).toHaveBeenCalledWith(
+        expect.objectContaining({ baseUrl: backendUrl }),
+      );
+    }
+  });
+
   it("lists resources and maps pagination fields", async () => {
     vi.mocked(
       apiSdk.listResourcesApiProjectsProjectIdResourcesGet,

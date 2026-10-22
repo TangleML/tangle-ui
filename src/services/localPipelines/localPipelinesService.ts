@@ -1,13 +1,20 @@
+import { getPipelineDocument } from "@/services/pipelineSpecService";
+import {
+  assertPipelineMigrationBackend,
+  findPipelineMigration,
+} from "@/services/pipelineStorage/pipelineMigrations";
 import {
   findById,
   findByStorageKey,
   registeredStorageKeys,
 } from "@/services/pipelineStorage/pipelineRegistry";
+import { editorSpecFromRemoteTask } from "@/services/pipelineStorage/remotePipelineTask";
 import {
   getComponentFileFromList,
   getComponentFileNamesFromList,
 } from "@/utils/componentStore";
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
+import { componentSpecToYaml } from "@/utils/yaml";
 
 import type { LocalPipeline, LocalPipelinePointer } from "./types";
 import { pointerKey } from "./types";
@@ -72,25 +79,44 @@ async function resolvePointer(
 
 export async function readLocalPipeline(
   pointer: LocalPipelinePointer,
+  backendUrl?: string,
 ): Promise<LocalPipeline | undefined> {
   const names = new Set(
     await getComponentFileNamesFromList(USER_PIPELINES_LIST_NAME),
   );
   const name = await resolvePointer(pointer, names);
-  if (!name) {
-    return undefined;
+  if (name) {
+    const entry = await getComponentFileFromList(
+      USER_PIPELINES_LIST_NAME,
+      name,
+    );
+    if (entry) {
+      return {
+        name,
+        spec: entry.componentRef.spec,
+        yaml: entry.componentRef.text,
+        modifiedAt: entry.modificationTime,
+      };
+    }
   }
 
-  const entry = await getComponentFileFromList(USER_PIPELINES_LIST_NAME, name);
-  if (!entry) {
-    return undefined;
-  }
-
+  const migration = await findPipelineMigration({
+    name: pointer.localName,
+    fileId: pointer.localId,
+  });
+  if (!migration) return undefined;
+  if (backendUrl !== undefined)
+    assertPipelineMigrationBackend(migration.remote, backendUrl);
+  const document = await getPipelineDocument(
+    migration.remote.pipelineId,
+    migration.remote.backendUrl,
+  );
+  const spec = editorSpecFromRemoteTask(document.root_pipeline_task);
   return {
-    name,
-    spec: entry.componentRef.spec,
-    yaml: entry.componentRef.text,
-    modifiedAt: entry.modificationTime,
+    name: spec.name ?? migration.name,
+    spec,
+    yaml: componentSpecToYaml(spec),
+    remote: migration.remote,
   };
 }
 
@@ -106,13 +132,16 @@ export async function resolvePointers(
     await getComponentFileNamesFromList(USER_PIPELINES_LIST_NAME),
   );
   const entries = await Promise.all(
-    pointers.map(
-      async (pointer) =>
-        [
-          pointerKey(pointer),
-          (await resolvePointer(pointer, names)) ?? null,
-        ] as const,
-    ),
+    pointers.map(async (pointer) => {
+      const name = await resolvePointer(pointer, names);
+      const migration = name
+        ? undefined
+        : await findPipelineMigration({
+            name: pointer.localName,
+            fileId: pointer.localId,
+          });
+      return [pointerKey(pointer), name ?? migration?.name ?? null] as const;
+    }),
   );
   return Object.fromEntries(entries);
 }

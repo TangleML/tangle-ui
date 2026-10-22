@@ -54,7 +54,7 @@ function renderRow(onUpload: () => void, disabled = false) {
   );
 }
 
-it("always explains sharing and removal before upload, including with the old skip preference", () => {
+it("always explains sharing and retained project links before upload, including with the old skip preference", () => {
   localStorage.setItem("skip-save-as-remote-pipeline-confirmation", "true");
   const upload = vi.fn();
   renderRow(upload);
@@ -65,7 +65,7 @@ it("always explains sharing and removal before upload, including with the old sk
     "Other users with read access to that backend can see them.",
   );
   expect(screen.getByRole("alertdialog")).toHaveTextContent(
-    "its browser copy is removed",
+    "Its browser copy and existing project links are kept",
   );
   expect(
     screen.queryByLabelText("Don't show this again"),

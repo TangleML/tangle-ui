@@ -30,7 +30,7 @@ export const LoadingScreen = ({
     <BlockStack fill gap="8" className="bg-background">
       <BlockStack align="center">
         <Spinner size={32} />
-        <Paragraph tone="subdued" size="sm">
+        <Paragraph tone="subdued" size="sm" role="status">
           {message}
         </Paragraph>
       </BlockStack>

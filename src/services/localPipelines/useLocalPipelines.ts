@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
+import { useBackend } from "@/providers/BackendProvider";
 import { MINUTES } from "@/utils/constants";
 
 import {
@@ -29,13 +30,19 @@ export function useLocalPipelineNames() {
 }
 
 export function useLocalPipeline(pointer: LocalPipelinePointer | undefined) {
+  const { backendUrl } = useBackend();
   return useQuery({
-    queryKey: LocalPipelinesQueryKeys.Pointer(pointer ?? { localName: "" }),
+    queryKey: [
+      ...LocalPipelinesQueryKeys.Pointer(pointer ?? { localName: "" }),
+      backendUrl,
+    ],
     queryFn: () => {
       if (!pointer) {
         throw new Error("A pointer is required");
       }
-      return readLocalPipeline(pointer).then((found) => found ?? null);
+      return readLocalPipeline(pointer, backendUrl).then(
+        (found) => found ?? null,
+      );
     },
     enabled: pointer !== undefined,
     staleTime: LOCAL_STALE_TIME,

@@ -1,7 +1,11 @@
 import "@xyflow/react/dist/style.css";
 import "@/styles/editor.css";
 
-import { Link as RouterLink, useRouterState } from "@tanstack/react-router";
+import {
+  Link as RouterLink,
+  useNavigate,
+  useRouterState,
+} from "@tanstack/react-router";
 import { ReactFlowProvider } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
 import { type ReactNode, useEffect } from "react";
@@ -9,6 +13,7 @@ import type { FallbackProps } from "react-error-boundary";
 
 import { ComponentEditorProvider } from "@/components/shared/ComponentEditor/ComponentEditorProvider";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
+import { LocalPipelineMigration } from "@/components/shared/LocalPipelineMigration";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { Button } from "@/components/ui/button";
@@ -23,6 +28,7 @@ import { useTourMode } from "@/providers/TourProvider/TourModeContext";
 import { TourSaveExploreDialog } from "@/providers/TourProvider/TourSaveExploreDialog";
 import { TourSecretsDialog } from "@/providers/TourProvider/TourSecretsDialog";
 import { APP_ROUTES } from "@/routes/appRoutes";
+import { readProjectIdParam } from "@/routes/projectRunSearch";
 import { QuickRunSubmitterProvider } from "@/routes/v2/pages/Editor/components/QuickRunSubmitterContext";
 import {
   AiChatStoreProvider,
@@ -189,6 +195,10 @@ function EditorV2Content({
 }) {
   const { navigation } = useSharedStores();
   const tourMode = useTourMode();
+  const navigate = useNavigate();
+  const projectId = useRouterState({
+    select: (state) => readProjectIdParam(state.matches.at(-1)?.search),
+  });
 
   const requestedName =
     pipelineRef &&
@@ -202,9 +212,30 @@ function EditorV2Content({
 
   let body: ReactNode;
   if (pipelineRef) {
+    const editor = <PipelineEditor pipelineRef={pipelineRef} />;
     body = (
       <DriverPermissionGate pipelineRef={pipelineRef}>
-        <PipelineEditor pipelineRef={pipelineRef} />
+        {"source" in pipelineRef ? (
+          editor
+        ) : (
+          <LocalPipelineMigration
+            pipelineRef={pipelineRef}
+            projectId={projectId}
+            onMigrated={(file, clearProjectContext) => {
+              void navigate({
+                to: APP_ROUTES.REMOTE_PIPELINE_EDITOR,
+                params: { pipelineId: file.id },
+                search: {
+                  projectId: clearProjectContext ? undefined : projectId,
+                },
+                replace: true,
+                resetScroll: false,
+              });
+            }}
+          >
+            {editor}
+          </LocalPipelineMigration>
+        )}
       </DriverPermissionGate>
     );
   } else if (tourMode) {

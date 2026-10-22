@@ -4,6 +4,8 @@ import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 
 import {
   type FolderEntry,
+  type PipelineMigration,
+  type PipelineMigrationAttempt,
   type PipelineRegistryEntry,
   ROOT_FOLDER_ID,
 } from "./types";
@@ -11,6 +13,8 @@ import {
 export const pipelineStorageDb = new Dexie("tangle_pipelines") as Dexie & {
   pipeline_registry: EntityTable<PipelineRegistryEntry, "id">;
   folders: EntityTable<FolderEntry, "id">;
+  pipeline_migrations: EntityTable<PipelineMigration, "key">;
+  pipeline_migration_attempts: EntityTable<PipelineMigrationAttempt, "localId">;
 };
 
 pipelineStorageDb.version(1).stores({
@@ -18,8 +22,19 @@ pipelineStorageDb.version(1).stores({
   folders: "id, parentId",
 });
 
-pipelineStorageDb.on("ready", async () => {
-  const count = await pipelineStorageDb.pipeline_registry.count();
+pipelineStorageDb.version(2).stores({
+  pipeline_migrations: "key",
+});
+
+pipelineStorageDb.version(3).stores({
+  pipeline_migration_attempts: "localId",
+});
+
+pipelineStorageDb.on("ready", async (db) => {
+  // The ready callback's connection stays usable across the dynamic import
+  // while ordinary callers wait for registry hydration to finish.
+  const registry = db.table<PipelineRegistryEntry>("pipeline_registry");
+  const count = await registry.count();
   if (count > 0) return;
 
   const { getAllComponentFilesFromList } =
@@ -30,21 +45,14 @@ pipelineStorageDb.on("ready", async () => {
 
   if (knownPipelines.size === 0) return;
 
-  const pipelineForRegistry = [...knownPipelines.entries()].map(
-    ([storageKey]) => ({
-      id: crypto.randomUUID(),
-      storageKey,
-      folderId: ROOT_FOLDER_ID,
-    }),
-  );
+  const pipelineForRegistry = [...knownPipelines.keys()].map((storageKey) => ({
+    id: crypto.randomUUID(),
+    storageKey,
+    folderId: ROOT_FOLDER_ID,
+  }));
 
   try {
-    /**
-     * This code may be revisited to ensure stability and performance.
-     */
-    pipelineForRegistry.forEach(async (row) => {
-      await pipelineStorageDb.pipeline_registry.upsert(row.id, row);
-    });
+    await registry.bulkPut(pipelineForRegistry);
   } catch (e) {
     console.error(e);
     throw e;

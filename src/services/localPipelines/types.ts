@@ -1,3 +1,4 @@
+import type { RemotePipelineRef } from "@/services/pipelineStorage/types";
 import type { ComponentSpec } from "@/utils/componentSpec";
 
 export interface LocalPipelinePointer {
@@ -9,7 +10,8 @@ export interface LocalPipeline {
   name: string;
   spec: ComponentSpec;
   yaml: string;
-  modifiedAt: Date;
+  modifiedAt?: Date;
+  remote?: RemotePipelineRef;
 }
 
 export const pointerKey = (pointer: LocalPipelinePointer) =>

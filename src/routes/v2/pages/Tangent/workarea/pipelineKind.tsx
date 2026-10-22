@@ -3,11 +3,12 @@ import type { ComponentProps } from "react";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { Paragraph } from "@/components/ui/typography";
 import { useBackend } from "@/providers/BackendProvider";
-import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { EmbeddedPipelineEditor } from "@/routes/v2/pages/Editor/EmbeddedPipelineEditor";
+import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { findById } from "@/services/pipelineStorage/pipelineRegistry";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import type { EditorPipelineRef } from "@/services/pipelineStorage/types";
+import { pipelineFileTarget } from "@/services/projects/pipelineResource";
 import { parseIdentity } from "@/services/projects/resourceTarget";
 
 import { registerWorkareaKind } from "./registry";
@@ -53,6 +54,9 @@ function PipelineWorkareaEditor({
     <EmbeddedPipelineEditor
       pipelineRef={pipelineRef}
       {...props}
+      onMigrated={(file) =>
+        project.replaceWorkareaTarget(target, pipelineFileTarget(file))
+      }
       onTitleChange={(title) => project.retitleWorkareaTarget(target, title)}
     />
   );

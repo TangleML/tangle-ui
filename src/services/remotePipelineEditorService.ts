@@ -100,3 +100,27 @@ export async function writeRemotePipelineDocument(
   }
   return result.data;
 }
+
+export async function findRemotePipelineDocumentByPath(
+  backendUrl: string,
+  filePath: string,
+): Promise<SavedPipelineDocument | undefined> {
+  const result = await client.get<{ 200: SavedPipelineDocument }>({
+    baseUrl: backendUrl,
+    url: "/api/users/me/pipelines",
+    query: { file_path: filePath },
+  });
+  if (result.response.status === 404) return undefined;
+  if (!result.response.ok || !result.data) {
+    throw apiError(
+      "Failed to check for an earlier upload",
+      result.response.status,
+      result.error,
+    );
+  }
+  validateDocument(result.data);
+  if (result.data.file_path !== filePath) {
+    throw new Error("The backend returned a different pipeline file.");
+  }
+  return result.data;
+}

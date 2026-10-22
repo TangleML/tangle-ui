@@ -344,6 +344,18 @@ export class TangentProjectStore {
     });
   }
 
+  @action replaceWorkareaTarget(
+    previous: WorkareaTarget,
+    target: WorkareaTarget,
+  ) {
+    this.#putSlice(
+      this.workareaTabs.map((tab) =>
+        sameTarget(tab.target, previous) ? { ...tab, target } : tab,
+      ),
+      this.activeWorkareaTabId,
+    );
+  }
+
   @action selectWorkareaTab(id: string) {
     const tabs = this.workareaTabs;
     if (!tabs.some((tab) => tab.id === id)) return;

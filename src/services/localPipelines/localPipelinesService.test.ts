@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { getPipelineDocument } from "@/services/pipelineSpecService";
+import { findPipelineMigration } from "@/services/pipelineStorage/pipelineMigrations";
 import * as registry from "@/services/pipelineStorage/pipelineRegistry";
 import type { ComponentFileEntry } from "@/utils/componentStore";
 import * as componentStore from "@/utils/componentStore";
@@ -14,9 +16,24 @@ import {
 
 vi.mock("@/utils/componentStore");
 vi.mock("@/services/pipelineStorage/pipelineRegistry");
+vi.mock("@/services/pipelineStorage/pipelineMigrations", async (original) => ({
+  ...(await original<
+    typeof import("@/services/pipelineStorage/pipelineMigrations")
+  >()),
+  findPipelineMigration: vi.fn(),
+}));
+vi.mock("@/services/pipelineSpecService", () => ({
+  getPipelineDocument: vi.fn(),
+}));
 
 const store = vi.mocked(componentStore);
 const rows = vi.mocked(registry);
+const remote = {
+  source: "remote",
+  backendUrl: "https://backend.example",
+  pipelineId: "remote-id",
+} as const;
+const migration = { key: "id/id-9", remote, name: "Churn remote" };
 
 function entry(name: string): ComponentFileEntry {
   return {
@@ -34,6 +51,7 @@ function entry(name: string): ComponentFileEntry {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(findPipelineMigration).mockResolvedValue(undefined);
 });
 
 function held(...names: string[]) {
@@ -137,6 +155,77 @@ describe("readLocalPipeline", () => {
 
     expect(found?.spec).toMatchObject({ name: "Churn model" });
   });
+
+  it.each([undefined, "id-9"])(
+    "reads the migrated remote pipeline for an old local pointer (%s)",
+    async (localId) => {
+      held();
+      vi.mocked(findPipelineMigration).mockResolvedValue(migration);
+      vi.mocked(getPipelineDocument).mockResolvedValue({
+        id: remote.pipelineId,
+        file_path: "pipelines/id-9.yaml",
+        pipeline_name: "Renamed remotely",
+        user_id: "user-1",
+        pipeline_run_annotations: {},
+        root_pipeline_task: {
+          arguments: { input: "kept" },
+          componentRef: {
+            spec: {
+              name: "Renamed remotely",
+              inputs: [{ name: "input", type: "String" }],
+              implementation: { graph: { tasks: {} } },
+            },
+          },
+        },
+      });
+
+      const found = await readLocalPipeline({
+        localName: "Churn model",
+        localId,
+      });
+
+      expect(findPipelineMigration).toHaveBeenCalledWith({
+        name: "Churn model",
+        fileId: localId,
+      });
+      expect(getPipelineDocument).toHaveBeenCalledWith(
+        remote.pipelineId,
+        remote.backendUrl,
+      );
+      expect(found).toMatchObject({
+        name: "Renamed remotely",
+        remote,
+        spec: { inputs: [{ name: "input", value: "kept" }] },
+      });
+      expect(found?.yaml).toContain("value: kept");
+    },
+  );
+
+  it("rejects a migrated preview on another backend before requesting its document", async () => {
+    held();
+    vi.mocked(findPipelineMigration).mockResolvedValue(migration);
+    await expect(
+      readLocalPipeline(
+        { localName: "Churn model", localId: "id-9" },
+        "https://other.example.com",
+      ),
+    ).rejects.toThrow("Select that backend in Settings");
+    expect(getPipelineDocument).not.toHaveBeenCalled();
+  });
+
+  it("keeps a live name-only pipeline ahead of an older migration", async () => {
+    held("Churn model");
+    vi.mocked(findPipelineMigration).mockResolvedValue(migration);
+
+    expect(await readLocalPipeline({ localName: "Churn model" })).toMatchObject(
+      {
+        name: "Churn model",
+        yaml: "name: Churn model\n",
+      },
+    );
+    expect(findPipelineMigration).not.toHaveBeenCalled();
+    expect(getPipelineDocument).not.toHaveBeenCalled();
+  });
 });
 
 describe("resolvePointers", () => {
@@ -187,6 +276,28 @@ describe("resolvePointers", () => {
     ]);
 
     expect(store.getComponentFileNamesFromList).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps migrated pointers available without fetching remote content", async () => {
+    held("Churn model");
+    vi.mocked(findPipelineMigration).mockResolvedValue(migration);
+
+    await expect(
+      resolvePointers([
+        { localName: "Churn model" },
+        { localName: "Churn model", localId: "id-9" },
+      ]),
+    ).resolves.toEqual({
+      "Churn model|": "Churn model",
+      "Churn model|id-9": migration.name,
+    });
+    expect(findPipelineMigration).toHaveBeenCalledOnce();
+    expect(findPipelineMigration).toHaveBeenCalledWith({
+      name: "Churn model",
+      fileId: "id-9",
+    });
+    expect(getPipelineDocument).not.toHaveBeenCalled();
+    expect(store.getComponentFileFromList).not.toHaveBeenCalled();
   });
 });
 

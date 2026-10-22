@@ -1,17 +1,21 @@
 import "@/styles/editor.css";
 
 import { DndContext } from "@dnd-kit/core";
-import { useParams } from "@tanstack/react-router";
+import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { ReactFlowProvider } from "@xyflow/react";
 import { useEffect } from "react";
 
 import PipelineEditor from "@/components/Editor/PipelineEditor";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
+import { LocalPipelineMigration } from "@/components/shared/LocalPipelineMigration";
 import { BlockStack } from "@/components/ui/layout";
 import { Paragraph } from "@/components/ui/typography";
 import { useLoadComponentSpecFromPath } from "@/hooks/useLoadComponentSpecFromPath";
 import { addRecentlyViewed } from "@/hooks/useRecentlyViewed";
+import { APP_ROUTES } from "@/routes/appRoutes";
+import { readProjectIdParam } from "@/routes/projectRunSearch";
+import { DriverPermissionGate } from "@/routes/v2/pages/Editor/components/DriverPermissionGate";
 
 const LocalEditor = () => {
   const { componentSpec, error } = useLoadComponentSpecFromPath();
@@ -53,10 +57,51 @@ const LocalEditor = () => {
 
 const Editor = () => {
   const params = useParams({ strict: false });
-  if ("pipelineId" in params) {
-    return <div className="h-full w-full bg-slate-100 dark:bg-background" />;
-  }
-  return <LocalEditor />;
+  const search = useSearch({ strict: false });
+  const navigate = useNavigate();
+  const pipelineId = "pipelineId" in params ? params.pipelineId : undefined;
+  const projectId = readProjectIdParam(search);
+
+  useEffect(() => {
+    if (pipelineId) {
+      void navigate({
+        to: APP_ROUTES.REMOTE_PIPELINE_EDITOR,
+        params: { pipelineId },
+        search: { projectId },
+        replace: true,
+      });
+    }
+  }, [navigate, pipelineId, projectId]);
+
+  if (pipelineId) return <LoadingScreen message="Loading pipeline..." />;
+  if (!("name" in params) || typeof params.name !== "string" || !params.name)
+    return <LocalEditor />;
+
+  const pipelineRef = {
+    name: params.name,
+    fileId:
+      "fileId" in search && typeof search.fileId === "string"
+        ? search.fileId
+        : undefined,
+  };
+  return (
+    <DriverPermissionGate pipelineRef={pipelineRef}>
+      <LocalPipelineMigration
+        pipelineRef={pipelineRef}
+        projectId={projectId}
+        onMigrated={(file, clearProjectContext) => {
+          void navigate({
+            to: APP_ROUTES.REMOTE_PIPELINE_EDITOR,
+            params: { pipelineId: file.id },
+            search: { projectId: clearProjectContext ? undefined : projectId },
+            replace: true,
+          });
+        }}
+      >
+        <LocalEditor />
+      </LocalPipelineMigration>
+    </DriverPermissionGate>
+  );
 };
 
 export default Editor;

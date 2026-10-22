@@ -8,6 +8,7 @@ import { useEffect, useRef } from "react";
 import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import { ComponentEditorProvider } from "@/components/shared/ComponentEditor/ComponentEditorProvider";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
+import { LocalPipelineMigration } from "@/components/shared/LocalPipelineMigration";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { InlineStack } from "@/components/ui/layout";
@@ -26,6 +27,7 @@ import {
 import { SharedStoreRegistrar } from "@/routes/v2/shared/store/SharedStoreRegistrar";
 import { DockArea } from "@/routes/v2/shared/windows/DockArea";
 import { WindowContainer } from "@/routes/v2/shared/windows/WindowContainer";
+import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import {
   type EditorPipelineRef,
   isRemotePipelineDraftRef,
@@ -57,6 +59,7 @@ interface EmbeddedPipelineEditorProps {
   isActive: boolean;
   projectId: string;
   onTitleChange?: (title: string) => void;
+  onMigrated?: (file: PipelineFile) => void;
   onStoreReady?: (store: SharedUIStore) => void;
   onStoreClosed?: () => void;
   sessionId?: string;
@@ -250,10 +253,22 @@ const RemoteEmbeddedPipelineEditor = withSuspenseWrapper(
 );
 
 export function EmbeddedPipelineEditor(props: EmbeddedPipelineEditorProps) {
-  return isRemotePipelineRef(props.pipelineRef) ||
-    isRemotePipelineDraftRef(props.pipelineRef) ? (
-    <RemoteEmbeddedPipelineEditor {...props} />
-  ) : (
-    <EditableEmbeddedPipelineEditor {...props} />
+  if (
+    isRemotePipelineRef(props.pipelineRef) ||
+    isRemotePipelineDraftRef(props.pipelineRef)
+  ) {
+    return <RemoteEmbeddedPipelineEditor {...props} />;
+  }
+  return (
+    <DriverPermissionGate pipelineRef={props.pipelineRef}>
+      <LocalPipelineMigration
+        pipelineRef={props.pipelineRef}
+        projectId={props.projectId}
+        isActive={props.isActive}
+        onMigrated={(file) => props.onMigrated?.(file)}
+      >
+        <EditableEmbeddedPipelineEditor {...props} />
+      </LocalPipelineMigration>
+    </DriverPermissionGate>
   );
 }
