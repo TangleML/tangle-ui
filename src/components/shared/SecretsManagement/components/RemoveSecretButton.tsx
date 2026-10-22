@@ -11,24 +11,28 @@ import { SecretsQueryKeys } from "../types";
 
 interface RemoveSecretButtonProps {
   secret: Pick<Secret, "id" | "name">;
+  teamId?: string;
   onSuccess?: () => void;
 }
 
 export function RemoveSecretButton({
   secret,
+  teamId,
   onSuccess,
 }: RemoveSecretButtonProps) {
   const notify = useToastNotification();
   const queryClient = useQueryClient();
 
   const { mutate: removeSecretMutation, isPending } = useMutation({
-    mutationFn: () => removeSecret(secret.id),
+    mutationFn: () => removeSecret(secret.id, teamId),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: SecretsQueryKeys.All() });
+      void queryClient.invalidateQueries({
+        queryKey: SecretsQueryKeys.All(teamId),
+      });
       onSuccess?.();
     },
-    onError: () => {
-      notify("Failed to remove secret", "error");
+    onError: (error) => {
+      notify(error.message, "error");
     },
   });
 
