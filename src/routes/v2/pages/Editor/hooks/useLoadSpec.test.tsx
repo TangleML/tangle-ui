@@ -22,10 +22,16 @@ const loadUndoHistory = vi.hoisted(() => vi.fn().mockResolvedValue(null));
 vi.mock("@/services/pipelineStorage/PipelineStorageProvider", () => ({
   usePipelineStorage: () => ({ resolvePipeline }),
 }));
-vi.mock("@/routes/v2/pages/Editor/utils/undoHistoryStorage", () => ({
-  loadUndoHistory,
-  createUndoStoreWithEvents: vi.fn(),
-}));
+vi.mock(
+  "@/routes/v2/pages/Editor/utils/undoHistoryStorage",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("@/routes/v2/pages/Editor/utils/undoHistoryStorage")
+    >()),
+    loadUndoHistory,
+    saveUndoHistory: vi.fn().mockResolvedValue(undefined),
+  }),
+);
 vi.mock("@/routes/v2/pages/Editor/utils/hydrateSpecRefs", () => ({
   hydrateLoadedSpecRefs: vi.fn(),
 }));
@@ -37,8 +43,12 @@ const remote = {
   pipelineId: "pipeline-1",
 } as const;
 const local = { name: "Original", fileId: "local-1" };
-const file = (name: string) => ({
+const file = (
+  name: string,
+  ref?: { backendUrl: string; pipelineId: string },
+) => ({
   storageKey: name,
+  remote: ref,
   read: async () => `name: ${name}\nimplementation:\n  graph:\n    tasks: {}\n`,
 });
 
@@ -56,11 +66,16 @@ const EditingChild = observer(function EditingChild({
   pipelineRef: EditorPipelineRef;
 }) {
   const { data } = useLoadSpec(pipelineRef);
-  const [autoSave] = useState(() => new AutoSaveStore(new UndoStore()));
+  const [undo] = useState(() => new UndoStore());
+  const [autoSave] = useState(() => new AutoSaveStore(undo));
   useEffect(() => {
+    undo.init(data.spec, data.restoredUndoStore);
     autoSave.init(data.spec, data.file, data.saveState);
-    return () => autoSave.dispose();
-  }, [autoSave, data]);
+    return () => {
+      autoSave.dispose();
+      undo.dispose();
+    };
+  }, [autoSave, data, undo]);
   return (
     <>
       <span>{data.spec.name}</span>
@@ -74,6 +89,12 @@ const EditingChild = observer(function EditingChild({
         Edit again
       </button>
       <button onClick={() => void autoSave.save().catch(() => {})}>Save</button>
+      <button onClick={() => undo.undo()} disabled={!undo.canUndo}>
+        Undo
+      </button>
+      <button onClick={() => undo.redo()} disabled={!undo.canRedo}>
+        Redo
+      </button>
     </>
   );
 });
@@ -104,13 +125,16 @@ afterEach(() => {
 
 describe("useLoadSpec", () => {
   it("keeps nested StrictMode observers stable, then reloads a closed remote document", async () => {
-    resolvePipeline.mockResolvedValue(file("Before"));
+    resolvePipeline.mockResolvedValue(file("Before", remote));
     const first = render(view(remote));
     await screen.findByText("Before");
     expect(resolvePipeline).toHaveBeenCalledExactlyOnceWith(remote);
-    expect(loadUndoHistory).not.toHaveBeenCalled();
+    expect(loadUndoHistory).toHaveBeenCalledExactlyOnceWith(
+      JSON.stringify(["remote-pipeline", remote.backendUrl, remote.pipelineId]),
+      expect.stringContaining("Before"),
+    );
     await act(async () => first.unmount());
-    resolvePipeline.mockResolvedValue(file("After"));
+    resolvePipeline.mockResolvedValue(file("After", remote));
     render(view(remote));
     await screen.findByText("After");
     expect(resolvePipeline).toHaveBeenCalledTimes(2);
@@ -158,6 +182,36 @@ describe("useLoadSpec", () => {
       render(view(pipelineRef));
       await screen.findByText("Saved on server");
       expect(resolvePipeline).toHaveBeenCalledTimes(2);
+    },
+  );
+
+  it.each([remote, local])(
+    "keeps undo and redo when reopening a failed edit without stored history: %j",
+    async (pipelineRef) => {
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      const write = vi.fn().mockRejectedValue(new Error("Save unavailable"));
+      resolvePipeline.mockResolvedValue({
+        ...file("Original", "source" in pipelineRef ? pipelineRef : undefined),
+        write,
+      });
+      const first = render(view(pipelineRef, true));
+      await screen.findByText("Original");
+      fireEvent.click(screen.getByText("Edit"));
+      fireEvent.click(screen.getByText("Save"));
+      await screen.findByText("Save unavailable");
+      await act(async () => first.unmount());
+
+      render(view(pipelineRef, true));
+      await screen.findByText("Unsaved edit");
+      const undo = screen.getByRole("button", { name: "Undo" });
+      expect(undo).toBeEnabled();
+      fireEvent.click(undo);
+      expect(screen.queryByText("Unsaved edit")).not.toBeInTheDocument();
+      const redo = screen.getByRole("button", { name: "Redo" });
+      expect(redo).toBeEnabled();
+      fireEvent.click(redo);
+      expect(screen.getByText("Unsaved edit")).toBeInTheDocument();
+      expect(resolvePipeline).toHaveBeenCalledTimes(1);
     },
   );
 
@@ -223,11 +277,11 @@ describe("useLoadSpec", () => {
   });
 
   it("loads the same ID separately for each backend", async () => {
-    resolvePipeline.mockResolvedValue(file("First backend"));
+    resolvePipeline.mockResolvedValue(file("First backend", remote));
     const { rerender } = render(view(remote));
     await screen.findByText("First backend");
     const other = { ...remote, backendUrl: "https://other.example.com" };
-    resolvePipeline.mockResolvedValue(file("Second backend"));
+    resolvePipeline.mockResolvedValue(file("Second backend", other));
     rerender(view(other));
     await screen.findByText("Second backend");
     expect(resolvePipeline).toHaveBeenLastCalledWith(other);
@@ -239,6 +293,9 @@ describe("useLoadSpec", () => {
     render(view(ref));
     await screen.findByText("Current name");
     expect(resolvePipeline).toHaveBeenCalledExactlyOnceWith(ref);
-    expect(loadUndoHistory).toHaveBeenCalledExactlyOnceWith("Current name");
+    expect(loadUndoHistory).toHaveBeenCalledExactlyOnceWith(
+      "Current name",
+      undefined,
+    );
   });
 });
