@@ -44,17 +44,6 @@ import { RemotePipelineActions } from "./RemotePipelineActions";
 import { RemotePipelineShell } from "./RemotePipelineShell";
 import { remotePipelineViewRegistry } from "./remotePipelineViewRegistry";
 
-function RemotePipelineUrlSync({
-  spec,
-  pipelineId,
-}: {
-  spec: ComponentSpec;
-  pipelineId: string;
-}) {
-  useRemotePipelineUrlSync(spec, pipelineId);
-  return null;
-}
-
 const VIEW_PRESETS: ViewPreset[] = [
   {
     label: "Default",
@@ -102,6 +91,7 @@ const RemotePipelineContent = observer(function RemotePipelineContent({
     pipelineFile.init(file ?? null);
     return () => pipelineFile.dispose();
   }, [pipelineFile, file]);
+  useRemotePipelineUrlSync(spec, pipelineId);
 
   useEffect(() => {
     if (!windows.getWindowById("pipeline-tools")) {
@@ -138,9 +128,6 @@ const RemotePipelineContent = observer(function RemotePipelineContent({
         </>
       }
     >
-      {pipelineId && navigation.rootSpec === spec && (
-        <RemotePipelineUrlSync spec={spec} pipelineId={pipelineId} />
-      )}
       {activeSpec && (
         <SpecProvider spec={activeSpec}>
           <InlineStack

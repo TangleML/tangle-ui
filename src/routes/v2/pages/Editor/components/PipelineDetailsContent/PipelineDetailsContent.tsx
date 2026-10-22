@@ -35,202 +35,203 @@ interface PipelineDetailsContentProps {
   ownerId?: string;
 }
 
-export const PipelineDetailsContent = observer(function PipelineDetailsContent({
-  readOnly = false,
-  ownerId,
-}: PipelineDetailsContentProps) {
-  const { track } = useAnalytics();
-  const { navigation } = useSharedStores();
-  const pipelineSpec = useSpec();
-  const notify = useToastNotification();
-  const { projectIds } = useRunProjectContext();
-  const {
-    updatePipelineDescription,
-    updatePipelineNotes,
-    updateRunNameTemplate,
-    renameSubgraph,
-  } = usePipelineActions();
+export const PipelineDetailsContent = observer<PipelineDetailsContentProps>(
+  function PipelineDetailsContent({ readOnly = false, ownerId }) {
+    const { track } = useAnalytics();
+    const { navigation } = useSharedStores();
+    const pipelineSpec = useSpec();
+    const notify = useToastNotification();
+    const { projectIds } = useRunProjectContext();
+    const {
+      updatePipelineDescription,
+      updatePipelineNotes,
+      updateRunNameTemplate,
+      renameSubgraph,
+    } = usePipelineActions();
 
-  if (!pipelineSpec) {
+    if (!pipelineSpec) {
+      return (
+        <BlockStack className="h-full items-center justify-center p-4">
+          <Icon name="FileQuestionMark" size="lg" className="text-gray-300" />
+          <Text size="xs" tone="subdued" className="text-center mt-2">
+            No pipeline loaded
+          </Text>
+        </BlockStack>
+      );
+    }
+
+    const yamlText = serializeComponentSpecToYaml(pipelineSpec);
+    const isNestedSubgraph = navigation.navigationDepth > 0;
+
+    const handleNavigateToLevel = (index: number) => {
+      navigation.navigateToLevel(index);
+    };
+
+    const handleDescriptionCommit = (value: string | undefined) => {
+      if (readOnly) return;
+      if (value !== pipelineSpec.description) {
+        updatePipelineDescription(pipelineSpec, value);
+        track("v2.pipeline_editor.configuration_panel.description.updated");
+      }
+    };
+
+    const handleNotesCommit = (value: string | undefined) => {
+      if (readOnly) return;
+      const currentNotes =
+        pipelineSpec.annotations.get(PIPELINE_NOTES_ANNOTATION) || undefined;
+      if (value !== currentNotes) {
+        updatePipelineNotes(pipelineSpec, value);
+        track("v2.pipeline_editor.configuration_panel.notes.updated");
+      }
+    };
+
+    const handleRunNameTemplateCommit = (value: string | undefined) => {
+      if (readOnly) return;
+      const currentTemplate =
+        pipelineSpec.annotations.get(RUN_NAME_TEMPLATE_ANNOTATION) || undefined;
+      if (value !== currentTemplate) {
+        updateRunNameTemplate(pipelineSpec, value);
+        track(
+          "v2.pipeline_editor.configuration_panel.run_name_template.updated",
+        );
+      }
+    };
+
+    const handleRenameSubgraph = (newName: string): boolean => {
+      const success = renameSubgraph(newName);
+      if (success) {
+        track("v2.pipeline_editor.subgraph_details.rename.completed");
+      } else {
+        notify("A subgraph with that name already exists", "error");
+      }
+      return success;
+    };
+
     return (
-      <BlockStack className="h-full items-center justify-center p-4">
-        <Icon name="FileQuestionMark" size="lg" className="text-gray-300" />
-        <Text size="xs" tone="subdued" className="text-center mt-2">
-          No pipeline loaded
-        </Text>
+      <BlockStack
+        className="h-full min-h-0 w-full"
+        data-testid="pipeline-details-content"
+      >
+        <PipelineDetailsHeader
+          canNavigateBack={navigation.canNavigateBack}
+          navigationPath={navigation.navigationPath}
+          onNavigateToLevel={handleNavigateToLevel}
+          isNestedSubgraph={isNestedSubgraph}
+          pipelineName={pipelineSpec.name}
+          yamlText={yamlText}
+          onRenameSubgraph={readOnly ? undefined : handleRenameSubgraph}
+        />
+
+        <Separator />
+
+        <BlockStack className="min-h-0 flex-1 overflow-y-auto">
+          <ProjectDetailsSection projectIds={projectIds} />
+
+          <PipelineDetailsCollapsibleSection
+            title="Details"
+            icon="FileText"
+            openDefault
+          >
+            <BlockStack gap="4">
+              <PipelineDetailsTextField
+                title="Description"
+                id="pipeline-description"
+                initialValue={pipelineSpec.description ?? ""}
+                onCommit={handleDescriptionCommit}
+                placeholder="Add a pipeline description..."
+                testId="pipeline-description-input"
+                readOnly={readOnly}
+              />
+              <Separator />
+              <PipelineDetailsTextField
+                title="Notes"
+                id="pipeline-notes"
+                initialValue={
+                  pipelineSpec.annotations.get(PIPELINE_NOTES_ANNOTATION) ?? ""
+                }
+                onCommit={handleNotesCommit}
+                placeholder="Share context about this pipeline..."
+                testId="pipeline-notes-input"
+                readOnly={readOnly}
+              />
+              <Separator />
+              <PipelineDetailsTextField
+                title="Run name template"
+                id="pipeline-run-name-template"
+                initialValue={pipelineSpec.annotations.get(
+                  RUN_NAME_TEMPLATE_ANNOTATION,
+                )}
+                onCommit={handleRunNameTemplateCommit}
+                placeholder="e.g. ${arguments.dataset}-${date.timestamp}"
+                testId="pipeline-run-name-template-input"
+                readOnly={readOnly}
+              />
+              <Separator />
+              <TagsBlock spec={pipelineSpec} readOnly={readOnly} />
+            </BlockStack>
+          </PipelineDetailsCollapsibleSection>
+
+          <PipelineDetailsCollapsibleSection
+            title="Metadata & annotations"
+            icon="Layers"
+            openDefault={false}
+          >
+            <BlockStack gap="4">
+              {readOnly ? (
+                <KeyValueList
+                  title="Metadata"
+                  items={ownerId ? [{ label: "Owner", value: ownerId }] : []}
+                />
+              ) : (
+                <MetadataBlock spec={pipelineSpec} />
+              )}
+              <Separator />
+              <AnnotationsBlock
+                annotations={pipelineSpec.annotations}
+                systemAnnotationKeys={SYSTEM_ANNOTATIONS}
+                readonly={readOnly}
+              />
+            </BlockStack>
+          </PipelineDetailsCollapsibleSection>
+
+          <PipelineDetailsCollapsibleSection
+            title="Inputs"
+            icon="ArrowDownToLine"
+            openDefault={false}
+          >
+            <InputsBlock spec={pipelineSpec} />
+          </PipelineDetailsCollapsibleSection>
+
+          <PipelineDetailsCollapsibleSection
+            title="Outputs"
+            icon="ArrowUpFromLine"
+            openDefault={false}
+          >
+            <OutputsBlock spec={pipelineSpec} />
+          </PipelineDetailsCollapsibleSection>
+
+          <PipelineDetailsCollapsibleSection
+            title="Validations"
+            icon="BadgeCheck"
+            openDefault
+          >
+            <BlockStack gap="2">
+              {pipelineSpec.hasValidationIssues ? (
+                <ValidationSummary spec={pipelineSpec} readOnly={readOnly} />
+              ) : (
+                <InfoBox
+                  variant="success"
+                  title="No validation issues"
+                  className="text-xs"
+                  width="full"
+                >
+                  Pipeline is ready for submission
+                </InfoBox>
+              )}
+            </BlockStack>
+          </PipelineDetailsCollapsibleSection>
+        </BlockStack>
       </BlockStack>
     );
-  }
-
-  const yamlText = serializeComponentSpecToYaml(pipelineSpec);
-  const isNestedSubgraph = navigation.navigationDepth > 0;
-
-  const handleNavigateToLevel = (index: number) => {
-    navigation.navigateToLevel(index);
-  };
-
-  const handleDescriptionCommit = (value: string | undefined) => {
-    if (readOnly) return;
-    if (value !== pipelineSpec.description) {
-      updatePipelineDescription(pipelineSpec, value);
-      track("v2.pipeline_editor.configuration_panel.description.updated");
-    }
-  };
-
-  const handleNotesCommit = (value: string | undefined) => {
-    if (readOnly) return;
-    const currentNotes =
-      pipelineSpec.annotations.get(PIPELINE_NOTES_ANNOTATION) || undefined;
-    if (value !== currentNotes) {
-      updatePipelineNotes(pipelineSpec, value);
-      track("v2.pipeline_editor.configuration_panel.notes.updated");
-    }
-  };
-
-  const handleRunNameTemplateCommit = (value: string | undefined) => {
-    if (readOnly) return;
-    const currentTemplate =
-      pipelineSpec.annotations.get(RUN_NAME_TEMPLATE_ANNOTATION) || undefined;
-    if (value !== currentTemplate) {
-      updateRunNameTemplate(pipelineSpec, value);
-      track("v2.pipeline_editor.configuration_panel.run_name_template.updated");
-    }
-  };
-
-  const handleRenameSubgraph = (newName: string): boolean => {
-    const success = renameSubgraph(newName);
-    if (success) {
-      track("v2.pipeline_editor.subgraph_details.rename.completed");
-    } else {
-      notify("A subgraph with that name already exists", "error");
-    }
-    return success;
-  };
-
-  return (
-    <BlockStack
-      className="h-full min-h-0 w-full"
-      data-testid="pipeline-details-content"
-    >
-      <PipelineDetailsHeader
-        canNavigateBack={navigation.canNavigateBack}
-        navigationPath={navigation.navigationPath}
-        onNavigateToLevel={handleNavigateToLevel}
-        isNestedSubgraph={isNestedSubgraph}
-        pipelineName={pipelineSpec.name}
-        yamlText={yamlText}
-        onRenameSubgraph={readOnly ? undefined : handleRenameSubgraph}
-      />
-
-      <Separator />
-
-      <BlockStack className="min-h-0 flex-1 overflow-y-auto">
-        <ProjectDetailsSection projectIds={projectIds} />
-
-        <PipelineDetailsCollapsibleSection
-          title="Details"
-          icon="FileText"
-          openDefault
-        >
-          <BlockStack gap="4">
-            <PipelineDetailsTextField
-              title="Description"
-              id="pipeline-description"
-              initialValue={pipelineSpec.description ?? ""}
-              onCommit={handleDescriptionCommit}
-              placeholder="Add a pipeline description..."
-              testId="pipeline-description-input"
-              readOnly={readOnly}
-            />
-            <Separator />
-            <PipelineDetailsTextField
-              title="Notes"
-              id="pipeline-notes"
-              initialValue={
-                pipelineSpec.annotations.get(PIPELINE_NOTES_ANNOTATION) ?? ""
-              }
-              onCommit={handleNotesCommit}
-              placeholder="Share context about this pipeline..."
-              testId="pipeline-notes-input"
-              readOnly={readOnly}
-            />
-            <Separator />
-            <PipelineDetailsTextField
-              title="Run name template"
-              id="pipeline-run-name-template"
-              initialValue={pipelineSpec.annotations.get(
-                RUN_NAME_TEMPLATE_ANNOTATION,
-              )}
-              onCommit={handleRunNameTemplateCommit}
-              placeholder="e.g. ${arguments.dataset}-${date.timestamp}"
-              testId="pipeline-run-name-template-input"
-              readOnly={readOnly}
-            />
-            <Separator />
-            <TagsBlock spec={pipelineSpec} readOnly={readOnly} />
-          </BlockStack>
-        </PipelineDetailsCollapsibleSection>
-
-        <PipelineDetailsCollapsibleSection
-          title="Metadata & annotations"
-          icon="Layers"
-          openDefault={false}
-        >
-          <BlockStack gap="4">
-            {readOnly ? (
-              <KeyValueList
-                title="Metadata"
-                items={ownerId ? [{ label: "Owner", value: ownerId }] : []}
-              />
-            ) : (
-              <MetadataBlock spec={pipelineSpec} />
-            )}
-            <Separator />
-            <AnnotationsBlock
-              annotations={pipelineSpec.annotations}
-              systemAnnotationKeys={SYSTEM_ANNOTATIONS}
-              readonly={readOnly}
-            />
-          </BlockStack>
-        </PipelineDetailsCollapsibleSection>
-
-        <PipelineDetailsCollapsibleSection
-          title="Inputs"
-          icon="ArrowDownToLine"
-          openDefault={false}
-        >
-          <InputsBlock spec={pipelineSpec} />
-        </PipelineDetailsCollapsibleSection>
-
-        <PipelineDetailsCollapsibleSection
-          title="Outputs"
-          icon="ArrowUpFromLine"
-          openDefault={false}
-        >
-          <OutputsBlock spec={pipelineSpec} />
-        </PipelineDetailsCollapsibleSection>
-
-        <PipelineDetailsCollapsibleSection
-          title="Validations"
-          icon="BadgeCheck"
-          openDefault
-        >
-          <BlockStack gap="2">
-            {pipelineSpec.hasValidationIssues ? (
-              <ValidationSummary spec={pipelineSpec} readOnly={readOnly} />
-            ) : (
-              <InfoBox
-                variant="success"
-                title="No validation issues"
-                className="text-xs"
-                width="full"
-              >
-                Pipeline is ready for submission
-              </InfoBox>
-            )}
-          </BlockStack>
-        </PipelineDetailsCollapsibleSection>
-      </BlockStack>
-    </BlockStack>
-  );
-});
+  },
+);

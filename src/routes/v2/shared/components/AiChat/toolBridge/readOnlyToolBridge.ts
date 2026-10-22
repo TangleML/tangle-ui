@@ -7,8 +7,13 @@ import { createSubgraphBridgeHandlers } from "./subgraphBridge";
 import type { BridgeDeps } from "./utils";
 import { requireActiveSpec, requireSpec, toValidationResult } from "./utils";
 
-const READ_ONLY_ERROR =
-  "This is a read-only view — the pipeline spec cannot be edited here.";
+async function denyEdit(): ReturnType<ToolBridgeApi["setPipelineName"]> {
+  return {
+    success: false,
+    error:
+      "This is a read-only view — the pipeline spec cannot be edited here.",
+  };
+}
 
 type ReadOnlyCsomHandlers = Pick<
   ToolBridgeApi,
@@ -68,87 +73,33 @@ export function createReadOnlyCsomHandlers(
       };
     },
 
-    async setPipelineName() {
-      return { success: false, error: READ_ONLY_ERROR };
-    },
-    async setPipelineDescription() {
-      return { success: false, error: READ_ONLY_ERROR };
-    },
-    async setPipelineNotes() {
-      return { success: false, error: READ_ONLY_ERROR };
-    },
-    async setPipelineTags() {
-      return { success: false, error: READ_ONLY_ERROR };
-    },
-    async setRunNameTemplate() {
-      return { success: false, error: READ_ONLY_ERROR };
-    },
-    async addTask() {
-      return { success: false, error: READ_ONLY_ERROR };
-    },
-    async deleteTask() {
-      return { success: false, error: READ_ONLY_ERROR };
-    },
-    async renameTask() {
-      return { success: false, error: READ_ONLY_ERROR };
-    },
-    async setTaskColor() {
-      return { success: false, error: READ_ONLY_ERROR };
-    },
-    async addInput() {
-      return { success: false, error: READ_ONLY_ERROR };
-    },
-    async deleteInput() {
-      return { success: false, error: READ_ONLY_ERROR };
-    },
-    async renameInput() {
-      return { success: false, error: READ_ONLY_ERROR };
-    },
-    async updateInput() {
-      return { success: false, error: READ_ONLY_ERROR };
-    },
-    async addOutput() {
-      return { success: false, error: READ_ONLY_ERROR };
-    },
-    async deleteOutput() {
-      return { success: false, error: READ_ONLY_ERROR };
-    },
-    async renameOutput() {
-      return { success: false, error: READ_ONLY_ERROR };
-    },
-    async updateOutput() {
-      return { success: false, error: READ_ONLY_ERROR };
-    },
-    async connectNodes() {
-      return { success: false, error: READ_ONLY_ERROR };
-    },
-    async deleteEdge() {
-      return { success: false, error: READ_ONLY_ERROR };
-    },
-    async setTaskArgument() {
-      return { success: false, error: READ_ONLY_ERROR };
-    },
-    async createSubgraph() {
-      return { success: false, error: READ_ONLY_ERROR };
-    },
-    async unpackSubgraph() {
-      return { success: false, error: READ_ONLY_ERROR };
-    },
-    async addStickyNote() {
-      return { success: false, error: READ_ONLY_ERROR };
-    },
-    async updateStickyNote() {
-      return { success: false, error: READ_ONLY_ERROR };
-    },
-    async deleteStickyNote() {
-      return { success: false, error: READ_ONLY_ERROR };
-    },
-    async moveNode() {
-      return { success: false, error: READ_ONLY_ERROR };
-    },
-    async autoLayout() {
-      return { success: false, error: READ_ONLY_ERROR };
-    },
+    setPipelineName: denyEdit,
+    setPipelineDescription: denyEdit,
+    setPipelineNotes: denyEdit,
+    setPipelineTags: denyEdit,
+    setRunNameTemplate: denyEdit,
+    addTask: denyEdit,
+    deleteTask: denyEdit,
+    renameTask: denyEdit,
+    setTaskColor: denyEdit,
+    addInput: denyEdit,
+    deleteInput: denyEdit,
+    renameInput: denyEdit,
+    updateInput: denyEdit,
+    addOutput: denyEdit,
+    deleteOutput: denyEdit,
+    renameOutput: denyEdit,
+    updateOutput: denyEdit,
+    connectNodes: denyEdit,
+    deleteEdge: denyEdit,
+    setTaskArgument: denyEdit,
+    createSubgraph: denyEdit,
+    unpackSubgraph: denyEdit,
+    addStickyNote: denyEdit,
+    updateStickyNote: denyEdit,
+    deleteStickyNote: denyEdit,
+    moveNode: denyEdit,
+    autoLayout: denyEdit,
   };
 }
 

@@ -94,21 +94,7 @@ beforeEach(async () => {
             componentRef: {
               spec: {
                 name: "Subgraph",
-                implementation: {
-                  graph: {
-                    tasks: {
-                      Process: {
-                        componentRef: {
-                          spec: {
-                            implementation: {
-                              container: { image: "example/process" },
-                            },
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
+                implementation: { graph: { tasks: {} } },
               },
             },
           },
