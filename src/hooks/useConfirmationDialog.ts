@@ -9,6 +9,7 @@ export type TriggerDialogProps = {
   title?: string;
   description?: string;
   content?: ReactNode;
+  confirmLabel?: string;
 };
 
 const DEFAULT_TITLE = "Are you sure?";
@@ -23,16 +24,19 @@ export default function useConfirmationDialog() {
   const [title, setTitle] = useState<string>(DEFAULT_TITLE);
   const [description, setDescription] = useState<string>(DEFAULT_DESCRIPTION);
   const [content, setContent] = useState<ReactNode>(DEFAULT_CONTENT);
+  const [confirmLabel, setConfirmLabel] = useState<string>();
 
   const triggerDialog = async ({
     title,
     description,
     content,
+    confirmLabel,
   }: TriggerDialogProps = {}): Promise<boolean> => {
     setIsOpen(true);
     setTitle(title ?? DEFAULT_TITLE);
     setDescription(description ?? DEFAULT_DESCRIPTION);
     setContent(content ?? DEFAULT_CONTENT);
+    setConfirmLabel(confirmLabel);
 
     return await new Promise<boolean>((resolve) => {
       setHandlers({
@@ -52,6 +56,7 @@ export default function useConfirmationDialog() {
     title,
     description,
     content,
+    confirmLabel,
     isOpen,
     handlers,
     triggerDialog,
