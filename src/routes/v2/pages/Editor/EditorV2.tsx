@@ -1,16 +1,24 @@
 import "@xyflow/react/dist/style.css";
 import "@/styles/editor.css";
 
-import { useParams, useSearch } from "@tanstack/react-router";
+import {
+  Link as RouterLink,
+  useParams,
+  useSearch,
+} from "@tanstack/react-router";
 import { ReactFlowProvider } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
 import { type ReactNode, useEffect } from "react";
+import type { FallbackProps } from "react-error-boundary";
 
 import { ComponentEditorProvider } from "@/components/shared/ComponentEditor/ComponentEditorProvider";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
-import { InlineStack } from "@/components/ui/layout";
+import { Button } from "@/components/ui/button";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { Paragraph } from "@/components/ui/typography";
+import { useBackend } from "@/providers/BackendProvider";
 import { useTrackRecentlyViewedPipeline } from "@/hooks/useTrackRecentlyViewedPipeline";
 import { ComponentLibraryProvider } from "@/providers/ComponentLibraryProvider";
 import { ForcedSearchProvider } from "@/providers/ComponentLibraryProvider/ForcedSearchProvider";
@@ -18,6 +26,7 @@ import { DialogProvider } from "@/providers/DialogProvider/DialogProvider";
 import { useTourMode } from "@/providers/TourProvider/TourModeContext";
 import { TourSaveExploreDialog } from "@/providers/TourProvider/TourSaveExploreDialog";
 import { TourSecretsDialog } from "@/providers/TourProvider/TourSecretsDialog";
+import { APP_ROUTES } from "@/routes/appRoutes";
 import { QuickRunSubmitterProvider } from "@/routes/v2/pages/Editor/components/QuickRunSubmitterContext";
 import { AiChatStoreProvider } from "@/routes/v2/shared/components/AiChat/AiChatStoreContext";
 import { useCanvasControlsWindow } from "@/routes/v2/shared/components/MiniMap/useCanvasControlsWindow";
@@ -36,7 +45,11 @@ import {
   TOUR_WINDOW_LAYOUT_ID,
   useWindowPersistence,
 } from "@/routes/v2/shared/windows/windowPersistence";
-import type { PipelineRef } from "@/services/pipelineStorage/types";
+import {
+  getEditorPipelineIdentity,
+  type PipelineRef,
+  type RemotePipelineRef,
+} from "@/services/pipelineStorage/types";
 
 import { createEditorAgentWorker } from "./components/AiChat/editorAgentWorker";
 import { useDebugPanelWindow } from "./components/DebugPanel";
@@ -45,6 +58,9 @@ import { EditorMenuBar } from "./components/EditorMenuBar/EditorMenuBar";
 import { EditorTourBridge } from "./components/EditorTourBridge/EditorTourBridge";
 import { EmptyEditorState } from "./components/EmptyEditorState";
 import { FlowCanvas } from "./components/FlowCanvas/FlowCanvas";
+import { RemotePipelineError } from "./components/RemotePipelineView/RemotePipelineError";
+import { RemotePipelineShell } from "./components/RemotePipelineView/RemotePipelineShell";
+import { RemotePipelineView } from "./components/RemotePipelineView/RemotePipelineView";
 import { useAiChatWindow } from "./hooks/useAiChatWindow";
 import { useComponentLibraryWindow } from "./hooks/useComponentLibraryWindow";
 import { useComponentSearchV2Window } from "./hooks/useComponentSearchV2Window";
@@ -82,7 +98,9 @@ const PipelineEditor = withSuspenseWrapper(
     const tourMode = useTourMode();
 
     useWindowPersistence(tourMode ? TOUR_WINDOW_LAYOUT_ID : "editor");
-    useTrackRecentlyViewedPipeline(tourMode ? null : pipelineRef.name);
+    useTrackRecentlyViewedPipeline(
+      tourMode || "source" in pipelineRef ? null : pipelineRef.name,
+    );
     useDockAreaAccordion();
     useSpecLifecycle(rootSpec, pipelineRef, restoredUndoStore);
     useSelectionWindowSync();
@@ -183,16 +201,56 @@ function EditorV2Content({ pipelineRef }: { pipelineRef: PipelineRef | null }) {
   );
 }
 
-// Remote links open the editor shell without initializing local loading or saving.
-function RemotePipelineEditorShell() {
+function RemotePipelineSkeleton() {
   return (
-    <div className="h-full w-full flex flex-col bg-slate-100 dark:bg-background select-none">
-      <SharedStoreProvider>
-        <EditorSessionProvider>
-          <EditorMenuBar />
-        </EditorSessionProvider>
-      </SharedStoreProvider>
-    </div>
+    <RemotePipelineShell>
+      <PipelineEditorSkeleton />
+    </RemotePipelineShell>
+  );
+}
+
+const RemotePipelineDocumentView = withSuspenseWrapper(
+  ({ pipelineRef }: { pipelineRef: RemotePipelineRef }) => {
+    const {
+      data: { spec },
+    } = useLoadSpec(pipelineRef);
+    return <RemotePipelineView spec={spec} />;
+  },
+  RemotePipelineSkeleton,
+  ({ error, resetErrorBoundary }: FallbackProps) => (
+    <RemotePipelineError error={error} onRetry={resetErrorBoundary} />
+  ),
+);
+
+function RemotePipelineEditor({ pipelineId }: { pipelineId: string }) {
+  const { backendUrl, ready, configured } = useBackend();
+  if (!ready) return <RemotePipelineSkeleton />;
+  if (!configured) {
+    return (
+      <RemotePipelineShell>
+        <BlockStack gap="3" className="p-6">
+          <Paragraph role="alert">
+            Configure a backend to open pipelines.
+          </Paragraph>
+          <Button asChild variant="outline">
+            <RouterLink to={APP_ROUTES.SETTINGS_BACKEND}>
+              Backend settings
+            </RouterLink>
+          </Button>
+        </BlockStack>
+      </RemotePipelineShell>
+    );
+  }
+  const pipelineRef: RemotePipelineRef = {
+    source: "remote",
+    backendUrl,
+    pipelineId,
+  };
+  return (
+    <RemotePipelineDocumentView
+      key={getEditorPipelineIdentity(pipelineRef)}
+      pipelineRef={pipelineRef}
+    />
   );
 }
 
@@ -205,8 +263,12 @@ export function EditorV2({
 } = {}) {
   const params = useParams({ strict: false });
   const search = useSearch({ strict: false });
-  if (pipelineRefProp === undefined && "pipelineId" in params) {
-    return <RemotePipelineEditorShell />;
+  if (
+    pipelineRefProp === undefined &&
+    "pipelineId" in params &&
+    typeof params.pipelineId === "string"
+  ) {
+    return <RemotePipelineEditor pipelineId={params.pipelineId} />;
   }
 
   const fileId =

@@ -44,7 +44,7 @@ import { TaskNodeSimplified } from "./TaskNodeSimplified";
 type TaskNodeType = Node<TaskNodeData, "task">;
 type TaskNodeProps = NodeProps<TaskNodeType> & {
   subgraphExecutionStats?: ExecutionStatusStats | null;
-  publishedComponentBadgeReadOnly?: boolean;
+  readOnly?: boolean;
 };
 
 export interface TaskNodeInput {
@@ -79,7 +79,7 @@ export interface TaskNodeViewProps {
   conditionDisplayValue: string;
   componentRef?: ComponentReference;
   digest?: string;
-  publishedComponentBadgeReadOnly?: boolean;
+  readOnly?: boolean;
   inputDisplayValues: Record<string, string | undefined>;
   secretInputNames: Set<string>;
   isAggregator: boolean;
@@ -237,7 +237,7 @@ export const TaskNode = observer(function TaskNode({
   data,
   selected,
   subgraphExecutionStats,
-  publishedComponentBadgeReadOnly = false,
+  readOnly = false,
 }: TaskNodeProps) {
   const { entityId } = data;
   const { editor, canvasOverlay } = useSharedStores();
@@ -306,6 +306,7 @@ export const TaskNode = observer(function TaskNode({
   const isSelected = isEditorVisualNodeSelected(editor, id, !!selected);
 
   const handleOutputTypeChange = (value: AggregatorOutputType) => {
+    if (readOnly) return;
     task.setArgument("output_type", value);
   };
 
@@ -336,7 +337,7 @@ export const TaskNode = observer(function TaskNode({
     componentRef: publishedComponentBadgeEnabled
       ? task.resolvedComponentRef
       : undefined,
-    publishedComponentBadgeReadOnly,
+    readOnly,
     isAggregator,
     outputType: resolveAggregatorOutputType(task),
     subgraphExecutionStats,

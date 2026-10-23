@@ -12,6 +12,8 @@ import { ComponentSpecProvider } from "@/providers/ComponentSpecProvider";
 import { ContextPanelProvider } from "@/providers/ContextPanelProvider";
 import { ExecutionDataProvider } from "@/providers/ExecutionDataProvider";
 import { RunSubmissionScopeProvider } from "@/providers/RunSubmissionScopeProvider";
+import { ReadOnlyFlowCanvas } from "@/routes/v2/shared/components/ReadOnlyFlowCanvas";
+import { useReadOnlySpecLifecycle } from "@/routes/v2/shared/hooks/useReadOnlySpecLifecycle";
 import { NodeRegistryProvider } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { SpecProvider } from "@/routes/v2/shared/providers/SpecContext";
 import { useShortcutListener } from "@/routes/v2/shared/shortcuts/useShortcutListener";
@@ -24,12 +26,11 @@ import { SharedStoreRegistrar } from "@/routes/v2/shared/store/SharedStoreRegist
 import { DockArea } from "@/routes/v2/shared/windows/DockArea";
 import { WindowContainer } from "@/routes/v2/shared/windows/WindowContainer";
 
-import { RunViewFlowCanvas } from "./components/RunViewFlowCanvas";
 import { RunViewLoadStateFallback } from "./components/RunViewLoadStateFallback";
+import { RunViewSelectionToolbar } from "./components/RunViewSelectionToolbar";
 import { useEmbeddedRunViewInitialDockLayout } from "./hooks/useEmbeddedRunViewInitialDockLayout";
 import { useRunViewLoadState } from "./hooks/useRunViewLoadState";
 import { useRunViewSelectionSync } from "./hooks/useRunViewSelectionSync";
-import { useRunViewSpecLifecycle } from "./hooks/useRunViewSpecLifecycle";
 import { useRunViewSubgraphExecutionSync } from "./hooks/useRunViewSubgraphUrlSync";
 import { useRunViewWindows } from "./hooks/useRunViewWindows";
 import { runViewRegistry } from "./nodes";
@@ -84,7 +85,7 @@ const EmbeddedRunViewLayout = observer(function EmbeddedRunViewLayout({
 }: EmbeddedRunViewLayoutProps) {
   const canvasRef = useRef<HTMLDivElement | null>(null);
 
-  useRunViewSpecLifecycle(spec);
+  useReadOnlySpecLifecycle(spec);
   useShortcutListener(isActive);
   useRunViewWindows({ offersTangentHandoff: false });
   useEmbeddedRunViewInitialDockLayout();
@@ -116,11 +117,13 @@ const EmbeddedRunViewLayout = observer(function EmbeddedRunViewLayout({
             data-testid="run-view-v2"
           >
             <div ref={canvasRef} className="relative flex-1 min-w-0 h-full">
-              <RunViewFlowCanvas
+              <ReadOnlyFlowCanvas
                 key={activeSpec.$id ?? "root"}
                 spec={activeSpec}
                 className="h-full"
-              />
+              >
+                <RunViewSelectionToolbar spec={activeSpec} />
+              </ReadOnlyFlowCanvas>
               <WindowContainer />
             </div>
             <DockArea side="right" />

@@ -2,10 +2,18 @@ import { makeObservable, observable } from "mobx";
 
 import { createDriver } from "./createDriver";
 import { pipelineStorageDb } from "./db";
+import { RemotePipelineStorageDriver } from "./drivers/RemotePipelineStorageDriver";
+import { RootFolderDbStorageDriver } from "./drivers/RootFolderDbStorageDriver";
 import { PipelineFile } from "./PipelineFile";
 import { PipelineFolder } from "./PipelineFolder";
 import { findById, findByStorageKey } from "./pipelineRegistry";
-import { type PipelineStorageDriver, ROOT_FOLDER_ID } from "./types";
+import {
+  type EditorPipelineRef,
+  getEditorPipelineIdentity,
+  isRemotePipelineRef,
+  type PipelineStorageDriver,
+  ROOT_FOLDER_ID,
+} from "./types";
 
 const ROOT_DRIVER_CONFIG = {
   driverType: "folder-indexdb",
@@ -20,6 +28,23 @@ export class PipelineStorageService {
       driver: createDriver(ROOT_DRIVER_CONFIG),
     });
     makeObservable(this);
+  }
+
+  async resolvePipeline(ref: EditorPipelineRef): Promise<PipelineFile> {
+    if (isRemotePipelineRef(ref)) {
+      return remoteFile(await RemotePipelineStorageDriver.open(ref));
+    }
+
+    const file = ref.fileId
+      ? await this.findPipelineById(ref.fileId)
+      : await this.resolvePipelineByName(ref.name);
+    if (file) return file;
+
+    const legacyDriver = new RootFolderDbStorageDriver();
+    if (await legacyDriver.hasKey(ref.name)) {
+      return this.rootFolder.assignFile(ref.name);
+    }
+    throw new Error(`Pipeline "${ref.name}" not found`);
   }
 
   async findPipelineById(id: string): Promise<PipelineFile> {
@@ -76,5 +101,23 @@ function createRoot(options?: { driver: PipelineStorageDriver }) {
     name: "Root",
     parentId: null,
     driver: options?.driver ?? createDriver({ driverType: "root-indexdb" }),
+  });
+}
+
+function remoteFile(driver: RemotePipelineStorageDriver): PipelineFile {
+  const remote = {
+    backendUrl: driver.backendUrl,
+    pipelineId: driver.pipelineId,
+  };
+  return new PipelineFile({
+    id: driver.pipelineId,
+    storageKey: driver.name,
+    remote,
+    folder: new PipelineFolder({
+      id: getEditorPipelineIdentity({ source: "remote", ...remote }),
+      name: "Remote pipelines",
+      parentId: null,
+      driver,
+    }),
   });
 }

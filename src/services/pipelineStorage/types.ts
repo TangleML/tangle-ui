@@ -1,4 +1,5 @@
 import type { GoogleDriveDriverConfig } from "../googleDrive/types"; // google-drive
+import { normalizePipelineId } from "../pipelineId";
 import type { FolderIndexDbDriverConfig } from "./drivers/FolderIndexDbStorageDriver";
 import type { LocalFileSystemDriverConfig } from "./drivers/LocalFileSystemDriver";
 import type { RootFolderDbDriverConfig } from "./drivers/RootFolderDbStorageDriver";
@@ -55,6 +56,30 @@ export interface PipelineRef {
   name: string;
   fileId?: string;
 }
+export interface RemotePipelineRef {
+  source: "remote";
+  backendUrl: string;
+  pipelineId: string;
+}
+
+export type EditorPipelineRef = PipelineRef | RemotePipelineRef;
+
+export function isRemotePipelineRef(
+  ref: EditorPipelineRef,
+): ref is RemotePipelineRef {
+  return "source" in ref && ref.source === "remote";
+}
+
+export function getEditorPipelineIdentity(ref: EditorPipelineRef): string {
+  return isRemotePipelineRef(ref)
+    ? JSON.stringify([
+        "remote-pipeline",
+        ref.backendUrl,
+        normalizePipelineId(ref.pipelineId),
+      ])
+    : (ref.fileId ?? ref.name);
+}
+
 export const FoldersQueryKeys = {
   All: () => ["pipeline-folders"] as const,
   Children: (parentId: string | null) =>
