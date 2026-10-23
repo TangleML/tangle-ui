@@ -10,6 +10,7 @@ import {
 } from "@/utils/componentSpec";
 import { EXIT_CODE_OOM } from "@/utils/constants";
 import { formatDate, formatDuration } from "@/utils/date";
+import { toAbsoluteHttpUrl } from "@/utils/URL";
 
 import type { AttributeProps } from "../ContextPanel/Blocks/Attribute";
 import { ContentBlock } from "../ContextPanel/Blocks/ContentBlock";
@@ -109,7 +110,11 @@ export const ExecutionDetails = ({
     const executionJobLinks = getExecutionJobLinks(containerState);
     if (executionJobLinks) {
       executionJobLinks.forEach((linkInfo) => {
-        if (!linkInfo.url) {
+        // KeyValueList keys rows by label, so a repeated label would collide.
+        if (
+          !linkInfo.url ||
+          items.some((item) => item.label === linkInfo.name)
+        ) {
           return;
         }
 
@@ -271,7 +276,30 @@ function getExecutionJobLinks(
     });
   }
 
+  result.push(...readExternalLinks(debugInfo.external_links));
+
   return result;
+}
+
+function readExternalLinks(value: unknown): ExecutionLinkItem[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.flatMap((entry) => {
+    if (!isRecord(entry) || typeof entry.label !== "string") {
+      return [];
+    }
+
+    const name = entry.label.trim();
+    const url = toAbsoluteHttpUrl(entry.url);
+    if (!name || !url) {
+      return [];
+    }
+
+    const text = typeof entry.text === "string" ? entry.text.trim() : "";
+    return [{ name, value: text || url, url }];
+  });
 }
 
 function getPath(obj: unknown, path: string): unknown {
