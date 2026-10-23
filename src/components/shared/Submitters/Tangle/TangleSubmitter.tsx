@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { useBackend } from "@/providers/BackendProvider";
 import { useTourMockBackend } from "@/providers/TourProvider/tourMockBackend";
 import { getDefaultRunPath } from "@/routes/runRoutes";
+import { useTeamForSubmission } from "@/services/teams/useTeamForSubmission";
 import type { PipelineRun } from "@/types/pipelineRun";
 import {
   type ArgumentType,
@@ -49,6 +50,7 @@ const TangleSubmitter = ({
   const { mutate: submit, isPending: isSubmitting } = useSubmitPipeline();
   const isAutoRedirect = useFlagValue("redirect-on-new-pipeline-run");
   const attribution = useRunAttribution();
+  const chosenProjectsTeam = useTeamForSubmission(attribution.chosenProjectIds);
 
   const [submitSuccess, setSubmitSuccess] = useState<boolean | null>(null);
   const [isArgumentsDialogOpen, setIsArgumentsDialogOpen] = useState(false);
@@ -262,6 +264,7 @@ const TangleSubmitter = ({
           onCancel={() => setIsArgumentsDialogOpen(false)}
           onConfirm={handleSubmitWithArguments}
           componentSpec={componentSpec}
+          team={chosenProjectsTeam}
           projectField={
             <RunProjectField
               pipelineName={componentSpec.name}

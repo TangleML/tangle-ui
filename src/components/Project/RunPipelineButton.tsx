@@ -9,6 +9,7 @@ import { Icon } from "@/components/ui/icon";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useBackend } from "@/providers/BackendProvider";
+import { useTeamForSubmission } from "@/services/teams/useTeamForSubmission";
 import type { PipelineRun } from "@/types/pipelineRun";
 import type { ArgumentType, ComponentSpec } from "@/utils/componentSpec";
 import { tracking } from "@/utils/tracking";
@@ -31,6 +32,7 @@ export function RunPipelineButton({
   const { mutate: submit, isPending } = useSubmitPipeline();
   const notify = useToastNotification();
   const { track } = useAnalytics();
+  const runTeam = useTeamForSubmission([projectId]);
 
   const { mutate: saveAnnotations } = useMutation({
     mutationFn: ({ runId, notes }: { runId: string; notes: string }) =>
@@ -83,6 +85,7 @@ export function RunPipelineButton({
           onCancel={() => setDialogOpen(false)}
           onConfirm={run}
           componentSpec={spec}
+          team={runTeam}
           showCopyFromRun={heldInThisBrowser}
         />
       )}

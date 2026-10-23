@@ -2,6 +2,8 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
+import { ActingTeamNotice } from "@/components/shared/Teams/ActingTeamNotice";
+import { TeamName } from "@/components/shared/Teams/TeamName";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -19,6 +21,9 @@ import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
 import { useBackend } from "@/providers/BackendProvider";
 import { useTourMockBackend } from "@/providers/TourProvider/tourMockBackend";
+import { actingTeamId } from "@/services/teams/teamResolution";
+import type { TeamResolution } from "@/services/teams/types";
+import { useActingTeam } from "@/services/teams/useActingTeam";
 
 import { AddSecretForm } from "./components/AddSecretForm";
 import { SecretsBackendUnavailable } from "./components/SecretsBackendUnavailable";
@@ -31,6 +36,7 @@ interface SelectSecretDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSelect: (secretName: string) => void;
+  team?: TeamResolution;
 }
 
 function SelectSecretDialogContentSkeleton() {
@@ -101,13 +107,19 @@ function SelectableSecretsList({
 }
 
 interface SelectSecretDialogContentProps {
+  resolution: Exclude<TeamResolution, { status: "resolving" | "conflict" }>;
   onSelect: (secretName: string) => void;
 }
 
 function SelectSecretDialogContentInternal({
+  resolution,
   onSelect,
 }: SelectSecretDialogContentProps) {
-  const { data: secrets } = useSuspenseQuery(secretsListQuery());
+  const teamId = actingTeamId(resolution);
+  const team = resolution.status === "active" ? resolution.team : undefined;
+  const canWrite = team?.canWrite ?? true;
+
+  const { data: secrets } = useSuspenseQuery(secretsListQuery(teamId));
 
   const [mode, setMode] = useState<DialogMode>("select");
 
@@ -132,11 +144,19 @@ function SelectSecretDialogContentInternal({
               <Button variant="ghost" size="sm" onClick={handleBackToSelect}>
                 <Icon name="ArrowLeft" />
               </Button>
-              Add Secret
+              {team ? "Add a team secret" : "Add Secret"}
             </InlineStack>
           </DialogTitle>
+          {team && (
+            <DialogDescription>
+              {"Everyone in "}
+              <TeamName team={team} />
+              {" can use it in this project."}
+            </DialogDescription>
+          )}
         </DialogHeader>
         <AddSecretForm
+          teamId={teamId}
           onSuccess={handleAddSuccess}
           onCancel={handleBackToSelect}
         />
@@ -154,23 +174,35 @@ function SelectSecretDialogContentInternal({
         be injected at runtime.
       </DialogDescription>
       <BlockStack gap="4">
+        {team && (
+          <Text size="sm" tone="subdued" data-testid="team-secrets-heading">
+            {"The "}
+            <TeamName team={team} />
+            {" team's secrets"}
+          </Text>
+        )}
+        <ActingTeamNotice resolution={resolution} />
         <SelectableSecretsList
           secrets={secrets}
           onSelect={handleSecretSelect}
         />
-        <Separator />
-        <InlineStack align="end" gap="2" className="w-full">
-          <Button
-            variant="secondary"
-            onClick={() => setMode("add")}
-            data-testid="select-secret-add-button"
-          >
-            <InlineStack align="center" gap="1">
-              <Icon name="Plus" />
-              Add Secret
+        {canWrite && (
+          <>
+            <Separator />
+            <InlineStack align="end" gap="2" className="w-full">
+              <Button
+                variant="secondary"
+                onClick={() => setMode("add")}
+                data-testid="select-secret-add-button"
+              >
+                <InlineStack align="center" gap="1">
+                  <Icon name="Plus" />
+                  Add Secret
+                </InlineStack>
+              </Button>
             </InlineStack>
-          </Button>
-        </InlineStack>
+          </>
+        )}
       </BlockStack>
     </>
   );
@@ -181,10 +213,47 @@ const SelectSecretDialogContent = withSuspenseWrapper(
   SelectSecretDialogContentSkeleton,
 );
 
+interface TeamSecretsPickerProps {
+  resolution: TeamResolution;
+  onSelect: (secretName: string) => void;
+}
+
+function TeamSecretsPicker({ resolution, onSelect }: TeamSecretsPickerProps) {
+  if (resolution.status === "resolving") {
+    return <SelectSecretDialogContentSkeleton />;
+  }
+
+  if (resolution.status === "conflict") {
+    return (
+      <>
+        <DialogHeader>
+          <DialogTitle>Select a Secret</DialogTitle>
+        </DialogHeader>
+        <ActingTeamNotice resolution={resolution} />
+      </>
+    );
+  }
+
+  return (
+    <SelectSecretDialogContent
+      key={actingTeamId(resolution) ?? "user"}
+      resolution={resolution}
+      onSelect={onSelect}
+    />
+  );
+}
+
+function PageTeamSecretsPicker({
+  onSelect,
+}: Pick<TeamSecretsPickerProps, "onSelect">) {
+  return <TeamSecretsPicker resolution={useActingTeam()} onSelect={onSelect} />;
+}
+
 export function SelectSecretDialog({
   open,
   onOpenChange,
   onSelect,
+  team,
 }: SelectSecretDialogProps) {
   const { available } = useBackend();
   const mockBackend = useTourMockBackend();
@@ -197,11 +266,13 @@ export function SelectSecretDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       {open && (
         <DialogContent data-testid="select-secret-dialog">
-          {available || mockBackend ? (
-            <SelectSecretDialogContent onSelect={handleSelect} />
-          ) : (
-            <SecretsBackendUnavailable />
-          )}
+          {!available && !mockBackend && <SecretsBackendUnavailable />}
+          {(available || mockBackend) &&
+            (team ? (
+              <TeamSecretsPicker resolution={team} onSelect={handleSelect} />
+            ) : (
+              <PageTeamSecretsPicker onSelect={handleSelect} />
+            ))}
         </DialogContent>
       )}
     </Dialog>
