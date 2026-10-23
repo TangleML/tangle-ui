@@ -73,6 +73,8 @@ export interface RunSubmissionResult {
   success: boolean;
   runId?: string;
   rootExecutionId?: string;
+  actingAsTeam?: string;
+  warning?: string;
   error?: string;
 }
 

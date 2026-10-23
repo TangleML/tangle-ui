@@ -1,5 +1,6 @@
 import { InfoBox } from "@/components/shared/InfoBox";
 import { ActingTeamNotice } from "@/components/shared/Teams/ActingTeamNotice";
+import { TeamName } from "@/components/shared/Teams/TeamName";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
@@ -25,14 +26,23 @@ function runsAs(team: TeamResolution) {
   return null;
 }
 
-function missingSecretsMessage(
-  names: readonly string[],
-  team: TeamResolution,
-): string {
+function MissingSecretsMessage({
+  names,
+  team,
+}: {
+  names: readonly string[];
+  team: TeamResolution;
+}) {
   const subject =
     names.length === 1 ? `${names[0]} isn't` : `${names.join(", ")} aren't`;
   if (team.status === "active") {
-    return `${subject} one of the ${team.team.label} team's secrets, so the run will fail when it starts.`;
+    return (
+      <>
+        {`${subject} one of the `}
+        <TeamName team={team.team} />
+        {" team's secrets, so the run will fail when it starts."}
+      </>
+    );
   }
   const missingFromYours = `${subject} in your secrets, so the run will fail when it starts.`;
   return team.status === "none"
@@ -68,7 +78,7 @@ export function RunIdentitySummary({
       <ActingTeamNotice resolution={team} />
       {missingSecrets.length > 0 && (
         <InfoBox title="Missing secrets" variant="warning" width="full">
-          {missingSecretsMessage(missingSecrets, team)}
+          <MissingSecretsMessage names={missingSecrets} team={team} />
         </InfoBox>
       )}
     </BlockStack>

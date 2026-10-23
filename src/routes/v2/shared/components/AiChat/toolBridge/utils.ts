@@ -23,6 +23,7 @@ import {
   ROOT_PATH_ID,
 } from "@/models/componentSpec/validation/collectIssues";
 import { resolveEntityPositions } from "@/routes/v2/shared/nodes/buildUtils";
+import type { TeamResolution } from "@/services/teams/types";
 
 const DEFAULT_POSITION = { x: 250, y: 250 };
 const POSITION_OFFSET = 200;
@@ -39,6 +40,7 @@ export interface BridgeDeps {
   getBackendUrl?: () => string;
   getAuthToken?: () => string | undefined;
   getRunAnnotations?: () => Record<string, string>;
+  getRunTeam?: () => TeamResolution;
   queryClient?: QueryClient;
 }
 

@@ -18,6 +18,7 @@ import { useRunSubmissionAnnotations } from "@/providers/RunSubmissionScopeProvi
 import { TangentRemoteEnvProvider } from "@/routes/v2/pages/Tangent/components/TangentRemoteEnvProvider";
 import { useLazyBridgeAuth } from "@/routes/v2/shared/components/AiChat/toolBridge/useLazyBridgeAuth";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { useTeamForSubmission } from "@/services/teams/useTeamForSubmission";
 
 import { createRunViewToolBridge } from "./toolBridge/runViewToolBridge";
 
@@ -48,10 +49,16 @@ export function TangentRunAgentProvider({
   const { getBackendUrl, getAuthToken, queryClient } = useLazyBridgeAuth();
   const runAnnotations = useRunSubmissionAnnotations();
   const runAnnotationsRef = useRef(runAnnotations);
+  const runTeam = useTeamForSubmission([]);
+  const runTeamRef = useRef(runTeam);
 
   useEffect(() => {
     runAnnotationsRef.current = runAnnotations;
   }, [runAnnotations]);
+
+  useEffect(() => {
+    runTeamRef.current = runTeam;
+  }, [runTeam]);
 
   const [bridge] = useState<ToolBridgeApi>(() =>
     createRunViewToolBridge({
@@ -62,6 +69,7 @@ export function TangentRunAgentProvider({
       getBackendUrl,
       getAuthToken,
       getRunAnnotations: () => runAnnotationsRef.current,
+      getRunTeam: () => runTeamRef.current,
       queryClient,
     }),
   );

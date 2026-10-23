@@ -7,6 +7,7 @@ import { RunProjectField } from "@/components/Project/RunProjectField";
 import { useAwaitAuthorization } from "@/components/shared/Authentication/useAwaitAuthorization";
 import { useMissingSecrets } from "@/components/shared/SecretsManagement/useMissingSecrets";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
+import { TeamName } from "@/components/shared/Teams/TeamName";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
@@ -260,9 +261,10 @@ const TangleSubmitter = ({
           {pageTeam.status === "active" && cooldownTime === 0 && (
             <div
               className="text-xs font-light -ml-1 text-muted-foreground truncate"
-              title={pageTeam.team.id}
+              data-testid="submit-as-team"
             >
-              {`as ${pageTeam.team.label}`}
+              {"as "}
+              <TeamName team={pageTeam.team} />
             </div>
           )}
           {pageTeam.status === "conflict" && (

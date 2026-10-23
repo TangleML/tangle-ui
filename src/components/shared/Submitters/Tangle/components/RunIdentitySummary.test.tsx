@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import type { TeamResolution } from "@/services/teams/types";
@@ -30,9 +30,9 @@ describe("RunIdentitySummary", () => {
     );
 
     expect(screen.getByText("Runs as you")).toBeVisible();
-    expect(
-      screen.getByText("You're not in the ML Research team"),
-    ).toBeVisible();
+    expect(screen.getByTestId("info-box-title")).toHaveTextContent(
+      "You're not in the ML Research team",
+    );
   });
 
   it("says nothing about who runs it outside a team", () => {
@@ -46,11 +46,13 @@ describe("RunIdentitySummary", () => {
   it("warns about a secret the team doesn't have", () => {
     render(<RunIdentitySummary team={ACTIVE} missingSecrets={["API_KEY"]} />);
 
-    expect(
-      screen.getByText(
-        "API_KEY isn't one of the ML Research team's secrets, so the run will fail when it starts.",
-      ),
-    ).toBeVisible();
+    const warning = screen.getByTestId("info-box-warning");
+    expect(warning).toHaveTextContent(
+      "API_KEY isn't one of the ML Research team's secrets, so the run will fail when it starts.",
+    );
+    expect(within(warning).getByTitle(TEAM.id)).toHaveTextContent(
+      "ML Research",
+    );
   });
 
   it("suggests a team's project for secrets you don't have", () => {

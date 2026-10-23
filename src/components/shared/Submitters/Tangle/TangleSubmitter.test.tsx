@@ -140,10 +140,10 @@ describe("TangleSubmitter", () => {
     render(<TangleSubmitter componentSpec={spec} />);
     const user = userEvent.setup();
 
-    expect(screen.getByText("as ML Research")).toHaveAttribute(
-      "title",
-      ML_TEAM.id,
+    expect(screen.getByTestId("submit-as-team")).toHaveTextContent(
+      "as ML Research",
     );
+    expect(screen.getByTitle(ML_TEAM.id)).toHaveTextContent("ML Research");
     await user.click(submitButton());
 
     expect(submit).toHaveBeenCalledWith(
