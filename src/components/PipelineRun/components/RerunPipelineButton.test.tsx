@@ -511,11 +511,9 @@ describe("<RerunPipelineButton/>", () => {
 
       await rerunNow();
 
-      expect(
-        screen.getByText(
-          "API_KEY isn't one of the ML Research team's secrets, so the run will fail when it starts.",
-        ),
-      ).toBeInTheDocument();
+      expect(screen.getByTestId("info-box-warning")).toHaveTextContent(
+        "API_KEY isn't one of the ML Research team's secrets, so the run will fail when it starts.",
+      );
       expect(mockSubmitPipelineRun).not.toHaveBeenCalled();
     });
 
