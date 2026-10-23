@@ -7,6 +7,10 @@ WORKDIR /app
 # Enable Corepack so the pinned pnpm version from package.json is used.
 RUN corepack enable
 
+# git is needed to resolve the VS Code extension's `@tangent/*` GitHub deps,
+# which `vite build` installs and bundles into a .vsix under public/extension/.
+RUN apk add --no-cache git
+
 # Leverage caching by installing dependencies first
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
