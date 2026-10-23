@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
+import type { TeamSummary } from "@/services/teams/types";
 import { formatRelativeTime } from "@/utils/date";
 import { tracking } from "@/utils/tracking";
 
@@ -11,7 +12,7 @@ import { ListRowIcon } from "./ListRowIcon";
 
 interface SecretRowProps {
   secret: Secret;
-  teamId: string;
+  team: TeamSummary;
   canWrite: boolean;
   onReplace: (secret: Secret) => void;
   onRemoved: () => void;
@@ -25,7 +26,7 @@ function secretDetail(secret: Secret): string {
 
 export function SecretRow({
   secret,
-  teamId,
+  team,
   canWrite,
   onReplace,
   onRemoved,
@@ -74,7 +75,7 @@ export function SecretRow({
           </Button>
           <RemoveSecretButton
             secret={secret}
-            teamId={teamId}
+            team={team}
             onSuccess={onRemoved}
           />
         </InlineStack>

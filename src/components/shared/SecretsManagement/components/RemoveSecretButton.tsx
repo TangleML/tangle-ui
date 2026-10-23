@@ -1,9 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
+import { TeamName } from "@/components/shared/Teams/TeamName";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import useToastNotification from "@/hooks/useToastNotification";
+import type { TeamSummary } from "@/services/teams/types";
 
 import { removeSecret } from "../secretsStorage";
 import type { Secret } from "../types";
@@ -11,17 +13,37 @@ import { SecretsQueryKeys } from "../types";
 
 interface RemoveSecretButtonProps {
   secret: Pick<Secret, "id" | "name">;
-  teamId?: string;
+  team?: TeamSummary;
   onSuccess?: () => void;
+}
+
+function deletionTitle(secretName: string, team: TeamSummary | undefined) {
+  return team
+    ? `Delete shared secret "${secretName}"?`
+    : `Delete "${secretName}"?`;
+}
+
+function deletionConsequence(team: TeamSummary | undefined) {
+  if (!team) {
+    return "Runs that use it will fail when they start. This can't be undone.";
+  }
+  return (
+    <>
+      {"This removes the secret from the "}
+      <TeamName team={team} bold />
+      {" workspace. Runs that use it will fail. This can't be undone."}
+    </>
+  );
 }
 
 export function RemoveSecretButton({
   secret,
-  teamId,
+  team,
   onSuccess,
 }: RemoveSecretButtonProps) {
   const notify = useToastNotification();
   const queryClient = useQueryClient();
+  const teamId = team?.id;
 
   const { mutate: removeSecretMutation, isPending } = useMutation({
     mutationFn: () => removeSecret(secret.id, teamId),
@@ -50,8 +72,8 @@ export function RemoveSecretButton({
           <Icon name="Trash" size="sm" />
         </Button>
       }
-      title={`Delete "${secret.name}"?`}
-      description="Runs that use it will fail when they start. This can't be undone."
+      title={deletionTitle(secret.name, team)}
+      description={deletionConsequence(team)}
       confirmLabel="Delete"
       onConfirm={() => removeSecretMutation()}
     />

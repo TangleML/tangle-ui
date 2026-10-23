@@ -64,10 +64,13 @@ describe("SecretFormDialog", () => {
   it("adds a team secret for everyone in the team", async () => {
     const { user, close } = renderDialog({ team: TEAM });
 
-    expect(screen.getByRole("dialog", { name: "Add a secret" })).toBeVisible();
-    expect(
-      screen.getByText("Everyone in ML Research can use it in this project."),
-    ).toBeVisible();
+    const dialog = screen.getByRole("dialog", {
+      name: "Add a workspace secret",
+    });
+    expect(dialog).toHaveAccessibleDescription(
+      "Everyone in ML Research can use it in this project.",
+    );
+    expect(screen.getByTitle(TEAM.id)).toHaveTextContent("ML Research");
     expect(screen.getByRole("button", { name: "Save" })).toHaveAttribute(
       "data-team-id",
       TEAM.id,

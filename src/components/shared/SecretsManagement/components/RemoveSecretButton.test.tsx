@@ -16,9 +16,9 @@ const { notify } = vi.hoisted(() => ({ notify: vi.fn() }));
 
 vi.mock("@/hooks/useToastNotification", () => ({ default: () => notify }));
 
-const TEAM_ID = "ml-team@example.com";
+const TEAM = { id: "ml-team@example.com", label: "ML Research" };
 
-function renderButton(teamId?: string) {
+function renderButton(team?: { id: string; label: string }) {
   const queryClient = new QueryClient({
     defaultOptions: { mutations: { retry: false } },
   });
@@ -27,7 +27,7 @@ function renderButton(teamId?: string) {
   render(
     <RemoveSecretButton
       secret={{ id: "API_KEY", name: "API_KEY" }}
-      teamId={teamId}
+      team={team}
       onSuccess={onSuccess}
     />,
     {
@@ -59,6 +59,21 @@ describe("RemoveSecretButton", () => {
     expect(removeSecret).not.toHaveBeenCalled();
   });
 
+  it("says a workspace secret is shared and removed from the whole workspace, named in bold", async () => {
+    const { user } = renderButton(TEAM);
+
+    await user.click(screen.getByRole("button", { name: "Delete API_KEY" }));
+
+    expect(
+      screen.getByRole("alertdialog", {
+        name: 'Delete shared secret "API_KEY"?',
+      }),
+    ).toHaveAccessibleDescription(
+      "This removes the secret from the ML Research workspace. Runs that use it will fail. This can't be undone.",
+    );
+    expect(screen.getByTitle(TEAM.id)).toHaveClass("font-semibold");
+  });
+
   it("deletes once confirmed", async () => {
     vi.mocked(removeSecret).mockResolvedValue(true);
     const { user, onSuccess } = renderButton();
@@ -72,15 +87,15 @@ describe("RemoveSecretButton", () => {
 
   it("deletes a team's secret as the team", async () => {
     vi.mocked(removeSecret).mockResolvedValue(true);
-    const { user, onSuccess, invalidateQueries } = renderButton(TEAM_ID);
+    const { user, onSuccess, invalidateQueries } = renderButton(TEAM);
 
     await user.click(screen.getByRole("button", { name: "Delete API_KEY" }));
     await user.click(screen.getByRole("button", { name: "Delete" }));
 
     await waitFor(() => expect(onSuccess).toHaveBeenCalled());
-    expect(removeSecret).toHaveBeenCalledWith("API_KEY", TEAM_ID);
+    expect(removeSecret).toHaveBeenCalledWith("API_KEY", TEAM.id);
     expect(invalidateQueries).toHaveBeenCalledWith({
-      queryKey: SecretsQueryKeys.All(TEAM_ID),
+      queryKey: SecretsQueryKeys.All(TEAM.id),
     });
   });
 
@@ -91,7 +106,7 @@ describe("RemoveSecretButton", () => {
         403,
       ),
     );
-    const { user, onSuccess } = renderButton(TEAM_ID);
+    const { user, onSuccess } = renderButton(TEAM);
 
     await user.click(screen.getByRole("button", { name: "Delete API_KEY" }));
     await user.click(screen.getByRole("button", { name: "Delete" }));
