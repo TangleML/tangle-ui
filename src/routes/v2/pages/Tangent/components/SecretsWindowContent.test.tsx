@@ -140,10 +140,15 @@ describe("SecretsWindowContent", () => {
       ).toBeVisible();
     });
 
-    it("says when the team has no secrets", async () => {
+    it("offers only the add button when the team has no secrets", async () => {
       renderWindow();
 
-      expect(await screen.findByText("No workspace secrets yet")).toBeVisible();
+      await waitFor(() => expect(screen.queryByText("Loading...")).toBeNull());
+      expect(screen.queryAllByTestId("secret-item")).toHaveLength(0);
+      expect(screen.queryByText(/No workspace secrets/)).toBeNull();
+      expect(
+        screen.getByRole("button", { name: "Add a secret" }),
+      ).toBeVisible();
     });
   });
 
@@ -194,6 +199,7 @@ describe("SecretsWindowContent", () => {
       expect(screen.getByTestId("info-box-warning")).toHaveTextContent(
         "You're not in the ML Research workspace. Ask an admin to add you.",
       );
+      expect(screen.getByTitle(TEAM.id)).toHaveTextContent("ML Research");
     });
 
     it("says when the backend refuses to act as the workspace", () => {

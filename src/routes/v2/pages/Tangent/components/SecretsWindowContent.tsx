@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { secretsListQuery } from "@/components/shared/SecretsManagement/secretsStorage";
 import type { Secret } from "@/components/shared/SecretsManagement/types";
+import { TeamName } from "@/components/shared/Teams/TeamName";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -83,9 +84,21 @@ function UnavailableReason({
 }) {
   switch (resolution.status) {
     case "not-member":
-      return `You're not in the ${resolution.team.label} workspace. Ask an admin to add you.`;
+      return (
+        <>
+          {"You're not in the "}
+          <TeamName team={resolution.team} />
+          {" workspace. Ask an admin to add you."}
+        </>
+      );
     case "unavailable":
-      return `The backend didn't let you act as the ${resolution.team.label} workspace.`;
+      return (
+        <>
+          {"The backend didn't let you act as the "}
+          <TeamName team={resolution.team} />
+          {" workspace."}
+        </>
+      );
     case "error":
       return `Couldn't check your access to this project's workspace: ${resolution.error.message}`;
     default:
@@ -154,12 +167,6 @@ function WorkspaceSecrets({ team }: { team: ActiveTeam }) {
         <InfoBox title="Error loading secrets" variant="error">
           {error.message}
         </InfoBox>
-      )}
-
-      {secrets && secrets.length === 0 && (
-        <Text size="sm" tone="subdued">
-          No workspace secrets yet
-        </Text>
       )}
 
       {secrets && secrets.length > 0 && (
