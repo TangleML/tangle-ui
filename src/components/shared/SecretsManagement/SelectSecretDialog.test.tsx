@@ -90,10 +90,10 @@ describe("SelectSecretDialog", () => {
     await user.click(await screen.findByText("API_KEY"));
 
     expect(fetchSecrets).toHaveBeenCalledWith(TEAM.id);
-    expect(screen.getByText("The ML Research team's secrets")).toHaveAttribute(
-      "title",
-      TEAM.id,
+    expect(screen.getByTestId("team-secrets-heading")).toHaveTextContent(
+      "The ML Research team's secrets",
     );
+    expect(screen.getByTitle(TEAM.id)).toHaveTextContent("ML Research");
     expect(onSelect).toHaveBeenCalledWith("API_KEY");
   });
 
@@ -113,16 +113,16 @@ describe("SelectSecretDialog", () => {
 
     expect(await screen.findByText("API_KEY")).toBeVisible();
     expect(fetchSecrets).toHaveBeenCalledWith(undefined);
-    expect(screen.queryByText(/team's secrets/)).toBeNull();
+    expect(screen.queryByTestId("team-secrets-heading")).toBeNull();
   });
 
   it("explains a fallback to your own secrets", async () => {
     renderDialog({ status: "not-member", team: TEAM });
 
     expect(await screen.findByText("API_KEY")).toBeVisible();
-    expect(
-      screen.getByText("You're not in the ML Research team"),
-    ).toBeVisible();
+    expect(screen.getByTestId("info-box-title")).toHaveTextContent(
+      "You're not in the ML Research team",
+    );
     expect(fetchSecrets).toHaveBeenCalledWith(undefined);
   });
 
@@ -134,7 +134,10 @@ describe("SelectSecretDialog", () => {
 
     await user.click(await screen.findByTestId("select-secret-add-button"));
 
-    expect(screen.getByText("Add a secret to ML Research")).toBeVisible();
+    expect(screen.getByText("Add a team secret")).toBeVisible();
+    expect(
+      screen.getByText(/can use it in this project/).closest("p"),
+    ).toHaveTextContent("Everyone in ML Research can use it in this project.");
   });
 
   it("offers no way to add a secret to a team you can't change", async () => {

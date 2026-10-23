@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { ActingTeamNotice } from "@/components/shared/Teams/ActingTeamNotice";
+import { TeamName } from "@/components/shared/Teams/TeamName";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -143,9 +144,16 @@ function SelectSecretDialogContentInternal({
               <Button variant="ghost" size="sm" onClick={handleBackToSelect}>
                 <Icon name="ArrowLeft" />
               </Button>
-              {team ? `Add a secret to ${team.label}` : "Add Secret"}
+              {team ? "Add a team secret" : "Add Secret"}
             </InlineStack>
           </DialogTitle>
+          {team && (
+            <DialogDescription>
+              {"Everyone in "}
+              <TeamName team={team} />
+              {" can use it in this project."}
+            </DialogDescription>
+          )}
         </DialogHeader>
         <AddSecretForm
           teamId={teamId}
@@ -167,21 +175,11 @@ function SelectSecretDialogContentInternal({
       </DialogDescription>
       <BlockStack gap="4">
         {team && (
-          <InlineStack gap="1" blockAlign="center" wrap="nowrap">
-            <Icon
-              name="Users"
-              size="xs"
-              className="shrink-0 text-muted-foreground"
-            />
-            <Text
-              size="sm"
-              tone="subdued"
-              className="min-w-0 truncate"
-              title={team.id}
-            >
-              {`The ${team.label} team's secrets`}
-            </Text>
-          </InlineStack>
+          <Text size="sm" tone="subdued" data-testid="team-secrets-heading">
+            {"The "}
+            <TeamName team={team} />
+            {" team's secrets"}
+          </Text>
         )}
         <ActingTeamNotice resolution={resolution} />
         <SelectableSecretsList
