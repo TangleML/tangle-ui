@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
+import { ConfirmationDialog } from "@/components/shared/Dialogs";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import useToastNotification from "@/hooks/useToastNotification";
@@ -9,7 +10,7 @@ import type { Secret } from "../types";
 import { SecretsQueryKeys } from "../types";
 
 interface RemoveSecretButtonProps {
-  secret: Pick<Secret, "id">;
+  secret: Pick<Secret, "id" | "name">;
   onSuccess?: () => void;
 }
 
@@ -32,15 +33,22 @@ export function RemoveSecretButton({
   });
 
   return (
-    <Button
-      variant="ghost"
-      size="xs"
-      onClick={() => removeSecretMutation()}
-      disabled={isPending}
-      className="text-destructive hover:text-destructive"
-      data-testid="secret-remove-button"
-    >
-      <Icon name="Trash" size="sm" />
-    </Button>
+    <ConfirmationDialog
+      trigger={
+        <Button
+          variant="ghost"
+          size="xs"
+          disabled={isPending}
+          aria-label={`Delete ${secret.name}`}
+          className="text-destructive hover:text-destructive"
+          data-testid="secret-remove-button"
+        >
+          <Icon name="Trash" size="sm" />
+        </Button>
+      }
+      title={`Delete "${secret.name}"?`}
+      description="Runs that use it will fail when they start. This can't be undone."
+      onConfirm={() => removeSecretMutation()}
+    />
   );
 }
