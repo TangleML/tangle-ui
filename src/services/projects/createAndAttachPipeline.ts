@@ -1,9 +1,13 @@
 import { createNewPipeline } from "@/routes/v2/pages/Editor/components/EditorMenuBar/components/fileMenu.actions";
 import { availablePipelineName } from "@/services/localPipelines/localPipelinesService";
+import { createsLocalPipelines } from "@/services/pipelineStorage/pipelineCreation";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
 
-import { localPipelineResourceInput } from "./resourceDescriptor";
+import {
+  pipelineFileResourceInput,
+  remotePipelineResourceInput,
+} from "./pipelineResource";
 import type { CreateResourceInput } from "./types";
 
 interface CreateAndAttachOptions {
@@ -14,14 +18,8 @@ interface CreateAndAttachOptions {
 }
 
 /**
- * A pipeline is made in this browser and then named on the project, which are
- * two stores and two failures. Left alone, a refused attach strands a pipeline
- * the caller never asked for in browser storage — invisible, because nothing
- * lists a pipeline by what it is not attached to.
- *
- * So the file is deleted again if the attach is refused, and the refusal is
- * what the caller sees. Losing the pipeline is right here: it holds nothing
- * anyone has typed, and the caller is about to be told the whole thing failed.
+ * Remote drafts are attached on their first save. Local creation attaches
+ * immediately and removes the empty file if the project refuses it.
  */
 export async function createAndAttachPipeline({
   storage,
@@ -29,19 +27,21 @@ export async function createAndAttachPipeline({
   provisionalName = false,
   attach,
 }: CreateAndAttachOptions): Promise<PipelineFile> {
-  const file = await createNewPipeline(
+  const file: PipelineFile = await createNewPipeline(
     storage,
-    name ? await availablePipelineName(name) : undefined,
-    { provisionalName },
+    name && createsLocalPipelines() ? await availablePipelineName(name) : name,
+    {
+      provisionalName,
+      onRemoteCreated: (remote) =>
+        attach(remotePipelineResourceInput(remote.pipelineId, file.storageKey)),
+    },
   );
 
+  // The driver awaits attachment, so failures remain retryable through autosave.
+  if (file.isDraft) return file;
+
   try {
-    await attach(
-      localPipelineResourceInput({
-        localName: file.storageKey,
-        localId: file.id,
-      }),
-    );
+    await attach(pipelineFileResourceInput(file));
   } catch (error) {
     await file
       .deleteFile()

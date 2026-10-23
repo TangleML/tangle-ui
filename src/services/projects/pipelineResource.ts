@@ -1,0 +1,47 @@
+import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
+
+import { localPipelineResourceInput } from "./resourceDescriptor";
+import {
+  draftPipelineIdentity,
+  idIdentity,
+  remotePipelineIdentity,
+  type WorkareaTarget,
+} from "./resourceTarget";
+import type { CreateResourceInput, ProjectResourceSummary } from "./types";
+
+export function pipelineFileTarget(file: PipelineFile): WorkareaTarget {
+  return {
+    type: "pipeline",
+    identity: file.remote
+      ? remotePipelineIdentity(file.id)
+      : file.isDraft
+        ? draftPipelineIdentity(file.initialId)
+        : idIdentity(file.id),
+  };
+}
+
+export function remotePipelineResourceInput(
+  pipelineId: string,
+  name: string,
+): CreateResourceInput {
+  return { entity: "pipeline", entityId: pipelineId, name };
+}
+
+export function pipelineFileResourceInput(
+  file: PipelineFile,
+): CreateResourceInput {
+  return file.remote
+    ? remotePipelineResourceInput(file.id, file.storageKey)
+    : localPipelineResourceInput({
+        localId: file.id,
+        localName: file.storageKey,
+      });
+}
+
+export function remoteResourceTarget(
+  resource: Pick<ProjectResourceSummary, "entity" | "entityId">,
+): WorkareaTarget | undefined {
+  return resource.entity === "pipeline" && resource.entityId
+    ? { type: "pipeline", identity: remotePipelineIdentity(resource.entityId) }
+    : undefined;
+}

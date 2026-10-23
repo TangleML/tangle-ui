@@ -23,6 +23,7 @@ interface DispatcherInvokeParams {
   threadId: string;
   aiConfig: AiProviderConfig;
   session: AgentSession;
+  signal?: AbortSignal;
 }
 
 interface DispatcherInvokeResult {
@@ -68,6 +69,7 @@ export function createDispatcherRuntime(
       });
       const result = await runner.run(agent, params.message, {
         session: sessionMemory,
+        signal: params.signal,
       });
       const answer =
         typeof result.finalOutput === "string"

@@ -31,8 +31,8 @@ const LocalEditor = () => {
           {error}
         </InfoBox>
         <Paragraph tone="subdued" size="sm">
-          Tip: Pipelines are stored locally and are not shareable by URL. To
-          share a pipeline it needs to be exported.
+          Check that the pipeline still exists. You can also import it from a
+          YAML file.
         </Paragraph>
       </BlockStack>
     );

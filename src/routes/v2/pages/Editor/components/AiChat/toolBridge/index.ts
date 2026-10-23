@@ -8,9 +8,8 @@
  *
  * The composed object is intended to be exposed to the worker via
  * `Comlink.proxy()`. The bridge owns no React or MobX subscriptions of
- * its own; every method reads the live spec / backend / auth values
- * through `BridgeDeps` callbacks so navigation, backend, and auth
- * changes are picked up without rebuilding the bridge.
+ * its own. Each turn receives a document-scoped bridge; mutation handlers
+ * verify that the captured document is still current before changing it.
  */
 import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import { createComponentSearchBridgeHandlers } from "@/routes/v2/shared/components/AiChat/toolBridge/componentSearchBridge";
@@ -30,11 +29,20 @@ export type EditorToolBridgeDeps = CsomBridgeDeps;
 export function createEditorToolBridge(
   deps: EditorToolBridgeDeps,
 ): ToolBridgeApi {
+  const scopedDeps = {
+    ...deps,
+    undo: {
+      withGroup<T>(label: string, fn: () => T): T {
+        deps.assertCurrentDocument?.();
+        return deps.undo.withGroup(label, fn);
+      },
+    },
+  };
   return {
-    ...createCsomBridgeHandlers(deps),
-    ...createSubgraphBridgeHandlers(deps),
-    ...createComponentSearchBridgeHandlers(deps),
-    ...createRunBridgeHandlers(deps),
-    ...createDebugBridgeHandlers(deps),
+    ...createCsomBridgeHandlers(scopedDeps),
+    ...createSubgraphBridgeHandlers(scopedDeps),
+    ...createComponentSearchBridgeHandlers(scopedDeps),
+    ...createRunBridgeHandlers(scopedDeps),
+    ...createDebugBridgeHandlers(scopedDeps),
   };
 }

@@ -242,14 +242,14 @@
   {
     "id": "drafts-vs-runs",
     "category": "System",
-    "title": "Drafts live in your browser, runs live on the backend",
-    "body": "Pipelines in the Editor are saved to your browser's IndexedDB. They're personal, draft-only, and lost if you clear browser data. Submitting creates a Pipeline Run that's stored on the backend and shareable via URL. Export important drafts as YAML if you care about them."
+    "title": "Pipelines define work, runs record executions",
+    "body": "Edit a pipeline to define its tasks, inputs, and connections. Submitting it creates a Pipeline Run with the configuration used for that execution. Open the run to inspect its status, logs, and outputs."
   },
   {
     "id": "autosave",
     "category": "System",
-    "title": "There's no save button, autosave handles it",
-    "body": "The Editor autosaves to browser local storage 300ms after your last change, so there's no manual save button to forget. Keep an eye on the save indicator in the toolbar to confirm a change landed before you close the tab."
+    "title": "Watch the save indicator before closing the tab",
+    "body": "The Editor saves your changes automatically. Watch the save indicator in the toolbar and wait for it to confirm your changes are saved before closing the tab."
   },
   {
     "id": "favorites",

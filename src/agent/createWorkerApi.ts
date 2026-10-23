@@ -34,7 +34,8 @@ export interface AgentWorkerApi {
     context: AgentContext,
   ): void;
   ping(): Promise<"pong">;
-  ask(params: AskParams, signal?: AbortSignal): Promise<AgentResponse>;
+  cancel(): void;
+  ask(params: AskParams, turnBridge?: ToolBridgeApi): Promise<AgentResponse>;
 }
 
 function generateThreadId(): string {
@@ -45,6 +46,7 @@ export function createWorkerApi(
   createDispatcher: () => TangleDispatcher,
 ): AgentWorkerApi {
   let dispatcher: TangleDispatcher | null = null;
+  let activeTurn: AbortController | null = null;
   let bridge: ToolBridgeApi | null = null;
   let context: AgentContext | null = null;
   let emitStatus: StatusCallback = () => {};
@@ -69,13 +71,15 @@ export function createWorkerApi(
       dispatcher = createDispatcher();
     },
 
+    cancel() {
+      activeTurn?.abort();
+    },
+
     async ping() {
       return "pong";
     },
 
-    async ask({ message, threadId, recentRuns, aiConfig }, _signal) {
-      // todo: add logic to handle the signal
-
+    async ask({ message, threadId, recentRuns, aiConfig }, turnBridge) {
       if (!dispatcher || !bridge || !context) {
         throw new Error(
           "Agent worker not initialized. Call init() before ask().",
@@ -91,7 +95,7 @@ export function createWorkerApi(
         threadId: resolvedThreadId,
         emitStatus,
         proxyClient,
-        bridge,
+        bridge: turnBridge ?? bridge,
         skillsLoader,
         aiConfig,
         recentRuns,
@@ -99,18 +103,26 @@ export function createWorkerApi(
         componentCatalog,
       });
 
-      const result = await dispatcher.invoke({
-        message,
-        threadId: resolvedThreadId,
-        aiConfig,
-        session,
-      });
-
-      return {
-        answer: result.answer,
-        threadId: result.threadId,
-        componentReferences: session.componentReferences,
-      };
+      if (activeTurn) throw new Error("An agent turn is already running.");
+      const controller = new AbortController();
+      activeTurn = controller;
+      try {
+        const result = await dispatcher.invoke({
+          message,
+          threadId: resolvedThreadId,
+          aiConfig,
+          session,
+          signal: controller.signal,
+        });
+        controller.signal.throwIfAborted();
+        return {
+          answer: result.answer,
+          threadId: result.threadId,
+          componentReferences: session.componentReferences,
+        };
+      } finally {
+        if (activeTurn === controller) activeTurn = null;
+      }
     },
   };
 }

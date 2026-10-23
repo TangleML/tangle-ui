@@ -10,13 +10,20 @@ import {
 
 import { type UndoRedo, useUndoRedo } from "@/hooks/useUndoRedo";
 import { loadPipelineByName } from "@/services/pipelineService";
+import { RemotePipelineDraftStorageDriver } from "@/services/pipelineStorage/drivers/RemotePipelineDraftStorageDriver";
+import {
+  createsLocalPipelines,
+  getPipelineCreationBackendUrl,
+} from "@/services/pipelineStorage/pipelineCreation";
 import { emitPipelineFileChanged } from "@/services/pipelineStorage/pipelineFileEvents";
+import type { RemotePipelineRef } from "@/services/pipelineStorage/types";
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 import { prepareComponentRefForEditor } from "@/utils/prepareComponentRefForEditor";
 import {
   getSubgraphComponentSpec,
   updateSubgraphSpec,
 } from "@/utils/subgraphUtils";
+import { emitUserPipelineWritten } from "@/utils/userPipelineWriteEvents";
 import {
   checkComponentSpecValidity,
   collectComponentValidationIssues,
@@ -37,6 +44,7 @@ import {
 import {
   type ComponentReferenceWithSpec,
   generateDigest,
+  getComponentFileFromList,
   writeComponentToFileListFromText,
 } from "../utils/componentStore";
 
@@ -64,7 +72,7 @@ interface ComponentSpecContextType {
   globalValidationIssues: ComponentValidationIssue[];
   refetch: () => void;
   updateGraphSpec: (newGraphSpec: GraphSpec) => void;
-  saveComponentSpec: (name: string) => Promise<void>;
+  saveComponentSpec: (name: string) => Promise<RemotePipelineRef | void>;
   undoRedo: UndoRedo;
 
   currentSubgraphPath: string[];
@@ -91,6 +99,10 @@ export const ComponentSpecProvider = ({
     spec ?? EMPTY_GRAPH_COMPONENT_SPEC,
   );
   const [digest, setDigest] = useState<string>("");
+  const remoteSave = useRef<{
+    sourceName?: string;
+    driver: Promise<RemotePipelineDraftStorageDriver>;
+  } | null>(null);
 
   const [isLoading, setIsLoading] = useState(!!spec);
 
@@ -148,6 +160,7 @@ export const ComponentSpecProvider = ({
   }, [componentSpec]);
 
   const clearComponentSpec = useCallback(() => {
+    remoteSave.current = null;
     setComponentSpec(EMPTY_GRAPH_COMPONENT_SPEC);
     setIsLoading(false);
     setCurrentSubgraphPath(["root"]);
@@ -210,6 +223,41 @@ export const ComponentSpecProvider = ({
       const specWithName = { ...componentSpec, name };
 
       const componentText = componentSpecToYaml(specWithName);
+      const existingLocal =
+        !createsLocalPipelines() &&
+        ((await getComponentFileFromList(USER_PIPELINES_LIST_NAME, name)) ||
+          (componentSpec.name &&
+            (await getComponentFileFromList(
+              USER_PIPELINES_LIST_NAME,
+              componentSpec.name,
+            ))));
+      if (!createsLocalPipelines() && !existingLocal) {
+        if (
+          !remoteSave.current ||
+          remoteSave.current.sourceName !== componentSpec.name
+        ) {
+          remoteSave.current = {
+            sourceName: componentSpec.name,
+            driver: getPipelineCreationBackendUrl().then(
+              (backendUrl) =>
+                new RemotePipelineDraftStorageDriver({
+                  source: "draft",
+                  backendUrl,
+                  name,
+                  draftId: crypto.randomUUID(),
+                }),
+            ),
+          };
+        }
+        const saving = remoteSave.current;
+        const driver = await saving.driver.catch((error) => {
+          if (remoteSave.current === saving) remoteSave.current = null;
+          throw error;
+        });
+        await driver.write(name, componentText);
+        emitUserPipelineWritten();
+        return driver.remoteRef;
+      }
       await writeComponentToFileListFromText(
         USER_PIPELINES_LIST_NAME,
         name,

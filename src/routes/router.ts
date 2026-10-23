@@ -40,6 +40,7 @@ import { LearnHomeView } from "./Dashboard/Learn/LearnHomeView";
 import { LearnTipsView } from "./Dashboard/Learn/LearnTipsView";
 import { LearnToursView } from "./Dashboard/Learn/LearnToursView";
 import { TourPage } from "./Dashboard/Learn/Tour";
+import { createEditorV2Routes } from "./editorV2Routes";
 import { ImportPage } from "./Import";
 import { createLegacyRemoteEditorRoutes } from "./legacyRemoteEditorRoutes";
 import NotFoundPage from "./NotFoundPage";
@@ -52,7 +53,6 @@ import { PreferencesSettings } from "./Settings/sections/PreferencesSettings";
 import { SecretsSettings } from "./Settings/sections/SecretsSettings";
 import { SettingsLayout } from "./Settings/SettingsLayout";
 import { CompareView } from "./v2/pages/CompareView/CompareView";
-import { EditorV2 } from "./v2/pages/Editor/EditorV2";
 import { PipelineFoldersPage } from "./v2/pages/PipelineFolders/PipelineFoldersPage";
 import { RunViewV2 } from "./v2/pages/RunView/RunViewV2";
 import { TangentProjectPage } from "./v2/pages/Tangent/TangentProjectPage";
@@ -288,24 +288,6 @@ const importRoute = createRoute({
   component: ImportPage,
 });
 
-const editorRoute = createRoute({
-  getParentRoute: () => mainLayout,
-  path: APP_ROUTES.EDITOR,
-  component: EditorV2,
-});
-
-const pipelineEditorRoute = createRoute({
-  getParentRoute: () => mainLayout,
-  path: APP_ROUTES.PIPELINE_EDITOR,
-  component: EditorV2,
-});
-
-const remoteEditorRoute = createRoute({
-  getParentRoute: () => mainLayout,
-  path: APP_ROUTES.REMOTE_PIPELINE_EDITOR,
-  component: EditorV2,
-});
-
 const legacyRemoteEditorRoutes = createLegacyRemoteEditorRoutes(mainLayout);
 
 const githubAuthCallbackRoute = createRoute({
@@ -481,9 +463,7 @@ const appRouteTree = mainLayout.addChildren([
   quickStartRoute,
   settingsRouteTree,
   importRoute,
-  editorRoute,
-  pipelineEditorRoute,
-  remoteEditorRoute,
+  createEditorV2Routes(mainLayout),
   editorV2RemotePipelineRoute,
   ...legacyRemoteEditorRoutes,
   runDetailRoute,

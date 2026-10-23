@@ -38,7 +38,8 @@ UndoHistoryDB.version(1).stores({
 });
 
 export function getUndoHistoryKey(
-  file: Pick<PipelineFile, "remote" | "storageKey">,
+  file: Pick<PipelineFile, "storageKey"> &
+    Partial<Pick<PipelineFile, "remote">>,
 ): string {
   return file.remote
     ? getEditorPipelineIdentity({ source: "remote", ...file.remote })

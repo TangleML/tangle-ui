@@ -19,7 +19,7 @@ import { TangentRemoteEnvProvider } from "@/routes/v2/pages/Tangent/components/T
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { useLazyBridgeAuth } from "@/routes/v2/shared/components/AiChat/toolBridge/useLazyBridgeAuth";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
-import { idIdentity } from "@/services/projects/resourceTarget";
+import { pipelineFileTarget } from "@/services/projects/pipelineResource";
 
 import { createEditorToolBridge } from "./components/AiChat/toolBridge";
 import { fitViewAfterEdits } from "./components/AiChat/toolBridge/fitViewAfterEdits";
@@ -77,11 +77,11 @@ export function TangentEditorAgentProvider({
       invokeAutoLayout: invokeAutoLayoutVia(keyboard),
       renamePipelineFile: renamePipelineFileFor(
         editorSession.pipelineFile,
-        (fileId, title) =>
-          project.retitleWorkareaTarget(
-            { type: "pipeline", identity: idIdentity(fileId) },
-            title,
-          ),
+        (_fileId, title) => {
+          const file = editorSession.pipelineFile.activePipelineFile;
+          if (!file) return;
+          project.retitleWorkareaTarget(pipelineFileTarget(file), title);
+        },
       ),
     }),
   );

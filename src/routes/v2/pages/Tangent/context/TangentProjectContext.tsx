@@ -1,4 +1,5 @@
 import { useTangent } from "@tangent/embed-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useState } from "react";
 
 import {
@@ -9,6 +10,8 @@ import useToastNotification from "@/hooks/useToastNotification";
 import { usePrepareProjectArrival } from "@/routes/v2/pages/Tangent/hooks/usePrepareProjectArrival";
 import { useProjectSessions } from "@/routes/v2/pages/Tangent/hooks/useProjectSessions";
 import { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
+import { observeWorkareaPipelineDrafts } from "@/routes/v2/pages/Tangent/workarea/observeWorkareaPipelineDrafts";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import { nameFromPrompt } from "@/services/projects/nameFromPrompt";
 import { useProjectInstructions } from "@/services/projects/useProjectInstructions";
 
@@ -36,6 +39,13 @@ export function TangentProjectProvider({
     renameSession,
   } = useProjectSessions(projectId);
   const [store] = useState(() => new TangentProjectStore(projectId));
+  const storage = usePipelineStorage();
+  const queryClient = useQueryClient();
+
+  useEffect(
+    () => observeWorkareaPipelineDrafts(store, storage, queryClient),
+    [store, storage, queryClient],
+  );
 
   useEffect(() => {
     store.setSessionIo({

@@ -1,3 +1,4 @@
+import { useNavigate } from "@tanstack/react-router";
 import { useCallback } from "react";
 
 import { ActionButton } from "@/components/shared/Buttons/ActionButton";
@@ -16,15 +17,17 @@ export const SavePipelineButton = ({
   const { componentSpec } = useComponentSpec();
   const { savePipeline } = useSavePipeline(componentSpec);
   const notify = useToastNotification();
+  const navigate = useNavigate();
 
   const handleSavePipeline = useCallback(async () => {
-    await savePipeline();
+    const saved = await savePipeline();
     notify(
       `Pipeline saved as "${componentSpec?.name ?? "Untitled Pipeline"}"`,
       "success",
     );
     onSaveComplete?.();
-  }, [savePipeline, notify, componentSpec?.name, onSaveComplete]);
+    if (saved?.remote) await navigate({ to: saved.url });
+  }, [savePipeline, notify, componentSpec?.name, onSaveComplete, navigate]);
 
   return (
     <ActionButton

@@ -112,13 +112,13 @@ describe("ResourceRow", () => {
       },
     });
 
-    expect(screen.getByText("Local pipeline")).toBeInTheDocument();
+    expect(screen.getByText("Pipeline")).toBeInTheDocument();
   });
 
   it("says nothing extra about a document that does not say what kind it is", () => {
     renderRow(ownContent);
 
-    expect(screen.queryByText("Local pipeline")).toBeNull();
+    expect(screen.queryByText("Pipeline")).toBeNull();
   });
 
   it("says what kind a document calls itself, whatever that kind is", () => {

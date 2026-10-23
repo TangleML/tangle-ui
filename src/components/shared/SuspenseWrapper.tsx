@@ -21,6 +21,7 @@ type ErrorFallbackProps<T extends ComponentType<any>> = FallbackProps & {
 interface SuspenseWrapperProps {
   fallback?: ReactNode;
   errorFallback?: (props: FallbackProps) => ReactNode;
+  resetKeys?: unknown[];
 }
 
 const ErrorFallback = <T extends ComponentType<any>>({
@@ -45,6 +46,7 @@ export const SuspenseWrapper = ({
   children,
   fallback,
   errorFallback = ErrorFallback,
+  resetKeys,
 }: PropsWithChildren<SuspenseWrapperProps>) => {
   const fallbackMarkup = fallback ?? <Spinner />;
 
@@ -52,6 +54,7 @@ export const SuspenseWrapper = ({
     <QueryErrorResetBoundary>
       {({ reset }) => (
         <ErrorBoundary
+          resetKeys={resetKeys}
           onReset={reset}
           onError={(error, info) =>
             reportError(error, {
@@ -80,10 +83,12 @@ export function withSuspenseWrapper<T extends ComponentType<any>>(
   Component: T,
   Skeleton?: ComponentType<Partial<ComponentProps<T>>>,
   errorFallback?: (props: ErrorFallbackProps<T>) => ReactNode,
+  getResetKeys?: (props: ComponentProps<T>) => unknown[],
 ) {
   const ErrorFallbackComponent = errorFallback ?? ErrorFallback<T>;
   const ComponentWithSuspense = (props: ComponentProps<T>) => (
     <SuspenseWrapper
+      resetKeys={getResetKeys?.(props)}
       fallback={Skeleton ? <Skeleton {...props} /> : undefined}
       errorFallback={(errorProps) => (
         <ErrorFallbackComponent {...errorProps} originalProps={props} />

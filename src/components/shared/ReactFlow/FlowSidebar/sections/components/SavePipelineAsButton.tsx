@@ -31,13 +31,13 @@ export const SavePipelineAsButton = ({
 
   const handleSavePipelineAs = useCallback(
     async (name: string) => {
-      await savePipeline(name);
+      const saved = await savePipeline(name);
       track("pipeline_editor.pipeline_actions.save_pipeline_as_completed");
       notify(`Pipeline saved as "${name}"`, "success");
       onSaveComplete?.(name);
 
       navigate({
-        to: `${EDITOR_PATH}/${encodeURIComponent(name)}`,
+        to: saved?.url ?? `${EDITOR_PATH}/${encodeURIComponent(name)}`,
       });
     },
     [navigate, savePipeline, notify, onSaveComplete, track],

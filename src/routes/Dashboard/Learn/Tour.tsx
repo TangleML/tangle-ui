@@ -40,6 +40,7 @@ import {
   clearLayout,
   TOUR_WINDOW_LAYOUT_ID,
 } from "@/routes/v2/shared/windows/windowPersistence";
+import { createPipelineFromContent } from "@/services/pipelineStorage/pipelineCreation";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
 import { isRecord } from "@/utils/typeGuards";
@@ -174,7 +175,18 @@ export function TourPage() {
 
   const promoteToPipeline = async (newName: string, yamlContent: string) => {
     try {
-      const file = await storage.rootFolder.addFile(newName, yamlContent);
+      const file = await createPipelineFromContent(
+        storage,
+        newName,
+        yamlContent,
+      );
+      if (file.remote) {
+        await navigate({
+          to: APP_ROUTES.REMOTE_PIPELINE_EDITOR,
+          params: { pipelineId: file.id },
+        });
+        return;
+      }
       await navigate({
         to: APP_ROUTES.PIPELINE_EDITOR,
         params: { pipelineName: newName },

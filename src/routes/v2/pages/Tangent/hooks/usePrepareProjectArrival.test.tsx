@@ -212,6 +212,7 @@ describe("usePrepareProjectArrival", () => {
     await waitFor(() => expect(createNewPipeline).toHaveBeenCalled());
     expect(createNewPipeline).toHaveBeenCalledWith(storage, undefined, {
       provisionalName: true,
+      onRemoteCreated: expect.any(Function),
     });
     expect(createResource).toHaveBeenCalledWith(
       expect.objectContaining({ entity: "document", name: "Churn model" }),
@@ -229,6 +230,42 @@ describe("usePrepareProjectArrival", () => {
         "Churn model",
       ),
     );
+  });
+
+  it("opens a remote draft without attaching an empty pipeline", async () => {
+    vi.mocked(createNewPipeline).mockResolvedValue({
+      id: "draft-1",
+      initialId: "draft-1",
+      storageKey: "Churn model",
+      isDraft: true,
+    } as Awaited<ReturnType<typeof createNewPipeline>>);
+    const store = makeStore();
+    prepare(store);
+    await waitFor(() =>
+      expect(store.openWorkareaTarget).toHaveBeenCalledWith(
+        { type: "pipeline", identity: "draft/draft-1" },
+        "Churn model",
+      ),
+    );
+    expect(createResource).not.toHaveBeenCalled();
+  });
+
+  it("reopens an attached remote pipeline instead of creating another", async () => {
+    given({
+      documents: [
+        { ...document(null), entity: "pipeline", entityId: "remote-1" },
+      ],
+    });
+    const store = makeStore();
+    prepare(store);
+    await waitFor(() =>
+      expect(store.openWorkareaTarget).toHaveBeenCalledWith(
+        { type: "pipeline", identity: "remote/remote-1" },
+        "Churn model",
+      ),
+    );
+    expect(createNewPipeline).not.toHaveBeenCalled();
+    expect(createResource).not.toHaveBeenCalled();
   });
 
   /** The workarea is keyed by session, so a tab opened before one is dropped. */
@@ -508,7 +545,7 @@ describe("usePrepareProjectArrival", () => {
       expect(createNewPipeline).toHaveBeenCalledWith(
         storage,
         "Build a churn model for Q3",
-        { provisionalName: true },
+        { provisionalName: true, onRemoteCreated: expect.any(Function) },
       ),
     );
   });
@@ -635,9 +672,12 @@ describe("usePrepareProjectArrival", () => {
       );
     });
 
-    it("starts the empty session it asks for, dropping a prompt left waiting", async () => {
+    it("opens a requested run in a populated remote project and clears a waiting prompt", async () => {
       search = { session: "new", open: "run://id/run-7" };
       given({
+        documents: [
+          { ...document(null), entity: "pipeline", entityId: "remote-1" },
+        ],
         projectOverrides: {
           metadata: startingSessionMetadata({
             prompt: "Find out why run-3 failed.",
@@ -654,11 +694,16 @@ describe("usePrepareProjectArrival", () => {
           identity: "id/run-7",
         }),
       );
+      expect(store.openWorkareaTarget).toHaveBeenCalledTimes(1);
+      expect(store.startSession).toHaveBeenCalledTimes(1);
       expect(store.startSession).toHaveBeenCalledWith(undefined);
       expect(updateProject).toHaveBeenCalledWith({
         id: "project-1",
         input: { metadata: {} },
       });
+      expect(createNewPipeline).not.toHaveBeenCalled();
+      expect(createResource).not.toHaveBeenCalled();
+      expect(minimize).not.toHaveBeenCalled();
     });
 
     it("waits for a cached project to be read again before deciding", async () => {

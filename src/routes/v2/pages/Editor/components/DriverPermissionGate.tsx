@@ -12,6 +12,7 @@ import type { PipelineStorageService } from "@/services/pipelineStorage/Pipeline
 import {
   type EditorPipelineRef,
   getEditorPipelineIdentity,
+  isRemotePipelineDraftRef,
   isRemotePipelineRef,
   type PermissionStatus,
 } from "@/services/pipelineStorage/types";
@@ -25,7 +26,7 @@ async function resolveFolder(
   ref: EditorPipelineRef,
   storage: PipelineStorageService,
 ): Promise<PipelineFolder | null> {
-  if (isRemotePipelineRef(ref)) return null;
+  if (isRemotePipelineRef(ref) || isRemotePipelineDraftRef(ref)) return null;
   try {
     const file = ref.fileId
       ? await storage.findPipelineById(ref.fileId)
@@ -43,8 +44,10 @@ export function DriverPermissionGate({
   const storage = usePipelineStorage();
   const queryClient = useQueryClient();
   const [isRequesting, setIsRequesting] = useState(false);
+  const remote = "source" in pipelineRef;
 
   const { data, isLoading } = useQuery({
+    enabled: !remote,
     queryKey: [
       "driver-permission-gate",
       getEditorPipelineIdentity(pipelineRef),
@@ -62,6 +65,8 @@ export function DriverPermissionGate({
     },
     staleTime: 0,
   });
+
+  if (remote) return <>{children}</>;
 
   if (isLoading || !data) {
     return (

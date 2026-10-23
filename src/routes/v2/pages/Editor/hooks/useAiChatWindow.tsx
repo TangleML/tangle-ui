@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 
@@ -8,6 +9,7 @@ import { renamePipelineFileFor } from "@/routes/v2/pages/Editor/hooks/renamePipe
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { AiChatContent } from "@/routes/v2/shared/components/AiChat/AiChatContent";
 import type { SuggestedPrompt } from "@/routes/v2/shared/components/AiChat/types";
+import { preserveRenamedPipelineQuery } from "@/routes/v2/pages/Editor/utils/preserveRenamedPipelineQuery";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { WindowMiniButton } from "@/routes/v2/shared/windows/WindowMiniButton";
 
@@ -27,6 +29,7 @@ export function useAiChatWindow(enabled: boolean) {
   const { windows, keyboard } = useSharedStores();
   const editorSession = useEditorSession();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!enabled) {
@@ -45,8 +48,9 @@ export function useAiChatWindow(enabled: boolean) {
             renamePipelineFile: renamePipelineFileFor(
               editorSession.pipelineFile,
               (fileId, name) => {
-                if (editorSession.pipelineFile.activePipelineFile?.remote)
-                  return;
+                const file = editorSession.pipelineFile.activePipelineFile;
+                if (file?.remote || file?.isDraft) return;
+                if (file) preserveRenamedPipelineQuery(queryClient, file);
                 void navigate({
                   to: APP_ROUTES.PIPELINE_EDITOR,
                   params: { pipelineName: name },
@@ -54,6 +58,7 @@ export function useAiChatWindow(enabled: boolean) {
                   replace: true,
                 });
               },
+              deps.assertCurrentDocument,
             ),
           })
         }
@@ -77,5 +82,5 @@ export function useAiChatWindow(enabled: boolean) {
         ),
       },
     );
-  }, [enabled, windows, editorSession, keyboard, navigate]);
+  }, [enabled, windows, editorSession, keyboard, navigate, queryClient]);
 }

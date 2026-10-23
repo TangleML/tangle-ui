@@ -365,6 +365,27 @@ describe("createWorkareaRemoteTools", () => {
     expect(createPipeline).toHaveBeenCalledWith(undefined);
   });
 
+  it("create_pipeline opens the draft target supplied by remote creation", async () => {
+    const target = { type: "pipeline", identity: "draft/draft-1" } as const;
+    const tab = { ...pipelineTab("tab-new"), target };
+    const openTarget = vi.fn().mockResolvedValue(tab);
+    const tools = createWorkareaRemoteTools(() =>
+      makeDeps({
+        createPipeline: vi.fn().mockResolvedValue({
+          pipelineName: "Draft",
+          fileId: "draft-1",
+          target,
+        }),
+        openTarget,
+        getTabs: () => [tab],
+      }),
+    );
+    expect(await tools.create_pipeline.execute({})).toMatchObject({
+      target: "pipeline://draft/draft-1",
+    });
+    expect(openTarget).toHaveBeenCalledWith(target, "Draft");
+  });
+
   it("create_pipeline refuses a name that is not worth a pipeline", async () => {
     const createPipeline = vi.fn();
     const tools = createWorkareaRemoteTools(() => makeDeps({ createPipeline }));
@@ -409,6 +430,21 @@ describe("createWorkareaRemoteTools", () => {
     await tools.clone_pipeline.execute({ runId: "run-explicit" });
 
     expect(clonePipeline).toHaveBeenCalledWith("run-explicit");
+  });
+
+  it("clone_pipeline returns the saved remote target", async () => {
+    const tools = createWorkareaRemoteTools(() =>
+      makeDeps({
+        clonePipeline: vi.fn().mockResolvedValue({
+          pipelineName: "Clone",
+          target: { type: "pipeline", identity: "remote/remote-1" },
+        }),
+      }),
+    );
+    expect(await tools.clone_pipeline.execute({ runId: "run-1" })).toEqual({
+      name: "Clone",
+      target: "pipeline://remote/remote-1",
+    });
   });
 
   describe("naming tools", () => {

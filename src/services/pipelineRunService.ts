@@ -4,7 +4,14 @@ import type {
   BodyCreateApiPipelineRunsPost,
   ListAnnotationsApiPipelineRunsIdAnnotationsGetResponse,
 } from "@/api/types.gen";
-import { getDefaultEditorPath } from "@/routes/editorRoutes";
+import {
+  getDefaultEditorPath,
+  getDefaultRemoteEditorPath,
+} from "@/routes/editorRoutes";
+import {
+  createsLocalPipelines,
+  saveNewRemotePipeline,
+} from "@/services/pipelineStorage/pipelineCreation";
 import type { PipelineRun } from "@/types/pipelineRun";
 import { EDITOR_FLOW_DIRECTION_ANNOTATION } from "@/utils/annotations";
 import { removeCachingStrategyFromSpec } from "@/utils/cache";
@@ -97,85 +104,85 @@ export const copyRunToPipeline = async (
     };
   }
 
-  try {
-    const cleanComponentSpec = structuredClone(componentSpec);
+  const cleanComponentSpec = structuredClone(componentSpec);
 
-    // The editor now only supports left-to-right layouts direction, so we mark every cloned pipelines with this annotation.
-    // Ideally, we should have tried to properly convert the pipelines (transpose the node positions).
-    // But there are already many runs that are left-to-right but not marked as such.
-    cleanComponentSpec.metadata ??= {};
-    cleanComponentSpec.metadata.annotations ??= {};
-    cleanComponentSpec.metadata.annotations[
-      EDITOR_FLOW_DIRECTION_ANNOTATION
-    ] ??= "left-to-right";
-    if (runId) {
-      cleanComponentSpec.metadata.annotations["cloned_from_run_id"] = runId;
-    }
+  // The editor now only supports left-to-right layouts direction, so we mark every cloned pipelines with this annotation.
+  // Ideally, we should have tried to properly convert the pipelines (transpose the node positions).
+  // But there are already many runs that are left-to-right but not marked as such.
+  cleanComponentSpec.metadata ??= {};
+  cleanComponentSpec.metadata.annotations ??= {};
+  cleanComponentSpec.metadata.annotations[EDITOR_FLOW_DIRECTION_ANNOTATION] ??=
+    "left-to-right";
+  if (runId) {
+    cleanComponentSpec.metadata.annotations["cloned_from_run_id"] = runId;
+  }
 
-    if (taskArguments) {
-      // update all  values of inputs with the task arguments
-      cleanComponentSpec.inputs?.forEach((input) => {
-        if (taskArguments[input.name]) {
-          input.value = taskArguments[input.name];
-        }
-      });
-    }
-
-    // Remove caching strategy from all tasks
-    if (isGraphImplementation(cleanComponentSpec.implementation)) {
-      const tasks = cleanComponentSpec.implementation.graph.tasks;
-
-      cleanComponentSpec.implementation.graph.tasks = Object.fromEntries(
-        Object.entries(tasks).map(([taskId, task]) => [
-          taskId,
-          removeCachingStrategyFromSpec(task),
-        ]),
-      );
-    }
-
-    // Generate a name for the copied pipeline
-    const originalName = cleanComponentSpec.name || "Unnamed Pipeline";
-    let newName = name || originalName;
-
-    // Check if the name already exists and append a number if needed
-    let nameExists = true;
-    let counter = 1;
-
-    while (nameExists) {
-      const existingFile = await getComponentFileFromList(
-        USER_PIPELINES_LIST_NAME,
-        newName,
-      );
-
-      if (existingFile === null) {
-        nameExists = false;
-      } else {
-        const countNumber = counter > 1 ? " " + counter : "";
-        newName = `${originalName} (Copy${countNumber})`;
-        counter++;
+  if (taskArguments) {
+    cleanComponentSpec.inputs?.forEach((input) => {
+      if (taskArguments[input.name]) {
+        input.value = taskArguments[input.name];
       }
-    }
+    });
+  }
 
-    cleanComponentSpec.name = newName;
+  if (isGraphImplementation(cleanComponentSpec.implementation)) {
+    const tasks = cleanComponentSpec.implementation.graph.tasks;
 
-    const componentText = componentSpecToYaml(cleanComponentSpec);
-    await writeComponentToFileListFromText(
-      USER_PIPELINES_LIST_NAME,
-      newName,
-      componentText,
+    cleanComponentSpec.implementation.graph.tasks = Object.fromEntries(
+      Object.entries(tasks).map(([taskId, task]) => [
+        taskId,
+        removeCachingStrategyFromSpec(task),
+      ]),
     );
+  }
 
+  const originalName = cleanComponentSpec.name || "Unnamed Pipeline";
+  let newName = name || originalName;
+
+  if (!createsLocalPipelines()) {
+    const remote = await saveNewRemotePipeline(
+      newName,
+      componentSpecToYaml({ ...cleanComponentSpec, name: newName }),
+    );
     return {
-      url: getDefaultEditorPath(newName),
       name: newName,
-    };
-  } catch (error) {
-    console.error("Error cloning pipeline:", error);
-    return {
-      url: null,
-      name: null,
+      url: getDefaultRemoteEditorPath(remote.pipelineId),
+      remote,
     };
   }
+
+  // Check if the name already exists and append a number if needed
+  let nameExists = true;
+  let counter = 1;
+
+  while (nameExists) {
+    const existingFile = await getComponentFileFromList(
+      USER_PIPELINES_LIST_NAME,
+      newName,
+    );
+
+    if (existingFile === null) {
+      nameExists = false;
+    } else {
+      const countNumber = counter > 1 ? " " + counter : "";
+      newName = `${originalName} (Copy${countNumber})`;
+      counter++;
+    }
+  }
+
+  cleanComponentSpec.name = newName;
+
+  const componentText = componentSpecToYaml(cleanComponentSpec);
+  await writeComponentToFileListFromText(
+    USER_PIPELINES_LIST_NAME,
+    newName,
+    componentText,
+  );
+
+  return {
+    url: getDefaultEditorPath(newName),
+    name: newName,
+  };
 };
 
 export const fetchPipelineRuns = async (

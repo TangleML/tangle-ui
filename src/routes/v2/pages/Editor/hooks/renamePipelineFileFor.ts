@@ -12,14 +12,19 @@ import { availablePipelineName } from "@/services/localPipelines/localPipelinesS
 export function renamePipelineFileFor(
   pipelineFile: PipelineFileStore,
   onRenamed?: (fileId: string, name: string) => void,
+  assertCurrentDocument?: () => void,
 ) {
   return async (name: string): Promise<string> => {
+    assertCurrentDocument?.();
     const file = pipelineFile.activePipelineFile;
     if (!file) return name;
     if (file.storageKey === name) return name;
 
-    const available = file.remote ? name : await availablePipelineName(name);
+    const available =
+      file.remote || file.isDraft ? name : await availablePipelineName(name);
+    assertCurrentDocument?.();
     await file.rename(available);
+    assertCurrentDocument?.();
     onRenamed?.(file.id, available);
     return available;
   };

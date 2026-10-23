@@ -1,6 +1,15 @@
 import * as yaml from "js-yaml";
 
 import { getAppSettings } from "@/appSettings";
+import {
+  getDefaultEditorPath,
+  getDefaultRemoteEditorPath,
+} from "@/routes/editorRoutes";
+import {
+  createsLocalPipelines,
+  saveNewRemotePipeline,
+} from "@/services/pipelineStorage/pipelineCreation";
+import type { RemotePipelineRef } from "@/services/pipelineStorage/types";
 import type { PipelineLibrary } from "@/types/pipelineLibrary";
 import { downloadDataWithCache, loadObjectFromYamlData } from "@/utils/cache";
 import {
@@ -48,11 +57,30 @@ export const useSavePipeline = (componentSpec: ComponentSpec) => {
 
     const componentSpecAsYaml = componentSpecToYaml(componentSpecWithNewName);
 
+    if (
+      !createsLocalPipelines() &&
+      (name !== undefined ||
+        !(await getComponentFileFromList(
+          USER_PIPELINES_LIST_NAME,
+          componentSpecWithNewName.name,
+        )))
+    ) {
+      const remote = await saveNewRemotePipeline(
+        componentSpecWithNewName.name,
+        componentSpecAsYaml,
+      );
+      return {
+        url: getDefaultRemoteEditorPath(remote.pipelineId),
+        remote: true as const,
+      };
+    }
+
     await writeComponentToFileListFromText(
       USER_PIPELINES_LIST_NAME,
       componentSpecWithNewName.name,
       componentSpecAsYaml,
     );
+    return { url: getDefaultEditorPath(componentSpecWithNewName.name) };
   };
 
   return {
@@ -143,6 +171,8 @@ export interface ImportResult {
   overwritten: boolean;
   successful: boolean;
   errorMessage?: string;
+  remote?: RemotePipelineRef;
+  url?: string;
 }
 
 /**
@@ -175,9 +205,10 @@ async function generateUniquePipelineName(baseName: string): Promise<string> {
 }
 
 /**
- * Imports a pipeline from YAML content and saves it to the user's pipeline library
+ * Imports a pipeline from YAML content into the selected storage destination.
+ * Remote imports create independent copies; they do not overwrite existing pipelines.
  * @param yamlContent The YAML content to import as a string
- * @param overwrite Optional. Whether to overwrite if a pipeline with the same name exists
+ * @param overwrite Whether to replace a same-name browser-local pipeline. Ignored for remote imports.
  * @returns The result of the import, with the pipeline name and unique flag
  */
 export async function importPipelineFromYaml(
@@ -207,6 +238,20 @@ export async function importPipelineFromYaml(
     // Use the name from the YAML or default to "Imported Pipeline"
     let pipelineName = componentSpec.name || "Imported Pipeline";
     let wasRenamed = false;
+
+    if (!createsLocalPipelines()) {
+      const remote = await saveNewRemotePipeline(
+        pipelineName,
+        componentSpecToYaml({ ...componentSpec, name: pipelineName }),
+      );
+      return {
+        name: pipelineName,
+        overwritten: false,
+        successful: true,
+        remote,
+        url: getDefaultRemoteEditorPath(remote.pipelineId),
+      };
+    }
 
     // Check if a pipeline with this name already exists
     const existingPipeline = await getComponentFileFromList(

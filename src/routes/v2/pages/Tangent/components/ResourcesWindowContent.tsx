@@ -9,6 +9,7 @@ import { useDialog } from "@/providers/DialogProvider/hooks/useDialog";
 import { convertCancelErrorTo } from "@/providers/DialogProvider/utils";
 import { AddResourceButton } from "@/routes/v2/pages/Tangent/components/AddResourceButton";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
+import { remoteResourceTarget } from "@/services/projects/pipelineResource";
 import { UNTITLED } from "@/services/projects/placeholderNames";
 import {
   describeResource,
@@ -48,7 +49,7 @@ interface ProjectResourceItem {
 
 const BACKEND_PIPELINE_META = {
   icon: resourceMeta("pipeline").icon,
-  description: "Backend pipeline — not supported yet",
+  description: resourceMeta("pipeline").label,
 };
 
 const ABSENT_PIPELINE_META = {
@@ -77,11 +78,8 @@ function targetOf(
 }
 
 /**
- * A row with no target is listed but cannot be opened. Two kinds land there: a
- * pipeline the backend holds, which nothing here can open because the editor
- * reads browser storage; and a pipeline held in a browser that is not this one,
- * which is the ordinary case in a project someone shared. Both belong to the
- * project, so leaving them out would make the list look wrong.
+ * Remote pipelines open by their backend identity. Local pipelines belonging
+ * to another browser remain listed, but cannot be opened here.
  *
  * Instructions are the one row deliberately left out: they have a box of their
  * own above this list, and a second way in would offer a Remove that wipes them.
@@ -96,6 +94,7 @@ function toResourceItem(
           id: resource.id,
           name: resource.name ?? resource.entityId,
           ...BACKEND_PIPELINE_META,
+          target: remoteResourceTarget(resource),
         }
       : undefined;
   }

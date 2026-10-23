@@ -40,7 +40,7 @@ export function useSpecLifecycle(
 
     pipelineFileStore.init(file);
     autoSave.init(rootSpec, file, saveState);
-    if (!file.remote) {
+    if (!file.remote && !file.isDraft) {
       void saveIdStack(file.storageKey, collectIdStack(rootSpec)).catch(
         (error) => console.warn("Failed to persist pipeline id stack", error),
       );
