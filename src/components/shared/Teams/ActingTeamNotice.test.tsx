@@ -15,9 +15,10 @@ describe("ActingTeamNotice", () => {
   it("tells a non-member their runs fall back to them", () => {
     renderNotice({ status: "not-member", team });
 
-    expect(
-      screen.getByText("You're not in the ML Research team"),
-    ).toBeVisible();
+    expect(screen.getByTestId("info-box-title")).toHaveTextContent(
+      "You're not in the ML Research team",
+    );
+    expect(screen.getByTitle(team.id)).toHaveTextContent("ML Research");
     expect(
       screen.getByText(/run as you instead, with your own secrets/),
     ).toBeVisible();
@@ -27,7 +28,9 @@ describe("ActingTeamNotice", () => {
   it("says when the backend refuses to act as the team", () => {
     renderNotice({ status: "unavailable", team });
 
-    expect(screen.getByText("Can't act as the ML Research team")).toBeVisible();
+    expect(screen.getByTestId("info-box-title")).toHaveTextContent(
+      "Can't act as the ML Research team",
+    );
     expect(
       screen.getByText(/run as you instead, with your own secrets/),
     ).toBeVisible();
@@ -57,7 +60,12 @@ describe("ActingTeamNotice", () => {
     expect(
       screen.getByText("These projects belong to different teams"),
     ).toBeVisible();
-    expect(screen.getByText(/use ML Research and Data/)).toBeVisible();
+    expect(screen.getByTestId("info-box-error")).toHaveTextContent(
+      "these projects use ML Research and Data.",
+    );
+    expect(screen.getByTitle("data-team@example.com")).toHaveTextContent(
+      "Data",
+    );
     expect(screen.getByTestId("info-box-error")).toBeInTheDocument();
   });
 

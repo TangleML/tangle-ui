@@ -1,7 +1,11 @@
+import { Fragment } from "react";
+
 import { InfoBox } from "@/components/shared/InfoBox";
 import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
-import type { TeamResolution } from "@/services/teams/types";
+import type { TeamResolution, TeamSummary } from "@/services/teams/types";
+
+import { TeamName } from "./TeamName";
 
 const RUNS_FALL_BACK_TO_YOU =
   "Runs you submit for this project run as you instead, with your own secrets.";
@@ -15,7 +19,13 @@ export function ActingTeamNotice({
     case "not-member":
       return (
         <InfoBox
-          title={`You're not in the ${resolution.team.label} team`}
+          title={
+            <>
+              {"You're not in the "}
+              <TeamName team={resolution.team} />
+              {" team"}
+            </>
+          }
           variant="warning"
           width="full"
         >
@@ -25,7 +35,13 @@ export function ActingTeamNotice({
     case "unavailable":
       return (
         <InfoBox
-          title={`Can't act as the ${resolution.team.label} team`}
+          title={
+            <>
+              {"Can't act as the "}
+              <TeamName team={resolution.team} />
+              {" team"}
+            </>
+          }
           variant="warning"
           width="full"
         >
@@ -56,10 +72,21 @@ export function ActingTeamNotice({
           variant="error"
           width="full"
         >
-          {`A run can only act as one team, and these projects use ${resolution.teams.map((team) => team.label).join(" and ")}. File the run under projects on one team.`}
+          {"A run can only act as one team, and these projects use "}
+          <TeamNames teams={resolution.teams} />
+          {". File the run under projects on one team."}
         </InfoBox>
       );
     default:
       return null;
   }
+}
+
+function TeamNames({ teams }: { teams: TeamSummary[] }) {
+  return teams.map((team, index) => (
+    <Fragment key={team.id}>
+      {index > 0 && " and "}
+      <TeamName team={team} />
+    </Fragment>
+  ));
 }

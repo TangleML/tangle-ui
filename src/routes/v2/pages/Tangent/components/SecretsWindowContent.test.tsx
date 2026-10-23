@@ -146,10 +146,13 @@ describe("SecretsWindowContent", () => {
       ).toBeVisible();
     });
 
-    it("says when the team has no secrets", async () => {
+    it("offers to add the first secret when the team has none", async () => {
       renderWindow();
 
-      expect(await screen.findByText("No team secrets yet")).toBeVisible();
+      expect(
+        await screen.findByRole("button", { name: "Add a secret" }),
+      ).toBeVisible();
+      expect(screen.queryByText(/No team secrets/)).toBeNull();
     });
   });
 
@@ -190,9 +193,9 @@ describe("SecretsWindowContent", () => {
     renderWindow();
 
     expect(await screen.findByText("MY_TOKEN")).toBeVisible();
-    expect(
-      screen.getByText("You're not in the ML Research team"),
-    ).toBeVisible();
+    expect(screen.getByTestId("info-box-title")).toHaveTextContent(
+      "You're not in the ML Research team",
+    );
     expect(screen.getByText("My secrets")).toBeVisible();
     expect(fetchSecrets).toHaveBeenCalledWith(undefined);
   });

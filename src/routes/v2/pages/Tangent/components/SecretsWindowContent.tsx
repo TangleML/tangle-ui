@@ -147,12 +147,6 @@ function ProjectSecrets({ resolution }: { resolution: SettledTeamResolution }) {
         </InfoBox>
       )}
 
-      {secrets && secrets.length === 0 && (
-        <Text size="sm" tone="subdued">
-          {team ? "No team secrets yet" : "No secrets yet"}
-        </Text>
-      )}
-
       {secrets && secrets.length > 0 && (
         <BlockStack className="border rounded-md divide-y">
           {secrets.map((secret) => (

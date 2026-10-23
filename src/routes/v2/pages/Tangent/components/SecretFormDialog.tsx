@@ -1,23 +1,40 @@
 import { AddSecretForm } from "@/components/shared/SecretsManagement/components/AddSecretForm";
 import type { Secret } from "@/components/shared/SecretsManagement/types";
+import { TeamName } from "@/components/shared/Teams/TeamName";
 import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import type { DialogProps } from "@/providers/DialogProvider/types";
 import type { TeamSummary } from "@/services/teams/types";
+
+import { ListRowIcon } from "./ListRowIcon";
 
 export interface SecretFormDialogProps {
   secret?: Secret;
   team?: TeamSummary;
 }
 
-function dialogDescription({ secret, team }: SecretFormDialogProps): string {
+function dialogTitle({ secret, team }: SecretFormDialogProps): string {
+  if (secret) return `Replace ${secret.name}`;
+  return team ? "Add a team secret" : "Add a secret";
+}
+
+function DialogDescriptionText({ secret, team }: SecretFormDialogProps) {
   if (secret) return "Runs that start after this use the new value.";
-  if (team) return `Everyone in ${team.label} can use it in this project.`;
+  if (team) {
+    return (
+      <>
+        {"Everyone in "}
+        <TeamName team={team} />
+        {" can use it in this project."}
+      </>
+    );
+  }
   return "Only runs you submit can use it.";
 }
 
@@ -45,12 +62,15 @@ export function SecretFormDialog({
   return (
     <>
       <DialogHeader>
-        <DialogTitle>
-          {secret ? `Replace ${secret.name}` : "Add a secret"}
-        </DialogTitle>
-        <DialogDescription>
-          {dialogDescription({ secret, team })}
-        </DialogDescription>
+        <InlineStack gap="3" blockAlign="center" wrap="nowrap">
+          {secret && <ListRowIcon icon="KeyRound" />}
+          <BlockStack gap="1" className="min-w-0">
+            <DialogTitle>{dialogTitle({ secret, team })}</DialogTitle>
+            <DialogDescription>
+              <DialogDescriptionText secret={secret} team={team} />
+            </DialogDescription>
+          </BlockStack>
+        </InlineStack>
       </DialogHeader>
       <AddSecretForm
         existingSecret={secret}
