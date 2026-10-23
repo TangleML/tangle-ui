@@ -10,7 +10,7 @@ import type { RemoteEnvWorkerApi } from "@/agent/createRemoteEnvWorkerApi";
 import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 
 import type { AgentTargetRouter } from "./createActiveTabRoutingBridge";
-import { createRemoteEnvHost } from "./remoteEnvHost";
+import { createRemoteEnvHost, describeBrowserEnv } from "./remoteEnvHost";
 
 const connectRemoteEnvironment = vi.fn();
 
@@ -137,6 +137,37 @@ describe("createRemoteEnvHost", () => {
       throw new Error("Connect listener was not registered");
     connectListener();
     await expect(connection).resolves.toBeUndefined();
+  });
+
+  it("forwards host metadata into the connect options", () => {
+    const worker = makeWorker();
+    const metadata = {
+      editor: "browser",
+      description: "Tangent browser canvas",
+    };
+    const host = createRemoteEnvHost({
+      url: "http://localhost:8000",
+      worker: worker as unknown as Remote<RemoteEnvWorkerApi>,
+      metadata,
+    });
+
+    void host.connect("token", "env-1");
+
+    const options = connectRemoteEnvironment.mock.calls.at(-1)?.[0];
+    expect(options.metadata).toEqual(metadata);
+  });
+
+  it("omits metadata from the connect options when unset", () => {
+    const worker = makeWorker();
+    const host = createRemoteEnvHost({
+      url: "http://localhost:8000",
+      worker: worker as unknown as Remote<RemoteEnvWorkerApi>,
+    });
+
+    void host.connect("token", "env-1");
+
+    const options = connectRemoteEnvironment.mock.calls.at(-1)?.[0];
+    expect(options.metadata).toBeUndefined();
   });
 
   it("settles a connect that a disconnect superseded", async () => {
@@ -592,5 +623,21 @@ describe("createRemoteEnvHost", () => {
     await handlers.onKill(killCommand("a1", false));
 
     expect(onError).toHaveBeenCalledWith("kill failed");
+  });
+});
+
+describe("describeBrowserEnv", () => {
+  it("describes the editor host", () => {
+    const metadata = describeBrowserEnv({ mode: "editor" });
+    expect(metadata.editor).toBe("browser");
+    expect(metadata.description).toBe("Tangent browser canvas");
+    expect(metadata.capabilities).toContain("edits the pipeline spec");
+  });
+
+  it("describes the run-view host distinctly", () => {
+    const metadata = describeBrowserEnv({ mode: "runView", runId: "r1" });
+    expect(metadata.editor).toBe("browser");
+    expect(metadata.description).toBe("Tangent browser run inspector");
+    expect(metadata.capabilities).toContain("read-only");
   });
 });
