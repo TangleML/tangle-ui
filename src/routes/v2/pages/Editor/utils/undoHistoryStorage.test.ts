@@ -12,6 +12,10 @@ import {
   Task,
   YamlDeserializer,
 } from "@/models/componentSpec";
+import {
+  editorSpecFromRemoteTask,
+  remotePipelineTaskFromSpec,
+} from "@/services/pipelineStorage/remotePipelineTask";
 import { isGraphImplementation } from "@/utils/componentSpec";
 import { componentSpecFromYaml, componentSpecToYaml } from "@/utils/yaml";
 
@@ -149,6 +153,45 @@ describe("remote browser history", () => {
     expect(restored.tasks).toHaveLength(0);
     manager.redo();
     expect(serializeComponentSpecToText(restored)).toBe(yaml);
+    manager.dispose();
+  });
+
+  it("restores undo after remote saving removes library reference metadata", async () => {
+    const spec = new ComponentSpec({ name: "Pipeline" });
+    const recording = undoMiddleware(spec);
+    spec.addTask(
+      new Task({
+        name: "Train",
+        componentRef: {
+          name: "Trainer",
+          favorited: true,
+          published_by: "author@example.com",
+        },
+      }),
+    );
+    const yaml = serializeComponentSpecToText(spec);
+    await saveUndoHistory(key, collectIdStack(spec), recording, yaml);
+    recording.dispose();
+
+    const serverSpec = editorSpecFromRemoteTask(
+      remotePipelineTaskFromSpec(componentSpecFromYaml(yaml)),
+    );
+    const serverYaml = componentSpecToYaml(serverSpec);
+    expect(serverYaml).not.toContain("favorited");
+    expect(serverYaml).not.toContain("published_by");
+    const stored = await loadUndoHistory(key, serverYaml);
+    if (!stored) throw new Error("Expected saved remote undo history");
+    const restored = new YamlDeserializer(
+      new ReplayIdGenerator(stored.idStack),
+    ).deserialize(serverSpec);
+    const manager = undoMiddleware(
+      restored,
+      createUndoStoreWithEvents(stored.undoEvents),
+    );
+    manager.undo();
+    expect(restored.tasks).toHaveLength(0);
+    manager.redo();
+    expect(restored.tasks.map((task) => task.name)).toEqual(["Train"]);
     manager.dispose();
   });
 

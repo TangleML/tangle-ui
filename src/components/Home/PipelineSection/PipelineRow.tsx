@@ -51,6 +51,8 @@ interface PipelineRowProps {
   name?: string;
   modificationTime?: Date;
   onDelete?: () => void;
+  onSaveAsRemote?: () => void;
+  saveAsRemoteDisabled?: boolean;
   isSelected?: boolean;
   onSelect?: (checked: boolean) => void;
   searchQuery?: string;
@@ -72,6 +74,8 @@ const PipelineRow = withSuspenseWrapper(
     componentRef,
     modificationTime,
     onDelete,
+    onSaveAsRemote,
+    saveAsRemoteDisabled,
     isSelected = false,
     onSelect,
     searchQuery,
@@ -229,15 +233,36 @@ const PipelineRow = withSuspenseWrapper(
         <TableCell>
           {name && <PipelineRunsButton pipelineName={name} />}
         </TableCell>
-        <TableCell className="w-16">
+        <TableCell className="w-16" onClick={(e) => e.stopPropagation()}>
           <InlineStack gap="1" blockAlign="center" wrap="nowrap">
             {name && <FavoriteToggle type="pipeline" id={name} name={name} />}
+            {onSaveAsRemote && (
+              <ConfirmationDialog
+                trigger={
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Upload pipeline"
+                    title="Upload pipeline"
+                    disabled={saveAsRemoteDisabled}
+                  >
+                    <Icon name="CloudUpload" />
+                  </Button>
+                }
+                title={`Upload "${name}"?`}
+                confirmLabel="Upload"
+                description="This pipeline and its configured input values will be saved to the selected backend. Other users with read access to that backend can see them. After uploading, this pipeline moves to Remote Pipelines and its browser copy is removed."
+                onConfirm={onSaveAsRemote}
+              />
+            )}
             <ConfirmationDialog
               trigger={
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="opacity-0 group-hover:opacity-100 cursor-pointer text-destructive-foreground hover:text-destructive-foreground"
+                  aria-label="Delete pipeline"
+                  title="Delete pipeline"
+                  className="text-foreground hover:text-destructive-foreground"
                   {...tracking(
                     `${analyticsTrackingPrefix}.pipeline_delete_confirm_open`,
                   )}

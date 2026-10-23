@@ -1,4 +1,10 @@
-import { type MouseEvent, type ReactNode, useCallback } from "react";
+import {
+  type MouseEvent,
+  type ReactNode,
+  useCallback,
+  useId,
+  useState,
+} from "react";
 
 import {
   AlertDialog,
@@ -11,11 +17,16 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { InlineStack } from "@/components/ui/layout";
 
 type ConfirmationDialogProps = {
   title?: string;
   description?: string;
   content?: ReactNode;
+  confirmLabel?: string;
+  dismissForeverKey?: string;
   onConfirm: () => void;
   onCancel?: () => void;
 } & (
@@ -31,20 +42,44 @@ const ConfirmationDialog = ({
   title = defaultTitle,
   description = defaultDescription,
   content,
+  confirmLabel = "Continue",
+  dismissForeverKey,
   isOpen,
   onConfirm,
   onCancel = () => {},
 }: ConfirmationDialogProps) => {
-  const handleClick = useCallback((e: MouseEvent) => {
-    e.stopPropagation();
-  }, []);
+  const [dismissForever, setDismissForever] = useState(false);
+  const checkboxId = useId();
+
+  const handleClick = useCallback(
+    (e: MouseEvent) => {
+      e.stopPropagation();
+      setDismissForever(false);
+      if (!dismissForeverKey) return;
+      try {
+        if (localStorage.getItem(dismissForeverKey) !== "true") return;
+      } catch {
+        return;
+      }
+      e.preventDefault();
+      onConfirm();
+    },
+    [dismissForeverKey, onConfirm],
+  );
 
   const handleConfirm = useCallback(
     (e: MouseEvent) => {
       e.stopPropagation();
+      if (dismissForeverKey && dismissForever) {
+        try {
+          localStorage.setItem(dismissForeverKey, "true");
+        } catch {
+          // Confirmation still works when browser storage is unavailable.
+        }
+      }
       onConfirm();
     },
-    [onConfirm],
+    [dismissForeverKey, dismissForever, onConfirm],
   );
 
   const handleCancel = useCallback(
@@ -72,10 +107,20 @@ const ConfirmationDialog = ({
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         {content}
+        {dismissForeverKey && (
+          <InlineStack gap="2" blockAlign="center">
+            <Checkbox
+              id={checkboxId}
+              checked={dismissForever}
+              onCheckedChange={(checked) => setDismissForever(checked === true)}
+            />
+            <Label htmlFor={checkboxId}>Don&apos;t show this again</Label>
+          </InlineStack>
+        )}
         <AlertDialogFooter>
           <AlertDialogCancel onClick={handleCancel}>Cancel</AlertDialogCancel>
           <AlertDialogAction onClick={handleConfirm} autoFocus>
-            Continue
+            {confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
