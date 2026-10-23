@@ -6,6 +6,7 @@ import type { AiProviderConfig } from "@/types/aiProvider";
 import type { ComponentCatalog } from "./componentCatalog";
 import { createComponentCatalog } from "./componentCatalog";
 import type { ProxyClient } from "./config";
+import type { SessionResourceBridge } from "./sessionResourceBridge";
 import type { SkillsLoader } from "./skills/loader";
 import type { ToolBridgeApi } from "./toolBridgeApi";
 import type { AgentContext, AgentResponse, StatusCallback } from "./types";
@@ -29,6 +30,7 @@ export interface AgentSession {
   context: AgentContext;
   componentReferences: AgentResponse["componentReferences"];
   componentCatalog: ComponentCatalog;
+  resources?: SessionResourceBridge;
 }
 
 export function createSession(params: {
@@ -41,6 +43,7 @@ export function createSession(params: {
   emitStatus?: StatusCallback;
   recentRuns?: RecentPipelineRun[];
   componentCatalog?: ComponentCatalog;
+  resources?: SessionResourceBridge;
 }): AgentSession {
   return {
     threadId: params.threadId,
@@ -53,5 +56,6 @@ export function createSession(params: {
     context: params.context,
     componentReferences: {},
     componentCatalog: params.componentCatalog ?? createComponentCatalog(),
+    ...(params.resources ? { resources: params.resources } : {}),
   };
 }

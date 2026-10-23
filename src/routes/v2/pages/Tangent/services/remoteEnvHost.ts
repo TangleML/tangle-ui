@@ -31,6 +31,7 @@ import type { Remote } from "comlink";
 import { proxy } from "comlink";
 
 import type { RemoteEnvWorkerApi } from "@/agent/createRemoteEnvWorkerApi";
+import type { SessionResourceBridge } from "@/agent/sessionResourceBridge";
 import type { AgentContext } from "@/agent/types";
 import type { AgentTargetRouter } from "@/routes/v2/pages/Tangent/services/createActiveTabRoutingBridge";
 import { getTangentSocketConfig } from "@/routes/v2/pages/Tangent/services/socketConfig";
@@ -185,6 +186,7 @@ export type RemoteEnvHostOptions = RemoteEnvHostBaseOptions &
 export interface RemoteEnvHost {
   connect(token: string, environmentId: string): Promise<void>;
   disconnect(): void;
+  readResource(uri: string): Promise<{ content: string; contentType: string }>;
 }
 
 interface AgentLifecycle {
@@ -273,9 +275,23 @@ export function createRemoteEnvHost(
         emitActivity(command, lifecycle, status.text),
       );
       agentTargets?.pinTurn(agentId);
+      // The socket client lives here, so the sub-agent reads the session's
+      // resource catalog through this per-turn bridge rather than holding the
+      // connection in the worker. Scoped to the turn's session and agent, it
+      // mirrors the pi host's loopback resource API.
+      const turnClient = client;
+      const resources: SessionResourceBridge | undefined = turnClient
+        ? {
+            list: () => turnClient.listResources(turnSessionId),
+            read: (uri) => turnClient.readResource(turnSessionId, uri),
+            put: (input) =>
+              turnClient.addResource(turnSessionId, agentId, input),
+          }
+        : undefined;
       const { answer } = await worker.runTurn(
         { agentId, message: text },
         onStatus,
+        resources ? proxy(resources) : undefined,
       );
       if (!isCurrent(agentId, lifecycle)) return;
       // The finalized `end` (with `content` + echoed `runId`) is the whole
@@ -478,6 +494,22 @@ export function createRemoteEnvHost(
       agentLifecycles.clear();
       client?.disconnect();
       client = null;
+    },
+
+    // A session-scoped read so a host tool can pull a resource by its handle
+    // (e.g. a pipeline another agent contributed) without holding the socket
+    // itself. Unlike the per-turn worker bridge this needs no agentId: reading
+    // the session catalog is not attributed to any one sub-agent.
+    readResource(uri) {
+      if (!client) {
+        throw new Error(
+          "Cannot read a session resource before the environment connects.",
+        );
+      }
+      if (sessionId === undefined) {
+        throw new Error("This environment has no session to read resources.");
+      }
+      return client.readResource(sessionId, uri);
     },
   };
 }
