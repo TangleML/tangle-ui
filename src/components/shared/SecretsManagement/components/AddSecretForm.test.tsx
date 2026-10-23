@@ -4,11 +4,9 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { toEndOfDayUTC } from "@/utils/date";
-
 import { addSecret, updateSecret } from "../secretsStorage";
 import type { Secret } from "../types";
-import { AddSecretForm } from "./AddSecretForm";
+import { AddSecretForm, lastWholeSecondOfDayUTC } from "./AddSecretForm";
 
 vi.mock("../secretsStorage", () => ({
   addSecret: vi.fn(),
@@ -56,6 +54,7 @@ describe("AddSecretForm", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.clearAllMocks();
   });
 
@@ -147,9 +146,9 @@ describe("AddSecretForm", () => {
       );
     });
 
-    it("sends the expiry as the end of the chosen day in UTC", async () => {
-      const now = new Date();
-      const chosen = new Date(now.getFullYear(), now.getMonth() + 1, 15);
+    it("sends the expiry as the last whole second of the chosen day in UTC", async () => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date(2026, 9, 31, 23, 59));
       const { user } = renderForm();
 
       await user.type(field("Secret Name"), "API_KEY");
@@ -162,18 +161,16 @@ describe("AddSecretForm", () => {
       await waitFor(() =>
         expect(addSecret).toHaveBeenCalledWith(
           expect.objectContaining({
-            expiresAt: new Date(toEndOfDayUTC(chosen)),
+            expiresAt: new Date("2026-11-15T23:59:59.000Z"),
           }),
         ),
       );
     });
 
-    it("says the expiry is only a reminder", () => {
+    it("adds no hint to a new secret's expiry", () => {
       renderForm();
 
-      expect(field("Expires (optional)")).toHaveAccessibleDescription(
-        "A reminder only. The secret keeps working after this date.",
-      );
+      expect(field("Expires (optional)")).not.toHaveAccessibleDescription();
     });
   });
 
@@ -219,11 +216,24 @@ describe("AddSecretForm", () => {
       );
     });
 
-    it("names the current expiry and keeps it when left empty", () => {
-      renderForm({ ...existing, expiresAt: new Date("2027-03-03T23:59:59Z") });
+    it("names the current expiry by its UTC day and keeps it when left empty", async () => {
+      const { user } = renderForm({
+        ...existing,
+        expiresAt: new Date("2027-03-03T02:00:00Z"),
+      });
 
       expect(field("Expires (optional)")).toHaveAccessibleDescription(
         "Currently Mar 3, 2027. Leave empty to keep that date.",
+      );
+
+      await user.type(field("New Secret Value"), "n3w");
+      await user.click(screen.getByRole("button", { name: "Update Secret" }));
+
+      await waitFor(() =>
+        expect(updateSecret).toHaveBeenCalledWith(
+          "API_KEY",
+          expect.objectContaining({ expiresAt: undefined }),
+        ),
       );
     });
 
@@ -234,5 +244,15 @@ describe("AddSecretForm", () => {
         screen.getByRole("button", { name: "Update Secret" }),
       ).toBeDisabled();
     });
+  });
+});
+
+describe("lastWholeSecondOfDayUTC", () => {
+  it("keeps the local day of an evening when UTC is already on the next one", () => {
+    const christmasEvening = new Date(2026, 11, 25, 21, 0);
+
+    expect(lastWholeSecondOfDayUTC(christmasEvening).toISOString()).toBe(
+      "2026-12-25T23:59:59.000Z",
+    );
   });
 });
