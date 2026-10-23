@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { type PointerEvent, useRef, useState } from "react";
 
 import { PaginationControls } from "@/components/shared/PaginationControls";
@@ -12,8 +11,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Text } from "@/components/ui/typography";
+import { useRemotePipelinesPage } from "@/hooks/useRemotePipelinesPage";
 import { useBackend } from "@/providers/BackendProvider";
-import { listRemotePipelines } from "@/services/remotePipelinesService";
 import { formatDate } from "@/utils/date";
 
 const COLUMN_NAMES = [
@@ -69,13 +68,11 @@ export function RemotePipelinesTable() {
   } | null>(null);
   const pageToken = pageTokens.at(-1);
   const canFetch = ready && configured && available;
-  const { data, isLoading, isFetching, error } = useQuery({
-    queryKey: ["remote-pipelines", backendUrl, pageToken],
-    queryFn: () => listRemotePipelines(backendUrl, pageToken),
-    enabled: canFetch,
-    refetchOnWindowFocus: false,
-    retry: false,
-  });
+  const { data, isLoading, isFetching, error } = useRemotePipelinesPage(
+    backendUrl,
+    pageToken,
+    canFetch,
+  );
   const pipelines = data?.pipelines ?? [];
 
   function changePage(tokens: string[]) {
@@ -99,6 +96,7 @@ export function RemotePipelinesTable() {
       <Table
         ref={tableRef}
         aria-label="Remote Pipelines"
+        aria-busy={isFetching}
         className="table-fixed"
       >
         <TableHeader>
