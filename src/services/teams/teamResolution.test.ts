@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { TeamIdentityError, TeamImpersonationError } from "./errors";
-import { actingTeamId, resolveTeam, teamAccess } from "./teamResolution";
+import {
+  actingTeamId,
+  fallsBackToYou,
+  resolveTeam,
+  teamAccess,
+} from "./teamResolution";
 import type { TeamIdentity, TeamMembership } from "./types";
 
 const TEAM_ID = "ml-team@project.iam.gserviceaccount.com";
@@ -152,5 +157,22 @@ describe("actingTeamId", () => {
     expect(actingTeamId(resolve())).toBe(TEAM_ID);
     expect(actingTeamId({ status: "not-member", team })).toBeUndefined();
     expect(actingTeamId({ status: "resolving" })).toBeUndefined();
+  });
+});
+
+describe("fallsBackToYou", () => {
+  it("is true when the projects have a team you can't act as", () => {
+    expect(fallsBackToYou({ status: "not-member", team })).toBe(true);
+    expect(fallsBackToYou({ status: "unavailable", team })).toBe(true);
+    expect(
+      fallsBackToYou({ status: "error", error: new Error("lookup failed") }),
+    ).toBe(true);
+  });
+
+  it("is false when the run acts as expected or can't be submitted", () => {
+    expect(fallsBackToYou(resolve())).toBe(false);
+    expect(fallsBackToYou({ status: "none" })).toBe(false);
+    expect(fallsBackToYou({ status: "resolving" })).toBe(false);
+    expect(fallsBackToYou({ status: "conflict", teams: [team] })).toBe(false);
   });
 });

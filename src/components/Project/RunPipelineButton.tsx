@@ -9,6 +9,7 @@ import { Icon } from "@/components/ui/icon";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useBackend } from "@/providers/BackendProvider";
+import { actingTeamId } from "@/services/teams/teamResolution";
 import { useTeamForSubmission } from "@/services/teams/useTeamForSubmission";
 import type { PipelineRun } from "@/types/pipelineRun";
 import type { ArgumentType, ComponentSpec } from "@/utils/componentSpec";
@@ -35,20 +36,35 @@ export function RunPipelineButton({
   const runTeam = useTeamForSubmission([projectId]);
 
   const { mutate: saveAnnotations } = useMutation({
-    mutationFn: ({ runId, notes }: { runId: string; notes: string }) =>
-      saveRunAnnotations(runId, backendUrl, { notes, componentSpec: spec }),
+    mutationFn: ({
+      runId,
+      notes,
+      teamId,
+    }: {
+      runId: string;
+      notes: string;
+      teamId?: string;
+    }) =>
+      saveRunAnnotations(
+        runId,
+        backendUrl,
+        { notes, componentSpec: spec },
+        teamId,
+      ),
   });
 
   const runnable = pipelineValidity(spec) !== "invalid";
 
   const run = (taskArguments: Record<string, ArgumentType>, notes: string) => {
     setDialogOpen(false);
+    const teamId = actingTeamId(runTeam);
     submit({
       componentSpec: spec,
       taskArguments,
       projectIds: [projectId],
+      teamId,
       onSuccess: (run: PipelineRun) => {
-        saveAnnotations({ runId: run.id.toString(), notes });
+        saveAnnotations({ runId: run.id.toString(), notes, teamId });
         track("projects.run_pipeline_completed", {});
         notify("Run started in this project", "success");
       },

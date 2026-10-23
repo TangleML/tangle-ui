@@ -35,6 +35,7 @@ export function createDocumentScopedBridge(
     getAuthToken: deps.getAuthToken && checked(deps.getAuthToken),
     getRunAnnotations:
       deps.getRunAnnotations && checked(deps.getRunAnnotations),
+    getRunTeam: deps.getRunTeam && checked(deps.getRunTeam),
   });
   return new Proxy(bridge, {
     get(target, key, receiver) {

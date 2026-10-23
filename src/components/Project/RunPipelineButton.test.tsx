@@ -178,6 +178,46 @@ describe("RunPipelineButton", () => {
       "42",
       "https://backend.test",
       expect.objectContaining({ notes: "why this run" }),
+      undefined,
+    );
+  });
+
+  it("starts the run as the project's team", async () => {
+    vi.mocked(useTeamForSubmission).mockReturnValue({
+      status: "active",
+      team: { id: "ml-team@example.com", label: "ML Research", canWrite: true },
+    });
+    renderButton({});
+    const user = userEvent.setup();
+
+    await user.click(runButton());
+    await user.click(screen.getByRole("button", { name: "Submit Run" }));
+    submit.mock.calls[0][0].onSuccess({ id: 42 });
+
+    expect(submit).toHaveBeenCalledWith(
+      expect.objectContaining({ teamId: "ml-team@example.com" }),
+    );
+    expect(saveAnnotations).toHaveBeenCalledWith(
+      "42",
+      "https://backend.test",
+      expect.objectContaining({ notes: "why this run" }),
+      "ml-team@example.com",
+    );
+  });
+
+  it("starts the run as you when you're not in the project's team", async () => {
+    vi.mocked(useTeamForSubmission).mockReturnValue({
+      status: "not-member",
+      team: { id: "ml-team@example.com", label: "ML Research" },
+    });
+    renderButton({});
+    const user = userEvent.setup();
+
+    await user.click(runButton());
+    await user.click(screen.getByRole("button", { name: "Submit Run" }));
+
+    expect(submit).toHaveBeenCalledWith(
+      expect.objectContaining({ teamId: undefined }),
     );
   });
 

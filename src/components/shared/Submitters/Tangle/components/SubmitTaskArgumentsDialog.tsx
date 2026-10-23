@@ -13,6 +13,7 @@ import {
   createSecretArgument,
   extractSecretName,
 } from "@/components/shared/SecretsManagement/types";
+import { useMissingSecrets } from "@/components/shared/SecretsManagement/useMissingSecrets";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -54,6 +55,8 @@ import {
 import { extractTaskArguments } from "@/utils/nodes/taskArguments";
 import { validateArguments } from "@/utils/validations";
 
+import { RunIdentitySummary } from "./RunIdentitySummary";
+
 type TaskArguments = TaskSpecOutput["arguments"];
 
 interface SubmitTaskArgumentsDialogProps {
@@ -94,6 +97,11 @@ export const SubmitTaskArgumentsDialog = ({
   const [isValidToSubmit, setIsValidToSubmit] = useState(
     validateArguments(inputs, taskArguments),
   );
+
+  const { missing: missingSecrets, isChecking: isCheckingSecrets } =
+    useMissingSecrets(team, [componentSpec, taskArguments]);
+  const isTeamSettled =
+    team.status !== "resolving" && team.status !== "conflict";
 
   const handleCopyFromRun = (args: Record<string, string>) => {
     const diff = Object.entries(args).filter(
@@ -224,13 +232,20 @@ export const SubmitTaskArgumentsDialog = ({
           />
         </BlockStack>
 
+        <RunIdentitySummary team={team} missingSecrets={missingSecrets} />
+
         <DialogFooter>
           <Button variant="outline" onClick={handleCancel}>
             Cancel
           </Button>
           <Button
             onClick={handleConfirm}
-            disabled={!isValidToSubmit || mockBackend}
+            disabled={
+              !isValidToSubmit ||
+              mockBackend ||
+              !isTeamSettled ||
+              isCheckingSecrets
+            }
             data-tour="submit-arguments-confirm"
           >
             Submit Run

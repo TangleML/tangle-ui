@@ -38,6 +38,8 @@ import {
   fetchPipelineRun,
 } from "@/services/executionService";
 import { invalidateProjectRunQueries } from "@/services/projects/useProjectRuns";
+import { actingTeamId } from "@/services/teams/teamResolution";
+import type { TeamResolution } from "@/services/teams/types";
 import type { PipelineRun } from "@/types/pipelineRun";
 import { TANGENT_UI_RUN_SOURCE } from "@/utils/annotationKeys";
 import {
@@ -57,6 +59,33 @@ type RunHandlers = Pick<
   "submitPipelineRun" | "getRunDetails" | "debugPipelineRun"
 >;
 
+const RUNS_WITH_YOUR_SECRETS =
+  "The run uses the user's own secrets, so a secret only the team has will fail at launch.";
+
+function refusalFor(team: TeamResolution): string | undefined {
+  if (team.status === "resolving") {
+    return "This project's team is still being checked. Try again in a moment.";
+  }
+  if (team.status === "conflict") {
+    const names = team.teams.map((candidate) => candidate.label).join(" and ");
+    return `This run's projects belong to different teams (${names}), so it can't act as one. File it under projects on one team.`;
+  }
+  return undefined;
+}
+
+function fallbackWarning(team: TeamResolution): string | undefined {
+  switch (team.status) {
+    case "not-member":
+      return `Submitted as the user, not as the ${team.team.label} team, because they're not in that team. ${RUNS_WITH_YOUR_SECRETS}`;
+    case "unavailable":
+      return `Submitted as the user, not as the ${team.team.label} team, because the backend didn't let them act as it. ${RUNS_WITH_YOUR_SECRETS}`;
+    case "error":
+      return `Submitted as the user, because this project's team couldn't be checked: ${team.error.message}. ${RUNS_WITH_YOUR_SECRETS}`;
+    default:
+      return undefined;
+  }
+}
+
 export function createRunBridgeHandlers(deps: BridgeDeps): RunHandlers {
   return {
     async submitPipelineRun(): Promise<RunSubmissionResult> {
@@ -69,6 +98,10 @@ export function createRunBridgeHandlers(deps: BridgeDeps): RunHandlers {
             "Backend is not configured — pipeline cannot be submitted from the assistant.",
         };
       }
+      const runTeam = deps.getRunTeam?.() ?? { status: "none" };
+      const refusal = refusalFor(runTeam);
+      if (refusal) return { success: false, error: refusal };
+      const teamId = actingTeamId(runTeam);
       const wireSpec = serializeComponentSpec(spec);
       const authorizationToken = deps.getAuthToken?.();
       const runAnnotations = deps.getRunAnnotations?.();
@@ -78,6 +111,7 @@ export function createRunBridgeHandlers(deps: BridgeDeps): RunHandlers {
       }>((resolve) => {
         submitPipelineRunHelper(wireSpec, backendUrl, {
           authorizationToken,
+          teamId,
           runAnnotations,
           runSource: TANGENT_UI_RUN_SOURCE,
           onSuccess: (data) => resolve({ run: data, error: null }),
@@ -106,6 +140,8 @@ export function createRunBridgeHandlers(deps: BridgeDeps): RunHandlers {
         success: true,
         runId: String(submission.run.id),
         rootExecutionId: String(submission.run.root_execution_id),
+        actingAsTeam: teamId,
+        warning: fallbackWarning(runTeam),
       };
     },
 

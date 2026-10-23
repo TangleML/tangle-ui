@@ -100,4 +100,67 @@ describe("runBridge submitPipelineRun", () => {
 
     expect(result).toEqual({ success: false, error: "spec is invalid" });
   });
+
+  describe("in a team's project", () => {
+    const TEAM = { id: "ml-team@example.com", label: "ML Research" };
+
+    it("submits the run as the team", async () => {
+      const result = await createRunBridgeHandlers(
+        deps({
+          getRunTeam: () => ({
+            status: "active",
+            team: { ...TEAM, canWrite: true },
+          }),
+        }),
+      ).submitPipelineRun();
+
+      expect(vi.mocked(submitPipelineRun).mock.calls[0][2]).toMatchObject({
+        teamId: TEAM.id,
+      });
+      expect(result).toMatchObject({ success: true, actingAsTeam: TEAM.id });
+      expect(result.warning).toBeUndefined();
+    });
+
+    it("submits as the user and says why when they're not in the team", async () => {
+      const result = await createRunBridgeHandlers(
+        deps({ getRunTeam: () => ({ status: "not-member", team: TEAM }) }),
+      ).submitPipelineRun();
+
+      expect(vi.mocked(submitPipelineRun).mock.calls[0][2]).toMatchObject({
+        teamId: undefined,
+      });
+      expect(result.success).toBe(true);
+      expect(result.actingAsTeam).toBeUndefined();
+      expect(result.warning).toMatch(
+        /^Submitted as the user, not as the ML Research team, because they're not in that team\./,
+      );
+    });
+
+    it("waits for the team before submitting", async () => {
+      const result = await createRunBridgeHandlers(
+        deps({ getRunTeam: () => ({ status: "resolving" }) }),
+      ).submitPipelineRun();
+
+      expect(submitPipelineRun).not.toHaveBeenCalled();
+      expect(result).toEqual({
+        success: false,
+        error:
+          "This project's team is still being checked. Try again in a moment.",
+      });
+    });
+
+    it("refuses a run whose projects are on different teams", async () => {
+      const result = await createRunBridgeHandlers(
+        deps({
+          getRunTeam: () => ({
+            status: "conflict",
+            teams: [TEAM, { id: "data@example.com", label: "Data" }],
+          }),
+        }),
+      ).submitPipelineRun();
+
+      expect(submitPipelineRun).not.toHaveBeenCalled();
+      expect(result.error).toMatch(/different teams \(ML Research and Data\)/);
+    });
+  });
 });

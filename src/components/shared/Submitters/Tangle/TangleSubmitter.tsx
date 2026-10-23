@@ -5,7 +5,9 @@ import { type MouseEvent, useRef, useState } from "react";
 
 import { RunProjectField } from "@/components/Project/RunProjectField";
 import { useAwaitAuthorization } from "@/components/shared/Authentication/useAwaitAuthorization";
+import { useMissingSecrets } from "@/components/shared/SecretsManagement/useMissingSecrets";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
+import { TeamName } from "@/components/shared/Teams/TeamName";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
@@ -15,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { useBackend } from "@/providers/BackendProvider";
 import { useTourMockBackend } from "@/providers/TourProvider/tourMockBackend";
 import { getDefaultRunPath } from "@/routes/runRoutes";
+import { actingTeamId, fallsBackToYou } from "@/services/teams/teamResolution";
 import { useTeamForSubmission } from "@/services/teams/useTeamForSubmission";
 import type { PipelineRun } from "@/types/pipelineRun";
 import {
@@ -50,7 +53,10 @@ const TangleSubmitter = ({
   const { mutate: submit, isPending: isSubmitting } = useSubmitPipeline();
   const isAutoRedirect = useFlagValue("redirect-on-new-pipeline-run");
   const attribution = useRunAttribution();
+  const pageTeam = useTeamForSubmission(attribution.defaultProjectIds);
   const chosenProjectsTeam = useTeamForSubmission(attribution.chosenProjectIds);
+  const { missing: missingPageSecrets, isChecking: isCheckingPageSecrets } =
+    useMissingSecrets(pageTeam, [componentSpec]);
 
   const [submitSuccess, setSubmitSuccess] = useState<boolean | null>(null);
   const [isArgumentsDialogOpen, setIsArgumentsDialogOpen] = useState(false);
@@ -59,13 +65,19 @@ const TangleSubmitter = ({
   const navigate = useNavigate();
 
   const runNotes = useRef<string>("");
+  const runTeamId = useRef<string | undefined>(undefined);
 
   const { mutate: saveAnnotations } = useMutation({
     mutationFn: (runId: string) =>
-      saveRunAnnotations(runId, backendUrl, {
-        notes: runNotes.current,
-        componentSpec,
-      }),
+      saveRunAnnotations(
+        runId,
+        backendUrl,
+        {
+          notes: runNotes.current,
+          componentSpec,
+        },
+        runTeamId.current,
+      ),
   });
 
   const handleError = (message: string) => {
@@ -130,6 +142,7 @@ const TangleSubmitter = ({
   const handleSubmit = async (
     taskArguments?: Record<string, ArgumentType>,
     runProjectIds: string[] = attribution.defaultProjectIds,
+    teamId: string | undefined = actingTeamId(pageTeam),
   ) => {
     if (!componentSpec) {
       handleError("No pipeline to submit");
@@ -152,10 +165,12 @@ const TangleSubmitter = ({
     }
 
     setSubmitSuccess(null);
+    runTeamId.current = teamId;
     submit({
       componentSpec,
       taskArguments,
       projectIds: runProjectIds,
+      teamId,
       onSuccess,
       onError,
     });
@@ -167,7 +182,22 @@ const TangleSubmitter = ({
   ) => {
     runNotes.current = notes;
     setIsArgumentsDialogOpen(false);
-    handleSubmit(args, attribution.chosenProjectIds);
+    handleSubmit(
+      args,
+      attribution.chosenProjectIds,
+      actingTeamId(chosenProjectsTeam),
+    );
+  };
+
+  const pageTeamNeedsReview =
+    fallsBackToYou(pageTeam) || missingPageSecrets.length > 0;
+
+  const handleQuickSubmit = () => {
+    if (pageTeamNeedsReview) {
+      openArgumentsDialog();
+      return;
+    }
+    handleSubmit();
   };
 
   const hasConfigurableInputs = (componentSpec?.inputs?.length ?? 0) > 0;
@@ -190,6 +220,11 @@ const TangleSubmitter = ({
     cooldownTime === 0 &&
     isGraphImplementation(componentSpec.implementation) &&
     Object.keys(componentSpec.implementation.graph.tasks).length > 0;
+
+  const isPageTeamUnsettled =
+    pageTeam.status === "resolving" ||
+    pageTeam.status === "conflict" ||
+    isCheckingPageSecrets;
 
   const isButtonDisabled = isSubmitting || !isSubmittable;
 
@@ -216,13 +251,27 @@ const TangleSubmitter = ({
     <>
       <InlineStack align="space-between" className="pr-2.5">
         <Button
-          onClick={() => handleSubmit()}
+          onClick={handleQuickSubmit}
           className="flex-1 justify-start"
           variant="ghost"
-          disabled={isButtonDisabled || !available}
+          disabled={isButtonDisabled || isPageTeamUnsettled || !available}
         >
           {getButtonIcon()}
           <span className="font-normal text-xs">{getButtonText()}</span>
+          {pageTeam.status === "active" && cooldownTime === 0 && (
+            <div
+              className="text-xs font-light -ml-1 text-muted-foreground truncate"
+              data-testid="submit-as-team"
+            >
+              {"as "}
+              <TeamName team={pageTeam.team} />
+            </div>
+          )}
+          {pageTeam.status === "conflict" && (
+            <div className="text-xs font-light -ml-1 text-destructive">
+              (projects on different teams)
+            </div>
+          )}
           {!isComponentTreeValid && !onlyFixableIssues && (
             <div
               className={cn(
