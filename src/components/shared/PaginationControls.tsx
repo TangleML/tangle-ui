@@ -6,9 +6,10 @@ import { tracking } from "@/utils/tracking";
 
 interface PaginationControlsProps {
   currentPage: number;
-  totalPages: number;
+  totalPages?: number;
   hasNextPage: boolean;
   hasPreviousPage: boolean;
+  disabled?: boolean;
   onNextPage: () => void;
   onPreviousPage: () => void;
   onReset: () => void;
@@ -20,12 +21,15 @@ export function PaginationControls({
   totalPages,
   hasNextPage,
   hasPreviousPage,
+  disabled = false,
   onNextPage,
   onPreviousPage,
   onReset,
   analyticsTrackingPrefix,
 }: PaginationControlsProps) {
-  if (totalPages <= 1) return null;
+  const hasMultiplePages =
+    totalPages === undefined ? hasPreviousPage || hasNextPage : totalPages > 1;
+  if (!hasMultiplePages) return null;
 
   const firstProps = analyticsTrackingPrefix
     ? tracking(`${analyticsTrackingPrefix}.pagination_first`)
@@ -47,8 +51,9 @@ export function PaginationControls({
       <InlineStack gap="2" blockAlign="center">
         <Button
           variant="outline"
+          aria-label="First page"
           onClick={onReset}
-          disabled={currentPage === 1}
+          disabled={disabled || currentPage === 1}
           {...firstProps}
         >
           <Icon name="ChevronFirst" />
@@ -56,7 +61,7 @@ export function PaginationControls({
         <Button
           variant="outline"
           onClick={onPreviousPage}
-          disabled={!hasPreviousPage}
+          disabled={disabled || !hasPreviousPage}
           {...previousProps}
         >
           <Icon name="ChevronLeft" />
@@ -64,12 +69,14 @@ export function PaginationControls({
         </Button>
       </InlineStack>
       <Text size="sm" tone="subdued">
-        Page {currentPage} of {totalPages}
+        {totalPages === undefined
+          ? `Page ${currentPage}`
+          : `Page ${currentPage} of ${totalPages}`}
       </Text>
       <Button
         variant="outline"
         onClick={onNextPage}
-        disabled={!hasNextPage}
+        disabled={disabled || !hasNextPage}
         {...nextProps}
       >
         Next
