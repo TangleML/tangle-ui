@@ -9,6 +9,11 @@ import { useUserDetails } from "@/hooks/useUserDetails";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
 import { getDefaultEditorPath } from "@/routes/editorRoutes";
+import {
+  type RunManagement,
+  runManagement,
+} from "@/services/teams/runManagement";
+import { useRunTeam } from "@/services/teams/useRunTeam";
 import { extractCanonicalName } from "@/utils/canonicalPipelineName";
 import type { ComponentSpec } from "@/utils/componentSpec";
 import {
@@ -22,7 +27,7 @@ interface RunViewActionsReady {
   componentSpec: ComponentSpec;
   runId: string | null | undefined;
   canAccessEditorSpec: boolean;
-  isRunCreator: boolean | "" | undefined;
+  management: RunManagement;
   isInProgress: boolean;
   isComplete: boolean;
   pipelineName: string | undefined;
@@ -40,12 +45,9 @@ function resolveActions(
   runId: string | null | undefined,
   metadata: PipelineRunResponse | undefined,
   details: GetExecutionInfoResponse | undefined,
-  currentUserId: string | undefined,
+  management: RunManagement,
   canAccessEditorSpec: boolean,
 ): RunViewActionsReady {
-  const isRunCreator =
-    !!currentUserId && metadata?.created_by === currentUserId;
-
   const executionStatusStats =
     metadata?.execution_status_stats ??
     flattenExecutionStatusStats(state.child_execution_status_stats);
@@ -63,7 +65,7 @@ function resolveActions(
     componentSpec,
     runId,
     canAccessEditorSpec,
-    isRunCreator,
+    management,
     isInProgress,
     isComplete,
     pipelineName,
@@ -79,6 +81,7 @@ export function useRunViewActions(): RunViewActions {
     rootDetails: details,
   } = useExecutionData();
   const { data: currentUserDetails } = useUserDetails();
+  const runTeam = useRunTeam(metadata?.id);
 
   const editorRoute = componentSpec?.name
     ? getDefaultEditorPath(componentSpec.name)
@@ -99,7 +102,7 @@ export function useRunViewActions(): RunViewActions {
     runId,
     metadata,
     details,
-    currentUserDetails?.id,
+    runManagement(metadata?.created_by, currentUserDetails?.id, runTeam),
     canAccessEditorSpec,
   );
 }

@@ -27,7 +27,7 @@ export const RunToolsContent = observer(function RunToolsContent({
     componentSpec,
     runId,
     canAccessEditorSpec,
-    isRunCreator,
+    management,
     isInProgress,
     isComplete,
     pipelineName,
@@ -84,9 +84,10 @@ export const RunToolsContent = observer(function RunToolsContent({
             {...tracking("v2.run_view.tools.clone_pipeline")}
           />
 
-          {isInProgress && isRunCreator && (
+          {isInProgress && management.canManage && (
             <CancelPipelineRunButton
               runId={runId}
+              teamId={management.teamId}
               displayLabel={isRail ? undefined : "Cancel run"}
               aria-label="Cancel run"
               showTooltip={isRail}
@@ -100,7 +101,6 @@ export const RunToolsContent = observer(function RunToolsContent({
           {isComplete && (
             <RerunPipelineButton
               componentSpec={componentSpec}
-              runId={runId}
               displayLabel={isRail ? undefined : "Rerun pipeline"}
               aria-label="Rerun pipeline"
               showTooltip={isRail}
