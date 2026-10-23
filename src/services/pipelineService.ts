@@ -5,10 +5,13 @@ import {
   getDefaultEditorPath,
   getDefaultRemoteEditorPath,
 } from "@/routes/editorRoutes";
+import { availablePipelineName } from "@/services/localPipelines/localPipelinesService";
 import {
-  createsLocalPipelines,
-  saveNewRemotePipeline,
+  createPipelineFromContent,
+  getPipelineCreationBackendUrl,
 } from "@/services/pipelineStorage/pipelineCreation";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
+import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
 import type { RemotePipelineRef } from "@/services/pipelineStorage/types";
 import type { PipelineLibrary } from "@/types/pipelineLibrary";
 import { downloadDataWithCache, loadObjectFromYamlData } from "@/utils/cache";
@@ -22,7 +25,6 @@ import {
   fullyLoadComponentRefFromUrl,
   getAllComponentFilesFromList,
   getComponentFileFromList,
-  writeComponentToFileListFromText,
 } from "@/utils/componentStore";
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 import { componentSpecToYaml } from "@/utils/yaml";
@@ -45,6 +47,7 @@ export const deletePipeline = async (name: string, onDelete?: () => void) => {
 };
 
 export const useSavePipeline = (componentSpec: ComponentSpec) => {
+  const storage = usePipelineStorage();
   const savePipeline = async (name?: string) => {
     if (!componentSpec) {
       return;
@@ -55,32 +58,38 @@ export const useSavePipeline = (componentSpec: ComponentSpec) => {
       name: name ?? componentSpec.name ?? "Untitled Pipeline",
     };
 
-    const componentSpecAsYaml = componentSpecToYaml(componentSpecWithNewName);
-
-    if (
-      !createsLocalPipelines() &&
-      (name !== undefined ||
-        !(await getComponentFileFromList(
-          USER_PIPELINES_LIST_NAME,
-          componentSpecWithNewName.name,
-        )))
-    ) {
-      const remote = await saveNewRemotePipeline(
+    const backendUrl = await getPipelineCreationBackendUrl();
+    const existingLocal =
+      (!backendUrl || name === undefined) &&
+      (await getComponentFileFromList(
+        USER_PIPELINES_LIST_NAME,
         componentSpecWithNewName.name,
-        componentSpecAsYaml,
-      );
-      return {
-        url: getDefaultRemoteEditorPath(remote.pipelineId),
-        remote: true as const,
-      };
+      ));
+    if (existingLocal) {
+      const file = await storage.resolvePipeline({
+        name: componentSpecWithNewName.name,
+      });
+      await file.write(componentSpecToYaml(componentSpecWithNewName));
+      return { url: getDefaultEditorPath(componentSpecWithNewName.name) };
     }
 
-    await writeComponentToFileListFromText(
-      USER_PIPELINES_LIST_NAME,
+    if (!backendUrl) {
+      componentSpecWithNewName.name = await availablePipelineName(
+        componentSpecWithNewName.name,
+      );
+    }
+    const file = await createPipelineFromContent(
+      storage,
       componentSpecWithNewName.name,
-      componentSpecAsYaml,
+      componentSpecToYaml(componentSpecWithNewName),
+      { backendUrl },
     );
-    return { url: getDefaultEditorPath(componentSpecWithNewName.name) };
+    return file.remote
+      ? {
+          url: getDefaultRemoteEditorPath(file.id),
+          remote: true as const,
+        }
+      : { url: getDefaultEditorPath(file.storageKey) };
   };
 
   return {
@@ -176,35 +185,6 @@ export interface ImportResult {
 }
 
 /**
- * Generates a unique pipeline name by adding a numbered suffix when a collision occurs
- * @param baseName The original pipeline name
- * @returns A promise resolving to a unique pipeline name
- */
-async function generateUniquePipelineName(baseName: string): Promise<string> {
-  // First check if the base name is available
-  const existingPipeline = await getComponentFileFromList(
-    USER_PIPELINES_LIST_NAME,
-    baseName,
-  );
-
-  if (!existingPipeline) {
-    return baseName; // Base name is available
-  }
-
-  // Base name exists, try adding numbers
-  let counter = 1;
-  let newName = `${baseName} (${counter})`;
-
-  // Keep checking until we find an available name
-  while (await getComponentFileFromList(USER_PIPELINES_LIST_NAME, newName)) {
-    counter++;
-    newName = `${baseName} (${counter})`;
-  }
-
-  return newName;
-}
-
-/**
  * Imports a pipeline from YAML content into the selected storage destination.
  * Remote imports create independent copies; they do not overwrite existing pipelines.
  * @param yamlContent The YAML content to import as a string
@@ -212,6 +192,7 @@ async function generateUniquePipelineName(baseName: string): Promise<string> {
  * @returns The result of the import, with the pipeline name and unique flag
  */
 export async function importPipelineFromYaml(
+  storage: PipelineStorageService,
   yamlContent: string,
   overwrite = false,
 ): Promise<ImportResult> {
@@ -239,17 +220,20 @@ export async function importPipelineFromYaml(
     let pipelineName = componentSpec.name || "Imported Pipeline";
     let wasRenamed = false;
 
-    if (!createsLocalPipelines()) {
-      const remote = await saveNewRemotePipeline(
+    const backendUrl = await getPipelineCreationBackendUrl();
+    if (backendUrl) {
+      const file = await createPipelineFromContent(
+        storage,
         pipelineName,
         componentSpecToYaml({ ...componentSpec, name: pipelineName }),
+        { backendUrl },
       );
       return {
         name: pipelineName,
         overwritten: false,
         successful: true,
-        remote,
-        url: getDefaultRemoteEditorPath(remote.pipelineId),
+        remote: file.remote && { source: "remote", ...file.remote },
+        url: getDefaultRemoteEditorPath(file.id),
       };
     }
 
@@ -259,33 +243,32 @@ export async function importPipelineFromYaml(
       pipelineName,
     );
 
-    // If exists and we're not overwriting, generate a unique name
-    if (existingPipeline && !overwrite) {
+    if (!existingPipeline || !overwrite) {
       const originalName = pipelineName;
-      pipelineName = await generateUniquePipelineName(pipelineName);
+      pipelineName = await availablePipelineName(pipelineName);
       wasRenamed = pipelineName !== originalName;
-
-      // Update the component spec name to match the new name
-      componentSpec.name = pipelineName;
+      if (wasRenamed) componentSpec.name = pipelineName;
     }
 
     // Standardize the YAML to ensure consistent format
     // This also ensures the ComponentSpec is valid
     const standardizedYaml = componentSpecToYaml(componentSpec);
 
-    // Save the pipeline to IndexedDB
-    await writeComponentToFileListFromText(
-      USER_PIPELINES_LIST_NAME,
-      pipelineName,
-      standardizedYaml,
-    );
+    if (existingPipeline && overwrite) {
+      const file = await storage.resolvePipeline({ name: pipelineName });
+      await file.write(standardizedYaml);
+    } else {
+      await createPipelineFromContent(storage, pipelineName, standardizedYaml, {
+        backendUrl,
+      });
+    }
 
     return {
       name: pipelineName,
       overwritten: Boolean(existingPipeline && overwrite),
       successful: true,
       errorMessage: wasRenamed
-        ? `Pipeline was renamed to "${pipelineName}" to avoid name conflict.`
+        ? `Pipeline was renamed to "${pipelineName}" during import.`
         : undefined,
     };
   } catch (error) {
@@ -315,12 +298,13 @@ export async function importPipelineFromYaml(
  * @returns The result of the import operation
  */
 export async function importPipelineFromFile(
+  storage: PipelineStorageService,
   file: File,
   overwrite = false,
 ): Promise<ImportResult> {
   try {
     const yamlContent = await file.text();
-    return importPipelineFromYaml(yamlContent, overwrite);
+    return importPipelineFromYaml(storage, yamlContent, overwrite);
   } catch (error) {
     let errorMessage = "Failed to read file.";
     if (error instanceof Error) {

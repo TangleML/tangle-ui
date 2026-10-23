@@ -8,10 +8,12 @@ import {
   getDefaultEditorPath,
   getDefaultRemoteEditorPath,
 } from "@/routes/editorRoutes";
+import { availablePipelineName } from "@/services/localPipelines/localPipelinesService";
 import {
-  createsLocalPipelines,
-  saveNewRemotePipeline,
+  createPipelineFromContent,
+  getPipelineCreationBackendUrl,
 } from "@/services/pipelineStorage/pipelineCreation";
+import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
 import type { PipelineRun } from "@/types/pipelineRun";
 import { EDITOR_FLOW_DIRECTION_ANNOTATION } from "@/utils/annotations";
 import { removeCachingStrategyFromSpec } from "@/utils/cache";
@@ -19,15 +21,7 @@ import {
   type ComponentSpec,
   isGraphImplementation,
 } from "@/utils/componentSpec";
-import {
-  getComponentFileFromList,
-  writeComponentToFileListFromText,
-} from "@/utils/componentStore";
-import {
-  DB_NAME,
-  PIPELINE_RUNS_STORE_NAME,
-  USER_PIPELINES_LIST_NAME,
-} from "@/utils/constants";
+import { DB_NAME, PIPELINE_RUNS_STORE_NAME } from "@/utils/constants";
 import { fetchWithErrorHandling } from "@/utils/fetchWithErrorHandling";
 import { componentSpecToYaml } from "@/utils/yaml";
 
@@ -91,6 +85,7 @@ export const savePipelineRun = async (
 };
 
 export const copyRunToPipeline = async (
+  storage: PipelineStorageService,
   componentSpec: ComponentSpec,
   runId?: string | null,
   name?: string,
@@ -139,45 +134,28 @@ export const copyRunToPipeline = async (
   const originalName = cleanComponentSpec.name || "Unnamed Pipeline";
   let newName = name || originalName;
 
-  if (!createsLocalPipelines()) {
-    const remote = await saveNewRemotePipeline(
+  const backendUrl = await getPipelineCreationBackendUrl();
+  if (backendUrl) {
+    const file = await createPipelineFromContent(
+      storage,
       newName,
       componentSpecToYaml({ ...cleanComponentSpec, name: newName }),
+      { backendUrl },
     );
     return {
       name: newName,
-      url: getDefaultRemoteEditorPath(remote.pipelineId),
-      remote,
+      url: getDefaultRemoteEditorPath(file.id),
+      remote: file.remote && { source: "remote" as const, ...file.remote },
     };
   }
 
-  // Check if the name already exists and append a number if needed
-  let nameExists = true;
-  let counter = 1;
-
-  while (nameExists) {
-    const existingFile = await getComponentFileFromList(
-      USER_PIPELINES_LIST_NAME,
-      newName,
-    );
-
-    if (existingFile === null) {
-      nameExists = false;
-    } else {
-      const countNumber = counter > 1 ? " " + counter : "";
-      newName = `${originalName} (Copy${countNumber})`;
-      counter++;
-    }
-  }
-
+  newName = await availablePipelineName(newName);
   cleanComponentSpec.name = newName;
 
   const componentText = componentSpecToYaml(cleanComponentSpec);
-  await writeComponentToFileListFromText(
-    USER_PIPELINES_LIST_NAME,
-    newName,
-    componentText,
-  );
+  await createPipelineFromContent(storage, newName, componentText, {
+    backendUrl,
+  });
 
   return {
     url: getDefaultEditorPath(newName),

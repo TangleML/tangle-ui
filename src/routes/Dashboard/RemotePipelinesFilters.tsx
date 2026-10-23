@@ -1,5 +1,6 @@
+import { useLocation } from "@tanstack/react-router";
 import { format, parseISO } from "date-fns";
-import { useId } from "react";
+import { useEffect, useId, useRef } from "react";
 
 import { CreatedByFilter } from "@/components/shared/CreatedByFilter/CreatedByFilter";
 import { Button } from "@/components/ui/button";
@@ -8,8 +9,10 @@ import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
+import { useDebouncedSearchValue } from "@/hooks/useDebouncedSearchValue";
 
 import {
+  hasRemotePipelineFilters,
   isInvalidPipelineId,
   type RemotePipelineSearchFilters,
 } from "./pipelinesSearch";
@@ -17,14 +20,52 @@ import {
 interface RemotePipelinesFiltersProps {
   filters: RemotePipelineSearchFilters;
   onChange: (filters: RemotePipelineSearchFilters) => void;
+  onPendingChange: (pending: boolean) => void;
 }
 
 export function RemotePipelinesFilters({
   filters,
   onChange,
+  onPendingChange,
 }: RemotePipelinesFiltersProps) {
   const { name, id, user, createdFrom, createdTo, updatedFrom, updatedTo } =
     filters;
+  const navigationIndex = useLocation({
+    select: (location) => location.state.__TSR_index,
+  });
+  const previousNavigationIndex = useRef(navigationIndex);
+  const [nameInput, setNameInput, resetName] = useDebouncedSearchValue(
+    (name) => onChange({ name: name || undefined }),
+    undefined,
+    name ?? "",
+  );
+  const [idInput, setIdInput, resetId] = useDebouncedSearchValue(
+    (id) => onChange({ id: id || undefined }),
+    undefined,
+    id ?? "",
+  );
+  const [userInput, setUserInput, resetUser] = useDebouncedSearchValue(
+    (user) => onChange({ user: user || undefined }),
+    undefined,
+    user ?? "",
+  );
+  const pending =
+    nameInput !== (name ?? "") ||
+    idInput !== (id ?? "") ||
+    userInput !== (user ?? "");
+
+  useEffect(() => {
+    onPendingChange(pending);
+  }, [onPendingChange, pending]);
+
+  useEffect(() => {
+    if (previousNavigationIndex.current === navigationIndex) return;
+    previousNavigationIndex.current = navigationIndex;
+    resetName(name ?? "");
+    resetId(id ?? "");
+    resetUser(user ?? "");
+  }, [navigationIndex, name, id, user, resetName, resetId, resetUser]);
+
   const createdAt = createdFrom
     ? {
         from: parseISO(createdFrom),
@@ -37,11 +78,13 @@ export function RemotePipelinesFilters({
         to: updatedTo ? parseISO(updatedTo) : undefined,
       }
     : undefined;
-  const hasFilters = name || id || user || createdAt?.from || updatedAt?.from;
   const idErrorId = useId();
-  const invalidId = isInvalidPipelineId(id);
+  const invalidId = isInvalidPipelineId(idInput);
 
   function clearFilters() {
+    resetName("");
+    resetId("");
+    resetUser("");
     onChange({
       name: undefined,
       id: undefined,
@@ -54,7 +97,7 @@ export function RemotePipelinesFilters({
   }
 
   return (
-    <search aria-label="Remote pipeline filters" className="w-full">
+    <div role="search" aria-label="Remote pipeline filters" className="w-full">
       <InlineStack gap="2">
         <div className="relative w-44">
           <Icon
@@ -64,10 +107,8 @@ export function RemotePipelinesFilters({
           <Input
             aria-label="Search by name"
             placeholder="Search by name..."
-            value={name ?? ""}
-            onChange={(event) =>
-              onChange({ name: event.target.value || undefined })
-            }
+            value={nameInput}
+            onChange={(event) => setNameInput(event.target.value)}
             className="pl-9"
           />
         </div>
@@ -76,16 +117,21 @@ export function RemotePipelinesFilters({
           aria-invalid={invalidId}
           aria-describedby={invalidId ? idErrorId : undefined}
           placeholder="Search by ID..."
-          value={id ?? ""}
-          onChange={(event) =>
-            onChange({ id: event.target.value || undefined })
-          }
+          value={idInput}
+          onChange={(event) => setIdInput(event.target.value)}
           className="w-40"
         />
         <CreatedByFilter
-          value={user}
-          onChange={(user) => onChange({ user })}
-          onClear={() => onChange({ user: undefined })}
+          value={userInput || undefined}
+          onChange={(user) => setUserInput(user ?? "")}
+          onClear={() => {
+            resetUser("");
+            onChange({ user: undefined });
+          }}
+          onSetMe={() => {
+            resetUser("me");
+            onChange({ user: "me" });
+          }}
         />
         <fieldset className="min-w-0" title="Created at">
           <legend className="sr-only">Created at</legend>
@@ -113,7 +159,7 @@ export function RemotePipelinesFilters({
             placeholder="Updated at"
           />
         </fieldset>
-        {hasFilters && (
+        {(hasRemotePipelineFilters(filters) || pending) && (
           <Button
             variant="ghost"
             size="sm"
@@ -130,6 +176,6 @@ export function RemotePipelinesFilters({
           Enter a complete pipeline ID (UUID) to search.
         </Text>
       )}
-    </search>
+    </div>
   );
 }

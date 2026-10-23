@@ -10,6 +10,7 @@ interface CreatedByFilterProps {
   // The parent owns debouncing.
   onChange: (value: string | undefined) => void;
   onClear: () => void;
+  onSetMe?: () => void;
   // Pre-fills the input on mount, and fires onChange when the URL carries no value.
   defaultValue?: string;
 }
@@ -21,6 +22,7 @@ export function CreatedByFilter({
   value,
   onChange,
   onClear,
+  onSetMe,
   defaultValue,
 }: CreatedByFilterProps) {
   const [inputValue, setInputValue] = useState(value ?? defaultValue ?? "");
@@ -50,7 +52,8 @@ export function CreatedByFilter({
 
   const handleSetMe = () => {
     setInputValue("me");
-    onChange("me");
+    if (onSetMe) onSetMe();
+    else onChange("me");
   };
 
   return (

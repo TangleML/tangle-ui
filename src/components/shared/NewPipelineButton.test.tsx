@@ -12,6 +12,7 @@ import NewPipelineButton from "./NewPipelineButton";
 const state = vi.hoisted(() => ({
   v2Enabled: true,
   configured: true,
+  ready: true,
   navigate: vi.fn(),
   notify: vi.fn(),
   write: vi.fn(),
@@ -25,7 +26,7 @@ vi.mock("@/components/shared/Settings/useFlags", () => ({
 }));
 vi.mock("@/providers/BackendProvider", () => ({
   useBackend: () => ({
-    ready: true,
+    ready: state.ready,
     configured: state.configured,
     backendUrl: "https://backend.example.com",
   }),
@@ -33,8 +34,8 @@ vi.mock("@/providers/BackendProvider", () => ({
 vi.mock("@/hooks/useToastNotification", () => ({
   default: () => state.notify,
 }));
-vi.mock("@/utils/componentStore", () => ({
-  writeComponentToFileListFromText: state.write,
+vi.mock("@/services/pipelineStorage/PipelineStorageProvider", () => ({
+  usePipelineStorage: () => ({ rootFolder: { addFile: state.write } }),
 }));
 vi.mock("random-words", () => ({ generate: () => ["New", "pipeline"] }));
 
@@ -43,6 +44,7 @@ beforeEach(() => {
   vi.stubEnv("VITE_LOCAL_PIPELINES", undefined);
   state.v2Enabled = true;
   state.configured = true;
+  state.ready = true;
 });
 afterEach(() => {
   cleanup();
@@ -88,17 +90,28 @@ it.each(["ctrlKey", "metaKey"])(
   },
 );
 
-it("requires backend configuration when remote creation is enabled", async () => {
-  vi.stubEnv("VITE_LOCAL_PIPELINES", undefined);
+it("creates locally without a configured backend", async () => {
+  state.configured = false;
+  render(<NewPipelineButton />);
+  fireEvent.click(screen.getByRole("button"));
+  await waitFor(() => expect(state.write).toHaveBeenCalledOnce());
+  expect(state.notify).not.toHaveBeenCalled();
+  expect(state.navigate).toHaveBeenCalledWith({
+    to: "/editor/New%20pipeline",
+    reloadDocument: true,
+  });
+});
+
+it("waits for backend settings before choosing storage", () => {
+  state.ready = false;
   state.configured = false;
   render(<NewPipelineButton />);
   fireEvent.click(screen.getByRole("button"));
   expect(state.notify).toHaveBeenCalledWith(
-    expect.stringContaining("Configure a backend"),
+    "Backend settings are loading. Try again shortly.",
     "error",
   );
   expect(state.write).not.toHaveBeenCalled();
-  expect(state.navigate).not.toHaveBeenCalled();
 });
 
 it("creates a remote draft when the V2 editor flag is disabled", async () => {

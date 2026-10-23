@@ -22,8 +22,10 @@ import { Paragraph, Text } from "@/components/ui/typography";
 import { usePagination } from "@/hooks/usePagination";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
+import { LocalPipelinesQueryKeys } from "@/services/localPipelines/types";
 import { invalidatePipelineQueries } from "@/services/pipelineStorage/invalidatePipelineQueries";
 import { PipelineMigrationRecoveryError } from "@/services/pipelineStorage/migrateLocalPipelineToRemote";
+import { createsLocalPipelines } from "@/services/pipelineStorage/pipelineCreation";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import {
   type ComponentFileEntry,
@@ -104,6 +106,13 @@ export const PipelineSection = withSuspenseWrapper(
       } finally {
         setIsLoading(false);
       }
+    };
+
+    const refreshUserPipelines = () => {
+      void fetchUserPipelines();
+      void queryClient.invalidateQueries({
+        queryKey: LocalPipelinesQueryKeys.Names(),
+      });
     };
 
     const { mutate: saveAsRemote, isPending: isSavingAsRemote } = useMutation({
@@ -205,8 +214,12 @@ export const PipelineSection = withSuspenseWrapper(
                 name={name}
                 componentRef={fileEntry.componentRef}
                 modificationTime={fileEntry.modificationTime}
-                onDelete={fetchUserPipelines}
-                onSaveAsRemote={() => saveAsRemote(name)}
+                onDelete={refreshUserPipelines}
+                onSaveAsRemote={
+                  createsLocalPipelines(configured)
+                    ? undefined
+                    : () => saveAsRemote(name)
+                }
                 saveAsRemoteDisabled={
                   isSavingAsRemote || !ready || !configured || !available
                 }
@@ -232,7 +245,7 @@ export const PipelineSection = withSuspenseWrapper(
           onReset={resetPage}
         />
 
-        <Button onClick={fetchUserPipelines} className="mt-6 max-w-96">
+        <Button onClick={refreshUserPipelines} className="mt-6 max-w-96">
           Refresh
         </Button>
 
@@ -241,7 +254,7 @@ export const PipelineSection = withSuspenseWrapper(
             selectedPipelines={Array.from(selectedPipelines)}
             onDeleteSuccess={() => {
               setSelectedPipelines(new Set());
-              fetchUserPipelines();
+              refreshUserPipelines();
             }}
             onClearSelection={() => setSelectedPipelines(new Set())}
           />

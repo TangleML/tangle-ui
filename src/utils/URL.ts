@@ -1,5 +1,5 @@
+import { RUNS_BASE_PATH } from "@/routes/appRoutes";
 import { getProjectHomePath } from "@/routes/projectRoutes";
-import { RUNS_BASE_PATH } from "@/routes/router";
 import { getDefaultRunPath } from "@/routes/runRoutes";
 import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
 

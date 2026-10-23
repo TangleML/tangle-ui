@@ -30,11 +30,13 @@ import { APP_ROUTES } from "./appRoutes";
 import { createEditorV2Routes } from "./editorV2Routes";
 import { EmbeddedPipelineEditor } from "./v2/pages/Editor/EmbeddedPipelineEditor";
 import type { useEditorSession } from "./v2/pages/Editor/store/EditorSessionContext";
+import type { SharedUIStore } from "./v2/shared/store/SharedStoreContext";
 
 const canvas = vi.hoisted(() => ({ mounts: 0, unmounts: 0 }));
 const flags = vi.hoisted(() => ({ v2Editor: true }));
 const chat = vi.hoisted(() => ({ mounts: 0, threads: [{ abort: vi.fn() }] }));
 let session: ReturnType<typeof useEditorSession>;
+let stores: SharedUIStore;
 const storage = new PipelineStorageService();
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
@@ -92,6 +94,8 @@ vi.mock("./v2/pages/Editor/components/FlowCanvas/FlowCanvas", async () => {
   const { useEffect } = await import("react");
   const { useEditorSession } =
     await import("./v2/pages/Editor/store/EditorSessionContext");
+  const { useSharedStores } =
+    await import("./v2/shared/store/SharedStoreContext");
   return {
     FlowCanvas: function Canvas({
       spec,
@@ -99,6 +103,7 @@ vi.mock("./v2/pages/Editor/components/FlowCanvas/FlowCanvas", async () => {
       spec: import("@/models/componentSpec").ComponentSpec;
     }) {
       session = useEditorSession();
+      stores = useSharedStores();
       useEffect(() => {
         canvas.mounts++;
         return () => {
@@ -180,6 +185,7 @@ vi.mock("./v2/pages/Editor/hooks/useAiChatWindow", () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  localStorage.clear();
   vi.spyOn(window, "scrollTo").mockImplementation(() => {});
   canvas.mounts = 0;
   chat.mounts = 0;
@@ -337,6 +343,34 @@ it("retains a failed draft edit and changes its URL only after retry succeeds", 
   );
   expect(client.put).toHaveBeenCalledTimes(2);
   expect(canvas.mounts).toBe(1);
+});
+
+it("retains a failed draft when browser storage is enabled before returning to it", async () => {
+  const { router, history } = await open();
+  vi.mocked(client.put).mockRejectedValue(new Error("Backend unavailable"));
+  fireEvent.click(screen.getByRole("button", { name: "Edit pipeline" }));
+  await waitFor(() =>
+    expect(session.autoSave.error).toBe("Backend unavailable"),
+  );
+  const originalFile = session.pipelineFile.activePipelineFile;
+  const originalSpec = stores.navigation.rootSpec;
+  expect(history.location.state.newPipeline?.storage).toBe("remote");
+  await act(async () => {
+    history.back();
+    await router.load();
+  });
+  await screen.findByText("Dashboard");
+  localStorage.setItem("pipelines:save-in-browser", "true");
+  await act(async () => {
+    history.forward();
+    await router.load();
+  });
+  await screen.findByRole("button", { name: "Edit pipeline" });
+  expect(history.location.pathname).toBe(APP_ROUTES.EDITOR_NEW_PIPELINE);
+  expect(session.pipelineFile.activePipelineFile).toBe(originalFile);
+  expect(stores.navigation.rootSpec).toBe(originalSpec);
+  expect(stores.navigation.rootSpec?.description).toBe("First edit");
+  expect(session.autoSave.hasUnsavedChanges).toBe(true);
 });
 
 it("starts a separate unsaved pipeline when New is used again at the same URL", async () => {

@@ -7,7 +7,10 @@ export function useNewPipelineDraft() {
 
   return (name: string) => {
     if (createsLocalPipelines()) return undefined;
-    if (!ready || !configured || !backendUrl) {
+    if (!ready)
+      throw new Error("Backend settings are loading. Try again shortly.");
+    if (createsLocalPipelines(configured)) return undefined;
+    if (!backendUrl) {
       throw new Error("Configure a backend in Settings to create pipelines.");
     }
     return {

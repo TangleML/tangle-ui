@@ -75,8 +75,7 @@ export function validateFilters(parsed: unknown): PipelineRunFilters {
   return filters;
 }
 
-/** Predicate types for the filter_query JSON format */
-type FilterQueryPredicate =
+export type FilterQueryPredicate =
   | { key_exists: { key: string } }
   | { value_equals: { key: string; value: string } }
   | { value_contains: { key: string; value_substring: string } }

@@ -1,6 +1,7 @@
 import "@xyflow/react/dist/style.css";
 import "@/styles/editor.css";
 
+import { useQuery } from "@tanstack/react-query";
 import {
   Link as RouterLink,
   useNavigate,
@@ -51,6 +52,8 @@ import {
   useWindowPersistence,
 } from "@/routes/v2/shared/windows/windowPersistence";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
+import { createsLocalPipelines } from "@/services/pipelineStorage/pipelineCreation";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import {
   type EditorPipelineRef,
   getEditorPipelineIdentity,
@@ -64,6 +67,7 @@ import {
 import { createEditorAgentWorker } from "./components/AiChat/editorAgentWorker";
 import { useDebugPanelWindow } from "./components/DebugPanel";
 import { DriverPermissionGate } from "./components/DriverPermissionGate";
+import { createNewPipeline } from "./components/EditorMenuBar/components/fileMenu.actions";
 import { EditorMenuBar } from "./components/EditorMenuBar/EditorMenuBar";
 import { EditorTourBridge } from "./components/EditorTourBridge/EditorTourBridge";
 import { EmptyEditorState } from "./components/EmptyEditorState";
@@ -291,15 +295,72 @@ const RemotePipelineDocumentView = withSuspenseWrapper(
   ({ pipelineRef }) => [getEditorPipelineIdentity(pipelineRef)],
 );
 
+function CreateLocalPipeline({
+  name,
+  draftId,
+}: {
+  name: string;
+  draftId: string;
+}) {
+  const storage = usePipelineStorage();
+  const navigate = useNavigate();
+  const {
+    data: file,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["new-local-pipeline", draftId],
+    queryFn: () => createNewPipeline(storage, name),
+    staleTime: Infinity,
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+
+  useEffect(() => {
+    if (!file) return;
+    void navigate({
+      to: APP_ROUTES.PIPELINE_EDITOR,
+      params: { pipelineName: file.storageKey },
+      search: (previous) => ({ ...previous, fileId: file.id }),
+      replace: true,
+      resetScroll: false,
+    });
+  }, [file, navigate]);
+
+  return error ? (
+    <PipelineLoadError
+      error={error}
+      resetErrorBoundary={() => void refetch()}
+    />
+  ) : (
+    <PipelineEditorSkeleton />
+  );
+}
+
 function RemotePipelineEditor({
   pipeline,
 }: {
   pipeline:
     | { source: "remote"; pipelineId: string }
-    | { source: "draft"; name: string; draftId: string };
+    | {
+        source: "draft";
+        name: string;
+        draftId: string;
+        storage?: "local" | "remote";
+      };
 }) {
   const { backendUrl, ready, configured } = useBackend();
   if (!ready) return <RemotePipelineSkeleton />;
+  if (
+    pipeline.source === "draft" &&
+    (pipeline.storage === "local" ||
+      (pipeline.storage === undefined && createsLocalPipelines(configured)))
+  ) {
+    return (
+      <CreateLocalPipeline name={pipeline.name} draftId={pipeline.draftId} />
+    );
+  }
   if (!configured) {
     return (
       <RemotePipelineShell>

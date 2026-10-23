@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
+import { RemotePipelineQueryKeys } from "@/services/remotePipelineQueryKeys";
 import { listRemotePipelines } from "@/services/remotePipelinesService";
 
 export function useRemotePipelinesPage(
@@ -9,7 +10,11 @@ export function useRemotePipelinesPage(
   filterQuery?: string,
 ) {
   return useQuery({
-    queryKey: ["remote-pipelines", backendUrl, filterQuery, pageToken],
+    queryKey: RemotePipelineQueryKeys.Cursor(
+      backendUrl,
+      filterQuery,
+      pageToken,
+    ),
     queryFn: () => listRemotePipelines(backendUrl, pageToken, filterQuery),
     enabled,
     placeholderData: (previous, previousQuery) =>

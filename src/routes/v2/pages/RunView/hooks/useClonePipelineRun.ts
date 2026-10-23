@@ -5,6 +5,7 @@ import { buildTaskSpecShape } from "@/components/shared/PipelineRunNameTemplate/
 import useToastNotification from "@/hooks/useToastNotification";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
 import { copyRunToPipeline } from "@/services/pipelineRunService";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import { extractCanonicalName } from "@/utils/canonicalPipelineName";
 import {
   type ArgumentType,
@@ -27,6 +28,7 @@ export function useClonePipelineRun(
 ) {
   const navigate = useNavigate();
   const notify = useToastNotification();
+  const storage = usePipelineStorage();
   const { rootDetails } = useExecutionData();
 
   const { mutate: clonePipeline, isPending: isCloning } = useMutation({
@@ -36,7 +38,7 @@ export function useClonePipelineRun(
       name,
       taskArguments,
     }: CloneVariables) =>
-      copyRunToPipeline(componentSpec, runId, name, taskArguments),
+      copyRunToPipeline(storage, componentSpec, runId, name, taskArguments),
     onSuccess: (result) => {
       if (!result?.url) return;
       notify(`Pipeline "${result.name}" cloned`, "success");

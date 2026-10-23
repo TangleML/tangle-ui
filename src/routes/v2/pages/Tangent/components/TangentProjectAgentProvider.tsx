@@ -28,6 +28,7 @@ import { createRunBridgeHandlers } from "@/routes/v2/shared/components/AiChat/to
 import type { BridgeDeps } from "@/routes/v2/shared/components/AiChat/toolBridge/utils";
 import { copyRunToPipeline } from "@/services/pipelineRunService";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
+import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
 import type { RemotePipelineRef } from "@/services/pipelineStorage/types";
 import { createAndAttachPipeline } from "@/services/projects/createAndAttachPipeline";
 import {
@@ -59,6 +60,7 @@ interface TangentProjectAgentProviderProps {
  * @todo: deduplicate with ClonePipelineButton
  */
 async function clonePipelineFromRun(
+  storage: PipelineStorageService,
   runInspect: RunInspectDeps,
   runId: string,
 ): Promise<{ pipelineName: string; remote?: RemotePipelineRef }> {
@@ -85,6 +87,7 @@ async function clonePipelineFromRun(
 
   const name = getInitialName(componentSpec, canonicalName);
   const result = await copyRunToPipeline(
+    storage,
     componentSpec,
     runId,
     name,
@@ -226,6 +229,7 @@ export function TangentProjectAgentProvider({
       },
       clonePipeline: async (runId) => {
         const { pipelineName, remote } = await clonePipelineFromRun(
+          storage,
           runInspect,
           runId,
         );

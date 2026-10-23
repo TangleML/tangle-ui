@@ -26,6 +26,7 @@ const agentsCoreBrowserShim = path.resolve(
 );
 
 export default defineConfig(({ mode }) => {
+  if (mode === "test") process.env.TZ = "America/New_York";
   const env = loadEnv(mode, process.cwd(), "");
 
   const apiKey = env.VITE_BUGSNAG_API_KEY;
