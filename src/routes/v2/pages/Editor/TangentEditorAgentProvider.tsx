@@ -20,6 +20,7 @@ import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProj
 import { useLazyBridgeAuth } from "@/routes/v2/shared/components/AiChat/toolBridge/useLazyBridgeAuth";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { pipelineFileTarget } from "@/services/projects/pipelineResource";
+import { useTeamForSubmission } from "@/services/teams/useTeamForSubmission";
 
 import { createEditorToolBridge } from "./components/AiChat/toolBridge";
 import { fitViewAfterEdits } from "./components/AiChat/toolBridge/fitViewAfterEdits";
@@ -53,10 +54,16 @@ export function TangentEditorAgentProvider({
   const { getNodes, getEdges } = useReactFlow();
   const runAnnotations = useRunSubmissionAnnotations();
   const runAnnotationsRef = useRef(runAnnotations);
+  const runTeam = useTeamForSubmission([]);
+  const runTeamRef = useRef(runTeam);
 
   useEffect(() => {
     runAnnotationsRef.current = runAnnotations;
   }, [runAnnotations]);
+
+  useEffect(() => {
+    runTeamRef.current = runTeam;
+  }, [runTeam]);
 
   // A single bridge instance per mount: every method re-reads the live spec,
   // active subgraph, and backend/auth values lazily, so navigation and config
@@ -72,6 +79,7 @@ export function TangentEditorAgentProvider({
       getBackendUrl,
       getAuthToken,
       getRunAnnotations: () => runAnnotationsRef.current,
+      getRunTeam: () => runTeamRef.current,
       queryClient,
       undo: fitViewAfterEdits(editorSession.undo, editor),
       invokeAutoLayout: invokeAutoLayoutVia(keyboard),
