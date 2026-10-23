@@ -237,23 +237,16 @@ const PipelineRow = withSuspenseWrapper(
           <InlineStack gap="1" blockAlign="center" wrap="nowrap">
             {name && <FavoriteToggle type="pipeline" id={name} name={name} />}
             {onSaveAsRemote && (
-              <ConfirmationDialog
-                trigger={
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    aria-label="Upload pipeline"
-                    title="Upload pipeline"
-                    disabled={saveAsRemoteDisabled}
-                  >
-                    <Icon name="CloudUpload" />
-                  </Button>
-                }
-                title={`Upload "${name}"?`}
-                confirmLabel="Upload"
-                description="This pipeline and its configured input values will be saved to the selected backend. Other users with read access to that backend can see them. The uploaded pipeline appears in Remote Pipelines. Its browser copy and existing project links are kept. Open the pipeline from a project to update that project's link."
-                onConfirm={onSaveAsRemote}
-              />
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Upload pipeline"
+                title="Upload pipeline"
+                disabled={saveAsRemoteDisabled}
+                onClick={onSaveAsRemote}
+              >
+                <Icon name="CloudUpload" />
+              </Button>
             )}
             <ConfirmationDialog
               trigger={

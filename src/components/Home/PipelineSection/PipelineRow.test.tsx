@@ -54,33 +54,16 @@ function renderRow(onUpload: () => void, disabled = false) {
   );
 }
 
-it("always explains sharing and retained project links before upload, including with the old skip preference", () => {
-  localStorage.setItem("skip-save-as-remote-pipeline-confirmation", "true");
+it("delegates upload to the pipeline list", () => {
   const upload = vi.fn();
   renderRow(upload);
 
   fireEvent.click(screen.getByRole("button", { name: "Upload pipeline" }));
-  expect(upload).not.toHaveBeenCalled();
-  expect(screen.getByRole("alertdialog")).toHaveTextContent(
-    "Other users with read access to that backend can see them.",
-  );
-  expect(screen.getByRole("alertdialog")).toHaveTextContent(
-    "Its browser copy and existing project links are kept",
-  );
-  expect(
-    screen.queryByLabelText("Don't show this again"),
-  ).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "Upload" }));
   expect(upload).toHaveBeenCalledOnce();
 });
 
-it("does not upload after cancellation or when the action is disabled", () => {
+it("does not upload when the action is disabled", () => {
   const upload = vi.fn();
-  const view = renderRow(upload);
-  fireEvent.click(screen.getByRole("button", { name: "Upload pipeline" }));
-  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
-  expect(upload).not.toHaveBeenCalled();
-  view.unmount();
   renderRow(upload, true);
   expect(
     screen.getByRole("button", { name: "Upload pipeline" }),

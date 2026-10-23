@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 import { ExamplePipelines } from "@/components/Learn/ExamplePipelines";
+import { ConfirmationDialog } from "@/components/shared/Dialogs";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import NewPipelineButton from "@/components/shared/NewPipelineButton";
 import { PaginationControls } from "@/components/shared/PaginationControls";
@@ -19,6 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Paragraph, Text } from "@/components/ui/typography";
+import useConfirmationDialog from "@/hooks/useConfirmationDialog";
 import { usePagination } from "@/hooks/usePagination";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
@@ -27,12 +29,14 @@ import { invalidatePipelineQueries } from "@/services/pipelineStorage/invalidate
 import { PipelineMigrationRecoveryError } from "@/services/pipelineStorage/migrateLocalPipelineToRemote";
 import { createsLocalPipelines } from "@/services/pipelineStorage/pipelineCreation";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
+import { isGraphImplementation } from "@/utils/componentSpec";
 import {
   type ComponentFileEntry,
   getAllComponentFilesFromList,
 } from "@/utils/componentStore";
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 import { getErrorMessage } from "@/utils/string";
+import { componentSpecFromYaml } from "@/utils/yaml";
 
 import BulkActionsBar from "./BulkActionsBar";
 import { PipelineFiltersBar } from "./PipelineFiltersBar";
@@ -75,6 +79,7 @@ export const PipelineSection = withSuspenseWrapper(
     const { backendUrl, ready, configured, available } = useBackend();
     const queryClient = useQueryClient();
     const notify = useToastNotification();
+    const uploadConfirmation = useConfirmationDialog();
     const [pipelines, setPipelines] = useState<Pipelines>(new Map());
     const [isLoading, setIsLoading] = useState(false);
     const [selectedPipelines, setSelectedPipelines] = useState<Set<string>>(
@@ -116,13 +121,48 @@ export const PipelineSection = withSuspenseWrapper(
     };
 
     const { mutate: saveAsRemote, isPending: isSavingAsRemote } = useMutation({
-      mutationFn: (name: string) =>
-        storage.moveLocalPipelineToRemote(name, backendUrl, undefined, {
+      mutationFn: async (name: string) => {
+        const local = await storage.resolvePipeline({ name });
+        const content = await local.read();
+        const spec = componentSpecFromYaml(content);
+        const isEmpty =
+          !local.remote &&
+          !local.isDraft &&
+          isGraphImplementation(spec.implementation) &&
+          Object.keys(spec.implementation.graph.tasks ?? {}).length === 0;
+        const confirmed = await uploadConfirmation.triggerDialog({
+          title: isEmpty
+            ? `Delete empty pipeline "${name}"?`
+            : `Upload "${name}"?`,
+          description: isEmpty
+            ? "This pipeline has no tasks. Uploading it will delete the browser copy instead of creating a remote pipeline. This action cannot be undone. Cancel to keep it and add tasks."
+            : "This pipeline and its configured input values will be saved to the selected backend. Other users with read access to that backend can see them. The uploaded pipeline appears in Remote Pipelines. Its browser copy and existing project links are kept. Open the pipeline from a project to update that project's link.",
+          confirmLabel: isEmpty ? "Delete empty pipeline" : "Upload",
+        });
+        if (!confirmed) return "cancelled";
+        if ((await local.read()) !== content) {
+          throw new Error(
+            "This pipeline changed while the confirmation was open. Nothing was uploaded or deleted. Try uploading again.",
+          );
+        }
+        if (isEmpty) {
+          await local.deleteFile();
+          return "deleted";
+        }
+        await storage.moveLocalPipelineToRemote(local, backendUrl, undefined, {
           keepLocalCopy: true,
-        }),
-      onSuccess: () => {
+        });
+        return "uploaded";
+      },
+      onSuccess: (result) => {
+        if (result === "cancelled") return;
         setSelectedPipelines(new Set());
-        notify("Pipeline uploaded.", "success");
+        notify(
+          result === "deleted"
+            ? "Empty pipeline deleted."
+            : "Pipeline uploaded.",
+          "success",
+        );
       },
       onError: (error) =>
         notify(
@@ -181,6 +221,14 @@ export const PipelineSection = withSuspenseWrapper(
 
     return (
       <BlockStack gap="4" className="w-full">
+        <ConfirmationDialog
+          isOpen={uploadConfirmation.isOpen}
+          title={uploadConfirmation.title}
+          description={uploadConfirmation.description}
+          confirmLabel={uploadConfirmation.confirmLabel}
+          onConfirm={() => uploadConfirmation.handlers?.onConfirm()}
+          onCancel={() => uploadConfirmation.handlers?.onCancel()}
+        />
         <PipelineFiltersBar filters={filterBarProps} />
 
         <Table className="text-sm">
