@@ -34,6 +34,10 @@ vi.mock("@/components/Home/PipelineSection/PipelineSection", () => ({
   PipelineSection: () => <div>Local pipeline list</div>,
 }));
 
+vi.mock("@/providers/AnalyticsProvider", () => ({
+  useAnalytics: () => ({ track: vi.fn() }),
+}));
+
 vi.mock("./FavoritesPreview", () => ({
   FavoritesPreview: () => <div>Favorite Pipelines</div>,
 }));
