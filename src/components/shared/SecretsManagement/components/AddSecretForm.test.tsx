@@ -4,8 +4,6 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { toEndOfDayUTC } from "@/utils/date";
-
 import { addSecret, updateSecret } from "../secretsStorage";
 import type { Secret } from "../types";
 import { AddSecretForm } from "./AddSecretForm";
@@ -119,7 +117,7 @@ describe("AddSecretForm", () => {
       );
     });
 
-    it("sends the expiry as the end of the chosen day in UTC", async () => {
+    it("sends the expiry as the last whole second of the chosen day in UTC", async () => {
       const now = new Date();
       const chosen = new Date(now.getFullYear(), now.getMonth() + 1, 15);
       const { user } = renderForm();
@@ -134,18 +132,25 @@ describe("AddSecretForm", () => {
       await waitFor(() =>
         expect(addSecret).toHaveBeenCalledWith(
           expect.objectContaining({
-            expiresAt: new Date(toEndOfDayUTC(chosen)),
+            expiresAt: new Date(
+              Date.UTC(
+                chosen.getFullYear(),
+                chosen.getMonth(),
+                chosen.getDate(),
+                23,
+                59,
+                59,
+              ),
+            ),
           }),
         ),
       );
     });
 
-    it("says the expiry is only a reminder", () => {
+    it("adds no hint to a new secret's expiry", () => {
       renderForm();
 
-      expect(field("Expires (optional)")).toHaveAccessibleDescription(
-        "A reminder only. The secret keeps working after this date.",
-      );
+      expect(field("Expires (optional)")).not.toHaveAccessibleDescription();
     });
   });
 

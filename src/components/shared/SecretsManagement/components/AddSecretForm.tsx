@@ -68,10 +68,14 @@ const initialFormState: AddSecretFormState = {
   valueError: null,
 };
 
-function expiryHint(existingSecret?: Secret): string {
-  if (!existingSecret?.expiresAt) {
-    return "A reminder only. The secret keeps working after this date.";
-  }
+function lastWholeSecondOfDayUTC(day: Date): Date {
+  const endOfDay = new Date(toEndOfDayUTC(day));
+  endOfDay.setUTCMilliseconds(0);
+  return endOfDay;
+}
+
+function expiryHint(existingSecret?: Secret): string | null {
+  if (!existingSecret?.expiresAt) return null;
   const currentExpiry = formatDate(
     parseUTCAsLocalDate(existingSecret.expiresAt.toISOString()),
     EXPIRY_FORMAT,
@@ -126,8 +130,9 @@ export function AddSecretForm({
       ? trimmedDescription
       : undefined;
   const expiresAt = state.expiresOn
-    ? new Date(toEndOfDayUTC(state.expiresOn))
+    ? lastWholeSecondOfDayUTC(state.expiresOn)
     : undefined;
+  const currentExpiryHint = expiryHint(existingSecret);
 
   return (
     <BlockStack gap="4">
@@ -203,11 +208,13 @@ export function AddSecretForm({
           id="secret-expiry"
           value={state.expiresOn}
           onChange={handleExpiresOnChange}
-          describedBy="secret-expiry-hint"
+          describedBy={currentExpiryHint ? "secret-expiry-hint" : undefined}
         />
-        <Text id="secret-expiry-hint" size="xs" tone="subdued">
-          {expiryHint(existingSecret)}
-        </Text>
+        {currentExpiryHint && (
+          <Text id="secret-expiry-hint" size="xs" tone="subdued">
+            {currentExpiryHint}
+          </Text>
+        )}
       </BlockStack>
 
       <InlineStack gap="2" align="end" fill>
