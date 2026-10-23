@@ -53,7 +53,7 @@ function openDashboard() {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.stubEnv("VITE_LOCAL_PIPELINES", undefined);
+  vi.stubEnv("VITE_REMOTE_PIPELINES", "true");
   state.backend = { configured: true, ready: true, available: true };
   state.search = {};
   vi.mocked(listLocalPipelineNames).mockResolvedValue(["Local pipeline"]);
@@ -65,11 +65,13 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-it.each(["local flag", "no backend"])(
+it.each(["remote disabled", "no backend", "no opt-in"])(
   "shows only local pipelines for %s, even with a remote URL selection",
   async (mode) => {
-    if (mode === "local flag") vi.stubEnv("VITE_LOCAL_PIPELINES", "true");
-    else state.backend.configured = false;
+    if (mode === "remote disabled")
+      vi.stubEnv("VITE_REMOTE_PIPELINES", "false");
+    else if (mode === "no backend") state.backend.configured = false;
+    else vi.stubEnv("VITE_REMOTE_PIPELINES", undefined);
     state.search = { tab: "remote", page: 2, name: "Missing pipeline" };
     openDashboard();
     expect(await screen.findByText("Local pipeline list")).toBeInTheDocument();
@@ -87,15 +89,16 @@ it("shows only remote pipelines when the local inventory is empty", async () => 
   expect(screen.queryByText("Local pipeline list")).not.toBeInTheDocument();
 });
 
-it("shows both tabs with local selected when local pipelines exist", async () => {
+it("shows remote first and selected when local pipelines exist", async () => {
   openDashboard();
   expect(
-    await screen.findByRole("tab", { name: "Local Pipelines" }),
+    await screen.findByRole("tab", { name: "Remote Pipelines" }),
   ).toHaveAttribute("aria-selected", "true");
-  expect(
-    screen.getByRole("tab", { name: "Remote Pipelines" }),
-  ).toBeInTheDocument();
-  expect(screen.getByText("Local pipeline list")).toBeInTheDocument();
+  expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+    "Remote Pipelines",
+    "Local Pipelines",
+  ]);
+  expect(screen.getByText("Remote pipeline list")).toBeInTheDocument();
 });
 
 it("keeps both tabs for a filtered remote view", async () => {
@@ -131,6 +134,7 @@ it("waits for backend settings before choosing a mode", async () => {
 });
 
 it("retains access to local pipelines when enumeration fails", async () => {
+  state.search = { tab: "local" };
   vi.mocked(listLocalPipelineNames).mockRejectedValue(
     new Error("Storage unavailable"),
   );

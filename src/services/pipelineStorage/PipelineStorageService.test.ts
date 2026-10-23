@@ -279,7 +279,11 @@ describe("PipelineStorageService editor resolution", () => {
     await expect(file.write(content)).rejects.toThrow(
       "Failed to save pipeline (403)",
     );
+    await expect(file.rename("Changed")).rejects.toThrow(
+      "Failed to save pipeline (403)",
+    );
     expect(componentSpecFromYaml(await file.read())).toEqual(spec);
+    expect(file.storageKey).toBe("Original");
     expect(getCurrentUserApiUsersMeGet).toHaveBeenCalledTimes(1);
   });
 
@@ -463,9 +467,10 @@ describe("PipelineStorageService editor resolution", () => {
   it("propagates remote errors without resolving a local namesake", async () => {
     vi.mocked(client.get).mockRejectedValue(new Error("Remote unavailable"));
     const legacy = vi.spyOn(RootFolderDbStorageDriver.prototype, "hasKey");
-    await expect(storage.resolvePipeline(ref)).rejects.toThrow(
-      "Remote unavailable",
-    );
+    await expect(storage.resolvePipeline(ref)).rejects.toMatchObject({
+      kind: "unavailable",
+      status: 0,
+    });
     expect(registry.findById).not.toHaveBeenCalled();
     expect(registry.findByStorageKey).not.toHaveBeenCalled();
     expect(legacy).not.toHaveBeenCalled();
@@ -513,7 +518,7 @@ describe("remote drafts and project attachment", () => {
       .mocked(client.put)
       .mock.calls.map(([options]) => options?.query?.file_path);
   beforeEach(() => {
-    vi.stubEnv("VITE_LOCAL_PIPELINES", undefined);
+    vi.stubEnv("VITE_REMOTE_PIPELINES", "true");
     let filePath = document.file_path;
     vi.mocked(client.put).mockImplementation(async (options) => {
       filePath = String(options?.query?.file_path ?? filePath);
@@ -584,12 +589,12 @@ describe("remote drafts and project attachment", () => {
     );
     await Promise.all([second, third]);
     expect(paths().slice(1)).toEqual([undefined, undefined]);
-    expect(client.put).toHaveBeenLastCalledWith(
-      expect.objectContaining({
+    for (const [options] of vi.mocked(client.put).mock.calls.slice(1)) {
+      expect(options).toMatchObject({
         url: "/api/pipelines/{pipeline_id}",
         path: { pipeline_id: ref.pipelineId },
-      }),
-    );
+      });
+    }
     expect(paths()[0]).not.toBe("pipelines/draft-1.yaml");
     expect(file.id).toBe(ref.pipelineId);
     expect(file.initialId).toBe(draft.draftId);
@@ -601,12 +606,10 @@ describe("remote drafts and project attachment", () => {
       name: "Renamed after saving",
       description: "Third",
     });
-    expect(client.put).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        url: "/api/pipelines/{pipeline_id}",
-        path: { pipeline_id: ref.pipelineId },
-      }),
-    );
+    expect(vi.mocked(client.put).mock.lastCall?.[0]).toMatchObject({
+      url: "/api/pipelines/{pipeline_id}",
+      path: { pipeline_id: ref.pipelineId },
+    });
     expect(registry.addEntry).not.toHaveBeenCalled();
     expect(registry.updateEntry).not.toHaveBeenCalled();
     storage.discardRemoteDraft(draft);
@@ -661,7 +664,10 @@ describe("remote drafts and project attachment", () => {
   it("blocks reopening a draft whose lost creation response is being deleted", async () => {
     const file = await storage.resolvePipeline(draft);
     vi.mocked(client.put).mockRejectedValueOnce(new Error("Response lost"));
-    await expect(file.write(content)).rejects.toThrow("Response lost");
+    await expect(file.write(content)).rejects.toMatchObject({
+      kind: "unavailable",
+      status: 0,
+    });
     expect(file.remote).toBeUndefined();
     const removal = Promise.withResolvers<void>();
     const deleting = withRemotePipelineDeletion(
@@ -736,20 +742,17 @@ describe("remote drafts and project attachment", () => {
         entityId: ref.pipelineId,
         name: "Project",
       });
-      expect(paths()[0]).toEqual(expect.any(String));
-      expect(paths()[1]).toBeUndefined();
-      expect(client.put).toHaveBeenLastCalledWith(
-        expect.objectContaining({
-          url: "/api/pipelines/{pipeline_id}",
-          path: { pipeline_id: ref.pipelineId },
-        }),
-      );
+      expect(paths()).toEqual([expect.any(String), undefined]);
+      expect(vi.mocked(client.put).mock.lastCall?.[0]).toMatchObject({
+        url: "/api/pipelines/{pipeline_id}",
+        path: { pipeline_id: ref.pipelineId },
+      });
       expect(registry.addEntry).not.toHaveBeenCalled();
     },
   );
 
   it("rolls back a local pipeline when attachment is refused", async () => {
-    vi.stubEnv("VITE_LOCAL_PIPELINES", "true");
+    vi.stubEnv("VITE_REMOTE_PIPELINES", "false");
     const deleteFile = vi.fn().mockResolvedValue(undefined);
     vi.spyOn(storage.rootFolder, "addFile").mockResolvedValue({
       id: "local-1",
@@ -944,7 +947,7 @@ describe("moving local pipelines to remote storage", () => {
     vi.mocked(client.put).mockRejectedValueOnce(new Error("Response lost"));
     await expect(
       storage.moveLocalPipelineToRemote(local, ref.backendUrl),
-    ).rejects.toThrow("Response lost");
+    ).rejects.toMatchObject({ kind: "unavailable", status: 0 });
     const recovered = {
       ...document,
       file_path: `pipelines/${local.id}.yaml`,
@@ -1404,7 +1407,7 @@ describe("moving local pipelines to remote storage", () => {
   });
 
   it("resolves old project IDs and names after migration and a fresh service instance", async () => {
-    vi.stubEnv("VITE_LOCAL_PIPELINES", "true");
+    vi.stubEnv("VITE_REMOTE_PIPELINES", "false");
     await storage.moveLocalPipelineToRemote(local, ref.backendUrl);
     const reopened = new PipelineStorageService();
     vi.spyOn(reopened, "resolvePipelineByName").mockResolvedValue(undefined);
@@ -1503,9 +1506,11 @@ describe("moving local pipelines to remote storage", () => {
       const error = new Error("Unavailable");
       if (step === "read") vi.mocked(local.read).mockRejectedValue(error);
       else vi.mocked(client.put).mockRejectedValue(error);
-      await expect(
+      const result = expect(
         storage.moveLocalPipelineToRemote("Original", ref.backendUrl),
-      ).rejects.toThrow("Unavailable");
+      ).rejects;
+      if (step === "read") await result.toBe(error);
+      else await result.toMatchObject({ kind: "unavailable", status: 0 });
       expect(local.deleteFile).not.toHaveBeenCalled();
       expect(await LibraryDB.favorites.toArray()).toEqual([favorite]);
       expect(localStorage.getItem("Home/recently_viewed")).toBe(recent);
@@ -1588,15 +1593,13 @@ describe("moving local pipelines to remote storage", () => {
 
 describe("saved draft history safety", () => {
   beforeEach(() => {
-    let filePath = document.file_path;
-    vi.mocked(client.put).mockImplementation(async (options) => {
-      filePath = String(options?.query?.file_path ?? filePath);
-      return response({
+    vi.mocked(client.put).mockImplementation(async (options) =>
+      response({
         ...document,
-        file_path: filePath,
+        file_path: String(options?.query?.file_path),
         ...(options?.body as object),
-      });
-    });
+      }),
+    );
   });
   const draft = {
     source: "draft",

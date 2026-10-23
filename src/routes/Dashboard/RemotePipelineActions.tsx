@@ -42,7 +42,7 @@ export function RemotePipelineActions({
   const mutationKey = RemotePipelineQueryKeys.Deletion(backendUrl, pipeline.id);
   const isDeleting = useIsMutating({ mutationKey, exact: true }) > 0;
   const { data: writerId, error: permissionError } = useQuery({
-    queryKey: ["remote-pipeline-writer", backendUrl],
+    queryKey: RemotePipelineQueryKeys.Writer(backendUrl),
     queryFn: () => getRemotePipelineWriter(backendUrl),
     retry: false,
   });
@@ -109,6 +109,7 @@ export function RemotePipelineActions({
         />
         {!permissionError && writerId === pipeline.user_id && (
           <ConfirmationDialog
+            confirmLabel="Delete"
             title={`Delete pipeline "${name}"?`}
             description="This deletes the saved pipeline. Existing pipeline runs will not be impacted. This action cannot be undone."
             trigger={

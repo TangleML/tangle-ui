@@ -10,10 +10,10 @@ import { Heading, Paragraph } from "@/components/ui/typography";
 import { useBackend } from "@/providers/BackendProvider";
 import { APP_ROUTES } from "@/routes/appRoutes";
 import { useLocalPipelineNames } from "@/services/localPipelines/useLocalPipelines";
+import { remotePipelinesEnabled } from "@/services/pipelineStorage/pipelineCreation";
 
 import { FavoritesPreview } from "./FavoritesPreview";
 import {
-  hasRemotePipelineFilters,
   type RemotePipelineSearchFilters,
   validatePipelinesSearch,
 } from "./pipelinesSearch";
@@ -29,17 +29,16 @@ export function DashboardPipelinesView() {
     error,
     refetch,
   } = useLocalPipelineNames();
-  const localBuild = import.meta.env.VITE_LOCAL_PIPELINES === "true";
+  const localBuild = !remotePipelinesEnabled();
   const localOnly = localBuild || !configured;
   const hasLocalPipelines = localNames?.length !== 0;
   const showTabs = !localOnly && hasLocalPipelines;
   const isLoading = !localBuild && (!ready || (!localOnly && isPending));
-  const hasFilters = hasRemotePipelineFilters(search);
   const tab = localOnly
     ? "local"
     : !hasLocalPipelines
       ? "remote"
-      : (search.tab ?? (hasFilters ? "remote" : "local"));
+      : (search.tab ?? "remote");
 
   function changeFilters(filters: RemotePipelineSearchFilters) {
     void navigate({
@@ -108,8 +107,8 @@ export function DashboardPipelinesView() {
               >
                 <InlineStack gap="3">
                   <TabsList aria-label="Pipelines">
-                    <TabsTrigger value="local">Local Pipelines</TabsTrigger>
                     <TabsTrigger value="remote">Remote Pipelines</TabsTrigger>
+                    <TabsTrigger value="local">Local Pipelines</TabsTrigger>
                   </TabsList>
                   {examples}
                 </InlineStack>

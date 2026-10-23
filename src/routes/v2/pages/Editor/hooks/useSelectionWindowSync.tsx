@@ -61,7 +61,7 @@ const CONTEXT_WINDOW_WIDTH = 310;
 
 function scrollWindowIntoView() {
   // MobX needs a tick to re-render the new docked window into the DOM
-  setTimeout(() => {
+  return setTimeout(() => {
     const header = document.querySelector(
       `[data-dock-window="${CONTEXT_PANEL_WINDOW_ID}"]`,
     );
@@ -98,6 +98,7 @@ function ensureContextPanelVisible(
   windows: WindowStoreImpl,
   deselectAll: () => void,
   placement: ContextPanelPlacement,
+  readOnly: boolean,
 ) {
   const existing = windows.getWindowById(CONTEXT_PANEL_WINDOW_ID);
 
@@ -106,11 +107,10 @@ function ensureContextPanelVisible(
     if (existing.state === "hidden" || existing.isMinimized) {
       existing.restore();
     }
-    scrollWindowIntoView();
-    return;
+    return scrollWindowIntoView();
   }
 
-  windows.openWindow(<ContextPanelContent />, {
+  windows.openWindow(<ContextPanelContent readOnly={readOnly} />, {
     id: CONTEXT_PANEL_WINDOW_ID,
     title: "Properties",
     position: placement.getInitialPosition?.() ?? {
@@ -131,7 +131,7 @@ function ensureContextPanelVisible(
       />
     ),
   });
-  scrollWindowIntoView();
+  return scrollWindowIntoView();
 }
 
 function closeContextPanel(windows: WindowStoreImpl) {
@@ -162,10 +162,12 @@ function isSelectionStale(
 
 export function useSelectionWindowSync(options?: {
   contextPanel?: ContextPanelPlacement;
+  readOnly?: boolean;
 }) {
   const { editor, navigation, windows } = useSharedStores();
   const deselectAll = useDeselectAll();
   const placement = options?.contextPanel ?? DEFAULT_CONTEXT_PANEL_PLACEMENT;
+  const readOnly = options?.readOnly ?? false;
   const placementRef = useRef(placement);
 
   useEffect(() => {
@@ -173,6 +175,17 @@ export function useSelectionWindowSync(options?: {
   }, [placement]);
 
   useEffect(() => {
+    let scrollTimeout: ReturnType<typeof setTimeout> | undefined;
+    const revealContextPanel = () => {
+      clearTimeout(scrollTimeout);
+      scrollTimeout = ensureContextPanelVisible(
+        windows,
+        deselectAll,
+        placementRef.current,
+        readOnly,
+      );
+    };
+
     const disposeSelectionWatcher = reaction(
       () => ({
         selectedNodeId: editor.selectedNodeId,
@@ -200,7 +213,7 @@ export function useSelectionWindowSync(options?: {
           return;
         }
 
-        if (lastSelectionWasShiftClick && lastShiftClickEntityId) {
+        if (!readOnly && lastSelectionWasShiftClick && lastShiftClickEntityId) {
           handleShiftClickPin(
             navigation,
             windows,
@@ -214,13 +227,14 @@ export function useSelectionWindowSync(options?: {
           multiSelectionLength > 1 || (selectedNodeId && selectedNodeType);
 
         if (!shouldShowPanel) {
+          clearTimeout(scrollTimeout);
           closeContextPanel(windows);
           return;
         }
 
         if (editor.draggedSincePointerDown) return;
 
-        ensureContextPanelVisible(windows, deselectAll, placementRef.current);
+        revealContextPanel();
       },
     );
 
@@ -231,13 +245,14 @@ export function useSelectionWindowSync(options?: {
         if (!editor.selectedNodeId && editor.multiSelection.length === 0) {
           return;
         }
-        ensureContextPanelVisible(windows, deselectAll, placementRef.current);
+        revealContextPanel();
       },
     );
 
     return () => {
       disposeSelectionWatcher();
       disposeRevealWatcher();
+      clearTimeout(scrollTimeout);
     };
-  }, [editor, navigation, windows, deselectAll]);
+  }, [editor, navigation, windows, deselectAll, readOnly]);
 }

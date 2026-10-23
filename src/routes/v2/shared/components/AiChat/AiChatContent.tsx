@@ -43,6 +43,7 @@ type CreateBridge = (deps: BridgeDeps) => ToolBridgeApi;
 interface AiChatContentProps {
   createBridge: CreateBridge;
   suggestedPrompts?: SuggestedPrompt[];
+  includeRecentRuns?: boolean;
 }
 
 function projectRecentRuns(runs: PipelineRun[]): RecentPipelineRun[] {
@@ -58,6 +59,7 @@ function projectRecentRuns(runs: PipelineRun[]): RecentPipelineRun[] {
 export const AiChatContent = observer(function AiChatContent({
   createBridge,
   suggestedPrompts,
+  includeRecentRuns = true,
 }: AiChatContentProps) {
   const aiChat = useAiChatStore();
   const { track } = useAnalytics();
@@ -89,7 +91,7 @@ export const AiChatContent = observer(function AiChatContent({
       const res = await fetchPipelineRuns(pipelineName);
       return res?.runs ?? [];
     },
-    enabled: !!pipelineName,
+    enabled: includeRecentRuns && !!pipelineName,
     staleTime: 60_000,
     refetchOnWindowFocus: false,
   });
@@ -98,9 +100,10 @@ export const AiChatContent = observer(function AiChatContent({
 
   async function handleSend(prompt: string) {
     if (!thread) return;
-    const recentRuns = recentRunsData
-      ? projectRecentRuns(recentRunsData)
-      : undefined;
+    const recentRuns =
+      includeRecentRuns && recentRunsData
+        ? projectRecentRuns(recentRunsData)
+        : undefined;
 
     track("ai_assistant.message.submitted", {
       prompt,

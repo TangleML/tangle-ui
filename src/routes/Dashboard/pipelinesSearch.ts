@@ -27,7 +27,7 @@ function dateParam(value: unknown): string | undefined {
 }
 
 export function validatePipelinesSearch(search: unknown): PipelinesSearch {
-  if (!isRecord(search)) return {};
+  if (!isRecord(search)) return { user: "me" };
   const { page: _page, ...rest } = search;
   const createdFrom = dateParam(search.createdFrom);
   const createdTo = dateParam(search.createdTo);
@@ -41,7 +41,7 @@ export function validatePipelinesSearch(search: unknown): PipelinesSearch {
         : undefined,
     name: typeof search.name === "string" ? search.name : undefined,
     id: typeof search.id === "string" ? search.id : undefined,
-    user: typeof search.user === "string" ? search.user : undefined,
+    user: typeof search.user === "string" ? search.user : "me",
     createdFrom,
     createdTo:
       createdFrom && createdTo && createdTo >= createdFrom

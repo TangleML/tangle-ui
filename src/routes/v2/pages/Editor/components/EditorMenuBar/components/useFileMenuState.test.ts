@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ComponentSpec } from "@/models/componentSpec";
 import { APP_ROUTES } from "@/routes/appRoutes";
+import * as deletion from "@/services/pipelineStorage/remotePipelineDeletion";
 import { componentSpecFromYaml } from "@/utils/yaml";
 
 import { useFileMenuState } from "./useFileMenuState";
@@ -107,7 +108,7 @@ beforeEach(() => {
   state.file.remote = undefined;
   state.file.isDraft = false;
   state.file.draftBackendUrl = undefined;
-  vi.stubEnv("VITE_LOCAL_PIPELINES", undefined);
+  vi.stubEnv("VITE_REMOTE_PIPELINES", "true");
   state.configured = true;
   state.save.mockResolvedValue(undefined);
   state.navigate.mockResolvedValue(undefined);
@@ -124,6 +125,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.unstubAllEnvs();
 });
 
@@ -145,19 +147,19 @@ describe("editor file actions", () => {
     expect(state.storage.rootFolder.addFile).not.toHaveBeenCalled();
   });
   it.each([
-    { sourceRemote: false, local: false, configured: true },
-    { sourceRemote: true, local: false, configured: true },
-    { sourceRemote: false, local: true, configured: true },
-    { sourceRemote: true, local: true, configured: true },
-    { sourceRemote: false, local: false, configured: false },
-    { sourceRemote: true, local: false, configured: false },
+    { sourceRemote: false, enabled: true, configured: true },
+    { sourceRemote: true, enabled: true, configured: true },
+    { sourceRemote: false, enabled: false, configured: true },
+    { sourceRemote: true, enabled: false, configured: true },
+    { sourceRemote: false, enabled: true, configured: false },
+    { sourceRemote: true, enabled: true, configured: false },
   ])(
     "copies content using the deployment policy: %j",
-    async ({ sourceRemote, local, configured }) => {
+    async ({ sourceRemote, enabled, configured }) => {
       state.configured = configured;
-      vi.stubEnv("VITE_LOCAL_PIPELINES", String(local));
+      vi.stubEnv("VITE_REMOTE_PIPELINES", String(enabled));
       if (sourceRemote) state.file.remote = remote;
-      const isRemote = !local && configured;
+      const isRemote = enabled && configured;
       const { result } = renderFileMenu();
       await result.current.handleSavePipelineAs("Copy");
       const target = isRemote
@@ -269,6 +271,9 @@ describe("editor file actions", () => {
 
 it("acknowledges the captured source only after its copy succeeds", async () => {
   state.file.remote = remote;
+  vi.spyOn(deletion, "getRemotePipelineDeletionError").mockReturnValue(
+    new Error("This pipeline was deleted"),
+  );
   const pending = Promise.withResolvers<{ id: string; storageKey: string }>();
   state.storage.copyRemotePipeline.mockReturnValue(pending.promise);
   const { result } = renderFileMenu();

@@ -46,10 +46,12 @@ import { useTaskConfigActions } from "./useTaskConfigActions";
 
 interface ConfigurationSectionProps {
   task: Task;
+  readOnly?: boolean;
 }
 
 export const ConfigurationSection = observer(function ConfigurationSection({
   task,
+  readOnly = false,
 }: ConfigurationSectionProps) {
   const { track } = useAnalytics();
   const spec = useSpec();
@@ -74,7 +76,7 @@ export const ConfigurationSection = observer(function ConfigurationSection({
   );
 
   const handleConditionalChange = (checked: boolean) => {
-    if (!spec) return;
+    if (!spec || readOnly) return;
     setConditionalExecution(spec, task, checked);
     track("v2.pipeline_editor.task_details.conditional_execution.toggle", {
       conditional: checked,
@@ -82,6 +84,7 @@ export const ConfigurationSection = observer(function ConfigurationSection({
   };
 
   const handleRunConditionChange = (value: string) => {
+    if (readOnly) return;
     const literal = toConditionLiteral(value);
     setRunCondition(task, literal);
     track("v2.pipeline_editor.task_details.run_condition.change", { literal });
@@ -118,6 +121,7 @@ export const ConfigurationSection = observer(function ConfigurationSection({
     : [];
 
   useEffect(() => {
+    if (readOnly) return;
     if (selectedProvider === previousProvider) return;
 
     if (previousProvider) {
@@ -148,9 +152,17 @@ export const ConfigurationSection = observer(function ConfigurationSection({
     }
 
     setPreviousProvider(selectedProvider);
-  }, [selectedProvider, previousProvider, capabilitiesActive, schema, task]);
+  }, [
+    selectedProvider,
+    previousProvider,
+    capabilitiesActive,
+    schema,
+    task,
+    readOnly,
+  ]);
 
   const handleDisableCacheChange = (checked: boolean) => {
+    if (readOnly) return;
     toggleCacheDisable(task, checked);
     track("v2.pipeline_editor.task_details.disable_cache.toggle", {
       cache_disabled: checked,
@@ -158,6 +170,7 @@ export const ConfigurationSection = observer(function ConfigurationSection({
   };
 
   const handleSave = (key: string, value: string | undefined) => {
+    if (readOnly) return;
     if (
       capabilitiesActive &&
       cloudProviderConfig &&
@@ -171,10 +184,12 @@ export const ConfigurationSection = observer(function ConfigurationSection({
   };
 
   const handleColorChange = (color: string) => {
+    if (readOnly) return;
     setTaskColor(task, color);
   };
 
   const handleCollapsedChange = (checked: boolean) => {
+    if (readOnly) return;
     setCollapsed(task, checked);
     track("v2.pipeline_editor.task_details.collapse_node.toggle");
   };
@@ -191,14 +206,22 @@ export const ConfigurationSection = observer(function ConfigurationSection({
         <Paragraph size="xs" tone="subdued">
           Task color
         </Paragraph>
-        <ColorPicker
-          title="Task color"
-          color={taskColor ?? "transparent"}
-          setColor={handleColorChange}
-          onClose={() =>
-            track("v2.pipeline_editor.task_details.task_color_picker.closed")
-          }
-        />
+        {readOnly ? (
+          <span
+            aria-label={`Task color: ${taskColor ?? "Default"}`}
+            className="size-7 rounded-full border-2 border-border"
+            style={{ backgroundColor: taskColor ?? "transparent" }}
+          />
+        ) : (
+          <ColorPicker
+            title="Task color"
+            color={taskColor ?? "transparent"}
+            setColor={handleColorChange}
+            onClose={() =>
+              track("v2.pipeline_editor.task_details.task_color_picker.closed")
+            }
+          />
+        )}
       </InlineStack>
 
       {conditionalExecutionEnabled && isConditionalExecutionSupported(task) && (
@@ -219,6 +242,7 @@ export const ConfigurationSection = observer(function ConfigurationSection({
               <Switch
                 id={conditionalSwitchId}
                 checked={isConditional}
+                disabled={readOnly}
                 onCheckedChange={handleConditionalChange}
               />
             </InlineStack>
@@ -246,10 +270,18 @@ export const ConfigurationSection = observer(function ConfigurationSection({
                       className="h-6"
                       aria-labelledby={runConditionLabelId}
                     >
-                      <TabsTrigger value="true" className="text-xs px-2.5">
+                      <TabsTrigger
+                        value="true"
+                        className="text-xs px-2.5"
+                        disabled={readOnly}
+                      >
                         {CONDITION_LITERAL_LABELS.true}
                       </TabsTrigger>
-                      <TabsTrigger value="false" className="text-xs px-2.5">
+                      <TabsTrigger
+                        value="false"
+                        className="text-xs px-2.5"
+                        disabled={readOnly}
+                      >
                         {CONDITION_LITERAL_LABELS.false}
                       </TabsTrigger>
                     </TabsList>
@@ -270,6 +302,7 @@ export const ConfigurationSection = observer(function ConfigurationSection({
             </Paragraph>
             <Switch
               checked={cacheDisabled}
+              disabled={readOnly}
               onCheckedChange={handleDisableCacheChange}
             />
           </InlineStack>
@@ -280,7 +313,11 @@ export const ConfigurationSection = observer(function ConfigurationSection({
         <Paragraph size="xs" tone="subdued">
           Collapse node
         </Paragraph>
-        <Switch checked={isCollapsed} onCheckedChange={handleCollapsedChange} />
+        <Switch
+          checked={isCollapsed}
+          onCheckedChange={handleCollapsedChange}
+          disabled={readOnly}
+        />
       </InlineStack>
 
       <Separator />
@@ -291,6 +328,7 @@ export const ConfigurationSection = observer(function ConfigurationSection({
         annotations={annotationsRecord}
         onSave={handleSave}
         providerValue={capabilitiesActive ? selectedProvider : undefined}
+        readOnly={readOnly}
       />
     </BlockStack>
   );

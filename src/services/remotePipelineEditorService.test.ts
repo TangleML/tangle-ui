@@ -39,13 +39,28 @@ it("looks up an earlier upload using the captured backend and exact owner path",
 it("allows a new upload only when the owner path is absent", async () => {
   vi.mocked(client.get).mockResolvedValue({
     data: undefined,
-    error: { detail: "Not found" },
+    error: {
+      detail:
+        "Pipeline with file path 'pipelines/local-id.yaml' was not found for user 'owner@example.com'.",
+    },
     request: new Request(backendUrl),
     response: new Response(null, { status: 404 }),
   });
   await expect(
     findRemotePipelineDocumentByPath(backendUrl, filePath),
   ).resolves.toBeUndefined();
+});
+
+it("does not start an upload when the lookup route is unsupported", async () => {
+  vi.mocked(client.get).mockResolvedValue({
+    data: undefined,
+    error: { detail: "Not Found" },
+    request: new Request(backendUrl),
+    response: new Response(null, { status: 404 }),
+  });
+  await expect(
+    findRemotePipelineDocumentByPath(backendUrl, filePath),
+  ).rejects.toMatchObject({ kind: "unsupported", status: 404 });
 });
 
 it("preserves non-missing lookup errors instead of proceeding to overwrite", async () => {

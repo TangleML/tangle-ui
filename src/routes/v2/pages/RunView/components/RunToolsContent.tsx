@@ -6,23 +6,12 @@ import { InspectPipelineButton } from "@/components/PipelineRun/components/Inspe
 import { RerunPipelineButton } from "@/components/PipelineRun/components/RerunPipelineButton";
 import { SharePipelineButton } from "@/components/PipelineRun/components/SharePipelineButton";
 import { ViewYamlButton } from "@/components/shared/Buttons/ViewYamlButton";
-import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { useRunViewActions } from "@/routes/v2/pages/RunView/hooks/useRunViewActions";
-import { useOptionalWindowContext } from "@/routes/v2/shared/windows/ContentWindowStateContext";
+import { ToolsPanel } from "@/routes/v2/shared/components/ToolsPanel";
 import { tracking } from "@/utils/tracking";
-
-const RUN_TOOL_CLASS_NAME =
-  "h-10 w-48 justify-start gap-3 border-transparent bg-transparent px-3 shadow-none hover:border-border hover:bg-muted";
-const RUN_TOOL_WRAPPER_CLASS_NAME = "w-fit";
 
 const CANCEL_TOOL_CLASS_NAME =
   "text-destructive hover:text-destructive dark:text-red-400 dark:hover:text-red-400 border-destructive/50 dark:border-red-400/30 hover:bg-destructive/10 dark:hover:bg-red-400/10";
-
-const ROW_TOOL_CLASS_NAME =
-  "h-10 justify-start gap-3 px-3 shadow-none hover:border-border hover:bg-muted border";
-const ROW_TOOL_WRAPPER_CLASS_NAME = "shrink-0";
-
-const RAIL_TOOL_CLASS_NAME = "size-8 shrink-0 p-0";
 
 interface RunToolsContentProps {
   layout?: "rail";
@@ -32,11 +21,6 @@ export const RunToolsContent = observer(function RunToolsContent({
   layout,
 }: RunToolsContentProps) {
   const actions = useRunViewActions();
-  const windowContext = useOptionalWindowContext();
-  const isFloatingPanel =
-    windowContext?.model.variant === "panel" &&
-    windowContext.model.dockState === "none";
-
   if (!actions.ready) return null;
 
   const {
@@ -49,157 +33,85 @@ export const RunToolsContent = observer(function RunToolsContent({
     pipelineName,
   } = actions;
 
-  if (layout === "rail") {
-    return (
-      <BlockStack gap="1" align="center" className="w-full">
-        <ViewYamlButton
-          componentSpec={componentSpec}
-          aria-label="View YAML"
-          className={RAIL_TOOL_CLASS_NAME}
-          tooltipSide="right"
-          {...tracking("v2.run_view.tools.view_yaml")}
-        />
-
-        <SharePipelineButton
-          runId={runId}
-          aria-label="Share run"
-          className={RAIL_TOOL_CLASS_NAME}
-          tooltipSide="right"
-          {...tracking("v2.run_view.tools.share_pipeline")}
-        />
-
-        {canAccessEditorSpec && pipelineName && (
-          <InspectPipelineButton
-            pipelineName={pipelineName}
-            aria-label="Inspect pipeline"
-            className={RAIL_TOOL_CLASS_NAME}
-            tooltipSide="right"
-            {...tracking("v2.run_view.tools.inspect_pipeline")}
+  return (
+    <ToolsPanel layout={layout}>
+      {({ isRail, className, wrapperClassName, tooltipSide }) => (
+        <>
+          <ViewYamlButton
+            componentSpec={componentSpec}
+            displayLabel={isRail ? undefined : "View YAML"}
+            aria-label="View YAML"
+            showTooltip={isRail}
+            tooltipSide={tooltipSide}
+            className={className}
+            wrapperClassName={wrapperClassName}
+            {...tracking("v2.run_view.tools.view_yaml")}
           />
-        )}
 
-        <ClonePipelineButton
-          componentSpec={componentSpec}
-          runId={runId}
-          aria-label="Clone pipeline"
-          className={RAIL_TOOL_CLASS_NAME}
-          tooltipSide="right"
-          {...tracking("v2.run_view.tools.clone_pipeline")}
-        />
-
-        {isInProgress && isRunCreator && (
-          <CancelPipelineRunButton
+          <SharePipelineButton
             runId={runId}
-            aria-label="Cancel run"
-            className={`${RAIL_TOOL_CLASS_NAME} bg-transparent ${CANCEL_TOOL_CLASS_NAME}`}
-            tooltipSide="right"
-            {...tracking("v2.run_view.tools.cancel_run")}
+            displayLabel={isRail ? undefined : "Share run"}
+            aria-label="Share run"
+            showTooltip={isRail}
+            tooltipSide={tooltipSide}
+            className={className}
+            wrapperClassName={wrapperClassName}
+            {...tracking("v2.run_view.tools.share_pipeline")}
           />
-        )}
 
-        {isComplete && (
-          <RerunPipelineButton
+          {canAccessEditorSpec && pipelineName && (
+            <InspectPipelineButton
+              pipelineName={pipelineName}
+              displayLabel={isRail ? undefined : "Inspect pipeline"}
+              aria-label="Inspect pipeline"
+              showTooltip={isRail}
+              tooltipSide={tooltipSide}
+              className={className}
+              wrapperClassName={wrapperClassName}
+              {...tracking("v2.run_view.tools.inspect_pipeline")}
+            />
+          )}
+
+          <ClonePipelineButton
             componentSpec={componentSpec}
             runId={runId}
-            aria-label="Rerun pipeline"
-            className={RAIL_TOOL_CLASS_NAME}
-            tooltipSide="right"
-            {...tracking("v2.run_view.tools.rerun_pipeline")}
+            displayLabel={isRail ? undefined : "Clone pipeline"}
+            aria-label="Clone pipeline"
+            showTooltip={isRail}
+            tooltipSide={tooltipSide}
+            className={className}
+            wrapperClassName={wrapperClassName}
+            {...tracking("v2.run_view.tools.clone_pipeline")}
           />
-        )}
-      </BlockStack>
-    );
-  }
 
-  const toolClassName = isFloatingPanel
-    ? ROW_TOOL_CLASS_NAME
-    : RUN_TOOL_CLASS_NAME;
-  const wrapperClassName = isFloatingPanel
-    ? ROW_TOOL_WRAPPER_CLASS_NAME
-    : RUN_TOOL_WRAPPER_CLASS_NAME;
+          {isInProgress && isRunCreator && (
+            <CancelPipelineRunButton
+              runId={runId}
+              displayLabel={isRail ? undefined : "Cancel run"}
+              aria-label="Cancel run"
+              showTooltip={isRail}
+              tooltipSide={tooltipSide}
+              className={`${className} bg-transparent ${CANCEL_TOOL_CLASS_NAME}`}
+              wrapperClassName={wrapperClassName}
+              {...tracking("v2.run_view.tools.cancel_run")}
+            />
+          )}
 
-  const tools = (
-    <>
-      <ViewYamlButton
-        componentSpec={componentSpec}
-        displayLabel="View YAML"
-        showTooltip={false}
-        className={toolClassName}
-        wrapperClassName={wrapperClassName}
-        {...tracking("v2.run_view.tools.view_yaml")}
-      />
-
-      <SharePipelineButton
-        runId={runId}
-        displayLabel="Share run"
-        showTooltip={false}
-        className={toolClassName}
-        wrapperClassName={wrapperClassName}
-        {...tracking("v2.run_view.tools.share_pipeline")}
-      />
-
-      {canAccessEditorSpec && pipelineName && (
-        <InspectPipelineButton
-          pipelineName={pipelineName}
-          displayLabel="Inspect pipeline"
-          showTooltip={false}
-          className={toolClassName}
-          wrapperClassName={wrapperClassName}
-          {...tracking("v2.run_view.tools.inspect_pipeline")}
-        />
+          {isComplete && (
+            <RerunPipelineButton
+              componentSpec={componentSpec}
+              runId={runId}
+              displayLabel={isRail ? undefined : "Rerun pipeline"}
+              aria-label="Rerun pipeline"
+              showTooltip={isRail}
+              tooltipSide={tooltipSide}
+              className={className}
+              wrapperClassName={wrapperClassName}
+              {...tracking("v2.run_view.tools.rerun_pipeline")}
+            />
+          )}
+        </>
       )}
-
-      <ClonePipelineButton
-        componentSpec={componentSpec}
-        runId={runId}
-        displayLabel="Clone pipeline"
-        showTooltip={false}
-        className={toolClassName}
-        wrapperClassName={wrapperClassName}
-        {...tracking("v2.run_view.tools.clone_pipeline")}
-      />
-
-      {isInProgress && isRunCreator && (
-        <CancelPipelineRunButton
-          runId={runId}
-          displayLabel="Cancel run"
-          showTooltip={false}
-          className={`${toolClassName} bg-transparent ${CANCEL_TOOL_CLASS_NAME}`}
-          wrapperClassName={wrapperClassName}
-          {...tracking("v2.run_view.tools.cancel_run")}
-        />
-      )}
-
-      {isComplete && (
-        <RerunPipelineButton
-          componentSpec={componentSpec}
-          runId={runId}
-          displayLabel="Rerun pipeline"
-          showTooltip={false}
-          className={toolClassName}
-          wrapperClassName={wrapperClassName}
-          {...tracking("v2.run_view.tools.rerun_pipeline")}
-        />
-      )}
-    </>
-  );
-
-  if (isFloatingPanel) {
-    return (
-      <InlineStack
-        gap="1"
-        wrap="nowrap"
-        blockAlign="center"
-        className="p-2 bg-background rounded-md border"
-      >
-        {tools}
-      </InlineStack>
-    );
-  }
-
-  return (
-    <BlockStack gap="1" className="p-2">
-      {tools}
-    </BlockStack>
+    </ToolsPanel>
   );
 });

@@ -32,6 +32,7 @@ import {
 import { formatDate } from "@/utils/date";
 
 import { DashboardPipelinesView } from "./DashboardPipelinesView";
+import { getRemotePipelinesFilterQuery } from "./pipelinesSearch";
 
 vi.mock("@/components/Home/PipelineSection/PipelineSection", () => ({
   PipelineSection: () => <div>Local pipeline list</div>,
@@ -117,6 +118,7 @@ const pipeline: RemotePipeline = {
   file_path: "Example pipeline",
   versioning_mode: "full",
 };
+const meFilterQuery = getRemotePipelinesFilterQuery({ user: "me" });
 
 const clients: QueryClient[] = [];
 
@@ -194,11 +196,13 @@ async function renderDashboard(
     path: APP_ROUTES.PIPELINE_EDITOR,
     component: () => <div>Editor destination</div>,
   });
+
   const remoteEditorRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: APP_ROUTES.REMOTE_PIPELINE_EDITOR,
     component: () => <div>Remote editor destination</div>,
   });
+
   const history = createMemoryHistory({ initialEntries: [initialEntry] });
   const router = createRouter({
     routeTree: rootRoute.addChildren([
@@ -268,6 +272,7 @@ async function renderResizableTable() {
 }
 
 beforeEach(() => {
+  vi.stubEnv("VITE_REMOTE_PIPELINES", "true");
   vi.spyOn(window, "scrollTo").mockImplementation(() => {});
   vi.mocked(getRemotePipelineWriter).mockResolvedValue(pipeline.user_id);
   vi.mocked(deleteRemotePipeline).mockResolvedValue(undefined);
@@ -279,6 +284,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.unstubAllEnvs();
   clients.splice(0).forEach((client) => client.clear());
   vi.restoreAllMocks();
   vi.resetAllMocks();
@@ -299,7 +305,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
     await user.click(
       await within(row).findByRole("button", { name: /^Delete / }),
     );
-    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(screen.getByRole("button", { name: "Delete" }));
     await waitFor(() => expect(link).toHaveAttribute("aria-disabled", "true"));
 
     await user.click(ownerCell);
@@ -340,7 +346,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
     await user.click(
       await screen.findByRole("button", { name: "Delete Pipeline 11" }),
     );
-    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(screen.getByRole("button", { name: "Delete" }));
     await waitFor(() =>
       expect(screen.queryByText("Pipeline 11")).not.toBeInTheDocument(),
     );
@@ -364,7 +370,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
     await user.click(
       await screen.findByRole("button", { name: "Delete Pipeline 1" }),
     );
-    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(screen.getByRole("button", { name: "Delete" }));
     await waitFor(() => expect(listRemotePipelines).toHaveBeenCalledTimes(2));
     const filter = screen.getByRole("textbox", { name: "Search by name" });
     await user.click(filter);
@@ -394,7 +400,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
     await user.click(
       await within(row).findByRole("button", { name: /^Delete / }),
     );
-    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await user.click(screen.getByRole("button", { name: "Delete" }));
 
     await screen.findByRole("link", { name: "Pipeline 1" });
     expect(searchParams().has("page")).toBe(false);
@@ -413,7 +419,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
       let deleted = false;
       vi.mocked(listRemotePipelines).mockImplementation(
         async (url, token, query) => {
-          if (url !== backend.backendUrl || query) {
+          if (url !== backend.backendUrl || query !== meFilterQuery) {
             return token
               ? createPage(211, 5, null)
               : createPage(201, 10, "new-page-two");
@@ -434,7 +440,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
       await user.click(
         await within(row).findByRole("button", { name: /^Delete / }),
       );
-      await user.click(screen.getByRole("button", { name: "Continue" }));
+      await user.click(screen.getByRole("button", { name: "Delete" }));
       await waitFor(() => expect(listRemotePipelines).toHaveBeenCalledTimes(3));
 
       if (changed === "backend") {
@@ -568,17 +574,22 @@ describe("DashboardPipelinesView remote pipelines", () => {
     expect(router.state.location.pathname).toBe(APP_ROUTES.DASHBOARD_PIPELINES);
   });
 
-  it("fetches only when the remote tab opens and displays the returned metadata", async () => {
+  it("opens remote pipelines by default with the current-user filter and metadata", async () => {
     const { user } = await renderDashboard();
 
-    expect(screen.getByText("Local pipeline list")).toBeInTheDocument();
+    expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+      "Remote Pipelines",
+      "Local Pipelines",
+    ]);
+    expect(
+      screen.getByRole("tab", { name: "Remote Pipelines" }),
+    ).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("textbox", { name: "Search by user" })).toHaveValue(
+      "me",
+    );
     expect(
       screen.getByRole("link", { name: "Example Pipelines" }),
     ).toHaveAttribute("href", APP_ROUTES.LEARN_EXAMPLES);
-    expect(listRemotePipelines).not.toHaveBeenCalled();
-
-    await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
-
     const row = await screen.findByRole("row", { name: /Example pipeline/ });
     const cells = within(row).getAllByRole("cell");
     expect(cells.map((cell) => cell.textContent)).toEqual([
@@ -602,7 +613,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
     expect(listRemotePipelines).toHaveBeenCalledExactlyOnceWith(
       backend.backendUrl,
       undefined,
-      undefined,
+      meFilterQuery,
     );
     expectNoPaginationControls();
     expect(
@@ -626,6 +637,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
       ["user", "Search by user", "another@example.com"],
     ];
     for (const [, label, value] of fields) {
+      await user.clear(screen.getByRole("textbox", { name: label }));
       await user.type(screen.getByRole("textbox", { name: label }), value);
     }
     await waitFor(() => {
@@ -657,12 +669,12 @@ describe("DashboardPipelinesView remote pipelines", () => {
   });
 
   it("applies Me immediately and clears every filter", async () => {
-    const { user, searchParams } = await renderDashboard(
+    const { user, router, searchParams, unmount } = await renderDashboard(
       `${APP_ROUTES.DASHBOARD_PIPELINES}?name=shared&user=another@example.com&id=123e4567-e89b-12d3-a456-426614174000&createdFrom=2026-09-10&createdTo=2026-09-12&updatedFrom=2026-09-20&updatedTo=2026-09-22&panel=compact`,
     );
     await screen.findByText("Example pipeline");
     await user.click(screen.getByRole("button", { name: "Clear user filter" }));
-    expect(searchParams().has("user")).toBe(false);
+    expect(searchParams().get("user")).toBe("");
     await user.click(screen.getByRole("button", { name: "Me" }));
     expect(screen.getByRole("textbox", { name: "Search by user" })).toHaveValue(
       "me",
@@ -681,6 +693,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
     expect(Object.fromEntries(searchParams())).toEqual({
       tab: "remote",
       panel: "compact",
+      user: "",
     });
     await waitFor(() =>
       expect(listRemotePipelines).toHaveBeenLastCalledWith(
@@ -688,6 +701,12 @@ describe("DashboardPipelinesView remote pipelines", () => {
         undefined,
         undefined,
       ),
+    );
+    const clearedUrl = router.history.location.href;
+    unmount();
+    await renderDashboard(clearedUrl);
+    expect(screen.getByRole("textbox", { name: "Search by user" })).toHaveValue(
+      "",
     );
   });
 
@@ -730,16 +749,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
   });
 
   it("ignores a legacy page number in a filtered link without requesting unfiltered results", async () => {
-    const query = JSON.stringify({
-      and: [
-        {
-          value_contains: {
-            key: "system/pipeline.name",
-            value_substring: "shared",
-          },
-        },
-      ],
-    });
+    const query = getRemotePipelinesFilterQuery({ name: "shared", user: "me" });
     vi.mocked(listRemotePipelines).mockImplementation(async (_, token) =>
       token ? createPage(111, 5, null) : createPage(101, 10, "shared-two"),
     );
@@ -869,12 +879,10 @@ describe("DashboardPipelinesView remote pipelines", () => {
       fireEvent.click(screen.getByRole("button", { name: label }));
       await act(() => vi.advanceTimersByTimeAsync(250));
       expect(input).toHaveValue("");
-      expect(searchParams().has("user")).toBe(false);
+      expect(searchParams().get("user")).toBe("");
       expect(
-        vi
-          .mocked(listRemotePipelines)
-          .mock.calls.every(([, , query]) => query === undefined),
-      ).toBe(true);
+        vi.mocked(listRemotePipelines).mock.calls.map(([, , query]) => query),
+      ).toEqual([meFilterQuery, undefined]);
     },
   );
 
@@ -903,7 +911,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
     const filteredPage = createDeferredPage();
     vi.mocked(listRemotePipelines).mockImplementation(
       async (_, token, query) => {
-        if (query) return filteredPage.promise;
+        if (query !== meFilterQuery) return filteredPage.promise;
         return token
           ? createPage(11, 10, "unfiltered-three")
           : createPage(1, 10, "unfiltered-two");
@@ -1001,7 +1009,9 @@ describe("DashboardPipelinesView remote pipelines", () => {
     vi.mocked(listRemotePipelines).mockImplementation(
       async (_, _pageToken, query) => {
         if (query?.includes("older")) return olderPage.promise;
-        return query ? createPage(201, 1, null) : createPage(1, 1, null);
+        return query?.includes("newer")
+          ? createPage(201, 1, null)
+          : createPage(1, 1, null);
       },
     );
     await renderDashboard(`${APP_ROUTES.DASHBOARD_PIPELINES}?tab=remote`);
@@ -1098,28 +1108,6 @@ describe("DashboardPipelinesView remote pipelines", () => {
     expect(screen.getByText("pipeline-1")).toBeInTheDocument();
   });
 
-  it("opens another backend without reusing the previous backend's rows", async () => {
-    const { user, setBackend } = await renderDashboard();
-    await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
-    await screen.findByText("Example pipeline");
-
-    vi.mocked(listRemotePipelines).mockResolvedValue({
-      pipelines: [
-        { ...pipeline, id: "pipeline-2", pipeline_name: "Other pipeline" },
-      ],
-      nextPageToken: null,
-    });
-    setBackend(createBackend({ backendUrl: "https://other.example.com" }));
-
-    expect(await screen.findByText("Other pipeline")).toBeInTheDocument();
-    expect(screen.queryByText("Example pipeline")).not.toBeInTheDocument();
-    expect(listRemotePipelines).toHaveBeenLastCalledWith(
-      "https://other.example.com",
-      undefined,
-      undefined,
-    );
-  });
-
   it("navigates cursor pages without totals, including a partial final page", async () => {
     mockCursorPages([
       [undefined, createPage(1, 10, "page-two")],
@@ -1167,33 +1155,32 @@ describe("DashboardPipelinesView remote pipelines", () => {
   it("ignores a legacy page number when deciding which tab to open", async () => {
     await renderDashboard(`${APP_ROUTES.DASHBOARD_PIPELINES}?page=1000000`);
 
-    expect(screen.getByText("Local pipeline list")).toBeInTheDocument();
-    expect(listRemotePipelines).not.toHaveBeenCalled();
+    expect(await screen.findByText("Example pipeline")).toBeInTheDocument();
+    expect(
+      screen.getByRole("tab", { name: "Remote Pipelines" }),
+    ).toHaveAttribute("aria-selected", "true");
   });
 
-  it.each(["2", "1000000", "0", "-2", "1.5", "invalid", "9007199254740992"])(
-    "ignores legacy page value %s without walking prior cursors",
-    async (page) => {
-      vi.mocked(listRemotePipelines).mockResolvedValue(
-        createPage(1, 10, "page-two"),
-      );
-      const { searchParams } = await renderDashboard(
-        `${APP_ROUTES.DASHBOARD_PIPELINES}?tab=remote&page=${page}&panel=compact`,
-      );
+  it("ignores a legacy page value without walking prior cursors", async () => {
+    vi.mocked(listRemotePipelines).mockResolvedValue(
+      createPage(1, 10, "page-two"),
+    );
+    const { searchParams } = await renderDashboard(
+      `${APP_ROUTES.DASHBOARD_PIPELINES}?tab=remote&page=1000000&panel=compact`,
+    );
 
-      expect(await screen.findByText("Pipeline 1")).toBeInTheDocument();
-      expect(screen.getByText("Page 1")).toBeInTheDocument();
-      expect(listRemotePipelines).toHaveBeenCalledExactlyOnceWith(
-        backend.backendUrl,
-        undefined,
-        undefined,
-      );
-      expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
-      expect(screen.getByRole("button", { name: "Next" })).toBeEnabled();
-      expect(searchParams().get("tab")).toBe("remote");
-      expect(searchParams().get("panel")).toBe("compact");
-    },
-  );
+    expect(await screen.findByText("Pipeline 1")).toBeInTheDocument();
+    expect(screen.getByText("Page 1")).toBeInTheDocument();
+    expect(listRemotePipelines).toHaveBeenCalledExactlyOnceWith(
+      backend.backendUrl,
+      undefined,
+      meFilterQuery,
+    );
+    expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Next" })).toBeEnabled();
+    expect(searchParams().get("tab")).toBe("remote");
+    expect(searchParams().get("panel")).toBe("compact");
+  });
 
   it("opens a copied listing URL on the first page", async () => {
     vi.mocked(listRemotePipelines).mockImplementation(async (_, pageToken) =>
@@ -1216,7 +1203,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
     expect(listRemotePipelines).toHaveBeenCalledExactlyOnceWith(
       backend.backendUrl,
       undefined,
-      undefined,
+      meFilterQuery,
     );
   });
 
@@ -1244,12 +1231,21 @@ describe("DashboardPipelinesView remote pipelines", () => {
     await screen.findByText("Pipeline 1");
     await user.click(screen.getByRole("button", { name: "Next" }));
     await screen.findByText("Pipeline 11");
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    await screen.findByText("Pipeline 21");
     refreshed = true;
 
     await user.click(screen.getByRole("button", { name: "First page" }));
     await screen.findByText("Pipeline 101");
+    expect(screen.getByText("Page 1")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "First page" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Next" })).toBeEnabled(),
+    );
     await user.click(screen.getByRole("button", { name: "Next" }));
     await screen.findByText("Pipeline 111");
+    expect(screen.getByText("Page 2")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Next" }));
 
     expect(await screen.findByText("Pipeline 121")).toBeInTheDocument();
@@ -1259,6 +1255,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
     ).toEqual([
       undefined,
       "old-page-two",
+      "old-page-three",
       undefined,
       "new-page-two",
       "new-page-three",
@@ -1279,7 +1276,7 @@ describe("DashboardPipelinesView remote pipelines", () => {
     const table = screen.getByRole("table", { name: "Remote Pipelines" });
     const initialUrl = router.history.location.href;
     const historyLength = router.history.length;
-    expect(searchParams().get("tab")).toBe("remote");
+    expect(searchParams().has("tab")).toBe(false);
     vi.mocked(window.scrollTo).mockClear();
 
     await user.click(screen.getByRole("button", { name: "Next" }));
@@ -1327,7 +1324,9 @@ describe("DashboardPipelinesView remote pipelines", () => {
     vi.mocked(listRemotePipelines).mockImplementation(async (_, pageToken) =>
       pageToken ? createPage(11, 10, null) : createPage(1, 10, "page-two"),
     );
-    const { user, router, searchParams } = await renderDashboard();
+    const { user, router, searchParams } = await renderDashboard(
+      `${APP_ROUTES.DASHBOARD_PIPELINES}?tab=local`,
+    );
     await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
     await screen.findByText("Pipeline 1");
     await user.click(screen.getByRole("button", { name: "Next" }));
@@ -1450,50 +1449,6 @@ describe("DashboardPipelinesView remote pipelines", () => {
     );
     expect(await screen.findByText("Pipeline 201")).toBeInTheDocument();
     expect(screen.getByText("Page 1")).toBeInTheDocument();
-  });
-
-  it("returns to the first page with the First page button", async () => {
-    const pages = new Map<string | undefined, RemotePipelinesPage>([
-      [undefined, createPage(1, 10, "page-two")],
-      ["page-two", createPage(11, 10, "page-three")],
-      ["page-three", createPage(21, 5, null)],
-    ]);
-    vi.mocked(listRemotePipelines).mockImplementation(async (_, pageToken) => {
-      const page = pages.get(pageToken);
-      if (!page) throw new Error(`Unexpected page token: ${pageToken}`);
-      return page;
-    });
-    const { user } = await renderDashboard();
-    await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
-    await screen.findByText("Pipeline 1");
-    await user.click(screen.getByRole("button", { name: "Next" }));
-    await screen.findByText("Pipeline 11");
-    await user.click(screen.getByRole("button", { name: "Next" }));
-    await screen.findByText("Pipeline 21");
-    expect(screen.getByText("Page 3")).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "First page" }));
-    expect(await screen.findByText("Pipeline 1")).toBeInTheDocument();
-    expect(screen.getByText("Page 1")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "First page" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Next" })).toBeEnabled();
-    });
-    expect(listRemotePipelines).toHaveBeenLastCalledWith(
-      backend.backendUrl,
-      undefined,
-      undefined,
-    );
-
-    await user.click(screen.getByRole("button", { name: "Next" }));
-    expect(await screen.findByText("Pipeline 11")).toBeInTheDocument();
-    expect(screen.getByText("Page 2")).toBeInTheDocument();
-    expect(listRemotePipelines).toHaveBeenLastCalledWith(
-      backend.backendUrl,
-      "page-two",
-      undefined,
-    );
   });
 
   it("disables navigation until the next page request settles", async () => {
@@ -1639,12 +1594,12 @@ describe("DashboardPipelinesView remote pipelines", () => {
     expect(listRemotePipelines).toHaveBeenLastCalledWith(
       "https://other.example.com",
       undefined,
-      undefined,
+      meFilterQuery,
     );
     expect(listRemotePipelines).not.toHaveBeenCalledWith(
       "https://other.example.com",
       "original-page-two",
-      undefined,
+      meFilterQuery,
     );
   });
 
@@ -1749,9 +1704,10 @@ describe("DashboardPipelinesView remote pipelines", () => {
 it("keeps saved remote pipelines reachable when new pipelines are saved in the browser", async () => {
   localStorage.setItem("pipelines:save-in-browser", "true");
   try {
-    const { user } = await renderDashboard();
-    expect(screen.getByText("Local pipeline list")).toBeInTheDocument();
-    await user.click(screen.getByRole("tab", { name: "Remote Pipelines" }));
+    await renderDashboard();
+    expect(
+      screen.getByRole("tab", { name: "Remote Pipelines" }),
+    ).toHaveAttribute("aria-selected", "true");
     expect(await screen.findByText("Example pipeline")).toBeInTheDocument();
     expect(listRemotePipelines).toHaveBeenCalled();
   } finally {

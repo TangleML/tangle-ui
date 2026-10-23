@@ -65,6 +65,10 @@ describe("DashboardLayout", () => {
 
     render(<DashboardLayout />);
 
+    expect(screen.getByRole("link", { name: "All Pipelines" })).toHaveAttribute(
+      "href",
+      "/pipelines",
+    );
     expect(screen.queryByRole("link", { name: /^Tangent/ })).toBeNull();
     expect(screen.queryByRole("link", { name: /^Projects/ })).toBeNull();
   });

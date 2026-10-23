@@ -7,13 +7,18 @@ import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 import { MultiSelectionDetails } from "./components/MultiSelectionDetails/MultiSelectionDetails";
+import { SelectedNodesList } from "./components/MultiSelectionDetails/SelectedNodesList";
 
 /**
  * Content for the Context Panel window.
  * Displays details about the selected node and allows editing via direct mutation.
  * Used within the Windows system.
  */
-export const ContextPanelContent = observer(function ContextPanelContent() {
+export const ContextPanelContent = observer(function ContextPanelContent({
+  readOnly = false,
+}: {
+  readOnly?: boolean;
+}) {
   const registry = useNodeRegistry();
   const { editor } = useSharedStores();
   const { selectedNodeId, selectedNodeType, multiSelection } = editor;
@@ -21,6 +26,13 @@ export const ContextPanelContent = observer(function ContextPanelContent() {
   const spec = useSpec();
 
   if (multiSelection.length > 1) {
+    if (readOnly) {
+      return (
+        <BlockStack className="p-3">
+          <SelectedNodesList nodes={multiSelection} spec={spec} />
+        </BlockStack>
+      );
+    }
     return <MultiSelectionDetails />;
   }
 

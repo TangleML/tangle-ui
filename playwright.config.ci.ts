@@ -43,7 +43,7 @@ export default defineConfig({
 
   webServer: {
     command: "vite --port 3001",
-    env: { VITE_LOCAL_PIPELINES: "true" },
+    env: { VITE_REMOTE_PIPELINES: "false" },
     url: "http://localhost:3001",
     reuseExistingServer: false, // Force fresh server like CI
     timeout: 120 * 1000,

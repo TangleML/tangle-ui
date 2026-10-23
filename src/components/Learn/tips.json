@@ -255,7 +255,7 @@
     "id": "favorites",
     "category": "System",
     "title": "Favorite pipelines and runs to keep them at the top",
-    "body": "Star pipelines or runs to surface them at the top of My Pipelines, the All Runs list, and the Favorites view. My Dashboard shows your five most recent favorites, with a hover-X to unfavorite in place."
+    "body": "Star pipelines or runs to surface them at the top of All Pipelines, the All Runs list, and the Favorites view. My Dashboard shows your five most recent favorites, with a hover-X to unfavorite in place."
   },
   {
     "id": "backend-availability",
@@ -279,7 +279,7 @@
     "id": "pipeline-tags",
     "category": "Advanced",
     "title": "Tag pipelines so the search bar actually helps",
-    "body": "Add tags from the Pipeline Context panel. Tangle stores them in IndexedDB, surfaces them as filters in My Pipelines, and writes them into the YAML so they survive export and import. Tagging up front saves you from grepping through a wall of similar names later."
+    "body": "Add tags from the Pipeline Context panel. Tangle stores them in IndexedDB, surfaces them as filters in All Pipelines, and writes them into the YAML so they survive export and import. Tagging up front saves you from grepping through a wall of similar names later."
   },
   {
     "id": "pipeline-notes",

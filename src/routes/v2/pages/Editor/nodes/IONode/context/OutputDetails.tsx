@@ -13,10 +13,12 @@ import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 
 interface OutputDetailsProps {
   entityId: string;
+  readOnly?: boolean;
 }
 
 export const OutputDetails = observer(function OutputDetails({
   entityId,
+  readOnly = false,
 }: OutputDetailsProps) {
   const { track } = useAnalytics();
   const ioActions = useIOActions();
@@ -26,6 +28,7 @@ export const OutputDetails = observer(function OutputDetails({
   if (!spec || !output) return null;
 
   const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
+    if (readOnly) return;
     const newName = event.target.value;
     if (newName && newName !== output.name) {
       ioActions.renameOutput(spec, entityId, newName);
@@ -34,6 +37,7 @@ export const OutputDetails = observer(function OutputDetails({
   };
 
   const handleDescriptionChange = (event: FocusEvent<HTMLTextAreaElement>) => {
+    if (readOnly) return;
     const value = event.target.value;
     const newDescription = value || undefined;
     if (newDescription !== output.description) {
@@ -54,6 +58,7 @@ export const OutputDetails = observer(function OutputDetails({
             key={`${entityId}-name`}
             id="output-name"
             defaultValue={output.name}
+            readOnly={readOnly}
             onBlur={handleNameChange}
             className="font-mono text-xs!"
           />
@@ -84,6 +89,7 @@ export const OutputDetails = observer(function OutputDetails({
             key={`${entityId}-description`}
             id="output-description"
             defaultValue={output.description ?? ""}
+            readOnly={readOnly}
             placeholder="Describe this output..."
             onBlur={handleDescriptionChange}
             className="text-xs!"
