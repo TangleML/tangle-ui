@@ -32,6 +32,7 @@ import { EmbeddedPipelineEditor } from "./v2/pages/Editor/EmbeddedPipelineEditor
 import type { useEditorSession } from "./v2/pages/Editor/store/EditorSessionContext";
 
 const canvas = vi.hoisted(() => ({ mounts: 0, unmounts: 0 }));
+const flags = vi.hoisted(() => ({ v2Editor: true }));
 const chat = vi.hoisted(() => ({ mounts: 0, threads: [{ abort: vi.fn() }] }));
 let session: ReturnType<typeof useEditorSession>;
 const storage = new PipelineStorageService();
@@ -50,7 +51,9 @@ vi.mock("@/routes/v2/shared/components/AppMenuActions", () => ({
 }));
 vi.mock("@/api/client.gen", () => ({ client: { get: vi.fn(), put: vi.fn() } }));
 vi.mock("@/api/sdk.gen", () => ({ getCurrentUserApiUsersMeGet: vi.fn() }));
-vi.mock("@/utils/componentStore", () => ({}));
+vi.mock("@/utils/componentStore", () => ({
+  getAllComponentFilesFromList: async () => [],
+}));
 vi.mock("@/hooks/useToastNotification", () => ({ default: () => vi.fn() }));
 vi.mock("@/providers/BackendProvider", () => ({
   useBackend: () => ({
@@ -61,7 +64,7 @@ vi.mock("@/providers/BackendProvider", () => ({
 }));
 vi.mock("@/components/shared/Settings/useFlags", () => ({
   useFlagValue: () => false,
-  isFlagEnabled: () => true,
+  isFlagEnabled: () => flags.v2Editor,
 }));
 vi.mock("@/services/pipelineStorage/createDriver", () => ({
   createDriver: () => ({}),
@@ -181,6 +184,7 @@ beforeEach(() => {
   canvas.mounts = 0;
   chat.mounts = 0;
   canvas.unmounts = 0;
+  flags.v2Editor = true;
   vi.mocked(getCurrentUserApiUsersMeGet).mockResolvedValue({
     data: { id: "user", permissions: ["read", "write"] },
     response: new Response(null, { status: 200 }),
@@ -203,6 +207,7 @@ afterEach(() => {
   cleanup();
   queryClient.clear();
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
 });
 
 async function open(initialEntry: string = APP_ROUTES.EDITOR_NEW_PIPELINE) {
@@ -361,6 +366,29 @@ it("starts a separate unsaved pipeline when New is used again at the same URL", 
   expect(client.put).toHaveBeenCalledOnce();
 });
 
+it("opens remote pipelines when the V2 editor flag is disabled", async () => {
+  flags.v2Editor = false;
+  vi.mocked(client.get).mockResolvedValue({
+    data: {
+      id: pipelineId,
+      user_id: "user",
+      file_path: "pipelines/remote.yaml",
+      root_pipeline_task: {
+        componentRef: {
+          spec: {
+            name: "Remote pipeline",
+            implementation: { graph: { tasks: {} } },
+          },
+        },
+      },
+      pipeline_run_annotations: {},
+    },
+    response: new Response(null, { status: 200 }),
+  } as Awaited<ReturnType<typeof client.get>>);
+  const { history } = await open(`/editor/pipeline/${pipelineId}`);
+  expect(history.location.pathname).toBe(`/editor/pipeline/${pipelineId}`);
+  expect(client.get).toHaveBeenCalledOnce();
+});
 it("reopens the saved pipeline after leaving during creation and going Back", async () => {
   const { router, history } = await open();
   const draftId = history.location.state.newPipeline?.draftId;
@@ -407,6 +435,7 @@ it("reopens the saved pipeline after leaving during creation and going Back", as
 });
 
 it("keeps local chat mounted while replacing document undo and save state", async () => {
+  vi.stubEnv("VITE_LOCAL_PIPELINES", "true");
   const first = new PipelineFile({
     id: "local-first",
     storageKey: "First",
@@ -447,4 +476,14 @@ it("keeps local chat mounted while replacing document undo and save state", asyn
   expect(writeSecond).not.toHaveBeenCalled();
   expect(chat.mounts).toBe(1);
   expect(chat.threads[0].abort).toHaveBeenCalled();
+});
+
+it("creates and promotes a new pipeline when the V2 flag is disabled", async () => {
+  flags.v2Editor = false;
+  const { history } = await open();
+  fireEvent.click(screen.getByRole("button", { name: "Edit pipeline" }));
+  await waitFor(() =>
+    expect(history.location.pathname).toBe(`/editor/pipeline/${pipelineId}`),
+  );
+  expect(client.put).toHaveBeenCalledOnce();
 });

@@ -22,6 +22,8 @@ import { Paragraph, Text } from "@/components/ui/typography";
 import { usePagination } from "@/hooks/usePagination";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
+import { invalidatePipelineQueries } from "@/services/pipelineStorage/invalidatePipelineQueries";
+import { PipelineMigrationRecoveryError } from "@/services/pipelineStorage/migrateLocalPipelineToRemote";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import {
   type ComponentFileEntry,
@@ -106,19 +108,23 @@ export const PipelineSection = withSuspenseWrapper(
 
     const { mutate: saveAsRemote, isPending: isSavingAsRemote } = useMutation({
       mutationFn: (name: string) =>
-        storage.moveLocalPipelineToRemote(name, backendUrl),
+        storage.moveLocalPipelineToRemote(name, backendUrl, undefined, {
+          keepLocalCopy: true,
+        }),
       onSuccess: () => {
         setSelectedPipelines(new Set());
         notify("Pipeline uploaded.", "success");
       },
-      onError: (error) => notify(getErrorMessage(error), "error"),
+      onError: (error) =>
+        notify(
+          getErrorMessage(error),
+          error instanceof PipelineMigrationRecoveryError ? "warning" : "error",
+        ),
       onSettled: () => {
         void fetchUserPipelines();
+        invalidatePipelineQueries(queryClient, backendUrl);
         void queryClient.invalidateQueries({
-          queryKey: ["remote-pipelines-page", backendUrl],
-        });
-        void queryClient.invalidateQueries({
-          queryKey: ["remote-pipelines", backendUrl],
+          queryKey: ["local-pipeline-migration"],
         });
       },
     });

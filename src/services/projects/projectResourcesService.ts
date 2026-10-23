@@ -19,8 +19,10 @@ import type {
 export async function listProjectResources(
   projectId: string,
   params: ListProjectResourcesParams = {},
+  backendUrl?: string,
 ): Promise<ProjectResourcePage> {
   const result = await listResourcesApiProjectsProjectIdResourcesGet({
+    ...(backendUrl && { baseUrl: backendUrl }),
     path: { project_id: projectId },
     query: {
       entity: params.entity,
@@ -60,8 +62,10 @@ export async function getProjectResource(
 export async function createProjectResource(
   projectId: string,
   input: CreateResourceInput,
+  backendUrl?: string,
 ): Promise<ProjectResource> {
   const result = await createResourceApiProjectsProjectIdResourcesPost({
+    ...(backendUrl && { baseUrl: backendUrl }),
     path: { project_id: projectId },
     body: {
       entity: input.entity,
@@ -106,9 +110,11 @@ export async function updateProjectResource(
 export async function deleteProjectResource(
   projectId: string,
   resourceId: string,
+  backendUrl?: string,
 ): Promise<void> {
   const result =
     await deleteResourceApiProjectsProjectIdResourcesResourceIdDelete({
+      ...(backendUrl && { baseUrl: backendUrl }),
       path: { project_id: projectId, resource_id: resourceId },
     });
   if (!result.response.ok) {

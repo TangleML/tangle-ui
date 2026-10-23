@@ -10,9 +10,13 @@ import { pipelineStorageDb } from "./db";
 import { RemotePipelineDraftStorageDriver } from "./drivers/RemotePipelineDraftStorageDriver";
 import { RemotePipelineStorageDriver } from "./drivers/RemotePipelineStorageDriver";
 import { RootFolderDbStorageDriver } from "./drivers/RootFolderDbStorageDriver";
-import { movePipelineAssociationsToRemote } from "./pipelineAssociations";
+import {
+  migrateLocalPipelineToRemote,
+  type PipelineMigrationOptions,
+} from "./migrateLocalPipelineToRemote";
 import { PipelineFile } from "./PipelineFile";
 import { PipelineFolder } from "./PipelineFolder";
+import { findPipelineMigration } from "./pipelineMigrations";
 import { findById, findByStorageKey } from "./pipelineRegistry";
 import {
   type EditorPipelineRef,
@@ -102,6 +106,10 @@ export class PipelineStorageService {
     const legacyDriver = new RootFolderDbStorageDriver();
     if (await legacyDriver.hasKey(ref.name)) {
       return this.rootFolder.assignFile(ref.name);
+    }
+    const migration = await findPipelineMigration(ref);
+    if (migration) {
+      return this.resolvePipeline(migration.remote);
     }
     throw new Error(`Pipeline "${ref.name}" not found`);
   }
@@ -277,41 +285,37 @@ export class PipelineStorageService {
     backendUrl: string,
     name: string,
     content: string,
+    filePath?: string,
   ): Promise<PipelineFile> {
     const file = remoteFile(
-      await RemotePipelineStorageDriver.create(backendUrl, name, content),
+      await RemotePipelineStorageDriver.create(
+        backendUrl,
+        name,
+        content,
+        filePath,
+      ),
     );
     emitUserPipelineWritten();
     return file;
   }
 
   async moveLocalPipelineToRemote(
-    name: string,
+    pipeline: string | PipelineFile,
     backendUrl: string,
+    onCreated?: (remote: PipelineFile) => Promise<unknown>,
+    options?: PipelineMigrationOptions,
   ): Promise<PipelineFile> {
-    const local = await this.resolvePipeline({ name });
-    const remote = await this.createRemotePipeline(
+    const local =
+      typeof pipeline === "string"
+        ? await this.resolvePipeline({ name: pipeline })
+        : pipeline;
+    return migrateLocalPipelineToRemote(
+      this,
+      local,
       backendUrl,
-      name,
-      await local.read(),
+      onCreated,
+      options,
     );
-    try {
-      await movePipelineAssociationsToRemote(local, remote);
-    } catch (cause) {
-      throw new Error(
-        "Pipeline was uploaded, but its saved links could not be updated. The copy in this browser was kept.",
-        { cause },
-      );
-    }
-    try {
-      await local.deleteFile();
-    } catch (cause) {
-      throw new Error(
-        "Pipeline was uploaded, but the copy in this browser could not be removed.",
-        { cause },
-      );
-    }
-    return remote;
   }
 
   async copyRemotePipeline(
@@ -332,6 +336,8 @@ export class PipelineStorageService {
   async findPipelineById(id: string): Promise<PipelineFile> {
     const entry = await findById(id);
     if (!entry) {
+      const migration = await findPipelineMigration({ name: id, fileId: id });
+      if (migration) return this.resolvePipeline(migration.remote);
       throw new Error(`Pipeline not found: ${id}`);
     }
 

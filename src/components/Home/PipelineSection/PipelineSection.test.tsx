@@ -10,6 +10,9 @@ import {
 import type { ComponentType } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
+import { PipelineMigrationRecoveryError } from "@/services/pipelineStorage/migrateLocalPipelineToRemote";
+import { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
+import { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
 import { getAllComponentFilesFromList } from "@/utils/componentStore";
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 
@@ -145,20 +148,23 @@ it("prevents duplicate uploads while pending and refreshes the list and selectio
   expect(upload).toHaveBeenCalledExactlyOnceWith(
     "Example",
     "https://example.com",
+    undefined,
+    { keepLocalCopy: true },
   );
 
   const files = await getAllComponentFilesFromList(USER_PIPELINES_LIST_NAME);
   const remaining = files.get("Example");
   if (!remaining) throw new Error("Missing pipeline fixture");
   vi.mocked(getAllComponentFilesFromList).mockResolvedValue(
-    new Map([["Remaining", { ...remaining, name: "Remaining" }]]),
+    new Map([
+      ["Example", remaining],
+      ["Remaining", { ...remaining, name: "Remaining" }],
+    ]),
   );
   await act(async () => pending.resolve());
-  await waitFor(() =>
-    expect(
-      screen.queryByRole("button", { name: "Upload Example" }),
-    ).not.toBeInTheDocument(),
-  );
+  expect(
+    await screen.findByRole("button", { name: "Upload Example" }),
+  ).toBeEnabled();
   expect(
     await screen.findByRole("button", { name: "Upload Remaining" }),
   ).toBeInTheDocument();
@@ -180,4 +186,26 @@ it("keeps the local row and selection available after upload fails", async () =>
   ).toBeEnabled();
   expect(screen.getByLabelText("Select Example")).toBeChecked();
   expect(notify).toHaveBeenCalledWith("Upload failed", "error");
+});
+
+it("reports an incomplete link repair as a warning and keeps the browser row", async () => {
+  const error = new PipelineMigrationRecoveryError(
+    "Pipeline was uploaded, but its saved links could not be updated. The copy in this browser was kept.",
+    new PipelineFile({
+      id: "remote-1",
+      storageKey: "Example",
+      folder: new PipelineStorageService().rootFolder,
+    }),
+  );
+  upload.mockRejectedValue(error);
+  const button = await renderSection();
+  fireEvent.click(button);
+
+  await waitFor(() =>
+    expect(notify).toHaveBeenCalledWith(error.message, "warning"),
+  );
+  expect(
+    await screen.findByRole("button", { name: "Upload Example" }),
+  ).toBeEnabled();
+  expect(notify).not.toHaveBeenCalledWith("Pipeline uploaded.", "success");
 });

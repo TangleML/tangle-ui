@@ -22,16 +22,18 @@ import { ProjectResourcesQueryKeys, ProjectsQueryKeys } from "./types";
 
 /**
  * `ProjectsQueryKeys.Id` is a prefix of the project's resources *and* its runs,
- * so invalidating it plainly re-reads the resource list a second time and the
- * run feed for no reason. Only the project row itself needs it, for the
- * resource counts the dashboard shows.
+ * so invalidate the exact project row separately from its resource list.
+ * The project-list prefix refreshes the dashboard's resource counts.
  */
-function invalidateProjectResources(
+export function invalidateProjectResources(
   queryClient: QueryClient,
   projectId: string,
 ) {
   void queryClient.invalidateQueries({
     queryKey: ProjectResourcesQueryKeys.All(projectId),
+  });
+  void queryClient.invalidateQueries({
+    queryKey: ["projects", "list"],
   });
   void queryClient.invalidateQueries({
     queryKey: ProjectsQueryKeys.Id(projectId),

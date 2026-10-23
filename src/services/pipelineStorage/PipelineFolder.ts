@@ -255,6 +255,10 @@ async function resolveOrCreateRegistryEntry(
   }
 
   const id = crypto.randomUUID();
-  await addEntry({ id, storageKey, folderId: folder.id });
+  await addEntry({
+    id,
+    storageKey,
+    folderId: folder.id,
+  });
   return new PipelineFile({ id, storageKey, folder, ...metadata });
 }

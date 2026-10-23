@@ -251,7 +251,7 @@ const PipelineRow = withSuspenseWrapper(
                 }
                 title={`Upload "${name}"?`}
                 confirmLabel="Upload"
-                description="This pipeline and its configured input values will be saved to the selected backend. Other users with read access to that backend can see them. After uploading, this pipeline moves to Remote Pipelines and its browser copy is removed."
+                description="This pipeline and its configured input values will be saved to the selected backend. Other users with read access to that backend can see them. The uploaded pipeline appears in Remote Pipelines. Its browser copy and existing project links are kept. Open the pipeline from a project to update that project's link."
                 onConfirm={onSaveAsRemote}
               />
             )}

@@ -5,15 +5,31 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { client } from "@/api/client.gen";
 import { getCurrentUserApiUsersMeGet } from "@/api/sdk.gen";
 import { LibraryDB } from "@/providers/ComponentLibraryProvider/libraries/storage";
+import { TourPipelineStorageService } from "@/providers/TourProvider/tourPipelineStorage/TourPipelineStorageService";
 import type { SavedPipelineDocument } from "@/services/pipelineSpecService";
+import { migrateLocalPipelineOnOpen } from "@/services/pipelineStorage/migrateLocalPipelineOnOpen";
 import { createAndAttachPipeline } from "@/services/projects/createAndAttachPipeline";
 import { pipelineFileTarget } from "@/services/projects/pipelineResource";
+import {
+  createProjectResource,
+  deleteProjectResource,
+  listProjectResources,
+} from "@/services/projects/projectResourcesService";
+import { localPipelineResourceInput } from "@/services/projects/resourceDescriptor";
+import type { ProjectResource } from "@/services/projects/types";
+import { findRemotePipelineDocumentByPath } from "@/services/remotePipelineEditorService";
 import { getRemotePipelineSavedId } from "@/services/remotePipelineSavedLinks";
 import { componentSpecFromYaml, componentSpecToYaml } from "@/utils/yaml";
 
+import { pipelineStorageDb } from "./db";
 import { RootFolderDbStorageDriver } from "./drivers/RootFolderDbStorageDriver";
+import * as pipelineAssociations from "./pipelineAssociations";
 import { PipelineFile } from "./PipelineFile";
 import { emitPipelineFileChanged } from "./pipelineFileEvents";
+import {
+  findPipelineMigration,
+  PipelineMovedToBackendError,
+} from "./pipelineMigrations";
 import * as registry from "./pipelineRegistry";
 import { PipelineStorageService } from "./PipelineStorageService";
 import { getEditorPipelineIdentity } from "./types";
@@ -23,8 +39,17 @@ vi.mock("@/api/client.gen", () => ({
 }));
 vi.mock("@/api/sdk.gen", () => ({ getCurrentUserApiUsersMeGet: vi.fn() }));
 vi.mock("./pipelineFileEvents", () => ({ emitPipelineFileChanged: vi.fn() }));
-vi.mock("./createDriver", () => ({ createDriver: () => ({}) }));
+vi.mock("./createDriver", () => ({
+  createDriver: () => ({ hasKey: vi.fn().mockResolvedValue(false) }),
+}));
+vi.mock("@/services/remotePipelineEditorService", async (original) => ({
+  ...(await original<
+    typeof import("@/services/remotePipelineEditorService")
+  >()),
+  findRemotePipelineDocumentByPath: vi.fn(),
+}));
 vi.mock("./pipelineRegistry");
+vi.mock("@/services/projects/projectResourcesService");
 vi.mock("@/utils/localforage", () => ({
   getUseEnv: async () => false,
   getUseRelativePath: async () => false,
@@ -81,7 +106,10 @@ function response<T>(data: T, status = 200) {
 beforeEach(async () => {
   vi.restoreAllMocks();
   vi.resetAllMocks();
+  vi.mocked(findRemotePipelineDocumentByPath).mockResolvedValue(undefined);
   await LibraryDB.favorites.clear();
+  await pipelineStorageDb.pipeline_migrations.clear();
+  await pipelineStorageDb.pipeline_migration_attempts.clear();
   localStorage.clear();
   sessionStorage.clear();
   storage = new PipelineStorageService();
@@ -434,6 +462,17 @@ describe("PipelineStorageService editor resolution", () => {
     );
     expect(storage.rootFolder.assignFile).toHaveBeenCalledWith("Legacy");
   });
+
+  it("resolves tour file IDs through their existing session-storage lookup", async () => {
+    const tour = new TourPipelineStorageService();
+    const file = await tour.rootFolder.addFile("Tour pipeline", content);
+    const reopened = await tour.resolvePipeline({
+      fileId: file.id,
+      name: file.storageKey,
+    });
+    expect(await reopened.read()).toBe(content);
+    expect(registry.findById).not.toHaveBeenCalled();
+  });
 });
 
 describe("remote drafts and project attachment", () => {
@@ -679,7 +718,12 @@ describe("moving local pipelines to remote storage", () => {
       storageKey: "Original",
       folder: storage.rootFolder,
     });
-    vi.spyOn(storage, "resolvePipeline").mockResolvedValue(local);
+    const resolvePipeline = storage.resolvePipeline.bind(storage);
+    vi.spyOn(storage, "resolvePipeline").mockImplementation((pipelineRef) =>
+      "source" in pipelineRef
+        ? resolvePipeline(pipelineRef)
+        : Promise.resolve(local),
+    );
     vi.spyOn(local, "read").mockResolvedValue(content);
     vi.spyOn(local, "deleteFile").mockResolvedValue();
     vi.mocked(client.put).mockImplementation(async (options) =>
@@ -689,6 +733,401 @@ describe("moving local pipelines to remote storage", () => {
         ...(options?.body as Partial<typeof document>),
       }),
     );
+  });
+
+  it("keeps the browser copy when manual Upload cannot establish project coverage", async () => {
+    await expect(
+      storage.moveLocalPipelineToRemote(local, ref.backendUrl, undefined, {
+        keepLocalCopy: true,
+      }),
+    ).resolves.toMatchObject({ id: ref.pipelineId });
+
+    expect(client.put).toHaveBeenCalledOnce();
+    expect(local.deleteFile).not.toHaveBeenCalled();
+    expect(listProjectResources).not.toHaveBeenCalled();
+    expect(createProjectResource).not.toHaveBeenCalled();
+    expect(deleteProjectResource).not.toHaveBeenCalled();
+    expect(
+      await pipelineStorageDb.pipeline_migration_attempts.get(local.id),
+    ).toMatchObject({
+      keepLocalCopy: true,
+      content,
+    });
+  });
+
+  it("retains the browser copy after restart and retries without overwriting the upload", async () => {
+    await expect(
+      storage.moveLocalPipelineToRemote(local, ref.backendUrl, undefined, {
+        keepLocalCopy: true,
+      }),
+    ).resolves.toMatchObject({ id: ref.pipelineId });
+    await pipelineStorageDb.pipeline_registry.put({
+      id: local.id,
+      storageKey: local.storageKey,
+      folderId: local.folder.id,
+    });
+    pipelineStorageDb.close();
+    await pipelineStorageDb.open();
+    const reopened = new PipelineStorageService();
+    const reopenedLocal = new PipelineFile({
+      id: local.id,
+      storageKey: local.storageKey,
+      folder: reopened.rootFolder,
+    });
+    vi.spyOn(reopenedLocal, "read").mockResolvedValue(content);
+    vi.spyOn(reopenedLocal, "deleteFile").mockResolvedValue();
+    vi.mocked(client.get).mockResolvedValue(
+      response({
+        ...document,
+        root_pipeline_task: {
+          componentRef: { spec: { ...spec, description: "Edited remotely" } },
+        },
+      }),
+    );
+
+    const recovered = await migrateLocalPipelineOnOpen(
+      reopened,
+      reopenedLocal,
+      { name: local.storageKey, fileId: local.id },
+      ref.backendUrl,
+    );
+
+    expect(recovered.warning).toBeUndefined();
+    expect(componentSpecFromYaml(await recovered.file.read()).description).toBe(
+      "Edited remotely",
+    );
+    expect(reopenedLocal.deleteFile).not.toHaveBeenCalled();
+    expect(client.put).toHaveBeenCalledOnce();
+    expect(
+      await pipelineStorageDb.pipeline_migration_attempts.get(local.id),
+    ).toMatchObject({
+      keepLocalCopy: true,
+    });
+  });
+
+  it("repairs one known project without deleting the copy needed by undiscovered project links", async () => {
+    const localResource: ProjectResource = {
+      id: "local-resource",
+      projectId: "known-project",
+      name: local.storageKey,
+      entityId: null,
+      metadata: null,
+      payload: null,
+      createdBy: null,
+      createdAt: new Date(0),
+      updatedAt: new Date(0),
+      ...localPipelineResourceInput({
+        localId: local.id,
+        localName: local.storageKey,
+      }),
+    };
+    const undiscovered = { ...localResource, projectId: "unlisted-project" };
+    const resources = new Map([
+      ["known-project", [localResource]],
+      ["unlisted-project", [undiscovered]],
+    ]);
+    vi.mocked(listProjectResources).mockImplementation(async (projectId) => ({
+      items: resources.get(projectId) ?? [],
+      nextPageToken: null,
+      totalCount: resources.get(projectId)?.length ?? 0,
+    }));
+    vi.mocked(createProjectResource).mockImplementation(
+      async (projectId, input) => {
+        const remoteResource: ProjectResource = {
+          ...localResource,
+          ...input,
+          id: "remote-resource",
+          projectId,
+        };
+        resources.get(projectId)!.push(remoteResource);
+        return remoteResource;
+      },
+    );
+    vi.mocked(deleteProjectResource).mockImplementation(
+      async (projectId, resourceId) => {
+        resources.set(
+          projectId,
+          resources.get(projectId)!.filter(({ id }) => id !== resourceId),
+        );
+      },
+    );
+    await expect(
+      storage.moveLocalPipelineToRemote(local, ref.backendUrl, undefined, {
+        keepLocalCopy: true,
+      }),
+    ).resolves.toMatchObject({ id: ref.pipelineId });
+
+    const recovered = await migrateLocalPipelineOnOpen(
+      storage,
+      local,
+      { name: local.storageKey, fileId: local.id },
+      ref.backendUrl,
+      "known-project",
+    );
+
+    expect(recovered.warning).toBeUndefined();
+    expect(resources.get("known-project")).toEqual([
+      expect.objectContaining({ entity: "pipeline", entityId: ref.pipelineId }),
+    ]);
+    expect(resources.get("unlisted-project")).toEqual([undiscovered]);
+    expect(listProjectResources).toHaveBeenCalledExactlyOnceWith(
+      "known-project",
+      expect.any(Object),
+      ref.backendUrl,
+    );
+    expect(local.deleteFile).not.toHaveBeenCalled();
+    expect(client.put).toHaveBeenCalledOnce();
+  });
+
+  it("recovers a lost upload response without overwriting remote edits", async () => {
+    vi.mocked(client.put).mockRejectedValueOnce(new Error("Response lost"));
+    await expect(
+      storage.moveLocalPipelineToRemote(local, ref.backendUrl),
+    ).rejects.toThrow("Response lost");
+    const recovered = {
+      ...document,
+      file_path: `pipelines/${local.id}.yaml`,
+      root_pipeline_task: {
+        componentRef: {
+          spec: { ...spec, description: "Edited remotely after upload" },
+        },
+      },
+    };
+    vi.mocked(findRemotePipelineDocumentByPath).mockResolvedValue(recovered);
+    vi.mocked(client.get).mockResolvedValue(response(recovered));
+    const remote = await storage.moveLocalPipelineToRemote(
+      local,
+      ref.backendUrl,
+    );
+    expect(componentSpecFromYaml(await remote.read()).description).toBe(
+      "Edited remotely after upload",
+    );
+    expect(client.put).toHaveBeenCalledOnce();
+    expect(local.deleteFile).toHaveBeenCalledOnce();
+  });
+
+  it("keeps local edits made after an uncertain upload instead of deleting them", async () => {
+    vi.mocked(client.put).mockRejectedValueOnce(new Error("Response lost"));
+    await expect(
+      storage.moveLocalPipelineToRemote(local, ref.backendUrl),
+    ).rejects.toThrow();
+    vi.mocked(local.read).mockResolvedValue(
+      componentSpecToYaml({ ...spec, description: "New local work" }),
+    );
+    vi.mocked(findRemotePipelineDocumentByPath).mockResolvedValue({
+      ...document,
+      file_path: `pipelines/${local.id}.yaml`,
+    });
+    await expect(
+      storage.moveLocalPipelineToRemote(local, ref.backendUrl),
+    ).rejects.toMatchObject({
+      name: "PipelineMigrationRecoveryError",
+      remote: expect.objectContaining({
+        remote: expect.objectContaining({ pipelineId: ref.pipelineId }),
+      }),
+    });
+    expect(local.deleteFile).not.toHaveBeenCalled();
+    expect(client.put).toHaveBeenCalledOnce();
+  });
+
+  it.each([403, 404, 405, 422, 501])(
+    "allows another backend after a rejected upload (%s)",
+    async (status) => {
+      vi.mocked(client.put).mockResolvedValueOnce(response(undefined, status));
+      await expect(
+        storage.moveLocalPipelineToRemote(local, ref.backendUrl),
+      ).rejects.toThrow();
+      expect(
+        await pipelineStorageDb.pipeline_migration_attempts.get(local.id),
+      ).toBeUndefined();
+      await storage.moveLocalPipelineToRemote(
+        local,
+        "https://other.example.com",
+      );
+      expect(local.deleteFile).toHaveBeenCalledOnce();
+    },
+  );
+
+  it("allows another backend when checking for an earlier upload failed before any PUT", async () => {
+    vi.mocked(findRemotePipelineDocumentByPath).mockRejectedValueOnce(
+      new Error("Lookup unavailable"),
+    );
+    await expect(
+      storage.moveLocalPipelineToRemote(local, ref.backendUrl),
+    ).rejects.toThrow("Lookup unavailable");
+    expect(client.put).not.toHaveBeenCalled();
+    await storage.moveLocalPipelineToRemote(local, "https://other.example.com");
+    expect(local.deleteFile).toHaveBeenCalledOnce();
+  });
+
+  it("describes an uncertain upload without claiming that the pipeline was moved", async () => {
+    vi.mocked(client.put).mockRejectedValueOnce(new Error("Response lost"));
+    await expect(
+      storage.moveLocalPipelineToRemote(local, ref.backendUrl),
+    ).rejects.toThrow();
+    await expect(
+      storage.moveLocalPipelineToRemote(local, "https://other.example.com"),
+    ).rejects.toThrow("may have completed");
+    expect(client.put).toHaveBeenCalledOnce();
+    expect(local.deleteFile).not.toHaveBeenCalled();
+  });
+
+  it("keeps edits written while saved links are being moved", async () => {
+    vi.spyOn(
+      pipelineAssociations,
+      "movePipelineAssociationsToRemote",
+    ).mockImplementationOnce(async () => {
+      vi.mocked(local.read).mockResolvedValue(
+        componentSpecToYaml({ ...spec, description: "Other tab edit" }),
+      );
+    });
+    await expect(
+      storage.moveLocalPipelineToRemote(local, ref.backendUrl),
+    ).rejects.toThrow("local changes were not uploaded");
+    expect(local.deleteFile).not.toHaveBeenCalled();
+  });
+
+  it("uploads the latest local edits if a previous failed attempt saved nothing", async () => {
+    vi.mocked(client.put).mockRejectedValueOnce(new Error("Offline"));
+    await expect(
+      storage.moveLocalPipelineToRemote(local, ref.backendUrl),
+    ).rejects.toThrow();
+    vi.mocked(local.read).mockResolvedValue(
+      componentSpecToYaml({ ...spec, description: "New local work" }),
+    );
+    await storage.moveLocalPipelineToRemote(local, ref.backendUrl);
+    expect(vi.mocked(client.put).mock.lastCall?.[0]?.body).toMatchObject({
+      root_pipeline_task: {
+        componentRef: { spec: { description: "New local work" } },
+      },
+    });
+    expect(local.deleteFile).toHaveBeenCalledOnce();
+  });
+
+  it("serializes two callers and repairs both projects without uploading twice", async () => {
+    const firstRepair = vi.fn();
+    const secondRepair = vi.fn();
+    await Promise.all([
+      storage.moveLocalPipelineToRemote(local, ref.backendUrl, firstRepair),
+      storage.moveLocalPipelineToRemote(local, ref.backendUrl, secondRepair),
+    ]);
+    expect(client.put).toHaveBeenCalledOnce();
+    expect(local.deleteFile).toHaveBeenCalledOnce();
+    expect(firstRepair).toHaveBeenCalledOnce();
+    expect(secondRepair).toHaveBeenCalledOnce();
+  });
+
+  it("assigns a fresh identity to a raw file recreated after migration", async () => {
+    await pipelineStorageDb.pipeline_migrations.put({
+      key: "name:Original",
+      localId: "old-id",
+      remote: ref,
+      name: "Original",
+    });
+    await storage.rootFolder.assignFile("Original");
+    expect(registry.addEntry).toHaveBeenCalledWith(
+      expect.objectContaining({
+        storageKey: "Original",
+      }),
+    );
+  });
+
+  it("refuses a recreated local file rather than replacing a previous name alias", async () => {
+    await pipelineStorageDb.pipeline_migrations.put({
+      key: "name:Original",
+      localId: "old-id",
+      remote: ref,
+      name: "Original",
+    });
+    vi.mocked(registry.findById).mockResolvedValue({
+      id: local.id,
+      storageKey: "Original",
+      folderId: "folder",
+    });
+    await expect(
+      storage.moveLocalPipelineToRemote(local, ref.backendUrl),
+    ).rejects.toThrow("recreated a local copy");
+    expect(client.put).not.toHaveBeenCalled();
+    expect(local.deleteFile).not.toHaveBeenCalled();
+    expect((await findPipelineMigration({ name: "Original" }))?.localId).toBe(
+      "old-id",
+    );
+  });
+
+  it("retries a retained upload after the saved remote pipeline was deleted", async () => {
+    await storage.moveLocalPipelineToRemote(local, ref.backendUrl, undefined, {
+      keepLocalCopy: true,
+    });
+    vi.mocked(client.get).mockImplementation(async (options) =>
+      options?.url === "/api/pipelines/{pipeline_id}"
+        ? response(undefined, 404)
+        : response({ items: [], total_count: 0 }),
+    );
+    await expect(
+      storage.moveLocalPipelineToRemote(local, ref.backendUrl, undefined, {
+        keepLocalCopy: true,
+      }),
+    ).resolves.toMatchObject({ id: ref.pipelineId });
+    expect(client.put).toHaveBeenCalledTimes(2);
+    expect(local.deleteFile).not.toHaveBeenCalled();
+  });
+
+  it("reuses the remote document found at the migration path after its old ID is missing", async () => {
+    await storage.moveLocalPipelineToRemote(local, ref.backendUrl, undefined, {
+      keepLocalCopy: true,
+    });
+    const recovered = {
+      ...document,
+      id: "recovered-at-migration-path",
+      file_path: `pipelines/${local.id}.yaml`,
+    };
+    vi.mocked(findRemotePipelineDocumentByPath).mockResolvedValue(recovered);
+    vi.mocked(client.get).mockImplementation(async (options) =>
+      options?.path?.pipeline_id === ref.pipelineId
+        ? response(undefined, 404)
+        : response(recovered),
+    );
+    await expect(
+      storage.moveLocalPipelineToRemote(local, ref.backendUrl, undefined, {
+        keepLocalCopy: true,
+      }),
+    ).resolves.toMatchObject({ id: recovered.id });
+    expect(
+      (
+        await findPipelineMigration({
+          fileId: local.id,
+          name: local.storageKey,
+        })
+      )?.remote.pipelineId,
+    ).toBe(recovered.id);
+    expect(client.put).toHaveBeenCalledOnce();
+    expect(local.deleteFile).not.toHaveBeenCalled();
+  });
+
+  it("accepts equivalent backend spellings on a retained upload retry", async () => {
+    await storage.moveLocalPipelineToRemote(local, ref.backendUrl, undefined, {
+      keepLocalCopy: true,
+    });
+    await expect(
+      storage.moveLocalPipelineToRemote(
+        local,
+        "https://BACKEND.example.com:443/",
+        undefined,
+        { keepLocalCopy: true },
+      ),
+    ).resolves.toMatchObject({ id: ref.pipelineId });
+    expect(client.put).toHaveBeenCalledOnce();
+  });
+
+  it("reports a queued backend switch as already moved after the first caller removes the local file", async () => {
+    const first = storage.moveLocalPipelineToRemote(local, ref.backendUrl);
+    const second = storage.moveLocalPipelineToRemote(
+      local,
+      "https://other.example.com",
+    );
+    await first;
+    await expect(second).rejects.toBeInstanceOf(PipelineMovedToBackendError);
+    expect(local.deleteFile).toHaveBeenCalledOnce();
   });
 
   it("waits for remote creation before removing the local pipeline", async () => {
@@ -794,6 +1233,174 @@ describe("moving local pipelines to remote storage", () => {
     expect(await LibraryDB.favorites.count()).toBe(0);
     expect(localStorage.getItem("Home/recently_viewed")).toBeNull();
     expect(localStorage.getItem("Home/recently_used")).toBeNull();
+  });
+
+  it("uses a resolved file's current name and updates project links before deletion", async () => {
+    const onCreated = vi.fn(async (remote: PipelineFile) => {
+      expect(remote.storageKey).toBe(local.storageKey);
+      expect(local.deleteFile).not.toHaveBeenCalled();
+    });
+    await storage.moveLocalPipelineToRemote(local, ref.backendUrl, onCreated);
+    expect(storage.resolvePipeline).not.toHaveBeenCalled();
+    expect(onCreated).toHaveBeenCalledOnce();
+    expect(local.deleteFile).toHaveBeenCalledOnce();
+  });
+
+  it("keeps the local pipeline if updating project links fails", async () => {
+    await expect(
+      storage.moveLocalPipelineToRemote(local, ref.backendUrl, async () => {
+        throw new Error("Project unavailable");
+      }),
+    ).rejects.toThrow("saved links could not be updated");
+    expect(local.deleteFile).not.toHaveBeenCalled();
+    // A retry must not overwrite edits made to the already-created remote.
+    vi.mocked(client.get).mockResolvedValue(
+      response({
+        ...document,
+        root_pipeline_task: {
+          componentRef: { spec: { ...spec, description: "Remote edit" } },
+        },
+      }),
+    );
+    const onCreated = vi.fn();
+    await expect(
+      storage.moveLocalPipelineToRemote(
+        local,
+        "https://other.example.com",
+        onCreated,
+      ),
+    ).rejects.toThrow(
+      `This pipeline was moved to ${ref.backendUrl}. Select that backend in Settings to open it.`,
+    );
+    expect(client.get).not.toHaveBeenCalled();
+    expect(onCreated).not.toHaveBeenCalled();
+    expect(local.deleteFile).not.toHaveBeenCalled();
+
+    const remote = await storage.moveLocalPipelineToRemote(
+      local,
+      ref.backendUrl,
+    );
+    expect(componentSpecFromYaml(await remote.read()).description).toBe(
+      "Remote edit",
+    );
+    expect(remote.remote).toEqual({
+      backendUrl: ref.backendUrl,
+      pipelineId: ref.pipelineId,
+    });
+    expect(
+      (await findPipelineMigration({ name: "Original", fileId: local.id }))
+        ?.remote,
+    ).toEqual(ref);
+    expect(
+      vi
+        .mocked(client.put)
+        .mock.calls.map(([options]) => options?.query?.file_path),
+    ).toEqual([`pipelines/${local.id}.yaml`]);
+  });
+
+  it("rejects an already migrated file from another backend before updating links", async () => {
+    const remote = await storage.moveLocalPipelineToRemote(
+      local,
+      ref.backendUrl,
+    );
+    const onCreated = vi.fn();
+
+    await expect(
+      storage.moveLocalPipelineToRemote(
+        remote,
+        "https://other.example.com",
+        onCreated,
+      ),
+    ).rejects.toThrow("Select that backend in Settings");
+    expect(onCreated).not.toHaveBeenCalled();
+    expect(client.put).toHaveBeenCalledOnce();
+    expect(local.deleteFile).toHaveBeenCalledOnce();
+  });
+
+  it("resolves old project IDs and names after migration and a fresh service instance", async () => {
+    vi.stubEnv("VITE_LOCAL_PIPELINES", "true");
+    await storage.moveLocalPipelineToRemote(local, ref.backendUrl);
+    const reopened = new PipelineStorageService();
+    vi.spyOn(reopened, "resolvePipelineByName").mockResolvedValue(undefined);
+    vi.spyOn(RootFolderDbStorageDriver.prototype, "hasKey").mockResolvedValue(
+      false,
+    );
+    for (const oldRef of [
+      { name: local.storageKey, fileId: local.id },
+      { name: local.storageKey },
+    ]) {
+      expect((await reopened.resolvePipeline(oldRef)).remote).toEqual({
+        backendUrl: ref.backendUrl,
+        pipelineId: ref.pipelineId,
+      });
+    }
+    expect(client.put).toHaveBeenCalledTimes(1);
+
+    const namesake = new PipelineFile({
+      id: "new-local-id",
+      storageKey: local.storageKey,
+      folder: reopened.rootFolder,
+    });
+    vi.mocked(reopened.resolvePipelineByName).mockResolvedValue(namesake);
+    expect(await reopened.resolvePipeline({ name: local.storageKey })).toBe(
+      namesake,
+    );
+    expect(
+      (
+        await reopened.resolvePipeline({
+          name: "Old project label",
+          fileId: local.id,
+        })
+      ).remote?.pipelineId,
+    ).toBe(ref.pipelineId);
+    await expect(
+      reopened.resolvePipeline({
+        name: local.storageKey,
+        fileId: "missing-id",
+      }),
+    ).rejects.toThrow("Pipeline not found");
+  });
+
+  it("keeps earlier ID links when a recreated copy is deliberately renamed and migrated", async () => {
+    await storage.moveLocalPipelineToRemote(local, ref.backendUrl);
+    const namesake = new PipelineFile({
+      id: "new-local-id",
+      storageKey: "Renamed copy",
+      folder: storage.rootFolder,
+    });
+    vi.spyOn(namesake, "read").mockResolvedValue(content);
+    vi.spyOn(namesake, "deleteFile").mockResolvedValue();
+    vi.mocked(client.put).mockResolvedValue(
+      response({
+        ...document,
+        id: "remote-2",
+        file_path: "pipelines/new-local-id.yaml",
+      }),
+    );
+    await storage.moveLocalPipelineToRemote(namesake, ref.backendUrl);
+    expect(
+      (
+        await findPipelineMigration({
+          name: local.storageKey,
+          fileId: local.id,
+        })
+      )?.remote.pipelineId,
+    ).toBe(ref.pipelineId);
+    expect(
+      (await findPipelineMigration({ name: namesake.storageKey }))?.remote
+        .pipelineId,
+    ).toBe("remote-2");
+  });
+
+  it("keeps the local file when its project-link mapping cannot be saved", async () => {
+    vi.spyOn(
+      pipelineStorageDb.pipeline_migrations,
+      "bulkPut",
+    ).mockRejectedValue(new Error("Storage unavailable"));
+    await expect(
+      storage.moveLocalPipelineToRemote(local, ref.backendUrl),
+    ).rejects.toThrow("saved links could not be updated");
+    expect(local.deleteFile).not.toHaveBeenCalled();
   });
 
   it.each(["read", "save"])(
