@@ -37,9 +37,13 @@ export function useFavorites() {
       ) === index,
   );
 
-  const storedKey = (type: FavoriteType, id: string): [FavoriteType, string] =>
+  const storedKey = (
+    type: FavoriteType,
+    id: string,
+    targetBackendUrl = backendUrl,
+  ): [FavoriteType, string] =>
     type === "remote-pipeline"
-      ? ["pipeline", getRemotePipelineSavedId(backendUrl, id)]
+      ? ["pipeline", getRemotePipelineSavedId(targetBackendUrl, id)]
       : [type, id];
 
   const addFavorite = async (item: FavoriteItem) => {
@@ -80,8 +84,12 @@ export function useFavorites() {
     });
   };
 
-  const removeFavorite = async (type: FavoriteType, id: string) => {
-    const [storedType, storedId] = storedKey(type, id);
+  const removeFavorite = async (
+    type: FavoriteType,
+    id: string,
+    targetBackendUrl = backendUrl,
+  ) => {
+    const [storedType, storedId] = storedKey(type, id, targetBackendUrl);
     await LibraryDB.favorites
       .filter(
         (favorite) =>

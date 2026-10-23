@@ -12,18 +12,23 @@ import { observer } from "mobx-react-lite";
 import { StrictMode, Suspense, useEffect, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { DriverPermissionGate } from "@/routes/v2/pages/Editor/components/DriverPermissionGate";
 import { AutoSaveStore } from "@/routes/v2/pages/Editor/store/autoSaveStore";
 import { UndoStore } from "@/routes/v2/pages/Editor/store/undoStore";
-import { DriverPermissionGate } from "@/routes/v2/pages/Editor/components/DriverPermissionGate";
 import { preserveRenamedPipelineQuery } from "@/routes/v2/pages/Editor/utils/preserveRenamedPipelineQuery";
 import { promoteRemoteDraftQuery } from "@/routes/v2/pages/Editor/utils/promoteRemoteDraftQuery";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
+import {
+  assertRemotePipelineAvailable,
+  withRemotePipelineDeletion,
+} from "@/services/pipelineStorage/remotePipelineDeletion";
 import {
   type EditorPipelineRef,
   getEditorPipelineIdentity,
 } from "@/services/pipelineStorage/types";
 
-import { EDITOR_SPEC_QUERY_KEY, useLoadSpec } from "./useLoadSpec";
+import { EDITOR_SPEC_QUERY_KEY } from "./deletedRemotePipelineCache";
+import { useLoadSpec } from "./useLoadSpec";
 
 const resolvePipeline = vi.hoisted(() => vi.fn());
 const discardRemoteDraft = vi.hoisted(() => vi.fn());
@@ -143,6 +148,43 @@ afterEach(() => {
 });
 
 describe("useLoadSpec", () => {
+  it("keeps a deleted document's unsaved model available when its editor reopens", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const ref = { ...remote, pipelineId: "deleted-dirty-editor" };
+    const write = vi.fn(async () => {
+      assertRemotePipelineAvailable(ref.backendUrl, ref);
+      throw new Error("Save unavailable");
+    });
+    resolvePipeline.mockResolvedValue({ ...file("Original", ref), write });
+    const opened = render(view(ref, true));
+    await screen.findByText("Original");
+    fireEvent.click(screen.getByText("Edit"));
+    fireEvent.click(screen.getByText("Save"));
+    await screen.findByText("Save unavailable");
+
+    await act(async () => {
+      await withRemotePipelineDeletion(
+        ref,
+        "pipelines/deleted-dirty-editor.yaml",
+        async () => {},
+      );
+    });
+    await screen.findByText(
+      "This pipeline was deleted. Save a copy to keep your changes.",
+    );
+    expect(screen.getByText("Unsaved edit")).toBeInTheDocument();
+    await act(async () => opened.unmount());
+    addRecentlyViewed.mockClear();
+
+    render(view(ref, true));
+    await screen.findByText("Unsaved edit");
+    await screen.findByText(
+      "This pipeline was deleted. Save a copy to keep your changes.",
+    );
+    expect(resolvePipeline).toHaveBeenCalledExactlyOnceWith(ref);
+    expect(addRecentlyViewed).not.toHaveBeenCalled();
+  });
+
   it("keeps new draft undo history when a promoted document starts another editor session", async () => {
     const draft = {
       source: "draft",

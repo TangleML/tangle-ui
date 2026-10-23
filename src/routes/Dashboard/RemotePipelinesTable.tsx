@@ -1,3 +1,4 @@
+import { useMutationState, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { type PointerEvent, useRef, useState } from "react";
 
@@ -16,6 +17,8 @@ import { Text } from "@/components/ui/typography";
 import { useRemotePipelinesPage } from "@/hooks/useRemotePipelinesPage";
 import { useBackend } from "@/providers/BackendProvider";
 import { getDefaultRemoteEditorPath } from "@/routes/editorRoutes";
+import { RemotePipelineQueryKeys } from "@/services/remotePipelineQueryKeys";
+import type { RemotePipelinesPage } from "@/services/remotePipelinesService";
 import { formatDate } from "@/utils/date";
 import { hasNewTabModifier } from "@/utils/dom";
 
@@ -24,6 +27,7 @@ import {
   isInvalidPipelineId,
   type RemotePipelineSearchFilters,
 } from "./pipelinesSearch";
+import { RemotePipelineActions } from "./RemotePipelineActions";
 import { RemotePipelinesFilters } from "./RemotePipelinesFilters";
 
 const COLUMN_NAMES = [
@@ -76,7 +80,15 @@ export function RemotePipelinesTable({
 }: RemotePipelinesTableProps) {
   const navigate = useNavigate();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { backendUrl, configured, available, ready } = useBackend();
+  const deletingIds = useMutationState({
+    filters: {
+      mutationKey: RemotePipelineQueryKeys.Deletions(backendUrl),
+      status: "pending",
+    },
+    select: (mutation) => mutation.options.mutationKey?.[2],
+  });
   const filterQuery = getRemotePipelinesFilterQuery(filters);
   const invalidId = isInvalidPipelineId(filters.id);
   const [isEditingFilters, setIsEditingFilters] = useState(false);
@@ -96,6 +108,7 @@ export function RemotePipelinesTable({
   const pageToken = pageTokens.at(-1);
   const [columnWidths, setColumnWidths] = useState(INITIAL_COLUMN_WIDTHS);
   const tableRef = useRef<HTMLTableElement>(null);
+  const actionsHeaderRef = useRef<HTMLTableCellElement>(null);
   const dragRef = useRef<{
     pointerId: number;
     startX: number;
@@ -115,6 +128,26 @@ export function RemotePipelinesTable({
 
   function changePage(tokens: string[]) {
     setPagination({ backendUrl, filterQuery, tokens });
+  }
+
+  function recoverAfterDeletion(restoreFocus: boolean) {
+    if (restoreFocus) tableRef.current?.focus();
+    if (currentPage === 1) return;
+    const refreshed = queryClient.getQueryState<RemotePipelinesPage>(
+      RemotePipelineQueryKeys.Cursor(backendUrl, filterQuery, pageToken),
+    );
+    if (
+      refreshed?.status !== "success" ||
+      refreshed.data?.pipelines.length !== 0
+    )
+      return;
+    setPagination((current) =>
+      current.backendUrl === backendUrl &&
+      current.filterQuery === filterQuery &&
+      current.tokens.at(-1) === pageToken
+        ? { ...current, tokens: current.tokens.slice(0, -1) }
+        : current,
+    );
   }
 
   let message: string | undefined;
@@ -140,9 +173,10 @@ export function RemotePipelinesTable({
       />
       <Table
         ref={tableRef}
+        tabIndex={-1}
         aria-label="Remote Pipelines"
         aria-busy={isFetching}
-        className="table-fixed"
+        className="table-fixed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       >
         <TableHeader>
           <TableRow className="text-xs">
@@ -178,8 +212,10 @@ export function RemotePipelinesTable({
                     onPointerDown={(event) => {
                       if (event.button !== 0 || dragRef.current) return;
                       const tableWidth =
-                        tableRef.current?.getBoundingClientRect().width;
-                      if (!tableWidth) return;
+                        (tableRef.current?.getBoundingClientRect().width ?? 0) -
+                        (actionsHeaderRef.current?.getBoundingClientRect()
+                          .width ?? 0);
+                      if (tableWidth <= 0) return;
                       event.preventDefault();
                       event.currentTarget.setPointerCapture(event.pointerId);
                       dragRef.current = {
@@ -228,12 +264,18 @@ export function RemotePipelinesTable({
                 )}
               </TableHead>
             ))}
+            <TableHead ref={actionsHeaderRef} scope="col" className="w-20">
+              <span className="sr-only">Actions</span>
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {message ? (
             <TableRow>
-              <TableCell colSpan={6} className="whitespace-normal text-center">
+              <TableCell
+                colSpan={COLUMN_NAMES.length + 1}
+                className="whitespace-normal text-center"
+              >
                 <Text size="sm" tone="subdued">
                   {message}
                 </Text>
@@ -245,6 +287,7 @@ export function RemotePipelinesTable({
                 key={pipeline.id}
                 className="cursor-pointer text-xs"
                 onClick={(event) => {
+                  if (deletingIds.includes(pipeline.id)) return;
                   const destination = {
                     to: getDefaultRemoteEditorPath(pipeline.id),
                   };
@@ -269,6 +312,7 @@ export function RemotePipelinesTable({
                   >
                     <Link
                       to={getDefaultRemoteEditorPath(pipeline.id)}
+                      disabled={deletingIds.includes(pipeline.id)}
                       onClick={(event) => event.stopPropagation()}
                       className="block truncate hover:underline"
                       title={pipeline.pipeline_name ?? "Untitled Pipeline"}
@@ -302,6 +346,17 @@ export function RemotePipelinesTable({
                 <TruncatedTableCell>
                   {pipeline.current_version}
                 </TruncatedTableCell>
+                <TableCell
+                  className="w-20"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <RemotePipelineActions
+                    key={backendUrl}
+                    backendUrl={backendUrl}
+                    pipeline={pipeline}
+                    onDeleted={recoverAfterDeletion}
+                  />
+                </TableCell>
               </TableRow>
             ))
           )}

@@ -1,9 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 
-import {
-  EDITOR_SPEC_QUERY_KEY,
-  type LoadedSpec,
-} from "@/routes/v2/pages/Editor/hooks/useLoadSpec";
+import { EDITOR_SPEC_QUERY_KEY } from "@/routes/v2/pages/Editor/hooks/deletedRemotePipelineCache";
+import type { LoadedSpec } from "@/routes/v2/pages/Editor/hooks/useLoadSpec";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 
 /** A name-only URL and a file-ID URL can refer to the same mounted document. */

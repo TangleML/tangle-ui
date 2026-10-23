@@ -20,6 +20,11 @@ import { PipelineFolder } from "./PipelineFolder";
 import { findPipelineMigration } from "./pipelineMigrations";
 import { findById, findByStorageKey } from "./pipelineRegistry";
 import {
+  assertRemotePipelineAvailable,
+  RemotePipelineDeletionError,
+  type RemotePipelineWriteAdmission,
+} from "./remotePipelineDeletion";
+import {
   type EditorPipelineRef,
   getEditorPipelineIdentity,
   isRemotePipelineDraftRef,
@@ -48,6 +53,7 @@ export class PipelineStorageService {
     {
       ref: RemotePipelineDraftRef;
       file: PipelineFile;
+      filePath: string;
       owners: number;
       discardRequested: boolean;
     }
@@ -65,6 +71,10 @@ export class PipelineStorageService {
     if (isRemotePipelineDraftRef(ref)) {
       const draft = this.remoteDrafts.get(getEditorPipelineIdentity(ref));
       if (draft) {
+        assertRemotePipelineAvailable(
+          ref.backendUrl,
+          draft.file.remote ?? { filePath: draft.filePath },
+        );
         const ownerId = draft.file.folder.driver.ownerId;
         if (draft.file.remote && ownerId)
           await this.assertDraftOwner(ref.backendUrl, ownerId);
@@ -81,7 +91,11 @@ export class PipelineStorageService {
         try {
           return await this.resolvePipeline(saved.remote);
         } catch (error) {
-          if (error instanceof PipelineSpecApiError && error.status === 404) {
+          if (
+            (error instanceof PipelineSpecApiError && error.status === 404) ||
+            (error instanceof RemotePipelineDeletionError &&
+              error.state === "deleted")
+          ) {
             this.storeSavedDraft(getEditorPipelineIdentity(ref), {
               ...saved,
               unavailable: true,
@@ -122,12 +136,14 @@ export class PipelineStorageService {
     const filePath = `pipelines/${crypto.randomUUID()}.yaml`;
     const driver = new RemotePipelineDraftStorageDriver(
       ref,
-      (content) =>
+      filePath,
+      (content, admission) =>
         this.createRemoteDriver(
           ref.backendUrl,
           componentSpecFromYaml(content).name ?? ref.name,
           content,
           filePath,
+          admission,
         ),
       async (remote) => {
         file.promoteToRemote(remote);
@@ -158,6 +174,7 @@ export class PipelineStorageService {
     this.remoteDrafts.set(getEditorPipelineIdentity(ref), {
       ref,
       file,
+      filePath,
       owners: 0,
       discardRequested: true,
     });
@@ -311,12 +328,14 @@ export class PipelineStorageService {
     name: string,
     content: string,
     filePath?: string,
+    admission?: RemotePipelineWriteAdmission,
   ): Promise<RemotePipelineStorageDriver> {
     return RemotePipelineStorageDriver.create(
       backendUrl,
       name,
       content,
       filePath,
+      admission,
     );
   }
 
