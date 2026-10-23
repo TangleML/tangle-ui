@@ -22,8 +22,8 @@ import { useTourMockBackend } from "@/providers/TourProvider/tourMockBackend";
 
 import { AddSecretForm } from "./components/AddSecretForm";
 import { SecretsBackendUnavailable } from "./components/SecretsBackendUnavailable";
-import { fetchSecretsList } from "./secretsStorage";
-import { type Secret, SecretsQueryKeys } from "./types";
+import { secretsListQuery } from "./secretsStorage";
+import type { Secret } from "./types";
 
 type DialogMode = "select" | "add";
 
@@ -107,10 +107,7 @@ interface SelectSecretDialogContentProps {
 function SelectSecretDialogContentInternal({
   onSelect,
 }: SelectSecretDialogContentProps) {
-  const { data: secrets } = useSuspenseQuery({
-    queryKey: SecretsQueryKeys.All(),
-    queryFn: fetchSecretsList,
-  });
+  const { data: secrets } = useSuspenseQuery(secretsListQuery());
 
   const [mode, setMode] = useState<DialogMode>("select");
 
