@@ -29,7 +29,7 @@ export interface StoredLibrary extends StoredLibraryFolder {
   knownDigests: string[];
 }
 
-export type FavoriteType = "pipeline" | "run" | "project";
+export type FavoriteType = "pipeline" | "remote-pipeline" | "run" | "project";
 
 export interface FavoriteItem {
   type: FavoriteType;
@@ -37,9 +37,13 @@ export interface FavoriteItem {
   name: string;
 }
 
+export interface StoredFavoriteItem extends FavoriteItem {
+  sortKey?: number;
+}
+
 export const LibraryDB = new Dexie(DB_NAME) as Dexie & {
   component_libraries: EntityTable<StoredLibrary, "id">;
-  favorites: Table<FavoriteItem, [FavoriteType, string]>;
+  favorites: Table<StoredFavoriteItem, [FavoriteType, string]>;
 };
 
 /**

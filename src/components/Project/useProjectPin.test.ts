@@ -11,6 +11,10 @@ const notify = vi.fn();
 
 vi.mock("@/hooks/useToastNotification", () => ({ default: () => notify }));
 
+vi.mock("@/providers/BackendProvider", () => ({
+  useBackend: () => ({ backendUrl: "https://backend.example.com" }),
+}));
+
 const project = { id: "p-1", name: "Churn model" };
 
 afterEach(async () => {
@@ -67,7 +71,11 @@ describe("useProjectPin", () => {
     await waitFor(() => expect(result.current.pinned).toBe(true));
 
     await expect(LibraryDB.favorites.toArray()).resolves.toEqual([
-      { type: "project", id: "p-1", name: "Churn model" },
+      expect.objectContaining({
+        type: "project",
+        id: "p-1",
+        name: "Churn model",
+      }),
     ]);
   });
 });

@@ -1,8 +1,12 @@
+import "fake-indexeddb/auto";
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { client } from "@/api/client.gen";
 import { getCurrentUserApiUsersMeGet } from "@/api/sdk.gen";
+import { LibraryDB } from "@/providers/ComponentLibraryProvider/libraries/storage";
 import type { SavedPipelineDocument } from "@/services/pipelineSpecService";
+import { getRemotePipelineSavedId } from "@/services/remotePipelineSavedLinks";
 import { componentSpecFromYaml, componentSpecToYaml } from "@/utils/yaml";
 
 import { RootFolderDbStorageDriver } from "./drivers/RootFolderDbStorageDriver";
@@ -19,6 +23,9 @@ vi.mock("@/api/sdk.gen", () => ({ getCurrentUserApiUsersMeGet: vi.fn() }));
 vi.mock("./pipelineFileEvents", () => ({ emitPipelineFileChanged: vi.fn() }));
 vi.mock("./createDriver", () => ({ createDriver: () => ({}) }));
 vi.mock("./pipelineRegistry");
+vi.mock("@/providers/BackendProvider", () => ({
+  useBackend: () => ({ backendUrl: "https://backend.example.com" }),
+}));
 
 const ref = {
   source: "remote",
@@ -57,9 +64,11 @@ function response<T>(data: T, status = 200) {
   };
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.restoreAllMocks();
   vi.resetAllMocks();
+  await LibraryDB.favorites.clear();
+  localStorage.clear();
   storage = new PipelineStorageService();
   vi.mocked(client.get).mockResolvedValue(response(structuredClone(document)));
   vi.mocked(client.put).mockResolvedValue(response(document));
@@ -433,6 +442,11 @@ describe("moving local pipelines to remote storage", () => {
   });
 
   it("waits for remote creation before removing the local pipeline", async () => {
+    await LibraryDB.favorites.put({
+      type: "pipeline",
+      id: "Original",
+      name: "Original",
+    });
     let finishSave = () => {};
     const pending = new Promise<void>((resolve) => {
       finishSave = resolve;
@@ -448,6 +462,9 @@ describe("moving local pipelines to remote storage", () => {
     );
     await vi.waitFor(() => expect(client.put).toHaveBeenCalledTimes(1));
     expect(local.deleteFile).not.toHaveBeenCalled();
+    expect(
+      await LibraryDB.favorites.get(["pipeline", "Original"]),
+    ).toBeDefined();
     finishSave();
     const remote = await moving;
     expect(storage.resolvePipeline).toHaveBeenCalledWith({ name: "Original" });
@@ -456,11 +473,90 @@ describe("moving local pipelines to remote storage", () => {
       name: "Original",
     });
     expect(local.deleteFile).toHaveBeenCalledExactlyOnceWith();
+    expect(await LibraryDB.favorites.toArray()).toEqual([
+      {
+        type: "pipeline",
+        id: getRemotePipelineSavedId(ref.backendUrl, remote.id),
+        name: "Original",
+        sortKey: 0,
+      },
+    ]);
+  });
+
+  it("moves links stored under the local name or file ID before deleting the file", async () => {
+    await LibraryDB.favorites.bulkPut([
+      { type: "pipeline", id: local.storageKey, name: "Old name" },
+      { type: "pipeline", id: local.id, name: "Old name" },
+      { type: "remote-pipeline", id: ref.pipelineId, name: "Stale name" },
+      { type: "run", id: local.storageKey, name: "Unrelated run" },
+      { type: "pipeline", id: "Other", name: "Other pipeline" },
+    ]);
+    const recent = [
+      { type: "pipeline", id: local.id, name: "Old name", timestamp: 30 },
+      { type: "pipeline", id: "Other", name: "Other pipeline", timestamp: 20 },
+      {
+        type: "pipeline",
+        id: local.storageKey,
+        name: "Original",
+        timestamp: 10,
+      },
+    ];
+    for (const key of ["Home/recently_viewed", "Home/recently_used"]) {
+      localStorage.setItem(key, JSON.stringify(recent));
+    }
+    vi.mocked(local.deleteFile).mockImplementation(async () => {
+      expect(
+        await LibraryDB.favorites.get(["pipeline", local.id]),
+      ).toBeUndefined();
+      expect(
+        await LibraryDB.favorites.get(["pipeline", local.storageKey]),
+      ).toBeUndefined();
+      for (const key of ["Home/recently_viewed", "Home/recently_used"]) {
+        expect(JSON.parse(localStorage.getItem(key)!)).toEqual([
+          {
+            type: "pipeline",
+            id: getRemotePipelineSavedId(ref.backendUrl, ref.pipelineId),
+            name: "Original",
+            timestamp: 30,
+          },
+          recent[1],
+        ]);
+      }
+    });
+
+    await storage.moveLocalPipelineToRemote("Original", ref.backendUrl);
+
+    expect(await LibraryDB.favorites.toArray()).toEqual([
+      { type: "pipeline", id: "Other", name: "Other pipeline", sortKey: 1 },
+      {
+        type: "pipeline",
+        id: getRemotePipelineSavedId(ref.backendUrl, ref.pipelineId),
+        name: "Original",
+        sortKey: 0,
+      },
+      { type: "run", id: local.storageKey, name: "Unrelated run", sortKey: 4 },
+    ]);
+    expect(local.deleteFile).toHaveBeenCalledOnce();
+  });
+
+  it("does not create favorites or history for a pipeline without saved links", async () => {
+    await storage.moveLocalPipelineToRemote("Original", ref.backendUrl);
+    expect(await LibraryDB.favorites.count()).toBe(0);
+    expect(localStorage.getItem("Home/recently_viewed")).toBeNull();
+    expect(localStorage.getItem("Home/recently_used")).toBeNull();
   });
 
   it.each(["read", "save"])(
     "keeps the local pipeline when %s fails",
     async (step) => {
+      const favorite = {
+        type: "pipeline",
+        id: local.storageKey,
+        name: "Original",
+      } as const;
+      await LibraryDB.favorites.put(favorite);
+      const recent = JSON.stringify([{ ...favorite, timestamp: 1 }]);
+      localStorage.setItem("Home/recently_viewed", recent);
       const error = new Error("Unavailable");
       if (step === "read") vi.mocked(local.read).mockRejectedValue(error);
       else vi.mocked(client.put).mockRejectedValue(error);
@@ -468,10 +564,65 @@ describe("moving local pipelines to remote storage", () => {
         storage.moveLocalPipelineToRemote("Original", ref.backendUrl),
       ).rejects.toThrow("Unavailable");
       expect(local.deleteFile).not.toHaveBeenCalled();
+      expect(await LibraryDB.favorites.toArray()).toEqual([favorite]);
+      expect(localStorage.getItem("Home/recently_viewed")).toBe(recent);
     },
   );
 
+  it("keeps the local file if favorites cannot be migrated", async () => {
+    await LibraryDB.favorites.put({
+      type: "pipeline",
+      id: local.storageKey,
+      name: "Original",
+    });
+    vi.spyOn(LibraryDB.favorites, "put").mockRejectedValue(
+      new Error("Storage unavailable"),
+    );
+
+    await expect(
+      storage.moveLocalPipelineToRemote("Original", ref.backendUrl),
+    ).rejects.toThrow(
+      "Pipeline was uploaded, but its saved links could not be updated. The copy in this browser was kept.",
+    );
+
+    expect(local.deleteFile).not.toHaveBeenCalled();
+    expect(
+      await LibraryDB.favorites.get(["pipeline", local.storageKey]),
+    ).toBeDefined();
+  });
+
+  it("keeps the local file if recent links cannot be saved", async () => {
+    localStorage.setItem(
+      "Home/recently_viewed",
+      JSON.stringify([
+        {
+          type: "pipeline",
+          id: local.storageKey,
+          name: "Original",
+          timestamp: 1,
+        },
+      ]),
+    );
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("Storage unavailable");
+    });
+
+    await expect(
+      storage.moveLocalPipelineToRemote("Original", ref.backendUrl),
+    ).rejects.toThrow("saved links could not be updated");
+
+    expect(local.deleteFile).not.toHaveBeenCalled();
+    expect(
+      JSON.parse(localStorage.getItem("Home/recently_viewed")!)[0].type,
+    ).toBe("pipeline");
+  });
+
   it("reports that the remote copy exists if local removal fails", async () => {
+    await LibraryDB.favorites.put({
+      type: "pipeline",
+      id: local.storageKey,
+      name: "Original",
+    });
     vi.mocked(local.deleteFile).mockRejectedValue(
       new Error("Storage unavailable"),
     );
@@ -481,5 +632,13 @@ describe("moving local pipelines to remote storage", () => {
       "Pipeline was uploaded, but the copy in this browser could not be removed.",
     );
     expect(client.put).toHaveBeenCalledTimes(1);
+    expect(await LibraryDB.favorites.toArray()).toEqual([
+      {
+        type: "pipeline",
+        id: getRemotePipelineSavedId(ref.backendUrl, ref.pipelineId),
+        name: "Original",
+        sortKey: 0,
+      },
+    ]);
   });
 });

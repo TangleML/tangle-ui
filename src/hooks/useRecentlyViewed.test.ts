@@ -1,13 +1,23 @@
 import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { getRemotePipelineSavedId } from "@/services/remotePipelineSavedLinks";
 
 import {
   addRecentlyViewed,
+  moveRecentPipelineToRemote,
   parseRecent,
   type RecentItem,
   removeRecentlyViewed,
+  useRecentlyUsed,
   useRecentlyViewed,
 } from "./useRecentlyViewed";
+
+const backend = vi.hoisted(() => ({ backendUrl: "https://example.com" }));
+vi.mock("@/providers/BackendProvider", () => ({ useBackend: () => backend }));
+beforeEach(() => {
+  backend.backendUrl = "https://example.com";
+});
 
 describe("parseRecent", () => {
   it("keeps well-formed items", () => {
@@ -54,9 +64,97 @@ describe("parseRecent", () => {
   });
 });
 
+describe("moveRecentPipelineToRemote", () => {
+  beforeEach(() => localStorage.clear());
+
+  it.each([5, 15, 35])(
+    "merges existing remote history while keeping the latest visit (%s)",
+    (timestamp) => {
+      const items: RecentItem[] = [
+        { type: "pipeline", id: "Other", name: "Other", timestamp: 40 },
+        { type: "pipeline", id: "local-id", name: "Old name", timestamp: 30 },
+        { type: "run", id: "Original", name: "Run", timestamp: 20 },
+        { type: "pipeline", id: "Original", name: "Original", timestamp: 10 },
+        {
+          type: "remote-pipeline",
+          id: "remote-id",
+          name: "Stale name",
+          timestamp,
+        },
+      ].sort((a, b) => b.timestamp - a.timestamp) as RecentItem[];
+      for (const key of ["Home/recently_viewed", "Home/recently_used"]) {
+        localStorage.setItem(key, JSON.stringify(items));
+      }
+      const { result } = renderHook(() => ({
+        ...useRecentlyViewed(),
+        ...useRecentlyUsed(),
+      }));
+
+      act(() =>
+        moveRecentPipelineToRemote(["Original", "local-id"], {
+          id: "remote-id",
+          name: "Original",
+          backendUrl: backend.backendUrl,
+        }),
+      );
+
+      const expected = [
+        items[0],
+        {
+          type: "pipeline",
+          id: getRemotePipelineSavedId(backend.backendUrl, "remote-id"),
+          name: "Original",
+          timestamp: Math.max(30, timestamp),
+        },
+        { type: "run", id: "Original", name: "Run", timestamp: 20 },
+      ];
+      expect(result.current.recentlyViewed).toEqual(expected);
+      expect(result.current.recentlyUsed).toEqual(expected);
+      act(() =>
+        moveRecentPipelineToRemote(["Original", "local-id"], {
+          id: "remote-id",
+          name: "Original",
+          backendUrl: backend.backendUrl,
+        }),
+      );
+      expect(result.current.recentlyViewed).toEqual(expected);
+    },
+  );
+});
+
 describe("removeRecentlyViewed", () => {
   beforeEach(() => {
     localStorage.clear();
+  });
+
+  it("scopes remote history and deletion to its original backend", () => {
+    const item = {
+      type: "remote-pipeline",
+      id: "same-id",
+      name: "Remote",
+    } as const;
+    addRecentlyViewed(item, backend.backendUrl);
+    addRecentlyViewed(item, "https://other.example.com");
+    const { result, rerender } = renderHook(() => useRecentlyViewed());
+    expect(result.current.recentlyViewed.map((entry) => entry.id)).toEqual([
+      getRemotePipelineSavedId(backend.backendUrl, item.id),
+    ]);
+    expect(
+      parseRecent(localStorage.getItem("Home/recently_viewed")!).every(
+        (entry) => entry.type === "pipeline",
+      ),
+    ).toBe(true);
+
+    backend.backendUrl = "https://other.example.com";
+    rerender();
+    expect(result.current.recentlyViewed.map((entry) => entry.id)).toEqual([
+      getRemotePipelineSavedId(backend.backendUrl, item.id),
+    ]);
+    act(() => removeRecentlyViewed(item.type, item.id, backend.backendUrl));
+    expect(result.current.recentlyViewed).toEqual([]);
+    backend.backendUrl = "https://example.com";
+    rerender();
+    expect(result.current.recentlyViewed).toHaveLength(1);
   });
 
   /** A link to a deleted project is offered, clicked, and lands nowhere. */
@@ -102,4 +200,25 @@ describe("removeRecentlyViewed", () => {
 
     expect(result.current.recentlyViewed).toHaveLength(1);
   });
+});
+
+it("deduplicates and removes history recorded with an equivalent backend URL", () => {
+  const oldId = `remote:${encodeURIComponent("https://EXAMPLE.com:443/")}:pipeline-id`;
+  localStorage.setItem(
+    "Home/recently_viewed",
+    JSON.stringify([
+      { type: "pipeline", id: oldId, name: "Old", timestamp: 1 },
+    ]),
+  );
+  addRecentlyViewed(
+    { type: "remote-pipeline", id: "pipeline-id", name: "Saved" },
+    backend.backendUrl,
+  );
+  expect(
+    JSON.parse(localStorage.getItem("Home/recently_viewed") ?? "[]"),
+  ).toHaveLength(1);
+  removeRecentlyViewed("remote-pipeline", "pipeline-id", backend.backendUrl);
+  expect(
+    JSON.parse(localStorage.getItem("Home/recently_viewed") ?? "[]"),
+  ).toEqual([]);
 });
