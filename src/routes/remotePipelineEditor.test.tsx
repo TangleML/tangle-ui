@@ -26,7 +26,7 @@ import { EmbeddedPipelineEditor } from "./v2/pages/Editor/EmbeddedPipelineEditor
 
 const route = vi.hoisted(() => ({
   params: {} as Record<string, unknown>,
-  search: {} as Record<string, string>,
+  search: {} as Record<string, unknown>,
   context: {} as { newPipeline?: { name: string; draftId: string } },
 }));
 const permission = vi.hoisted(() => ({ granted: true }));
@@ -337,19 +337,34 @@ describe("remote pipeline editor entry", () => {
       expect(loadV2).not.toHaveBeenCalled();
     },
   );
-  it("redirects legacy remote URLs to the V2 editor", () => {
-    route.params = { pipelineId: "pipeline-123" };
-    route.search = { projectId: "project-1" };
-    renderEditor(<Editor />);
+  it.each([
+    { name: "pipeline", search: { projectId: "project-1" } },
+    {
+      name: "nested node",
+      search: {
+        projectId: "project-1",
+        subgraphPath: ["Preprocess", "Normalize"],
+        nodeId: "Clean data",
+        nodeType: "task",
+      },
+    },
+  ])(
+    "redirects legacy remote $name URLs to the V2 editor and preserves search parameters",
+    ({ search }) => {
+      route.params = { pipelineId: "pipeline-123" };
+      route.search = search;
+      renderEditor(<Editor />);
 
-    expect(loadLegacy).not.toHaveBeenCalled();
-    expect(navigate).toHaveBeenCalledWith({
-      to: "/editor/pipeline/$pipelineId",
-      params: { pipelineId: "pipeline-123" },
-      search: { projectId: "project-1" },
-      replace: true,
-    });
-  });
+      expect(loadLegacy).not.toHaveBeenCalled();
+      expect(navigate).toHaveBeenCalledWith({
+        to: "/editor/pipeline/$pipelineId",
+        params: { pipelineId: "pipeline-123" },
+        search: expect.any(Function),
+        replace: true,
+      });
+      expect(navigate.mock.calls[0][0].search(search)).toEqual(search);
+    },
+  );
 
   it.each(["legacy", "V2"])(
     "waits for %s local migration before loading and preserves the project",

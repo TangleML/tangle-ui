@@ -67,7 +67,7 @@ const Editor = () => {
       void navigate({
         to: APP_ROUTES.REMOTE_PIPELINE_EDITOR,
         params: { pipelineId },
-        search: { projectId },
+        search: (previous) => ({ ...previous, projectId }),
         replace: true,
       });
     }
