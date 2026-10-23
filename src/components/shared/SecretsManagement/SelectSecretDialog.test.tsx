@@ -104,9 +104,12 @@ describe("SelectSecretDialog", () => {
     expect(yourGroup).toHaveTextContent("Your secrets");
     expect(within(yourGroup).getByText("MY_KEY")).toBeVisible();
     expect(within(yourGroup).queryByText("TEAM_KEY")).toBeNull();
-    expect(
-      within(teamGroup).getByText("The ML Research workspace's secrets"),
-    ).toHaveAttribute("title", TEAM.id);
+    expect(screen.getByTestId("team-secrets-heading")).toHaveTextContent(
+      "The ML Research workspace's secrets",
+    );
+    expect(within(teamGroup).getByTitle(TEAM.id)).toHaveTextContent(
+      "ML Research",
+    );
     expect(fetchSecrets).toHaveBeenCalledWith(undefined);
     expect(fetchSecrets).toHaveBeenCalledWith(TEAM.id);
 
@@ -131,7 +134,7 @@ describe("SelectSecretDialog", () => {
     expect(await screen.findByText("MY_KEY")).toBeVisible();
     expect(fetchSecrets).toHaveBeenCalledTimes(1);
     expect(fetchSecrets).toHaveBeenCalledWith(undefined);
-    expect(screen.queryByTestId("team-secrets")).toBeNull();
+    expect(screen.queryByTestId("team-secrets-heading")).toBeNull();
     expect(screen.queryByTestId("your-secrets-heading")).toBeNull();
   });
 

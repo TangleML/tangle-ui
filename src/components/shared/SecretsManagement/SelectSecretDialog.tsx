@@ -123,21 +123,11 @@ function SecretsGroup({
   return (
     <BlockStack gap="2" data-testid={team ? "team-secrets" : "your-secrets"}>
       {team ? (
-        <InlineStack gap="1" blockAlign="center" wrap="nowrap">
-          <Icon
-            name="Users"
-            size="xs"
-            className="shrink-0 text-muted-foreground"
-          />
-          <Text
-            size="sm"
-            tone="subdued"
-            className="min-w-0 truncate"
-            title={team.id}
-          >
-            {`The ${team.label} workspace's secrets`}
-          </Text>
-        </InlineStack>
+        <Text size="sm" tone="subdued" data-testid="team-secrets-heading">
+          {"The "}
+          <TeamName team={team} />
+          {" workspace's secrets"}
+        </Text>
       ) : (
         <Text size="sm" tone="subdued" data-testid="your-secrets-heading">
           Your secrets
