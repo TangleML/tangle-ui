@@ -44,10 +44,19 @@
         {
           "id": "tangle.sessions",
           "name": "Sessions"
+        },
+        {
+          "id": "tangle.savedPipelines",
+          "name": "Saved Pipelines"
         }
       ]
     },
     "viewsWelcome": [
+      {
+        "view": "tangle.savedPipelines",
+        "contents": "Install the tangle-deploy CLI to manage saved pipelines, schedules, and subscriptions.\n[Install Help](command:tangle.cli.showInstallHelp)",
+        "when": "!tangle.hasCli"
+      },
       {
         "view": "tangle.runs",
         "contents": "Select a Tangle project to see its runs.\n[Select Project](command:tangle.selectProject)\n[Set Tangle API URL](command:tangle.setApiUrl)",
@@ -64,11 +73,27 @@
         "when": "!tangle.hasProject"
       }
     ],
+    "submenus": [
+      {
+        "id": "tangle.fileActions",
+        "label": "Tangle Deploy"
+      }
+    ],
     "menus": {
       "view/title": [
         {
           "command": "tangle.newSession",
           "when": "view == tangle.sessions",
+          "group": "navigation@1"
+        },
+        {
+          "command": "tangle.cli.searchRuns",
+          "when": "view == tangle.runs && tangle.hasCli",
+          "group": "navigation@1"
+        },
+        {
+          "command": "tangle.savedPipelines.refresh",
+          "when": "view == tangle.savedPipelines",
           "group": "navigation@1"
         },
         {
@@ -99,6 +124,46 @@
           "group": "inline"
         },
         {
+          "command": "tangle.cli.runDetails",
+          "when": "view == tangle.runs && viewItem == tangleRun && tangle.hasCli",
+          "group": "1_run@1"
+        },
+        {
+          "command": "tangle.cli.runLogs",
+          "when": "view == tangle.runs && viewItem == tangleRun && tangle.hasCli",
+          "group": "1_run@2"
+        },
+        {
+          "command": "tangle.cli.cancelRun",
+          "when": "view == tangle.runs && viewItem == tangleRun && tangle.hasCli",
+          "group": "1_run@3"
+        },
+        {
+          "command": "tangle.cli.exportRun",
+          "when": "view == tangle.runs && viewItem == tangleRun && tangle.hasCli",
+          "group": "1_run@4"
+        },
+        {
+          "command": "tangle.cli.getArtifacts",
+          "when": "view == tangle.runs && viewItem == tangleRun && tangle.hasCli",
+          "group": "2_artifacts@1"
+        },
+        {
+          "command": "tangle.cli.downloadArtifacts",
+          "when": "view == tangle.runs && viewItem == tangleRun && tangle.hasCli",
+          "group": "2_artifacts@2"
+        },
+        {
+          "command": "tangle.cli.listRunAnnotations",
+          "when": "view == tangle.runs && viewItem == tangleRun && tangle.hasCli",
+          "group": "3_annotations@1"
+        },
+        {
+          "command": "tangle.cli.setRunAnnotation",
+          "when": "view == tangle.runs && viewItem == tangleRun && tangle.hasCli",
+          "group": "3_annotations@2"
+        },
+        {
           "command": "tangle.openResource",
           "when": "view == tangle.resources && viewItem == tangleResource",
           "group": "inline"
@@ -117,6 +182,102 @@
           "command": "tangle.detachSession",
           "when": "view == tangle.sessions && viewItem == tangleSession",
           "group": "2_remove"
+        }
+      ],
+      "editor/context": [
+        {
+          "submenu": "tangle.fileActions",
+          "group": "tangle",
+          "when": "tangle.hasCli && resourceExtname =~ /\\.(ya?ml|py)$/ || tangle.hasCli && resourceFilename =~ /[Dd]ockerfile$/"
+        }
+      ],
+      "explorer/context": [
+        {
+          "submenu": "tangle.fileActions",
+          "group": "tangle",
+          "when": "tangle.hasCli && resourceExtname =~ /\\.(ya?ml|py)$/ || tangle.hasCli && resourceFilename =~ /[Dd]ockerfile$/"
+        }
+      ],
+      "tangle.fileActions": [
+        {
+          "command": "tangle.cli.submitPipeline",
+          "when": "resourceFilename =~ /\\.pipeline\\.ya?ml$/ || resourceExtname == .py",
+          "group": "1_run@1"
+        },
+        {
+          "command": "tangle.cli.validatePipeline",
+          "when": "resourceFilename =~ /\\.pipeline\\.ya?ml$/",
+          "group": "1_run@2"
+        },
+        {
+          "command": "tangle.cli.viewPipeline",
+          "when": "resourceFilename =~ /\\.pipeline\\.ya?ml$/",
+          "group": "1_run@3"
+        },
+        {
+          "command": "tangle.cli.diagramPipeline",
+          "when": "resourceFilename =~ /\\.pipeline\\.ya?ml$/",
+          "group": "1_run@4"
+        },
+        {
+          "command": "tangle.cli.publishComponent",
+          "when": "resourceExtname =~ /\\.ya?ml$/ && !(resourceFilename =~ /\\.pipeline\\.ya?ml$/)",
+          "group": "2_component@1"
+        },
+        {
+          "command": "tangle.cli.bumpComponentVersion",
+          "when": "resourceExtname =~ /\\.ya?ml$/ && !(resourceFilename =~ /\\.pipeline\\.ya?ml$/)",
+          "group": "2_component@2"
+        },
+        {
+          "command": "tangle.cli.generateComponentFromPython",
+          "when": "resourceExtname == .py",
+          "group": "2_component@3"
+        },
+        {
+          "command": "tangle.cli.generateComponentFromDocker",
+          "when": "resourceFilename =~ /[Dd]ockerfile$/",
+          "group": "2_component@4"
+        },
+        {
+          "command": "tangle.cli.deploySavedPipeline",
+          "when": "resourceFilename =~ /\\.pipeline\\.ya?ml$/",
+          "group": "3_saved@1"
+        },
+        {
+          "command": "tangle.cli.shipSavedPipeline",
+          "when": "resourceExtname == .py",
+          "group": "3_saved@2"
+        },
+        {
+          "command": "tangle.cli.hydratePipeline",
+          "when": "resourceFilename =~ /\\.pipeline\\.ya?ml$/",
+          "group": "4_transform@1"
+        },
+        {
+          "command": "tangle.cli.dehydratePipeline",
+          "when": "resourceFilename =~ /\\.pipeline\\.ya?ml$/",
+          "group": "4_transform@2"
+        },
+        {
+          "command": "tangle.cli.autoLayoutPipeline",
+          "when": "resourceFilename =~ /\\.pipeline\\.ya?ml$/",
+          "group": "4_transform@3"
+        },
+        {
+          "command": "tangle.cli.decompilePipeline",
+          "when": "resourceFilename =~ /\\.pipeline\\.ya?ml$/",
+          "group": "4_transform@4"
+        },
+        {
+          "command": "tangle.cli.compilePipelineFromPython",
+          "when": "resourceExtname == .py",
+          "group": "4_transform@5"
+        },
+        {
+          "command": "tangle.cli.convertFromAirflow",
+          "when": "resourceExtname == .py",
+          "group": "4_transform@6"
         }
       ],
       "commandPalette": [
@@ -142,6 +303,42 @@
         },
         {
           "command": "tangle.loadMoreRuns",
+          "when": "false"
+        },
+        {
+          "command": "tangle.cli.cancelRun",
+          "when": "false"
+        },
+        {
+          "command": "tangle.cli.runLogs",
+          "when": "false"
+        },
+        {
+          "command": "tangle.cli.runDetails",
+          "when": "false"
+        },
+        {
+          "command": "tangle.cli.exportRun",
+          "when": "false"
+        },
+        {
+          "command": "tangle.cli.getArtifacts",
+          "when": "false"
+        },
+        {
+          "command": "tangle.cli.downloadArtifacts",
+          "when": "false"
+        },
+        {
+          "command": "tangle.cli.listRunAnnotations",
+          "when": "false"
+        },
+        {
+          "command": "tangle.cli.setRunAnnotation",
+          "when": "false"
+        },
+        {
+          "command": "tangle.savedPipelines.refresh",
           "when": "false"
         }
       ]
@@ -238,6 +435,265 @@
         "command": "tangent.checkForUpdates",
         "title": "Check for Updates",
         "category": "Tangent"
+      },
+      {
+        "command": "tangle.cli.submitPipeline",
+        "title": "Submit Pipeline",
+        "category": "Tangle Deploy",
+        "icon": "$(run)"
+      },
+      {
+        "command": "tangle.cli.validatePipeline",
+        "title": "Validate Pipeline (Dry Run)",
+        "category": "Tangle Deploy",
+        "icon": "$(check)"
+      },
+      {
+        "command": "tangle.cli.viewPipeline",
+        "title": "Open Pipeline in Tangle Editor",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.diagramPipeline",
+        "title": "Generate Pipeline Diagram",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.searchRuns",
+        "title": "Search Runs",
+        "category": "Tangle Deploy",
+        "icon": "$(search)"
+      },
+      {
+        "command": "tangle.cli.cancelRun",
+        "title": "Cancel Run",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.runLogs",
+        "title": "Fetch Run Logs",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.runDetails",
+        "title": "Show Run Details",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.exportRun",
+        "title": "Export Run as YAML",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.publishComponent",
+        "title": "Publish Component",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.publishAllComponents",
+        "title": "Publish Components from Config",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.generateComponentFromPython",
+        "title": "Generate Component from Python",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.generateComponentFromDbt",
+        "title": "Generate Component from dbt",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.generateComponentFromDocker",
+        "title": "Generate Component from Dockerfile",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.inspectComponent",
+        "title": "Inspect Component",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.searchComponents",
+        "title": "Search Components",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.bumpComponentVersion",
+        "title": "Bump Component Version",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.deprecateComponent",
+        "title": "Deprecate Component",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.deploySavedPipeline",
+        "title": "Save Pipeline Definition",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.shipSavedPipeline",
+        "title": "Ship Pipeline from Python",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.syncSavedPipeline",
+        "title": "Sync Pipelines from Python",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.listSavedPipelines",
+        "title": "List Saved Pipelines",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.readSavedPipeline",
+        "title": "Read Saved Pipeline",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.runSavedPipeline",
+        "title": "Run Saved Pipeline",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.configureSavedPipeline",
+        "title": "Configure Saved Pipeline",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.deleteSavedPipeline",
+        "title": "Delete Saved Pipeline",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.listSchedules",
+        "title": "List Schedules",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.manageSchedule",
+        "title": "Manage Schedule",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.listSubscriptions",
+        "title": "List Subscriptions",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.manageSubscription",
+        "title": "Manage Subscription",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.hydratePipeline",
+        "title": "Hydrate Pipeline",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.dehydratePipeline",
+        "title": "Dehydrate Pipeline",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.autoLayoutPipeline",
+        "title": "Auto-Layout Pipeline",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.compilePipelineFromPython",
+        "title": "Compile Pipeline from Python",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.decompilePipeline",
+        "title": "Decompile Pipeline to Python",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.generatePipelineSchema",
+        "title": "Generate Pipeline Schema",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.convertFromAirflow",
+        "title": "Convert Airflow DAG",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.whoami",
+        "title": "Check Auth (whoami)",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.listSecrets",
+        "title": "List Secrets",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.createSecret",
+        "title": "Create Secret",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.deleteSecret",
+        "title": "Delete Secret",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.listRunAnnotations",
+        "title": "List Run Annotations",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.setRunAnnotation",
+        "title": "Set Run Annotation",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.getArtifacts",
+        "title": "Get Run Artifacts",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.downloadArtifacts",
+        "title": "Download Run Artifacts",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.listQuotaGroups",
+        "title": "List Quota Groups",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.manageQuotaGroup",
+        "title": "Manage Quota Group",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.docs",
+        "title": "Browse Docs",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.quickstart",
+        "title": "Quickstart (List Commands)",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.cli.showInstallHelp",
+        "title": "Install Help",
+        "category": "Tangle Deploy"
+      },
+      {
+        "command": "tangle.savedPipelines.refresh",
+        "title": "Refresh",
+        "category": "Tangle Deploy",
+        "icon": "$(refresh)"
       }
     ],
     "configuration": {
@@ -287,6 +743,11 @@
           "type": "string",
           "default": "http://localhost:3000",
           "description": "Base URL of the Tangle web app, used to open projects and runs in the browser."
+        },
+        "tangent.tangleDeployBin": {
+          "type": "string",
+          "default": "tangle-deploy",
+          "description": "Path to the tangle-deploy CLI used to submit, validate, publish, and manage pipelines and components."
         },
         "tangent.updateBaseUrl": {
           "type": "string",
