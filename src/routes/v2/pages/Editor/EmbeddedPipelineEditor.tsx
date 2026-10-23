@@ -100,12 +100,12 @@ const EmbeddedPipelineEditorCanvas = withSuspenseWrapper(
       ...agentBoundaryProps
     }: EmbeddedPipelineEditorCanvasProps) => {
       const {
-        data: { spec: rootSpec, restoredUndoStore },
+        data: { spec: rootSpec, file, restoredUndoStore, saveState },
       } = useLoadSpec(pipelineRef);
       const { navigation } = useSharedStores();
       const canvasRef = useRef<HTMLDivElement | null>(null);
 
-      useSpecLifecycle(rootSpec, pipelineRef, restoredUndoStore);
+      useSpecLifecycle(rootSpec, file, restoredUndoStore, saveState);
       useSelectionWindowSync({
         contextPanel: {
           defaultDockState: undefined,

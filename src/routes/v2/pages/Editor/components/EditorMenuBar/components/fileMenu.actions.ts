@@ -25,6 +25,7 @@ export async function savePipelineAs(
   navigation: NavigationStore,
   newName: string,
   storage: PipelineStorageService,
+  sourceFile?: PipelineFile | null,
 ): Promise<PipelineFile | undefined> {
   const componentSpec = navigation.rootSpec;
   if (!componentSpec) return undefined;
@@ -35,6 +36,9 @@ export async function savePipelineAs(
   };
   const componentText = componentSpecToYaml(serialized);
 
+  if (sourceFile?.remote) {
+    return storage.copyRemotePipeline(sourceFile, newName, componentText);
+  }
   return storage.rootFolder.addFile(newName, componentText);
 }
 

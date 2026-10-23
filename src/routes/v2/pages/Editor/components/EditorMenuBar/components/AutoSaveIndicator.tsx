@@ -1,9 +1,10 @@
 import { observer } from "mobx-react-lite";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { Icon } from "@/components/ui/icon";
 import { Spinner } from "@/components/ui/spinner";
+import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { tracking } from "@/utils/tracking";
@@ -41,8 +42,13 @@ function IdleLayer({ children }: { children: ReactNode }) {
   );
 }
 
-function getTooltipText(isSaving: boolean, lastSavedAt: Date | null): string {
+function getTooltipText(
+  isSaving: boolean,
+  lastSavedAt: Date | null,
+  error: string | null,
+): string {
   if (isSaving) return "Saving...";
+  if (error) return `Save failed: ${error}. Click to retry.`;
   if (lastSavedAt) {
     return `Last saved at ${lastSavedAt.toLocaleTimeString()}`;
   }
@@ -50,34 +56,53 @@ function getTooltipText(isSaving: boolean, lastSavedAt: Date | null): string {
 }
 
 export const AutoSaveIndicator = observer(function AutoSaveIndicator() {
-  const { autoSave } = useEditorSession();
-  const { isSaving, lastSavedAt } = autoSave;
-  const tooltipText = getTooltipText(isSaving, lastSavedAt);
+  const { autoSave, pipelineFile } = useEditorSession();
+  const { isSaving, lastSavedAt, error } = autoSave;
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const tooltipText = getTooltipText(isSaving, lastSavedAt, error);
 
   const handleClick = () => {
-    void autoSave.save();
+    void autoSave.save().catch(() => {});
   };
 
   return (
-    <TooltipButton
-      tooltip={tooltipText}
-      variant="header"
-      disabled={isSaving}
-      onClick={handleClick}
-      data-testid="auto-save-button"
-      {...tracking("v2.pipeline_editor.auto_save_indicator")}
-    >
-      <div
-        data-saving={isSaving ? "true" : "false"}
-        className="group relative isolate size-4"
-      >
-        <SavingLayer>
-          <Spinner size={16} />
-        </SavingLayer>
-        <IdleLayer>
-          <Icon name="CloudCheck" />
-        </IdleLayer>
-      </div>
-    </TooltipButton>
+    <>
+      {pipelineFile.activePipelineFile && (
+        <TooltipButton
+          tooltip={tooltipText}
+          aria-label={tooltipText}
+          variant="header"
+          disabled={isSaving}
+          onClick={handleClick}
+          data-testid="auto-save-button"
+          {...tracking("v2.pipeline_editor.auto_save_indicator")}
+        >
+          <div
+            data-saving={isSaving ? "true" : "false"}
+            className="group relative isolate size-4"
+          >
+            <SavingLayer>
+              <Spinner size={16} />
+            </SavingLayer>
+            <IdleLayer>
+              <Icon
+                name={error ? "CloudAlert" : "CloudCheck"}
+                className={error ? "text-red-400" : undefined}
+              />
+            </IdleLayer>
+          </div>
+        </TooltipButton>
+      )}
+      <Text role="status" className="sr-only">
+        {mounted
+          ? isSaving
+            ? "Saving..."
+            : error
+              ? `Save failed: ${error}`
+              : ""
+          : ""}
+      </Text>
+    </>
   );
 });
