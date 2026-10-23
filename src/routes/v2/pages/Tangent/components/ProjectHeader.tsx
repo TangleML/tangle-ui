@@ -13,6 +13,8 @@ import type { Project } from "@/services/projects/types";
 import { useProject } from "@/services/projects/useProjects";
 import { tracking } from "@/utils/tracking";
 
+import { LocalEnvIndicator } from "./LocalEnvIndicator";
+
 export function ProjectHeader() {
   const store = useTangentProject();
   const { data: project } = useProject(store.projectId);
@@ -97,6 +99,8 @@ function ProjectHeaderBar({ project }: { project: Project }) {
           <Icon name="Share2" size="sm" />
         </Button>
       </InlineStack>
+
+      <LocalEnvIndicator />
     </InlineStack>
   );
 }
