@@ -45,7 +45,7 @@ describe("ExecutionDetails external links", () => {
   test("renders a link the backend put in debug_info", () => {
     renderWithDebugInfo({
       external_links: [
-        { label: "Job dashboard", text: "job-123", url: JOB_URL },
+        { label: "Job dashboard", url_text: "job-123", url: JOB_URL },
       ],
     });
 
@@ -56,7 +56,7 @@ describe("ExecutionDetails external links", () => {
     );
   });
 
-  test("uses the URL as the link text when text is missing", () => {
+  test("uses the URL as the link text when url_text is missing", () => {
     renderWithDebugInfo({
       external_links: [{ label: "Job dashboard", url: JOB_URL }],
     });
@@ -71,7 +71,7 @@ describe("ExecutionDetails external links", () => {
     "drops a link whose url is %s",
     (url) => {
       renderWithDebugInfo({
-        external_links: [{ label: "Job dashboard", text: "job-123", url }],
+        external_links: [{ label: "Job dashboard", url_text: "job-123", url }],
       });
 
       expect(screen.queryByText("Job dashboard")).not.toBeInTheDocument();
@@ -83,7 +83,7 @@ describe("ExecutionDetails external links", () => {
     "drops a link whose label is %j",
     (label) => {
       renderWithDebugInfo({
-        external_links: [{ label, text: "job-123", url: JOB_URL }],
+        external_links: [{ label, url_text: "job-123", url: JOB_URL }],
       });
 
       expect(screen.queryByRole("link")).not.toBeInTheDocument();
@@ -101,10 +101,10 @@ describe("ExecutionDetails external links", () => {
   test("keeps only the first link when labels repeat", () => {
     renderWithDebugInfo({
       external_links: [
-        { label: "Job dashboard", text: "first", url: JOB_URL },
+        { label: "Job dashboard", url_text: "first", url: JOB_URL },
         {
           label: "Job dashboard",
-          text: "second",
+          url_text: "second",
           url: "https://example.com/other",
         },
       ],
@@ -118,7 +118,7 @@ describe("ExecutionDetails external links", () => {
     renderWithDebugInfo({
       huggingface_job: { id: "hf-1", namespace: "team" },
       external_links: [
-        { label: "Job dashboard", text: "job-123", url: JOB_URL },
+        { label: "Job dashboard", url_text: "job-123", url: JOB_URL },
       ],
     });
 

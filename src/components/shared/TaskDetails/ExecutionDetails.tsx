@@ -297,8 +297,9 @@ function readExternalLinks(value: unknown): ExecutionLinkItem[] {
       return [];
     }
 
-    const text = typeof entry.text === "string" ? entry.text.trim() : "";
-    return [{ name, value: text || url, url }];
+    const urlText =
+      typeof entry.url_text === "string" ? entry.url_text.trim() : "";
+    return [{ name, value: urlText || url, url }];
   });
 }
 

@@ -16,7 +16,7 @@ Tangle-UI reads `debug_info.external_links` from the container execution state (
     "external_links": [
       {
         "label": "Job dashboard",
-        "text": "job-123",
+        "url_text": "job-123",
         "url": "https://jobs.example.com/jobs/job-123"
       }
     ]
@@ -24,11 +24,11 @@ Tangle-UI reads `debug_info.external_links` from the container execution state (
 }
 ```
 
-| Field   | Required | Meaning                                      |
-| ------- | -------- | -------------------------------------------- |
-| `label` | yes      | Row label. Must be a non-empty string        |
-| `url`   | yes      | Link target. Must be an absolute http(s) URL |
-| `text`  | no       | Link text; defaults to `url`                 |
+| Field      | Required | Meaning                                      |
+| ---------- | -------- | -------------------------------------------- |
+| `label`    | yes      | Row label. Must be a non-empty string        |
+| `url`      | yes      | Link target. Must be an absolute http(s) URL |
+| `url_text` | no       | Link text; defaults to `url`                 |
 
 Invalid entries are dropped silently: a missing or empty label, or a URL that is relative or uses another scheme. A value that is not an array is ignored. If an entry's label matches a row that is already shown, the entry is skipped, so give each link a distinct label.
 
