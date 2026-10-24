@@ -13,7 +13,7 @@ import { tangentAnchorProtocols } from "@/routes/v2/pages/Tangent/components/tan
 import { getTangentSocketConfig } from "@/routes/v2/pages/Tangent/services/socketConfig";
 import { SharedStoreProvider } from "@/routes/v2/shared/store/SharedStoreContext";
 import { useProject } from "@/services/projects/useProjects";
-import { TOP_NAV_HEIGHT } from "@/utils/constants";
+import { contentHeight } from "@/utils/layout";
 
 import { TangentProjectWorkspace } from "./components/TangentProjectWorkspace";
 import { TangentUnreachable } from "./components/TangentUnreachable";
@@ -122,7 +122,7 @@ function TangentProjectPageContent({ projectId }: { projectId: string }) {
   return (
     <div
       className="w-full overflow-hidden bg-slate-100 dark:bg-background"
-      style={{ height: `calc(100vh - ${TOP_NAV_HEIGHT}px)` }}
+      style={{ height: contentHeight() }}
     >
       <TangentProvider
         key={baseUrl}

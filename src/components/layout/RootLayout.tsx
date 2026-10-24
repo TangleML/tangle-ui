@@ -15,6 +15,7 @@ import { TourProvider } from "@/providers/TourProvider/TourProvider";
 import { PipelineStorageProvider } from "@/services/pipelineStorage/PipelineStorageProvider";
 
 import AppMenu from "./AppMenu";
+import { AppNoticeBanners } from "./AppNoticeBanners";
 
 function SessionPipelineStatsTracker() {
   useSessionPipelineStats();
@@ -37,6 +38,7 @@ function RootLayoutContent() {
 
               <div className="App flex flex-col min-h-screen w-full">
                 <AppMenu />
+                <AppNoticeBanners />
 
                 <main className="flex-1 grid">
                   <Outlet />

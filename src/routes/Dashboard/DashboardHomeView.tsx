@@ -1,7 +1,6 @@
 import { Link } from "@tanstack/react-router";
 
 import { RunSection } from "@/components/Home/RunSection/RunSection";
-import { NoticeBanners } from "@/components/shared/Notices/NoticeBanners";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import {
   Tooltip,
@@ -165,8 +164,6 @@ const RecentComponentsPreview = () => {
 export function DashboardHomeView() {
   return (
     <BlockStack gap="6">
-      <NoticeBanners />
-
       <div className="w-full grid grid-cols-3 gap-6 overflow-hidden">
         <FavoritesPreview />
         <RecentlyViewedPreview />

@@ -201,18 +201,18 @@ const DefaultAppMenu = () => {
   );
 };
 
+export function hasAppMenu(pathname: string): boolean {
+  return (
+    !pathname.startsWith(APP_ROUTES.EDITOR) &&
+    !isRunViewPath(pathname) &&
+    !pathname.startsWith(APP_ROUTES.TOUR)
+  );
+}
+
 const AppMenu = () => {
   const { pathname } = useLocation();
 
-  if (pathname.startsWith(APP_ROUTES.EDITOR)) {
-    return null;
-  }
-
-  if (isRunViewPath(pathname)) {
-    return null;
-  }
-
-  if (pathname.startsWith(APP_ROUTES.TOUR)) {
+  if (!hasAppMenu(pathname)) {
     return null;
   }
 
