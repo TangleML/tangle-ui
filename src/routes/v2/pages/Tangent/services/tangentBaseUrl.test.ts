@@ -4,8 +4,22 @@ import { DEV_TANGENT_BASE_URL } from "@/routes/v2/pages/Tangent/constants";
 
 import { resolveTangentBaseUrl } from "./tangentBaseUrl";
 
+const DEPLOYED_HOST = "tangle.example.com";
+const LOOPBACK_HOSTS = ["localhost", "127.0.0.1"];
+
+function inDev() {
+  vi.stubEnv("DEV", true);
+  vi.stubGlobal("location", { hostname: DEPLOYED_HOST });
+}
+
+function buildServedFrom(hostname: string) {
+  vi.stubEnv("DEV", false);
+  vi.stubGlobal("location", { hostname });
+}
+
 afterEach(() => {
   vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
 });
 
 describe("resolveTangentBaseUrl", () => {
@@ -33,7 +47,7 @@ describe("resolveTangentBaseUrl", () => {
     ] as const;
 
     it.each(unusable)("falls back to localhost in dev when %s", (_, input) => {
-      vi.stubEnv("DEV", true);
+      inDev();
 
       expect(resolveTangentBaseUrl(input)).toEqual({
         baseUrl: DEV_TANGENT_BASE_URL,
@@ -41,16 +55,31 @@ describe("resolveTangentBaseUrl", () => {
       });
     });
 
-    // A built app that reached for loopback would make the browser prompt for
-    // local network access, so there it must resolve to no url at all.
-    it.each(unusable)("resolves to no url in a build when %s", (_, input) => {
-      vi.stubEnv("DEV", false);
+    // A deployed app that reached for loopback would make the browser prompt
+    // for local network access, so there it must resolve to no url at all.
+    it.each(unusable)(
+      "resolves to no url on a deployed origin when %s",
+      (_, input) => {
+        buildServedFrom(DEPLOYED_HOST);
 
-      expect(resolveTangentBaseUrl(input)).toEqual({
-        baseUrl: null,
-        localAddress: null,
-      });
-    });
+        expect(resolveTangentBaseUrl(input)).toEqual({
+          baseUrl: null,
+          localAddress: null,
+        });
+      },
+    );
+
+    it.each(LOOPBACK_HOSTS)(
+      "falls back to localhost in a build served from %s",
+      (hostname) => {
+        buildServedFrom(hostname);
+
+        expect(resolveTangentBaseUrl({ other: "value" })).toEqual({
+          baseUrl: DEV_TANGENT_BASE_URL,
+          localAddress: null,
+        });
+      },
+    );
   });
 
   // Tangent is deployed alongside Tangle, so a workspace still carrying a
@@ -72,25 +101,51 @@ describe("resolveTangentBaseUrl", () => {
       "http://someones-laptop.local:5173",
     ];
 
-    it.each(localAddresses)("is refused in a build: %s", (tangentBaseUrl) => {
-      vi.stubEnv("DEV", false);
+    it.each(localAddresses)(
+      "is refused on a deployed origin: %s",
+      (tangentBaseUrl) => {
+        buildServedFrom(DEPLOYED_HOST);
 
-      expect(resolveTangentBaseUrl({ tangentBaseUrl })).toEqual({
-        baseUrl: null,
-        localAddress: tangentBaseUrl,
-      });
-    });
+        expect(resolveTangentBaseUrl({ tangentBaseUrl })).toEqual({
+          baseUrl: null,
+          localAddress: tangentBaseUrl,
+        });
+      },
+    );
 
     it.each(localAddresses)("is honoured in dev: %s", (tangentBaseUrl) => {
-      vi.stubEnv("DEV", true);
+      inDev();
 
       expect(resolveTangentBaseUrl({ tangentBaseUrl }).baseUrl).toBe(
         tangentBaseUrl,
       );
     });
+
+    it.each(LOOPBACK_HOSTS)(
+      "is honoured in a build served from %s",
+      (hostname) => {
+        buildServedFrom(hostname);
+
+        expect(
+          resolveTangentBaseUrl({ tangentBaseUrl: "http://localhost:5173" }),
+        ).toEqual({ baseUrl: "http://localhost:5173", localAddress: null });
+      },
+    );
+
+    // Off loopback, Chrome still prompts before a page can reach loopback.
+    it.each(["192.168.1.20", "someones-laptop.local"])(
+      "is refused in a build served from %s",
+      (hostname) => {
+        buildServedFrom(hostname);
+
+        expect(
+          resolveTangentBaseUrl({ tangentBaseUrl: "http://localhost:5173" }),
+        ).toEqual({ baseUrl: null, localAddress: "http://localhost:5173" });
+      },
+    );
   });
 
-  describe("addresses a build still accepts", () => {
+  describe("addresses a deployed origin still accepts", () => {
     const routable = [
       "https://tangent.example.com",
       "https://tangent.internal.example.com",
@@ -101,7 +156,7 @@ describe("resolveTangentBaseUrl", () => {
     ];
 
     it.each(routable)("is not mistaken for local: %s", (tangentBaseUrl) => {
-      vi.stubEnv("DEV", false);
+      buildServedFrom(DEPLOYED_HOST);
 
       expect(resolveTangentBaseUrl({ tangentBaseUrl })).toEqual({
         baseUrl: tangentBaseUrl,

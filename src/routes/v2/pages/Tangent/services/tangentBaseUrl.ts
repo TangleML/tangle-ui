@@ -13,9 +13,10 @@ function normalizeBaseUrl(value: string): string {
 /**
  * The set Chrome gates behind its Local Network Access permission: loopback,
  * the private IPv4 ranges, link-local, and `.local` names. Tangent is deployed
- * alongside Tangle, so in a build none of these can be a real Tangent — they
- * are only ever a workspace still holding a developer's address, and fetching
- * one would put a permission prompt in front of every first-time visitor.
+ * alongside Tangle, so on a deployed origin none of these can be a real Tangent
+ * — they are only ever a workspace still holding a developer's address, and
+ * fetching one would put a permission prompt in front of every first-time
+ * visitor.
  */
 function isLocalNetworkHost(hostname: string): boolean {
   const host = hostname.toLowerCase().replace(/^\[|\]$/g, "");
@@ -50,9 +51,17 @@ function isLocalNetworkAddress(url: string): boolean {
   }
 }
 
+// A build served from loopback runs on the developer's own machine, and Chrome
+// doesn't prompt a loopback page for local network access.
+function allowsLocalTangent(): boolean {
+  if (import.meta.env.DEV) return true;
+  const { hostname } = window.location;
+  return hostname === "localhost" || hostname === "127.0.0.1";
+}
+
 function unconfigured(): TangentBaseUrlResolution {
   return {
-    baseUrl: import.meta.env.DEV ? DEV_TANGENT_BASE_URL : null,
+    baseUrl: allowsLocalTangent() ? DEV_TANGENT_BASE_URL : null,
     localAddress: null,
   };
 }
@@ -67,7 +76,7 @@ export function resolveTangentBaseUrl(
   const normalized = normalizeBaseUrl(tangentBaseUrl);
   if (normalized.length === 0) return unconfigured();
 
-  if (!import.meta.env.DEV && isLocalNetworkAddress(normalized)) {
+  if (!allowsLocalTangent() && isLocalNetworkAddress(normalized)) {
     return { baseUrl: null, localAddress: normalized };
   }
 
