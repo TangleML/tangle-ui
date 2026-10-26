@@ -19,6 +19,7 @@ import { TangentProjectWorkspace } from "./components/TangentProjectWorkspace";
 import { TangentUnreachable } from "./components/TangentUnreachable";
 import { TangentProjectProvider } from "./context/TangentProjectContext";
 import { useTangentBaseUrl } from "./hooks/useTangentBaseUrl";
+import { useTangentEmbedToken } from "./hooks/useTangentEmbedToken";
 import {
   tangentChannelUrl,
   useTangentRuntime,
@@ -78,6 +79,7 @@ function TangentProjectPageContent({ projectId }: { projectId: string }) {
   useTrackRecentlyViewedProject(projectId);
   const channelUrl = tangentChannelUrl(baseUrl);
   const runtime = useTangentRuntime(channelUrl);
+  const getToken = useTangentEmbedToken(baseUrl);
 
   // Before the loading branch: a project that is gone never resolves a
   // workspace to take a Tangent url from, so waiting on one waits forever.
@@ -131,6 +133,7 @@ function TangentProjectPageContent({ projectId }: { projectId: string }) {
         colorScheme={resolvedTheme}
         socketUrl={socketUrl}
         socketPath={socketPath}
+        getToken={getToken}
         anchorProtocols={tangentAnchorProtocols}
       >
         <SharedStoreProvider>
