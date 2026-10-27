@@ -1,6 +1,11 @@
 import type { GetExecutionArtifactsResponse } from "@/api/types.gen";
+import { extractSecretName } from "@/components/shared/SecretsManagement/types";
 import { Paragraph } from "@/components/ui/typography";
-import type { InputSpec } from "@/utils/componentSpec";
+import {
+  type InputSpec,
+  isSecretArgument,
+  type TaskSpec,
+} from "@/utils/componentSpec";
 
 import IOCell from "./IOCell/IOCell";
 import IOCollapsibleSection from "./IOCollapsibleSection";
@@ -8,9 +13,10 @@ import IOCollapsibleSection from "./IOCollapsibleSection";
 interface IOInputsProps {
   inputs?: InputSpec[];
   artifacts: GetExecutionArtifactsResponse;
+  taskArguments?: TaskSpec["arguments"];
 }
 
-const IOInputs = ({ inputs, artifacts }: IOInputsProps) => {
+const IOInputs = ({ inputs, artifacts, taskArguments }: IOInputsProps) => {
   return (
     <IOCollapsibleSection title="Inputs" count={inputs?.length ?? 0}>
       {(!inputs || inputs.length === 0) && (
@@ -21,6 +27,10 @@ const IOInputs = ({ inputs, artifacts }: IOInputsProps) => {
 
       {inputs?.map((input) => {
         const inputArtifact = artifacts.input_artifacts?.[input.name];
+        const argument = taskArguments?.[input.name];
+        const secretName = isSecretArgument(argument)
+          ? extractSecretName(argument)
+          : null;
 
         return (
           <IOCell
@@ -28,6 +38,7 @@ const IOInputs = ({ inputs, artifacts }: IOInputsProps) => {
             name={input.name}
             type={input.type?.toString()}
             artifact={inputArtifact}
+            secretName={secretName}
           />
         );
       })}

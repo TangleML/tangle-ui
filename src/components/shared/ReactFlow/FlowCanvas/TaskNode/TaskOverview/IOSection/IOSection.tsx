@@ -113,6 +113,7 @@ const IOSection = ({ taskSpec, executionId, readOnly }: IOSectionProps) => {
               key="inputs"
               inputs={taskSpec.componentRef.spec?.inputs}
               artifacts={artifacts}
+              taskArguments={taskSpec.arguments}
             />
           );
         }
