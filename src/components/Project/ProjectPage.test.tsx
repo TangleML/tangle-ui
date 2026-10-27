@@ -138,8 +138,8 @@ describe("ProjectPage", () => {
     vi.resetAllMocks();
   });
 
-  it("shows the project it was asked for", () => {
-    render(<ProjectPage />);
+  it("shows the requested project and tracks its visit once in Strict Mode", () => {
+    render(<ProjectPage />, { reactStrictMode: true });
 
     expect(useProject).toHaveBeenCalledWith("project-1");
     expect(screen.getByText("Churn model")).toBeInTheDocument();
@@ -149,13 +149,17 @@ describe("ProjectPage", () => {
     );
   });
 
-  it("tracks a visit when loading finishes without counting metadata refreshes", async () => {
+  it("tracks one visit through metadata updates and failed refetches", async () => {
     const { useProject: useRealProject } = await vi.importActual<
       typeof import("@/services/projects/useProjects")
     >("@/services/projects/useProjects");
     vi.mocked(useProject).mockImplementation(useRealProject);
-    vi.spyOn(projectsService, "getProject").mockResolvedValue(project);
-    const queryClient = new QueryClient();
+    const getProject = vi
+      .spyOn(projectsService, "getProject")
+      .mockResolvedValue(project);
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retryDelay: 0 } },
+    });
 
     render(
       <QueryClientProvider client={queryClient}>
@@ -179,6 +183,30 @@ describe("ProjectPage", () => {
     });
     expect(await screen.findByText("Renamed project")).toBeInTheDocument();
     expect(track).toHaveBeenCalledTimes(1);
+
+    getProject.mockRejectedValue(
+      new ProjectsApiError("Temporary backend failure", 500),
+    );
+    await act(async () => {
+      await queryClient.refetchQueries({
+        queryKey: ProjectsQueryKeys.Id(project.id),
+        exact: true,
+      });
+    });
+    expect(
+      await screen.findByText("Error loading project"),
+    ).toBeInTheDocument();
+    expect(track).toHaveBeenCalledTimes(1);
+
+    getProject.mockResolvedValue(project);
+    await act(async () => {
+      await queryClient.refetchQueries({
+        queryKey: ProjectsQueryKeys.Id(project.id),
+        exact: true,
+      });
+    });
+    expect(await screen.findByText("Churn model")).toBeInTheDocument();
+    expect(track).toHaveBeenCalledTimes(1);
     queryClient.clear();
   });
 
@@ -192,6 +220,36 @@ describe("ProjectPage", () => {
     expect(track).toHaveBeenCalledTimes(2);
     expect(track).toHaveBeenLastCalledWith("projects.project_page.impression", {
       project_id: "project-2",
+    });
+
+    vi.mocked(useParams).mockReturnValue({ projectId: "project-1" });
+    mockProject();
+    rerender(<ProjectPage />);
+
+    expect(track).toHaveBeenCalledTimes(3);
+    expect(track).toHaveBeenLastCalledWith("projects.project_page.impression", {
+      project_id: "project-1",
+    });
+  });
+
+  it("tracks a return visit after another project fails to load", () => {
+    const { rerender } = render(<ProjectPage />);
+
+    vi.mocked(useParams).mockReturnValue({ projectId: "project-2" });
+    mockProject({
+      data: undefined,
+      error: new ProjectsApiError("Temporary backend failure", 500),
+    });
+    rerender(<ProjectPage />);
+    expect(track).toHaveBeenCalledTimes(1);
+
+    vi.mocked(useParams).mockReturnValue({ projectId: "project-1" });
+    mockProject();
+    rerender(<ProjectPage />);
+
+    expect(track).toHaveBeenCalledTimes(2);
+    expect(track).toHaveBeenLastCalledWith("projects.project_page.impression", {
+      project_id: "project-1",
     });
   });
 

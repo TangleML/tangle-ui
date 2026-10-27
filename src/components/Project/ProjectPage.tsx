@@ -1,5 +1,5 @@
 import { Link, useParams } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { InfoBox } from "@/components/shared/InfoBox";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -65,14 +65,20 @@ function ProjectDetail({ projectId }: { projectId: string | undefined }) {
   );
   const { data: project, isPending, error } = useProject(projectId);
   const { track } = useAnalytics();
+  const impression = useRef({ projectId, tracked: false });
   useTrackRecentlyViewedProject(projectId);
 
   const loadedProjectId = !isPending && !error ? project?.id : undefined;
 
   useEffect(() => {
-    if (!loadedProjectId) return;
+    if (impression.current.projectId !== projectId) {
+      impression.current = { projectId, tracked: false };
+    }
+
+    if (!loadedProjectId || impression.current.tracked) return;
+    impression.current.tracked = true;
     track("projects.project_page.impression", { project_id: loadedProjectId });
-  }, [loadedProjectId, track]);
+  }, [loadedProjectId, projectId, track]);
 
   if (isPending) {
     return <LoadingProject />;
