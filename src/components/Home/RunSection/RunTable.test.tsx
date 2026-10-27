@@ -50,6 +50,17 @@ const runs: PipelineRunResponse[] = [
 ];
 
 describe("run table selection", () => {
+  it("omits headers in compact dashboard sections while retaining row selection", async () => {
+    const user = userEvent.setup();
+    render(<RunTable runs={runs} responsive showHeader={false} />);
+    expect(screen.queryByRole("columnheader")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("checkbox", { name: "Select one" }));
+    expect(screen.getByRole("checkbox", { name: "Select one" })).toBeChecked();
+    expect(
+      screen.getByRole("button", { name: "Clear one" }),
+    ).toBeInTheDocument();
+  });
+
   it("selects the page and clears the selection through bulk actions", async () => {
     const user = userEvent.setup();
     render(<RunTable runs={runs} />);

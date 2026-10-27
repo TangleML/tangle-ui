@@ -70,10 +70,10 @@ vi.mock("@/hooks/useFavorites", () => ({
   useFavorites: () => ({ isFavorite: () => false, toggleFavorite }),
 }));
 
-function renderPipelines() {
+function renderPipelines(width: 1 | 2 | 3 = 3) {
   return render(
     <DashboardWidget
-      section={{ id: "pipelines", type: "pipelines", width: 3 }}
+      section={{ id: "pipelines", type: "pipelines", width }}
       editing={false}
       onChange={vi.fn()}
       onRemove={vi.fn()}
@@ -86,6 +86,18 @@ function renderPipelines() {
 
 describe("dashboard pipelines", () => {
   afterEach(() => vi.clearAllMocks());
+
+  it.each([1, 2] as const)("omits pipeline headers at width %s", (width) => {
+    renderPipelines(width);
+    const table = screen.getByRole("table", { name: "My Pipelines" });
+    expect(within(table).queryByRole("columnheader")).not.toBeInTheDocument();
+    expect(
+      within(table).getByRole("link", { name: "Training pipeline" }),
+    ).toBeInTheDocument();
+    expect(
+      within(table).getByRole("link", { name: "Local pipeline" }),
+    ).toBeInTheDocument();
+  });
 
   it("aligns remote pipeline metadata with the pipeline headers and retains favorites", async () => {
     const user = userEvent.setup();

@@ -155,6 +155,16 @@ describe("ProjectRow", () => {
     expect(screen.getByText("3 pipelines · 1 document")).toBeInTheDocument();
   });
 
+  it("keeps dashboard rows compact while retaining project contents and actions", () => {
+    render(<ProjectRow project={project} compact />);
+    expect(screen.getByText("Churn model")).toBeInTheDocument();
+    expect(screen.getByText("3 pipelines · 1 document")).toBeInTheDocument();
+    expect(screen.queryByText("Q3 churn work")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Project actions: Churn model" }),
+    ).toBeInTheDocument();
+  });
+
   /**
    * A row sits in a fixed list track, and its stacks lay children out at
    * content width unless told otherwise, so a long name ran out over the row

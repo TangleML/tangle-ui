@@ -27,7 +27,7 @@ export function ProjectsPreview(props: DashboardWidgetProps) {
     >
       <div className="overflow-hidden rounded-lg border border-border">
         {projects.slice(0, 5).map((project) => (
-          <ProjectRow key={project.id} project={project} />
+          <ProjectRow key={project.id} project={project} compact />
         ))}
       </div>
     </DashboardSectionFrame>

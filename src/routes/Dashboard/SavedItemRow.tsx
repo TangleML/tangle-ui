@@ -21,7 +21,7 @@ export function SavedItemRow({
   onClick?: () => void;
 }) {
   return (
-    <div className="group flex min-w-0 items-center hover:bg-muted/50">
+    <div className="group flex h-12 min-w-0 items-center hover:bg-muted/50">
       <Link
         to={getRecentlyViewedUrl(item)}
         {...(item.type === "component"
@@ -29,7 +29,7 @@ export function SavedItemRow({
           : {})}
         {...tracking(trackingId)}
         onClick={onClick}
-        className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3 no-underline"
+        className="flex h-full min-w-0 flex-1 items-center gap-3 px-4 no-underline"
       >
         <TypePill type={item.type} id={item.id} />
         <span className="min-w-0 flex-1 truncate text-sm" title={item.name}>

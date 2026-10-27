@@ -142,7 +142,8 @@ const RunRow = ({
     <TableRow
       onClick={handleRowClick}
       className={cn(
-        "cursor-pointer text-muted-foreground text-xs h-10",
+        "cursor-pointer text-muted-foreground text-xs",
+        responsive ? "h-12" : "h-10",
         responsive && overflow && "hidden @[52rem]/dashboard-section:table-row",
       )}
     >
@@ -234,7 +235,9 @@ const RunRow = ({
           responsive && "hidden @[52rem]/dashboard-section:table-cell",
         )}
       >
-        {tags && tags.length > 0 && <TagList tags={tags} />}
+        {tags && tags.length > 0 && (
+          <TagList tags={tags} wrap={responsive ? "nowrap" : "wrap"} />
+        )}
       </TableCell>
       <TableCell
         className={cn(

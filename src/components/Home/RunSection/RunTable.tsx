@@ -18,12 +18,14 @@ import RunRow from "./RunRow";
 export function RunTable({
   runs,
   responsive = false,
+  showHeader = true,
   onFilterByUser,
   onRunClick,
   selection,
 }: {
   runs: PipelineRunResponse[];
   responsive?: boolean;
+  showHeader?: boolean;
   onFilterByUser?: (user: string) => void;
   onRunClick?: (run: PipelineRunResponse) => void;
   selection?: {
@@ -65,81 +67,115 @@ export function RunTable({
           responsive && "overflow-hidden rounded-lg border border-border",
         )}
       >
-        <TableHeader className={cn(responsive && "bg-muted/20 [&_th]:px-4")}>
-          <TableRow className="text-xs">
-            {compareEnabled && (
+        <colgroup>
+          {compareEnabled && (
+            <col
+              className={cn(
+                "w-8",
+                responsive && "hidden @[52rem]/dashboard-section:table-column",
+              )}
+            />
+          )}
+          <col
+            className={
+              responsive
+                ? "w-full @[36rem]/dashboard-section:w-1/2 @[52rem]/dashboard-section:w-1/3"
+                : "w-1/4"
+            }
+          />
+          <col
+            className={
+              responsive
+                ? "hidden w-1/4 @[36rem]/dashboard-section:table-column @[52rem]/dashboard-section:w-1/6"
+                : "w-1/4"
+            }
+          />
+          <col
+            className={
+              responsive
+                ? "hidden w-1/4 @[36rem]/dashboard-section:table-column @[52rem]/dashboard-section:w-1/6"
+                : "w-3/20"
+            }
+          />
+          <col
+            className={
+              responsive
+                ? "hidden w-1/6 @[52rem]/dashboard-section:table-column"
+                : "w-3/20"
+            }
+          />
+          <col
+            className={
+              responsive
+                ? "hidden w-1/6 @[52rem]/dashboard-section:table-column"
+                : "w-1/5"
+            }
+          />
+          <col
+            className={cn(
+              "w-28",
+              responsive && "hidden @[52rem]/dashboard-section:table-column",
+            )}
+          />
+        </colgroup>
+        {showHeader && (
+          <TableHeader className={cn(responsive && "bg-muted/20 [&_th]:px-4")}>
+            <TableRow className="text-xs">
+              {compareEnabled && (
+                <TableHead
+                  className={cn(
+                    responsive &&
+                      "hidden @[52rem]/dashboard-section:table-cell",
+                  )}
+                >
+                  <Checkbox
+                    checked={allSelected}
+                    onCheckedChange={toggleAll}
+                    aria-label="Select all runs on this page"
+                  />
+                </TableHead>
+              )}
+              <TableHead>Name</TableHead>
               <TableHead
                 className={cn(
-                  "w-8",
+                  responsive && "hidden @[36rem]/dashboard-section:table-cell",
+                )}
+              >
+                Status
+              </TableHead>
+              <TableHead
+                className={cn(
+                  responsive && "hidden @[36rem]/dashboard-section:table-cell",
+                )}
+              >
+                Date
+              </TableHead>
+              <TableHead
+                className={cn(
                   responsive && "hidden @[52rem]/dashboard-section:table-cell",
                 )}
               >
-                <Checkbox
-                  checked={allSelected}
-                  onCheckedChange={toggleAll}
-                  aria-label="Select all runs on this page"
-                />
+                Initiated By
               </TableHead>
-            )}
-            <TableHead
-              className={cn(
-                responsive
-                  ? "w-full @[36rem]/dashboard-section:w-1/2 @[52rem]/dashboard-section:w-1/3"
-                  : "w-1/4",
-              )}
-            >
-              Name
-            </TableHead>
-            <TableHead
-              className={cn(
-                responsive
-                  ? "hidden w-1/4 @[36rem]/dashboard-section:table-cell @[52rem]/dashboard-section:w-1/6"
-                  : "w-1/4",
-              )}
-            >
-              Status
-            </TableHead>
-            <TableHead
-              className={cn(
-                responsive
-                  ? "hidden w-1/4 @[36rem]/dashboard-section:table-cell @[52rem]/dashboard-section:w-1/6"
-                  : "w-3/20",
-              )}
-            >
-              Date
-            </TableHead>
-            <TableHead
-              className={cn(
-                responsive
-                  ? "hidden w-1/6 @[52rem]/dashboard-section:table-cell"
-                  : "w-3/20",
-              )}
-            >
-              Initiated By
-            </TableHead>
-            <TableHead
-              className={cn(
-                responsive
-                  ? "hidden @[52rem]/dashboard-section:table-cell"
-                  : "w-1/5",
-              )}
-            >
-              Tags
-            </TableHead>
-            <TableHead
-              className={cn(
-                "w-28",
-                responsive && "hidden @[52rem]/dashboard-section:table-cell",
-              )}
-            >
-              <span className="sr-only">Actions</span>
-            </TableHead>
-          </TableRow>
-        </TableHeader>
+              <TableHead
+                className={cn(
+                  responsive && "hidden @[52rem]/dashboard-section:table-cell",
+                )}
+              >
+                Tags
+              </TableHead>
+              <TableHead
+                className={cn(
+                  responsive && "hidden @[52rem]/dashboard-section:table-cell",
+                )}
+              >
+                <span className="sr-only">Actions</span>
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+        )}
         <TableBody
-          className={cn(
-            responsive && "[&_td]:px-4 [&_td:not(:last-child)]:py-3",
-          )}
+          className={cn(responsive && "[&_td]:h-12 [&_td]:px-4 [&_td]:py-2")}
         >
           {runs.map((run, index) => (
             <RunRow

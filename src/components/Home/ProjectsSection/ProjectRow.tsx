@@ -31,9 +31,10 @@ import {
 
 interface ProjectRowProps {
   project: ProjectSummary;
+  compact?: boolean;
 }
 
-export function ProjectRow({ project }: ProjectRowProps) {
+export function ProjectRow({ project, compact = false }: ProjectRowProps) {
   const navigate = useNavigate();
   const { confirmAndDelete, isDeleting, confirmation } = useDeleteProjectAction(
     project,
@@ -62,13 +63,17 @@ export function ProjectRow({ project }: ProjectRowProps) {
     <div
       className={cn(
         "@container/project-row relative flex min-w-0 items-center border-b border-border last:border-b-0 transition-colors hover:bg-muted/50",
+        compact && "h-12",
         isDeleting && "pointer-events-none opacity-50",
       )}
     >
       <Link
         to={projectHomeRoute(tangentEnabled)}
         params={{ projectId: project.id }}
-        className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3 no-underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/50"
+        className={cn(
+          "flex min-w-0 flex-1 items-center gap-3 px-4 no-underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/50",
+          compact ? "h-full" : "py-3",
+        )}
         {...tracking("projects.project_row")}
       >
         <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
@@ -96,7 +101,7 @@ export function ProjectRow({ project }: ProjectRowProps) {
           >
             {contents}
           </Text>
-          {project.description && (
+          {!compact && project.description && (
             <Text
               size="xs"
               tone="subdued"

@@ -133,7 +133,7 @@ function RunsPreview(props: DashboardWidgetProps) {
       loading={!ready || isLoading}
       error={error?.message}
     >
-      <RunTable runs={runs} responsive />
+      <RunTable runs={runs} responsive showHeader={props.section.width === 3} />
     </DashboardSectionFrame>
   );
 }
@@ -185,32 +185,41 @@ function PipelinesPreview(props: DashboardWidgetProps) {
         className="table-fixed"
         containerClassName="overflow-hidden rounded-lg border border-border"
       >
-        <TableHeader className="bg-muted/20 [&_th]:px-4">
-          <TableRow className="text-xs">
-            <TableHead className="w-full @[36rem]/dashboard-section:w-2/3 @[52rem]/dashboard-section:w-1/4">
-              Name
-            </TableHead>
-            <TableHead className="hidden w-[12%] @[52rem]/dashboard-section:table-cell">
-              ID
-            </TableHead>
-            <TableHead className="hidden w-[18%] @[52rem]/dashboard-section:table-cell">
-              User
-            </TableHead>
-            <TableHead className="hidden w-[15%] @[52rem]/dashboard-section:table-cell">
-              Created at
-            </TableHead>
-            <TableHead className="hidden w-1/3 @[36rem]/dashboard-section:table-cell @[52rem]/dashboard-section:w-[15%]">
-              Updated at
-            </TableHead>
-            <TableHead className="hidden w-[15%] @[52rem]/dashboard-section:table-cell">
-              Current version
-            </TableHead>
-            <TableHead className="hidden w-12 @[36rem]/dashboard-section:table-cell">
-              <span className="sr-only">Actions</span>
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody className="[&_td]:px-4 [&_td]:py-3">
+        <colgroup>
+          <col className="w-full @[36rem]/dashboard-section:w-2/3 @[52rem]/dashboard-section:w-1/4" />
+          <col className="hidden w-[12%] @[52rem]/dashboard-section:table-column" />
+          <col className="hidden w-[18%] @[52rem]/dashboard-section:table-column" />
+          <col className="hidden w-[15%] @[52rem]/dashboard-section:table-column" />
+          <col className="hidden w-1/3 @[36rem]/dashboard-section:table-column @[52rem]/dashboard-section:w-[15%]" />
+          <col className="hidden w-[15%] @[52rem]/dashboard-section:table-column" />
+          <col className="hidden w-12 @[36rem]/dashboard-section:table-column" />
+        </colgroup>
+        {props.section.width === 3 && (
+          <TableHeader className="bg-muted/20 [&_th]:px-4">
+            <TableRow className="text-xs">
+              <TableHead>Name</TableHead>
+              <TableHead className="hidden @[52rem]/dashboard-section:table-cell">
+                ID
+              </TableHead>
+              <TableHead className="hidden @[52rem]/dashboard-section:table-cell">
+                User
+              </TableHead>
+              <TableHead className="hidden @[52rem]/dashboard-section:table-cell">
+                Created at
+              </TableHead>
+              <TableHead className="hidden @[36rem]/dashboard-section:table-cell">
+                Updated at
+              </TableHead>
+              <TableHead className="hidden @[52rem]/dashboard-section:table-cell">
+                Current version
+              </TableHead>
+              <TableHead className="hidden @[36rem]/dashboard-section:table-cell">
+                <span className="sr-only">Actions</span>
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+        )}
+        <TableBody className="[&_td]:h-12 [&_td]:px-4 [&_td]:py-2">
           {items.map((item) => (
             <TableRow
               key={`${item.type}-${item.id}`}
