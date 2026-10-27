@@ -36,10 +36,17 @@ export function useProjectPin(project: {
           id: project.id,
           name: project.name,
         });
-        notify(pinned ? "Project unpinned" : "Project pinned", "success");
+        notify(
+          pinned
+            ? "Project removed from favorites"
+            : "Project added to favorites",
+          "success",
+        );
       } catch {
         notify(
-          pinned ? "Could not unpin the project" : "Could not pin the project",
+          pinned
+            ? "Could not remove the project from favorites"
+            : "Could not add the project to favorites",
           "error",
         );
       } finally {

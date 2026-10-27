@@ -1,6 +1,7 @@
 import { WorkspaceNotice } from "@/components/Project/WorkspaceNotice";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
@@ -10,9 +11,7 @@ import { usePinnedProjects } from "@/services/projects/usePinnedProjects";
 import { useWorkspaces } from "@/services/projects/useWorkspaces";
 
 import { CreateProjectDialog } from "./CreateProjectDialog";
-import { NewProjectCard } from "./NewProjectCard";
-import { ProjectCard } from "./ProjectCard";
-import { PROJECT_GRID } from "./projectGrid";
+import { ProjectRow } from "./ProjectRow";
 import { useMyProjects } from "./useMyProjects";
 
 const LoadingProjects = () => (
@@ -44,10 +43,10 @@ export function ProjectsSection() {
     );
   }
 
-  return <ProjectsGrid />;
+  return <ProjectsList />;
 }
 
-function ProjectsGrid() {
+function ProjectsList() {
   const {
     projects: allProjects,
     createdBy,
@@ -61,7 +60,7 @@ function ProjectsGrid() {
   const { data: workspaces } = useWorkspaces();
   const { projects: pinned } = usePinnedProjects();
 
-  // Pinned projects lead the grid, so a pinned project of the caller's own is
+  // Pinned projects lead the list, so a pinned project of the caller's own is
   // dropped from the tail to move rather than appear twice.
   const pinnedIds = new Set(pinned.map((project) => project.id));
   const rest = allProjects.filter((project) => !pinnedIds.has(project.id));
@@ -88,20 +87,25 @@ function ProjectsGrid() {
   }
 
   return (
-    <BlockStack gap="4">
+    <BlockStack gap="4" align="stretch">
       <WorkspaceNotice />
-      <div className={PROJECT_GRID}>
-        {workspaces && activeWorkspaces(workspaces).length > 0 && (
-          <CreateProjectDialog
-            workspaces={workspaces}
-            trigger={<NewProjectCard />}
-          />
-        )}
+      {workspaces && activeWorkspaces(workspaces).length > 0 && (
+        <CreateProjectDialog
+          workspaces={workspaces}
+          trigger={
+            <Button type="button" variant="outline" className="self-start">
+              <Icon name="Plus" size="sm" />
+              New project
+            </Button>
+          }
+        />
+      )}
+      <div className="overflow-hidden rounded-lg border border-border empty:hidden">
         {pinned.map((project) => (
-          <ProjectCard key={project.id} project={project} />
+          <ProjectRow key={project.id} project={project} />
         ))}
         {rest.map((project) => (
-          <ProjectCard key={project.id} project={project} />
+          <ProjectRow key={project.id} project={project} />
         ))}
       </div>
       {hasMore && (

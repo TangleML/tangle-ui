@@ -3,14 +3,16 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { InlineStack } from "@/components/ui/layout";
 import { Paragraph } from "@/components/ui/typography";
+import { cn } from "@/lib/utils";
 
 interface TagListProps {
   tags: string[];
+  wrap?: "wrap" | "nowrap";
 }
 
 const MAX_VISIBLE_TAGS = 3;
 
-export const TagList = ({ tags }: TagListProps) => {
+export const TagList = ({ tags, wrap = "wrap" }: TagListProps) => {
   const [showAllTags, setShowAllTags] = useState(false);
 
   const hasMoreTags = tags.length > MAX_VISIBLE_TAGS;
@@ -25,7 +27,11 @@ export const TagList = ({ tags }: TagListProps) => {
   }
 
   return (
-    <InlineStack gap="2" wrap="wrap">
+    <InlineStack
+      gap="2"
+      wrap={wrap}
+      className={cn(wrap === "nowrap" && "h-6 overflow-x-auto")}
+    >
       {visibleTags.map((tag) => (
         <Badge key={tag} shape="rounded" variant="secondary" size="sm">
           {tag}

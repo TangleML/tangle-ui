@@ -120,11 +120,11 @@ describe("Tangent ProjectHeader", () => {
   });
 
   /** Pinning is the only thing that keeps a shared project reachable. */
-  it("offers to pin the project from inside it", () => {
+  it("offers to favorite the project from inside it", () => {
     renderHeader();
 
     expect(
-      screen.getByRole("button", { name: "Pin Churn model" }),
+      screen.getByRole("button", { name: "Add Churn model to favorites" }),
     ).toBeInTheDocument();
   });
 

@@ -1,68 +1,13 @@
-import { Link } from "@tanstack/react-router";
-
-import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
-import { BlockStack, InlineStack } from "@/components/ui/layout";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Paragraph, Text } from "@/components/ui/typography";
-import {
-  type FavoriteItem,
-  type FavoriteType,
-  useFavorites,
-} from "@/hooks/useFavorites";
+import { BlockStack } from "@/components/ui/layout";
+import { Paragraph } from "@/components/ui/typography";
+import { type FavoriteType, useFavorites } from "@/hooks/useFavorites";
 import { APP_ROUTES } from "@/routes/router";
-import { tracking } from "@/utils/tracking";
 
+import { SavedItemRow } from "./SavedItemRow";
 import { SectionHeader } from "./SectionHeader";
-import { getFavoriteUrl, TypePill } from "./TypePill";
 import { useListedItems } from "./useListedItems";
 
 const PREVIEW_COUNT = 5;
-
-const FavoritePreviewRow = ({
-  item,
-  onRemove,
-  trackingId,
-}: {
-  item: FavoriteItem;
-  onRemove: () => void;
-  trackingId: string;
-}) => (
-  <InlineStack gap="2" className="min-w-0 overflow-hidden">
-    <Link
-      to={getFavoriteUrl(item)}
-      {...tracking(trackingId)}
-      className="group flex w-full items-center gap-3 px-4 py-3 hover:bg-muted/50 no-underline"
-    >
-      <TypePill type={item.type} id={item.id} />
-      <Tooltip>
-        <TooltipTrigger className="flex-1 min-w-0 overflow-hidden text-left">
-          <Text size="sm" className="truncate block">
-            {item.name}
-          </Text>
-        </TooltipTrigger>
-        <TooltipContent>{item.name}</TooltipContent>
-      </Tooltip>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          onRemove();
-        }}
-        className="shrink-0 size-5 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground"
-        aria-label="Remove from favorites"
-      >
-        <Icon name="X" size="sm" />
-      </Button>
-    </Link>
-  </InlineStack>
-);
 
 interface FavoritesPreviewProps {
   title?: string;
@@ -75,7 +20,7 @@ interface FavoritesPreviewProps {
 export const FavoritesPreview = ({
   title = "Favorites",
   typeFilter,
-  emptyMessage = "No favorites yet. Star a pipeline or run to pin it here.",
+  emptyMessage = "No favorites yet. Star a pipeline, run, or project to keep it here.",
   hideWhenEmpty = false,
   trackingId = "homepage.favorites.item",
 }: FavoritesPreviewProps) => {
@@ -104,7 +49,7 @@ export const FavoritesPreview = ({
           </div>
         ) : (
           preview.map((item) => (
-            <FavoritePreviewRow
+            <SavedItemRow
               key={`${item.type}-${item.id}`}
               item={item}
               onRemove={() => removeFavorite(item.type, item.id)}
