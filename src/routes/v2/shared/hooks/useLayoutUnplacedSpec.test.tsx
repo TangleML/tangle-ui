@@ -26,6 +26,7 @@ const getNodes = () => [
 ];
 const getEdges = () => [];
 vi.mock("@xyflow/react", () => ({
+  SelectionMode: { Full: "full" },
   useNodesInitialized: () => initialized,
   useReactFlow: () => ({ getNodes, getEdges, fitView }),
 }));
