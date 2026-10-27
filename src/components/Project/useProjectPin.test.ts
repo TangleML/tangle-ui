@@ -46,7 +46,10 @@ describe("useProjectPin", () => {
 
     await act(() => result.current.togglePin());
 
-    expect(notify).toHaveBeenCalledWith("Project pinned", "success");
+    expect(notify).toHaveBeenCalledWith(
+      "Project added to favorites",
+      "success",
+    );
   });
 
   it("says so when the store refuses the pin", async () => {
@@ -58,7 +61,10 @@ describe("useProjectPin", () => {
 
     await act(() => result.current.togglePin());
 
-    expect(notify).toHaveBeenCalledWith("Could not pin the project", "error");
+    expect(notify).toHaveBeenCalledWith(
+      "Could not add the project to favorites",
+      "error",
+    );
     put.mockRestore();
   });
 
