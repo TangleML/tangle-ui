@@ -1,5 +1,5 @@
 import { Link, useParams } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { InfoBox } from "@/components/shared/InfoBox";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
 import { useTrackRecentlyViewedProject } from "@/hooks/useTrackRecentlyViewedProject";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useBackend } from "@/providers/BackendProvider";
 import { DialogProvider } from "@/providers/DialogProvider/DialogProvider";
 import { APP_ROUTES } from "@/routes/appRoutes";
@@ -63,7 +64,21 @@ function ProjectDetail({ projectId }: { projectId: string | undefined }) {
     null,
   );
   const { data: project, isPending, error } = useProject(projectId);
+  const { track } = useAnalytics();
+  const impression = useRef({ projectId, tracked: false });
   useTrackRecentlyViewedProject(projectId);
+
+  const loadedProjectId = !isPending && !error ? project?.id : undefined;
+
+  useEffect(() => {
+    if (impression.current.projectId !== projectId) {
+      impression.current = { projectId, tracked: false };
+    }
+
+    if (!loadedProjectId || impression.current.tracked) return;
+    impression.current.tracked = true;
+    track("projects.project_page.impression", { project_id: loadedProjectId });
+  }, [loadedProjectId, projectId, track]);
 
   if (isPending) {
     return <LoadingProject />;

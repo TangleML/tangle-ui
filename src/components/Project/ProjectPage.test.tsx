@@ -1,19 +1,25 @@
-import { render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useParams } from "@tanstack/react-router";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useBackend } from "@/providers/BackendProvider";
 import { ProjectsApiError } from "@/services/projects/errors";
+import * as projectsService from "@/services/projects/projectsService";
 import type { Project } from "@/services/projects/types";
+import { ProjectsQueryKeys } from "@/services/projects/types";
 import { useProject } from "@/services/projects/useProjects";
 
 import { ProjectPage } from "./ProjectPage";
+
+const track = vi.hoisted(() => vi.fn());
 
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@tanstack/react-router")>()),
   Link: ({ children }: { children: ReactNode }) => <a>{children}</a>,
   useNavigate: () => vi.fn(),
-  useParams: () => ({ projectId: "project-1" }),
+  useParams: vi.fn(),
   useSearch: () => ({}),
 }));
 
@@ -71,7 +77,7 @@ vi.mock("@/services/projects/useProjectInstructions", () => ({
 }));
 
 vi.mock("@/providers/AnalyticsProvider", () => ({
-  useAnalytics: () => ({ track: vi.fn() }),
+  useAnalytics: () => ({ track }),
 }));
 
 vi.mock("@/utils/string", () => ({
@@ -122,19 +128,129 @@ describe("ProjectPage", () => {
   beforeEach(() => {
     Element.prototype.scrollIntoView = vi.fn();
     Element.prototype.hasPointerCapture = vi.fn();
+    vi.mocked(useParams).mockReturnValue({ projectId: "project-1" });
     mockBackend();
     mockProject();
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.resetAllMocks();
   });
 
-  it("shows the project it was asked for", () => {
-    render(<ProjectPage />);
+  it("shows the requested project and tracks its visit once in Strict Mode", () => {
+    render(<ProjectPage />, { reactStrictMode: true });
 
     expect(useProject).toHaveBeenCalledWith("project-1");
     expect(screen.getByText("Churn model")).toBeInTheDocument();
+    expect(track).toHaveBeenCalledExactlyOnceWith(
+      "projects.project_page.impression",
+      { project_id: "project-1" },
+    );
+  });
+
+  it("tracks one visit through metadata updates and failed refetches", async () => {
+    const { useProject: useRealProject } = await vi.importActual<
+      typeof import("@/services/projects/useProjects")
+    >("@/services/projects/useProjects");
+    vi.mocked(useProject).mockImplementation(useRealProject);
+    const getProject = vi
+      .spyOn(projectsService, "getProject")
+      .mockResolvedValue(project);
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retryDelay: 0 } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ProjectPage />
+      </QueryClientProvider>,
+    );
+    expect(track).not.toHaveBeenCalled();
+
+    await waitFor(() =>
+      expect(track).toHaveBeenCalledExactlyOnceWith(
+        "projects.project_page.impression",
+        { project_id: "project-1" },
+      ),
+    );
+
+    act(() => {
+      queryClient.setQueryData(ProjectsQueryKeys.Id(project.id), {
+        ...project,
+        name: "Renamed project",
+      });
+    });
+    expect(await screen.findByText("Renamed project")).toBeInTheDocument();
+    expect(track).toHaveBeenCalledTimes(1);
+
+    getProject.mockRejectedValue(
+      new ProjectsApiError("Temporary backend failure", 500),
+    );
+    await act(async () => {
+      await queryClient.refetchQueries({
+        queryKey: ProjectsQueryKeys.Id(project.id),
+        exact: true,
+      });
+    });
+    expect(
+      await screen.findByText("Error loading project"),
+    ).toBeInTheDocument();
+    expect(track).toHaveBeenCalledTimes(1);
+
+    getProject.mockResolvedValue(project);
+    await act(async () => {
+      await queryClient.refetchQueries({
+        queryKey: ProjectsQueryKeys.Id(project.id),
+        exact: true,
+      });
+    });
+    expect(await screen.findByText("Churn model")).toBeInTheDocument();
+    expect(track).toHaveBeenCalledTimes(1);
+    queryClient.clear();
+  });
+
+  it("tracks a new visit when navigating to another project", () => {
+    const { rerender } = render(<ProjectPage />);
+
+    vi.mocked(useParams).mockReturnValue({ projectId: "project-2" });
+    mockProject({ data: { ...project, id: "project-2" } });
+    rerender(<ProjectPage />);
+
+    expect(track).toHaveBeenCalledTimes(2);
+    expect(track).toHaveBeenLastCalledWith("projects.project_page.impression", {
+      project_id: "project-2",
+    });
+
+    vi.mocked(useParams).mockReturnValue({ projectId: "project-1" });
+    mockProject();
+    rerender(<ProjectPage />);
+
+    expect(track).toHaveBeenCalledTimes(3);
+    expect(track).toHaveBeenLastCalledWith("projects.project_page.impression", {
+      project_id: "project-1",
+    });
+  });
+
+  it("tracks a return visit after another project fails to load", () => {
+    const { rerender } = render(<ProjectPage />);
+
+    vi.mocked(useParams).mockReturnValue({ projectId: "project-2" });
+    mockProject({
+      data: undefined,
+      error: new ProjectsApiError("Temporary backend failure", 500),
+    });
+    rerender(<ProjectPage />);
+    expect(track).toHaveBeenCalledTimes(1);
+
+    vi.mocked(useParams).mockReturnValue({ projectId: "project-1" });
+    mockProject();
+    rerender(<ProjectPage />);
+
+    expect(track).toHaveBeenCalledTimes(2);
+    expect(track).toHaveBeenLastCalledWith("projects.project_page.impression", {
+      project_id: "project-1",
+    });
   });
 
   it("puts the project's resources, preview, runs and details on one page", () => {
@@ -172,6 +288,7 @@ describe("ProjectPage", () => {
 
     expect(screen.getByText(/Loading/)).toBeInTheDocument();
     expect(useProject).not.toHaveBeenCalled();
+    expect(track).not.toHaveBeenCalled();
   });
 
   it("asks for a backend when none is configured", () => {
@@ -179,6 +296,7 @@ describe("ProjectPage", () => {
     render(<ProjectPage />);
 
     expect(screen.getByText("Backend not configured")).toBeInTheDocument();
+    expect(track).not.toHaveBeenCalled();
   });
 
   it("says when the configured backend cannot be reached", () => {
@@ -186,6 +304,7 @@ describe("ProjectPage", () => {
     render(<ProjectPage />);
 
     expect(screen.getByText("Backend not available")).toBeInTheDocument();
+    expect(track).not.toHaveBeenCalled();
   });
 
   it("waits on the project rather than showing an empty page", () => {
@@ -203,6 +322,7 @@ describe("ProjectPage", () => {
     render(<ProjectPage />);
 
     expect(screen.getByText("Project not found")).toBeInTheDocument();
+    expect(track).not.toHaveBeenCalled();
     expect(
       screen.getByText("This project does not exist, or it has been deleted."),
     ).toBeInTheDocument();
@@ -217,6 +337,7 @@ describe("ProjectPage", () => {
     render(<ProjectPage />);
 
     expect(screen.getByText("Error loading project")).toBeInTheDocument();
+    expect(track).not.toHaveBeenCalled();
     expect(screen.getByText("backend exploded")).toBeInTheDocument();
     expect(screen.queryByText("Project not found")).toBeNull();
   });
