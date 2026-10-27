@@ -17,6 +17,12 @@ vi.mock("@tanstack/react-router", async (importOriginal) => ({
   ),
 }));
 
+vi.mock("@/components/Project/ProjectWorkspaceLabel", () => ({
+  ProjectWorkspaceLabel: ({ project }: { project: Project }) => (
+    <span data-testid="workspace-label">{project.id}</span>
+  ),
+}));
+
 const project: Project = {
   id: "project-1",
   workspaceId: "workspace-1",
@@ -42,9 +48,11 @@ describe("ProjectHeader", () => {
     ).toHaveAttribute("href", "/projects");
   });
 
-  it("never names the workspace a project sits in", () => {
+  it("shows the project's workspace label", () => {
     render(<ProjectHeader project={project} />);
 
-    expect(screen.queryByText(/workspace/i)).toBeNull();
+    expect(screen.getByTestId("workspace-label")).toHaveTextContent(
+      "project-1",
+    );
   });
 });
