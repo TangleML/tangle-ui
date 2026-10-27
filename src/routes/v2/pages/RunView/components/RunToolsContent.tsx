@@ -30,7 +30,6 @@ export const RunToolsContent = observer(function RunToolsContent({
     isRunCreator,
     isInProgress,
     isComplete,
-    pipelineName,
     inspectPath,
   } = actions;
 
@@ -62,7 +61,6 @@ export const RunToolsContent = observer(function RunToolsContent({
 
           {canAccessEditorSpec && inspectPath && (
             <InspectPipelineButton
-              pipelineName={pipelineName}
               inspectPath={inspectPath}
               displayLabel={isRail ? undefined : "Inspect pipeline"}
               aria-label="Inspect pipeline"

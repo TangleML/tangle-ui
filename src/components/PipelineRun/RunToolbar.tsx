@@ -5,17 +5,14 @@ import { useUserDetails } from "@/hooks/useUserDetails";
 import { cn } from "@/lib/utils";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
-import {
-  getDefaultEditorPath,
-  getDefaultRemoteEditorPath,
-} from "@/routes/editorRoutes";
+import { getDefaultEditorPath } from "@/routes/editorRoutes";
 import { extractCanonicalName } from "@/utils/canonicalPipelineName";
 import {
   countInProgressFromStats,
   flattenExecutionStatusStats,
   isExecutionComplete,
 } from "@/utils/executionStatus";
-import { remotePipelineIdFromRunAnnotations } from "@/utils/remotePipelineRunAnnotations";
+import { resolvePipelineInspectPath } from "@/utils/remotePipelineRunAnnotations";
 
 import { ViewYamlButton } from "../shared/Buttons/ViewYamlButton";
 import { buildTaskSpecShape } from "../shared/PipelineRunNameTemplate/types";
@@ -34,8 +31,9 @@ export const RunToolbar = () => {
   } = useExecutionData();
   const { data: currentUserDetails } = useUserDetails();
 
-  const remotePipelineId = remotePipelineIdFromRunAnnotations(
+  const remoteInspectPath = resolvePipelineInspectPath(
     metadata?.annotations,
+    undefined,
   );
 
   const editorRoute = componentSpec.name
@@ -68,11 +66,10 @@ export const RunToolbar = () => {
       buildTaskSpecShape(details?.task_spec, componentSpec),
     ) ?? componentSpec.name;
 
-  const inspectPath = remotePipelineId
-    ? getDefaultRemoteEditorPath(remotePipelineId)
-    : pipelineName
-      ? getDefaultEditorPath(pipelineName)
-      : undefined;
+  const inspectPath = resolvePipelineInspectPath(
+    metadata?.annotations,
+    pipelineName,
+  );
 
   return (
     <InlineStack
@@ -87,12 +84,8 @@ export const RunToolbar = () => {
       )}
       <ViewYamlButton componentSpec={componentSpec} displayLabel="View" />
 
-      {(remotePipelineId || canAccessEditorSpec) && inspectPath && (
-        <InspectPipelineButton
-          pipelineName={pipelineName}
-          inspectPath={inspectPath}
-          showLabel
-        />
+      {(remoteInspectPath || canAccessEditorSpec) && inspectPath && (
+        <InspectPipelineButton inspectPath={inspectPath} showLabel />
       )}
 
       <ClonePipelineButton

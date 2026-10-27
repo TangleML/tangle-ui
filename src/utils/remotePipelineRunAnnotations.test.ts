@@ -4,7 +4,10 @@ import {
   LEGACY_REMOTE_PIPELINE_ID_ANNOTATION,
   REMOTE_PIPELINE_ID_ANNOTATION,
 } from "./annotationKeys";
-import { remotePipelineIdFromRunAnnotations } from "./remotePipelineRunAnnotations";
+import {
+  remotePipelineIdFromRunAnnotations,
+  resolvePipelineInspectPath,
+} from "./remotePipelineRunAnnotations";
 
 describe("remotePipelineIdFromRunAnnotations", () => {
   it("reads the backend pipeline id annotation", () => {
@@ -31,5 +34,26 @@ describe("remotePipelineIdFromRunAnnotations", () => {
         [LEGACY_REMOTE_PIPELINE_ID_ANNOTATION]: " ",
       }),
     ).toBeUndefined();
+  });
+});
+
+describe("resolvePipelineInspectPath", () => {
+  it("prefers the remote pipeline editor path when annotations identify one", () => {
+    expect(
+      resolvePipelineInspectPath(
+        { [REMOTE_PIPELINE_ID_ANNOTATION]: "remote-id" },
+        "Local Name",
+      ),
+    ).toBe("/editor/pipeline/remote-id");
+  });
+
+  it("falls back to the named local pipeline path", () => {
+    expect(resolvePipelineInspectPath({}, "Local Name")).toBe(
+      "/editor/Local%20Name",
+    );
+  });
+
+  it("returns nothing without a remote id or pipeline name", () => {
+    expect(resolvePipelineInspectPath({}, undefined)).toBeUndefined();
   });
 });

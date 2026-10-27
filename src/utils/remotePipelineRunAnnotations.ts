@@ -1,4 +1,9 @@
 import {
+  getDefaultEditorPath,
+  getDefaultRemoteEditorPath,
+} from "@/routes/editorRoutes";
+
+import {
   LEGACY_REMOTE_PIPELINE_ID_ANNOTATION,
   REMOTE_PIPELINE_ID_ANNOTATION,
 } from "./annotationKeys";
@@ -16,4 +21,13 @@ export function remotePipelineIdFromRunAnnotations(
     stringAnnotation(annotations[REMOTE_PIPELINE_ID_ANNOTATION]) ??
     stringAnnotation(annotations[LEGACY_REMOTE_PIPELINE_ID_ANNOTATION])
   );
+}
+
+export function resolvePipelineInspectPath(
+  annotations: Record<string, unknown> | null | undefined,
+  pipelineName: string | null | undefined,
+): string | undefined {
+  const remotePipelineId = remotePipelineIdFromRunAnnotations(annotations);
+  if (remotePipelineId) return getDefaultRemoteEditorPath(remotePipelineId);
+  return pipelineName ? getDefaultEditorPath(pipelineName) : undefined;
 }
