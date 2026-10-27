@@ -32,18 +32,22 @@ const isMac =
   /Mac|iPhone|iPad/.test(navigator.platform);
 /**
  * Returns a platform-aware display string for a shortcut.
- * On macOS uses symbols; on other platforms uses "Ctrl+".
+ * On macOS uses symbols; on other platforms CMDALT is Alt because the
+ * shortcut listener maps Alt, not Ctrl, to that modifier.
  */
-function formatShortcut(keys: KeyConstant[]): string {
+export function formatShortcut(
+  keys: KeyConstant[],
+  platformIsMac = isMac,
+): string {
   const parts: string[] = [];
 
   for (const key of keys) {
     switch (key) {
       case CMDALT:
-        parts.push(isMac ? "\u2318" : "Ctrl");
+        parts.push(platformIsMac ? "\u2318" : "Alt");
         break;
       case SHIFT:
-        parts.push(isMac ? "\u21E7" : "Shift");
+        parts.push(platformIsMac ? "\u21E7" : "Shift");
         break;
       default: {
         const label = key.length === 1 ? key.toUpperCase() : key;
@@ -52,5 +56,5 @@ function formatShortcut(keys: KeyConstant[]): string {
     }
   }
 
-  return isMac ? parts.join(" ") : parts.join("+");
+  return platformIsMac ? parts.join(" ") : parts.join("+");
 }

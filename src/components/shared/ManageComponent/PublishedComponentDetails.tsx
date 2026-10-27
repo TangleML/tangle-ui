@@ -3,8 +3,11 @@ import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
+import { useUpgradeComponentsWindow } from "@/routes/v2/pages/Editor/components/UpgradeComponents/useUpgradeComponentsWindow";
+import { useOptionalWindowContext } from "@/routes/v2/shared/windows/ContentWindowStateContext";
 import type { HydratedComponentReference } from "@/utils/componentSpec";
 
+import { useDialogContext } from "../Dialogs/dialog.context";
 import { withSuspenseWrapper } from "../SuspenseWrapper";
 import { ComponentUsageCount } from "./ComponentUsageCount";
 import { useForceUpdateTasks } from "./hooks/useForceUpdateTasks";
@@ -25,6 +28,38 @@ function PublishedComponentDetailsSkeleton() {
         Looking for updates...
       </Text>
     </InlineStack>
+  );
+}
+
+function ReviewTasksButton({ onLegacyReview }: { onLegacyReview: () => void }) {
+  const windowCtx = useOptionalWindowContext();
+
+  if (windowCtx) {
+    return <ReviewTasksV2Button />;
+  }
+
+  return (
+    <Button variant="secondary" size="xs" onClick={onLegacyReview}>
+      Review tasks
+    </Button>
+  );
+}
+
+function ReviewTasksV2Button() {
+  const dialogContext = useDialogContext();
+  const openUpgradeComponentsWindow = useUpgradeComponentsWindow();
+
+  return (
+    <Button
+      variant="secondary"
+      size="xs"
+      onClick={() => {
+        dialogContext?.close();
+        openUpgradeComponentsWindow();
+      }}
+    >
+      Review tasks
+    </Button>
   );
 }
 
@@ -86,9 +121,7 @@ function PublishedComponentDetailsContent({
                 There is a newer version of this component available.
               </Paragraph>
               {!readOnly && (
-                <Button variant="secondary" size="xs" onClick={onUpdateTasks}>
-                  Review tasks
-                </Button>
+                <ReviewTasksButton onLegacyReview={onUpdateTasks} />
               )}
             </InlineStack>
           )}
