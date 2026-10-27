@@ -1,5 +1,6 @@
 import type { ArtifactNodeResponse } from "@/api/types.gen";
 import { CopyText } from "@/components/shared/CopyText/CopyText";
+import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { formatBytes } from "@/utils/string";
@@ -19,9 +20,10 @@ interface IOCellProps {
   name: string;
   type?: string;
   artifact: ArtifactNodeResponse | null | undefined;
+  secretName?: string | null;
 }
 
-const IOCell = ({ name, type, artifact }: IOCellProps) => {
+const IOCell = ({ name, type, artifact, secretName }: IOCellProps) => {
   const artifactData = artifact?.artifact_data;
   const inlineValue = artifactData?.value;
   const hasInlineValue = canShowInlineValue(inlineValue);
@@ -120,7 +122,27 @@ const IOCell = ({ name, type, artifact }: IOCellProps) => {
         </InlineStack>
       )}
 
-      {!hasDetails && (
+      {secretName && (
+        <InlineStack
+          gap="1"
+          blockAlign="center"
+          wrap="nowrap"
+          data-testid="secret-input"
+        >
+          <Icon
+            name="Lock"
+            size="xs"
+            className="shrink-0 text-amber-600"
+            aria-hidden="true"
+          />
+          <Text size="xs" className="break-all text-amber-600">
+            <span className="sr-only">Secret: </span>
+            {secretName}
+          </Text>
+        </InlineStack>
+      )}
+
+      {!hasDetails && !secretName && (
         <Text size="xs" tone="subdued">
           No data available
         </Text>

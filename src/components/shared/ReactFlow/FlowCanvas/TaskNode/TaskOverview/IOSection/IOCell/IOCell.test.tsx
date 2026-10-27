@@ -259,6 +259,27 @@ describe("IOCell", () => {
     expect(screen.queryByTestId("artifact-visualizer")).not.toBeInTheDocument();
   });
 
+  it("says there is no data for an input with no artifact", () => {
+    renderWithQuery(<IOCell name="input" artifact={null} />);
+    expect(screen.getByText("No data available")).toBeInTheDocument();
+  });
+
+  it("names the secret a secret input was given instead of its missing data", () => {
+    renderWithQuery(
+      <IOCell
+        name="api_token"
+        type="String"
+        artifact={null}
+        secretName="Test"
+      />,
+    );
+
+    expect(screen.getByTestId("secret-input")).toHaveTextContent(
+      "Secret: Test",
+    );
+    expect(screen.queryByText("No data available")).not.toBeInTheDocument();
+  });
+
   const OVER_LIMIT_BYTES = 60 * 1024 * 1024; // > 50 MB
 
   it("hides the preview for large fully-downloaded artifacts (> 50 MB)", () => {

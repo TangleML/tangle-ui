@@ -96,7 +96,14 @@ export const RunViewTaskDetails = observer(function RunViewTaskDetails({
 
   const componentRef = task.resolvedComponentRef;
 
-  const taskSpecForIO = { componentRef } as TaskSpec;
+  const taskSpecForIO = {
+    componentRef,
+    arguments: Object.fromEntries(
+      task.arguments.flatMap((argument) =>
+        argument.value === undefined ? [] : [[argument.name, argument.value]],
+      ),
+    ),
+  } as TaskSpec;
 
   const openLogsInNewTabAction = executionId ? (
     <OpenLogsInNewWindowLink
