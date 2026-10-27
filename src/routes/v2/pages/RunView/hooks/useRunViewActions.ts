@@ -8,7 +8,10 @@ import { useCheckComponentSpecFromPath } from "@/hooks/useCheckComponentSpecFrom
 import { useUserDetails } from "@/hooks/useUserDetails";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
-import { getDefaultEditorPath } from "@/routes/editorRoutes";
+import {
+  getDefaultEditorPath,
+  getDefaultRemoteEditorPath,
+} from "@/routes/editorRoutes";
 import { extractCanonicalName } from "@/utils/canonicalPipelineName";
 import type { ComponentSpec } from "@/utils/componentSpec";
 import {
@@ -16,12 +19,14 @@ import {
   flattenExecutionStatusStats,
   isExecutionComplete,
 } from "@/utils/executionStatus";
+import { remotePipelineIdFromRunAnnotations } from "@/utils/remotePipelineRunAnnotations";
 
 interface RunViewActionsReady {
   ready: true;
   componentSpec: ComponentSpec;
   runId: string | null | undefined;
   canAccessEditorSpec: boolean;
+  inspectPath: string | undefined;
   isRunCreator: boolean | "" | undefined;
   isInProgress: boolean;
   isComplete: boolean;
@@ -41,7 +46,8 @@ function resolveActions(
   metadata: PipelineRunResponse | undefined,
   details: GetExecutionInfoResponse | undefined,
   currentUserId: string | undefined,
-  canAccessEditorSpec: boolean,
+  canAccessLocalEditorSpec: boolean,
+  remotePipelineId: string | undefined,
 ): RunViewActionsReady {
   const isRunCreator =
     !!currentUserId && metadata?.created_by === currentUserId;
@@ -58,11 +64,18 @@ function resolveActions(
       buildTaskSpecShape(details?.task_spec, componentSpec),
     ) ?? componentSpec.name;
 
+  const inspectPath = remotePipelineId
+    ? getDefaultRemoteEditorPath(remotePipelineId)
+    : pipelineName
+      ? getDefaultEditorPath(pipelineName)
+      : undefined;
+
   return {
     ready: true,
     componentSpec,
     runId,
-    canAccessEditorSpec,
+    canAccessEditorSpec: Boolean(remotePipelineId) || canAccessLocalEditorSpec,
+    inspectPath,
     isRunCreator,
     isInProgress,
     isComplete,
@@ -79,6 +92,9 @@ export function useRunViewActions(): RunViewActions {
     rootDetails: details,
   } = useExecutionData();
   const { data: currentUserDetails } = useUserDetails();
+  const remotePipelineId = remotePipelineIdFromRunAnnotations(
+    metadata?.annotations,
+  );
 
   const editorRoute = componentSpec?.name
     ? getDefaultEditorPath(componentSpec.name)
@@ -101,5 +117,6 @@ export function useRunViewActions(): RunViewActions {
     details,
     currentUserDetails?.id,
     canAccessEditorSpec,
+    remotePipelineId,
   );
 }

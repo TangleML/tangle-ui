@@ -181,6 +181,21 @@ describe("<RunToolbar/>", () => {
         expect(inspect).not.toBeInTheDocument();
       });
     });
+
+    test("should render inspect button for a remote-only pipeline", async () => {
+      vi.mocked(useCheckComponentSpecFromPath).mockReturnValue(false);
+      queryClient.setQueryData(["pipeline-run-metadata", "123"], {
+        ...mockPipelineRun,
+        annotations: { "system/pipeline.id": "remote-pipeline-id" },
+      });
+
+      renderWithProviders(<RunToolbar />);
+
+      await waitFor(() => {
+        const inspect = screen.getByTestId("inspect-pipeline-button");
+        expect(inspect).toBeInTheDocument();
+      });
+    });
   });
 
   describe("Clone Pipeline Button", () => {

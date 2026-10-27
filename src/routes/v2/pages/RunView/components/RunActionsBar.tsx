@@ -36,6 +36,7 @@ export function RunActionsBar({
   const componentSpec = actions.ready ? actions.componentSpec : undefined;
   const runId = actions.ready ? actions.runId : undefined;
   const pipelineName = actions.ready ? actions.pipelineName : undefined;
+  const inspectPath = actions.ready ? actions.inspectPath : undefined;
 
   const { yamlViewerOpen, openYamlViewer, closeYamlViewer } = useYamlViewer();
   const { clone, isCloning } = useClonePipelineRun(componentSpec, runId);
@@ -47,7 +48,7 @@ export function RunActionsBar({
     confirmCancel,
     dismissCancel,
   } = useCancelPipelineRun(runId);
-  const { inspect } = useInspectPipeline(pipelineName);
+  const { inspect } = useInspectPipeline(inspectPath);
   const { exportYaml } = useExportPipelineYaml(componentSpec, pipelineName);
 
   const status = (
@@ -106,7 +107,7 @@ export function RunActionsBar({
             </DropdownMenuTrigger>
 
             <DropdownMenuContent align="end">
-              {canAccessEditorSpec && pipelineName && (
+              {canAccessEditorSpec && inspectPath && (
                 <DropdownMenuItem
                   onSelect={inspect}
                   {...tracking("v2.run_view.menu_bar.inspect_pipeline")}

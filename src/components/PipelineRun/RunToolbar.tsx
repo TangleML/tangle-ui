@@ -5,13 +5,17 @@ import { useUserDetails } from "@/hooks/useUserDetails";
 import { cn } from "@/lib/utils";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
-import { getDefaultEditorPath } from "@/routes/editorRoutes";
+import {
+  getDefaultEditorPath,
+  getDefaultRemoteEditorPath,
+} from "@/routes/editorRoutes";
 import { extractCanonicalName } from "@/utils/canonicalPipelineName";
 import {
   countInProgressFromStats,
   flattenExecutionStatusStats,
   isExecutionComplete,
 } from "@/utils/executionStatus";
+import { remotePipelineIdFromRunAnnotations } from "@/utils/remotePipelineRunAnnotations";
 
 import { ViewYamlButton } from "../shared/Buttons/ViewYamlButton";
 import { buildTaskSpecShape } from "../shared/PipelineRunNameTemplate/types";
@@ -29,6 +33,10 @@ export const RunToolbar = () => {
     rootDetails: details,
   } = useExecutionData();
   const { data: currentUserDetails } = useUserDetails();
+
+  const remotePipelineId = remotePipelineIdFromRunAnnotations(
+    metadata?.annotations,
+  );
 
   const editorRoute = componentSpec.name
     ? getDefaultEditorPath(componentSpec.name)
@@ -60,6 +68,12 @@ export const RunToolbar = () => {
       buildTaskSpecShape(details?.task_spec, componentSpec),
     ) ?? componentSpec.name;
 
+  const inspectPath = remotePipelineId
+    ? getDefaultRemoteEditorPath(remotePipelineId)
+    : pipelineName
+      ? getDefaultEditorPath(pipelineName)
+      : undefined;
+
   return (
     <InlineStack
       gap="2"
@@ -73,8 +87,12 @@ export const RunToolbar = () => {
       )}
       <ViewYamlButton componentSpec={componentSpec} displayLabel="View" />
 
-      {canAccessEditorSpec && pipelineName && (
-        <InspectPipelineButton pipelineName={pipelineName} showLabel />
+      {(remotePipelineId || canAccessEditorSpec) && inspectPath && (
+        <InspectPipelineButton
+          pipelineName={pipelineName}
+          inspectPath={inspectPath}
+          showLabel
+        />
       )}
 
       <ClonePipelineButton
