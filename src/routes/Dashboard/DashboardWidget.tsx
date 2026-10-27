@@ -1,8 +1,17 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 
 import { RunTable } from "@/components/Home/RunSection/RunTable";
+import { CopyText } from "@/components/shared/CopyText/CopyText";
 import { FavoriteToggle } from "@/components/shared/FavoriteToggle";
 import { Icon } from "@/components/ui/icon";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { useFavorites } from "@/hooks/useFavorites";
 import { usePipelineRunList } from "@/hooks/usePipelineRunList";
 import { useRecentlyUsed, useRecentlyViewed } from "@/hooks/useRecentlyViewed";
@@ -11,7 +20,8 @@ import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useBackend } from "@/providers/BackendProvider";
 import { useLocalPipelineNames } from "@/services/localPipelines/useLocalPipelines";
 import { remotePipelinesEnabled } from "@/services/pipelineStorage/pipelineCreation";
-import { formatRelativeTime } from "@/utils/date";
+import { formatDate } from "@/utils/date";
+import { hasNewTabModifier } from "@/utils/dom";
 import { filtersToFilterQuery } from "@/utils/pipelineRunFilterUtils";
 
 import {
@@ -129,6 +139,7 @@ function RunsPreview(props: DashboardWidgetProps) {
 }
 
 function PipelinesPreview(props: DashboardWidgetProps) {
+  const navigate = useNavigate();
   const { backendUrl, configured, available, ready } = useBackend();
   const local = useLocalPipelineNames();
   const remoteEnabled = remotePipelinesEnabled() && configured;
@@ -144,16 +155,20 @@ function PipelinesPreview(props: DashboardWidgetProps) {
         type: "remote-pipeline" as const,
         id: pipeline.id,
         name: pipeline.pipeline_name ?? pipeline.file_path,
+        created: pipeline.created_at,
         updated: pipeline.updated_at,
         author: pipeline.user_id,
+        version: pipeline.current_version,
       }),
     ),
     ...(local.data ?? []).map((name) => ({
       type: "pipeline" as const,
       id: name,
       name,
+      created: undefined,
       updated: undefined,
       author: undefined,
+      version: undefined,
     })),
   ].slice(0, 5);
   return (
@@ -165,45 +180,113 @@ function PipelinesPreview(props: DashboardWidgetProps) {
       }
       error={local.error?.message ?? remote.error?.message}
     >
-      <div className="divide-y divide-border overflow-hidden rounded-lg border border-border">
-        {items.map((item) => (
-          <div
-            key={`${item.type}-${item.id}`}
-            className="flex min-w-0 items-center hover:bg-muted/50"
-          >
-            <Link
-              to={getRecentlyViewedUrl(item)}
-              className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3 no-underline"
+      <Table
+        aria-label="My Pipelines"
+        className="table-fixed"
+        containerClassName="overflow-hidden rounded-lg border border-border"
+      >
+        <TableHeader className="bg-muted/20 [&_th]:px-4">
+          <TableRow className="text-xs">
+            <TableHead className="w-full @[36rem]/dashboard-section:w-2/3 @[52rem]/dashboard-section:w-1/4">
+              Name
+            </TableHead>
+            <TableHead className="hidden w-[12%] @[52rem]/dashboard-section:table-cell">
+              ID
+            </TableHead>
+            <TableHead className="hidden w-[18%] @[52rem]/dashboard-section:table-cell">
+              User
+            </TableHead>
+            <TableHead className="hidden w-[15%] @[52rem]/dashboard-section:table-cell">
+              Created at
+            </TableHead>
+            <TableHead className="hidden w-1/3 @[36rem]/dashboard-section:table-cell @[52rem]/dashboard-section:w-[15%]">
+              Updated at
+            </TableHead>
+            <TableHead className="hidden w-[15%] @[52rem]/dashboard-section:table-cell">
+              Current version
+            </TableHead>
+            <TableHead className="hidden w-12 @[36rem]/dashboard-section:table-cell">
+              <span className="sr-only">Actions</span>
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody className="[&_td]:px-4 [&_td]:py-3">
+          {items.map((item) => (
+            <TableRow
+              key={`${item.type}-${item.id}`}
+              className="cursor-pointer text-xs"
+              onClick={(event) => {
+                const destination = getRecentlyViewedUrl(item);
+                if (hasNewTabModifier(event)) {
+                  window.open(destination, "_blank", "noopener,noreferrer");
+                } else {
+                  void navigate({ to: destination });
+                }
+              }}
             >
-              <Icon
-                name="GitBranch"
-                size="sm"
-                className="shrink-0 text-muted-foreground"
-              />
-              <span
-                className="min-w-0 flex-1 truncate text-sm"
-                title={item.name}
+              <TableCell>
+                <Link
+                  to={getRecentlyViewedUrl(item)}
+                  onClick={(event) => event.stopPropagation()}
+                  className="flex min-w-0 items-center gap-3 text-sm no-underline hover:underline"
+                >
+                  <Icon
+                    name="GitBranch"
+                    size="sm"
+                    className="shrink-0 text-muted-foreground"
+                  />
+                  <span className="truncate" title={item.name}>
+                    {item.name}
+                  </span>
+                </Link>
+              </TableCell>
+              <TableCell
+                className="hidden @[52rem]/dashboard-section:table-cell"
+                onClick={(event) => event.stopPropagation()}
               >
-                {item.name}
-              </span>
-              <span
-                className="hidden min-w-0 max-w-48 truncate text-xs text-muted-foreground @[52rem]/dashboard-section:block"
-                title={item.author}
-              >
-                {item.author}
-              </span>
-              <span className="hidden shrink-0 text-xs text-muted-foreground @[36rem]/dashboard-section:block">
-                {item.updated
-                  ? `Updated ${formatRelativeTime(new Date(item.updated))}`
-                  : "Local pipeline"}
-              </span>
-            </Link>
-            <div className="mr-3 hidden @[36rem]/dashboard-section:block">
-              <FavoriteToggle type={item.type} id={item.id} name={item.name} />
-            </div>
-          </div>
-        ))}
-      </div>
+                {item.type === "remote-pipeline" ? (
+                  <CopyText
+                    size="xs"
+                    className="truncate"
+                    copyLabel="Copy pipeline ID"
+                  >
+                    {item.id}
+                  </CopyText>
+                ) : (
+                  "—"
+                )}
+              </TableCell>
+              <TableCell className="hidden @[52rem]/dashboard-section:table-cell">
+                <span className="block truncate" title={item.author}>
+                  {item.author ?? "—"}
+                </span>
+              </TableCell>
+              <TableCell className="hidden @[52rem]/dashboard-section:table-cell">
+                <span className="block truncate" title={item.created}>
+                  {item.created ? formatDate(item.created) : "—"}
+                </span>
+              </TableCell>
+              <TableCell className="hidden @[36rem]/dashboard-section:table-cell">
+                <span className="block truncate" title={item.updated}>
+                  {item.updated ? formatDate(item.updated) : "Local pipeline"}
+                </span>
+              </TableCell>
+              <TableCell className="hidden @[52rem]/dashboard-section:table-cell">
+                <span className="block truncate" title={item.version}>
+                  {item.version ?? "—"}
+                </span>
+              </TableCell>
+              <TableCell className="hidden @[36rem]/dashboard-section:table-cell">
+                <FavoriteToggle
+                  type={item.type}
+                  id={item.id}
+                  name={item.name}
+                />
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </DashboardSectionFrame>
   );
 }
