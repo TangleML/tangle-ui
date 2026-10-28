@@ -136,7 +136,8 @@ describe("remote agent reasoning", () => {
   );
 
   it.each([
-    ["gpt-6-astra", "low", "none", "gpt-6-sol", "none"],
+    ["gpt-6-astra", "low", "none", "gpt-6.1-terra", "none"],
+    ["gpt-6.1-terra", "none", "none", "gpt-6.1-sol", "low"],
     ["custom-model", undefined, "max", "gpt-6-astra", "max"],
   ] as const)(
     "uses the original preference when %s delegates to another model",

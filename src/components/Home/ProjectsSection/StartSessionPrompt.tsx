@@ -1,8 +1,3 @@
-import type { ThinkingLevel } from "@tangent/shared/contracts.ts";
-import {
-  DEFAULT_MODEL_ID,
-  DEFAULT_THINKING_LEVEL,
-} from "@tangent/shared/contracts.ts";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
@@ -19,7 +14,11 @@ import { TANGENT_AI_REQUIRED } from "@/routes/v2/shared/components/AiChat/compon
 import { rememberLastUsedWorkspace } from "@/services/projects/defaultWorkspace";
 import { nameFromPrompt } from "@/services/projects/nameFromPrompt";
 import { provisionalNameMetadata } from "@/services/projects/provisionalName";
-import { startingSessionMetadata } from "@/services/projects/startingSession";
+import {
+  getStartingSessionModel,
+  getStartingSessionThinkingDepth,
+  startingSessionMetadata,
+} from "@/services/projects/startingSession";
 import { useCreateProject } from "@/services/projects/useProjects";
 import { useWorkspaceChoice } from "@/services/projects/useWorkspaceChoice";
 import { useWorkspaces } from "@/services/projects/useWorkspaces";
@@ -30,10 +29,6 @@ import { useMyProjects } from "./useMyProjects";
 
 export function StartSessionPrompt() {
   const [prompt, setPrompt] = useState("");
-  const [model, setModel] = useState(DEFAULT_MODEL_ID);
-  const [thinkingDepth, setThinkingDepth] = useState<ThinkingLevel>(
-    DEFAULT_THINKING_LEVEL,
-  );
   const composer = useRef<HTMLTextAreaElement>(null);
   const hasFocused = useRef(false);
   const navigate = useNavigate();
@@ -43,7 +38,9 @@ export function StartSessionPrompt() {
   const { data: workspaces, isPending: isFindingWorkspace } = useWorkspaces();
   const workspaceChoice = useWorkspaceChoice(workspaces);
   const { projects } = useMyProjects();
-  const { isConfigured: isAiConfigured } = useAiProviderSettings();
+  const { config, isConfigured: isAiConfigured } = useAiProviderSettings();
+  const model = getStartingSessionModel(config);
+  const thinkingDepth = getStartingSessionThinkingDepth(config);
 
   const workspace = workspaceChoice.selected;
 
@@ -91,7 +88,7 @@ export function StartSessionPrompt() {
         onSuccess: (project) => {
           rememberLastUsedWorkspace(workspace.id);
           track("projects.start_session_completed", {
-            model,
+            model: model ?? "custom",
             thinkingDepth,
             workspace_changed: workspaceChanged,
           });
@@ -142,10 +139,6 @@ export function StartSessionPrompt() {
         </InlineStack>
 
         <StartSessionToolbar
-          model={model}
-          onModelChange={setModel}
-          thinkingDepth={thinkingDepth}
-          onThinkingDepthChange={setThinkingDepth}
           workspaceChoice={workspaceChoice}
           disabled={isBusy}
           canStart={!isEmpty}

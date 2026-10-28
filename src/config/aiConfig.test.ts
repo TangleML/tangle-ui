@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import type { AiModelCapabilities } from "@/types/aiProvider";
+
 import {
   getAiModelLabel,
   getAiModelOptions,
@@ -65,7 +67,8 @@ describe("aiConfig", () => {
 
   it("uses the nearest supported thinking level without inventing capabilities", () => {
     expect(getEffectiveReasoningEffort("gpt-6-astra", "none")).toBe("low");
-    expect(getEffectiveReasoningEffort("gpt-6-sol", "none")).toBe("none");
+    expect(getEffectiveReasoningEffort("gpt-6.1-sol", "none")).toBe("low");
+    expect(getEffectiveReasoningEffort("gpt-6.1-terra", "none")).toBe("none");
     expect(getEffectiveReasoningEffort("gpt-6-luna", "max")).toBe("max");
     expect(getEffectiveReasoningEffort("custom-model", "high")).toBeUndefined();
     expect(
@@ -113,8 +116,28 @@ describe("aiConfig", () => {
 
     expect(getEffectiveReasoningEffort("custom", "max", models)).toBe("high");
     expect(
-      getEffectiveReasoningEffort("gpt-6-sol", "max", models),
+      getEffectiveReasoningEffort("gpt-6.1-sol", "max", models),
     ).toBeUndefined();
     expect(getEffectiveReasoningEffort(" ", "max", models)).toBeUndefined();
+  });
+
+  it("intersects consumer and model capabilities before choosing the nearest level", () => {
+    const models: AiModelCapabilities[] = [
+      { id: "custom", reasoningEfforts: ["low", "high", "max"] },
+    ];
+    const supported = ["none", "high", "xhigh"] as const;
+
+    expect(getAiModelReasoningLevels("custom", models, supported)).toEqual([
+      { value: "high", label: "High" },
+    ]);
+    expect(
+      getEffectiveReasoningEffort("custom", "max", models, supported),
+    ).toBe("high");
+    expect(
+      getEffectiveReasoningEffort("custom", "max", models, []),
+    ).toBeUndefined();
+    expect(
+      getEffectiveReasoningEffort("unknown", "max", models, supported),
+    ).toBeUndefined();
   });
 });
