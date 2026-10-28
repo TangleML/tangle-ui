@@ -85,9 +85,9 @@
     "@radix-ui/react-tooltip": "^1.4.1",
     "@reactour/tour": "3.8.0",
     "@tailwindcss/vite": "^4.3.3",
-    "@tangent/embed-react": "github:TangleML/tangent-shell#1998f551d910e229d5108045b552b5549635cd58&path:packages/embed-react",
-    "@tangent/remote-subagent": "github:TangleML/tangent-shell#1998f551d910e229d5108045b552b5549635cd58&path:packages/remote-subagent",
-    "@tangent/shared": "github:TangleML/tangent-shell#1998f551d910e229d5108045b552b5549635cd58&path:packages/shared",
+    "@tangent/embed-react": "github:TangleML/tangent-shell#d229883163658bb188250ecb1ae75e974a18207d&path:packages/embed-react",
+    "@tangent/remote-subagent": "github:TangleML/tangent-shell#d229883163658bb188250ecb1ae75e974a18207d&path:packages/remote-subagent",
+    "@tangent/shared": "github:TangleML/tangent-shell#d229883163658bb188250ecb1ae75e974a18207d&path:packages/shared",
     "@tanstack/history": "1.162.5",
     "@tanstack/react-query": "^5.105.0",
     "@tanstack/react-query-devtools": "^5.105.0",
@@ -179,7 +179,7 @@
   },
   "pnpm": {
     "overrides": {
-      "@tangent/shared": "github:TangleML/tangent-shell#1998f551d910e229d5108045b552b5549635cd58&path:packages/shared"
+      "@tangent/shared": "github:TangleML/tangent-shell#d229883163658bb188250ecb1ae75e974a18207d&path:packages/shared"
     }
   }
 }
