@@ -32,6 +32,7 @@ import { RunViewSelectionToolbar } from "./components/RunViewSelectionToolbar";
 import { useAiChatWindow } from "./hooks/useAiChatWindow";
 import { useFocusTaskFromUrl } from "./hooks/useFocusTaskFromUrl";
 import { useRunViewDocumentTitle } from "./hooks/useRunViewDocumentTitle";
+import { useRunViewFavicon } from "./hooks/useRunViewFavicon";
 import { useRunViewLoadState } from "./hooks/useRunViewLoadState";
 import { useRunViewSelectionSync } from "./hooks/useRunViewSelectionSync";
 import { useRunViewSubgraphUrlSync } from "./hooks/useRunViewSubgraphUrlSync";
@@ -51,6 +52,7 @@ const RunViewContent = observer(function RunViewContent({
     runId,
     loadState.status === "spec" ? loadState.spec.name : undefined,
   );
+  useRunViewFavicon();
 
   if (loadState.status === "spec") {
     return <RunViewLayout spec={loadState.spec} />;

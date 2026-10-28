@@ -10,7 +10,7 @@ import { NodesOverlayProvider } from "@/components/shared/ReactFlow/NodesOverlay
 import { RemoteAuthErrorView } from "@/components/shared/RemoteAuthErrorView";
 import { BlockStack } from "@/components/ui/layout";
 import { Paragraph } from "@/components/ui/typography";
-import { faviconManager } from "@/favicon";
+import { faviconManager, getFaviconStatus } from "@/favicon";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { useTrackRecentlyViewedRun } from "@/hooks/useTrackRecentlyViewedRun";
 import { useBackend } from "@/providers/BackendProvider";
@@ -57,8 +57,7 @@ const PipelineRunContent = () => {
     );
     const overallStatus =
       getOverallExecutionStatusFromStats(executionStatusStats);
-    const iconStatus = mapExecutionStatusToFavicon(overallStatus);
-    faviconManager.updateFavicon(iconStatus);
+    faviconManager.updateFavicon(getFaviconStatus(overallStatus));
 
     return () => {
       faviconManager.reset();
@@ -161,28 +160,3 @@ const PipelineRun = () => {
 };
 
 export default PipelineRun;
-
-const mapExecutionStatusToFavicon = (
-  status: string | undefined,
-): "success" | "failed" | "loading" | "paused" | "default" => {
-  switch (status) {
-    case "SUCCEEDED":
-      return "success";
-    case "FAILED":
-    case "SYSTEM_ERROR":
-    case "INVALID":
-      return "failed";
-    case "RUNNING":
-    case "PENDING":
-    case "QUEUED":
-    case "WAITING_FOR_UPSTREAM":
-    case "CANCELLING":
-    case "UNINITIALIZED":
-      return "loading";
-    case "CANCELLED":
-    case "SKIPPED":
-      return "paused";
-    default:
-      return "default";
-  }
-};
