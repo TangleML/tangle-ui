@@ -249,7 +249,7 @@ it("navigates into read-only subgraphs from DOM double-clicks and restores their
   expect(serializeComponentSpecToText(spec)).toBe(initialYaml);
 });
 
-it("reuses the editor docks and rich details while keeping the pipeline and nodes read-only", async () => {
+it.each([false, true])("inspects pipelines (embed=%s)", async (embedded) => {
   const user = userEvent.setup();
   const spec = new YamlDeserializer(new IncrementingIdGenerator()).deserialize({
     name: "Remote pipeline",
@@ -305,7 +305,7 @@ it("reuses the editor docks and rich details while keeping the pipeline and node
     routeTree: createRootRoute({
       component: function PipelineRoute() {
         const props = useContext(ViewContext);
-        return props && <RemotePipelineView {...props} />;
+        return props && <RemotePipelineView {...props} embedded={embedded} />;
       },
     }),
     history: createMemoryHistory(),
@@ -346,18 +346,41 @@ it("reuses the editor docks and rich details while keeping the pipeline and node
 
   const leftDock = container.querySelector('[data-dock-area="left"]');
   const rightDock = container.querySelector('[data-dock-area="right"]');
-  if (
-    !(leftDock instanceof HTMLElement) ||
-    !(rightDock instanceof HTMLElement)
-  ) {
-    throw new Error("Pipeline editor docks did not mount");
+  if (!(rightDock instanceof HTMLElement)) {
+    throw new Error("Pipeline details dock did not mount");
   }
-  expect(within(leftDock).getByText("Pipeline Tools")).toBeInTheDocument();
+  if (embedded) {
+    expect(leftDock).toBeNull();
+    expect(rightDock).toHaveStyle({ width: "36px" });
+    expect(container.querySelector(".react-flow__minimap")).toBeNull();
+    expect(
+      within(rightDock).getByRole("button", { name: "Pipeline Details" }),
+    ).toBeInTheDocument();
+    await user.click(
+      within(rightDock).getByRole("button", { name: "Sidekick" }),
+    );
+    expect(
+      screen.getByPlaceholderText("Ask about your pipeline..."),
+    ).toBeVisible();
+    await user.keyboard("{Escape}");
+    const handle = rightDock.querySelector(".cursor-col-resize");
+    if (!handle) throw new Error("Dock resize handle did not mount");
+    fireEvent.doubleClick(handle);
+  } else {
+    expect(leftDock).toBeInstanceOf(HTMLElement);
+    expect(container.querySelector(".react-flow__minimap")).toBeInTheDocument();
+  }
+  const toolsDock = embedded ? rightDock : leftDock;
+  if (!(toolsDock instanceof HTMLElement)) {
+    throw new Error("Pipeline tools dock did not mount");
+  }
+  if (embedded) await user.click(within(toolsDock).getByText("Pipeline Tools"));
+  expect(within(toolsDock).getByText("Pipeline Tools")).toBeInTheDocument();
   for (const name of ["View YAML", "Clone pipeline"]) {
-    expect(within(leftDock).getByRole("button", { name })).toBeInTheDocument();
+    expect(within(toolsDock).getByRole("button", { name })).toBeInTheDocument();
   }
   expect(screen.queryByRole("button", { name: /Submit Run/i })).toBeNull();
-  expect(within(leftDock).getByText("Sidekick")).toBeInTheDocument();
+  expect(within(toolsDock).getByText("Sidekick")).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Windows" }));
   expect(
     screen.queryByRole("menuitemcheckbox", { name: "Pipeline Structure" }),
@@ -372,15 +395,19 @@ it("reuses the editor docks and rich details while keeping the pipeline and node
     }),
   ).not.toBeInTheDocument();
 
+  if (embedded) await user.click(within(toolsDock).getByText("Sidekick"));
   await user.type(
-    within(leftDock).getByPlaceholderText("Ask about your pipeline..."),
+    within(toolsDock).getByPlaceholderText("Ask about your pipeline..."),
     "Explain this pipeline",
   );
   await user.click(
-    within(leftDock).getByRole("button", { name: "Send message" }),
+    within(toolsDock).getByRole("button", { name: "Send message" }),
   );
   await waitFor(() => expect(askAgent).toHaveBeenCalledOnce());
-  expect(agentContext).toHaveBeenCalledWith({ mode: "editor", readOnly: true });
+  expect(agentContext).toHaveBeenCalledWith({
+    mode: "editor",
+    readOnly: true,
+  });
   const bridge = askAgent.mock.calls[0][0].bridge as ToolBridgeApi;
   await expect(bridge.getPipelineState()).resolves.toMatchObject({
     name: "Remote pipeline",
@@ -397,6 +424,8 @@ it("reuses the editor docks and rich details while keeping the pipeline and node
   expect(fetchPipelineRuns).not.toHaveBeenCalled();
   expect(serializeComponentSpecToText(spec)).toBe(initialYaml);
 
+  if (embedded)
+    await user.click(within(rightDock).getByText("Pipeline Details"));
   const details = await screen.findByTestId("pipeline-details-content");
   expect(rightDock).toContainElement(details);
   expect(within(details).getByText("owner@example.com")).toBeVisible();
@@ -484,13 +513,23 @@ it("reuses the editor docks and rich details while keeping the pipeline and node
       folder: { driver: { ownerId: "second-owner@example.com" } },
     } as PipelineFile),
   );
+  if (embedded) {
+    const nextDock = container.querySelector('[data-dock-area="right"]');
+    if (!(nextDock instanceof HTMLElement))
+      throw new Error("Next pipeline dock did not mount");
+    await user.click(
+      within(nextDock).getByRole("button", { name: "Pipeline Details" }),
+    );
+  }
   const nextDetails = await screen.findByTestId("pipeline-details-content");
   await expect(bridge.getPipelineState()).rejects.toThrow(/changed|aborted/i);
   expect(
     within(nextDetails).getByTestId("pipeline-description-input"),
   ).toHaveValue("The pipeline on the other backend");
   await user.click(
-    within(nextDetails).getByRole("button", { name: "Metadata & annotations" }),
+    within(nextDetails).getByRole("button", {
+      name: "Metadata & annotations",
+    }),
   );
   expect(nextDetails).toHaveTextContent("second-owner@example.com");
   expect(

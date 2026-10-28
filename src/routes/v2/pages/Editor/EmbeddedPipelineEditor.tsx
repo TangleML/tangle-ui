@@ -26,6 +26,10 @@ import {
 } from "@/routes/v2/shared/store/SharedStoreContext";
 import { SharedStoreRegistrar } from "@/routes/v2/shared/store/SharedStoreRegistrar";
 import { DockArea } from "@/routes/v2/shared/windows/DockArea";
+import {
+  EMBEDDED_VIEW_PRESET,
+  viewPresetForComponentSearchMode,
+} from "@/routes/v2/shared/windows/viewPresets";
 import { WindowContainer } from "@/routes/v2/shared/windows/WindowContainer";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import {
@@ -144,7 +148,12 @@ const EmbeddedPipelineEditorCanvas = withSuspenseWrapper(
       useEditorEscapeShortcut();
 
       useComponentSearchV2Window(componentSearchV2Enabled);
-      useEmbeddedInitialDockLayout(componentSearchV2Enabled);
+      useEmbeddedInitialDockLayout(
+        viewPresetForComponentSearchMode(
+          EMBEDDED_VIEW_PRESET,
+          componentSearchV2Enabled,
+        ),
+      );
 
       const activeSpec = navigation.activeSpec;
 
@@ -244,7 +253,12 @@ const RemoteEmbeddedPipelineEditor = withSuspenseWrapper(
       if (readOnly) props.onTitleChange?.(title);
     }, [props.onTitleChange, readOnly, title]);
     return readOnly ? (
-      <RemotePipelineView spec={spec} file={file} isActive={props.isActive} />
+      <RemotePipelineView
+        spec={spec}
+        file={file}
+        isActive={props.isActive}
+        embedded
+      />
     ) : (
       <EditableEmbeddedPipelineEditor {...props} />
     );
