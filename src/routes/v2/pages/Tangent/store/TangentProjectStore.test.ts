@@ -13,9 +13,11 @@ import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import { ComponentSpec, Input, Output, Task } from "@/models/componentSpec";
 import { sessionMemorySeed } from "@/routes/v2/pages/Tangent/services/sessionMemory";
 import { rootConfigSeed } from "@/routes/v2/pages/Tangent/services/sessionRunConfig";
+import { sessionTeamBrief } from "@/routes/v2/pages/Tangent/services/sessionTeam";
 import type { WorkareaTarget } from "@/routes/v2/pages/Tangent/workarea/types";
 import type { SharedUIStore } from "@/routes/v2/shared/store/SharedStoreContext";
 import { idIdentity } from "@/services/projects/resourceTarget";
+import type { TeamResolution } from "@/services/teams/types";
 
 import {
   CHAT_TAB_VALUE,
@@ -426,6 +428,7 @@ interface StartSessionIoMock extends TangentSessionIo {
 
 function makeSessionIo(
   projectInstructions?: string | null,
+  runTeam: TeamResolution = { status: "none" },
 ): StartSessionIoMock {
   return {
     newSession: vi
@@ -442,6 +445,7 @@ function makeSessionIo(
       .mockResolvedValue(undefined),
     notify: vi.fn<TangentSessionIo["notify"]>(),
     projectInstructions,
+    runTeam,
   };
 }
 
@@ -593,6 +597,47 @@ describe("TangentProjectStore.startSession", () => {
     const withIo = new TangentProjectStore("project-1");
     withIo.setSessionIo(makeSessionIo(null));
     await expect(withIo.startSession()).resolves.toBe(true);
+  });
+});
+
+describe("TangentProjectStore.startSession in a team's project", () => {
+  const research = { id: "research@example.com", label: "Research" };
+
+  it.each<TeamResolution>([
+    { status: "active", team: { ...research, canWrite: true } },
+    { status: "not-member", team: research },
+  ])("briefs the project's team but grants it no session: %o", async (team) => {
+    const store = new TangentProjectStore("project-1");
+    const io = makeSessionIo(null, team);
+    store.setSessionIo(io);
+
+    await store.startSession();
+
+    const options = io.newSession.mock.calls[0][2];
+    expect(options.env).toEqual({
+      TANGLE_ROOT_CONFIG: "{{uploadsPath}}/tangle-deploy-root-config.yaml",
+    });
+    expect(options.resources).toContainEqual({
+      kind: "memory",
+      scope: "session",
+      content: sessionMemorySeed("project-1", null, sessionTeamBrief(team)),
+    });
+  });
+
+  it("sends no opening prompt until the team is known", async () => {
+    const store = new TangentProjectStore("project-1");
+    const io = makeSessionIo(null, { status: "resolving" });
+    store.setSessionIo(io);
+
+    await expect(store.startSession({ prompt: "Train it" })).resolves.toBe(
+      false,
+    );
+
+    expect(io.newSession).not.toHaveBeenCalled();
+    expect(io.notify).toHaveBeenCalledWith(
+      "This project's workspace is still being checked. Try again in a moment.",
+      "error",
+    );
   });
 });
 

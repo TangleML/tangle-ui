@@ -14,6 +14,7 @@ import { observeWorkareaPipelineDrafts } from "@/routes/v2/pages/Tangent/workare
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import { nameFromPrompt } from "@/services/projects/nameFromPrompt";
 import { useProjectInstructions } from "@/services/projects/useProjectInstructions";
+import { useTeamForProjects } from "@/services/teams/useTeamForProjects";
 
 const TangentProjectCtx = createRequiredContext<TangentProjectStore>(
   "TangentProjectContext",
@@ -31,6 +32,7 @@ export function TangentProjectProvider({
   const notify = useToastNotification();
   const { newSession } = useTangent();
   const { instructions } = useProjectInstructions(projectId);
+  const runTeam = useTeamForProjects([projectId]);
   const {
     sessions,
     isLoading: isSessionsLoading,
@@ -60,6 +62,7 @@ export function TangentProjectProvider({
       },
       notify,
       projectInstructions: instructions,
+      runTeam,
     });
   }, [
     store,
@@ -70,6 +73,7 @@ export function TangentProjectProvider({
     sessions,
     notify,
     instructions,
+    runTeam,
   ]);
 
   const defaultSessionId = sessions[0]?.sessionId;
@@ -81,6 +85,7 @@ export function TangentProjectProvider({
     projectId,
     sessionCount: sessions.length,
     isSessionsLoading,
+    isTeamSettled: runTeam.status !== "resolving",
   });
 
   useEffect(

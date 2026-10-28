@@ -44,6 +44,7 @@ interface PrepareProjectArrivalOptions {
   projectId: string;
   sessionCount: number;
   isSessionsLoading: boolean;
+  isTeamSettled: boolean;
 }
 
 function oldestFirst(resources: readonly ProjectResourceSummary[]) {
@@ -88,7 +89,12 @@ function oldestAttached(
  */
 export function usePrepareProjectArrival(
   store: TangentProjectStore,
-  { projectId, sessionCount, isSessionsLoading }: PrepareProjectArrivalOptions,
+  {
+    projectId,
+    sessionCount,
+    isSessionsLoading,
+    isTeamSettled,
+  }: PrepareProjectArrivalOptions,
 ) {
   const storage = usePipelineStorage();
   const search = useSearch({ strict: false });
@@ -181,7 +187,10 @@ export function usePrepareProjectArrival(
   });
 
   const knowsWhetherToArrive =
-    !isSessionsLoading && project !== undefined && !isProjectFetching;
+    !isSessionsLoading &&
+    isTeamSettled &&
+    project !== undefined &&
+    !isProjectFetching;
   const asksForArrival =
     isEmpty || starting !== undefined || linkAsksForSession;
 

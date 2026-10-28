@@ -76,6 +76,19 @@ describe("sessionMemorySeed", () => {
     expect(seed).toContain("422");
   });
 
+  it("ends with the team brief when there is one", () => {
+    const seed = sessionMemorySeed(PROJECT_ID, "Prefer concise plans.", "Team");
+
+    expect(seed.startsWith("Prefer concise plans.")).toBe(true);
+    expect(seed.endsWith("\n\nTeam")).toBe(true);
+  });
+
+  it("seeds no team brief without a team", () => {
+    expect(sessionMemorySeed(PROJECT_ID, null, null)).toBe(
+      sessionMemorySeed(PROJECT_ID),
+    );
+  });
+
   it("builds the key from the shared helper rather than its own spelling", () => {
     expect(sessionMemorySeed("abc-123")).toContain(
       "tangleml.com/project/id/abc-123",

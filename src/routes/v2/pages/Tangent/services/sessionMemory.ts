@@ -57,8 +57,11 @@ const runAttributionBrief = (projectId: string) =>
 export function sessionMemorySeed(
   projectId: string,
   projectInstructions?: string | null,
+  teamBrief?: string | null,
 ): string {
   const instructions = projectInstructions?.trim();
-  const briefs = `${NAMING_BRIEF}\n\n${runAttributionBrief(projectId)}`;
+  const briefs = [NAMING_BRIEF, runAttributionBrief(projectId), teamBrief]
+    .filter((brief): brief is string => !!brief)
+    .join("\n\n");
   return instructions ? `${instructions}\n\n${briefs}` : briefs;
 }

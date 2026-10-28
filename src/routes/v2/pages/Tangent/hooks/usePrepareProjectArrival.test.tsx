@@ -127,13 +127,18 @@ function wrapper({ children }: { children: ReactNode }) {
 
 const settle = () => act(() => new Promise((resolve) => setTimeout(resolve)));
 
-function prepare(store: TangentProjectStore, sessionCount = 0) {
+function prepare(
+  store: TangentProjectStore,
+  sessionCount = 0,
+  isTeamSettled = true,
+) {
   return renderHook(
     () =>
       usePrepareProjectArrival(store, {
         projectId: "project-1",
         sessionCount,
         isSessionsLoading: false,
+        isTeamSettled,
       }),
     { wrapper },
   );
@@ -572,6 +577,15 @@ describe("usePrepareProjectArrival", () => {
     const store = makeStore();
 
     prepare(store);
+    await settle();
+
+    expect(store.startSession).not.toHaveBeenCalled();
+  });
+
+  it("waits for the project's team before starting a session", async () => {
+    const store = makeStore();
+
+    prepare(store, 0, false);
     await settle();
 
     expect(store.startSession).not.toHaveBeenCalled();

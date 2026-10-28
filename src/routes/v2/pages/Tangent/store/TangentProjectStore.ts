@@ -17,6 +17,7 @@ import { TANGENT_BUNDLE_ID } from "@/routes/v2/pages/Tangent/constants";
 import { resolveWorkareaTarget } from "@/routes/v2/pages/Tangent/services/resolveWorkareaTarget";
 import { sessionMemorySeed } from "@/routes/v2/pages/Tangent/services/sessionMemory";
 import { rootConfigSeed } from "@/routes/v2/pages/Tangent/services/sessionRunConfig";
+import { sessionTeamBrief } from "@/routes/v2/pages/Tangent/services/sessionTeam";
 import type {
   ResolvedWorkareaView,
   WorkareaTab,
@@ -26,6 +27,7 @@ import { resolveChatEntity } from "@/routes/v2/shared/components/AiChat/componen
 import { navigateToEntity } from "@/routes/v2/shared/store/focus.actions";
 import type { SharedUIStore } from "@/routes/v2/shared/store/SharedStoreContext";
 import { idIdentity, sameTarget } from "@/services/projects/resourceTarget";
+import type { TeamResolution } from "@/services/teams/types";
 import { getErrorMessage } from "@/utils/string";
 
 export const CHAT_TAB_VALUE = "chat";
@@ -78,6 +80,7 @@ export interface TangentSessionIo {
   nameSessionIfUnnamed: (sessionId: string, prompt: string) => Promise<void>;
   notify: (message: string, type: "error") => void;
   projectInstructions?: string | null;
+  runTeam: TeamResolution;
 }
 
 export interface StartSessionOptions {
@@ -211,6 +214,13 @@ export class TangentProjectStore {
     if (this.isStartingSession) return false;
     const io = this.#io;
     if (!io) return false;
+    if (io.runTeam.status === "resolving") {
+      io.notify(
+        "This project's workspace is still being checked. Try again in a moment.",
+        "error",
+      );
+      return false;
+    }
     const previous = this.activeSessionId;
     runInAction(() => {
       this.isStartingSession = true;
@@ -226,7 +236,11 @@ export class TangentProjectStore {
           {
             kind: "memory",
             scope: "session",
-            content: sessionMemorySeed(this.projectId, io.projectInstructions),
+            content: sessionMemorySeed(
+              this.projectId,
+              io.projectInstructions,
+              sessionTeamBrief(io.runTeam),
+            ),
           },
           rootConfig.resource,
         ],
