@@ -1,14 +1,15 @@
-import {
-  DEFAULT_MODEL_ID,
-  DEFAULT_THINKING_LEVEL,
-} from "@tangent/shared/contracts.ts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
+import { AI_CONFIG, getDefaultAiModelId } from "@/config/aiConfig";
+import {
+  AI_PROVIDER_STORAGE_KEY,
+  AI_PROXY_STORAGE_KEY,
+  AI_USE_OWN_KEY_STORAGE_KEY,
+} from "@/hooks/useAiProviderSettings";
 import { useBackend } from "@/providers/BackendProvider";
 import { rememberLastUsedWorkspace } from "@/services/projects/defaultWorkspace";
 import { createProject } from "@/services/projects/projectsService";
@@ -49,10 +50,6 @@ vi.mock("./useMyProjects", () => ({
   useMyProjects: () => ({ projects: [{ name: "Project 1" }] }),
 }));
 
-vi.mock("@/hooks/useAiProviderSettings", () => ({
-  useAiProviderSettings: vi.fn(),
-}));
-
 function wrapper({ children }: { children: ReactNode }) {
   const client = new QueryClient({
     defaultOptions: { mutations: { retry: false } },
@@ -63,9 +60,10 @@ function wrapper({ children }: { children: ReactNode }) {
 const renderPrompt = () => render(<StartSessionPrompt />, { wrapper });
 
 function mockAiConfigured(isConfigured: boolean) {
-  vi.mocked(useAiProviderSettings).mockReturnValue({
-    isConfigured,
-  } as unknown as ReturnType<typeof useAiProviderSettings>);
+  localStorage.setItem(
+    AI_USE_OWN_KEY_STORAGE_KEY,
+    JSON.stringify(!isConfigured),
+  );
 }
 
 async function type(text: string) {
@@ -98,6 +96,7 @@ function mockWorkspaces(
 
 function mockBackend(overrides: Partial<ReturnType<typeof useBackend>> = {}) {
   vi.mocked(useBackend).mockReturnValue({
+    backendUrl: "https://backend.example.com",
     configured: true,
     available: true,
     ready: true,
@@ -116,6 +115,14 @@ describe("StartSessionPrompt", () => {
     // Radix's select measures and scrolls, neither of which jsdom does.
     Element.prototype.scrollIntoView = vi.fn();
     Element.prototype.hasPointerCapture = vi.fn();
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
     mockBackend();
     mockWorkspaces([research]);
     vi.mocked(createProject).mockResolvedValue({
@@ -125,7 +132,9 @@ describe("StartSessionPrompt", () => {
   });
   afterEach(() => {
     vi.resetAllMocks();
+    vi.unstubAllGlobals();
     localStorage.clear();
+    delete window.__TANGLE_AI_MODELS__;
   });
 
   /**
@@ -144,8 +153,8 @@ describe("StartSessionPrompt", () => {
       metadata: {
         ...startingSessionMetadata({
           prompt: "Build a churn model",
-          model: DEFAULT_MODEL_ID,
-          thinkingDepth: DEFAULT_THINKING_LEVEL,
+          model: `openai/${getDefaultAiModelId()}`,
+          thinkingDepth: AI_CONFIG.defaultReasoningEffort,
         }),
         startingRequestedAt: expect.any(String),
         provisionalName: true,
@@ -223,19 +232,147 @@ describe("StartSessionPrompt", () => {
     );
   });
 
-  it("starts the session on the model and depth that were chosen", async () => {
+  it.each([
+    ["GPT-6.1 Terra", "gpt-6.1-terra", "Home", "None", "off", "none"],
+    ["GPT-6.1 Sol", "gpt-6.1-sol", "Home", "Low", "low", "low"],
+    ["GPT-6.1 Sol", "gpt-6.1-sol", "End", "Extra high", "xhigh", "xhigh"],
+  ])(
+    "starts with the shared picker selection (%s, %s, %s)",
+    async (modelLabel, model, key, label, depth, preference) => {
+      renderPrompt();
+
+      const user = userEvent.setup();
+      await user.click(
+        screen.getByRole("button", { name: /^AI model and thinking:/ }),
+      );
+      await user.click(
+        screen.getByRole("button", { name: /^Choose a model:/ }),
+      );
+      await user.click(screen.getByRole("radio", { name: modelLabel }));
+      screen.getByRole("slider", { name: "Thinking" }).focus();
+      await user.keyboard(`{${key}}`);
+      expect(screen.getByRole("slider", { name: "Thinking" })).toHaveAttribute(
+        "aria-valuetext",
+        label,
+      );
+      await user.keyboard("{Escape}");
+      await type("Build a churn model{Enter}");
+
+      expect(vi.mocked(createProject).mock.calls[0][0].metadata).toMatchObject({
+        startingThinkingDepth: depth,
+        startingModel: `openai/${model}`,
+      });
+      expect(
+        JSON.parse(localStorage.getItem(AI_PROXY_STORAGE_KEY) ?? "{}"),
+      ).toMatchObject({
+        model,
+        reasoningEffortPreference: preference,
+      });
+    },
+  );
+
+  it("uses the saved model and thinking preferences", async () => {
+    localStorage.setItem(
+      AI_PROXY_STORAGE_KEY,
+      JSON.stringify({
+        model: "claude-sonnet-5-5",
+        reasoningEffortPreference: "low",
+      }),
+    );
     renderPrompt();
 
-    const user = userEvent.setup();
-    await user.click(screen.getByLabelText("Thinking"));
-    await user.click(screen.getByRole("option", { name: "High" }));
+    expect(
+      screen.getByRole("button", {
+        name: "AI model and thinking: Claude Sonnet 5.5, Low",
+      }),
+    ).toBeVisible();
     await type("Build a churn model{Enter}");
 
     expect(vi.mocked(createProject).mock.calls[0][0].metadata).toMatchObject({
-      startingThinkingDepth: "high",
-      startingModel: DEFAULT_MODEL_ID,
+      startingModel: "anthropic/claude-sonnet-5-5",
+      startingThinkingDepth: "low",
     });
+    await waitFor(() =>
+      expect(track).toHaveBeenCalledWith(
+        "projects.start_session_completed",
+        expect.objectContaining({ model: "anthropic/claude-sonnet-5-5" }),
+      ),
+    );
   });
+
+  it.each([
+    ["gpt-6.1-sol", "GPT-6.1 Sol", "Extra high", "xhigh", "3"],
+    ["custom", "Custom", "High", "high", "1"],
+  ])(
+    "shows and submits the supported level for a saved Max preference (%s)",
+    async (model, label, effortLabel, depth, maximum) => {
+      if (model === "custom") {
+        window.__TANGLE_AI_MODELS__ = {
+          models: [
+            { id: model, label, reasoningEfforts: ["low", "high", "max"] },
+          ],
+        };
+      }
+      const saved = JSON.stringify({ model, reasoningEffortPreference: "max" });
+      localStorage.setItem(AI_PROXY_STORAGE_KEY, saved);
+      renderPrompt();
+
+      const user = userEvent.setup();
+      await user.click(
+        screen.getByRole("button", {
+          name: `AI model and thinking: ${label}, ${effortLabel}`,
+        }),
+      );
+      const slider = screen.getByRole("slider", { name: "Thinking" });
+      expect(slider).toHaveAttribute("aria-valuetext", effortLabel);
+      expect(slider).toHaveAttribute("aria-valuemax", maximum);
+      expect(screen.getByText(/Your max preference is saved/)).toBeVisible();
+      slider.focus();
+      await user.keyboard("{Escape}");
+      await type("Build a churn model{Enter}");
+
+      expect(vi.mocked(createProject).mock.calls[0][0].metadata).toMatchObject({
+        startingModel: `openai/${model}`,
+        startingThinkingDepth: depth,
+      });
+      expect(localStorage.getItem(AI_PROXY_STORAGE_KEY)).toBe(saved);
+    },
+  );
+
+  /**
+   * Tangent runs sessions through its own proxy, which cannot reach a model
+   * only the user's provider knows, so the session starts on Tangent's default.
+   */
+  it.each([
+    [false, "vendor/custom-model"],
+    [false, "gemini-4-argon"],
+    [true, "my-deployment"],
+  ])(
+    "leaves a typed-in model for Tangent to choose (own key: %s, %s)",
+    async (ownKeyEnabled, model) => {
+      localStorage.setItem(
+        AI_USE_OWN_KEY_STORAGE_KEY,
+        JSON.stringify(ownKeyEnabled),
+      );
+      localStorage.setItem(
+        ownKeyEnabled ? AI_PROVIDER_STORAGE_KEY : AI_PROXY_STORAGE_KEY,
+        JSON.stringify({ apiBase: "https://gateway.example.com/v1", model }),
+      );
+      renderPrompt();
+
+      await type("Build a churn model{Enter}");
+
+      const { metadata } = vi.mocked(createProject).mock.calls[0][0];
+      expect(metadata).not.toHaveProperty("startingModel");
+      expect(metadata).not.toHaveProperty("startingThinkingDepth");
+      await waitFor(() =>
+        expect(track).toHaveBeenCalledWith(
+          "projects.start_session_completed",
+          expect.objectContaining({ model: "custom" }),
+        ),
+      );
+    },
+  );
 
   it("offers no workspace to pick when there is only one", () => {
     renderPrompt();
@@ -319,6 +456,9 @@ describe("StartSessionPrompt", () => {
     expect(screen.getByLabelText("Start a new session")).toBeDisabled();
     expect(
       screen.getByRole("button", { name: "Start session" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: /^AI model and thinking:/ }),
     ).toBeDisabled();
     expect(
       screen.getByText(

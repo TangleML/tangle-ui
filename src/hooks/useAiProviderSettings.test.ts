@@ -432,6 +432,34 @@ describe("useAiProviderSettings", () => {
     expect(result.current.config.model).toBe("gpt-5-mini");
   });
 
+  it.each([
+    [false, AI_PROXY_STORAGE_KEY],
+    [true, AI_PROVIDER_STORAGE_KEY],
+  ])(
+    "reads a saved GPT-6 Sol as GPT-6.1 Sol (own key: %s)",
+    (ownKeyEnabled, storageKey) => {
+      window.localStorage.setItem(
+        AI_USE_OWN_KEY_STORAGE_KEY,
+        JSON.stringify(ownKeyEnabled),
+      );
+      window.localStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          model: "gpt-6-sol",
+          reasoningEffortPreference: "none",
+        }),
+      );
+
+      const { result } = renderHook(() => useAiProviderSettings());
+
+      expect(result.current.config).toMatchObject({
+        model: "gpt-6.1-sol",
+        reasoningEffortPreference: "none",
+        reasoningEffort: "low",
+      });
+    },
+  );
+
   it("falls back to defaults when stored JSON is malformed", () => {
     window.localStorage.setItem(AI_PROVIDER_STORAGE_KEY, "not json");
     window.localStorage.setItem(AI_PROXY_STORAGE_KEY, "not json");
@@ -453,14 +481,14 @@ describe("useAiProviderSettings", () => {
     act(() => {
       window.localStorage.setItem(
         AI_PROVIDER_STORAGE_KEY,
-        JSON.stringify({ model: "gpt-6-sol", reasoningEffort: "max" }),
+        JSON.stringify({ model: "gpt-6.1-sol", reasoningEffort: "max" }),
       );
       window.dispatchEvent(
         new StorageEvent("storage", { key: AI_PROVIDER_STORAGE_KEY }),
       );
     });
     for (const consumer of [first, second]) {
-      expect(consumer.result.current.config.model).toBe("gpt-6-sol");
+      expect(consumer.result.current.config.model).toBe("gpt-6.1-sol");
       expect(consumer.result.current.config.reasoningEffort).toBe("max");
     }
   });
@@ -468,7 +496,7 @@ describe("useAiProviderSettings", () => {
   it("ignores invalid saved thinking levels", () => {
     window.localStorage.setItem(
       AI_PROXY_STORAGE_KEY,
-      JSON.stringify({ model: "gpt-6-sol", reasoningEffort: "invalid" }),
+      JSON.stringify({ model: "gpt-6.1-sol", reasoningEffort: "invalid" }),
     );
     const { result } = renderHook(() => useAiProviderSettings());
     expect(result.current.config.reasoningEffort).toBe("high");
@@ -517,7 +545,7 @@ describe("useAiProviderSettings", () => {
       expect(saved).not.toHaveProperty("reasoningEffort");
       expect(saved).not.toHaveProperty("modelCapabilities");
       expect(saved).not.toHaveProperty("credentials");
-      act(() => result.current.update({ model: "gpt-6-sol" }));
+      act(() => result.current.update({ model: "gpt-6.1-terra" }));
       expect(result.current.config.reasoningEffort).toBe("none");
     },
   );
@@ -527,7 +555,7 @@ describe("useAiProviderSettings", () => {
     const { result } = renderHook(() => useAiProviderSettings());
     act(() =>
       result.current.update({
-        model: "gpt-6-sol",
+        model: "gpt-6.1-terra",
         reasoningEffortPreference: "none",
       }),
     );
@@ -541,7 +569,7 @@ describe("useAiProviderSettings", () => {
     );
     act(() => result.current.setOwnKeyEnabled(true));
     expect(result.current.config).toMatchObject({
-      model: "gpt-6-sol",
+      model: "gpt-6.1-terra",
       reasoningEffort: "none",
     });
     act(() => result.current.setOwnKeyEnabled(false));

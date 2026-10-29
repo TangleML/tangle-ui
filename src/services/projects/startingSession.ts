@@ -1,6 +1,14 @@
 import type { ThinkingLevel } from "@tangent/shared/contracts.ts";
 import { THINKING_LEVELS } from "@tangent/shared/contracts.ts";
 
+import {
+  AI_CONFIG,
+  getAiModelOptions,
+  getAiProviderConfig,
+  getEffectiveReasoningEffort,
+  isAiReasoningEffort,
+} from "@/config/aiConfig";
+import type { AiProviderConfig } from "@/types/aiProvider";
 import { HOURS } from "@/utils/constants";
 
 const PROMPT = "startingPrompt";
@@ -9,6 +17,12 @@ const THINKING_DEPTH = "startingThinkingDepth";
 const REQUESTED_AT = "startingRequestedAt";
 
 const STARTING_SESSION_LIFETIME = 1 * HOURS;
+
+const toReasoningEffort = (level: ThinkingLevel): string =>
+  level === "off" ? "none" : level;
+
+export const STARTING_SESSION_REASONING_EFFORTS =
+  THINKING_LEVELS.map(toReasoningEffort).filter(isAiReasoningEffort);
 
 export interface StartingSession {
   prompt: string;
@@ -39,6 +53,37 @@ const asText = (value: unknown) =>
 
 const asThinkingLevel = (value: unknown) =>
   THINKING_LEVELS.find((level) => level === value);
+
+export function getStartingSessionThinkingDepth(
+  config: Pick<
+    AiProviderConfig,
+    "model" | "reasoningEffortPreference" | "modelCapabilities"
+  >,
+): ThinkingLevel | undefined {
+  const effort = getEffectiveReasoningEffort(
+    config.model,
+    config.reasoningEffortPreference,
+    config.modelCapabilities,
+    STARTING_SESSION_REASONING_EFFORTS,
+  );
+  return THINKING_LEVELS.find((level) => toReasoningEffort(level) === effort);
+}
+
+// Tangent runs sessions through its own proxy rather than the user's provider,
+// so a model typed in for that provider is left for Tangent to choose.
+export function getStartingSessionModel(
+  config: Pick<AiProviderConfig, "model" | "modelCapabilities">,
+): string | undefined {
+  const isCatalogModel = (config.modelCapabilities ?? getAiModelOptions()).some(
+    (option) => option.id === config.model,
+  );
+  if (!isCatalogModel) return undefined;
+  const provider =
+    getAiProviderConfig(config.model) === AI_CONFIG.providers.anthropic
+      ? "anthropic"
+      : "openai";
+  return `${provider}/${config.model}`;
+}
 
 function isStillWanted(requestedAt: unknown) {
   const time = typeof requestedAt === "string" ? Date.parse(requestedAt) : NaN;

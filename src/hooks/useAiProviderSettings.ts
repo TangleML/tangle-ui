@@ -72,6 +72,13 @@ function readTrimmedString(
   return trimmed.length > 0 ? trimmed : "";
 }
 
+const REPLACED_MODEL_IDS = new Map([["gpt-6-sol", "gpt-6.1-sol"]]);
+
+function readModelId(record: Record<string, unknown>, key: string): string {
+  const model = readTrimmedString(record, key);
+  return REPLACED_MODEL_IDS.get(model) ?? model;
+}
+
 function readReasoningPreference(record: Record<string, unknown>) {
   const preference = isAiReasoningEffort(record.reasoningEffortPreference)
     ? record.reasoningEffortPreference
@@ -89,8 +96,8 @@ function parseStoredConfig(value: unknown): StoredProviderSettings | null {
     apiKey: readTrimmedString(value, "apiKey") || DEFAULTS.apiKey,
     model:
       typeof value.model === "string"
-        ? readTrimmedString(value, "model")
-        : readTrimmedString(value, "thinkingModel"),
+        ? readModelId(value, "model")
+        : readModelId(value, "thinkingModel"),
     ...readReasoningPreference(value),
   };
 }
@@ -128,7 +135,7 @@ function readProxySettings(): ProxySettings {
   const stored = storage.getItem(AI_PROXY_STORAGE_KEY);
   return {
     model:
-      (isRecord(stored) ? readTrimmedString(stored, "model") : "") ||
+      (isRecord(stored) ? readModelId(stored, "model") : "") ||
       getDefaultAiModelId(),
     ...(isRecord(stored) ? readReasoningPreference(stored) : {}),
   };
