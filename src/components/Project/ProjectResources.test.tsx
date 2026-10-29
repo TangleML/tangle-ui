@@ -508,6 +508,30 @@ describe("ProjectResources", () => {
     expect(screen.queryByText("churn")).not.toBeInTheDocument();
   });
 
+  it("asks to remove a renamed pipeline by the name it shows", async () => {
+    mockResources({
+      items: [
+        resource({ entity: "pipeline", name: "churn", entityId: "pipeline-9" }),
+      ],
+      totalCount: 1,
+    });
+    vi.mocked(useRemotePipelineNames).mockReturnValue(
+      new Map([["resource-1", "Churn training"]]),
+    );
+    renderResources();
+
+    await userEvent.setup().click(
+      screen.getByRole("button", {
+        name: "Remove Churn training from this project",
+      }),
+    );
+
+    const dialog = await screen.findByRole("alertdialog");
+    expect(dialog).toHaveTextContent(
+      'Remove "Churn training" from this project?',
+    );
+  });
+
   it("promises an item it only points at is left where it lives", async () => {
     mockResources({
       items: [

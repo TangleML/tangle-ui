@@ -11,7 +11,10 @@ import { useDeleteProjectResource } from "@/services/projects/useProjectResource
 import { removalConsequence, removingDestroys } from "./resourceEntities";
 
 interface ConfirmedResourceRemoval {
-  confirmAndRemove: (resource: ProjectResourceSummary) => Promise<void>;
+  confirmAndRemove: (
+    resource: ProjectResourceSummary,
+    currentName?: string,
+  ) => Promise<void>;
   isRemoving: boolean;
   confirmation: ComponentProps<typeof ConfirmationDialog>;
 }
@@ -42,9 +45,12 @@ export function useConfirmedResourceRemoval({
   const { handlers, triggerDialog, ...confirmationProps } =
     useConfirmationDialog();
 
-  const confirmAndRemove = async (resource: ProjectResourceSummary) => {
+  const confirmAndRemove = async (
+    resource: ProjectResourceSummary,
+    currentName?: string,
+  ) => {
     const destroys = removingDestroys(resource);
-    const name = resource.name ?? UNTITLED;
+    const name = currentName ?? resource.name ?? UNTITLED;
 
     const confirmed = await triggerDialog({
       title: destroys
