@@ -180,6 +180,9 @@ vi.mock("./v2/pages/Editor/components/QuickRunSubmitterContext", () => ({
   QuickRunSubmitterProvider: ({ children }: { children: ReactNode }) =>
     children,
 }));
+vi.mock("./v2/pages/Editor/components/QuickRunSubmitter", () => ({
+  QuickRunSubmitter: () => null,
+}));
 vi.mock("@/providers/TourProvider/TourModeContext", () => ({
   useTourMode: () => null,
 }));

@@ -15,6 +15,7 @@ import { InlineStack } from "@/components/ui/layout";
 import { ComponentLibraryProvider } from "@/providers/ComponentLibraryProvider";
 import { ForcedSearchProvider } from "@/providers/ComponentLibraryProvider/ForcedSearchProvider";
 import { RunSubmissionScopeProvider } from "@/providers/RunSubmissionScopeProvider";
+import { QuickRunSubmitter } from "@/routes/v2/pages/Editor/components/QuickRunSubmitter";
 import { QuickRunSubmitterProvider } from "@/routes/v2/pages/Editor/components/QuickRunSubmitterContext";
 import { NodeRegistryProvider } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { SpecProvider } from "@/routes/v2/shared/providers/SpecContext";
@@ -138,7 +139,7 @@ const EmbeddedPipelineEditorCanvas = withSuspenseWrapper(
       useHistoryWindow();
 
       useRecentRunsWindow();
-      useRunsAndSubmissionWindow({ renderSubmitter: true });
+      useRunsAndSubmissionWindow();
       useUndoRedoKeyboard();
       useShortcutListener(isActive);
       useEditorEscapeShortcut();
@@ -171,6 +172,7 @@ const EmbeddedPipelineEditorCanvas = withSuspenseWrapper(
                 </div>
                 <DockArea side="right" />
               </InlineStack>
+              <QuickRunSubmitter />
             </SpecProvider>
           </NodeRegistryProvider>
           <EmbeddedEditorAgentBoundary {...agentBoundaryProps} />
