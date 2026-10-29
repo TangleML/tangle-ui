@@ -63,6 +63,10 @@ vi.mock("@/services/projects/useLocalPipelineStatus", () => ({
   }),
 }));
 
+vi.mock("@/services/projects/useRemotePipelineNames", () => ({
+  useRemotePipelineNames: () => new Map(),
+}));
+
 vi.mock("@/hooks/useToastNotification", () => ({
   default: () => vi.fn(),
 }));

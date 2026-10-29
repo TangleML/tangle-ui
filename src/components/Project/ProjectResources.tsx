@@ -36,6 +36,7 @@ import { sessionLabelsById } from "@/services/projects/sessionLabel";
 import type { ProjectResourceSummary } from "@/services/projects/types";
 import { useLocalPipelineStatus } from "@/services/projects/useLocalPipelineStatus";
 import { useProjectResources } from "@/services/projects/useProjectResources";
+import { useRemotePipelineNames } from "@/services/projects/useRemotePipelineNames";
 import { tracking } from "@/utils/tracking";
 
 import { AddResourceMenu } from "./AddResourceMenu";
@@ -148,6 +149,7 @@ export function ProjectResources({
 
   const { currentNames: currentPipelineNames } =
     useLocalPipelineStatus(resources);
+  const remotePipelineNames = useRemotePipelineNames(resources);
 
   const sessionLabels = sessionLabelsById(
     resources
@@ -249,7 +251,9 @@ export function ProjectResources({
                     key={resource.id}
                     resource={resource}
                     label={
-                      sessionLabel ?? currentPipelineNames.get(resource.id)
+                      sessionLabel ??
+                      currentPipelineNames.get(resource.id) ??
+                      remotePipelineNames.get(resource.id)
                     }
                     opensElsewhere={sessionLabel !== undefined}
                     selected={resource.id === selectedResourceId}

@@ -33,6 +33,7 @@ import {
   useDeleteProjectResource,
   useProjectResources,
 } from "@/services/projects/useProjectResources";
+import { useRemotePipelineNames } from "@/services/projects/useRemotePipelineNames";
 import { getErrorMessage } from "@/utils/string";
 import { tracking } from "@/utils/tracking";
 
@@ -87,12 +88,14 @@ function targetOf(
 function toResourceItem(
   resource: ProjectResourceSummary,
   { unavailable, currentNames }: LocalPipelineStatus,
+  remoteNames: ReadonlyMap<string, string>,
 ): ProjectResourceItem | undefined {
   if (resource.entity === "pipeline") {
     return resource.entityId
       ? {
           id: resource.id,
-          name: resource.name ?? resource.entityId,
+          name:
+            remoteNames.get(resource.id) ?? resource.name ?? resource.entityId,
           ...BACKEND_PIPELINE_META,
           target: remoteResourceTarget(resource),
         }
@@ -163,9 +166,11 @@ export function ResourcesWindowContent() {
 
   const items = resourcesPage?.items ?? [];
   const localPipelines = useLocalPipelineStatus(items);
+  const remotePipelineNames = useRemotePipelineNames(items);
 
   const resources: ProjectResourceItem[] = items.flatMap(
-    (resource) => toResourceItem(resource, localPipelines) ?? [],
+    (resource) =>
+      toResourceItem(resource, localPipelines, remotePipelineNames) ?? [],
   );
 
   async function handleOpenResource(resource: ProjectResourceItem) {
