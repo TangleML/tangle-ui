@@ -179,9 +179,6 @@ const ImportPipeline = ({
             <DialogTitle>Import Pipeline</DialogTitle>
             <DialogDescription>
               Import a pipeline from a YAML file or by pasting YAML content.
-              Browser-saved imports automatically get a unique name when one
-              already exists; remote imports create an independent backend copy
-              and keep the YAML name.
             </DialogDescription>
           </DialogHeader>
           {isLoading && (

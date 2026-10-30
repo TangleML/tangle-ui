@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  LEGACY_REMOTE_PIPELINE_ID_ANNOTATION,
-  REMOTE_PIPELINE_ID_ANNOTATION,
-} from "./annotationKeys";
+import { REMOTE_PIPELINE_ID_ANNOTATION } from "./annotationKeys";
 import {
   remotePipelineIdFromRunAnnotations,
   resolvePipelineInspectPath,
@@ -18,12 +15,12 @@ describe("remotePipelineIdFromRunAnnotations", () => {
     ).toBe("pipeline-123");
   });
 
-  it("falls back to the legacy user pipeline id annotation", () => {
+  it("ignores the saved-pipeline search key, which runs never carry", () => {
     expect(
       remotePipelineIdFromRunAnnotations({
-        [LEGACY_REMOTE_PIPELINE_ID_ANNOTATION]: "legacy-123",
+        "system/pipeline.id": "pipeline-123",
       }),
-    ).toBe("legacy-123");
+    ).toBeUndefined();
   });
 
   it("ignores absent or non-string values", () => {
@@ -31,7 +28,11 @@ describe("remotePipelineIdFromRunAnnotations", () => {
     expect(
       remotePipelineIdFromRunAnnotations({
         [REMOTE_PIPELINE_ID_ANNOTATION]: 123,
-        [LEGACY_REMOTE_PIPELINE_ID_ANNOTATION]: " ",
+      }),
+    ).toBeUndefined();
+    expect(
+      remotePipelineIdFromRunAnnotations({
+        [REMOTE_PIPELINE_ID_ANNOTATION]: " ",
       }),
     ).toBeUndefined();
   });

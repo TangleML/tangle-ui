@@ -16,6 +16,7 @@ import { useBackend } from "@/providers/BackendProvider";
 import { ComponentSpecProvider } from "@/providers/ComponentSpecProvider";
 import { ExecutionDataProvider } from "@/providers/ExecutionDataProvider";
 import { PipelineStorageProvider } from "@/services/pipelineStorage/PipelineStorageProvider";
+import { REMOTE_PIPELINE_ID_ANNOTATION } from "@/utils/annotationKeys";
 import type { ComponentSpec } from "@/utils/componentSpec";
 
 import { RunToolbar } from "./RunToolbar";
@@ -186,7 +187,7 @@ describe("<RunToolbar/>", () => {
       vi.mocked(useCheckComponentSpecFromPath).mockReturnValue(false);
       queryClient.setQueryData(["pipeline-run-metadata", "123"], {
         ...mockPipelineRun,
-        annotations: { "system/pipeline.id": "remote-pipeline-id" },
+        annotations: { [REMOTE_PIPELINE_ID_ANNOTATION]: "remote-pipeline-id" },
       });
 
       renderWithProviders(<RunToolbar />);
