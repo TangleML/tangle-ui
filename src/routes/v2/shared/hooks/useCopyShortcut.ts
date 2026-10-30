@@ -6,7 +6,7 @@ import { CLIPBOARD_COPY_FAILED_MESSAGE } from "@/routes/v2/shared/clipboard/clip
 import { copyNodesToClipboard } from "@/routes/v2/shared/clipboard/copyNodesToClipboard";
 import { getEffectiveSelection } from "@/routes/v2/shared/clipboard/getEffectiveSelection";
 import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
-import { CMDALT } from "@/routes/v2/shared/shortcuts/keys";
+import { CMD_OR_CTRL } from "@/routes/v2/shared/shortcuts/keys";
 import { hasTextSelection } from "@/routes/v2/shared/shortcuts/shortcutUtils";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
@@ -18,7 +18,7 @@ export function useCopyShortcut(spec: ComponentSpec | null): void {
   useEffect(() => {
     const unregister = keyboard.registerShortcut({
       id: "copy",
-      keys: [CMDALT, "C"],
+      keys: [CMD_OR_CTRL, "C"],
       label: "Copy",
       action: () => {
         if (hasTextSelection()) return false;

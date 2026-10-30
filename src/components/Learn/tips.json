@@ -50,8 +50,8 @@
   {
     "id": "auto-layout",
     "category": "Shortcuts",
-    "title": "Auto-layout (Cmd/Alt+Shift+L) with four algorithms",
-    "body": "Cmd/Alt+Shift+L re-arranges the whole graph using the Sugiyama layout. Open View → Auto-layout for the full set: Sugiyama, Sugiyama Centered, Compact, and Spread. Different graph shapes look better under different ones, so it's worth trying them all."
+    "title": "Auto-layout (Cmd/Ctrl+Shift+L) with four algorithms",
+    "body": "Cmd/Ctrl+Shift+L re-arranges the whole graph using the Sugiyama layout. Open View → Auto-layout for the full set: Sugiyama, Sugiyama Centered, Compact, and Spread. Different graph shapes look better under different ones, so it's worth trying them all."
   },
   {
     "id": "multi-select-toolbar",
@@ -99,7 +99,7 @@
     "id": "customizable-window-layout",
     "category": "Editor",
     "title": "Lay the editor out the way you actually work",
-    "body": "Every side panel is a window you can drag, dock left or right, undock to float, resize, minimize, or maximize. The Windows menu toggles each one on or off and includes a Views submenu with three presets: Default, All, and Minimal. Cmd/Alt+D snaps everything back to the Default layout, and your customizations persist across sessions so you only set things up once."
+    "body": "Every side panel is a window you can drag, dock left or right, undock to float, resize, minimize, or maximize. The Windows menu toggles each one on or off and includes a Views submenu with three presets: Default, All, and Minimal. Cmd/Ctrl+Shift+D snaps everything back to the Default layout, and your customizations persist across sessions so you only set things up once."
   },
   {
     "id": "recent-runs-window",

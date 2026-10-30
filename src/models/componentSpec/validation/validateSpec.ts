@@ -245,7 +245,7 @@ function validateSingleTask(
       message:
         'Component "' +
         (task.resolvedComponentSpec?.name ?? task.name) +
-        '" has no implementation, so this task cannot run. Give it a container implementation (image and command), or replace it with a component from search_components.',
+        '" has no implementation, so this task cannot run. Give it a container implementation (image and command), or replace it with a component from component search.',
       entityId: task.$id,
       severity: "error",
       issueCode: "MISSING_IMPLEMENTATION",

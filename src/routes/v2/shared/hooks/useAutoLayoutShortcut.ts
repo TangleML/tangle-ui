@@ -6,7 +6,7 @@ import {
   autoLayoutNodes,
   type LayoutAlgorithm,
 } from "@/components/shared/ReactFlow/FlowCanvas/utils/autolayout";
-import { CMDALT, SHIFT } from "@/routes/v2/shared/shortcuts/keys";
+import { CMD_OR_CTRL, SHIFT } from "@/routes/v2/shared/shortcuts/keys";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 /**
@@ -41,7 +41,7 @@ export function useAutoLayoutShortcut(
 
     const unregister = keyboard.registerShortcut({
       id: "auto-layout",
-      keys: [CMDALT, SHIFT, "L"],
+      keys: [CMD_OR_CTRL, SHIFT, "L"],
       label: "Auto layout",
       action: (_event, params) => {
         handleAutoLayout(

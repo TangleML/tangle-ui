@@ -17,7 +17,7 @@ import {
 } from "@/routes/v2/shared/clipboard/clipboardMessages";
 import { getEffectiveSelection } from "@/routes/v2/shared/clipboard/getEffectiveSelection";
 import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
-import { CMDALT } from "@/routes/v2/shared/shortcuts/keys";
+import { CMD_OR_CTRL } from "@/routes/v2/shared/shortcuts/keys";
 import {
   hasTextSelection,
   isEditableTarget,
@@ -38,7 +38,7 @@ export function useClipboardShortcuts(
   useEffect(() => {
     const unregisterDuplicate = keyboard.registerShortcut({
       id: "duplicate",
-      keys: [CMDALT, "D"],
+      keys: [CMD_OR_CTRL, "D"],
       label: "Duplicate",
       action: (e) => {
         e.preventDefault();
@@ -51,7 +51,7 @@ export function useClipboardShortcuts(
 
     const unregisterCopy = keyboard.registerShortcut({
       id: "copy",
-      keys: [CMDALT, "C"],
+      keys: [CMD_OR_CTRL, "C"],
       label: "Copy",
       action: () => {
         if (hasTextSelection()) return false;
@@ -67,7 +67,7 @@ export function useClipboardShortcuts(
 
     const unregisterPaste = keyboard.registerShortcut({
       id: "paste",
-      keys: [CMDALT, "V"],
+      keys: [CMD_OR_CTRL, "V"],
       label: "Paste",
       // Returning false skips preventDefault, so the browser still fires the
       // `paste` event the listener below depends on.

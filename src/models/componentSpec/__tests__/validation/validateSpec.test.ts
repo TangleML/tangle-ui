@@ -1158,6 +1158,8 @@ describe("validateSpec", () => {
       expect(issue?.severity).toBe("error");
       expect(issue?.entityId).toBe("t1");
       expect(issue?.message).toContain("Greet");
+      expect(issue?.message).toContain("component search");
+      expect(issue?.message).not.toContain("search_components");
     });
 
     it("says nothing when the component has a container", () => {

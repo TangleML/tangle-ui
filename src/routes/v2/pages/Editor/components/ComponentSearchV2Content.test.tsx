@@ -18,6 +18,15 @@ vi.mock(
   }),
 );
 
+vi.mock(
+  "@/components/shared/ReactFlow/FlowSidebar/components/UpgradeAvailableAlertBox",
+  () => ({
+    UpgradeAvailableAlertBox: () => (
+      <div data-testid="upgrade-available-alert" />
+    ),
+  }),
+);
+
 vi.mock("@/providers/AnalyticsProvider", () => ({
   useAnalytics: () => ({ track: mocks.track }),
 }));
@@ -97,6 +106,12 @@ describe("ComponentSearchV2Content", () => {
     const anchor = container.querySelector('[data-tour="library-search"]');
     expect(anchor).not.toBeNull();
     expect(anchor).toContainElement(screen.getByLabelText("Search components"));
+  });
+
+  it("shows the upgrades-available alert", () => {
+    render(<ComponentSearchV2Content />);
+
+    expect(screen.getByTestId("upgrade-available-alert")).toBeInTheDocument();
   });
 
   it("shows active AI rerank progress below the search box", async () => {

@@ -7,6 +7,7 @@ import {
 } from "react";
 
 import ImportComponent from "@/components/shared/ReactFlow/FlowSidebar/components/ImportComponent";
+import { UpgradeAvailableAlertBox } from "@/components/shared/ReactFlow/FlowSidebar/components/UpgradeAvailableAlertBox";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
@@ -183,6 +184,7 @@ export function ComponentSearchV2Content() {
             </InlineStack>
           }
         />
+        <UpgradeAvailableAlertBox />
         <InlineStack
           gap="2"
           blockAlign="center"

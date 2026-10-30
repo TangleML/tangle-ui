@@ -1,4 +1,4 @@
-export const CMDALT = "CMDALT" as const;
+export const CMD_OR_CTRL = "CMD_OR_CTRL" as const;
 export const CTRL = "CTRL" as const;
 export const SHIFT = "SHIFT" as const;
 
@@ -9,7 +9,7 @@ const ENTER = "ENTER" as const;
 const SPACE = "SPACE" as const;
 const TAB = "TAB" as const;
 
-type ModifierKey = typeof CMDALT | typeof CTRL | typeof SHIFT;
+type ModifierKey = typeof CMD_OR_CTRL | typeof CTRL | typeof SHIFT;
 
 type SpecialKey =
   | typeof ESCAPE
@@ -21,10 +21,20 @@ type SpecialKey =
 
 export type KeyConstant = ModifierKey | SpecialKey | string;
 
-const SPECIAL_KEY_MAP: Record<string, KeyConstant> = {
-  Meta: CMDALT,
+export const IS_MAC =
+  typeof navigator !== "undefined" &&
+  /Mac|iPhone|iPad/.test(navigator.platform);
+
+const MAC_MODIFIER_KEY_MAP: Record<string, KeyConstant> = {
+  Meta: CMD_OR_CTRL,
   Control: CTRL,
-  Alt: CMDALT,
+};
+
+const NON_MAC_MODIFIER_KEY_MAP: Record<string, KeyConstant> = {
+  Control: CMD_OR_CTRL,
+};
+
+const SPECIAL_KEY_MAP: Record<string, KeyConstant> = {
   Shift: SHIFT,
   Escape: ESCAPE,
   Delete: DELETE,
@@ -35,13 +45,19 @@ const SPECIAL_KEY_MAP: Record<string, KeyConstant> = {
 };
 
 /**
- * Maps a raw `KeyboardEvent.key` value to the canonical KeyConstant.
- * Returns `null` for keys we don't track (e.g. dead keys, CapsLock).
+ * Maps a raw `KeyboardEvent.key` value to the canonical KeyConstants.
+ * Returns an empty array for keys we don't track (e.g. dead keys, CapsLock).
  */
-export function normalizeKeyFromEvent(event: KeyboardEvent): KeyConstant[] {
+export function normalizeKeyFromEvent(
+  event: KeyboardEvent,
+  isMac: boolean,
+): KeyConstant[] {
   const keys: KeyConstant[] = [];
 
-  const mapped = SPECIAL_KEY_MAP[event.key];
+  const modifierKeyMap = isMac
+    ? MAC_MODIFIER_KEY_MAP
+    : NON_MAC_MODIFIER_KEY_MAP;
+  const mapped = modifierKeyMap[event.key] ?? SPECIAL_KEY_MAP[event.key];
   if (mapped) keys.push(mapped);
 
   if (event.key.length === 1) keys.push(event.key.toUpperCase());
@@ -50,11 +66,11 @@ export function normalizeKeyFromEvent(event: KeyboardEvent): KeyConstant[] {
 }
 
 /**
- * Canonical ordering: CMDALT < CTRL < SHIFT < everything else (alphabetical).
+ * Canonical ordering: CMD_OR_CTRL < CTRL < SHIFT < everything else (alphabetical).
  * Used to build the combo-key string for the shortcuts map.
  */
 const KEY_ORDER: Record<string, number> = {
-  [CMDALT]: 0,
+  [CMD_OR_CTRL]: 0,
   [CTRL]: 1,
   [SHIFT]: 2,
 };

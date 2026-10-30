@@ -2,7 +2,8 @@ import { observer } from "mobx-react-lite";
 
 import { Badge } from "@/components/ui/badge";
 import {
-  CMDALT,
+  CMD_OR_CTRL,
+  CTRL,
   type KeyConstant,
   SHIFT,
 } from "@/routes/v2/shared/shortcuts/keys";
@@ -22,25 +23,25 @@ export const ShortcutBadge = observer(function ShortcutBadge({
 
   return (
     <Badge variant="outline" className={className}>
-      {formatShortcut(shortcut.keys)}
+      {formatShortcut(shortcut.keys, keyboard.isMac)}
     </Badge>
   );
 });
 
-const isMac =
-  typeof navigator !== "undefined" &&
-  /Mac|iPhone|iPad/.test(navigator.platform);
 /**
  * Returns a platform-aware display string for a shortcut.
  * On macOS uses symbols; on other platforms uses "Ctrl+".
  */
-function formatShortcut(keys: KeyConstant[]): string {
+export function formatShortcut(keys: KeyConstant[], isMac: boolean): string {
   const parts: string[] = [];
 
   for (const key of keys) {
     switch (key) {
-      case CMDALT:
+      case CMD_OR_CTRL:
         parts.push(isMac ? "\u2318" : "Ctrl");
+        break;
+      case CTRL:
+        parts.push(isMac ? "\u2303" : "Ctrl");
         break;
       case SHIFT:
         parts.push(isMac ? "\u21E7" : "Shift");

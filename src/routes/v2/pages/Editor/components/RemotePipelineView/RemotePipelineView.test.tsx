@@ -265,7 +265,7 @@ it("copies the selected task only while the view is active", async () => {
   const node = canvas.nodes![0];
   act(() => canvas.onSelectionChange?.({ nodes: [node], edges: [] }));
 
-  fireEvent.keyDown(window, { key: "c", metaKey: true });
+  fireEvent.keyDown(window, { key: "c", ctrlKey: true });
   expect(writeText).toHaveBeenCalledTimes(1);
   expect(JSON.parse(writeText.mock.calls[0][0])).toMatchObject({
     _type: "tangle-pipeline-nodes",
@@ -274,15 +274,15 @@ it("copies the selected task only while the view is active", async () => {
   });
 
   rerender(<RemotePipelineView spec={spec} isActive={false} />);
-  fireEvent.keyDown(window, { key: "c", metaKey: true });
+  fireEvent.keyDown(window, { key: "c", ctrlKey: true });
   expect(writeText).toHaveBeenCalledTimes(1);
 
   rerender(<RemotePipelineView spec={spec} isActive />);
-  fireEvent.keyDown(window, { key: "c", metaKey: true });
+  fireEvent.keyDown(window, { key: "c", ctrlKey: true });
   expect(writeText).toHaveBeenCalledTimes(2);
 
   unmount();
-  fireEvent.keyDown(window, { key: "c", metaKey: true });
+  fireEvent.keyDown(window, { key: "c", ctrlKey: true });
   expect(writeText).toHaveBeenCalledTimes(2);
 });
 

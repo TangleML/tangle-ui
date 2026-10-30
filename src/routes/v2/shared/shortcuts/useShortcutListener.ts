@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
 import {
-  CMDALT,
+  CMD_OR_CTRL,
   normalizeKeyFromEvent,
 } from "@/routes/v2/shared/shortcuts/keys";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
@@ -25,14 +25,14 @@ export function useShortcutListener(enabled = true): void {
     keyboard.setListening(true);
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.repeat && event.metaKey) return;
+      if (event.repeat && keyboard.isPrimaryModifierHeld(event)) return;
 
       keyboard.syncModifiers(event);
       if (event.metaKey) {
         keyboard.clearNonModifierKeys();
       }
 
-      const keys = normalizeKeyFromEvent(event);
+      const keys = normalizeKeyFromEvent(event, keyboard.isMac);
       for (const key of keys) {
         keyboard.pressKey(key);
       }
@@ -55,8 +55,8 @@ export function useShortcutListener(enabled = true): void {
     };
 
     const handleKeyUp = (event: KeyboardEvent) => {
-      const keys = normalizeKeyFromEvent(event);
-      if (keys.includes(CMDALT)) {
+      const keys = normalizeKeyFromEvent(event, keyboard.isMac);
+      if (keys.includes(CMD_OR_CTRL)) {
         keyboard.clearPressed();
         return;
       }
