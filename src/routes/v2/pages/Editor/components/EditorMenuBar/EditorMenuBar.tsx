@@ -20,6 +20,7 @@ import {
   CanvasMenuBar,
 } from "@/routes/v2/shared/components/CanvasMenuBar";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { projectPipelineOf } from "@/services/projects/pipelineResource";
 import { tracking } from "@/utils/tracking";
 
 import { AutoSaveIndicator } from "./components/AutoSaveIndicator";
@@ -158,9 +159,11 @@ export const EditorMenuBar = observer(function EditorMenuBar() {
       >
         {displayMenu && (
           <>
-            {!isRemote && (
-              <ProjectPicker pipelineName={activePipeline?.storageKey} />
-            )}
+            <ProjectPicker
+              pipeline={
+                activePipeline ? projectPipelineOf(activePipeline) : undefined
+              }
+            />
             <QuickRunButton />
             <div className="w-px h-5 bg-stone-700" />
           </>

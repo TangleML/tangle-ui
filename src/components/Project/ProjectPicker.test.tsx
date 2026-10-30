@@ -2,12 +2,18 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { ProjectPipelineRef } from "@/services/projects/pipelineResource";
 import type { PipelineProjectMembership } from "@/services/projects/usePipelineProjects";
 import { usePipelineProjects } from "@/services/projects/usePipelineProjects";
 import { useDeleteProjectResource } from "@/services/projects/useProjectResources";
 
 import { ProjectPicker } from "./ProjectPicker";
 import { useRunProjectContext } from "./useRunProjectContext";
+
+const CHURN_MODEL: ProjectPipelineRef = {
+  source: "local",
+  name: "Churn model",
+};
 
 const setProjectId = vi.fn();
 const removeResource = vi.fn();
@@ -93,14 +99,14 @@ describe("ProjectPicker", () => {
   it("shows nothing at all while projects are switched off", () => {
     given({ enabled: false });
 
-    const { container } = render(<ProjectPicker pipelineName="Churn model" />);
+    const { container } = render(<ProjectPicker pipeline={CHURN_MODEL} />);
 
     expect(container).toBeEmptyDOMElement();
   });
 
   /** The old chip only appeared once a project was set, so there was nothing to click. */
   it("offers itself on a pipeline that belongs to no project", () => {
-    render(<ProjectPicker pipelineName="Churn model" />);
+    render(<ProjectPicker pipeline={CHURN_MODEL} />);
 
     expect(
       screen.getByRole("button", { name: "Project for runs: No project" }),
@@ -110,7 +116,7 @@ describe("ProjectPicker", () => {
   it("names the project the runs of this tab go to", () => {
     given({ projectId: "project-1", projectName: "Churn work" });
 
-    render(<ProjectPicker pipelineName="Churn model" />);
+    render(<ProjectPicker pipeline={CHURN_MODEL} />);
 
     expect(
       screen.getByRole("button", { name: "Project for runs: Churn work" }),
@@ -127,7 +133,7 @@ describe("ProjectPicker", () => {
       ],
     });
 
-    render(<ProjectPicker pipelineName="Churn model" />);
+    render(<ProjectPicker pipeline={CHURN_MODEL} />);
     await open();
 
     expect(
@@ -148,7 +154,7 @@ describe("ProjectPicker", () => {
       ],
     });
 
-    render(<ProjectPicker pipelineName="Churn model" />);
+    render(<ProjectPicker pipeline={CHURN_MODEL} />);
     await open();
     await userEvent.click(
       screen.getByRole("menuitemradio", { name: "Q3 models" }),
@@ -160,7 +166,7 @@ describe("ProjectPicker", () => {
   it("stops sending them anywhere", async () => {
     given({ projectId: "project-1", projectName: "Churn work" });
 
-    render(<ProjectPicker pipelineName="Churn model" />);
+    render(<ProjectPicker pipeline={CHURN_MODEL} />);
     await open();
     await userEvent.click(
       screen.getByRole("menuitemradio", { name: "No project" }),
@@ -176,7 +182,7 @@ describe("ProjectPicker", () => {
   it("lists a chosen project the pipeline is not in", async () => {
     given({ projectId: "project-9", projectName: "Somebody else's" });
 
-    render(<ProjectPicker pipelineName="Churn model" />);
+    render(<ProjectPicker pipeline={CHURN_MODEL} />);
     await open();
 
     expect(
@@ -187,7 +193,7 @@ describe("ProjectPicker", () => {
   it("offers no removal from a project the pipeline is not in", async () => {
     given({ projectId: "project-9", projectName: "Somebody else's" });
 
-    render(<ProjectPicker pipelineName="Churn model" />);
+    render(<ProjectPicker pipeline={CHURN_MODEL} />);
     await open();
 
     expect(screen.queryByText(/^Remove from/)).not.toBeInTheDocument();
@@ -200,7 +206,7 @@ describe("ProjectPicker", () => {
       memberships: [membership("project-1", "Churn work")],
     });
 
-    render(<ProjectPicker pipelineName="Churn model" />);
+    render(<ProjectPicker pipeline={CHURN_MODEL} />);
     await open();
     await userEvent.click(screen.getByText("Remove from Churn work"));
     await userEvent.click(
@@ -223,7 +229,7 @@ describe("ProjectPicker", () => {
       memberships: [membership("project-1", "Churn work")],
     });
 
-    render(<ProjectPicker pipelineName="Churn model" />);
+    render(<ProjectPicker pipeline={CHURN_MODEL} />);
     await open();
     await userEvent.click(screen.getByText("Remove from Churn work"));
 
@@ -234,10 +240,18 @@ describe("ProjectPicker", () => {
   });
 
   it("waits to be asked before reading every project's contents", () => {
-    render(<ProjectPicker pipelineName="Churn model" />);
+    render(<ProjectPicker pipeline={CHURN_MODEL} />);
 
-    expect(usePipelineProjects).toHaveBeenCalledWith("Churn model", {
+    expect(usePipelineProjects).toHaveBeenCalledWith(CHURN_MODEL, {
       enabled: false,
     });
+  });
+
+  /** A draft has no backend id yet, so there is nothing a project could point at. */
+  it("offers no adding while there is no pipeline to add", async () => {
+    render(<ProjectPicker pipeline={undefined} />);
+    await open();
+
+    expect(screen.queryByText("Add to a project...")).not.toBeInTheDocument();
   });
 });

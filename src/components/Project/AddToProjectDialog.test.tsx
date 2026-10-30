@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { pointerTo } from "@/services/localPipelines/localPipelinesService";
+import type { ProjectPipelineRef } from "@/services/projects/pipelineResource";
 import { useAddResourceToProject } from "@/services/projects/useProjectResources";
 import { useReachableProjects } from "@/services/projects/useReachableProjects";
 
@@ -40,10 +41,13 @@ function mockProjects(items = [{ id: "project-1", name: "Churn work" }]) {
   } as unknown as ReturnType<typeof useReachableProjects>);
 }
 
-const dialog = (memberProjectIds: string[] = []) =>
+const dialog = (
+  memberProjectIds: string[] = [],
+  pipeline: ProjectPipelineRef = { source: "local", name: "Churn model" },
+) =>
   render(
     <AddToProjectDialog
-      pipelineName="Churn model"
+      pipeline={pipeline}
       memberProjectIds={memberProjectIds}
       onOpenChange={onOpenChange}
       onAdded={onAdded}
@@ -74,6 +78,27 @@ describe("AddToProjectDialog", () => {
       projectId: "project-1",
       input: { entity: "document", metadata: { type: "local_pipeline" } },
     });
+  });
+
+  it("files a backend pipeline by its id rather than as a browser pointer", async () => {
+    dialog([], {
+      source: "remote",
+      pipelineId: "pipeline-7",
+      name: "Churn model",
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: /Churn work/ }));
+
+    await waitFor(() => expect(mutate).toHaveBeenCalled());
+    expect(mutate.mock.calls[0][0]).toEqual({
+      projectId: "project-1",
+      input: {
+        entity: "pipeline",
+        entityId: "pipeline-7",
+        name: "Churn model",
+      },
+    });
+    expect(pointerTo).not.toHaveBeenCalled();
   });
 
   /** Attribution follows membership, so the project just joined is where runs go. */

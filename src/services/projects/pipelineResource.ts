@@ -1,3 +1,4 @@
+import { normalizePipelineId } from "@/services/pipelineId";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 
 import { localPipelineResourceInput } from "./resourceDescriptor";
@@ -8,6 +9,39 @@ import {
   type WorkareaTarget,
 } from "./resourceTarget";
 import type { CreateResourceInput, ProjectResourceSummary } from "./types";
+
+interface LocalProjectPipeline {
+  source: "local";
+  name: string;
+}
+
+interface RemoteProjectPipeline {
+  source: "remote";
+  pipelineId: string;
+  name: string;
+}
+
+export type ProjectPipelineRef = LocalProjectPipeline | RemoteProjectPipeline;
+
+export function localProjectPipeline(
+  name: string | undefined,
+): ProjectPipelineRef | undefined {
+  return name ? { source: "local", name } : undefined;
+}
+
+/** A draft has no backend id until its first save, so nothing can point at it yet. */
+export function projectPipelineOf(
+  file: Pick<PipelineFile, "id" | "storageKey" | "remote" | "isDraft">,
+): ProjectPipelineRef | undefined {
+  if (file.remote) {
+    return {
+      source: "remote",
+      pipelineId: normalizePipelineId(file.id),
+      name: file.storageKey,
+    };
+  }
+  return file.isDraft ? undefined : localProjectPipeline(file.storageKey);
+}
 
 export function pipelineFileTarget(file: PipelineFile): WorkareaTarget {
   return {

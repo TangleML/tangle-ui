@@ -16,6 +16,7 @@ import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
+import type { ProjectPipelineRef } from "@/services/projects/pipelineResource";
 import { usePipelineProjects } from "@/services/projects/usePipelineProjects";
 import { tracking } from "@/utils/tracking";
 
@@ -25,15 +26,15 @@ import { useConfirmedResourceRemoval } from "./useConfirmedResourceRemoval";
 import { useRunProjectContext } from "./useRunProjectContext";
 
 interface ProjectPickerProps {
-  pipelineName: string | undefined;
+  pipeline: ProjectPipelineRef | undefined;
 }
 
-export function ProjectPicker({ pipelineName }: ProjectPickerProps) {
+export function ProjectPicker({ pipeline }: ProjectPickerProps) {
   const { enabled, projectId, projectName, setProjectId } =
     useRunProjectContext();
   const [open, setOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
-  const { memberships, isPending, error } = usePipelineProjects(pipelineName, {
+  const { memberships, isPending, error } = usePipelineProjects(pipeline, {
     enabled: open,
   });
   const { confirmAndRemove, confirmation: confirmationProps } =
@@ -118,7 +119,7 @@ export function ProjectPicker({ pipelineName }: ProjectPickerProps) {
             </InlineStack>
           )}
 
-          {pipelineName && (
+          {pipeline && (
             <>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -146,9 +147,9 @@ export function ProjectPicker({ pipelineName }: ProjectPickerProps) {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {addOpen && pipelineName && (
+      {addOpen && pipeline && (
         <AddToProjectDialog
-          pipelineName={pipelineName}
+          pipeline={pipeline}
           memberProjectIds={memberships.map(
             (membership) => membership.project.id,
           )}

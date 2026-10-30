@@ -1,4 +1,5 @@
 import type { LocalPipelinePointer } from "@/services/localPipelines/types";
+import { normalizePipelineId } from "@/services/pipelineId";
 
 import { localPipelinePointerOf } from "./resourceDescriptor";
 import type {
@@ -36,6 +37,19 @@ export function pipelineResourceIn(
   pipeline: LocalPipelinePointer,
 ) {
   return resources.find((resource) => pointsAt(resource, pipeline));
+}
+
+export function remotePipelineResourceIn(
+  resources: readonly ProjectResourceSummary[],
+  pipelineId: string,
+) {
+  const wanted = normalizePipelineId(pipelineId);
+  return resources.find(
+    (resource) =>
+      resource.entity === "pipeline" &&
+      resource.entityId !== null &&
+      normalizePipelineId(resource.entityId) === wanted,
+  );
 }
 
 export function holdsPipeline(
