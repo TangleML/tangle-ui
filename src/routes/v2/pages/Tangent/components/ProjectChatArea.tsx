@@ -1,10 +1,11 @@
 import { observer } from "mobx-react-lite";
 
-import { BlockStack } from "@/components/ui/layout";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
 import { AgentTraceButton } from "@/routes/v2/pages/Tangent/components/AgentTraceDialog";
+import { AttachAgentButton } from "@/routes/v2/pages/Tangent/components/AttachAgentButton";
 import { TangentChatPane } from "@/routes/v2/pages/Tangent/components/TangentChatPane";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { AiProviderSetup } from "@/routes/v2/shared/components/AiChat/components/AiProviderSetup";
@@ -58,9 +59,15 @@ export const ProjectChatArea = observer(function ProjectChatArea() {
         onSendPrompt={(content) => store.recordSessionPrompt(content)}
         onError={(message) => notify(message, "error")}
         headerAction={
-          <AgentTraceButton
-            scope={{ projectId: store.projectId, sessionId: activeSessionId }}
-          />
+          <InlineStack gap="1" blockAlign="center" wrap="nowrap">
+            <AgentTraceButton
+              scope={{ projectId: store.projectId, sessionId: activeSessionId }}
+            />
+            <AttachAgentButton
+              projectId={store.projectId}
+              sessionId={activeSessionId}
+            />
+          </InlineStack>
         }
       />
     </ChatEntityRevealProvider>

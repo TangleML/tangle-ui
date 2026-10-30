@@ -27,6 +27,10 @@ vi.mock("@/components/Project/useShareProjectAction", () => ({
   useShareProjectAction: () => share,
 }));
 
+vi.mock("./LocalEnvIndicator", () => ({
+  LocalEnvIndicator: () => null,
+}));
+
 vi.mock("@tanstack/react-router", () => ({
   Link: ({
     children,
