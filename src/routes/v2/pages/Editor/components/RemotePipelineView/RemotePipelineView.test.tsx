@@ -15,6 +15,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactFlowProps } from "@xyflow/react";
 import { isRootStore } from "mobx-keystone";
 import { type PropsWithChildren, StrictMode } from "react";
@@ -199,6 +200,30 @@ it("shows a read-only graph and navigates subgraphs without changing the spec", 
   expect(serializeComponentSpecToText(spec)).toBe(initialYaml);
   unmount();
   expect(isRootStore(spec)).toBe(false);
+});
+
+it("starts embedded views compact with Sidekick disabled and keeps the minimap available", async () => {
+  const user = userEvent.setup();
+  localStorage.setItem("betaFlags", JSON.stringify({ "ai-assistant": false }));
+  const spec = new YamlDeserializer(new IncrementingIdGenerator()).deserialize({
+    name: "Shared pipeline",
+    implementation: { graph: { tasks: {} } },
+  });
+  const { container } = render(<RemotePipelineView spec={spec} embedded />, {
+    wrapper: RouterWrapper,
+  });
+  await screen.findByText("View only");
+  expect(container.querySelector('[data-dock-area="left"]')).toBeNull();
+  expect(container.querySelector('[data-dock-area="right"]')).toHaveStyle({
+    width: "36px",
+  });
+  expect(screen.queryByRole("button", { name: "Fit view" })).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Windows" }));
+  const minimap = screen.getByRole("menuitemcheckbox", { name: "Minimap" });
+  expect(minimap).toHaveAttribute("aria-checked", "false");
+  await user.click(minimap);
+  await user.keyboard("{Escape}");
+  expect(await screen.findByRole("button", { name: "Fit view" })).toBeVisible();
 });
 
 it("copies the selected task only while the view is active", async () => {

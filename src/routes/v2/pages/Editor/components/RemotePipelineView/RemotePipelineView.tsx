@@ -16,6 +16,7 @@ import { ViewMenu } from "@/routes/v2/pages/Editor/components/EditorMenuBar/comp
 import { EDITOR_SPEC_QUERY_KEY } from "@/routes/v2/pages/Editor/hooks/deletedRemotePipelineCache";
 import { useAiChatWindow } from "@/routes/v2/pages/Editor/hooks/useAiChatWindow";
 import { useEditorEscapeShortcut } from "@/routes/v2/pages/Editor/hooks/useEditorEscapeShortcut";
+import { useEmbeddedInitialDockLayout } from "@/routes/v2/pages/Editor/hooks/useEmbeddedInitialDockLayout";
 import { usePipelineDetailsWindow } from "@/routes/v2/pages/Editor/hooks/usePipelineDetailsWindow";
 import { useRemotePipelineUrlSync } from "@/routes/v2/pages/Editor/hooks/useRemotePipelineUrlSync";
 import { useSelectionWindowSync } from "@/routes/v2/pages/Editor/hooks/useSelectionWindowSync";
@@ -70,16 +71,18 @@ const RemotePipelineContent = observer(function RemotePipelineContent({
   isActive,
   pipelineId,
   file,
+  embedded,
 }: {
   spec: ComponentSpec;
   isActive: boolean;
   pipelineId?: string;
   file?: PipelineFile;
+  embedded: boolean;
 }) {
   const { navigation, windows } = useSharedStores();
   const queryClient = useQueryClient();
   const { pipelineFile } = useEditorSession();
-  useWindowPersistence("pipeline-view");
+  useWindowPersistence("pipeline-view", !embedded);
   useReadOnlySpecLifecycle(spec);
   useShortcutListener(isActive);
   useDockAreaAccordion();
@@ -89,7 +92,6 @@ const RemotePipelineContent = observer(function RemotePipelineContent({
   });
   useSelectionWindowSync({ readOnly: true });
   useCanvasControlsWindow("v2.pipeline_canvas", false);
-  useFocusMode(VIEW_PRESETS[0]);
   useEditorEscapeShortcut();
 
   useEffect(() => {
@@ -117,6 +119,20 @@ const RemotePipelineContent = observer(function RemotePipelineContent({
 
   const aiEnabled = useFlagValue("ai-assistant");
   useAiChatWindow(aiEnabled, { readOnly: true });
+  const right = [
+    "pipeline-tools",
+    ...(aiEnabled ? ["ai-assistant-chat"] : []),
+    "pipeline-details",
+  ];
+  const embeddedPreset: ViewPreset = {
+    label: "Default",
+    description:
+      "Pipeline tools, Sidekick, and details in a collapsed right dock",
+    visible: new Set(right),
+    dockAreas: { left: [], right },
+  };
+  useEmbeddedInitialDockLayout(embeddedPreset, embedded);
+  useFocusMode(embedded ? embeddedPreset : VIEW_PRESETS[0]);
 
   const activeSpec = navigation.activeSpec;
 
@@ -128,7 +144,7 @@ const RemotePipelineContent = observer(function RemotePipelineContent({
         <>
           <ViewMenu />
           <WindowManagementMenu
-            presets={VIEW_PRESETS}
+            presets={embedded ? [embeddedPreset] : VIEW_PRESETS}
             trackingPrefix="v2.pipeline_view.windows_menu"
           />
         </>
@@ -166,7 +182,7 @@ const RemotePipelineContent = observer(function RemotePipelineContent({
             blockAlign="stretch"
             wrap="nowrap"
           >
-            <DockArea side="left" />
+            {!embedded && <DockArea side="left" />}
             <div className="relative flex-1 min-w-0 h-full">
               <ReadOnlyFlowCanvas
                 key={activeSpec.$id}
@@ -189,11 +205,13 @@ export function RemotePipelineView({
   isActive = true,
   pipelineId,
   file,
+  embedded = false,
 }: {
   spec: ComponentSpec;
   isActive?: boolean;
   pipelineId?: string;
   file?: PipelineFile;
+  embedded?: boolean;
 }) {
   const identity = file?.remote
     ? getEditorPipelineIdentity({ source: "remote", ...file.remote })
@@ -215,6 +233,7 @@ export function RemotePipelineView({
                       isActive={isActive}
                       pipelineId={pipelineId}
                       file={file}
+                      embedded={embedded}
                     />
                   </NodeRegistryProvider>
                 </ReactFlowProvider>

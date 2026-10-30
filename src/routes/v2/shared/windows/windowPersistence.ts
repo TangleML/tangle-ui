@@ -208,9 +208,10 @@ function restoreDockAreaState(store: WindowStoreImpl): void {
   }
 }
 
-export function useWindowPersistence(layoutId: string) {
+export function useWindowPersistence(layoutId: string, enabled = true) {
   const { windows: store } = useSharedStores();
   useEffect(() => {
+    if (!enabled) return;
     activeLayoutId = layoutId;
 
     restoreDockAreaState(store);
@@ -227,5 +228,5 @@ export function useWindowPersistence(layoutId: string) {
       saveWindowLayout.cancel();
       activeLayoutId = null;
     };
-  }, [layoutId, store]);
+  }, [layoutId, store, enabled]);
 }
