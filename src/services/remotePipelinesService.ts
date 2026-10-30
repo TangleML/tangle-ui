@@ -99,6 +99,22 @@ export async function listRemotePipelines(
   };
 }
 
+export async function getRemotePipelineName(
+  backendUrl: string,
+  pipelineId: string,
+): Promise<string | null> {
+  const { pipelines } = await listRemotePipelines(
+    backendUrl,
+    undefined,
+    remotePipelineFiltersToQuery({ id: pipelineId }),
+  );
+  const id = normalizePipelineId(pipelineId);
+  const match = pipelines.find(
+    (pipeline) => normalizePipelineId(pipeline.id) === id,
+  );
+  return match?.pipeline_name ?? null;
+}
+
 export async function deleteRemotePipeline(
   backendUrl: string,
   pipeline: RemotePipeline,

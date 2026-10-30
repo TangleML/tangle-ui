@@ -9,6 +9,7 @@ import { componentSpecToYaml } from "@/utils/yaml";
 
 import {
   deleteRemotePipeline,
+  getRemotePipelineName,
   listRemotePipelines,
   type RemotePipeline,
   type RemotePipelineFilters,
@@ -149,6 +150,53 @@ describe("listRemotePipelines", () => {
     await expect(listRemotePipelines(BACKEND_URL)).rejects.toThrow(
       "Failed to load pipelines (503)",
     );
+  });
+});
+
+describe("getRemotePipelineName", () => {
+  it("searches for the one pipeline and answers with its current name", async () => {
+    mockResponse({ pipelines: [pipeline], next_page_token: null });
+
+    await expect(
+      getRemotePipelineName(BACKEND_URL, "pipeline-1"),
+    ).resolves.toBe("Example pipeline");
+
+    expect(client.post).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        body: {
+          page_size: 10,
+          page_token: undefined,
+          filter_query: remotePipelineFiltersToQuery({ id: "pipeline-1" }),
+        },
+      }),
+    );
+  });
+
+  it("matches an id the backend spells differently", async () => {
+    const id = "0123456789abcdef0123456789abcdef";
+    mockResponse({
+      pipelines: [{ ...pipeline, id: "01234567-89AB-CDEF-0123-456789ABCDEF" }],
+      next_page_token: null,
+    });
+
+    await expect(getRemotePipelineName(BACKEND_URL, id)).resolves.toBe(
+      "Example pipeline",
+    );
+  });
+
+  it("answers null for a pipeline that is gone or has no name", async () => {
+    mockResponse({ pipelines: [], next_page_token: null });
+    await expect(
+      getRemotePipelineName(BACKEND_URL, "pipeline-1"),
+    ).resolves.toBeNull();
+
+    mockResponse({
+      pipelines: [{ ...pipeline, pipeline_name: null }],
+      next_page_token: null,
+    });
+    await expect(
+      getRemotePipelineName(BACKEND_URL, "pipeline-1"),
+    ).resolves.toBeNull();
   });
 });
 

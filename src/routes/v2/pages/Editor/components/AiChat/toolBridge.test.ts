@@ -305,6 +305,24 @@ describe("createEditorToolBridge", () => {
       expect(undo.labels).toContain("Rename pipeline");
     });
 
+    /** Resource lists read the name through these, not off the row. */
+    it("setPipelineName refreshes what local and backend pipelines are called", async () => {
+      const invalidate = vi.fn();
+      const queryClient = {
+        invalidateQueries: invalidate,
+      } as unknown as QueryClient;
+      const { bridge } = makeBackendBridge({ queryClient });
+
+      await bridge.setPipelineName("NewName");
+
+      expect(invalidate).toHaveBeenCalledWith({
+        queryKey: ["local-pipelines"],
+      });
+      expect(invalidate).toHaveBeenCalledWith({
+        queryKey: ["remote-pipelines", TEST_BACKEND_URL],
+      });
+    });
+
     it("setPipelineDescription updates the spec inside an undo group", async () => {
       const { bridge, undo, spec } = makeBridge();
       const result = await bridge.setPipelineDescription("hi");
