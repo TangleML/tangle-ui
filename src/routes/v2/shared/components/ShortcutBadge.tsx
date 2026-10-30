@@ -3,6 +3,7 @@ import { observer } from "mobx-react-lite";
 import { Badge } from "@/components/ui/badge";
 import {
   CMDALT,
+  CTRL,
   type KeyConstant,
   SHIFT,
 } from "@/routes/v2/shared/shortcuts/keys";
@@ -22,32 +23,28 @@ export const ShortcutBadge = observer(function ShortcutBadge({
 
   return (
     <Badge variant="outline" className={className}>
-      {formatShortcut(shortcut.keys)}
+      {formatShortcut(shortcut.keys, keyboard.isMac)}
     </Badge>
   );
 });
 
-const isMac =
-  typeof navigator !== "undefined" &&
-  /Mac|iPhone|iPad/.test(navigator.platform);
 /**
  * Returns a platform-aware display string for a shortcut.
- * On macOS uses symbols; on other platforms CMDALT is Alt because the
- * shortcut listener maps Alt, not Ctrl, to that modifier.
+ * On macOS uses symbols; on other platforms uses "Ctrl+".
  */
-export function formatShortcut(
-  keys: KeyConstant[],
-  platformIsMac = isMac,
-): string {
+export function formatShortcut(keys: KeyConstant[], isMac: boolean): string {
   const parts: string[] = [];
 
   for (const key of keys) {
     switch (key) {
       case CMDALT:
-        parts.push(platformIsMac ? "\u2318" : "Alt");
+        parts.push(isMac ? "\u2318" : "Ctrl");
+        break;
+      case CTRL:
+        parts.push(isMac ? "\u2303" : "Ctrl");
         break;
       case SHIFT:
-        parts.push(platformIsMac ? "\u21E7" : "Shift");
+        parts.push(isMac ? "\u21E7" : "Shift");
         break;
       default: {
         const label = key.length === 1 ? key.toUpperCase() : key;
@@ -56,5 +53,5 @@ export function formatShortcut(
     }
   }
 
-  return platformIsMac ? parts.join(" ") : parts.join("+");
+  return isMac ? parts.join(" ") : parts.join("+");
 }

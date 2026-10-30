@@ -3,6 +3,7 @@ import { action, computed, makeObservable, observable } from "mobx";
 import {
   CMDALT,
   CTRL,
+  IS_MAC,
   type KeyConstant,
   normalizeComboKey,
   SHIFT,
@@ -29,6 +30,8 @@ interface ShortcutDefinition {
 }
 
 export class KeyboardStore {
+  readonly isMac: boolean;
+
   @observable.ref accessor pressed = observable.set<KeyConstant>();
   @observable.ref accessor shortcuts = observable.map<
     string,
@@ -37,7 +40,8 @@ export class KeyboardStore {
 
   @observable accessor listening = false;
 
-  constructor() {
+  constructor({ isMac = IS_MAC }: { isMac?: boolean } = {}) {
+    this.isMac = isMac;
     makeObservable(this);
   }
 
@@ -67,9 +71,13 @@ export class KeyboardStore {
       if (flag) this.pressed.add(key);
       else this.pressed.delete(key);
     };
-    toggle(event.metaKey || event.altKey, CMDALT);
-    toggle(event.ctrlKey, CTRL);
+    toggle(this.isPrimaryModifierHeld(event), CMDALT);
+    toggle(this.isMac && event.ctrlKey, CTRL);
     toggle(event.shiftKey, SHIFT);
+  }
+
+  isPrimaryModifierHeld(event: KeyboardEvent): boolean {
+    return this.isMac ? event.metaKey : event.ctrlKey;
   }
 
   @action clearNonModifierKeys() {
@@ -81,14 +89,23 @@ export class KeyboardStore {
   }
 
   @action registerShortcut(definition: ShortcutDefinition): () => void {
-    const comboKey = normalizeComboKey(definition.keys);
-    this.shortcuts.set(comboKey, definition);
+    const registered = {
+      ...definition,
+      keys: this.toPlatformKeys(definition.keys),
+    };
+    const comboKey = normalizeComboKey(registered.keys);
+    this.shortcuts.set(comboKey, registered);
     return () => {
       const current = this.shortcuts.get(comboKey);
-      if (current === definition) {
+      if (current === registered) {
         this.shortcuts.delete(comboKey);
       }
     };
+  }
+
+  private toPlatformKeys(keys: ShortcutKeys): ShortcutKeys {
+    if (this.isMac) return keys;
+    return keys.map((key) => (key === CTRL ? CMDALT : key));
   }
 
   @computed get pressedKeys(): KeyConstant[] {

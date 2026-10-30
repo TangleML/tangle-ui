@@ -25,14 +25,14 @@ export function useShortcutListener(enabled = true): void {
     keyboard.setListening(true);
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.repeat && event.metaKey) return;
+      if (event.repeat && keyboard.isPrimaryModifierHeld(event)) return;
 
       keyboard.syncModifiers(event);
       if (event.metaKey) {
         keyboard.clearNonModifierKeys();
       }
 
-      const keys = normalizeKeyFromEvent(event);
+      const keys = normalizeKeyFromEvent(event, keyboard.isMac);
       for (const key of keys) {
         keyboard.pressKey(key);
       }
@@ -55,7 +55,7 @@ export function useShortcutListener(enabled = true): void {
     };
 
     const handleKeyUp = (event: KeyboardEvent) => {
-      const keys = normalizeKeyFromEvent(event);
+      const keys = normalizeKeyFromEvent(event, keyboard.isMac);
       if (keys.includes(CMDALT)) {
         keyboard.clearPressed();
         return;

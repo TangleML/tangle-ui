@@ -167,7 +167,7 @@ test.describe.fixme("Pipeline Validation UI", () => {
       );
     }
 
-    await page.keyboard.down("Meta");
+    await page.keyboard.down("ControlOrMeta");
 
     await labelColumnHandle.hover();
     await page.mouse.down();
@@ -180,7 +180,7 @@ test.describe.fixme("Pipeline Validation UI", () => {
 
     await page.mouse.up();
 
-    await page.keyboard.up("Meta");
+    await page.keyboard.up("ControlOrMeta");
 
     const inputNode = page.getByTestId("io-node-input-label_column_name");
     await expect(

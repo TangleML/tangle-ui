@@ -21,10 +21,20 @@ type SpecialKey =
 
 export type KeyConstant = ModifierKey | SpecialKey | string;
 
-const SPECIAL_KEY_MAP: Record<string, KeyConstant> = {
+export const IS_MAC =
+  typeof navigator !== "undefined" &&
+  /Mac|iPhone|iPad/.test(navigator.platform);
+
+const MAC_MODIFIER_KEY_MAP: Record<string, KeyConstant> = {
   Meta: CMDALT,
   Control: CTRL,
-  Alt: CMDALT,
+};
+
+const NON_MAC_MODIFIER_KEY_MAP: Record<string, KeyConstant> = {
+  Control: CMDALT,
+};
+
+const SPECIAL_KEY_MAP: Record<string, KeyConstant> = {
   Shift: SHIFT,
   Escape: ESCAPE,
   Delete: DELETE,
@@ -35,13 +45,19 @@ const SPECIAL_KEY_MAP: Record<string, KeyConstant> = {
 };
 
 /**
- * Maps a raw `KeyboardEvent.key` value to the canonical KeyConstant.
- * Returns `null` for keys we don't track (e.g. dead keys, CapsLock).
+ * Maps a raw `KeyboardEvent.key` value to the canonical KeyConstants.
+ * Returns an empty array for keys we don't track (e.g. dead keys, CapsLock).
  */
-export function normalizeKeyFromEvent(event: KeyboardEvent): KeyConstant[] {
+export function normalizeKeyFromEvent(
+  event: KeyboardEvent,
+  isMac: boolean,
+): KeyConstant[] {
   const keys: KeyConstant[] = [];
 
-  const mapped = SPECIAL_KEY_MAP[event.key];
+  const modifierKeyMap = isMac
+    ? MAC_MODIFIER_KEY_MAP
+    : NON_MAC_MODIFIER_KEY_MAP;
+  const mapped = modifierKeyMap[event.key] ?? SPECIAL_KEY_MAP[event.key];
   if (mapped) keys.push(mapped);
 
   if (event.key.length === 1) keys.push(event.key.toUpperCase());
