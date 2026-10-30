@@ -31,6 +31,7 @@ import type { Remote } from "comlink";
 import { proxy } from "comlink";
 
 import type { RemoteEnvWorkerApi } from "@/agent/createRemoteEnvWorkerApi";
+import type { AgentContext } from "@/agent/types";
 import type { AgentTargetRouter } from "@/routes/v2/pages/Tangent/services/createActiveTabRoutingBridge";
 import { getTangentSocketConfig } from "@/routes/v2/pages/Tangent/services/socketConfig";
 import { isRecord } from "@/utils/typeGuards";
@@ -146,6 +147,26 @@ interface RemoteEnvHostBaseOptions {
   worker: Remote<RemoteEnvWorkerApi>;
   onError?: (message: string) => void;
   agentTargets?: AgentTargetRouter;
+  metadata?: Record<string, string>;
+}
+
+// Self-description Prime reads via `list_environments` to tell this browser host
+// apart from an editor host (e.g. the VS Code extension) and target it.
+export function describeBrowserEnv(
+  context: AgentContext,
+): Record<string, string> {
+  if (context.mode === "runView") {
+    return {
+      editor: "browser",
+      description: "Tangent browser run inspector",
+      capabilities: "inspects a run's executions (read-only)",
+    };
+  }
+  return {
+    editor: "browser",
+    description: "Tangent browser canvas",
+    capabilities: "edits the pipeline spec live on the browser canvas",
+  };
 }
 
 interface RemoteEnvToolHostOptions {
@@ -175,7 +196,8 @@ interface AgentLifecycle {
 export function createRemoteEnvHost(
   options: RemoteEnvHostOptions,
 ): RemoteEnvHost {
-  const { url, worker, onError, tools, sessionId, agentTargets } = options;
+  const { url, worker, onError, tools, sessionId, agentTargets, metadata } =
+    options;
 
   let client: RemoteEnvironmentClient | null = null;
   const agentLifecycles = new Map<string, AgentLifecycle>();
@@ -402,6 +424,7 @@ export function createRemoteEnvHost(
         environmentId,
         handlers,
         ...(loggedTools ? { tools: loggedTools, sessionId } : {}),
+        ...(metadata ? { metadata } : {}),
       });
       client = nextClient;
       socketHolder.socket = nextClient.socket;
