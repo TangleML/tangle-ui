@@ -7,6 +7,7 @@ import {
   YamlDeserializer,
 } from "@/models/componentSpec";
 import type { ComponentSpec } from "@/utils/componentSpec";
+import { generateDigest } from "@/utils/componentStore";
 import * as localforage from "@/utils/localforage";
 
 import { hydrateComponentReference } from "./componentService";
@@ -845,7 +846,7 @@ describe("hydrateComponentReference()", () => {
     });
 
     describe("when reference contains spec with digest", () => {
-      it("should hydrate from spec and ignore provided digest", async () => {
+      it("should hydrate from spec and keep the provided digest", async () => {
         // Arrange
         const providedDigest = "provideddigest123";
         const { spec: componentSpec } = prepareComponentContent(
@@ -865,11 +866,90 @@ describe("hydrateComponentReference()", () => {
 
         // Assert
         expect(result).not.toBeNull();
-        expect(result?.digest).toBeDefined();
-        expect(result?.digest).not.toBe(providedDigest); // Should generate new digest
-        expect(result?.digest).toMatch(/^[a-f0-9]{64}$/); // Should be a SHA-256 hash
+        // Text is synthesized from the spec, so its hash would not be the real digest
+        expect(result?.digest).toBe(providedDigest);
         expect(result?.name).toBe("DigestSpecComponent");
         expect(result?.spec).toEqual(componentSpec);
+        expect(result?.text).toBe(yaml.dump(componentSpec));
+      });
+
+      it("should keep the digest of a run API style reference (name, digest, spec) missing from storage and not cache synthesized text", async () => {
+        // Arrange
+        const publishedDigest = "9ff70bbe".padEnd(64, "0");
+        const { spec: componentSpec } = prepareComponentContent(
+          "Schedule Manager",
+          "schedule-manager:v1",
+        );
+
+        mockGetComponentById(null);
+
+        const runApiRef = {
+          name: "Schedule Manager",
+          digest: publishedDigest,
+          spec: componentSpec,
+        };
+
+        const hashSpy = vi.spyOn(globalThis.crypto.subtle, "digest");
+
+        // Act
+        const result = await hydrateComponentReference(runApiRef);
+
+        // Assert
+        expect(localforage.getComponentById).toHaveBeenCalledExactlyOnceWith(
+          `component-${publishedDigest}`,
+        );
+        expect(result).not.toBeNull();
+        expect(result?.digest).toBe(publishedDigest);
+        expect(result?.name).toBe("Schedule Manager");
+        expect(result?.spec).toEqual(componentSpec);
+        // the synthesized text is never hashed when the digest is known
+        expect(hashSpy).not.toHaveBeenCalled();
+        expect(localforage.saveComponent).not.toHaveBeenCalled();
+      });
+
+      it("should derive the fallback name from the provided digest when spec and ref have no name", async () => {
+        // Arrange
+        const providedDigest = "abcdef0123456789".padEnd(64, "0");
+        const componentSpec = createComponentSpec(undefined, "nameless:v1");
+
+        // Act
+        const result = await hydrateComponentReference({
+          spec: componentSpec,
+          digest: providedDigest,
+        });
+
+        // Assert
+        expect(result?.digest).toBe(providedDigest);
+        expect(result?.name).toBe("component-abcdef01");
+      });
+    });
+
+    describe("when reference contains text with digest", () => {
+      it("should compute the digest from the text and ignore the provided digest", async () => {
+        // Arrange
+        const providedDigest = "provideddigest789";
+        const { text: componentText } = prepareComponentContent(
+          "DigestTextComponent",
+          "digesttext:v1",
+        );
+
+        mockGetComponentById(null);
+
+        const partialRef = {
+          text: componentText,
+          digest: providedDigest,
+        };
+
+        // Act
+        const result = await hydrateComponentReference(partialRef);
+
+        // Assert
+        expect(result).not.toBeNull();
+        expect(result?.digest).toBe(await generateDigest(componentText));
+        expect(result?.name).toBe("DigestTextComponent");
+        await waitFor(() => {
+          expect(localforage.saveComponent).toHaveBeenCalled();
+        });
       });
     });
 
