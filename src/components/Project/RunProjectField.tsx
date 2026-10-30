@@ -7,6 +7,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Paragraph } from "@/components/ui/typography";
+import { localProjectPipeline } from "@/services/projects/pipelineResource";
 import { usePipelineProjects } from "@/services/projects/usePipelineProjects";
 
 import { NO_PROJECT, projectOptions } from "./projectOptions";
@@ -30,7 +31,7 @@ export function RunProjectField({
 }: RunProjectFieldProps) {
   const { enabled, projectName } = useRunProjectContext();
   const { memberships } = usePipelineProjects(
-    enabled ? pipelineName : undefined,
+    enabled ? localProjectPipeline(pipelineName) : undefined,
   );
 
   const options = projectOptions(memberships, value, projectName);

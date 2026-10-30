@@ -5,6 +5,7 @@ import GoogleCloudSubmissionDialog from "@/components/shared/Submitters/GoogleCl
 import TangleSubmitter from "@/components/shared/Submitters/Tangle/TangleSubmitter";
 import { BlockStack } from "@/components/ui/layout";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
+import { localProjectPipeline } from "@/services/projects/pipelineResource";
 import { isFixableIssue } from "@/utils/validations";
 
 import { RecentExecutionsButton } from "../components/RecentExecutionsButton";
@@ -30,7 +31,7 @@ const RunsAndSubmission = () => {
     <SidebarSection title="Runs & Submissions" headerAction={showMoreButton}>
       <BlockStack as="ul" gap="1">
         <li className="w-full px-2.5">
-          <ProjectPicker pipelineName={componentSpec?.name} />
+          <ProjectPicker pipeline={localProjectPipeline(componentSpec?.name)} />
         </li>
         <li className="w-full">
           {isAuthorized ? (
