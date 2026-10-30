@@ -180,8 +180,8 @@ importers:
         specifier: ^2.4.1
         version: 2.4.1(mobx@6.16.1)
       mobx-react-lite:
-        specifier: ^4.1.1
-        version: 4.1.1(mobx@6.16.1)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        specifier: ^5.1.0
+        version: 5.1.0(mobx@6.16.1)(react@19.3.1)
       monaco-editor:
         specifier: ^0.54.0
         version: 0.54.0
@@ -4888,18 +4888,11 @@ packages:
     peerDependencies:
       mobx: ^7.0.0 || ^6.0.0 || ^5.0.0 || ^4.0.0
 
-  mobx-react-lite@4.1.1:
-    resolution: {integrity: sha512-iUxiMpsvNraCKXU+yPotsOncNNmyeS2B5DKL+TL6Tar/xm+wwNJAubJmtRSeAoYawdZqwv8Z/+5nPRHeQxTiXg==}
+  mobx-react-lite@5.1.0:
+    resolution: {integrity: sha512-++LQTCRr4FJCWuaEvYl5gCtGBwOpOwrnWjm9uhCUDI5nmkzLR8eT1jgMeYfJ8wc88YOYyC/ygjw2KpYPBYGsww==}
     peerDependencies:
-      mobx: ^6.9.0
-      react: ^16.8.0 || ^17 || ^18 || ^19
-      react-dom: '*'
-      react-native: '*'
-    peerDependenciesMeta:
-      react-dom:
-        optional: true
-      react-native:
-        optional: true
+      mobx: ^7.0.0
+      react: ^18 || ^19
 
   mobx@6.16.1:
     resolution: {integrity: sha512-syNcDdX3KT+Jq3je6eGjBhuc24Z68td2VG0zNFqRswaE433D9SNH5VRy/xrGbJsUixfppLLccXhAW9JSf6n+SQ==}
@@ -5988,11 +5981,6 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
-
-  use-sync-external-store@1.6.0:
-    resolution: {integrity: sha512-Pp6GSwGP/NrPIrxVFAIkOQeyw8lFenOHijQWkUTrDvrF4ALqylP2C/KCkeS9dpUM3KvYRQhna5vt7IL95+ZQ9w==}
-    peerDependencies:
-      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
   use-sync-external-store@1.7.0:
     resolution: {integrity: sha512-6L+EeigHMQhdaIPNIFUKwfWJSwWFQ8gJbJ2DLOs5sDIegTwR9fRxvnM3uciHKjIZhFz+KAv2emhWMRvDmMcY8A==}
@@ -10919,13 +10907,10 @@ snapshots:
       ts-toolbelt: 9.6.0
       tslib: 2.8.1
 
-  mobx-react-lite@4.1.1(mobx@6.16.1)(react-dom@19.3.1(react@19.3.1))(react@19.3.1):
+  mobx-react-lite@5.1.0(mobx@6.16.1)(react@19.3.1):
     dependencies:
       mobx: 6.16.1
       react: 19.3.1
-      use-sync-external-store: 1.6.0(react@19.3.1)
-    optionalDependencies:
-      react-dom: 19.3.1(react@19.3.1)
 
   mobx@6.16.1: {}
 
@@ -12231,10 +12216,6 @@ snapshots:
       tslib: 2.8.1
     optionalDependencies:
       '@types/react': 19.3.0
-
-  use-sync-external-store@1.6.0(react@19.3.1):
-    dependencies:
-      react: 19.3.1
 
   use-sync-external-store@1.7.0(react@19.3.1):
     dependencies:
