@@ -14,9 +14,9 @@ const QuickRunSubmitterContext = createContext<QuickRunSubmitterApi | null>(
  * Scopes the hidden `TangleSubmitter` to one editor. The workarea mounts an
  * editor per tab, so a `document`-wide lookup would find whichever submitter
  * comes first and run the wrong pipeline. Several Quick Run controls share one
- * submitter — the menu bar button renders it while the dock's mini button and
- * the Runs menu drive it — so the element is registered here rather than held
- * in a ref beside any one of them.
+ * submitter — each editor renders `QuickRunSubmitter` once, and the menu bar
+ * button, the dock's mini button and the Runs menu drive it — so the element is
+ * registered here rather than held in a ref beside any one of them.
  */
 export function QuickRunSubmitterProvider({
   children,
