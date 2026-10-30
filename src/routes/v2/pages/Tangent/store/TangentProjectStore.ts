@@ -25,6 +25,7 @@ import type {
 import { resolveChatEntity } from "@/routes/v2/shared/components/AiChat/components/resolveChatEntity";
 import { navigateToEntity } from "@/routes/v2/shared/store/focus.actions";
 import type { SharedUIStore } from "@/routes/v2/shared/store/SharedStoreContext";
+import { projectSelector } from "@/services/projects/projectSelector";
 import { idIdentity, sameTarget } from "@/services/projects/resourceTarget";
 import { getErrorMessage } from "@/utils/string";
 
@@ -71,6 +72,7 @@ export interface TangentSessionIo {
       env?: Record<string, string>;
       model?: string;
       thinkingDepth?: ThinkingLevel;
+      tags?: string[];
     },
   ) => Promise<{ sessionId: string }>;
   attachSession: (sessionId: string, name?: string) => Promise<{ id: string }>;
@@ -233,6 +235,7 @@ export class TangentProjectStore {
         env: rootConfig.env,
         model: options?.model,
         thinkingDepth: options?.thinkingDepth,
+        tags: [projectSelector(this.projectId)],
       });
       const resource = await io.attachSession(sessionId, options?.name);
       runInAction(() => {

@@ -69,8 +69,9 @@ export function createNamingHandlers({
 
     async namePipeline(name) {
       // Driven through the open tab's bridge rather than the resource row: the
-      // canvas holds the spec, and only the bridge moves the spec, the file and
-      // the row together. A row renamed on its own disagrees with the pipeline.
+      // canvas holds the spec, only the bridge moves the spec and the file
+      // together, and resource lists show what the pipeline is called rather
+      // than the row's copy of the name.
       const bridge = getPipelineBridge();
       if (!bridge) return { renamed: false };
 

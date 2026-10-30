@@ -48,9 +48,15 @@ export const AI_CONFIG = {
       reasoningEfforts: ["low", "medium", "high", "xhigh", "max"],
     },
     {
-      id: "gpt-6-sol",
-      label: "GPT-6 Sol",
+      id: "gpt-6.1-sol",
+      label: "GPT-6.1 Sol",
       description: "Balanced model for coding and agentic workflows",
+      reasoningEfforts: ["low", "medium", "high", "xhigh", "max"],
+    },
+    {
+      id: "gpt-6.1-terra",
+      label: "GPT-6.1 Terra",
+      description: "Fast model for visual reasoning, computer use, and writing",
       reasoningEfforts: ["none", "low", "medium", "high", "xhigh", "max"],
     },
     {
@@ -179,12 +185,16 @@ export function getAiModelLabel(modelId: string): string {
 export function getAiModelReasoningLevels(
   modelId: string,
   models: readonly AiModelCapabilities[] = getAiModelOptions(),
+  supportedReasoningEfforts?: readonly AiReasoningEffort[],
 ) {
   const id = modelId.trim();
   if (!id) return [];
   const model = models.find((option) => option.id === id);
-  return AI_CONFIG.reasoningLevels.filter((level) =>
-    model?.reasoningEfforts?.includes(level.value),
+  return AI_CONFIG.reasoningLevels.filter(
+    (level) =>
+      model?.reasoningEfforts?.includes(level.value) &&
+      (!supportedReasoningEfforts ||
+        supportedReasoningEfforts.includes(level.value)),
   );
 }
 
@@ -192,8 +202,13 @@ export function getEffectiveReasoningEffort(
   modelId: string,
   preference: AiReasoningEffort = AI_CONFIG.defaultReasoningEffort,
   models?: readonly AiModelCapabilities[],
+  supportedReasoningEfforts?: readonly AiReasoningEffort[],
 ): AiReasoningEffort | undefined {
-  const levels = getAiModelReasoningLevels(modelId, models);
+  const levels = getAiModelReasoningLevels(
+    modelId,
+    models,
+    supportedReasoningEfforts,
+  );
   const preferredIndex = AI_CONFIG.reasoningLevels.findIndex(
     (level) => level.value === preference,
   );

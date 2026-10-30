@@ -22,7 +22,10 @@ import {
   type RunInspectDeps,
 } from "@/routes/v2/pages/Tangent/services/createWorkareaRemoteTools";
 import { createRemoteEnvAgentWorker } from "@/routes/v2/pages/Tangent/services/remoteEnvAgentWorker";
-import { createRemoteEnvHost } from "@/routes/v2/pages/Tangent/services/remoteEnvHost";
+import {
+  createRemoteEnvHost,
+  describeBrowserEnv,
+} from "@/routes/v2/pages/Tangent/services/remoteEnvHost";
 import { createDebugBridgeHandlers } from "@/routes/v2/shared/components/AiChat/toolBridge/debugBridge";
 import { createRunBridgeHandlers } from "@/routes/v2/shared/components/AiChat/toolBridge/runBridge";
 import type { BridgeDeps } from "@/routes/v2/shared/components/AiChat/toolBridge/utils";
@@ -30,7 +33,10 @@ import { copyRunToPipeline } from "@/services/pipelineRunService";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
 import type { RemotePipelineRef } from "@/services/pipelineStorage/types";
-import { createAndAttachPipeline } from "@/services/projects/createAndAttachPipeline";
+import {
+  createAndAttachPipeline,
+  importAndAttachPipeline,
+} from "@/services/projects/createAndAttachPipeline";
 import {
   pipelineFileTarget,
   remotePipelineResourceInput,
@@ -50,6 +56,7 @@ import { extractCanonicalName } from "@/utils/canonicalPipelineName";
 import { isValidComponentSpec } from "@/utils/componentSpec";
 import { getInitialName } from "@/utils/getComponentName";
 import { extractCloneableTaskArguments } from "@/utils/nodes/taskArguments";
+import { decodeBase64Utf8 } from "@/utils/string";
 
 interface TangentProjectAgentProviderProps {
   sessionId: string | undefined;
@@ -128,6 +135,9 @@ export function TangentProjectAgentProvider({
     sessionId ? { projectId: store.projectId, sessionId } : undefined,
   );
   const workerRef = useRef<Comlink.Remote<RemoteEnvWorkerApi> | null>(null);
+  const readSessionResourceRef = useRef<
+    ((uri: string) => Promise<string>) | null
+  >(null);
 
   // A project-level backend bridge for the run inspect tools: read-only run and
   // execution fetches that don't need any one tab's canvas spec, so Prime can
@@ -227,6 +237,25 @@ export function TangentProjectAgentProvider({
           target: pipelineFileTarget(file),
         };
       },
+      importPipeline: async (yaml, name) => {
+        const file = await importAndAttachPipeline({
+          storage,
+          yaml,
+          name,
+          attach: (input) => createProjectResource(store.projectId, input),
+        });
+        await refreshProjectResources();
+        return { pipelineName: file.storageKey, fileId: file.id };
+      },
+      readSessionResource: async (uri) => {
+        const read = readSessionResourceRef.current;
+        if (!read) {
+          throw new Error(
+            "The session environment is not connected, so its resources cannot be read yet.",
+          );
+        }
+        return read(uri);
+      },
       clonePipeline: async (runId) => {
         const { pipelineName, remote } = await clonePipelineFromRun(
           storage,
@@ -292,7 +321,13 @@ export function TangentProjectAgentProvider({
       tools,
       sessionId: activeSessionId,
       agentTargets,
+      metadata: describeBrowserEnv({ mode: "editor" }),
     });
+
+    readSessionResourceRef.current = async (uri) => {
+      const { content } = await host.readResource(uri);
+      return decodeBase64Utf8(content);
+    };
 
     const stop = connectRemoteEnvWithRefresh({
       host,
@@ -310,6 +345,7 @@ export function TangentProjectAgentProvider({
       host.disconnect();
       worker.terminate();
       workerRef.current = null;
+      readSessionResourceRef.current = null;
     };
   }, [sessionId, tools, routingBridge, agentTargets, baseUrl]);
 

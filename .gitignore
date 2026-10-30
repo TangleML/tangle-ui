@@ -33,3 +33,6 @@ playwright-report
 .local/
 .planning/
 .codanna/index/
+
+# generated extension artifacts (built into public/ during `vite build`)
+public/extension/

@@ -81,7 +81,7 @@ import {
 import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
 import { hydrateComponentReference } from "@/services/componentService";
 import { clearProvisionalName } from "@/services/localPipelines/provisionalPipelineName";
-import { LocalPipelinesQueryKeys } from "@/services/localPipelines/types";
+import { invalidatePipelineQueries } from "@/services/pipelineStorage/invalidatePipelineQueries";
 
 import {
   applyToTarget,
@@ -217,13 +217,16 @@ export function createCsomBridgeHandlers(deps: CsomBridgeDeps): CsomHandlers {
       const applied = (await deps.renamePipelineFile?.(name)) ?? name;
       renamePipeline(deps.undo, spec, applied);
       clearProvisionalName(spec);
-      // Browser storage fires no event a rename in this tab would reach, and
-      // the query that answers "what is this pipeline called now" is keyed on
-      // the pointer, which a rename does not change. Left alone it serves the
-      // old name to every resource list until it goes stale a minute later.
-      void deps.queryClient?.invalidateQueries({
-        queryKey: LocalPipelinesQueryKeys.All(),
-      });
+      // Neither storage fires an event a rename in this tab would reach, and
+      // the queries that answer "what is this pipeline called now" are keyed
+      // on what points at it, which a rename does not change. Left alone they
+      // serve the old name to every resource list until they go stale.
+      if (deps.queryClient) {
+        invalidatePipelineQueries(
+          deps.queryClient,
+          deps.getBackendUrl?.() ?? "",
+        );
+      }
       return applied === name
         ? { success: true }
         : {

@@ -55,6 +55,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/services/projects/usePipelineProjects.ts",
   "src/services/projects/useProjectInstructions.ts",
   "src/services/projects/useProjectRuns.ts",
+  "src/services/projects/useRemotePipelineNames.ts",
   "src/services/projects/useWorkspaceChoice.ts",
   "src/services/usePipelineSpec.ts",
   "src/components/shared/FavoriteToggle.tsx",

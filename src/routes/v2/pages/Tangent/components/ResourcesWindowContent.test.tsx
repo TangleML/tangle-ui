@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useResolvedPointers } from "@/services/localPipelines/useLocalPipelines";
 import type { ProjectResourceSummary } from "@/services/projects/types";
 import { useProjectResources } from "@/services/projects/useProjectResources";
+import { useRemotePipelineNames } from "@/services/projects/useRemotePipelineNames";
 
 import { ResourcesWindowContent } from "./ResourcesWindowContent";
 
@@ -41,6 +42,10 @@ vi.mock("@/hooks/useToastNotification", () => ({ default: () => vi.fn() }));
 
 vi.mock("@/services/localPipelines/useLocalPipelines", () => ({
   useResolvedPointers: vi.fn(),
+}));
+
+vi.mock("@/services/projects/useRemotePipelineNames", () => ({
+  useRemotePipelineNames: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-query", async (importOriginal) => ({
@@ -113,6 +118,7 @@ describe("ResourcesWindowContent", () => {
   beforeEach(() => {
     given();
     browserHolds({});
+    vi.mocked(useRemotePipelineNames).mockReturnValue(new Map());
   });
   afterEach(() => vi.resetAllMocks());
 
@@ -239,6 +245,27 @@ describe("ResourcesWindowContent", () => {
     expect(openWorkareaTarget).toHaveBeenCalledWith(
       { type: "pipeline", identity: "remote/uuid-1" },
       "Hello World",
+    );
+  });
+
+  it("names a renamed remote pipeline as it is called now", async () => {
+    given(backendPipeline("r-5", "Make a basic hello world pipeline"));
+    vi.mocked(useRemotePipelineNames).mockReturnValue(
+      new Map([["r-5", "Workspace secret hello world"]]),
+    );
+
+    render(<ResourcesWindowContent />);
+
+    expect(
+      screen.getByText("Workspace secret hello world"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Make a basic hello world pipeline"),
+    ).not.toBeInTheDocument();
+    await userEvent.setup().click(screen.getByTestId("open-resource-r-5"));
+    expect(openWorkareaTarget).toHaveBeenCalledWith(
+      { type: "pipeline", identity: "remote/uuid-1" },
+      "Workspace secret hello world",
     );
   });
 

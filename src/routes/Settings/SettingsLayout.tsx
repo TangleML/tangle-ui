@@ -53,15 +53,25 @@ const AGENT_ITEM: SidebarItem = {
   testId: "settings-nav-agent",
 };
 
+const VSCODE_ITEM: SidebarItem = {
+  to: "/settings/vscode-extension",
+  label: "VS Code Extension",
+  icon: "Download",
+  testId: "settings-nav-vscode-extension",
+};
+
 export function SettingsLayout() {
   const router = useRouter();
   const componentSearchEnabled = useFlagValue("component-search-v2");
   const aiAssistantEnabled = useFlagValue("ai-assistant");
   const tangentShellEnabled = useTangentEnabled();
-  const sidebarItems =
-    componentSearchEnabled || aiAssistantEnabled || tangentShellEnabled
-      ? [...SIDEBAR_ITEMS, AGENT_ITEM]
-      : SIDEBAR_ITEMS;
+  const sidebarItems = [
+    ...SIDEBAR_ITEMS,
+    ...(componentSearchEnabled || aiAssistantEnabled || tangentShellEnabled
+      ? [AGENT_ITEM]
+      : []),
+    ...(tangentShellEnabled ? [VSCODE_ITEM] : []),
+  ];
 
   const handleGoBack = () => {
     router.history.back();

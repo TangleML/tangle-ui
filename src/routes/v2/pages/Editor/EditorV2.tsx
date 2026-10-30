@@ -30,6 +30,7 @@ import { TourSaveExploreDialog } from "@/providers/TourProvider/TourSaveExploreD
 import { TourSecretsDialog } from "@/providers/TourProvider/TourSecretsDialog";
 import { APP_ROUTES } from "@/routes/appRoutes";
 import { readProjectIdParam } from "@/routes/projectRunSearch";
+import { QuickRunSubmitter } from "@/routes/v2/pages/Editor/components/QuickRunSubmitter";
 import { QuickRunSubmitterProvider } from "@/routes/v2/pages/Editor/components/QuickRunSubmitterContext";
 import {
   AiChatStoreProvider,
@@ -261,6 +262,7 @@ function EditorV2Content({
         <ReactFlowProvider>
           <QuickRunSubmitterProvider>
             <EditorMenuBar />
+            <QuickRunSubmitter />
             <RemotePipelineSaveRecovery />
             <EditorTourBridge />
             <TourSaveExploreDialog />
