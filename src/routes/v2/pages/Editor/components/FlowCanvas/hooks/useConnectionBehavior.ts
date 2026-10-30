@@ -24,7 +24,7 @@ import {
 } from "@/routes/v2/pages/Editor/store/actions/aggregator.actions";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
-import { CMDALT } from "@/routes/v2/shared/shortcuts/keys";
+import { CMD_OR_CTRL } from "@/routes/v2/shared/shortcuts/keys";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { AGGREGATOR_ADD_INPUT_HANDLE_ID } from "@/utils/aggregatorInputs";
 
@@ -139,7 +139,7 @@ export function useConnectionBehavior(
     connectionState: FinalConnectionState,
   ) => {
     if (!spec || !reactFlowInstance) return;
-    if (!keyboard.pressed.has(CMDALT)) return;
+    if (!keyboard.pressed.has(CMD_OR_CTRL)) return;
 
     const validated = validateConnectEndPreconditions(event, connectionState);
     if (!validated) return;

@@ -1,4 +1,4 @@
-export const CMDALT = "CMDALT" as const;
+export const CMD_OR_CTRL = "CMD_OR_CTRL" as const;
 export const CTRL = "CTRL" as const;
 export const SHIFT = "SHIFT" as const;
 
@@ -9,7 +9,7 @@ const ENTER = "ENTER" as const;
 const SPACE = "SPACE" as const;
 const TAB = "TAB" as const;
 
-type ModifierKey = typeof CMDALT | typeof CTRL | typeof SHIFT;
+type ModifierKey = typeof CMD_OR_CTRL | typeof CTRL | typeof SHIFT;
 
 type SpecialKey =
   | typeof ESCAPE
@@ -26,12 +26,12 @@ export const IS_MAC =
   /Mac|iPhone|iPad/.test(navigator.platform);
 
 const MAC_MODIFIER_KEY_MAP: Record<string, KeyConstant> = {
-  Meta: CMDALT,
+  Meta: CMD_OR_CTRL,
   Control: CTRL,
 };
 
 const NON_MAC_MODIFIER_KEY_MAP: Record<string, KeyConstant> = {
-  Control: CMDALT,
+  Control: CMD_OR_CTRL,
 };
 
 const SPECIAL_KEY_MAP: Record<string, KeyConstant> = {
@@ -66,11 +66,11 @@ export function normalizeKeyFromEvent(
 }
 
 /**
- * Canonical ordering: CMDALT < CTRL < SHIFT < everything else (alphabetical).
+ * Canonical ordering: CMD_OR_CTRL < CTRL < SHIFT < everything else (alphabetical).
  * Used to build the combo-key string for the shortcuts map.
  */
 const KEY_ORDER: Record<string, number> = {
-  [CMDALT]: 0,
+  [CMD_OR_CTRL]: 0,
   [CTRL]: 1,
   [SHIFT]: 2,
 };

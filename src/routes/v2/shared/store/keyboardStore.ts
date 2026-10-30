@@ -1,7 +1,7 @@
 import { action, computed, makeObservable, observable } from "mobx";
 
 import {
-  CMDALT,
+  CMD_OR_CTRL,
   CTRL,
   IS_MAC,
   type KeyConstant,
@@ -71,7 +71,7 @@ export class KeyboardStore {
       if (flag) this.pressed.add(key);
       else this.pressed.delete(key);
     };
-    toggle(this.isPrimaryModifierHeld(event), CMDALT);
+    toggle(this.isPrimaryModifierHeld(event), CMD_OR_CTRL);
     toggle(this.isMac && event.ctrlKey, CTRL);
     toggle(event.shiftKey, SHIFT);
   }
@@ -82,7 +82,7 @@ export class KeyboardStore {
 
   @action clearNonModifierKeys() {
     for (const key of this.pressed) {
-      if (key !== CMDALT && key !== CTRL && key !== SHIFT) {
+      if (key !== CMD_OR_CTRL && key !== CTRL && key !== SHIFT) {
         this.pressed.delete(key);
       }
     }
@@ -105,7 +105,7 @@ export class KeyboardStore {
 
   private toPlatformKeys(keys: ShortcutKeys): ShortcutKeys {
     if (this.isMac) return keys;
-    return keys.map((key) => (key === CTRL ? CMDALT : key));
+    return keys.map((key) => (key === CTRL ? CMD_OR_CTRL : key));
   }
 
   @computed get pressedKeys(): KeyConstant[] {

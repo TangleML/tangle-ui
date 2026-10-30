@@ -2,7 +2,7 @@ import { observer } from "mobx-react-lite";
 
 import { Badge } from "@/components/ui/badge";
 import {
-  CMDALT,
+  CMD_OR_CTRL,
   CTRL,
   type KeyConstant,
   SHIFT,
@@ -37,7 +37,7 @@ export function formatShortcut(keys: KeyConstant[], isMac: boolean): string {
 
   for (const key of keys) {
     switch (key) {
-      case CMDALT:
+      case CMD_OR_CTRL:
         parts.push(isMac ? "\u2318" : "Ctrl");
         break;
       case CTRL:

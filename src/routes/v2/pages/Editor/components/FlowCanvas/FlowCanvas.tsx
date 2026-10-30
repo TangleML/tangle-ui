@@ -21,7 +21,7 @@ import { focusModeStore } from "@/routes/v2/shared/hooks/useFocusMode";
 import { useIsDetailedView } from "@/routes/v2/shared/hooks/useIsDetailedView";
 import { useViewportScaling } from "@/routes/v2/shared/hooks/useViewportScaling";
 import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
-import { CMDALT, SHIFT } from "@/routes/v2/shared/shortcuts/keys";
+import { CMD_OR_CTRL, SHIFT } from "@/routes/v2/shared/shortcuts/keys";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 import { CanvasUndoRedo } from "./components/CanvasUndoRedo";
@@ -52,7 +52,7 @@ export const FlowCanvas = observer(function FlowCanvas({
     useState<ReactFlowInstance | null>(null);
   const focusModeActive = focusModeStore.active;
 
-  const metaKeyPressed = keyboard.pressed.has(CMDALT);
+  const metaKeyPressed = keyboard.pressed.has(CMD_OR_CTRL);
   const shiftKeyPressed = keyboard.pressed.has(SHIFT);
   const isConnecting = useConnection((c) => c.inProgress);
   const isDetailedView = useIsDetailedView();

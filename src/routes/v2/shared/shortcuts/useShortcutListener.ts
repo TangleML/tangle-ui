@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
 import {
-  CMDALT,
+  CMD_OR_CTRL,
   normalizeKeyFromEvent,
 } from "@/routes/v2/shared/shortcuts/keys";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
@@ -56,7 +56,7 @@ export function useShortcutListener(enabled = true): void {
 
     const handleKeyUp = (event: KeyboardEvent) => {
       const keys = normalizeKeyFromEvent(event, keyboard.isMac);
-      if (keys.includes(CMDALT)) {
+      if (keys.includes(CMD_OR_CTRL)) {
         keyboard.clearPressed();
         return;
       }

@@ -2,7 +2,7 @@ import { cleanup, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
-  CMDALT,
+  CMD_OR_CTRL,
   CTRL,
   type KeyConstant,
 } from "@/routes/v2/shared/shortcuts/keys";
@@ -44,14 +44,14 @@ describe("useShortcutListener", () => {
 
   it("takes over the keystroke when the shortcut handles it", () => {
     listen({ isMac: false });
-    register([CMDALT, "C"], () => undefined);
+    register([CMD_OR_CTRL, "C"], () => undefined);
 
     expect(keyDown({ key: "c", ctrlKey: true }).defaultPrevented).toBe(true);
   });
 
   it("leaves the keystroke to the browser when the shortcut returns false", () => {
     listen({ isMac: false });
-    register([CMDALT, "C"], () => false);
+    register([CMD_OR_CTRL, "C"], () => false);
 
     expect(keyDown({ key: "c", ctrlKey: true }).defaultPrevented).toBe(false);
   });
@@ -59,7 +59,7 @@ describe("useShortcutListener", () => {
   describe("off Mac", () => {
     it("runs primary-modifier shortcuts with Ctrl", () => {
       listen({ isMac: false });
-      const undo = register([CMDALT, "Z"]);
+      const undo = register([CMD_OR_CTRL, "Z"]);
 
       keyDown({ key: "z", ctrlKey: true });
 
@@ -68,7 +68,7 @@ describe("useShortcutListener", () => {
 
     it("does not treat Alt as the primary modifier", () => {
       listen({ isMac: false });
-      const undo = register([CMDALT, "Z"]);
+      const undo = register([CMD_OR_CTRL, "Z"]);
 
       keyDown({ key: "z", altKey: true });
 
@@ -86,7 +86,7 @@ describe("useShortcutListener", () => {
 
     it("ignores auto-repeat while Ctrl is held", () => {
       listen({ isMac: false });
-      const undo = register([CMDALT, "Z"]);
+      const undo = register([CMD_OR_CTRL, "Z"]);
 
       keyDown({ key: "z", ctrlKey: true, repeat: true });
 
@@ -97,17 +97,17 @@ describe("useShortcutListener", () => {
       listen({ isMac: false });
 
       keyDown({ key: "Control", ctrlKey: true });
-      expect(shared.keyboard.pressed.has(CMDALT)).toBe(true);
+      expect(shared.keyboard.pressed.has(CMD_OR_CTRL)).toBe(true);
 
       window.dispatchEvent(new KeyboardEvent("keyup", { key: "Control" }));
-      expect(shared.keyboard.pressed.has(CMDALT)).toBe(false);
+      expect(shared.keyboard.pressed.has(CMD_OR_CTRL)).toBe(false);
     });
   });
 
   describe("on Mac", () => {
     it("runs primary-modifier shortcuts with Cmd", () => {
       listen({ isMac: true });
-      const undo = register([CMDALT, "Z"]);
+      const undo = register([CMD_OR_CTRL, "Z"]);
 
       keyDown({ key: "z", metaKey: true });
 
@@ -116,7 +116,7 @@ describe("useShortcutListener", () => {
 
     it("keeps Ctrl separate from Cmd", () => {
       listen({ isMac: true });
-      const undo = register([CMDALT, "Z"]);
+      const undo = register([CMD_OR_CTRL, "Z"]);
       const openPipeline = register([CTRL, "O"]);
 
       keyDown({ key: "z", ctrlKey: true });
