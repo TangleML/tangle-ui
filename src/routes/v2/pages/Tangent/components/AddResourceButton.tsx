@@ -50,6 +50,13 @@ function alreadyHolds(
   resources: ProjectResourceSummary[],
   pick: CreateResourceInput,
 ): boolean {
+  if (pick.entity === "pipeline" && pick.entityId) {
+    return resources.some(
+      (resource) =>
+        resource.entity === "pipeline" && resource.entityId === pick.entityId,
+    );
+  }
+
   const metadata = pick.metadata ?? null;
 
   const pointer = localPipelinePointerOf({ metadata });

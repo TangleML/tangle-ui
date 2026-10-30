@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { remotePipelineResourceInput } from "@/services/projects/pipelineResource";
 import { localPipelineResourceInput } from "@/services/projects/resourceDescriptor";
 import type {
   CreateResourceInput,
@@ -62,8 +63,27 @@ function attachedRow(identity: string): ProjectResourceSummary {
   };
 }
 
-async function pickAPipeline(resources: ProjectResourceSummary[]) {
-  openDialog.mockResolvedValue(PICKED_PIPELINE);
+const SAVED_PIPELINE_ID = "71c26504-e061-4edb-a2f8-846bc960f8b2";
+
+const PICKED_SAVED_PIPELINE = remotePipelineResourceInput(
+  SAVED_PIPELINE_ID,
+  "Churn model",
+);
+
+function savedPipelineRow(entityId: string): ProjectResourceSummary {
+  return {
+    ...attachedRow(""),
+    entity: "pipeline",
+    entityId,
+    metadata: null,
+  };
+}
+
+async function pickAPipeline(
+  resources: ProjectResourceSummary[],
+  picked: CreateResourceInput = PICKED_PIPELINE,
+) {
+  openDialog.mockResolvedValue(picked);
   const user = userEvent.setup();
   render(<AddResourceButton projectId="project-1" resources={resources} />);
 
@@ -99,5 +119,27 @@ describe("AddResourceButton", () => {
     await pickAPipeline([attachedRow("pipeline://name/Churn model")]);
 
     expect(createResource).not.toHaveBeenCalled();
+  });
+
+  it("attaches nothing when the project already holds the saved pipeline", async () => {
+    await pickAPipeline(
+      [savedPipelineRow(SAVED_PIPELINE_ID)],
+      PICKED_SAVED_PIPELINE,
+    );
+
+    expect(createResource).not.toHaveBeenCalled();
+    expect(notify).toHaveBeenCalledWith(
+      "Churn model is already in this project",
+      "info",
+    );
+  });
+
+  it("attaches a saved pipeline the project does not hold yet", async () => {
+    await pickAPipeline(
+      [savedPipelineRow("2c2a8f3e-37c6-4a5e-9d5e-0b0f1f8d0c11")],
+      PICKED_SAVED_PIPELINE,
+    );
+
+    expect(createResource).toHaveBeenCalledWith(PICKED_SAVED_PIPELINE);
   });
 });
