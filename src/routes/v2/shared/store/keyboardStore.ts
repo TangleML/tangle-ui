@@ -36,7 +36,7 @@ export class KeyboardStore {
   @observable.ref accessor shortcuts = observable.map<
     string,
     ShortcutDefinition
-  >();
+  >(undefined, { deep: false });
 
   @observable accessor listening = false;
 
