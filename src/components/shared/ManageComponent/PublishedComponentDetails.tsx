@@ -4,7 +4,7 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
 import { useUpgradeComponentsWindow } from "@/routes/v2/pages/Editor/components/UpgradeComponents/useUpgradeComponentsWindow";
-import { useOptionalWindowContext } from "@/routes/v2/shared/windows/ContentWindowStateContext";
+import { useOptionalSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import type { HydratedComponentReference } from "@/utils/componentSpec";
 
 import { useDialogContext } from "../Dialogs/dialog.context";
@@ -32,9 +32,9 @@ function PublishedComponentDetailsSkeleton() {
 }
 
 function ReviewTasksButton({ onLegacyReview }: { onLegacyReview: () => void }) {
-  const windowCtx = useOptionalWindowContext();
+  const sharedStores = useOptionalSharedStores();
 
-  if (windowCtx) {
+  if (sharedStores) {
     return <ReviewTasksV2Button />;
   }
 

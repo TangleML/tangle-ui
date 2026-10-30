@@ -18,7 +18,6 @@ import { useDebouncedSearchValue } from "@/hooks/useDebouncedSearchValue";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { SourceFilterBar } from "@/routes/Dashboard/DashboardComponentsV2SourceFilter";
 import { useComponentSearchV2State } from "@/routes/v2/pages/Editor/hooks/useComponentSearchV2State";
-import { useOptionalWindowContext } from "@/routes/v2/shared/windows/ContentWindowStateContext";
 import { tracking } from "@/utils/tracking";
 
 import { ComponentSearchResults } from "./ComponentSearchResults";
@@ -55,12 +54,6 @@ function AiRerankProgress() {
       </Text>
     </InlineStack>
   );
-}
-
-function ComponentSearchV2UpgradeAlert() {
-  const windowCtx = useOptionalWindowContext();
-  if (!windowCtx) return null;
-  return <UpgradeAvailableAlertBox />;
 }
 
 function DebouncedComponentSearchInput({
@@ -191,7 +184,7 @@ export function ComponentSearchV2Content() {
             </InlineStack>
           }
         />
-        <ComponentSearchV2UpgradeAlert />
+        <UpgradeAvailableAlertBox />
         <InlineStack
           gap="2"
           blockAlign="center"
