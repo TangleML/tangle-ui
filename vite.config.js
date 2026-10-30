@@ -1,6 +1,14 @@
 import babel from "@rolldown/plugin-babel";
 import tailwindcss from "@tailwindcss/vite";
 import viteReact from "@vitejs/plugin-react";
+import { spawn } from "child_process";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+} from "fs";
 import { createRequire } from "module";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -25,6 +33,155 @@ const agentsCoreBrowserShim = path.resolve(
   "shims/shims-browser.mjs",
 );
 
+function isExtensionArtifactCurrent(outputDir, name, vsixFilename, version) {
+  const manifestPath = path.join(outputDir, "latest.json");
+  const requiredFiles = [
+    manifestPath,
+    path.join(outputDir, vsixFilename),
+    path.join(outputDir, `${name}.vsix`),
+  ];
+  if (requiredFiles.some((file) => !existsSync(file))) return false;
+  try {
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+    return manifest.version === version && manifest.filename === vsixFilename;
+  } catch {
+    return false;
+  }
+}
+
+// Compiles the Tangent Local Agent extension to a `.vsix` and publishes it,
+// its install scripts, and a version manifest under `public/extension/` so the
+// app serves them from its own origin (`/extension/*`). A production build
+// (`vite build`) always builds it and fails if it fails. The dev server never
+// blocks on it: the build is opt-in there via `BUILD_VSCODE_EXTENSION=true`, in
+// which case it runs in the background. Either way the rebuild is skipped when
+// the published artifacts already match the extension's declared version. The
+// extension's own `package` script shells out to esbuild and `@vscode/vsce`.
+function tangleVscodeExtension() {
+  const extensionDir = path.resolve(__dirname, "vscode-extension");
+  const outputDir = path.resolve(__dirname, "public/extension");
+  const manifestPath = path.join(extensionDir, "package.json");
+
+  const buildInDev = process.env.BUILD_VSCODE_EXTENSION === "true";
+  let command = "serve";
+  let failedVersion;
+  let building = false;
+
+  const run = (args) =>
+    new Promise((resolve, reject) => {
+      // `shell: true` so Windows resolves the `pnpm.cmd` shim; async spawn so a
+      // long build never blocks Vite's event loop.
+      const child = spawn("pnpm", args, {
+        cwd: extensionDir,
+        stdio: "inherit",
+        shell: true,
+      });
+      child.on("error", reject);
+      child.on("close", (code) =>
+        code === 0
+          ? resolve()
+          : reject(
+              new Error(`pnpm ${args.join(" ")} exited with code ${code}`),
+            ),
+      );
+    });
+
+  const buildArtifacts = async () => {
+    const pkg = JSON.parse(readFileSync(manifestPath, "utf8"));
+    const { name, version } = pkg;
+    const vsixFilename = `${name}-${version}.vsix`;
+
+    if (isExtensionArtifactCurrent(outputDir, name, vsixFilename, version)) {
+      return false;
+    }
+    // A previous attempt for this exact version already failed; don't re-run the
+    // install/package toolchain until the declared version changes.
+    if (failedVersion === version) return false;
+
+    try {
+      await run(["install", "--frozen-lockfile"]);
+      await run(["package"]);
+    } catch (error) {
+      failedVersion = version;
+      throw error;
+    }
+
+    mkdirSync(outputDir, { recursive: true });
+
+    const builtVsix = path.join(extensionDir, vsixFilename);
+    copyFileSync(builtVsix, path.join(outputDir, vsixFilename));
+    copyFileSync(builtVsix, path.join(outputDir, `${name}.vsix`));
+
+    for (const script of ["install.sh", "install.ps1"]) {
+      const src = path.join(extensionDir, script);
+      if (existsSync(src)) {
+        copyFileSync(src, path.join(outputDir, script));
+      }
+    }
+
+    writeFileSync(
+      path.join(outputDir, "latest.json"),
+      `${JSON.stringify(
+        {
+          version,
+          filename: vsixFilename,
+          url: `/extension/${vsixFilename}`,
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    failedVersion = undefined;
+    return true;
+  };
+
+  // A failed extension build must not fail the web app's build or stall its dev
+  // server, so log and keep going with whatever artifact is already published.
+  const buildOnce = async (log) => {
+    if (building) return false;
+    building = true;
+    try {
+      return await buildArtifacts();
+    } catch (error) {
+      log(`[tangle-vscode-extension] build failed: ${error.message}`);
+      return false;
+    } finally {
+      building = false;
+    }
+  };
+
+  return {
+    name: "tangle-vscode-extension",
+    configResolved(config) {
+      command = config.command;
+    },
+    // Only a production build blocks here, and it fails the build on error. In
+    // dev, `buildStart` is awaited before the server listens, so building here
+    // would stall `pnpm start`; the background loop in `configureServer` handles
+    // dev instead.
+    async buildStart() {
+      if (command !== "build") return;
+      await buildArtifacts();
+    },
+    // A bump to this nested, non-imported manifest is invisible to Vite's dev
+    // watcher (it only tracks the module graph, config, and publicDir, and
+    // `server.watcher.add` does not bring it in). Poll the staleness guard
+    // instead, which is a cheap stat+parse until the declared version changes.
+    configureServer(server) {
+      if (!buildInDev) return;
+      const interval = setInterval(() => {
+        void buildOnce((message) => server.config.logger.error(message)).then(
+          (rebuilt) => {
+            if (rebuilt) server.hot.send({ type: "full-reload" });
+          },
+        );
+      }, 2000);
+      server.httpServer?.once("close", () => clearInterval(interval));
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => {
   if (mode === "test") process.env.TZ = "America/New_York";
   const env = loadEnv(mode, process.cwd(), "");
@@ -44,6 +201,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [
+      ...(mode === "test" ? [] : [tangleVscodeExtension()]),
       viteReact(),
       babel({
         plugins: [

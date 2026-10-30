@@ -1,0 +1,16 @@
+{
+  "ui": {
+    "VsCodeExtensionSettings": {
+      "description": "Download the package and install it from the editor. Re-running either path always pulls the latest version.",
+      "steps": [
+        "Open the Extensions view, then its “…” menu.",
+        "Choose “Install from VSIX…” and pick the downloaded file.",
+        "Reload or restart the editor to activate it."
+      ]
+    },
+    "AttachLocalAgentButton": {
+      "dialogDescription": "Pick the agent you are running, then copy its attach command and paste it into that agent in the relevant repo. It joins as a sub-agent of the same kind and handles its own login.",
+      "commandInstructions": "Copy and paste this command into the relevant agent in the relevant repo. It joins as a sub-agent of the same kind and handles its own login."
+    }
+  }
+}

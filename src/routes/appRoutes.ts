@@ -41,6 +41,7 @@ export const APP_ROUTES = {
   SETTINGS_PREFERENCES: `${SETTINGS_PATH}/preferences`,
   SETTINGS_BETA_FEATURES: `${SETTINGS_PATH}/beta-features`,
   SETTINGS_AGENT: `${SETTINGS_PATH}/agent`,
+  SETTINGS_VSCODE: `${SETTINGS_PATH}/vscode-extension`,
   SETTINGS_SECRETS: `${SETTINGS_PATH}/secrets`,
   SETTINGS_SECRETS_ADD: `${SETTINGS_PATH}/secrets/add`,
   SETTINGS_SECRETS_REPLACE: `${SETTINGS_PATH}/secrets/$secretId/replace`,

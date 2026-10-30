@@ -87,11 +87,11 @@ describe("AiModelPicker", () => {
   it.each([false, true])("selects models (configured: %s)", (configured) => {
     if (configured) {
       saveModelPreferences({
-        model: "gpt-6-sol",
+        model: "gpt-6.1-sol",
       });
     }
     renderPicker();
-    const selectedModel = configured ? "GPT-6 Sol" : "GPT-6 Astra";
+    const selectedModel = configured ? "GPT-6.1 Sol" : "GPT-6 Astra";
     expectEffort("High");
     expect(modelTitle()).toHaveTextContent(selectedModel);
     expect(modelTitle()).toHaveAccessibleName(
@@ -110,13 +110,14 @@ describe("AiModelPicker", () => {
     expect(
       screen.queryByRole("radio", { name: "Provider default" }),
     ).toBeNull();
-    const sol = modelOption("GPT-6 Sol");
+    const sol = modelOption("GPT-6.1 Sol");
     expect(modelOption(selectedModel)).toBeChecked();
     expect(sol).toHaveAccessibleDescription(
       "Balanced model for coding and agentic workflows",
     );
     expect(modelOption(selectedModel)).toHaveFocus();
     expect(modelOption("GPT-6 Astra")).toBeInTheDocument();
+    expect(modelOption("GPT-6.1 Terra")).toBeInTheDocument();
     expect(modelOption("GPT-6 Luna")).toBeInTheDocument();
     const nextModel = configured ? "GPT-6 Astra" : "GPT-6 Luna";
     fireEvent.click(modelOption(nextModel));
@@ -209,10 +210,10 @@ describe("AiModelPicker", () => {
     expect(onCustomModelSelect).toHaveBeenLastCalledWith("custom-draft");
     expect(onModelSelect).not.toHaveBeenCalled();
     expect(window.localStorage.getItem(AI_PROXY_STORAGE_KEY)).toBeNull();
-    selectModel("GPT-6 Sol");
+    selectModel("GPT-6.1 Sol");
     expect(onModelSelect).toHaveBeenCalledOnce();
     const saved = window.localStorage.getItem(AI_PROXY_STORAGE_KEY);
-    expect(JSON.parse(saved ?? "").model).toBe("gpt-6-sol");
+    expect(JSON.parse(saved ?? "").model).toBe("gpt-6.1-sol");
   });
 
   it.each([false, true])(
@@ -276,11 +277,12 @@ describe("AiModelPicker", () => {
       openModels();
       expect(modelOption("GPT-6 Astra")).toHaveFocus();
       for (const [key, label] of [
-        ["ArrowDown", "GPT-6 Sol"],
+        ["ArrowDown", "GPT-6.1 Sol"],
+        ["ArrowDown", "GPT-6.1 Terra"],
         ["ArrowDown", "GPT-6 Luna"],
         ["ArrowDown", "Claude Fable 5.1"],
         ["ArrowUp", "GPT-6 Luna"],
-        ["ArrowLeft", "GPT-6 Sol"],
+        ["ArrowLeft", "GPT-6.1 Terra"],
         ["ArrowRight", "GPT-6 Luna"],
         ["Home", "GPT-6 Astra"],
         ["End", "Claude Haiku 5.5"],
@@ -338,19 +340,60 @@ describe("AiModelPicker", () => {
       };
     }
     renderPicker(variant);
-    selectModel("GPT-6 Sol");
+    selectModel("GPT-6.1 Terra");
     fireEvent.keyDown(thinking(), { key: "Home" });
-    selectModel("GPT-6 Astra");
+    selectModel("GPT-6.1 Sol");
     expectEffort("Low");
-    expectText(/Your none preference is saved/);
+    expectText("Using low for this model. Your none preference is saved.");
     const saved = window.localStorage.getItem(AI_PROXY_STORAGE_KEY);
     expect(JSON.parse(saved ?? "").reasoningEffortPreference).toBe("none");
     if (variant === "compact") {
       selectModel("Custom model");
       expect(screen.queryByRole("slider")).not.toBeInTheDocument();
     }
-    selectModel("GPT-6 Sol");
+    selectModel("GPT-6.1 Terra");
     expectEffort("None");
+  });
+
+  it("constrains a picker without overwriting the shared preference", () => {
+    saveModelPreferences({
+      model: "gpt-6.1-sol",
+      reasoningEffortPreference: "max",
+    });
+    render(
+      <>
+        <AiModelPicker variant="settings" />
+        <AiModelPicker
+          variant="compact"
+          supportedReasoningEfforts={["low", "high"]}
+        />
+      </>,
+    );
+
+    expect(triggers()[0]).toHaveAccessibleName(
+      "AI model and thinking: GPT-6.1 Sol, Max",
+    );
+    expect(triggers()[1]).toHaveAccessibleName(
+      "AI model and thinking: GPT-6.1 Sol, High",
+    );
+    fireEvent.click(triggers()[1]);
+    expectEffort("High");
+    expect(thinking()).toHaveAttribute("aria-valuemax", "1");
+    expectText("Using high here. Your max preference is saved.");
+    expect(
+      JSON.parse(window.localStorage.getItem(AI_PROXY_STORAGE_KEY) ?? "{}"),
+    ).toMatchObject({ reasoningEffortPreference: "max" });
+
+    fireEvent.keyDown(thinking(), { key: "Home" });
+    expectEffort("Low");
+    fireEvent.keyDown(thinking(), { key: "End" });
+    expectEffort("High");
+    expect(
+      JSON.parse(window.localStorage.getItem(AI_PROXY_STORAGE_KEY) ?? "{}"),
+    ).toMatchObject({ reasoningEffortPreference: "high" });
+    expect(triggers("AI model and thinking: GPT-6.1 Sol, High")).toHaveLength(
+      2,
+    );
   });
 
   it.each([
@@ -360,7 +403,7 @@ describe("AiModelPicker", () => {
     "Claude Haiku 5.5",
   ])("selects and persists thinking for %s", (model) => {
     saveModelPreferences({
-      model: "gpt-6-sol",
+      model: "gpt-6.1-terra",
       reasoningEffortPreference: "none",
     });
     const { unmount } = renderPicker();
@@ -369,7 +412,7 @@ describe("AiModelPicker", () => {
     expect(thinking()).toHaveAttribute("aria-valuemin", "0");
     expect(thinking()).toHaveAttribute("aria-valuemax", "4");
     expectText(/Your none preference is saved/);
-    selectModel("GPT-6 Sol");
+    selectModel("GPT-6.1 Terra");
     expectEffort("None");
     selectModel(model);
     fireEvent.keyDown(thinking(), { key: "End" });

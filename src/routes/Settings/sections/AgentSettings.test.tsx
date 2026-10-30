@@ -130,17 +130,17 @@ describe("AgentSettings", () => {
   it("discards an unfinished custom model when switching modes with the same saved model", () => {
     window.localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ model: "gpt-6-sol" }),
+      JSON.stringify({ model: "gpt-6.1-sol" }),
     );
     window.localStorage.setItem(
       AI_PROXY_STORAGE_KEY,
-      JSON.stringify({ model: "gpt-6-sol" }),
+      JSON.stringify({ model: "gpt-6.1-sol" }),
     );
     render(<AgentSettings />);
     editField("Model ID", "personal-draft");
     fireEvent.click(screen.getByRole("switch", { name: "Bring your own key" }));
     fireEvent.click(screen.getByRole("switch", { name: "Bring your own key" }));
-    expect(button(/^AI model and thinking:/)).toHaveTextContent("GPT-6 Sol");
+    expect(button(/^AI model and thinking:/)).toHaveTextContent("GPT-6.1 Sol");
     expect(screen.queryByLabelText("Model ID")).not.toBeInTheDocument();
   });
 
@@ -232,8 +232,9 @@ describe("AgentSettings", () => {
 
   it.each([
     { model: "gpt-6-astra", preference: "none", effort: "low" },
-    { model: "gpt-6-sol", preference: "max", effort: "max" },
-    { model: "gpt-6-sol", preference: "none", effort: "none" },
+    { model: "gpt-6.1-sol", preference: "max", effort: "max" },
+    { model: "gpt-6.1-sol", preference: "none", effort: "low" },
+    { model: "gpt-6.1-terra", preference: "none", effort: "none" },
   ])(
     "tests $model with $effort thinking and preserves $preference",
     async ({ model, preference, effort }) => {
@@ -409,7 +410,7 @@ describe("AgentSettings", () => {
     const savedConfig = {
       apiBase: "https://api.example.com/v1",
       apiKey: "sk-test",
-      model: "gpt-6-sol",
+      model: "gpt-6.1-sol",
       reasoningEffortPreference: "high",
     };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(savedConfig));
@@ -440,7 +441,7 @@ describe("AgentSettings", () => {
     const savedConfig = {
       apiBase: "https://api.example.com/v1",
       apiKey: "",
-      model: "gpt-6-sol",
+      model: "gpt-6.1-sol",
     };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(savedConfig));
     mockFetch.mockResolvedValue(new Response("Unknown model", { status: 400 }));
@@ -460,7 +461,7 @@ describe("AgentSettings", () => {
     const savedConfig = {
       apiBase: "https://api.example.com/v1",
       apiKey: "",
-      model: "gpt-6-sol",
+      model: "gpt-6.1-sol",
     };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(savedConfig));
     render(<AgentSettings />);
@@ -478,7 +479,7 @@ describe("AgentSettings", () => {
   });
 
   it.each([
-    { label: "GPT-6 Sol", id: "gpt-6-sol" },
+    { label: "GPT-6.1 Sol", id: "gpt-6.1-sol" },
     { label: "GPT-6 Luna", id: "gpt-6-luna" },
   ])(
     "replaces an unfinished model draft when selecting $label",
@@ -505,7 +506,7 @@ describe("AgentSettings", () => {
     const savedConfig = {
       apiBase: "https://api.example.com/v1",
       apiKey: "sk-personal",
-      model: "gpt-6-sol",
+      model: "gpt-6.1-sol",
       reasoningEffort: "high",
     };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(savedConfig));
@@ -589,7 +590,7 @@ describe("AgentSettings", () => {
         JSON.stringify({
           apiBase: "https://api.example.com/v1",
           apiKey: "",
-          model: "gpt-6-sol",
+          model: "gpt-6.1-sol",
         }),
       );
       let finishTest!: (response: Response) => void;
@@ -735,7 +736,7 @@ describe("AgentSettings", () => {
     const savedConfig = {
       apiBase: "https://api.example.com/v1",
       apiKey: "old-key",
-      model: "gpt-6-sol",
+      model: "gpt-6.1-sol",
       reasoningEffort: "medium",
     };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(savedConfig));
@@ -849,8 +850,8 @@ describe("AgentSettings", () => {
     editField("API base URL", "https://gateway.example.com/v1");
     editField("API key", "gateway-key");
     editField("Model ID", "custom-model");
-    chooseModel("GPT-6 Sol");
-    expect(button(/^AI model and thinking:/)).toHaveTextContent("GPT-6 Sol");
+    chooseModel("GPT-6.1 Sol");
+    expect(button(/^AI model and thinking:/)).toHaveTextContent("GPT-6.1 Sol");
     editField("Model ID", "custom-model");
     fireEvent.click(button("Save and test AI"));
 

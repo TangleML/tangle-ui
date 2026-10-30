@@ -51,6 +51,7 @@ import { BackendSettings } from "./Settings/sections/BackendSettings";
 import { BetaFeaturesSettings } from "./Settings/sections/BetaFeaturesSettings";
 import { PreferencesSettings } from "./Settings/sections/PreferencesSettings";
 import { SecretsSettings } from "./Settings/sections/SecretsSettings";
+import { VsCodeExtensionSettings } from "./Settings/sections/VsCodeExtensionSettings";
 import { SettingsLayout } from "./Settings/SettingsLayout";
 import { CompareView } from "./v2/pages/CompareView/CompareView";
 import { PipelineFoldersPage } from "./v2/pages/PipelineFolders/PipelineFoldersPage";
@@ -258,6 +259,17 @@ const settingsAgentRoute = createRoute({
   },
 });
 
+const settingsVsCodeRoute = createRoute({
+  getParentRoute: () => settingsLayoutRoute,
+  path: "/vscode-extension",
+  component: VsCodeExtensionSettings,
+  beforeLoad: () => {
+    if (!isTangentEnabled()) {
+      throw redirect({ to: APP_ROUTES.SETTINGS_BACKEND });
+    }
+  },
+});
+
 const settingsSecretsRoute = createRoute({
   getParentRoute: () => settingsLayoutRoute,
   path: "/secrets",
@@ -326,6 +338,7 @@ const settingsRouteTree = settingsLayoutRoute.addChildren([
   settingsPreferencesRoute,
   settingsBetaFeaturesRoute,
   settingsAgentRoute,
+  settingsVsCodeRoute,
   secretsRouteTree,
 ]);
 

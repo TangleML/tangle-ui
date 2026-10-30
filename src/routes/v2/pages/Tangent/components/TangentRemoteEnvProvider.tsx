@@ -26,7 +26,10 @@ import { useRemoteEnvAuthToken } from "@/routes/v2/pages/Tangent/hooks/useRemote
 import { useTangentBaseUrl } from "@/routes/v2/pages/Tangent/hooks/useTangentBaseUrl";
 import { connectRemoteEnvWithRefresh } from "@/routes/v2/pages/Tangent/services/connectRemoteEnvWithRefresh";
 import { createRemoteEnvAgentWorker } from "@/routes/v2/pages/Tangent/services/remoteEnvAgentWorker";
-import { createRemoteEnvHost } from "@/routes/v2/pages/Tangent/services/remoteEnvHost";
+import {
+  createRemoteEnvHost,
+  describeBrowserEnv,
+} from "@/routes/v2/pages/Tangent/services/remoteEnvHost";
 
 interface TangentRemoteEnvProviderProps {
   sessionId: string;
@@ -135,6 +138,7 @@ export function TangentRemoteEnvProvider({
       url: baseUrl,
       worker: remote,
       onError,
+      metadata: describeBrowserEnv(contextRef.current),
     });
 
     const stop = connectRemoteEnvWithRefresh({

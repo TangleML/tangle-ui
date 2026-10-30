@@ -2,14 +2,10 @@ import { cva } from "class-variance-authority";
 import { observer } from "mobx-react-lite";
 import type { ComponentProps, MouseEvent } from "react";
 
-import { useAwaitAuthorization } from "@/components/shared/Authentication/useAwaitAuthorization";
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
-import TangleSubmitter from "@/components/shared/Submitters/Tangle/TangleSubmitter";
 import { Icon } from "@/components/ui/icon";
-import { serializeComponentSpec } from "@/models/componentSpec";
 import { useQuickRunSubmitter } from "@/routes/v2/pages/Editor/components/QuickRunSubmitterContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
-import { deepClone } from "@/utils/deepClone";
 import { tracking } from "@/utils/tracking";
 
 const quickRunIconVariants = cva("transition-colors", {
@@ -49,37 +45,23 @@ function tooltipLabel(hasErrors: boolean, onlyWarnings: boolean) {
 
 interface QuickRunButtonProps {
   variant?: "menubar" | "mini";
-  renderSubmitter?: boolean;
   trackingKey?: string;
 }
 
 export const QuickRunButton = observer(function QuickRunButton({
   variant = "menubar",
-  renderSubmitter = true,
   trackingKey = "v2.pipeline_editor.quick_run",
   ...tooltipButtonProps
 }: QuickRunButtonProps &
   Omit<ComponentProps<typeof TooltipButton>, "tooltip" | "variant" | "size">) {
   const { navigation } = useSharedStores();
-  const { isAuthorized } = useAwaitAuthorization();
-  const { registerSubmitter, submitRun, submitWithArguments } =
-    useQuickRunSubmitter();
+  const { submitRun, submitWithArguments } = useQuickRunSubmitter();
   const rootSpec = navigation.rootSpec;
   const allIssues = rootSpec?.allValidationIssues ?? [];
   const errorCount = allIssues.filter((i) => i.severity === "error").length;
   const hasErrors = errorCount > 0;
   const onlyWarnings = allIssues.length > 0 && errorCount === 0;
   const hasConfigurableInputs = (rootSpec?.inputs?.length ?? 0) > 0;
-
-  let serializedPipelineSpec:
-    ReturnType<typeof serializeComponentSpec> | undefined;
-  try {
-    serializedPipelineSpec = rootSpec
-      ? deepClone(serializeComponentSpec(rootSpec))
-      : undefined;
-  } catch {
-    serializedPipelineSpec = undefined;
-  }
 
   const tooltip = tooltipLabel(hasErrors, onlyWarnings);
   const isMini = variant === "mini";
@@ -136,15 +118,6 @@ export const QuickRunButton = observer(function QuickRunButton({
         >
           <Icon name="Split" size="sm" className="rotate-90" />
         </TooltipButton>
-      )}
-      {renderSubmitter && serializedPipelineSpec && isAuthorized && (
-        <div ref={registerSubmitter} className="sr-only">
-          <TangleSubmitter
-            componentSpec={serializedPipelineSpec}
-            isComponentTreeValid={rootSpec?.isValid}
-            onlyFixableIssues={!hasErrors && allIssues.length > 0}
-          />
-        </div>
       )}
     </>
   );

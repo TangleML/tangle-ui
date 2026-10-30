@@ -25,5 +25,5 @@
     "noFallthroughCasesInSwitch": true,
     "noImplicitAny": true
   },
-  "exclude": ["node_modules", "src/api"]
+  "exclude": ["node_modules", "src/api", "vscode-extension"]
 }

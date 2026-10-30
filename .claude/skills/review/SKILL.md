@@ -139,11 +139,22 @@ Present findings in this format:
 
 ## Step 2: Select Comments to Post (PR mode only)
 
-**Skip this step entirely if in fallback mode (no PR).**
+**Skip this step entirely if in fallback mode (no PR).** If there are no findings, skip to the end.
 
-After presenting the review, use `AskUserQuestion` with **multi-select** to let the user pick which findings to post as inline PR comments.
+### 2a: All or a selection
 
-**Always make "All findings" the first option of the first question**, with the total count (e.g. `All findings (12)`). Selecting it posts every finding, whatever else is selected. `AskUserQuestion` allows at most 4 options per question and 4 questions, so when the findings don't fit in the remaining slots, group related ones into a single option (by severity or shared root cause) rather than leaving any out.
+With **more than 4 findings**, first ask one **single-select** `AskUserQuestion` with exactly two options:
+
+- `All findings (12)` → post every finding and go straight to Step 3 — ask nothing else
+- `Choose which to post` → continue to 2b
+
+With 4 or fewer findings, skip 2a: they fit in a single question, so go straight to 2b.
+
+### 2b: Pick findings
+
+Only after 2a comes back as `Choose which to post` (or was skipped), make a **separate** `AskUserQuestion` call with **multi-select** listing the findings. Never bundle 2a and 2b into one call — that makes the user step through every breakdown question even after answering "All".
+
+`AskUserQuestion` allows at most 4 options per question and 4 questions, so up to 16 findings fit one per option. Beyond that, group related ones into a single option (by severity or shared root cause) rather than leaving any out. Don't add an "All findings" option here — 2a already offered it.
 
 Each finding option should show:
 
@@ -154,13 +165,10 @@ Each finding option should show:
 
 Example options:
 
-- `All findings (12)` → post every finding above
 - `[High] src/utils/api.ts:42 — "Unsafe type cast" → suggest type guard instead of as`
 - `[Medium] src/components/List.tsx:15 — "Missing UI primitive" → use BlockStack instead of div`
 
-The user picks which comments to post. If "All findings" is selected, post every finding; otherwise post only the selected ones.
-
-If the user selects none or there are no findings, skip to the end.
+Post only the selected findings. If the user selects none, skip to the end.
 
 ## Step 3: Post Selected Comments (PR mode only)
 
@@ -172,7 +180,7 @@ Determine the repo owner/name:
 gh repo view --json nameWithOwner --jq '.nameWithOwner'
 ```
 
-For each selected finding, post an inline review comment. Every comment **must** be prefixed with the AI disclaimer:
+Post all selected findings as **one review** — a single notification and timeline entry for the author, instead of one per comment. Every inline comment **and** the review body **must** start with the AI disclaimer:
 
 ```markdown
 > 🤖 This is an AI-generated code review comment.
@@ -180,22 +188,36 @@ For each selected finding, post an inline review comment. Every comment **must**
 <rest of the comment body>
 ```
 
-Post using:
+The review body is required: a one-line summary (e.g. `5 findings, inline below`) plus any cross-stack observations from "Stack Awareness".
+
+Post using a quoted heredoc, so backticks and `$` in comment bodies reach GitHub untouched:
 
 ```bash
-gh api repos/{owner}/{repo}/pulls/{pr_number}/comments \
-  -f body="<comment>" \
-  -f path="<file>" \
-  -F line=<line> \
-  -f commit_id="<head_sha>"
+gh api repos/{owner}/{repo}/pulls/{pr_number}/reviews --input - --jq '.html_url' <<'EOF'
+{
+  "commit_id": "<head_sha>",
+  "event": "COMMENT",
+  "body": "> 🤖 This is an AI-generated code review comment.\n\n<summary>",
+  "comments": [
+    {
+      "path": "<file>",
+      "line": <line>,
+      "side": "RIGHT",
+      "body": "> 🤖 This is an AI-generated code review comment.\n\n<comment>"
+    }
+  ]
+}
+EOF
 ```
 
-After posting, show a summary:
+The review is all-or-nothing: if any comment's line is outside the diff, GitHub rejects the whole review with a 422 and posts nothing. Before posting, confirm each `line` falls inside a hunk of `gh pr diff` on the new side. If a 422 still comes back, move the offending finding into the review body (citing `file:line`) and retry — never drop it silently.
 
-| #   | File                       | Issue                | Posted |
-| --- | -------------------------- | -------------------- | ------ |
-| 1   | src/utils/api.ts:42        | Unsafe type cast     | Yes    |
-| 2   | src/components/List.tsx:15 | Missing UI primitive | Yes    |
+After posting, share the review URL and show a summary:
+
+| #   | File                       | Issue                | Posted      |
+| --- | -------------------------- | -------------------- | ----------- |
+| 1   | src/utils/api.ts:42        | Unsafe type cast     | Inline      |
+| 2   | src/components/List.tsx:15 | Missing UI primitive | Review body |
 
 ## Review Principles
 

@@ -14,6 +14,7 @@ import {
   useDeleteProjectResource,
   useProjectResources,
 } from "@/services/projects/useProjectResources";
+import { useRemotePipelineNames } from "@/services/projects/useRemotePipelineNames";
 
 import { ProjectResources } from "./ProjectResources";
 
@@ -38,6 +39,10 @@ vi.mock("@/services/projects/useLocalPipelineStatus", () => ({
     unavailable: new Set(),
     currentNames: new Map(),
   }),
+}));
+
+vi.mock("@/services/projects/useRemotePipelineNames", () => ({
+  useRemotePipelineNames: vi.fn(),
 }));
 
 vi.mock("@/hooks/useToastNotification", () => ({
@@ -119,6 +124,7 @@ describe("ProjectResources", () => {
       isPending: false,
     } as unknown as ReturnType<typeof useDeleteProjectResource>);
     mockResources();
+    vi.mocked(useRemotePipelineNames).mockReturnValue(new Map());
     enableFlags({ projects: true, "tangent-shell": true });
     configureAi();
   });
@@ -481,6 +487,49 @@ describe("ProjectResources", () => {
     await user.click(screen.getByRole("button", { name: "Model card" }));
 
     expect(onSelect).toHaveBeenCalledWith(null);
+  });
+
+  it("names a renamed remote pipeline as it is called now", () => {
+    mockResources({
+      items: [
+        resource({ entity: "pipeline", name: "churn", entityId: "pipeline-9" }),
+      ],
+      totalCount: 1,
+    });
+    vi.mocked(useRemotePipelineNames).mockReturnValue(
+      new Map([["resource-1", "Churn training"]]),
+    );
+
+    renderResources();
+
+    expect(
+      screen.getByRole("button", { name: "Churn training" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("churn")).not.toBeInTheDocument();
+  });
+
+  it("asks to remove a renamed pipeline by the name it shows", async () => {
+    mockResources({
+      items: [
+        resource({ entity: "pipeline", name: "churn", entityId: "pipeline-9" }),
+      ],
+      totalCount: 1,
+    });
+    vi.mocked(useRemotePipelineNames).mockReturnValue(
+      new Map([["resource-1", "Churn training"]]),
+    );
+    renderResources();
+
+    await userEvent.setup().click(
+      screen.getByRole("button", {
+        name: "Remove Churn training from this project",
+      }),
+    );
+
+    const dialog = await screen.findByRole("alertdialog");
+    expect(dialog).toHaveTextContent(
+      'Remove "Churn training" from this project?',
+    );
   });
 
   it("promises an item it only points at is left where it lives", async () => {

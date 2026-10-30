@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { HOURS } from "@/utils/constants";
 
 import {
+  getStartingSessionModel,
+  getStartingSessionThinkingDepth,
   readStartingSession,
   startingSessionMetadata,
   withoutStartingSession,
@@ -96,4 +98,28 @@ describe("startingSession", () => {
     expect(withoutStartingSession({ keepMe: true })).toEqual({ keepMe: true });
     expect(withoutStartingSession(null)).toEqual({});
   });
+
+  it.each([
+    ["gpt-6.1-sol", "openai/gpt-6.1-sol"],
+    ["claude-opus-5-5", "anthropic/claude-opus-5-5"],
+    ["anthropic:claude-custom", undefined],
+    ["vendor/custom-model", undefined],
+    ["my-deployment", undefined],
+  ])("names %s for Tangent as %s", (model, expected) => {
+    expect(getStartingSessionModel({ model })).toBe(expected);
+  });
+
+  it.each([
+    ["gpt-6.1-terra", "none", "off"],
+    ["gpt-6.1-sol", "none", "low"],
+    ["gpt-6.1-sol", "max", "xhigh"],
+    ["my-deployment", "high", undefined],
+  ] as const)(
+    "runs %s with a %s preference at %s thinking",
+    (model, reasoningEffortPreference, expected) => {
+      expect(
+        getStartingSessionThinkingDepth({ model, reasoningEffortPreference }),
+      ).toBe(expected);
+    },
+  );
 });

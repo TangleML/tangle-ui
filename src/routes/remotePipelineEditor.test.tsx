@@ -138,6 +138,9 @@ vi.mock("./v2/pages/Editor/components/QuickRunSubmitterContext", () => ({
   QuickRunSubmitterProvider: ({ children }: { children: ReactNode }) =>
     permission.granted ? children : null,
 }));
+vi.mock("./v2/pages/Editor/components/QuickRunSubmitter", () => ({
+  QuickRunSubmitter: () => null,
+}));
 vi.mock("@/routes/v2/shared/store/SharedStoreRegistrar", () => ({
   SharedStoreRegistrar: () => {
     useState(() => mountEditor());

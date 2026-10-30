@@ -25,7 +25,9 @@ import type { AiReasoningEffort } from "@/types/aiProvider";
 
 interface AiModelPickerProps {
   variant?: "header" | "settings" | "compact";
+  disabled?: boolean;
   modelDraft?: string | null;
+  supportedReasoningEfforts?: readonly AiReasoningEffort[];
   onModelSelect?: () => void;
   onCustomModelSelect?: (model: string) => void;
 }
@@ -39,16 +41,20 @@ const TRIGGER_STYLES = {
 function getThinkingHint(
   effort: AiReasoningEffort,
   preference: AiReasoningEffort,
+  modelEffort: AiReasoningEffort | undefined,
 ): string {
   if (effort !== preference) {
-    return `Using ${getAiReasoningLabel(effort).toLowerCase()} for this model. Your ${getAiReasoningLabel(preference).toLowerCase()} preference is saved.`;
+    const scope = effort === modelEffort ? "for this model" : "here";
+    return `Using ${getAiReasoningLabel(effort).toLowerCase()} ${scope}. Your ${getAiReasoningLabel(preference).toLowerCase()} preference is saved.`;
   }
   return "More thinking gives the model more time to work through a task.";
 }
 
 export function AiModelPicker({
   variant = "settings",
+  disabled = false,
   modelDraft,
+  supportedReasoningEfforts,
   onModelSelect,
   onCustomModelSelect,
 }: AiModelPickerProps) {
@@ -80,8 +86,18 @@ export function AiModelPicker({
   const preference =
     modelPreferences.reasoningEffortPreference ??
     AI_CONFIG.defaultReasoningEffort;
-  const levels = getAiModelReasoningLevels(model, config.modelCapabilities);
+  const levels = getAiModelReasoningLevels(
+    model,
+    config.modelCapabilities,
+    supportedReasoningEfforts,
+  );
   const effort = getEffectiveReasoningEffort(
+    model,
+    preference,
+    config.modelCapabilities,
+    supportedReasoningEfforts,
+  );
+  const modelEffort = getEffectiveReasoningEffort(
     model,
     preference,
     config.modelCapabilities,
@@ -178,6 +194,7 @@ export function AiModelPicker({
         <Button
           ref={triggerRef}
           type="button"
+          disabled={disabled}
           variant={buttonVariant}
           aria-label={`AI model and thinking: ${modelLabel}${effortLabel ? `, ${effortLabel}` : ""}`}
           className={triggerClassName}
@@ -197,6 +214,7 @@ export function AiModelPicker({
         ref={contentRef}
         align={variant === "header" ? "end" : "start"}
         side={variant === "compact" ? "top" : "bottom"}
+        collisionPadding={16}
         aria-label="Model and thinking"
         className="w-80 p-2"
         onCloseAutoFocus={(event) => {
@@ -271,7 +289,7 @@ export function AiModelPicker({
           ) : selectingModel ? (
             <BlockStack gap="2">
               <div role="radiogroup" aria-label="Models">
-                <BlockStack gap="2">
+                <BlockStack gap="1">
                   {options.map((option, index) => (
                     <Button
                       key={option.id}
@@ -291,7 +309,7 @@ export function AiModelPicker({
                       }
                       aria-checked={option.id === model}
                       tabIndex={option.id === model ? 0 : -1}
-                      className="h-auto w-full justify-between px-3 py-3 text-left whitespace-normal aria-[checked=true]:bg-accent"
+                      className="h-auto w-full justify-between px-3 py-2 text-left whitespace-normal aria-[checked=true]:bg-accent"
                       onKeyDown={(event) => {
                         let nextIndex: number;
                         if (
@@ -388,7 +406,7 @@ export function AiModelPicker({
                 </InlineStack>
               </BlockStack>
               <Paragraph id={thinkingHintId} size="xs" tone="subdued">
-                {getThinkingHint(effort, preference)}
+                {getThinkingHint(effort, preference, modelEffort)}
               </Paragraph>
             </BlockStack>
           ) : null}

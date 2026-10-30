@@ -466,6 +466,7 @@ describe("TangentProjectStore.startSession", () => {
           },
           rootConfigSeed("project-1").resource,
         ],
+        tags: ["projectId:project-1"],
         env: {
           TANGLE_ROOT_CONFIG: "{{uploadsPath}}/tangle-deploy-root-config.yaml",
         },
@@ -474,6 +475,18 @@ describe("TangentProjectStore.startSession", () => {
     expect(io.newSession.mock.calls[0][2].resources?.[0]).toMatchObject({
       content: expect.stringContaining("Prefer concise plans."),
     });
+  });
+
+  it("tags the session with the project selector so project hosts serve it", async () => {
+    const store = new TangentProjectStore("project-42");
+    const io = makeSessionIo(null);
+    store.setSessionIo(io);
+
+    await store.startSession();
+
+    expect(io.newSession.mock.calls[0][2].tags).toEqual([
+      "projectId:project-42",
+    ]);
   });
 
   /** The naming brief is seeded whether or not the project says anything. */
