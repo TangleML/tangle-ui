@@ -109,3 +109,32 @@ jobs:
 
       - name: Run knip
         run: pnpm run knip
+
+  vscode-extension:
+    name: VS Code extension
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Install dependencies
+        run: pnpm --dir vscode-extension install --frozen-lockfile
+
+      - name: Run type checking
+        run: pnpm --dir vscode-extension typecheck
+
+      - name: Run linting
+        run: pnpm --dir vscode-extension lint
+
+      - name: Run tests
+        run: pnpm --dir vscode-extension test
+
+      - name: Package extension
+        run: pnpm --dir vscode-extension package
