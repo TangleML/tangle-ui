@@ -397,16 +397,20 @@ function componentId(component: UnknownComponentReference): string {
  * This function assumes, that text and spec are in sync.
  *
  * @param component - The component reference to hydrate
+ * @param knownDigest - Digest to use instead of hashing `text`. Pass it only when
+ * `text` was synthesized from the spec, so it isn't the original bytes the
+ * digest was computed from.
  * @returns The hydrated component reference or null if the component reference is invalid
  */
 async function hydrateFromContentfulComponentReference(
   component: ContentfulComponentReference,
+  knownDigest?: string,
 ): Promise<HydratedComponentReference | null> {
   const { spec, text } = component;
 
   // todo: should we validate that text and spec are in sync?
 
-  const digest = await generateDigest(text);
+  const digest = knownDigest ?? (await generateDigest(text));
   // we always want to have a name, so we generate a default one if it is not provided
   const name = spec.name ?? component.name ?? `component-${digest.slice(0, 8)}`;
 
@@ -598,11 +602,6 @@ export const hydrateComponentReference = async (
         return component;
       },
     ),
-
-    hydrationStrategy(
-      isSpecOnlyComponentReference,
-      hydrateFromPartialContentfulComponentReference,
-    ),
   ];
 
   /**
@@ -626,6 +625,39 @@ export const hydrateComponentReference = async (
       );
       return currentComponent;
     }
+  }
+
+  // Last resort: synthesize text from the spec.
+  if (isSpecOnlyComponentReference(currentComponent)) {
+    const { digest } = currentComponent;
+
+    // The synthesized YAML is not the original component text, so use the
+    // incoming digest as-is (no hashing) and don't cache under that digest.
+    if (digest) {
+      let text: string;
+      try {
+        text = componentSpecToYaml(currentComponent.spec);
+      } catch {
+        return null;
+      }
+
+      return hydrateFromContentfulComponentReference(
+        { ...currentComponent, text },
+        digest,
+      );
+    }
+
+    // Without an incoming digest, hash the synthesized text and cache as before.
+    const hydrated =
+      await hydrateFromPartialContentfulComponentReference(currentComponent);
+
+    if (hydrated) {
+      void saveHydratedComponentReferenceToStorage(hydrated).catch(
+        console.error,
+      );
+    }
+
+    return hydrated;
   }
 
   return null;
