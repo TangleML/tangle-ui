@@ -23,7 +23,7 @@ import { InlineStack } from "@/components/ui/layout";
 
 type ConfirmationDialogProps = {
   title?: string;
-  description?: string;
+  description?: ReactNode;
   content?: ReactNode;
   confirmLabel?: string;
   dismissForeverKey?: string;

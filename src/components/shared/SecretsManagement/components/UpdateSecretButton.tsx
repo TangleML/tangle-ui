@@ -9,12 +9,14 @@ import { type Secret, SecretsQueryKeys } from "../types";
 
 interface UpdateSecretButtonProps {
   secret: Pick<Secret, "id" | "value" | "description" | "expiresAt">;
+  teamId?: string;
   disabled?: boolean;
   onSuccess: () => void;
 }
 
 export function UpdateSecretButton({
   secret,
+  teamId,
   disabled,
   onSuccess,
 }: UpdateSecretButtonProps) {
@@ -22,13 +24,15 @@ export function UpdateSecretButton({
   const queryClient = useQueryClient();
 
   const { mutate: updateSecretMutation, isPending } = useMutation({
-    mutationFn: () => updateSecret(secret.id, secret),
+    mutationFn: () => updateSecret(secret.id, secret, teamId),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: SecretsQueryKeys.All() });
+      void queryClient.invalidateQueries({
+        queryKey: SecretsQueryKeys.All(teamId),
+      });
       onSuccess();
     },
-    onError: () => {
-      notify("Failed to update secret", "error");
+    onError: (error) => {
+      notify(error.message, "error");
     },
   });
 
