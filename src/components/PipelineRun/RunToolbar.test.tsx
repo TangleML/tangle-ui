@@ -16,6 +16,7 @@ import { useBackend } from "@/providers/BackendProvider";
 import { ComponentSpecProvider } from "@/providers/ComponentSpecProvider";
 import { ExecutionDataProvider } from "@/providers/ExecutionDataProvider";
 import { PipelineStorageProvider } from "@/services/pipelineStorage/PipelineStorageProvider";
+import { REMOTE_PIPELINE_ID_ANNOTATION } from "@/utils/annotationKeys";
 import type { ComponentSpec } from "@/utils/componentSpec";
 
 import { RunToolbar } from "./RunToolbar";
@@ -179,6 +180,21 @@ describe("<RunToolbar/>", () => {
       await waitFor(() => {
         const inspect = screen.queryByTestId("inspect-pipeline-button");
         expect(inspect).not.toBeInTheDocument();
+      });
+    });
+
+    test("should render inspect button for a remote-only pipeline", async () => {
+      vi.mocked(useCheckComponentSpecFromPath).mockReturnValue(false);
+      queryClient.setQueryData(["pipeline-run-metadata", "123"], {
+        ...mockPipelineRun,
+        annotations: { [REMOTE_PIPELINE_ID_ANNOTATION]: "remote-pipeline-id" },
+      });
+
+      renderWithProviders(<RunToolbar />);
+
+      await waitFor(() => {
+        const inspect = screen.getByTestId("inspect-pipeline-button");
+        expect(inspect).toBeInTheDocument();
       });
     });
   });

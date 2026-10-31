@@ -178,9 +178,7 @@ const ImportPipeline = ({
           <DialogHeader>
             <DialogTitle>Import Pipeline</DialogTitle>
             <DialogDescription>
-              Import a pipeline from a YAML file or by pasting YAML content. If
-              a pipeline with the same name already exists, a unique name will
-              be automatically generated.
+              Import a pipeline from a YAML file or by pasting YAML content.
             </DialogDescription>
           </DialogHeader>
           {isLoading && (

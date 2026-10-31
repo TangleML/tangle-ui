@@ -1,11 +1,11 @@
 import { useNavigate } from "@tanstack/react-router";
 
-export function useInspectPipeline(pipelineName?: string) {
+export function useInspectPipeline(inspectPath?: string) {
   const navigate = useNavigate();
 
   const inspect = () => {
-    if (!pipelineName) return;
-    navigate({ to: `/editor/${encodeURIComponent(pipelineName)}` });
+    if (!inspectPath) return;
+    navigate({ to: inspectPath });
   };
 
   return { inspect };
