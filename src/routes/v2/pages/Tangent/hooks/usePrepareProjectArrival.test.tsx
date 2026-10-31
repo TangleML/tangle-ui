@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import { createNewPipeline } from "@/routes/v2/pages/Editor/components/EditorMenuBar/components/fileMenu.actions";
 import type { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
+import { getProject } from "@/services/projects/projectsService";
 import { startingSessionMetadata } from "@/services/projects/startingSession";
 import type {
   Project,
@@ -35,6 +36,10 @@ vi.mock("@/hooks/useToastNotification", () => ({ default: () => notify }));
 vi.mock("@/services/projects/useProjects", () => ({
   useProject: vi.fn(),
   useUpdateProject: () => ({ mutateAsync: updateProject }),
+}));
+
+vi.mock("@/services/projects/projectsService", () => ({
+  getProject: vi.fn(),
 }));
 
 vi.mock("@/services/projects/useProjectResources", () => ({
@@ -113,6 +118,7 @@ function given({
   vi.mocked(useProject).mockReturnValue({
     data: { ...project, ...projectOverrides },
   } as unknown as ReturnType<typeof useProject>);
+  vi.mocked(getProject).mockResolvedValue({ ...project, ...projectOverrides });
   vi.mocked(useProjectResources).mockReturnValue({
     data: { items: documents },
   } as unknown as ReturnType<typeof useProjectResources>);
@@ -331,6 +337,31 @@ describe("usePrepareProjectArrival", () => {
       expect(updateProject).toHaveBeenCalledWith({
         id: "project-1",
         input: { metadata: {} },
+      }),
+    );
+  });
+
+  /** Starting the session saves the project's shared folder onto it. */
+  it("keeps what starting the session wrote when it clears the ask", async () => {
+    given({
+      projectOverrides: {
+        metadata: startingSessionMetadata({ prompt: "Fix run 7" }),
+      },
+    });
+    vi.mocked(getProject).mockResolvedValue({
+      ...project,
+      metadata: {
+        ...startingSessionMetadata({ prompt: "Fix run 7" }),
+        tangentSharedFolderId: "folder-1",
+      },
+    });
+
+    prepare(makeStore(), 2);
+
+    await waitFor(() =>
+      expect(updateProject).toHaveBeenCalledWith({
+        id: "project-1",
+        input: { metadata: { tangentSharedFolderId: "folder-1" } },
       }),
     );
   });
