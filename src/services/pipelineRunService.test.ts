@@ -9,6 +9,7 @@ import {
 } from "vitest";
 
 import type { BodyCreateApiPipelineRunsPost } from "@/api/types.gen";
+import { RemoteAuthError } from "@/utils/fetchWithErrorHandling";
 
 import {
   cancelPipelineRun,
@@ -93,6 +94,65 @@ describe("createPipelineRun", () => {
       "<html>502 Bad Gateway</html>",
     );
   });
+});
+
+describe("changing a run", () => {
+  let mockFetch: Mock;
+
+  beforeEach(() => {
+    mockFetch = vi.fn();
+    global.fetch = mockFetch;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("rejects a cancel with the reason the backend gave", async () => {
+    mockFetch.mockResolvedValue(
+      jsonResponse(403, { detail: "Only the run's creator can cancel it." }),
+    );
+
+    await expect(cancelPipelineRun("42", BACKEND_URL)).rejects.toThrow(
+      "Failed to cancel the run (403): Only the run's creator can cancel it.",
+    );
+  });
+
+  it("rejects an annotation with the reason the backend gave", async () => {
+    mockFetch.mockResolvedValue(
+      jsonResponse(403, { detail: "Only the run's creator can annotate it." }),
+    );
+
+    await expect(
+      updateRunAnnotation("42", BACKEND_URL, { key: "notes", value: "Hi" }),
+    ).rejects.toThrow(
+      "Failed to save the run's notes (403): Only the run's creator can annotate it.",
+    );
+  });
+
+  it.each([
+    ["a cancel", () => cancelPipelineRun("42", BACKEND_URL)],
+    [
+      "an annotation",
+      () =>
+        updateRunAnnotation("42", BACKEND_URL, { key: "notes", value: "Hi" }),
+    ],
+  ])(
+    "refuses %s that a sign-in redirect intercepted",
+    async (_, change: () => Promise<void>) => {
+      mockFetch.mockResolvedValue(
+        Object.defineProperty(new Response(null), "type", {
+          value: "opaqueredirect",
+        }),
+      );
+
+      await expect(change()).rejects.toBeInstanceOf(RemoteAuthError);
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({ redirect: "manual" }),
+      );
+    },
+  );
 });
 
 describe("acting as a team", () => {

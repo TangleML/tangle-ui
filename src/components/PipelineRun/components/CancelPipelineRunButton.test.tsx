@@ -145,6 +145,7 @@ describe("<CancelPipelineRunButton/>", () => {
       expect(cancelPipelineRun).toHaveBeenCalledWith(
         "test-run-123",
         "http://localhost:8000",
+        undefined,
       );
       expect(mockNotify).toHaveBeenCalledWith(
         "Pipeline run test-run-123 cancelled",
@@ -152,6 +153,27 @@ describe("<CancelPipelineRunButton/>", () => {
       );
       expect(button).toBeDisabled();
       expect(button).toHaveTextContent("Stop");
+    });
+
+    test("cancels a team's run as the team", async () => {
+      cancelPipelineRun.mockResolvedValue();
+      renderWithQueryClient(
+        <CancelPipelineRunButton
+          runId="test-run-123"
+          teamId="ml-team@example.com"
+        />,
+      );
+
+      await act(() =>
+        fireEvent.click(screen.getByTestId("cancel-pipeline-run-button")),
+      );
+      await act(() => fireEvent.click(screen.getByText("Continue")));
+
+      expect(cancelPipelineRun).toHaveBeenCalledWith(
+        "test-run-123",
+        "http://localhost:8000",
+        "ml-team@example.com",
+      );
     });
 
     test("handles cancellation error", async () => {
@@ -168,7 +190,7 @@ describe("<CancelPipelineRunButton/>", () => {
 
       // assert
       expect(mockNotify).toHaveBeenCalledWith(
-        `Error cancelling run: Error: ${errorMessage}`,
+        `Error cancelling run: ${errorMessage}`,
         "error",
       );
       expect(button).toBeVisible();
