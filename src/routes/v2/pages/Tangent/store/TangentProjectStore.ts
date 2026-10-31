@@ -2,6 +2,7 @@ import type {
   EmbedAgent,
   EmbedAsset,
   HostResourceInput,
+  MemoryBinding,
 } from "@tangent/embed-react";
 import type { ThinkingLevel } from "@tangent/shared/contracts.ts";
 import {
@@ -14,6 +15,7 @@ import {
 
 import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import { TANGENT_BUNDLE_ID } from "@/routes/v2/pages/Tangent/constants";
+import { projectSharedMemorySeed } from "@/routes/v2/pages/Tangent/services/projectSharedMemory";
 import { resolveWorkareaTarget } from "@/routes/v2/pages/Tangent/services/resolveWorkareaTarget";
 import { sessionMemorySeed } from "@/routes/v2/pages/Tangent/services/sessionMemory";
 import { rootConfigSeed } from "@/routes/v2/pages/Tangent/services/sessionRunConfig";
@@ -73,8 +75,10 @@ export interface TangentSessionIo {
       model?: string;
       thinkingDepth?: ThinkingLevel;
       tags?: string[];
+      memory?: MemoryBinding;
     },
   ) => Promise<{ sessionId: string }>;
+  ensureSharedFolderId: () => Promise<string | undefined>;
   attachSession: (sessionId: string, name?: string) => Promise<{ id: string }>;
   detachSession: (resourceId: string) => Promise<void>;
   nameSessionIfUnnamed: (sessionId: string, prompt: string) => Promise<void>;
@@ -222,20 +226,28 @@ export class TangentProjectStore {
       // types the first message; a non-empty one runs it immediately.
       const prompt = options?.prompt ?? "";
       const rootConfig = rootConfigSeed(this.projectId);
+      const folderId = await io.ensureSharedFolderId();
+      const sharedMemory = folderId
+        ? projectSharedMemorySeed(folderId)
+        : undefined;
       const { sessionId } = await io.newSession(prompt, TANGENT_BUNDLE_ID, {
         name: options?.name ?? "New Tangent session",
         resources: [
           {
             kind: "memory",
             scope: "session",
-            content: sessionMemorySeed(this.projectId, io.projectInstructions),
+            content: sessionMemorySeed(this.projectId, io.projectInstructions, {
+              hasSharedFolder: sharedMemory !== undefined,
+            }),
           },
           rootConfig.resource,
+          ...(sharedMemory ? [sharedMemory.resource] : []),
         ],
         env: rootConfig.env,
         model: options?.model,
         thinkingDepth: options?.thinkingDepth,
         tags: [projectSelector(this.projectId)],
+        ...(sharedMemory ? { memory: sharedMemory.memory } : {}),
       });
       const resource = await io.attachSession(sessionId, options?.name);
       runInAction(() => {
