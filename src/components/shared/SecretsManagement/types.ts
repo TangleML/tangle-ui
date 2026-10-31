@@ -38,10 +38,9 @@ export function extractSecretName(arg: DynamicDataArgument): string | null {
   return null;
 }
 
-/**
- * Query keys for React Query.
- */
 export const SecretsQueryKeys = {
-  All: () => ["secrets"] as const,
-  Id: (id: string) => ["secrets", id] as const,
+  All: (teamId?: string) =>
+    teamId
+      ? (["secrets", "team", teamId] as const)
+      : (["secrets", "user"] as const),
 } as const;
