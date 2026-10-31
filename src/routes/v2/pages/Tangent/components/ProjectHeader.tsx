@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 
 import { PinProjectButton } from "@/components/Project/PinProjectButton";
+import { ProjectWorkspaceLabel } from "@/components/Project/ProjectWorkspaceLabel";
 import { useRenameProjectAction } from "@/components/Project/useRenameProjectAction";
 import { useShareProjectAction } from "@/components/Project/useShareProjectAction";
 import { Button } from "@/components/ui/button";
@@ -98,6 +99,10 @@ function ProjectHeaderBar({ project }: { project: Project }) {
         >
           <Icon name="Share2" size="sm" />
         </Button>
+
+        <div className="ml-2 min-w-0">
+          <ProjectWorkspaceLabel project={project} />
+        </div>
       </InlineStack>
 
       <LocalEnvIndicator />
