@@ -69,3 +69,11 @@ export function resolveTeam({
 export function actingTeamId(resolution: TeamResolution): string | undefined {
   return resolution.status === "active" ? resolution.team.id : undefined;
 }
+
+export function fallsBackToYou(resolution: TeamResolution): boolean {
+  return (
+    resolution.status === "not-member" ||
+    resolution.status === "unavailable" ||
+    resolution.status === "error"
+  );
+}

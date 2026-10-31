@@ -31,9 +31,18 @@ export function createRunTools(bridge: ToolBridgeApi) {
   const submitPipelineRun = tool({
     name: "submit_pipeline_run",
     description:
-      "Submit the currently-open pipeline to the backend for execution. Only call this when the user has explicitly asked to run the pipeline. Does not take parameters — always submits the live pipeline.",
-    parameters: z.object({}),
-    execute: async () => asJson(await bridge.submitPipelineRun()),
+      "Submit the currently-open pipeline to the backend for execution. Only call this when the user has explicitly asked to run the pipeline. Always submits the live pipeline. A run uses the secrets of whoever submits it: it goes as the user unless asTeam is set, or unless it needs a secret only the project's workspace has, in which case it goes as the workspace. The result's actingAsWorkspace names the workspace it went as, and actingAsTeam is that workspace's team id.",
+    parameters: z.object({
+      asTeam: z
+        .boolean()
+        .nullable()
+        .optional()
+        .describe(
+          "Submit as the project's workspace, so the run uses the workspace's secrets instead of the user's. Set it when the user asks for the workspace, or when the run needs a secret only the workspace has. Refused when the user can't act as the workspace.",
+        ),
+    }),
+    execute: async ({ asTeam }) =>
+      asJson(await bridge.submitPipelineRun({ asTeam: asTeam ?? undefined })),
   });
 
   const getRunStatus = tool({

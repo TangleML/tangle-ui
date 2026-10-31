@@ -40,6 +40,7 @@ interface SelectSecretDialogProps {
   onOpenChange: (open: boolean) => void;
   onSelect: (secretName: string) => void;
   team?: TeamResolution;
+  defaultSaveTo?: SecretOwner;
 }
 
 function SelectSecretDialogContentSkeleton() {
@@ -194,11 +195,13 @@ function SaveToControl({
 
 interface SelectSecretDialogContentProps {
   resolution: Exclude<TeamResolution, { status: "resolving" | "conflict" }>;
+  defaultSaveTo: SecretOwner;
   onSelect: (secretName: string) => void;
 }
 
 function SelectSecretDialogContentInternal({
   resolution,
+  defaultSaveTo,
   onSelect,
 }: SelectSecretDialogContentProps) {
   const teamId = actingTeamId(resolution);
@@ -210,7 +213,7 @@ function SelectSecretDialogContentInternal({
   });
 
   const [mode, setMode] = useState<DialogMode>("select");
-  const [saveTo, setSaveTo] = useState<SecretOwner>("you");
+  const [saveTo, setSaveTo] = useState<SecretOwner>(defaultSaveTo);
 
   const handleSecretSelect = (secret: Secret) => {
     onSelect(secret.name);
@@ -310,10 +313,15 @@ const SelectSecretDialogContent = withSuspenseWrapper(
 
 interface TeamSecretsPickerProps {
   resolution: TeamResolution;
+  defaultSaveTo: SecretOwner;
   onSelect: (secretName: string) => void;
 }
 
-function TeamSecretsPicker({ resolution, onSelect }: TeamSecretsPickerProps) {
+function TeamSecretsPicker({
+  resolution,
+  defaultSaveTo,
+  onSelect,
+}: TeamSecretsPickerProps) {
   if (resolution.status === "resolving") {
     return <SelectSecretDialogContentSkeleton />;
   }
@@ -333,15 +341,23 @@ function TeamSecretsPicker({ resolution, onSelect }: TeamSecretsPickerProps) {
     <SelectSecretDialogContent
       key={actingTeamId(resolution) ?? "user"}
       resolution={resolution}
+      defaultSaveTo={defaultSaveTo}
       onSelect={onSelect}
     />
   );
 }
 
 function PageTeamSecretsPicker({
+  defaultSaveTo,
   onSelect,
-}: Pick<TeamSecretsPickerProps, "onSelect">) {
-  return <TeamSecretsPicker resolution={useActingTeam()} onSelect={onSelect} />;
+}: Pick<TeamSecretsPickerProps, "defaultSaveTo" | "onSelect">) {
+  return (
+    <TeamSecretsPicker
+      resolution={useActingTeam()}
+      defaultSaveTo={defaultSaveTo}
+      onSelect={onSelect}
+    />
+  );
 }
 
 export function SelectSecretDialog({
@@ -349,6 +365,7 @@ export function SelectSecretDialog({
   onOpenChange,
   onSelect,
   team,
+  defaultSaveTo = "you",
 }: SelectSecretDialogProps) {
   const { available } = useBackend();
   const mockBackend = useTourMockBackend();
@@ -364,9 +381,16 @@ export function SelectSecretDialog({
           {!available && !mockBackend && <SecretsBackendUnavailable />}
           {(available || mockBackend) &&
             (team ? (
-              <TeamSecretsPicker resolution={team} onSelect={handleSelect} />
+              <TeamSecretsPicker
+                resolution={team}
+                defaultSaveTo={defaultSaveTo}
+                onSelect={handleSelect}
+              />
             ) : (
-              <PageTeamSecretsPicker onSelect={handleSelect} />
+              <PageTeamSecretsPicker
+                defaultSaveTo={defaultSaveTo}
+                onSelect={handleSelect}
+              />
             ))}
         </DialogContent>
       )}

@@ -18,6 +18,7 @@ interface SubmitPipelineVariables {
   componentSpec: ComponentSpec;
   taskArguments?: Record<string, ArgumentType>;
   projectIds?: readonly string[];
+  teamId?: string;
   onSuccess: (data: PipelineRun) => void;
   onError: (error: Error | string) => void;
 }
@@ -42,6 +43,7 @@ export function useSubmitPipeline() {
       componentSpec,
       taskArguments,
       projectIds,
+      teamId,
       onSuccess,
       onError,
     }: SubmitPipelineVariables) => {
@@ -56,6 +58,7 @@ export function useSubmitPipeline() {
       return new Promise<PipelineRun>((resolve, reject) => {
         submitPipelineRun(componentSpec, backendUrl, {
           authorizationToken: authorizationToken.current,
+          teamId,
           taskArguments,
           runAnnotations: annotationsFor(projectIds),
           onSuccess: (data) => {
