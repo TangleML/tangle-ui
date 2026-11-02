@@ -112,10 +112,10 @@ export function AddResourceButton({
     void openResourceDialog(AddPipelineRunDialog, "add-pipeline-run");
   }
 
-  // The pipeline and run pickers are browsers and want the room; two fields
-  // and a pair of buttons do not.
+  // The pipeline and run pickers are browsers and want the whole screen; a
+  // document editor wants width, but lines that span a wide monitor read badly.
   function handleAddDocument() {
-    void openResourceDialog(AddDocumentDialog, "add-document", "md");
+    void openResourceDialog(AddDocumentDialog, "add-document", "xl");
   }
 
   return (
