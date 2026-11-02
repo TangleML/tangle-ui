@@ -2,9 +2,11 @@ import type { ReactNode } from "react";
 
 import ComponentDetailsDialog from "@/components/shared/Dialogs/ComponentDetailsDialog";
 import { TrimmedDigest } from "@/components/shared/ManageComponent/TrimmedDigest";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
+import { cn } from "@/lib/utils";
 import type { ComponentReference } from "@/utils/componentSpec";
 import { getComponentName } from "@/utils/getComponentName";
 import { isSubgraph } from "@/utils/subgraphUtils";
@@ -38,15 +40,21 @@ export function ComponentReferenceBar({
         displayName={displayName}
         readOnly={readOnly}
         trigger={
-          <button
+          <Button
             type="button"
-            className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 rounded-sm px-1 py-0.5 hover:bg-accent"
+            variant="ghost"
+            size="min"
+            align="start"
+            className="min-w-0 flex-1 gap-1.5 px-1 py-0.5"
             {...tracking(trackingId)}
           >
             <Icon
               name={isSubgraphSpec ? "Workflow" : "File"}
               size="sm"
-              className={`shrink-0 ${isSubgraphSpec ? "text-blue-500" : "text-muted-foreground"}`}
+              className={cn(
+                "shrink-0",
+                isSubgraphSpec ? "text-blue-500" : "text-muted-foreground",
+              )}
             />
             <Text size="xs" className="truncate">
               {displayName}
@@ -58,7 +66,7 @@ export function ComponentReferenceBar({
                 className="shrink-0 text-muted-foreground"
               />
             )}
-          </button>
+          </Button>
         }
       />
       {children}
