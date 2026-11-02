@@ -22,6 +22,7 @@ import { ReadOnlyFlowCanvas } from "@/routes/v2/shared/components/ReadOnlyFlowCa
 import { NodeRegistryProvider } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { SpecProvider } from "@/routes/v2/shared/providers/SpecContext";
 import { SharedStoreProvider } from "@/routes/v2/shared/store/SharedStoreContext";
+import { EDITOR_COLLAPSED_ANNOTATION } from "@/utils/annotationKeys";
 
 vi.mock("@/components/shared/Settings/useFlags", () => ({
   useFlagValue: () => false,
@@ -41,25 +42,30 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function renderRunCanvas() {
+function renderRunCanvas({ collapsed = false } = {}) {
+  const task = new Task({
+    $id: "task_greet",
+    name: "Greet",
+    componentRef: {
+      spec: {
+        name: "Greeter",
+        inputs: [{ name: "name" }, { name: "unused" }],
+        // Collapsed, the unconnected `log` output is hidden behind a toggle.
+        outputs: collapsed
+          ? [{ name: "greeting" }, { name: "log" }]
+          : [{ name: "greeting" }],
+        implementation: { container: { image: "example/greeter" } },
+      },
+    },
+  });
+  if (collapsed) {
+    task.annotations.add({ key: EDITOR_COLLAPSED_ANNOTATION, value: "true" });
+  }
   const spec = new ComponentSpec({
     name: "Greeting pipeline",
     inputs: [new Input({ $id: "input_name", name: "name" })],
     outputs: [new Output({ $id: "output_greeting", name: "greeting" })],
-    tasks: [
-      new Task({
-        $id: "task_greet",
-        name: "Greet",
-        componentRef: {
-          spec: {
-            name: "Greeter",
-            inputs: [{ name: "name" }, { name: "unused" }],
-            outputs: [{ name: "greeting" }],
-            implementation: { container: { image: "example/greeter" } },
-          },
-        },
-      }),
-    ],
+    tasks: [task],
     bindings: [
       new Binding({
         $id: "in",
@@ -171,6 +177,47 @@ it("changes the highlighted port and clears it for an unconnected handle", async
   await waitFor(() =>
     expect(flow.getEdges().some((edge) => edge.selected)).toBe(false),
   );
+});
+
+it("leaves the edges as they were once the highlight is cleared", async () => {
+  const { handle, flow, container } = renderRunCanvas();
+  const edgeStyles = () =>
+    flow.getEdges().map(({ id, style }) => ({ id, style }));
+  const initialStyles = edgeStyles();
+
+  // The second click lands while the first highlight is dimming the edges.
+  fireEvent.click(handle("task_greet", "input_name"));
+  await waitFor(() => expect(flow.getEdge("edge_in")?.selected).toBe(true));
+  fireEvent.click(handle("task_greet", "output_greeting"));
+  await waitFor(() => expect(flow.getEdge("edge_out")?.selected).toBe(true));
+  fireEvent.click(container.querySelector(".react-flow__pane")!);
+  await waitFor(() =>
+    expect(flow.getEdges().some((edge) => edge.selected)).toBe(false),
+  );
+
+  expect(edgeStyles()).toEqual(initialStyles);
+});
+
+it("keeps a collapsed task's expanded inputs open while highlighting", async () => {
+  const { handle, flow, getByText, queryByText } = renderRunCanvas({
+    collapsed: true,
+  });
+  fireEvent.click(getByText(/\+1 more input/));
+  getByText("(Click to collapse)");
+
+  fireEvent.click(handle("task_greet", "input_name"));
+
+  await waitFor(() => expect(flow.getEdge("edge_in")?.selected).toBe(true));
+  expect(queryByText("(Click to collapse)")).not.toBeNull();
+});
+
+it("highlights from an output handle on a collapsed task with hidden outputs", async () => {
+  const { handle, flow, queryByText } = renderRunCanvas({ collapsed: true });
+
+  fireEvent.click(handle("task_greet", "output_greeting"));
+
+  await waitFor(() => expect(flow.getEdge("edge_out")?.selected).toBe(true));
+  expect(queryByText("(Click to collapse)")).toBeNull();
 });
 
 it("keeps handles inspectable when zoomed out without starting connections or deleting edges", async () => {

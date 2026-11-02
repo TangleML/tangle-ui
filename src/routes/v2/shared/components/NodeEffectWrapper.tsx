@@ -9,9 +9,9 @@ export function NodeEffectWrapper({
   effect: NodeOverlayEffect | undefined;
   children: ReactElement;
 }) {
-  if (!effect?.className && effect?.opacity === undefined) {
-    return children;
-  }
+  // Always the same element, effect or not: switching between a bare child and a
+  // wrapped one remounts the node card and drops its local state, such as which
+  // collapsed sections are expanded.
   return (
     <div
       className={effect?.className}

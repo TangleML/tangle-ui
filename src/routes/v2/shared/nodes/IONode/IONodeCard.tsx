@@ -94,7 +94,10 @@ export function IONodeCard({
           isConnectableEnd={isConnectable}
           onClick={onHandleClick}
           className={cn(
-            "pointer-events-auto! w-3! h-3! border-0! transform-none! bg-gray-500!",
+            // Clickable when read-only; a connectable handle keeps React Flow's
+            // pointer rule so a drag passes through handles it can't end on.
+            !isConnectable && "pointer-events-auto!",
+            "w-3! h-3! border-0! transform-none! bg-gray-500!",
             isInput ? "translate-x-1.5" : "-translate-x-1.5",
           )}
         />

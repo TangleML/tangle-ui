@@ -151,11 +151,15 @@ const ClassicInputHandle = observer(function ClassicInputHandle({
           type="target"
           position={Position.Left}
           id={`input_${input.name}`}
-          className={
-            hasError
-              ? "pointer-events-auto! border-0! h-full! w-full! transform-none! bg-red-700!"
-              : "pointer-events-auto! border-0! h-full! w-full! transform-none! bg-gray-500!"
-          }
+          className={cn(
+            // React Flow turns pointer events off on a handle that can't
+            // connect, but a read-only one still takes clicks to highlight its
+            // connections. A connectable one keeps React Flow's rule, which lets
+            // a drag pass through handles it can't end on.
+            !isConnectable && "pointer-events-auto!",
+            "border-0! h-full! w-full! transform-none!",
+            hasError ? "bg-red-700!" : "bg-gray-500!",
+          )}
           onClick={onHandleClick}
           data-input-control
           data-testid={`input-handle-${input.name}`}
@@ -254,7 +258,8 @@ function RunConditionHandle({
           id={RUN_CONDITION_HANDLE_ID}
           aria-label={`Connect ${RUN_CONDITION_LABEL}`}
           className={cn(
-            "pointer-events-auto! h-full! w-full! transform-none!",
+            !isConnectable && "pointer-events-auto!",
+            "h-full! w-full! transform-none!",
             CONDITION_HANDLE_CLASSES,
           )}
           onClick={onHandleClick}
@@ -563,7 +568,7 @@ export const TaskNodeCard = observer(function TaskNodeCard({
                 "hover:bg-accent",
             )}
             style={palette ? { backgroundColor: palette.sectionBg } : undefined}
-            onClickCapture={
+            onClick={
               collapsed && hiddenOutputCount > 0
                 ? (e) => {
                     e.stopPropagation();
@@ -630,7 +635,10 @@ export const TaskNodeCard = observer(function TaskNodeCard({
                     type="source"
                     position={Position.Right}
                     id={`output_${output.name}`}
-                    className="pointer-events-auto! relative! border-0! w-3! h-3! transform-none! translate-x-6 bg-gray-500!"
+                    className={cn(
+                      !isConnectable && "pointer-events-auto!",
+                      "relative! border-0! w-3! h-3! transform-none! translate-x-6 bg-gray-500!",
+                    )}
                     onClick={(e) => onHandleClick(`output_${output.name}`, e)}
                   />
                 </div>
