@@ -6,8 +6,9 @@ export function useCopyNodeLink(nodeId: string) {
   return () => {
     const link = new URL(window.location.href);
     link.searchParams.set("nodeId", nodeId);
-    navigator.clipboard.writeText(link.toString());
-
-    notify("Link copied to clipboard", "success");
+    navigator.clipboard.writeText(link.toString()).then(
+      () => notify("Link copied to clipboard", "success"),
+      (err) => notify("Failed to copy link: " + err, "error"),
+    );
   };
 }

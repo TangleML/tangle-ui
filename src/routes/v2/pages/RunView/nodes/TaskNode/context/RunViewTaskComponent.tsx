@@ -4,6 +4,7 @@ import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
 import { useCopyNodeLink } from "@/hooks/useCopyNodeLink";
 import { useHydrateComponentReference } from "@/hooks/useHydrateComponentReference";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import type { ComponentReference } from "@/utils/componentSpec";
 import { getComponentName } from "@/utils/getComponentName";
 
@@ -18,10 +19,12 @@ const RunViewTaskComponentInternal = ({
 }: RunViewTaskComponentProps) => {
   const hydratedRef = useHydrateComponentReference(componentRef);
   const copyNodeLink = useCopyNodeLink(taskName);
+  const { track } = useAnalytics();
 
   if (!hydratedRef) return null;
 
   const componentName = getComponentName(hydratedRef);
+  const trackingPrefix = "v2.run_view.context_panel";
 
   return (
     <ComponentReferenceBar
@@ -31,9 +34,14 @@ const RunViewTaskComponentInternal = ({
       pythonCode={hydratedRef.spec.metadata?.annotations?.python_original_code}
       pythonFilename={hydratedRef.name || componentName}
       readOnly
-      trackingPrefix="v2.run_view.context_panel"
+      trackingPrefix={trackingPrefix}
       additionalMenuItems={
-        <DropdownMenuItem onSelect={copyNodeLink}>
+        <DropdownMenuItem
+          onSelect={() => {
+            track(`${trackingPrefix}.copy_node_link.click`);
+            copyNodeLink();
+          }}
+        >
           <Icon name="Link" size="sm" />
           Copy node link
         </DropdownMenuItem>
