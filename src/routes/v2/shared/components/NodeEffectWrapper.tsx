@@ -12,14 +12,5 @@ export function NodeEffectWrapper({
   // Always the same element, effect or not: switching between a bare child and a
   // wrapped one remounts the node card and drops its local state, such as which
   // collapsed sections are expanded.
-  return (
-    <div
-      className={effect?.className}
-      style={
-        effect?.opacity !== undefined ? { opacity: effect.opacity } : undefined
-      }
-    >
-      {children}
-    </div>
-  );
+  return <div className={effect?.className}>{children}</div>;
 }
