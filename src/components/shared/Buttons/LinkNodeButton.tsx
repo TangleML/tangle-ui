@@ -1,6 +1,6 @@
 import { type ComponentPropsWithoutRef } from "react";
 
-import useToastNotification from "@/hooks/useToastNotification";
+import { useCopyNodeLink } from "@/hooks/useCopyNodeLink";
 
 import { ActionButton } from "./ActionButton";
 
@@ -12,15 +12,7 @@ type LinkNodeButtonProps = {
 >;
 
 export const LinkNodeButton = ({ nodeId, ...rest }: LinkNodeButtonProps) => {
-  const notify = useToastNotification();
-
-  const handleLink = () => {
-    const link = new URL(window.location.href);
-    link.searchParams.set("nodeId", nodeId);
-    navigator.clipboard.writeText(link.toString());
-
-    notify(`Link copied to clipboard`, "success");
-  };
+  const handleLink = useCopyNodeLink(nodeId);
 
   return (
     <ActionButton
