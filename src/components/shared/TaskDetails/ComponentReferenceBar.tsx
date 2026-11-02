@@ -53,7 +53,7 @@ export function ComponentReferenceBar({
               size="sm"
               className={cn(
                 "shrink-0",
-                isSubgraphSpec ? "text-blue-500" : "text-muted-foreground",
+                isSubgraphSpec ? "text-info" : "text-muted-foreground",
               )}
             />
             <Text size="xs" className="truncate">
