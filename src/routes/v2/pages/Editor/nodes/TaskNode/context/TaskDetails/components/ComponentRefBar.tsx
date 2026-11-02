@@ -2,8 +2,7 @@ import { useState } from "react";
 
 import { CodeViewer } from "@/components/shared/CodeViewer";
 import { useComponentEditor } from "@/components/shared/ComponentEditor/ComponentEditorProvider";
-import ComponentDetailsDialog from "@/components/shared/Dialogs/ComponentDetailsDialog";
-import { TrimmedDigest } from "@/components/shared/ManageComponent/TrimmedDigest";
+import { ComponentReferenceBar } from "@/components/shared/TaskDetails/ComponentReferenceBar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -18,12 +17,9 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Text } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import type { ComponentReference as ModelComponentReference } from "@/models/componentSpec/entities/types";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
-import { getComponentName } from "@/utils/getComponentName";
-import { isSubgraph } from "@/utils/subgraphUtils";
 import { tracking } from "@/utils/tracking";
 import {
   downloadStringAsFile,
@@ -50,12 +46,6 @@ export function ComponentRefBar({
   const { openComponentEditor } = useComponentEditor();
   const [showCodeViewer, setShowCodeViewer] = useState(false);
 
-  const displayName = componentRef.name ?? getComponentName(componentRef);
-
-  const isSubgraphSpec = isSubgraph(componentRef.spec);
-  const iconName = isSubgraphSpec ? "Workflow" : "File";
-  const iconColor = isSubgraphSpec ? "text-blue-500" : "text-muted-foreground";
-
   const handleCopyYaml = () => {
     navigator.clipboard.writeText(yamlText).then(
       () => notify("YAML copied to clipboard", "success"),
@@ -75,43 +65,11 @@ export function ComponentRefBar({
 
   return (
     <>
-      <InlineStack
-        gap="1"
-        blockAlign="center"
-        wrap="nowrap"
-        className="w-full rounded-md border px-2 py-1"
+      <ComponentReferenceBar
+        componentRef={componentRef}
+        readOnly={readOnly}
+        trackingId="v2.pipeline_editor.task_details.component_details_open"
       >
-        <ComponentDetailsDialog
-          component={componentRef}
-          displayName={displayName}
-          readOnly={readOnly}
-          trigger={
-            <button
-              type="button"
-              className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 rounded-sm px-1 py-0.5 hover:bg-accent"
-              {...tracking(
-                "v2.pipeline_editor.task_details.component_details_open",
-              )}
-            >
-              <Icon
-                name={iconName}
-                size="sm"
-                className={`shrink-0 ${iconColor}`}
-              />
-              <Text size="xs" className="truncate">
-                {displayName}
-              </Text>
-              {componentRef.digest && (
-                <TrimmedDigest
-                  digest={componentRef.digest}
-                  tooltip={false}
-                  className="shrink-0 text-muted-foreground"
-                />
-              )}
-            </button>
-          }
-        />
-
         <InlineStack blockAlign="center" className="shrink-0">
           <Tooltip>
             <TooltipTrigger asChild>
@@ -196,7 +154,7 @@ export function ComponentRefBar({
             </DropdownMenuContent>
           </DropdownMenu>
         </InlineStack>
-      </InlineStack>
+      </ComponentReferenceBar>
 
       {showCodeViewer && (
         <CodeViewer
