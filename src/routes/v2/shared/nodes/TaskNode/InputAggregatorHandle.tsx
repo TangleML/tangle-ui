@@ -8,7 +8,11 @@ import { AGGREGATOR_ADD_INPUT_HANDLE_ID } from "@/utils/aggregatorInputs";
  * dropping from it) mints a fresh `agg_N` input on the aggregator task — see
  * `aggregator.actions.ts`.
  */
-export function InputAggregatorHandle() {
+export function InputAggregatorHandle({
+  isConnectable,
+}: {
+  isConnectable: boolean;
+}) {
   return (
     <div
       className="relative w-full h-fit"
@@ -19,7 +23,9 @@ export function InputAggregatorHandle() {
           type="target"
           id={AGGREGATOR_ADD_INPUT_HANDLE_ID}
           position={Position.Left}
-          isConnectable
+          isConnectable={isConnectable}
+          isConnectableStart={isConnectable}
+          isConnectableEnd={isConnectable}
           className="border-0! h-full! w-full! transform-none! bg-blue-400!"
         />
       </div>

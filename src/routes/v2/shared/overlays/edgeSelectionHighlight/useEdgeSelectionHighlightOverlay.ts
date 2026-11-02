@@ -5,6 +5,7 @@ import { EdgeColor } from "@/components/shared/ReactFlow/FlowCanvas/Edges/utils"
 import { useCanvasOverlay } from "@/routes/v2/shared/hooks/useCanvasOverlay";
 import type {
   CanvasOverlayConfig,
+  EdgeOverlayEffect,
   NodeOverlayEffect,
 } from "@/routes/v2/shared/store/canvasOverlay.types";
 
@@ -14,7 +15,11 @@ const HIGHLIGHT_EFFECT: NodeOverlayEffect = {
   className: "ring-4 ring-edge-selected/60 rounded-2xl",
 };
 
-const DIMMED_EFFECT: NodeOverlayEffect = {
+const DIMMED_NODE_EFFECT: NodeOverlayEffect = {
+  className: "opacity-30",
+};
+
+const DIMMED_EDGE_EFFECT: EdgeOverlayEffect = {
   opacity: 0.3,
 };
 
@@ -43,14 +48,14 @@ function buildConfig(connectedIds: ReadonlySet<string>): CanvasOverlayConfig {
   return {
     id: OVERLAY_ID,
     resolveNodeEffect: (nodeId: string) =>
-      connectedIds.has(nodeId) ? HIGHLIGHT_EFFECT : DIMMED_EFFECT,
+      connectedIds.has(nodeId) ? HIGHLIGHT_EFFECT : DIMMED_NODE_EFFECT,
     resolveEdgeEffect: (edge: Edge) =>
       connectedIds.has(edge.source) && connectedIds.has(edge.target)
         ? {
             ...HIGHLIGHT_EFFECT,
             style: { stroke: EdgeColor.Selected },
           }
-        : DIMMED_EFFECT,
+        : DIMMED_EDGE_EFFECT,
   };
 }
 

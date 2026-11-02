@@ -26,7 +26,7 @@ export function useUpgradePreviewOverlay(candidates: UpgradeCandidate[]): void {
           id: OVERLAY_ID,
           resolveNodeEffect: (nodeId) => {
             const wrapper = wrapperMap.get(nodeId);
-            if (!wrapper) return { opacity: 0.3 };
+            if (!wrapper) return { className: "opacity-30" };
             return {
               componentOverride: wrapper,
               className: issueIds.has(nodeId)

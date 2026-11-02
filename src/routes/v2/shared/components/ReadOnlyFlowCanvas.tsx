@@ -1,5 +1,6 @@
 import {
   Background,
+  type EdgeChange,
   type NodeChange,
   ReactFlow,
   useReactFlow,
@@ -50,6 +51,7 @@ export const ReadOnlyFlowCanvas = observer(function ReadOnlyFlowCanvas({
     displayEdges,
     onEdgeClick,
     rfOnNodesChange,
+    rfOnEdgesChange,
     selectionBehavior,
   } = useFlowCanvasState({ spec });
 
@@ -71,6 +73,14 @@ export const ReadOnlyFlowCanvas = observer(function ReadOnlyFlowCanvas({
     editor.clearSelection();
   };
 
+  const onEdgesChange = (changes: EdgeChange[]) => {
+    rfOnEdgesChange(
+      changes.filter(
+        (change) => change.type !== "remove" && change.type !== "add",
+      ),
+    );
+  };
+
   return (
     <BlockStack
       ref={containerRef}
@@ -85,6 +95,7 @@ export const ReadOnlyFlowCanvas = observer(function ReadOnlyFlowCanvas({
         nodes={displayNodes}
         edges={displayEdges}
         onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
         onPaneClick={onPaneClick}
         onEdgeClick={onEdgeClick}
         onPointerDownCapture={() => editor.setDraggedSincePointerDown(false)}
