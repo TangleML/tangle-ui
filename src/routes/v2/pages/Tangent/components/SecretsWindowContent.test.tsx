@@ -100,6 +100,9 @@ describe("SecretsWindowContent", () => {
         "title",
         TEAM.id,
       );
+      expect(
+        screen.getByText(/any of their pipelines.*and editors can change them/),
+      ).toBeVisible();
       expect(fetchSecrets).toHaveBeenCalledWith(TEAM.id);
     });
 
@@ -159,9 +162,7 @@ describe("SecretsWindowContent", () => {
     renderWindow();
 
     expect(await screen.findByText("API_KEY")).toBeVisible();
-    expect(
-      screen.getByText(/Your role in the workspace can't change them/),
-    ).toBeVisible();
+    expect(screen.getByText(/but only editors can change them/)).toBeVisible();
     expect(screen.queryByRole("button", { name: "Add a secret" })).toBeNull();
     expect(
       screen.queryByRole("button", { name: "Replace API_KEY" }),
@@ -197,7 +198,7 @@ describe("SecretsWindowContent", () => {
       renderWindow();
 
       expect(screen.getByTestId("info-box-warning")).toHaveTextContent(
-        "You're not in the ML Research workspace. Ask an admin to add you.",
+        "You're not a member of the ML Research workspace. Ask an admin to add you.",
       );
       expect(screen.getByTitle(TEAM.id)).toHaveTextContent("ML Research");
     });

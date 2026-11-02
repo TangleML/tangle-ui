@@ -86,7 +86,7 @@ function UnavailableReason({
     case "not-member":
       return (
         <>
-          {"You're not in the "}
+          {"You're not a member of the "}
           <TeamName team={resolution.team} />
           {" workspace. Ask an admin to add you."}
         </>
@@ -126,8 +126,8 @@ function WorkspaceHeader({ team }: { team: ActiveTeam }) {
       </InlineStack>
       <Text size="xs" tone="subdued">
         {team.canWrite
-          ? "Runs in this project use these secrets. Everyone in the workspace can see and change them."
-          : "Runs in this project use these secrets. Your role in the workspace can't change them."}
+          ? "Projects in this workspace can use these secrets in any of their pipelines. Workspace members can see them, and editors can change them."
+          : "Projects in this workspace can use these secrets in any of their pipelines. Workspace members can see them, but only editors can change them."}
       </Text>
     </BlockStack>
   );
