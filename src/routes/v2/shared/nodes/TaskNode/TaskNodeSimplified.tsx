@@ -48,6 +48,8 @@ export function TaskNodeSimplified({
   isAggregator,
   isConditional,
   subgraphExecutionStats,
+  isConnectable = true,
+  onHandleClick,
   onNodeClick,
 }: TaskNodeViewProps) {
   const isDark = useTheme().resolvedTheme === "dark";
@@ -83,9 +85,15 @@ export function TaskNodeSimplified({
     >
       {isConditional && (
         <Handle
+          isConnectable={isConnectable}
+          isConnectableStart={isConnectable}
+          isConnectableEnd={isConnectable}
           type="target"
           position={Position.Left}
           id={`input_${IS_ENABLED_PORT_NAME}`}
+          onClick={(event) =>
+            onHandleClick(`input_${IS_ENABLED_PORT_NAME}`, event)
+          }
           aria-label={`Connect ${RUN_CONDITION_LABEL}`}
           style={{
             top: "25%",
@@ -93,26 +101,33 @@ export function TaskNodeSimplified({
             height: `calc(${s} * 12px)`,
             left: `calc(${s} * -4px)`,
           }}
-          className={CONDITION_HANDLE_CLASSES}
+          className={cn("pointer-events-auto!", CONDITION_HANDLE_CLASSES)}
         />
       )}
       {visibleInputs.map((input) => (
         <Handle
+          isConnectable={isConnectable}
+          isConnectableStart={isConnectable}
+          isConnectableEnd={isConnectable}
           key={input.name}
           type="target"
           position={Position.Left}
           id={`input_${input.name}`}
+          onClick={(event) => onHandleClick(`input_${input.name}`, event)}
           style={{
             top: "50%",
             width: `calc(${s} * 12px)`,
             height: `calc(${s} * 12px)`,
             left: `calc(${s} * -4px)`,
           }}
-          className="bg-gray-500! border-0!"
+          className="pointer-events-auto! bg-gray-500! border-0!"
         />
       ))}
       {isAggregator && (
         <Handle
+          isConnectable={isConnectable}
+          isConnectableStart={isConnectable}
+          isConnectableEnd={isConnectable}
           type="target"
           position={Position.Left}
           id={AGGREGATOR_ADD_INPUT_HANDLE_ID}
@@ -198,17 +213,21 @@ export function TaskNodeSimplified({
 
       {outputs.map((output) => (
         <Handle
+          isConnectable={isConnectable}
+          isConnectableStart={isConnectable}
+          isConnectableEnd={isConnectable}
           key={output.name}
           type="source"
           position={Position.Right}
           id={`output_${output.name}`}
+          onClick={(event) => onHandleClick(`output_${output.name}`, event)}
           style={{
             top: "50%",
             width: `calc(${s} * 12px)`,
             height: `calc(${s} * 12px)`,
             right: `calc(${s} * -4px)`,
           }}
-          className="bg-gray-500! border-0!"
+          className="pointer-events-auto! bg-gray-500! border-0!"
         />
       ))}
     </Card>

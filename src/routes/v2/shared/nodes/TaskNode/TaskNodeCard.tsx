@@ -112,6 +112,7 @@ interface ClassicInputHandleProps {
   isDark: boolean;
   onRowClick?: (event: ReactMouseEvent) => void;
   onLabelClick: (event: ReactMouseEvent) => void;
+  isConnectable: boolean;
   onHandleClick: (event: ReactMouseEvent) => void;
 }
 
@@ -125,6 +126,7 @@ const ClassicInputHandle = observer(function ClassicInputHandle({
   isDark,
   onRowClick,
   onLabelClick,
+  isConnectable,
   onHandleClick,
 }: ClassicInputHandleProps) {
   const spec = useSpec();
@@ -143,13 +145,16 @@ const ClassicInputHandle = observer(function ClassicInputHandle({
     <div className="relative w-full h-fit cursor-pointer" onClick={onRowClick}>
       <div className="absolute -translate-x-6 flex items-center h-3 w-3">
         <Handle
+          isConnectable={isConnectable}
+          isConnectableStart={isConnectable}
+          isConnectableEnd={isConnectable}
           type="target"
           position={Position.Left}
           id={`input_${input.name}`}
           className={
             hasError
-              ? "border-0! h-full! w-full! transform-none! bg-red-700!"
-              : "border-0! h-full! w-full! transform-none! bg-gray-500!"
+              ? "pointer-events-auto! border-0! h-full! w-full! transform-none! bg-red-700!"
+              : "pointer-events-auto! border-0! h-full! w-full! transform-none! bg-gray-500!"
           }
           onClick={onHandleClick}
           data-input-control
@@ -228,23 +233,28 @@ const ClassicInputHandle = observer(function ClassicInputHandle({
 
 interface RunConditionHandleProps {
   displayValue: string;
+  isConnectable: boolean;
   onHandleClick: (event: ReactMouseEvent) => void;
 }
 
 function RunConditionHandle({
   displayValue,
+  isConnectable,
   onHandleClick,
 }: RunConditionHandleProps) {
   return (
     <div className={cn("relative p-2 rounded-lg", CONDITION_SURFACE_CLASSES)}>
       <div className="absolute top-1/2 -translate-x-6 -translate-y-1/2 flex items-center h-3 w-3">
         <Handle
+          isConnectable={isConnectable}
+          isConnectableStart={isConnectable}
+          isConnectableEnd={isConnectable}
           type="target"
           position={Position.Left}
           id={RUN_CONDITION_HANDLE_ID}
           aria-label={`Connect ${RUN_CONDITION_LABEL}`}
           className={cn(
-            "h-full! w-full! transform-none!",
+            "pointer-events-auto! h-full! w-full! transform-none!",
             CONDITION_HANDLE_CLASSES,
           )}
           onClick={onHandleClick}
@@ -293,6 +303,7 @@ export const TaskNodeCard = observer(function TaskNodeCard({
   onInputClick,
   onOutputClick,
   onHandleClick,
+  isConnectable = true,
   taskColor,
   cacheDisabled,
   isConditional,
@@ -471,6 +482,7 @@ export const TaskNodeCard = observer(function TaskNodeCard({
         )}
         {isConditional && (
           <RunConditionHandle
+            isConnectable={isConnectable}
             displayValue={conditionDisplayValue}
             onHandleClick={(e) => onHandleClick(RUN_CONDITION_HANDLE_ID, e)}
           />
@@ -496,9 +508,12 @@ export const TaskNodeCard = observer(function TaskNodeCard({
             }
           >
             <BlockStack gap="3">
-              {isAggregator && <InputAggregatorHandle />}
+              {isAggregator && (
+                <InputAggregatorHandle isConnectable={isConnectable} />
+              )}
               {visibleInputs.map((input, index) => (
                 <ClassicInputHandle
+                  isConnectable={isConnectable}
                   key={input.name}
                   input={input}
                   entityId={entityId}
@@ -609,10 +624,13 @@ export const TaskNodeCard = observer(function TaskNodeCard({
                     </div>
                   </div>
                   <Handle
+                    isConnectable={isConnectable}
+                    isConnectableStart={isConnectable}
+                    isConnectableEnd={isConnectable}
                     type="source"
                     position={Position.Right}
                     id={`output_${output.name}`}
-                    className="relative! border-0! w-3! h-3! transform-none! translate-x-6 bg-gray-500!"
+                    className="pointer-events-auto! relative! border-0! w-3! h-3! transform-none! translate-x-6 bg-gray-500!"
                     onClick={(e) => onHandleClick(`output_${output.name}`, e)}
                   />
                 </div>

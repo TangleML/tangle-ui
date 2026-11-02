@@ -1,12 +1,12 @@
-import { type Node, type NodeProps, useReactFlow } from "@xyflow/react";
+import { type Node, type NodeProps } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
-import type { MouseEvent, ReactElement } from "react";
+import type { MouseEvent } from "react";
 
 import { extractSecretName } from "@/components/shared/SecretsManagement/types";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Card } from "@/components/ui/card";
 import { Text } from "@/components/ui/typography";
-import { cn } from "@/lib/utils";
+import { useHandleEdgeSelection } from "@/hooks/useHandleEdgeSelection";
 import type {
   ComponentReference,
   ComponentSpec,
@@ -14,6 +14,7 @@ import type {
   Task,
   TypeSpecType,
 } from "@/models/componentSpec";
+import { NodeEffectWrapper } from "@/routes/v2/shared/components/NodeEffectWrapper";
 import { useIsDetailedView } from "@/routes/v2/shared/hooks/useIsDetailedView";
 import type { TaskNodeData } from "@/routes/v2/shared/nodes/types";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
@@ -80,6 +81,7 @@ export interface TaskNodeViewProps {
   componentRef?: ComponentReference;
   digest?: string;
   readOnly?: boolean;
+  isConnectable?: boolean;
   inputDisplayValues: Record<string, string | undefined>;
   secretInputNames: Set<string>;
   isAggregator: boolean;
@@ -192,28 +194,6 @@ function resolveNodeEffect(
   return canvasOverlay.activeOverlay?.resolveNodeEffect?.(entityId);
 }
 
-function NodeEffectWrapper({
-  effect,
-  children,
-}: {
-  effect: NodeOverlayEffect | undefined;
-  children: ReactElement;
-}) {
-  if (!effect?.className && effect?.opacity === undefined) {
-    return children;
-  }
-  return (
-    <div
-      className={cn(effect?.className)}
-      style={
-        effect?.opacity !== undefined ? { opacity: effect.opacity } : undefined
-      }
-    >
-      {children}
-    </div>
-  );
-}
-
 function TaskNodeNotFound({ entityId }: { entityId: string }) {
   return (
     <Card className="min-w-45 max-w-70 rounded-xl border-2 border-red-300 p-4">
@@ -238,10 +218,11 @@ export const TaskNode = observer(function TaskNode({
   selected,
   subgraphExecutionStats,
   readOnly = false,
+  isConnectable = true,
 }: TaskNodeProps) {
   const { entityId } = data;
   const { editor, canvasOverlay } = useSharedStores();
-  const { getEdges, setEdges } = useReactFlow();
+  const { selectEdgesForHandle } = useHandleEdgeSelection(id);
   const showContent = useIsDetailedView();
   const inputAggregatorEnabled = useFlagValue("input-aggregator");
   const publishedComponentBadgeEnabled = useFlagValue(
@@ -268,17 +249,6 @@ export const TaskNode = observer(function TaskNode({
     editor.selectNode(id, "task", { shiftKey: event.shiftKey, entityId });
   };
 
-  const selectEdgesByHandle = (handleId: string) => {
-    setEdges(
-      getEdges().map((edge) => ({
-        ...edge,
-        selected:
-          (edge.target === id && edge.targetHandle === handleId) ||
-          (edge.source === id && edge.sourceHandle === handleId),
-      })),
-    );
-  };
-
   const handleInputClick = (
     inputName: string,
     e: MouseEvent | KeyboardEvent,
@@ -295,7 +265,7 @@ export const TaskNode = observer(function TaskNode({
 
   const handleHandleClick = (handleId: string, e: MouseEvent) => {
     e.stopPropagation();
-    selectEdgesByHandle(handleId);
+    selectEdgesForHandle(handleId);
   };
 
   const connectedPorts = resolveConnectedPortNames(entityId, spec);
@@ -338,6 +308,7 @@ export const TaskNode = observer(function TaskNode({
       ? task.resolvedComponentRef
       : undefined,
     readOnly,
+    isConnectable: isConnectable && !readOnly,
     isAggregator,
     outputType: resolveAggregatorOutputType(task),
     subgraphExecutionStats,

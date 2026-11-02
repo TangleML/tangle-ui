@@ -19,6 +19,8 @@ export function IONodeCard({
   isInput,
   selected,
   isHovered,
+  isConnectable = true,
+  onHandleClick,
   onNodeClick,
 }: IONodeViewProps) {
   const bgColor = isInput ? "bg-io-input" : "bg-io-output";
@@ -87,8 +89,12 @@ export function IONodeCard({
           type={isInput ? "source" : "target"}
           position={isInput ? Position.Right : Position.Left}
           id={isInput ? `output_${entityId}` : `input_${entityId}`}
+          isConnectable={isConnectable}
+          isConnectableStart={isConnectable}
+          isConnectableEnd={isConnectable}
+          onClick={onHandleClick}
           className={cn(
-            "w-3! h-3! border-0! transform-none! bg-gray-500!",
+            "pointer-events-auto! w-3! h-3! border-0! transform-none! bg-gray-500!",
             isInput ? "translate-x-1.5" : "-translate-x-1.5",
           )}
         />
