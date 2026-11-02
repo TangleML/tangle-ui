@@ -29,8 +29,8 @@ import type { TaskSpec } from "@/utils/componentSpec";
 import { tracking } from "@/utils/tracking";
 
 import { getLogsWindowSize } from "./logsWindowSize";
-import { RunViewTaskActions } from "./RunViewTaskActions";
 import { getTaskAnnotationSections } from "./RunViewTaskAnnotations";
+import { RunViewTaskComponent } from "./RunViewTaskComponent";
 
 const DEFAULT_TAB = "artifacts";
 
@@ -170,7 +170,7 @@ export const RunViewTaskDetails = observer(function RunViewTaskDetails({
         <StatusIcon status={status} tooltip label="task" />
       </InlineStack>
 
-      <RunViewTaskActions componentRef={componentRef} taskName={task.name} />
+      <RunViewTaskComponent componentRef={componentRef} taskName={task.name} />
 
       {runId && (
         <RemoteTroubleshootButton

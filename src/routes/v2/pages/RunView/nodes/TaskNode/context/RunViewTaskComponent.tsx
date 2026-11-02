@@ -1,18 +1,19 @@
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import TaskActions from "@/components/shared/TaskDetails/Actions";
+import { ComponentReferenceBar } from "@/components/shared/TaskDetails/ComponentReferenceBar";
 import { useHydrateComponentReference } from "@/hooks/useHydrateComponentReference";
 import type { TaskNodeContextType } from "@/providers/TaskNodeProvider";
 import type { ComponentReference } from "@/utils/componentSpec";
 
-interface RunViewTaskActionsProps {
+interface RunViewTaskComponentProps {
   componentRef: ComponentReference;
   taskName: string;
 }
 
-const RunViewTaskActionsInternal = ({
+const RunViewTaskComponentInternal = ({
   componentRef,
   taskName,
-}: RunViewTaskActionsProps) => {
+}: RunViewTaskComponentProps) => {
   const hydratedRef = useHydrateComponentReference(componentRef);
 
   if (!hydratedRef) return null;
@@ -23,10 +24,17 @@ const RunViewTaskActionsInternal = ({
   } as TaskNodeContextType;
 
   return (
-    <TaskActions componentRef={hydratedRef} readOnly taskNode={taskNode} />
+    <>
+      <ComponentReferenceBar
+        componentRef={hydratedRef}
+        readOnly
+        trackingId="v2.run_view.context_panel.component_details_open"
+      />
+      <TaskActions componentRef={hydratedRef} readOnly taskNode={taskNode} />
+    </>
   );
 };
 
-export const RunViewTaskActions = withSuspenseWrapper(
-  RunViewTaskActionsInternal,
+export const RunViewTaskComponent = withSuspenseWrapper(
+  RunViewTaskComponentInternal,
 );
