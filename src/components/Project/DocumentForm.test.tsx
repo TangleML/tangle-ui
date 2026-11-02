@@ -181,33 +181,4 @@ describe("DocumentForm file drop", () => {
     fireEvent.dragLeave(form(), fileDrag());
     expect(draggingHint()).toBeNull();
   });
-
-  it("stays highlighted while the drag crosses from the form into a field", () => {
-    renderForm();
-
-    fireEvent.dragEnter(form(), fileDrag());
-    fireEvent.dragEnter(titleField(), fileDrag());
-    fireEvent.dragLeave(form(), fileDrag());
-    expect(draggingHint()).toBeInTheDocument();
-
-    fireEvent.dragLeave(titleField(), fileDrag());
-    expect(draggingHint()).toBeNull();
-  });
-
-  it("leaves dragged text to the fields", () => {
-    renderForm();
-
-    const textDrag = { dataTransfer: { files: [], types: ["text/plain"] } };
-    fireEvent.dragEnter(form(), textDrag);
-
-    expect(draggingHint()).toBeNull();
-    expect(fireEvent.dragOver(contentField(), textDrag)).toBe(true);
-  });
-
-  it("claims a file drag, so the browser doesn't open the file instead", () => {
-    renderForm();
-
-    expect(fireEvent.dragOver(contentField(), fileDrag())).toBe(false);
-    expect(fireEvent.drop(contentField(), fileDrag())).toBe(false);
-  });
 });

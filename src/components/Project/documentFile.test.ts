@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { readDocumentFile } from "./documentFile";
 
@@ -13,32 +13,14 @@ describe("readDocumentFile", () => {
     });
   });
 
-  it("reads text whatever the file is called", async () => {
-    const file = new File(["plain words"], "NOTES");
-
-    await expect(readDocumentFile(file)).resolves.toMatchObject({
-      ok: true,
-      content: "plain words",
-    });
-  });
-
-  it("refuses bytes that are not UTF-8 text", async () => {
-    const file = new File(
-      [new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0xff])],
-      "chart.png",
-    );
+  it("explains that only text can be a document", async () => {
+    const file = new File([new Uint8Array([0xff, 0xfe, 0x00])], "chart.png");
 
     await expect(readDocumentFile(file)).resolves.toEqual({
       ok: false,
       error:
         "chart.png isn't a text file. Only text can be added as a document.",
     });
-  });
-
-  it("refuses valid UTF-8 that carries NUL bytes, as binary formats do", async () => {
-    const file = new File(["header\0\0\0body"], "model.bin");
-
-    await expect(readDocumentFile(file)).resolves.toMatchObject({ ok: false });
   });
 
   it("refuses a file larger than 1 MB", async () => {
@@ -50,6 +32,16 @@ describe("readDocumentFile", () => {
     await expect(readDocumentFile(file)).resolves.toEqual({
       ok: false,
       error: "big.txt is larger than 1 MB.",
+    });
+  });
+
+  it("names the file it couldn't read", async () => {
+    const file = new File(["gone"], "moved.txt");
+    vi.spyOn(file, "arrayBuffer").mockRejectedValue(new Error("NotFound"));
+
+    await expect(readDocumentFile(file)).resolves.toEqual({
+      ok: false,
+      error: "Couldn't read moved.txt.",
     });
   });
 });

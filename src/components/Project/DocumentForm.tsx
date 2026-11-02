@@ -7,6 +7,7 @@ import { DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { useFileDrop } from "@/hooks/useFileDrop";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { documentResourceInput } from "@/services/projects/resourceDescriptor";
 import type { CreateResourceInput } from "@/services/projects/types";
@@ -14,7 +15,6 @@ import { tracking } from "@/utils/tracking";
 
 import { readDocumentFile } from "./documentFile";
 import { DocumentFileDropZone } from "./DocumentFileDropZone";
-import { useFileDrop } from "./useFileDrop";
 
 interface DocumentFormProps {
   onSubmit: (input: CreateResourceInput) => void;
