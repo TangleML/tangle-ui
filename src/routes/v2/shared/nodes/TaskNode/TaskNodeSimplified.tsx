@@ -113,7 +113,12 @@ export function TaskNodeSimplified({
           type="target"
           position={Position.Left}
           id={`input_${input.name}`}
-          onClick={(event) => onHandleClick(`input_${input.name}`, event)}
+          onClick={(event) =>
+            onHandleClick(
+              visibleInputs.map((port) => `input_${port.name}`),
+              event,
+            )
+          }
           style={{
             top: "50%",
             width: `calc(${s} * 12px)`,
@@ -220,7 +225,12 @@ export function TaskNodeSimplified({
           type="source"
           position={Position.Right}
           id={`output_${output.name}`}
-          onClick={(event) => onHandleClick(`output_${output.name}`, event)}
+          onClick={(event) =>
+            onHandleClick(
+              outputs.map((port) => `output_${port.name}`),
+              event,
+            )
+          }
           style={{
             top: "50%",
             width: `calc(${s} * 12px)`,

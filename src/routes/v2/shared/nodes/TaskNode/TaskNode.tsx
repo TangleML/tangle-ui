@@ -91,7 +91,10 @@ export interface TaskNodeViewProps {
   onNodeClick: (event: MouseEvent) => void;
   onInputClick: (inputName: string, event: MouseEvent | KeyboardEvent) => void;
   onOutputClick: (outputName: string, event: MouseEvent) => void;
-  onHandleClick: (handleId: string, event: MouseEvent) => void;
+  onHandleClick: (
+    handleId: string | readonly string[],
+    event: MouseEvent,
+  ) => void;
 }
 
 interface InputDisplayData {
@@ -263,7 +266,10 @@ export const TaskNode = observer(function TaskNode({
     editor.selectNode(id, "task", { entityId });
   };
 
-  const handleHandleClick = (handleId: string, e: MouseEvent) => {
+  const handleHandleClick = (
+    handleId: string | readonly string[],
+    e: MouseEvent,
+  ) => {
     e.stopPropagation();
     selectEdgesForHandle(handleId);
   };

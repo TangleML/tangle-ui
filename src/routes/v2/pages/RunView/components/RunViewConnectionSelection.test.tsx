@@ -178,7 +178,8 @@ it("keeps handles inspectable when zoomed out without starting connections or de
   const initialYaml = serializeComponentSpecToText(spec);
   act(() => store.setState({ transform: [0, 0, 0.2] }));
 
-  const inputHandle = handle("task_greet", "input_name");
+  // Simplified ports overlap; the last, unconnected input is on top.
+  const inputHandle = handle("task_greet", "input_unused");
   fireEvent.mouseDown(inputHandle, { button: 0 });
   expect(store.getState().connection.inProgress).toBe(false);
   expect(inputHandle).not.toHaveClass("connectablestart");

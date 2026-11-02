@@ -4,19 +4,20 @@ export function useHandleEdgeSelection(nodeId: string) {
   const { setEdges } = useReactFlow();
 
   const selectEdgesForHandle = (
-    handleId: string,
+    handleId: string | readonly string[],
     handleType?: "source" | "target",
   ) => {
+    const handleIds = typeof handleId === "string" ? [handleId] : handleId;
     setEdges((eds) =>
       eds.map((edge) => ({
         ...edge,
         selected:
           (handleType !== "target" &&
             edge.source === nodeId &&
-            edge.sourceHandle === handleId) ||
+            handleIds.includes(edge.sourceHandle ?? "")) ||
           (handleType !== "source" &&
             edge.target === nodeId &&
-            edge.targetHandle === handleId),
+            handleIds.includes(edge.targetHandle ?? "")),
       })),
     );
   };
