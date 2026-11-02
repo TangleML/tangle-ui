@@ -16,7 +16,7 @@ describe("ActingTeamNotice", () => {
     renderNotice({ status: "not-member", team });
 
     expect(screen.getByTestId("info-box-title")).toHaveTextContent(
-      "You're not in the ML Research workspace",
+      "You're not a member of the ML Research workspace",
     );
     expect(screen.getByTitle(team.id)).toHaveTextContent("ML Research");
     expect(

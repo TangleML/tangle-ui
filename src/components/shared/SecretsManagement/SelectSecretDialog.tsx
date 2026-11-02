@@ -184,9 +184,9 @@ function SaveToControl({
       </RadioGroup>
       {saveTo === "team" && (
         <Text size="xs" tone="subdued" data-testid="save-to-team-hint">
-          {"Everyone in "}
+          {"Projects in the "}
           <TeamName team={team} />
-          {" can use it in this project."}
+          {" workspace can use it in any of their pipelines."}
         </Text>
       )}
     </BlockStack>

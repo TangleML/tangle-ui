@@ -109,7 +109,7 @@ describe("SubmitTaskArgumentsDialog", () => {
     );
 
     expect(screen.getByTestId("info-box-title")).toHaveTextContent(
-      "You're not in the Search workspace",
+      "You're not a member of the Search workspace",
     );
     expect(screen.queryByRole("radio")).toBeNull();
     await user.click(submitButton());

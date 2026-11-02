@@ -130,7 +130,7 @@ describe("RunIdentitySummary", () => {
     expect(screen.getByText("Runs as you")).toBeVisible();
     expect(screen.queryByRole("radiogroup")).toBeNull();
     expect(screen.getByTestId("info-box-title")).toHaveTextContent(
-      "You're not in the ML Research workspace",
+      "You're not a member of the ML Research workspace",
     );
   });
 

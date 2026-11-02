@@ -68,7 +68,7 @@ describe("SecretFormDialog", () => {
       name: "Add a workspace secret",
     });
     expect(dialog).toHaveAccessibleDescription(
-      "Everyone in ML Research can use it in this project.",
+      "Projects in the ML Research workspace can use it in any of their pipelines.",
     );
     expect(screen.getByTitle(TEAM.id)).toHaveTextContent("ML Research");
     expect(screen.getByRole("button", { name: "Save" })).toHaveAttribute(

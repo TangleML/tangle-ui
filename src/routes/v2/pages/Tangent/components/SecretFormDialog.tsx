@@ -23,9 +23,9 @@ function DialogDescriptionText({ secret, team }: SecretFormDialogProps) {
   if (secret) return "Runs that start after this use the new value.";
   return (
     <>
-      {"Everyone in "}
+      {"Projects in the "}
       <TeamName team={team} />
-      {" can use it in this project."}
+      {" workspace can use it in any of their pipelines."}
     </>
   );
 }
