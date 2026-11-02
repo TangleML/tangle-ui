@@ -1,6 +1,7 @@
 import { readTextFile, type TextFileReadFailure } from "@/utils/textFile";
 
 const MAX_DOCUMENT_FILE_MB = 1;
+const MAX_DOCUMENT_FILE_BYTES = MAX_DOCUMENT_FILE_MB * 1024 * 1024;
 
 type DocumentFileReadResult =
   { ok: true; title: string; content: string } | { ok: false; error: string };
@@ -20,7 +21,7 @@ export async function readDocumentFile(
   file: File,
 ): Promise<DocumentFileReadResult> {
   const result = await readTextFile(file, {
-    maxBytes: MAX_DOCUMENT_FILE_MB * 1024 * 1024,
+    maxBytes: MAX_DOCUMENT_FILE_BYTES,
   });
 
   return result.ok
