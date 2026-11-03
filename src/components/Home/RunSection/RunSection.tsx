@@ -56,7 +56,6 @@ export const RunSection = ({
   const { pathname } = useLocation();
   const search = useSearch({ strict: false }) as RunSectionSearch;
   const isCreatedByMeDefault = useFlagValue("created-by-me-default");
-  const compareEnabled = useFlagValue("compare-runs");
   const { setFilter } = useRunSearchParams();
   const dataVersion = useRef(0);
 
@@ -305,15 +304,13 @@ export const RunSection = ({
       <Table>
         <TableHeader>
           <TableRow className="text-xs">
-            {compareEnabled && (
-              <TableHead className="w-8">
-                <Checkbox
-                  checked={allPageRunsSelected}
-                  onCheckedChange={toggleSelectAll}
-                  aria-label="Select all runs on this page"
-                />
-              </TableHead>
-            )}
+            <TableHead className="w-8">
+              <Checkbox
+                checked={allPageRunsSelected}
+                onCheckedChange={toggleSelectAll}
+                aria-label="Select all runs on this page"
+              />
+            </TableHead>
             <TableHead className="w-1/4">Name</TableHead>
             <TableHead className="w-1/4">Status</TableHead>
             <TableHead className="w-3/20">Date</TableHead>
@@ -327,7 +324,7 @@ export const RunSection = ({
               key={run.id}
               run={run}
               onFilterByUser={onFilterByUser}
-              selectable={compareEnabled}
+              selectable
               isSelected={selectedRuns.has(`${run.id}`)}
               onToggleSelected={toggleRun}
               onRunClick={onRunClick}
@@ -336,7 +333,7 @@ export const RunSection = ({
         </TableBody>
       </Table>
 
-      {compareEnabled && selectedRuns.size > 0 && (
+      {selectedRuns.size > 0 && (
         <RunBulkActionsBar
           selectedRuns={Array.from(selectedRuns)}
           onClearSelection={() => setSelectedRuns(new Set())}

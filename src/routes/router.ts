@@ -420,11 +420,6 @@ const compareRoute = createRoute({
   getParentRoute: () => mainLayout,
   path: APP_ROUTES.COMPARE,
   component: CompareView,
-  beforeLoad: () => {
-    if (!isFlagEnabled("compare-runs")) {
-      throw redirect({ to: APP_ROUTES.DASHBOARD_RUNS });
-    }
-  },
 });
 
 const tangentProjectRoute = createRoute({

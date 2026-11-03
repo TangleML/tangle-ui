@@ -3,7 +3,6 @@ import { useNavigate } from "@tanstack/react-router";
 import { RerunBlockedReason } from "@/components/PipelineRun/components/RerunBlockedReason";
 import { RerunReviewDialog } from "@/components/PipelineRun/components/RerunReviewDialog";
 import ConfirmationDialog from "@/components/shared/Dialogs/ConfirmationDialog";
-import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import TaskImplementation from "@/components/shared/TaskDetails/Implementation";
 import {
   DropdownMenu,
@@ -29,7 +28,6 @@ import { tracking } from "@/utils/tracking";
 export function RunMenu() {
   const navigate = useNavigate();
   const actions = useRunViewActions();
-  const compareEnabled = useFlagValue("compare-runs");
   const componentSpec = actions.ready ? actions.componentSpec : undefined;
   const runId = actions.ready ? actions.runId : undefined;
   const cancelAsTeamId = actions.ready ? actions.management.teamId : undefined;
@@ -102,7 +100,7 @@ export function RunMenu() {
             View YAML
           </DropdownMenuItem>
 
-          {compareEnabled && runId && (
+          {runId && (
             <DropdownMenuItem
               onSelect={handleCompare}
               {...tracking("compare_runs.run_view.compare_with_another")}
