@@ -1,6 +1,6 @@
 const DEFAULT_SCOPES = "profile email openid";
-const DEFAULT_REDIRECT_URI = "http://localhost:3001/auth";
-const DEFAULT_CALLBACK_PORT = 3001;
+const DEFAULT_REDIRECT_URI = "http://localhost:31337/auth";
+const DEFAULT_CALLBACK_PORT = 31337;
 const DEFAULT_REFRESH_AFTER_MS = 3_300_000;
 
 export interface OktaSsoConfig {

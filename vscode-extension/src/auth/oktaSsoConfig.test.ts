@@ -54,8 +54,8 @@ test("falls back to the documented defaults for optional settings", () => {
   clearEnv();
   const config = getOktaSsoConfig();
   assert.equal(config.scopes, "profile email openid");
-  assert.equal(config.redirectUri, "http://localhost:3001/auth");
-  assert.equal(config.callbackPort, 3001);
+  assert.equal(config.redirectUri, "http://localhost:31337/auth");
+  assert.equal(config.callbackPort, 31337);
   assert.equal(config.refreshAfterMs, 3_300_000);
 });
 
