@@ -2,7 +2,6 @@ import { useConnection, useEdges } from "@xyflow/react";
 import { type MouseEvent, useCallback, useEffect, useState } from "react";
 
 import { OutputTypeSelector } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/OutputTypeSelector/OutputTypeSelector";
-import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { cn } from "@/lib/utils";
 import { useForcedSearchContext } from "@/providers/ComponentLibraryProvider/ForcedSearchProvider";
 import { isValidFilterRequest } from "@/providers/ComponentLibraryProvider/types";
@@ -29,7 +28,6 @@ export function TaskNodeOutputs({
 }: TaskNodeOutputsProps) {
   const { nodeId, outputs, state, taskSpec, callbacks } = useTaskNode();
   const { onSelect } = callbacks;
-  const isPipelineAggregatorEnabled = useFlagValue("input-aggregator");
   const {
     highlightSearchFilter,
     resetSearchFilter,
@@ -42,9 +40,9 @@ export function TaskNodeOutputs({
 
   const [isDragging, setIsDragging] = useState(false);
 
-  const isAggregator =
-    isPipelineAggregatorEnabled &&
-    isPipelineAggregator(taskSpec?.componentRef?.spec?.metadata?.annotations);
+  const isAggregator = isPipelineAggregator(
+    taskSpec?.componentRef?.spec?.metadata?.annotations,
+  );
 
   // For aggregators, get the current output type from the output_type input argument
   const rawOutputType = isAggregator

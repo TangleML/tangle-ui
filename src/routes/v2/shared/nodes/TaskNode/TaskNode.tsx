@@ -227,7 +227,6 @@ export const TaskNode = observer(function TaskNode({
   const { editor, canvasOverlay } = useSharedStores();
   const { selectEdgesForHandle } = useHandleEdgeSelection(id);
   const showContent = useIsDetailedView();
-  const inputAggregatorEnabled = useFlagValue("input-aggregator");
   const publishedComponentBadgeEnabled = useFlagValue(
     "remote-component-library-search",
   );
@@ -244,9 +243,9 @@ export const TaskNode = observer(function TaskNode({
     getComponentSpecDefaults(componentSpec);
   const isManuallyCollapsed =
     task.annotations.get(EDITOR_COLLAPSED_ANNOTATION) === "true";
-  const isAggregator =
-    inputAggregatorEnabled &&
-    isPipelineAggregator(componentSpec?.metadata?.annotations);
+  const isAggregator = isPipelineAggregator(
+    componentSpec?.metadata?.annotations,
+  );
 
   const handleClick = (event: MouseEvent) => {
     editor.selectNode(id, "task", { shiftKey: event.shiftKey, entityId });
