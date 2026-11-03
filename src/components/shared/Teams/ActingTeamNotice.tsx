@@ -21,7 +21,7 @@ export function ActingTeamNotice({
         <InfoBox
           title={
             <>
-              {"You're not in the "}
+              {"You're not a member of the "}
               <TeamName team={resolution.team} />
               {" workspace"}
             </>

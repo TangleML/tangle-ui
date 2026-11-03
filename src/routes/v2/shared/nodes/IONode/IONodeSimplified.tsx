@@ -20,6 +20,8 @@ export function IONodeSimplified({
   isInput,
   selected,
   isHovered,
+  isConnectable = true,
+  onHandleClick,
   onNodeClick,
 }: IONodeViewProps) {
   const bgColor = isInput ? "bg-io-input" : "bg-io-output";
@@ -81,6 +83,10 @@ export function IONodeSimplified({
         type={isInput ? "source" : "target"}
         position={isInput ? Position.Right : Position.Left}
         id={isInput ? `output_${entityId}` : `input_${entityId}`}
+        isConnectable={isConnectable}
+        isConnectableStart={isConnectable}
+        isConnectableEnd={isConnectable}
+        onClick={onHandleClick}
         style={{
           top: "50%",
           width: `calc(${s} * 12px)`,
@@ -89,7 +95,7 @@ export function IONodeSimplified({
             ? { right: `calc(${s} * -4px)` }
             : { left: `calc(${s} * -4px)` }),
         }}
-        className="bg-gray-500! border-0!"
+        className="pointer-events-auto! bg-gray-500! border-0!"
       />
     </Card>
   );

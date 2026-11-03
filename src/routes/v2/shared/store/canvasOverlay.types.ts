@@ -5,7 +5,6 @@ import type { TaskNodeViewProps } from "@/routes/v2/shared/nodes/TaskNode/TaskNo
 
 /** Visual effect to apply to a single node. All fields are optional; undefined means no change. */
 export interface NodeOverlayEffect {
-  opacity?: number;
   className?: string;
   hidden?: boolean;
   componentOverride?: ComponentType<TaskNodeViewProps>;

@@ -151,9 +151,9 @@ sequenceDiagram
         alt effect.hidden is true
             TN -->> RF: render null (node hidden)
         else effect.componentOverride is set
-            TN -->> RF: render OverrideComponent<br/>wrapped in div with className + opacity
-        else effect has className or opacity
-            TN -->> RF: render default node variant<br/>wrapped in div with className + opacity
+            TN -->> RF: render OverrideComponent<br/>wrapped in div with className
+        else effect has className
+            TN -->> RF: render default node variant<br/>wrapped in div with className
         else no effect
             TN -->> RF: render default node variant
         end
@@ -211,16 +211,15 @@ Defined in `shared/store/canvasOverlay.types.ts`. All fields are optional; `unde
 
 | Field               | Type                               | Description                                                                          |
 | ------------------- | ---------------------------------- | ------------------------------------------------------------------------------------ |
-| `opacity`           | `number`                           | CSS opacity applied to the node wrapper `div`.                                       |
-| `className`         | `string`                           | Tailwind classes applied to the node wrapper `div` (e.g. ring highlights).           |
+| `className`         | `string`                           | Tailwind classes applied to the node wrapper `div` (e.g. ring highlights, dimming).  |
 | `hidden`            | `boolean`                          | When `true`, the node renders `null` (completely hidden).                            |
 | `componentOverride` | `ComponentType<TaskNodeViewProps>` | Replaces the default node component entirely. Receives the same `TaskNodeViewProps`. |
 
 **Precedence in `TaskNode`:**
 
 1. `hidden` -- if `true`, returns `null` immediately.
-2. `componentOverride` -- if set, renders `<OverrideComponent {...viewProps} />` inside a wrapper `div` with `className` and `opacity`.
-3. `className` / `opacity` -- wraps the default node variant (`TaskNodeClassic` or `TaskNodeCollapsed`) in a `div`.
+2. `componentOverride` -- if set, renders `<OverrideComponent {...viewProps} />` inside a wrapper `div` with `className`.
+3. `className` -- wraps the default node variant (`TaskNodeClassic` or `TaskNodeCollapsed`) in a `div`.
 
 ### `EdgeOverlayEffect`
 
@@ -314,7 +313,11 @@ const HIGHLIGHT_EFFECT: NodeOverlayEffect = {
   className: "ring-4 ring-edge-selected/30 rounded-xl",
 };
 
-const DIMMED_EFFECT: NodeOverlayEffect = {
+const DIMMED_NODE_EFFECT: NodeOverlayEffect = {
+  className: "opacity-30",
+};
+
+const DIMMED_EDGE_EFFECT: EdgeOverlayEffect = {
   opacity: 0.3,
 };
 
@@ -322,11 +325,11 @@ function buildConfig(connectedIds: ReadonlySet<string>): CanvasOverlayConfig {
   return {
     id: OVERLAY_ID,
     resolveNodeEffect: (nodeId) =>
-      connectedIds.has(nodeId) ? HIGHLIGHT_EFFECT : DIMMED_EFFECT,
+      connectedIds.has(nodeId) ? HIGHLIGHT_EFFECT : DIMMED_NODE_EFFECT,
     resolveEdgeEffect: (edge) =>
       connectedIds.has(edge.source) && connectedIds.has(edge.target)
         ? { ...HIGHLIGHT_EFFECT, style: { stroke: EdgeColor.Selected } }
-        : DIMMED_EFFECT,
+        : DIMMED_EDGE_EFFECT,
   };
 }
 ```
@@ -340,7 +343,7 @@ When you need to render an entirely different component in place of a node, use 
 
 resolveNodeEffect: (nodeId) => {
   const wrapper = wrapperMap.get(nodeId);
-  if (!wrapper) return { opacity: 0.3 };
+  if (!wrapper) return { className: "opacity-30" };
   return {
     componentOverride: wrapper,
     className: issueIds.has(nodeId)
@@ -379,7 +382,7 @@ const ACTIVE_EFFECT: NodeOverlayEffect = {
 };
 
 const DIMMED_EFFECT: NodeOverlayEffect = {
-  opacity: 0.3,
+  className: "opacity-30",
 };
 ```
 

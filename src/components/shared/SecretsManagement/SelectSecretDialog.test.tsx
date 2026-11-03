@@ -145,7 +145,7 @@ describe("SelectSecretDialog", () => {
 
     expect(await screen.findByText("MY_KEY")).toBeVisible();
     expect(screen.getByTestId("info-box-title")).toHaveTextContent(
-      "You're not in the ML Research workspace",
+      "You're not a member of the ML Research workspace",
     );
     expect(fetchSecrets).toHaveBeenCalledWith(undefined);
   });
@@ -177,7 +177,7 @@ describe("SelectSecretDialog", () => {
     );
 
     expect(screen.getByTestId("save-to-team-hint")).toHaveTextContent(
-      "Everyone in ML Research can use it in this project.",
+      "Projects in the ML Research workspace can use it in any of their pipelines.",
     );
 
     await addSecretNamed(user, "API_KEY");
