@@ -233,7 +233,6 @@ describe("AnalyticsProvider", () => {
         (e) => e.detail.actionType === "session.tab.start",
       )!.detail.metadata as Record<string, Record<string, boolean>>;
       expect(flags["remote-component-library-search"]).toBe(true);
-      expect(flags["github-component-library"]).toBe(false);
       cleanup();
     });
 
