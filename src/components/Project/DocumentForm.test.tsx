@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -52,6 +58,19 @@ function fileDrag(...files: File[]) {
 }
 
 const modelCard = () => new File(["Trained on Q3 data"], "model-card.md");
+
+function fileReadOnCue(text: string, name: string) {
+  const file = new File([text], name);
+  let finishReading = () => {};
+  const bytes = new Promise<ArrayBuffer>((resolve) => {
+    finishReading = () => resolve(new TextEncoder().encode(text).buffer);
+  });
+  vi.spyOn(file, "arrayBuffer").mockReturnValue(bytes);
+  return { file, finishReading };
+}
+
+const addButton = () => screen.getByRole("button", { name: "Add" });
+const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe("DocumentForm file drop", () => {
   afterEach(() => {
@@ -123,6 +142,45 @@ describe("DocumentForm file drop", () => {
     fireEvent.drop(form(), fileDrag(modelCard()));
     await waitFor(() => {
       expect(titleField()).toHaveValue("model-card.md");
+    });
+    expect(contentField()).toHaveValue("Trained on Q3 data");
+  });
+
+  it("keeps the later file when an earlier one finishes reading last", async () => {
+    renderForm();
+    const first = fileReadOnCue("first draft", "first.md");
+    const second = fileReadOnCue("second draft", "second.md");
+
+    fireEvent.drop(form(), fileDrag(first.file));
+    fireEvent.drop(form(), fileDrag(second.file));
+
+    second.finishReading();
+    await waitFor(() => {
+      expect(contentField()).toHaveValue("second draft");
+    });
+
+    await act(async () => {
+      first.finishReading();
+      await settle();
+    });
+    expect(contentField()).toHaveValue("second draft");
+    expect(titleField()).toHaveValue("second.md");
+  });
+
+  it("holds off adding until a dropped file has been read", async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.type(titleField(), "notes.md");
+    await user.type(contentField(), "Draft");
+    expect(addButton()).toBeEnabled();
+
+    const slow = fileReadOnCue("Trained on Q3 data", "model-card.md");
+    fireEvent.drop(form(), fileDrag(slow.file));
+    expect(addButton()).toBeDisabled();
+
+    slow.finishReading();
+    await waitFor(() => {
+      expect(addButton()).toBeEnabled();
     });
     expect(contentField()).toHaveValue("Trained on Q3 data");
   });

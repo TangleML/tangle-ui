@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useRef, useState } from "react";
 
 import { languageFor } from "@/components/shared/CodeViewer";
 import CodeEditor from "@/components/shared/CodeViewer/CodeEditor";
@@ -32,11 +32,18 @@ export function DocumentForm({
   const [content, setContent] = useState("");
   const [titleFromFile, setTitleFromFile] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [isReadingFile, setIsReadingFile] = useState(false);
+  const latestReadId = useRef(0);
 
   const fillFromFile = async (file: File, method: "drop" | "browse") => {
     if (isSubmitting) return;
 
+    const readId = ++latestReadId.current;
+    setIsReadingFile(true);
     const result = await readDocumentFile(file);
+    if (readId !== latestReadId.current) return;
+
+    setIsReadingFile(false);
     if (!result.ok) {
       setFileError(result.error);
       return;
@@ -60,7 +67,10 @@ export function DocumentForm({
   const trimmedTitle = title.trim();
   const trimmedContent = content.trim();
   const canSubmit =
-    trimmedTitle !== "" && trimmedContent !== "" && !isSubmitting;
+    trimmedTitle !== "" &&
+    trimmedContent !== "" &&
+    !isSubmitting &&
+    !isReadingFile;
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
