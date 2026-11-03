@@ -1,10 +1,7 @@
 import { useEffect } from "react";
 
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
-import {
-  DEFAULT_VIEW_PRESET,
-  viewPresetForComponentSearchMode,
-} from "@/routes/v2/shared/windows/viewPresets";
+import { DEFAULT_VIEW_PRESET } from "@/routes/v2/shared/windows/viewPresets";
 import { hasPersistedLayout } from "@/routes/v2/shared/windows/windowPersistence";
 
 /**
@@ -15,19 +12,12 @@ import { hasPersistedLayout } from "@/routes/v2/shared/windows/windowPersistence
  * `PipelineEditor` so those hooks’ effects have already opened windows in the
  * store. Only runs when `hasPersistedLayout()` is false.
  */
-export function useSeedInitialDockLayoutFromPreset(
-  componentSearchV2Enabled: boolean,
-): void {
+export function useSeedInitialDockLayoutFromPreset(): void {
   const { windows } = useSharedStores();
 
   useEffect(() => {
     if (!hasPersistedLayout()) {
-      windows.seedInitialDockLayoutFromPreset(
-        viewPresetForComponentSearchMode(
-          DEFAULT_VIEW_PRESET,
-          componentSearchV2Enabled,
-        ),
-      );
+      windows.seedInitialDockLayoutFromPreset(DEFAULT_VIEW_PRESET);
     }
-  }, [componentSearchV2Enabled, windows]);
+  }, [windows]);
 }
