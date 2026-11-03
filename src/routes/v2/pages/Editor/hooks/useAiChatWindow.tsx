@@ -35,20 +35,15 @@ const SUGGESTED_PROMPTS_READ_ONLY: SuggestedPrompt[] = [
   { label: "Check this pipeline for validation issues", icon: "HeartPulse" },
 ];
 
-export function useAiChatWindow(
-  enabled: boolean,
-  { readOnly = false }: { readOnly?: boolean } = {},
-) {
+export function useAiChatWindow({
+  readOnly = false,
+}: { readOnly?: boolean } = {}) {
   const { windows, keyboard } = useSharedStores();
   const editorSession = useEditorSession();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (!enabled) {
-      windows.closeWindow(AI_CHAT_WINDOW_ID);
-      return;
-    }
     if (windows.getWindowById(AI_CHAT_WINDOW_ID)) return;
 
     windows.openWindow(
@@ -100,13 +95,5 @@ export function useAiChatWindow(
         ),
       },
     );
-  }, [
-    enabled,
-    windows,
-    editorSession,
-    keyboard,
-    navigate,
-    queryClient,
-    readOnly,
-  ]);
+  }, [windows, editorSession, keyboard, navigate, queryClient, readOnly]);
 }

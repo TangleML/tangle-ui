@@ -49,7 +49,7 @@ const RUN_WINDOW_IDS = [
 function renderRunWindowHooks() {
   return renderHook(() => {
     useRunViewWindows({ offersTangentHandoff: true });
-    useAiChatWindow(true);
+    useAiChatWindow();
   });
 }
 

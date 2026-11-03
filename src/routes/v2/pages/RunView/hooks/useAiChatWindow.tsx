@@ -74,14 +74,10 @@ const RunAiChatContent = observer(function RunAiChatContent() {
   );
 });
 
-export function useAiChatWindow(enabled: boolean) {
+export function useAiChatWindow() {
   const { windows } = useSharedStores();
 
   useEffect(() => {
-    if (!enabled) {
-      windows.closeWindow(RUN_AI_ASSISTANT_WINDOW_ID);
-      return;
-    }
     if (windows.getWindowById(RUN_AI_ASSISTANT_WINDOW_ID)) return;
 
     windows.openWindow(<RunAiChatContent />, {
@@ -101,5 +97,5 @@ export function useAiChatWindow(enabled: boolean) {
         />
       ),
     });
-  }, [enabled, windows]);
+  }, [windows]);
 }
