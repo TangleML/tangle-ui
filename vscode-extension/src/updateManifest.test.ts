@@ -48,7 +48,7 @@ test("resolveVsixUrl strips a cross-origin absolute url to the deployment origin
 
 test("isTrustedUpdateUrl allows https and loopback but refuses plain http", () => {
   assert.equal(isTrustedUpdateUrl("https://app.example.com/x.vsix"), true);
-  assert.equal(isTrustedUpdateUrl("http://localhost:3000/x.vsix"), true);
+  assert.equal(isTrustedUpdateUrl("http://localhost:4200/x.vsix"), true);
   assert.equal(isTrustedUpdateUrl("http://127.0.0.1:3000/x.vsix"), true);
   assert.equal(isTrustedUpdateUrl("http://app.example.com/x.vsix"), false);
 });

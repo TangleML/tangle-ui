@@ -23,7 +23,7 @@ export default defineConfig({
   },
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: "http://localhost:3000",
+    baseURL: "http://localhost:4200",
 
     /* Collect trace on failure. See https://playwright.dev/docs/trace-viewer */
     trace: "retain-on-failure",
@@ -56,7 +56,7 @@ export default defineConfig({
   webServer: {
     command: "npm start",
     env: { VITE_REMOTE_PIPELINES: "false" },
-    url: "http://localhost:3000",
+    url: "http://localhost:4200",
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
   },

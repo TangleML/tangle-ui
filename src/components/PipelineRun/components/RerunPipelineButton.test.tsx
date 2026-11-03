@@ -123,7 +123,7 @@ async function blockedReason(user: ReturnType<typeof userEvent.setup>) {
   return screen.findByRole("tooltip");
 }
 
-const testOrigin = import.meta.env.VITE_BASE_URL || "http://localhost:3000";
+const testOrigin = import.meta.env.VITE_BASE_URL || "http://localhost:4200";
 
 Object.defineProperty(window, "location", {
   value: {

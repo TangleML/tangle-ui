@@ -24,6 +24,6 @@ Run project validation and testing commands.
 
 ## Local Development Ports
 
-- **Frontend**: `localhost:3000` (default for `pnpm start`)
+- **Frontend**: `localhost:4200` (default for `pnpm start`)
 - **Backend API**: `localhost:8000`
 - **API Docs**: `localhost:8000/docs`
