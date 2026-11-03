@@ -300,7 +300,7 @@ async function navigateToSettings(
 /**
  * Toggles a beta feature flag via the settings UI.
  * @param page - Playwright page object
- * @param flagKey - The flag key as defined in flags.ts (e.g. "remote-component-library-search")
+ * @param flagKey - The flag key as defined in flags.ts (e.g. "input-aggregator")
  * @param enabled - Whether the flag should be enabled or disabled
  */
 export async function setBetaFlag(

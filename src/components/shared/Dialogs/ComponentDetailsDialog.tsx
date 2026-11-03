@@ -22,7 +22,6 @@ import { ComponentFavoriteToggle } from "../FavoriteComponentToggle";
 import { InfoBox } from "../InfoBox";
 import { PublishComponent } from "../ManageComponent/PublishComponent";
 import { PublishedComponentDetails } from "../ManageComponent/PublishedComponentDetails";
-import { useFlagValue } from "../Settings/useFlags";
 import { withSuspenseWrapper } from "../SuspenseWrapper";
 import { TaskDetails, TaskImplementation, TaskIO } from "../TaskDetails";
 import TaskActions from "../TaskDetails/Actions";
@@ -65,10 +64,6 @@ const ComponentDetailsDialogContentSkeleton = () => {
 
 const ComponentDetailsDialogContent = withSuspenseWrapper(
   ({ component, displayName, readOnly }: ComponentDetailsProps) => {
-    const remoteComponentLibrarySearchEnabled = useFlagValue(
-      "remote-component-library-search",
-    );
-
     const componentRef = useHydrateComponentReference(component);
 
     if (!componentRef) {
@@ -81,8 +76,7 @@ const ComponentDetailsDialogContent = withSuspenseWrapper(
 
     const componentSpec = componentRef.spec;
 
-    const hasPublishSection =
-      remoteComponentLibrarySearchEnabled && component.owned;
+    const hasPublishSection = component.owned;
 
     return (
       <>
@@ -124,12 +118,10 @@ const ComponentDetailsDialogContent = withSuspenseWrapper(
 
             <div className="overflow-auto h-[40vh]">
               <TabsContent value="details">
-                {remoteComponentLibrarySearchEnabled && (
-                  <PublishedComponentDetails
-                    component={componentRef}
-                    readOnly={readOnly}
-                  />
-                )}
+                <PublishedComponentDetails
+                  component={componentRef}
+                  readOnly={readOnly}
+                />
 
                 <TaskDetails componentRef={componentRef} />
                 <TaskActions

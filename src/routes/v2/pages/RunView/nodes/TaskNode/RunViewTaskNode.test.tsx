@@ -16,8 +16,7 @@ import { RunViewTaskNode } from "./RunViewTaskNode";
 
 vi.mock("@/components/shared/Settings/useFlags", async (original) => ({
   ...(await original<typeof import("@/components/shared/Settings/useFlags")>()),
-  useFlagValue: (flag: string) =>
-    flag === "input-aggregator" || flag === "remote-component-library-search",
+  useFlagValue: (flag: string) => flag === "input-aggregator",
 }));
 vi.mock("@/providers/ExecutionDataProvider", () => ({
   useExecutionDataOptional: () => null,
