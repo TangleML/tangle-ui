@@ -66,7 +66,7 @@ vi.mock("@/routes/v2/pages/Editor/store/actions/useTaskActions", () => ({
 }));
 vi.mock("@/hooks/useToastNotification", () => ({ default: () => vi.fn() }));
 vi.mock("@/utils/dom", () => ({
-  readTextFromFile: async () => "name: Search",
+  readYamlFromFile: async () => "name: Search",
 }));
 
 const spec = new YamlDeserializer(new IncrementingIdGenerator()).deserialize({

@@ -35,6 +35,12 @@ describe("readDocumentFile", () => {
     });
   });
 
+  it("accepts a file of exactly 1 MB", async () => {
+    const file = new File([new Uint8Array(1024 * 1024).fill(97)], "full.txt");
+
+    await expect(readDocumentFile(file)).resolves.toMatchObject({ ok: true });
+  });
+
   it("names the file it couldn't read", async () => {
     const file = new File(["gone"], "moved.txt");
     vi.spyOn(file, "arrayBuffer").mockRejectedValue(new Error("NotFound"));
