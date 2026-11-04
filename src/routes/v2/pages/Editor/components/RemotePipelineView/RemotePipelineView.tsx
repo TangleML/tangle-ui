@@ -6,7 +6,7 @@ import { useEffect } from "react";
 import { ComponentEditorProvider } from "@/components/shared/ComponentEditor/ComponentEditorProvider";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Button } from "@/components/ui/button";
-import { InlineStack } from "@/components/ui/layout";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import type { ComponentSpec } from "@/models/componentSpec";
 import { ComponentLibraryProvider } from "@/providers/ComponentLibraryProvider";
@@ -45,6 +45,7 @@ import { useWindowPersistence } from "@/routes/v2/shared/windows/windowPersisten
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import { getEditorPipelineIdentity } from "@/services/pipelineStorage/types";
 
+import { EmbeddedPipelineViewControls } from "./EmbeddedPipelineViewControls";
 import { RemotePipelineActions } from "./RemotePipelineActions";
 import { RemotePipelineShell } from "./RemotePipelineShell";
 import { remotePipelineViewRegistry } from "./remotePipelineViewRegistry";
@@ -136,20 +137,18 @@ const RemotePipelineContent = observer(function RemotePipelineContent({
 
   const activeSpec = navigation.activeSpec;
 
-  return (
-    <RemotePipelineShell
-      readOnly
-      name={spec.name || "Untitled pipeline"}
-      menus={
-        <>
-          <ViewMenu />
-          <WindowManagementMenu
-            presets={embedded ? [embeddedPreset] : VIEW_PRESETS}
-            trackingPrefix="v2.pipeline_view.windows_menu"
-          />
-        </>
-      }
-    >
+  const menus = (
+    <>
+      <ViewMenu />
+      <WindowManagementMenu
+        presets={embedded ? [embeddedPreset] : VIEW_PRESETS}
+        trackingPrefix="v2.pipeline_view.windows_menu"
+      />
+    </>
+  );
+
+  const content = (
+    <>
       {file?.editingError && (
         <div role="alert" className="w-full border-b p-3">
           <InlineStack gap="2" blockAlign="center">
@@ -189,13 +188,42 @@ const RemotePipelineContent = observer(function RemotePipelineContent({
                 spec={activeSpec}
                 nodesDraggable={false}
                 className="h-full"
-              />
+              >
+                {embedded && (
+                  <EmbeddedPipelineViewControls>
+                    {menus}
+                  </EmbeddedPipelineViewControls>
+                )}
+              </ReadOnlyFlowCanvas>
               <WindowContainer />
             </div>
             <DockArea side="right" />
           </InlineStack>
         </SpecProvider>
       )}
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <BlockStack
+        fill
+        align="stretch"
+        inlineAlign="start"
+        className="bg-slate-100 dark:bg-background select-none"
+      >
+        {content}
+      </BlockStack>
+    );
+  }
+
+  return (
+    <RemotePipelineShell
+      readOnly
+      name={spec.name || "Untitled pipeline"}
+      menus={menus}
+    >
+      {content}
     </RemotePipelineShell>
   );
 });
