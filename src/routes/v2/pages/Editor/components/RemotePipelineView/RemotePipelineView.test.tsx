@@ -111,9 +111,6 @@ vi.mock("@xyflow/react", async (original) => {
 vi.mock("@/routes/v2/shared/components/AppMenuActions", () => ({
   AppMenuActions: () => null,
 }));
-vi.mock("@/components/layout/AiModelQuickSelect", () => ({
-  AiModelQuickSelect: () => <button>AI model</button>,
-}));
 vi.mock("@/providers/ComponentLibraryProvider", () => ({
   ComponentLibraryProvider: ({ children }: PropsWithChildren) => children,
 }));
@@ -242,7 +239,8 @@ it("floats the view controls on an embedded canvas instead of a menu bar", async
     name: "Pipeline view controls",
   });
   expect(within(controls).getByText("View only")).toBeInTheDocument();
-  for (const name of ["View", "Windows", "AI model"]) {
+  expect(within(controls).getAllByRole("button")).toHaveLength(2);
+  for (const name of ["View", "Windows"]) {
     expect(within(controls).getByRole("button", { name })).toBeInTheDocument();
   }
   expect(screen.queryByRole("banner")).toBeNull();

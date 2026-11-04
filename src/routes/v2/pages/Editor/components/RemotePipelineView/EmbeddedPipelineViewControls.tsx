@@ -1,7 +1,6 @@
 import { Panel } from "@xyflow/react";
 import type { PropsWithChildren } from "react";
 
-import { AiModelQuickSelect } from "@/components/layout/AiModelQuickSelect";
 import { Badge } from "@/components/ui/badge";
 import { InlineStack } from "@/components/ui/layout";
 
@@ -24,7 +23,6 @@ export function EmbeddedPipelineViewControls({ children }: PropsWithChildren) {
         <InlineStack wrap="nowrap" blockAlign="center">
           {children}
         </InlineStack>
-        <AiModelQuickSelect />
       </InlineStack>
     </Panel>
   );
