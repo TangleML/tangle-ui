@@ -1,8 +1,9 @@
 import { Panel } from "@xyflow/react";
 import type { PropsWithChildren } from "react";
 
-import { Badge } from "@/components/ui/badge";
 import { InlineStack } from "@/components/ui/layout";
+
+import { ReadOnlyBadge } from "./ReadOnlyBadge";
 
 export function EmbeddedPipelineViewControls({ children }: PropsWithChildren) {
   return (
@@ -17,9 +18,7 @@ export function EmbeddedPipelineViewControls({ children }: PropsWithChildren) {
         wrap="nowrap"
         className="rounded-md border border-white/10 bg-stone-900 px-2 py-1 shadow-md"
       >
-        <Badge size="sm" className="shrink-0">
-          View only
-        </Badge>
+        <ReadOnlyBadge />
         <InlineStack wrap="nowrap" blockAlign="center">
           {children}
         </InlineStack>

@@ -1,6 +1,5 @@
 import type { PropsWithChildren, ReactNode } from "react";
 
-import { Badge } from "@/components/ui/badge";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { AppMenuActions } from "@/routes/v2/shared/components/AppMenuActions";
@@ -8,6 +7,8 @@ import {
   CanvasHomeLink,
   CanvasMenuBar,
 } from "@/routes/v2/shared/components/CanvasMenuBar";
+
+import { ReadOnlyBadge } from "./ReadOnlyBadge";
 
 export function RemotePipelineShell({
   name = "Pipeline",
@@ -48,11 +49,7 @@ export function RemotePipelineShell({
               >
                 {name}
               </Text>
-              {readOnly && (
-                <Badge size="sm" className="shrink-0">
-                  View only
-                </Badge>
-              )}
+              {readOnly && <ReadOnlyBadge />}
             </InlineStack>
             {menus && (
               <InlineStack wrap="nowrap" blockAlign="center">
