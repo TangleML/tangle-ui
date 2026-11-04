@@ -29,6 +29,7 @@ import { navigateToEntity } from "@/routes/v2/shared/store/focus.actions";
 import type { SharedUIStore } from "@/routes/v2/shared/store/SharedStoreContext";
 import { projectSelector } from "@/services/projects/projectSelector";
 import { idIdentity, sameTarget } from "@/services/projects/resourceTarget";
+import { TANGENT_UI_RUN_SOURCE } from "@/utils/annotationKeys";
 import { getErrorMessage } from "@/utils/string";
 
 export const CHAT_TAB_VALUE = "chat";
@@ -247,7 +248,9 @@ export class TangentProjectStore {
           rootConfig.resource,
           ...(shared ? [shared.resource] : []),
         ],
-        env: rootConfig.env,
+        // tangle-deploy and the bundle's submit tool write this as the run's
+        // source; unset, the Tangent skill falls back to `tangent`.
+        env: { ...rootConfig.env, TANGLE_DEPLOY_SOURCE: TANGENT_UI_RUN_SOURCE },
         model: options?.model,
         thinkingDepth: options?.thinkingDepth,
         tags: [projectSelector(this.projectId)],

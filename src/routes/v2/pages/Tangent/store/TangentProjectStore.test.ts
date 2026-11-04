@@ -474,6 +474,7 @@ describe("TangentProjectStore.startSession", () => {
         tags: ["projectId:project-1"],
         env: {
           TANGLE_ROOT_CONFIG: "{{uploadsPath}}/tangle-deploy-root-config.yaml",
+          TANGLE_DEPLOY_SOURCE: "tangent-ui",
         },
       },
     );
@@ -492,6 +493,18 @@ describe("TangentProjectStore.startSession", () => {
     expect(io.newSession.mock.calls[0][2].tags).toEqual([
       "projectId:project-42",
     ]);
+  });
+
+  it("attributes the runs its agents submit to this app as tangent-ui", async () => {
+    const store = new TangentProjectStore("project-1");
+    const io = makeSessionIo(null);
+    store.setSessionIo(io);
+
+    await store.startSession();
+
+    expect(io.newSession.mock.calls[0][2].env).toMatchObject({
+      TANGLE_DEPLOY_SOURCE: "tangent-ui",
+    });
   });
 
   /** The naming brief is seeded whether or not the project says anything. */
