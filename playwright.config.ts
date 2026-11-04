@@ -1,4 +1,18 @@
 import { defineConfig, devices } from "@playwright/test";
+import { loadEnv } from "vite";
+
+const env = loadEnv(process.env.NODE_ENV ?? "", process.cwd(), "");
+const tangleUiPort = Number(env.TANGLE_UI_PORT || 3000);
+if (
+  !Number.isInteger(tangleUiPort) ||
+  tangleUiPort <= 0 ||
+  tangleUiPort > 65535
+) {
+  throw new Error(
+    `TANGLE_UI_PORT must be a numeric TCP port, got ${JSON.stringify(env.TANGLE_UI_PORT)}`,
+  );
+}
+const tangleUiUrl = `http://localhost:${tangleUiPort}`;
 
 /**
  * @see https://playwright.dev/docs/test-configuration
@@ -23,7 +37,7 @@ export default defineConfig({
   },
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: "http://localhost:3000",
+    baseURL: tangleUiUrl,
 
     /* Collect trace on failure. See https://playwright.dev/docs/trace-viewer */
     trace: "retain-on-failure",
@@ -56,7 +70,7 @@ export default defineConfig({
   webServer: {
     command: "npm start",
     env: { VITE_REMOTE_PIPELINES: "false" },
-    url: "http://localhost:3000",
+    url: tangleUiUrl,
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
   },

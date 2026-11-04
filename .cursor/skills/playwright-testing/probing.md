@@ -144,7 +144,7 @@ After each command, `playwright-cli` outputs a snapshot with element refs:
 
 ```
 ### Page
-- Page URL: http://localhost:3000/
+- Page URL: http://localhost:${TANGLE_UI_PORT:-3000}/
 - Page Title: Pipeline Studio
 
 ### Snapshot
@@ -165,7 +165,7 @@ playwright-cli click e23
 
 ```bash
 # 1. Start debugging session
-playwright-cli -s=debug open http://localhost:3000 --headed
+playwright-cli -s=debug open http://localhost:${TANGLE_UI_PORT:-3000} --headed
 
 # 2. Get initial state
 playwright-cli -s=debug snapshot
