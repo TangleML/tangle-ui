@@ -2,6 +2,8 @@ import { Panel } from "@xyflow/react";
 import type { PropsWithChildren } from "react";
 
 import { InlineStack } from "@/components/ui/layout";
+import { cn } from "@/lib/utils";
+import { CANVAS_MENU_SURFACE_CLASS } from "@/routes/v2/shared/components/CanvasMenuBar";
 
 import { ReadOnlyBadge } from "./ReadOnlyBadge";
 
@@ -16,7 +18,10 @@ export function EmbeddedPipelineViewControls({ children }: PropsWithChildren) {
         gap="2"
         blockAlign="center"
         wrap="nowrap"
-        className="rounded-md border border-white/10 bg-stone-900 px-2 py-1 shadow-md"
+        className={cn(
+          "rounded-md border border-white/10 px-2 py-1 shadow-md",
+          CANVAS_MENU_SURFACE_CLASS,
+        )}
       >
         <ReadOnlyBadge />
         <InlineStack wrap="nowrap" blockAlign="center">

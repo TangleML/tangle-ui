@@ -3,14 +3,20 @@ import type { PropsWithChildren } from "react";
 
 import logo from "/Tangle_Icon_White.png";
 import { InlineStack } from "@/components/ui/layout";
+import { cn } from "@/lib/utils";
 import { APP_ROUTES } from "@/routes/appRoutes";
 import { TOP_NAV_HEIGHT } from "@/utils/constants";
 import { tracking } from "@/utils/tracking";
 
+export const CANVAS_MENU_SURFACE_CLASS = "bg-stone-900";
+
 export function CanvasMenuBar({ children }: PropsWithChildren) {
   return (
     <header
-      className="relative w-full shrink-0 bg-stone-900 px-3 py-1 md:px-4"
+      className={cn(
+        "relative w-full shrink-0 px-3 py-1 md:px-4",
+        CANVAS_MENU_SURFACE_CLASS,
+      )}
       style={{ height: TOP_NAV_HEIGHT }}
     >
       <InlineStack

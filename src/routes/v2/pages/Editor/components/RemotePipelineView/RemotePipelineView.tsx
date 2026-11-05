@@ -6,7 +6,7 @@ import { useEffect } from "react";
 import { ComponentEditorProvider } from "@/components/shared/ComponentEditor/ComponentEditorProvider";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Button } from "@/components/ui/button";
-import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import type { ComponentSpec } from "@/models/componentSpec";
 import { ComponentLibraryProvider } from "@/providers/ComponentLibraryProvider";
@@ -47,7 +47,10 @@ import { getEditorPipelineIdentity } from "@/services/pipelineStorage/types";
 
 import { EmbeddedPipelineViewControls } from "./EmbeddedPipelineViewControls";
 import { RemotePipelineActions } from "./RemotePipelineActions";
-import { RemotePipelineShell } from "./RemotePipelineShell";
+import {
+  RemotePipelineFrame,
+  RemotePipelineShell,
+} from "./RemotePipelineShell";
 import { remotePipelineViewRegistry } from "./remotePipelineViewRegistry";
 
 const VIEW_PRESETS: ViewPreset[] = [
@@ -205,16 +208,7 @@ const RemotePipelineContent = observer(function RemotePipelineContent({
   );
 
   if (embedded) {
-    return (
-      <BlockStack
-        fill
-        align="stretch"
-        inlineAlign="start"
-        className="bg-slate-100 dark:bg-background select-none"
-      >
-        {content}
-      </BlockStack>
-    );
+    return <RemotePipelineFrame>{content}</RemotePipelineFrame>;
   }
 
   return (

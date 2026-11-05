@@ -10,6 +10,19 @@ import {
 
 import { ReadOnlyBadge } from "./ReadOnlyBadge";
 
+export function RemotePipelineFrame({ children }: PropsWithChildren) {
+  return (
+    <BlockStack
+      fill
+      align="stretch"
+      inlineAlign="start"
+      className="bg-slate-100 dark:bg-background select-none"
+    >
+      {children}
+    </BlockStack>
+  );
+}
+
 export function RemotePipelineShell({
   name = "Pipeline",
   readOnly = false,
@@ -21,12 +34,7 @@ export function RemotePipelineShell({
   menus?: ReactNode;
 }>) {
   return (
-    <BlockStack
-      fill
-      align="stretch"
-      inlineAlign="start"
-      className="bg-slate-100 dark:bg-background select-none"
-    >
+    <RemotePipelineFrame>
       <CanvasMenuBar>
         <InlineStack
           gap="3"
@@ -63,6 +71,6 @@ export function RemotePipelineShell({
         </InlineStack>
       </CanvasMenuBar>
       {children}
-    </BlockStack>
+    </RemotePipelineFrame>
   );
 }
