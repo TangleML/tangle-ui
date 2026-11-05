@@ -96,7 +96,7 @@ function AttachAgentDialog({
               <Markdown body={commandInstructions} />
               <CommandBlock
                 command={target.command(baseUrl, sessionId)}
-                contained
+                wrap
                 trackingId="projects.attach_agent.copy_command"
                 trackingMetadata={{ agent: target.id }}
               />
