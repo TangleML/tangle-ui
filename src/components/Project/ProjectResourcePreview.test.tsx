@@ -58,6 +58,31 @@ vi.mock("./RunPipelineButton", () => ({
   ),
 }));
 
+vi.mock("./DocumentEditor", async () => {
+  const { useState } = await vi.importActual<typeof import("react")>("react");
+
+  function DocumentEditor({
+    projectId,
+    resource,
+  }: {
+    projectId: string;
+    resource: ProjectResource;
+  }) {
+    const [openedFor] = useState(resource.id);
+    return (
+      <div
+        data-testid="document-editor"
+        data-project={projectId}
+        data-opened-for={openedFor}
+      >
+        {String(resource.payload?.content)}
+      </div>
+    );
+  }
+
+  return { DocumentEditor };
+});
+
 vi.mock("@/components/shared/CodeViewer", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/components/shared/CodeViewer")>()),
   CodeViewer: ({
@@ -176,24 +201,26 @@ describe("ProjectResourcePreview", () => {
     expect(useProjectResource).not.toHaveBeenCalled();
   });
 
-  it("shows a document's own body", () => {
+  it("opens a document's own body in the editor", () => {
     renderPreview("resource-1");
 
-    expect(viewer()).toHaveTextContent("# Hello");
-    expect(viewer()).toHaveTextContent("readme.md");
+    const editor = screen.getByTestId("document-editor");
+    expect(editor).toHaveTextContent("# Hello");
+    expect(editor).toHaveAttribute("data-project", "project-1");
+    expect(screen.queryByTestId("code-viewer")).toBeNull();
   });
 
-  it("highlights a document by the language its name implies", () => {
-    renderPreview("resource-1");
+  it("opens a fresh editor for each document selected, so a draft never moves to another document", () => {
+    const { rerender } = renderPreview("resource-1");
 
-    expect(viewer()).toHaveAttribute("data-language", "markdown");
-  });
+    mockResource({ id: "resource-2", payload: { content: "# Other" } });
+    rerender(
+      <ProjectResourcePreview projectId="project-1" resourceId="resource-2" />,
+    );
 
-  it("falls back to plain text for a name that says nothing", () => {
-    mockResource({ name: "Model card" });
-    renderPreview("resource-1");
-
-    expect(viewer()).toHaveAttribute("data-language", "plaintext");
+    const editor = screen.getByTestId("document-editor");
+    expect(editor).toHaveTextContent("# Other");
+    expect(editor).toHaveAttribute("data-opened-for", "resource-2");
   });
 
   it("shows a pipeline as the yaml of its spec", () => {

@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import * as yaml from "js-yaml";
 import type { ReactNode } from "react";
 
-import { CodeViewer, languageFor } from "@/components/shared/CodeViewer";
+import { CodeViewer } from "@/components/shared/CodeViewer";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -33,6 +33,7 @@ import { tracking } from "@/utils/tracking";
 import { componentSpecToText } from "@/utils/yaml";
 
 import { ColumnHeadingRow } from "./ColumnHeadingRow";
+import { DocumentEditor } from "./DocumentEditor";
 import { type PipelineValidity, pipelineValidity } from "./pipelineValidity";
 import { RunPipelineButton } from "./RunPipelineButton";
 
@@ -163,7 +164,7 @@ function SelectedResource({ projectId, resourceId }: SelectedResourceProps) {
     );
   }
 
-  return <PayloadPreview resource={resource} />;
+  return <PayloadPreview projectId={projectId} resource={resource} />;
 }
 
 /**
@@ -335,16 +336,26 @@ function ValidityBadge({ validity }: { validity: PipelineValidity }) {
   );
 }
 
-function PayloadPreview({ resource }: { resource: ProjectResource }) {
+function PayloadPreview({
+  projectId,
+  resource,
+}: {
+  projectId: string;
+  resource: ProjectResource;
+}) {
   const body = resource.payload?.[CONTENT_KEY];
 
   if (typeof body === "string") {
     return (
-      <Code
-        code={body}
-        language={languageFor(resource.name)}
-        filename={resource.name ?? UNTITLED}
-      />
+      <div
+        className={`flex w-full flex-col overflow-hidden rounded-lg border border-border ${PREVIEW_HEIGHT}`}
+      >
+        <DocumentEditor
+          key={resource.id}
+          projectId={projectId}
+          resource={resource}
+        />
+      </div>
     );
   }
 
