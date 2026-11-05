@@ -2,6 +2,7 @@ import type {
   EmbedAgent,
   EmbedAsset,
   HostResourceInput,
+  MemoryBinding,
 } from "@tangent/embed-react";
 import type { ThinkingLevel } from "@tangent/shared/contracts.ts";
 import {
@@ -14,6 +15,7 @@ import {
 
 import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import { TANGENT_BUNDLE_ID } from "@/routes/v2/pages/Tangent/constants";
+import { projectSharedMemorySeed } from "@/routes/v2/pages/Tangent/services/projectSharedMemory";
 import { resolveWorkareaTarget } from "@/routes/v2/pages/Tangent/services/resolveWorkareaTarget";
 import { sessionMemorySeed } from "@/routes/v2/pages/Tangent/services/sessionMemory";
 import { rootConfigSeed } from "@/routes/v2/pages/Tangent/services/sessionRunConfig";
@@ -61,20 +63,24 @@ interface TabBridgeRegistration {
 const EMPTY_WORKAREA: WorkareaSlice = { tabs: [], activeId: null };
 const EMPTY_CHAT: ChatSlice = { tabs: [], activeTab: CHAT_TAB_VALUE };
 
+interface NewSessionOptions {
+  name: string;
+  resources?: HostResourceInput[];
+  env?: Record<string, string>;
+  model?: string;
+  thinkingDepth?: ThinkingLevel;
+  tags?: string[];
+  memory?: MemoryBinding;
+}
+
 /** Server I/O the store needs for session lifecycle, injected by the provider. */
 export interface TangentSessionIo {
   newSession: (
     prompt: string,
     bundleId: string,
-    options: {
-      name: string;
-      resources?: HostResourceInput[];
-      env?: Record<string, string>;
-      model?: string;
-      thinkingDepth?: ThinkingLevel;
-      tags?: string[];
-    },
+    options: NewSessionOptions,
   ) => Promise<{ sessionId: string }>;
+  ensureSharedFolderId: () => Promise<string | undefined>;
   attachSession: (sessionId: string, name?: string) => Promise<{ id: string }>;
   detachSession: (resourceId: string) => Promise<void>;
   nameSessionIfUnnamed: (sessionId: string, prompt: string) => Promise<void>;
@@ -222,21 +228,48 @@ export class TangentProjectStore {
       // types the first message; a non-empty one runs it immediately.
       const prompt = options?.prompt ?? "";
       const rootConfig = rootConfigSeed(this.projectId);
-      const { sessionId } = await io.newSession(prompt, TANGENT_BUNDLE_ID, {
+      const folderId = await io.ensureSharedFolderId();
+      const sharedMemory = folderId
+        ? projectSharedMemorySeed(folderId)
+        : undefined;
+      const sessionOptions = (
+        shared: typeof sharedMemory,
+      ): NewSessionOptions => ({
         name: options?.name ?? "New Tangent session",
         resources: [
           {
             kind: "memory",
             scope: "session",
-            content: sessionMemorySeed(this.projectId, io.projectInstructions),
+            content: sessionMemorySeed(this.projectId, io.projectInstructions, {
+              hasSharedFolder: shared !== undefined,
+            }),
           },
           rootConfig.resource,
+          ...(shared ? [shared.resource] : []),
         ],
         env: rootConfig.env,
         model: options?.model,
         thinkingDepth: options?.thinkingDepth,
         tags: [projectSelector(this.projectId)],
+        ...(shared ? { memory: shared.memory } : {}),
       });
+      const { sessionId } = await io
+        .newSession(prompt, TANGENT_BUNDLE_ID, sessionOptions(sharedMemory))
+        .catch((error: unknown) => {
+          if (!sharedMemory) throw error;
+          // The stored folder id may be unknown to this Tangent server (base
+          // URL changed, data reset, bad PATCH). Re-reading it would fail the
+          // same way on every start, so the session goes without the folder.
+          console.error(
+            "Failed to start a session with the project's shared folder; retrying without it",
+            error,
+          );
+          return io.newSession(
+            prompt,
+            TANGENT_BUNDLE_ID,
+            sessionOptions(undefined),
+          );
+        });
       const resource = await io.attachSession(sessionId, options?.name);
       runInAction(() => {
         this.#freshSessions.set(sessionId, resource.id);
