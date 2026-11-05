@@ -174,9 +174,36 @@ describe("AddDocumentDialog", () => {
     await act(async () => options.onSuccess());
 
     expect(notify).toHaveBeenCalledWith("Document added", "success");
-    expect(track).toHaveBeenCalledWith("projects.add_document_completed");
+    expect(track).toHaveBeenCalledWith("projects.add_document_completed", {
+      kind: "document",
+    });
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).toBeNull();
+    });
+  });
+
+  it("names code as code, in its title and once it lands", async () => {
+    const user = userEvent.setup();
+    render(
+      <AddDocumentDialog
+        projectId="project-1"
+        open
+        onOpenChange={vi.fn()}
+        kind="code"
+      />,
+    );
+
+    expect(await screen.findByRole("dialog")).toHaveTextContent("Add Code");
+
+    await user.type(screen.getByLabelText("Filename"), "train.py");
+    await user.type(contentField(), "print(1)");
+    await user.click(addButton());
+    const [, options] = mutate.mock.calls[0];
+    await act(async () => options.onSuccess());
+
+    expect(notify).toHaveBeenCalledWith("Code added", "success");
+    expect(track).toHaveBeenCalledWith("projects.add_document_completed", {
+      kind: "code",
     });
   });
 

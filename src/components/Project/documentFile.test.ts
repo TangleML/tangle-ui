@@ -18,8 +18,7 @@ describe("readDocumentFile", () => {
 
     await expect(readDocumentFile(file)).resolves.toEqual({
       ok: false,
-      error:
-        "chart.png isn't a text file. Only text can be added as a document.",
+      error: "chart.png isn't a text file. Only text files can be added.",
     });
   });
 

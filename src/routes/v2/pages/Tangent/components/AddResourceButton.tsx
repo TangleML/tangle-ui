@@ -1,3 +1,4 @@
+import { DOCUMENT_TYPE_COPY } from "@/components/Project/documentTypeCopy";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -15,7 +16,11 @@ import { AddDocumentDialog } from "@/routes/v2/pages/Tangent/components/AddDocum
 import { AddPipelineDialog } from "@/routes/v2/pages/Tangent/components/AddPipelineDialog";
 import { AddPipelineRunDialog } from "@/routes/v2/pages/Tangent/components/AddPipelineRunDialog";
 import type { LocalPipelinePointer } from "@/services/localPipelines/types";
-import { localPipelinePointerOf } from "@/services/projects/resourceDescriptor";
+import {
+  type DocumentDescriptorType,
+  localPipelinePointerOf,
+} from "@/services/projects/resourceDescriptor";
+import { resourceMeta } from "@/services/projects/resourceMeta";
 import type {
   CreateResourceInput,
   ProjectResourceSummary,
@@ -27,8 +32,6 @@ interface AddResourceButtonProps {
   projectId: string;
   resources: ProjectResourceSummary[];
 }
-
-type ResourceDialogComponent = DialogConfig<CreateResourceInput>["component"];
 
 function identityOf(metadata: Record<string, unknown> | null | undefined) {
   const identity = metadata?.identity;
@@ -83,15 +86,17 @@ export function AddResourceButton({
   const { mutate: createResource, isPending } =
     useCreateProjectResource(projectId);
 
-  async function openResourceDialog(
-    component: ResourceDialogComponent,
+  async function openResourceDialog<TProps extends object>(
+    component: DialogConfig<CreateResourceInput, TProps>["component"],
     routeKey: string,
     size: DialogConfig<CreateResourceInput>["size"] = "full",
+    props?: TProps,
   ) {
-    const result = await open<CreateResourceInput>({
+    const result = await open<CreateResourceInput, TProps>({
       component,
       routeKey,
       size,
+      props,
     }).catch(convertCancelErrorTo(undefined));
 
     if (!result) return;
@@ -114,8 +119,8 @@ export function AddResourceButton({
 
   // The pipeline and run pickers are browsers and want the whole screen; a
   // document editor wants width, but lines that span a wide monitor read badly.
-  function handleAddDocument() {
-    void openResourceDialog(AddDocumentDialog, "add-document", "xl");
+  function handleAddDocument(kind: DocumentDescriptorType) {
+    void openResourceDialog(AddDocumentDialog, `add-${kind}`, "xl", { kind });
   }
 
   return (
@@ -158,11 +163,18 @@ export function AddResourceButton({
             Add pipeline run
           </DropdownMenuItem>
           <DropdownMenuItem
-            onClick={handleAddDocument}
-            {...tracking("projects.add_document_open")}
+            onClick={() => handleAddDocument("document")}
+            {...tracking("projects.add_document_open", { kind: "document" })}
           >
-            <Icon name="FileText" size="sm" />
-            Add a document
+            <Icon name={resourceMeta("document").icon} size="sm" />
+            {DOCUMENT_TYPE_COPY.document.addLabel}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => handleAddDocument("code")}
+            {...tracking("projects.add_document_open", { kind: "code" })}
+          >
+            <Icon name={resourceMeta("code").icon} size="sm" />
+            {DOCUMENT_TYPE_COPY.code.addLabel}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

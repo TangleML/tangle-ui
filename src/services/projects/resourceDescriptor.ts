@@ -18,8 +18,11 @@ import type {
 export const LOCAL_PIPELINE = "local_pipeline";
 export const PIPELINE_RUN = "pipeline_run";
 export const DOCUMENT = "document";
+export const CODE = "code";
 export const INSTRUCTIONS = "instructions";
 export const AGENT_SESSION = "agent_session";
+
+export type DocumentDescriptorType = typeof DOCUMENT | typeof CODE;
 
 const BROWSER = "browser";
 
@@ -73,12 +76,17 @@ export function describeResource(
 export const namesLocalPipeline = (resource: ResourceRow): boolean =>
   describeResource(resource)?.type === LOCAL_PIPELINE;
 
+export const documentTypeOf = (
+  resource: ResourceRow,
+): DocumentDescriptorType =>
+  describeResource(resource)?.type === CODE ? CODE : DOCUMENT;
+
 export function isDocumentResource(
   resource: Pick<ProjectResourceSummary, "entity" | "metadata">,
 ): boolean {
   if (resource.entity !== "document") return false;
   const type = describeResource(resource)?.type;
-  return type === undefined || type === DOCUMENT;
+  return type === undefined || type === DOCUMENT || type === CODE;
 }
 
 /**
@@ -173,14 +181,15 @@ export const documentPayload = (
 
 /** No identity to record: the row is the document. */
 export function documentResourceInput(
-  title: string,
+  type: DocumentDescriptorType,
+  name: string,
   content: string,
 ): CreateResourceInput {
   return {
     entity: "document",
-    name: title,
+    name,
     payload: documentPayload(content),
-    metadata: { type: DOCUMENT },
+    metadata: { type },
   };
 }
 

@@ -8,25 +8,32 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
-import { documentResourceInput } from "@/services/projects/resourceDescriptor";
+import {
+  type DocumentDescriptorType,
+  documentResourceInput,
+} from "@/services/projects/resourceDescriptor";
 import type { CreateResourceInput } from "@/services/projects/types";
 import { tracking } from "@/utils/tracking";
 
 import { readDocumentFile } from "./documentFile";
 import { DocumentFileDropZone } from "./DocumentFileDropZone";
+import { DOCUMENT_TYPE_COPY } from "./documentTypeCopy";
 import { useFileDrop } from "./useFileDrop";
 
 interface DocumentFormProps {
   onSubmit: (input: CreateResourceInput) => void;
   onCancel: () => void;
   isSubmitting?: boolean;
+  kind?: DocumentDescriptorType;
 }
 
 export function DocumentForm({
   onSubmit,
   onCancel,
   isSubmitting = false,
+  kind = "document",
 }: DocumentFormProps) {
+  const copy = DOCUMENT_TYPE_COPY[kind];
   const { track } = useAnalytics();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -57,7 +64,7 @@ export function DocumentForm({
     );
     setTitleFromFile(result.title);
     setContent(result.content);
-    track("projects.add_document_from_file_completed", { method });
+    track("projects.add_document_from_file_completed", { method, kind });
   };
 
   const { isDraggingFile, dropTargetProps } = useFileDrop(
@@ -75,13 +82,14 @@ export function DocumentForm({
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
     if (!canSubmit) return;
-    onSubmit(documentResourceInput(trimmedTitle, trimmedContent));
+    onSubmit(documentResourceInput(kind, trimmedTitle, trimmedContent));
   };
 
   return (
     <form onSubmit={handleSubmit} className="min-w-0" {...dropTargetProps}>
       <BlockStack gap="4">
         <DocumentFileDropZone
+          kind={kind}
           isDraggingFile={isDraggingFile}
           error={fileError}
           disabled={isSubmitting}
@@ -89,12 +97,12 @@ export function DocumentForm({
         />
 
         <BlockStack gap="2">
-          <Label htmlFor="add-document-title">Title</Label>
+          <Label htmlFor="add-document-title">{copy.nameLabel}</Label>
           <Input
             id="add-document-title"
             value={title}
             onChange={(event) => setTitle(event.target.value)}
-            placeholder="model-card.md"
+            placeholder={copy.namePlaceholder}
             autoFocus
           />
         </BlockStack>
@@ -108,7 +116,7 @@ export function DocumentForm({
               onChange={setContent}
               options={{
                 ariaLabel: "Content",
-                placeholder: "What this document records",
+                placeholder: copy.contentPlaceholder,
               }}
             />
           </div>
@@ -120,14 +128,14 @@ export function DocumentForm({
               type="button"
               variant="outline"
               onClick={onCancel}
-              {...tracking("projects.add_document_cancel")}
+              {...tracking("projects.add_document_cancel", { kind })}
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={!canSubmit}
-              {...tracking("projects.add_document_submit")}
+              {...tracking("projects.add_document_submit", { kind })}
             >
               Add
             </Button>

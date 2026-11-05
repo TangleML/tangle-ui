@@ -8,7 +8,7 @@ type DocumentFileReadResult =
 
 function readFailureMessage(error: unknown, fileName: string) {
   return error instanceof NotTextFileError
-    ? `${fileName} isn't a text file. Only text can be added as a document.`
+    ? `${fileName} isn't a text file. Only text files can be added.`
     : `Couldn't read ${fileName}.`;
 }
 

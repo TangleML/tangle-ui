@@ -8,6 +8,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
+import type { DocumentDescriptorType } from "@/services/projects/resourceDescriptor";
+import { resourceMeta } from "@/services/projects/resourceMeta";
 import type { ProjectResourceSummary } from "@/services/projects/types";
 import { tracking } from "@/utils/tracking";
 
@@ -25,7 +27,14 @@ export function AddResourceMenu({
   resources,
 }: AddResourceMenuProps) {
   const [documentOpen, setDocumentOpen] = useState(false);
+  const [documentType, setDocumentType] =
+    useState<DocumentDescriptorType>("document");
   const [pipelineOpen, setPipelineOpen] = useState(false);
+
+  const openDocument = (type: DocumentDescriptorType) => {
+    setDocumentType(type);
+    setDocumentOpen(true);
+  };
 
   return (
     <>
@@ -43,11 +52,19 @@ export function AddResourceMenu({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start">
           <DropdownMenuItem
-            onSelect={() => setDocumentOpen(true)}
-            {...tracking("projects.add_document_open")}
+            onSelect={() => openDocument("document")}
+            {...tracking("projects.add_document_open", { kind: "document" })}
           >
             <Icon name={entityIcon("document")} size="sm" />
             Document
+          </DropdownMenuItem>
+
+          <DropdownMenuItem
+            onSelect={() => openDocument("code")}
+            {...tracking("projects.add_document_open", { kind: "code" })}
+          >
+            <Icon name={resourceMeta("code").icon} size="sm" />
+            Code
           </DropdownMenuItem>
 
           <DropdownMenuItem
@@ -64,6 +81,7 @@ export function AddResourceMenu({
         projectId={projectId}
         open={documentOpen}
         onOpenChange={setDocumentOpen}
+        kind={documentType}
       />
 
       {/* Mounted only while open so the project page does not read browser

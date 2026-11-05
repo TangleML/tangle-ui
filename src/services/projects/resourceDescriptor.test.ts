@@ -6,6 +6,7 @@ import {
   documentBody,
   documentPayload,
   documentResourceInput,
+  documentTypeOf,
   isDocumentResource,
   localPipelinePointerOf,
   localPipelineResourceInput,
@@ -163,8 +164,9 @@ describe("namesLocalPipeline", () => {
 });
 
 describe("isDocumentResource", () => {
-  it("is true of a document row, with or without a descriptor", () => {
+  it("is true of a document or code row, or one without a descriptor", () => {
     expect(isDocumentResource(row({ type: "document" }))).toBe(true);
+    expect(isDocumentResource(row({ type: "code" }))).toBe(true);
     expect(isDocumentResource(row(null))).toBe(true);
   });
 
@@ -203,9 +205,25 @@ describe("localPipelineResourceInput", () => {
   });
 });
 
+describe("documentTypeOf", () => {
+  it("tells code from a document", () => {
+    expect(documentTypeOf({ metadata: { type: "code" } })).toBe("code");
+    expect(documentTypeOf({ metadata: { type: "document" } })).toBe("document");
+  });
+
+  it("treats any other row it is asked about as a document", () => {
+    expect(documentTypeOf({ metadata: null })).toBe("document");
+    expect(documentTypeOf({ metadata: { type: "instructions" } })).toBe(
+      "document",
+    );
+  });
+});
+
 describe("documentResourceInput", () => {
   it("files the body as the payload and says what the row is", () => {
-    expect(documentResourceInput("Model card", "Trained on Q3")).toEqual({
+    expect(
+      documentResourceInput("document", "Model card", "Trained on Q3"),
+    ).toEqual({
       entity: "document",
       name: "Model card",
       payload: { content: "Trained on Q3" },
@@ -215,10 +233,27 @@ describe("documentResourceInput", () => {
 
   /** Both pages filter on `type`, so a document has to answer that question. */
   it("reads back as a document", () => {
-    const input = documentResourceInput("Model card", "Body");
+    const input = documentResourceInput("document", "Model card", "Body");
 
     expect(describeResource({ metadata: input.metadata ?? null })).toEqual({
       type: "document",
+    });
+  });
+
+  it("files code as a document that says it is code", () => {
+    expect(documentResourceInput("code", "train.py", "print(1)")).toEqual({
+      entity: "document",
+      name: "train.py",
+      payload: { content: "print(1)" },
+      metadata: { type: "code" },
+    });
+  });
+
+  it("reads code back as code", () => {
+    const input = documentResourceInput("code", "train.py", "print(1)");
+
+    expect(describeResource({ metadata: input.metadata ?? null })).toEqual({
+      type: "code",
     });
   });
 });

@@ -173,7 +173,9 @@ describe("DocumentEditor", () => {
     expect(track).not.toHaveBeenCalled();
     saveLands();
 
-    expect(track).toHaveBeenCalledWith("projects.save_document_completed");
+    expect(track).toHaveBeenCalledWith("projects.save_document_completed", {
+      kind: "document",
+    });
   });
 
   it("saves on Cmd+S and Ctrl+S", async () => {
@@ -271,6 +273,30 @@ describe("DocumentEditor", () => {
 
     expect(screen.queryByRole("alert")).toBeNull();
     expect(saveButton()).toBeDisabled();
+  });
+
+  it("reports saving code under the same events as a document, told apart by kind", async () => {
+    renderEditor(
+      resource({
+        metadata: { type: "code" },
+        payload: { content: "print(1)" },
+      }),
+    );
+
+    const save = screen.getByRole("button", { name: "Save" });
+    expect(save).toHaveAttribute("data-tracking-id", "projects.save_document");
+    expect(save).toHaveAttribute(
+      "data-tracking-metadata",
+      JSON.stringify({ kind: "code" }),
+    );
+
+    await type("print(2)");
+    await userEvent.click(save);
+    saveLands();
+
+    expect(track).toHaveBeenCalledWith("projects.save_document_completed", {
+      kind: "code",
+    });
   });
 
   it("opens an empty document ready to be written into", async () => {

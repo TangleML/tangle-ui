@@ -200,6 +200,21 @@ describe("ResourcesWindowContent", () => {
     );
   });
 
+  it("lists a code file as code and opens it in a document tab, by the row that holds it", async () => {
+    given(resource("r-6", "train.py", { type: "code" }));
+    const user = userEvent.setup();
+
+    render(<ResourcesWindowContent />);
+    expect(screen.getByText("Code")).toBeInTheDocument();
+
+    await user.click(screen.getByTestId("open-resource-r-6"));
+
+    expect(openWorkareaTarget).toHaveBeenCalledWith(
+      { type: "document", identity: "id/r-6" },
+      "train.py",
+    );
+  });
+
   /** It belongs to the project, so hiding it would make the list look wrong. */
   it("lists a row it has no way to open, without offering to open it", () => {
     given(resource("r-3", "Mystery", { type: "something_else" }));

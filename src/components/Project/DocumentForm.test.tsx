@@ -8,6 +8,8 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import type { DocumentDescriptorType } from "@/services/projects/resourceDescriptor";
+
 import { DocumentForm } from "./DocumentForm";
 
 const track = vi.fn();
@@ -43,12 +45,21 @@ const form = () => titleField().closest("form") as HTMLFormElement;
 const draggingHint = () =>
   screen.queryByText("Drop to fill in the title and content");
 
-function renderForm({ isSubmitting = false } = {}) {
+function renderForm({
+  isSubmitting = false,
+  kind,
+  onSubmit = vi.fn(),
+}: {
+  isSubmitting?: boolean;
+  kind?: DocumentDescriptorType;
+  onSubmit?: (input: unknown) => void;
+} = {}) {
   render(
     <DocumentForm
-      onSubmit={vi.fn()}
+      onSubmit={onSubmit}
       onCancel={vi.fn()}
       isSubmitting={isSubmitting}
+      kind={kind}
     />,
   );
 }
@@ -88,7 +99,7 @@ describe("DocumentForm file drop", () => {
     expect(titleField()).toHaveValue("model-card.md");
     expect(track).toHaveBeenCalledWith(
       "projects.add_document_from_file_completed",
-      { method: "drop" },
+      { method: "drop", kind: "document" },
     );
   });
 
@@ -114,7 +125,7 @@ describe("DocumentForm file drop", () => {
     expect(titleField()).toHaveValue("model-card.md");
     expect(track).toHaveBeenCalledWith(
       "projects.add_document_from_file_completed",
-      { method: "browse" },
+      { method: "browse", kind: "document" },
     );
   });
 
@@ -197,7 +208,7 @@ describe("DocumentForm file drop", () => {
 
     expect(
       await screen.findByText(
-        "chart.png isn't a text file. Only text can be added as a document.",
+        "chart.png isn't a text file. Only text files can be added.",
       ),
     ).toBeInTheDocument();
     expect(contentField()).toHaveValue("Draft");
@@ -238,5 +249,85 @@ describe("DocumentForm file drop", () => {
 
     fireEvent.dragLeave(form(), fileDrag());
     expect(draggingHint()).toBeNull();
+  });
+});
+
+describe("DocumentForm kinds", () => {
+  afterEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it("adds a document by default, filed under its title", async () => {
+    const onSubmit = vi.fn();
+    const user = userEvent.setup();
+    renderForm({ onSubmit });
+
+    await user.type(titleField(), "Model card");
+    await user.type(contentField(), "Trained on Q3");
+    await user.click(addButton());
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "Model card",
+        metadata: { type: "document" },
+      }),
+    );
+  });
+
+  it("adds code by its filename, filed as code", async () => {
+    const onSubmit = vi.fn();
+    const user = userEvent.setup();
+    renderForm({ kind: "code", onSubmit });
+
+    const filename = screen.getByLabelText("Filename");
+    expect(filename).toHaveAttribute("placeholder", "train.py");
+    expect(screen.queryByLabelText("Title")).toBeNull();
+
+    await user.type(filename, "train.py");
+    await user.type(contentField(), "print(1)");
+    expect(contentField()).toHaveAttribute("data-language", "python");
+
+    await user.click(addButton());
+
+    expect(onSubmit).toHaveBeenCalledWith({
+      entity: "document",
+      name: "train.py",
+      payload: { content: "print(1)" },
+      metadata: { type: "code" },
+    });
+  });
+
+  it("names the filename, not a title, while a file is dragged over code", () => {
+    renderForm({ kind: "code" });
+
+    fireEvent.dragEnter(screen.getByLabelText("Filename"), fileDrag());
+
+    expect(
+      screen.getByText("Drop to fill in the filename and content"),
+    ).toBeInTheDocument();
+    expect(draggingHint()).toBeNull();
+  });
+
+  it("says which kind is being browsed for", () => {
+    renderForm({ kind: "code" });
+
+    expect(screen.getByRole("button", { name: "browse" })).toHaveAttribute(
+      "data-tracking-metadata",
+      JSON.stringify({ kind: "code" }),
+    );
+  });
+
+  it("says which kind a dropped file became", async () => {
+    renderForm({ kind: "code" });
+
+    fireEvent.drop(contentField(), fileDrag(modelCard()));
+
+    await waitFor(() => {
+      expect(contentField()).toHaveValue("Trained on Q3 data");
+    });
+    expect(track).toHaveBeenCalledWith(
+      "projects.add_document_from_file_completed",
+      { method: "drop", kind: "code" },
+    );
   });
 });

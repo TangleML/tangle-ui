@@ -12,6 +12,7 @@ import { UNTITLED } from "@/services/projects/placeholderNames";
 import {
   documentBody,
   documentPayload,
+  documentTypeOf,
 } from "@/services/projects/resourceDescriptor";
 import { resourceMeta } from "@/services/projects/resourceMeta";
 import type { ProjectResource } from "@/services/projects/types";
@@ -39,6 +40,7 @@ export function DocumentEditor({ projectId, resource }: DocumentEditorProps) {
   const changedElsewhere = isDirty && edit.startedFrom !== saved;
   const canSave = isDirty && !update.isPending;
   const name = resource.name ?? UNTITLED;
+  const kind = documentTypeOf(resource);
 
   const handleChange = (value: string) => {
     if (value === saved && !update.isPending) {
@@ -63,7 +65,7 @@ export function DocumentEditor({ projectId, resource }: DocumentEditorProps) {
       },
       {
         onSuccess: () => {
-          track("projects.save_document_completed");
+          track("projects.save_document_completed", { kind });
           setEdit((current) => {
             if (!current || current.draft === draft) return null;
             return { startedFrom: draft, draft: current.draft };
@@ -87,7 +89,7 @@ export function DocumentEditor({ projectId, resource }: DocumentEditorProps) {
         className="w-full shrink-0 border-b border-border px-3 py-1.5"
       >
         <Icon
-          name={resourceMeta("document").icon}
+          name={resourceMeta(kind).icon}
           size="xs"
           className="shrink-0 text-muted-foreground"
         />
@@ -105,7 +107,7 @@ export function DocumentEditor({ projectId, resource }: DocumentEditorProps) {
             size="xs"
             disabled={edit === null || update.isPending}
             onClick={discard}
-            {...tracking("projects.discard_document_edits")}
+            {...tracking("projects.discard_document_edits", { kind })}
           >
             Discard
           </Button>
@@ -113,7 +115,7 @@ export function DocumentEditor({ projectId, resource }: DocumentEditorProps) {
             size="xs"
             disabled={!canSave}
             onClick={save}
-            {...tracking("projects.save_document")}
+            {...tracking("projects.save_document", { kind })}
           >
             {update.isPending ? "Saving…" : "Save"}
           </Button>

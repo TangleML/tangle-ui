@@ -6,9 +6,13 @@ import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
+import type { DocumentDescriptorType } from "@/services/projects/resourceDescriptor";
 import { tracking } from "@/utils/tracking";
 
+import { DOCUMENT_TYPE_COPY } from "./documentTypeCopy";
+
 interface DocumentFileDropZoneProps {
+  kind: DocumentDescriptorType;
   isDraggingFile: boolean;
   error: string | null;
   disabled: boolean;
@@ -16,6 +20,7 @@ interface DocumentFileDropZoneProps {
 }
 
 export function DocumentFileDropZone({
+  kind,
   isDraggingFile,
   error,
   disabled,
@@ -42,7 +47,7 @@ export function DocumentFileDropZone({
         <Icon name="FileUp" size="sm" className="text-muted-foreground" />
         {isDraggingFile ? (
           <Text size="xs" tone="subdued">
-            Drop to fill in the title and content
+            {DOCUMENT_TYPE_COPY[kind].dropHint}
           </Text>
         ) : (
           <Text size="xs" tone="subdued">
@@ -53,7 +58,7 @@ export function DocumentFileDropZone({
               size="inline-xs"
               disabled={disabled}
               onClick={() => fileInputRef.current?.click()}
-              {...tracking("projects.add_document_browse_file")}
+              {...tracking("projects.add_document_browse_file", { kind })}
             >
               browse
             </Button>

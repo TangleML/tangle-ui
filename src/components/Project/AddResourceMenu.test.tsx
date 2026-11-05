@@ -49,6 +49,16 @@ describe("AddResourceMenu", () => {
     expect(await screen.findByRole("dialog")).toHaveTextContent("Add Document");
   });
 
+  it("opens the same form for code, under its own name", async () => {
+    const user = await openMenu();
+
+    await user.click(screen.getByRole("menuitem", { name: "Code" }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog).toHaveTextContent("Add Code");
+    expect(screen.getByLabelText("Filename")).toBeInTheDocument();
+  });
+
   it("opens the pipeline picker", async () => {
     await openMenu();
 
