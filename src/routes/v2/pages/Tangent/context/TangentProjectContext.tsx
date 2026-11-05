@@ -10,6 +10,7 @@ import useToastNotification from "@/hooks/useToastNotification";
 import { useBackfillSessionTags } from "@/routes/v2/pages/Tangent/hooks/useBackfillSessionTags";
 import { usePrepareProjectArrival } from "@/routes/v2/pages/Tangent/hooks/usePrepareProjectArrival";
 import { useProjectSessions } from "@/routes/v2/pages/Tangent/hooks/useProjectSessions";
+import { useProjectSharedFolder } from "@/routes/v2/pages/Tangent/hooks/useProjectSharedFolder";
 import { useRemoteEnvAuthToken } from "@/routes/v2/pages/Tangent/hooks/useRemoteEnvAuthToken";
 import { useTangentBaseUrl } from "@/routes/v2/pages/Tangent/hooks/useTangentBaseUrl";
 import { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
@@ -41,6 +42,7 @@ export function TangentProjectProvider({
     detachSession,
     renameSession,
   } = useProjectSessions(projectId);
+  const ensureSharedFolderId = useProjectSharedFolder(projectId);
   const [store] = useState(() => new TangentProjectStore(projectId));
   const storage = usePipelineStorage();
   const queryClient = useQueryClient();
@@ -61,6 +63,7 @@ export function TangentProjectProvider({
         if (!session || session.name || !name) return;
         await renameSession(session.resourceId, name);
       },
+      ensureSharedFolderId,
       notify,
       projectInstructions: instructions,
     });
@@ -71,6 +74,7 @@ export function TangentProjectProvider({
     detachSession,
     renameSession,
     sessions,
+    ensureSharedFolderId,
     notify,
     instructions,
   ]);

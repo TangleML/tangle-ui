@@ -1,3 +1,7 @@
+import {
+  PROJECT_MOUNT_NAME,
+  PROJECT_NOTES_ROOT,
+} from "@/routes/v2/pages/Tangent/services/projectSharedMemory";
 import { projectRunAnnotationKey } from "@/utils/projectRunAnnotation";
 
 const NAMING_BRIEF = [
@@ -41,6 +45,25 @@ const runAttributionBrief = (projectId: string) =>
     "- A run you start through the pipeline canvas is attributed for you.",
   ].join("\n");
 
+const SHARED_FOLDER_BRIEF = [
+  "Sharing work across this project's sessions:",
+  `- \`${PROJECT_MOUNT_NAME}/\` is the project's shared folder. Every session in`,
+  "  this project mounts the same folder, and writes show up in the others",
+  "  immediately. Put work later sessions should build on there, not in",
+  "  `uploads/`, which is private to this session.",
+  "- Your memory_* tools write a store inside that folder, so other sessions in",
+  "  this project read what you remember. Record decisions, conventions and",
+  "  hard-won findings with memory_write, and memory_search before re-deriving",
+  "  something an earlier session may already have settled.",
+  `- \`${PROJECT_NOTES_ROOT}/MEMORY.md\` is the project's human-readable note.`,
+  "  Keep it short and current; people read it too.",
+  "- Never write secrets, tokens or credentials into the shared folder.",
+].join("\n");
+
+interface SessionMemorySeedOptions {
+  hasSharedFolder?: boolean;
+}
+
 /**
  * The session's standing memory, seeded before the agent spawns so it is
  * context from the first turn rather than something said in the transcript.
@@ -57,8 +80,13 @@ const runAttributionBrief = (projectId: string) =>
 export function sessionMemorySeed(
   projectId: string,
   projectInstructions?: string | null,
+  { hasSharedFolder = false }: SessionMemorySeedOptions = {},
 ): string {
   const instructions = projectInstructions?.trim();
-  const briefs = `${NAMING_BRIEF}\n\n${runAttributionBrief(projectId)}`;
+  const briefs = [
+    NAMING_BRIEF,
+    runAttributionBrief(projectId),
+    ...(hasSharedFolder ? [SHARED_FOLDER_BRIEF] : []),
+  ].join("\n\n");
   return instructions ? `${instructions}\n\n${briefs}` : briefs;
 }

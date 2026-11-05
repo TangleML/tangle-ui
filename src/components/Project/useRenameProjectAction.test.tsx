@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DialogProvider } from "@/providers/DialogProvider/DialogProvider";
+import { getProject } from "@/services/projects/projectsService";
 import type { Project } from "@/services/projects/types";
 import { useUpdateProject } from "@/services/projects/useProjects";
 
@@ -26,6 +27,10 @@ const track = vi.fn();
 
 vi.mock("@/services/projects/useProjects", () => ({
   useUpdateProject: vi.fn(),
+}));
+
+vi.mock("@/services/projects/projectsService", () => ({
+  getProject: vi.fn(),
 }));
 
 vi.mock("@/hooks/useToastNotification", () => ({
@@ -55,10 +60,14 @@ function Subject({ subject }: { subject: Project }) {
   return <button onClick={() => void rename()}>Rename project</button>;
 }
 
-async function openRename(overrides: Partial<Project> = {}) {
+async function openRename(
+  overrides: Partial<Project> = {},
+  latest: Partial<Project> = overrides,
+) {
   vi.mocked(useUpdateProject).mockReturnValue({
     mutate,
   } as unknown as ReturnType<typeof useUpdateProject>);
+  vi.mocked(getProject).mockResolvedValue({ ...project, ...latest });
 
   const user = userEvent.setup();
   render(
@@ -70,12 +79,22 @@ async function openRename(overrides: Partial<Project> = {}) {
   return user;
 }
 
-async function renameTo(name: string, overrides: Partial<Project> = {}) {
-  const user = await openRename(overrides);
-
+async function submitName(
+  user: ReturnType<typeof userEvent.setup>,
+  name: string,
+) {
   await user.clear(screen.getByLabelText("Name"));
   await user.type(screen.getByLabelText("Name"), name);
   await user.click(screen.getByRole("button", { name: "Rename" }));
+}
+
+async function renameTo(
+  name: string,
+  overrides: Partial<Project> = {},
+  latest: Partial<Project> = overrides,
+) {
+  const user = await openRename(overrides, latest);
+  await submitName(user, name);
 
   await waitFor(() => expect(mutate).toHaveBeenCalled());
 }
@@ -115,6 +134,45 @@ describe("useRenameProjectAction", () => {
       },
       expect.anything(),
     );
+  });
+
+  /** A stale copy would drop keys written since, like the shared folder id. */
+  it("keeps metadata written since the project was loaded", async () => {
+    await renameTo(
+      "Churn model v2",
+      { metadata: { provisionalName: true } },
+      {
+        metadata: { provisionalName: true, tangentSharedFolderId: "folder-1" },
+      },
+    );
+
+    expect(getProject).toHaveBeenCalledWith("project-1");
+    expect(mutate).toHaveBeenCalledWith(
+      {
+        id: "project-1",
+        input: {
+          name: "Churn model v2",
+          metadata: { tangentSharedFolderId: "folder-1" },
+        },
+      },
+      expect.anything(),
+    );
+  });
+
+  it("leaves the project alone when it cannot be re-read", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    const user = await openRename();
+    vi.mocked(getProject).mockRejectedValue(new Error("down"));
+
+    await submitName(user, "Churn model v2");
+
+    await waitFor(() =>
+      expect(notify).toHaveBeenCalledWith("Failed to update project", "error"),
+    );
+    expect(mutate).not.toHaveBeenCalled();
+    consoleError.mockRestore();
   });
 
   it("says so once the rename lands", async () => {

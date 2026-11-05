@@ -19,6 +19,7 @@ import {
   pipelineFileTarget,
   remoteResourceTarget,
 } from "@/services/projects/pipelineResource";
+import { getProject } from "@/services/projects/projectsService";
 import { MAX_PAGE_SIZE } from "@/services/projects/queryDefaults";
 import {
   describeResource,
@@ -124,12 +125,15 @@ export function usePrepareProjectArrival(
       // it, is housekeeping that stops the next arrival repeating it. The
       // session has already started, so a refusal here must not cost the
       // caller the pipeline and the workarea they came for — it is left for
-      // the next arrival to try again.
+      // the next arrival to try again. The metadata is re-read because
+      // starting the session may have written to it, and the PATCH replaces
+      // the whole object.
       if (waiting) {
         try {
+          const latest = await getProject(projectId);
           await updateProject({
             id: projectId,
-            input: { metadata: withoutStartingSession(project?.metadata) },
+            input: { metadata: withoutStartingSession(latest.metadata) },
           });
         } catch (error) {
           console.error(

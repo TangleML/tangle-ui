@@ -6,6 +6,7 @@ import useToastNotification from "@/hooks/useToastNotification";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useDialog } from "@/providers/DialogProvider/hooks/useDialog";
 import { convertCancelErrorTo } from "@/providers/DialogProvider/utils";
+import { getProject } from "@/services/projects/projectsService";
 import { withoutProvisionalName } from "@/services/projects/provisionalName";
 import type { Project } from "@/services/projects/types";
 import { useUpdateProject } from "@/services/projects/useProjects";
@@ -35,6 +36,16 @@ export function useRenameProjectAction(project: Project): () => Promise<void> {
 
     if (!name) return;
 
+    // The PATCH replaces the whole metadata object, and the cached copy may
+    // predate keys written since (such as Tangent's shared folder id).
+    const latest = await getProject(project.id).catch((error: unknown) => {
+      console.error("Failed to read the project before renaming it", error);
+      notify("Failed to update project", "error");
+      return undefined;
+    });
+
+    if (!latest) return;
+
     updateProject.mutate(
       {
         id: project.id,
@@ -42,7 +53,7 @@ export function useRenameProjectAction(project: Project): () => Promise<void> {
           name,
           // A name someone typed is a deliberate one, so the agent stops
           // offering to replace it.
-          metadata: withoutProvisionalName(project.metadata),
+          metadata: withoutProvisionalName(latest.metadata),
         },
       },
       {
