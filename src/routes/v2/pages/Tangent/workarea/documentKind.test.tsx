@@ -3,6 +3,7 @@ import "./documentKind";
 import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import type { ProjectResource } from "@/services/projects/types";
 import { useProjectResource } from "@/services/projects/useProjectResources";
 
 import { getWorkareaKind } from "./registry";
@@ -12,12 +13,18 @@ vi.mock("@/services/projects/useProjectResources", () => ({
   useProjectResource: vi.fn(),
 }));
 
-vi.mock("@/components/shared/CodeViewer", () => ({
-  CodeViewer: ({ code, language }: { code: string; language: string }) => (
-    <pre data-language={language}>{code}</pre>
+vi.mock("@/components/Project/DocumentEditor", () => ({
+  DocumentEditor: ({
+    projectId,
+    resource,
+  }: {
+    projectId: string;
+    resource: ProjectResource;
+  }) => (
+    <div data-testid="document-editor" data-project={projectId}>
+      {String(resource.payload?.content)}
+    </div>
   ),
-  languageFor: (name: string | null) =>
-    name?.endsWith(".md") ? "markdown" : "plaintext",
 }));
 
 const tab: WorkareaTab = {
@@ -26,11 +33,15 @@ const tab: WorkareaTab = {
   target: { type: "document", identity: "id/resource-7" },
 };
 
+function kind() {
+  const registered = getWorkareaKind("document");
+  if (!registered) throw new Error("document kind is not registered");
+  return registered;
+}
+
 function renderDocument() {
-  const kind = getWorkareaKind("document");
-  if (!kind) throw new Error("document kind is not registered");
   return render(
-    <>{kind.render(tab, { projectId: "project-1" } as WorkareaHostProps)}</>,
+    <>{kind().render(tab, { projectId: "project-1" } as WorkareaHostProps)}</>,
   );
 }
 
@@ -45,7 +56,7 @@ function given(value: Partial<ReturnType<typeof useProjectResource>>) {
 describe("documentKind", () => {
   afterEach(() => vi.resetAllMocks());
 
-  it("shows what the document says", () => {
+  it("opens the document in the editor", () => {
     given({
       data: {
         name: "Model card",
@@ -55,39 +66,43 @@ describe("documentKind", () => {
 
     renderDocument();
 
-    expect(screen.getByText("Trained on Q3")).toBeInTheDocument();
+    expect(screen.getByTestId("document-editor")).toHaveTextContent(
+      "Trained on Q3",
+    );
+    expect(screen.getByTestId("document-editor")).toHaveAttribute(
+      "data-project",
+      "project-1",
+    );
     expect(useProjectResource).toHaveBeenCalledWith("project-1", "resource-7");
   });
 
-  it("highlights by the name the author gave it", () => {
+  it("stays mounted in the background so an unsaved draft is not lost", () => {
+    expect(kind().keepMounted).toBe(true);
+  });
+
+  it("passes on why it could not be loaded", () => {
     given({
-      data: { name: "notes.md", payload: { content: "# Heading" } } as never,
+      data: undefined,
+      isLoadingError: true,
+      error: new Error("Not found"),
     });
 
     renderDocument();
 
-    expect(screen.getByText("# Heading")).toHaveAttribute(
-      "data-language",
-      "markdown",
-    );
-  });
-
-  /** Anyone may PATCH a payload, so an empty one has to read as something. */
-  it("says so rather than rendering nothing when there is no body", () => {
-    given({ data: { name: "Model card", payload: {} } as never });
-
-    renderDocument();
-
-    expect(
-      screen.getByText("This document has nothing written in it."),
-    ).toBeInTheDocument();
-  });
-
-  it("passes on why it could not be loaded", () => {
-    given({ data: undefined, error: new Error("Not found") });
-
-    renderDocument();
-
     expect(screen.getByText("Not found")).toBeInTheDocument();
+    expect(screen.queryByTestId("document-editor")).toBeNull();
+  });
+
+  it("keeps the editor when a refetch fails, so its draft survives", () => {
+    given({
+      data: { name: "Model card", payload: { content: "Draft" } } as never,
+      isLoadingError: false,
+      error: new Error("Network error"),
+    });
+
+    renderDocument();
+
+    expect(screen.getByTestId("document-editor")).toHaveTextContent("Draft");
+    expect(screen.queryByText("Network error")).toBeNull();
   });
 });
