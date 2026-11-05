@@ -3,7 +3,10 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { remotePipelineResourceInput } from "@/services/projects/pipelineResource";
-import { localPipelineResourceInput } from "@/services/projects/resourceDescriptor";
+import {
+  documentResourceInput,
+  localPipelineResourceInput,
+} from "@/services/projects/resourceDescriptor";
 import type {
   CreateResourceInput,
   ProjectResourceSummary,
@@ -142,4 +145,36 @@ describe("AddResourceButton", () => {
 
     expect(createResource).toHaveBeenCalledWith(PICKED_SAVED_PIPELINE);
   });
+
+  it.each([
+    ["Add a document", "document"],
+    ["Add code", "code"],
+  ] as const)(
+    "opens %s as its own kind of the one form",
+    async (item, kind) => {
+      const picked = documentResourceInput(kind, "train.py", "print(1)");
+      openDialog.mockResolvedValue(picked);
+      const user = userEvent.setup();
+      render(<AddResourceButton projectId="project-1" resources={[]} />);
+
+      await user.click(
+        screen.getByRole("button", { name: "More resource types" }),
+      );
+      const menuItem = await screen.findByRole("menuitem", { name: item });
+      expect(menuItem).toHaveAttribute(
+        "data-tracking-id",
+        "projects.add_document_open",
+      );
+      expect(menuItem).toHaveAttribute(
+        "data-tracking-metadata",
+        JSON.stringify({ kind }),
+      );
+      await user.click(menuItem);
+
+      expect(openDialog).toHaveBeenCalledWith(
+        expect.objectContaining({ routeKey: `add-${kind}`, props: { kind } }),
+      );
+      expect(createResource).toHaveBeenCalledWith(picked);
+    },
+  );
 });

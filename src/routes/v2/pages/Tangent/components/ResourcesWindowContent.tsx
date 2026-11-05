@@ -12,6 +12,7 @@ import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProj
 import { remoteResourceTarget } from "@/services/projects/pipelineResource";
 import { UNTITLED } from "@/services/projects/placeholderNames";
 import {
+  CODE,
   describeResource,
   DOCUMENT,
   INSTRUCTIONS,
@@ -64,15 +65,15 @@ const OTHER_META = {
 };
 
 /**
- * A document carries its own body, so it records no identity — the row is the
- * document, and the row's own id is what addresses it.
+ * A document or code file carries its own body, so it records no identity —
+ * the row is the document, and the row's own id is what addresses it.
  */
 function targetOf(
   resource: ProjectResourceSummary,
   type: string,
   recorded: WorkareaTarget | undefined,
 ): WorkareaTarget | undefined {
-  if (type === DOCUMENT) {
+  if (type === DOCUMENT || type === CODE) {
     return { type: "document", identity: idIdentity(resource.id) };
   }
   return recorded;

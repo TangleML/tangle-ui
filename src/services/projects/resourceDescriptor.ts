@@ -14,8 +14,11 @@ import type { CreateResourceInput, ProjectResourceSummary } from "./types";
 export const LOCAL_PIPELINE = "local_pipeline";
 export const PIPELINE_RUN = "pipeline_run";
 export const DOCUMENT = "document";
+export const CODE = "code";
 export const INSTRUCTIONS = "instructions";
 export const AGENT_SESSION = "agent_session";
+
+export type DocumentKind = typeof DOCUMENT | typeof CODE;
 
 const BROWSER = "browser";
 
@@ -68,6 +71,9 @@ export function describeResource(
 
 export const namesLocalPipeline = (resource: ResourceRow): boolean =>
   describeResource(resource)?.type === LOCAL_PIPELINE;
+
+export const documentKindOf = (resource: ResourceRow): DocumentKind =>
+  describeResource(resource)?.type === CODE ? CODE : DOCUMENT;
 
 /**
  * The id is tried first because a name can be recycled; the name is the
@@ -145,16 +151,17 @@ export function localPipelineResourceInput(
 
 /** No identity to record: the row is the document. */
 export function documentResourceInput(
-  title: string,
+  kind: DocumentKind,
+  name: string,
   content: string,
 ): CreateResourceInput {
   return {
     entity: "document",
-    name: title,
+    name,
     // The backend validates nothing inside a document payload; `content` is
     // this app's convention for the whole body.
     payload: { content },
-    metadata: { type: DOCUMENT },
+    metadata: { type: kind },
   };
 }
 

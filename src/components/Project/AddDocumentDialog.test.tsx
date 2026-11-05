@@ -174,7 +174,9 @@ describe("AddDocumentDialog", () => {
     await act(async () => options.onSuccess());
 
     expect(notify).toHaveBeenCalledWith("Document added", "success");
-    expect(track).toHaveBeenCalledWith("projects.add_document_completed");
+    expect(track).toHaveBeenCalledWith("projects.add_document_completed", {
+      kind: "document",
+    });
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).toBeNull();
     });

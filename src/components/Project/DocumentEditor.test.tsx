@@ -229,6 +229,22 @@ describe("DocumentEditor", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
+  it("reports saving code under the same event as a document, told apart by kind", () => {
+    renderEditor(
+      resource({
+        metadata: { type: "code" },
+        payload: { content: "print(1)" },
+      }),
+    );
+
+    const save = screen.getByRole("button", { name: "Save" });
+    expect(save).toHaveAttribute("data-tracking-id", "projects.save_document");
+    expect(save).toHaveAttribute(
+      "data-tracking-metadata",
+      JSON.stringify({ kind: "code" }),
+    );
+  });
+
   it("opens an empty document ready to be written into", async () => {
     renderEditor(resource({ name: null, payload: {} }));
 
