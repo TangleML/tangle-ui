@@ -2,8 +2,10 @@ import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
+import { getDefaultRemoteEditorPath } from "@/routes/editorRoutes";
 import type { TeamResolution } from "@/services/teams/types";
 import { useRunTeam } from "@/services/teams/useRunTeam";
+import { REMOTE_PIPELINE_ID_ANNOTATION } from "@/utils/annotationKeys";
 
 import { useRunViewActions } from "./useRunViewActions";
 
@@ -33,13 +35,14 @@ const ACTIVE: TeamResolution = {
   team: { id: TEAM_ID, label: "ML Research", canWrite: true },
 };
 
-function runCreatedBy(createdBy: string) {
+function runCreatedBy(createdBy: string, annotations?: Record<string, string>) {
   vi.mocked(useExecutionData).mockReturnValue({
     rootState: { child_execution_status_stats: {} },
     runId: "run-1",
     metadata: {
       id: "run-1",
       created_by: createdBy,
+      annotations,
       execution_status_stats: { RUNNING: 1 },
     },
     rootDetails: undefined,
@@ -60,6 +63,21 @@ describe("useRunViewActions", () => {
     expect(result.current).toMatchObject({
       ready: true,
       isInProgress: true,
+      management: { canManage: true, teamId: TEAM_ID },
+    });
+  });
+
+  it("inspects a remote pipeline while preserving team run management", () => {
+    runCreatedBy(TEAM_ID, {
+      [REMOTE_PIPELINE_ID_ANNOTATION]: "remote-pipeline-1",
+    });
+
+    const { result } = renderHook(() => useRunViewActions());
+
+    expect(result.current).toMatchObject({
+      ready: true,
+      canAccessEditorSpec: true,
+      inspectPath: getDefaultRemoteEditorPath("remote-pipeline-1"),
       management: { canManage: true, teamId: TEAM_ID },
     });
   });

@@ -12,6 +12,7 @@ import {
   flattenExecutionStatusStats,
   isExecutionComplete,
 } from "@/utils/executionStatus";
+import { resolvePipelineInspectPath } from "@/utils/remotePipelineRunAnnotations";
 
 import { ViewYamlButton } from "../shared/Buttons/ViewYamlButton";
 import { buildTaskSpecShape } from "../shared/PipelineRunNameTemplate/types";
@@ -29,6 +30,11 @@ export const RunToolbar = () => {
     rootDetails: details,
   } = useExecutionData();
   const { data: currentUserDetails } = useUserDetails();
+
+  const remoteInspectPath = resolvePipelineInspectPath(
+    metadata?.annotations,
+    undefined,
+  );
 
   const editorRoute = componentSpec.name
     ? getDefaultEditorPath(componentSpec.name)
@@ -60,6 +66,11 @@ export const RunToolbar = () => {
       buildTaskSpecShape(details?.task_spec, componentSpec),
     ) ?? componentSpec.name;
 
+  const inspectPath = resolvePipelineInspectPath(
+    metadata?.annotations,
+    pipelineName,
+  );
+
   return (
     <InlineStack
       gap="2"
@@ -73,8 +84,8 @@ export const RunToolbar = () => {
       )}
       <ViewYamlButton componentSpec={componentSpec} displayLabel="View" />
 
-      {canAccessEditorSpec && pipelineName && (
-        <InspectPipelineButton pipelineName={pipelineName} showLabel />
+      {(remoteInspectPath || canAccessEditorSpec) && inspectPath && (
+        <InspectPipelineButton inspectPath={inspectPath} showLabel />
       )}
 
       <ClonePipelineButton
