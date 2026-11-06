@@ -1,5 +1,10 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  queryOptions,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
@@ -41,13 +46,11 @@ export function invalidateProjectResources(
   });
 }
 
-export function useProjectResources(
+export function projectResourcesQueryOptions(
   projectId: string | undefined,
   params: ListProjectResourcesParams = {},
 ) {
-  const { configured, available } = useBackend();
-
-  return useQuery({
+  return queryOptions({
     queryKey: ProjectResourcesQueryKeys.List(projectId ?? "", params),
     queryFn: () => {
       if (!projectId) {
@@ -55,8 +58,19 @@ export function useProjectResources(
       }
       return listProjectResources(projectId, params);
     },
-    enabled: configured && available && Boolean(projectId),
     ...projectQueryDefaults,
+  });
+}
+
+export function useProjectResources(
+  projectId: string | undefined,
+  params: ListProjectResourcesParams = {},
+) {
+  const { configured, available } = useBackend();
+
+  return useQuery({
+    ...projectResourcesQueryOptions(projectId, params),
+    enabled: configured && available && Boolean(projectId),
   });
 }
 
