@@ -37,6 +37,8 @@ import { useOpenInTangent } from "@/routes/v2/pages/RunView/hooks/useOpenInTange
 import { PipelineDetailsCollapsibleSection } from "@/routes/v2/shared/components/PipelineDetailsCollapsibleSection";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { runAnnotationsQueryOptions } from "@/services/runAnnotations";
+import { runManagement } from "@/services/teams/runManagement";
+import { useRunTeam } from "@/services/teams/useRunTeam";
 import {
   getAnnotationValue,
   isSystemRunAnnotation,
@@ -362,8 +364,12 @@ function NotesSection({
   metadata,
   currentUserId,
 }: NotesSectionProps) {
-  const isRunCreator =
-    !!currentUserId && metadata?.created_by === currentUserId;
+  const runTeam = useRunTeam(metadata?.id);
+  const management = runManagement(
+    metadata?.created_by,
+    currentUserId,
+    runTeam,
+  );
 
   return (
     <BlockStack gap="2">
@@ -376,7 +382,11 @@ function NotesSection({
       {!!metadata?.id && (
         <BlockStack>
           <Paragraph size="xs">Run Notes</Paragraph>
-          <RunNotesEditor runId={metadata.id} readOnly={!isRunCreator} />
+          <RunNotesEditor
+            runId={metadata.id}
+            readOnly={!management.canManage}
+            teamId={management.teamId}
+          />
         </BlockStack>
       )}
     </BlockStack>

@@ -8,8 +8,7 @@ import { Paragraph } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 
-import { fetchSecretsList } from "../secretsStorage";
-import { SecretsQueryKeys } from "../types";
+import { secretsListQuery } from "../secretsStorage";
 import { AddSecretForm } from "./AddSecretForm";
 import { SecretsBreadcrumbs } from "./SecretsBreadcrumbs";
 
@@ -19,10 +18,7 @@ export function ReplaceSecretView() {
   const navigate = useNavigate();
   const { track } = useAnalytics();
 
-  const { data: secrets } = useSuspenseQuery({
-    queryKey: SecretsQueryKeys.All(),
-    queryFn: fetchSecretsList,
-  });
+  const { data: secrets } = useSuspenseQuery(secretsListQuery());
 
   const secret = secrets.find((s) => s.id === secretId);
 

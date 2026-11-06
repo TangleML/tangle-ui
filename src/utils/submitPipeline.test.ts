@@ -159,6 +159,7 @@ describe("submitPipelineRun", () => {
         },
         mockBackendUrl,
         mockAuthToken,
+        undefined,
       );
       expect(pipelineRunService.savePipelineRun).toHaveBeenCalledWith(
         mockPipelineRun,
@@ -198,6 +199,7 @@ describe("submitPipelineRun", () => {
         },
         mockBackendUrl,
         undefined,
+        undefined,
       );
     });
 
@@ -216,6 +218,25 @@ describe("submitPipelineRun", () => {
         expect.any(Object),
         mockBackendUrl,
         undefined,
+        undefined,
+      );
+    });
+
+    it("submits the run as the team it is given", async () => {
+      const componentSpec: ComponentSpec = {
+        name: "team-component",
+        implementation: { container: { image: "test:latest" } },
+      };
+
+      await submitPipelineRun(componentSpec, mockBackendUrl, {
+        teamId: "ml-team@project.iam.gserviceaccount.com",
+      });
+
+      expect(pipelineRunService.createPipelineRun).toHaveBeenCalledWith(
+        expect.any(Object),
+        mockBackendUrl,
+        undefined,
+        "ml-team@project.iam.gserviceaccount.com",
       );
     });
 
@@ -448,6 +469,7 @@ describe("submitPipelineRun", () => {
         },
         mockBackendUrl,
         undefined,
+        undefined,
       );
     });
 
@@ -491,6 +513,7 @@ describe("submitPipelineRun", () => {
         },
         mockBackendUrl,
         undefined,
+        undefined,
       );
     });
 
@@ -533,6 +556,7 @@ describe("submitPipelineRun", () => {
         },
         mockBackendUrl,
         undefined,
+        undefined,
       );
     });
 
@@ -572,6 +596,7 @@ describe("submitPipelineRun", () => {
         },
         mockBackendUrl,
         undefined,
+        undefined,
       );
     });
 
@@ -603,6 +628,7 @@ describe("submitPipelineRun", () => {
           },
         },
         mockBackendUrl,
+        undefined,
         undefined,
       );
     });
@@ -696,6 +722,7 @@ describe("submitPipelineRun", () => {
           },
         },
         mockBackendUrl,
+        undefined,
         undefined,
       );
     });
@@ -860,6 +887,7 @@ describe("submitPipelineRun", () => {
           },
         }),
         mockBackendUrl,
+        undefined,
         undefined,
       );
     });
@@ -1108,6 +1136,7 @@ describe("submitPipelineRun", () => {
         }),
         mockBackendUrl,
         undefined,
+        undefined,
       );
     });
 
@@ -1142,6 +1171,7 @@ describe("submitPipelineRun", () => {
           },
         }),
         mockBackendUrl,
+        undefined,
         undefined,
       );
     });

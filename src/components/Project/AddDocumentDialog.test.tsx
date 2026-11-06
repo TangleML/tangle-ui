@@ -23,6 +23,24 @@ vi.mock("@/providers/AnalyticsProvider", () => ({
   useAnalytics: () => ({ track }),
 }));
 
+vi.mock("@/components/shared/CodeViewer/CodeEditor", () => ({
+  default: ({
+    value,
+    onChange,
+    options,
+  }: {
+    value: string;
+    onChange: (value: string) => void;
+    options: { ariaLabel: string };
+  }) => (
+    <textarea
+      aria-label={options.ariaLabel}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+    />
+  ),
+}));
+
 function mockCreate({ isPending = false } = {}) {
   vi.mocked(useCreateProjectResource).mockReturnValue({
     mutate,

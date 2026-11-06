@@ -69,10 +69,17 @@ export interface StickyNoteUpdates extends StickyNoteContent {
   locked?: boolean;
 }
 
+export interface RunSubmissionOptions {
+  asTeam?: boolean;
+}
+
 export interface RunSubmissionResult {
   success: boolean;
   runId?: string;
   rootExecutionId?: string;
+  actingAsTeam?: string;
+  actingAsWorkspace?: string;
+  warning?: string;
   error?: string;
 }
 
@@ -234,7 +241,9 @@ export interface ToolBridgeApi {
 
   searchComponents(args: SearchComponentsArgs): Promise<SearchComponentsResult>;
 
-  submitPipelineRun(): Promise<RunSubmissionResult>;
+  submitPipelineRun(
+    options?: RunSubmissionOptions,
+  ): Promise<RunSubmissionResult>;
   getRunDetails(runId: string): Promise<RunDetails>;
   getExecutionDetails(executionId: string): Promise<ExecutionDetails>;
   getExecutionState(executionId: string): Promise<ExecutionState>;

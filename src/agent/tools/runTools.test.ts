@@ -35,6 +35,25 @@ describe("createRunTools", () => {
     ]);
   });
 
+  it.each([
+    [{ asTeam: true }, { asTeam: true }],
+    [{ asTeam: null }, { asTeam: undefined }],
+    [{}, { asTeam: undefined }],
+  ])(
+    "submit_pipeline_run passes %o to the bridge as %o",
+    async (payload, options) => {
+      const submitPipelineRun = vi
+        .fn()
+        .mockResolvedValue({ success: true, runId: "7" });
+      const tools = createRunTools(makeBridge({ submitPipelineRun }));
+
+      const result = await invoke(tools.submitPipelineRun, payload);
+
+      expect(submitPipelineRun).toHaveBeenCalledWith(options);
+      expect(result).toEqual({ success: true, runId: "7" });
+    },
+  );
+
   it("get_run_status derives overall status from execution_status_stats", async () => {
     const getRunDetails = vi.fn().mockResolvedValue({
       id: "1",

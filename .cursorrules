@@ -469,7 +469,7 @@ Use these npm scripts for validation and testing:
 
 ### Local Development Ports
 
-- **Frontend**: `localhost:3000` (default for `npm start`)
+- **Frontend**: the dev server URL: `http://localhost:${TANGLE_UI_PORT:-3000}` (default for `npm start`)
 - **Backend API**: `localhost:8000`
 - **API Docs**: `localhost:8000/docs`
 

@@ -5,19 +5,19 @@ import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
 import { cancelPipelineRun } from "@/services/pipelineRunService";
 
-export function useCancelPipelineRun(runId?: string | null) {
+export function useCancelPipelineRun(runId?: string | null, teamId?: string) {
   const notify = useToastNotification();
   const { backendUrl, available } = useBackend();
 
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
   const { mutate: cancelRun, isPending: isCancelling } = useMutation({
-    mutationFn: (runId: string) => cancelPipelineRun(runId, backendUrl),
+    mutationFn: (runId: string) => cancelPipelineRun(runId, backendUrl, teamId),
     onSuccess: () => {
       notify("Pipeline run cancelled", "success");
     },
     onError: (error) => {
-      notify(`Error cancelling run: ${error}`, "error");
+      notify(`Error cancelling run: ${error.message}`, "error");
     },
   });
 

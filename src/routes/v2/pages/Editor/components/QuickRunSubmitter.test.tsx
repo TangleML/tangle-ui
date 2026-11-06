@@ -34,6 +34,23 @@ vi.mock("@/models/componentSpec", () => ({
   serializeComponentSpec: () => ({ name: "Pipeline" }),
 }));
 
+vi.mock("@/components/Project/useRunProjectContext", () => ({
+  useRunProjectContext: () => ({ projectIds: [] }),
+}));
+
+vi.mock("@/services/teams/useTeamForSubmission", () => ({
+  useTeamForSubmission: () => ({ status: "none" }),
+}));
+
+vi.mock("@/components/shared/SecretsManagement/useRunIdentity", () => ({
+  useRunIdentity: () => ({
+    team: undefined,
+    rule: { kind: "open", defaultAs: "you" },
+    missing: { you: [], team: [] },
+    isChecking: false,
+  }),
+}));
+
 vi.mock("@/components/shared/Authentication/useAwaitAuthorization", () => ({
   useAwaitAuthorization: () => ({ isAuthorized: true }),
 }));

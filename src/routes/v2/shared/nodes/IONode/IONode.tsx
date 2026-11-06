@@ -2,7 +2,9 @@ import { type Node, type NodeProps } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
 import { type MouseEvent } from "react";
 
+import { useHandleEdgeSelection } from "@/hooks/useHandleEdgeSelection";
 import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
+import { NodeEffectWrapper } from "@/routes/v2/shared/components/NodeEffectWrapper";
 import { useIsDetailedView } from "@/routes/v2/shared/hooks/useIsDetailedView";
 import type { IONodeData } from "@/routes/v2/shared/nodes/types";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
@@ -28,6 +30,8 @@ export interface IONodeViewProps {
   isInput: boolean;
   selected: boolean;
   isHovered: boolean;
+  isConnectable?: boolean;
+  onHandleClick: (event: MouseEvent) => void;
   onNodeClick: (event: MouseEvent) => void;
 }
 
@@ -41,9 +45,11 @@ export const IONode = observer(function IONode({
   id,
   data,
   selected,
+  isConnectable,
 }: IONodeProps) {
   const { entityId, ioType } = data;
-  const { editor } = useSharedStores();
+  const { editor, canvasOverlay } = useSharedStores();
+  const { selectEdgesForHandle } = useHandleEdgeSelection(id);
   const showContent = useIsDetailedView();
   const executionData = useExecutionDataOptional();
 
@@ -59,6 +65,14 @@ export const IONode = observer(function IONode({
       shiftKey: event.shiftKey,
       entityId,
     });
+  };
+
+  const handleHandleClick = (event: MouseEvent) => {
+    event.stopPropagation();
+    selectEdgesForHandle(
+      isInput ? `output_${entityId}` : `input_${entityId}`,
+      isInput ? "source" : "target",
+    );
   };
 
   const name = entity?.name ?? entityId;
@@ -110,12 +124,21 @@ export const IONode = observer(function IONode({
     isInput,
     selected: isSelected,
     isHovered,
+    isConnectable,
+    onHandleClick: handleHandleClick,
     onNodeClick: handleClick,
   };
 
-  if (!showContent) {
-    return <IONodeSimplified {...viewProps} />;
-  }
+  const nodeEffect = canvasOverlay.activeOverlay?.resolveNodeEffect?.(entityId);
+  if (nodeEffect?.hidden) return null;
 
-  return <IONodeCard {...viewProps} />;
+  return (
+    <NodeEffectWrapper effect={nodeEffect}>
+      {showContent ? (
+        <IONodeCard {...viewProps} />
+      ) : (
+        <IONodeSimplified {...viewProps} />
+      )}
+    </NodeEffectWrapper>
+  );
 });

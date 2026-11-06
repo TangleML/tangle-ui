@@ -7,9 +7,13 @@ import { AssetsWindowContent } from "@/routes/v2/pages/Tangent/components/Assets
 import { ProjectWindowContent } from "@/routes/v2/pages/Tangent/components/ProjectWindowContent";
 import { ResourcesWindowContent } from "@/routes/v2/pages/Tangent/components/ResourcesWindowContent";
 import { RunsWindowContent } from "@/routes/v2/pages/Tangent/components/RunsWindowContent";
+import { SecretsWindowContent } from "@/routes/v2/pages/Tangent/components/SecretsWindowContent";
 import { SessionsWindowContent } from "@/routes/v2/pages/Tangent/components/SessionsWindowContent";
+import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { WindowMiniButton } from "@/routes/v2/shared/windows/WindowMiniButton";
+import type { WindowStoreImpl } from "@/routes/v2/shared/windows/windowStore";
+import { useTeamForProjects } from "@/services/teams/useTeamForProjects";
 
 import {
   placeProjectDockWindows,
@@ -65,31 +69,57 @@ const PROJECT_DOCK_WINDOWS: ProjectDockWindow[] = [
   },
 ];
 
+const SECRETS_DOCK_WINDOW: ProjectDockWindow = {
+  id: "tangent-project-secrets",
+  title: "Secrets",
+  icon: "KeyRound",
+  content: <SecretsWindowContent />,
+};
+
+function openProjectDockWindow(
+  windows: WindowStoreImpl,
+  win: ProjectDockWindow,
+) {
+  windows.openWindow(win.content, {
+    id: win.id,
+    title: win.title,
+    persisted: true,
+    defaultDockState: "left",
+    startVisible: true,
+    maxDockedHeight: MAX_PROJECT_WINDOW_HEIGHT,
+    miniContent: (
+      <WindowMiniButton tooltip={win.title} label={win.title} icon={win.icon} />
+    ),
+  });
+}
+
 export function useTangentProjectWindows() {
   const { windows } = useSharedStores();
+  const { projectId } = useTangentProject();
+  const team = useTeamForProjects([projectId]);
+  const hasSecretsWindow =
+    team.status !== "none" && team.status !== "resolving";
 
   useEffect(() => {
     const remembered = rememberedDockWindows(windows);
 
     PROJECT_DOCK_WINDOWS.forEach((win) => {
       if (windows.getWindowById(win.id)) return;
-      windows.openWindow(win.content, {
-        id: win.id,
-        title: win.title,
-        persisted: true,
-        defaultDockState: "left",
-        startVisible: true,
-        maxDockedHeight: MAX_PROJECT_WINDOW_HEIGHT,
-        miniContent: (
-          <WindowMiniButton
-            tooltip={win.title}
-            label={win.title}
-            icon={win.icon}
-          />
-        ),
-      });
+      openProjectDockWindow(windows, win);
     });
 
     placeProjectDockWindows(windows, remembered);
   }, [windows]);
+
+  useEffect(() => {
+    if (!hasSecretsWindow) {
+      windows.closeWindow(SECRETS_DOCK_WINDOW.id);
+      return;
+    }
+    if (windows.getWindowById(SECRETS_DOCK_WINDOW.id)) return;
+
+    const remembered = rememberedDockWindows(windows);
+    openProjectDockWindow(windows, SECRETS_DOCK_WINDOW);
+    placeProjectDockWindows(windows, remembered);
+  }, [windows, hasSecretsWindow]);
 }

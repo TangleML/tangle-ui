@@ -3,6 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useSubmitPipeline } from "@/components/shared/Submitters/Tangle/useSubmitPipeline";
+import type { TeamResolution } from "@/services/teams/types";
+import { useTeamForSubmission } from "@/services/teams/useTeamForSubmission";
 import type { ArgumentType, ComponentSpec } from "@/utils/componentSpec";
 
 import { RunPipelineButton } from "./RunPipelineButton";
@@ -18,6 +20,10 @@ vi.mock("@/components/shared/Submitters/Tangle/useSubmitPipeline", () => ({
 
 vi.mock("@/components/shared/Submitters/Tangle/saveRunAnnotations", () => ({
   saveRunAnnotations: (...args: unknown[]) => saveAnnotations(...args),
+}));
+
+vi.mock("@/services/teams/useTeamForSubmission", () => ({
+  useTeamForSubmission: vi.fn(),
 }));
 
 vi.mock("@/hooks/useToastNotification", () => ({
@@ -46,17 +52,39 @@ vi.mock(
     SubmitTaskArgumentsDialog: ({
       onConfirm,
       showCopyFromRun,
+      team,
     }: {
-      onConfirm: (args: Record<string, ArgumentType>, notes: string) => void;
+      onConfirm: (
+        args: Record<string, ArgumentType>,
+        notes: string,
+        teamId: string | undefined,
+      ) => void;
       showCopyFromRun?: boolean;
+      team: TeamResolution;
     }) => (
-      <div role="dialog" data-copy-from-run={String(showCopyFromRun)}>
+      <div
+        role="dialog"
+        data-copy-from-run={String(showCopyFromRun)}
+        data-team-status={team.status}
+      >
         <button
           type="button"
-          onClick={() => onConfirm({ name: "Morgan" }, "why this run")}
+          onClick={() =>
+            onConfirm({ name: "Morgan" }, "why this run", undefined)
+          }
         >
           Submit Run
         </button>
+        {team.status === "active" && (
+          <button
+            type="button"
+            onClick={() =>
+              onConfirm({ name: "Morgan" }, "why this run", team.team.id)
+            }
+          >
+            Submit as the workspace
+          </button>
+        )}
       </div>
     ),
   }),
@@ -97,6 +125,7 @@ const runButton = () => screen.getByRole("button", { name: /Run pipeline/ });
 
 describe("RunPipelineButton", () => {
   beforeEach(() => {
+    vi.mocked(useTeamForSubmission).mockReturnValue({ status: "none" });
     vi.mocked(useSubmitPipeline).mockReturnValue({
       mutate: submit,
       isPending: false,
@@ -135,6 +164,23 @@ describe("RunPipelineButton", () => {
     );
   });
 
+  it("offers the secrets of the project's team", async () => {
+    vi.mocked(useTeamForSubmission).mockReturnValue({
+      status: "active",
+      team: { id: "ml-team@example.com", label: "ML Research", canWrite: true },
+    });
+    renderButton({});
+    const user = userEvent.setup();
+
+    await user.click(runButton());
+
+    expect(useTeamForSubmission).toHaveBeenCalledWith(["project-1"]);
+    expect(screen.getByRole("dialog")).toHaveAttribute(
+      "data-team-status",
+      "active",
+    );
+  });
+
   it("keeps the notes the run was submitted with", async () => {
     renderButton({});
     const user = userEvent.setup();
@@ -148,6 +194,32 @@ describe("RunPipelineButton", () => {
       "42",
       "https://backend.test",
       expect.objectContaining({ notes: "why this run" }),
+      undefined,
+    );
+  });
+
+  it("starts the run as the identity chosen in the dialog", async () => {
+    vi.mocked(useTeamForSubmission).mockReturnValue({
+      status: "active",
+      team: { id: "ml-team@example.com", label: "ML Research", canWrite: true },
+    });
+    renderButton({});
+    const user = userEvent.setup();
+
+    await user.click(runButton());
+    await user.click(
+      screen.getByRole("button", { name: "Submit as the workspace" }),
+    );
+    submit.mock.calls[0][0].onSuccess({ id: 42 });
+
+    expect(submit).toHaveBeenCalledWith(
+      expect.objectContaining({ teamId: "ml-team@example.com" }),
+    );
+    expect(saveAnnotations).toHaveBeenCalledWith(
+      "42",
+      "https://backend.test",
+      expect.objectContaining({ notes: "why this run" }),
+      "ml-team@example.com",
     );
   });
 

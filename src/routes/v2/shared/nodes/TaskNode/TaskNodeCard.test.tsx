@@ -74,6 +74,33 @@ describe("TaskNodeCard", () => {
     },
   );
 
+  it.each([
+    [true, false],
+    [false, true],
+  ])(
+    "forces pointer events on handles only when they can't connect (connectable: %s)",
+    (isConnectable, forced) => {
+      const { container } = render(
+        <ReactFlowProvider>
+          <TaskNodeCard
+            {...buildProps({
+              isSubgraph: false,
+              isConnectable,
+              inputs: [{ name: "name" }],
+              outputs: [{ name: "greeting" }],
+            })}
+          />
+        </ReactFlowProvider>,
+      );
+
+      const handles = container.querySelectorAll(".react-flow__handle");
+      expect(handles).toHaveLength(2);
+      for (const handle of handles) {
+        expect(handle.classList.contains("pointer-events-auto!")).toBe(forced);
+      }
+    },
+  );
+
   it("resolves secret argument references for display", () => {
     const task = new Task({
       $id: "task-1",

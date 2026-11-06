@@ -1,9 +1,11 @@
 import type { ComponentProps, MouseEvent, ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Icon, type IconName } from "@/components/ui/icon";
+import type { IconName } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
+
+import { ListRowIcon } from "./ListRowIcon";
 
 interface WindowListRowProps {
   icon: IconName;
@@ -42,13 +44,7 @@ export function WindowListRow({
         {...rest}
         className="h-auto min-w-0 flex-1 items-start justify-start gap-3 px-2 py-2"
       >
-        <InlineStack
-          align="center"
-          blockAlign="center"
-          className="size-9 shrink-0 rounded-md bg-muted text-muted-foreground"
-        >
-          <Icon name={icon} size="lg" />
-        </InlineStack>
+        <ListRowIcon icon={icon} />
         <BlockStack align="start" className="min-w-0 text-left">
           <Text
             size="sm"

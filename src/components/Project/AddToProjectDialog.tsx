@@ -4,23 +4,36 @@ import useToastNotification from "@/hooks/useToastNotification";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { pointerTo } from "@/services/localPipelines/localPipelinesService";
 import {
+  type ProjectPipelineRef,
+  remotePipelineResourceInput,
+} from "@/services/projects/pipelineResource";
+import {
   DescriptorTooLargeError,
   localPipelineResourceInput,
 } from "@/services/projects/resourceDescriptor";
+import type { CreateResourceInput } from "@/services/projects/types";
 import { useAddResourceToProject } from "@/services/projects/useProjectResources";
 import { useReachableProjects } from "@/services/projects/useReachableProjects";
 
 import { PickFromListDialog } from "./PickFromListDialog";
 
 interface AddToProjectDialogProps {
-  pipelineName: string;
+  pipeline: ProjectPipelineRef;
   memberProjectIds: readonly string[];
   onOpenChange: (open: boolean) => void;
   onAdded: (projectId: string) => void;
 }
 
+async function resourceInputFor(
+  pipeline: ProjectPipelineRef,
+): Promise<CreateResourceInput> {
+  return pipeline.source === "remote"
+    ? remotePipelineResourceInput(pipeline.pipelineId, pipeline.name)
+    : localPipelineResourceInput(await pointerTo(pipeline.name));
+}
+
 export function AddToProjectDialog({
-  pipelineName,
+  pipeline,
   memberProjectIds,
   onOpenChange,
   onAdded,
@@ -44,7 +57,7 @@ export function AddToProjectDialog({
   const add = async (projectId: string) => {
     let input;
     try {
-      input = localPipelineResourceInput(await pointerTo(pipelineName));
+      input = await resourceInputFor(pipeline);
     } catch (problem) {
       notify(
         problem instanceof DescriptorTooLargeError
@@ -71,7 +84,7 @@ export function AddToProjectDialog({
   return (
     <PickFromListDialog
       title="Add to a project"
-      helpText={`Runs of "${pipelineName}" can then be attributed to the project you pick.`}
+      helpText={`Runs of "${pipeline.name}" can then be attributed to the project you pick.`}
       noun="project"
       icon="Folder"
       items={items}

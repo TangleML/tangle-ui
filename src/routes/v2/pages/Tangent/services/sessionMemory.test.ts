@@ -81,4 +81,30 @@ describe("sessionMemorySeed", () => {
       "tangleml.com/project/id/abc-123",
     );
   });
+
+  /** Without the mount the paths it names do not exist in the session. */
+  it("leaves the shared folder out unless the session mounts one", () => {
+    expect(sessionMemorySeed(PROJECT_ID)).not.toContain("`project/");
+    expect(
+      sessionMemorySeed(PROJECT_ID, null, { hasSharedFolder: false }),
+    ).toBe(sessionMemorySeed(PROJECT_ID));
+  });
+
+  it("points a session with a shared folder at it and its memory tools", () => {
+    const seed = sessionMemorySeed(PROJECT_ID, null, { hasSharedFolder: true });
+
+    expect(seed).toContain("`project/`");
+    expect(seed).toContain("`project/NOTES/MEMORY.md`");
+    expect(seed).toContain("memory_write");
+    expect(seed).toContain("memory_search");
+    expect(seed).toContain("Never write secrets");
+  });
+
+  it("keeps the instructions first when the shared folder brief is added", () => {
+    const seed = sessionMemorySeed(PROJECT_ID, "Prefer concise plans.", {
+      hasSharedFolder: true,
+    });
+
+    expect(seed.startsWith("Prefer concise plans.\n\n")).toBe(true);
+  });
 });

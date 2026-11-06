@@ -45,8 +45,12 @@ import { useWindowPersistence } from "@/routes/v2/shared/windows/windowPersisten
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import { getEditorPipelineIdentity } from "@/services/pipelineStorage/types";
 
+import { EmbeddedPipelineViewControls } from "./EmbeddedPipelineViewControls";
 import { RemotePipelineActions } from "./RemotePipelineActions";
-import { RemotePipelineShell } from "./RemotePipelineShell";
+import {
+  RemotePipelineFrame,
+  RemotePipelineShell,
+} from "./RemotePipelineShell";
 import { remotePipelineViewRegistry } from "./remotePipelineViewRegistry";
 
 const VIEW_PRESETS: ViewPreset[] = [
@@ -136,20 +140,18 @@ const RemotePipelineContent = observer(function RemotePipelineContent({
 
   const activeSpec = navigation.activeSpec;
 
-  return (
-    <RemotePipelineShell
-      readOnly
-      name={spec.name || "Untitled pipeline"}
-      menus={
-        <>
-          <ViewMenu />
-          <WindowManagementMenu
-            presets={embedded ? [embeddedPreset] : VIEW_PRESETS}
-            trackingPrefix="v2.pipeline_view.windows_menu"
-          />
-        </>
-      }
-    >
+  const menus = (
+    <>
+      <ViewMenu />
+      <WindowManagementMenu
+        presets={embedded ? [embeddedPreset] : VIEW_PRESETS}
+        trackingPrefix="v2.pipeline_view.windows_menu"
+      />
+    </>
+  );
+
+  const content = (
+    <>
       {file?.editingError && (
         <div role="alert" className="w-full border-b p-3">
           <InlineStack gap="2" blockAlign="center">
@@ -189,13 +191,33 @@ const RemotePipelineContent = observer(function RemotePipelineContent({
                 spec={activeSpec}
                 nodesDraggable={false}
                 className="h-full"
-              />
+              >
+                {embedded && (
+                  <EmbeddedPipelineViewControls>
+                    {menus}
+                  </EmbeddedPipelineViewControls>
+                )}
+              </ReadOnlyFlowCanvas>
               <WindowContainer />
             </div>
             <DockArea side="right" />
           </InlineStack>
         </SpecProvider>
       )}
+    </>
+  );
+
+  if (embedded) {
+    return <RemotePipelineFrame>{content}</RemotePipelineFrame>;
+  }
+
+  return (
+    <RemotePipelineShell
+      readOnly
+      name={spec.name || "Untitled pipeline"}
+      menus={menus}
+    >
+      {content}
     </RemotePipelineShell>
   );
 });

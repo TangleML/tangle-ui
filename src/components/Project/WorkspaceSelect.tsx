@@ -1,5 +1,6 @@
 import { useId } from "react";
 
+import { Icon } from "@/components/ui/icon";
 import { Label } from "@/components/ui/label";
 import { BlockStack } from "@/components/ui/layout";
 import {
@@ -45,7 +46,8 @@ export function WorkspaceSelect({
         aria-describedby={ariaDescribedBy}
         className={className}
       >
-        <SelectValue placeholder={placeholder} />
+        <Icon name="Shapes" size="xs" />
+        <SelectValue placeholder={placeholder} className="grow" />
       </SelectTrigger>
       <SelectContent>
         {choice.workspaces.map((workspace) => (

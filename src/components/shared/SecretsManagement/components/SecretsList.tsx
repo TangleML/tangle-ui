@@ -12,8 +12,8 @@ import { useTourMockBackend } from "@/providers/TourProvider/tourMockBackend";
 import { formatRelativeTime } from "@/utils/date";
 
 import { withSuspenseWrapper } from "../../SuspenseWrapper";
-import { fetchSecretsList } from "../secretsStorage";
-import { type Secret, SecretsQueryKeys } from "../types";
+import { secretsListQuery } from "../secretsStorage";
+import type { Secret } from "../types";
 import { RemoveSecretButton } from "./RemoveSecretButton";
 import { SecretsBackendUnavailable } from "./SecretsBackendUnavailable";
 
@@ -26,10 +26,7 @@ function SecretsListInternal({
   onRemoveSuccess,
   onEditSecret,
 }: SecretsListProps) {
-  const { data: secrets } = useSuspenseQuery({
-    queryKey: SecretsQueryKeys.All(),
-    queryFn: fetchSecretsList,
-  });
+  const { data: secrets } = useSuspenseQuery(secretsListQuery());
 
   if (secrets.length === 0) {
     return (
@@ -58,12 +55,26 @@ function SecretsListInternal({
             data-testid="secret-item"
             data-secret-name={secret.name}
           >
-            <InlineStack gap="2" blockAlign="center" wrap="nowrap">
+            <InlineStack
+              gap="2"
+              blockAlign="center"
+              wrap="nowrap"
+              className="min-w-0 flex-1"
+            >
               <Icon name="Lock" size="lg" className="shrink-0" />
-              <BlockStack>
+              <BlockStack className="min-w-0">
                 <Text size="sm" weight="semibold">
                   {secret.name}
                 </Text>
+                {secret.description && (
+                  <Text
+                    size="xs"
+                    className="max-w-full truncate"
+                    title={secret.description}
+                  >
+                    {secret.description}
+                  </Text>
+                )}
                 <Text size="xs" tone="subdued">
                   Added {formatRelativeTime(secret.createdAt)}
                 </Text>

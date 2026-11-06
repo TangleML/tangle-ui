@@ -8,7 +8,7 @@ import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskAc
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import type { HydratedComponentReference } from "@/utils/componentSpec";
 import { componentMetadata } from "@/utils/componentTracking";
-import { readTextFromFile } from "@/utils/dom";
+import { readYamlFromFile } from "@/utils/dom";
 
 import { useValidateComponentDrop } from "./useValidateComponentDrop";
 
@@ -33,7 +33,7 @@ export function useFileDropHandler() {
 
   return async (file: File, spec: ComponentSpec, position: XYPosition) => {
     try {
-      const content = await readTextFromFile(file);
+      const content = await readYamlFromFile(file);
       const hydrated = await validateComponentDrop({ text: content });
 
       if (!hydrated || navigation.activeSpec !== spec) return;

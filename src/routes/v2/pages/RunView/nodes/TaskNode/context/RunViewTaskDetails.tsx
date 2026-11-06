@@ -18,6 +18,7 @@ import { StatusIcon } from "@/components/shared/Status";
 import TaskDetails from "@/components/shared/TaskDetails/Details";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Text } from "@/components/ui/typography";
 import { useContainerLog } from "@/hooks/useContainerLog";
@@ -29,8 +30,8 @@ import type { TaskSpec } from "@/utils/componentSpec";
 import { tracking } from "@/utils/tracking";
 
 import { getLogsWindowSize } from "./logsWindowSize";
-import { RunViewTaskActions } from "./RunViewTaskActions";
 import { getTaskAnnotationSections } from "./RunViewTaskAnnotations";
+import { RunViewTaskComponent } from "./RunViewTaskComponent";
 
 const DEFAULT_TAB = "artifacts";
 
@@ -158,30 +159,42 @@ export const RunViewTaskDetails = observer(function RunViewTaskDetails({
 
   return (
     <BlockStack
-      gap="4"
-      className="h-full px-2"
+      className="h-full min-h-0 w-full"
       data-context-panel="task-overview"
     >
-      <InlineStack gap="2">
-        {isSubgraphTask && <Icon name="Workflow" />}
-        <Text size="lg" weight="semibold" className="wrap-anywhere">
-          {task.name}
-        </Text>
-        <StatusIcon status={status} tooltip label="task" />
-      </InlineStack>
+      <BlockStack gap="2" className="shrink-0 px-4 pt-3 pb-2">
+        <InlineStack gap="2" blockAlign="center" wrap="nowrap">
+          {isSubgraphTask && (
+            <Icon name="Workflow" size="sm" className="shrink-0" />
+          )}
+          <Text
+            size="md"
+            weight="semibold"
+            className="min-w-0 wrap-anywhere select-text"
+          >
+            {task.name}
+          </Text>
+          <StatusIcon status={status} tooltip label="task" />
+        </InlineStack>
 
-      <RunViewTaskActions componentRef={componentRef} taskName={task.name} />
-
-      {runId && (
-        <RemoteTroubleshootButton
-          runId={runId}
-          executionId={executionId}
+        <RunViewTaskComponent
+          componentRef={componentRef}
           taskName={task.name}
-          status={status}
         />
-      )}
 
-      <div className="overflow-y-auto pb-4 h-full w-full">
+        {runId && (
+          <RemoteTroubleshootButton
+            runId={runId}
+            executionId={executionId}
+            taskName={task.name}
+            status={status}
+          />
+        )}
+      </BlockStack>
+
+      <Separator />
+
+      <div className="min-h-0 w-full flex-1 overflow-y-auto px-4 pt-2 pb-4">
         <Tabs
           value={activeTab}
           className="h-full"

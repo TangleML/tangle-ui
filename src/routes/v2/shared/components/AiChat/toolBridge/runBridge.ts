@@ -20,6 +20,7 @@ import type {
   RunDebugSnapshot,
   RunDebugSnapshotChild,
   RunDetails,
+  RunSubmissionOptions,
   RunSubmissionResult,
   ToolBridgeApi,
 } from "@/agent/toolBridgeApi";
@@ -28,6 +29,16 @@ import {
   truncateContainerState,
   truncateExecutionDetails,
 } from "@/agent/util/truncate";
+import {
+  type RunAs,
+  runAsFor,
+  type RunAsRule,
+  type RunIdentity,
+  runIdentity,
+  teamIdFor,
+} from "@/components/shared/SecretsManagement/runIdentity";
+import { referencedSecretNames } from "@/components/shared/SecretsManagement/secretReferences";
+import { secretsListQuery } from "@/components/shared/SecretsManagement/secretsStorage";
 import { serializeComponentSpec } from "@/models/componentSpec/serialization/serialize";
 import { ONBOARDING_MY_RUN_COUNT_KEY } from "@/providers/OnboardingProvider/onboardingQueryKeys";
 import {
@@ -38,6 +49,7 @@ import {
   fetchPipelineRun,
 } from "@/services/executionService";
 import { invalidateProjectRunQueries } from "@/services/projects/useProjectRuns";
+import type { TeamResolution, TeamSummary } from "@/services/teams/types";
 import type { PipelineRun } from "@/types/pipelineRun";
 import { TANGENT_UI_RUN_SOURCE } from "@/utils/annotationKeys";
 import {
@@ -57,9 +69,95 @@ type RunHandlers = Pick<
   "submitPipelineRun" | "getRunDetails" | "debugPipelineRun"
 >;
 
+function refusalFor(team: TeamResolution): string | undefined {
+  if (team.status === "resolving") {
+    return "This project's workspace is still being checked. Try again in a moment.";
+  }
+  if (team.status === "conflict") {
+    const names = team.teams.map((candidate) => candidate.label).join(" and ");
+    return `This run's projects belong to different workspaces (${names}), so it can't act as one. File it under projects on one workspace.`;
+  }
+  return undefined;
+}
+
+const NOT_SUBMITTED_AS_TEAM =
+  "Nothing was submitted. Don't retry it as the user unless they ask for that.";
+
+function asTeamRefusal(team: TeamResolution): string | undefined {
+  switch (team.status) {
+    case "none":
+      return `Runs in this project can't act as a workspace. ${NOT_SUBMITTED_AS_TEAM}`;
+    case "not-member":
+      return `The user isn't in the ${team.team.label} workspace, so the run can't act as it. ${NOT_SUBMITTED_AS_TEAM}`;
+    case "unavailable":
+      return `The backend didn't let the user act as the ${team.team.label} workspace. ${NOT_SUBMITTED_AS_TEAM}`;
+    case "error":
+      return `This project's workspace couldn't be checked: ${team.error.message}. ${NOT_SUBMITTED_AS_TEAM}`;
+    default:
+      return undefined;
+  }
+}
+
+const isOrAre = (names: readonly string[]) =>
+  `${names.join(", ")} ${names.length === 1 ? "is" : "are"}`;
+
+function splitRefusal(
+  rule: Extract<RunAsRule, { kind: "split" }>,
+  team: TeamSummary,
+): string {
+  return `${isOrAre(rule.yoursOnly)} only in the user's secrets and ${isOrAre(rule.teamOnly)} only in the ${team.label} workspace's, so the run would fail whichever it went as. Nothing was submitted. Ask the user which to use, or to add the missing secrets to one of them.`;
+}
+
+function submissionNote(identity: RunIdentity, runAs: RunAs, asTeam: boolean) {
+  const notes: string[] = [];
+  const { team, missing: missingFrom } = identity;
+  if (!asTeam && runAs === "team" && team) {
+    const teamOnly = missingFrom.you.filter(
+      (name) => !missingFrom.team.includes(name),
+    );
+    notes.push(
+      `Submitted as the ${team.label} workspace, because only the workspace has ${teamOnly.join(", ")}.`,
+    );
+  }
+  const missing = identity.missing[runAs];
+  if (missing.length > 0) {
+    const whose =
+      runAs === "team" && team
+        ? `the ${team.label} workspace's secrets`
+        : "the user's secrets";
+    notes.push(
+      `${missing.join(", ")} ${missing.length === 1 ? "isn't" : "aren't"} in ${whose}, so the run will fail at launch.`,
+    );
+  }
+  return notes.length > 0 ? notes.join(" ") : undefined;
+}
+
+async function checkRunIdentity(
+  deps: BridgeDeps,
+  team: TeamSummary | undefined,
+  referenced: string[],
+): Promise<RunIdentity> {
+  if (referenced.length === 0) return runIdentity({ team, referenced });
+
+  const listSecrets = (teamId?: string) => {
+    const query = secretsListQuery(teamId);
+    const listing = deps.queryClient
+      ? deps.queryClient.fetchQuery(query)
+      : query.queryFn();
+    return listing.catch(() => undefined);
+  };
+  const [yourSecrets, teamSecrets] = await Promise.all([
+    listSecrets(),
+    team ? listSecrets(team.id) : undefined,
+  ]);
+  return runIdentity({ team, referenced, yourSecrets, teamSecrets });
+}
+
 export function createRunBridgeHandlers(deps: BridgeDeps): RunHandlers {
   return {
-    async submitPipelineRun(): Promise<RunSubmissionResult> {
+    async submitPipelineRun({
+      asTeam = false,
+    }: RunSubmissionOptions = {}): Promise<RunSubmissionResult> {
       const spec = requireSpec(deps);
       const backendUrl = deps.getBackendUrl?.();
       if (!backendUrl) {
@@ -69,7 +167,22 @@ export function createRunBridgeHandlers(deps: BridgeDeps): RunHandlers {
             "Backend is not configured — pipeline cannot be submitted from the assistant.",
         };
       }
+      const runTeam = deps.getRunTeam?.() ?? { status: "none" };
+      const refusal =
+        refusalFor(runTeam) ?? (asTeam ? asTeamRefusal(runTeam) : undefined);
+      if (refusal) return { success: false, error: refusal };
+      const team = runTeam.status === "active" ? runTeam.team : undefined;
       const wireSpec = serializeComponentSpec(spec);
+      const identity = await checkRunIdentity(
+        deps,
+        team,
+        referencedSecretNames(wireSpec),
+      );
+      if (!asTeam && identity.rule.kind === "split" && team) {
+        return { success: false, error: splitRefusal(identity.rule, team) };
+      }
+      const runAs = runAsFor(identity, asTeam ? "team" : undefined);
+      const teamId = teamIdFor(identity, runAs);
       const authorizationToken = deps.getAuthToken?.();
       const runAnnotations = deps.getRunAnnotations?.();
       const submission = await new Promise<{
@@ -78,6 +191,7 @@ export function createRunBridgeHandlers(deps: BridgeDeps): RunHandlers {
       }>((resolve) => {
         submitPipelineRunHelper(wireSpec, backendUrl, {
           authorizationToken,
+          teamId,
           runAnnotations,
           runSource: TANGENT_UI_RUN_SOURCE,
           onSuccess: (data) => resolve({ run: data, error: null }),
@@ -106,6 +220,9 @@ export function createRunBridgeHandlers(deps: BridgeDeps): RunHandlers {
         success: true,
         runId: String(submission.run.id),
         rootExecutionId: String(submission.run.root_execution_id),
+        actingAsTeam: teamId,
+        actingAsWorkspace: teamId ? team?.label : undefined,
+        warning: submissionNote(identity, runAs, asTeam),
       };
     },
 

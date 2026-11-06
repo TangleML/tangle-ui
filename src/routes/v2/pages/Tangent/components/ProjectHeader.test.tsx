@@ -70,6 +70,12 @@ vi.mock("@/services/projects/useProjects", () => ({
   useUpdateProject: () => ({ mutate: updateProject, isPending: false }),
 }));
 
+vi.mock("@/components/Project/ProjectWorkspaceLabel", () => ({
+  ProjectWorkspaceLabel: ({ project }: { project: { id: string } }) => (
+    <span data-testid="workspace-label">{project.id}</span>
+  ),
+}));
+
 const project = {
   id: "project-1",
   name: "Churn model",
@@ -164,9 +170,11 @@ describe("Tangent ProjectHeader", () => {
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
   });
 
-  it("says nothing about the workspace the project lives in", () => {
+  it("shows the project's workspace label", () => {
     renderHeader();
 
-    expect(screen.queryByText(/workspace/i)).toBeNull();
+    expect(screen.getByTestId("workspace-label")).toHaveTextContent(
+      "project-1",
+    );
   });
 });

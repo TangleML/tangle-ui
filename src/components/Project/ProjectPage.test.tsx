@@ -92,6 +92,12 @@ vi.mock("@/utils/URL", () => ({
   getProjectUrl: (id: string) => `https://tangle.example/projects/${id}`,
 }));
 
+vi.mock("@/components/Project/ProjectWorkspaceLabel", () => ({
+  ProjectWorkspaceLabel: ({ project }: { project: Project }) => (
+    <span data-testid="workspace-label">{project.id}</span>
+  ),
+}));
+
 const project: Project = {
   id: "project-1",
   workspaceId: "workspace-1",
@@ -346,9 +352,11 @@ describe("ProjectPage", () => {
     expect(screen.queryByText("Project not found")).toBeNull();
   });
 
-  it("says nothing about the workspace the project lives in", () => {
+  it("shows the project's workspace label", () => {
     render(<ProjectPage />);
 
-    expect(screen.queryByText(/workspace/i)).toBeNull();
+    expect(screen.getByTestId("workspace-label")).toHaveTextContent(
+      "project-1",
+    );
   });
 });

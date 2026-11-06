@@ -186,6 +186,17 @@ export default defineConfig(({ mode }) => {
   if (mode === "test") process.env.TZ = "America/New_York";
   const env = loadEnv(mode, process.cwd(), "");
 
+  const tangleUiPort = Number(env.TANGLE_UI_PORT || 3000);
+  if (
+    !Number.isInteger(tangleUiPort) ||
+    tangleUiPort <= 0 ||
+    tangleUiPort > 65535
+  ) {
+    throw new Error(
+      `TANGLE_UI_PORT must be a numeric TCP port, got ${JSON.stringify(env.TANGLE_UI_PORT)}`,
+    );
+  }
+
   const apiKey = env.VITE_BUGSNAG_API_KEY;
   const appVersion = env.VITE_GIT_COMMIT ?? "dev";
   const appUrl = process.env.APP_URL;
@@ -230,6 +241,10 @@ export default defineConfig(({ mode }) => {
         : []),
     ],
     base: "/",
+    server: {
+      port: tangleUiPort,
+      strictPort: Boolean(env.TANGLE_UI_PORT),
+    },
     experimental: {
       // Deploy base is unknown at build time: production serves assets from
       // the origin root, tophat from a CDN subpath. Emit in-bundle asset

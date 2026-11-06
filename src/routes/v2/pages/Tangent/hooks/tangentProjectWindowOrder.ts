@@ -9,6 +9,7 @@ export const PROJECT_DOCK_WINDOW_IDS = [
   "tangent-project-assets",
   "tangent-project-resources",
   "tangent-project-runs",
+  "tangent-project-secrets",
 ] as const;
 
 export const rememberedDockWindows = (

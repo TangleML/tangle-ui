@@ -7,7 +7,7 @@ import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 
 interface InfoBoxProps {
-  title: string;
+  title: ReactNode;
   width?: "full" | "fit" | "auto";
   className?: string;
   children: ReactNode;

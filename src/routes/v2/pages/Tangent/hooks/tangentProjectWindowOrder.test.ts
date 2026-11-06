@@ -22,7 +22,7 @@ function open(store: WindowStoreImpl, id: string) {
   store.openWindow(stub, { id, title: id, defaultDockState: "left" });
 }
 
-/** What the Tangent page does on every mount: open all five, then order them. */
+/** What the Tangent page does on every mount: open them all, then order them. */
 function mountProjectWindows(store: WindowStoreImpl) {
   const remembered = rememberedDockWindows(store);
   for (const id of PROJECT_DOCK_WINDOW_IDS) open(store, id);
@@ -66,6 +66,7 @@ describe("the Tangent project dock order", () => {
   it("leaves a saved layout that already knows every window alone", () => {
     const rearranged = [
       "tangent-project-resources",
+      "tangent-project-secrets",
       "tangent-project-details",
       "tangent-project-runs",
       "tangent-project-sessions",
@@ -83,6 +84,31 @@ describe("the Tangent project dock order", () => {
     mountProjectWindows(store);
 
     expect(store.getDockedWindowOrder("left")).toEqual(rearranged);
+  });
+
+  it("adds the secrets window last to a rearranged layout that predates it", () => {
+    const rearranged = [
+      "tangent-project-resources",
+      "tangent-project-details",
+      "tangent-project-runs",
+      "tangent-project-sessions",
+      "tangent-project-assets",
+      "tangent-project-agents",
+    ];
+    const store = new WindowStoreImpl();
+    store.enableDockSide("left");
+    store.restoreDockArea("left", {
+      width: 320,
+      collapsed: false,
+      windowOrder: rearranged,
+    });
+
+    mountProjectWindows(store);
+
+    expect(store.getDockedWindowOrder("left")).toEqual([
+      ...rearranged,
+      "tangent-project-secrets",
+    ]);
   });
 
   /** A window the user dragged to the right is theirs to keep there. */

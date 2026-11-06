@@ -383,6 +383,18 @@ describe("StartSessionPrompt", () => {
   describe("choosing a workspace", () => {
     beforeEach(() => mockWorkspaces([analytics, research]));
 
+    it("marks the picker with the workspace icon, but not its options", async () => {
+      renderPrompt();
+
+      const picker = screen.getByLabelText("Workspace");
+      expect(picker.querySelector("svg.lucide-shapes")).not.toBeNull();
+
+      await userEvent.setup().click(picker);
+      for (const option of screen.getAllByRole("option")) {
+        expect(option.querySelector("svg.lucide-shapes")).toBeNull();
+      }
+    });
+
     it("starts the session in the workspace that was picked", async () => {
       renderPrompt();
 

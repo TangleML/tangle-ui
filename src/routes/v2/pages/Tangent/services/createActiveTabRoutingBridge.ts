@@ -63,7 +63,7 @@ function createRoutingBridge(resolve: () => ToolBridgeApi): ToolBridgeApi {
     unpackSubgraph: (taskEntityId) => resolve().unpackSubgraph(taskEntityId),
     validatePipeline: () => resolve().validatePipeline(),
     searchComponents: (args) => resolve().searchComponents(args),
-    submitPipelineRun: () => resolve().submitPipelineRun(),
+    submitPipelineRun: (options) => resolve().submitPipelineRun(options),
     getRunDetails: (runId) => resolve().getRunDetails(runId),
     getExecutionDetails: (executionId) =>
       resolve().getExecutionDetails(executionId),

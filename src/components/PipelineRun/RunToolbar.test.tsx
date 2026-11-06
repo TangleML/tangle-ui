@@ -43,6 +43,10 @@ vi.mock("@/hooks/useUserDetails", () => ({
   })),
 }));
 
+vi.mock("@/services/teams/useRunTeam", () => ({
+  useRunTeam: () => ({ status: "none" }),
+}));
+
 describe("<RunToolbar/>", () => {
   const queryClient = new QueryClient({
     defaultOptions: {
