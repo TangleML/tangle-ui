@@ -154,8 +154,7 @@ const PipelineEditor = withSuspenseWrapper(
     useDebugPanelWindow();
     useTipOfTheDayWindow();
 
-    const aiEnabled = useFlagValue("ai-assistant");
-    useAiChatWindow(aiEnabled);
+    useAiChatWindow();
 
     useComponentSearchV2Window(componentSearchV2Enabled);
     useSeedInitialDockLayoutFromPreset(componentSearchV2Enabled);

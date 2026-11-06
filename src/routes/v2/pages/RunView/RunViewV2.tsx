@@ -4,7 +4,6 @@ import { useParams } from "@tanstack/react-router";
 import { ReactFlowProvider } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
 
-import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { InlineStack } from "@/components/ui/layout";
 import type { ComponentSpec } from "@/models/componentSpec";
 import { ComponentLibraryProvider } from "@/providers/ComponentLibraryProvider";
@@ -78,8 +77,7 @@ const RunViewLayout = observer(function RunViewLayout({
   useFocusTaskFromUrl(spec);
   useCanvasControlsWindow("v2.run_view");
 
-  const aiEnabled = useFlagValue("ai-assistant");
-  useAiChatWindow(aiEnabled);
+  useAiChatWindow();
 
   const { navigation } = useSharedStores();
   const activeSpec = navigation.activeSpec;

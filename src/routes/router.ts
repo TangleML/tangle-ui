@@ -248,15 +248,6 @@ const settingsAgentRoute = createRoute({
   getParentRoute: () => settingsLayoutRoute,
   path: "/agent",
   component: AgentSettings,
-  beforeLoad: () => {
-    if (
-      !isFlagEnabled("component-search-v2") &&
-      !isFlagEnabled("ai-assistant") &&
-      !isTangentEnabled()
-    ) {
-      throw redirect({ to: APP_ROUTES.SETTINGS_BACKEND });
-    }
-  },
 });
 
 const settingsVsCodeRoute = createRoute({

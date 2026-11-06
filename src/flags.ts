@@ -49,14 +49,6 @@ export const ExistingFlags: ConfigFlags = {
     category: "beta",
   },
 
-  ["ai-assistant"]: {
-    name: "AI Assistant",
-    description:
-      "Enable the AI Assistant panel in the V2 editor. Lets you chat with an assistant about your pipeline.",
-    default: false,
-    category: "beta",
-  },
-
   ["projects"]: {
     name: "Projects",
     description:

@@ -109,7 +109,6 @@ let queryClient: QueryClient;
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
-  localStorage.setItem("betaFlags", JSON.stringify({ "ai-assistant": true }));
   askAgent.mockResolvedValue({
     answer: "This pipeline processes its input.",
     threadId: "test-thread",

@@ -55,9 +55,25 @@ vi.mock(
 vi.mock("./RemotePipelineActions", () => ({
   RemotePipelineActions: () => null,
 }));
-vi.mock("@/routes/v2/pages/Editor/hooks/useAiChatWindow", () => ({
-  useAiChatWindow: () => {},
-}));
+vi.mock("@/routes/v2/pages/Editor/hooks/useAiChatWindow", async () => {
+  const { useEffect } = await import("react");
+  const { useSharedStores } =
+    await import("@/routes/v2/shared/store/SharedStoreContext");
+  return {
+    useAiChatWindow: () => {
+      const { windows } = useSharedStores();
+      useEffect(() => {
+        if (windows.getWindowById("ai-assistant-chat")) return;
+        windows.openWindow(null, {
+          id: "ai-assistant-chat",
+          title: "Sidekick",
+          startVisible: true,
+          defaultDockState: "left",
+        });
+      }, [windows]);
+    },
+  };
+});
 vi.mock("@/routes/v2/shared/components/MiniMap/CanvasControlsContent", () => ({
   CanvasControlsContent: () => <button>Fit view</button>,
 }));
@@ -202,9 +218,8 @@ it("shows a read-only graph and navigates subgraphs without changing the spec", 
   expect(isRootStore(spec)).toBe(false);
 });
 
-it("starts embedded views compact with Sidekick disabled and keeps the minimap available", async () => {
+it("starts embedded views with Sidekick in a compact right dock and keeps the minimap available", async () => {
   const user = userEvent.setup();
-  localStorage.setItem("betaFlags", JSON.stringify({ "ai-assistant": false }));
   const spec = new YamlDeserializer(new IncrementingIdGenerator()).deserialize({
     name: "Shared pipeline",
     implementation: { graph: { tasks: {} } },

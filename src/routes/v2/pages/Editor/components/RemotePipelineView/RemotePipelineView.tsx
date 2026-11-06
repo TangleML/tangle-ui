@@ -4,7 +4,6 @@ import { observer } from "mobx-react-lite";
 import { useEffect } from "react";
 
 import { ComponentEditorProvider } from "@/components/shared/ComponentEditor/ComponentEditorProvider";
-import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Button } from "@/components/ui/button";
 import { InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
@@ -117,13 +116,8 @@ const RemotePipelineContent = observer(function RemotePipelineContent({
     }
   }, [windows, file]);
 
-  const aiEnabled = useFlagValue("ai-assistant");
-  useAiChatWindow(aiEnabled, { readOnly: true });
-  const right = [
-    "pipeline-tools",
-    ...(aiEnabled ? ["ai-assistant-chat"] : []),
-    "pipeline-details",
-  ];
+  useAiChatWindow({ readOnly: true });
+  const right = ["pipeline-tools", "ai-assistant-chat", "pipeline-details"];
   const embeddedPreset: ViewPreset = {
     label: "Default",
     description:
