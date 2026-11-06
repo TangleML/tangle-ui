@@ -69,10 +69,16 @@ function given(...sessions: ReturnType<typeof session>[]) {
   } as unknown as ReturnType<typeof useProjectSessions>);
 }
 
-function renderSessions(projectId = "project-1") {
+function renderSessions(
+  projectId = "project-1",
+  onlySessionIds?: ReadonlySet<string>,
+) {
   return render(
     <DialogProvider disableRouterSync>
-      <SessionsWindowContent projectId={projectId} />
+      <SessionsWindowContent
+        projectId={projectId}
+        onlySessionIds={onlySessionIds}
+      />
     </DialogProvider>,
   );
 }
@@ -193,5 +199,25 @@ describe("SessionsWindowContent", () => {
     expect(openProject).toHaveBeenCalledWith("project-2", {
       session: "session-2",
     });
+  });
+
+  it("lists every session a search matched, and only those", () => {
+    const days = [1, 2, 3, 4, 5, 6, 7];
+    given(
+      ...days.map((day) =>
+        session(`s-${day}`, `Backfill day ${day}`, `2026-01-0${day}`),
+      ),
+    );
+
+    renderSessions(
+      "project-1",
+      new Set(days.slice(1).map((day) => `s-${day}`)),
+    );
+
+    expect(screen.queryByText("Backfill day 1")).toBeNull();
+    for (const day of days.slice(1)) {
+      expect(screen.getByText(`Backfill day ${day}`)).toBeInTheDocument();
+    }
+    expect(screen.queryByRole("button", { name: "Show more" })).toBeNull();
   });
 });

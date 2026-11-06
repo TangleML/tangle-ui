@@ -1,5 +1,13 @@
-import type { ProjectResource } from "@/services/projects/types";
+import { useQueries } from "@tanstack/react-query";
+
+import { useBackend } from "@/providers/BackendProvider";
+import type {
+  ListProjectResourcesParams,
+  ProjectResource,
+  ProjectResourceSummary,
+} from "@/services/projects/types";
 import {
+  projectResourcesQueryOptions,
   useCreateProjectResource,
   useDeleteProjectResource,
   useProjectResources,
@@ -13,19 +21,14 @@ export interface ProjectSession {
   createdAt: Date;
 }
 
-/**
- * A session attaches to a project as a resource row carrying its id, so these
- * are the generic resource reads and writes narrowed to that entity. The row's
- * `name` is the display name; the shell keeps its own, which nothing here
- * reads.
- */
-export function useProjectSessions(projectId: string) {
-  const query = useProjectResources(projectId, { entity: ["agent_session"] });
-  const createResource = useCreateProjectResource(projectId);
-  const deleteResource = useDeleteProjectResource(projectId);
-  const updateResource = useUpdateProjectResource(projectId);
+const SESSION_RESOURCES: ListProjectResourcesParams = {
+  entity: ["agent_session"],
+};
 
-  const sessions: ProjectSession[] = (query.data?.items ?? [])
+function sessionsOf(
+  resources: ProjectResourceSummary[] = [],
+): ProjectSession[] {
+  return resources
     .flatMap((resource) =>
       resource.entityId
         ? [
@@ -39,6 +42,21 @@ export function useProjectSessions(projectId: string) {
         : [],
     )
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+}
+
+/**
+ * A session attaches to a project as a resource row carrying its id, so these
+ * are the generic resource reads and writes narrowed to that entity. The row's
+ * `name` is the display name; the shell keeps its own, which nothing here
+ * reads.
+ */
+export function useProjectSessions(projectId: string) {
+  const query = useProjectResources(projectId, SESSION_RESOURCES);
+  const createResource = useCreateProjectResource(projectId);
+  const deleteResource = useDeleteProjectResource(projectId);
+  const updateResource = useUpdateProjectResource(projectId);
+
+  const sessions = sessionsOf(query.data?.items);
 
   function attachSession(
     sessionId: string,
@@ -70,4 +88,28 @@ export function useProjectSessions(projectId: string) {
     detachSession,
     renameSession,
   };
+}
+
+/**
+ * The sessions of many projects at once, read from the cache each project's
+ * own list fills, and only fetched while `enabled`.
+ */
+export function useSessionsOfProjects(
+  projectIds: string[],
+  enabled: boolean,
+): ReadonlyMap<string, ProjectSession[]> {
+  const { configured, available } = useBackend();
+  const results = useQueries({
+    queries: projectIds.map((projectId) => ({
+      ...projectResourcesQueryOptions(projectId, SESSION_RESOURCES),
+      enabled: enabled && configured && available,
+    })),
+  });
+
+  return new Map(
+    projectIds.map((projectId, index) => [
+      projectId,
+      sessionsOf(results[index]?.data?.items),
+    ]),
+  );
 }
