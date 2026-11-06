@@ -16,7 +16,7 @@ export function CloseableTabTrigger({
   icon = "Bot",
 }: CloseableTabTriggerProps) {
   return (
-    <div className="relative inline-flex items-center">
+    <div className="relative inline-flex items-stretch">
       <TabsTrigger value={value} className="max-w-44 pr-7">
         <Icon name={icon} size="xs" />
         <span className="min-w-0 truncate">{title}</span>
@@ -27,7 +27,7 @@ export function CloseableTabTrigger({
         size="min"
         aria-label={`Close ${title}`}
         title={`Close ${title}`}
-        className="absolute right-1.5"
+        className="absolute top-1/2 right-1.5 -translate-y-1/2"
         onClick={(event) => {
           event.stopPropagation();
           onClose();
