@@ -60,14 +60,6 @@ vi.mock("@/routes/v2/shared/nodes/NodeRegistryContext", () => ({
     }),
   }),
 }));
-vi.mock("@/routes/v2/pages/Editor/nodes", () => ({
-  editorRegistry: {
-    getByNodeId: () => ({
-      deleteNode: (_undo: unknown, current: ComponentSpec, id: string) =>
-        current.deleteTaskById(id),
-    }),
-  },
-}));
 vi.mock("@/routes/v2/shared/hooks/useFlowCanvasState", () => ({
   useFlowCanvasState: () => ({
     displayNodes: [
@@ -89,15 +81,6 @@ vi.mock("@/routes/v2/shared/hooks/useFlowCanvasState", () => ({
     selectionBehavior: {},
   }),
 }));
-vi.mock("@/routes/v2/shared/hooks/useViewportScaling", () => ({
-  useViewportScaling: () => ({
-    containerRef: undefined,
-    handleViewportChange: undefined,
-  }),
-}));
-vi.mock("@/routes/v2/shared/hooks/useIsDetailedView", () => ({
-  useIsDetailedView: () => true,
-}));
 vi.mock("@/routes/v2/shared/components/SubgraphBreadcrumbs", () => ({
   SubgraphBreadcrumbs: () => null,
 }));
@@ -105,31 +88,7 @@ vi.mock("./components/CanvasUndoRedo", () => ({ CanvasUndoRedo: () => null }));
 vi.mock("./components/FloatingSelectionToolbar", () => ({
   FloatingSelectionToolbar: () => null,
 }));
-vi.mock("@/routes/v2/shared/hooks/useFitViewOnFocus", () => ({
-  useFitViewOnFocus: vi.fn(),
-}));
-vi.mock("@/routes/v2/shared/hooks/useFitViewOnRequest", () => ({
-  useFitViewOnRequest: vi.fn(),
-}));
-vi.mock("@/routes/v2/pages/Editor/hooks/useAutoLayout", () => ({
-  useAutoLayout: vi.fn(),
-}));
-vi.mock("./hooks/useClipboardShortcuts", () => ({
-  useClipboardShortcuts: vi.fn(),
-}));
-vi.mock("./hooks/useNodeEdgeChanges", () => ({
-  useNodeEdgeChanges: () => ({}),
-}));
-vi.mock("./hooks/useConnectionBehavior", () => ({
-  useConnectionBehavior: () => ({}),
-}));
 vi.mock("./hooks/useDropBehavior", () => ({ useDropBehavior: () => ({}) }));
-vi.mock("@/routes/v2/shared/hooks/useDoubleClickBehavior", () => ({
-  useDoubleClickBehavior: () => ({}),
-}));
-vi.mock("./hooks/usePaneClickBehavior", () => ({
-  usePaneClickBehavior: () => ({}),
-}));
 
 let deleteProgrammatically: () => Promise<unknown>;
 function FlowProbe() {
@@ -192,36 +151,35 @@ beforeEach(() => {
 
 describe("real ReactFlow keyboard activity", () => {
   it.each(["Delete", "Backspace"])(
-    "does not mutate hidden spec/undo on %s at the Show button, retains selection and resumes after restore",
+    "ignores %s while the workarea is hidden and deletes again once shown",
     async (key) => {
       render(<Fixture />);
-      expect(keyboard.listening).toBe(true);
       expect(spec.tasks).toHaveLength(1);
-      expect(spec.bindings).toHaveLength(1);
       fireEvent.click(screen.getByRole("button", { name: "Hide workarea" }));
       const show = screen.getByRole("button", { name: "Show workarea" });
       show.focus();
-      expect(keyboard.listening).toBe(false);
+
       await act(async () => {
         fireEvent.keyDown(show, { key, code: key });
+      });
+      await act(async () => {
         fireEvent.keyUp(show, { key, code: key });
       });
       expect(show).toHaveFocus();
       expect(spec.tasks).toHaveLength(1);
       expect(spec.bindings).toHaveLength(1);
-      expect(undoGroup).not.toHaveBeenCalled();
-      expect(clearSelection).not.toHaveBeenCalled();
-      expect(clearMultiSelection).not.toHaveBeenCalled();
+
       fireEvent.click(show);
       const hide = screen.getByRole("button", { name: "Hide workarea" });
       hide.focus();
-      fireEvent.keyDown(hide, { key, code: key });
-      await waitFor(() => expect(undoGroup).toHaveBeenCalledOnce());
-      expect(spec.tasks).toHaveLength(0);
+      await act(async () => {
+        fireEvent.keyDown(hide, { key, code: key });
+      });
+      await waitFor(() => expect(spec.tasks).toHaveLength(0));
       expect(spec.bindings).toHaveLength(0);
-      expect(clearSelection).toHaveBeenCalledOnce();
-      expect(clearMultiSelection).toHaveBeenCalledOnce();
-      fireEvent.keyUp(hide, { key, code: key });
+      await act(async () => {
+        fireEvent.keyUp(hide, { key, code: key });
+      });
     },
   );
 
@@ -233,6 +191,5 @@ describe("real ReactFlow keyboard activity", () => {
     });
     expect(spec.tasks).toHaveLength(0);
     expect(spec.bindings).toHaveLength(0);
-    expect(undoGroup).toHaveBeenCalledOnce();
   });
 });

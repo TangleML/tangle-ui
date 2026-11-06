@@ -168,6 +168,39 @@ it.each([false, true])(
   },
 );
 
+it("finishes an already-consented move for a hidden tab that opted in", async () => {
+  render(
+    <QueryClientProvider client={client}>
+      <LocalPipelineMigration
+        pipelineRef={pipelineRef}
+        isActive={false}
+        allowBackgroundMigration
+        onMigrated={onMigrated}
+      >
+        <p>Local editor</p>
+      </LocalPipelineMigration>
+    </QueryClientProvider>,
+  );
+  await waitFor(() => expect(onMigrated).toHaveBeenCalledWith(remote));
+  expect(screen.queryByRole("alertdialog")).toBeNull();
+});
+
+it("keeps a cancelled pipeline local when consent is granted elsewhere", async () => {
+  localStorage.removeItem(consentKey);
+  open();
+  fireEvent.click(await screen.findByRole("button", { name: "Cancel" }));
+  await screen.findByText("Local editor");
+
+  act(() => {
+    localStorage.setItem(consentKey, "true");
+    window.dispatchEvent(new StorageEvent("storage", { key: consentKey }));
+  });
+
+  await act(async () => {});
+  expect(storage.moveLocalPipelineToRemote).not.toHaveBeenCalled();
+  expect(screen.getByText("Local editor")).toBeInTheDocument();
+});
+
 it("opens the local editor without offering a move when writing is unavailable", async () => {
   vi.mocked(getRemotePipelineWriter).mockRejectedValue(
     new Error("Write permission denied"),
