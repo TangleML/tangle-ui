@@ -78,6 +78,9 @@ registerWorkareaKind({
       target={tab.target}
       title={tab.title}
       isActive={hostProps.isActive}
+      // Hiding the workarea must not strand the selected tab mid-migration, but
+      // it must not start migrating the other mounted tabs either.
+      allowBackgroundMigration={hostProps.isSelected}
       projectId={hostProps.projectId}
       onStoreReady={(store) => hostProps.registerTabStore(tab.id, store)}
       onStoreClosed={() => hostProps.unregisterTabStore(tab.id)}

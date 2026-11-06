@@ -105,6 +105,7 @@ function makeStore() {
     isStartingSession: false,
     startSession: vi.fn().mockResolvedValue(true),
     openWorkareaTarget: vi.fn().mockResolvedValue(undefined),
+    showWorkarea: vi.fn(),
   } as unknown as TangentProjectStore;
 }
 
@@ -301,6 +302,19 @@ describe("usePrepareProjectArrival", () => {
     prepare(store);
 
     await waitFor(() => expect(store.openWorkareaTarget).toHaveBeenCalled());
+  });
+
+  it("does not reveal again after pending arrival work can be manually collapsed", async () => {
+    const store = makeStore();
+    const pending = Promise.withResolvers<boolean>();
+    vi.mocked(store.startSession).mockReturnValue(pending.promise);
+    prepare(store);
+    await waitFor(() => expect(store.startSession).toHaveBeenCalled());
+    expect(store.showWorkarea).toHaveBeenCalledOnce();
+    vi.mocked(store.showWorkarea).mockClear();
+    await act(async () => pending.resolve(true));
+    await waitFor(() => expect(store.openWorkareaTarget).toHaveBeenCalled());
+    expect(store.showWorkarea).not.toHaveBeenCalled();
   });
 
   it("leaves a project that already has a session alone", async () => {

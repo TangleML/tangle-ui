@@ -116,7 +116,11 @@ export const FlowCanvas = observer(function FlowCanvas({
         onViewportChange={handleViewportChange}
         onBeforeDelete={onBeforeDelete}
         connectionLineComponent={ConnectionLine}
-        deleteKeyCode={["Delete", "Backspace"]}
+        deleteKeyCode={keyboard.listening ? ["Delete", "Backspace"] : null}
+        selectionKeyCode={keyboard.listening ? undefined : null}
+        multiSelectionKeyCode={keyboard.listening ? undefined : null}
+        panActivationKeyCode={keyboard.listening ? undefined : null}
+        zoomActivationKeyCode={keyboard.listening ? undefined : null}
         className={cn(
           shiftKeyPressed && !isConnecting && "cursor-crosshair",
           !isDetailedView && "connections-disabled",

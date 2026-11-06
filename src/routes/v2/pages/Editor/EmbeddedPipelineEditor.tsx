@@ -63,6 +63,10 @@ import { TangentEditorAgentProvider } from "./TangentEditorAgentProvider";
 interface EmbeddedPipelineEditorProps {
   pipelineRef: EditorPipelineRef;
   isActive: boolean;
+  // Lets an already-consented migration finish while this editor is mounted but
+  // inactive (its pane is collapsed). Hosts pass it only for the selected tab;
+  // it never bypasses consent nor shows a dialog the user cannot see.
+  allowBackgroundMigration?: boolean;
   projectId: string;
   onMigrated?: (file: PipelineFile) => void;
   onTitleChange?: (title: string) => void;
@@ -281,6 +285,7 @@ export function EmbeddedPipelineEditor(props: EmbeddedPipelineEditorProps) {
         pipelineRef={props.pipelineRef}
         projectId={props.projectId}
         isActive={props.isActive}
+        allowBackgroundMigration={props.allowBackgroundMigration ?? false}
         onMigrated={(file) => props.onMigrated?.(file)}
       >
         <EditableEmbeddedPipelineEditor {...props} />

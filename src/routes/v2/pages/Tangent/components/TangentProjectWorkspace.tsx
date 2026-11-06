@@ -2,6 +2,7 @@ import { observer } from "mobx-react-lite";
 
 import { InlineStack } from "@/components/ui/layout";
 import { VerticalResizeHandle } from "@/components/ui/resize-handle";
+import { cn } from "@/lib/utils";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { useChatPaneWidth } from "@/routes/v2/pages/Tangent/hooks/useChatPaneWidth";
 import { useNarrowLayoutDock } from "@/routes/v2/pages/Tangent/hooks/useNarrowLayoutDock";
@@ -43,21 +44,26 @@ export const TangentProjectWorkspace = observer(
           <ProjectHeader />
           <InlineStack
             ref={rowRef}
-            className="min-h-0 flex-1"
+            className="min-h-0 min-w-0 flex-1"
             blockAlign="stretch"
             wrap="nowrap"
           >
             <DockArea side="left" />
             <div
-              className="relative flex min-h-0 shrink-0 flex-col"
-              style={{ width: chatWidth }}
+              className={cn(
+                "relative flex min-h-0 min-w-0 flex-col",
+                store.workareaCollapsed ? "w-0 flex-1" : "shrink-0",
+              )}
+              style={{ width: store.workareaCollapsed ? undefined : chatWidth }}
             >
-              <VerticalResizeHandle
-                side="right"
-                minWidth={MIN_CHAT_WIDTH}
-                maxWidth={maxChatWidth}
-                onResizeEnd={requestWidth}
-              />
+              {!store.workareaCollapsed && (
+                <VerticalResizeHandle
+                  side="right"
+                  minWidth={MIN_CHAT_WIDTH}
+                  maxWidth={maxChatWidth}
+                  onResizeEnd={requestWidth}
+                />
+              )}
               <ProjectChatArea />
               <WindowContainer />
             </div>

@@ -8,3 +8,5 @@ export const MIN_WORKAREA_WIDTH = 420;
 
 export const NARROW_LAYOUT_WIDTH =
   MIN_CHAT_WIDTH + MIN_WORKAREA_WIDTH + MIN_DOCK_AREA_WIDTH;
+
+export const WORKAREA_ID = "tangent-project-workarea";

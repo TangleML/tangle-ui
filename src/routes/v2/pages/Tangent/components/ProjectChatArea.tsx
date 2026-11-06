@@ -55,7 +55,10 @@ export const ProjectChatArea = observer(function ProjectChatArea() {
         activeTab={store.chatActiveTab}
         onTabChange={(value) => store.setChatActiveTab(value)}
         onCloseTab={(id) => store.closeChatTab(id)}
-        onOpenArtifact={(url, title) => store.openArtifactTab(url, title)}
+        onOpenArtifact={(url, title) => {
+          store.showWorkarea();
+          store.openArtifactTab(url, title);
+        }}
         onSendPrompt={(content) => store.recordSessionPrompt(content)}
         onError={(message) => notify(message, "error")}
         headerAction={

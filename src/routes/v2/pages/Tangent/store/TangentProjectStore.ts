@@ -111,6 +111,7 @@ export class TangentProjectStore {
   @observable accessor selectedSessionId: string | undefined = undefined;
   @observable accessor defaultSessionId: string | undefined = undefined;
   @observable accessor isStartingSession = false;
+  @observable accessor workareaCollapsed = false;
 
   @observable.shallow accessor workareaBySession = new Map<
     string,
@@ -136,6 +137,14 @@ export class TangentProjectStore {
   constructor(projectId: string) {
     this.projectId = projectId;
     makeObservable(this);
+  }
+
+  @action hideWorkarea() {
+    this.workareaCollapsed = true;
+  }
+
+  @action showWorkarea() {
+    this.workareaCollapsed = false;
   }
 
   @action setSessionIo(io: TangentSessionIo) {
@@ -469,6 +478,7 @@ export class TangentProjectStore {
       const store = this.#tabStores.get(tab.id);
       if (store && this.#focusEntityInStore(store, entityId, label)) {
         this.selectWorkareaTab(tab.id);
+        this.showWorkarea();
         return true;
       }
     }

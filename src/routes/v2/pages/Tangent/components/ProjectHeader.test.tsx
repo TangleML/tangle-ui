@@ -1,12 +1,14 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DialogProvider } from "@/providers/DialogProvider/DialogProvider";
+import { WORKAREA_ID } from "@/routes/v2/pages/Tangent/layout";
+import { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
 import { useProject } from "@/services/projects/useProjects";
 
-import { ProjectHeader } from "./ProjectHeader";
+import { ProjectHeader, WorkareaToggle } from "./ProjectHeader";
 
 class ResizeObserverMock {
   observe = vi.fn();
@@ -14,6 +16,11 @@ class ResizeObserverMock {
   disconnect = vi.fn();
 }
 vi.stubGlobal("ResizeObserver", ResizeObserverMock);
+
+let store: TangentProjectStore;
+beforeEach(() => {
+  store = new TangentProjectStore("project-1");
+});
 
 const updateProject = vi.fn();
 const share = vi.fn();
@@ -54,7 +61,7 @@ vi.mock("@tanstack/react-router", () => ({
 }));
 
 vi.mock("@/routes/v2/pages/Tangent/context/TangentProjectContext", () => ({
-  useTangentProject: () => ({ projectId: "project-1" }),
+  useTangentProject: () => store,
 }));
 
 vi.mock("@/providers/AnalyticsProvider", () => ({
@@ -176,5 +183,54 @@ describe("Tangent ProjectHeader", () => {
     expect(screen.getByTestId("workspace-label")).toHaveTextContent(
       "project-1",
     );
+  });
+});
+
+describe("workarea header toggle", () => {
+  it("remains reachable without project metadata or any open tabs", async () => {
+    const user = userEvent.setup();
+    vi.mocked(useProject).mockReturnValue({ data: undefined } as ReturnType<
+      typeof useProject
+    >);
+    render(<ProjectHeader />);
+    const toggle = screen.getByRole("button", { name: "Hide workarea" });
+    expect(toggle).toHaveAttribute("type", "button");
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(toggle).toHaveAttribute("aria-controls", WORKAREA_ID);
+    await user.click(toggle);
+    expect(screen.getByRole("button", { name: "Show workarea" })).toBeVisible();
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(store.workareaTabs).toEqual([]);
+  });
+
+  it("supports Enter and Space and leaves focus on the restore control", async () => {
+    const user = userEvent.setup();
+    render(<WorkareaToggle />);
+    const toggle = screen.getByRole("button", { name: "Hide workarea" });
+    toggle.focus();
+    await user.keyboard("{Enter}");
+    expect(store.workareaCollapsed).toBe(true);
+    expect(toggle).toHaveFocus();
+    await user.keyboard(" ");
+    expect(store.workareaCollapsed).toBe(false);
+    expect(toggle).toHaveFocus();
+  });
+
+  it("moves focus out of the workarea before hiding, including iframe focus", () => {
+    render(
+      <>
+        <WorkareaToggle />
+        <div id={WORKAREA_ID}>
+          <iframe title="Editor" />
+        </div>
+      </>,
+    );
+    screen.getByTitle("Editor").focus();
+    const toggle = screen.getByRole("button", { name: "Hide workarea" });
+    const hide = vi.spyOn(store, "hideWorkarea").mockImplementation(() => {
+      expect(toggle).toHaveFocus();
+    });
+    fireEvent.click(toggle);
+    expect(hide).toHaveBeenCalledOnce();
   });
 });

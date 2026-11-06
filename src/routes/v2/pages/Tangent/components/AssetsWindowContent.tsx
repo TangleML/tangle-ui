@@ -13,6 +13,7 @@ export const AssetsWindowContent = observer(function AssetsWindowContent() {
   function handleOpenAsset(asset: EmbedAsset) {
     store.selectAsset(asset);
     if (asset.kind !== "trigger") {
+      store.showWorkarea();
       store.openArtifactTab(asset.url, asset.title);
     }
   }

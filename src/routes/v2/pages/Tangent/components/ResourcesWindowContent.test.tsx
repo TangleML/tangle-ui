@@ -10,11 +10,16 @@ import { useRemotePipelineNames } from "@/services/projects/useRemotePipelineNam
 import { ResourcesWindowContent } from "./ResourcesWindowContent";
 
 const openWorkareaTarget = vi.fn();
+const showWorkarea = vi.fn();
 const deleteResource = vi.fn();
 const saveInstructions = vi.fn();
 
 vi.mock("@/routes/v2/pages/Tangent/context/TangentProjectContext", () => ({
-  useTangentProject: () => ({ projectId: "project-1", openWorkareaTarget }),
+  useTangentProject: () => ({
+    projectId: "project-1",
+    openWorkareaTarget,
+    showWorkarea,
+  }),
 }));
 
 vi.mock("@/services/projects/useProjectResources", () => ({
@@ -194,6 +199,7 @@ describe("ResourcesWindowContent", () => {
 
     await user.click(screen.getByTestId("open-resource-r-2"));
 
+    expect(showWorkarea).toHaveBeenCalled();
     expect(openWorkareaTarget).toHaveBeenCalledWith(
       { type: "document", identity: "id/r-2" },
       "Model card",
@@ -220,6 +226,7 @@ describe("ResourcesWindowContent", () => {
 
     await user.click(screen.getByTestId("open-resource-r-5"));
 
+    expect(showWorkarea).toHaveBeenCalled();
     expect(openWorkareaTarget).toHaveBeenCalledWith(
       { type: "document", identity: "id/r-5" },
       "Loose note",
@@ -242,6 +249,7 @@ describe("ResourcesWindowContent", () => {
     expect(screen.getByText("Hello World")).toBeInTheDocument();
     expect(screen.getByText("Pipeline")).toBeInTheDocument();
     await userEvent.setup().click(screen.getByTestId("open-resource-r-5"));
+    expect(showWorkarea).toHaveBeenCalled();
     expect(openWorkareaTarget).toHaveBeenCalledWith(
       { type: "pipeline", identity: "remote/uuid-1" },
       "Hello World",
@@ -263,6 +271,7 @@ describe("ResourcesWindowContent", () => {
       screen.queryByText("Make a basic hello world pipeline"),
     ).not.toBeInTheDocument();
     await userEvent.setup().click(screen.getByTestId("open-resource-r-5"));
+    expect(showWorkarea).toHaveBeenCalled();
     expect(openWorkareaTarget).toHaveBeenCalledWith(
       { type: "pipeline", identity: "remote/uuid-1" },
       "Workspace secret hello world",
@@ -309,6 +318,7 @@ describe("ResourcesWindowContent", () => {
 
     await user.click(screen.getByTestId("open-resource-r-7"));
 
+    expect(showWorkarea).toHaveBeenCalled();
     expect(openWorkareaTarget).toHaveBeenCalledWith(
       { type: "pipeline", identity: "name/Churn model" },
       "Churn model",

@@ -36,6 +36,12 @@ export type WorkareaTab = ResolvedWorkareaView & { id: string };
  * they need into their view.
  */
 export interface WorkareaHostProps {
+  // Selected tab, whether or not the workarea is visible. Collapsing does not
+  // clear it, so selected-tab work continues while hidden without spreading to
+  // the other mounted-but-unselected tabs.
+  isSelected: boolean;
+  // Selected AND visible: what the user can see and type into. Gates keyboard
+  // shortcuts and any UI put in front of the user, such as a consent dialog.
   isActive: boolean;
   projectId: string;
   sessionId?: string;

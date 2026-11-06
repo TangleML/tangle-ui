@@ -382,7 +382,9 @@ describe("TangentProjectStore.revealEntity", () => {
     store.registerTabStore(p2.id, shared);
     store.selectWorkareaTab(p1.id);
 
+    store.hideWorkarea();
     expect(store.revealEntity("task_1", "Load CSV")).toBe(true);
+    expect(store.workareaCollapsed).toBe(false);
     expect(store.activeWorkareaTabId).toBe(p2.id);
     expect(shared.navigation.navigateToPath).toHaveBeenCalledWith([
       "MyPipeline",
@@ -405,7 +407,9 @@ describe("TangentProjectStore.revealEntity", () => {
     const p1 = store.openResolvedView({ title: "P1", target: pipeline("p1") });
     store.registerTabStore(p1.id, makeSharedStore(specWithTask()));
 
+    store.hideWorkarea();
     expect(store.revealEntity("task_missing", "Nope")).toBe(false);
+    expect(store.workareaCollapsed).toBe(true);
   });
 
   it("returns false when the pipeline tab has no registered store yet", () => {
@@ -725,5 +729,53 @@ describe("TangentProjectStore.waitForTabEnvironment", () => {
     vi.advanceTimersByTime(1000);
 
     await expect(pending).resolves.toBeUndefined();
+  });
+});
+
+describe("workarea layout visibility", () => {
+  it("defaults expanded and preserves tabs, selection, environments and bridge routing across hide/show", () => {
+    const store = activeStore();
+    const tab = store.openResolvedView({
+      title: "Pipeline",
+      target: pipeline("p1"),
+    });
+    const bridge = makeBridge("p1");
+    store.registerTabEnvironment(tab.id, "env-1");
+    store.registerTabBridge(tab.id, "pipeline", bridge);
+    const tabs = store.workareaTabs;
+    expect(store.workareaCollapsed).toBe(false);
+    store.hideWorkarea();
+    expect(store.workareaCollapsed).toBe(true);
+    expect(store.workareaTabs).toBe(tabs);
+    expect(store.activeWorkareaTabId).toBe(tab.id);
+    expect(store.getTabEnvironmentId(tab.id)).toBe("env-1");
+    expect(store.getActiveTabBridge()).toBe(bridge);
+    store.showWorkarea();
+    expect(store.workareaTabs).toBe(tabs);
+    expect(store.activeWorkareaTabId).toBe(tab.id);
+  });
+
+  it("agent target opens, deduplication, session switches and closing the final tab never change manual visibility", () => {
+    const store = activeStore();
+    store.hideWorkarea();
+    const first = store.openResolvedView({
+      title: "Pipeline",
+      target: pipeline("p1"),
+    });
+    expect(
+      store.openResolvedView({ title: "Again", target: pipeline("p1") }),
+    ).toBe(first);
+    expect(store.workareaTabs).toHaveLength(1);
+    store.selectSession(SESSION_B);
+    const second = store.openResolvedView({ title: "Run", target: run("r1") });
+    store.closeWorkareaTab(second.id);
+    expect(store.workareaCollapsed).toBe(true);
+    store.selectSession(SESSION_A);
+    expect(store.activeWorkareaTabId).toBe(first.id);
+    expect(store.workareaCollapsed).toBe(true);
+    store.closeWorkareaTab(first.id);
+    expect(store.workareaCollapsed).toBe(true);
+    store.showWorkarea();
+    expect(store.workareaCollapsed).toBe(false);
   });
 });

@@ -176,6 +176,7 @@ export function ResourcesWindowContent() {
   async function handleOpenResource(resource: ProjectResourceItem) {
     if (!resource.target) return;
     try {
+      store.showWorkarea();
       await store.openWorkareaTarget(resource.target, resource.name);
     } catch (error) {
       notify(getErrorMessage(error), "error");

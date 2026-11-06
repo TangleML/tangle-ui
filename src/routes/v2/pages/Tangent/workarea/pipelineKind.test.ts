@@ -63,6 +63,7 @@ function renderPipeline(identity: WorkareaIdentity) {
         target: { type: "pipeline", identity },
       },
       {
+        isSelected: true,
         isActive: true,
         projectId: "project-1",
         tabEnvironmentId: () => undefined,
@@ -172,6 +173,7 @@ it("shows a recoverable message when an old draft target is unavailable", () => 
         target: { type: "pipeline", identity: "draft/missing" },
       } as Parameters<typeof kind.render>[0],
       {
+        isSelected: true,
         isActive: true,
         projectId: "project-1",
         tabEnvironmentId: () => undefined,

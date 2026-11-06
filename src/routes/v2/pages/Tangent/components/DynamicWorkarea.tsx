@@ -12,7 +12,10 @@ import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { CloseableTabTrigger } from "@/routes/v2/pages/Tangent/components/CloseableTabTrigger";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
-import { MIN_WORKAREA_WIDTH } from "@/routes/v2/pages/Tangent/layout";
+import {
+  MIN_WORKAREA_WIDTH,
+  WORKAREA_ID,
+} from "@/routes/v2/pages/Tangent/layout";
 import { getWorkareaKind } from "@/routes/v2/pages/Tangent/workarea/registry";
 import type { WorkareaHostProps } from "@/routes/v2/pages/Tangent/workarea/types";
 
@@ -31,8 +34,10 @@ export const DynamicWorkarea = observer(function DynamicWorkarea() {
   const workareaTabs = store.workareaTabs;
   const activeWorkareaTabId = store.activeWorkareaTabId;
   function hostPropsFor(tabId: string): WorkareaHostProps {
+    const isSelected = tabId === activeWorkareaTabId;
     return {
-      isActive: tabId === activeWorkareaTabId,
+      isSelected,
+      isActive: !store.workareaCollapsed && isSelected,
       projectId: store.projectId,
       sessionId: activeSessionId,
       registerTabStore: (id, tabStore) => store.registerTabStore(id, tabStore),
@@ -51,8 +56,13 @@ export const DynamicWorkarea = observer(function DynamicWorkarea() {
 
   return (
     <div
+      id={WORKAREA_ID}
+      inert={store.workareaCollapsed}
       className="relative flex h-full min-w-0 flex-1 flex-col border-l border-border bg-card"
-      style={{ minWidth: MIN_WORKAREA_WIDTH }}
+      style={{
+        minWidth: MIN_WORKAREA_WIDTH,
+        display: store.workareaCollapsed ? "none" : undefined,
+      }}
     >
       {workareaTabs.length > 0 ? (
         <Tabs
