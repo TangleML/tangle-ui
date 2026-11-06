@@ -1,16 +1,18 @@
 import * as vscode from "vscode";
 
+import type { RunStatusFor } from "./cli/runStatusSource.ts";
 import {
   isRunActive,
   overallRunStatus,
   runStatusIcon,
   runStatusLabel,
 } from "./runStatus.ts";
-import type { ProjectRun, TangleRestClient } from "./tangleRestClient.ts";
+import type { ProjectRun } from "./tangleRestClient.ts";
 import {
   type MessageNode,
   messageNode,
   ProjectTree,
+  type ProjectTreeDeps,
   themeIcon,
 } from "./treeNodes.ts";
 
@@ -76,15 +78,19 @@ function loadMoreItem(): vscode.TreeItem {
 }
 
 async function withLatestStatus(
-  client: TangleRestClient,
+  statusFor: RunStatusFor,
   node: RunNode,
 ): Promise<RunNode> {
   try {
-    const stats = await client.getRunStats(node.run.id);
+    const stats = await statusFor(node.run.id);
     return { ...node, status: overallRunStatus(stats) };
   } catch {
     return node;
   }
+}
+
+export interface RunsTreeDeps extends ProjectTreeDeps {
+  statusFor: RunStatusFor;
 }
 
 /**
@@ -92,9 +98,15 @@ async function withLatestStatus(
  * that can still change status are re-polled so the list reflects live state.
  */
 export class RunsTreeProvider extends ProjectTree<RunsTreeNode> {
+  private readonly statusFor: RunStatusFor;
   private loaded: LoadedRuns | undefined;
   private pollTimer: ReturnType<typeof setTimeout> | undefined;
   private visible = false;
+
+  constructor(deps: RunsTreeDeps) {
+    super(deps);
+    this.statusFor = deps.statusFor;
+  }
 
   setVisible(visible: boolean): void {
     this.visible = visible;
@@ -151,7 +163,11 @@ export class RunsTreeProvider extends ProjectTree<RunsTreeNode> {
     const page = await client.listProjectRuns(projectId, pageToken);
     const runs = await Promise.all(
       page.items.map((run) =>
-        withLatestStatus(client, { kind: "run", run, status: undefined }),
+        withLatestStatus(this.statusFor, {
+          kind: "run",
+          run,
+          status: undefined,
+        }),
       ),
     );
     return { runs, nextPageToken: page.nextPageToken };
@@ -178,10 +194,11 @@ export class RunsTreeProvider extends ProjectTree<RunsTreeNode> {
   private async pollActiveRuns(): Promise<void> {
     const loaded = this.loaded;
     if (!loaded || !this.visible) return;
-    const client = await this.deps.createClient();
     const runs = await Promise.all(
       loaded.runs.map((node) =>
-        isRunActive(node.status) ? withLatestStatus(client, node) : node,
+        isRunActive(node.status)
+          ? withLatestStatus(this.statusFor, node)
+          : node,
       ),
     );
     if (this.loaded !== loaded) return;

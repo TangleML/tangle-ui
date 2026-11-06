@@ -106,6 +106,10 @@ export class ExtensionConfig {
     }
   }
 
+  get tangleDeployBin(): string {
+    return stringSetting("tangleDeployBin") ?? "tangle-deploy";
+  }
+
   get updateBaseUrl(): string {
     return (stringSetting("updateBaseUrl") ?? this.tangleUiUrl).replace(
       /\/+$/,
