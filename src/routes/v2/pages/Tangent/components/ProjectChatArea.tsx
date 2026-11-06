@@ -35,7 +35,7 @@ export const ProjectChatArea = observer(function ProjectChatArea() {
           No active session
         </Text>
         <Text size="sm" tone="subdued">
-          Start a session from the Sessions panel to chat with Tangent.
+          Choose New chat in the Projects panel to chat with Tangent.
         </Text>
       </BlockStack>
     );

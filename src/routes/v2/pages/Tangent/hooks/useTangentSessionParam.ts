@@ -15,14 +15,14 @@ import type { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/Tangen
 export function useTangentSessionParam(store: TangentProjectStore) {
   const search = useSearch({ strict: false });
   const navigate = useNavigate();
-  const handled = useRef(false);
+  const handled = useRef<TangentProjectStore | null>(null);
 
   const asked = readTangentSessionParam(search);
   const sessionId = asked?.kind === "existing" ? asked.sessionId : undefined;
 
   useEffect(() => {
-    if (!sessionId || handled.current) return;
-    handled.current = true;
+    if (!sessionId || handled.current === store) return;
+    handled.current = store;
 
     store.selectSession(sessionId);
 
