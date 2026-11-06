@@ -447,6 +447,7 @@ export function createRemoteEnvHost(
 
       const connection = new Promise<void>((resolve, reject) => {
         let connected = nextClient.socket.connected;
+        let reconnectErrorReported = false;
 
         // Settle rather than return when a newer connection (or a disconnect)
         // has taken over: the caller awaits this before scheduling the next
@@ -458,6 +459,7 @@ export function createRemoteEnvHost(
             return;
           }
           connected = true;
+          reconnectErrorReported = false;
           resolve();
         });
         nextClient.socket.on("connect_error", (error: Error) => {
@@ -473,9 +475,12 @@ export function createRemoteEnvHost(
             );
             return;
           }
-          onError?.(
-            `Tangent editor control failed to reconnect: ${error.message}`,
-          );
+          if (!reconnectErrorReported) {
+            reconnectErrorReported = true;
+            onError?.(
+              `Tangent editor control failed to reconnect: ${error.message}`,
+            );
+          }
         });
 
         if (connected) resolve();

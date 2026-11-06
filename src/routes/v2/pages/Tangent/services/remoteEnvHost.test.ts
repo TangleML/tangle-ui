@@ -139,6 +139,50 @@ describe("createRemoteEnvHost", () => {
     await expect(connection).resolves.toBeUndefined();
   });
 
+  it("reports reconnect errors once per outage and resets after recovery", async () => {
+    const { host, onError } = connectedHost(makeWorker());
+    const connect = client.socket.on.mock.calls.find(
+      ([event]) => event === "connect",
+    )![1];
+    const error = client.socket.on.mock.calls.find(
+      ([event]) => event === "connect_error",
+    )![1];
+    connect();
+    error(new Error("websocket error"));
+    error(new Error("xhr poll error"));
+    error(new Error("websocket error"));
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError).toHaveBeenCalledWith(
+      "Tangent editor control failed to reconnect: websocket error",
+    );
+
+    connect();
+    error(new Error("xhr poll error"));
+    expect(onError).toHaveBeenCalledTimes(2);
+
+    host.disconnect();
+    error(new Error("stale connection"));
+    expect(onError).toHaveBeenCalledTimes(2);
+  });
+
+  it("still rejects initial connection failures", async () => {
+    const onError = vi.fn();
+    const host = createRemoteEnvHost({
+      url: "http://localhost:8000",
+      worker: makeWorker() as unknown as Remote<RemoteEnvWorkerApi>,
+      onError,
+    });
+    const connection = host.connect("token", "env-1");
+    const error = client.socket.on.mock.calls.find(
+      ([event]) => event === "connect_error",
+    )![1];
+    error(new Error("xhr poll error"));
+    await expect(connection).rejects.toThrow(
+      "Tangent editor control failed to connect: xhr poll error",
+    );
+    expect(onError).not.toHaveBeenCalled();
+  });
+
   it("forwards host metadata into the connect options", () => {
     const worker = makeWorker();
     const metadata = {
