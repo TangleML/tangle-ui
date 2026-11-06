@@ -130,7 +130,11 @@ export function useUpdateProjectResource(projectId: string) {
       resourceId: string;
       input: UpdateResourceInput;
     }) => updateProjectResource(projectId, resourceId, input),
-    onSuccess: () => {
+    onSuccess: (resource) => {
+      queryClient.setQueryData(
+        ProjectResourcesQueryKeys.Id(projectId, resource.id),
+        resource,
+      );
       invalidateProjectResources(queryClient, projectId);
     },
     onError: () => {
