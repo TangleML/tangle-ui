@@ -4,6 +4,7 @@ import { type RefObject, useEffect, useRef } from "react";
 
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
 import { getRunPath } from "@/routes/runRoutes";
+import type { NavigationEntry } from "@/routes/v2/shared/store/navigationStore";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 /**
@@ -118,8 +119,11 @@ export function useRunViewSubgraphExecutionSync(
  * root execution, so task status indicators and artifacts fail to resolve for
  * subgraph tasks. This mirrors V1 (`TaskNodeCard.handleDoubleClick`), which
  * pushes the child execution id onto the URL when entering a subgraph.
+ *
+ * Returns whether the navigation store is showing the subgraph the URL points
+ * at, so URL-driven effects can wait for a deep link to finish opening.
  */
-export function useRunViewSubgraphUrlSync(): void {
+export function useRunViewSubgraphUrlSync(): boolean {
   const navigate = useNavigate();
   const { navigation } = useSharedStores();
   const executionData = useExecutionData();
@@ -169,29 +173,49 @@ export function useRunViewSubgraphUrlSync(): void {
     // Ignore URL changes we initiated ourselves in direction A.
     if (subgraphExecutionId === lastPushedExecutionId.current) return;
 
-    const rootName = navigation.rootSpec?.name;
-    if (!rootName) return;
-
-    // The URL points at a subgraph but breadcrumbs have not resolved yet;
-    // wait for them before syncing to avoid collapsing to the root level.
-    if (subgraphExecutionId && executionData.segments.length === 0) return;
-
-    const targetPath = [
-      rootName,
-      ...executionData.segments.map((segment) => segment.taskName),
-    ];
-    const currentPath = navigation.navigationPath.map(
-      (entry) => entry.displayName,
+    const urlPath = getUrlNavigationPath(
+      navigation.rootSpec?.name,
+      subgraphExecutionId,
+      executionData.segments,
     );
-
-    const isSamePath =
-      currentPath.length === targetPath.length &&
-      currentPath.every((name, index) => name === targetPath[index]);
-
-    if (isSamePath) return;
+    if (!urlPath) return;
+    if (isSamePath(toDisplayNames(navigation.navigationPath), urlPath)) return;
 
     isApplyingFromUrl.current = true;
-    navigation.navigateToPath(targetPath);
+    navigation.navigateToPath(urlPath);
     isApplyingFromUrl.current = false;
   }, [subgraphExecutionId, executionData.segments, navigation]);
+
+  const urlPath = getUrlNavigationPath(
+    navigation.rootSpec?.name,
+    subgraphExecutionId,
+    executionData.segments,
+  );
+  return (
+    urlPath !== null &&
+    isSamePath(toDisplayNames(navigation.navigationPath), urlPath)
+  );
+}
+
+/**
+ * The navigation path the URL's subgraph execution points at, or `null` while
+ * that can't be known yet: before the root spec loads, or while a subgraph's
+ * breadcrumbs are still resolving (syncing then would collapse to the root).
+ */
+function getUrlNavigationPath(
+  rootName: string | undefined,
+  subgraphExecutionId: string | undefined,
+  segments: { taskId: string }[],
+): string[] | null {
+  if (!rootName) return null;
+  if (subgraphExecutionId && segments.length === 0) return null;
+  return [rootName, ...segments.map((segment) => segment.taskId)];
+}
+
+function toDisplayNames(entries: NavigationEntry[]): string[] {
+  return entries.map((entry) => entry.displayName);
+}
+
+function isSamePath(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((name, index) => name === b[index]);
 }
