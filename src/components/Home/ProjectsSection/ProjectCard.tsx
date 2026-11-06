@@ -1,24 +1,15 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 
+import { ProjectMenu } from "@/components/Project/ProjectMenu";
 import { useDeleteProjectAction } from "@/components/Project/useDeleteProjectAction";
 import { useProjectPin } from "@/components/Project/useProjectPin";
-import { useShareProjectAction } from "@/components/Project/useShareProjectAction";
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
 import { useTangentEnabled } from "@/components/shared/Settings/useFlags";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Paragraph, Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
-import { APP_ROUTES } from "@/routes/appRoutes";
 import { projectHomeRoute } from "@/routes/projectRoutes";
 import type { ProjectSummary } from "@/services/projects/types";
 import { useWorkspaces } from "@/services/projects/useWorkspaces";
@@ -35,14 +26,11 @@ interface ProjectCardProps {
 }
 
 export function ProjectCard({ project }: ProjectCardProps) {
-  const navigate = useNavigate();
   const { confirmAndDelete, isDeleting, confirmation } = useDeleteProjectAction(
     project,
     { navigateAfterDelete: false },
   );
-  const share = useShareProjectAction(project.id);
-
-  const { pinned, isPinning, togglePin } = useProjectPin(project);
+  const { pinned } = useProjectPin(project);
   const { data: workspaces } = useWorkspaces();
   const workspace = workspaces?.find(({ id }) => id === project.workspaceId);
   const tangentEnabled = useTangentEnabled();
@@ -50,13 +38,6 @@ export function ProjectCard({ project }: ProjectCardProps) {
     project.resourceCounts,
     tangentEnabled,
   );
-
-  const openDetails = () => {
-    void navigate({
-      to: APP_ROUTES.PROJECT_DETAIL,
-      params: { projectId: project.id },
-    });
-  };
 
   return (
     <div
@@ -132,57 +113,15 @@ export function ProjectCard({ project }: ProjectCardProps) {
         </BlockStack>
       </Link>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute right-2 top-2"
-            // The card is dimmed while the delete runs, but dimming stops a
-            // pointer and not a keyboard.
-            disabled={isDeleting}
-            aria-label={`Project actions: ${project.name}`}
-            {...tracking("projects.project_card_menu")}
-          >
-            <Icon name="EllipsisVertical" size="sm" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem
-            disabled={isPinning}
-            onSelect={() => void togglePin()}
-            {...tracking("projects.pin_project", { new_value: !pinned })}
-          >
-            <Icon name={pinned ? "PinOff" : "Pin"} size="sm" />
-            {pinned ? "Unpin project" : "Pin project"}
-          </DropdownMenuItem>
-          {tangentEnabled && (
-            <DropdownMenuItem
-              onSelect={openDetails}
-              {...tracking("projects.open_project_details")}
-            >
-              <Icon name="Info" size="sm" />
-              Details
-            </DropdownMenuItem>
-          )}
-          <DropdownMenuItem
-            onSelect={share}
-            {...tracking("projects.share_project")}
-          >
-            <Icon name="Share2" size="sm" />
-            Share project
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            className="text-destructive"
-            onSelect={() => void confirmAndDelete()}
-            {...tracking("projects.delete_project_open")}
-          >
-            <Icon name="Trash" size="sm" />
-            Delete project
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <ProjectMenu
+        project={project}
+        onDelete={() => void confirmAndDelete()}
+        // The card is dimmed while the delete runs, but dimming stops a
+        // pointer and not a keyboard.
+        disabled={isDeleting}
+        triggerClassName="absolute right-2 top-2"
+        triggerTrackingId="projects.project_card_menu"
+      />
 
       <ConfirmationDialog {...confirmation} />
     </div>

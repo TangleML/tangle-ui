@@ -841,3 +841,38 @@ describe("usePrepareProjectArrival", () => {
     });
   });
 });
+
+describe("moving to another project in place", () => {
+  beforeEach(() => {
+    search = {};
+    given();
+    mockAiConfigured(true);
+    vi.mocked(createNewPipeline).mockResolvedValue({
+      id: "file-1",
+      storageKey: "Churn model",
+      deleteFile,
+    } as unknown as Awaited<ReturnType<typeof createNewPipeline>>);
+  });
+  afterEach(() => vi.resetAllMocks());
+
+  /** The sidebar swaps the project's store without remounting the page. */
+  it("arrives in the next project as well", async () => {
+    const first = makeStore();
+    const second = makeStore();
+    const { rerender } = renderHook(
+      ({ store }: { store: TangentProjectStore }) =>
+        usePrepareProjectArrival(store, {
+          projectId: "project-1",
+          sessionCount: 0,
+          isSessionsLoading: false,
+        }),
+      { wrapper, initialProps: { store: first } },
+    );
+    await waitFor(() => expect(first.startSession).toHaveBeenCalledTimes(1));
+
+    rerender({ store: second });
+
+    await waitFor(() => expect(second.startSession).toHaveBeenCalledTimes(1));
+    expect(first.startSession).toHaveBeenCalledTimes(1);
+  });
+});
