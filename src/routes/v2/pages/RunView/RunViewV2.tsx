@@ -74,15 +74,14 @@ const RunViewLayout = observer(function RunViewLayout({
   useDockAreaAccordion();
   useRunViewWindows({ offersTangentHandoff: true });
   useRunViewSelectionSync();
-  useRunViewSubgraphUrlSync();
-  useFocusTaskFromUrl(spec);
+  const isShowingUrlSubgraph = useRunViewSubgraphUrlSync();
+  const { navigation } = useSharedStores();
+  const activeSpec = navigation.activeSpec;
+  useFocusTaskFromUrl(isShowingUrlSubgraph ? activeSpec : null);
   useCanvasControlsWindow("v2.run_view");
 
   const aiEnabled = useFlagValue("ai-assistant");
   useAiChatWindow(aiEnabled);
-
-  const { navigation } = useSharedStores();
-  const activeSpec = navigation.activeSpec;
 
   if (!activeSpec) return null;
 

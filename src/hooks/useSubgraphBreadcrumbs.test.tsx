@@ -174,16 +174,10 @@ describe("useSubgraphBreadcrumbs", () => {
     });
 
     expect(result.current.segments).toHaveLength(2);
-    expect(result.current.segments[0]).toMatchObject({
-      taskId: "Task Level 1",
-      executionId: level1ExecutionId,
-      taskName: "Subgraph Level 1",
-    });
-    expect(result.current.segments[1]).toMatchObject({
-      taskId: "Task Level 2",
-      executionId: level2ExecutionId,
-      taskName: "Subgraph Level 2",
-    });
+    expect(result.current.segments).toEqual([
+      { taskId: "Task Level 1", executionId: level1ExecutionId },
+      { taskId: "Task Level 2", executionId: level2ExecutionId },
+    ]);
     expect(result.current.path).toEqual([
       "root",
       "Task Level 1",

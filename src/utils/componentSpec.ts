@@ -1,8 +1,3 @@
-import type {
-  ContainerImplementationOutput,
-  GraphImplementationOutput,
-} from "@/api/types.gen";
-
 import type { FLEX_NODES_ANNOTATION } from "./annotations";
 
 export type TypeSpecType =
@@ -461,19 +456,6 @@ export const isGraphImplementation = (
   implementation !== null &&
   implementation !== undefined &&
   "graph" in implementation;
-
-export const isGraphImplementationOutput = (
-  implementation:
-    | ContainerImplementationOutput
-    | GraphImplementationOutput
-    | null
-    | undefined,
-): implementation is GraphImplementationOutput =>
-  implementation !== null &&
-  implementation !== undefined &&
-  "graph" in implementation &&
-  implementation.graph !== null &&
-  implementation.graph !== undefined;
 
 /**
  * The template forms an argument reference takes in hand-written YAML, which the
