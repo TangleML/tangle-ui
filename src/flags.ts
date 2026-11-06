@@ -41,14 +41,6 @@ export const ExistingFlags: ConfigFlags = {
     category: "setting",
   },
 
-  ["input-aggregator"]: {
-    name: "Input Aggregator Component",
-    description:
-      "Enable the Input Aggregator component that supports multiple dynamic inputs and configurable output types (Array, Object, CSV).",
-    default: false,
-    category: "beta",
-  },
-
   ["ai-assistant"]: {
     name: "AI Assistant",
     description:

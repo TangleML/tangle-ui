@@ -4,7 +4,6 @@ import {
   createNewPipeline,
   dropComponentFromLibraryOnCanvas,
   openComponentLibFolder,
-  setBetaFlag,
 } from "./helpers";
 
 const INPUT_AGGREGATOR_URL =
@@ -14,7 +13,6 @@ const INPUT_AGGREGATOR_URL =
 // editor before re-enabling: https://github.com/TangleML/tangle-ui/issues/2925
 test.describe.fixme("Input Aggregator Component", () => {
   test.beforeEach(async ({ page }) => {
-    await setBetaFlag(page, "input-aggregator", true);
     // The component is served from GitHub raw in production, but that URL isn't
     // accessible in CI until the standalone PR merges. Serve the local copy instead.
     await page.route(INPUT_AGGREGATOR_URL, (route) =>
