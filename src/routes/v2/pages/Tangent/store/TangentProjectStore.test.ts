@@ -382,7 +382,9 @@ describe("TangentProjectStore.revealEntity", () => {
     store.registerTabStore(p2.id, shared);
     store.selectWorkareaTab(p1.id);
 
+    store.hideWorkarea();
     expect(store.revealEntity("task_1", "Load CSV")).toBe(true);
+    expect(store.workareaCollapsed).toBe(false);
     expect(store.activeWorkareaTabId).toBe(p2.id);
     expect(shared.navigation.navigateToPath).toHaveBeenCalledWith([
       "MyPipeline",
@@ -405,7 +407,9 @@ describe("TangentProjectStore.revealEntity", () => {
     const p1 = store.openResolvedView({ title: "P1", target: pipeline("p1") });
     store.registerTabStore(p1.id, makeSharedStore(specWithTask()));
 
+    store.hideWorkarea();
     expect(store.revealEntity("task_missing", "Nope")).toBe(false);
+    expect(store.workareaCollapsed).toBe(true);
   });
 
   it("returns false when the pipeline tab has no registered store yet", () => {

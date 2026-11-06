@@ -36,6 +36,7 @@ function RunAnchor({ path, label }: AnchorProtocolProps) {
   async function openRun() {
     if (!target) return;
     try {
+      store.showWorkarea();
       await store.openWorkareaTarget(target, label);
     } catch (error) {
       notify(getErrorMessage(error), "error");

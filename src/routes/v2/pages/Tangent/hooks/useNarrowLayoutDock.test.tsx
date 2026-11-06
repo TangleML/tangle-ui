@@ -1,7 +1,11 @@
 import { act, renderHook } from "@testing-library/react";
+import { observable, runInAction } from "mobx";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { NARROW_LAYOUT_WIDTH } from "@/routes/v2/pages/Tangent/layout";
+import {
+  NARROW_LAYOUT_WIDTH,
+  narrowLayoutWidth,
+} from "@/routes/v2/pages/Tangent/layout";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 import { useNarrowLayoutDock } from "./useNarrowLayoutDock";
@@ -62,6 +66,14 @@ describe("useNarrowLayoutDock", () => {
     expect(setDockAreaCollapsed).toHaveBeenLastCalledWith("left", false);
   });
 
+  it("keeps the dock open where only a collapsed workarea leaves room for it", () => {
+    window.innerWidth = (narrowLayoutWidth(true) + NARROW_LAYOUT_WIDTH) / 2;
+
+    renderHook(() => useNarrowLayoutDock(true));
+
+    expect(setDockAreaCollapsed).not.toHaveBeenCalled();
+  });
+
   /** Reopening a dock someone shut reads as the app fighting the mouse. */
   it("leaves a dock the user collapsed alone", () => {
     collapsed = true;
@@ -71,5 +83,29 @@ describe("useNarrowLayoutDock", () => {
     resizeTo(WIDE);
 
     expect(setDockAreaCollapsed).not.toHaveBeenCalledWith("left", false);
+  });
+
+  it("does not reopen a dock the user closed after reopening it by hand", () => {
+    const dock = observable({ collapsed: false });
+    setDockAreaCollapsed.mockImplementation((_side, next) => {
+      dock.collapsed = next;
+    });
+    vi.mocked(useSharedStores).mockReturnValue({
+      windows: { getDockAreaConfig: () => dock, setDockAreaCollapsed },
+    } as unknown as ReturnType<typeof useSharedStores>);
+    window.innerWidth = (narrowLayoutWidth(true) + NARROW_LAYOUT_WIDTH) / 2;
+    const { rerender } = renderHook(
+      ({ workareaCollapsed }) => useNarrowLayoutDock(workareaCollapsed),
+      { initialProps: { workareaCollapsed: false } },
+    );
+    expect(dock.collapsed).toBe(true);
+
+    runInAction(() => (dock.collapsed = false));
+    rerender({ workareaCollapsed: true });
+    runInAction(() => (dock.collapsed = true));
+    rerender({ workareaCollapsed: false });
+    rerender({ workareaCollapsed: true });
+
+    expect(dock.collapsed).toBe(true);
   });
 });

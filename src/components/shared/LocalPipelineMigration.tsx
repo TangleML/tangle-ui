@@ -43,6 +43,7 @@ interface LocalPipelineMigrationProps {
   pipelineRef: PipelineRef;
   projectId?: string;
   isActive?: boolean;
+  allowBackgroundMigration?: boolean;
   onMigrated: (file: PipelineFile, clearProjectContext?: boolean) => void;
   children: ReactNode;
 }
@@ -119,6 +120,7 @@ function MigrateLocalPipeline({
   pipelineRef,
   projectId,
   isActive = true,
+  allowBackgroundMigration = false,
   onMigrated,
   children,
   file,
@@ -191,16 +193,24 @@ function MigrateLocalPipeline({
   const writer = useQuery({
     queryKey: RemotePipelineQueryKeys.Writer(backendUrl),
     queryFn: () => getRemotePipelineWriter(backendUrl),
-    enabled: ready && isActive && shouldMigrate && !isFetching,
+    enabled:
+      ready &&
+      !keepLocal &&
+      (isActive || (allowBackgroundMigration && hasConsent)) &&
+      shouldMigrate &&
+      !isFetching,
     retry: false,
   });
   useEffect(() => {
     if (
-      !isActive ||
+      (!isActive && !allowBackgroundMigration) ||
       !file ||
       isFetching ||
       started.current ||
-      (!file.remote && (!shouldMigrate || !hasConsent || !writer.isSuccess))
+      // Declining the dialog keeps this pipeline local until the user opens it
+      // again; later consent from another tab must not override that choice.
+      (!file.remote &&
+        (keepLocal || !shouldMigrate || !hasConsent || !writer.isSuccess))
     )
       return;
     started.current = true;
@@ -210,6 +220,8 @@ function MigrateLocalPipeline({
     hasConsent,
     isFetching,
     isActive,
+    keepLocal,
+    allowBackgroundMigration,
     migration,
     shouldMigrate,
     writer.isSuccess,

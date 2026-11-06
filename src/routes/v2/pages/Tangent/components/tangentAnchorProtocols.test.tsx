@@ -5,10 +5,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { tangentAnchorProtocols } from "./tangentAnchorProtocols";
 
 const openWorkareaTarget = vi.fn();
+const showWorkarea = vi.fn();
 const notify = vi.fn();
 
 vi.mock("@/routes/v2/pages/Tangent/context/TangentProjectContext", () => ({
-  useTangentProject: () => ({ openWorkareaTarget }),
+  useTangentProject: () => ({ openWorkareaTarget, showWorkarea }),
 }));
 
 vi.mock("@/hooks/useToastNotification", () => ({
@@ -43,6 +44,7 @@ describe("tangentAnchorProtocols run anchor", () => {
     render(<RunAnchor {...anchorProps()} />);
     fireEvent.click(screen.getByRole("button"));
 
+    expect(showWorkarea).toHaveBeenCalled();
     expect(openWorkareaTarget).toHaveBeenCalledWith(
       { type: "run", identity: "id/run_1" },
       "Training run",

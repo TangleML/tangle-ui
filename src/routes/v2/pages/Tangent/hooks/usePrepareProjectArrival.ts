@@ -116,6 +116,7 @@ export function usePrepareProjectArrival(
 
   const { mutate, isIdle } = useMutation({
     mutationFn: async (askedToOpen: WorkareaTarget | undefined) => {
+      if (askedToOpen || isEmpty) store.showWorkarea();
       const started = await store.startSession(
         starting && { ...starting, name: askedFor },
       );

@@ -12,9 +12,17 @@ import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { CloseableTabTrigger } from "@/routes/v2/pages/Tangent/components/CloseableTabTrigger";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
-import { MIN_WORKAREA_WIDTH } from "@/routes/v2/pages/Tangent/layout";
+import {
+  MIN_WORKAREA_WIDTH,
+  WORKAREA_ID,
+} from "@/routes/v2/pages/Tangent/layout";
 import { getWorkareaKind } from "@/routes/v2/pages/Tangent/workarea/registry";
 import type { WorkareaHostProps } from "@/routes/v2/pages/Tangent/workarea/types";
+import { workareaTabIcon } from "@/routes/v2/pages/Tangent/workarea/workareaTabIcon";
+
+interface DynamicWorkareaProps {
+  collapsePreview?: boolean;
+}
 
 /**
  * The right-hand "Dynamic Workarea": a tabbed surface people and Tangent agents
@@ -25,14 +33,18 @@ import type { WorkareaHostProps } from "@/routes/v2/pages/Tangent/workarea/types
  * A `keepMounted` view stays mounted while inactive (hidden via CSS) so a live
  * view survives background switches; other views mount only when active.
  */
-export const DynamicWorkarea = observer(function DynamicWorkarea() {
+export const DynamicWorkarea = observer(function DynamicWorkarea({
+  collapsePreview = false,
+}: DynamicWorkareaProps) {
   const store = useTangentProject();
   const activeSessionId = store.activeSessionId;
   const workareaTabs = store.workareaTabs;
   const activeWorkareaTabId = store.activeWorkareaTabId;
   function hostPropsFor(tabId: string): WorkareaHostProps {
+    const isSelected = tabId === activeWorkareaTabId;
     return {
-      isActive: tabId === activeWorkareaTabId,
+      isSelected,
+      isActive: !store.workareaCollapsed && isSelected,
       projectId: store.projectId,
       sessionId: activeSessionId,
       registerTabStore: (id, tabStore) => store.registerTabStore(id, tabStore),
@@ -51,9 +63,19 @@ export const DynamicWorkarea = observer(function DynamicWorkarea() {
 
   return (
     <div
+      id={WORKAREA_ID}
+      hidden={store.workareaCollapsed}
       className="relative flex h-full min-w-0 flex-1 flex-col border-l border-border bg-card"
       style={{ minWidth: MIN_WORKAREA_WIDTH }}
     >
+      {collapsePreview && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-20 bg-background/60 backdrop-blur-[1px]"
+        >
+          <div className="absolute inset-y-0 right-0 w-9 border-l border-primary/40 bg-primary/15 shadow-xl" />
+        </div>
+      )}
       {workareaTabs.length > 0 ? (
         <Tabs
           value={activeWorkareaTabId ?? undefined}
@@ -71,7 +93,7 @@ export const DynamicWorkarea = observer(function DynamicWorkarea() {
                 key={tab.id}
                 value={tab.id}
                 title={tab.title}
-                icon={getWorkareaKind(tab.target.type)?.icon ?? "FileText"}
+                icon={workareaTabIcon(tab)}
                 onClose={() => store.closeWorkareaTab(tab.id)}
               />
             ))}

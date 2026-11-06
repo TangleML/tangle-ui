@@ -7,6 +7,8 @@ interface ResizeHandleProps {
   minWidth?: number;
   maxWidth?: number;
   side?: "left" | "right";
+  // Names the handle as a separator for assistive tech and tests.
+  label?: string;
   onDoubleClick?: () => void;
   /** Called while dragging with the width requested before min/max constraints. */
   onResize?: (attemptedWidth: number) => void;
@@ -18,6 +20,7 @@ export const VerticalResizeHandle = ({
   minWidth = 200,
   maxWidth = 600,
   side = "left",
+  label,
   onDoubleClick,
   onResize,
   onResizeEnd,
@@ -92,6 +95,9 @@ export const VerticalResizeHandle = ({
         "w-2 -mx-0.5",
       )}
       ref={captureParentElement}
+      role={label ? "separator" : undefined}
+      aria-orientation={label ? "vertical" : undefined}
+      aria-label={label}
       onMouseDown={handleMouseDown}
       onDoubleClick={onDoubleClick}
     >

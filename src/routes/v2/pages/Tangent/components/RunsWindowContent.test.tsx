@@ -11,9 +11,14 @@ import {
 import { RunsWindowContent } from "./RunsWindowContent";
 
 const openWorkareaTarget = vi.fn();
+const showWorkarea = vi.fn();
 
 vi.mock("@/routes/v2/pages/Tangent/context/TangentProjectContext", () => ({
-  useTangentProject: () => ({ projectId: "project-1", openWorkareaTarget }),
+  useTangentProject: () => ({
+    projectId: "project-1",
+    openWorkareaTarget,
+    showWorkarea,
+  }),
 }));
 
 vi.mock("@/services/projects/useProjectRuns", () => ({
@@ -79,6 +84,7 @@ describe("RunsWindowContent", () => {
     render(<RunsWindowContent />);
     await user.click(screen.getByTestId("open-run-run-7"));
 
+    expect(showWorkarea).toHaveBeenCalled();
     expect(openWorkareaTarget).toHaveBeenCalledWith(
       { type: "run", identity: "id/run-7" },
       "Churn model",
@@ -101,6 +107,7 @@ describe("RunsWindowContent", () => {
 
       expect(window.open).toHaveBeenCalledWith("/runs/run-7", "_blank");
       expect(openWorkareaTarget).not.toHaveBeenCalled();
+      expect(showWorkarea).not.toHaveBeenCalled();
     },
   );
 
@@ -111,6 +118,7 @@ describe("RunsWindowContent", () => {
     render(<RunsWindowContent />);
     await user.click(screen.getByTestId("open-run-run-8"));
 
+    expect(showWorkarea).toHaveBeenCalled();
     expect(openWorkareaTarget).toHaveBeenCalledWith(
       { type: "run", identity: "id/run-8" },
       "Unnamed pipeline",

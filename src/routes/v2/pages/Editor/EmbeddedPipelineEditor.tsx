@@ -63,6 +63,7 @@ import { TangentEditorAgentProvider } from "./TangentEditorAgentProvider";
 interface EmbeddedPipelineEditorProps {
   pipelineRef: EditorPipelineRef;
   isActive: boolean;
+  allowBackgroundMigration?: boolean;
   projectId: string;
   onMigrated?: (file: PipelineFile) => void;
   onTitleChange?: (title: string) => void;
@@ -281,6 +282,7 @@ export function EmbeddedPipelineEditor(props: EmbeddedPipelineEditorProps) {
         pipelineRef={props.pipelineRef}
         projectId={props.projectId}
         isActive={props.isActive}
+        allowBackgroundMigration={props.allowBackgroundMigration}
         onMigrated={(file) => props.onMigrated?.(file)}
       >
         <EditableEmbeddedPipelineEditor {...props} />

@@ -53,7 +53,13 @@ function resolvePipelineTitle(
   return kind.resolveTitle({ type: "pipeline", identity });
 }
 
-function renderPipeline(identity: WorkareaIdentity) {
+function renderPipeline(
+  identity: WorkareaIdentity,
+  visibility: { isSelected: boolean; isActive: boolean } = {
+    isSelected: true,
+    isActive: true,
+  },
+) {
   const kind = getWorkareaKind("pipeline")!;
   render(
     kind.render(
@@ -63,7 +69,7 @@ function renderPipeline(identity: WorkareaIdentity) {
         target: { type: "pipeline", identity },
       },
       {
-        isActive: true,
+        ...visibility,
         projectId: "project-1",
         tabEnvironmentId: () => undefined,
         registerTabStore: vi.fn(),
@@ -76,6 +82,23 @@ function renderPipeline(identity: WorkareaIdentity) {
     ),
   );
 }
+
+describe("pipelineKind background migration", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it.each([true, false])(
+    "only lets the selected tab migrate while hidden (selected: %s)",
+    (isSelected) => {
+      renderPipeline("id/abc", { isSelected, isActive: false });
+      expect(mocks.editor.mock.calls.at(-1)?.[0]).toMatchObject({
+        isActive: false,
+        allowBackgroundMigration: isSelected,
+      });
+    },
+  );
+});
 
 describe("pipelineKind resolveTitle", () => {
   beforeEach(() => {
@@ -172,6 +195,7 @@ it("shows a recoverable message when an old draft target is unavailable", () => 
         target: { type: "pipeline", identity: "draft/missing" },
       } as Parameters<typeof kind.render>[0],
       {
+        isSelected: true,
         isActive: true,
         projectId: "project-1",
         tabEnvironmentId: () => undefined,

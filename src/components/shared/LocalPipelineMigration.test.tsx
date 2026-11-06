@@ -168,6 +168,64 @@ it.each([false, true])(
   },
 );
 
+it("finishes an already-consented move for a hidden tab that opted in", async () => {
+  render(
+    <QueryClientProvider client={client}>
+      <LocalPipelineMigration
+        pipelineRef={pipelineRef}
+        isActive={false}
+        allowBackgroundMigration
+        onMigrated={onMigrated}
+      >
+        <p>Local editor</p>
+      </LocalPipelineMigration>
+    </QueryClientProvider>,
+  );
+  await waitFor(() => expect(onMigrated).toHaveBeenCalledWith(remote));
+  expect(screen.queryByRole("alertdialog")).toBeNull();
+});
+
+it("never prompts, checks write access or uploads for a hidden opted-in tab without consent", async () => {
+  localStorage.removeItem(consentKey);
+  const view = (active: boolean) => (
+    <QueryClientProvider client={client}>
+      <LocalPipelineMigration
+        pipelineRef={pipelineRef}
+        isActive={active}
+        allowBackgroundMigration
+        onMigrated={onMigrated}
+      >
+        <p>Local editor</p>
+      </LocalPipelineMigration>
+    </QueryClientProvider>
+  );
+  const { rerender } = render(view(false));
+  await waitFor(() => expect(storage.resolvePipeline).toHaveBeenCalled());
+  await act(async () => {});
+  expect(screen.queryByRole("alertdialog")).toBeNull();
+  expect(getRemotePipelineWriter).not.toHaveBeenCalled();
+  expect(storage.moveLocalPipelineToRemote).not.toHaveBeenCalled();
+
+  rerender(view(true));
+  expect(await screen.findByRole("alertdialog")).toBeInTheDocument();
+});
+
+it("keeps a cancelled pipeline local when consent is granted elsewhere", async () => {
+  localStorage.removeItem(consentKey);
+  open();
+  fireEvent.click(await screen.findByRole("button", { name: "Cancel" }));
+  await screen.findByText("Local editor");
+
+  act(() => {
+    localStorage.setItem(consentKey, "true");
+    window.dispatchEvent(new StorageEvent("storage"));
+  });
+
+  await act(async () => {});
+  expect(storage.moveLocalPipelineToRemote).not.toHaveBeenCalled();
+  expect(screen.getByText("Local editor")).toBeInTheDocument();
+});
+
 it("opens the local editor without offering a move when writing is unavailable", async () => {
   vi.mocked(getRemotePipelineWriter).mockRejectedValue(
     new Error("Write permission denied"),

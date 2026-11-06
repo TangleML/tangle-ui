@@ -38,6 +38,7 @@ export function RunsWindowContent() {
     }
     const title = run.pipelineName ?? UNNAMED_PIPELINE;
     try {
+      store.showWorkarea();
       await store.openWorkareaTarget(
         { type: "run", identity: idIdentity(run.id) },
         title,
