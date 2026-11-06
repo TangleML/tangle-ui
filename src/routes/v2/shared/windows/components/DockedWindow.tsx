@@ -114,7 +114,7 @@ export const DockedWindow = observer(function DockedWindow() {
           actions={actions}
           className="bg-card"
         />
-        <div className="flex-1 min-h-0 overflow-auto bg-background">
+        <div className="reveal-scrollbar flex-1 min-h-0 overflow-auto bg-background">
           {content}
         </div>
       </div>,
@@ -208,7 +208,9 @@ export const DockedWindow = observer(function DockedWindow() {
           onMouseDown={handleContainerMouseDown}
           onClick={handleContainerClick}
         >
-          <div className="flex-1 min-h-0 overflow-auto bg-card">{content}</div>
+          <div className="reveal-scrollbar flex-1 min-h-0 overflow-auto bg-card">
+            {content}
+          </div>
           {!model.fillDockHeight && (
             <div
               className="h-1 cursor-ns-resize hover:bg-accent transition-colors shrink-0"
