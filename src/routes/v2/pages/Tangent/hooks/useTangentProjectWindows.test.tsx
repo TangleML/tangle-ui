@@ -5,7 +5,6 @@ import { describe, expect, it, vi } from "vitest";
 import { WindowStoreImpl } from "@/routes/v2/shared/windows/windowStore";
 
 import {
-  AGENTS_WINDOW_ID,
   PROJECTS_WINDOW_ID,
   useTangentProjectWindows,
 } from "./useTangentProjectWindows";
@@ -22,10 +21,6 @@ vi.mock("@/routes/v2/pages/Tangent/components/ProjectsWindowContent", () => ({
   ProjectsWindowContent: () => null,
 }));
 
-vi.mock("@/routes/v2/pages/Tangent/components/AgentsWindowContent", () => ({
-  AgentsWindowContent: () => null,
-}));
-
 function dockedStore() {
   const windows = new WindowStoreImpl();
   windows.enableDockSide("left");
@@ -35,15 +30,12 @@ function dockedStore() {
 
 describe("useTangentProjectWindows", () => {
   /** The rest live in a card over the canvas, so an editor's rail is the only one. */
-  it("docks the Projects panel above the Agents panel, on the left", () => {
+  it("docks only the Projects panel, on the left", () => {
     const windows = dockedStore();
 
     renderHook(() => useTangentProjectWindows());
 
-    expect(windows.getDockedWindowOrder("left")).toEqual([
-      PROJECTS_WINDOW_ID,
-      AGENTS_WINDOW_ID,
-    ]);
+    expect(windows.getDockedWindowOrder("left")).toEqual([PROJECTS_WINDOW_ID]);
   });
 
   it("leaves a Projects panel the saved layout already restored", () => {
@@ -57,8 +49,6 @@ describe("useTangentProjectWindows", () => {
 
     renderHook(() => useTangentProjectWindows());
 
-    expect(openWindow.mock.calls.map(([, options]) => options.id)).toEqual([
-      AGENTS_WINDOW_ID,
-    ]);
+    expect(openWindow).not.toHaveBeenCalled();
   });
 });
