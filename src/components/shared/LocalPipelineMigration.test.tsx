@@ -193,7 +193,7 @@ it("keeps a cancelled pipeline local when consent is granted elsewhere", async (
 
   act(() => {
     localStorage.setItem(consentKey, "true");
-    window.dispatchEvent(new StorageEvent("storage", { key: consentKey }));
+    window.dispatchEvent(new StorageEvent("storage"));
   });
 
   await act(async () => {});
