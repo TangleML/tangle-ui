@@ -61,10 +61,6 @@ vi.mock(
   }),
 );
 
-vi.mock("@/routes/v2/shared/store/SharedStoreContext", () => ({
-  useSharedStores: () => ({ windows }),
-}));
-
 vi.mock(
   "@/routes/v2/pages/Editor/components/EditorMenuBar/components/fileMenu.actions",
   () => ({ createNewPipeline: vi.fn() }),
@@ -74,8 +70,6 @@ const updateProject = vi.fn();
 const createResource = vi.fn();
 const deleteFile = vi.fn();
 const storage = {};
-const minimize = vi.fn();
-const windows = { getWindowById: vi.fn(() => ({ minimize })) };
 
 const project = {
   id: "project-1",
@@ -156,7 +150,6 @@ describe("usePrepareProjectArrival", () => {
     search = {};
     given();
     mockAiConfigured(true);
-    windows.getWindowById.mockReturnValue({ minimize });
     vi.mocked(createNewPipeline).mockResolvedValue({
       id: "file-1",
       storageKey: "Churn model",
@@ -164,37 +157,6 @@ describe("usePrepareProjectArrival", () => {
     } as unknown as Awaited<ReturnType<typeof createNewPipeline>>);
   });
   afterEach(() => vi.resetAllMocks());
-
-  /** An empty project's window is a tall empty form above what someone came for. */
-  it("folds the project window away on a project nobody has worked in", async () => {
-    const store = makeStore();
-
-    prepare(store);
-
-    await waitFor(() => expect(minimize).toHaveBeenCalledTimes(1));
-    expect(windows.getWindowById).toHaveBeenCalledWith(
-      "tangent-project-details",
-    );
-  });
-
-  it("leaves the project window as it was found on a project with a session", async () => {
-    const store = makeStore();
-
-    prepare(store, 1);
-    await settle();
-
-    expect(minimize).not.toHaveBeenCalled();
-  });
-
-  it("does not fold it away when the session could not start", async () => {
-    const store = makeStore();
-    vi.mocked(store.startSession).mockResolvedValue(false);
-
-    prepare(store);
-    await settle();
-
-    expect(minimize).not.toHaveBeenCalled();
-  });
 
   it("starts a session for a project that has none", async () => {
     const store = makeStore();
@@ -389,7 +351,7 @@ describe("usePrepareProjectArrival", () => {
   });
 
   /** Somebody is working in it: it is not theirs to rearrange. */
-  it("leaves a busy project's window and pipelines as they are", async () => {
+  it("leaves a busy project's pipelines as they are", async () => {
     given({
       projectOverrides: {
         metadata: startingSessionMetadata({ prompt: "Fix run 7" }),
@@ -400,8 +362,6 @@ describe("usePrepareProjectArrival", () => {
     prepare(store, 2);
     await waitFor(() => expect(store.startSession).toHaveBeenCalled());
     await settle();
-
-    expect(minimize).not.toHaveBeenCalled();
     expect(createNewPipeline).not.toHaveBeenCalled();
     expect(store.openWorkareaTarget).not.toHaveBeenCalled();
   });
@@ -677,7 +637,6 @@ describe("usePrepareProjectArrival", () => {
       );
       expect(store.startSession).toHaveBeenCalledTimes(1);
       expect(createNewPipeline).not.toHaveBeenCalled();
-      expect(minimize).toHaveBeenCalled();
     });
 
     it("says why the view it names could not be opened", async () => {
@@ -749,7 +708,6 @@ describe("usePrepareProjectArrival", () => {
       });
       expect(createNewPipeline).not.toHaveBeenCalled();
       expect(createResource).not.toHaveBeenCalled();
-      expect(minimize).not.toHaveBeenCalled();
     });
 
     it("waits for a cached project to be read again before deciding", async () => {

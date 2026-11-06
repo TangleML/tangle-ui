@@ -30,6 +30,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
+import { isTangentProjectPath } from "@/routes/appRoutes";
 import { APP_ROUTES } from "@/routes/router";
 import { isRunViewPath } from "@/routes/runRoutes";
 import { DOCUMENTATION_URL, TOP_NAV_HEIGHT } from "@/utils/constants";
@@ -213,6 +214,10 @@ const AppMenu = () => {
   }
 
   if (pathname.startsWith(APP_ROUTES.TOUR)) {
+    return null;
+  }
+
+  if (isTangentProjectPath(pathname)) {
     return null;
   }
 
