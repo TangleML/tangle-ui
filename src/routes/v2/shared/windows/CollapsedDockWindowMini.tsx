@@ -94,7 +94,9 @@ export const CollapsedDockWindowMini = observer(
             </Text>
           </div>
           <div className="min-h-0 flex-1 overflow-auto bg-card">
-            <WindowContextProvider value={{ model, content }}>
+            <WindowContextProvider
+              value={{ model, content, dismissFlyout: () => setOpen(false) }}
+            >
               {content}
             </WindowContextProvider>
           </div>

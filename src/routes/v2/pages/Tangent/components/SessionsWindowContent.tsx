@@ -1,4 +1,5 @@
 import { observer } from "mobx-react-lite";
+import { useState } from "react";
 
 import {
   RenameDialog,
@@ -6,28 +7,43 @@ import {
 } from "@/components/shared/Dialogs/RenameDialog";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
-import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useDialog } from "@/providers/DialogProvider/hooks/useDialog";
 import { convertCancelErrorTo } from "@/providers/DialogProvider/utils";
+import { tangentSessionSearch } from "@/routes/tangentSearch";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
+import { useOpenTangentProject } from "@/routes/v2/pages/Tangent/hooks/useOpenTangentProject";
 import {
   type ProjectSession,
   useProjectSessions,
 } from "@/routes/v2/pages/Tangent/hooks/useProjectSessions";
-import { useAiGate } from "@/routes/v2/shared/components/AiChat/components/useAiGate";
+import { useOptionalWindowContext } from "@/routes/v2/shared/windows/ContentWindowStateContext";
 import { sessionLabelsById } from "@/services/projects/sessionLabel";
 import { formatRelativeTime } from "@/utils/date";
 import { tracking } from "@/utils/tracking";
 
-export const SessionsWindowContent = observer(function SessionsWindowContent() {
+const PREVIEW_COUNT = 5;
+
+/**
+ * One project's sessions in the sidebar. A session of the project in view is
+ * selected in place; one of another project opens that project with it.
+ */
+export const SessionsWindowContent = observer(function SessionsWindowContent({
+  projectId,
+}: {
+  projectId: string;
+}) {
   const store = useTangentProject();
-  const aiGate = useAiGate("New session");
-  const { sessions, renameSession } = useProjectSessions(store.projectId);
-  const activeSessionId = store.activeSessionId;
+  const openProject = useOpenTangentProject();
+  const dismissFlyout = useOptionalWindowContext()?.dismissFlyout;
+  const { sessions, renameSession } = useProjectSessions(projectId);
+  const [showAll, setShowAll] = useState(false);
+  const isProjectInView = projectId === store.projectId;
+  const activeSessionId = isProjectInView ? store.activeSessionId : null;
   const labels = sessionLabelsById(
     sessions.map((session) => [session.sessionId, session]),
   );
@@ -61,71 +77,107 @@ export const SessionsWindowContent = observer(function SessionsWindowContent() {
     }
   }
 
-  return (
-    <BlockStack gap="2" className="p-2">
-      {sessions.length === 0 ? (
-        <Text size="xs" tone="subdued">
-          No sessions yet.
-        </Text>
-      ) : (
-        <BlockStack gap="1">
-          {sessions.map((session) => {
-            const isActive = session.sessionId === activeSessionId;
-            const label = labelFor(session.sessionId);
-            return (
-              <InlineStack
-                key={session.sessionId}
-                wrap="nowrap"
-                blockAlign="center"
-                className={cn(
-                  "group w-full rounded-md hover:bg-accent",
-                  isActive && "bg-accent",
-                )}
-              >
-                <button
-                  type="button"
-                  onClick={() => store.selectSession(session.sessionId)}
-                  {...tracking("projects.open_session")}
-                  className="min-w-0 flex-1 px-2 py-1.5 text-left"
-                >
-                  <InlineStack gap="2" blockAlign="center">
-                    <Icon name="MessageSquare" size="xs" />
-                    <Text size="sm" className="min-w-0 flex-1 truncate">
-                      {label}
-                    </Text>
-                  </InlineStack>
-                  <Text size="xs" tone="subdued">
-                    {formatRelativeTime(session.createdAt)}
-                  </Text>
-                </button>
-                <Button
-                  variant="ghost"
-                  size="xs"
-                  aria-label={`Rename ${label}`}
-                  onClick={() => void rename(session)}
-                  {...tracking("projects.rename_session_open")}
-                  className="mr-1 shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100"
-                >
-                  <Icon name="Pencil" size="xs" />
-                </Button>
-              </InlineStack>
-            );
-          })}
-        </BlockStack>
-      )}
+  function openSession(sessionId: string) {
+    dismissFlyout?.();
+    if (isProjectInView) {
+      store.selectSession(sessionId);
+      return;
+    }
+    void openProject(projectId, tangentSessionSearch(sessionId));
+  }
 
-      <Button
-        variant="outline"
-        aria-label="New session"
-        title={aiGate.title}
-        onClick={() => void store.startSession()}
-        {...tracking("projects.start_session")}
-        disabled={store.isStartingSession || aiGate.disabled}
-        className="w-full"
-      >
-        <Icon name={store.isStartingSession ? "Loader" : "Plus"} size="xs" />
-        New session
-      </Button>
+  if (sessions.length === 0) {
+    return (
+      <Text size="xs" tone="subdued" className="block py-1 ps-8 pe-2">
+        No sessions yet
+      </Text>
+    );
+  }
+
+  const activeIndex = sessions.findIndex(
+    (session) => session.sessionId === activeSessionId,
+  );
+  const visible =
+    showAll || activeIndex >= PREVIEW_COUNT
+      ? sessions
+      : sessions.slice(0, PREVIEW_COUNT);
+
+  return (
+    <BlockStack align="stretch">
+      <BlockStack as="ul" align="stretch">
+        {visible.map((session) => {
+          const label = labelFor(session.sessionId);
+          return (
+            <SessionRow
+              key={session.sessionId}
+              label={label}
+              createdAt={session.createdAt}
+              selected={session.sessionId === activeSessionId}
+              onOpen={() => openSession(session.sessionId)}
+              onRename={() => void rename(session)}
+            />
+          );
+        })}
+      </BlockStack>
+      {visible.length < sessions.length && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-auto justify-start py-1.5 ps-8 pe-2 font-normal text-muted-foreground hover:bg-transparent hover:text-foreground"
+          onClick={() => setShowAll(true)}
+          {...tracking("projects.sidebar.show_more_sessions")}
+        >
+          Show more
+        </Button>
+      )}
     </BlockStack>
   );
 });
+
+/** A session reads as a line of text under its project, as a chat list does. */
+function SessionRow({
+  label,
+  createdAt,
+  selected,
+  onOpen,
+  onRename,
+}: {
+  label: string;
+  createdAt: Date;
+  selected: boolean;
+  onOpen: () => void;
+  onRename: () => void;
+}) {
+  return (
+    <li
+      className={cn(
+        "group/session flex items-center rounded-md pe-1 transition-colors hover:bg-foreground/5 motion-reduce:transition-none",
+        selected && "bg-foreground/10 hover:bg-foreground/10",
+      )}
+    >
+      <button
+        type="button"
+        aria-current={selected || undefined}
+        title={`${label} · ${formatRelativeTime(createdAt)}`}
+        onClick={onOpen}
+        className="flex min-w-0 flex-1 cursor-pointer rounded-md py-1.5 ps-8 pe-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+        {...tracking("projects.open_session")}
+      >
+        <Text size="sm" className="min-w-0 truncate">
+          {label}
+        </Text>
+      </button>
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label={`Rename ${label}`}
+        title="Rename session"
+        onClick={onRename}
+        className="hidden size-6 shrink-0 text-muted-foreground hover:text-foreground group-focus-within/session:flex group-hover/session:flex pointer-coarse:flex"
+        {...tracking("projects.rename_session_open")}
+      >
+        <Icon name="Pencil" size="xs" />
+      </Button>
+    </li>
+  );
+}

@@ -81,11 +81,13 @@ function oldestAttached(
  * project arrives session-less a second time. Reusing the pipeline or run
  * attached last time is what stops that adding a pipeline.
  *
- * The sequence is one mutation so `isIdle` guards all of it, and the pipeline
- * opens only after `startSession` resolves, because the workarea is keyed by
- * session and a tab opened before there is one is dropped. The ref guards what
- * `isIdle` cannot: StrictMode replays this effect inside one commit, where the
- * closure's `isIdle` has not yet seen the first `mutate`.
+ * The sequence is one mutation so `isPending` guards all of it, and the
+ * pipeline opens only after `startSession` resolves, because the workarea is
+ * keyed by session and a tab opened before there is one is dropped. The ref
+ * holds the store it prepared, so moving to another project in place (a new
+ * store, same mount) arrives there too. It also guards what `isPending` cannot:
+ * StrictMode replays this effect inside one commit, where the closure's
+ * `isPending` has not yet seen the first `mutate`.
  */
 export function usePrepareProjectArrival(
   store: TangentProjectStore,
@@ -105,7 +107,7 @@ export function usePrepareProjectArrival(
   const { mutateAsync: createResource } = useCreateProjectResource(projectId);
   const { mutateAsync: updateProject } = useUpdateProject();
   const { isConfigured: isAiConfigured } = useAiProviderSettings();
-  const prepared = useRef(false);
+  const prepared = useRef<TangentProjectStore | null>(null);
 
   const linkAsksForSession = readTangentSessionParam(search)?.kind === "new";
   const waiting = readStartingSession(project?.metadata);
@@ -114,7 +116,7 @@ export function usePrepareProjectArrival(
   const isEmpty = sessionCount === 0;
   const linkAsksToOpen = readTangentOpenParam(search);
 
-  const { mutate, isIdle } = useMutation({
+  const { mutate, isPending } = useMutation({
     mutationFn: async (askedToOpen: WorkareaTarget | undefined) => {
       const started = await store.startSession(
         starting && { ...starting, name: askedFor },
@@ -210,9 +212,9 @@ export function usePrepareProjectArrival(
   }, [dropsOpenAsk, navigate]);
 
   useEffect(() => {
-    if (!hasArrival || prepared.current) return;
-    if (!isIdle || store.isStartingSession) return;
-    prepared.current = true;
+    if (!hasArrival || prepared.current === store) return;
+    if (isPending || store.isStartingSession) return;
+    prepared.current = store;
     mutate(linkAsksToOpen);
 
     if (linkAsksForSession || linkAsksToOpen) {
@@ -224,7 +226,7 @@ export function usePrepareProjectArrival(
     }
   }, [
     hasArrival,
-    isIdle,
+    isPending,
     store,
     mutate,
     linkAsksForSession,

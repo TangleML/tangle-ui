@@ -19,6 +19,11 @@ vi.mock("@tanstack/react-router", () => ({
   useSearch: () => ({}),
 }));
 
+vi.mock("@/routes/v2/pages/Tangent/hooks/useOpenTangentProject", () => ({
+  useOpenTangentProject: () => openProject,
+}));
+
+const openProject = vi.fn();
 const selectSession = vi.fn();
 const renameSession = vi.fn();
 const notify = vi.fn();
@@ -64,10 +69,10 @@ function given(...sessions: ReturnType<typeof session>[]) {
   } as unknown as ReturnType<typeof useProjectSessions>);
 }
 
-function renderSessions() {
+function renderSessions(projectId = "project-1") {
   return render(
     <DialogProvider disableRouterSync>
-      <SessionsWindowContent />
+      <SessionsWindowContent projectId={projectId} />
     </DialogProvider>,
   );
 }
@@ -165,5 +170,28 @@ describe("SessionsWindowContent", () => {
     await user.click(screen.getByRole("button", { name: "Rename Session 1" }));
 
     expect(selectSession).not.toHaveBeenCalled();
+  });
+
+  it("selects a session of the project in view where it is", async () => {
+    const user = userEvent.setup();
+    renderSessions();
+
+    await user.click(screen.getByText("Feature exploration"));
+
+    expect(selectSession).toHaveBeenCalledWith("session-2");
+    expect(openProject).not.toHaveBeenCalled();
+  });
+
+  /** Its files and resources are that project's, so the page moves there. */
+  it("opens another project's session in that project", async () => {
+    const user = userEvent.setup();
+    renderSessions("project-2");
+
+    await user.click(screen.getByText("Feature exploration"));
+
+    expect(selectSession).not.toHaveBeenCalled();
+    expect(openProject).toHaveBeenCalledWith("project-2", {
+      session: "session-2",
+    });
   });
 });
