@@ -1,5 +1,4 @@
 import { Link } from "@tanstack/react-router";
-import { observer } from "mobx-react-lite";
 
 import { PinProjectButton } from "@/components/Project/PinProjectButton";
 import { ProjectWorkspaceLabel } from "@/components/Project/ProjectWorkspaceLabel";
@@ -11,7 +10,6 @@ import { InlineStack } from "@/components/ui/layout";
 import { Heading } from "@/components/ui/typography";
 import { APP_ROUTES } from "@/routes/appRoutes";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
-import { WORKAREA_ID } from "@/routes/v2/pages/Tangent/layout";
 import type { Project } from "@/services/projects/types";
 import { useProject } from "@/services/projects/useProjects";
 import { tracking } from "@/utils/tracking";
@@ -22,13 +20,7 @@ export function ProjectHeader() {
   const store = useTangentProject();
   const { data: project } = useProject(store.projectId);
 
-  if (!project) {
-    return (
-      <InlineStack className="shrink-0 border-b border-border px-4 py-2">
-        <WorkareaToggle />
-      </InlineStack>
-    );
-  }
+  if (!project) return null;
 
   return <ProjectHeaderBar project={project} />;
 }
@@ -42,16 +34,14 @@ function ProjectHeaderBar({ project }: { project: Project }) {
       align="space-between"
       blockAlign="center"
       gap="3"
-      wrap="nowrap"
-      className="min-w-0 shrink-0 border-b border-border px-4 py-2"
+      className="shrink-0 border-b border-border px-4 py-2"
     >
       <InlineStack
         gap="1"
         blockAlign="center"
         wrap="nowrap"
-        className="min-w-0 flex-1"
+        className="min-w-0"
       >
-        <WorkareaToggle />
         {/* The only way out of a project was the logo, which leaves Tangent
             altogether rather than going back up one level. */}
         <Link
@@ -119,37 +109,3 @@ function ProjectHeaderBar({ project }: { project: Project }) {
     </InlineStack>
   );
 }
-
-export const WorkareaToggle = observer(function WorkareaToggle() {
-  const store = useTangentProject();
-  const label = store.workareaCollapsed ? "Show workarea" : "Hide workarea";
-
-  return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon"
-      aria-label={label}
-      title={label}
-      aria-expanded={!store.workareaCollapsed}
-      aria-controls={WORKAREA_ID}
-      className="size-7 shrink-0 text-muted-foreground hover:text-foreground"
-      onClick={(event) => {
-        if (store.workareaCollapsed) {
-          store.showWorkarea();
-          return;
-        }
-        const workarea = document.getElementById(WORKAREA_ID);
-        if (workarea?.contains(document.activeElement)) {
-          event.currentTarget.focus();
-        }
-        store.hideWorkarea();
-      }}
-    >
-      <Icon
-        name={store.workareaCollapsed ? "PanelRightOpen" : "PanelRightClose"}
-        size="sm"
-      />
-    </Button>
-  );
-});

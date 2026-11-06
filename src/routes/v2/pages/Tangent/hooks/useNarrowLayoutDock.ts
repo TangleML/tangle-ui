@@ -1,20 +1,22 @@
 import { useEffect, useRef } from "react";
 
-import { NARROW_LAYOUT_WIDTH } from "@/routes/v2/pages/Tangent/layout";
+import { narrowLayoutWidth } from "@/routes/v2/pages/Tangent/layout";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 /**
  * Only a collapse this hook performed is undone: someone who collapsed the dock
  * themselves and then widened the window meant to keep it collapsed, and
  * reopening it under them reads as the app fighting the mouse.
+ *
+ * A collapsed workarea only needs its rail, so it frees room for the dock.
  */
-export function useNarrowLayoutDock() {
+export function useNarrowLayoutDock(workareaCollapsed = false) {
   const { windows } = useSharedStores();
   const collapsedByUs = useRef(false);
 
   useEffect(() => {
     const apply = () => {
-      const narrow = window.innerWidth < NARROW_LAYOUT_WIDTH;
+      const narrow = window.innerWidth < narrowLayoutWidth(workareaCollapsed);
       const { collapsed } = windows.getDockAreaConfig("left");
 
       if (narrow && !collapsed) {
@@ -31,5 +33,5 @@ export function useNarrowLayoutDock() {
     apply();
     window.addEventListener("resize", apply);
     return () => window.removeEventListener("resize", apply);
-  }, [windows]);
+  }, [windows, workareaCollapsed]);
 }

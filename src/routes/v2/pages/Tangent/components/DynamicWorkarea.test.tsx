@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import { observer } from "mobx-react-lite";
 import { useEffect } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -6,8 +7,8 @@ import { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProj
 import type { WorkareaTab } from "@/routes/v2/pages/Tangent/workarea/types";
 import { idIdentity } from "@/services/projects/resourceTarget";
 
+import { CollapsedWorkareaRail } from "./CollapsedWorkareaRail";
 import { DynamicWorkarea } from "./DynamicWorkarea";
-import { WorkareaToggle } from "./ProjectHeader";
 
 let store: TangentProjectStore;
 const unmounted = vi.fn();
@@ -38,39 +39,58 @@ function open(title: string) {
   });
 }
 
+const Workarea = observer(function Workarea() {
+  return (
+    <>
+      <DynamicWorkarea />
+      {store.workareaCollapsed && <CollapsedWorkareaRail />}
+    </>
+  );
+});
+
 beforeEach(() => {
   vi.clearAllMocks();
   store = new TangentProjectStore("project-1");
   store.setDefaultSessionId("session-1");
 });
 
-describe("hiding and showing the workarea", () => {
-  it("hides the open view and brings it back with its work intact", () => {
-    open("Pipeline");
-    render(
-      <>
-        <WorkareaToggle />
-        <DynamicWorkarea />
-      </>,
-    );
-    const view = screen.getByTestId("view-Pipeline");
-    fireEvent.change(view, { target: { value: "edited canvas" } });
+describe("collapsing the workarea to its rail", () => {
+  it("keeps the open view's work while collapsed and reopens on its tab", () => {
+    open("First");
+    open("Second");
+    render(<Workarea />);
+    const first = screen.getByTestId("view-First");
+    fireEvent.change(first, { target: { value: "edited canvas" } });
+    first.focus();
 
-    fireEvent.click(screen.getByRole("button", { name: "Hide workarea" }));
-    expect(view).not.toBeVisible();
+    act(() => store.hideWorkarea());
+    expect(first).not.toBeVisible();
+    expect(screen.getByRole("button", { name: "Show workarea" })).toHaveFocus();
     expect(unmounted).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole("button", { name: "Show workarea" }));
-    expect(view).toBeVisible();
-    expect(view).toHaveValue("edited canvas");
+    fireEvent.click(screen.getByRole("button", { name: "Show First" }));
+    expect(first).toBeVisible();
+    expect(first).toHaveValue("edited canvas");
   });
 
-  it("opens an agent's new tab while hidden without revealing it or taking focus", () => {
+  it("reopens when the rail's edge is double-clicked", () => {
+    open("Pipeline");
+    store.hideWorkarea();
+    render(<Workarea />);
+
+    fireEvent.doubleClick(
+      screen.getByRole("separator", { name: "Expand workarea" }),
+    );
+
+    expect(screen.getByTestId("view-Pipeline")).toBeVisible();
+  });
+
+  it("opens an agent's new tab while collapsed without reopening or taking focus", () => {
     store.hideWorkarea();
     render(
       <>
         <input aria-label="Chat composer" />
-        <DynamicWorkarea />
+        <Workarea />
       </>,
     );
     const composer = screen.getByLabelText("Chat composer");

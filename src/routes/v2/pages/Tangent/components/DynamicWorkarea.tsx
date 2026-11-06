@@ -28,7 +28,11 @@ import type { WorkareaHostProps } from "@/routes/v2/pages/Tangent/workarea/types
  * A `keepMounted` view stays mounted while inactive (hidden via CSS) so a live
  * view survives background switches; other views mount only when active.
  */
-export const DynamicWorkarea = observer(function DynamicWorkarea() {
+export const DynamicWorkarea = observer(function DynamicWorkarea({
+  collapsePreview = false,
+}: {
+  collapsePreview?: boolean;
+}) {
   const store = useTangentProject();
   const activeSessionId = store.activeSessionId;
   const workareaTabs = store.workareaTabs;
@@ -64,6 +68,14 @@ export const DynamicWorkarea = observer(function DynamicWorkarea() {
         display: store.workareaCollapsed ? "none" : undefined,
       }}
     >
+      {collapsePreview && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-20 bg-background/60 backdrop-blur-[1px]"
+        >
+          <div className="absolute inset-y-0 right-0 w-9 border-l border-primary/40 bg-primary/15 shadow-xl" />
+        </div>
+      )}
       {workareaTabs.length > 0 ? (
         <Tabs
           value={activeWorkareaTabId ?? undefined}

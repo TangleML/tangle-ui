@@ -6,12 +6,13 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { ReactFlowProvider, useReactFlow } from "@xyflow/react";
+import { observer } from "mobx-react-lite";
 import { useEffect } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { Binding, ComponentSpec, Task } from "@/models/componentSpec";
+import { CollapsedWorkareaRail } from "@/routes/v2/pages/Tangent/components/CollapsedWorkareaRail";
 import { DynamicWorkarea } from "@/routes/v2/pages/Tangent/components/DynamicWorkarea";
-import { WorkareaToggle } from "@/routes/v2/pages/Tangent/components/ProjectHeader";
 import { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
 import type { WorkareaHostProps } from "@/routes/v2/pages/Tangent/workarea/types";
 import { useShortcutListener } from "@/routes/v2/shared/shortcuts/useShortcutListener";
@@ -108,14 +109,14 @@ function WorkareaCanvas({ active }: { active: boolean }) {
     </ReactFlowProvider>
   );
 }
-function Fixture() {
+const Fixture = observer(function Fixture() {
   return (
     <>
-      <WorkareaToggle />
       <DynamicWorkarea />
+      {project.workareaCollapsed && <CollapsedWorkareaRail />}
     </>
   );
-}
+});
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -155,7 +156,7 @@ describe("real ReactFlow keyboard activity", () => {
     async (key) => {
       render(<Fixture />);
       expect(spec.tasks).toHaveLength(1);
-      fireEvent.click(screen.getByRole("button", { name: "Hide workarea" }));
+      act(() => project.hideWorkarea());
       const show = screen.getByRole("button", { name: "Show workarea" });
       show.focus();
 
@@ -170,15 +171,15 @@ describe("real ReactFlow keyboard activity", () => {
       expect(spec.bindings).toHaveLength(1);
 
       fireEvent.click(show);
-      const hide = screen.getByRole("button", { name: "Hide workarea" });
-      hide.focus();
+      const body = document.body;
+      body.focus();
       await act(async () => {
-        fireEvent.keyDown(hide, { key, code: key });
+        fireEvent.keyDown(body, { key, code: key });
       });
       await waitFor(() => expect(spec.tasks).toHaveLength(0));
       expect(spec.bindings).toHaveLength(0);
       await act(async () => {
-        fireEvent.keyUp(hide, { key, code: key });
+        fireEvent.keyUp(body, { key, code: key });
       });
     },
   );
