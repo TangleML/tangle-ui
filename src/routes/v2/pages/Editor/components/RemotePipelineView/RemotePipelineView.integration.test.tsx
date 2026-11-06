@@ -389,8 +389,11 @@ it.each([false, true])("inspects pipelines (embed=%s)", async (embedded) => {
     screen.getByRole("menuitemcheckbox", { name: "Sidekick" }),
   ).toBeInTheDocument();
   await user.keyboard("{Escape}");
+  const viewControls = embedded
+    ? screen.getByRole("group", { name: "Pipeline view controls" })
+    : screen.getByRole("banner");
   expect(
-    within(screen.getByRole("banner")).queryByRole("button", {
+    within(viewControls).queryByRole("button", {
       name: /^(Details|Clone pipeline|Submit Run)$/,
     }),
   ).not.toBeInTheDocument();
