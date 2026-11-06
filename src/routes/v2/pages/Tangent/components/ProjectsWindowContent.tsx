@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { observer } from "mobx-react-lite";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 
 import { CreateProjectDialog } from "@/components/Home/ProjectsSection/CreateProjectDialog";
 import { ProjectMenu } from "@/components/Project/ProjectMenu";
@@ -21,6 +21,7 @@ import { APP_ROUTES } from "@/routes/appRoutes";
 import { newTangentSessionSearch } from "@/routes/tangentSearch";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { useOpenTangentProject } from "@/routes/v2/pages/Tangent/hooks/useOpenTangentProject";
+import { useSessionsOfProjects } from "@/routes/v2/pages/Tangent/hooks/useProjectSessions";
 import { useAiGate } from "@/routes/v2/shared/components/AiChat/components/useAiGate";
 import { useOptionalWindowContext } from "@/routes/v2/shared/windows/ContentWindowStateContext";
 import { activeWorkspaces } from "@/services/projects/defaultWorkspace";
@@ -32,6 +33,7 @@ import { useWorkspaces } from "@/services/projects/useWorkspaces";
 import { tracking } from "@/utils/tracking";
 import { getStorage } from "@/utils/typedStorage";
 
+import { searchProjects } from "./projectSidebarSearch";
 import { SessionsWindowContent } from "./SessionsWindowContent";
 
 const EXPANDED_KEY = "tangent-sidebar-expanded-projects";
@@ -45,6 +47,10 @@ const storage = getStorage<
  * Every project someone can get back to, each with its sessions, so moving
  * between projects is one click. "New chat" starts in whichever project was
  * clicked last, which is the one in view until another is touched.
+ *
+ * A search opens each project with a matching session, and what is opened or
+ * closed while searching is forgotten with the search, so it never changes
+ * the remembered layout.
  */
 export const ProjectsWindowContent = observer(function ProjectsWindowContent() {
   const store = useTangentProject();
@@ -61,6 +67,11 @@ export const ProjectsWindowContent = observer(function ProjectsWindowContent() {
     ...storage.getItem(EXPANDED_KEY),
     [store.projectId]: true,
   }));
+  const [query, setQuery] = useState("");
+  const [expandedWhileSearching, setExpandedWhileSearching] = useState<
+    Record<string, boolean>
+  >({});
+  const searching = query.trim() !== "";
 
   // This panel outlives a move to another project in place, so the project
   // arrived in becomes the target and is opened, as it is on a fresh mount.
@@ -80,12 +91,38 @@ export const ProjectsWindowContent = observer(function ProjectsWindowContent() {
   const target =
     projects.find(({ id }) => id === targetProjectId) ??
     projects.find(({ id }) => id === store.projectId);
+  const sessionsByProject = useSessionsOfProjects(
+    projects.map(({ id }) => id),
+    searching,
+  );
+  const matches = searching
+    ? searchProjects(projects, sessionsByProject, query)
+    : undefined;
+  const matchingSessions = new Map(
+    matches?.map(({ project, matchingSessionIds }) => [
+      project.id,
+      matchingSessionIds,
+    ]),
+  );
+  const shown = matches?.map(({ project }) => project) ?? projects;
   const pinnedIds = new Set(pinnedProjects.map(({ id }) => id));
-  const pinned = projects.filter(({ id }) => pinnedIds.has(id));
-  const unpinned = projects.filter(({ id }) => !pinnedIds.has(id));
+  const pinned = shown.filter(({ id }) => pinnedIds.has(id));
+  const unpinned = shown.filter(({ id }) => !pinnedIds.has(id));
+
+  function search(next: string) {
+    setQuery(next);
+    setExpandedWhileSearching({});
+  }
 
   function setOpen(projectId: string, open: boolean) {
     setTargetProjectId(projectId);
+    if (searching) {
+      setExpandedWhileSearching((current) => ({
+        ...current,
+        [projectId]: open,
+      }));
+      return;
+    }
     const next = { ...expanded, [projectId]: open };
     setExpanded(next);
     storage.setItem(EXPANDED_KEY, next);
@@ -145,7 +182,14 @@ export const ProjectsWindowContent = observer(function ProjectsWindowContent() {
         </Link>
       </InlineStack>
 
+      <SidebarSearch value={query} onChange={search} />
+
       <BlockStack gap="3" align="stretch">
+        {searching && shown.length === 0 && (
+          <Text size="sm" tone="subdued" className="px-2 py-1">
+            No matching projects or sessions
+          </Text>
+        )}
         {pinned.length > 0 && (
           <ProjectSection title="Pinned">
             {pinned.map(renderGroup)}
@@ -161,17 +205,78 @@ export const ProjectsWindowContent = observer(function ProjectsWindowContent() {
   );
 
   function renderGroup(project: ProjectSummary) {
+    const sessionIds = matchingSessions.get(project.id);
+    const hasMatchingSessions = sessionIds !== undefined && sessionIds.size > 0;
+    const remembered = expanded[project.id] ?? false;
+    const open = searching
+      ? (expandedWhileSearching[project.id] ??
+        (hasMatchingSessions || remembered))
+      : remembered;
+
     return (
       <ProjectGroup
         key={project.id}
         project={project}
-        open={expanded[project.id] ?? false}
+        open={open}
         inView={project.id === store.projectId}
-        onOpenChange={(open) => setOpen(project.id, open)}
+        onlySessionIds={hasMatchingSessions ? sessionIds : undefined}
+        onOpenChange={(next) => setOpen(project.id, next)}
       />
     );
   }
 });
+
+function SidebarSearch({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function clear() {
+    onChange("");
+    inputRef.current?.focus();
+  }
+
+  return (
+    <div
+      role="search"
+      className="flex h-8 items-center gap-2 rounded-md px-3 text-muted-foreground transition-colors focus-within:bg-foreground/5 focus-within:ring-1 focus-within:ring-ring/50 hover:bg-foreground/5 motion-reduce:transition-none"
+    >
+      <Icon name="Search" size="sm" className="shrink-0" />
+      <input
+        ref={inputRef}
+        type="search"
+        value={value}
+        placeholder="Search"
+        aria-label="Search projects and sessions"
+        onChange={(event) => onChange(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key !== "Escape" || value === "") return;
+          event.preventDefault();
+          event.stopPropagation();
+          onChange("");
+        }}
+        className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground [&::-webkit-search-cancel-button]:appearance-none"
+        {...tracking("projects.sidebar.search")}
+      />
+      {value !== "" && (
+        <button
+          type="button"
+          aria-label="Clear search"
+          title="Clear search"
+          onClick={clear}
+          className="grid size-5 shrink-0 cursor-pointer place-items-center rounded-sm outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
+          {...tracking("projects.sidebar.clear_search")}
+        >
+          <Icon name="X" size="xs" />
+        </button>
+      )}
+    </div>
+  );
+}
 
 /** Without pins there is one list, which needs no heading under "Projects". */
 function ProjectSection({
@@ -199,11 +304,13 @@ function ProjectGroup({
   project,
   open,
   inView,
+  onlySessionIds,
   onOpenChange,
 }: {
   project: ProjectSummary;
   open: boolean;
   inView: boolean;
+  onlySessionIds?: ReadonlySet<string>;
   onOpenChange: (open: boolean) => void;
 }) {
   const rename = useRenameProjectAction(project);
@@ -248,7 +355,10 @@ function ProjectGroup({
           />
         </div>
         <CollapsibleContent>
-          <SessionsWindowContent projectId={project.id} />
+          <SessionsWindowContent
+            projectId={project.id}
+            onlySessionIds={onlySessionIds}
+          />
         </CollapsibleContent>
       </Collapsible>
       <ConfirmationDialog {...confirmation} />
