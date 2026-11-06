@@ -2,6 +2,7 @@ import "@/routes/v2/pages/Tangent/workarea/registerKinds";
 
 import { TangentProvider } from "@tangent/embed-react";
 import { Link, useParams } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 
 import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
@@ -13,8 +14,8 @@ import { tangentAnchorProtocols } from "@/routes/v2/pages/Tangent/components/tan
 import { getTangentSocketConfig } from "@/routes/v2/pages/Tangent/services/socketConfig";
 import { SharedStoreProvider } from "@/routes/v2/shared/store/SharedStoreContext";
 import { useProject } from "@/services/projects/useProjects";
-import { TOP_NAV_HEIGHT } from "@/utils/constants";
 
+import { ProjectHeader } from "./components/ProjectHeader";
 import { TangentProjectWorkspace } from "./components/TangentProjectWorkspace";
 import { TangentUnreachable } from "./components/TangentUnreachable";
 import { TangentProjectProvider } from "./context/TangentProjectContext";
@@ -41,6 +42,16 @@ function ProjectGone() {
   );
 }
 
+/** The page owns the app bar here, so every state before the workspace gets it too. */
+function ProjectPageFrame({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex h-screen w-full flex-col overflow-hidden">
+      <ProjectHeader />
+      <div className="grid min-h-0 flex-1">{children}</div>
+    </div>
+  );
+}
+
 function LoadingProject() {
   return (
     <BlockStack fill align="center" gap="1" className="p-10">
@@ -60,11 +71,13 @@ export function TangentProjectPage() {
 
   if (!projectId) {
     return (
-      <BlockStack fill align="center" gap="1" className="p-10">
-        <Text size="sm" weight="semibold">
-          Project not found
-        </Text>
-      </BlockStack>
+      <ProjectPageFrame>
+        <BlockStack fill align="center" gap="1" className="p-10">
+          <Text size="sm" weight="semibold">
+            Project not found
+          </Text>
+        </BlockStack>
+      </ProjectPageFrame>
     );
   }
 
@@ -80,19 +93,22 @@ function TangentProjectPageContent({ projectId }: { projectId: string }) {
   const channelUrl = tangentChannelUrl(baseUrl);
   const runtime = useTangentRuntime(channelUrl);
   const getToken = useTangentEmbedToken(baseUrl);
+  const framed = (content: ReactNode) => (
+    <ProjectPageFrame>{content}</ProjectPageFrame>
+  );
 
   // Before the loading branch: a project that is gone never resolves a
   // workspace to take a Tangent url from, so waiting on one waits forever.
   if (projectError) {
-    return <ProjectGone />;
+    return framed(<ProjectGone />);
   }
 
   if (isLoading) {
-    return <LoadingProject />;
+    return framed(<LoadingProject />);
   }
 
   if (isError) {
-    return (
+    return framed(
       <BlockStack fill align="center" gap="1" className="p-10">
         <Text size="sm" weight="semibold">
           Project unavailable
@@ -101,31 +117,30 @@ function TangentProjectPageContent({ projectId }: { projectId: string }) {
           This project could not be loaded. The projects service may not be
           available in this environment.
         </Text>
-      </BlockStack>
+      </BlockStack>,
     );
   }
 
   // Ahead of the runtime states: with no url there is nothing to import, so
   // `runtime` sits on `loading` forever and the page would never settle.
   if (!baseUrl) {
-    return <TangentUnreachable baseUrl={null} localAddress={localAddress} />;
+    return framed(
+      <TangentUnreachable baseUrl={null} localAddress={localAddress} />,
+    );
   }
 
   if (runtime === "loading") {
-    return <LoadingProject />;
+    return framed(<LoadingProject />);
   }
 
   if (runtime === "unreachable") {
-    return <TangentUnreachable baseUrl={baseUrl} />;
+    return framed(<TangentUnreachable baseUrl={baseUrl} />);
   }
 
   const { socketUrl, socketPath } = getTangentSocketConfig(baseUrl);
 
   return (
-    <div
-      className="w-full overflow-hidden bg-slate-100 dark:bg-background"
-      style={{ height: `calc(100vh - ${TOP_NAV_HEIGHT}px)` }}
-    >
+    <div className="h-screen w-full overflow-hidden bg-slate-100 dark:bg-background">
       <TangentProvider
         key={baseUrl}
         baseUrl={baseUrl}

@@ -11,7 +11,6 @@ import { ResourcesWindowContent } from "./ResourcesWindowContent";
 
 const openWorkareaTarget = vi.fn();
 const deleteResource = vi.fn();
-const saveInstructions = vi.fn();
 
 vi.mock("@/routes/v2/pages/Tangent/context/TangentProjectContext", () => ({
   useTangentProject: () => ({ projectId: "project-1", openWorkareaTarget }),
@@ -22,15 +21,6 @@ vi.mock("@/services/projects/useProjectResources", () => ({
   useDeleteProjectResource: () => ({
     mutate: deleteResource,
     isPending: false,
-  }),
-}));
-
-vi.mock("@/services/projects/useProjectInstructions", () => ({
-  useProjectInstructions: () => ({
-    instructions: "",
-    isPending: false,
-    isSaving: false,
-    save: saveInstructions,
   }),
 }));
 
@@ -168,6 +158,13 @@ describe("ResourcesWindowContent", () => {
     expect(
       screen.getByText("Nothing is attached to this project yet"),
     ).toBeInTheDocument();
+  });
+
+  /** Instructions are edited in Project settings, beside the description. */
+  it("leaves the instructions to project settings", () => {
+    render(<ResourcesWindowContent />);
+
+    expect(screen.queryByText(/instructions/i)).toBeNull();
   });
 
   it("lists a pipeline the project holds", () => {

@@ -11,6 +11,7 @@ const mutate = vi.fn();
 const track = vi.fn();
 const saveInstructions = vi.fn();
 let savedInstructions = "Retrain weekly";
+let instructionsPending = false;
 
 vi.mock("@/services/projects/useProjects", () => ({
   useUpdateProject: vi.fn(),
@@ -23,7 +24,7 @@ vi.mock("@/providers/AnalyticsProvider", () => ({
 vi.mock("@/services/projects/useProjectInstructions", () => ({
   useProjectInstructions: () => ({
     instructions: savedInstructions,
-    isPending: false,
+    isPending: instructionsPending,
     isSaving: false,
     save: saveInstructions,
   }),
@@ -59,6 +60,7 @@ const instructions = () => screen.getByLabelText("Instructions");
 describe("ProjectAbout", () => {
   beforeEach(() => {
     savedInstructions = "Retrain weekly";
+    instructionsPending = false;
     mockUpdate();
   });
 
@@ -191,6 +193,23 @@ describe("ProjectAbout", () => {
       expect.anything(),
     );
     expect(saveInstructions).toHaveBeenCalledWith("Owner is the growth team");
+  });
+
+  /** An edit typed before the saved instructions arrive would replace them unseen. */
+  it("holds the instructions until the saved ones have loaded", () => {
+    instructionsPending = true;
+    renderAbout();
+
+    expect(instructions()).toBeDisabled();
+    expect(description()).toBeEnabled();
+  });
+
+  it("says who the instructions are for", () => {
+    renderAbout();
+
+    expect(instructions()).toHaveAccessibleDescription(
+      "Shared with every agent, in every session of this project.",
+    );
   });
 
   it("takes up a value that changed elsewhere", () => {

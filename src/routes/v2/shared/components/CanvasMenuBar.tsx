@@ -2,6 +2,7 @@ import { Link as RouterLink } from "@tanstack/react-router";
 import type { PropsWithChildren } from "react";
 
 import logo from "/Tangle_Icon_White.png";
+import wordmarkLogo from "/Tangle_white.png";
 import { InlineStack } from "@/components/ui/layout";
 import { APP_ROUTES } from "@/routes/appRoutes";
 import { TOP_NAV_HEIGHT } from "@/utils/constants";
@@ -25,7 +26,14 @@ export function CanvasMenuBar({ children }: PropsWithChildren) {
   );
 }
 
-export function CanvasHomeLink({ trackingId }: { trackingId: string }) {
+/** `wordmark` shows "tangle" beside the mark, for a bar with room to spare. */
+export function CanvasHomeLink({
+  trackingId,
+  wordmark = false,
+}: {
+  trackingId: string;
+  wordmark?: boolean;
+}) {
   return (
     <RouterLink
       to={APP_ROUTES.HOME}
@@ -33,7 +41,11 @@ export function CanvasHomeLink({ trackingId }: { trackingId: string }) {
       className="shrink-0"
       {...tracking(trackingId)}
     >
-      <img src={logo} alt="logo" className="h-8 cursor-pointer shrink-0" />
+      <img
+        src={wordmark ? wordmarkLogo : logo}
+        alt="logo"
+        className="h-8 cursor-pointer shrink-0"
+      />
     </RouterLink>
   );
 }

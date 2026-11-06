@@ -1,111 +1,31 @@
-import { Link } from "@tanstack/react-router";
-
-import { PinProjectButton } from "@/components/Project/PinProjectButton";
-import { ProjectWorkspaceLabel } from "@/components/Project/ProjectWorkspaceLabel";
-import { useRenameProjectAction } from "@/components/Project/useRenameProjectAction";
-import { useShareProjectAction } from "@/components/Project/useShareProjectAction";
-import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
-import { Heading } from "@/components/ui/typography";
-import { APP_ROUTES } from "@/routes/appRoutes";
-import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
-import type { Project } from "@/services/projects/types";
-import { useProject } from "@/services/projects/useProjects";
-import { tracking } from "@/utils/tracking";
+import { AppMenuActions } from "@/routes/v2/shared/components/AppMenuActions";
+import {
+  CanvasHomeLink,
+  CanvasMenuBar,
+} from "@/routes/v2/shared/components/CanvasMenuBar";
 
-import { LocalEnvIndicator } from "./LocalEnvIndicator";
-
+/**
+ * The app's top bar on a Tangent project, as the editor and run pages own
+ * theirs. The project itself is named in the sidebar and its Project panel,
+ * and its settings live beside the chat it configures.
+ */
 export function ProjectHeader() {
-  const store = useTangentProject();
-  const { data: project } = useProject(store.projectId);
-
-  if (!project) return null;
-
-  return <ProjectHeaderBar project={project} />;
-}
-
-function ProjectHeaderBar({ project }: { project: Project }) {
-  const share = useShareProjectAction(project.id);
-  const rename = useRenameProjectAction(project);
-
   return (
-    <InlineStack
-      align="space-between"
-      blockAlign="center"
-      gap="3"
-      className="shrink-0 border-b border-border px-4 py-2"
-    >
-      <InlineStack
-        gap="1"
-        blockAlign="center"
-        wrap="nowrap"
-        className="min-w-0"
-      >
-        {/* The only way out of a project was the logo, which leaves Tangent
-            altogether rather than going back up one level. */}
-        <Link
-          to={APP_ROUTES.PROJECTS}
-          aria-label="Back to projects"
-          title="Back to projects"
-          className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
-          {...tracking("projects.back_to_projects")}
-        >
-          <Icon name="ArrowLeft" size="sm" />
-        </Link>
-
-        <Link
-          to={APP_ROUTES.PROJECT_DETAIL}
-          params={{ projectId: project.id }}
-          title="Project details"
-          className="min-w-0 rounded-md px-2 py-1 hover:bg-accent"
-          {...tracking("projects.open_project_details")}
-        >
-          <InlineStack gap="2" blockAlign="center" wrap="nowrap">
-            <Icon
-              name="Folder"
-              size="sm"
-              className="shrink-0 text-muted-foreground"
-              aria-hidden="true"
-            />
-            <Heading level={2} size="sm" className="min-w-0 truncate">
-              {project.name}
-            </Heading>
-          </InlineStack>
-        </Link>
-
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => void rename()}
-          aria-label={`Rename ${project.name}`}
-          title="Rename project"
-          className="size-7 shrink-0 text-muted-foreground hover:text-foreground"
-          {...tracking("projects.rename_project_open")}
-        >
-          <Icon name="Pencil" size="sm" />
-        </Button>
-
-        <PinProjectButton project={project} className="size-7" />
-
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={share}
-          aria-label={`Share ${project.name}`}
-          title="Copy link to project"
-          className="size-7 shrink-0 text-muted-foreground hover:text-foreground"
-          {...tracking("projects.share_project")}
-        >
-          <Icon name="Share2" size="sm" />
-        </Button>
-
-        <div className="ml-2 min-w-0">
-          <ProjectWorkspaceLabel project={project} />
-        </div>
+    <CanvasMenuBar>
+      <InlineStack blockAlign="center">
+        <CanvasHomeLink trackingId="projects.menu_bar.home" wordmark />
       </InlineStack>
 
-      <LocalEnvIndicator />
-    </InlineStack>
+      <InlineStack
+        gap="2"
+        wrap="nowrap"
+        blockAlign="center"
+        className="shrink-0"
+      >
+        {/* Each chat composer has its own model picker. */}
+        <AppMenuActions showAiModelQuickSelect={false} />
+      </InlineStack>
+    </CanvasMenuBar>
   );
 }
