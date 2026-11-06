@@ -14,7 +14,11 @@ import { openTourSettings } from "@/providers/TourProvider/TourSecretsDialog";
 import { DOCUMENTATION_URL } from "@/utils/constants";
 import { tracking } from "@/utils/tracking";
 
-export function AppMenuActions() {
+export function AppMenuActions({
+  showAiModelQuickSelect = true,
+}: {
+  showAiModelQuickSelect?: boolean;
+}) {
   const requiresAuthorization = isAuthorizationRequired();
   const tourMode = useTourMode();
 
@@ -26,7 +30,7 @@ export function AppMenuActions() {
       data-testid="app-menu-actions"
     >
       {!tourMode && <OnboardingNavPill />}
-      <AiModelQuickSelect />
+      {showAiModelQuickSelect && <AiModelQuickSelect />}
       <NoticeInbox />
       {tourMode ? (
         <TooltipButton

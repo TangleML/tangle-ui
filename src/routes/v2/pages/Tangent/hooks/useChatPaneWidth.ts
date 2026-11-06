@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
 import {
-  DEFAULT_CHAT_WIDTH,
   MAX_CHAT_WIDTH,
   MIN_CHAT_WIDTH,
   MIN_WORKAREA_WIDTH,
@@ -18,7 +17,8 @@ export function chatWidthCeiling(rowWidth: number, dockWidth: number): number {
 export function useChatPaneWidth(dockWidth: number) {
   const rowRef = useRef<HTMLElement | null>(null);
   const [rowWidth, setRowWidth] = useState(UNMEASURED);
-  const [requestedWidth, setRequestedWidth] = useState(DEFAULT_CHAT_WIDTH);
+  // Starts as wide as it can go; the ceiling still leaves the canvas its room.
+  const [requestedWidth, setRequestedWidth] = useState(MAX_CHAT_WIDTH);
 
   useEffect(() => {
     const row = rowRef.current;
