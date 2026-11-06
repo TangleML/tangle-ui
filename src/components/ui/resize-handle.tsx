@@ -95,12 +95,13 @@ export const VerticalResizeHandle = ({
       onMouseDown={handleMouseDown}
       onDoubleClick={onDoubleClick}
     >
-      {/* Thin visible line */}
+      {/* The grab area overhangs the edge by 2px (`-mx-0.5`); the line is inset
+          by the same 2px so it sits on the panel's edge, not past it. */}
       <div
         className={cn(
           "absolute top-0 h-full w-px bg-border transition-all pointer-events-none",
           "group-hover:bg-primary/30",
-          side === "left" ? "left-0" : "right-0",
+          side === "left" ? "left-0.5" : "right-0.5",
         )}
       />
 

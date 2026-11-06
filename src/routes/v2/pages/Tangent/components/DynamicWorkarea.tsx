@@ -1,7 +1,7 @@
 import { observer } from "mobx-react-lite";
 
 import { Icon } from "@/components/ui/icon";
-import { BlockStack } from "@/components/ui/layout";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
 import {
   SCROLLING_TAB_STRIP,
   Tabs,
@@ -51,31 +51,34 @@ export const DynamicWorkarea = observer(function DynamicWorkarea() {
 
   return (
     <div
-      className="relative flex h-full min-w-0 flex-1 flex-col border-l border-border bg-card"
+      className="relative flex h-full min-w-0 flex-1 flex-col bg-card"
       style={{ minWidth: MIN_WORKAREA_WIDTH }}
     >
       {workareaTabs.length > 0 ? (
         <Tabs
           value={activeWorkareaTabId ?? undefined}
           onValueChange={(id) => store.selectWorkareaTab(id)}
-          className="flex h-full min-h-0 flex-col gap-1"
+          className="flex h-full min-h-0 flex-col gap-0"
         >
-          <TabsList
-            className={cn(
-              "max-w-full shrink-0 rounded-none border-b border-border bg-card",
-              SCROLLING_TAB_STRIP,
-            )}
+          <InlineStack
+            wrap="nowrap"
+            className="w-full shrink-0 shadow-[inset_0_-1px_0_var(--border)]"
           >
-            {workareaTabs.map((tab) => (
-              <CloseableTabTrigger
-                key={tab.id}
-                value={tab.id}
-                title={tab.title}
-                icon={getWorkareaKind(tab.target.type)?.icon ?? "FileText"}
-                onClose={() => store.closeWorkareaTab(tab.id)}
-              />
-            ))}
-          </TabsList>
+            <TabsList
+              variant="line"
+              className={cn("min-w-0 flex-1", SCROLLING_TAB_STRIP)}
+            >
+              {workareaTabs.map((tab) => (
+                <CloseableTabTrigger
+                  key={tab.id}
+                  value={tab.id}
+                  title={tab.title}
+                  icon={getWorkareaKind(tab.target.type)?.icon ?? "FileText"}
+                  onClose={() => store.closeWorkareaTab(tab.id)}
+                />
+              ))}
+            </TabsList>
+          </InlineStack>
           {workareaTabs.map((tab) => {
             const viewKind = getWorkareaKind(tab.target.type);
             if (!viewKind) return null;

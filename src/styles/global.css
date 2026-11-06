@@ -380,6 +380,46 @@ code {
       transparent
     );
   }
+
+  /* Thin like `subtle-scrollbar`, but the thumb only shows while the region is
+     hovered or focused, so a page at rest shows no scrollbars at all. */
+  .reveal-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+
+  .reveal-scrollbar:hover,
+  .reveal-scrollbar:focus-within {
+    scrollbar-color: color-mix(
+        in oklch,
+        var(--muted-foreground) 35%,
+        transparent
+      )
+      transparent;
+  }
+
+  .reveal-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .reveal-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .reveal-scrollbar::-webkit-scrollbar-thumb {
+    background-color: transparent;
+    border-radius: 3px;
+  }
+
+  .reveal-scrollbar:hover::-webkit-scrollbar-thumb,
+  .reveal-scrollbar:focus-within::-webkit-scrollbar-thumb {
+    background-color: color-mix(
+      in oklch,
+      var(--muted-foreground) 35%,
+      transparent
+    );
+  }
 }
 
 /* Dialog stack transition animations */

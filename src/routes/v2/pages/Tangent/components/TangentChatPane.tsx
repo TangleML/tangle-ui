@@ -33,7 +33,7 @@ interface TangentChatPaneProps {
 }
 
 /**
- * The tabbed Tangent chat surface: a Prime "Chat" tab plus one tab per opened
+ * The tabbed Tangent chat surface: a "Prime" tab plus one tab per opened
  * sub-agent. Shared by the editor's docked Tangent window and the Tangent
  * Shell project workspace so their chat behavior stays in sync.
  */
@@ -53,18 +53,19 @@ export function TangentChatPane({
       <Tabs
         value={activeTab}
         onValueChange={onTabChange}
-        className="flex h-full min-h-0 flex-col gap-1"
+        className="flex h-full min-h-0 flex-col gap-0"
       >
         <InlineStack
-          gap="2"
-          align="space-between"
-          blockAlign="center"
-          className="w-full shrink-0"
+          wrap="nowrap"
+          className="w-full shrink-0 shadow-[inset_0_-1px_0_var(--border)]"
         >
-          <TabsList className={cn("min-w-0 max-w-full", SCROLLING_TAB_STRIP)}>
+          <TabsList
+            variant="line"
+            className={cn("min-w-0 flex-1", SCROLLING_TAB_STRIP)}
+          >
             <TabsTrigger value={CHAT_TAB_VALUE}>
               <Icon name="MessageSquare" size="xs" />
-              Chat
+              Prime
             </TabsTrigger>
             {tabs.map((tab) => (
               <CloseableTabTrigger
@@ -75,7 +76,7 @@ export function TangentChatPane({
               />
             ))}
           </TabsList>
-          {headerAction}
+          {headerAction && <div className="shrink-0 px-2">{headerAction}</div>}
         </InlineStack>
         <TabsContent
           value={CHAT_TAB_VALUE}
