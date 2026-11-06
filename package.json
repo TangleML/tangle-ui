@@ -85,7 +85,7 @@
     "@radix-ui/react-tooltip": "^1.4.1",
     "@reactour/tour": "3.8.0",
     "@tailwindcss/vite": "^4.3.3",
-    "@tangent/embed-react": "github:TangleML/tangent-shell#main&path:packages/embed-react",
+    "@tangent/embed-react": "github:TangleML/tangent-shell#MB/tangent-ui-declutter&path:packages/embed-react",
     "@tangent/remote-subagent": "github:TangleML/tangent-shell#main&path:packages/remote-subagent",
     "@tangent/shared": "github:TangleML/tangent-shell#main&path:packages/shared",
     "@tanstack/history": "1.162.5",
