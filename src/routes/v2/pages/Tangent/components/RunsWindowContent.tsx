@@ -1,9 +1,9 @@
 import type { MouseEvent } from "react";
 
-import { ProjectRunStatus } from "@/components/Project/ProjectRunStatus";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { Button } from "@/components/ui/button";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { ListItem, type ListItemFlair } from "@/components/ui/list-item";
 import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
@@ -12,12 +12,66 @@ import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProj
 import { UNNAMED_PIPELINE } from "@/services/projects/placeholderNames";
 import { idIdentity } from "@/services/projects/resourceTarget";
 import type { ProjectRun } from "@/services/projects/types";
-import { useProjectRuns } from "@/services/projects/useProjectRuns";
+import {
+  useProjectRuns,
+  useRunExecutionStats,
+} from "@/services/projects/useProjectRuns";
 import { hasNewTabModifier } from "@/utils/dom";
+import {
+  getExecutionStatusLabel,
+  getOverallExecutionStatusFromStats,
+  isInProgressStatus,
+} from "@/utils/executionStatus";
 import { getErrorMessage } from "@/utils/string";
 import { tracking } from "@/utils/tracking";
 
-import { WindowListRow } from "./WindowListRow";
+const FAILED_STATUSES = new Set([
+  "FAILED",
+  "UPSTREAM_FAILED",
+  "UPSTREAM_FAILED_OR_SKIPPED",
+  "SYSTEM_ERROR",
+  "INVALID",
+]);
+
+function runStatusFlair(
+  status: string | undefined,
+  label: string,
+): ListItemFlair {
+  if (status === "SUCCEEDED") return { kind: "dot", label, tone: "success" };
+  if (status && FAILED_STATUSES.has(status)) {
+    return { kind: "dot", label, tone: "critical" };
+  }
+  if (isInProgressStatus(status)) {
+    return { kind: "dot", label, tone: "success", pulse: true };
+  }
+  return { kind: "dot", label };
+}
+
+function RunListItem({
+  run,
+  onOpen,
+}: {
+  run: ProjectRun;
+  onOpen: (event: MouseEvent<HTMLButtonElement>) => void;
+}) {
+  const { data, isPending, error } = useRunExecutionStats(run.id);
+  const status = error
+    ? undefined
+    : getOverallExecutionStatusFromStats(data ?? undefined);
+  const label = getExecutionStatusLabel(status);
+
+  return (
+    <ListItem
+      icon="Play"
+      title={run.pipelineName ?? UNNAMED_PIPELINE}
+      subtitle={isPending ? undefined : label}
+      flair={isPending ? undefined : runStatusFlair(status, label)}
+      testId={`open-run-${run.id}`}
+      onOpen={onOpen}
+      tracking={tracking("projects.project_runs.open_run")}
+    />
+  );
+}
 
 export function RunsWindowContent() {
   const store = useTangentProject();
@@ -70,16 +124,12 @@ export function RunsWindowContent() {
       )}
 
       {runs.length > 0 && (
-        <BlockStack className="border rounded-md divide-y">
+        <BlockStack as="ul" gap="1">
           {runs.map((run) => (
-            <WindowListRow
+            <RunListItem
               key={run.id}
-              icon="Play"
-              title={run.pipelineName ?? UNNAMED_PIPELINE}
-              description={<ProjectRunStatus runId={run.id} />}
-              testId={`open-run-${run.id}`}
+              run={run}
               onOpen={(event) => void handleOpenRun(run, event)}
-              {...tracking("projects.project_runs.open_run")}
             />
           ))}
         </BlockStack>
