@@ -6,15 +6,18 @@ import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 
+import { useDismissProjectCard } from "./projectCardContext";
+
 export const AssetsWindowContent = observer(function AssetsWindowContent() {
   const store = useTangentProject();
+  const dismissCard = useDismissProjectCard();
   const activeSessionId = store.activeSessionId;
 
   function handleOpenAsset(asset: EmbedAsset) {
     store.selectAsset(asset);
-    if (asset.kind !== "trigger") {
-      store.openArtifactTab(asset.url, asset.title);
-    }
+    dismissCard();
+    if (asset.kind === "trigger") return;
+    store.openArtifactTab(asset.url, asset.title);
   }
 
   if (!activeSessionId) {
