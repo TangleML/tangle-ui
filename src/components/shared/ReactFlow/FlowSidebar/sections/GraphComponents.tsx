@@ -42,9 +42,6 @@ const GraphComponents = ({
   const remoteComponentLibrarySearchEnabled = useFlagValue(
     "remote-component-library-search",
   );
-  const githubComponentLibraryEnabled = useFlagValue(
-    "github-component-library",
-  );
   const inputAggregatorEnabled = useFlagValue("input-aggregator");
   const { getComponentLibrary, existingComponentLibraries } =
     useComponentLibrary();
@@ -176,35 +173,31 @@ const GraphComponents = ({
             }
             icon="Folder"
           />
-          {githubComponentLibraryEnabled && (
-            <>
-              <Separator />
-              <BlockStack gap="1" className="pl-2 py-2">
-                <InlineStack className="w-full" align="space-between">
-                  <Text size="sm" tone="subdued">
-                    Connected libraries
-                  </Text>
-                  <ManageLibrariesDialog />
-                </InlineStack>
+          <Separator />
+          <BlockStack gap="1" className="pl-2 py-2">
+            <InlineStack className="w-full" align="space-between">
+              <Text size="sm" tone="subdued">
+                Connected libraries
+              </Text>
+              <ManageLibrariesDialog />
+            </InlineStack>
 
-                {existingComponentLibraries?.length === 0 && (
-                  <BlockStack gap="1" align="center">
-                    <Text size="sm" tone="subdued">
-                      No libraries connected
-                    </Text>
-                  </BlockStack>
-                )}
+            {existingComponentLibraries?.length === 0 && (
+              <BlockStack gap="1" align="center">
+                <Text size="sm" tone="subdued">
+                  No libraries connected
+                </Text>
               </BlockStack>
+            )}
+          </BlockStack>
 
-              {existingComponentLibraries?.map((library) => (
-                <LibraryFolderItem
-                  key={library.id}
-                  library={getComponentLibrary(library.id)}
-                  icon={library.icon}
-                />
-              ))}
-            </>
-          )}
+          {existingComponentLibraries?.map((library) => (
+            <LibraryFolderItem
+              key={library.id}
+              library={getComponentLibrary(library.id)}
+              icon={library.icon}
+            />
+          ))}
         </BlockStack>
       </BlockStack>
     );
@@ -217,7 +210,6 @@ const GraphComponents = ({
     error,
     searchResult,
     remoteComponentLibrarySearchEnabled,
-    githubComponentLibraryEnabled,
     inputAggregatorEnabled,
     existingComponentLibraries,
     getComponentLibrary,
