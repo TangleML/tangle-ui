@@ -25,11 +25,6 @@ type ResolvedExecutionId =
   | {
       skip: false;
       executionId: string | undefined;
-      /**
-       * Execution ids for every nesting level down to `executionId`, outermost
-       * first (empty at the root). `undefined` when the ancestor chain is not
-       * known yet (breadcrumb segments still loading while deepening).
-       */
       executionIdPath: string[] | undefined;
     };
 
@@ -46,6 +41,11 @@ interface ResolveSubgraphExecutionIdInput {
  * - deepening one level (double-click) reads the child execution id off the
  *   current level's details,
  * - shallowing (breadcrumbs) reuses the already-resolved breadcrumb segment.
+ *
+ * `executionIdPath` lists the execution id of every level down to
+ * `executionId`, outermost first. It is `undefined` when deepening before the
+ * parent level's breadcrumbs have loaded, since its ancestors are not known
+ * yet.
  *
  * Returns `{ skip: true }` when there is nothing to sync (empty path from
  * `clearNavigation()`, no run yet, or an unresolved child id).
@@ -162,7 +162,6 @@ export function useRunViewSubgraphUrlSync(): void {
   const executionData = useExecutionData();
 
   const params = useParams({ strict: false });
-  // One URL segment per nesting level; the last one is the subgraph in view.
   const urlExecutionIds = getSubgraphExecutionIdsFromParams(params);
   const subgraphExecutionId = urlExecutionIds.at(-1);
 

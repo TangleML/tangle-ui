@@ -272,7 +272,7 @@ describe("useRunViewSubgraphUrlSync", () => {
   });
 
   it("syncs the navigation store from an external subgraph URL without pushing back", () => {
-    routerMocks.params = { subgraphExecutionId: "exec-sub" };
+    routerMocks.params = { _splat: "exec-sub" };
     executionDataMock.current.segments = [
       { taskId: "t-sub", executionId: "exec-sub", taskName: "sub-task" },
     ];
@@ -303,7 +303,7 @@ describe("useRunViewSubgraphUrlSync", () => {
   });
 
   it("does not resync the navigation store while breadcrumb segments are still loading", () => {
-    routerMocks.params = { subgraphExecutionId: "exec-sub" };
+    routerMocks.params = { _splat: "exec-sub" };
     executionDataMock.current.segments = [];
 
     const navigation = sharedStoreMock.navigation;

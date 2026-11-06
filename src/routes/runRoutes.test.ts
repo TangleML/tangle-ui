@@ -11,7 +11,7 @@ import {
 describe("run routes", () => {
   it("builds run paths, including subgraph executions", () => {
     expect(getRunPath("run 1")).toBe("/runs/run%201");
-    expect(getRunPath("run 1", "subgraph 1")).toBe(
+    expect(getRunPath("run 1", ["subgraph 1"])).toBe(
       "/runs/run%201/subgraph%201",
     );
   });
@@ -34,9 +34,6 @@ describe("run routes", () => {
     expect(
       getSubgraphExecutionIdsFromParams({ _splat: "sub-1/sub-2/" }),
     ).toEqual(["sub-1", "sub-2"]);
-    expect(
-      getSubgraphExecutionIdsFromParams({ subgraphExecutionId: "sub-1" }),
-    ).toEqual(["sub-1"]);
     expect(getSubgraphExecutionIdFromParams({ _splat: "sub-1/sub-2" })).toBe(
       "sub-2",
     );

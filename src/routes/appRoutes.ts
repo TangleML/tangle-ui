@@ -34,7 +34,6 @@ export const APP_ROUTES = {
   REMOTE_PIPELINE_EDITOR: `${EDITOR_PATH}/pipeline/$pipelineId`,
   LEGACY_REMOTE_PIPELINE_EDITOR: `${EDITOR_PATH}/remote/$pipelineId`,
   RUN_DETAIL: `${RUNS_BASE_PATH}/$id`,
-  // Splat: one segment per nested subgraph execution id, outermost first.
   RUN_DETAIL_WITH_SUBGRAPH: `${RUNS_BASE_PATH}/$id/$`,
   RUNS: RUNS_BASE_PATH,
   SETTINGS: SETTINGS_PATH,
