@@ -5,21 +5,38 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { DialogProps } from "@/providers/DialogProvider/types";
+import type { DocumentKind } from "@/services/projects/resourceDescriptor";
 import type { CreateResourceInput } from "@/services/projects/types";
+
+interface AddDocumentDialogProps {
+  kind?: DocumentKind;
+}
+
+const COPY: Record<DocumentKind, { title: string; description: string }> = {
+  document: {
+    title: "Add a document",
+    description: "Write a document for this project.",
+  },
+  code: {
+    title: "Add code",
+    description: "Add a code file to this project.",
+  },
+};
 
 export function AddDocumentDialog({
   close,
   cancel,
-}: DialogProps<CreateResourceInput>) {
+  kind = "document",
+}: DialogProps<CreateResourceInput, AddDocumentDialogProps>) {
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Add a document</DialogTitle>
+        <DialogTitle>{COPY[kind].title}</DialogTitle>
         <DialogDescription className="sr-only">
-          Write a document for this project.
+          {COPY[kind].description}
         </DialogDescription>
       </DialogHeader>
-      <DocumentForm onSubmit={close} onCancel={cancel} />
+      <DocumentForm kind={kind} onSubmit={close} onCancel={cancel} />
     </>
   );
 }

@@ -8,6 +8,7 @@ import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { UNTITLED } from "@/services/projects/placeholderNames";
+import { documentKindOf } from "@/services/projects/resourceDescriptor";
 import { resourceMeta } from "@/services/projects/resourceMeta";
 import type { ProjectResource } from "@/services/projects/types";
 import { useUpdateProjectResource } from "@/services/projects/useProjectResources";
@@ -42,6 +43,7 @@ export function DocumentEditor({ projectId, resource }: DocumentEditorProps) {
   const changedElsewhere = edit !== null && edit.startedFrom !== saved;
   const canSave = isDirty && !update.isPending;
   const name = resource.name ?? UNTITLED;
+  const kind = documentKindOf(resource);
 
   const handleChange = (value: string) => {
     setEdit((current) => ({
@@ -84,7 +86,7 @@ export function DocumentEditor({ projectId, resource }: DocumentEditorProps) {
         className="w-full shrink-0 border-b border-border px-3 py-1.5"
       >
         <Icon
-          name={resourceMeta("document").icon}
+          name={resourceMeta(kind).icon}
           size="xs"
           className="shrink-0 text-muted-foreground"
         />
@@ -102,7 +104,7 @@ export function DocumentEditor({ projectId, resource }: DocumentEditorProps) {
             size="xs"
             disabled={edit === null || update.isPending}
             onClick={discard}
-            {...tracking("projects.discard_document_edits")}
+            {...tracking("projects.discard_document_edits", { kind })}
           >
             Discard
           </Button>
@@ -110,7 +112,7 @@ export function DocumentEditor({ projectId, resource }: DocumentEditorProps) {
             size="xs"
             disabled={!canSave}
             onClick={save}
-            {...tracking("projects.save_document")}
+            {...tracking("projects.save_document", { kind })}
           >
             {update.isPending ? "Saving…" : "Save"}
           </Button>
