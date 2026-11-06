@@ -169,6 +169,108 @@ describe("useRunViewSubgraphUrlSync", () => {
     });
   });
 
+  it("appends a segment per nesting level when entering a nested subgraph", () => {
+    // Already scoped to subgraph "a": the URL and breadcrumbs reflect it, and
+    // the current execution details hold the nested child's execution id.
+    routerMocks.params = { _splat: "exec-a" };
+    executionDataMock.current.segments = [
+      { taskId: "t-a", executionId: "exec-a", taskName: "a" },
+    ];
+    executionDataMock.current.details = {
+      child_task_execution_ids: { b: "exec-b" },
+    };
+
+    const navigation = sharedStoreMock.navigation;
+    navigation.navigateToSubgraph("a");
+
+    renderSyncHook();
+
+    act(() => navigation.navigateToSubgraph("b"));
+
+    expect(routerMocks.navigate).toHaveBeenCalledTimes(1);
+    expect(routerMocks.navigate).toHaveBeenCalledWith({
+      to: "/runs/run-1/exec-a/exec-b",
+    });
+  });
+
+  it("builds the nested chain from breadcrumb ancestry for a leaf-only deep link", () => {
+    // Legacy / shared link carrying only the leaf execution id.
+    routerMocks.params = { _splat: "exec-b" };
+    executionDataMock.current.segments = [
+      { taskId: "t-a", executionId: "exec-a", taskName: "a" },
+      { taskId: "t-b", executionId: "exec-b", taskName: "b" },
+    ];
+    executionDataMock.current.details = {
+      child_task_execution_ids: { c: "exec-c" },
+    };
+
+    const navigation = sharedStoreMock.navigation;
+    navigation.navigateToSubgraph("a");
+    navigation.navigateToSubgraph("b");
+
+    renderSyncHook();
+
+    act(() => navigation.navigateToSubgraph("c"));
+
+    expect(routerMocks.navigate).toHaveBeenCalledWith({
+      to: "/runs/run-1/exec-a/exec-b/exec-c",
+    });
+  });
+
+  it("appends to the current URL chain when breadcrumbs have not resolved yet", () => {
+    routerMocks.params = { _splat: "exec-a" };
+    executionDataMock.current.segments = [];
+    executionDataMock.current.details = {
+      child_task_execution_ids: { b: "exec-b" },
+    };
+
+    const navigation = sharedStoreMock.navigation;
+    navigation.navigateToSubgraph("a");
+
+    renderSyncHook();
+
+    act(() => navigation.navigateToSubgraph("b"));
+
+    expect(routerMocks.navigate).toHaveBeenCalledWith({
+      to: "/runs/run-1/exec-a/exec-b",
+    });
+  });
+
+  it("drops only the deeper segments when going up one nested level", () => {
+    routerMocks.params = { _splat: "exec-a/exec-b/exec-c" };
+    executionDataMock.current.segments = [
+      { taskId: "t-a", executionId: "exec-a", taskName: "a" },
+      { taskId: "t-b", executionId: "exec-b", taskName: "b" },
+      { taskId: "t-c", executionId: "exec-c", taskName: "c" },
+    ];
+
+    const navigation = sharedStoreMock.navigation;
+    navigation.navigateToPath([ROOT_NAME, "a", "b", "c"]);
+
+    renderSyncHook();
+
+    act(() => navigation.navigateToLevel(2));
+
+    expect(routerMocks.navigate).toHaveBeenCalledTimes(1);
+    expect(routerMocks.navigate).toHaveBeenCalledWith({
+      to: "/runs/run-1/exec-a/exec-b",
+    });
+  });
+
+  it("restores the nested navigation path from a multi-segment deep link", () => {
+    routerMocks.params = { _splat: "exec-a/exec-b" };
+    executionDataMock.current.segments = [
+      { taskId: "t-a", executionId: "exec-a", taskName: "a" },
+      { taskId: "t-b", executionId: "exec-b", taskName: "b" },
+    ];
+
+    const navigation = sharedStoreMock.navigation;
+    renderSyncHook();
+
+    expect(navigation.displayNames).toEqual([ROOT_NAME, "a", "b"]);
+    expect(routerMocks.navigate).not.toHaveBeenCalled();
+  });
+
   it("syncs the navigation store from an external subgraph URL without pushing back", () => {
     routerMocks.params = { subgraphExecutionId: "exec-sub" };
     executionDataMock.current.segments = [
@@ -236,7 +338,7 @@ describe("useRunViewSubgraphExecutionSync (callback mode)", () => {
 
     act(() => navigation.navigateToSubgraph("sub-task"));
 
-    expect(onExecutionId).toHaveBeenCalledWith("exec-sub");
+    expect(onExecutionId).toHaveBeenCalledWith("exec-sub", ["exec-sub"]);
     expect(routerMocks.navigate).not.toHaveBeenCalled();
   });
 
@@ -249,7 +351,7 @@ describe("useRunViewSubgraphExecutionSync (callback mode)", () => {
 
     act(() => navigation.navigateToLevel(0));
 
-    expect(onExecutionId).toHaveBeenCalledWith(undefined);
+    expect(onExecutionId).toHaveBeenCalledWith(undefined, []);
   });
 
   it("emits the breadcrumb execution id when going shallower", () => {
@@ -266,7 +368,7 @@ describe("useRunViewSubgraphExecutionSync (callback mode)", () => {
 
     act(() => navigation.navigateToLevel(1));
 
-    expect(onExecutionId).toHaveBeenCalledWith("exec-a");
+    expect(onExecutionId).toHaveBeenCalledWith("exec-a", ["exec-a"]);
   });
 
   it("does not emit when the child execution id cannot be resolved", () => {

@@ -34,7 +34,8 @@ export const APP_ROUTES = {
   REMOTE_PIPELINE_EDITOR: `${EDITOR_PATH}/pipeline/$pipelineId`,
   LEGACY_REMOTE_PIPELINE_EDITOR: `${EDITOR_PATH}/remote/$pipelineId`,
   RUN_DETAIL: `${RUNS_BASE_PATH}/$id`,
-  RUN_DETAIL_WITH_SUBGRAPH: `${RUNS_BASE_PATH}/$id/$subgraphExecutionId`,
+  // Splat: one segment per nested subgraph execution id, outermost first.
+  RUN_DETAIL_WITH_SUBGRAPH: `${RUNS_BASE_PATH}/$id/$`,
   RUNS: RUNS_BASE_PATH,
   SETTINGS: SETTINGS_PATH,
   SETTINGS_BACKEND: `${SETTINGS_PATH}/backend`,
@@ -53,7 +54,7 @@ export const APP_ROUTES = {
   EDITOR_V2_REMOTE_PIPELINE: `${EDITOR_V2_BASE_PATH}/pipeline/$pipelineId`,
   LEGACY_EDITOR_V2_REMOTE_PIPELINE: `${EDITOR_V2_BASE_PATH}/remote/$pipelineId`,
   RUN_DETAIL_V2: `${RUNS_V2_BASE_PATH}/$id`,
-  RUN_DETAIL_V2_WITH_SUBGRAPH: `${RUNS_V2_BASE_PATH}/$id/$subgraphExecutionId`,
+  RUN_DETAIL_V2_WITH_SUBGRAPH: `${RUNS_V2_BASE_PATH}/$id/$`,
   TANGENT_PROJECT: `${TANGENT_BASE_PATH}/$projectId`,
   PIPELINE_FOLDERS: "/pipeline-folders",
   PLAYGROUND: "/playground",

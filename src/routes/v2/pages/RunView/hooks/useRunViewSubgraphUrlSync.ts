@@ -3,7 +3,10 @@ import { reaction } from "mobx";
 import { type RefObject, useEffect, useRef } from "react";
 
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
-import { getRunPath } from "@/routes/runRoutes";
+import {
+  getRunPath,
+  getSubgraphExecutionIdsFromParams,
+} from "@/routes/runRoutes";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 /**
@@ -18,7 +21,17 @@ interface SubgraphExecutionSource {
 }
 
 type ResolvedExecutionId =
-  { skip: true } | { skip: false; executionId: string | undefined };
+  | { skip: true }
+  | {
+      skip: false;
+      executionId: string | undefined;
+      /**
+       * Execution ids for every nesting level down to `executionId`, outermost
+       * first (empty at the root). `undefined` when the ancestor chain is not
+       * known yet (breadcrumb segments still loading while deepening).
+       */
+      executionIdPath: string[] | undefined;
+    };
 
 interface ResolveSubgraphExecutionIdInput {
   path: string[];
@@ -46,20 +59,38 @@ function resolveSubgraphExecutionId({
   // empties the path. Ignore it so we never drop a valid subgraph segment.
   if (path.length === 0) return { skip: true };
   if (!source.runId) return { skip: true };
-  if (path.length <= 1) return { skip: false, executionId: undefined };
+  if (path.length <= 1) {
+    return { skip: false, executionId: undefined, executionIdPath: [] };
+  }
 
   const targetDepth = path.length - 1;
   const isDeepening = path.length > prevPath.length;
+  const segmentIds = source.segments.map((segment) => segment.executionId);
 
-  // Deepening happens one level at a time (double-click), so the current
-  // execution details are the parent level and hold the child execution id.
+  if (isDeepening) {
+    // Deepening happens one level at a time (double-click), so the current
+    // execution details are the parent level and hold the child execution id.
+    const executionId =
+      source.details?.child_task_execution_ids?.[path[path.length - 1]];
+    if (!executionId) return { skip: true };
+
+    // The current breadcrumb segments are the parent level's ancestor chain.
+    const parentIds = segmentIds.length === targetDepth - 1 ? segmentIds : null;
+    return {
+      skip: false,
+      executionId,
+      executionIdPath: parentIds ? [...parentIds, executionId] : undefined,
+    };
+  }
+
   // Shallowing (breadcrumbs) reuses the already-resolved breadcrumb segments.
-  const executionId = isDeepening
-    ? source.details?.child_task_execution_ids?.[path[path.length - 1]]
-    : source.segments[targetDepth - 1]?.executionId;
-
+  const executionId = segmentIds[targetDepth - 1];
   if (!executionId) return { skip: true };
-  return { skip: false, executionId };
+  return {
+    skip: false,
+    executionId,
+    executionIdPath: segmentIds.slice(0, targetDepth),
+  };
 }
 
 /**
@@ -72,7 +103,10 @@ function resolveSubgraphExecutionId({
  * itself driving the navigation store from the URL (avoids a redundant push).
  */
 export function useRunViewSubgraphExecutionSync(
-  onExecutionId: (executionId: string | undefined) => void,
+  onExecutionId: (
+    executionId: string | undefined,
+    executionIdPath: string[] | undefined,
+  ) => void,
   options: { isApplyingFromUrl?: RefObject<boolean> } = {},
 ): void {
   const { navigation } = useSharedStores();
@@ -101,7 +135,10 @@ export function useRunViewSubgraphExecutionSync(
           source: executionDataRef.current,
         });
         if (resolved.skip) return;
-        onExecutionIdRef.current(resolved.executionId);
+        onExecutionIdRef.current(
+          resolved.executionId,
+          resolved.executionIdPath,
+        );
       },
     );
     return dispose;
@@ -125,18 +162,18 @@ export function useRunViewSubgraphUrlSync(): void {
   const executionData = useExecutionData();
 
   const params = useParams({ strict: false });
-  const subgraphExecutionId =
-    "subgraphExecutionId" in params &&
-    typeof params.subgraphExecutionId === "string"
-      ? params.subgraphExecutionId
-      : undefined;
+  // One URL segment per nesting level; the last one is the subgraph in view.
+  const urlExecutionIds = getSubgraphExecutionIdsFromParams(params);
+  const subgraphExecutionId = urlExecutionIds.at(-1);
 
   const navigateRef = useRef(navigate);
   const executionDataRef = useRef(executionData);
+  const urlExecutionIdsRef = useRef(urlExecutionIds);
 
   useEffect(() => {
     navigateRef.current = navigate;
     executionDataRef.current = executionData;
+    urlExecutionIdsRef.current = urlExecutionIds;
   });
 
   // Set while direction B mutates the navigation store so the direction A
@@ -151,11 +188,17 @@ export function useRunViewSubgraphUrlSync(): void {
 
   // Direction A: navigationStore path -> URL subgraphExecutionId.
   useRunViewSubgraphExecutionSync(
-    (executionId) => {
+    (executionId, executionIdPath) => {
       const runId = executionDataRef.current.runId;
       if (!runId) return;
 
-      const target = getRunPath(runId, executionId);
+      // Append the child to the current URL chain when the breadcrumb
+      // ancestry is not resolved yet (deepening only), so each nesting level
+      // keeps its own segment instead of replacing the previous one.
+      const ids =
+        executionIdPath ??
+        (executionId ? [...urlExecutionIdsRef.current, executionId] : []);
+      const target = getRunPath(runId, ids);
       if (window.location.pathname === target) return;
 
       lastPushedExecutionId.current = executionId;

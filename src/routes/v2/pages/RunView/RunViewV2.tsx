@@ -10,6 +10,7 @@ import type { ComponentSpec } from "@/models/componentSpec";
 import { ComponentLibraryProvider } from "@/providers/ComponentLibraryProvider";
 import { ContextPanelProvider } from "@/providers/ContextPanelProvider";
 import { ExecutionDataProvider } from "@/providers/ExecutionDataProvider";
+import { getSubgraphExecutionIdFromParams } from "@/routes/runRoutes";
 import { AiChatStoreProvider } from "@/routes/v2/shared/components/AiChat/AiChatStoreContext";
 import { useCanvasControlsWindow } from "@/routes/v2/shared/components/MiniMap/useCanvasControlsWindow";
 import { ReadOnlyFlowCanvas } from "@/routes/v2/shared/components/ReadOnlyFlowCanvas";
@@ -122,11 +123,7 @@ export function RunViewV2() {
   }
 
   const id = params.id;
-  const subgraphExecutionId =
-    "subgraphExecutionId" in params &&
-    typeof params.subgraphExecutionId === "string"
-      ? params.subgraphExecutionId
-      : undefined;
+  const subgraphExecutionId = getSubgraphExecutionIdFromParams(params);
 
   return (
     <div className="h-full w-full flex flex-col bg-slate-100 dark:bg-background select-none">

@@ -409,7 +409,7 @@ const runV2WithSubgraphRedirectRoute = createRoute({
       to: APP_ROUTES.RUN_DETAIL_WITH_SUBGRAPH,
       params: {
         id: params.id,
-        subgraphExecutionId: params.subgraphExecutionId,
+        _splat: params._splat,
       },
       search: (previous) => previous,
     });
