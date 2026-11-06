@@ -25,10 +25,10 @@ vi.mock("../SettingsFlagsContext", () => ({
 
 import { BetaFeaturesSettings } from "./BetaFeaturesSettings";
 
-const componentSearchFlag: Flag = {
-  key: "component-search-v2",
-  name: "Component Search",
-  description: "Show component search.",
+const projectsFlag: Flag = {
+  key: "projects",
+  name: "Projects",
+  description: "Enable the Projects dashboard.",
   default: false,
   enabled: false,
   category: "beta",
@@ -42,35 +42,32 @@ describe("BetaFeaturesSettings", () => {
   });
 
   it("renders the beta flags it is given", () => {
-    mocks.betaFlags = [componentSearchFlag];
+    mocks.betaFlags = [projectsFlag];
 
     render(<BetaFeaturesSettings />);
 
-    expect(screen.getByText("Component Search")).toBeInTheDocument();
+    expect(screen.getByText("Projects")).toBeInTheDocument();
   });
 
   it("tracks and forwards a toggle change", () => {
-    mocks.betaFlags = [componentSearchFlag];
+    mocks.betaFlags = [projectsFlag];
 
     render(<BetaFeaturesSettings />);
-    fireEvent.click(screen.getByTestId("component-search-v2-switch"));
+    fireEvent.click(screen.getByTestId("projects-switch"));
 
     expect(mocks.track).toHaveBeenCalledWith("settings.toggle_changed", {
       section: "beta_features",
-      flag_name: "component-search-v2",
+      flag_name: "projects",
       new_value: true,
     });
-    expect(mocks.handleSetFlag).toHaveBeenCalledWith(
-      "component-search-v2",
-      true,
-    );
+    expect(mocks.handleSetFlag).toHaveBeenCalledWith("projects", true);
   });
 
   it("locks a flag this build cannot enable", () => {
-    mocks.betaFlags = [{ ...componentSearchFlag, canEnable: false }];
+    mocks.betaFlags = [{ ...projectsFlag, canEnable: false }];
 
     render(<BetaFeaturesSettings />);
-    const toggle = screen.getByTestId("component-search-v2-switch");
+    const toggle = screen.getByTestId("projects-switch");
 
     expect(toggle).toBeDisabled();
     fireEvent.click(toggle);
@@ -78,19 +75,14 @@ describe("BetaFeaturesSettings", () => {
   });
 
   it("still lets an already-enabled flag be turned off", () => {
-    mocks.betaFlags = [
-      { ...componentSearchFlag, canEnable: false, enabled: true },
-    ];
+    mocks.betaFlags = [{ ...projectsFlag, canEnable: false, enabled: true }];
 
     render(<BetaFeaturesSettings />);
-    const toggle = screen.getByTestId("component-search-v2-switch");
+    const toggle = screen.getByTestId("projects-switch");
 
     expect(toggle).toBeEnabled();
     fireEvent.click(toggle);
 
-    expect(mocks.handleSetFlag).toHaveBeenCalledWith(
-      "component-search-v2",
-      false,
-    );
+    expect(mocks.handleSetFlag).toHaveBeenCalledWith("projects", false);
   });
 });

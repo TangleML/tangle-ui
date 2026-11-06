@@ -75,21 +75,12 @@ export const ExistingFlags: ConfigFlags = {
     dependsOn: "projects",
   },
 
-  ["component-search-v2"]: {
-    name: "Component Search",
-    description:
-      "Show the experimental component search that searches across standard, published, registered, and user component sources, with optional AI rerank.",
-    default: true,
-    category: "beta",
-  },
-
   ["component-search-v2-ai-descriptions"]: {
     name: "Auto-generate component search AI descriptions",
     description:
       "Automatically generate an AI description when viewing a component in component search.",
     default: false,
     category: "setting",
-    dependsOn: "component-search-v2",
   },
 
   ["compare-runs"]: {

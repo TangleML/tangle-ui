@@ -12,7 +12,6 @@ import {
   getTour,
   type TourDefinition,
 } from "@/components/Learn/tours/registry";
-import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { addRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
@@ -82,9 +81,7 @@ function TourReactourBridge({
   onUrlStepChange: (step: number) => void;
 }) {
   const { setSteps, setCurrentStep, setIsOpen, currentStep } = useTour();
-  const componentWindowId = componentWindowIdForFlag(
-    useFlagValue("component-search-v2"),
-  );
+  const componentWindowId = componentWindowIdForFlag(true);
 
   const lastSyncRef = useRef<number | null>(null);
   const initializedRef = useRef(false);
