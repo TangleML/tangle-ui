@@ -14,9 +14,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
-import { BlockStack, InlineStack } from "@/components/ui/layout";
-import { Separator } from "@/components/ui/separator";
-import { Paragraph, Text } from "@/components/ui/typography";
+import { InlineStack } from "@/components/ui/layout";
+import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { APP_ROUTES } from "@/routes/appRoutes";
 import { projectHomeRoute } from "@/routes/projectRoutes";
@@ -30,11 +29,12 @@ import {
   visibleResourceCounts,
 } from "./formatResourceCounts";
 
-interface ProjectCardProps {
+interface ProjectRowProps {
   project: ProjectSummary;
+  compact?: boolean;
 }
 
-export function ProjectCard({ project }: ProjectCardProps) {
+export function ProjectRow({ project, compact = false }: ProjectRowProps) {
   const navigate = useNavigate();
   const { confirmAndDelete, isDeleting, confirmation } = useDeleteProjectAction(
     project,
@@ -50,6 +50,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
     project.resourceCounts,
     tangentEnabled,
   );
+  const contents = formatResourceCounts(resourceCounts);
 
   const openDetails = () => {
     void navigate({
@@ -61,75 +62,89 @@ export function ProjectCard({ project }: ProjectCardProps) {
   return (
     <div
       className={cn(
-        "relative min-h-56 rounded-lg border border-border bg-card transition-colors hover:bg-muted/50",
+        "@container/project-row relative flex min-w-0 items-center border-b border-border last:border-b-0 transition-colors hover:bg-muted/50",
+        compact && "h-12",
         isDeleting && "pointer-events-none opacity-50",
       )}
     >
       <Link
         to={projectHomeRoute(tangentEnabled)}
         params={{ projectId: project.id }}
-        className="flex h-full flex-col justify-between gap-2 p-4"
-        {...tracking("projects.project_card")}
+        className={cn(
+          "flex min-w-0 flex-1 items-center gap-3 px-4 no-underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/50",
+          compact ? "h-full" : "py-3",
+        )}
+        {...tracking("projects.project_row")}
       >
-        <BlockStack gap="2" align="stretch">
-          <InlineStack
-            gap="2"
-            blockAlign="center"
-            wrap="nowrap"
-            className="pr-8"
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+          <Icon
+            name={pinned ? "Star" : "Folder"}
+            size="md"
+            aria-label={pinned ? "Favorite" : undefined}
+            className={cn(pinned && "fill-warning text-warning")}
+          />
+        </div>
+        <div className="min-w-0 flex-1">
+          <Text
+            size="sm"
+            weight="semibold"
+            className="block min-w-0 truncate"
+            title={project.name}
           >
-            <Icon
-              name={pinned ? "Pin" : "Folder"}
-              size="lg"
-              aria-label={pinned ? "Pinned" : undefined}
-              className={cn(
-                "shrink-0",
-                pinned ? "text-brand-accent" : "text-muted-foreground",
-              )}
-            />
-            <Text weight="semibold" className="min-w-0 truncate">
-              {project.name}
-            </Text>
-          </InlineStack>
-
-          {project.description && (
-            <Paragraph
-              size="sm"
+            {project.name}
+          </Text>
+          <Text
+            size="xs"
+            tone="subdued"
+            className="block truncate"
+            title={contents}
+          >
+            {contents}
+          </Text>
+          {!compact && project.description && (
+            <Text
+              size="xs"
               tone="subdued"
-              className="line-clamp-3 wrap-break-word"
+              className="mt-1 hidden truncate wrap-break-word @[48rem]/project-row:block"
+              title={project.description}
             >
               {project.description}
-            </Paragraph>
+            </Text>
           )}
-        </BlockStack>
-
-        <BlockStack gap="2" align="stretch">
-          <Text size="xs" weight="medium" className="truncate">
-            {formatResourceCounts(resourceCounts)}
+        </div>
+        <div className="hidden min-w-0 max-w-48 shrink-0 space-y-1 text-right @[36rem]/project-row:block">
+          {workspace && (
+            <InlineStack
+              gap="1"
+              blockAlign="center"
+              wrap="nowrap"
+              className="min-w-0 justify-end"
+            >
+              <Icon
+                name="Shapes"
+                size="xs"
+                aria-label="Workspace"
+                className="shrink-0 text-muted-foreground"
+              />
+              <Text
+                size="xs"
+                tone="subdued"
+                className="min-w-0 truncate"
+                title={workspace.name}
+              >
+                {workspace.name}
+              </Text>
+            </InlineStack>
+          )}
+          <Text
+            size="xs"
+            tone="subdued"
+            className="block"
+            title={`Created ${formatDate(project.createdAt)} · Updated ${formatDate(project.updatedAt)}`}
+          >
+            {`Updated ${formatRelativeTime(project.updatedAt)}`}
           </Text>
-          <Separator />
-          <BlockStack gap="1" align="stretch">
-            {workspace && (
-              <InlineStack gap="1" blockAlign="center" wrap="nowrap">
-                <Icon
-                  name="Shapes"
-                  size="xs"
-                  aria-label="Workspace"
-                  className="shrink-0 text-muted-foreground"
-                />
-                <Text size="xs" tone="subdued" className="min-w-0 truncate">
-                  {workspace.name}
-                </Text>
-              </InlineStack>
-            )}
-            <Text size="xs" tone="subdued" className="truncate">
-              {`Created ${formatDate(project.createdAt)}`}
-            </Text>
-            <Text size="xs" tone="subdued" className="truncate">
-              {`Updated ${formatRelativeTime(project.updatedAt)}`}
-            </Text>
-          </BlockStack>
-        </BlockStack>
+        </div>
       </Link>
 
       <DropdownMenu>
@@ -137,12 +152,11 @@ export function ProjectCard({ project }: ProjectCardProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="absolute right-2 top-2"
-            // The card is dimmed while the delete runs, but dimming stops a
-            // pointer and not a keyboard.
+            className="mr-3 size-8 shrink-0 text-muted-foreground"
+            // Keep keyboard actions disabled while deletion is pending.
             disabled={isDeleting}
             aria-label={`Project actions: ${project.name}`}
-            {...tracking("projects.project_card_menu")}
+            {...tracking("projects.project_row_menu")}
           >
             <Icon name="EllipsisVertical" size="sm" />
           </Button>
@@ -151,10 +165,14 @@ export function ProjectCard({ project }: ProjectCardProps) {
           <DropdownMenuItem
             disabled={isPinning}
             onSelect={() => void togglePin()}
-            {...tracking("projects.pin_project", { new_value: !pinned })}
+            {...tracking("projects.favorite_project", { new_value: !pinned })}
           >
-            <Icon name={pinned ? "PinOff" : "Pin"} size="sm" />
-            {pinned ? "Unpin project" : "Pin project"}
+            <Icon
+              name="Star"
+              size="sm"
+              className={cn(pinned && "fill-warning text-warning")}
+            />
+            {pinned ? "Remove from favorites" : "Add to favorites"}
           </DropdownMenuItem>
           {tangentEnabled && (
             <DropdownMenuItem

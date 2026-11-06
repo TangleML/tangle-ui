@@ -1,5 +1,6 @@
 import type { Node, XYPosition } from "@xyflow/react";
 
+import { addRecentlyUsed } from "@/hooks/useRecentlyViewed";
 import {
   type ComponentReference,
   type ComponentSpec,
@@ -41,6 +42,13 @@ export function addTask(
     });
 
     spec.addTask(task);
+    if (componentRef.digest) {
+      addRecentlyUsed({
+        type: "component",
+        id: componentRef.digest,
+        name: componentName,
+      });
+    }
     return task;
   });
 }
