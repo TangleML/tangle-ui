@@ -4,7 +4,10 @@ import { useEffect } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
-import type { WorkareaTab } from "@/routes/v2/pages/Tangent/workarea/types";
+import type {
+  WorkareaHostProps,
+  WorkareaTab,
+} from "@/routes/v2/pages/Tangent/workarea/types";
 import { idIdentity } from "@/services/projects/resourceTarget";
 
 import { CollapsedWorkareaRail } from "./CollapsedWorkareaRail";
@@ -12,6 +15,7 @@ import { DynamicWorkarea } from "./DynamicWorkarea";
 
 let store: TangentProjectStore;
 const unmounted = vi.fn();
+const listening = new Map<string, boolean>();
 
 vi.mock("@/routes/v2/pages/Tangent/context/TangentProjectContext", () => ({
   useTangentProject: () => store,
@@ -21,11 +25,21 @@ vi.mock("@/routes/v2/pages/Tangent/workarea/registry", () => ({
   getWorkareaKind: () => ({
     icon: "FileText",
     keepMounted: true,
-    render: (tab: WorkareaTab) => <TestView tab={tab} />,
+    render: (tab: WorkareaTab, host: WorkareaHostProps) => (
+      <TestView tab={tab} host={host} />
+    ),
   }),
 }));
 
-function TestView({ tab }: { tab: WorkareaTab }) {
+// Stands in for an editor's shortcut listener, which follows `isActive`.
+function TestView({
+  tab,
+  host,
+}: {
+  tab: WorkareaTab;
+  host: WorkareaHostProps;
+}) {
+  listening.set(tab.title, host.isActive);
   useEffect(() => () => unmounted(tab.id), [tab.id]);
   return (
     <input data-testid={`view-${tab.title}`} defaultValue="work in progress" />
@@ -50,6 +64,7 @@ const Workarea = observer(function Workarea() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  listening.clear();
   store = new TangentProjectStore("project-1");
   store.setDefaultSessionId("session-1");
 });
@@ -65,12 +80,14 @@ describe("collapsing the workarea to its rail", () => {
 
     act(() => store.hideWorkarea());
     expect(first).not.toBeVisible();
+    expect(listening.get("Second")).toBe(false);
     expect(screen.getByRole("button", { name: "Show workarea" })).toHaveFocus();
     expect(unmounted).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "Show First" }));
     expect(first).toBeVisible();
     expect(first).toHaveValue("edited canvas");
+    expect(listening.get("First")).toBe(true);
   });
 
   it("reopens when the rail's edge is double-clicked", () => {

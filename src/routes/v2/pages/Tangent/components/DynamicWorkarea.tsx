@@ -18,6 +18,11 @@ import {
 } from "@/routes/v2/pages/Tangent/layout";
 import { getWorkareaKind } from "@/routes/v2/pages/Tangent/workarea/registry";
 import type { WorkareaHostProps } from "@/routes/v2/pages/Tangent/workarea/types";
+import { workareaTabIcon } from "@/routes/v2/pages/Tangent/workarea/workareaTabIcon";
+
+interface DynamicWorkareaProps {
+  collapsePreview?: boolean;
+}
 
 /**
  * The right-hand "Dynamic Workarea": a tabbed surface people and Tangent agents
@@ -30,9 +35,7 @@ import type { WorkareaHostProps } from "@/routes/v2/pages/Tangent/workarea/types
  */
 export const DynamicWorkarea = observer(function DynamicWorkarea({
   collapsePreview = false,
-}: {
-  collapsePreview?: boolean;
-}) {
+}: DynamicWorkareaProps) {
   const store = useTangentProject();
   const activeSessionId = store.activeSessionId;
   const workareaTabs = store.workareaTabs;
@@ -61,12 +64,9 @@ export const DynamicWorkarea = observer(function DynamicWorkarea({
   return (
     <div
       id={WORKAREA_ID}
-      inert={store.workareaCollapsed}
+      hidden={store.workareaCollapsed}
       className="relative flex h-full min-w-0 flex-1 flex-col border-l border-border bg-card"
-      style={{
-        minWidth: MIN_WORKAREA_WIDTH,
-        display: store.workareaCollapsed ? "none" : undefined,
-      }}
+      style={{ minWidth: MIN_WORKAREA_WIDTH }}
     >
       {collapsePreview && (
         <div
@@ -93,7 +93,7 @@ export const DynamicWorkarea = observer(function DynamicWorkarea({
                 key={tab.id}
                 value={tab.id}
                 title={tab.title}
-                icon={getWorkareaKind(tab.target.type)?.icon ?? "FileText"}
+                icon={workareaTabIcon(tab)}
                 onClose={() => store.closeWorkareaTab(tab.id)}
               />
             ))}

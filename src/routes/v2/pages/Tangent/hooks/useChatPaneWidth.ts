@@ -35,7 +35,7 @@ export function useChatPaneWidth(dockWidth: number) {
 
   return {
     rowRef,
-    rowWidth,
+    rowMeasured: rowWidth !== UNMEASURED,
     maxWidth,
     width: Math.min(requestedWidth, maxWidth),
     requestWidth: (attempted: number) =>

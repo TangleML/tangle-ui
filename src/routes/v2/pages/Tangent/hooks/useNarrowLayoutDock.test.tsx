@@ -1,4 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
+import { observable, runInAction } from "mobx";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -82,5 +83,29 @@ describe("useNarrowLayoutDock", () => {
     resizeTo(WIDE);
 
     expect(setDockAreaCollapsed).not.toHaveBeenCalledWith("left", false);
+  });
+
+  it("does not reopen a dock the user closed after reopening it by hand", () => {
+    const dock = observable({ collapsed: false });
+    setDockAreaCollapsed.mockImplementation((_side, next) => {
+      dock.collapsed = next;
+    });
+    vi.mocked(useSharedStores).mockReturnValue({
+      windows: { getDockAreaConfig: () => dock, setDockAreaCollapsed },
+    } as unknown as ReturnType<typeof useSharedStores>);
+    window.innerWidth = (narrowLayoutWidth(true) + NARROW_LAYOUT_WIDTH) / 2;
+    const { rerender } = renderHook(
+      ({ workareaCollapsed }) => useNarrowLayoutDock(workareaCollapsed),
+      { initialProps: { workareaCollapsed: false } },
+    );
+    expect(dock.collapsed).toBe(true);
+
+    runInAction(() => (dock.collapsed = false));
+    rerender({ workareaCollapsed: true });
+    runInAction(() => (dock.collapsed = true));
+    rerender({ workareaCollapsed: false });
+    rerender({ workareaCollapsed: true });
+
+    expect(dock.collapsed).toBe(true);
   });
 });

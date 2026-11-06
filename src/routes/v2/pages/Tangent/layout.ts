@@ -1,6 +1,6 @@
 import {
   COLLAPSED_DOCK_AREA_WIDTH,
-  DOCK_AREA_SNAP_GIVE,
+  DOCK_AREA_SNAP_OVERSHOOT,
   MIN_DOCK_AREA_WIDTH,
 } from "@/routes/v2/shared/windows/types";
 
@@ -29,7 +29,7 @@ export function snapsWorkareaShut(
   attemptedChatWidth: number,
 ): boolean {
   return (
-    rowMeasured && attemptedChatWidth >= maxChatWidth + DOCK_AREA_SNAP_GIVE
+    rowMeasured && attemptedChatWidth >= maxChatWidth + DOCK_AREA_SNAP_OVERSHOOT
   );
 }
 

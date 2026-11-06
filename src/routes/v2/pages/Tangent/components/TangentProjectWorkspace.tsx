@@ -33,7 +33,7 @@ export const TangentProjectWorkspace = observer(
     const dockWidth = dock.collapsed ? COLLAPSED_DOCK_AREA_WIDTH : dock.width;
     const {
       rowRef,
-      rowWidth,
+      rowMeasured,
       width: chatWidth,
       maxWidth: maxChatWidth,
       requestWidth,
@@ -60,7 +60,7 @@ export const TangentProjectWorkspace = observer(
             >
               {!store.workareaCollapsed && (
                 <WorkareaDivider
-                  rowMeasured={rowWidth > 0}
+                  rowMeasured={rowMeasured}
                   maxChatWidth={maxChatWidth}
                   onResize={requestWidth}
                   onCollapsePreview={setCollapsePreview}

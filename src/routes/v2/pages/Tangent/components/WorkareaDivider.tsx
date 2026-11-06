@@ -12,11 +12,6 @@ interface WorkareaDividerProps {
   onCollapsePreview: (snapping: boolean) => void;
 }
 
-/**
- * The divider between chat and workarea, behaving like the left dock's edge:
- * dragging it past where it stops snaps the workarea shut, double-clicking it
- * collapses the workarea, and any shorter drag just resizes the chat.
- */
 export function WorkareaDivider({
   rowMeasured,
   maxChatWidth,

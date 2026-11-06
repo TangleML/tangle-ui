@@ -34,14 +34,15 @@ export type WorkareaTab = ResolvedWorkareaView & { id: string };
  * a spawnable kind (pipeline / run) uses to host a remote sub-agent bound to
  * its live canvas. The shell fills this bag from context; kinds pass the pieces
  * they need into their view.
+ *
+ * `isSelected` is the tab the user picked, and stays true while the workarea
+ * is collapsed. `isActive` is that tab while it is also visible. Keyboard
+ * shortcuts and anything that puts UI in front of the user follow `isActive`;
+ * work that may carry on while collapsed follows `isSelected`, so it never
+ * spreads to the other mounted tabs.
  */
 export interface WorkareaHostProps {
-  // Selected tab, whether or not the workarea is visible. Collapsing does not
-  // clear it, so selected-tab work continues while hidden without spreading to
-  // the other mounted-but-unselected tabs.
   isSelected: boolean;
-  // Selected AND visible: what the user can see and type into. Gates keyboard
-  // shortcuts and any UI put in front of the user, such as a consent dialog.
   isActive: boolean;
   projectId: string;
   sessionId?: string;

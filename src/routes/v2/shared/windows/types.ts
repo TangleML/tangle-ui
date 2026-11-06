@@ -90,11 +90,10 @@ export const DEFAULT_DOCK_AREA_WIDTH = 320;
 
 export const MIN_DOCK_AREA_WIDTH = 220;
 
-// How far past a panel's resize limit a drag must go before it snaps shut.
-export const DOCK_AREA_SNAP_GIVE = 20;
+export const DOCK_AREA_SNAP_OVERSHOOT = 20;
 
 export const DOCK_AREA_COLLAPSE_SNAP_THRESHOLD =
-  MIN_DOCK_AREA_WIDTH - DOCK_AREA_SNAP_GIVE;
+  MIN_DOCK_AREA_WIDTH - DOCK_AREA_SNAP_OVERSHOOT;
 
 export const MAX_DOCK_AREA_WIDTH = 600;
 

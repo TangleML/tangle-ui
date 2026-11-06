@@ -1,45 +1,18 @@
-import {
-  act,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { act, fireEvent, render, waitFor } from "@testing-library/react";
 import { ReactFlowProvider, useReactFlow } from "@xyflow/react";
-import { observer } from "mobx-react-lite";
 import { useEffect } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { Binding, ComponentSpec, Task } from "@/models/componentSpec";
-import { CollapsedWorkareaRail } from "@/routes/v2/pages/Tangent/components/CollapsedWorkareaRail";
-import { DynamicWorkarea } from "@/routes/v2/pages/Tangent/components/DynamicWorkarea";
-import { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
-import type { WorkareaHostProps } from "@/routes/v2/pages/Tangent/workarea/types";
-import { useShortcutListener } from "@/routes/v2/shared/shortcuts/useShortcutListener";
 import { KeyboardStore } from "@/routes/v2/shared/store/keyboardStore";
 
 import { FlowCanvas } from "./FlowCanvas";
 
-let project: TangentProjectStore;
 let keyboard: KeyboardStore;
 let spec: ComponentSpec;
 const undoGroup = vi.fn((_label: string, apply: () => void) => apply());
 const clearSelection = vi.fn();
 const clearMultiSelection = vi.fn();
-
-vi.mock("@/routes/v2/pages/Tangent/context/TangentProjectContext", () => ({
-  useTangentProject: () => project,
-}));
-vi.mock("@/routes/v2/pages/Tangent/workarea/registry", () => ({
-  registerWorkareaKind: vi.fn(),
-  getWorkareaKind: () => ({
-    keepMounted: true,
-    icon: "GitBranch",
-    render: (_tab: unknown, host: WorkareaHostProps) => (
-      <WorkareaCanvas active={host.isActive} />
-    ),
-  }),
-}));
 
 vi.mock("@/routes/v2/shared/store/SharedStoreContext", () => ({
   useSharedStores: () => ({
@@ -100,8 +73,7 @@ function FlowProbe() {
   }, [flow]);
   return null;
 }
-function WorkareaCanvas({ active }: { active: boolean }) {
-  useShortcutListener(active);
+function Canvas() {
   return (
     <ReactFlowProvider>
       <FlowCanvas spec={spec} />
@@ -109,14 +81,15 @@ function WorkareaCanvas({ active }: { active: boolean }) {
     </ReactFlowProvider>
   );
 }
-const Fixture = observer(function Fixture() {
-  return (
-    <>
-      <DynamicWorkarea />
-      {project.workareaCollapsed && <CollapsedWorkareaRail />}
-    </>
-  );
-});
+
+async function press(key: string) {
+  await act(async () => {
+    fireEvent.keyDown(document.body, { key, code: key });
+  });
+  await act(async () => {
+    fireEvent.keyUp(document.body, { key, code: key });
+  });
+}
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -128,12 +101,6 @@ beforeEach(() => {
       disconnect() {}
     },
   );
-  project = new TangentProjectStore("project-1");
-  project.setDefaultSessionId("session-1");
-  project.openResolvedView({
-    title: "Pipeline",
-    target: { type: "pipeline", identity: "id/p1" },
-  });
   keyboard = new KeyboardStore();
   spec = new ComponentSpec({ name: "Pipeline" });
   spec.addTask(
@@ -152,41 +119,23 @@ beforeEach(() => {
 
 describe("real ReactFlow keyboard activity", () => {
   it.each(["Delete", "Backspace"])(
-    "ignores %s while the workarea is hidden and deletes again once shown",
+    "ignores %s while the editor is not listening and deletes once it is",
     async (key) => {
-      render(<Fixture />);
-      expect(spec.tasks).toHaveLength(1);
-      act(() => project.hideWorkarea());
-      const show = screen.getByRole("button", { name: "Show workarea" });
-      show.focus();
+      render(<Canvas />);
 
-      await act(async () => {
-        fireEvent.keyDown(show, { key, code: key });
-      });
-      await act(async () => {
-        fireEvent.keyUp(show, { key, code: key });
-      });
-      expect(show).toHaveFocus();
+      await press(key);
       expect(spec.tasks).toHaveLength(1);
       expect(spec.bindings).toHaveLength(1);
 
-      fireEvent.click(show);
-      const body = document.body;
-      body.focus();
-      await act(async () => {
-        fireEvent.keyDown(body, { key, code: key });
-      });
+      act(() => keyboard.setListening(true));
+      await press(key);
       await waitFor(() => expect(spec.tasks).toHaveLength(0));
       expect(spec.bindings).toHaveLength(0);
-      await act(async () => {
-        fireEvent.keyUp(body, { key, code: key });
-      });
     },
   );
 
-  it("keeps deliberate programmatic/agent deletion available while hidden", async () => {
-    project.hideWorkarea();
-    render(<Fixture />);
+  it("keeps deliberate programmatic/agent deletion available while not listening", async () => {
+    render(<Canvas />);
     await act(async () => {
       await deleteProgrammatically();
     });

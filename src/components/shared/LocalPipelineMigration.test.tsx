@@ -185,6 +185,31 @@ it("finishes an already-consented move for a hidden tab that opted in", async ()
   expect(screen.queryByRole("alertdialog")).toBeNull();
 });
 
+it("never prompts, checks write access or uploads for a hidden opted-in tab without consent", async () => {
+  localStorage.removeItem(consentKey);
+  const view = (active: boolean) => (
+    <QueryClientProvider client={client}>
+      <LocalPipelineMigration
+        pipelineRef={pipelineRef}
+        isActive={active}
+        allowBackgroundMigration
+        onMigrated={onMigrated}
+      >
+        <p>Local editor</p>
+      </LocalPipelineMigration>
+    </QueryClientProvider>
+  );
+  const { rerender } = render(view(false));
+  await waitFor(() => expect(storage.resolvePipeline).toHaveBeenCalled());
+  await act(async () => {});
+  expect(screen.queryByRole("alertdialog")).toBeNull();
+  expect(getRemotePipelineWriter).not.toHaveBeenCalled();
+  expect(storage.moveLocalPipelineToRemote).not.toHaveBeenCalled();
+
+  rerender(view(true));
+  expect(await screen.findByRole("alertdialog")).toBeInTheDocument();
+});
+
 it("keeps a cancelled pipeline local when consent is granted elsewhere", async () => {
   localStorage.removeItem(consentKey);
   open();
