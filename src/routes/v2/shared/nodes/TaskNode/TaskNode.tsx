@@ -228,9 +228,6 @@ export const TaskNode = observer(function TaskNode({
   const { selectEdgesForHandle } = useHandleEdgeSelection(id);
   const showContent = useIsDetailedView();
   const inputAggregatorEnabled = useFlagValue("input-aggregator");
-  const publishedComponentBadgeEnabled = useFlagValue(
-    "remote-component-library-search",
-  );
 
   const spec = useSpec();
   const task = spec?.tasks.find((t) => t.$id === entityId);
@@ -310,9 +307,7 @@ export const TaskNode = observer(function TaskNode({
       conditionReferenceLabel ??
       describeConditionSource(task.isEnabled) ??
       CONDITION_LITERAL_LABELS[toConditionLiteral(task.isEnabled)],
-    componentRef: publishedComponentBadgeEnabled
-      ? task.resolvedComponentRef
-      : undefined,
+    componentRef: task.resolvedComponentRef,
     readOnly,
     isConnectable: isConnectable && !readOnly,
     isAggregator,

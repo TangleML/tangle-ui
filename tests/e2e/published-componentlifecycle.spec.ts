@@ -6,7 +6,6 @@ import {
   locateComponentInFolder,
   locateFolderByName,
   openComponentLibFolder,
-  setBetaFlag,
 } from "./helpers";
 
 /**
@@ -26,8 +25,6 @@ test.describe.fixme("Published Component Library - Lifecycle", () => {
 
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
-
-    await setBetaFlag(page, "remote-component-library-search", true);
 
     await createNewPipeline(page);
 

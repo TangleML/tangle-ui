@@ -1,4 +1,4 @@
-import { type ChangeEvent, useCallback, useMemo } from "react";
+import { useMemo } from "react";
 
 import { ManageLibrariesDialog } from "@/components/shared/GitHubLibrary/ManageLibrariesDialog";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
@@ -7,7 +7,6 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/typography";
 import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
-import { useForcedSearchContext } from "@/providers/ComponentLibraryProvider/ForcedSearchProvider";
 import type { UIComponentFolder } from "@/types/componentLibrary";
 
 import {
@@ -16,8 +15,6 @@ import {
   FolderItem,
   ImportComponent,
   LoadingState,
-  SearchInput,
-  SearchResults,
 } from "../components";
 import {
   ComponentItemFromUrl,
@@ -39,9 +36,6 @@ interface GraphComponentsProps {
 const GraphComponents = ({
   showSectionHeader = false,
 }: GraphComponentsProps) => {
-  const remoteComponentLibrarySearchEnabled = useFlagValue(
-    "remote-component-library-search",
-  );
   const githubComponentLibraryEnabled = useFlagValue(
     "github-component-library",
   );
@@ -49,7 +43,6 @@ const GraphComponents = ({
   const { getComponentLibrary, existingComponentLibraries } =
     useComponentLibrary();
 
-  const { updateSearchFilter, currentSearchFilter } = useForcedSearchContext();
   const {
     componentLibrary,
     usedComponentsFolder,
@@ -57,37 +50,12 @@ const GraphComponents = ({
     favoritesFolder,
     isLoading,
     error,
-    searchResult,
   } = useComponentLibrary();
-
-  const handleSearchChange = (e: ChangeEvent<HTMLInputElement>) => {
-    updateSearchFilter({
-      searchTerm: e.target.value,
-    });
-  };
-
-  const handleFiltersChange = useCallback(
-    (filters: string[]) => {
-      updateSearchFilter({
-        filters,
-      });
-    },
-    [updateSearchFilter],
-  );
 
   const memoizedContent = useMemo(() => {
     if (isLoading) return <LoadingState />;
     if (error) return <ErrorState message={(error as Error).message} />;
     if (!componentLibrary) return <EmptyState />;
-
-    if (!remoteComponentLibrarySearchEnabled && searchResult) {
-      return (
-        <SearchResults
-          searchResult={searchResult}
-          onFiltersChange={handleFiltersChange}
-        />
-      );
-    }
 
     const hasUsedComponents =
       usedComponentsFolder?.components &&
@@ -102,7 +70,7 @@ const GraphComponents = ({
 
     return (
       <BlockStack gap="2">
-        {remoteComponentLibrarySearchEnabled && <UpgradeAvailableAlertBox />}
+        <UpgradeAvailableAlertBox />
 
         <BlockStack>
           <FolderItem
@@ -215,27 +183,14 @@ const GraphComponents = ({
     favoritesFolder,
     isLoading,
     error,
-    searchResult,
-    remoteComponentLibrarySearchEnabled,
     githubComponentLibraryEnabled,
     inputAggregatorEnabled,
     existingComponentLibraries,
     getComponentLibrary,
   ]);
 
-  const searchComponent = remoteComponentLibrarySearchEnabled ? (
+  const searchComponent = (
     <PublishedComponentsSearch>{memoizedContent}</PublishedComponentsSearch>
-  ) : (
-    <>
-      <SearchInput
-        value={currentSearchFilter.searchTerm}
-        activeFilters={currentSearchFilter.filters}
-        onChange={handleSearchChange}
-        onFiltersChange={handleFiltersChange}
-      />
-
-      {memoizedContent}
-    </>
   );
 
   const content = (

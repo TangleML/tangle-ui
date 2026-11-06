@@ -1,7 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 
 import {
-  assertSearchState,
   createNewPipeline,
   dropComponentFromLibraryOnCanvas,
   locateComponentInFolder,
@@ -9,7 +8,6 @@ import {
   locateFolderByName,
   openComponentLibFolder,
   removeComponentFromCanvas,
-  setBetaFlag,
 } from "./helpers";
 
 /**
@@ -28,7 +26,6 @@ test.describe.fixme("Component Library", () => {
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
 
-    await setBetaFlag(page, "remote-component-library-search", false);
     await createNewPipeline(page);
 
     await expect(page.locator("[data-testid='search-input']")).toBeVisible();
@@ -174,21 +171,6 @@ test.describe.fixme("Component Library", () => {
     await expect(usedOnCanvasFolder.locator("li")).toHaveCount(0);
   });
 
-  test("library can be searched", async () => {
-    await page.getByTestId("search-input").fill("GCS");
-
-    const searchResultsHeader = page.getByTestId("search-results-header");
-    await expect(searchResultsHeader).toBeVisible();
-    await expect(searchResultsHeader).toHaveText("Search Results (3)");
-
-    const componentItem = page.getByTestId("component-item");
-    await expect(componentItem).toHaveCount(3);
-
-    await page.getByTestId("search-input").clear();
-
-    await expect(searchResultsHeader).toBeHidden();
-  });
-
   test("search results can be highlighted on input pin click", async () => {
     await openComponentLibFolder(page, "Standard library");
     await openComponentLibFolder(page, "Data manipulation");
@@ -219,23 +201,12 @@ test.describe.fixme("Component Library", () => {
     await expect(inputConnection).toHaveAttribute("data-highlighted", "false");
     await expect(inputConnection).toHaveAttribute("data-selected", "true");
 
-    await assertSearchState(page, {
-      searchTerm: "CSV",
-      searchFilterCount: "2",
-      searchResultsCount: "*",
-    });
-
     // reset highlighting after clicking on the canvas
     await locateFlowCanvas(page).click();
 
     // resets selection after clicking on the canvas
     await expect(inputConnection).toHaveAttribute("data-highlighted", "false");
     await expect(outputConnection).toHaveAttribute("data-highlighted", "false");
-
-    // search should be reset
-    await assertSearchState(page, {
-      searchTerm: "",
-    });
 
     // remove the component from the canvas
     await removeComponentFromCanvas(
@@ -274,25 +245,12 @@ test.describe.fixme("Component Library", () => {
     await expect(outputConnection).toHaveAttribute("data-selected", "true");
     await expect(inputConnection).toHaveAttribute("data-highlighted", "true");
 
-    // assert search inputs
-    await assertSearchState(page, {
-      searchTerm: "CSV",
-      searchFilterCount: "2",
-      // todo: this can be painful to maintain, find a better way to do this
-      searchResultsCount: "*",
-    });
-
     // reset highlighting after clicking on the canvas
     await locateFlowCanvas(page).click();
 
     // resets selection after clicking on the canvas
     await expect(inputConnection).toHaveAttribute("data-highlighted", "false");
     await expect(outputConnection).toHaveAttribute("data-selected", "false");
-
-    // search should be reset
-    await assertSearchState(page, {
-      searchTerm: "",
-    });
 
     // remove the component from the canvas
     await removeComponentFromCanvas(

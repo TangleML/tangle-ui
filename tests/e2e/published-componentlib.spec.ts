@@ -10,7 +10,6 @@ import {
   locateFolderByName,
   openComponentLibFolder,
   removeComponentFromCanvas,
-  setBetaFlag,
 } from "./helpers";
 
 /**
@@ -30,8 +29,6 @@ test.describe.fixme("Published Component Library", () => {
     page = await browser.newPage();
 
     await createNewPipeline(page);
-    await setBetaFlag(page, "remote-component-library-search", true);
-    await page.goBack();
 
     await expect(page.locator("[data-testid='search-input']")).toBeVisible();
   });

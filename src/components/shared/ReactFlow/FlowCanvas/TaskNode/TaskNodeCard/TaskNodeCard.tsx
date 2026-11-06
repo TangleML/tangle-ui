@@ -35,9 +35,6 @@ import { UpgradeNodePopover } from "./UpgradeNodePopover";
 
 const TaskNodeCard = () => {
   const navigate = useNavigate();
-  const isRemoteComponentLibrarySearchEnabled = useFlagValue(
-    "remote-component-library-search",
-  );
   const inputAggregatorEnabled = useFlagValue("input-aggregator");
 
   const { registerNode } = useNodesOverlay();
@@ -260,16 +257,12 @@ const TaskNodeCard = () => {
             )}
         </BlockStack>
 
-        {isRemoteComponentLibrarySearchEnabled ? (
-          <PublishedComponentBadge
-            componentRef={taskSpec.componentRef}
-            readOnly={readOnly}
-          >
-            {digestMarkup}
-          </PublishedComponentBadge>
-        ) : (
-          digestMarkup
-        )}
+        <PublishedComponentBadge
+          componentRef={taskSpec.componentRef}
+          readOnly={readOnly}
+        >
+          {digestMarkup}
+        </PublishedComponentBadge>
       </CardHeader>
       <CardContent className="p-2 flex flex-col gap-2">
         {isSubgraphNode && subgraphExecutionStats && (
@@ -298,7 +291,7 @@ const TaskNodeCard = () => {
             onBackgroundClick={handleOutputSectionClick}
           />
         </div>
-        {isRemoteComponentLibrarySearchEnabled && updateOverlayDialogOpen ? (
+        {updateOverlayDialogOpen ? (
           <UpgradeNodePopover
             currentNode={taskNode}
             onOpenChange={closeOverlayPopover}

@@ -11,13 +11,6 @@ const isTangentEnabled =
   import.meta.env.VITE_ENABLE_TANGENT === "true";
 
 export const ExistingFlags: ConfigFlags = {
-  ["remote-component-library-search"]: {
-    name: "Published Components Library",
-    description: "Enable the Published Components Library feature.",
-    default: true,
-    category: "beta",
-  },
-
   ["github-component-library"]: {
     name: "GitHub Component Library",
     description:

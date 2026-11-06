@@ -1,4 +1,4 @@
-import type { ChangeEvent, ReactElement } from "react";
+import type { ReactElement } from "react";
 
 import type { ComponentReference } from "@/utils/componentSpec";
 
@@ -22,20 +22,6 @@ export type UIComponentFolder = {
   components?: (ComponentReference | ReactElement)[];
   folders?: UIComponentFolder[];
   isUserFolder?: boolean;
-};
-
-export type SearchInputProps = {
-  value: string;
-  activeFilters: string[];
-  onChange: (e: ChangeEvent<HTMLInputElement>) => void;
-  onFiltersChange: (filters: string[]) => void;
-};
-
-export type SearchFilterProps = {
-  availableFilters: string[];
-  activeFilters: string[];
-  disableCounter?: boolean;
-  onFiltersChange: (filters: string[]) => void;
 };
 
 export type SearchResult = {

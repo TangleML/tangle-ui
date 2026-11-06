@@ -4,7 +4,6 @@ import { useCallback, useMemo, useRef } from "react";
 import { ComponentDetailsDialog } from "@/components/shared/Dialogs";
 import { ComponentFavoriteToggle } from "@/components/shared/FavoriteComponentToggle";
 import { useOutdatedComponents } from "@/components/shared/ManageComponent/hooks/useOutdatedComponents";
-import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
@@ -105,12 +104,6 @@ const ComponentMarkup = ({
   showOutdatedBadge = true,
   source,
 }: ComponentMarkupProps) => {
-  const isRemoteComponentLibrarySearchEnabled = useFlagValue(
-    "remote-component-library-search",
-  );
-  const shouldShowOutdatedBadge =
-    isRemoteComponentLibrarySearchEnabled && showOutdatedBadge;
-
   const popoverRef = useRef<ComponentHoverPopoverHandle>(null);
 
   // TODO: respect selected node as a starting point
@@ -252,7 +245,7 @@ const ComponentMarkup = ({
               wrap="nowrap"
               blockAlign="start"
             >
-              {shouldShowOutdatedBadge ? (
+              {showOutdatedBadge ? (
                 <ComponentIcon
                   name={iconName}
                   className={iconClass}
