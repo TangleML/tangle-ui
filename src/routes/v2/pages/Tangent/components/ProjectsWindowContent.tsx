@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { observer } from "mobx-react-lite";
-import { type ReactNode, useRef, useState } from "react";
+import { type ReactNode, useState } from "react";
 
 import { CreateProjectDialog } from "@/components/Home/ProjectsSection/CreateProjectDialog";
 import { ProjectMenu } from "@/components/Project/ProjectMenu";
@@ -34,6 +34,7 @@ import { tracking } from "@/utils/tracking";
 import { getStorage } from "@/utils/typedStorage";
 
 import { searchProjects } from "./projectSidebarSearch";
+import { SearchField } from "./SearchField";
 import { SessionsWindowContent } from "./SessionsWindowContent";
 
 const EXPANDED_KEY = "tangent-sidebar-expanded-projects";
@@ -182,7 +183,12 @@ export const ProjectsWindowContent = observer(function ProjectsWindowContent() {
         </Link>
       </InlineStack>
 
-      <SidebarSearch value={query} onChange={search} />
+      <SearchField
+        value={query}
+        onChange={search}
+        label="Search projects and sessions"
+        trackingPrefix="projects.sidebar"
+      />
 
       <BlockStack gap="3" align="stretch">
         {searching && shown.length === 0 && (
@@ -225,58 +231,6 @@ export const ProjectsWindowContent = observer(function ProjectsWindowContent() {
     );
   }
 });
-
-function SidebarSearch({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  function clear() {
-    onChange("");
-    inputRef.current?.focus();
-  }
-
-  return (
-    <div
-      role="search"
-      className="flex h-8 items-center gap-2 rounded-md px-3 text-muted-foreground transition-colors focus-within:bg-foreground/5 focus-within:ring-1 focus-within:ring-ring/50 hover:bg-foreground/5 motion-reduce:transition-none"
-    >
-      <Icon name="Search" size="sm" className="shrink-0" />
-      <input
-        ref={inputRef}
-        type="search"
-        value={value}
-        placeholder="Search"
-        aria-label="Search projects and sessions"
-        onChange={(event) => onChange(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key !== "Escape" || value === "") return;
-          event.preventDefault();
-          event.stopPropagation();
-          onChange("");
-        }}
-        className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground [&::-webkit-search-cancel-button]:appearance-none"
-        {...tracking("projects.sidebar.search")}
-      />
-      {value !== "" && (
-        <button
-          type="button"
-          aria-label="Clear search"
-          title="Clear search"
-          onClick={clear}
-          className="grid size-5 shrink-0 cursor-pointer place-items-center rounded-sm outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
-          {...tracking("projects.sidebar.clear_search")}
-        >
-          <Icon name="X" size="xs" />
-        </button>
-      )}
-    </div>
-  );
-}
 
 /** Without pins there is one list, which needs no heading under "Projects". */
 function ProjectSection({
