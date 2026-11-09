@@ -92,4 +92,22 @@ describe("ProjectPanelCard", () => {
 
     expect(isOpen()).toBe(false);
   });
+
+  it("opens and closes with the keyboard shortcut, even from a text box", () => {
+    render(
+      <>
+        <ProjectPanelCard />
+        <textarea aria-label="Message" />
+      </>,
+    );
+    const message = screen.getByRole("textbox", { name: "Message" });
+    message.focus();
+    const shortcut = { key: "k", metaKey: true, ctrlKey: true };
+
+    fireEvent.keyDown(message, shortcut);
+    expect(isOpen()).toBe(true);
+
+    fireEvent.keyDown(document.body, shortcut);
+    expect(isOpen()).toBe(false);
+  });
 });

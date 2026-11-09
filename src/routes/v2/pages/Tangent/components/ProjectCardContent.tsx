@@ -60,7 +60,8 @@ const FAILED_STATUSES = new Set([
 
 type AttachedItem = ProjectResourceItem & { target: WorkareaTarget };
 
-const fileKey = (file: ProjectFile) => `file:${file.key}`;
+type CardView = "main" | "files" | "archived";
+
 const runKey = (run: RunEntry) => `run:${run.id}`;
 const attachedKey = (item: AttachedItem) => `resource:${item.id}`;
 
@@ -90,19 +91,20 @@ function split<T>(items: T[], isArchived: (item: T) => boolean) {
 }
 
 /**
- * What the project holds, in the order someone looks for it: finished
- * reports from any of its chats, its latest runs, its pipelines, and its
- * documents, each a short list that scrolls. Working files stay folded away,
- * and anything archived waits behind "Show archived". One search filters
- * every section, and a section with nothing to show drops out.
+ * What the project holds, in the order someone looks for it: reports (the
+ * files pinned as ready to share), its latest runs, its pipelines, and its
+ * documents, each a short list that scrolls. Every file the chats made waits
+ * behind "All files", with its own search, where any of them can be pinned or
+ * unpinned. One search filters the card, and a section with nothing to show
+ * drops out.
  */
 export const ProjectCardContent = observer(function ProjectCardContent() {
   const store = useTangentProject();
   const dismissCard = useDismissProjectCard();
   const notify = useToastNotification();
   const [query, setQuery] = useState("");
-  const [showWorking, setShowWorking] = useState(false);
-  const [showArchived, setShowArchived] = useState(false);
+  const [fileQuery, setFileQuery] = useState("");
+  const [view, setView] = useState<CardView>("main");
   const { resources, summaries } = useProjectResourceItems(store.projectId);
   const projectRuns = useProjectRuns(store.projectId);
   const files = useProjectSessionFiles(store.projectId);
@@ -149,33 +151,29 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
     ),
     (run) => isArchived(runKey(run)),
   );
-  const reports = split(files.reports, (file) => isArchived(fileKey(file)));
-  const workingFiles = split(files.workingFiles, (file) =>
-    isArchived(fileKey(file)),
-  );
-  const archivedCount = [reports, runs, pipelines, documents, workingFiles]
-    .map(({ archived }) => archived.length)
-    .reduce((sum, count) => sum + count, 0);
+  const archivedCount =
+    runs.archived.length +
+    pipelines.archived.length +
+    documents.archived.length;
 
-  const shownReports = reports.active.filter(({ title, path }) =>
-    matches(title, path),
-  );
+  const fileMatches = ({ title, path }: ProjectFile) => matches(title, path);
+  const shownReports = files.reports.filter(fileMatches);
+  const shownOtherFiles = searching
+    ? files.files.filter((file) => !file.pinned && fileMatches(file))
+    : [];
   const shownRuns = runs.active.filter(({ pipelineName }) =>
     matches(pipelineName),
   );
   const shownPipelines = pipelines.active.filter(({ name }) => matches(name));
   const shownDocuments = documents.active.filter(({ name }) => matches(name));
-  const shownWorkingFiles = workingFiles.active.filter(({ title, path }) =>
-    matches(title, path),
-  );
   const nothingMatches =
     searching &&
     [
       shownReports,
+      shownOtherFiles,
       shownRuns,
       shownPipelines,
       shownDocuments,
-      shownWorkingFiles,
     ].every((list) => list.length === 0);
 
   async function openTarget(target: WorkareaTarget, title: string) {
@@ -201,7 +199,7 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
   }
 
   function archiveAction(key: string, name: string): ListItemAction {
-    return showArchived
+    return view === "archived"
       ? {
           icon: "Undo2",
           label: `Restore ${name}`,
@@ -216,17 +214,7 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
         };
   }
 
-  function renderFile(file: ProjectFile) {
-    const promote: ListItemAction[] =
-      file.placement === "working" && !showArchived
-        ? [
-            {
-              icon: "ArrowUpFromLine",
-              label: "Move to reports",
-              onClick: () => files.place(file, "report"),
-            },
-          ]
-        : [];
+  function renderFile(file: ProjectFile, markPinned = false) {
     return (
       <ListItem
         key={file.key}
@@ -234,9 +222,28 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
         icon={fileIcon(file.path)}
         title={file.title}
         subtitle={ago(file.addedAt)}
+        flair={
+          markPinned && file.pinned
+            ? { kind: "icon", icon: "Pin", label: "Pinned to reports" }
+            : undefined
+        }
         onOpen={() => openFile(file)}
         tracking={tracking("projects.project_card.open_file")}
-        actions={[...promote, archiveAction(fileKey(file), file.title)]}
+        actions={[
+          file.pinned
+            ? {
+                icon: "PinOff",
+                label: `Unpin ${file.title} from reports`,
+                onClick: () => files.unpin(file),
+                tracking: tracking("projects.project_card.unpin_report"),
+              }
+            : {
+                icon: "Pin",
+                label: `Pin ${file.title} to reports`,
+                onClick: () => files.pin(file),
+                tracking: tracking("projects.project_card.pin_report"),
+              },
+        ]}
       />
     );
   }
@@ -280,41 +287,51 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
       kind={kind}
     />
   );
+  const back = () => setView("main");
 
-  if (showArchived) {
+  if (view === "files") {
+    const fileNeedle = fileQuery.trim().toLocaleLowerCase();
+    const shownFiles = files.files.filter(({ title, path }) =>
+      [title, path].some((text) =>
+        text.toLocaleLowerCase().includes(fileNeedle),
+      ),
+    );
+    return (
+      <SubView title="All files" count={files.files.length} onBack={back}>
+        <div className="px-2">
+          <SearchField
+            value={fileQuery}
+            onChange={setFileQuery}
+            label="Search all files"
+            trackingPrefix="projects.project_card.all_files"
+          />
+        </div>
+        {shownFiles.length === 0 ? (
+          <EmptyNote>
+            {files.files.length === 0
+              ? "The chats in this project haven't made any files yet"
+              : "No files match"}
+          </EmptyNote>
+        ) : (
+          <BlockStack as="ul" align="stretch" className="p-2">
+            {shownFiles.map((file) => renderFile(file, true))}
+          </BlockStack>
+        )}
+      </SubView>
+    );
+  }
+
+  if (view === "archived") {
     const groups = [
-      { title: "Reports", items: reports.archived.map(renderFile) },
       { title: "Runs", items: runs.archived.map(renderRun) },
       { title: "Pipelines", items: pipelines.archived.map(renderAttached) },
       { title: "Documents", items: documents.archived.map(renderAttached) },
-      { title: "Working files", items: workingFiles.archived.map(renderFile) },
     ].filter(({ items }) => items.length > 0);
 
     return (
-      <BlockStack align="stretch">
-        <InlineStack gap="1" wrap="nowrap" className="min-h-11 px-2 pt-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Back"
-            title="Back"
-            onClick={() => setShowArchived(false)}
-            className="size-7 shrink-0 text-muted-foreground hover:text-foreground"
-            {...tracking("projects.project_card.back")}
-          >
-            <Icon name="ChevronLeft" size="sm" />
-          </Button>
-          <Heading level={3} size="xs" weight="medium">
-            Archived
-          </Heading>
-          <Text size="xs" tone="subdued">
-            {archivedCount}
-          </Text>
-        </InlineStack>
+      <SubView title="Archived" count={archivedCount} onBack={back}>
         {groups.length === 0 ? (
-          <Text size="sm" tone="subdued" className="px-4 py-3">
-            Nothing is archived
-          </Text>
+          <EmptyNote>Nothing is archived</EmptyNote>
         ) : (
           <div className="divide-y divide-border">
             {groups.map(({ title, items }) => (
@@ -324,7 +341,7 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
             ))}
           </div>
         )}
-      </BlockStack>
+      </SubView>
     );
   }
 
@@ -338,15 +355,31 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
           trackingPrefix="projects.project_card"
         />
       </div>
-      {nothingMatches && (
-        <Text size="sm" tone="subdued" className="px-4 py-3">
-          Nothing in this project matches
-        </Text>
-      )}
+      {nothingMatches && <EmptyNote>Nothing in this project matches</EmptyNote>}
       <div className="divide-y divide-border">
-        {shownReports.length > 0 && (
-          <CardSection title="Reports" count={shownReports.length}>
-            {shownReports.map(renderFile)}
+        {files.files.length > 0 && (!searching || shownReports.length > 0) && (
+          <CardSection
+            title="Reports"
+            count={shownReports.length}
+            empty="Nothing has been pinned as a report yet"
+            footer={
+              searching ? undefined : (
+                <FooterButton
+                  icon="Files"
+                  label="All files"
+                  count={files.files.length}
+                  onClick={() => setView("files")}
+                  trackingId="projects.project_card.all_files"
+                />
+              )
+            }
+          >
+            {shownReports.map((file) => renderFile(file))}
+          </CardSection>
+        )}
+        {shownOtherFiles.length > 0 && (
+          <CardSection title="Other files" count={shownOtherFiles.length}>
+            {shownOtherFiles.map((file) => renderFile(file))}
           </CardSection>
         )}
         {(!searching || shownRuns.length > 0) && (
@@ -380,37 +413,94 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
             {shownDocuments.map(renderAttached)}
           </CardSection>
         )}
-        {shownWorkingFiles.length > 0 && (
-          <CardSection
-            title="Working files"
-            count={shownWorkingFiles.length}
-            collapsed={!searching && !showWorking}
-            onToggle={
-              searching ? undefined : () => setShowWorking(!showWorking)
-            }
-          >
-            {shownWorkingFiles.map(renderFile)}
-          </CardSection>
-        )}
       </div>
       {archivedCount > 0 && !searching && (
         <div className="border-t border-border p-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowArchived(true)}
-            className="h-auto w-full justify-start gap-2 px-2 py-1.5 font-normal text-muted-foreground hover:text-foreground"
-            {...tracking("projects.project_card.show_archived")}
-          >
-            <Icon name="Archive" size="sm" />
-            Show archived
-            <span className="ms-auto text-xs">{archivedCount}</span>
-          </Button>
+          <FooterButton
+            icon="Archive"
+            label="Show archived"
+            count={archivedCount}
+            onClick={() => setView("archived")}
+            trackingId="projects.project_card.show_archived"
+          />
         </div>
       )}
     </BlockStack>
   );
 });
+
+function EmptyNote({ children }: { children: ReactNode }) {
+  return (
+    <Text size="sm" tone="subdued" className="px-4 py-3">
+      {children}
+    </Text>
+  );
+}
+
+function SubView({
+  title,
+  count,
+  onBack,
+  children,
+}: {
+  title: string;
+  count: number;
+  onBack: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <BlockStack align="stretch">
+      <InlineStack gap="1" wrap="nowrap" className="min-h-11 px-2 pt-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Back"
+          title="Back"
+          onClick={onBack}
+          className="size-7 shrink-0 text-muted-foreground hover:text-foreground"
+          {...tracking("projects.project_card.back")}
+        >
+          <Icon name="ChevronLeft" size="sm" />
+        </Button>
+        <Heading level={3} size="xs" weight="medium">
+          {title}
+        </Heading>
+        <Text size="xs" tone="subdued">
+          {count}
+        </Text>
+      </InlineStack>
+      {children}
+    </BlockStack>
+  );
+}
+
+function FooterButton({
+  icon,
+  label,
+  count,
+  onClick,
+  trackingId,
+}: {
+  icon: "Archive" | "Files";
+  label: string;
+  count: number;
+  onClick: () => void;
+  trackingId: string;
+}) {
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={onClick}
+      className="h-auto w-full justify-start gap-2 px-2 py-1.5 font-normal text-muted-foreground hover:text-foreground"
+      {...tracking(trackingId)}
+    >
+      <Icon name={icon} size="sm" />
+      {label}
+      <span className="ms-auto text-xs">{count}</span>
+    </Button>
+  );
+}
 
 /** A section's list scrolls past a handful of rows, so every section shows. */
 function CardSection({
@@ -418,57 +508,32 @@ function CardSection({
   count,
   action,
   empty,
-  collapsed = false,
-  onToggle,
+  footer,
   children,
 }: {
   title: string;
   count: number;
   action?: ReactNode;
   empty?: string;
-  collapsed?: boolean;
-  onToggle?: () => void;
+  footer?: ReactNode;
   children: ReactNode;
 }) {
-  const countLabel =
-    count > 0 ? (
-      <Text size="xs" tone="subdued">
-        {count}
-      </Text>
-    ) : null;
-
   return (
     <section aria-label={title} className="flex flex-col gap-0.5 p-2">
       <InlineStack align="space-between" wrap="nowrap" className="min-h-6 px-2">
-        {onToggle ? (
-          <button
-            type="button"
-            aria-expanded={!collapsed}
-            onClick={onToggle}
-            className="-ms-1 flex cursor-pointer items-center gap-1 rounded-sm ps-1 pe-1.5 outline-none hover:bg-foreground/5 focus-visible:ring-2 focus-visible:ring-ring/50"
-            {...tracking("projects.project_card.toggle_working_files")}
-          >
-            <Icon
-              name={collapsed ? "ChevronRight" : "ChevronDown"}
-              size="xs"
-              className="text-muted-foreground"
-            />
-            <Text size="xs" weight="medium" tone="subdued">
-              {title}
+        <InlineStack gap="2" wrap="nowrap">
+          <Heading level={3} size="xs" weight="medium" tone="subdued">
+            {title}
+          </Heading>
+          {count > 0 && (
+            <Text size="xs" tone="subdued">
+              {count}
             </Text>
-            {countLabel}
-          </button>
-        ) : (
-          <InlineStack gap="2" wrap="nowrap">
-            <Heading level={3} size="xs" weight="medium" tone="subdued">
-              {title}
-            </Heading>
-            {countLabel}
-          </InlineStack>
-        )}
+          )}
+        </InlineStack>
         {action}
       </InlineStack>
-      {collapsed ? null : count === 0 && empty ? (
+      {count === 0 && empty ? (
         <Text size="xs" tone="subdued" className="px-2 py-1">
           {empty}
         </Text>
@@ -479,6 +544,7 @@ function CardSection({
           </BlockStack>
         </div>
       )}
+      {footer}
     </section>
   );
 }

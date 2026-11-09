@@ -4,7 +4,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ProjectCardContent } from "./ProjectCardContent";
 
-const place = vi.fn();
+const pin = vi.fn();
+const unpin = vi.fn();
 
 vi.mock("@/routes/v2/pages/Tangent/context/TangentProjectContext", () => ({
   useTangentProject: () => ({
@@ -76,26 +77,31 @@ vi.mock("@/services/projects/useProjectRuns", () => ({
   useRunExecutionStats: () => ({ data: undefined, isPending: true }),
 }));
 
-const file = (key: string, title: string, placement: string) => ({
+const file = (key: string, title: string, pinned: boolean) => ({
   key,
   sessionId: "s-1",
   path: `artifacts/${key}`,
   title,
   addedAt: new Date("2026-11-06"),
   url: `https://tangent.example/files/${key}`,
-  placement,
+  pinned,
 });
 
 vi.mock("@/routes/v2/pages/Tangent/hooks/useProjectSessionFiles", () => ({
-  useProjectSessionFiles: () => ({
-    reports: [file("summary.html", "Q3 summary", "report")],
-    workingFiles: [
-      file("plan.md", "Plan", "working"),
-      file("notes.md", "Notes", "working"),
-    ],
-    isLoading: false,
-    place,
-  }),
+  useProjectSessionFiles: () => {
+    const summary = file("summary.html", "Q3 summary", true);
+    return {
+      files: [
+        summary,
+        file("plan.md", "Plan", false),
+        file("notes.md", "Notes", false),
+      ],
+      reports: [summary],
+      isLoading: false,
+      pin,
+      unpin,
+    };
+  },
 }));
 
 const sectionNames = () =>
@@ -114,9 +120,13 @@ async function search(text: string) {
 }
 
 describe("ProjectCardContent", () => {
-  beforeEach(() => localStorage.clear());
+  beforeEach(() => {
+    localStorage.clear();
+    pin.mockClear();
+    unpin.mockClear();
+  });
 
-  it("leads with reports, then runs, pipelines and documents, with working files folded away", () => {
+  it("leads with reports, then runs, pipelines and documents, with other files behind All files", () => {
     render(<ProjectCardContent />);
 
     expect(sectionNames()).toEqual([
@@ -124,11 +134,13 @@ describe("ProjectCardContent", () => {
       "Runs",
       "Pipelines",
       "Documents",
-      "Working files",
     ]);
     expect(screen.getByText("Q3 summary")).toBeInTheDocument();
     expect(screen.getByText("Project brief")).toBeInTheDocument();
     expect(screen.queryByText("Plan")).toBeNull();
+    expect(screen.getByRole("button", { name: /All files/ })).toHaveTextContent(
+      "3",
+    );
   });
 
   it("lists every item in a section rather than hiding some behind Show all", () => {
@@ -159,10 +171,10 @@ describe("ProjectCardContent", () => {
     expect(screen.queryByText("Pipeline 1")).toBeNull();
   });
 
-  it("finds working files without unfolding them first", async () => {
+  it("finds files that aren't reports while searching", async () => {
     await search("plan");
 
-    expect(sectionNames()).toEqual(["Working files"]);
+    expect(sectionNames()).toEqual(["Other files"]);
     expect(screen.getByText("Plan")).toBeInTheDocument();
   });
 
@@ -175,18 +187,53 @@ describe("ProjectCardContent", () => {
     expect(screen.queryAllByRole("region")).toHaveLength(0);
   });
 
-  it("unfolds working files and moves one to reports", async () => {
+  it("lists every file under All files, pinned ones marked, and pins one to the reports", async () => {
     const user = userEvent.setup();
     render(<ProjectCardContent />);
 
-    await user.click(screen.getByRole("button", { name: /Working files/ }));
+    await user.click(screen.getByRole("button", { name: /All files/ }));
+    expect(screen.getByText("Notes")).toBeInTheDocument();
+    expect(screen.getByText("Q3 summary")).toBeInTheDocument();
+    expect(screen.getByText("Pinned to reports")).toBeInTheDocument();
     await user.click(
-      screen.getAllByRole("button", { name: "Move to reports" })[0],
+      screen.getByRole("button", { name: "Pin Plan to reports" }),
     );
 
-    expect(place).toHaveBeenCalledWith(
+    expect(pin).toHaveBeenCalledWith(
       expect.objectContaining({ title: "Plan" }),
-      "report",
+    );
+  });
+
+  it("searches All files on its own", async () => {
+    const user = userEvent.setup();
+    render(<ProjectCardContent />);
+
+    await user.click(screen.getByRole("button", { name: /All files/ }));
+    await user.type(
+      screen.getByRole("searchbox", { name: "Search all files" }),
+      "notes",
+    );
+
+    expect(screen.getByText("Notes")).toBeInTheDocument();
+    expect(screen.queryByText("Plan")).toBeNull();
+
+    await user.type(
+      screen.getByRole("searchbox", { name: "Search all files" }),
+      "zzz",
+    );
+    expect(screen.getByText("No files match")).toBeInTheDocument();
+  });
+
+  it("unpins a report", async () => {
+    const user = userEvent.setup();
+    render(<ProjectCardContent />);
+
+    await user.click(
+      screen.getByRole("button", { name: "Unpin Q3 summary from reports" }),
+    );
+
+    expect(unpin).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Q3 summary" }),
     );
   });
 
@@ -211,18 +258,18 @@ describe("ProjectCardContent", () => {
     render(<ProjectCardContent />);
 
     await user.click(
-      screen.getByRole("button", { name: "Archive Q3 summary" }),
+      screen.getByRole("button", { name: "Archive Project brief" }),
     );
     await user.click(screen.getByRole("button", { name: /Show archived/ }));
     await user.click(
-      screen.getByRole("button", { name: "Restore Q3 summary" }),
+      screen.getByRole("button", { name: "Restore Project brief" }),
     );
 
     expect(screen.getByText("Nothing is archived")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Back" }));
     expect(
-      within(screen.getByRole("region", { name: "Reports" })).getByText(
-        "Q3 summary",
+      within(screen.getByRole("region", { name: "Documents" })).getByText(
+        "Project brief",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Show archived/ })).toBeNull();
