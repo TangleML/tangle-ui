@@ -16,6 +16,7 @@ import { FLOW_CANVAS_DEFAULT_PROPS } from "@/routes/v2/shared/flowCanvasDefaults
 import { useDoubleClickBehavior } from "@/routes/v2/shared/hooks/useDoubleClickBehavior";
 import { useFitViewOnFocus } from "@/routes/v2/shared/hooks/useFitViewOnFocus";
 import { useFitViewOnRequest } from "@/routes/v2/shared/hooks/useFitViewOnRequest";
+import { useFitViewOnResize } from "@/routes/v2/shared/hooks/useFitViewOnResize";
 import { useFlowCanvasState } from "@/routes/v2/shared/hooks/useFlowCanvasState";
 import { focusModeStore } from "@/routes/v2/shared/hooks/useFocusMode";
 import { useIsDetailedView } from "@/routes/v2/shared/hooks/useIsDetailedView";
@@ -70,6 +71,7 @@ export const FlowCanvas = observer(function FlowCanvas({
 
   useFitViewOnFocus();
   useFitViewOnRequest();
+  useFitViewOnResize(containerRef);
   useAutoLayout(spec);
   useClipboardShortcuts(spec, containerRef, reactFlowInstance);
 

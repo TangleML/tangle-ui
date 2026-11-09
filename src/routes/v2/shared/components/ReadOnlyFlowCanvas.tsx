@@ -20,6 +20,7 @@ import { useAutoLayoutShortcut } from "@/routes/v2/shared/hooks/useAutoLayoutSho
 import { useCopyShortcut } from "@/routes/v2/shared/hooks/useCopyShortcut";
 import { useDoubleClickBehavior } from "@/routes/v2/shared/hooks/useDoubleClickBehavior";
 import { useFitViewOnFocus } from "@/routes/v2/shared/hooks/useFitViewOnFocus";
+import { useFitViewOnResize } from "@/routes/v2/shared/hooks/useFitViewOnResize";
 import { useFlowCanvasState } from "@/routes/v2/shared/hooks/useFlowCanvasState";
 import { useLayoutUnplacedSpec } from "@/routes/v2/shared/hooks/useLayoutUnplacedSpec";
 import { useViewportScaling } from "@/routes/v2/shared/hooks/useViewportScaling";
@@ -58,6 +59,7 @@ export const ReadOnlyFlowCanvas = observer(function ReadOnlyFlowCanvas({
   const doubleClickBehavior = useDoubleClickBehavior(spec);
   useCopyShortcut(spec);
   useFitViewOnFocus();
+  useFitViewOnResize(containerRef);
 
   useAutoLayoutShortcut(rfSetNodes);
   useLayoutUnplacedSpec(spec);
