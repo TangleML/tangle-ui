@@ -8,10 +8,13 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { IS_MAC } from "@/routes/v2/shared/shortcuts/keys";
 import { tracking } from "@/utils/tracking";
 
 import { ProjectCardContent } from "./ProjectCardContent";
 import { ProjectCardDismissContext } from "./projectCardContext";
+
+const SHORTCUT_LABEL = IS_MAC ? "⌘K" : "Ctrl+K";
 
 // Menus and dialogs the card opens are portaled outside it, so working in one
 // is not a click away from the card.
@@ -28,6 +31,27 @@ export function ProjectPanelCard() {
   const cardRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const close = () => setOpen(false);
+
+  // The key works from anywhere on the page, the chat box included, so someone
+  // typing can look something up without reaching for the mouse. An open
+  // dialog keeps it for itself.
+  useEffect(() => {
+    const toggle = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.altKey || event.shiftKey) return;
+      if (!(IS_MAC ? event.metaKey : event.ctrlKey)) return;
+      if (event.key.toLowerCase() !== "k") return;
+      if (
+        !open &&
+        document.querySelector('[role="dialog"][aria-modal="true"]')
+      ) {
+        return;
+      }
+      event.preventDefault();
+      setOpen(!open);
+    };
+    window.addEventListener("keydown", toggle);
+    return () => window.removeEventListener("keydown", toggle);
+  }, [open]);
 
   // Radix listens for outside presses as they bubble, but a pipeline canvas
   // stops them first and an artifact's iframe never sends them up at all, so
@@ -60,7 +84,8 @@ export function ProjectPanelCard() {
           variant="ghost"
           size="icon"
           aria-label="Project contents"
-          title="Reports, pipelines and documents"
+          aria-keyshortcuts={IS_MAC ? "Meta+K" : "Control+K"}
+          title={`Reports, runs, pipelines and documents (${SHORTCUT_LABEL})`}
           className={cn(
             "size-7 text-muted-foreground hover:text-foreground",
             open && "bg-accent text-foreground",
