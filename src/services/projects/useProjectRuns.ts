@@ -1,5 +1,10 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import {
+  queryOptions,
+  useInfiniteQuery,
+  useQueries,
+  useQuery,
+} from "@tanstack/react-query";
 
 import { useBackend } from "@/providers/BackendProvider";
 import {
@@ -69,10 +74,8 @@ export function useProjectRuns(projectId: string | undefined) {
  * alone it serves a settled status to the next mount, which is how a completed
  * run came back still claiming to be waiting.
  */
-export function useRunExecutionStats(runId: string | undefined) {
-  const { configured, available } = useBackend();
-
-  return useQuery({
+function runExecutionStatsQuery(runId: string | undefined, enabled: boolean) {
+  return queryOptions({
     queryKey: ProjectRunsQueryKeys.Stats(runId ?? ""),
     queryFn: () => {
       if (!runId) {
@@ -80,9 +83,24 @@ export function useRunExecutionStats(runId: string | undefined) {
       }
       return getRunExecutionStats(runId);
     },
-    enabled: configured && available && Boolean(runId),
+    enabled: enabled && Boolean(runId),
     ...projectQueryDefaults,
     staleTime: RUN_POLL_MS,
     refetchInterval: ({ state }) => runPollInterval(state.data),
+  });
+}
+
+export function useRunExecutionStats(runId: string | undefined) {
+  const { configured, available } = useBackend();
+  return useQuery(runExecutionStatsQuery(runId, configured && available));
+}
+
+/** {@link useRunExecutionStats} for several runs, sharing its cache and polling. */
+export function useRunsExecutionStats(runIds: string[]) {
+  const { configured, available } = useBackend();
+  return useQueries({
+    queries: runIds.map((runId) =>
+      runExecutionStatsQuery(runId, configured && available),
+    ),
   });
 }

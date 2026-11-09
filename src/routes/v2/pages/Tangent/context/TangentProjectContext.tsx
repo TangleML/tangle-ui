@@ -14,6 +14,7 @@ import { usePrepareProjectArrival } from "@/routes/v2/pages/Tangent/hooks/usePre
 import { useProjectSessions } from "@/routes/v2/pages/Tangent/hooks/useProjectSessions";
 import { useProjectSharedFolder } from "@/routes/v2/pages/Tangent/hooks/useProjectSharedFolder";
 import { useRemoteEnvAuthToken } from "@/routes/v2/pages/Tangent/hooks/useRemoteEnvAuthToken";
+import { useRecordSessionRun } from "@/routes/v2/pages/Tangent/hooks/useSessionRuns";
 import { useTangentBaseUrl } from "@/routes/v2/pages/Tangent/hooks/useTangentBaseUrl";
 import { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
 import { observeWorkareaPipelineDrafts } from "@/routes/v2/pages/Tangent/workarea/observeWorkareaPipelineDrafts";
@@ -76,6 +77,7 @@ export function TangentProjectProvider({
   });
   const storage = usePipelineStorage();
   const queryClient = useQueryClient();
+  const recordSessionRun = useRecordSessionRun();
 
   useEffect(
     () => observeWorkareaPipelineDrafts(store, storage, queryClient),
@@ -96,6 +98,7 @@ export function TangentProjectProvider({
       ensureSharedFolderId,
       notify,
       projectInstructions: instructions,
+      recordSessionRun,
     });
   }, [
     store,
@@ -107,6 +110,7 @@ export function TangentProjectProvider({
     ensureSharedFolderId,
     notify,
     instructions,
+    recordSessionRun,
   ]);
 
   const defaultSessionId = sessions[0]?.sessionId;
