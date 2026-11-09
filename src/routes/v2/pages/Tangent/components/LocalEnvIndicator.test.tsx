@@ -8,7 +8,7 @@ import { useProjectSessions } from "@/routes/v2/pages/Tangent/hooks/useProjectSe
 import { useTangentBaseUrl } from "@/routes/v2/pages/Tangent/hooks/useTangentBaseUrl";
 import { API_URL } from "@/utils/constants";
 
-import { LocalEnvIndicator } from "./LocalEnvIndicator";
+import { LocalEnvIndicator, LocalEnvStatus } from "./LocalEnvIndicator";
 
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@tanstack/react-router")>()),
@@ -212,5 +212,61 @@ describe("LocalEnvIndicator", () => {
     const { container } = render(<LocalEnvIndicator />);
 
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+describe("LocalEnvStatus", () => {
+  afterEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it("shows nothing while no editor is connected", () => {
+    mockBaseUrl(SHELL_URL);
+    mockLocalEnvironments([]);
+
+    const { container } = render(<LocalEnvStatus onOpen={vi.fn()} />);
+
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("names the connected window", () => {
+    mockBaseUrl(SHELL_URL);
+    mockLocalEnvironments([
+      {
+        environmentId: "session-1:vscode-abc",
+        metadata: { windowName: "my-workspace" },
+      },
+    ]);
+
+    render(<LocalEnvStatus onOpen={vi.fn()} />);
+
+    expect(
+      screen.getByRole("button", {
+        name: "Connected to VS Code · my-workspace",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("counts the windows when several are connected", () => {
+    mockBaseUrl(SHELL_URL);
+    mockLocalEnvironments(["session-1:vscode-a", "session-1:vscode-b"]);
+
+    render(<LocalEnvStatus onOpen={vi.fn()} />);
+
+    expect(
+      screen.getByRole("button", { name: "Connected to VS Code · 2 windows" }),
+    ).toBeInTheDocument();
+  });
+
+  it("opens project settings when clicked", async () => {
+    const user = userEvent.setup();
+    const onOpen = vi.fn();
+    mockBaseUrl(SHELL_URL);
+    mockLocalEnvironments(["session-1:vscode-a"]);
+
+    render(<LocalEnvStatus onOpen={onOpen} />);
+    await user.click(screen.getByRole("button"));
+
+    expect(onOpen).toHaveBeenCalledTimes(1);
   });
 });
