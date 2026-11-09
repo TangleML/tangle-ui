@@ -3,8 +3,17 @@ import { describe, expect, it, vi } from "vitest";
 
 import { useChatReferences } from "./useChatReferences";
 
+vi.mock("@/utils/date", () => ({
+  formatRelativeTime: (date: Date) => `at ${date.toISOString().slice(0, 10)}`,
+}));
+
 vi.mock("@/routes/v2/pages/Tangent/hooks/useProjectResourceItems", () => ({
   useProjectResourceItems: () => ({
+    summaries: [
+      { id: "r-1", createdAt: new Date("2026-11-01") },
+      { id: "r-2", createdAt: new Date("2026-11-05") },
+      { id: "r-3", createdAt: new Date("2026-11-06") },
+    ],
     resources: [
       {
         id: "r-1",
@@ -32,31 +41,44 @@ vi.mock("@/routes/v2/pages/Tangent/hooks/useProjectResourceItems", () => ({
 
 vi.mock("@/services/projects/useProjectRuns", () => ({
   useProjectRuns: () => ({
-    data: [{ id: "run-7", pipelineName: "Churn model", createdAt: undefined }],
+    data: [
+      { id: "run-6", pipelineName: "Churn model", createdAt: null },
+      {
+        id: "run-7",
+        pipelineName: null,
+        createdAt: new Date("2026-11-07"),
+      },
+    ],
   }),
 }));
 
 describe("useChatReferences", () => {
-  it("offers the project's pipelines, documents and runs by their workarea target", () => {
+  it("offers pipelines, documents and runs by their workarea target, newest first", () => {
     const { result } = renderHook(() => useChatReferences("project-1"));
 
     expect(result.current).toEqual([
       {
-        kind: "pipeline",
-        label: "Churn model",
-        href: "pipeline://id/p-1",
-        detail: "Pipeline",
-      },
-      {
         kind: "document",
         label: "Brief",
         href: "document://id/r-2",
-        detail: "Document",
+        detail: "at 2026-11-05",
+      },
+      {
+        kind: "pipeline",
+        label: "Churn model",
+        href: "pipeline://id/p-1",
+        detail: "at 2026-11-01",
+      },
+      {
+        kind: "run",
+        label: "Unnamed pipeline",
+        href: "run://id/run-7",
+        detail: "at 2026-11-07",
       },
       {
         kind: "run",
         label: "Churn model",
-        href: "run://id/run-7",
+        href: "run://id/run-6",
         detail: undefined,
       },
     ]);
