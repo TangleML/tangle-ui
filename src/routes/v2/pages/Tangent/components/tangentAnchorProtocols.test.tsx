@@ -82,3 +82,63 @@ describe("tangentAnchorProtocols run anchor", () => {
     expect(screen.getByRole("button")).toBeDisabled();
   });
 });
+
+describe("tangentAnchorProtocols pipeline and document anchors", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("opens a referenced pipeline in the workarea", () => {
+    const PipelineAnchor = tangentAnchorProtocols.pipeline;
+    render(
+      <PipelineAnchor
+        {...anchorProps({
+          href: "pipeline://id/p-1",
+          protocol: "pipeline",
+          path: "id/p-1",
+          label: "Churn model",
+        })}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button"));
+
+    expect(openWorkareaTarget).toHaveBeenCalledWith(
+      { type: "pipeline", identity: "id/p-1" },
+      "Churn model",
+    );
+  });
+
+  it("opens a referenced document in the workarea", () => {
+    const DocumentAnchor = tangentAnchorProtocols.document;
+    render(
+      <DocumentAnchor
+        {...anchorProps({
+          href: "document://id/d-1",
+          protocol: "document",
+          path: "id/d-1",
+          label: "Brief",
+        })}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button"));
+
+    expect(openWorkareaTarget).toHaveBeenCalledWith(
+      { type: "document", identity: "id/d-1" },
+      "Brief",
+    );
+  });
+
+  it("can't open a link that isn't a workarea target", () => {
+    const PipelineAnchor = tangentAnchorProtocols.pipeline;
+    render(
+      <PipelineAnchor
+        {...anchorProps({
+          href: "pipeline://nowhere",
+          protocol: "pipeline",
+          path: "nowhere",
+          label: "Lost",
+        })}
+      />,
+    );
+
+    expect(screen.getByRole("button")).toBeDisabled();
+  });
+});
