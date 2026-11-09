@@ -58,6 +58,31 @@ vi.mock("./RunPipelineButton", () => ({
   ),
 }));
 
+vi.mock("./DocumentEditor", async () => {
+  const { useState } = await vi.importActual<typeof import("react")>("react");
+
+  function DocumentEditor({
+    projectId,
+    resource,
+  }: {
+    projectId: string;
+    resource: ProjectResource;
+  }) {
+    const [openedFor] = useState(resource.id);
+    return (
+      <div
+        data-testid="document-editor"
+        data-project={projectId}
+        data-opened-for={openedFor}
+      >
+        {String(resource.payload?.content)}
+      </div>
+    );
+  }
+
+  return { DocumentEditor };
+});
+
 vi.mock("@/components/shared/CodeViewer", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/components/shared/CodeViewer")>()),
   CodeViewer: ({
@@ -176,24 +201,56 @@ describe("ProjectResourcePreview", () => {
     expect(useProjectResource).not.toHaveBeenCalled();
   });
 
-  it("shows a document's own body", () => {
+  it("opens a document's own body in the editor", () => {
     renderPreview("resource-1");
 
-    expect(viewer()).toHaveTextContent("# Hello");
-    expect(viewer()).toHaveTextContent("readme.md");
+    const editor = screen.getByTestId("document-editor");
+    expect(editor).toHaveTextContent("# Hello");
+    expect(editor).toHaveAttribute("data-project", "project-1");
+    expect(screen.queryByTestId("code-viewer")).toBeNull();
   });
 
-  it("highlights a document by the language its name implies", () => {
+  it("opens a fresh editor for each document selected, so a draft never moves to another document", () => {
+    const { rerender } = renderPreview("resource-1");
+
+    mockResource({ id: "resource-2", payload: { content: "# Other" } });
+    rerender(
+      <ProjectResourcePreview projectId="project-1" resourceId="resource-2" />,
+    );
+
+    const editor = screen.getByTestId("document-editor");
+    expect(editor).toHaveTextContent("# Other");
+    expect(editor).toHaveAttribute("data-opened-for", "resource-2");
+  });
+
+  it("opens a document with nothing written in it in the editor, as Tangent does", () => {
+    mockResource({ metadata: { type: "document" }, payload: {} });
     renderPreview("resource-1");
 
+    expect(screen.getByTestId("document-editor")).toBeInTheDocument();
+    expect(screen.queryByText("Nothing to preview")).toBeNull();
+  });
+
+  it("keeps a document open when a refetch fails, so its draft survives", () => {
+    vi.mocked(useProjectResource).mockReturnValue({
+      data: resource(),
+      isPending: false,
+      isLoadingError: false,
+      error: new Error("Backend said no"),
+    } as unknown as ReturnType<typeof useProjectResource>);
+    renderPreview("resource-1");
+
+    expect(screen.getByTestId("document-editor")).toBeInTheDocument();
+    expect(screen.queryByText("Error loading preview")).toBeNull();
+  });
+
+  it("shows the written content of a row it does not know as read-only code", () => {
+    mockResource({ metadata: { type: "something_else" } });
+    renderPreview("resource-1");
+
+    expect(screen.queryByTestId("document-editor")).toBeNull();
     expect(viewer()).toHaveAttribute("data-language", "markdown");
-  });
-
-  it("falls back to plain text for a name that says nothing", () => {
-    mockResource({ name: "Model card" });
-    renderPreview("resource-1");
-
-    expect(viewer()).toHaveAttribute("data-language", "plaintext");
+    expect(viewer()).toHaveTextContent("# Hello");
   });
 
   it("shows a pipeline as the yaml of its spec", () => {
@@ -443,7 +500,11 @@ describe("ProjectResourcePreview", () => {
      * whole class of rows rather than a quirk of pipelines.
      */
     it("says an empty payload holds nothing, whatever kind of row it is", () => {
-      mockResource({ name: "empty.yaml", payload: {} });
+      mockResource({
+        name: "empty.yaml",
+        payload: {},
+        metadata: { type: "something_else" },
+      });
       renderPreview("resource-1");
 
       expect(screen.getByText("Nothing to preview")).toBeInTheDocument();
@@ -528,6 +589,7 @@ describe("ProjectResourcePreview", () => {
     vi.mocked(useProjectResource).mockReturnValue({
       data: undefined,
       isPending: false,
+      isLoadingError: true,
       error: new Error("Backend said no"),
     } as unknown as ReturnType<typeof useProjectResource>);
     renderPreview("resource-1");
