@@ -8,14 +8,20 @@ import {
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
 import useToastNotification from "@/hooks/useToastNotification";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useDialog } from "@/providers/DialogProvider/hooks/useDialog";
 import type { DialogConfig } from "@/providers/DialogProvider/types";
 import { convertCancelErrorTo } from "@/providers/DialogProvider/utils";
 import { AddDocumentDialog } from "@/routes/v2/pages/Tangent/components/AddDocumentDialog";
 import { AddPipelineDialog } from "@/routes/v2/pages/Tangent/components/AddPipelineDialog";
 import { AddPipelineRunDialog } from "@/routes/v2/pages/Tangent/components/AddPipelineRunDialog";
+import {
+  LinkRepositoryDialog,
+  type LinkRepositoryDialogProps,
+} from "@/routes/v2/pages/Tangent/components/LinkRepositoryDialog";
 import type { LocalPipelinePointer } from "@/services/localPipelines/types";
 import { localPipelinePointerOf } from "@/services/projects/resourceDescriptor";
+import { resourceMeta } from "@/services/projects/resourceMeta";
 import type {
   CreateResourceInput,
   ProjectResourceSummary,
@@ -80,6 +86,7 @@ export function AddResourceButton({
 }: AddResourceButtonProps) {
   const { open } = useDialog();
   const notify = useToastNotification();
+  const { track } = useAnalytics();
   const { mutate: createResource, isPending } =
     useCreateProjectResource(projectId);
 
@@ -116,6 +123,21 @@ export function AddResourceButton({
   // document editor wants width, but lines that span a wide monitor read badly.
   function handleAddDocument() {
     void openResourceDialog(AddDocumentDialog, "add-document", "xl");
+  }
+
+  async function handleLinkRepository() {
+    const result = await open<CreateResourceInput, LinkRepositoryDialogProps>({
+      component: LinkRepositoryDialog,
+      props: { resources },
+      routeKey: "link-repository",
+      size: "md",
+    }).catch(convertCancelErrorTo(undefined));
+
+    if (!result) return;
+
+    createResource(result, {
+      onSuccess: () => track("projects.link_repository_completed"),
+    });
   }
 
   return (
@@ -163,6 +185,13 @@ export function AddResourceButton({
           >
             <Icon name="FileText" size="sm" />
             Add a document
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => void handleLinkRepository()}
+            {...tracking("projects.link_repository_open")}
+          >
+            <Icon name={resourceMeta("repository").icon} size="sm" />
+            Link a repository
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

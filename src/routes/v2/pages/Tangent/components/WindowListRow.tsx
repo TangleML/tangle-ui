@@ -7,16 +7,25 @@ import { Text } from "@/components/ui/typography";
 
 import { ListRowIcon } from "./ListRowIcon";
 
-interface WindowListRowProps {
+type RowOpening =
+  | {
+      onOpen: (event: MouseEvent<HTMLButtonElement>) => void;
+      externalHref?: never;
+    }
+  | { externalHref: string; onOpen?: never };
+
+type WindowListRowProps = RowOpening & {
   icon: IconName;
   title: string;
   description: ReactNode;
   titleSubdued?: boolean;
   disabled?: boolean;
   testId?: string;
-  onOpen: (event: MouseEvent<HTMLButtonElement>) => void;
   action?: ReactNode;
-}
+};
+
+const ROW_BUTTON_CLASS =
+  "h-auto min-w-0 flex-1 items-start justify-start gap-3 px-2 py-2";
 
 export function WindowListRow({
   icon,
@@ -26,43 +35,65 @@ export function WindowListRow({
   disabled,
   testId,
   onOpen,
+  externalHref,
   action,
   ...rest
-}: WindowListRowProps & ComponentProps<typeof Button>) {
+}: WindowListRowProps & Omit<ComponentProps<typeof Button>, "onClick">) {
+  const content = (
+    <>
+      <ListRowIcon icon={icon} />
+      <BlockStack align="start" className="min-w-0 text-left">
+        <Text
+          size="sm"
+          weight="medium"
+          tone={titleSubdued ? "subdued" : "inherit"}
+          className="max-w-full truncate"
+        >
+          {title}
+        </Text>
+        {typeof description === "string" ? (
+          <Text size="xs" tone="subdued" className="max-w-full truncate">
+            {description}
+          </Text>
+        ) : (
+          description
+        )}
+      </BlockStack>
+    </>
+  );
+
   return (
     <InlineStack
       blockAlign="start"
       wrap="nowrap"
       className="w-full hover:bg-accent"
     >
-      <Button
-        variant="ghost"
-        disabled={disabled}
-        data-testid={testId}
-        title={title}
-        onClick={onOpen}
-        {...rest}
-        className="h-auto min-w-0 flex-1 items-start justify-start gap-3 px-2 py-2"
-      >
-        <ListRowIcon icon={icon} />
-        <BlockStack align="start" className="min-w-0 text-left">
-          <Text
-            size="sm"
-            weight="medium"
-            tone={titleSubdued ? "subdued" : "inherit"}
-            className="max-w-full truncate"
-          >
-            {title}
-          </Text>
-          {typeof description === "string" ? (
-            <Text size="xs" tone="subdued" className="max-w-full truncate">
-              {description}
-            </Text>
-          ) : (
-            description
-          )}
-        </BlockStack>
-      </Button>
+      {externalHref === undefined ? (
+        <Button
+          variant="ghost"
+          disabled={disabled}
+          data-testid={testId}
+          title={title}
+          onClick={onOpen}
+          {...rest}
+          className={ROW_BUTTON_CLASS}
+        >
+          {content}
+        </Button>
+      ) : (
+        <Button
+          variant="ghost"
+          asChild
+          data-testid={testId}
+          title={title}
+          {...rest}
+          className={ROW_BUTTON_CLASS}
+        >
+          <a href={externalHref} target="_blank" rel="noopener noreferrer">
+            {content}
+          </a>
+        </Button>
+      )}
       {action}
     </InlineStack>
   );

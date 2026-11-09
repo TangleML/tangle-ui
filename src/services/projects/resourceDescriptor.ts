@@ -1,3 +1,8 @@
+import {
+  isGitHubWebUrl,
+  type RepositoryLocation,
+  repositoryUrl,
+} from "@/services/github/repositoryUrl";
 import type { LocalPipelinePointer } from "@/services/localPipelines/types";
 
 import type { WorkareaTarget } from "./resourceTarget";
@@ -9,13 +14,18 @@ import {
   parseWorkareaTarget,
   runTarget,
 } from "./resourceTarget";
-import type { CreateResourceInput, ProjectResourceSummary } from "./types";
+import type {
+  CreateResourceInput,
+  ProjectResource,
+  ProjectResourceSummary,
+} from "./types";
 
 export const LOCAL_PIPELINE = "local_pipeline";
 export const PIPELINE_RUN = "pipeline_run";
 export const DOCUMENT = "document";
 export const INSTRUCTIONS = "instructions";
 export const AGENT_SESSION = "agent_session";
+export const REPOSITORY = "repository";
 
 const BROWSER = "browser";
 
@@ -173,6 +183,57 @@ export function instructionsResourceInput(
     name: INSTRUCTIONS_NAME,
     payload: { content },
     metadata: { type: INSTRUCTIONS },
+  };
+}
+
+export const repositoryName = ({ owner, repo, path }: RepositoryLocation) =>
+  path ? `${owner}/${repo}/${path}` : `${owner}/${repo}`;
+
+export function repositoryResourceInput(
+  location: RepositoryLocation,
+): CreateResourceInput {
+  const name = repositoryName(location);
+  const { owner, repo, ref, path } = location;
+
+  return {
+    entity: "document",
+    name,
+    payload: { owner, repo, ref, path },
+    metadata: withinLimit(
+      { type: REPOSITORY, url: repositoryUrl(location) },
+      name,
+    ),
+  };
+}
+
+export const namesRepository = (resource: ResourceRow): boolean =>
+  describeResource(resource)?.type === REPOSITORY;
+
+export function repositoryUrlOf(resource: ResourceRow): string | undefined {
+  if (!namesRepository(resource)) return undefined;
+
+  const url = resource.metadata?.url;
+  return typeof url === "string" && isGitHubWebUrl(url) ? url : undefined;
+}
+
+const stringOrNull = (value: unknown) =>
+  typeof value === "string" && value !== "" ? value : null;
+
+export function linkedRepositoryOf(
+  resource: Pick<ProjectResource, "metadata" | "payload">,
+): RepositoryLocation | undefined {
+  if (!namesRepository(resource)) return undefined;
+
+  const payload = resource.payload ?? {};
+  const owner = stringOrNull(payload.owner);
+  const repo = stringOrNull(payload.repo);
+  if (owner === null || repo === null) return undefined;
+
+  return {
+    owner,
+    repo,
+    ref: stringOrNull(payload.ref),
+    path: stringOrNull(payload.path),
   };
 }
 

@@ -367,6 +367,62 @@ describe("ResourcesWindowContent", () => {
     expect(screen.getByTestId("open-resource-r-7")).toBeEnabled();
   });
 
+  it("opens a linked repository on GitHub, in a new tab", () => {
+    const url =
+      "https://github.com/TangleML/pipeline_components/tree/master/components";
+    given(
+      resource("r-10", "TangleML/pipeline_components/components", {
+        type: "repository",
+        url,
+      }),
+    );
+
+    render(<ResourcesWindowContent />);
+
+    const row = screen.getByRole("link", {
+      name: /TangleML\/pipeline_components\/components/,
+    });
+    expect(row).toHaveAttribute("href", url);
+    expect(row).toHaveAttribute("target", "_blank");
+    expect(row).toHaveAttribute("rel", "noopener noreferrer");
+    expect(row).toHaveAttribute("data-tracking-id", "projects.open_repository");
+    expect(screen.getByText("Repository")).toBeVisible();
+    expect(openWorkareaTarget).not.toHaveBeenCalled();
+  });
+
+  it("does not link a repository row whose URL leads off GitHub", () => {
+    given(
+      resource("r-11", "Tampered", {
+        type: "repository",
+        url: "javascript:alert(1)",
+      }),
+    );
+
+    render(<ResourcesWindowContent />);
+
+    expect(screen.queryByRole("link")).toBeNull();
+    expect(screen.getByTestId("open-resource-r-11")).toBeDisabled();
+  });
+
+  it("still lets a linked repository be removed", async () => {
+    given(
+      resource("r-10", "TangleML/pipeline_components", {
+        type: "repository",
+        url: "https://github.com/TangleML/pipeline_components",
+      }),
+    );
+    const user = userEvent.setup();
+
+    render(<ResourcesWindowContent />);
+    await user.click(
+      screen.getByRole("button", {
+        name: "Remove TangleML/pipeline_components",
+      }),
+    );
+
+    expect(deleteResource).toHaveBeenCalledWith("r-10");
+  });
+
   it("asks for both the documents and the pipelines a project holds", () => {
     render(<ResourcesWindowContent />);
 
