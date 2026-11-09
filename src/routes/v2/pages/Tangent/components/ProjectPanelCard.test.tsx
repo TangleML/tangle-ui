@@ -6,21 +6,18 @@ import { describe, expect, it, vi } from "vitest";
 import { useDismissProjectCard } from "./projectCardContext";
 import { ProjectPanelCard } from "./ProjectPanelCard";
 
-vi.mock("./ResourcesWindowContent", () => ({
-  ResourcesWindowContent: function Resources() {
+vi.mock("./ProjectCardContent", () => ({
+  ProjectCardContent: function Contents() {
     const dismiss = useDismissProjectCard();
     return (
-      <button type="button" onClick={dismiss}>
-        Open the pipeline already in the canvas
-      </button>
+      <>
+        <p>project contents</p>
+        <button type="button" onClick={dismiss}>
+          Open the pipeline already in the canvas
+        </button>
+      </>
     );
   },
-}));
-vi.mock("./AssetsWindowContent", () => ({
-  AssetsWindowContent: () => <div>assets list</div>,
-}));
-vi.mock("./RunsWindowContent", () => ({
-  RunsWindowContent: () => <div>runs list</div>,
 }));
 
 /** Like the pipeline canvas: it stops presses before they bubble up. */
@@ -44,20 +41,17 @@ async function openCard() {
       <div role="menu" data-testid="menu-from-card" />
     </>,
   );
-  await user.click(screen.getByRole("button", { name: "Project resources" }));
+  await user.click(screen.getByRole("button", { name: "Project contents" }));
   return user;
 }
 
-const isOpen = () => screen.queryByText("runs list") !== null;
+const isOpen = () => screen.queryByText("project contents") !== null;
 
 describe("ProjectPanelCard", () => {
-  it("opens the project's resources, assets and runs", async () => {
+  it("opens the project's contents", async () => {
     await openCard();
 
-    for (const section of ["Resources", "Assets", "Runs"]) {
-      expect(screen.getByRole("region", { name: section })).toBeInTheDocument();
-    }
-    expect(screen.queryByRole("region", { name: "Project" })).toBeNull();
+    expect(isOpen()).toBe(true);
   });
 
   it("closes when anything in it is chosen, even what is already open", async () => {

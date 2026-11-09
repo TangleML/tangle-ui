@@ -28,7 +28,7 @@ export type ListItemFlair =
       tone?: "subdued" | "info" | "success" | "warning" | "critical";
     };
 
-interface ListItemAction {
+export interface ListItemAction {
   icon: IconName;
   /** Accessible name and tooltip, also used as the key, so keep it unique per item. */
   label: string;
@@ -54,6 +54,8 @@ interface ListItemProps {
   disabled?: boolean;
   /** Omit for display-only items. */
   onOpen?: (event: MouseEvent<HTMLButtonElement>) => void;
+  /** `compact` drops the icon tile and puts the subtitle beside the title. */
+  density?: "default" | "compact";
   testId?: string;
   tracking?: TrackingAttributes;
 }
@@ -150,6 +152,7 @@ export function ListItem({
   placeholder = false,
   disabled = false,
   onOpen,
+  density = "default",
   testId,
   tracking,
 }: ListItemProps) {
@@ -162,7 +165,38 @@ export function ListItem({
     ? "bg-foreground/10"
     : openable && "hover:bg-foreground/5";
 
-  const body = (
+  const compact = density === "compact";
+  const body = compact ? (
+    <>
+      <Icon
+        name={icon}
+        size="sm"
+        aria-hidden
+        className={cn(
+          "shrink-0",
+          tone === "critical" ? "text-destructive" : "text-muted-foreground",
+        )}
+      />
+      <Text
+        size="sm"
+        tone={placeholder ? "subdued" : "inherit"}
+        title={title}
+        className="min-w-0 flex-1 truncate"
+      >
+        {title}
+      </Text>
+      {subtitle ? (
+        <Text
+          size="xs"
+          tone="subdued"
+          title={subtitle}
+          className="max-w-[45%] shrink-0 truncate"
+        >
+          {subtitle}
+        </Text>
+      ) : null}
+    </>
+  ) : (
     <>
       <span
         className={cn(
@@ -207,12 +241,22 @@ export function ListItem({
           data-testid={testId}
           onClick={onOpen}
           {...tracking}
-          className="flex min-w-0 cursor-pointer items-center gap-3 p-2 text-left outline-none after:absolute after:inset-0 after:rounded-md focus-visible:after:ring-2 focus-visible:after:ring-ring/50 focus-visible:after:ring-inset disabled:cursor-default disabled:opacity-50"
+          className={cn(
+            "flex min-w-0 cursor-pointer items-center text-left outline-none after:absolute after:inset-0 after:rounded-md focus-visible:after:ring-2 focus-visible:after:ring-ring/50 focus-visible:after:ring-inset disabled:cursor-default disabled:opacity-50",
+            compact ? "gap-2 px-2 py-1.5" : "gap-3 p-2",
+          )}
         >
           {body}
         </button>
       ) : (
-        <div className="flex min-w-0 items-center gap-3 p-2">{body}</div>
+        <div
+          className={cn(
+            "flex min-w-0 items-center",
+            compact ? "gap-2 px-2 py-1.5" : "gap-3 p-2",
+          )}
+        >
+          {body}
+        </div>
       )}
       {flair || hasActions ? (
         <div
@@ -221,7 +265,7 @@ export function ListItem({
             // Nothing else on a row that can't be opened takes focus, so its
             // actions stay shown instead of waiting on focus to reveal them.
             !openable && "flex gap-1",
-            subtitle ? "mt-2 self-start" : "self-center",
+            subtitle && !compact ? "mt-2 self-start" : "self-center",
           )}
         >
           {hasActions ? (
