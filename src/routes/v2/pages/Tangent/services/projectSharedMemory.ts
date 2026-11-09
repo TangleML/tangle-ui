@@ -4,6 +4,8 @@ export const PROJECT_MOUNT_NAME = "project";
 export const PROJECT_NOTES_ROOT = `${PROJECT_MOUNT_NAME}/NOTES`;
 const PROJECT_PI_MEMORY_ROOT = `${PROJECT_MOUNT_NAME}/pi-memory`;
 
+export const BUNDLE_KNOWLEDGE_BINDING: MemoryBinding = { kind: "bundle-kb" };
+
 interface ProjectSharedMemorySeed {
   resource: Extract<HostResourceInput, { kind: "mount" }>;
   memory: MemoryBinding;
@@ -25,6 +27,7 @@ export function projectSharedMemorySeed(
       children: [
         { kind: "simple-md", root: PROJECT_NOTES_ROOT },
         { kind: "pi-memory", root: PROJECT_PI_MEMORY_ROOT },
+        BUNDLE_KNOWLEDGE_BINDING,
       ],
     },
   };
