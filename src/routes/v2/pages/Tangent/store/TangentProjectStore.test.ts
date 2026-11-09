@@ -740,3 +740,35 @@ describe("TangentProjectStore.waitForTabEnvironment", () => {
     await expect(pending).resolves.toBeUndefined();
   });
 });
+
+describe("TangentProjectStore session runs", () => {
+  it("notes a run down on the chat it was opened in", () => {
+    const store = activeStore();
+    const recordSessionRun = vi
+      .fn<NonNullable<TangentSessionIo["recordSessionRun"]>>()
+      .mockResolvedValue(undefined);
+    store.setSessionIo({ ...makeSessionIo(), recordSessionRun });
+
+    store.openResolvedView({ title: "Nightly", target: run("r-1") });
+    store.openResolvedView({ title: "P1", target: pipeline("p1") });
+
+    expect(recordSessionRun).toHaveBeenCalledTimes(1);
+    expect(recordSessionRun).toHaveBeenCalledWith(SESSION_A, "r-1", "Nightly");
+  });
+
+  it("still opens the run when the chat can't note it down", async () => {
+    const store = activeStore();
+    store.setSessionIo({
+      ...makeSessionIo(),
+      recordSessionRun: vi.fn().mockRejectedValue(new Error("offline")),
+    });
+
+    const tab = store.openResolvedView({
+      title: "Nightly",
+      target: run("r-1"),
+    });
+
+    expect(store.workareaTabs).toEqual([tab]);
+    await Promise.resolve();
+  });
+});
