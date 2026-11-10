@@ -14,6 +14,9 @@ interface WindowHeaderProps {
   style?: CSSProperties;
   actionsOnHover?: boolean;
   tone?: "light" | "dark";
+  // Reads as a section label: no hover tint, and the leading icon only on
+  // hover, in the margin, so the title lines up with the content below it.
+  quiet?: boolean;
 }
 
 export function WindowHeader({
@@ -26,11 +29,15 @@ export function WindowHeader({
   style,
   actionsOnHover = false,
   tone = "light",
+  quiet = false,
 }: WindowHeaderProps) {
   return (
     <div
       className={cn(
-        "group/header flex items-center justify-between px-2 py-2.5 shrink-0 transition-all duration-300 group-hover/window:bg-purple-500/10",
+        "group/header flex items-center justify-between py-2.5 shrink-0 transition-all duration-300",
+        quiet
+          ? "relative ps-4 pe-2"
+          : "px-2 group-hover/window:bg-purple-500/10",
         onMouseDown && "cursor-grab",
         onMouseDown && isDragging && "cursor-grabbing",
         className,
@@ -38,13 +45,18 @@ export function WindowHeader({
       style={style}
       onMouseDown={onMouseDown}
     >
+      {quiet && leadingIcon && (
+        <span className="absolute inset-y-0 start-0.5 flex items-center opacity-0 transition-opacity group-hover/window:opacity-100">
+          {leadingIcon}
+        </span>
+      )}
       <InlineStack
         gap="1"
         blockAlign="center"
         wrap="nowrap"
         className="min-w-0 flex-1 overflow-hidden"
       >
-        {leadingIcon}
+        {!quiet && leadingIcon}
         <Text
           size="xs"
           weight="semibold"

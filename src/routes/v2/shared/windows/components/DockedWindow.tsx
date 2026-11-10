@@ -19,11 +19,18 @@ import {
   DOCKED_HEADER_HEIGHT as HEADER_HEIGHT,
 } from "@/routes/v2/shared/windows/types";
 
+import { FoldButton } from "./FoldButton";
 import { WindowActions } from "./WindowActions";
 import { WindowHeader } from "./WindowHeader";
 
 export const DockedWindow = observer(function DockedWindow() {
-  const { model, content, dockIndex = 0 } = useWindowContext();
+  const {
+    model,
+    content,
+    dockIndex = 0,
+    fillsDock = false,
+    quietHeader = false,
+  } = useWindowContext();
   const { track } = useAnalytics();
 
   const {
@@ -92,7 +99,7 @@ export const DockedWindow = observer(function DockedWindow() {
 
   const actions = <WindowActions />;
   const showCollapsedStyle = model.isMinimized || isStuck;
-  const fitsContent = !model.fillDockHeight && model.dockedHeight === undefined;
+  const fitsContent = !fillsDock && model.dockedHeight === undefined;
 
   if (model.isMaximized) {
     return createPortal(
@@ -148,9 +155,14 @@ export const DockedWindow = observer(function DockedWindow() {
             "group/window w-full sticky text-left shrink-0",
             (isDragging || isResizing) && "select-none",
             isDragging && "cursor-grabbing opacity-50",
-            showCollapsedStyle
-              ? "bg-card bg-linear-to-b from-edge-selected/10 to-edge-selected/10 border-b border-edge-selected/30"
-              : "bg-card border-b border-transparent",
+            quietHeader
+              ? cn(
+                  "bg-card border-b border-transparent",
+                  isStuck && "border-b-border",
+                )
+              : showCollapsedStyle
+                ? "bg-card bg-linear-to-b from-edge-selected/10 to-edge-selected/10 border-b border-edge-selected/30"
+                : "bg-card border-b border-transparent",
           )}
           style={{ top: stickyTop, zIndex: 20 - dockIndex }}
           onMouseDown={handleContainerMouseDown}
@@ -174,35 +186,39 @@ export const DockedWindow = observer(function DockedWindow() {
                 className="text-muted-foreground shrink-0"
               />
             }
-            actions={actions}
-            actionsOnHover
+            actions={quietHeader ? <QuietHeaderActions /> : actions}
+            actionsOnHover={!quietHeader}
+            quiet={quietHeader}
           />
         </div>
       </CollapsibleTrigger>
 
       <CollapsibleContent
-        className={cn(
-          "w-full",
-          model.fillDockHeight ? "flex-1 min-h-0" : "shrink-0",
-        )}
+        className={cn("w-full", fillsDock ? "flex-1 min-h-0" : "shrink-0")}
+        // Filling the dock, a window still keeps its minimum height, so a
+        // short dock scrolls instead of squeezing it.
+        style={fillsDock ? { minHeight: model.minDockedHeight } : undefined}
         data-dock-window-content={model.id}
       >
         <div
           ref={contentRef}
           className={cn(
             "w-full bg-card text-foreground flex flex-col overflow-hidden",
-            model.fillDockHeight && "h-full",
+            fillsDock && "h-full",
             (isDragging || isResizing) && "select-none",
             isDragging && "opacity-50",
           )}
           style={{
-            minHeight: model.minDockedHeight,
-            // fillDockHeight => grow to fill the dock column; otherwise an
+            // A fill window's minimum is against being squeezed while it
+            // fills; sharing the dock, it shows all of itself instead.
+            minHeight:
+              model.fillDockHeight && !fillsDock
+                ? undefined
+                : model.minDockedHeight,
+            // fillsDock => grow to fill the dock column; otherwise an
             // undefined height fits content and a concrete value fixes the
             // height with the inner content area scrolling.
-            height: model.fillDockHeight
-              ? undefined
-              : (model.dockedHeight ?? undefined),
+            height: fillsDock ? undefined : (model.dockedHeight ?? undefined),
             maxHeight: fitsContent ? model.maxDockedHeight : undefined,
           }}
           onMouseDown={handleContainerMouseDown}
@@ -211,7 +227,7 @@ export const DockedWindow = observer(function DockedWindow() {
           <div className="reveal-scrollbar flex-1 min-h-0 overflow-auto bg-card">
             {content}
           </div>
-          {!model.fillDockHeight && (
+          {!fillsDock && (
             <div
               className="h-1 cursor-ns-resize hover:bg-accent transition-colors shrink-0"
               onMouseDown={handleResizeMouseDown}
@@ -234,3 +250,15 @@ export const DockedWindow = observer(function DockedWindow() {
     </Collapsible>
   );
 });
+
+/** Whether the window is folded stays in view; the rest wait for a hover. */
+function QuietHeaderActions() {
+  return (
+    <div className="flex items-center gap-0.5">
+      <div className="opacity-0 transition-opacity duration-200 group-focus-within/window:opacity-100 group-hover/window:opacity-100">
+        <WindowActions hideMinimize />
+      </div>
+      <FoldButton trackingId="v2.shared_window.chrome.fold" />
+    </div>
+  );
+}

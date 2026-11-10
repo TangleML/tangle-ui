@@ -4,6 +4,7 @@ import { InlineStack } from "@/components/ui/layout";
 import { VerticalResizeHandle } from "@/components/ui/resize-handle";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { useChatPaneWidth } from "@/routes/v2/pages/Tangent/hooks/useChatPaneWidth";
+import { useFindProjectCard } from "@/routes/v2/pages/Tangent/hooks/useFindProjectCard";
 import { useNarrowLayoutDock } from "@/routes/v2/pages/Tangent/hooks/useNarrowLayoutDock";
 import { useTangentProjectWindows } from "@/routes/v2/pages/Tangent/hooks/useTangentProjectWindows";
 import { useTangentSessionParam } from "@/routes/v2/pages/Tangent/hooks/useTangentSessionParam";
@@ -23,6 +24,7 @@ export const TangentProjectWorkspace = observer(
   function TangentProjectWorkspace() {
     useWindowPersistence("tangent-project");
     useTangentProjectWindows();
+    useFindProjectCard();
     useNarrowLayoutDock();
     const store = useTangentProject();
     useTangentSessionParam(store);
@@ -47,7 +49,7 @@ export const TangentProjectWorkspace = observer(
             blockAlign="stretch"
             wrap="nowrap"
           >
-            <DockArea side="left" />
+            <DockArea side="left" quietHeaders />
             <div
               className="relative flex min-h-0 shrink-0 flex-col"
               style={{ width: chatWidth }}

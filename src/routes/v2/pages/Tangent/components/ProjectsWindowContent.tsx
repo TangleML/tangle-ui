@@ -150,7 +150,7 @@ export const ProjectsWindowContent = observer(function ProjectsWindowContent() {
       <InlineStack gap="1" wrap="nowrap" className="w-full">
         <Button
           variant="ghost"
-          className="min-w-0 flex-1 justify-start"
+          className="min-w-0 flex-1 justify-start has-[>svg]:px-2"
           title={
             aiGate.disabled || !target
               ? aiGate.title
