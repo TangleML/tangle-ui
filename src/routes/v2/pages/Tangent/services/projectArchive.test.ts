@@ -1,3 +1,4 @@
+import { QueryClient } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -68,10 +69,12 @@ describe("project archive", () => {
   });
 
   it("keeps every item when several are archived at once", async () => {
+    const queryClient = new QueryClient();
+
     await Promise.all([
-      setProjectItemArchived("project-1", "run://id/r-1", true),
-      setProjectItemArchived("project-1", "run://id/r-2", true),
-      setProjectItemArchived("project-1", "run://id/r-3", true),
+      setProjectItemArchived(queryClient, "project-1", "run://id/r-1", true),
+      setProjectItemArchived(queryClient, "project-1", "run://id/r-2", true),
+      setProjectItemArchived(queryClient, "project-1", "run://id/r-3", true),
     ]);
 
     expect(saved).toEqual({
@@ -81,10 +84,21 @@ describe("project archive", () => {
   });
 
   it("still saves a change queued behind one that failed", async () => {
+    const queryClient = new QueryClient();
     services.updateProject.mockRejectedValueOnce(new Error("Couldn't save"));
 
-    const first = setProjectItemArchived("project-1", "run://id/r-1", true);
-    const second = setProjectItemArchived("project-1", "run://id/r-2", true);
+    const first = setProjectItemArchived(
+      queryClient,
+      "project-1",
+      "run://id/r-1",
+      true,
+    );
+    const second = setProjectItemArchived(
+      queryClient,
+      "project-1",
+      "run://id/r-2",
+      true,
+    );
 
     await expect(first).rejects.toThrow("Couldn't save");
     await second;

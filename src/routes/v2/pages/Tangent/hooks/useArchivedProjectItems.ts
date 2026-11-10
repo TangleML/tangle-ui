@@ -4,9 +4,7 @@ import useToastNotification from "@/hooks/useToastNotification";
 import {
   archivedTargets,
   setProjectItemArchived,
-  withArchived,
 } from "@/routes/v2/pages/Tangent/services/projectArchive";
-import { type Project, ProjectsQueryKeys } from "@/services/projects/types";
 import { useProject } from "@/services/projects/useProjects";
 import { getErrorMessage } from "@/utils/string";
 
@@ -20,29 +18,18 @@ export function useArchivedProjectItems(projectId: string) {
   const { data: project } = useProject(projectId, { refetchOnMount: "always" });
   const queryClient = useQueryClient();
   const notify = useToastNotification();
-  const archived = new Set(archivedTargets(project?.metadata));
-  const projectKey = ProjectsQueryKeys.Id(projectId);
+  const archived: ReadonlySet<string> = new Set(
+    archivedTargets(project?.metadata),
+  );
 
   const { mutate } = useMutation({
     mutationFn: ({ target, archive }: { target: string; archive: boolean }) =>
-      setProjectItemArchived(projectId, target, archive),
-    onMutate: ({ target, archive }) => {
-      queryClient.setQueryData<Project>(projectKey, (current) =>
-        current
-          ? {
-              ...current,
-              metadata: withArchived(current.metadata, target, archive),
-            }
-          : current,
-      );
-    },
+      setProjectItemArchived(queryClient, projectId, target, archive),
     onError: (error) => notify(getErrorMessage(error), "error"),
-    onSettled: () =>
-      queryClient.invalidateQueries({ queryKey: projectKey, exact: true }),
   });
 
   return {
-    isArchived: (target: string) => archived.has(target),
+    archived,
     archive: (target: string) => mutate({ target, archive: true }),
     restore: (target: string) => mutate({ target, archive: false }),
   };

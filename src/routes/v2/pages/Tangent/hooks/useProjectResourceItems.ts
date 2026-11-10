@@ -152,6 +152,8 @@ export function useProjectResourceItems(projectId: string) {
     isLoaded: query.data !== undefined,
     error: query.error,
     summaries: items,
+    localPipelines,
+    remotePipelineNames,
     resources: items.flatMap(
       (resource) =>
         toResourceItem(resource, localPipelines, remotePipelineNames) ?? [],

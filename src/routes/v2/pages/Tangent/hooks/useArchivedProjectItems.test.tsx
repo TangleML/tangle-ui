@@ -38,7 +38,7 @@ describe("useArchivedProjectItems", () => {
     vi.clearAllMocks();
   });
 
-  it("archives at once and saves it on the project for everyone", async () => {
+  it("archives an item and saves it on the project for everyone", async () => {
     services.getProject.mockResolvedValue({ metadata: { theme: "dark" } });
     services.updateProject.mockImplementation(
       async (_id: string, { metadata }: { metadata: unknown }) => {
@@ -52,37 +52,24 @@ describe("useArchivedProjectItems", () => {
     act(() => result.current.archive("run://id/r-1"));
 
     await waitFor(() =>
-      expect(result.current.isArchived("run://id/r-1")).toBe(true),
+      expect(result.current.archived.has("run://id/r-1")).toBe(true),
     );
     expect(services.updateProject).toHaveBeenCalledWith("project-1", {
       metadata: { theme: "dark", tangentArchived: ["run://id/r-1"] },
     });
   });
 
-  it("says so and puts the item back when saving fails", async () => {
+  it("says so when saving fails, and leaves the item where it was", async () => {
     services.getProject.mockResolvedValue({ metadata: null });
-    let fail: (error: Error) => void = () => undefined;
-    services.updateProject.mockImplementation(
-      () =>
-        new Promise((_resolve, reject) => {
-          fail = reject;
-        }),
-    );
+    services.updateProject.mockRejectedValue(new Error("Couldn't save"));
     const { result } = renderArchive();
     await waitFor(() => expect(services.getProject).toHaveBeenCalled());
 
     act(() => result.current.archive("run://id/r-1"));
-    await waitFor(() =>
-      expect(result.current.isArchived("run://id/r-1")).toBe(true),
-    );
-    await waitFor(() => expect(services.updateProject).toHaveBeenCalled());
-    act(() => fail(new Error("Couldn't save")));
 
     await waitFor(() =>
       expect(services.notify).toHaveBeenCalledWith("Couldn't save", "error"),
     );
-    await waitFor(() =>
-      expect(result.current.isArchived("run://id/r-1")).toBe(false),
-    );
+    expect(result.current.archived.has("run://id/r-1")).toBe(false);
   });
 });

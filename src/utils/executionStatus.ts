@@ -181,6 +181,19 @@ export function isInProgressStatus(status?: string): boolean {
   return IN_PROGRESS_STATUSES.has(status);
 }
 
+const FAILED_STATUSES = new Set([
+  "FAILED",
+  "UPSTREAM_FAILED",
+  "UPSTREAM_FAILED_OR_SKIPPED",
+  "SYSTEM_ERROR",
+  "INVALID",
+]);
+
+export function isFailedStatus(status?: string): boolean {
+  if (!status) return false;
+  return FAILED_STATUSES.has(status);
+}
+
 /**
  * Count the number of in-progress tasks from execution stats.
  */

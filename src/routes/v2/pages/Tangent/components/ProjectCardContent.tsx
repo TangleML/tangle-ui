@@ -1,96 +1,52 @@
 import { observer } from "mobx-react-lite";
-import { type MouseEvent, type ReactNode, useRef, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
-import {
-  ListItem,
-  type ListItemAction,
-  type ListItemFlair,
-} from "@/components/ui/list-item";
+import { ListItem, type ListItemAction } from "@/components/ui/list-item";
 import { Heading, Text } from "@/components/ui/typography";
-import useToastNotification from "@/hooks/useToastNotification";
-import { getDefaultRunPath } from "@/routes/runRoutes";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { useArchivedProjectItems } from "@/routes/v2/pages/Tangent/hooks/useArchivedProjectItems";
-import {
-  type ProjectResourceItem,
-  useProjectResourceItems,
-} from "@/routes/v2/pages/Tangent/hooks/useProjectResourceItems";
+import { useOpenWorkareaTarget } from "@/routes/v2/pages/Tangent/hooks/useOpenWorkareaTarget";
+import { useProjectResourceItems } from "@/routes/v2/pages/Tangent/hooks/useProjectResourceItems";
 import { useProjectSearchFocus } from "@/routes/v2/pages/Tangent/hooks/useProjectSearchFocus";
 import {
   type ProjectFile,
   useProjectSessionFiles,
 } from "@/routes/v2/pages/Tangent/hooks/useProjectSessionFiles";
+import {
+  type ProjectCardItem,
+  projectCardLists,
+  type ProjectCardRun,
+} from "@/routes/v2/pages/Tangent/services/projectCardEntries";
 import { fileIcon } from "@/routes/v2/pages/Tangent/services/projectFiles";
-import {
-  mergeProjectRuns,
-  type RunEntry,
-} from "@/routes/v2/pages/Tangent/services/projectRunEntries";
 import { useOptionalWindowContext } from "@/routes/v2/shared/windows/ContentWindowStateContext";
-import {
-  formatWorkareaTarget,
-  parseIdentity,
-  runTarget,
-  type WorkareaTarget,
-} from "@/services/projects/resourceTarget";
-import {
-  useProjectRuns,
-  useRunExecutionStats,
-} from "@/services/projects/useProjectRuns";
+import { runTarget } from "@/services/projects/resourceTarget";
+import { useProjectRuns } from "@/services/projects/useProjectRuns";
 import { formatRelativeTime } from "@/utils/date";
-import { hasNewTabModifier } from "@/utils/dom";
-import {
-  getExecutionStatusLabel,
-  getOverallExecutionStatusFromStats,
-  isInProgressStatus,
-} from "@/utils/executionStatus";
-import { getErrorMessage } from "@/utils/string";
+import { containsSearchTerm } from "@/utils/searchUtils";
 import { tracking } from "@/utils/tracking";
 
 import { AddResourceButton } from "./AddResourceButton";
+import { RunListItem } from "./RunListItem";
 import { SearchField } from "./SearchField";
 
-const FAILED_STATUSES = new Set([
-  "FAILED",
-  "UPSTREAM_FAILED",
-  "UPSTREAM_FAILED_OR_SKIPPED",
-  "SYSTEM_ERROR",
-  "INVALID",
-]);
-
-type AttachedItem = ProjectResourceItem & { target: WorkareaTarget };
-
 type CardView = "main" | "files" | "archived";
-
-const runKey = (run: RunEntry) => formatWorkareaTarget(runTarget(run.id));
-const attachedKey = (item: AttachedItem) => formatWorkareaTarget(item.target);
-
-function runStatusFlair(
-  status: string | undefined,
-  label: string,
-): ListItemFlair {
-  if (status === "SUCCEEDED") return { kind: "dot", label, tone: "success" };
-  if (status && FAILED_STATUSES.has(status)) {
-    return { kind: "dot", label, tone: "critical" };
-  }
-  if (isInProgressStatus(status)) {
-    return { kind: "dot", label, tone: "success", pulse: true };
-  }
-  return { kind: "dot", label };
-}
 
 function ago(date: Date | null | undefined): string | undefined {
   return date ? formatRelativeTime(date) : undefined;
 }
 
-function split<T>(items: T[], isArchived: (item: T) => boolean) {
+function split<T extends { archived: boolean }>(items: T[]) {
   return {
-    active: items.filter((item) => !isArchived(item)),
-    archived: items.filter(isArchived),
+    active: items.filter(({ archived }) => !archived),
+    archived: items.filter(({ archived }) => archived),
   };
 }
+
+const matching = (query: string, ...texts: string[]) =>
+  texts.some((text) => containsSearchTerm(text, query));
 
 /**
  * What the project holds, in the order someone looks for it: reports (the
@@ -103,7 +59,7 @@ function split<T>(items: T[], isArchived: (item: T) => boolean) {
 export const ProjectCardContent = observer(function ProjectCardContent() {
   const store = useTangentProject();
   const dismissCard = useOptionalWindowContext()?.dismissFlyout;
-  const notify = useToastNotification();
+  const openWorkareaTarget = useOpenWorkareaTarget();
   const searchRef = useRef<HTMLInputElement>(null);
   useProjectSearchFocus(searchRef);
   const [query, setQuery] = useState("");
@@ -113,49 +69,23 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
   const { resources, summaries } = resourceItems;
   const projectRuns = useProjectRuns(store.projectId);
   const files = useProjectSessionFiles(store.projectId);
-  const { isArchived, archive, restore } = useArchivedProjectItems(
+  const { archived, archive, restore } = useArchivedProjectItems(
     store.projectId,
   );
 
-  const needle = query.trim().toLocaleLowerCase();
-  const searching = needle !== "";
+  const searching = query.trim() !== "";
   const matches = (...texts: string[]) =>
-    !searching ||
-    texts.some((text) => text.toLocaleLowerCase().includes(needle));
+    !searching || matching(query, ...texts);
 
-  const addedAt = new Map(
-    summaries.map(({ id, createdAt }) => [id, createdAt]),
-  );
-  const newestAdded = (a: AttachedItem, b: AttachedItem) =>
-    (addedAt.get(b.id)?.getTime() ?? 0) - (addedAt.get(a.id)?.getTime() ?? 0);
-  const attached: AttachedItem[] = resources.flatMap((item) =>
-    item.target ? [{ ...item, target: item.target }] : [],
-  );
-  const pipelines = split(
-    attached
-      .filter(({ target }) => target.type === "pipeline")
-      .sort(newestAdded),
-    (item) => isArchived(attachedKey(item)),
-  );
-  const documents = split(
-    attached
-      .filter(({ target }) => target.type === "document")
-      .sort(newestAdded),
-    (item) => isArchived(attachedKey(item)),
-  );
-  const runs = split(
-    mergeProjectRuns(
-      projectRuns.data ?? [],
-      attached
-        .filter(({ target }) => target.type === "run")
-        .map(({ id, name, target }) => ({
-          id: parseIdentity(target.identity).value,
-          pipelineName: name,
-          ranAt: addedAt.get(id) ?? null,
-        })),
-    ),
-    (run) => isArchived(runKey(run)),
-  );
+  const lists = projectCardLists({
+    items: resources,
+    summaries,
+    projectRuns: projectRuns.data ?? [],
+    archived,
+  });
+  const pipelines = split(lists.pipelines);
+  const documents = split(lists.documents);
+  const runs = split(lists.runs);
   const archivedCount =
     runs.archived.length +
     pipelines.archived.length +
@@ -181,22 +111,10 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
       shownDocuments,
     ].every((list) => list.length === 0);
 
-  async function openTarget(target: WorkareaTarget, title: string) {
+  const openTarget: typeof openWorkareaTarget = (target, title, event) => {
     dismissCard?.();
-    try {
-      await store.openWorkareaTarget(target, title);
-    } catch (error) {
-      notify(getErrorMessage(error), "error");
-    }
-  }
-
-  function openRun(run: RunEntry, event: MouseEvent) {
-    if (hasNewTabModifier(event)) {
-      window.open(getDefaultRunPath(run.id), "_blank");
-      return;
-    }
-    void openTarget(runTarget(run.id), run.pipelineName);
-  }
+    return openWorkareaTarget(target, title, event);
+  };
 
   function openFile(file: ProjectFile) {
     dismissCard?.();
@@ -253,25 +171,30 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
     );
   }
 
-  function renderRun(run: RunEntry) {
+  function renderRun(run: ProjectCardRun) {
     return (
-      <RunItem
+      <RunListItem
         key={run.id}
-        run={run}
-        action={archiveAction(runKey(run), run.pipelineName)}
-        onOpen={(event) => openRun(run, event)}
+        runId={run.id}
+        name={run.pipelineName}
+        at={run.ranAt}
+        action={archiveAction(run.key, run.pipelineName)}
+        onOpen={(event) =>
+          void openTarget(runTarget(run.id), run.pipelineName, event)
+        }
+        trackingId="projects.project_card.open_run"
       />
     );
   }
 
-  function renderAttached(item: AttachedItem) {
+  function renderAttached(item: ProjectCardItem) {
     const isPipeline = item.target.type === "pipeline";
-    const added = ago(addedAt.get(item.id));
+    const added = ago(item.addedAt);
     return (
       <ListItem
         key={item.id}
         density="compact"
-        icon={isPipeline ? "GitBranch" : "FileText"}
+        icon={item.icon}
         title={item.name}
         subtitle={added && `Added ${added}`}
         onOpen={() => void openTarget(item.target, item.name)}
@@ -280,7 +203,7 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
             ? "projects.project_card.open_pipeline"
             : "projects.project_card.open_document",
         )}
-        actions={[archiveAction(attachedKey(item), item.name)]}
+        actions={[archiveAction(item.key, item.name)]}
       />
     );
   }
@@ -296,11 +219,8 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
   const back = () => setView("main");
 
   if (view === "files") {
-    const fileNeedle = fileQuery.trim().toLocaleLowerCase();
     const shownFiles = files.files.filter(({ title, path }) =>
-      [title, path].some((text) =>
-        text.toLocaleLowerCase().includes(fileNeedle),
-      ),
+      matching(fileQuery, title, path),
     );
     return (
       <SubView title="All files" count={files.files.length} onBack={back}>
@@ -577,35 +497,6 @@ function CardSection({
       )}
       {footer}
     </section>
-  );
-}
-
-function RunItem({
-  run,
-  action,
-  onOpen,
-}: {
-  run: RunEntry;
-  action: ListItemAction;
-  onOpen: (event: MouseEvent<HTMLButtonElement>) => void;
-}) {
-  const { data, isPending, error } = useRunExecutionStats(run.id);
-  const status = error
-    ? undefined
-    : getOverallExecutionStatusFromStats(data ?? undefined);
-  const label = getExecutionStatusLabel(status);
-
-  return (
-    <ListItem
-      density="compact"
-      icon="Play"
-      title={run.pipelineName}
-      subtitle={ago(run.ranAt)}
-      flair={isPending ? undefined : runStatusFlair(status, label)}
-      onOpen={onOpen}
-      tracking={tracking("projects.project_card.open_run")}
-      actions={[action]}
-    />
   );
 }
 

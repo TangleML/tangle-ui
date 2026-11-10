@@ -1,3 +1,7 @@
+import {
+  tangentAuthHeaders,
+  tangentSessionUrl,
+} from "@/routes/v2/pages/Tangent/services/tangentApi";
 import { isRecord } from "@/utils/typeGuards";
 
 /**
@@ -68,11 +72,10 @@ export async function listTangentEnvironments({
   sessionId,
   authToken,
 }: ListTangentEnvironmentsParams): Promise<TangentEnvironment[]> {
-  const url = `${baseUrl.replace(/\/+$/, "")}/api/sessions/${encodeURIComponent(sessionId)}/environments`;
-  const headers: Record<string, string> = {};
-  if (authToken) headers.Authorization = `Bearer ${authToken}`;
-
-  const response = await fetch(url, { headers });
+  const response = await fetch(
+    tangentSessionUrl(baseUrl, sessionId, "environments"),
+    { headers: tangentAuthHeaders(authToken) },
+  );
   if (!response.ok) {
     throw new Error(
       `Failed to list Tangent environments (${response.status} ${response.statusText}).`,

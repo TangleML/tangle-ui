@@ -12,6 +12,7 @@ import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProj
 import { useRecordSessionRun } from "@/routes/v2/pages/Tangent/hooks/useSessionRuns";
 import { useTangentBaseUrl } from "@/routes/v2/pages/Tangent/hooks/useTangentBaseUrl";
 import {
+  ASSET_LIMIT,
   assetsResult,
   documentsResult,
   filesResult,
@@ -24,22 +25,22 @@ import {
   runStartsResult,
   targetId,
 } from "@/routes/v2/pages/Tangent/services/chatCommandResults";
-import type { ProjectCardEntry } from "@/routes/v2/pages/Tangent/services/createProjectCardRemoteTools";
+import type { ProjectCardEntry } from "@/routes/v2/pages/Tangent/services/createProjectCardHandlers";
 import {
   type SessionFileRecord,
   sessionFileUrl,
 } from "@/routes/v2/pages/Tangent/services/sessionFiles";
+import { pipelineRefForTarget } from "@/routes/v2/pages/Tangent/workarea/pipelineRef";
 import { createRunBridgeHandlers } from "@/routes/v2/shared/components/AiChat/toolBridge/runBridge";
 import { useLazyBridgeAuth } from "@/routes/v2/shared/components/AiChat/toolBridge/useLazyBridgeAuth";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
-import type { EditorPipelineRef } from "@/services/pipelineStorage/types";
-import { getRunExecutionStats } from "@/services/projects/projectRunsService";
 import {
   formatWorkareaTarget,
   parseIdentity,
   parseWorkareaTarget,
   runTarget,
 } from "@/services/projects/resourceTarget";
+import { runExecutionStatsQuery } from "@/services/projects/useProjectRuns";
 import { useTeamForSubmission } from "@/services/teams/useTeamForSubmission";
 import { buildProjectRunAnnotationKey } from "@/utils/annotations";
 import {
@@ -48,8 +49,6 @@ import {
 } from "@/utils/executionStatus";
 import { getErrorMessage } from "@/utils/string";
 import { PIPELINE_YAML_LOAD_OPTIONS } from "@/utils/yaml";
-
-const ASSET_RUNS = 5;
 
 /**
  * The chat box's slash commands for a project. The list commands show what the
@@ -81,9 +80,9 @@ export function useChatCommands(projectId: string): EmbedCommand[] {
   async function statusLabels(runs: ProjectCardEntry[]) {
     const labels = await Promise.all(
       runs.map(async ({ target }) => {
-        const stats = await getRunExecutionStats(targetId(target)).catch(
-          () => null,
-        );
+        const stats = await queryClient
+          .fetchQuery(runExecutionStatsQuery(targetId(target), true))
+          .catch(() => null);
         return stats
           ? [
               [
@@ -103,32 +102,30 @@ export function useChatCommands(projectId: string): EmbedCommand[] {
     statusCount: number,
     withReports = false,
   ): Promise<ProjectListing> {
-    const [entries, archivedTargets, files] = await Promise.all([
+    const [entries, files] = await Promise.all([
       handlers.listEntries(),
-      handlers.listArchived(),
       withReports ? handlers.listFiles() : [],
     ]);
-    const archived = new Set(archivedTargets);
-    const runs = entries.runs.filter(({ target }) => !archived.has(target));
+    const runs = entries.runs.filter(({ archived }) => !archived);
     return {
       ...entries,
       reports: files.filter(({ pinned }) => pinned),
-      archived,
       runStatuses: await statusLabels(runs.slice(0, statusCount)),
     };
   }
 
   // Loaded the way the editor loads it, so it submits the same way.
   async function specFor({ target, name }: ProjectCardEntry) {
-    const { key, value } = parseIdentity(parseWorkareaTarget(target).identity);
-    if (key === "draft") throw new Error("it's a draft that isn't saved yet");
-    const ref: EditorPipelineRef =
-      key === "remote"
-        ? { source: "remote", backendUrl: getBackendUrl(), pipelineId: value }
-        : key === "id"
-          ? { fileId: value, name }
-          : { name: value };
-    const file = await storage.resolvePipeline(ref);
+    const parsed = parseWorkareaTarget(target);
+    if (parseIdentity(parsed.identity).key === "draft") {
+      throw new Error("it's a draft that isn't saved yet");
+    }
+    const file = await storage.resolvePipeline(
+      pipelineRefForTarget(parsed, name, {
+        backendUrl: getBackendUrl(),
+        storage,
+      }),
+    );
     const spec = new YamlDeserializer(
       new IncrementingIdGenerator(),
     ).deserialize(yaml.load(await file.read(), PIPELINE_YAML_LOAD_OPTIONS));
@@ -182,7 +179,7 @@ export function useChatCommands(projectId: string): EmbedCommand[] {
       description: "Everything in the project",
       run: async () => {
         const links = fileLinks();
-        return assetsResult(await readCard(ASSET_RUNS, true), links);
+        return assetsResult(await readCard(ASSET_LIMIT, true), links);
       },
     },
     {

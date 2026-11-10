@@ -19,7 +19,6 @@ function listing(overrides: Partial<ProjectListing> = {}): ProjectListing {
     pipelines: [],
     documents: [],
     reports: [],
-    archived: new Set(),
     runStatuses: new Map(),
     ...overrides,
   };
@@ -40,10 +39,19 @@ describe("chat command results", () => {
     const text = pipelinesResult(
       listing({
         pipelines: [
-          { target: "pipeline://remote/p-1", name: "Train [v2]", at: NOV_5 },
-          { target: "pipeline://id/f-2", name: "Old", at: null },
+          {
+            target: "pipeline://remote/p-1",
+            name: "Train [v2]",
+            at: NOV_5,
+            archived: false,
+          },
+          {
+            target: "pipeline://id/f-2",
+            name: "Old",
+            at: null,
+            archived: true,
+          },
         ],
-        archived: new Set(["pipeline://id/f-2"]),
       }),
     );
 
@@ -66,6 +74,7 @@ describe("chat command results", () => {
       target: `run://id/r-${index}`,
       name: `Run ${index}`,
       at: null,
+      archived: false,
     }));
 
     const text = runsResult(
@@ -110,6 +119,7 @@ describe("chat command results", () => {
       target: `pipeline://remote/p-${index}`,
       name: `Pipeline ${index}`,
       at: null,
+      archived: false,
     }));
 
     const text = assetsResult(
