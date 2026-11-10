@@ -141,9 +141,7 @@ export function useWindowDrag({
         trackDragUndockOnce();
       }
 
-      if (windows.windowDrag?.windowId !== model.id) {
-        windows.beginWindowDrag(model.id);
-      }
+      if (!windows.isDraggingWindow) windows.beginWindowDrag();
 
       const preview = detectSnapPreview({
         windowId: model.id,
@@ -153,25 +151,25 @@ export function useWindowDrag({
           right: [...windows.getDockAreaWindowIds("right")],
         },
         enabledDockSides: windows.enabledDockSides,
+        popoverDockSides: windows.popoverDockSides,
       });
       snapPreviewRef.current = preview;
       setSnapPreview(preview);
-      windows.setWindowDragPreview(preview);
+      windows.setDropTargetSide(
+        preview?.type === "dock-target" ? preview.side : null,
+      );
     };
 
     const handleMouseUp = () => {
       const currentPreview = snapPreviewRef.current;
 
-      if (currentPreview?.type === "edge") {
+      if (
+        currentPreview?.type === "edge" ||
+        currentPreview?.type === "dock-target"
+      ) {
         model.dock(currentPreview.side);
         track("v2.shared_window.snap_dock_completed", {
-          snap_kind: "edge",
-          dock_side: currentPreview.side,
-        });
-      } else if (currentPreview?.type === "dock-target") {
-        model.dock(currentPreview.side);
-        track("v2.shared_window.snap_dock_completed", {
-          snap_kind: "dock_target",
+          snap_kind: currentPreview.type === "edge" ? "edge" : "dock_target",
           dock_side: currentPreview.side,
         });
       } else if (currentPreview?.type === "dock-insert") {

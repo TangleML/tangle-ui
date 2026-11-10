@@ -36,28 +36,15 @@ export function registerDockAreaElement(
 }
 
 /**
- * Sides whose dock is a single button to drop on (a dock popover) rather than
- * a column, with that button once it's on screen. A window docks to such a side
- * only by being dropped on its button, never at the screen edge.
+ * The button each popover dock shows once it's on screen. A window docks to a
+ * popover side only by being dropped on its button, never at the screen edge.
  */
-const dockTargetSides = new Set<"left" | "right">();
 const dockTargetElements: Record<"left" | "right", HTMLElement | null> = {
   left: null,
   right: null,
 };
 
 const DOCK_TARGET_PADDING = 8;
-
-export function setDockTargetSide(
-  side: "left" | "right",
-  isTarget: boolean,
-): void {
-  if (isTarget) {
-    dockTargetSides.add(side);
-  } else {
-    dockTargetSides.delete(side);
-  }
-}
 
 export function registerDockTargetElement(
   side: "left" | "right",
@@ -69,11 +56,11 @@ export function registerDockTargetElement(
 function detectDockTarget(
   mouseX: number,
   mouseY: number,
-  enabledSides: ReadonlySet<"left" | "right">,
+  popoverSides: ReadonlySet<"left" | "right">,
 ): SnapPreviewType | null {
-  for (const side of dockTargetSides) {
+  for (const side of popoverSides) {
     const el = dockTargetElements[side];
-    if (!el || !enabledSides.has(side)) continue;
+    if (!el) continue;
     const rect = el.getBoundingClientRect();
     if (
       mouseX >= rect.left - DOCK_TARGET_PADDING &&
@@ -208,6 +195,7 @@ interface DetectSnapPreviewOptions {
   mousePosition?: Position;
   dockAreaWindowIds?: Record<"left" | "right", string[]>;
   enabledDockSides?: ReadonlySet<"left" | "right">;
+  popoverDockSides?: ReadonlySet<"left" | "right">;
 }
 
 export function detectSnapPreview(
@@ -218,6 +206,7 @@ export function detectSnapPreview(
     mousePosition,
     dockAreaWindowIds,
     enabledDockSides = new Set(["left", "right"] as const),
+    popoverDockSides = new Set(),
   } = options;
 
   if (!mousePosition) return null;
@@ -225,12 +214,12 @@ export function detectSnapPreview(
   const target = detectDockTarget(
     mousePosition.x,
     mousePosition.y,
-    enabledDockSides,
+    popoverDockSides,
   );
   if (target) return target;
 
   const columnSides = new Set(
-    [...enabledDockSides].filter((side) => !dockTargetSides.has(side)),
+    [...enabledDockSides].filter((side) => !popoverDockSides.has(side)),
   );
 
   if (dockAreaWindowIds) {

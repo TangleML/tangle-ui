@@ -97,7 +97,6 @@ export const DockedWindow = observer(function DockedWindow() {
     sentinelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  const actions = <WindowActions />;
   const showCollapsedStyle = model.isMinimized || isStuck;
   const fitsContent = !fillsDock && model.dockedHeight === undefined;
 
@@ -118,7 +117,7 @@ export const DockedWindow = observer(function DockedWindow() {
               className="text-muted-foreground shrink-0"
             />
           }
-          actions={actions}
+          actions={<WindowActions />}
           className="bg-card"
         />
         <div className="reveal-scrollbar flex-1 min-h-0 overflow-auto bg-background">
@@ -186,8 +185,13 @@ export const DockedWindow = observer(function DockedWindow() {
                 className="text-muted-foreground shrink-0"
               />
             }
-            actions={quietHeader ? <QuietHeaderActions /> : actions}
-            actionsOnHover={!quietHeader}
+            actions={<WindowActions hideMinimize={quietHeader} />}
+            trailing={
+              quietHeader && (
+                <FoldButton trackingId="v2.shared_window.chrome.fold" />
+              )
+            }
+            actionsOnHover
             quiet={quietHeader}
           />
         </div>
@@ -209,12 +213,9 @@ export const DockedWindow = observer(function DockedWindow() {
             isDragging && "opacity-50",
           )}
           style={{
-            // A fill window's minimum is against being squeezed while it
-            // fills; sharing the dock, it shows all of itself instead.
-            minHeight:
-              model.fillDockHeight && !fillsDock
-                ? undefined
-                : model.minDockedHeight,
+            // A fill window's minimum sits on its slot while it fills the
+            // dock; sharing the dock, it shows all of itself instead.
+            minHeight: model.fillDockHeight ? undefined : model.minDockedHeight,
             // fillsDock => grow to fill the dock column; otherwise an
             // undefined height fits content and a concrete value fixes the
             // height with the inner content area scrolling.
@@ -250,15 +251,3 @@ export const DockedWindow = observer(function DockedWindow() {
     </Collapsible>
   );
 });
-
-/** Whether the window is folded stays in view; the rest wait for a hover. */
-function QuietHeaderActions() {
-  return (
-    <div className="flex items-center gap-0.5">
-      <div className="opacity-0 transition-opacity duration-200 group-focus-within/window:opacity-100 group-hover/window:opacity-100">
-        <WindowActions hideMinimize />
-      </div>
-      <FoldButton trackingId="v2.shared_window.chrome.fold" />
-    </div>
-  );
-}

@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DialogProvider } from "@/providers/DialogProvider/DialogProvider";
 import { useProjectSessions } from "@/routes/v2/pages/Tangent/hooks/useProjectSessions";
 
-import { SessionsWindowContent } from "./SessionsWindowContent";
+import { ProjectSessionList } from "./ProjectSessionList";
 
 class ResizeObserverMock {
   observe = vi.fn();
@@ -77,15 +77,16 @@ function renderSessions(
 ) {
   return render(
     <DialogProvider disableRouterSync>
-      <SessionsWindowContent
+      <ProjectSessionList
         projectId={projectId}
         onlySessionIds={onlySessionIds}
+        runStates={new Map()}
       />
     </DialogProvider>,
   );
 }
 
-describe("SessionsWindowContent", () => {
+describe("ProjectSessionList", () => {
   beforeEach(() => {
     given(
       session("session-1", null, "2026-09-22T10:00:00Z"),
@@ -97,7 +98,7 @@ describe("SessionsWindowContent", () => {
   it("says which sessions have an agent working", () => {
     render(
       <DialogProvider disableRouterSync>
-        <SessionsWindowContent
+        <ProjectSessionList
           projectId="project-1"
           runStates={new Map([["session-2", "working"]])}
         />
@@ -116,7 +117,7 @@ describe("SessionsWindowContent", () => {
   it("says which sessions have a run that finished or failed unseen", () => {
     render(
       <DialogProvider disableRouterSync>
-        <SessionsWindowContent
+        <ProjectSessionList
           projectId="project-1"
           runStates={
             new Map([

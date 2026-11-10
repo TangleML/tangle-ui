@@ -1,14 +1,17 @@
-import { act, render, screen, within } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { requestProjectSearchFocus } from "@/routes/v2/pages/Tangent/hooks/useProjectSearchFocus";
 import { WindowContextProvider } from "@/routes/v2/shared/windows/ContentWindowStateContext";
 import { WindowStoreImpl } from "@/routes/v2/shared/windows/windowStore";
 
 import { ProjectCardContent } from "./ProjectCardContent";
 
+const focus = vi.hoisted(() => ({
+  searchFocusRequested: false,
+  clearSearchFocusRequest: vi.fn(),
+}));
 const pin = vi.fn();
 const unpin = vi.fn();
 const archiveChange = vi.fn();
@@ -18,6 +21,7 @@ vi.mock("@/routes/v2/pages/Tangent/context/TangentProjectContext", () => ({
     projectId: "project-1",
     openWorkareaTarget: vi.fn(),
     openArtifactTab: vi.fn(),
+    ...focus,
   }),
 }));
 
@@ -368,13 +372,14 @@ describe("ProjectCardContent", () => {
   });
 
   it("puts the cursor in its search when asked", () => {
+    focus.searchFocusRequested = true;
     render(<ProjectCardContent />);
-
-    act(() => requestProjectSearchFocus());
 
     expect(
       screen.getByRole("searchbox", { name: "Search this project" }),
     ).toHaveFocus();
+    expect(focus.clearSearchFocusRequest).toHaveBeenCalled();
+    focus.searchFocusRequested = false;
   });
 
   it("closes the popover it's in once something is opened", async () => {

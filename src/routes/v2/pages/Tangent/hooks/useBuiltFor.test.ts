@@ -3,14 +3,14 @@ import { describe, expect, it } from "vitest";
 
 import { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
 
-import { usePerStore } from "./usePerStore";
+import { useBuiltFor } from "./useBuiltFor";
 
-describe("usePerStore", () => {
-  it("keeps what it built for a store, and builds again for the next project", () => {
+describe("useBuiltFor", () => {
+  it("keeps what it built for a key, and builds again for the next one", () => {
     const first = new TangentProjectStore("project-1");
     const second = new TangentProjectStore("project-2");
     const { result, rerender } = renderHook(
-      ({ store }) => usePerStore(store, () => ({ projectId: store.projectId })),
+      ({ store }) => useBuiltFor(store, () => ({ projectId: store.projectId })),
       { initialProps: { store: first } },
     );
     const built = result.current;
