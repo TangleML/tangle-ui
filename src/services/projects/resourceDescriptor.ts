@@ -193,12 +193,19 @@ export function repositoryResourceInput(
   location: RepositoryLocation,
 ): CreateResourceInput {
   const name = repositoryName(location);
-  const { owner, repo, ref, path } = location;
+  const { owner, repo, ref, path, isPrivate, grantId } = location;
 
   return {
     entity: "document",
     name,
-    payload: { owner, repo, ref, path },
+    payload: {
+      owner,
+      repo,
+      ref,
+      path,
+      private: isPrivate,
+      ...(grantId ? { grantId } : {}),
+    },
     metadata: withinLimit(
       { type: REPOSITORY, url: repositoryUrl(location) },
       name,
@@ -229,11 +236,14 @@ export function linkedRepositoryOf(
   const repo = stringOrNull(payload.repo);
   if (owner === null || repo === null) return undefined;
 
+  const grantId = stringOrNull(payload.grantId);
   return {
     owner,
     repo,
     ref: stringOrNull(payload.ref),
     path: stringOrNull(payload.path),
+    isPrivate: payload.private === true,
+    ...(grantId ? { grantId } : {}),
   };
 }
 

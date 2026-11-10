@@ -570,6 +570,28 @@ describe("ProjectResourcePreview", () => {
       expect(screen.getByText("Commit")).toBeVisible();
       expect(screen.queryByText("Branch")).toBeNull();
     });
+
+    it("marks a private repository as private", () => {
+      linked({ private: true, grantId: "7" });
+      renderPreview("resource-1");
+
+      expect(screen.getByText("TangleML/pipeline_components")).toBeVisible();
+      expect(screen.getByText("Private")).toBeVisible();
+    });
+
+    it("does not mark a public repository read with a token as private", () => {
+      linked({ private: false, grantId: "7" });
+      renderPreview("resource-1");
+
+      expect(screen.queryByText("Private")).toBeNull();
+    });
+
+    it("does not mark a public repository as private", () => {
+      linked({});
+      renderPreview("resource-1");
+
+      expect(screen.queryByText("Private")).toBeNull();
+    });
   });
 
   it("dumps an unfamiliar payload as yaml rather than nothing", () => {

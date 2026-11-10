@@ -1,3 +1,4 @@
+import { repositoryLinkedMetadata } from "@/components/Project/repositoryLinkTracking";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -136,7 +137,11 @@ export function AddResourceButton({
     if (!result) return;
 
     createResource(result, {
-      onSuccess: () => track("projects.link_repository_completed"),
+      onSuccess: () =>
+        track(
+          "projects.link_repository_completed",
+          repositoryLinkedMetadata(result),
+        ),
     });
   }
 

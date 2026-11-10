@@ -1,6 +1,7 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Icon } from "@/components/ui/icon";
@@ -9,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/typography";
 import { useBackend } from "@/providers/BackendProvider";
 import { useTourMockBackend } from "@/providers/TourProvider/tourMockBackend";
+import { useTokenSecretName } from "@/services/github/useGitHubToken";
 import { formatRelativeTime } from "@/utils/date";
 
 import { withSuspenseWrapper } from "../../SuspenseWrapper";
@@ -27,6 +29,7 @@ function SecretsListInternal({
   onEditSecret,
 }: SecretsListProps) {
   const { data: secrets } = useSuspenseQuery(secretsListQuery());
+  const { data: gitHubTokenSecret } = useTokenSecretName();
 
   if (secrets.length === 0) {
     return (
@@ -63,9 +66,16 @@ function SecretsListInternal({
             >
               <Icon name="Lock" size="lg" className="shrink-0" />
               <BlockStack className="min-w-0">
-                <Text size="sm" weight="semibold">
-                  {secret.name}
-                </Text>
+                <InlineStack gap="2" blockAlign="center">
+                  <Text size="sm" weight="semibold">
+                    {secret.name}
+                  </Text>
+                  {secret.name === gitHubTokenSecret && (
+                    <Badge size="sm" variant="secondary">
+                      GitHub token
+                    </Badge>
+                  )}
+                </InlineStack>
                 {secret.description && (
                   <Text
                     size="xs"
