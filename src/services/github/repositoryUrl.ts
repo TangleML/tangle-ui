@@ -15,6 +15,8 @@ const UNRECOGNISED_URL_MESSAGE =
   "That isn't a GitHub repository URL. Paste one like https://github.com/owner/repo, or the URL of a folder in it.";
 const NOT_VISIBLE_MESSAGE =
   "This repository is private or doesn't exist. Private repositories aren't supported yet.";
+export const TOKEN_UNUSABLE_MESSAGE =
+  "Your GitHub token can't be used right now.";
 const RATE_LIMITED_MESSAGE =
   "GitHub allows 60 lookups an hour from one network address without signing in, and that limit has been reached. Try again later.";
 
@@ -23,23 +25,54 @@ export interface RepositoryLocation {
   repo: string;
   ref: string | null;
   path: string | null;
+  isPrivate: boolean;
+  grantId?: string;
 }
 
-type RepositoryLinkProblem =
-  "unrecognised_url" | "not_visible" | "unknown_ref" | "rate_limited";
+type RepositoryAddress = Pick<
+  RepositoryLocation,
+  "owner" | "repo" | "ref" | "path"
+>;
+
+export interface VisibleRepository {
+  owner: string;
+  repo: string;
+  defaultBranch: string;
+  grant?: { id: string; isPrivate: boolean };
+}
+
+export interface RepositorySource {
+  getRepository(owner: string, repo: string): Promise<VisibleRepository>;
+  branchExists(repository: VisibleRepository, branch: string): Promise<boolean>;
+  tagExists(repository: VisibleRepository, tag: string): Promise<boolean>;
+}
+
+export type RepositoryLinkProblem =
+  | "unrecognised_url"
+  | "not_visible"
+  | "unknown_ref"
+  | "rate_limited"
+  | "token_unusable";
 
 export class RepositoryLinkError extends Error {
   name = "RepositoryLinkError";
   constructor(
     readonly problem: RepositoryLinkProblem,
     message: string,
+    readonly needsToken = false,
   ) {
     super(message);
   }
 }
 
+const PROBLEMS_NOT_WITH_URL: readonly RepositoryLinkProblem[] = [
+  "rate_limited",
+  "token_unusable",
+];
+
 export const isProblemWithUrl = (error: unknown) =>
-  error instanceof RepositoryLinkError && error.problem !== "rate_limited";
+  error instanceof RepositoryLinkError &&
+  !PROBLEMS_NOT_WITH_URL.includes(error.problem);
 
 type RepositoryView = "root" | "tree" | "blob";
 
@@ -90,7 +123,7 @@ function webPathSegments(text: string): string[] {
   }
 }
 
-function parseRepositoryUrl(input: string): ParsedRepositoryUrl {
+export function parseRepositoryUrl(input: string): ParsedRepositoryUrl {
   const text = input.trim();
 
   const ssh = SSH_URL.exec(text);
@@ -133,25 +166,37 @@ async function askGitHub<T>(lookup: Promise<T>): Promise<T> {
   }
 }
 
-async function visibleRepository(
-  client: ReturnType<typeof createGitHubApiClient>,
-  owner: string,
-  repo: string,
-) {
-  try {
-    return await client.getRepository(`${owner}/${repo}`);
-  } catch (error) {
-    if (error instanceof GitHubApiError && error.statusCode === 404) {
-      throw new RepositoryLinkError("not_visible", NOT_VISIBLE_MESSAGE);
-    }
-    throw linkErrorFrom(error);
-  }
+const fullNameOf = ({ owner, repo }: VisibleRepository) => `${owner}/${repo}`;
+
+export function anonymousRepositorySource(): RepositorySource {
+  const client = createGitHubApiClient();
+
+  return {
+    async getRepository(owner, repo) {
+      try {
+        const found = await client.getRepository(`${owner}/${repo}`);
+        return {
+          owner: found.owner.login,
+          repo: found.name,
+          defaultBranch: found.default_branch,
+        };
+      } catch (error) {
+        if (error instanceof GitHubApiError && error.statusCode === 404) {
+          throw new RepositoryLinkError("not_visible", NOT_VISIBLE_MESSAGE);
+        }
+        throw linkErrorFrom(error);
+      }
+    },
+    branchExists: (repository, branch) =>
+      askGitHub(client.branchExists(fullNameOf(repository), branch)),
+    tagExists: (repository, tag) =>
+      askGitHub(client.tagExists(fullNameOf(repository), tag)),
+  };
 }
 
 async function resolveRef(
-  client: ReturnType<typeof createGitHubApiClient>,
-  fullName: string,
-  defaultBranch: string,
+  source: RepositorySource,
+  repository: VisibleRepository,
   segments: string[],
 ): Promise<ResolvedRef> {
   const [first] = segments;
@@ -168,48 +213,49 @@ async function resolveRef(
   });
 
   const defaultBranchPrefix = longestFirst.find(
-    (candidate) => candidate.ref === defaultBranch,
+    (candidate) => candidate.ref === repository.defaultBranch,
   );
   if (defaultBranchPrefix) {
     return defaultBranchPrefix;
   }
 
   for (const candidate of longestFirst) {
-    if (await askGitHub(client.branchExists(fullName, candidate.ref))) {
+    if (await source.branchExists(repository, candidate.ref)) {
       return candidate;
     }
   }
   for (const candidate of longestFirst) {
-    if (await askGitHub(client.tagExists(fullName, candidate.ref))) {
+    if (await source.tagExists(repository, candidate.ref)) {
       return candidate;
     }
   }
 
   throw new RepositoryLinkError(
     "unknown_ref",
-    `${fullName} has no branch or tag that matches this URL. To link a commit, use its full 40-character hash.`,
+    `${fullNameOf(repository)} has no branch or tag that matches this URL. To link a commit, use its full 40-character hash.`,
   );
 }
 
 export async function resolveRepositoryUrl(
   input: string,
+  source: RepositorySource,
 ): Promise<RepositoryLocation> {
   const parsed = parseRepositoryUrl(input);
-  const client = createGitHubApiClient();
-  const repository = await visibleRepository(client, parsed.owner, parsed.repo);
+  const repository = await source.getRepository(parsed.owner, parsed.repo);
 
-  const owner = repository.owner.login;
-  const repo = repository.name;
+  const { owner, repo, grant } = repository;
+  const access = grant
+    ? { isPrivate: grant.isPrivate, grantId: grant.id }
+    : { isPrivate: false };
   if (parsed.view === "root") {
-    return { owner, repo, ref: null, path: null };
+    return { owner, repo, ref: null, path: null, ...access };
   }
 
   const fileSegmentCount = parsed.view === "blob" ? 1 : 0;
   const lastFolderIndex = parsed.segments.length - fileSegmentCount;
   const { ref, segmentCount } = await resolveRef(
-    client,
-    `${owner}/${repo}`,
-    repository.default_branch,
+    source,
+    repository,
     parsed.segments.slice(0, lastFolderIndex),
   );
   const folder = parsed.segments.slice(segmentCount, lastFolderIndex);
@@ -219,6 +265,7 @@ export async function resolveRepositoryUrl(
     repo,
     ref,
     path: folder.length > 0 ? folder.join("/") : null,
+    ...access,
   };
 }
 
@@ -227,7 +274,7 @@ export function repositoryUrl({
   repo,
   ref,
   path,
-}: RepositoryLocation): string {
+}: RepositoryAddress): string {
   const base = `${GITHUB_WEB_ORIGIN}/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
   if (ref === null && path === null) {
     return base;

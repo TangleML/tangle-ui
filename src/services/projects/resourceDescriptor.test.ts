@@ -210,6 +210,7 @@ const WHOLE_REPOSITORY = {
   repo: "pipeline_components",
   ref: null,
   path: null,
+  isPrivate: false,
 };
 
 const ONE_FOLDER = {
@@ -228,6 +229,7 @@ describe("repositoryResourceInput", () => {
         repo: "pipeline_components",
         ref: null,
         path: null,
+        private: false,
       },
       metadata: {
         type: "repository",
@@ -245,12 +247,33 @@ describe("repositoryResourceInput", () => {
         repo: "pipeline_components",
         ref: "master",
         path: "components/data",
+        private: false,
       },
       metadata: {
         type: "repository",
         url: "https://github.com/TangleML/pipeline_components/tree/master/components/data",
       },
     });
+  });
+
+  it("records a grant and whether the repository is private in the payload, not the URL", () => {
+    const input = repositoryResourceInput({
+      ...ONE_FOLDER,
+      isPrivate: true,
+      grantId: "7",
+    });
+
+    expect(input.payload).toEqual({
+      owner: "TangleML",
+      repo: "pipeline_components",
+      ref: "master",
+      path: "components/data",
+      private: true,
+      grantId: "7",
+    });
+    expect(input.metadata).toEqual(
+      repositoryResourceInput(ONE_FOLDER).metadata,
+    );
   });
 
   it("refuses a folder whose URL is too long to record", () => {
@@ -273,6 +296,31 @@ describe("linkedRepositoryOf", () => {
     expect(
       linkedRepositoryOf(filed(repositoryResourceInput(WHOLE_REPOSITORY))),
     ).toEqual(WHOLE_REPOSITORY);
+  });
+
+  it("reads back a private repository's grant", () => {
+    const privateLink = { ...WHOLE_REPOSITORY, isPrivate: true, grantId: "7" };
+
+    expect(
+      linkedRepositoryOf(filed(repositoryResourceInput(privateLink))),
+    ).toEqual(privateLink);
+  });
+
+  it("reads back a public repository's grant without calling it private", () => {
+    const publicLink = { ...WHOLE_REPOSITORY, grantId: "7" };
+
+    expect(
+      linkedRepositoryOf(filed(repositoryResourceInput(publicLink))),
+    ).toEqual(publicLink);
+  });
+
+  it("calls a link that never recorded privacy public", () => {
+    expect(
+      linkedRepositoryOf({
+        metadata: { type: "repository" },
+        payload: { owner: "TangleML", repo: "pipeline_components" },
+      }),
+    ).toMatchObject({ isPrivate: false });
   });
 
   it("finds no repository in a row that is something else", () => {

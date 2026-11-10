@@ -14,6 +14,7 @@ import type {
 import { useCreateProjectResource } from "@/services/projects/useProjectResources";
 
 import { RepositoryLinkForm } from "./RepositoryLinkForm";
+import { repositoryLinkedMetadata } from "./repositoryLinkTracking";
 
 interface LinkRepositoryDialogProps {
   projectId: string;
@@ -35,7 +36,10 @@ export function LinkRepositoryDialog({
   const handleSubmit = (input: CreateResourceInput) => {
     createResource.mutate(input, {
       onSuccess: () => {
-        track("projects.link_repository_completed");
+        track(
+          "projects.link_repository_completed",
+          repositoryLinkedMetadata(input),
+        );
         notify("Repository linked", "success");
         onOpenChange(false);
       },
@@ -48,8 +52,7 @@ export function LinkRepositoryDialog({
         <DialogHeader>
           <DialogTitle>Link a repository</DialogTitle>
           <DialogDescription>
-            Link a public GitHub repository, or one folder in it, to this
-            project.
+            Link a GitHub repository, or one folder in it, to this project.
           </DialogDescription>
         </DialogHeader>
         <RepositoryLinkForm
