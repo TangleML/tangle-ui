@@ -1,42 +1,194 @@
-import { describe, expect, it } from "vitest";
+import { act, renderHook } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { runStatesFromSnapshot, withRunStatus } from "./useSessionRunStates";
+import {
+  rememberSeen,
+  runStatesToShow,
+  seenAsOf,
+  statusesFromSnapshot,
+  useSessionRunStates,
+  withStatus,
+} from "./useSessionRunStates";
+
+const socketHandlers = new Map<string, (payload: unknown) => void>();
+
+vi.mock("socket.io-client", () => ({
+  io: () => ({
+    on: (event: string, handler: (payload: unknown) => void) => {
+      socketHandlers.set(event, handler);
+    },
+    emit: vi.fn(),
+    disconnect: vi.fn(),
+  }),
+}));
+
+vi.mock("@/routes/v2/pages/Tangent/hooks/useRemoteEnvAuthToken", () => ({
+  useRemoteEnvAuthToken: () => undefined,
+}));
+
+const SEEN_KEY = "tangent-sessions-seen";
+const EARLIER = "2026-11-10T09:00:00.000Z";
+const LATER = "2026-11-10T10:00:00.000Z";
+
+function send(event: string, payload: unknown) {
+  act(() => socketHandlers.get(event)?.(payload));
+}
 
 describe("session run states", () => {
-  it("keeps only the sessions with an agent working or a failed last run", () => {
-    const states = runStatesFromSnapshot({
+  it("keeps the sessions working or that have stopped, and says when", () => {
+    const statuses = statusesFromSnapshot({
       statuses: [
         { sessionId: "s-busy", status: "busy" },
         { sessionId: "s-quiet", status: "active" },
-        { sessionId: "s-failed", status: "active", failed: true },
-        { sessionId: "s-gone", status: "idle", failed: true },
+        { sessionId: "s-done", status: "active", endedAt: EARLIER },
+        { sessionId: "s-failed", status: "idle", failed: true, endedAt: LATER },
         { status: "busy" },
       ],
     });
 
-    expect([...states]).toEqual([
-      ["s-busy", "working"],
-      ["s-failed", "failed"],
-      ["s-gone", "failed"],
+    expect([...statuses]).toEqual([
+      ["s-busy", { working: true }],
+      ["s-done", { working: false, failed: false, endedAt: EARLIER }],
+      ["s-failed", { working: false, failed: true, endedAt: LATER }],
     ]);
   });
 
-  it("marks a session as it starts working and clears it once it's quiet", () => {
-    const working = withRunStatus(new Map(), {
-      sessionId: "s-1",
-      status: "busy",
-    });
-    expect(working.get("s-1")).toBe("working");
+  it("follows a session as it works, stops, and goes quiet", () => {
+    const working = withStatus(new Map(), { sessionId: "s-1", status: "busy" });
+    expect(working.get("s-1")).toEqual({ working: true });
 
-    const failed = withRunStatus(working, {
+    const done = withStatus(working, {
       sessionId: "s-1",
       status: "active",
-      failed: true,
+      endedAt: EARLIER,
     });
-    expect(failed.get("s-1")).toBe("failed");
+    expect(done.get("s-1")).toEqual({
+      working: false,
+      failed: false,
+      endedAt: EARLIER,
+    });
 
-    const quiet = withRunStatus(failed, { sessionId: "s-1", status: "active" });
+    const quiet = withStatus(done, { sessionId: "s-1", status: "active" });
     expect(quiet.has("s-1")).toBe(false);
-    expect(withRunStatus(quiet, "not a status")).toBe(quiet);
+    expect(withStatus(quiet, "not a status")).toBe(quiet);
+  });
+
+  it("marks a run that ended since its chat was last open, but not the chat in view", () => {
+    const statuses = statusesFromSnapshot({
+      statuses: [
+        { sessionId: "s-busy", status: "busy" },
+        { sessionId: "s-new", status: "active", endedAt: LATER },
+        { sessionId: "s-seen", status: "active", endedAt: EARLIER },
+        { sessionId: "s-failed", status: "idle", failed: true, endedAt: LATER },
+        { sessionId: "s-open", status: "active", endedAt: LATER },
+      ],
+    });
+    const seen = { "s-new": EARLIER, "s-seen": EARLIER };
+
+    expect([...runStatesToShow(statuses, seen, "s-open")]).toEqual([
+      ["s-busy", "working"],
+      ["s-new", "finished"],
+      ["s-failed", "failed"],
+    ]);
+  });
+
+  it("remembers each chat once, newest last, and only so many", () => {
+    const seen = rememberSeen({ a: EARLIER, b: EARLIER }, "a", LATER);
+    expect(Object.entries(seen)).toEqual([
+      ["b", EARLIER],
+      ["a", LATER],
+    ]);
+
+    let many = {};
+    for (let i = 0; i < 510; i++) many = rememberSeen(many, `s-${i}`, LATER);
+    expect(Object.keys(many)).toHaveLength(500);
+    expect(Object.keys(many)[0]).toBe("s-10");
+  });
+
+  it("counts everything that had already stopped as seen", () => {
+    const statuses = statusesFromSnapshot({
+      statuses: [
+        { sessionId: "s-busy", status: "busy" },
+        { sessionId: "s-done", status: "active", endedAt: EARLIER },
+      ],
+    });
+
+    expect(seenAsOf(statuses)).toEqual({ "s-done": EARLIER });
+  });
+});
+
+describe("useSessionRunStates", () => {
+  beforeEach(() => {
+    socketHandlers.clear();
+    localStorage.clear();
+  });
+  afterEach(() => localStorage.clear());
+
+  it("doesn't mark what had already ended the first time this browser looks", () => {
+    const { result } = renderHook(() =>
+      useSessionRunStates("http://tangent", undefined),
+    );
+
+    send("session:status:snapshot", {
+      statuses: [
+        { sessionId: "s-1", status: "active", endedAt: EARLIER },
+        { sessionId: "s-2", status: "busy" },
+      ],
+    });
+
+    expect([...result.current]).toEqual([["s-2", "working"]]);
+  });
+
+  it("marks a finished run until its chat is opened, and remembers that", () => {
+    localStorage.setItem(SEEN_KEY, JSON.stringify({}));
+    const { result, rerender } = renderHook(
+      ({ active }) => useSessionRunStates("http://tangent", active),
+      { initialProps: { active: undefined as string | undefined } },
+    );
+
+    send("session:status:snapshot", { statuses: [] });
+    send("session:status", { sessionId: "s-1", status: "busy" });
+    expect(result.current.get("s-1")).toBe("working");
+
+    send("session:status", {
+      sessionId: "s-1",
+      status: "active",
+      endedAt: LATER,
+    });
+    expect(result.current.get("s-1")).toBe("finished");
+
+    rerender({ active: "s-1" });
+    expect(result.current.has("s-1")).toBe(false);
+
+    rerender({ active: undefined });
+    expect(result.current.has("s-1")).toBe(false);
+    expect(JSON.parse(localStorage.getItem(SEEN_KEY) ?? "{}")).toEqual({
+      "s-1": LATER,
+    });
+  });
+
+  it("marks a failed run the same way, and doesn't mark one that ended in view", () => {
+    localStorage.setItem(SEEN_KEY, JSON.stringify({ "s-1": EARLIER }));
+    const { result, rerender } = renderHook(
+      ({ active }) => useSessionRunStates("http://tangent", active),
+      { initialProps: { active: "s-2" as string | undefined } },
+    );
+
+    send("session:status:snapshot", {
+      statuses: [
+        { sessionId: "s-1", status: "idle", failed: true, endedAt: LATER },
+        { sessionId: "s-2", status: "busy" },
+      ],
+    });
+    expect(result.current.get("s-1")).toBe("failed");
+
+    send("session:status", {
+      sessionId: "s-2",
+      status: "active",
+      endedAt: LATER,
+    });
+    rerender({ active: "s-1" });
+
+    expect([...result.current]).toEqual([]);
   });
 });

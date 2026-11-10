@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
+import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
@@ -36,14 +37,16 @@ const NO_RUN_STATES: SessionRunStates = new Map();
 
 const RUN_STATE_LABEL: Record<SessionRunState, string> = {
   working: "Working",
+  finished: "Finished",
   failed: "Last run failed",
 };
 
 /**
  * One project's sessions in the sidebar. A session of the project in view is
  * selected in place; one of another project opens that project with it. A
- * search lists every session it matched, and only those. A dot marks a session
- * with an agent working, or one whose last run failed.
+ * search lists every session it matched, and only those. A spinner marks a
+ * session with an agent working, and a dot one whose run finished (green) or
+ * failed (red) since it was last open.
  */
 export const SessionsWindowContent = observer(function SessionsWindowContent({
   projectId,
@@ -194,14 +197,18 @@ function SessionRow({
         </Text>
         {stateLabel && <span className="sr-only">, {stateLabel}</span>}
       </button>
-      {runState && (
+      {runState === "working" && (
+        <Spinner
+          size={12}
+          className="me-1 shrink-0 text-muted-foreground motion-reduce:animate-none"
+        />
+      )}
+      {(runState === "finished" || runState === "failed") && (
         <span
           aria-hidden
           className={cn(
             "me-1.5 size-1.5 shrink-0 rounded-full",
-            runState === "working"
-              ? "animate-pulse bg-success motion-reduce:animate-none"
-              : "bg-destructive",
+            runState === "finished" ? "bg-success" : "bg-destructive",
           )}
         />
       )}

@@ -92,7 +92,7 @@ describe("SessionsWindowContent", () => {
   });
   afterEach(() => vi.resetAllMocks());
 
-  it("says which sessions have an agent working or a failed last run", () => {
+  it("says which sessions have an agent working", () => {
     render(
       <DialogProvider disableRouterSync>
         <SessionsWindowContent
@@ -105,9 +105,36 @@ describe("SessionsWindowContent", () => {
     expect(
       screen.getByRole("button", { name: /^Feature exploration\W+Working$/ }),
     ).toBeInTheDocument();
+    expect(screen.getByTestId("spinner")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Session 1" }),
     ).toBeInTheDocument();
+  });
+
+  it("says which sessions have a run that finished or failed unseen", () => {
+    render(
+      <DialogProvider disableRouterSync>
+        <SessionsWindowContent
+          projectId="project-1"
+          runStates={
+            new Map([
+              ["session-1", "finished"],
+              ["session-2", "failed"],
+            ])
+          }
+        />
+      </DialogProvider>,
+    );
+
+    expect(
+      screen.getByRole("button", { name: /^Session 1\W+Finished$/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: /^Feature exploration\W+Last run failed$/,
+      }),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("spinner")).toBeNull();
   });
 
   it("numbers an unnamed session and shows a named one by its name", () => {
