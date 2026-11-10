@@ -24,7 +24,7 @@ export function LinkRepositoryDialog({
       <DialogHeader>
         <DialogTitle>Link a repository</DialogTitle>
         <DialogDescription>
-          Link a public GitHub repository, or one folder in it, to this project.
+          Link a GitHub repository, or one folder in it, to this project.
         </DialogDescription>
       </DialogHeader>
       <RepositoryLinkForm

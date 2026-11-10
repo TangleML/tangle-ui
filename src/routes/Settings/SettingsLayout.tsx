@@ -44,6 +44,12 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
     icon: "Lock",
     testId: "settings-nav-secrets",
   },
+  {
+    to: "/settings/github",
+    label: "GitHub",
+    icon: "FolderGit2",
+    testId: "settings-nav-github",
+  },
 ];
 
 const AGENT_ITEM: SidebarItem = {

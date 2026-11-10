@@ -1,3 +1,4 @@
+import { repositoryLinkedMetadata } from "@/components/Project/repositoryLinkTracking";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { RUN_FILTER_SEARCH_PARAM } from "@/hooks/useRunSearchParams";
@@ -51,7 +52,7 @@ type ResourceDialogConfig<TProps> = DialogConfig<
   CreateResourceInput,
   TProps
 > & {
-  onSuccess?: () => void;
+  onSuccess?: (created: CreateResourceInput) => void;
 };
 
 function identityOf(metadata: Record<string, unknown> | null | undefined) {
@@ -126,7 +127,7 @@ export function AddResourceButton({
       return;
     }
 
-    createResource(result, { onSuccess });
+    createResource(result, { onSuccess: () => onSuccess?.(result) });
   }
 
   function handleAddPipeline() {
@@ -160,7 +161,11 @@ export function AddResourceButton({
       props: { resources },
       routeKey: "link-repository",
       size: "md",
-      onSuccess: () => track("projects.link_repository_completed"),
+      onSuccess: (linked) =>
+        track(
+          "projects.link_repository_completed",
+          repositoryLinkedMetadata(linked),
+        ),
     });
   }
 

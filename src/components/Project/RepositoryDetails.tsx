@@ -1,3 +1,5 @@
+import { Badge } from "@/components/ui/badge";
+import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/typography";
 import {
   isCommitSha,
@@ -12,7 +14,7 @@ interface RepositoryDetailsProps {
 }
 
 export function RepositoryDetails({ repository }: RepositoryDetailsProps) {
-  const { owner, repo, ref, path } = repository;
+  const { owner, repo, ref, path, isPrivate } = repository;
 
   return (
     <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1 text-left">
@@ -20,7 +22,13 @@ export function RepositoryDetails({ repository }: RepositoryDetailsProps) {
         Repository
       </Text>
       <Text as="dd" size="sm" className="break-all">
-        {`${owner}/${repo}`}
+        <span>{`${owner}/${repo}`}</span>
+        {isPrivate && (
+          <Badge size="sm" variant="secondary" className="ml-2 align-middle">
+            <Icon name="Lock" size="xs" />
+            Private
+          </Badge>
+        )}
       </Text>
 
       <Text as="dt" size="sm" tone="subdued">

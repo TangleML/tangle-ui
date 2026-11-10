@@ -17,6 +17,10 @@ vi.mock("@/providers/AnalyticsProvider", () => ({
   useAnalytics: () => ({ track: vi.fn() }),
 }));
 
+vi.mock("@/providers/BackendProvider", () => ({
+  useBackend: () => ({ available: false, backendUrl: "" }),
+}));
+
 vi.mock("@/services/localPipelines/useLocalPipelines", () => ({
   useLocalPipelineNames: () => ({
     data: ["Churn model"],
