@@ -9,6 +9,7 @@ import {
   type DockState,
   isDockSide,
   type Position,
+  type SnapPreviewType,
   type WindowOptions,
   type WindowRef,
 } from "./types";
@@ -19,6 +20,19 @@ import { buildWindowModelInit } from "./windowStore.utils";
 
 function generateWindowId(): string {
   return `window-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+/** Whether two previews would land a window in the same place. */
+function samePreview(
+  a: SnapPreviewType | null,
+  b: SnapPreviewType | null,
+): boolean {
+  if (a === null || b === null) return a === b;
+  if (a.type !== b.type || a.side !== b.side) return false;
+  return (
+    a.type !== "dock-insert" ||
+    (b.type === "dock-insert" && a.insertIndex === b.insertIndex)
+  );
 }
 
 export class WindowStoreImpl implements WindowStoreRef {
@@ -46,9 +60,47 @@ export class WindowStoreImpl implements WindowStoreRef {
     },
   };
   @observable accessor enabledDockSides: Set<"left" | "right"> = new Set();
+  /** The window being dragged and where it would land, for drop targets. */
+  @observable.ref accessor windowDrag: {
+    windowId: string;
+    preview: SnapPreviewType | null;
+  } | null = null;
+  /** The side whose dock is open as a popover, if any. */
+  @observable accessor openDockPopoverSide: "left" | "right" | null = null;
 
   constructor() {
     makeObservable(this);
+  }
+
+  // -- Dragging --
+
+  @action beginWindowDrag(windowId: string): void {
+    this.windowDrag = { windowId, preview: null };
+  }
+
+  @action setWindowDragPreview(preview: SnapPreviewType | null): void {
+    if (!this.windowDrag || samePreview(this.windowDrag.preview, preview)) {
+      return;
+    }
+    this.windowDrag = { ...this.windowDrag, preview };
+  }
+
+  @action endWindowDrag(): void {
+    this.windowDrag = null;
+  }
+
+  // -- Dock popovers --
+
+  @action setDockPopoverOpen(side: "left" | "right", open: boolean): void {
+    if (open) {
+      this.openDockPopoverSide = side;
+    } else if (this.openDockPopoverSide === side) {
+      this.openDockPopoverSide = null;
+    }
+  }
+
+  isDockPopoverOpen(side: "left" | "right"): boolean {
+    return this.openDockPopoverSide === side;
   }
 
   private calculateNewPosition(): Position {
