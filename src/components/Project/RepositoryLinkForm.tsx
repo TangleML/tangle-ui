@@ -1,4 +1,4 @@
-import { skipToken, useQuery } from "@tanstack/react-query";
+import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 
 import { InfoBox } from "@/components/shared/InfoBox";
@@ -9,11 +9,18 @@ import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
+import { useBackend } from "@/providers/BackendProvider";
 import {
   isProblemWithUrl,
+  RepositoryLinkError,
+  type RepositoryLinkProblem,
   repositoryUrl,
-  resolveRepositoryUrl,
 } from "@/services/github/repositoryUrl";
+import {
+  resolveRepositoryLink,
+  type TokenAccess,
+} from "@/services/github/resolveRepositoryLink";
+import { gitHubTokenStatusQuery } from "@/services/github/useGitHubToken";
 import {
   repositoryName,
   repositoryResourceInput,
@@ -27,29 +34,66 @@ import { MINUTES } from "@/utils/constants";
 import { getErrorMessage } from "@/utils/string";
 import { tracking } from "@/utils/tracking";
 
+import { GitHubSettingsLink } from "./GitHubSettingsLink";
+import { RepositoryAccessNotice } from "./RepositoryAccessNotice";
 import { RepositoryDetails } from "./RepositoryDetails";
 
 const URL_FIELD_ID = "link-repository-url";
 const URL_HINT_ID = "link-repository-url-hint";
 const CHECK_ERROR_ID = "link-repository-check-error";
 
-async function checkRepository(url: string) {
-  const repository = await resolveRepositoryUrl(url);
+async function checkRepository(url: string, access: TokenAccess | null) {
+  const { repository, tokensSupported } = await resolveRepositoryLink(
+    url,
+    access,
+  );
   return {
     repository,
+    tokensSupported,
     url: repositoryUrl(repository),
     input: repositoryResourceInput(repository),
   };
 }
 
+function useTokenAccess(): TokenAccess | null {
+  const { available, backendUrl } = useBackend();
+  const queryClient = useQueryClient();
+  if (!available) return null;
+
+  return {
+    backendUrl,
+    readTokenSupport: () =>
+      queryClient.fetchQuery({
+        ...gitHubTokenStatusQuery(backendUrl),
+        staleTime: 0,
+      }),
+  };
+}
+
 function useRepositoryCheck(url: string | null) {
+  const access = useTokenAccess();
   return useQuery({
-    queryKey: ["github", "repository-link", url],
-    queryFn: url === null ? skipToken : () => checkRepository(url),
+    queryKey: ["github", "repository-link", access?.backendUrl ?? null, url],
+    queryFn: url === null ? skipToken : () => checkRepository(url, access),
     retry: false,
     staleTime: 5 * MINUTES,
     refetchOnWindowFocus: false,
   });
+}
+
+const SETTINGS_HINT_LEAD: Partial<Record<RepositoryLinkProblem, string>> = {
+  token_unusable: "Check it in ",
+  rate_limited: "To look it up with your own GitHub token, choose one in ",
+};
+
+function GitHubSettingsHint({ error }: { error: RepositoryLinkError }) {
+  return (
+    <Text size="sm">
+      {SETTINGS_HINT_LEAD[error.problem] ??
+        "To link private repositories, choose a GitHub token in "}
+      <GitHubSettingsLink />.
+    </Text>
+  );
 }
 
 interface RepositoryLinkFormProps {
@@ -137,7 +181,7 @@ export function RepositoryLinkForm({
             </Button>
           </InlineStack>
           <Text id={URL_HINT_ID} size="xs" tone="subdued">
-            A public GitHub repository, or one folder in it.
+            A GitHub repository, or one folder in it.
           </Text>
         </BlockStack>
 
@@ -151,15 +195,26 @@ export function RepositoryLinkForm({
 
           {!isFetching && error && (
             <InfoBox title="Can't link this repository" variant="error">
-              <Text id={CHECK_ERROR_ID} size="sm">
-                {getErrorMessage(error)}
-              </Text>
+              <BlockStack gap="1">
+                <Text id={CHECK_ERROR_ID} size="sm">
+                  {getErrorMessage(error)}
+                </Text>
+                {error instanceof RepositoryLinkError && error.needsToken && (
+                  <GitHubSettingsHint error={error} />
+                )}
+              </BlockStack>
             </InfoBox>
           )}
 
           {!isFetching && checked && (
             <>
               <RepositoryDetails repository={checked.repository} />
+              {!alreadyLinked && (
+                <RepositoryAccessNotice
+                  repository={checked.repository}
+                  tokensSupported={checked.tokensSupported}
+                />
+              )}
               {alreadyLinked && (
                 <InfoBox title="Already linked" variant="info">
                   {`${repositoryName(checked.repository)} is already linked to this project.`}
