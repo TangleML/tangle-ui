@@ -7,19 +7,19 @@ import type { DockState } from "@/routes/v2/shared/windows/types";
 import { WindowStoreImpl } from "@/routes/v2/shared/windows/windowStore";
 
 import { useFindProjectCard } from "./useFindProjectCard";
-import { requestProjectSearchFocus } from "./useProjectSearchFocus";
 import { PROJECT_CARD_WINDOW_ID } from "./useTangentProjectWindows";
 
 const stores = vi.hoisted(() => ({
   windows: undefined as WindowStoreImpl | undefined,
 }));
+const requestSearchFocus = vi.hoisted(() => vi.fn());
 
 vi.mock("@/routes/v2/shared/store/SharedStoreContext", () => ({
   useSharedStores: () => ({ windows: stores.windows }),
 }));
 
-vi.mock("./useProjectSearchFocus", () => ({
-  requestProjectSearchFocus: vi.fn(),
+vi.mock("@/routes/v2/pages/Tangent/context/TangentProjectContext", () => ({
+  useTangentProject: () => ({ requestSearchFocus }),
 }));
 
 vi.mock("@/routes/v2/pages/Tangent/components/ProjectsWindowContent", () => ({
@@ -52,7 +52,7 @@ function cardDocked(dockState: DockState) {
 }
 
 describe("useFindProjectCard", () => {
-  beforeEach(() => vi.mocked(requestProjectSearchFocus).mockClear());
+  beforeEach(() => requestSearchFocus.mockClear());
   afterEach(() => document.body.replaceChildren());
 
   it("opens and closes the popover while the card is in it", () => {
@@ -60,7 +60,7 @@ describe("useFindProjectCard", () => {
 
     pressShortcut();
     expect(windows.isDockPopoverOpen("right")).toBe(true);
-    expect(requestProjectSearchFocus).toHaveBeenCalledTimes(1);
+    expect(requestSearchFocus).toHaveBeenCalledTimes(1);
 
     pressShortcut();
     expect(windows.isDockPopoverOpen("right")).toBe(false);
@@ -77,7 +77,7 @@ describe("useFindProjectCard", () => {
     expect(windows.getWindowById(PROJECT_CARD_WINDOW_ID)?.isMinimized).toBe(
       false,
     );
-    expect(requestProjectSearchFocus).toHaveBeenCalledTimes(1);
+    expect(requestSearchFocus).toHaveBeenCalledTimes(1);
     expect(windows.isDockPopoverOpen("right")).toBe(false);
   });
 
@@ -101,6 +101,6 @@ describe("useFindProjectCard", () => {
     pressShortcut();
 
     expect(windows.isDockPopoverOpen("right")).toBe(false);
-    expect(requestProjectSearchFocus).not.toHaveBeenCalled();
+    expect(requestSearchFocus).not.toHaveBeenCalled();
   });
 });

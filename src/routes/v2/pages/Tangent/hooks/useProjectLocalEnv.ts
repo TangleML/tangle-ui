@@ -1,6 +1,6 @@
+import { SocketEvents } from "@tangent/shared/contracts.ts";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { io } from "socket.io-client";
 
 import { userQueryOptions } from "@/hooks/useUserDetails";
 import { useRemoteEnvAuthToken } from "@/routes/v2/pages/Tangent/hooks/useRemoteEnvAuthToken";
@@ -8,10 +8,8 @@ import {
   listTangentEnvironments,
   type TangentEnvironment,
 } from "@/routes/v2/pages/Tangent/services/listTangentEnvironments";
-import { getTangentSocketConfig } from "@/routes/v2/pages/Tangent/services/socketConfig";
+import { connectTangentSocket } from "@/routes/v2/pages/Tangent/services/socketConfig";
 import { isVscodeEnvironment } from "@/routes/v2/pages/Tangent/services/vscodeConnect";
-
-const ENVIRONMENT_UPDATE_EVENT = "environment:update";
 
 const ENVIRONMENTS_QUERY_SCOPE = ["tangent", "environments"] as const;
 
@@ -68,12 +66,8 @@ export function useProjectLocalEnv(
     if (!baseUrl) return;
 
     const projectSessionIds = new Set(sessionIds);
-    const { socketUrl, socketPath } = getTangentSocketConfig(baseUrl);
-    const socket = io(socketUrl, {
-      path: socketPath,
-      auth: authToken ? { token: authToken } : {},
-    });
-    socket.on(ENVIRONMENT_UPDATE_EVENT, (payload: unknown) => {
+    const socket = connectTangentSocket(baseUrl, authToken);
+    socket.on(SocketEvents.EnvironmentUpdate, (payload: unknown) => {
       const sessionId = broadcastSessionId(payload);
       if (sessionId && !projectSessionIds.has(sessionId)) return;
 

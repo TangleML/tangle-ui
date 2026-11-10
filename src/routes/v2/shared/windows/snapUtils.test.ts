@@ -1,10 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import {
-  detectSnapPreview,
-  registerDockTargetElement,
-  setDockTargetSide,
-} from "./snapUtils";
+import { detectSnapPreview, registerDockTargetElement } from "./snapUtils";
 
 function buttonAt(left: number, top: number): HTMLElement {
   const button = document.createElement("button");
@@ -20,25 +16,21 @@ function previewAt(x: number, y: number) {
     mousePosition: { x, y },
     dockAreaWindowIds: { left: [], right: [] },
     enabledDockSides: new Set(["left", "right"]),
+    popoverDockSides: new Set(["right"]),
   });
 }
 
 describe("dock targets", () => {
-  afterEach(() => {
-    setDockTargetSide("right", false);
-    registerDockTargetElement("right", null);
-  });
+  afterEach(() => registerDockTargetElement("right", null));
 
-  it("drops a window over a dock's button into that dock", () => {
-    setDockTargetSide("right", true);
+  it("drops a window over a popover dock's button into that dock", () => {
     registerDockTargetElement("right", buttonAt(900, 10));
 
     expect(previewAt(910, 20)).toEqual({ type: "dock-target", side: "right" });
     expect(previewAt(600, 20)).toBeNull();
   });
 
-  it("never docks a window to a button's side at the screen edge", () => {
-    setDockTargetSide("right", true);
+  it("never docks a window to a popover dock's side at the screen edge", () => {
     registerDockTargetElement("right", buttonAt(900, 10));
 
     expect(previewAt(window.innerWidth - 1, 300)).toBeNull();
@@ -46,8 +38,6 @@ describe("dock targets", () => {
   });
 
   it("takes nothing on that side while its button isn't on screen", () => {
-    setDockTargetSide("right", true);
-
     expect(previewAt(window.innerWidth - 1, 300)).toBeNull();
   });
 });

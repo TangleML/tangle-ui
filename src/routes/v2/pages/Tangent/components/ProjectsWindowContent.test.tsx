@@ -109,8 +109,8 @@ vi.mock("@/routes/v2/pages/Tangent/hooks/useProjectSessions", () => ({
   useSessionsOfProjects: vi.fn(),
 }));
 
-vi.mock("./SessionsWindowContent", () => ({
-  SessionsWindowContent: ({
+vi.mock("./ProjectSessionList", () => ({
+  ProjectSessionList: ({
     projectId,
     onlySessionIds,
   }: {

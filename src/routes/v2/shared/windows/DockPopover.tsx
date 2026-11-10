@@ -8,17 +8,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useDismissOnOutsidePress } from "@/hooks/useDismissOnOutsidePress";
 import { cn } from "@/lib/utils";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { tracking } from "@/utils/tracking";
 
 import { PopoverWindow } from "./components/PopoverWindow";
-import { registerDockTargetElement, setDockTargetSide } from "./snapUtils";
-
-// Menus and dialogs a window opens are portaled outside the popover, so working
-// in one is not a click away from it.
-const LAYERS_OPENED_FROM_POPOVER =
-  '[role="menu"], [role="dialog"], [role="alertdialog"], [role="listbox"], [data-radix-popper-content-wrapper]';
+import { registerDockTargetElement } from "./snapUtils";
 
 interface DockPopoverProps {
   side: "left" | "right";
@@ -46,47 +42,24 @@ export const DockPopover = observer(function DockPopover({
   const docked = windows
     .getDockedWindowOrder(side)
     .filter((id) => windows.getWindowById(id)?.state !== "hidden");
-  const dragging = windows.windowDrag !== null;
-  const preview = windows.windowDrag?.preview;
-  const targeted = preview?.type === "dock-target" && preview.side === side;
+  const dragging = windows.isDraggingWindow;
+  const targeted = windows.dropTargetSide === side;
   const open = windows.isDockPopoverOpen(side) && docked.length > 0;
+  const close = () => windows.setDockPopoverOpen(side, false);
 
   useEffect(() => {
-    windows.enableDockSide(side);
-    setDockTargetSide(side, true);
+    windows.enablePopoverDock(side);
     return () => {
-      windows.disableDockSide(side);
-      setDockTargetSide(side, false);
+      windows.disablePopoverDock(side);
       registerDockTargetElement(side, null);
     };
   }, [windows, side]);
 
-  // A window dragged out of the popover needs the page behind it.
-  useEffect(() => {
-    if (dragging) windows.setDockPopoverOpen(side, false);
-  }, [windows, side, dragging]);
-
-  // Radix listens for outside presses as they bubble, but a pipeline canvas
-  // stops them first and a frame never sends them up at all, so this listens
-  // ahead of the canvas and closes when focus leaves the page for a frame.
-  useEffect(() => {
-    if (!open) return;
-    const close = () => windows.setDockPopoverOpen(side, false);
-    const closeIfOutside = (event: PointerEvent) => {
-      const target = event.target;
-      if (!(target instanceof Element)) return;
-      if (contentRef.current?.contains(target)) return;
-      if (triggerRef.current?.contains(target)) return;
-      if (target.closest(LAYERS_OPENED_FROM_POPOVER)) return;
-      close();
-    };
-    document.addEventListener("pointerdown", closeIfOutside, true);
-    window.addEventListener("blur", close);
-    return () => {
-      document.removeEventListener("pointerdown", closeIfOutside, true);
-      window.removeEventListener("blur", close);
-    };
-  }, [windows, side, open]);
+  useDismissOnOutsidePress({
+    open,
+    refs: [triggerRef, contentRef],
+    onDismiss: close,
+  });
 
   if (docked.length === 0 && !dragging) return null;
 
@@ -95,7 +68,6 @@ export const DockPopover = observer(function DockPopover({
     .filter(Boolean)
     .join(", ");
   const label = titles || "Drop a window here";
-  const close = () => windows.setDockPopoverOpen(side, false);
 
   return (
     <Popover

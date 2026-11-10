@@ -50,16 +50,11 @@ describe("DockPopover", () => {
     renderPopover();
     expect(screen.queryByRole("button")).toBeNull();
 
-    act(() => stores.windows?.beginWindowDrag("projects"));
+    act(() => stores.windows?.beginWindowDrag());
     const button = screen.getByRole("button", { name: "Drop a window here" });
     expect(button).toHaveAttribute("data-drop-target", "ready");
 
-    act(() =>
-      stores.windows?.setWindowDragPreview({
-        type: "dock-target",
-        side: "right",
-      }),
-    );
+    act(() => stores.windows?.setDropTargetSide("right"));
     expect(button).toHaveAttribute("data-drop-target", "active");
 
     act(() => stores.windows?.endWindowDrag());
@@ -104,7 +99,7 @@ describe("DockPopover", () => {
     renderPopover();
 
     await user.click(screen.getByRole("button", { name: "Project contents" }));
-    act(() => stores.windows?.beginWindowDrag("card"));
+    act(() => stores.windows?.beginWindowDrag());
 
     expect(screen.queryByText("Project contents body")).toBeNull();
   });

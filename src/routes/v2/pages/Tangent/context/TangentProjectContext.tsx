@@ -1,7 +1,7 @@
 import { useTangent } from "@tangent/embed-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect } from "react";
 
 import {
   createRequiredContext,
@@ -10,6 +10,7 @@ import {
 import useToastNotification from "@/hooks/useToastNotification";
 import { readTangentSessionParam } from "@/routes/tangentSearch";
 import { useBackfillSessionTags } from "@/routes/v2/pages/Tangent/hooks/useBackfillSessionTags";
+import { useBuiltFor } from "@/routes/v2/pages/Tangent/hooks/useBuiltFor";
 import { usePrepareProjectArrival } from "@/routes/v2/pages/Tangent/hooks/usePrepareProjectArrival";
 import { useProjectSessions } from "@/routes/v2/pages/Tangent/hooks/useProjectSessions";
 import { useProjectSharedFolder } from "@/routes/v2/pages/Tangent/hooks/useProjectSharedFolder";
@@ -47,12 +48,7 @@ function useProjectStore(
     if (seed.askedSessionId) store.selectSession(seed.askedSessionId);
     return store;
   };
-  const [store, setStore] = useState(create);
-  if (store.projectId === projectId) return store;
-
-  const next = create();
-  setStore(next);
-  return next;
+  return useBuiltFor(projectId, create);
 }
 
 export function TangentProjectProvider({

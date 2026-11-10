@@ -28,7 +28,6 @@ export function ProjectAbout({
 
 interface FieldAppearance {
   label?: ReactNode;
-  labelClassName?: string;
   placeholder?: string;
   className?: string;
 }
@@ -95,7 +94,6 @@ export function ProjectInstructionsField({
 
 interface EditableTextProps {
   label: ReactNode;
-  labelClassName?: string;
   placeholder: string;
   className?: string;
   hint?: string;
@@ -106,7 +104,6 @@ interface EditableTextProps {
 
 function EditableText({
   label,
-  labelClassName,
   placeholder,
   className,
   hint,
@@ -131,9 +128,7 @@ function EditableText({
 
   return (
     <BlockStack gap="2">
-      <Label htmlFor={id} className={labelClassName}>
-        {label}
-      </Label>
+      <Label htmlFor={id}>{label}</Label>
       <Textarea
         id={id}
         value={draft}
