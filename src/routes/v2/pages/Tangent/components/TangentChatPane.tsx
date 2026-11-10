@@ -36,6 +36,7 @@ interface TangentChatPaneProps {
   onOpenArtifact?: (url: string, title: string) => void;
   onSendPrompt?: (content: string) => void;
   onError?: (message: string) => void;
+  onResourcesChange?: () => void;
   headerAction?: ReactNode;
 }
 
@@ -56,6 +57,7 @@ export function TangentChatPane({
   onOpenArtifact,
   onSendPrompt,
   onError,
+  onResourcesChange,
   headerAction,
 }: TangentChatPaneProps) {
   return (
@@ -104,6 +106,7 @@ export function TangentChatPane({
             onOpenArtifact={onOpenArtifact}
             onSendPrompt={onSendPrompt}
             onError={onError}
+            onResourcesChange={onResourcesChange}
           />
         </TabsContent>
         {tabs.map((tab) => (
@@ -124,6 +127,7 @@ export function TangentChatPane({
               onOpenArtifact={onOpenArtifact}
               onSendPrompt={onSendPrompt}
               onError={onError}
+              onResourcesChange={onResourcesChange}
             />
           </TabsContent>
         ))}

@@ -13,10 +13,11 @@ import { getErrorMessage } from "@/utils/string";
 /**
  * What's been archived out of the project's card, by workarea target. It's
  * kept on the project, so everyone sees the same card and the agent can
- * archive and restore too.
+ * archive and restore too. Someone else may have archived something, so the
+ * project is read again each time the card opens.
  */
 export function useArchivedProjectItems(projectId: string) {
-  const { data: project } = useProject(projectId);
+  const { data: project } = useProject(projectId, { refetchOnMount: "always" });
   const queryClient = useQueryClient();
   const notify = useToastNotification();
   const archived = new Set(archivedTargets(project?.metadata));

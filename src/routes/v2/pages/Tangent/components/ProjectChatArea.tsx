@@ -9,6 +9,7 @@ import { ProjectSettingsButton } from "@/routes/v2/pages/Tangent/components/Proj
 import { TangentChatPane } from "@/routes/v2/pages/Tangent/components/TangentChatPane";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { useChatReferences } from "@/routes/v2/pages/Tangent/hooks/useChatReferences";
+import { useRefreshSessionResources } from "@/routes/v2/pages/Tangent/hooks/useRefreshSessionResources";
 import { AiProviderSetup } from "@/routes/v2/shared/components/AiChat/components/AiProviderSetup";
 import { TANGENT_AI_SETUP } from "@/routes/v2/shared/components/AiChat/components/aiSetupCopy";
 import { ChatEntityRevealProvider } from "@/routes/v2/shared/components/AiChat/components/ChatEntityRevealContext";
@@ -18,6 +19,7 @@ export const ProjectChatArea = observer(function ProjectChatArea() {
   const notify = useToastNotification();
   const { isConfigured } = useAiProviderSettings();
   const references = useChatReferences(store.projectId);
+  const refreshSessionResources = useRefreshSessionResources(store.projectId);
   const activeSessionId = store.activeSessionId;
 
   // Ahead of the session states: without a provider there is nothing to say to
@@ -69,6 +71,7 @@ export const ProjectChatArea = observer(function ProjectChatArea() {
         onOpenArtifact={(url, title) => store.openArtifactTab(url, title)}
         onSendPrompt={(content) => store.recordSessionPrompt(content)}
         onError={(message) => notify(message, "error")}
+        onResourcesChange={() => refreshSessionResources(activeSessionId)}
         headerAction={<ProjectSettingsButton />}
       />
     </ChatEntityRevealProvider>
