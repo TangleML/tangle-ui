@@ -1,5 +1,8 @@
 import type { IconName } from "@/components/ui/icon";
-import { namesLocalPipeline } from "@/services/projects/resourceDescriptor";
+import {
+  namesLocalPipeline,
+  namesRepository,
+} from "@/services/projects/resourceDescriptor";
 import {
   conceptForEntity,
   resourceMeta,
@@ -61,11 +64,16 @@ export function resourceKindLabel(
  * its own, so removing it cannot destroy one.
  */
 export const removingDestroys = (resource: ResourceRowShape) =>
-  resource.entityId === null && !namesLocalPipeline(resource);
+  resource.entityId === null &&
+  !namesLocalPipeline(resource) &&
+  !namesRepository(resource);
 
 export function removalConsequence(resource: ResourceRowShape) {
   if (namesLocalPipeline(resource)) {
     return "This only takes it out of this project. The pipeline itself is not deleted and stays in the browser that holds it.";
+  }
+  if (namesRepository(resource)) {
+    return "This only takes it out of this project. The repository stays on GitHub.";
   }
   if (removingDestroys(resource)) {
     return "This is the only copy, so deleting it here deletes it for good.";

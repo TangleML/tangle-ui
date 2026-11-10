@@ -15,6 +15,8 @@ import {
   describeResource,
   DOCUMENT,
   INSTRUCTIONS,
+  REPOSITORY,
+  repositoryUrlOf,
 } from "@/services/projects/resourceDescriptor";
 import {
   conceptForDescriptorType,
@@ -46,6 +48,7 @@ interface ProjectResourceItem {
   icon: IconName;
   description: string;
   target?: WorkareaTarget;
+  externalUrl?: string;
 }
 
 const BACKEND_PIPELINE_META = {
@@ -118,6 +121,18 @@ function toResourceItem(
           description: meta.label,
         }
       : { id: resource.id, name: resource.name ?? UNTITLED, ...OTHER_META };
+  }
+
+  if (described.type === REPOSITORY) {
+    const { icon, label } = resourceMeta("repository");
+    const externalUrl = repositoryUrlOf(resource);
+    return {
+      id: resource.id,
+      name: resource.name ?? externalUrl ?? UNTITLED,
+      icon,
+      description: label,
+      externalUrl,
+    };
   }
 
   // A descriptor naming a type this version does not know describes something
@@ -194,8 +209,17 @@ export function ResourcesWindowContent() {
             description={resource.description}
             disabled={!resource.target}
             testId={`open-resource-${resource.id}`}
-            onOpen={() => void handleOpenResource(resource)}
-            {...tracking("projects.open_from_details_panel")}
+            {...(resource.externalUrl
+              ? {
+                  externalHref: resource.externalUrl,
+                  ...tracking("projects.open_repository", {
+                    surface: "resources_window",
+                  }),
+                }
+              : {
+                  onOpen: () => void handleOpenResource(resource),
+                  ...tracking("projects.open_from_details_panel"),
+                })}
             action={
               <Button
                 variant="ghost"

@@ -8,11 +8,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
+import { resourceMeta } from "@/services/projects/resourceMeta";
 import type { ProjectResourceSummary } from "@/services/projects/types";
 import { tracking } from "@/utils/tracking";
 
 import { AddDocumentDialog } from "./AddDocumentDialog";
 import { AddPipelineDialog } from "./AddPipelineDialog";
+import { LinkRepositoryDialog } from "./LinkRepositoryDialog";
 import { entityIcon } from "./resourceEntities";
 
 interface AddResourceMenuProps {
@@ -25,6 +27,7 @@ export function AddResourceMenu({
   resources,
 }: AddResourceMenuProps) {
   const [documentOpen, setDocumentOpen] = useState(false);
+  const [repositoryOpen, setRepositoryOpen] = useState(false);
   const [pipelineOpen, setPipelineOpen] = useState(false);
 
   return (
@@ -51,6 +54,14 @@ export function AddResourceMenu({
           </DropdownMenuItem>
 
           <DropdownMenuItem
+            onSelect={() => setRepositoryOpen(true)}
+            {...tracking("projects.link_repository_open")}
+          >
+            <Icon name={resourceMeta("repository").icon} size="sm" />
+            Repository
+          </DropdownMenuItem>
+
+          <DropdownMenuItem
             onSelect={() => setPipelineOpen(true)}
             {...tracking("projects.add_pipeline_open")}
           >
@@ -64,6 +75,13 @@ export function AddResourceMenu({
         projectId={projectId}
         open={documentOpen}
         onOpenChange={setDocumentOpen}
+      />
+
+      <LinkRepositoryDialog
+        projectId={projectId}
+        resources={resources}
+        open={repositoryOpen}
+        onOpenChange={setRepositoryOpen}
       />
 
       {/* Mounted only while open so the project page does not read browser

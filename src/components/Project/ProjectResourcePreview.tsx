@@ -16,11 +16,16 @@ import {
 } from "@/routes/editorRoutes";
 import { PROJECT_ID_SEARCH_PARAM } from "@/routes/projectRunSearch";
 import { getDefaultRunPath } from "@/routes/runRoutes";
+import {
+  type RepositoryLocation,
+  repositoryUrl,
+} from "@/services/github/repositoryUrl";
 import type { LocalPipelinePointer } from "@/services/localPipelines/types";
 import { useLocalPipeline } from "@/services/localPipelines/useLocalPipelines";
 import { UNTITLED } from "@/services/projects/placeholderNames";
 import {
   describeResource,
+  linkedRepositoryOf,
   localPipelinePointerOf,
   PIPELINE_RUN,
 } from "@/services/projects/resourceDescriptor";
@@ -34,6 +39,7 @@ import { componentSpecToText } from "@/utils/yaml";
 
 import { ColumnHeadingRow } from "./ColumnHeadingRow";
 import { type PipelineValidity, pipelineValidity } from "./pipelineValidity";
+import { RepositoryDetails } from "./RepositoryDetails";
 import { RunPipelineButton } from "./RunPipelineButton";
 
 const CONTENT_KEY = "content";
@@ -151,6 +157,11 @@ function SelectedResource({ projectId, resourceId }: SelectedResourceProps) {
     );
   }
 
+  const repository = linkedRepositoryOf(resource);
+  if (repository) {
+    return <RepositoryPreview repository={repository} />;
+  }
+
   const described = describeResource(resource);
   if (described?.type === PIPELINE_RUN) {
     const target = described.target;
@@ -191,6 +202,36 @@ function RunPreview({ runId }: { runId: string | null }) {
           </Button>
         )}
       </BlockStack>
+    </Placeholder>
+  );
+}
+
+function RepositoryPreview({ repository }: { repository: RepositoryLocation }) {
+  return (
+    <Placeholder>
+      <EmptyState
+        icon={resourceMeta("repository").icon}
+        title="Repository on GitHub"
+        description="Its files are not shown here. Open it on GitHub to browse them."
+        className="max-w-md"
+      >
+        <BlockStack gap="4" inlineAlign="center">
+          <RepositoryDetails repository={repository} />
+          <Button variant="outline" size="sm" asChild>
+            <a
+              href={repositoryUrl(repository)}
+              target="_blank"
+              rel="noopener noreferrer"
+              {...tracking("projects.open_repository", {
+                surface: "resource_preview",
+              })}
+            >
+              <Icon name="ExternalLink" size="xs" />
+              Open on GitHub
+            </a>
+          </Button>
+        </BlockStack>
+      </EmptyState>
     </Placeholder>
   );
 }

@@ -504,6 +504,74 @@ describe("ProjectResourcePreview", () => {
     });
   });
 
+  describe("a linked repository", () => {
+    const linked = (payload: Record<string, unknown>) =>
+      mockResource({
+        name: "TangleML/pipeline_components",
+        metadata: {
+          type: "repository",
+          url: "https://github.com/TangleML/pipeline_components",
+        },
+        payload: {
+          owner: "TangleML",
+          repo: "pipeline_components",
+          ref: null,
+          path: null,
+          ...payload,
+        },
+      });
+
+    const openOnGitHub = () =>
+      screen.getByRole("link", { name: "Open on GitHub" });
+
+    it("shows the repository, branch and folder it links", () => {
+      linked({ ref: "master", path: "components/data" });
+      renderPreview("resource-1");
+
+      expect(screen.getByText("TangleML/pipeline_components")).toBeVisible();
+      expect(screen.getByText("Branch")).toBeVisible();
+      expect(screen.getByText("master")).toBeVisible();
+      expect(screen.getByText("components/data")).toBeVisible();
+      expect(screen.queryByTestId("code-viewer")).toBeNull();
+    });
+
+    it("opens what it links on GitHub, in a new tab", () => {
+      linked({ ref: "master", path: "components/data" });
+      renderPreview("resource-1");
+
+      expect(openOnGitHub()).toHaveAttribute(
+        "href",
+        "https://github.com/TangleML/pipeline_components/tree/master/components/data",
+      );
+      expect(openOnGitHub()).toHaveAttribute("target", "_blank");
+      expect(openOnGitHub()).toHaveAttribute("rel", "noopener noreferrer");
+      expect(openOnGitHub()).toHaveAttribute(
+        "data-tracking-id",
+        "projects.open_repository",
+      );
+    });
+
+    it("says when it follows the default branch across the whole repository", () => {
+      linked({});
+      renderPreview("resource-1");
+
+      expect(screen.getByText("Default branch")).toBeVisible();
+      expect(screen.getByText("Whole repository")).toBeVisible();
+      expect(openOnGitHub()).toHaveAttribute(
+        "href",
+        "https://github.com/TangleML/pipeline_components",
+      );
+    });
+
+    it("calls a pinned commit a commit", () => {
+      linked({ ref: "0123456789abcdef0123456789abcdef01234567" });
+      renderPreview("resource-1");
+
+      expect(screen.getByText("Commit")).toBeVisible();
+      expect(screen.queryByText("Branch")).toBeNull();
+    });
+  });
+
   it("dumps an unfamiliar payload as yaml rather than nothing", () => {
     mockResource({
       entity: "dataset",

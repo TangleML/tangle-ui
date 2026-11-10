@@ -1,8 +1,14 @@
 import type { IconName } from "@/components/ui/icon";
 
-import { DOCUMENT, LOCAL_PIPELINE, PIPELINE_RUN } from "./resourceDescriptor";
+import {
+  DOCUMENT,
+  LOCAL_PIPELINE,
+  PIPELINE_RUN,
+  REPOSITORY,
+} from "./resourceDescriptor";
 
-export type ResourceConcept = "pipeline" | "run" | "document" | "session";
+export type ResourceConcept =
+  "pipeline" | "run" | "document" | "repository" | "session";
 
 interface ResourceMeta {
   icon: IconName;
@@ -21,6 +27,7 @@ const RESOURCE_META: Record<ResourceConcept, ResourceMeta> = {
   pipeline: { icon: "GitBranch", label: "Pipeline" },
   run: { icon: "Play", label: "Pipeline run" },
   document: { icon: "FileText", label: "Document" },
+  repository: { icon: "FolderGit2", label: "Repository" },
   session: { icon: "MessageSquare", label: "Session" },
 };
 
@@ -40,6 +47,7 @@ const DESCRIPTOR_CONCEPTS: Record<string, ResourceConcept> = {
   [LOCAL_PIPELINE]: "pipeline",
   [PIPELINE_RUN]: "run",
   [DOCUMENT]: "document",
+  [REPOSITORY]: "repository",
 };
 
 export const conceptForDescriptorType = (

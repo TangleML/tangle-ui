@@ -1,19 +1,28 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { remotePipelineResourceInput } from "@/services/projects/pipelineResource";
-import { localPipelineResourceInput } from "@/services/projects/resourceDescriptor";
+import {
+  localPipelineResourceInput,
+  repositoryResourceInput,
+} from "@/services/projects/resourceDescriptor";
 import type {
   CreateResourceInput,
   ProjectResourceSummary,
 } from "@/services/projects/types";
 
 import { AddResourceButton } from "./AddResourceButton";
+import { LinkRepositoryDialog } from "./LinkRepositoryDialog";
 
 const openDialog = vi.fn();
 const createResource = vi.fn();
 const notify = vi.fn();
+const track = vi.fn();
+
+vi.mock("@/providers/AnalyticsProvider", () => ({
+  useAnalytics: () => ({ track }),
+}));
 
 vi.mock("@/providers/DialogProvider/hooks/useDialog", () => ({
   useDialog: () => ({ open: openDialog }),
@@ -141,5 +150,67 @@ describe("AddResourceButton", () => {
     );
 
     expect(createResource).toHaveBeenCalledWith(PICKED_SAVED_PIPELINE);
+  });
+});
+
+describe("AddResourceButton repository link", () => {
+  const LINKED = repositoryResourceInput({
+    owner: "TangleML",
+    repo: "pipeline_components",
+    ref: null,
+    path: null,
+  });
+
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn();
+    Element.prototype.hasPointerCapture = vi.fn();
+  });
+
+  afterEach(() => vi.resetAllMocks());
+
+  async function chooseLinkARepository(resources: ProjectResourceSummary[]) {
+    const user = userEvent.setup();
+    render(<AddResourceButton projectId="project-1" resources={resources} />);
+
+    await user.click(
+      screen.getByRole("button", { name: "More resource types" }),
+    );
+    await user.click(
+      await screen.findByRole("menuitem", { name: "Link a repository" }),
+    );
+  }
+
+  it("opens the link dialog with what the project already holds", async () => {
+    openDialog.mockResolvedValue(undefined);
+    const resources = [attachedRow("pipeline://id/file-1")];
+
+    await chooseLinkARepository(resources);
+
+    expect(openDialog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        component: LinkRepositoryDialog,
+        props: { resources },
+        routeKey: "link-repository",
+      }),
+    );
+  });
+
+  it("links the repository the dialog returns and records that it landed", async () => {
+    openDialog.mockResolvedValue(LINKED);
+
+    await chooseLinkARepository([]);
+
+    expect(createResource).toHaveBeenCalledWith(LINKED, expect.anything());
+    const [, options] = createResource.mock.calls[0];
+    options.onSuccess();
+    expect(track).toHaveBeenCalledWith("projects.link_repository_completed");
+  });
+
+  it("links nothing when the dialog is cancelled", async () => {
+    openDialog.mockResolvedValue(undefined);
+
+    await chooseLinkARepository([]);
+
+    expect(createResource).not.toHaveBeenCalled();
   });
 });

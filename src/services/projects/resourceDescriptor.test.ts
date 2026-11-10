@@ -4,10 +4,14 @@ import {
   describeResource,
   DescriptorTooLargeError,
   documentResourceInput,
+  linkedRepositoryOf,
   localPipelinePointerOf,
   localPipelineResourceInput,
   namesLocalPipeline,
+  namesRepository,
   pipelineRunResourceInput,
+  repositoryResourceInput,
+  repositoryUrlOf,
 } from "./resourceDescriptor";
 import type { ProjectResourceSummary } from "./types";
 
@@ -198,5 +202,133 @@ describe("documentResourceInput", () => {
     expect(describeResource({ metadata: input.metadata ?? null })).toEqual({
       type: "document",
     });
+  });
+});
+
+const WHOLE_REPOSITORY = {
+  owner: "TangleML",
+  repo: "pipeline_components",
+  ref: null,
+  path: null,
+};
+
+const ONE_FOLDER = {
+  ...WHOLE_REPOSITORY,
+  ref: "master",
+  path: "components/data",
+};
+
+describe("repositoryResourceInput", () => {
+  it("files a whole repository under its owner and name", () => {
+    expect(repositoryResourceInput(WHOLE_REPOSITORY)).toEqual({
+      entity: "document",
+      name: "TangleML/pipeline_components",
+      payload: {
+        owner: "TangleML",
+        repo: "pipeline_components",
+        ref: null,
+        path: null,
+      },
+      metadata: {
+        type: "repository",
+        url: "https://github.com/TangleML/pipeline_components",
+      },
+    });
+  });
+
+  it("files one folder under its path, at the branch it was linked on", () => {
+    expect(repositoryResourceInput(ONE_FOLDER)).toEqual({
+      entity: "document",
+      name: "TangleML/pipeline_components/components/data",
+      payload: {
+        owner: "TangleML",
+        repo: "pipeline_components",
+        ref: "master",
+        path: "components/data",
+      },
+      metadata: {
+        type: "repository",
+        url: "https://github.com/TangleML/pipeline_components/tree/master/components/data",
+      },
+    });
+  });
+
+  it("refuses a folder whose URL is too long to record", () => {
+    expect(() =>
+      repositoryResourceInput({ ...ONE_FOLDER, path: "a/".repeat(600) + "b" }),
+    ).toThrow(DescriptorTooLargeError);
+  });
+});
+
+describe("linkedRepositoryOf", () => {
+  const filed = (input: ReturnType<typeof repositoryResourceInput>) => ({
+    metadata: input.metadata ?? null,
+    payload: input.payload ?? null,
+  });
+
+  it("reads back the repository and folder that were linked", () => {
+    expect(
+      linkedRepositoryOf(filed(repositoryResourceInput(ONE_FOLDER))),
+    ).toEqual(ONE_FOLDER);
+    expect(
+      linkedRepositoryOf(filed(repositoryResourceInput(WHOLE_REPOSITORY))),
+    ).toEqual(WHOLE_REPOSITORY);
+  });
+
+  it("finds no repository in a row that is something else", () => {
+    expect(
+      linkedRepositoryOf({
+        metadata: { type: "document" },
+        payload: { owner: "TangleML", repo: "pipeline_components" },
+      }),
+    ).toBeUndefined();
+  });
+
+  it("finds no repository when the payload does not name one", () => {
+    expect(
+      linkedRepositoryOf({ metadata: { type: "repository" }, payload: null }),
+    ).toBeUndefined();
+    expect(
+      linkedRepositoryOf({
+        metadata: { type: "repository" },
+        payload: { owner: "", repo: "pipeline_components" },
+      }),
+    ).toBeUndefined();
+  });
+});
+
+describe("repositoryUrlOf", () => {
+  it("reads the URL a linked repository recorded", () => {
+    expect(
+      repositoryUrlOf(
+        row(repositoryResourceInput(ONE_FOLDER).metadata ?? null),
+      ),
+    ).toBe(
+      "https://github.com/TangleML/pipeline_components/tree/master/components/data",
+    );
+  });
+
+  it("refuses a recorded URL that does not lead to GitHub", () => {
+    expect(
+      repositoryUrlOf(row({ type: "repository", url: "javascript:alert(1)" })),
+    ).toBeUndefined();
+  });
+
+  it("finds no URL on a row that is not a repository", () => {
+    expect(
+      repositoryUrlOf(row({ type: "document", url: "https://github.com/x/y" })),
+    ).toBeUndefined();
+  });
+});
+
+describe("namesRepository", () => {
+  it("is true only of a row filed as one", () => {
+    expect(
+      namesRepository(
+        row(repositoryResourceInput(WHOLE_REPOSITORY).metadata ?? null),
+      ),
+    ).toBe(true);
+    expect(namesRepository(row({ type: "document" }))).toBe(false);
+    expect(namesRepository(row(null))).toBe(false);
   });
 });
