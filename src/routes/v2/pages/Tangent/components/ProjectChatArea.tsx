@@ -8,6 +8,7 @@ import useToastNotification from "@/hooks/useToastNotification";
 import { ProjectSettingsButton } from "@/routes/v2/pages/Tangent/components/ProjectSettingsButton";
 import { TangentChatPane } from "@/routes/v2/pages/Tangent/components/TangentChatPane";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
+import { useChatCommands } from "@/routes/v2/pages/Tangent/hooks/useChatCommands";
 import { useChatReferences } from "@/routes/v2/pages/Tangent/hooks/useChatReferences";
 import { useRefreshSessionResources } from "@/routes/v2/pages/Tangent/hooks/useRefreshSessionResources";
 import { AiProviderSetup } from "@/routes/v2/shared/components/AiChat/components/AiProviderSetup";
@@ -19,6 +20,7 @@ export const ProjectChatArea = observer(function ProjectChatArea() {
   const notify = useToastNotification();
   const { isConfigured } = useAiProviderSettings();
   const references = useChatReferences(store.projectId);
+  const commands = useChatCommands(store.projectId);
   const refreshSessionResources = useRefreshSessionResources(store.projectId);
   const activeSessionId = store.activeSessionId;
 
@@ -68,6 +70,7 @@ export const ProjectChatArea = observer(function ProjectChatArea() {
         onOpenAgent={(agent) => store.openAgent(agent)}
         onRemoveAgent={(id) => store.closeChatTab(id)}
         references={references}
+        commands={commands}
         onOpenArtifact={(url, title) => store.openArtifactTab(url, title)}
         onSendPrompt={(content) => store.recordSessionPrompt(content)}
         onError={(message) => notify(message, "error")}
