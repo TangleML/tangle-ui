@@ -10,9 +10,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { StatusDot } from "@/components/ui/status-dot";
 import { Text } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
-import { cn } from "@/lib/utils";
 import { useOpenWorkareaTarget } from "@/routes/v2/pages/Tangent/hooks/useOpenWorkareaTarget";
 import {
   type SessionRun,
@@ -105,12 +105,10 @@ export const ChatRunsPill = observer(function ChatRunsPill({
           <Icon name="Play" size="xs" />
           {pillLabel(rows)}
           {(anyFailed || anyRunning) && (
-            <span
-              aria-hidden
-              className={cn(
-                "size-1.5 rounded-full",
-                anyFailed ? "bg-destructive" : "animate-pulse bg-success",
-              )}
+            <StatusDot
+              size="sm"
+              tone={anyFailed ? "critical" : "success"}
+              pulse={!anyFailed}
             />
           )}
         </Button>

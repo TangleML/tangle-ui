@@ -23,7 +23,7 @@ function Tabs({
  * then eats into the strip's fixed height, leaving the tabs scrollable up and
  * down inside a bar one tab tall.
  */
-export const SCROLLING_TAB_STRIP = "overflow-x-auto overflow-y-hidden";
+const SCROLLING_TAB_STRIP = "overflow-x-auto overflow-y-hidden";
 
 /**
  * `default` is a segmented control for switching views of one thing. `line` is
@@ -79,7 +79,6 @@ function TabsList({
     <TabsVariantContext.Provider value={resolvedVariant}>
       <TabsPrimitive.List
         data-slot="tabs-list"
-        data-variant={resolvedVariant}
         className={cn(
           tabsListVariants({ variant: resolvedVariant }),
           className,
@@ -117,4 +116,36 @@ function TabsContent({
   );
 }
 
-export { Tabs, TabsContent, TabsList, TabsTrigger };
+/**
+ * A strip of `line` tabs that scrolls sideways when they outgrow it, with an
+ * optional control at its end. The strip draws the divider under both, so
+ * the control sits on the same line as the tabs. Without tabs it's the bar
+ * alone, for a pane that has nothing to switch between.
+ */
+function TabStrip({
+  children,
+  trailing,
+}: {
+  children?: React.ReactNode;
+  trailing?: React.ReactNode;
+}) {
+  return (
+    <div className="flex min-h-10 w-full shrink-0 shadow-[inset_0_-1px_0_var(--border)]">
+      {children ? (
+        <TabsList
+          variant="line"
+          className={cn("min-w-0 flex-1 shadow-none", SCROLLING_TAB_STRIP)}
+        >
+          {children}
+        </TabsList>
+      ) : (
+        <div className="flex-1" />
+      )}
+      {trailing && (
+        <div className="flex shrink-0 items-center px-2">{trailing}</div>
+      )}
+    </div>
+  );
+}
+
+export { Tabs, TabsContent, TabsList, TabsTrigger, TabStrip };

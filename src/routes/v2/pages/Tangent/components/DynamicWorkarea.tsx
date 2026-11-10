@@ -1,13 +1,6 @@
 import { observer } from "mobx-react-lite";
 
-import { InlineStack } from "@/components/ui/layout";
-import {
-  SCROLLING_TAB_STRIP,
-  Tabs,
-  TabsContent,
-  TabsList,
-} from "@/components/ui/tabs";
-import { cn } from "@/lib/utils";
+import { Tabs, TabsContent, TabStrip } from "@/components/ui/tabs";
 import { CloseableTabTrigger } from "@/routes/v2/pages/Tangent/components/CloseableTabTrigger";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { MIN_WORKAREA_WIDTH } from "@/routes/v2/pages/Tangent/layout";
@@ -60,28 +53,17 @@ export const DynamicWorkarea = observer(function DynamicWorkarea() {
         onValueChange={(id) => store.selectWorkareaTab(id)}
         className="flex h-full min-h-0 flex-col gap-0"
       >
-        <InlineStack
-          wrap="nowrap"
-          className="w-full shrink-0 shadow-[inset_0_-1px_0_var(--border)]"
-        >
-          <TabsList
-            variant="line"
-            className={cn("min-w-0 flex-1", SCROLLING_TAB_STRIP)}
-          >
-            {workareaTabs.map((tab) => (
-              <CloseableTabTrigger
-                key={tab.id}
-                value={tab.id}
-                title={tab.title}
-                icon={getWorkareaKind(tab.target.type)?.icon ?? "FileText"}
-                onClose={() => store.closeWorkareaTab(tab.id)}
-              />
-            ))}
-          </TabsList>
-          <div className="shrink-0 px-2">
-            <ProjectDockPopover />
-          </div>
-        </InlineStack>
+        <TabStrip trailing={<ProjectDockPopover />}>
+          {workareaTabs.map((tab) => (
+            <CloseableTabTrigger
+              key={tab.id}
+              value={tab.id}
+              title={tab.title}
+              icon={getWorkareaKind(tab.target.type)?.icon ?? "FileText"}
+              onClose={() => store.closeWorkareaTab(tab.id)}
+            />
+          ))}
+        </TabStrip>
         {workareaTabs.length > 0 ? (
           workareaTabs.map((tab) => {
             const viewKind = getWorkareaKind(tab.target.type);

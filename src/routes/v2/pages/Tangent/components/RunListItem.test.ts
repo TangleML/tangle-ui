@@ -14,7 +14,10 @@ describe("runStatusFlair", () => {
       kind: "dot",
       label: "Cancelled",
     });
-    expect(runStatusFlair("SKIPPED")?.tone).toBeUndefined();
+    expect(runStatusFlair("SKIPPED")).toEqual({
+      kind: "dot",
+      label: "Skipped",
+    });
     expect(runStatusFlair(undefined)).toBeUndefined();
   });
 });

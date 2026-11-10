@@ -17,6 +17,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Icon, type IconName } from "@/components/ui/icon";
+import { IconTile } from "@/components/ui/icon-tile";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
@@ -74,14 +75,7 @@ export const ProjectSettingsDialog = observer(function ProjectSettingsDialog({
               wrap="nowrap"
               className="pr-6"
             >
-              <InlineStack
-                align="center"
-                blockAlign="center"
-                aria-hidden="true"
-                className="size-12 shrink-0 rounded-xl bg-edge-selected/15 text-edge-selected"
-              >
-                <Icon name="FolderOpen" size="lg" />
-              </InlineStack>
+              <IconTile icon="FolderOpen" size="lg" tone="accent" />
               <BlockStack gap="1" className="min-w-0 flex-1">
                 <DialogTitle className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                   Project settings
@@ -238,14 +232,9 @@ function SettingsGroup({
   );
 }
 
-const ROW_TONES = {
-  info: "bg-info/15 text-info",
-  accent: "bg-edge-selected/15 text-edge-selected",
-};
-
 interface SettingRowProps {
   icon: IconName;
-  tone: keyof typeof ROW_TONES;
+  tone: "info" | "accent";
   title: string;
   description: string;
   children?: ReactNode;
@@ -260,14 +249,7 @@ function SettingRow({
 }: SettingRowProps) {
   return (
     <InlineStack gap="3" blockAlign="start" wrap="nowrap">
-      <InlineStack
-        align="center"
-        blockAlign="center"
-        aria-hidden="true"
-        className={cn("size-8 shrink-0 rounded-full", ROW_TONES[tone])}
-      >
-        <Icon name={icon} size="sm" />
-      </InlineStack>
+      <IconTile icon={icon} size="sm" shape="round" tone={tone} />
       <BlockStack gap="2" className="min-w-0 flex-1">
         <BlockStack>
           <Text size="sm" weight="medium">
