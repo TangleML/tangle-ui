@@ -1,9 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
-import {
-  createProjectCardRemoteTools,
-  type ProjectCardToolDeps,
-} from "./createProjectCardRemoteTools";
+import type { ProjectCardToolDeps } from "./createProjectCardHandlers";
+import { createProjectCardRemoteTools } from "./createProjectCardRemoteTools";
 
 function makeDeps(
   overrides: Partial<ProjectCardToolDeps> = {},
@@ -13,7 +11,6 @@ function makeDeps(
     listEntries: vi
       .fn()
       .mockResolvedValue({ runs: [], pipelines: [], documents: [] }),
-    listArchived: vi.fn().mockResolvedValue([]),
     setArchived: vi.fn().mockResolvedValue(undefined),
     listFiles: vi.fn().mockResolvedValue([]),
     pinFile: vi.fn().mockResolvedValue(undefined),
@@ -50,20 +47,26 @@ describe("createProjectCardRemoteTools", () => {
               target: "run://id/r-1",
               name: "Train",
               at: new Date("2026-11-05T10:00:00Z"),
+              archived: false,
             },
           ],
           pipelines: [
-            { target: "pipeline://remote/p-1", name: "Train", at: null },
+            {
+              target: "pipeline://remote/p-1",
+              name: "Train",
+              at: null,
+              archived: false,
+            },
           ],
           documents: [
             {
               target: "document://id/d-1",
               name: "Brief",
               at: new Date("2026-11-01T09:00:00Z"),
+              archived: true,
             },
           ],
         }),
-        listArchived: vi.fn().mockResolvedValue(["document://id/d-1"]),
       }),
     );
 
@@ -98,11 +101,19 @@ describe("createProjectCardRemoteTools", () => {
   it("archives and restores by the target the card keys on", async () => {
     const deps = makeDeps({
       listEntries: vi.fn().mockResolvedValue({
-        runs: [{ target: "run://id/r-7", name: "Train", at: null }],
+        runs: [
+          { target: "run://id/r-7", name: "Train", at: null, archived: false },
+        ],
         pipelines: [],
-        documents: [],
+        documents: [
+          {
+            target: "document://id/d-1",
+            name: "Brief",
+            at: null,
+            archived: true,
+          },
+        ],
       }),
-      listArchived: vi.fn().mockResolvedValue(["document://id/d-1"]),
     });
     const tools = toolsWith(deps);
 
@@ -142,7 +153,15 @@ describe("createProjectCardRemoteTools", () => {
   });
 
   it("won't restore something that isn't archived", async () => {
-    const deps = makeDeps();
+    const deps = makeDeps({
+      listEntries: vi.fn().mockResolvedValue({
+        runs: [
+          { target: "run://id/r-7", name: "Train", at: null, archived: false },
+        ],
+        pipelines: [],
+        documents: [],
+      }),
+    });
     const tools = toolsWith(deps);
 
     await expect(

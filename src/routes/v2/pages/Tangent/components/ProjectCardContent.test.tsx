@@ -41,7 +41,7 @@ vi.mock("@/routes/v2/pages/Tangent/hooks/useArchivedProjectItems", async () => {
         );
       };
       return {
-        isArchived: (target: string) => archived.includes(target),
+        archived: new Set(archived),
         archive: (target: string) => change(target, true),
         restore: (target: string) => change(target, false),
       };

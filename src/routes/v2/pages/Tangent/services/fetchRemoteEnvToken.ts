@@ -10,6 +10,10 @@
  */
 import { nanoid } from "nanoid";
 
+import {
+  tangentAuthHeaders,
+  tangentUrl,
+} from "@/routes/v2/pages/Tangent/services/tangentApi";
 import { isRecord } from "@/utils/typeGuards";
 
 export interface RemoteEnvToken {
@@ -82,11 +86,11 @@ export async function fetchRemoteEnvToken({
     };
   }
 
-  const url = `${baseUrl.replace(/\/$/, "")}${REMOTE_ENV_TOKEN_PATH}`;
-  const headers: Record<string, string> = {
+  const url = tangentUrl(baseUrl, REMOTE_ENV_TOKEN_PATH);
+  const headers = {
     "Content-Type": "application/json",
+    ...tangentAuthHeaders(authToken),
   };
-  if (authToken) headers.Authorization = `Bearer ${authToken}`;
 
   const body: RemoteEnvTokenRequestBody = {
     sessionId,

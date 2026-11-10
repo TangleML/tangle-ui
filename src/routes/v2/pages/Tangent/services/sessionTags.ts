@@ -1,17 +1,13 @@
+import {
+  tangentAuthHeaders,
+  tangentSessionUrl,
+} from "@/routes/v2/pages/Tangent/services/tangentApi";
 import { isRecord } from "@/utils/typeGuards";
 
 interface SessionTagParams {
   baseUrl: string;
   sessionId: string;
   authToken?: string;
-}
-
-function sessionUrl(baseUrl: string, sessionId: string): string {
-  return `${baseUrl.replace(/\/+$/, "")}/api/sessions/${encodeURIComponent(sessionId)}`;
-}
-
-function authHeaders(authToken?: string): Record<string, string> {
-  return authToken ? { Authorization: `Bearer ${authToken}` } : {};
 }
 
 function parseSessionTags(value: unknown): string[] {
@@ -28,8 +24,8 @@ export async function getTangentSessionTags({
   sessionId,
   authToken,
 }: SessionTagParams): Promise<string[]> {
-  const response = await fetch(sessionUrl(baseUrl, sessionId), {
-    headers: authHeaders(authToken),
+  const response = await fetch(tangentSessionUrl(baseUrl, sessionId), {
+    headers: tangentAuthHeaders(authToken),
   });
   if (!response.ok) {
     throw new Error(
@@ -45,9 +41,12 @@ export async function replaceTangentSessionTags({
   authToken,
   tags,
 }: SessionTagParams & { tags: string[] }): Promise<void> {
-  const response = await fetch(sessionUrl(baseUrl, sessionId), {
+  const response = await fetch(tangentSessionUrl(baseUrl, sessionId), {
     method: "PATCH",
-    headers: { "Content-Type": "application/json", ...authHeaders(authToken) },
+    headers: {
+      "Content-Type": "application/json",
+      ...tangentAuthHeaders(authToken),
+    },
     body: JSON.stringify({ tags }),
   });
   if (!response.ok) {

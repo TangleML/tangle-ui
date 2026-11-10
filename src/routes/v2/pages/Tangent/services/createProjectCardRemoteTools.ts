@@ -1,43 +1,15 @@
 import type { RemoteToolMap } from "@tangent/remote-subagent";
 
-import type { SessionRun } from "@/routes/v2/pages/Tangent/hooks/useSessionRuns";
+import type {
+  ProjectCardEntry,
+  ProjectCardToolDeps,
+} from "@/routes/v2/pages/Tangent/services/createProjectCardHandlers";
 import { coerceWorkareaTarget } from "@/routes/v2/pages/Tangent/services/resolveWorkareaTarget";
 import type { SessionFileRecord } from "@/routes/v2/pages/Tangent/services/sessionFiles";
 import { formatWorkareaTarget } from "@/services/projects/resourceTarget";
 import { isRecord } from "@/utils/typeGuards";
 
 const ARCHIVABLE_TYPES = new Set(["run", "pipeline", "document"]);
-
-/** A row on the project card, addressed by its formatted workarea target. */
-export interface ProjectCardEntry {
-  target: string;
-  name: string;
-  at: Date | null;
-}
-
-interface ProjectCardEntries {
-  runs: ProjectCardEntry[];
-  pipelines: ProjectCardEntry[];
-  documents: ProjectCardEntry[];
-}
-
-/** Live handles into the project card and the chat's runs pill. */
-export interface ProjectCardToolDeps {
-  getActiveSessionId: () => string | undefined;
-  listEntries: () => Promise<ProjectCardEntries>;
-  listArchived: () => Promise<string[]>;
-  setArchived: (target: string, archived: boolean) => Promise<void>;
-  listFiles: () => Promise<SessionFileRecord[]>;
-  pinFile: (sessionId: string, path: string, title: string) => Promise<void>;
-  unpinFile: (sessionId: string, path: string) => Promise<void>;
-  listChatRuns: (sessionId: string) => Promise<SessionRun[]>;
-  dismissChatRun: (sessionId: string, runId: string) => Promise<boolean>;
-  addRun: (
-    runId: string,
-    name?: string,
-  ) => Promise<{ added: boolean; target: string }>;
-  addDocument: (title: string, content: string) => Promise<string>;
-}
 
 function requireString(args: unknown, key: string): string {
   const value = isRecord(args) ? args[key] : undefined;
@@ -65,30 +37,22 @@ function archivableTarget(args: unknown): string {
   return formatWorkareaTarget(target);
 }
 
-/** The card's archive button is only on its rows, so the agent's is too. */
-async function cardTarget(
+/** The card's archive and restore buttons are only on its rows, so the agent's are too. */
+async function cardEntry(
   args: unknown,
   deps: ProjectCardToolDeps,
-): Promise<string> {
+): Promise<ProjectCardEntry> {
   const target = archivableTarget(args);
   const { runs, pipelines, documents } = await deps.listEntries();
-  if (![...runs, ...pipelines, ...documents].some((e) => e.target === target)) {
+  const entry = [...runs, ...pipelines, ...documents].find(
+    (candidate) => candidate.target === target,
+  );
+  if (!entry) {
     throw new Error(
       `\`${target}\` isn't on the project card. \`list_project_items\` lists what is.`,
     );
   }
-  return target;
-}
-
-async function archivedTarget(
-  args: unknown,
-  deps: ProjectCardToolDeps,
-): Promise<string> {
-  const target = archivableTarget(args);
-  if (!(await deps.listArchived()).includes(target)) {
-    throw new Error(`\`${target}\` isn't archived.`);
-  }
-  return target;
+  return entry;
 }
 
 function chatOf(args: unknown, deps: ProjectCardToolDeps): string {
@@ -174,18 +138,13 @@ export function createProjectCardRemoteTools(
         "archived. Archived items are under the card's 'Show archived'.",
       inputSchema: { type: "object", properties: {} },
       execute: async () => {
-        const deps = getDeps();
-        const [entries, archived] = await Promise.all([
-          deps.listEntries(),
-          deps.listArchived(),
-        ]);
-        const archivedSet = new Set(archived);
+        const entries = await getDeps().listEntries();
         const rows = (list: ProjectCardEntry[], dateKey: string) =>
-          list.map(({ target, name, at }) => ({
+          list.map(({ target, name, at, archived }) => ({
             target,
             name,
             [dateKey]: at?.toISOString() ?? null,
-            archived: archivedSet.has(target),
+            archived,
           }));
         return {
           runs: rows(entries.runs, "ranAt"),
@@ -203,7 +162,7 @@ export function createProjectCardRemoteTools(
       inputSchema: TARGET_SCHEMA,
       execute: async (args) => {
         const deps = getDeps();
-        const target = await cardTarget(args, deps);
+        const { target } = await cardEntry(args, deps);
         await deps.setArchived(target, true);
         return { archived: true, target };
       },
@@ -215,7 +174,8 @@ export function createProjectCardRemoteTools(
       inputSchema: TARGET_SCHEMA,
       execute: async (args) => {
         const deps = getDeps();
-        const target = await archivedTarget(args, deps);
+        const { target, archived } = await cardEntry(args, deps);
+        if (!archived) throw new Error(`\`${target}\` isn't archived.`);
         await deps.setArchived(target, false);
         return { archived: false, target };
       },

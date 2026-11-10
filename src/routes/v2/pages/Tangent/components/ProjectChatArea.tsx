@@ -21,7 +21,7 @@ export const ProjectChatArea = observer(function ProjectChatArea() {
   const { isConfigured } = useAiProviderSettings();
   const references = useChatReferences(store.projectId);
   const commands = useChatCommands(store.projectId);
-  const refreshSessionResources = useRefreshSessionResources(store.projectId);
+  const refreshSessionResources = useRefreshSessionResources();
   const activeSessionId = store.activeSessionId;
 
   // Ahead of the session states: without a provider there is nothing to say to

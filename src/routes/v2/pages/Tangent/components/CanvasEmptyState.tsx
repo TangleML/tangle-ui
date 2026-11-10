@@ -3,8 +3,8 @@ import { observer } from "mobx-react-lite";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
-import useToastNotification from "@/hooks/useToastNotification";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
+import { useOpenWorkareaTarget } from "@/routes/v2/pages/Tangent/hooks/useOpenWorkareaTarget";
 import { useProjectResourceItems } from "@/routes/v2/pages/Tangent/hooks/useProjectResourceItems";
 import { UNNAMED_PIPELINE } from "@/services/projects/placeholderNames";
 import {
@@ -13,7 +13,6 @@ import {
 } from "@/services/projects/resourceTarget";
 import { useProjectRuns } from "@/services/projects/useProjectRuns";
 import { formatRelativeTime } from "@/utils/date";
-import { getErrorMessage } from "@/utils/string";
 import { tracking } from "@/utils/tracking";
 
 const RESOURCE_LIMIT = 4;
@@ -33,7 +32,7 @@ interface Suggestion {
  */
 export const CanvasEmptyState = observer(function CanvasEmptyState() {
   const store = useTangentProject();
-  const notify = useToastNotification();
+  const openTarget = useOpenWorkareaTarget();
   const { resources } = useProjectResourceItems(store.projectId);
   const { data: runs = [] } = useProjectRuns(store.projectId);
 
@@ -52,13 +51,7 @@ export const CanvasEmptyState = observer(function CanvasEmptyState() {
     })),
   ];
 
-  async function open({ target, title }: Suggestion) {
-    try {
-      await store.openWorkareaTarget(target, title);
-    } catch (error) {
-      notify(getErrorMessage(error), "error");
-    }
-  }
+  const open = ({ target, title }: Suggestion) => openTarget(target, title);
 
   return (
     <BlockStack

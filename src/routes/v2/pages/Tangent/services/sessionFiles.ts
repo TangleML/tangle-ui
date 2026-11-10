@@ -1,4 +1,11 @@
-import { isRecord } from "@/utils/typeGuards";
+import type { EmbedResource } from "@tangent/embed-react";
+import type { QueryClient } from "@tanstack/react-query";
+
+import { sessionResourcesKey } from "@/routes/v2/pages/Tangent/services/sessionResources";
+import {
+  tangentAuthHeaders,
+  tangentSessionUrl,
+} from "@/routes/v2/pages/Tangent/services/tangentApi";
 
 export interface SessionFileRecord {
   sessionId: string;
@@ -8,81 +15,57 @@ export interface SessionFileRecord {
   pinned: boolean;
 }
 
-interface SessionRequest {
+interface SessionFileRequest {
   baseUrl: string;
   sessionId: string;
   authToken?: string;
+  path: string;
+  title: string;
 }
 
 const AGENT_OUTPUT_DIR = "artifacts/";
 
-function sessionUrl(baseUrl: string, sessionId: string, rest: string): string {
-  return `${baseUrl.replace(/\/+$/, "")}/api/sessions/${encodeURIComponent(sessionId)}/${rest}`;
-}
-
-function authHeaders(authToken: string | undefined): Record<string, string> {
-  return authToken ? { Authorization: `Bearer ${authToken}` } : {};
-}
-
 /**
- * A file an agent pinned is always listed; any other file counts only when it
- * sits in `artifacts/`, where agents write what they make. Uploads, memory and
- * host entries are someone else's.
+ * The files a chat's agents made, from its resources. A file an agent pinned
+ * is always listed, as finished work ready to share; any other file counts
+ * only when it sits in `artifacts/`, where agents write what they make.
+ * Uploads, memory and host entries are someone else's.
  */
-function parseSessionFile(
+export function sessionFilesOf(
   sessionId: string,
-  value: unknown,
-): SessionFileRecord | null {
-  if (!isRecord(value)) return null;
-  const { kind, uri, name, createdAt } = value;
-  if (typeof uri !== "string" || uri === "") return null;
-  const pinned = kind === "artifact";
-  if (!pinned && !(kind === "file" && uri.startsWith(AGENT_OUTPUT_DIR))) {
-    return null;
-  }
-  return {
-    sessionId,
-    path: uri,
-    title: typeof name === "string" && name.trim() !== "" ? name : uri,
-    addedAt: new Date(typeof createdAt === "string" ? createdAt : 0),
-    pinned,
-  };
-}
-
-/**
- * The files a session's agents made, from Tangent's resource catalog. The
- * ones an agent pinned are finished work, ready to share.
- */
-export async function listSessionFiles({
-  baseUrl,
-  sessionId,
-  authToken,
-}: SessionRequest): Promise<SessionFileRecord[]> {
-  const response = await fetch(sessionUrl(baseUrl, sessionId, "resources"), {
-    headers: authHeaders(authToken),
+  resources: EmbedResource[],
+): SessionFileRecord[] {
+  return resources.flatMap(({ kind, uri, name, createdAt }) => {
+    const pinned = kind === "artifact";
+    if (uri === "") return [];
+    if (!pinned && !(kind === "file" && uri.startsWith(AGENT_OUTPUT_DIR))) {
+      return [];
+    }
+    return [
+      {
+        sessionId,
+        path: uri,
+        title: name.trim() === "" ? uri : name,
+        addedAt: new Date(createdAt),
+        pinned,
+      },
+    ];
   });
-  if (!response.ok) {
-    throw new Error(`Couldn't load this session's files (${response.status}).`);
-  }
-  const body: unknown = await response.json();
-  if (!isRecord(body) || !Array.isArray(body.resources)) {
-    throw new Error("Tangent resources response was malformed.");
-  }
-  return body.resources.flatMap(
-    (resource) => parseSessionFile(sessionId, resource) ?? [],
-  );
 }
 
-export async function pinSessionFile({
+async function pinSessionFile({
   baseUrl,
   sessionId,
   authToken,
   path,
   title,
-}: SessionRequest & { path: string; title: string }): Promise<void> {
-  const response = await fetch(sessionUrl(baseUrl, sessionId, "pins"), {
+}: SessionFileRequest): Promise<void> {
+  const response = await fetch(tangentSessionUrl(baseUrl, sessionId, "pins"), {
     method: "POST",
-    headers: { "content-type": "application/json", ...authHeaders(authToken) },
+    headers: {
+      "content-type": "application/json",
+      ...tangentAuthHeaders(authToken),
+    },
     body: JSON.stringify({ path, title }),
   });
   if (!response.ok) {
@@ -90,19 +73,35 @@ export async function pinSessionFile({
   }
 }
 
-export async function unpinSessionFile({
+async function unpinSessionFile({
   baseUrl,
   sessionId,
   authToken,
   path,
-}: SessionRequest & { path: string }): Promise<void> {
+}: SessionFileRequest): Promise<void> {
   const response = await fetch(
-    sessionUrl(baseUrl, sessionId, `pins?path=${encodeURIComponent(path)}`),
-    { method: "DELETE", headers: authHeaders(authToken) },
+    tangentSessionUrl(
+      baseUrl,
+      sessionId,
+      `pins?path=${encodeURIComponent(path)}`,
+    ),
+    { method: "DELETE", headers: tangentAuthHeaders(authToken) },
   );
   if (!response.ok) {
     throw new Error(`Couldn't unpin this file (${response.status}).`);
   }
+}
+
+/** Pins a file to the project's reports or takes it out, for everyone. */
+export async function setSessionFilePinned(
+  queryClient: QueryClient,
+  request: SessionFileRequest,
+  pinned: boolean,
+): Promise<void> {
+  await (pinned ? pinSessionFile(request) : unpinSessionFile(request));
+  await queryClient.invalidateQueries({
+    queryKey: sessionResourcesKey(request.sessionId),
+  });
 }
 
 export function sessionFileUrl(
@@ -111,5 +110,5 @@ export function sessionFileUrl(
   path: string,
 ): string {
   const encodedPath = path.split("/").map(encodeURIComponent).join("/");
-  return sessionUrl(baseUrl, sessionId, `files/${encodedPath}`);
+  return tangentSessionUrl(baseUrl, sessionId, `files/${encodedPath}`);
 }
