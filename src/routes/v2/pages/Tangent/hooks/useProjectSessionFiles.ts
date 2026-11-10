@@ -33,7 +33,8 @@ export interface ProjectFile {
 /**
  * Every file the project's chats made, newest first. The pinned ones are its
  * reports: an agent pins what's ready to share, and anyone can pin or unpin a
- * file here, which Tangent keeps for everyone.
+ * file here, which Tangent keeps for everyone. The open chat says when its
+ * files change; the rest are read again whenever the card opens.
  */
 export function useProjectSessionFiles(projectId: string) {
   const { baseUrl } = useTangentBaseUrl(projectId);
@@ -47,6 +48,7 @@ export function useProjectSessionFiles(projectId: string) {
       queryKey: sessionFilesKey(baseUrl, sessionId),
       queryFn: () =>
         baseUrl ? listSessionFiles({ baseUrl, sessionId, authToken }) : [],
+      refetchOnMount: "always" as const,
       enabled: Boolean(baseUrl),
       staleTime: 30_000,
     })),
