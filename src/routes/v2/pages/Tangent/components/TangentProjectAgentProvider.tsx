@@ -1,3 +1,4 @@
+import { useTangent } from "@tangent/embed-react";
 import { useQueryClient } from "@tanstack/react-query";
 import * as Comlink from "comlink";
 import { type ReactNode, useEffect, useRef, useState } from "react";
@@ -9,6 +10,7 @@ import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
+import { usePerStore } from "@/routes/v2/pages/Tangent/hooks/usePerStore";
 import { useRemoteEnvAuthToken } from "@/routes/v2/pages/Tangent/hooks/useRemoteEnvAuthToken";
 import { useTangentBaseUrl } from "@/routes/v2/pages/Tangent/hooks/useTangentBaseUrl";
 import { connectRemoteEnvWithRefresh } from "@/routes/v2/pages/Tangent/services/connectRemoteEnvWithRefresh";
@@ -17,6 +19,8 @@ import {
   createAgentTargetRouter,
 } from "@/routes/v2/pages/Tangent/services/createActiveTabRoutingBridge";
 import { createNamingHandlers } from "@/routes/v2/pages/Tangent/services/createNamingHandlers";
+import { createProjectCardHandlers } from "@/routes/v2/pages/Tangent/services/createProjectCardHandlers";
+import { createProjectCardRemoteTools } from "@/routes/v2/pages/Tangent/services/createProjectCardRemoteTools";
 import {
   createWorkareaRemoteTools,
   type RunInspectDeps,
@@ -125,10 +129,13 @@ export function TangentProjectAgentProvider({
   const store = useTangentProject();
   const storage = usePipelineStorage();
   const { baseUrl } = useTangentBaseUrl(store.projectId);
+  const tangent = useTangent();
 
   const authToken = useRemoteEnvAuthToken();
   const authTokenRef = useRef(authToken);
   const backendUrlRef = useRef(backendUrl);
+  const baseUrlRef = useRef(baseUrl);
+  const tangentRef = useRef(tangent);
   const notifyRef = useRef(notify);
   const aiConfigRef = useRef(aiConfig);
   const traceScopeRef = useRef<TraceScope | undefined>(
@@ -171,6 +178,12 @@ export function TangentProjectAgentProvider({
     backendUrlRef.current = backendUrl;
   }, [backendUrl]);
   useEffect(() => {
+    baseUrlRef.current = baseUrl;
+  }, [baseUrl]);
+  useEffect(() => {
+    tangentRef.current = tangent;
+  }, [tangent]);
+  useEffect(() => {
     notifyRef.current = notify;
   }, [notify]);
 
@@ -200,7 +213,7 @@ export function TangentProjectAgentProvider({
     ]);
   };
 
-  const [naming] = useState(() =>
+  const naming = usePerStore(store, () =>
     createNamingHandlers({
       projectId: store.projectId,
       getActiveSessionId: () => store.activeSessionId,
@@ -209,8 +222,22 @@ export function TangentProjectAgentProvider({
     }),
   );
 
-  const [tools] = useState(() =>
-    createWorkareaRemoteTools(() => ({
+  const projectCard = usePerStore(store, () =>
+    createProjectCardHandlers({
+      projectId: store.projectId,
+      queryClient,
+      getActiveSessionId: () => store.activeSessionId,
+      getBaseUrl: () => baseUrlRef.current ?? undefined,
+      getAuthToken: () => authTokenRef.current,
+      getTangent: () => tangentRef.current,
+      getRunDetails: runInspect.getRunDetails,
+      onResourcesChanged: () => refreshProjectResources(),
+    }),
+  );
+
+  const tools = usePerStore(store, () => ({
+    ...createProjectCardRemoteTools(() => projectCard),
+    ...createWorkareaRemoteTools(() => ({
       openTarget: (target, title) => store.openWorkareaTarget(target, title),
       getTabs: () => store.workareaTabs,
       getActiveTabId: () => store.activeWorkareaTabId ?? undefined,
@@ -290,11 +317,11 @@ export function TangentProjectAgentProvider({
       nameSession: naming.nameSession,
       namePipeline: naming.namePipeline,
     })),
-  );
-  const [routingBridge] = useState(() =>
+  }));
+  const routingBridge = usePerStore(store, () =>
     createActiveTabRoutingBridge(() => store.getActiveTabBridge()),
   );
-  const [agentTargets] = useState(() =>
+  const agentTargets = usePerStore(store, () =>
     createAgentTargetRouter(() => store.getActiveTabBridge()),
   );
 

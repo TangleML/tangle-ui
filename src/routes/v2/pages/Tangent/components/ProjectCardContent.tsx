@@ -28,6 +28,7 @@ import {
   type RunEntry,
 } from "@/routes/v2/pages/Tangent/services/projectRunEntries";
 import {
+  formatWorkareaTarget,
   parseIdentity,
   runTarget,
   type WorkareaTarget,
@@ -62,8 +63,8 @@ type AttachedItem = ProjectResourceItem & { target: WorkareaTarget };
 
 type CardView = "main" | "files" | "archived";
 
-const runKey = (run: RunEntry) => `run:${run.id}`;
-const attachedKey = (item: AttachedItem) => `resource:${item.id}`;
+const runKey = (run: RunEntry) => formatWorkareaTarget(runTarget(run.id));
+const attachedKey = (item: AttachedItem) => formatWorkareaTarget(item.target);
 
 function runStatusFlair(
   status: string | undefined,
