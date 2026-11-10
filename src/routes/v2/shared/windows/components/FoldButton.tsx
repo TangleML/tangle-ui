@@ -16,15 +16,14 @@ export const FoldButton = observer(function FoldButton({
 
   return (
     <Button
-      variant="ghost"
-      size="icon"
+      variant="subtle"
+      size="icon-xs"
       aria-label={`${folded ? "Unfold" : "Fold"} ${model.title}`}
       aria-expanded={!folded}
       onClick={(event) => {
         event.stopPropagation();
         model.toggleMinimize();
       }}
-      className="size-6 text-muted-foreground hover:text-foreground"
       {...tracking(trackingId)}
     >
       <Icon name={folded ? "ChevronRight" : "ChevronDown"} size="xs" />

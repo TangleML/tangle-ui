@@ -137,7 +137,6 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
     return (
       <ListItem
         key={file.key}
-        density="compact"
         icon={fileIcon(file.path)}
         title={file.title}
         subtitle={ago(file.addedAt)}
@@ -189,7 +188,6 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
     return (
       <ListItem
         key={item.id}
-        density="compact"
         icon={item.icon}
         title={item.name}
         subtitle={added && `Added ${added}`}
@@ -399,12 +397,11 @@ function SubView({
     <BlockStack align="stretch">
       <InlineStack gap="1" wrap="nowrap" className="min-h-11 px-2 pt-2">
         <Button
-          variant="ghost"
-          size="icon"
+          variant="subtle"
+          size="icon-sm"
           aria-label="Back"
           title="Back"
           onClick={onBack}
-          className="size-7 shrink-0 text-muted-foreground hover:text-foreground"
           {...tracking("projects.project_card.back")}
         >
           <Icon name="ChevronLeft" size="sm" />
@@ -436,15 +433,18 @@ function FooterButton({
 }) {
   return (
     <Button
-      variant="ghost"
-      size="sm"
+      variant="subtle"
+      size="row"
+      align="start"
+      fullWidth
       onClick={onClick}
-      className="h-auto w-full justify-start gap-2 px-2 py-1.5 font-normal text-muted-foreground hover:text-foreground"
       {...tracking(trackingId)}
     >
       <Icon name={icon} size="sm" />
       {label}
-      <span className="ms-auto text-xs">{count}</span>
+      <Text size="xs" tone="inherit" className="ms-auto">
+        {count}
+      </Text>
     </Button>
   );
 }
@@ -505,11 +505,12 @@ function LoadOlderRuns({
   return (
     <li>
       <Button
-        variant="ghost"
-        size="sm"
+        variant="subtle"
+        size="row"
+        align="start"
+        fullWidth
         disabled={query.isFetchingNextPage}
         onClick={() => void query.fetchNextPage()}
-        className="h-auto w-full justify-start px-2 py-1.5 font-normal text-muted-foreground hover:bg-transparent hover:text-foreground"
         {...tracking("projects.project_card.load_older_runs")}
       >
         {query.isFetchingNextPage ? "Loading…" : "Load older runs"}

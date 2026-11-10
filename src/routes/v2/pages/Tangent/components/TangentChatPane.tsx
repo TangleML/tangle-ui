@@ -7,15 +7,7 @@ import {
 import type { ReactNode } from "react";
 
 import { Icon } from "@/components/ui/icon";
-import { InlineStack } from "@/components/ui/layout";
-import {
-  SCROLLING_TAB_STRIP,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import { cn } from "@/lib/utils";
+import { Tabs, TabsContent, TabsTrigger, TabStrip } from "@/components/ui/tabs";
 import { CloseableTabTrigger } from "@/routes/v2/pages/Tangent/components/CloseableTabTrigger";
 import {
   type AgentTab,
@@ -70,29 +62,20 @@ export function TangentChatPane({
         onValueChange={onTabChange}
         className="flex h-full min-h-0 flex-col gap-0"
       >
-        <InlineStack
-          wrap="nowrap"
-          className="w-full shrink-0 shadow-[inset_0_-1px_0_var(--border)]"
-        >
-          <TabsList
-            variant="line"
-            className={cn("min-w-0 flex-1", SCROLLING_TAB_STRIP)}
-          >
-            <TabsTrigger value={CHAT_TAB_VALUE}>
-              <Icon name="MessageSquare" size="xs" />
-              Prime
-            </TabsTrigger>
-            {tabs.map((tab) => (
-              <CloseableTabTrigger
-                key={tab.id}
-                value={tab.id}
-                title={tab.title}
-                onClose={() => onCloseTab(tab.id)}
-              />
-            ))}
-          </TabsList>
-          {headerAction && <div className="shrink-0 px-2">{headerAction}</div>}
-        </InlineStack>
+        <TabStrip trailing={headerAction}>
+          <TabsTrigger value={CHAT_TAB_VALUE}>
+            <Icon name="MessageSquare" size="xs" />
+            Prime
+          </TabsTrigger>
+          {tabs.map((tab) => (
+            <CloseableTabTrigger
+              key={tab.id}
+              value={tab.id}
+              title={tab.title}
+              onClose={() => onCloseTab(tab.id)}
+            />
+          ))}
+        </TabStrip>
         <TabsContent
           value={CHAT_TAB_VALUE}
           forceMount

@@ -52,7 +52,6 @@ export function RunListItem({
 
   return (
     <ListItem
-      density="compact"
       icon={resourceMeta("run").icon}
       title={name}
       subtitle={ago(at)}

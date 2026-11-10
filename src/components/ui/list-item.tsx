@@ -1,76 +1,48 @@
-import { type MouseEvent, useId } from "react";
+import { type MouseEvent, type ReactNode, useId } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Icon, type IconName } from "@/components/ui/icon";
+import { Spinner } from "@/components/ui/spinner";
+import { StatusDot, type StatusDotTone } from "@/components/ui/status-dot";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import type { tracking } from "@/utils/tracking";
 
 type TrackingAttributes = ReturnType<typeof tracking>;
 
-/** `label` is announced to screen readers; only the pill shows it. */
+/** `label` is announced to screen readers in place of what the flair shows. */
 export type ListItemFlair =
-  | {
-      kind: "dot";
-      label: string;
-      tone?: "subdued" | "success" | "warning" | "critical";
-      pulse?: boolean;
-    }
-  | {
-      kind: "icon";
-      icon: IconName;
-      label: string;
-      tone?: "subdued" | "success" | "warning" | "critical";
-    }
-  | {
-      kind: "pill";
-      label: string;
-      tone?: "subdued" | "info" | "success" | "warning" | "critical";
-    };
+  | { kind: "dot"; label: string; tone?: StatusDotTone; pulse?: boolean }
+  | { kind: "spinner"; label: string }
+  | { kind: "icon"; icon: IconName; label: string; tone?: StatusDotTone };
 
 export interface ListItemAction {
   icon: IconName;
   /** Accessible name and tooltip, also used as the key, so keep it unique per item. */
   label: string;
   onClick: () => void;
-  tone?: "default" | "success" | "critical";
-  disabled?: boolean;
   tracking?: TrackingAttributes;
 }
 
 interface ListItemProps {
-  icon: IconName;
+  /** Without one, the title lines up under the titles of rows that have one. */
+  icon?: IconName;
   title: string;
   subtitle?: string;
   flair?: ListItemFlair;
   actions?: ListItemAction[];
-  /** Tints the icon tile when the item needs attention. */
-  tone?: "default" | "critical";
+  /** A dropdown menu's trigger, shown with the actions. */
+  menu?: ReactNode;
   /** The item whose view is currently open. */
   selected?: boolean;
-  /** The title stands in for missing content, e.g. "No instructions yet". */
-  placeholder?: boolean;
-  /** Can't be opened right now; actions stay available. */
-  disabled?: boolean;
-  /** Omit for display-only items. */
-  onOpen?: (event: MouseEvent<HTMLButtonElement>) => void;
-  /** `compact` drops the icon tile and puts the subtitle beside the title. */
-  density?: "default" | "compact";
-  testId?: string;
+  /** For a row heading a group it opens and closes; its title reads heavier. */
+  expanded?: boolean;
+  tooltip?: string;
+  onOpen: (event: MouseEvent<HTMLButtonElement>) => void;
   tracking?: TrackingAttributes;
+  /** `div` for a row that heads a group inside another list's item. */
+  as?: "li" | "div";
 }
-
-const TILE_TONE = {
-  default: "bg-foreground/8 text-muted-foreground",
-  critical: "bg-destructive/10 text-destructive",
-} as const;
-
-const DOT_TONE = {
-  subdued: "bg-muted-foreground",
-  success: "bg-success",
-  warning: "bg-warning",
-  critical: "bg-destructive",
-} as const;
 
 const ICON_TONE = {
   subdued: "text-muted-foreground",
@@ -79,66 +51,34 @@ const ICON_TONE = {
   critical: "text-destructive",
 } as const;
 
-const PILL_TONE = {
-  subdued: "bg-muted text-muted-foreground",
-  info: "bg-info/10 text-info",
-  success: "bg-success/10 text-success",
-  warning: "bg-warning/15 text-warning",
-  critical: "bg-destructive/10 text-destructive",
-} as const;
-
-const ACTION_TONE = {
-  default: "",
-  success: "text-success hover:text-success",
-  critical: "text-destructive hover:bg-destructive/10 hover:text-destructive",
-} as const;
-
 function FlairContent({ flair }: { flair: ListItemFlair }) {
-  switch (flair.kind) {
-    case "dot":
-      return (
-        <>
-          <span
-            className={cn(
-              "size-2 rounded-full",
-              DOT_TONE[flair.tone ?? "subdued"],
-              flair.pulse && "animate-pulse motion-reduce:animate-none",
-            )}
-          />
-          <span className="sr-only">{flair.label}</span>
-        </>
-      );
-    case "icon":
-      return (
-        <>
-          <Icon
-            name={flair.icon}
-            size="sm"
-            aria-hidden
-            className={ICON_TONE[flair.tone ?? "subdued"]}
-          />
-          <span className="sr-only">{flair.label}</span>
-        </>
-      );
-    case "pill":
-      return (
-        <span
-          className={cn(
-            "whitespace-nowrap rounded-sm px-1.5 py-0.5 text-xs font-medium",
-            PILL_TONE[flair.tone ?? "subdued"],
-          )}
-        >
-          {flair.label}
-        </span>
-      );
-  }
+  return (
+    <>
+      {flair.kind === "dot" && (
+        <StatusDot tone={flair.tone} pulse={flair.pulse} />
+      )}
+      {flair.kind === "spinner" && (
+        <Spinner size={12} className="motion-reduce:animate-none" />
+      )}
+      {flair.kind === "icon" && (
+        <Icon
+          name={flair.icon}
+          size="sm"
+          aria-hidden
+          className={ICON_TONE[flair.tone ?? "subdued"]}
+        />
+      )}
+      <span className="sr-only">{flair.label}</span>
+    </>
+  );
 }
 
 /**
- * One item design for every list of openable things: icon tile, title over
- * subtitle, a read-only flair, and actions that take the flair's spot on hover.
- * Until then the actions take no room, so the title truncates at the column's
- * edge rather than short of it.
+ * One row design for every list of openable things: an icon, the title with
+ * a subtitle beside it, a read-only flair, and actions that take the flair's
+ * spot on hover. Until then the actions take no room, so the title truncates
+ * at the column's edge rather than short of it. A menu among the actions
+ * stays shown while it's open.
  * The row's slots take data instead of markup, so call sites can't restyle it.
  */
 export function ListItem({
@@ -147,152 +87,86 @@ export function ListItem({
   subtitle,
   flair,
   actions = [],
-  tone = "default",
+  menu,
   selected = false,
-  placeholder = false,
-  disabled = false,
+  expanded,
+  tooltip,
   onOpen,
-  density = "default",
-  testId,
   tracking,
+  as: Row = "li",
 }: ListItemProps) {
   const flairId = useId();
-  const openable = onOpen !== undefined && !disabled;
-  const hasActions = actions.length > 0;
-  // Translucent rather than a theme token, so selection matches the embedded
-  // Tangent lists, which sit on this page's surface with their own palette.
-  const rowBackground = selected
-    ? "bg-foreground/10"
-    : openable && "hover:bg-foreground/5";
+  const hasActions = actions.length > 0 || menu !== undefined;
 
-  const compact = density === "compact";
-  const body = compact ? (
-    <>
-      <Icon
-        name={icon}
-        size="sm"
-        aria-hidden
+  return (
+    <Row
+      className={cn(
+        "group/item relative grid w-full grid-cols-[minmax(0,1fr)_auto] rounded-md transition-colors motion-reduce:transition-none",
+        // Translucent rather than a theme token, so selection matches the
+        // embedded Tangent lists, which sit on this page's surface with their
+        // own palette.
+        selected ? "bg-foreground/10" : "hover:bg-foreground/5",
+      )}
+    >
+      <button
+        type="button"
+        aria-current={selected || undefined}
+        aria-expanded={expanded}
+        aria-describedby={flair ? flairId : undefined}
+        title={tooltip}
+        onClick={onOpen}
+        {...tracking}
         className={cn(
-          "shrink-0",
-          tone === "critical" ? "text-destructive" : "text-muted-foreground",
-        )}
-      />
-      <Text
-        size="sm"
-        tone={placeholder ? "subdued" : "inherit"}
-        title={title}
-        className="min-w-0 flex-1 truncate"
-      >
-        {title}
-      </Text>
-      {subtitle ? (
-        <Text
-          size="xs"
-          tone="subdued"
-          title={subtitle}
-          className="max-w-[45%] shrink-0 truncate"
-        >
-          {subtitle}
-        </Text>
-      ) : null}
-    </>
-  ) : (
-    <>
-      <span
-        className={cn(
-          "grid size-9 shrink-0 place-items-center rounded-md",
-          TILE_TONE[tone],
+          "flex min-w-0 cursor-pointer items-center gap-2 py-1.5 pe-2 text-left outline-none after:absolute after:inset-0 after:rounded-md focus-visible:after:ring-2 focus-visible:after:ring-ring/50 focus-visible:after:ring-inset",
+          icon ? "ps-2" : "ps-8",
         )}
       >
-        <Icon name={icon} size="lg" aria-hidden />
-      </span>
-      <span className="flex min-w-0 flex-1 flex-col">
+        {icon && (
+          <Icon
+            name={icon}
+            size="sm"
+            aria-hidden
+            className="shrink-0 text-muted-foreground"
+          />
+        )}
         <Text
           size="sm"
-          weight="medium"
-          tone={placeholder ? "subdued" : "inherit"}
-          title={title}
-          className="truncate"
+          weight={expanded === undefined ? undefined : "medium"}
+          tone="inherit"
+          title={tooltip ? undefined : title}
+          className="min-w-0 flex-1 truncate"
         >
           {title}
         </Text>
         {subtitle ? (
-          <Text size="xs" tone="subdued" title={subtitle} className="truncate">
+          <Text
+            size="xs"
+            tone="subdued"
+            title={subtitle}
+            className="max-w-[45%] shrink-0 truncate"
+          >
             {subtitle}
           </Text>
         ) : null}
-      </span>
-    </>
-  );
-
-  return (
-    <li
-      className={cn(
-        "group/item relative grid w-full grid-cols-[minmax(0,1fr)_auto] rounded-md transition-colors motion-reduce:transition-none",
-        rowBackground,
-      )}
-    >
-      {onOpen ? (
-        <button
-          type="button"
-          disabled={disabled}
-          aria-current={selected || undefined}
-          aria-describedby={flair ? flairId : undefined}
-          data-testid={testId}
-          onClick={onOpen}
-          {...tracking}
-          className={cn(
-            "flex min-w-0 cursor-pointer items-center text-left outline-none after:absolute after:inset-0 after:rounded-md focus-visible:after:ring-2 focus-visible:after:ring-ring/50 focus-visible:after:ring-inset disabled:cursor-default disabled:opacity-50",
-            compact ? "gap-2 px-2 py-1.5" : "gap-3 p-2",
-          )}
-        >
-          {body}
-        </button>
-      ) : (
-        <div
-          className={cn(
-            "flex min-w-0 items-center",
-            compact ? "gap-2 px-2 py-1.5" : "gap-3 p-2",
-          )}
-        >
-          {body}
-        </div>
-      )}
+      </button>
       {flair || hasActions ? (
-        <div
-          className={cn(
-            "pointer-events-none relative grid h-5 pe-2 pointer-coarse:flex pointer-coarse:gap-1",
-            // Nothing else on a row that can't be opened takes focus, so its
-            // actions stay shown instead of waiting on focus to reveal them.
-            !openable && "flex gap-1",
-            subtitle && !compact ? "mt-2 self-start" : "self-center",
-          )}
-        >
+        <div className="pointer-events-none relative grid h-5 self-center pe-2 pointer-coarse:flex pointer-coarse:gap-1">
           {hasActions ? (
-            <div
-              className={cn(
-                "pointer-events-auto hidden items-center justify-end gap-1 [grid-area:1/1] group-focus-within/item:flex group-hover/item:flex pointer-coarse:flex",
-                !openable && "flex",
-              )}
-            >
+            <div className="pointer-events-auto hidden items-center justify-end gap-1 [grid-area:1/1] group-focus-within/item:flex group-hover/item:flex has-[[data-state=open]]:flex pointer-coarse:flex">
               {actions.map((action) => (
                 <Button
                   key={action.label}
-                  variant="ghost"
-                  size="min"
+                  variant="subtle"
+                  size="icon-xs"
                   aria-label={action.label}
                   title={action.label}
-                  disabled={action.disabled}
                   onClick={action.onClick}
                   {...action.tracking}
-                  className={cn(
-                    "size-6",
-                    ACTION_TONE[action.tone ?? "default"],
-                  )}
                 >
                   <Icon name={action.icon} size="sm" aria-hidden />
                 </Button>
               ))}
+              {menu}
             </div>
           ) : null}
           {flair ? (
@@ -301,7 +175,6 @@ export function ListItem({
               className={cn(
                 "flex items-center justify-end transition-opacity duration-150 [grid-area:1/1] motion-reduce:transition-none",
                 hasActions &&
-                  openable &&
                   "group-hover/item:opacity-0 pointer-fine:group-focus-within/item:opacity-0",
               )}
             >
@@ -310,7 +183,7 @@ export function ListItem({
           ) : null}
         </div>
       ) : null}
-    </li>
+    </Row>
   );
 }
 
