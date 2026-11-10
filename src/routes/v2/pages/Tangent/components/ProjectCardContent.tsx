@@ -26,12 +26,23 @@ import { useProjectRuns } from "@/services/projects/useProjectRuns";
 import { formatRelativeTime } from "@/utils/date";
 import { containsSearchTerm } from "@/utils/searchUtils";
 import { tracking } from "@/utils/tracking";
+import { getStorage } from "@/utils/typedStorage";
 
 import { AddResourceButton } from "./AddResourceButton";
 import { RunListItem } from "./RunListItem";
 import { SearchField } from "./SearchField";
 
 type CardView = "main" | "files" | "archived";
+
+// As many as the slash commands show of each.
+const PREVIEW_COUNT = 5;
+
+const EXPANDED_KEY = "tangent-card-expanded-sections";
+
+const storage = getStorage<
+  typeof EXPANDED_KEY,
+  { [EXPANDED_KEY]: Record<string, string[]> }
+>();
 
 function ago(date: Date | null | undefined): string | undefined {
   return date ? formatRelativeTime(date) : undefined;
@@ -50,10 +61,11 @@ const matching = (query: string, ...texts: string[]) =>
 /**
  * What the project holds, in the order someone looks for it: reports (the
  * files pinned as ready to share), its latest runs, its pipelines, and its
- * documents, each a short list that scrolls. Every file the chats made waits
- * behind "All files", with its own search, where any of them can be pinned or
- * unpinned. One search filters the card, and a section with nothing to show
- * drops out.
+ * documents. Each shows its newest few and the rest on "Show all", which is
+ * remembered per project; reports leave the rest to "All files", where every
+ * file the chats made waits, with its own search, to be pinned or unpinned.
+ * One search filters the card, showing every match, and a section with
+ * nothing to show drops out.
  */
 export const ProjectCardContent = observer(function ProjectCardContent() {
   const store = useTangentProject();
@@ -69,6 +81,9 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
   const [query, setQuery] = useState("");
   const [fileQuery, setFileQuery] = useState("");
   const [view, setView] = useState<CardView>("main");
+  const [expandedByProject, setExpandedByProject] = useState(
+    () => storage.getItem(EXPANDED_KEY) ?? {},
+  );
   const resourceItems = useProjectResourceItems(store.projectId);
   const { resources, summaries } = resourceItems;
   const projectRuns = useProjectRuns(store.projectId);
@@ -248,6 +263,18 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
     );
   }
 
+  const remembered = expandedByProject[store.projectId];
+  const expanded = new Set(Array.isArray(remembered) ? remembered : []);
+  function toggleSection(title: string) {
+    const next = new Set(expanded);
+    if (!next.delete(title)) next.add(title);
+    const all = { ...expandedByProject, [store.projectId]: [...next] };
+    setExpandedByProject(all);
+    storage.setItem(EXPANDED_KEY, all);
+  }
+  // A search shows every match, so it's the one time nothing is held back.
+  const preview = (kind: Preview) => (searching ? undefined : kind);
+
   // A section stays while it has rows, or, outside a search, while it's one
   // that always shows.
   const sections: (Section & { always: boolean })[] = [
@@ -255,6 +282,7 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
       title: "Reports",
       rows: files.reports.filter(fileMatches).map((file) => renderFile(file)),
       empty: "Nothing has been pinned as a report yet",
+      preview: preview("cut"),
       footer: searching ? undefined : (
         <FooterButton
           icon="Files"
@@ -281,6 +309,7 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
         .filter(({ pipelineName }) => matches(pipelineName))
         .map(renderRun),
       more: searching ? undefined : <LoadOlderRuns query={projectRuns} />,
+      preview: preview("expand"),
       action: add("run"),
       empty: emptyNote(
         [projectRuns, resourceItems],
@@ -294,6 +323,7 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
       rows: pipelines.active
         .filter(({ name }) => matches(name))
         .map(renderAttached),
+      preview: preview("expand"),
       action: add("pipeline"),
       empty: emptyNote(
         [resourceItems],
@@ -307,6 +337,7 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
       rows: documents.active
         .filter(({ name }) => matches(name))
         .map(renderAttached),
+      preview: preview("expand"),
       action: add("document"),
       empty: emptyNote(
         [resourceItems],
@@ -334,7 +365,11 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
       {searching && shownSections.length === 0 && (
         <EmptyNote>Nothing in this project matches</EmptyNote>
       )}
-      <CardSections sections={shownSections} />
+      <CardSections
+        sections={shownSections}
+        expanded={expanded}
+        onToggle={toggleSection}
+      />
       {archivedCount > 0 && !searching && (
         <div className="border-t border-border p-2">
           <FooterButton
@@ -436,29 +471,97 @@ function FooterButton({
   );
 }
 
+/**
+ * How a long section holds back its rows: `expand` with a "Show all" row in
+ * place, `cut` leaving the rest to its footer. Without one, every row shows.
+ */
+type Preview = "expand" | "cut";
+
 interface Section {
   title: string;
   rows: ReactNode[];
+  // Shown after the rows, once they're all showing.
   more?: ReactNode;
+  preview?: Preview;
   action?: ReactNode;
   empty?: string;
   footer?: ReactNode;
 }
 
-function CardSections({ sections }: { sections: Section[] }) {
+function CardSections({
+  sections,
+  expanded = new Set(),
+  onToggle,
+}: {
+  sections: Section[];
+  expanded?: ReadonlySet<string>;
+  onToggle?: (title: string) => void;
+}) {
   return (
     <div className="divide-y divide-border">
-      {sections.map(({ title, rows, more, ...section }) => (
-        <CardSection key={title} title={title} count={rows.length} {...section}>
-          {rows}
-          {more}
-        </CardSection>
-      ))}
+      {sections.map(({ title, rows, more, preview, ...section }) => {
+        const long = preview !== undefined && rows.length > PREVIEW_COUNT;
+        const open = expanded.has(title);
+        const clipped = long && !(preview === "expand" && open);
+        return (
+          <CardSection
+            key={title}
+            title={title}
+            count={rows.length}
+            {...section}
+          >
+            {clipped ? rows.slice(0, PREVIEW_COUNT) : rows}
+            {!clipped && more}
+            {long && preview === "expand" && (
+              <ShowAllRow
+                open={open}
+                total={rows.length}
+                title={title}
+                onToggle={() => onToggle?.(title)}
+              />
+            )}
+          </CardSection>
+        );
+      })}
     </div>
   );
 }
 
-/** A section's list scrolls past a handful of rows, so every section shows. */
+function ShowAllRow({
+  open,
+  total,
+  title,
+  onToggle,
+}: {
+  open: boolean;
+  total: number;
+  title: string;
+  onToggle: () => void;
+}) {
+  return (
+    <li>
+      <Button
+        variant="subtle"
+        size="row"
+        align="start"
+        fullWidth
+        aria-expanded={open}
+        onClick={onToggle}
+        className="ps-8"
+        {...tracking(
+          open
+            ? "projects.project_card.show_fewer"
+            : "projects.project_card.show_all",
+          { section: title },
+        )}
+      >
+        {open ? "Show fewer" : `Show all ${total}`}
+      </Button>
+    </li>
+  );
+}
+
+/** Every row shows; the card's column or popover scrolls, not the section. */
 function CardSection({
   title,
   count,
@@ -494,11 +597,9 @@ function CardSection({
           {empty}
         </Text>
       ) : (
-        <div className="reveal-scrollbar max-h-36 overflow-y-auto overscroll-contain">
-          <BlockStack as="ul" align="stretch">
-            {children}
-          </BlockStack>
-        </div>
+        <BlockStack as="ul" align="stretch">
+          {children}
+        </BlockStack>
       )}
       {footer}
     </section>
@@ -520,6 +621,7 @@ function LoadOlderRuns({
         fullWidth
         disabled={query.isFetchingNextPage}
         onClick={() => void query.fetchNextPage()}
+        className="ps-8"
         {...tracking("projects.project_card.load_older_runs")}
       >
         {query.isFetchingNextPage ? "Loading…" : "Load older runs"}

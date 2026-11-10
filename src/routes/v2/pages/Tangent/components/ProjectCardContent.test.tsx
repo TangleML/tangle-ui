@@ -91,6 +91,8 @@ vi.mock("@/routes/v2/pages/Tangent/hooks/useProjectResourceItems", () => ({
           pipeline(2),
           pipeline(3),
           pipeline(4),
+          pipeline(5),
+          pipeline(6),
           {
             id: "d-1",
             name: "Project brief",
@@ -176,6 +178,7 @@ describe("ProjectCardContent", () => {
     pin.mockClear();
     unpin.mockClear();
     archiveChange.mockClear();
+    localStorage.clear();
     loading.resources = { isLoading: false, isLoaded: true, error: null };
     loading.runs = { isLoading: false, error: null };
   });
@@ -238,12 +241,41 @@ describe("ProjectCardContent", () => {
     );
   });
 
-  it("lists every item in a section rather than hiding some behind Show all", () => {
+  it("shows a section's newest five and the rest on Show all, remembered for the project", async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<ProjectCardContent />);
+    const pipelines = () => screen.getByRole("region", { name: "Pipelines" });
+
+    expect(within(pipelines()).getByText("Pipeline 5")).toBeInTheDocument();
+    expect(within(pipelines()).queryByText("Pipeline 6")).toBeNull();
+    expect(
+      within(screen.getByRole("region", { name: "Runs" })).queryByRole(
+        "button",
+        { name: /Show all/ },
+      ),
+    ).toBeNull();
+
+    await user.click(
+      within(pipelines()).getByRole("button", { name: "Show all 6" }),
+    );
+    expect(within(pipelines()).getByText("Pipeline 6")).toBeInTheDocument();
+
+    unmount();
     render(<ProjectCardContent />);
+    expect(within(pipelines()).getByText("Pipeline 6")).toBeInTheDocument();
+
+    await user.click(
+      within(pipelines()).getByRole("button", { name: "Show fewer" }),
+    );
+    expect(within(pipelines()).queryByText("Pipeline 6")).toBeNull();
+  });
+
+  it("shows every match while searching", async () => {
+    await search("pipeline");
 
     const pipelines = screen.getByRole("region", { name: "Pipelines" });
-    expect(within(pipelines).getByText("Pipeline 4")).toBeInTheDocument();
-    expect(screen.queryByText(/Show all/)).toBeNull();
+    expect(within(pipelines).getByText("Pipeline 6")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Show all/ })).toBeNull();
   });
 
   it("lists runs newest first, whichever pipeline they ran", () => {
