@@ -21,11 +21,11 @@ export interface ProjectSession {
   createdAt: Date;
 }
 
-const SESSION_RESOURCES: ListProjectResourcesParams = {
+export const SESSION_RESOURCES: ListProjectResourcesParams = {
   entity: ["agent_session"],
 };
 
-function sessionsOf(
+export function sessionsOf(
   resources: ProjectResourceSummary[] = [],
 ): ProjectSession[] {
   return resources

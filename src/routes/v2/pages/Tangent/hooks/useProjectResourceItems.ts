@@ -67,7 +67,7 @@ function targetOf(
  * Instructions are the one row deliberately left out: they have a box of their
  * own above this list, and a second way in would offer a Remove that wipes them.
  */
-function toResourceItem(
+export function toResourceItem(
   resource: ProjectResourceSummary,
   { unavailable, currentNames }: LocalPipelineStatus,
   remoteNames: ReadonlyMap<string, string>,
