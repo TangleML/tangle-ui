@@ -27,6 +27,14 @@ vi.mock("@/routes/v2/pages/Tangent/hooks/useOpenTangentProject", () => ({
   useOpenTangentProject: () => openProject,
 }));
 
+vi.mock("@/routes/v2/pages/Tangent/hooks/useTangentBaseUrl", () => ({
+  useTangentBaseUrl: () => ({ baseUrl: null }),
+}));
+
+vi.mock("@/routes/v2/pages/Tangent/hooks/useSessionRunStates", () => ({
+  useSessionRunStates: () => new Map(),
+}));
+
 /** Stands in for the store's context, so a change re-renders the panel. */
 const inView = vi.hoisted(() => {
   const listeners = new Set<() => void>();

@@ -92,6 +92,24 @@ describe("SessionsWindowContent", () => {
   });
   afterEach(() => vi.resetAllMocks());
 
+  it("says which sessions have an agent working or a failed last run", () => {
+    render(
+      <DialogProvider disableRouterSync>
+        <SessionsWindowContent
+          projectId="project-1"
+          runStates={new Map([["session-2", "working"]])}
+        />
+      </DialogProvider>,
+    );
+
+    expect(
+      screen.getByRole("button", { name: /^Feature exploration\W+Working$/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Session 1" }),
+    ).toBeInTheDocument();
+  });
+
   it("numbers an unnamed session and shows a named one by its name", () => {
     renderSessions();
 
