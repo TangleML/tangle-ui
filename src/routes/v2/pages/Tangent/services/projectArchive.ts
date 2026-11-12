@@ -27,17 +27,39 @@ export function withArchived(
   return { ...metadata, [ARCHIVED_KEY]: [...targets] };
 }
 
+const lastWrite = new Map<string, Promise<unknown>>();
+
+function afterEarlierWrites<T>(
+  projectId: string,
+  write: () => Promise<T>,
+): Promise<T> {
+  const queued = (lastWrite.get(projectId) ?? Promise.resolve()).then(
+    write,
+    write,
+  );
+  lastWrite.set(projectId, queued);
+  const forget = () => {
+    if (lastWrite.get(projectId) === queued) lastWrite.delete(projectId);
+  };
+  queued.then(forget, forget);
+  return queued;
+}
+
 /**
  * Archives or restores an item for everyone in the project. The PATCH replaces
- * the whole metadata object, so the project is read again just before.
+ * the whole metadata object, so the project is read again just before, and a
+ * project's changes are saved one at a time: two that overlapped would each
+ * write back a list without the other's item.
  */
-export async function setProjectItemArchived(
+export function setProjectItemArchived(
   projectId: string,
   target: string,
   archived: boolean,
 ): Promise<Project> {
-  const latest = await getProject(projectId);
-  return updateProject(projectId, {
-    metadata: withArchived(latest.metadata, target, archived),
+  return afterEarlierWrites(projectId, async () => {
+    const latest = await getProject(projectId);
+    return updateProject(projectId, {
+      metadata: withArchived(latest.metadata, target, archived),
+    });
   });
 }
