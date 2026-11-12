@@ -20,6 +20,7 @@ import { resolveWorkareaTarget } from "@/routes/v2/pages/Tangent/services/resolv
 import { sessionMemorySeed } from "@/routes/v2/pages/Tangent/services/sessionMemory";
 import { rootConfigSeed } from "@/routes/v2/pages/Tangent/services/sessionRunConfig";
 import type {
+  OpenTabs,
   ResolvedWorkareaView,
   WorkareaTab,
   WorkareaTarget,
@@ -49,11 +50,6 @@ export interface AgentTab {
 /** How long {@link TangentProjectStore.waitForTabEnvironment} waits. */
 const DEFAULT_ENVIRONMENT_WAIT_MS = 15_000;
 
-interface WorkareaSlice {
-  tabs: WorkareaTab[];
-  activeId: string | null;
-}
-
 interface ChatSlice {
   tabs: AgentTab[];
   activeTab: string;
@@ -65,7 +61,7 @@ interface TabBridgeRegistration {
   bridge: ToolBridgeApi;
 }
 
-const EMPTY_WORKAREA: WorkareaSlice = { tabs: [], activeId: null };
+const NO_TABS: OpenTabs = { tabs: [], activeId: null };
 const EMPTY_CHAT: ChatSlice = { tabs: [], activeTab: CHAT_TAB_VALUE };
 
 interface NewSessionOptions {
@@ -110,9 +106,10 @@ export interface StartSessionOptions {
  * out-of-render agent tools read it from one place. Sessions, project and
  * resources stay in TanStack Query.
  *
- * Chat and workarea are keyed by session id and restored on switch, but the
- * live tab wiring — stores, environments, bridges — is keyed by globally unique
- * tab id, so backgrounded tabs clean up on unmount without a session-scoped
+ * The workarea's tabs belong to the project, so what's open stays open as its
+ * chats change. A chat's own tabs are keyed by session id and restored on
+ * switch. The live tab wiring — stores, environments, bridges — is keyed by
+ * globally unique tab id, so tabs clean up on unmount without a session-scoped
  * reset.
  */
 export class TangentProjectStore {
@@ -125,10 +122,7 @@ export class TangentProjectStore {
    * that isn't on screen yet takes it as soon as it shows. */
   @observable accessor searchFocusRequested = false;
 
-  @observable.shallow accessor workareaBySession = new Map<
-    string,
-    WorkareaSlice
-  >();
+  @observable.ref accessor openTabs: OpenTabs;
   @observable.shallow accessor chatBySession = new Map<string, ChatSlice>();
 
   // Live tab wiring is intentionally non-observable: it's registered/read by the
@@ -141,14 +135,19 @@ export class TangentProjectStore {
   >();
   #tabBridges = new Map<string, TabBridgeRegistration>();
   #lastEditorTabId: string | null = null;
+  // A tab's view mounts the first time it's in front, so a project that comes
+  // back with several tabs loads the one in view, not all of them at once.
+  #shownTabIds = new Set<string>();
 
   #freshSessions = new Map<string, string>();
   #sessionsWithPrompt = new Set<string>();
   #io: TangentSessionIo | null = null;
 
-  constructor(projectId: string) {
+  constructor(projectId: string, openTabs: OpenTabs = NO_TABS) {
     this.projectId = projectId;
+    this.openTabs = openTabs;
     makeObservable(this);
+    if (openTabs.activeId) this.#shownTabIds.add(openTabs.activeId);
   }
 
   @action setSessionIo(io: TangentSessionIo) {
@@ -161,20 +160,12 @@ export class TangentProjectStore {
     return this.selectedSessionId ?? this.defaultSessionId;
   }
 
-  @computed get workareaSlice(): WorkareaSlice {
-    const sessionId = this.activeSessionId;
-    return (
-      (sessionId ? this.workareaBySession.get(sessionId) : undefined) ??
-      EMPTY_WORKAREA
-    );
-  }
-
   @computed get workareaTabs(): WorkareaTab[] {
-    return this.workareaSlice.tabs;
+    return this.openTabs.tabs;
   }
 
   @computed get activeWorkareaTabId(): string | null {
-    return this.workareaSlice.activeId;
+    return this.openTabs.activeId;
   }
 
   @computed get chatSlice(): ChatSlice {
@@ -211,15 +202,12 @@ export class TangentProjectStore {
   }
 
   @action setDefaultSessionId(sessionId: string | undefined) {
-    if (this.defaultSessionId === sessionId) return;
     this.defaultSessionId = sessionId;
-    this.#syncLastEditor();
   }
 
   @action selectSession(sessionId: string) {
     const previous = this.activeSessionId;
     this.selectedSessionId = sessionId;
-    this.#syncLastEditor();
     if (previous && previous !== sessionId) {
       void this.discardEmptySession(previous);
     }
@@ -297,7 +285,6 @@ export class TangentProjectStore {
       runInAction(() => {
         this.#freshSessions.set(sessionId, resource.id);
         this.selectedSessionId = sessionId;
-        this.#syncLastEditor();
       });
       if (prompt.trim()) {
         this.#sessionsWithPrompt.add(sessionId);
@@ -337,7 +324,6 @@ export class TangentProjectStore {
   }
 
   @action dropSession(sessionId: string) {
-    this.workareaBySession.delete(sessionId);
     this.chatBySession.delete(sessionId);
   }
 
@@ -359,18 +345,12 @@ export class TangentProjectStore {
   }
 
   @action openResolvedView(view: ResolvedWorkareaView): WorkareaTab {
-    // Tabs live under the active session, so #putSlice drops them when there
-    // is none. Fail loudly instead of returning a tab that was never stored.
-    if (!this.activeSessionId) {
-      throw new Error(
-        "No active Tangent session. Start a session before opening a workarea tab.",
-      );
-    }
-    if (view.target.type === "run") {
+    const sessionId = this.activeSessionId;
+    if (sessionId && view.target.type === "run") {
       // Best effort: the run still opens if the chat can't note it down.
       void this.#io
         ?.recordSessionRun?.(
-          this.activeSessionId,
+          sessionId,
           parseIdentity(view.target.identity).value,
           view.title,
         )
@@ -379,11 +359,11 @@ export class TangentProjectStore {
     const tabs = this.workareaTabs;
     const existing = tabs.find((tab) => sameTarget(tab.target, view.target));
     if (existing) {
-      this.#putSlice(tabs, existing.id);
+      this.#setTabs(tabs, existing.id);
       return existing;
     }
     const tab: WorkareaTab = { ...view, id: crypto.randomUUID() };
-    this.#putSlice([...tabs, tab], tab.id);
+    this.#setTabs([...tabs, tab], tab.id);
     return tab;
   }
 
@@ -395,29 +375,23 @@ export class TangentProjectStore {
     if (index < 0 || tabs[index].title === title) return;
     const next = [...tabs];
     next[index] = { ...next[index], title };
-    this.#putSlice(next, this.activeWorkareaTabId);
+    this.#setTabs(next, this.activeWorkareaTabId);
   }
 
-  @action replaceWorkareaTabTarget(
-    sessionId: string,
-    tabId: string,
-    target: WorkareaTarget,
-  ) {
-    const slice = this.workareaBySession.get(sessionId);
-    if (!slice?.tabs.some((tab) => tab.id === tabId)) return;
-    this.workareaBySession.set(sessionId, {
-      ...slice,
-      tabs: slice.tabs.map((tab) =>
-        tab.id === tabId ? { ...tab, target } : tab,
-      ),
-    });
+  @action replaceWorkareaTabTarget(tabId: string, target: WorkareaTarget) {
+    const tabs = this.workareaTabs;
+    if (!tabs.some((tab) => tab.id === tabId)) return;
+    this.#setTabs(
+      tabs.map((tab) => (tab.id === tabId ? { ...tab, target } : tab)),
+      this.activeWorkareaTabId,
+    );
   }
 
   @action replaceWorkareaTarget(
     previous: WorkareaTarget,
     target: WorkareaTarget,
   ) {
-    this.#putSlice(
+    this.#setTabs(
       this.workareaTabs.map((tab) =>
         sameTarget(tab.target, previous) ? { ...tab, target } : tab,
       ),
@@ -428,19 +402,24 @@ export class TangentProjectStore {
   @action selectWorkareaTab(id: string) {
     const tabs = this.workareaTabs;
     if (!tabs.some((tab) => tab.id === id)) return;
-    this.#putSlice(tabs, id);
+    this.#setTabs(tabs, id);
+  }
+
+  hasShownTab(id: string): boolean {
+    return this.#shownTabIds.has(id);
   }
 
   @action closeWorkareaTab(id: string) {
     this.unregisterTabEnvironment(id);
     this.unregisterTabBridge(id);
+    this.#shownTabIds.delete(id);
     const tabs = this.workareaTabs;
     const next = tabs.filter((tab) => tab.id !== id);
     const nextActiveId =
       this.activeWorkareaTabId === id
         ? (next.at(-1)?.id ?? null)
         : this.activeWorkareaTabId;
-    this.#putSlice(next, nextActiveId);
+    this.#setTabs(next, nextActiveId);
   }
 
   @action openAgent(agent: EmbedAgent) {
@@ -603,16 +582,15 @@ export class TangentProjectStore {
       : undefined;
   }
 
-  #putSlice(tabs: WorkareaTab[], activeId: string | null) {
-    const sessionId = this.activeSessionId;
-    if (!sessionId) return;
-    this.workareaBySession.set(sessionId, { tabs, activeId });
+  #setTabs(tabs: WorkareaTab[], activeId: string | null) {
+    this.openTabs = { tabs, activeId };
+    if (activeId) this.#shownTabIds.add(activeId);
     this.#syncLastEditor();
   }
 
   // The editor-bridge fallback keeps the active pipeline tab when one is
   // focused, otherwise the still-open last editor tab, otherwise the newest
-  // pipeline in the active session's tabs.
+  // pipeline among the open tabs.
   #syncLastEditor() {
     const tabs = this.workareaTabs;
     const activeTab = tabs.find((tab) => tab.id === this.activeWorkareaTabId);

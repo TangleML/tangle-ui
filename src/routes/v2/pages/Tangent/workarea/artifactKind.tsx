@@ -2,6 +2,7 @@ import { ArtifactViewer } from "@tangent/embed-react";
 
 import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
+import { sessionIdOfFileUrl } from "@/routes/v2/pages/Tangent/services/sessionFiles";
 import { parseIdentity } from "@/services/projects/resourceTarget";
 
 import { registerWorkareaKind } from "./registry";
@@ -14,7 +15,11 @@ function ArtifactWorkareaView({
   tab: WorkareaTab;
   sessionId: string | undefined;
 }) {
-  if (sessionId === undefined) {
+  const url = parseIdentity(tab.target.identity).value;
+  // A chat's file is read as that chat's, so its tab shows the same whichever
+  // chat is open beside it.
+  const owner = sessionIdOfFileUrl(url) ?? sessionId;
+  if (owner === undefined) {
     return (
       <BlockStack
         gap="1"
@@ -29,8 +34,8 @@ function ArtifactWorkareaView({
   }
   return (
     <ArtifactViewer
-      sessionId={sessionId}
-      url={parseIdentity(tab.target.identity).value}
+      sessionId={owner}
+      url={url}
       title={tab.title}
       className="min-h-0 flex-1"
       style={{ height: "100%" }}

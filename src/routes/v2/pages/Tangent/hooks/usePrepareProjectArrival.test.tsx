@@ -247,7 +247,7 @@ describe("usePrepareProjectArrival", () => {
     expect(createResource).not.toHaveBeenCalled();
   });
 
-  /** The workarea is keyed by session, so a tab opened before one is dropped. */
+  /** A session that fails to start should leave the project as it was. */
   it("opens the pipeline only once a session is running", async () => {
     const store = makeStore();
     let sessionStarted = false;
