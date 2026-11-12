@@ -78,11 +78,18 @@ function runRow(runStatuses: ReadonlyMap<string, string>) {
       .join(" · ");
 }
 
+// A link's address ends at its first space unless it's in angle brackets, and
+// a file's path can hold one. Bracketed, it's read whole and the agent still
+// sees the real path.
+function fileAddress(address: string): string {
+  return /[\s()<>]/.test(address) ? `<${address}>` : address;
+}
+
 function fileRow({ thisChat, fileUrl }: FileLinks) {
   return (file: SessionFileRecord) =>
     file.sessionId === thisChat
-      ? link(file.title, file.path)
-      : `${link(file.title, fileUrl(file))} · another chat`;
+      ? link(file.title, fileAddress(file.path))
+      : `${link(file.title, fileAddress(fileUrl(file)))} · another chat`;
 }
 
 /**
