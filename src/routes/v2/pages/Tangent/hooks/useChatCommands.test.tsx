@@ -7,20 +7,23 @@ import type { BridgeDeps } from "@/routes/v2/shared/components/AiChat/toolBridge
 import { useChatCommands } from "./useChatCommands";
 
 const fakes = vi.hoisted(() => ({
+  store: { activeSessionId: "chat-1" },
   listEntries: vi.fn(),
   listArchived: vi.fn(),
+  listFiles: vi.fn(),
   resolvePipeline: vi.fn(),
   submit: vi.fn(),
   recordSessionRun: vi.fn(),
 }));
 
 vi.mock("@/routes/v2/pages/Tangent/context/TangentProjectContext", () => ({
-  useTangentProject: () => ({ activeSessionId: "chat-1" }),
+  useTangentProject: () => fakes.store,
 }));
 vi.mock("@/routes/v2/pages/Tangent/context/ProjectCardHandlersContext", () => ({
   useProjectCardHandlers: () => ({
     listEntries: fakes.listEntries,
     listArchived: fakes.listArchived,
+    listFiles: fakes.listFiles,
   }),
 }));
 vi.mock("@/services/pipelineStorage/PipelineStorageProvider", () => ({
@@ -66,6 +69,7 @@ function commandNamed(name: string): EmbedCommand {
 describe("useChatCommands", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    fakes.store.activeSessionId = "chat-1";
     fakes.listEntries.mockResolvedValue({
       runs: [],
       pipelines: [TRAIN],
@@ -117,6 +121,59 @@ describe("useChatCommands", () => {
 
     expect(text).toContain("`p-1` (Train): A required input has no value.");
     expect(fakes.recordSessionRun).not.toHaveBeenCalled();
+  });
+
+  it("keeps a run with the chat that asked for it when another is opened meanwhile", async () => {
+    const submitted = Promise.withResolvers<{
+      success: boolean;
+      runId: string;
+    }>();
+    fakes.submit.mockReturnValue(submitted.promise);
+
+    const running = commandNamed("run").run("p-1");
+    await vi.waitFor(() => expect(fakes.submit).toHaveBeenCalled());
+    fakes.store.activeSessionId = "chat-2";
+    submitted.resolve({ success: true, runId: "r-9" });
+    await running;
+
+    expect(fakes.recordSessionRun).toHaveBeenCalledWith(
+      "chat-1",
+      "r-9",
+      "Train",
+    );
+  });
+
+  it("reports a run as started even when the chat can't note it down", async () => {
+    fakes.submit.mockResolvedValue({ success: true, runId: "r-9" });
+    fakes.recordSessionRun.mockRejectedValue(new Error("Tangent is down"));
+
+    const text = await commandNamed("run").run("p-1");
+
+    expect(text).toContain("- [Train](run://id/r-9)");
+    expect(text).not.toContain("Couldn't start");
+  });
+
+  it("marks files by the chat the command ran in, not one opened meanwhile", async () => {
+    const listed = Promise.withResolvers<unknown[]>();
+    fakes.listFiles.mockReturnValue(listed.promise);
+    const file = (sessionId: string, path: string) => ({
+      sessionId,
+      path,
+      title: path,
+      addedAt: new Date("2026-11-09"),
+      pinned: false,
+    });
+
+    const running = commandNamed("files").run("");
+    fakes.store.activeSessionId = "chat-2";
+    listed.resolve([
+      file("chat-1", "artifacts/a.md"),
+      file("chat-2", "artifacts/b.md"),
+    ]);
+    const text = await running;
+
+    expect(text).toContain("- [artifacts/a.md](artifacts/a.md)");
+    expect(text).toMatch(/- \[artifacts\/b\.md\]\(https:\S+\) · another chat/);
   });
 
   it("asks for ids when none are given", async () => {

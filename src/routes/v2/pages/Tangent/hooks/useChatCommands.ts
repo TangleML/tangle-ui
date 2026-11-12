@@ -70,7 +70,8 @@ export function useChatCommands(projectId: string): EmbedCommand[] {
     runTeamRef.current = runTeam;
   }, [runTeam]);
 
-  // Read when a command runs: the active chat can change after render.
+  // Called before a command waits on anything: the person may open another
+  // chat while it runs, and the result still goes to the one it ran in.
   const fileLinks = () => ({
     thisChat: store.activeSessionId,
     fileUrl: (file: SessionFileRecord) =>
@@ -138,6 +139,7 @@ export function useChatCommands(projectId: string): EmbedCommand[] {
   async function start(
     id: string,
     pipelines: ProjectCardEntry[],
+    sessionId: string | undefined,
   ): Promise<RunStart> {
     const pipeline = pipelines.find(({ target }) => targetId(target) === id);
     if (!pipeline) return { id, error: "not one of this project's pipelines" };
@@ -158,9 +160,11 @@ export function useChatCommands(projectId: string): EmbedCommand[] {
       if (!result.success || !result.runId) {
         return { id, name: pipeline.name, error: result.error };
       }
-      const sessionId = store.activeSessionId;
       if (sessionId) {
-        await recordSessionRun(sessionId, result.runId, pipeline.name);
+        // Best effort: the run has started whether or not the chat noted it.
+        await recordSessionRun(sessionId, result.runId, pipeline.name).catch(
+          () => undefined,
+        );
       }
       return {
         id,
@@ -176,8 +180,10 @@ export function useChatCommands(projectId: string): EmbedCommand[] {
     {
       name: "assets",
       description: "Everything in the project",
-      run: async () =>
-        assetsResult(await readCard(ASSET_RUNS, true), fileLinks()),
+      run: async () => {
+        const links = fileLinks();
+        return assetsResult(await readCard(ASSET_RUNS, true), links);
+      },
     },
     {
       name: "pipelines",
@@ -197,7 +203,10 @@ export function useChatCommands(projectId: string): EmbedCommand[] {
     {
       name: "files",
       description: "Files the chats made",
-      run: async () => filesResult(await handlers.listFiles(), fileLinks()),
+      run: async () => {
+        const links = fileLinks();
+        return filesResult(await handlers.listFiles(), links);
+      },
     },
     {
       name: "run",
@@ -210,9 +219,13 @@ export function useChatCommands(projectId: string): EmbedCommand[] {
             "add pipeline ids separated by commas. /pipelines lists them.",
           );
         }
+        // The person may open another chat while these start.
+        const sessionId = store.activeSessionId;
         const { pipelines } = await handlers.listEntries();
         const starts: RunStart[] = [];
-        for (const id of ids) starts.push(await start(id, pipelines));
+        for (const id of ids) {
+          starts.push(await start(id, pipelines, sessionId));
+        }
         return runStartsResult(starts);
       },
     },

@@ -94,6 +94,17 @@ describe("chat command results", () => {
     );
   });
 
+  it("keeps a file whose path has a space readable as a link", () => {
+    const text = filesResult(
+      [file("chat-1", "artifacts/Final report (v2).html", true)],
+      links,
+    );
+
+    expect(text).toContain(
+      "- [artifacts/Final report (v2).html](<artifacts/Final report (v2).html>)",
+    );
+  });
+
   it("sums the project up a few at a time, pointing at the full lists", () => {
     const pipelines = Array.from({ length: 7 }, (_, index) => ({
       target: `pipeline://remote/p-${index}`,
