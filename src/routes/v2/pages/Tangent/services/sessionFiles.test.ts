@@ -2,7 +2,12 @@ import type { EmbedResource } from "@tangent/embed-react";
 import { QueryClient } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { sessionFilesOf, setSessionFilePinned } from "./sessionFiles";
+import {
+  sessionFilesOf,
+  sessionFileUrl,
+  sessionIdOfFileUrl,
+  setSessionFilePinned,
+} from "./sessionFiles";
 import { sessionResourcesKey } from "./sessionResources";
 
 const BASE = "https://tangent.example/";
@@ -97,5 +102,28 @@ describe("setSessionFilePinned", () => {
     await expect(
       setSessionFilePinned(new QueryClient(), request, true),
     ).rejects.toThrow("Couldn't pin Notes (500).");
+  });
+});
+
+describe("sessionIdOfFileUrl", () => {
+  it("names the chat a file's address belongs to", () => {
+    const url = sessionFileUrl(BASE, "s-1", "artifacts/a b.html");
+
+    expect(sessionIdOfFileUrl(url)).toBe("s-1");
+    expect(sessionIdOfFileUrl(sessionFileUrl(BASE, "s/2", "notes.md"))).toBe(
+      "s/2",
+    );
+  });
+
+  it("names none for an address that isn't a chat's file", () => {
+    expect(sessionIdOfFileUrl("https://example.com/report.html")).toBe(
+      undefined,
+    );
+    expect(
+      sessionIdOfFileUrl("https://tangent.example/api/sessions/s-1/pins"),
+    ).toBe(undefined);
+    expect(
+      sessionIdOfFileUrl("https://tangent.example/api/sessions/%zz/files/a"),
+    ).toBe(undefined);
   });
 });

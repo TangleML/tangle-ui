@@ -16,8 +16,10 @@ import { ProjectDockPopover } from "./ProjectDockPopover";
  * the workarea registry, so the shell never switches on a concrete view's
  * internals — it only reads the kind's `icon`, `keepMounted`, and `render`.
  *
- * A `keepMounted` view stays mounted while inactive (hidden via CSS) so a live
- * view survives background switches; other views mount only when active.
+ * A `keepMounted` view mounts the first time its tab is shown and then stays
+ * mounted while inactive (hidden via CSS), so a live view survives background
+ * switches without every tab a project comes back with loading at once. Other
+ * views mount only when active.
  */
 export const DynamicWorkarea = observer(function DynamicWorkarea() {
   const store = useTangentProject();
@@ -68,6 +70,7 @@ export const DynamicWorkarea = observer(function DynamicWorkarea() {
           workareaTabs.map((tab) => {
             const viewKind = getWorkareaKind(tab.target.type);
             if (!viewKind) return null;
+            if (viewKind.keepMounted && !store.hasShownTab(tab.id)) return null;
             const content = viewKind.render(tab, hostPropsFor(tab.id));
             if (viewKind.keepMounted) {
               return (

@@ -79,10 +79,10 @@ function oldestAttached(
  * attached last time is what stops that adding a pipeline.
  *
  * The sequence is one mutation so `isPending` guards all of it, and the
- * pipeline opens only after `startSession` resolves, because the workarea is
- * keyed by session and a tab opened before there is one is dropped. The ref
- * holds the store it prepared, so moving to another project in place (a new
- * store, same mount) arrives there too. It also guards what `isPending` cannot:
+ * pipeline opens only after `startSession` resolves, so a session that fails
+ * to start leaves the project as it was. The ref holds the store it prepared,
+ * so moving to another project in place (a new store, same mount) arrives
+ * there too. It also guards what `isPending` cannot:
  * StrictMode replays this effect inside one commit, where the closure's
  * `isPending` has not yet seen the first `mutate`.
  */
