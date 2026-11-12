@@ -8,7 +8,8 @@ import { DockPopover } from "@/routes/v2/shared/windows/DockPopover";
 /**
  * The page's right dock, as a popover by the tab strip rather than a column:
  * a pipeline or run open beside it brings a rail of its own, and two rails side
- * by side read as one cluttered toolbar. The project card starts here.
+ * by side read as one cluttered toolbar. Nothing starts here; it holds what's
+ * dragged to the right.
  */
 export const ProjectDockPopover = observer(function ProjectDockPopover() {
   const { windows } = useSharedStores();
