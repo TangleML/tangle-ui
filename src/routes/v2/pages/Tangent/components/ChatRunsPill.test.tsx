@@ -115,4 +115,33 @@ describe("ChatRunsPill", () => {
       expect.objectContaining({ id: "r-2" }),
     );
   });
+
+  it("keeps a run that has no status yet when clearing finished ones", async () => {
+    const user = userEvent.setup();
+    runs.current = [run("r-1", "Just started"), run("r-2", "Backfill")];
+    stats.current = { "r-2": { SUCCEEDED: 1 } };
+    renderPill();
+
+    await user.click(screen.getByRole("button", { name: "2 runs" }));
+    await user.click(screen.getByRole("button", { name: "Clear finished" }));
+
+    expect(dismiss).toHaveBeenCalledTimes(1);
+    expect(dismiss).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "r-2" }),
+    );
+  });
+
+  it("doesn't offer to clear a failed run whose other tasks are still going", async () => {
+    const user = userEvent.setup();
+    runs.current = [run("r-1", "Nightly")];
+    stats.current = { "r-1": { FAILED: 1, RUNNING: 1 } };
+    renderPill();
+
+    await user.click(screen.getByRole("button", { name: "1 run, one failed" }));
+
+    expect(screen.getByText("Runs in this chat")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Clear finished" }),
+    ).not.toBeInTheDocument();
+  });
 });

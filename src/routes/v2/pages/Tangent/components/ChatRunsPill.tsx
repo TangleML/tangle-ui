@@ -27,6 +27,7 @@ import { hasNewTabModifier } from "@/utils/dom";
 import {
   getExecutionStatusLabel,
   getOverallExecutionStatusFromStats,
+  isExecutionComplete,
   isInProgressStatus,
 } from "@/utils/executionStatus";
 import { getErrorMessage } from "@/utils/string";
@@ -46,6 +47,7 @@ interface RunRow {
   run: SessionRun;
   state: RunState;
   label: string;
+  finished: boolean;
 }
 
 function stateOf(status: string | undefined): RunState {
@@ -100,11 +102,12 @@ export const ChatRunsPill = observer(function ChatRunsPill({
       run,
       state: stateOf(status),
       label: getExecutionStatusLabel(status),
+      finished: Boolean(data && isExecutionComplete(data)),
     };
   });
   const anyFailed = rows.some(({ state }) => state === "failed");
   const anyRunning = rows.some(({ state }) => state === "running");
-  const finished = rows.filter(({ state }) => state !== "running");
+  const finished = rows.filter((row) => row.finished);
 
   function dismissRun(run: SessionRun) {
     dismiss(run).catch((error: unknown) =>
