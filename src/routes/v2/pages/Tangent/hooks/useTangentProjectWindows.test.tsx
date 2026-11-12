@@ -35,15 +35,16 @@ function dockedStore() {
 }
 
 describe("useTangentProjectWindows", () => {
-  it("docks Projects on the left and the project card in the right-hand popover", () => {
+  it("docks Projects on the left with the project card under it", () => {
     const windows = dockedStore();
 
     renderHook(() => useTangentProjectWindows());
 
-    expect(windows.getDockedWindowOrder("left")).toEqual([PROJECTS_WINDOW_ID]);
-    expect(windows.getDockedWindowOrder("right")).toEqual([
+    expect(windows.getDockedWindowOrder("left")).toEqual([
+      PROJECTS_WINDOW_ID,
       PROJECT_CARD_WINDOW_ID,
     ]);
+    expect(windows.getDockedWindowOrder("right")).toEqual([]);
   });
 
   it("keeps Projects and the project card from being hidden or closed", () => {
