@@ -344,6 +344,28 @@ describe("createProjectCardHandlers", () => {
     expect(onResourcesChanged).toHaveBeenCalledTimes(1);
   });
 
+  it("won't add a run that doesn't exist, even under a name", async () => {
+    const { handlers, getRunDetails } = setup({ cardResources: [] });
+    getRunDetails.mockRejectedValue(new Error("Run not-a-run not found"));
+
+    await expect(handlers.addRun("not-a-run", "Train")).rejects.toThrow(
+      /not found/,
+    );
+    expect(services.createProjectResource).not.toHaveBeenCalled();
+  });
+
+  it("adds a run under the name it's given", async () => {
+    services.createProjectResource.mockResolvedValue({ id: "res-new" });
+    const { handlers } = setup({ cardResources: [] });
+
+    await handlers.addRun("r-2", "Nightly train");
+
+    expect(services.createProjectResource).toHaveBeenCalledWith(
+      "project-1",
+      expect.objectContaining({ name: "Nightly train" }),
+    );
+  });
+
   it("adds a document and returns the target that opens it", async () => {
     services.createProjectResource.mockResolvedValue({ id: "res-doc" });
     const { handlers } = setup();

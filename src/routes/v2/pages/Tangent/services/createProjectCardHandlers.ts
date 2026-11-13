@@ -220,10 +220,11 @@ export function createProjectCardHandlers({
       const target = formatWorkareaTarget(runTarget(runId));
       const added = await attachPipelineRunOnce(projectId, {
         runId,
-        pipelineName:
-          name ??
-          (async () =>
-            (await getRunDetails(runId)).pipeline_name ?? `Run ${runId}`),
+        // Fetched even when named, so a run id that doesn't exist isn't added.
+        pipelineName: async () => {
+          const run = await getRunDetails(runId);
+          return name ?? run.pipeline_name ?? `Run ${runId}`;
+        },
       });
       if (added) await onResourcesChanged();
       return { added, target };
