@@ -108,15 +108,14 @@ export const DockPopover = observer(function DockPopover({
             triggerRef.current = element;
             registerDockTargetElement(side, element);
           }}
-          variant="ghost"
-          size="icon"
+          variant="subtle"
+          size="icon-sm"
           aria-label={label}
           title={shortcutHint ? `${label} (${shortcutHint})` : label}
           data-drop-target={
             dragging ? (targeted ? "active" : "ready") : undefined
           }
           className={cn(
-            "size-7 text-muted-foreground hover:text-foreground",
             open && "bg-accent text-foreground",
             dragging && "ring-1 ring-primary/40",
             targeted && "bg-primary/15 text-foreground ring-2 ring-primary",

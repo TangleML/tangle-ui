@@ -227,11 +227,10 @@ function ConnectEditorPopover({
       <PopoverTrigger asChild {...tracking("projects.connect_editor")}>
         {isConnected ? (
           <Button
-            variant="ghost"
-            size="icon"
+            variant="subtle"
+            size="icon-sm"
             aria-label="Connect another editor window"
             title="Connect another editor window"
-            className="size-7 shrink-0 text-muted-foreground hover:text-foreground"
           >
             <Icon name="Plug" size="sm" />
           </Button>

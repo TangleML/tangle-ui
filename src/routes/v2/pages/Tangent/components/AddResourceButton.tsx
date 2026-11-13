@@ -142,13 +142,12 @@ export function AddResourceButton({
 
   return (
     <Button
-      variant="ghost"
-      size="icon"
+      variant="subtle"
+      size="icon-xs"
       aria-label={label}
       title={label}
       disabled={disabled || isPending}
       onClick={add[kind]}
-      className="size-6 shrink-0 text-muted-foreground hover:text-foreground"
       {...tracking(trackingId)}
     >
       <Icon name="Plus" size="sm" />

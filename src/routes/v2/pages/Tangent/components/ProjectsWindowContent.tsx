@@ -8,13 +8,11 @@ import { useDeleteProjectAction } from "@/components/Project/useDeleteProjectAct
 import { useRenameProjectAction } from "@/components/Project/useRenameProjectAction";
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
 import { Button } from "@/components/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { ListItem } from "@/components/ui/list-item";
+import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { APP_ROUTES } from "@/routes/appRoutes";
@@ -160,7 +158,11 @@ export const ProjectsWindowContent = observer(function ProjectsWindowContent() {
           onClick={startChat}
           {...tracking("projects.sidebar.new_chat")}
         >
-          <Icon name={store.isStartingSession ? "Loader" : "SquarePen"} />
+          {store.isStartingSession ? (
+            <Spinner size={16} className="text-current" />
+          ) : (
+            <Icon name="SquarePen" />
+          )}
           New chat
         </Button>
         {workspaces && activeWorkspaces(workspaces).length > 0 && (
@@ -168,26 +170,26 @@ export const ProjectsWindowContent = observer(function ProjectsWindowContent() {
             workspaces={workspaces}
             trigger={
               <Button
-                variant="ghost"
-                size="icon"
+                variant="subtle"
+                size="icon-md"
                 aria-label="New project"
                 title="New project"
-                className="size-8 shrink-0 text-muted-foreground hover:text-foreground"
               >
                 <Icon name="FolderPlus" size="sm" />
               </Button>
             }
           />
         )}
-        <Link
-          to={APP_ROUTES.PROJECTS}
-          aria-label="All projects"
-          title="All projects"
-          className="grid size-8 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
-          {...tracking("projects.sidebar.all_projects")}
-        >
-          <Icon name="LayoutGrid" size="sm" />
-        </Link>
+        <Button asChild variant="subtle" size="icon-md">
+          <Link
+            to={APP_ROUTES.PROJECTS}
+            aria-label="All projects"
+            title="All projects"
+            {...tracking("projects.sidebar.all_projects")}
+          >
+            <Icon name="LayoutGrid" size="sm" />
+          </Link>
+        </Button>
       </InlineStack>
 
       <SearchField
@@ -288,36 +290,24 @@ function ProjectGroup({
   return (
     <li className={cn(isDeleting && "pointer-events-none opacity-50")}>
       <Collapsible open={open} onOpenChange={onOpenChange}>
-        <div className="group/project flex items-center rounded-md pe-1 transition-colors hover:bg-foreground/5 motion-reduce:transition-none">
-          <CollapsibleTrigger asChild>
-            <button
-              type="button"
-              className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-              {...tracking("projects.sidebar.toggle_project")}
-            >
-              <Icon
-                name={open ? "FolderOpen" : "Folder"}
-                size="sm"
-                className="shrink-0 text-muted-foreground"
-              />
-              <Text
-                size="sm"
-                weight="medium"
-                className="min-w-0 flex-1 truncate"
-              >
-                {project.name}
-              </Text>
-            </button>
-          </CollapsibleTrigger>
-          <ProjectMenu
-            project={project}
-            onRename={() => void rename()}
-            onDelete={() => void confirmAndDelete()}
-            disabled={isDeleting}
-            triggerClassName="hidden size-6 shrink-0 text-muted-foreground hover:text-foreground group-focus-within/project:flex group-hover/project:flex data-[state=open]:flex pointer-coarse:flex"
-            triggerTrackingId="projects.sidebar.project_menu"
-          />
-        </div>
+        <ListItem
+          as="div"
+          icon={open ? "FolderOpen" : "Folder"}
+          title={project.name}
+          expanded={open}
+          onOpen={() => onOpenChange(!open)}
+          tracking={tracking("projects.sidebar.toggle_project")}
+          menu={
+            <ProjectMenu
+              project={project}
+              onRename={() => void rename()}
+              onDelete={() => void confirmAndDelete()}
+              disabled={isDeleting}
+              compact
+              triggerTrackingId="projects.sidebar.project_menu"
+            />
+          }
+        />
         <CollapsibleContent>
           <SessionsWindowContent
             projectId={project.id}

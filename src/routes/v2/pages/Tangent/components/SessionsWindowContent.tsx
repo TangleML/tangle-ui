@@ -6,12 +6,10 @@ import {
   type RenameDialogProps,
 } from "@/components/shared/Dialogs/RenameDialog";
 import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
-import { Spinner } from "@/components/ui/spinner";
+import { ListItem, type ListItemFlair } from "@/components/ui/list-item";
 import { Text } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
-import { cn } from "@/lib/utils";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useDialog } from "@/providers/DialogProvider/hooks/useDialog";
 import { convertCancelErrorTo } from "@/providers/DialogProvider/utils";
@@ -145,9 +143,10 @@ export const SessionsWindowContent = observer(function SessionsWindowContent({
       </BlockStack>
       {visible.length < listed.length && (
         <Button
-          variant="ghost"
-          size="sm"
-          className="h-auto justify-start py-1.5 ps-8 pe-2 font-normal text-muted-foreground hover:bg-transparent hover:text-foreground"
+          variant="subtle"
+          size="row"
+          align="start"
+          className="ps-8"
           onClick={() => setShowAll(true)}
           {...tracking("projects.sidebar.show_more_sessions")}
         >
@@ -157,6 +156,12 @@ export const SessionsWindowContent = observer(function SessionsWindowContent({
     </BlockStack>
   );
 });
+
+const RUN_STATE_FLAIR: Record<SessionRunState, ListItemFlair> = {
+  working: { kind: "spinner", label: RUN_STATE_LABEL.working },
+  finished: { kind: "dot", label: RUN_STATE_LABEL.finished, tone: "success" },
+  failed: { kind: "dot", label: RUN_STATE_LABEL.failed, tone: "critical" },
+};
 
 /** A session reads as a line of text under its project, as a chat list does. */
 function SessionRow({
@@ -174,55 +179,28 @@ function SessionRow({
   onOpen: () => void;
   onRename: () => void;
 }) {
-  const stateLabel = runState && RUN_STATE_LABEL[runState];
   return (
-    <li
-      className={cn(
-        "group/session flex items-center rounded-md pe-1 transition-colors hover:bg-foreground/5 motion-reduce:transition-none",
-        selected && "bg-foreground/10 hover:bg-foreground/10",
-      )}
-    >
-      <button
-        type="button"
-        aria-current={selected || undefined}
-        title={[label, stateLabel, formatRelativeTime(createdAt)]
-          .filter(Boolean)
-          .join(" · ")}
-        onClick={onOpen}
-        className="flex min-w-0 flex-1 cursor-pointer rounded-md py-1.5 ps-8 pe-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-        {...tracking("projects.open_session")}
-      >
-        <Text size="sm" className="min-w-0 truncate">
-          {label}
-        </Text>
-        {stateLabel && <span className="sr-only">, {stateLabel}</span>}
-      </button>
-      {runState === "working" && (
-        <Spinner
-          size={12}
-          className="me-1 shrink-0 text-muted-foreground motion-reduce:animate-none"
-        />
-      )}
-      {(runState === "finished" || runState === "failed") && (
-        <span
-          aria-hidden
-          className={cn(
-            "me-1.5 size-1.5 shrink-0 rounded-full",
-            runState === "finished" ? "bg-success" : "bg-destructive",
-          )}
-        />
-      )}
-      <Button
-        variant="ghost"
-        size="icon"
-        aria-label={`Rename ${label}`}
-        title="Rename session"
-        onClick={onRename}
-        className="hidden size-6 shrink-0 text-muted-foreground hover:text-foreground group-focus-within/session:flex group-hover/session:flex pointer-coarse:flex"
-        {...tracking("projects.rename_session_open")}
-      >
-        <Icon name="Pencil" size="xs" />
-      </Button>
-    </li>
+    <ListItem
+      title={label}
+      tooltip={[
+        label,
+        runState && RUN_STATE_LABEL[runState],
+        formatRelativeTime(createdAt),
+      ]
+        .filter(Boolean)
+        .join(" · ")}
+      flair={runState && RUN_STATE_FLAIR[runState]}
+      selected={selected}
+      onOpen={onOpen}
+      tracking={tracking("projects.open_session")}
+      actions={[
+        {
+          icon: "Pencil",
+          label: `Rename ${label}`,
+          onClick: onRename,
+          tracking: tracking("projects.rename_session_open"),
+        },
+      ]}
+    />
   );
 }

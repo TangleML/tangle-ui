@@ -103,8 +103,8 @@ describe("SessionsWindowContent", () => {
     );
 
     expect(
-      screen.getByRole("button", { name: /^Feature exploration\W+Working$/ }),
-    ).toBeInTheDocument();
+      screen.getByRole("button", { name: "Feature exploration" }),
+    ).toHaveAccessibleDescription("Working");
     expect(screen.getByTestId("spinner")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Session 1" }),
@@ -127,13 +127,11 @@ describe("SessionsWindowContent", () => {
     );
 
     expect(
-      screen.getByRole("button", { name: /^Session 1\W+Finished$/ }),
-    ).toBeInTheDocument();
+      screen.getByRole("button", { name: "Session 1" }),
+    ).toHaveAccessibleDescription("Finished");
     expect(
-      screen.getByRole("button", {
-        name: /^Feature exploration\W+Last run failed$/,
-      }),
-    ).toBeInTheDocument();
+      screen.getByRole("button", { name: "Feature exploration" }),
+    ).toHaveAccessibleDescription("Last run failed");
     expect(screen.queryByTestId("spinner")).toBeNull();
   });
 
