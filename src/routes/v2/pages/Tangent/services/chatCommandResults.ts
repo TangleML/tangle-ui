@@ -11,6 +11,13 @@ const DAY: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
 
 export const RUN_LIMIT = 10;
 export const ASSET_LIMIT = 5;
+// A command's result is kept as a chat message and replayed to the agent on
+// every turn after, so even a full list stops somewhere.
+const LIST_LIMIT = 50;
+const FULL_LIST = {
+  limit: LIST_LIMIT,
+  more: "The Assets card lists them all.",
+};
 
 /** What the card lists, for the chat's slash commands to show. */
 export interface ProjectListing {
@@ -152,7 +159,7 @@ export function pipelinesResult({ pipelines }: ProjectListing) {
   if (pipelines.length === 0) return "This project has no pipelines yet.";
   const shown = active(pipelines);
   return withArchivedNote(
-    section("Pipelines", shown, pipelineRow),
+    section("Pipelines", shown, pipelineRow, FULL_LIST),
     pipelines.length - shown.length,
     "pipeline",
   );
@@ -162,7 +169,7 @@ export function documentsResult({ documents }: ProjectListing) {
   if (documents.length === 0) return "This project has no documents yet.";
   const shown = active(documents);
   return withArchivedNote(
-    section("Documents", shown, documentRow),
+    section("Documents", shown, documentRow, FULL_LIST),
     documents.length - shown.length,
     "document",
   );
@@ -185,8 +192,10 @@ export function filesResult(files: SessionFileRecord[], links: FileLinks) {
   const reports = files.filter(({ pinned }) => pinned);
   const others = files.filter(({ pinned }) => !pinned);
   return [
-    reports.length > 0 && section("Reports", reports, fileRow(links)),
-    others.length > 0 && section("Other files", others, fileRow(links)),
+    reports.length > 0 &&
+      section("Reports", reports, fileRow(links), FULL_LIST),
+    others.length > 0 &&
+      section("Other files", others, fileRow(links), FULL_LIST),
   ]
     .filter(Boolean)
     .join("\n\n");

@@ -87,6 +87,71 @@ describe("chat command results", () => {
     expect(text).toContain("…and 2 more.");
   });
 
+  it("stops a long list of pipelines or documents at fifty, saying how many are left", () => {
+    const entries = (kind: string) =>
+      Array.from({ length: 53 }, (_, index) => ({
+        target: `${kind}://id/${kind}-${index}`,
+        name: `${kind} ${index}`,
+        at: null,
+        archived: false,
+      }));
+
+    const pipelines = pipelinesResult(
+      listing({ pipelines: entries("pipeline") }),
+    );
+    const documents = documentsResult(
+      listing({ documents: entries("document") }),
+    );
+
+    for (const [text, kind] of [
+      [pipelines, "pipeline"],
+      [documents, "document"],
+    ]) {
+      expect(text.match(/^- /gm)).toHaveLength(50);
+      expect(text).toContain(`[${kind} 49]`);
+      expect(text).not.toContain(`[${kind} 50]`);
+      expect(
+        text.endsWith("…and 3 more. The Assets card lists them all."),
+      ).toBe(true);
+    }
+    expect(pipelines).toContain("**Pipelines** · 53");
+  });
+
+  it("lists every pipeline when there are no more than fifty", () => {
+    const pipelines = Array.from({ length: 50 }, (_, index) => ({
+      target: `pipeline://id/p-${index}`,
+      name: `Pipeline ${index}`,
+      at: null,
+      archived: false,
+    }));
+
+    const text = pipelinesResult(listing({ pipelines }));
+
+    expect(text.match(/^- /gm)).toHaveLength(50);
+    expect(text).not.toContain("more.");
+  });
+
+  it("stops each list of files at fifty, saying how many are left", () => {
+    const files = [
+      ...Array.from({ length: 51 }, (_, index) =>
+        file("chat-1", `artifacts/report-${index}.html`, true),
+      ),
+      ...Array.from({ length: 60 }, (_, index) =>
+        file("chat-1", `artifacts/draft-${index}.md`, false),
+      ),
+    ];
+
+    const text = filesResult(files, links);
+    const [reports, others] = text.split("\n\n**Other files**");
+
+    expect(reports.match(/^- /gm)).toHaveLength(50);
+    expect(reports).toContain("**Reports** · 51");
+    expect(reports).toContain("…and 1 more. The Assets card lists them all.");
+    expect(others.match(/^- /gm)).toHaveLength(50);
+    expect(others).toContain("…and 10 more. The Assets card lists them all.");
+    expect(text).not.toContain("draft-50.md");
+  });
+
   it("links this chat's files by path and other chats' by address", () => {
     const text = filesResult(
       [
