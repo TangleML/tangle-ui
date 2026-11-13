@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useResolvedPointers } from "@/services/localPipelines/useLocalPipelines";
+import { MAX_PAGE_SIZE } from "@/services/projects/queryDefaults";
 import type { ProjectResourceSummary } from "@/services/projects/types";
 import { useProjectResources } from "@/services/projects/useProjectResources";
 import { useRemotePipelineNames } from "@/services/projects/useRemotePipelineNames";
@@ -367,11 +368,12 @@ describe("ResourcesWindowContent", () => {
     expect(screen.getByTestId("open-resource-r-7")).toBeEnabled();
   });
 
-  it("asks for both the documents and the pipelines a project holds", () => {
+  it("asks for all the documents and pipelines a project holds, not just the API's first page", () => {
     render(<ResourcesWindowContent />);
 
     expect(useProjectResources).toHaveBeenCalledWith("project-1", {
       entity: ["document", "pipeline"],
+      pageSize: MAX_PAGE_SIZE,
     });
   });
 });
