@@ -30,6 +30,16 @@ function toolsWith(deps: ProjectCardToolDeps) {
   return createProjectCardRemoteTools(() => deps);
 }
 
+function listed(sessionId: string, path: string, pinned = false) {
+  return {
+    sessionId,
+    path,
+    title: path,
+    addedAt: new Date("2026-11-06T08:00:00Z"),
+    pinned,
+  };
+}
+
 describe("createProjectCardRemoteTools", () => {
   it("lists the card's items, saying which are archived", async () => {
     const tools = toolsWith(
@@ -86,7 +96,14 @@ describe("createProjectCardRemoteTools", () => {
   });
 
   it("archives and restores by the target the card keys on", async () => {
-    const deps = makeDeps();
+    const deps = makeDeps({
+      listEntries: vi.fn().mockResolvedValue({
+        runs: [{ target: "run://id/r-7", name: "Train", at: null }],
+        pipelines: [],
+        documents: [],
+      }),
+      listArchived: vi.fn().mockResolvedValue(["document://id/d-1"]),
+    });
     const tools = toolsWith(deps);
 
     await tools.archive_project_item.execute({
@@ -102,7 +119,7 @@ describe("createProjectCardRemoteTools", () => {
     );
   });
 
-  it("only archives what the card lists", async () => {
+  it("only archives runs, pipelines and documents", async () => {
     const deps = makeDeps();
     const tools = toolsWith(deps);
 
@@ -111,6 +128,26 @@ describe("createProjectCardRemoteTools", () => {
         target: "artifact://id/https://files.example/a.html",
       }),
     ).rejects.toThrow(/run, pipeline or document/);
+    expect(deps.setArchived).not.toHaveBeenCalled();
+  });
+
+  it("won't archive something that isn't on the card", async () => {
+    const deps = makeDeps();
+    const tools = toolsWith(deps);
+
+    await expect(
+      tools.archive_project_item.execute({ target: "pipeline://name/Train" }),
+    ).rejects.toThrow(/isn't on the project card/);
+    expect(deps.setArchived).not.toHaveBeenCalled();
+  });
+
+  it("won't restore something that isn't archived", async () => {
+    const deps = makeDeps();
+    const tools = toolsWith(deps);
+
+    await expect(
+      tools.restore_project_item.execute({ target: "run://id/r-7" }),
+    ).rejects.toThrow(/isn't archived/);
     expect(deps.setArchived).not.toHaveBeenCalled();
   });
 
@@ -153,7 +190,14 @@ describe("createProjectCardRemoteTools", () => {
   });
 
   it("pins in this chat by default, titled by its path", async () => {
-    const deps = makeDeps();
+    const deps = makeDeps({
+      listFiles: vi
+        .fn()
+        .mockResolvedValue([
+          listed("chat-1", "artifacts/report.html"),
+          listed("chat-2", "artifacts/deck.html"),
+        ]),
+    });
     const tools = toolsWith(deps);
 
     await tools.pin_project_file.execute({ path: "artifacts/report.html" });
@@ -178,7 +222,11 @@ describe("createProjectCardRemoteTools", () => {
   });
 
   it("unpins a file in the chat it names", async () => {
-    const deps = makeDeps();
+    const deps = makeDeps({
+      listFiles: vi
+        .fn()
+        .mockResolvedValue([listed("chat-2", "artifacts/notes.md", true)]),
+    });
     const tools = toolsWith(deps);
 
     await tools.unpin_project_file.execute({
@@ -188,6 +236,27 @@ describe("createProjectCardRemoteTools", () => {
 
     expect(deps.unpinFile).toHaveBeenCalledWith("chat-2", "artifacts/notes.md");
     await expect(tools.unpin_project_file.execute({})).rejects.toThrow(/path/);
+  });
+
+  it("won't pin or unpin a file the card doesn't list, such as one in another project's chat", async () => {
+    const deps = makeDeps({
+      listFiles: vi
+        .fn()
+        .mockResolvedValue([listed("chat-1", "artifacts/report.html")]),
+    });
+    const tools = toolsWith(deps);
+
+    await expect(
+      tools.pin_project_file.execute({
+        path: "artifacts/report.html",
+        sessionId: "other-project-chat",
+      }),
+    ).rejects.toThrow(/No file `artifacts\/report.html` in that chat/);
+    await expect(
+      tools.unpin_project_file.execute({ path: "artifacts/missing.html" }),
+    ).rejects.toThrow(/No file/);
+    expect(deps.pinFile).not.toHaveBeenCalled();
+    expect(deps.unpinFile).not.toHaveBeenCalled();
   });
 
   it("needs a chat to pin into when none is open", async () => {
