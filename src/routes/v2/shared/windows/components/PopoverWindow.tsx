@@ -25,7 +25,7 @@ export const PopoverWindow = observer(function PopoverWindow({
 }) {
   const { windows } = useSharedStores();
   const model = windows.getWindowById(windowId);
-  if (!model || model.state === "hidden") return null;
+  if (!model) return null;
 
   return (
     <WindowContextProvider
@@ -70,7 +70,7 @@ const StackedWindow = observer(function StackedWindow() {
               className="shrink-0 text-muted-foreground"
             />
           }
-          actions={
+          trailing={
             <FoldButton trackingId="v2.shared_window.dock_popover.fold" />
           }
           quiet

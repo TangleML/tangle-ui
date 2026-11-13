@@ -31,8 +31,6 @@ import { tracking } from "@/utils/tracking";
 
 const PREVIEW_COUNT = 5;
 
-const NO_RUN_STATES: SessionRunStates = new Map();
-
 const RUN_STATE_LABEL: Record<SessionRunState, string> = {
   working: "Working",
   finished: "Finished",
@@ -46,14 +44,14 @@ const RUN_STATE_LABEL: Record<SessionRunState, string> = {
  * session with an agent working, and a dot one whose run finished (green) or
  * failed (red) since it was last open.
  */
-export const SessionsWindowContent = observer(function SessionsWindowContent({
+export const ProjectSessionList = observer(function ProjectSessionList({
   projectId,
   onlySessionIds,
-  runStates = NO_RUN_STATES,
+  runStates,
 }: {
   projectId: string;
   onlySessionIds?: ReadonlySet<string>;
-  runStates?: SessionRunStates;
+  runStates: SessionRunStates;
 }) {
   const store = useTangentProject();
   const openProject = useOpenTangentProject();

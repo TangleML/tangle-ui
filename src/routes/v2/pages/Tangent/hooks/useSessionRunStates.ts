@@ -1,21 +1,24 @@
+import { SocketEvents } from "@tangent/shared/contracts.ts";
 import { useEffect, useState } from "react";
-import { io } from "socket.io-client";
 
 import { useRemoteEnvAuthToken } from "@/routes/v2/pages/Tangent/hooks/useRemoteEnvAuthToken";
-import { getTangentSocketConfig } from "@/routes/v2/pages/Tangent/services/socketConfig";
+import { connectTangentSocket } from "@/routes/v2/pages/Tangent/services/socketConfig";
 import { getStorage } from "@/utils/typedStorage";
 import { isRecord } from "@/utils/typeGuards";
-
-const SUBSCRIBE_EVENT = "session:status:subscribe";
-const SNAPSHOT_EVENT = "session:status:snapshot";
-const STATUS_EVENT = "session:status";
 
 const SEEN_KEY = "tangent-sessions-seen";
 // Plenty for the chats anyone opens in a long while; the oldest fall off.
 const MAX_SEEN = 500;
 
-/** Per chat, when it had last stopped working as of the last time it was open. */
-export type SeenEndings = Readonly<Record<string, string>>;
+/**
+ * Which runs this browser has seen: per chat, when it had last stopped
+ * working as of the last time it was open, and before that, everything that
+ * had ended by the time this browser first looked.
+ */
+export interface SeenRuns {
+  baseline?: string;
+  chats: Readonly<Record<string, string>>;
+}
 
 const storage = getStorage<typeof SEEN_KEY, { [SEEN_KEY]: unknown }>();
 
@@ -83,17 +86,17 @@ export function withStatus(
  */
 export function runStatesToShow(
   statuses: LobbyStatuses,
-  seen: SeenEndings,
+  seen: SeenRuns,
   activeSessionId: string | undefined,
 ): SessionRunStates {
   const states = new Map<string, SessionRunState>();
   for (const [sessionId, status] of statuses) {
     if (status.working) {
       states.set(sessionId, "working");
-    } else if (
-      sessionId !== activeSessionId &&
-      (seen[sessionId] ?? "") < status.endedAt
-    ) {
+      continue;
+    }
+    const seenUpTo = seen.chats[sessionId] ?? seen.baseline ?? "";
+    if (sessionId !== activeSessionId && seenUpTo < status.endedAt) {
       states.set(sessionId, status.failed ? "failed" : "finished");
     }
   }
@@ -101,41 +104,50 @@ export function runStatesToShow(
 }
 
 export function rememberSeen(
-  seen: SeenEndings,
+  seen: SeenRuns,
   sessionId: string,
   endedAt: string,
-): SeenEndings {
-  const others = Object.entries(seen).filter(([id]) => id !== sessionId);
-  return Object.fromEntries([...others, [sessionId, endedAt]].slice(-MAX_SEEN));
-}
-
-/** Every chat that had already stopped, as though each had just been seen. */
-export function seenAsOf(statuses: LobbyStatuses): SeenEndings {
-  return Object.fromEntries(
-    [...statuses]
-      .flatMap(([sessionId, status]) =>
-        status.working ? [] : [[sessionId, status.endedAt] as const],
-      )
-      .slice(-MAX_SEEN),
-  );
-}
-
-function readSeen(): SeenEndings | null {
-  const stored = storage.getItem(SEEN_KEY);
-  if (!isRecord(stored)) return null;
-  return Object.fromEntries(
-    Object.entries(stored).filter(
-      (entry): entry is [string, string] => typeof entry[1] === "string",
+): SeenRuns {
+  const others = Object.entries(seen.chats).filter(([id]) => id !== sessionId);
+  return {
+    ...seen,
+    chats: Object.fromEntries(
+      [...others, [sessionId, endedAt]].slice(-MAX_SEEN),
     ),
+  };
+}
+
+/** The first time this browser looks, what had already ended counts as seen. */
+export function withBaseline(
+  seen: SeenRuns,
+  statuses: LobbyStatuses,
+): SeenRuns {
+  if (seen.baseline !== undefined) return seen;
+  const endings = [...statuses.values()].flatMap((status) =>
+    status.working ? [] : [status.endedAt],
   );
+  return { ...seen, baseline: endings.sort().at(-1) ?? "" };
+}
+
+function readSeen(): SeenRuns {
+  const stored = storage.getItem(SEEN_KEY);
+  if (!isRecord(stored)) return { chats: {} };
+  const chats = isRecord(stored.chats) ? stored.chats : {};
+  return {
+    baseline: typeof stored.baseline === "string" ? stored.baseline : undefined,
+    chats: Object.fromEntries(
+      Object.entries(chats).filter(
+        (entry): entry is [string, string] => typeof entry[1] === "string",
+      ),
+    ),
+  };
 }
 
 /**
  * The chats to mark in the sidebar, from Tangent's sessions lobby: one with an
  * agent working, or one whose run finished or failed since it was last open.
  * One socket covers every project's chats on this Tangent. Which runs have been
- * seen is remembered in this browser; a browser with nothing remembered yet
- * starts from what had already ended, rather than marking every chat at once.
+ * seen is remembered in this browser.
  */
 export function useSessionRunStates(
   baseUrl: string | null,
@@ -147,18 +159,16 @@ export function useSessionRunStates(
 
   useEffect(() => {
     if (!baseUrl) return;
-    const { socketUrl, socketPath } = getTangentSocketConfig(baseUrl);
-    const socket = io(socketUrl, {
-      path: socketPath,
-      auth: authToken ? { token: authToken } : {},
-    });
-    socket.on("connect", () => socket.emit(SUBSCRIBE_EVENT));
-    socket.on(SNAPSHOT_EVENT, (snapshot: unknown) => {
+    const socket = connectTangentSocket(baseUrl, authToken);
+    socket.on("connect", () =>
+      socket.emit(SocketEvents.SessionStatusSubscribe),
+    );
+    socket.on(SocketEvents.SessionStatusSnapshot, (snapshot: unknown) => {
       const next = statusesFromSnapshot(snapshot);
       setStatuses(next);
-      setSeen((current) => current ?? seenAsOf(next));
+      setSeen((current) => withBaseline(current, next));
     });
-    socket.on(STATUS_EVENT, (status: unknown) =>
+    socket.on(SocketEvents.SessionStatus, (status: unknown) =>
       setStatuses((current) => withStatus(current, status)),
     );
     return () => {
@@ -169,17 +179,16 @@ export function useSessionRunStates(
   const active = activeSessionId ? statuses.get(activeSessionId) : undefined;
   const activeEndedAt = active && !active.working ? active.endedAt : undefined;
   if (
-    seen &&
     activeSessionId &&
     activeEndedAt &&
-    seen[activeSessionId] !== activeEndedAt
+    seen.chats[activeSessionId] !== activeEndedAt
   ) {
     setSeen(rememberSeen(seen, activeSessionId, activeEndedAt));
   }
 
   useEffect(() => {
-    if (seen) storage.setItem(SEEN_KEY, seen);
+    storage.setItem(SEEN_KEY, seen);
   }, [seen]);
 
-  return runStatesToShow(statuses, seen ?? {}, activeSessionId);
+  return runStatesToShow(statuses, seen, activeSessionId);
 }

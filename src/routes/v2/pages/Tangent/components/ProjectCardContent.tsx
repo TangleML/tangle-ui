@@ -1,5 +1,5 @@
 import { observer } from "mobx-react-lite";
-import { type ReactNode, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -10,7 +10,6 @@ import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProj
 import { useArchivedProjectItems } from "@/routes/v2/pages/Tangent/hooks/useArchivedProjectItems";
 import { useOpenWorkareaTarget } from "@/routes/v2/pages/Tangent/hooks/useOpenWorkareaTarget";
 import { useProjectResourceItems } from "@/routes/v2/pages/Tangent/hooks/useProjectResourceItems";
-import { useProjectSearchFocus } from "@/routes/v2/pages/Tangent/hooks/useProjectSearchFocus";
 import {
   type ProjectFile,
   useProjectSessionFiles,
@@ -61,7 +60,12 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
   const dismissCard = useOptionalWindowContext()?.dismissFlyout;
   const openWorkareaTarget = useOpenWorkareaTarget();
   const searchRef = useRef<HTMLInputElement>(null);
-  useProjectSearchFocus(searchRef);
+  const focusRequested = store.searchFocusRequested;
+  useEffect(() => {
+    if (!focusRequested) return;
+    searchRef.current?.focus();
+    store.clearSearchFocusRequest();
+  }, [focusRequested, store]);
   const [query, setQuery] = useState("");
   const [fileQuery, setFileQuery] = useState("");
   const [view, setView] = useState<CardView>("main");
@@ -86,31 +90,7 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
   const pipelines = split(lists.pipelines);
   const documents = split(lists.documents);
   const runs = split(lists.runs);
-  const archivedCount =
-    runs.archived.length +
-    pipelines.archived.length +
-    documents.archived.length;
-
   const fileMatches = ({ title, path }: ProjectFile) => matches(title, path);
-  const shownReports = files.reports.filter(fileMatches);
-  const shownOtherFiles = searching
-    ? files.files.filter((file) => !file.pinned && fileMatches(file))
-    : [];
-  const shownRuns = runs.active.filter(({ pipelineName }) =>
-    matches(pipelineName),
-  );
-  const shownPipelines = pipelines.active.filter(({ name }) => matches(name));
-  const shownDocuments = documents.active.filter(({ name }) => matches(name));
-  const nothingMatches =
-    searching &&
-    [
-      shownReports,
-      shownOtherFiles,
-      shownRuns,
-      shownPipelines,
-      shownDocuments,
-    ].every((list) => list.length === 0);
-
   const openTarget: typeof openWorkareaTarget = (target, title, event) => {
     dismissCard?.();
     return openWorkareaTarget(target, title, event);
@@ -246,29 +226,99 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
     );
   }
 
-  if (view === "archived") {
-    const groups = [
-      { title: "Runs", items: runs.archived.map(renderRun) },
-      { title: "Pipelines", items: pipelines.archived.map(renderAttached) },
-      { title: "Documents", items: documents.archived.map(renderAttached) },
-    ].filter(({ items }) => items.length > 0);
+  const archivedSections: Section[] = [
+    { title: "Runs", rows: runs.archived.map(renderRun) },
+    { title: "Pipelines", rows: pipelines.archived.map(renderAttached) },
+    { title: "Documents", rows: documents.archived.map(renderAttached) },
+  ].filter(({ rows }) => rows.length > 0);
+  const archivedCount = archivedSections.reduce(
+    (total, { rows }) => total + rows.length,
+    0,
+  );
 
+  if (view === "archived") {
     return (
       <SubView title="Archived" count={archivedCount} onBack={back}>
-        {groups.length === 0 ? (
+        {archivedSections.length === 0 ? (
           <EmptyNote>Nothing is archived</EmptyNote>
         ) : (
-          <div className="divide-y divide-border">
-            {groups.map(({ title, items }) => (
-              <CardSection key={title} title={title} count={items.length}>
-                {items}
-              </CardSection>
-            ))}
-          </div>
+          <CardSections sections={archivedSections} />
         )}
       </SubView>
     );
   }
+
+  // A section stays while it has rows, or, outside a search, while it's one
+  // that always shows.
+  const sections: (Section & { always: boolean })[] = [
+    {
+      title: "Reports",
+      rows: files.reports.filter(fileMatches).map((file) => renderFile(file)),
+      empty: "Nothing has been pinned as a report yet",
+      footer: searching ? undefined : (
+        <FooterButton
+          icon="Files"
+          label="All files"
+          count={files.files.length}
+          onClick={() => setView("files")}
+          trackingId="projects.project_card.all_files"
+        />
+      ),
+      always: files.files.length > 0,
+    },
+    {
+      title: "Other files",
+      rows: searching
+        ? files.files
+            .filter((file) => !file.pinned && fileMatches(file))
+            .map((file) => renderFile(file))
+        : [],
+      always: false,
+    },
+    {
+      title: "Runs",
+      rows: runs.active
+        .filter(({ pipelineName }) => matches(pipelineName))
+        .map(renderRun),
+      more: searching ? undefined : <LoadOlderRuns query={projectRuns} />,
+      action: add("run"),
+      empty: emptyNote(
+        [projectRuns, resourceItems],
+        "this project's runs",
+        "Nothing has been run yet",
+      ),
+      always: true,
+    },
+    {
+      title: "Pipelines",
+      rows: pipelines.active
+        .filter(({ name }) => matches(name))
+        .map(renderAttached),
+      action: add("pipeline"),
+      empty: emptyNote(
+        [resourceItems],
+        "this project's pipelines",
+        "No pipelines yet",
+      ),
+      always: true,
+    },
+    {
+      title: "Documents",
+      rows: documents.active
+        .filter(({ name }) => matches(name))
+        .map(renderAttached),
+      action: add("document"),
+      empty: emptyNote(
+        [resourceItems],
+        "this project's documents",
+        "No documents yet",
+      ),
+      always: true,
+    },
+  ];
+  const shownSections = sections.filter(
+    ({ rows, always }) => rows.length > 0 || (always && !searching),
+  );
 
   return (
     <BlockStack align="stretch">
@@ -281,77 +331,10 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
           inputRef={searchRef}
         />
       </div>
-      {nothingMatches && <EmptyNote>Nothing in this project matches</EmptyNote>}
-      <div className="divide-y divide-border">
-        {files.files.length > 0 && (!searching || shownReports.length > 0) && (
-          <CardSection
-            title="Reports"
-            count={shownReports.length}
-            empty="Nothing has been pinned as a report yet"
-            footer={
-              searching ? undefined : (
-                <FooterButton
-                  icon="Files"
-                  label="All files"
-                  count={files.files.length}
-                  onClick={() => setView("files")}
-                  trackingId="projects.project_card.all_files"
-                />
-              )
-            }
-          >
-            {shownReports.map((file) => renderFile(file))}
-          </CardSection>
-        )}
-        {shownOtherFiles.length > 0 && (
-          <CardSection title="Other files" count={shownOtherFiles.length}>
-            {shownOtherFiles.map((file) => renderFile(file))}
-          </CardSection>
-        )}
-        {(!searching || shownRuns.length > 0) && (
-          <CardSection
-            title="Runs"
-            count={shownRuns.length}
-            action={add("run")}
-            empty={emptyNote(
-              [projectRuns, resourceItems],
-              "this project's runs",
-              "Nothing has been run yet",
-            )}
-          >
-            {shownRuns.map(renderRun)}
-            {!searching && <LoadOlderRuns query={projectRuns} />}
-          </CardSection>
-        )}
-        {(!searching || shownPipelines.length > 0) && (
-          <CardSection
-            title="Pipelines"
-            count={shownPipelines.length}
-            action={add("pipeline")}
-            empty={emptyNote(
-              [resourceItems],
-              "this project's pipelines",
-              "No pipelines yet",
-            )}
-          >
-            {shownPipelines.map(renderAttached)}
-          </CardSection>
-        )}
-        {(!searching || shownDocuments.length > 0) && (
-          <CardSection
-            title="Documents"
-            count={shownDocuments.length}
-            action={add("document")}
-            empty={emptyNote(
-              [resourceItems],
-              "this project's documents",
-              "No documents yet",
-            )}
-          >
-            {shownDocuments.map(renderAttached)}
-          </CardSection>
-        )}
-      </div>
+      {searching && shownSections.length === 0 && (
+        <EmptyNote>Nothing in this project matches</EmptyNote>
+      )}
+      <CardSections sections={shownSections} />
       {archivedCount > 0 && !searching && (
         <div className="border-t border-border p-2">
           <FooterButton
@@ -450,6 +433,28 @@ function FooterButton({
         {count}
       </Text>
     </Button>
+  );
+}
+
+interface Section {
+  title: string;
+  rows: ReactNode[];
+  more?: ReactNode;
+  action?: ReactNode;
+  empty?: string;
+  footer?: ReactNode;
+}
+
+function CardSections({ sections }: { sections: Section[] }) {
+  return (
+    <div className="divide-y divide-border">
+      {sections.map(({ title, rows, more, ...section }) => (
+        <CardSection key={title} title={title} count={rows.length} {...section}>
+          {rows}
+          {more}
+        </CardSection>
+      ))}
+    </div>
   );
 }
 

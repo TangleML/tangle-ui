@@ -36,9 +36,9 @@ import { useWorkspaces } from "@/services/projects/useWorkspaces";
 import { tracking } from "@/utils/tracking";
 import { getStorage } from "@/utils/typedStorage";
 
+import { ProjectSessionList } from "./ProjectSessionList";
 import { searchProjects } from "./projectSidebarSearch";
 import { SearchField } from "./SearchField";
-import { SessionsWindowContent } from "./SessionsWindowContent";
 
 const EXPANDED_KEY = "tangent-sidebar-expanded-projects";
 
@@ -309,7 +309,7 @@ function ProjectGroup({
           }
         />
         <CollapsibleContent>
-          <SessionsWindowContent
+          <ProjectSessionList
             projectId={project.id}
             onlySessionIds={onlySessionIds}
             runStates={runStates}

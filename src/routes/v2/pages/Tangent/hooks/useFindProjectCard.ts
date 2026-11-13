@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-import { requestProjectSearchFocus } from "@/routes/v2/pages/Tangent/hooks/useProjectSearchFocus";
+import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { PROJECT_CARD_WINDOW_ID } from "@/routes/v2/pages/Tangent/hooks/useTangentProjectWindows";
 import { IS_MAC } from "@/routes/v2/shared/shortcuts/keys";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
@@ -38,6 +38,7 @@ function revealProjectCard(windows: WindowStoreImpl): void {
  */
 export function useFindProjectCard() {
   const { windows } = useSharedStores();
+  const store = useTangentProject();
 
   useEffect(() => {
     const find = (event: KeyboardEvent) => {
@@ -52,9 +53,9 @@ export function useFindProjectCard() {
       if (document.querySelector('[role="dialog"][aria-modal="true"]')) return;
       event.preventDefault();
       revealProjectCard(windows);
-      requestProjectSearchFocus();
+      store.requestSearchFocus();
     };
     window.addEventListener("keydown", find);
     return () => window.removeEventListener("keydown", find);
-  }, [windows]);
+  }, [windows, store]);
 }

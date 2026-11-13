@@ -121,6 +121,9 @@ export class TangentProjectStore {
   @observable accessor selectedSessionId: string | undefined = undefined;
   @observable accessor defaultSessionId: string | undefined = undefined;
   @observable accessor isStartingSession = false;
+  /** Someone asked for the cursor in the project card's search. A card
+   * that isn't on screen yet takes it as soon as it shows. */
+  @observable accessor searchFocusRequested = false;
 
   @observable.shallow accessor workareaBySession = new Map<
     string,
@@ -197,6 +200,14 @@ export class TangentProjectStore {
     return this.chatActiveTab === CHAT_TAB_VALUE
       ? PRIME_AGENT_ID
       : this.chatActiveTab;
+  }
+
+  @action requestSearchFocus() {
+    this.searchFocusRequested = true;
+  }
+
+  @action clearSearchFocusRequest() {
+    this.searchFocusRequested = false;
   }
 
   @action setDefaultSessionId(sessionId: string | undefined) {

@@ -9,7 +9,9 @@ interface WindowHeaderProps {
   isDragging?: boolean;
   onMouseDown?: (e: MouseEvent) => void;
   leadingIcon?: ReactNode;
-  actions: ReactNode;
+  actions?: ReactNode;
+  // Always shown after the actions, such as a fold button.
+  trailing?: ReactNode;
   className?: string;
   style?: CSSProperties;
   actionsOnHover?: boolean;
@@ -25,6 +27,7 @@ export function WindowHeader({
   onMouseDown,
   leadingIcon,
   actions,
+  trailing,
   className,
   style,
   actionsOnHover = false,
@@ -68,14 +71,17 @@ export function WindowHeader({
           {title}
         </Text>
       </InlineStack>
-      <div
-        className={cn(
-          actionsOnHover &&
-            "opacity-0 group-hover/window:opacity-100 transition-opacity duration-200",
-        )}
-      >
-        {actions}
-      </div>
+      <InlineStack gap="1" wrap="nowrap">
+        <div
+          className={cn(
+            actionsOnHover &&
+              "opacity-0 group-focus-within/window:opacity-100 group-hover/window:opacity-100 transition-opacity duration-200",
+          )}
+        >
+          {actions}
+        </div>
+        {trailing}
+      </InlineStack>
     </div>
   );
 }
