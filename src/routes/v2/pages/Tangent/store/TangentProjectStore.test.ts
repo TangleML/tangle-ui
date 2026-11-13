@@ -761,22 +761,28 @@ describe("TangentProjectStore.waitForTabEnvironment", () => {
 });
 
 describe("TangentProjectStore session runs", () => {
-  it("notes a run down on the chat it was opened in", () => {
+  it("notes a run down on the chat it was opened from", () => {
     const store = activeStore();
     const recordSessionRun = vi
       .fn<NonNullable<TangentSessionIo["recordSessionRun"]>>()
       .mockResolvedValue(undefined);
     store.setSessionIo({ ...makeSessionIo(), recordSessionRun });
 
-    store.openResolvedView({ title: "Nightly", target: run("r-1") });
-    store.openResolvedView({ title: "P1", target: pipeline("p1") });
+    store.openResolvedView(
+      { title: "Nightly", target: run("r-1") },
+      { recordRunIn: SESSION_A },
+    );
+    store.openResolvedView(
+      { title: "P1", target: pipeline("p1") },
+      { recordRunIn: SESSION_A },
+    );
 
     expect(recordSessionRun).toHaveBeenCalledTimes(1);
     expect(recordSessionRun).toHaveBeenCalledWith(SESSION_A, "r-1", "Nightly");
   });
 
-  it("opens a run without noting it down while no chat is open", () => {
-    const store = new TangentProjectStore("project-1");
+  it("leaves a run opened from outside a chat out of the open chat's runs", () => {
+    const store = activeStore();
     const recordSessionRun = vi
       .fn<NonNullable<TangentSessionIo["recordSessionRun"]>>()
       .mockResolvedValue(undefined);

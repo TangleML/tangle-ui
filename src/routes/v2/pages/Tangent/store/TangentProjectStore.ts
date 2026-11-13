@@ -101,6 +101,12 @@ export interface StartSessionOptions {
   thinkingDepth?: ThinkingLevel;
 }
 
+export interface OpenTargetOptions {
+  // The chat a run was opened from, read before any await so a chat switch
+  // meanwhile can't move it to another chat's runs.
+  recordRunIn?: string;
+}
+
 /**
  * Owns only UI state, so that the workarea shell, the chat panels and the
  * out-of-render agent tools read it from one place. Sessions, project and
@@ -339,18 +345,25 @@ export class TangentProjectStore {
   async openWorkareaTarget(
     target: WorkareaTarget,
     title?: string,
+    options: OpenTargetOptions = {},
   ): Promise<WorkareaTab> {
     const view = await resolveWorkareaTarget(target, { title });
-    return this.openResolvedView(view);
+    return this.openResolvedView(view, options);
   }
 
-  @action openResolvedView(view: ResolvedWorkareaView): WorkareaTab {
-    const sessionId = this.activeSessionId;
-    if (sessionId && view.target.type === "run") {
+  /**
+   * The tabs belong to the project, not to whichever chat is open, so a run
+   * joins a chat's runs only when it's opened from that chat.
+   */
+  @action openResolvedView(
+    view: ResolvedWorkareaView,
+    { recordRunIn }: OpenTargetOptions = {},
+  ): WorkareaTab {
+    if (recordRunIn && view.target.type === "run") {
       // Best effort: the run still opens if the chat can't note it down.
       void this.#io
         ?.recordSessionRun?.(
-          sessionId,
+          recordRunIn,
           parseIdentity(view.target.identity).value,
           view.title,
         )

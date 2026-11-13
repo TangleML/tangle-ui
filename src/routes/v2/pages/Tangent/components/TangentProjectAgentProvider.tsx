@@ -247,7 +247,9 @@ export function TangentProjectAgentProvider({
         ...createProjectCardRemoteTools(() => projectCard),
         ...createWorkareaRemoteTools(() => ({
           openTarget: (target, title) =>
-            store.openWorkareaTarget(target, title),
+            store.openWorkareaTarget(target, title, {
+              recordRunIn: store.activeSessionId,
+            }),
           getTabs: () => store.workareaTabs,
           getActiveTabId: () => store.activeWorkareaTabId ?? undefined,
           closeTab: (id) => store.closeWorkareaTab(id),
