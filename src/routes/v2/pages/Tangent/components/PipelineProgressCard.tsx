@@ -12,7 +12,10 @@ import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProj
 import { useOpenWorkareaTarget } from "@/routes/v2/pages/Tangent/hooks/useOpenWorkareaTarget";
 import { useRecordSessionRun } from "@/routes/v2/pages/Tangent/hooks/useSessionRuns";
 import { fetchExecutionDetails } from "@/services/executionService";
-import { runTarget } from "@/services/projects/resourceTarget";
+import {
+  isRunOrExecutionId,
+  runTarget,
+} from "@/services/projects/resourceTarget";
 import { useRunExecutionStats } from "@/services/projects/useProjectRuns";
 import {
   countInProgressFromStats,
@@ -27,6 +30,16 @@ function stringProp(
 ): string | undefined {
   const value = props[key];
   return typeof value === "string" && value.trim() !== "" ? value : undefined;
+}
+
+// The agent writes a card's props, and its ids go into request paths and the
+// chat's saved runs, so one that isn't shaped like an id is treated as absent.
+function idProp(
+  props: Record<string, unknown>,
+  key: string,
+): string | undefined {
+  const value = stringProp(props, key)?.trim();
+  return value && isRunOrExecutionId(value) ? value : undefined;
 }
 
 function progressLabel(stats: Record<string, number> | null | undefined) {
@@ -51,8 +64,8 @@ export const PipelineProgressCard = observer(function PipelineProgressCard({
   const openTarget = useOpenWorkareaTarget();
   const { backendUrl } = useBackend();
   const recordSessionRun = useRecordSessionRun();
-  const executionId = stringProp(props, "executionId");
-  const givenRunId = stringProp(props, "runId");
+  const executionId = idProp(props, "executionId");
+  const givenRunId = idProp(props, "runId");
 
   const { data: details } = useQuery({
     queryKey: ["tangent-execution-details", executionId],

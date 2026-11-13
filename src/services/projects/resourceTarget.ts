@@ -59,6 +59,17 @@ const IDENTITY_KEYS_BY_TYPE: Record<
 
 const TARGET_SEPARATOR = "://";
 
+const RUN_OR_EXECUTION_ID = /^[A-Za-z0-9_-]{1,128}$/;
+
+/**
+ * Run and execution ids reach this app from agents and from links in chats,
+ * and go on into request paths and saved records, so anything that isn't
+ * shaped like an id the backend issues is turned away first.
+ */
+export function isRunOrExecutionId(value: string): boolean {
+  return RUN_OR_EXECUTION_ID.test(value);
+}
+
 export interface ParsedIdentity {
   key: IdentityKey;
   value: string;
@@ -149,6 +160,9 @@ export function parseWorkareaTarget(raw: string): WorkareaTarget {
   if (!IDENTITY_KEYS_BY_TYPE[type].includes(key)) {
     throw new Error(`Unsupported ${type} target identity: ${identity}`);
   }
+  if (type === "run" && !isRunOrExecutionId(value)) {
+    throw new Error(`Malformed run id: ${value}`);
+  }
   return buildTarget(type, key, value);
 }
 
@@ -171,7 +185,10 @@ export function isWorkareaTargetString(
 
   const slashIndex = identity.indexOf("/");
   const key = identity.slice(0, slashIndex);
-  return isIdentityKey(key) && IDENTITY_KEYS_BY_TYPE[type].includes(key);
+  if (!isIdentityKey(key) || !IDENTITY_KEYS_BY_TYPE[type].includes(key)) {
+    return false;
+  }
+  return type !== "run" || isRunOrExecutionId(identity.slice(slashIndex + 1));
 }
 
 export function sameTarget(a: WorkareaTarget, b: WorkareaTarget): boolean {

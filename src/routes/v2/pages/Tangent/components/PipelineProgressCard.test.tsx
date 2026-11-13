@@ -4,6 +4,8 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { fetchExecutionDetails } from "@/services/executionService";
+
 import { PipelineProgressCard } from "./PipelineProgressCard";
 
 const openWorkareaTarget = vi.fn();
@@ -119,5 +121,37 @@ describe("PipelineProgressCard", () => {
       />,
     );
     expect(recordSessionRun).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    { executionId: "../../pipeline_runs/7/cancel" },
+    { runId: "run-7/../../users/me" },
+    { executionId: "exec 1", runId: "run-7?x=1" },
+  ])(
+    "neither looks up nor records ids that could not be real: %o",
+    async (ids) => {
+      renderCard({ ...ids, title: "Train" });
+
+      expect(await screen.findByText("Loading status…")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Train/ })).toBeDisabled();
+      expect(fetchExecutionDetails).not.toHaveBeenCalled();
+      expect(recordSessionRun).not.toHaveBeenCalled();
+    },
+  );
+
+  it("falls back to the execution when the run id it was given is malformed", async () => {
+    renderCard({ executionId: "exec-1", runId: "run 7", title: "Train" });
+
+    await waitFor(() =>
+      expect(recordSessionRun).toHaveBeenCalledWith(
+        "session-1",
+        "run-7",
+        "Train",
+      ),
+    );
+    expect(fetchExecutionDetails).toHaveBeenCalledWith(
+      "exec-1",
+      "https://tangle.example",
+    );
   });
 });

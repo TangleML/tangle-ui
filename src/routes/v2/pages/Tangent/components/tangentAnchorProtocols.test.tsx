@@ -80,6 +80,15 @@ describe("tangentAnchorProtocols run anchor", () => {
     expect(window.open).toHaveBeenCalledWith("/runs/run_2", "_blank");
   });
 
+  it.each(["id/../../users/me", "id/r-1?x=1", "..", "r 1", "r-1%2Fcancel"])(
+    "disables the chip for %s, which could not be a run's id",
+    (path) => {
+      render(<RunAnchor {...anchorProps({ href: `run://${path}`, path })} />);
+
+      expect(screen.getByRole("button")).toBeDisabled();
+    },
+  );
+
   it("disables the chip when the path is not a run", () => {
     render(<RunAnchor {...anchorProps({ path: "name/nope" })} />);
 
