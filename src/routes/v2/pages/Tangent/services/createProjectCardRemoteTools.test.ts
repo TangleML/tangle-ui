@@ -13,6 +13,7 @@ function makeDeps(
       .mockResolvedValue({ runs: [], pipelines: [], documents: [] }),
     setArchived: vi.fn().mockResolvedValue(undefined),
     listFiles: vi.fn().mockResolvedValue([]),
+    listChatFiles: vi.fn().mockResolvedValue([]),
     pinFile: vi.fn().mockResolvedValue(undefined),
     unpinFile: vi.fn().mockResolvedValue(undefined),
     listChatRuns: vi.fn().mockResolvedValue([]),
@@ -21,6 +22,12 @@ function makeDeps(
     addDocument: vi.fn().mockResolvedValue("document://id/d-9"),
     ...overrides,
   };
+}
+
+function chatFilesOf(files: ReturnType<typeof listed>[]) {
+  return vi.fn(async (sessionId: string) =>
+    files.filter((file) => file.sessionId === sessionId),
+  );
 }
 
 function toolsWith(deps: ProjectCardToolDeps) {
@@ -210,12 +217,10 @@ describe("createProjectCardRemoteTools", () => {
 
   it("pins in this chat by default, titled by its path", async () => {
     const deps = makeDeps({
-      listFiles: vi
-        .fn()
-        .mockResolvedValue([
-          listed("chat-1", "artifacts/report.html"),
-          listed("chat-2", "artifacts/deck.html"),
-        ]),
+      listChatFiles: chatFilesOf([
+        listed("chat-1", "artifacts/report.html"),
+        listed("chat-2", "artifacts/deck.html"),
+      ]),
     });
     const tools = toolsWith(deps);
 
@@ -242,9 +247,9 @@ describe("createProjectCardRemoteTools", () => {
 
   it("unpins a file in the chat it names", async () => {
     const deps = makeDeps({
-      listFiles: vi
-        .fn()
-        .mockResolvedValue([listed("chat-2", "artifacts/notes.md", true)]),
+      listChatFiles: chatFilesOf([
+        listed("chat-2", "artifacts/notes.md", true),
+      ]),
     });
     const tools = toolsWith(deps);
 
@@ -259,9 +264,7 @@ describe("createProjectCardRemoteTools", () => {
 
   it("won't pin or unpin a file the card doesn't list, such as one in another project's chat", async () => {
     const deps = makeDeps({
-      listFiles: vi
-        .fn()
-        .mockResolvedValue([listed("chat-1", "artifacts/report.html")]),
+      listChatFiles: chatFilesOf([listed("chat-1", "artifacts/report.html")]),
     });
     const tools = toolsWith(deps);
 
@@ -276,6 +279,43 @@ describe("createProjectCardRemoteTools", () => {
     ).rejects.toThrow(/No file/);
     expect(deps.pinFile).not.toHaveBeenCalled();
     expect(deps.unpinFile).not.toHaveBeenCalled();
+  });
+
+  it("checks only the file's own chat before pinning, not every chat", async () => {
+    const deps = makeDeps({
+      listChatFiles: chatFilesOf([listed("chat-2", "artifacts/deck.html")]),
+    });
+    const tools = toolsWith(deps);
+
+    await tools.pin_project_file.execute({
+      path: "artifacts/deck.html",
+      sessionId: "chat-2",
+    });
+    await tools.unpin_project_file.execute({
+      path: "artifacts/deck.html",
+      sessionId: "chat-2",
+    });
+
+    expect(deps.listChatFiles).toHaveBeenCalledTimes(2);
+    expect(deps.listChatFiles).toHaveBeenCalledWith("chat-2");
+    expect(deps.listFiles).not.toHaveBeenCalled();
+  });
+
+  it("won't pin a file its chat lists under another chat's id", async () => {
+    const deps = makeDeps({
+      listChatFiles: vi
+        .fn()
+        .mockResolvedValue([listed("chat-2", "artifacts/deck.html")]),
+    });
+    const tools = toolsWith(deps);
+
+    await expect(
+      tools.pin_project_file.execute({
+        path: "artifacts/deck.html",
+        sessionId: "chat-1",
+      }),
+    ).rejects.toThrow(/No file/);
+    expect(deps.pinFile).not.toHaveBeenCalled();
   });
 
   it("needs a chat to pin into when none is open", async () => {

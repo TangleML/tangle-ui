@@ -58,6 +58,7 @@ export interface ProjectCardToolDeps {
   listEntries: () => Promise<ProjectCardEntries>;
   setArchived: (target: string, archived: boolean) => Promise<void>;
   listFiles: () => Promise<SessionFileRecord[]>;
+  listChatFiles: (sessionId: string) => Promise<SessionFileRecord[]>;
   pinFile: (sessionId: string, path: string, title: string) => Promise<void>;
   unpinFile: (sessionId: string, path: string) => Promise<void>;
   listChatRuns: (sessionId: string) => Promise<SessionRun[]>;
@@ -136,6 +137,13 @@ export function createProjectCardHandlers({
       staleTime: 0,
     });
 
+  const readChatFiles = (sessionId: string) =>
+    readChat(sessionId).then(
+      (resources) => sessionFilesOf(sessionId, resources),
+      // The card skips a chat it can't read, such as someone else's.
+      (): SessionFileRecord[] => [],
+    );
+
   function fileRequest(sessionId: string, path: string, title = path) {
     const baseUrl = getBaseUrl();
     if (!baseUrl) throw new Error("This page can't reach Tangent right now.");
@@ -180,17 +188,19 @@ export function createProjectCardHandlers({
     async listFiles() {
       const sessions = sessionsOf(await fetchResources(SESSION_RESOURCES));
       const files = await Promise.all(
-        sessions.map(({ sessionId }) =>
-          readChat(sessionId).then(
-            (resources) => sessionFilesOf(sessionId, resources),
-            // The card skips a chat it can't read, such as someone else's.
-            () => [],
-          ),
-        ),
+        sessions.map(({ sessionId }) => readChatFiles(sessionId)),
       );
       return files
         .flat()
         .sort((a, b) => b.addedAt.getTime() - a.addedAt.getTime());
+    },
+
+    async listChatFiles(sessionId) {
+      const sessions = sessionsOf(await fetchResources(SESSION_RESOURCES));
+      const inProject = sessions.some(
+        (session) => session.sessionId === sessionId,
+      );
+      return inProject ? readChatFiles(sessionId) : [];
     },
 
     pinFile: (sessionId, path, title) =>
