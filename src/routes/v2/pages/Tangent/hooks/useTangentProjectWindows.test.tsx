@@ -46,14 +46,31 @@ describe("useTangentProjectWindows", () => {
     ]);
   });
 
-  it("keeps the project card from being hidden or closed", () => {
+  it("keeps Projects and the project card from being hidden or closed", () => {
     const windows = dockedStore();
 
     renderHook(() => useTangentProjectWindows());
 
-    const card = windows.getWindowById(PROJECT_CARD_WINDOW_ID);
-    expect(card?.isActionDisabled("hide")).toBe(true);
-    expect(card?.isActionDisabled("close")).toBe(true);
+    for (const id of [PROJECTS_WINDOW_ID, PROJECT_CARD_WINDOW_ID]) {
+      const model = windows.getWindowById(id);
+      expect(model?.isActionDisabled("hide")).toBe(true);
+      expect(model?.isActionDisabled("close")).toBe(true);
+    }
+  });
+
+  it("brings back a Projects window a saved layout left hidden", () => {
+    const windows = dockedStore();
+    windows
+      .openWindow(createElement("span"), {
+        id: PROJECTS_WINDOW_ID,
+        title: "Projects",
+        defaultDockState: "left",
+      })
+      .hide();
+
+    renderHook(() => useTangentProjectWindows());
+
+    expect(windows.getWindowById(PROJECTS_WINDOW_ID)?.state).not.toBe("hidden");
   });
 
   it("leaves the windows the saved layout already restored", () => {
