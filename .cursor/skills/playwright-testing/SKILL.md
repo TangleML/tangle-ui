@@ -11,7 +11,7 @@ Guidance for writing and debugging Playwright E2E tests for the Pipeline Studio 
 
 ### Environment
 
-- **Frontend**: `http://localhost:3000` (Vite dev server)
+- **Frontend**: the dev server URL: `http://localhost:${TANGLE_UI_PORT:-3000}` (Vite dev server)
 - **Backend API**: `http://localhost:8000`
 - **Test Directory**: `tests/e2e/`
 - **Helpers**: `tests/e2e/helpers.ts`
@@ -31,10 +31,10 @@ Pipeline Studio is a React Flow-based ML pipeline editor with:
 
 ```bash
 # Open app with Playwright codegen for locator discovery
-pnpm exec playwright codegen http://localhost:3000
+pnpm exec playwright codegen http://localhost:${TANGLE_UI_PORT:-3000}
 
 # Record actions and generate test code
-pnpm exec playwright codegen http://localhost:3000 --output tests/e2e/recorded.spec.ts
+pnpm exec playwright codegen http://localhost:${TANGLE_UI_PORT:-3000} --output tests/e2e/recorded.spec.ts
 ```
 
 ### Running Tests
@@ -53,7 +53,7 @@ pnpm exec playwright test --trace on          # Trace viewer on failure
 
 ```bash
 # Open Playwright Inspector to explore locators
-pnpm exec playwright open http://localhost:3000
+pnpm exec playwright open http://localhost:${TANGLE_UI_PORT:-3000}
 
 # In codegen: Click "Pick locator" → Click element → Copy locator
 ```
@@ -72,7 +72,7 @@ pnpm add -g @playwright/cli@latest
 
 ```bash
 # 1. Open browser and navigate (headed mode to see what's happening)
-playwright-cli open http://localhost:3000 --headed
+playwright-cli open http://localhost:${TANGLE_UI_PORT:-3000} --headed
 
 # 2. Take snapshot to get element refs
 playwright-cli snapshot
@@ -100,7 +100,7 @@ Use sessions to keep browser state between commands:
 
 ```bash
 # Use named session for this project
-playwright-cli -s=tangle open http://localhost:3000 --headed
+playwright-cli -s=tangle open http://localhost:${TANGLE_UI_PORT:-3000} --headed
 
 # All subsequent commands use same session
 playwright-cli -s=tangle snapshot
@@ -141,7 +141,7 @@ When a test fails, reproduce the failure interactively:
 
 ```bash
 # Start session
-playwright-cli -s=debug open http://localhost:3000 --headed
+playwright-cli -s=debug open http://localhost:${TANGLE_UI_PORT:-3000} --headed
 
 # Follow the test steps manually
 playwright-cli -s=debug snapshot

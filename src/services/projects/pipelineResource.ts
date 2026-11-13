@@ -9,6 +9,38 @@ import {
 } from "./resourceTarget";
 import type { CreateResourceInput, ProjectResourceSummary } from "./types";
 
+interface LocalProjectPipeline {
+  source: "local";
+  name: string;
+}
+
+interface RemoteProjectPipeline {
+  source: "remote";
+  pipelineId: string;
+  name: string;
+}
+
+export type ProjectPipelineRef = LocalProjectPipeline | RemoteProjectPipeline;
+
+export function localProjectPipeline(
+  name: string | undefined,
+): ProjectPipelineRef | undefined {
+  return name ? { source: "local", name } : undefined;
+}
+
+export function projectPipelineOf(
+  file: Pick<PipelineFile, "storageKey" | "remote" | "isDraft">,
+): ProjectPipelineRef | undefined {
+  if (file.remote) {
+    return {
+      source: "remote",
+      pipelineId: file.remote.pipelineId,
+      name: file.storageKey,
+    };
+  }
+  return file.isDraft ? undefined : localProjectPipeline(file.storageKey);
+}
+
 export function pipelineFileTarget(file: PipelineFile): WorkareaTarget {
   return {
     type: "pipeline",

@@ -421,13 +421,18 @@ interface StartSessionIoMock extends TangentSessionIo {
   attachSession: Mock<TangentSessionIo["attachSession"]>;
   detachSession: Mock<TangentSessionIo["detachSession"]>;
   nameSessionIfUnnamed: Mock<TangentSessionIo["nameSessionIfUnnamed"]>;
+  ensureSharedFolderId: Mock<TangentSessionIo["ensureSharedFolderId"]>;
   notify: Mock<TangentSessionIo["notify"]>;
 }
 
 function makeSessionIo(
   projectInstructions?: string | null,
+  sharedFolderId?: string,
 ): StartSessionIoMock {
   return {
+    ensureSharedFolderId: vi
+      .fn<TangentSessionIo["ensureSharedFolderId"]>()
+      .mockResolvedValue(sharedFolderId),
     newSession: vi
       .fn<TangentSessionIo["newSession"]>()
       .mockResolvedValue({ sessionId: "new-session" }),
@@ -469,6 +474,7 @@ describe("TangentProjectStore.startSession", () => {
         tags: ["projectId:project-1"],
         env: {
           TANGLE_ROOT_CONFIG: "{{uploadsPath}}/tangle-deploy-root-config.yaml",
+          TANGLE_DEPLOY_SOURCE: "tangent-ui",
         },
       },
     );
@@ -487,6 +493,18 @@ describe("TangentProjectStore.startSession", () => {
     expect(io.newSession.mock.calls[0][2].tags).toEqual([
       "projectId:project-42",
     ]);
+  });
+
+  it("attributes the runs its agents submit to this app as tangent-ui", async () => {
+    const store = new TangentProjectStore("project-1");
+    const io = makeSessionIo(null);
+    store.setSessionIo(io);
+
+    await store.startSession();
+
+    expect(io.newSession.mock.calls[0][2].env).toMatchObject({
+      TANGLE_DEPLOY_SOURCE: "tangent-ui",
+    });
   });
 
   /** The naming brief is seeded whether or not the project says anything. */
@@ -597,6 +615,85 @@ describe("TangentProjectStore.startSession", () => {
     await store.discardActiveSessionOnUnmount();
 
     expect(io.detachSession).not.toHaveBeenCalled();
+  });
+
+  it("mounts the project's shared folder and binds memory into it", async () => {
+    const store = new TangentProjectStore("project-1");
+    const io = makeSessionIo(null, "folder-1");
+    store.setSessionIo(io);
+
+    await store.startSession();
+
+    const options = io.newSession.mock.calls[0][2];
+    expect(options.resources).toContainEqual({
+      kind: "mount",
+      folderId: "folder-1",
+      mountName: "project",
+    });
+    expect(options.memory).toEqual({
+      kind: "composite",
+      children: [
+        { kind: "simple-md", root: "project/NOTES" },
+        { kind: "pi-memory", root: "project/pi-memory" },
+      ],
+    });
+    expect(options.resources).toContainEqual({
+      kind: "memory",
+      scope: "session",
+      content: sessionMemorySeed("project-1", null, { hasSharedFolder: true }),
+    });
+  });
+
+  /** A binding rooted in a folder that is not mounted is rejected server-side. */
+  it("starts without a mount or a binding when the project has no folder", async () => {
+    const store = new TangentProjectStore("project-1");
+    const io = makeSessionIo(null);
+    store.setSessionIo(io);
+
+    await expect(store.startSession()).resolves.toBe(true);
+
+    const options = io.newSession.mock.calls[0][2];
+    expect(options.resources?.some((r) => r.kind === "mount")).toBe(false);
+    expect(options).not.toHaveProperty("memory");
+  });
+
+  /** A folder id this Tangent server does not know would fail every start. */
+  it("starts without the shared folder when the server refuses it", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    const store = new TangentProjectStore("project-1");
+    const io = makeSessionIo(null, "folder-unknown");
+    io.newSession.mockRejectedValueOnce(new Error("Unknown shared folder"));
+    store.setSessionIo(io);
+
+    await expect(store.startSession()).resolves.toBe(true);
+
+    expect(io.newSession).toHaveBeenCalledTimes(2);
+    const retry = io.newSession.mock.calls[1][2];
+    expect(retry.resources?.some((r) => r.kind === "mount")).toBe(false);
+    expect(retry).not.toHaveProperty("memory");
+    expect(retry.resources).toContainEqual({
+      kind: "memory",
+      scope: "session",
+      content: sessionMemorySeed("project-1", null),
+    });
+    expect(io.notify).not.toHaveBeenCalled();
+    expect(io.attachSession).toHaveBeenCalledWith("new-session", undefined);
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+
+  it("reports a refused start without a shared folder instead of retrying", async () => {
+    const store = new TangentProjectStore("project-1");
+    const io = makeSessionIo(null);
+    io.newSession.mockRejectedValueOnce(new Error("Tangent is down"));
+    store.setSessionIo(io);
+
+    await expect(store.startSession()).resolves.toBe(false);
+
+    expect(io.newSession).toHaveBeenCalledTimes(1);
+    expect(io.notify).toHaveBeenCalledWith("Tangent is down", "error");
   });
 
   it("reports success only when a session was created", async () => {

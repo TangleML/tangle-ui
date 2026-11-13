@@ -14,6 +14,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactFlowProps } from "@xyflow/react";
@@ -179,7 +180,7 @@ it("shows a read-only graph and navigates subgraphs without changing the spec", 
     { wrapper: RouterWrapper },
   );
   await screen.findByText("First task");
-  expect(screen.getByText("View only")).toBeInTheDocument();
+  expect(screen.getByText("Read only")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Fit view" })).toBeInTheDocument();
   expect(canvas).toMatchObject({
     nodesConnectable: false,
@@ -212,7 +213,7 @@ it("starts embedded views compact with Sidekick disabled and keeps the minimap a
   const { container } = render(<RemotePipelineView spec={spec} embedded />, {
     wrapper: RouterWrapper,
   });
-  await screen.findByText("View only");
+  await screen.findByText("Read only");
   expect(container.querySelector('[data-dock-area="left"]')).toBeNull();
   expect(container.querySelector('[data-dock-area="right"]')).toHaveStyle({
     width: "36px",
@@ -224,6 +225,27 @@ it("starts embedded views compact with Sidekick disabled and keeps the minimap a
   await user.click(minimap);
   await user.keyboard("{Escape}");
   expect(await screen.findByRole("button", { name: "Fit view" })).toBeVisible();
+});
+
+it("floats the view controls on an embedded canvas instead of a menu bar", async () => {
+  const spec = new YamlDeserializer(new IncrementingIdGenerator()).deserialize({
+    name: "Shared pipeline",
+    implementation: { graph: { tasks: {} } },
+  });
+  render(<RemotePipelineView spec={spec} embedded />, {
+    wrapper: RouterWrapper,
+  });
+  const controls = await screen.findByRole("group", {
+    name: "Pipeline view controls",
+  });
+  expect(within(controls).getByText("Read only")).toBeInTheDocument();
+  expect(within(controls).getAllByRole("button")).toHaveLength(2);
+  for (const name of ["View", "Windows"]) {
+    expect(within(controls).getByRole("button", { name })).toBeInTheDocument();
+  }
+  expect(screen.queryByRole("banner")).toBeNull();
+  expect(screen.queryByRole("link", { name: "Home" })).toBeNull();
+  expect(screen.queryByText("Shared pipeline")).toBeNull();
 });
 
 it("copies the selected task only while the view is active", async () => {
@@ -406,7 +428,7 @@ it.each<RemotePipelineNodeType>(["task", "input", "output"])(
     await waitFor(() => expect(editor.selectedNodeId).toBe(node.$id));
     expect(editor.selectedNodeType).toBe(nodeType);
     expect(canvas.nodes?.some((item) => item.id === node.$id)).toBe(true);
-    expect(screen.getByText("View only")).toBeInTheDocument();
+    expect(screen.getByText("Read only")).toBeInTheDocument();
     await waitFor(() =>
       expect(router.state.location.search.nodeId).toBe("shared"),
     );

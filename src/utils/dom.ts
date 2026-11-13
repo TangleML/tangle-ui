@@ -1,29 +1,38 @@
 import type { MouseEvent } from "react";
 
-import { getStringFromData } from "./string";
-
 export function hasNewTabModifier(event: MouseEvent) {
   return event.ctrlKey || event.metaKey;
 }
 
+export class NotTextFileError extends Error {
+  constructor(fileName: string) {
+    super(`${fileName} is not a UTF-8 text file`);
+    this.name = "NotTextFileError";
+    Object.setPrototypeOf(this, NotTextFileError.prototype);
+  }
+}
+
+function decodeText(bytes: ArrayBuffer): string | null {
+  try {
+    const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    // Binary formats can still decode as valid UTF-8, but text never holds NUL.
+    return text.includes("\0") ? null : text;
+  } catch {
+    return null;
+  }
+}
+
 export async function readTextFromFile(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    if (!file.name.endsWith(".yaml")) {
-      reject("Only YAML files are supported");
-    }
+  const text = decodeText(await file.arrayBuffer());
+  if (text === null) throw new NotTextFileError(file.name);
+  return text;
+}
 
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const content = e.target?.result;
-      if (!content) {
-        reject("Failed to read file");
-      } else {
-        resolve(getStringFromData(content));
-      }
-    };
-
-    reader.readAsText(file);
-  });
+export async function readYamlFromFile(file: File): Promise<string> {
+  if (!file.name.endsWith(".yaml")) {
+    throw new Error("Only YAML files are supported");
+  }
+  return readTextFromFile(file);
 }
 
 export function createPromiseFromDomEvent(

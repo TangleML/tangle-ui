@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { holdsPipeline, pipelineResourceIn } from "./pipelineProjects";
+import {
+  holdsPipeline,
+  pipelineResourceIn,
+  remotePipelineResourceIn,
+} from "./pipelineProjects";
 import { localPipelineResourceInput } from "./resourceDescriptor";
 import type { ProjectResourceSummary } from "./types";
 
@@ -102,6 +106,44 @@ describe("pipelineResourceIn", () => {
       pipelineResourceIn([pointerRow("Something else")], {
         localName: "Churn model",
       }),
+    ).toBeUndefined();
+  });
+});
+
+describe("remotePipelineResourceIn", () => {
+  const PIPELINE_ID = "0f8fad5b-d9cb-469f-a165-70867728950e";
+  const remoteRow = (entityId: string) =>
+    row({ id: "resource-7", entity: "pipeline", entityId });
+
+  it("hands back the row that names the backend pipeline", () => {
+    const wanted = remoteRow(PIPELINE_ID);
+
+    expect(
+      remotePipelineResourceIn(
+        [row({ id: "resource-1" }), wanted],
+        PIPELINE_ID,
+      ),
+    ).toBe(wanted);
+  });
+
+  it("recognises the id however the backend spelled it", () => {
+    const wanted = remoteRow(PIPELINE_ID.toUpperCase().replaceAll("-", ""));
+
+    expect(remotePipelineResourceIn([wanted], PIPELINE_ID)).toBe(wanted);
+  });
+
+  it("does not take a browser pointer for it, even under the same name", () => {
+    expect(
+      remotePipelineResourceIn([pointerRow("Churn model")], PIPELINE_ID),
+    ).toBeUndefined();
+  });
+
+  it("does not claim a different backend pipeline", () => {
+    expect(
+      remotePipelineResourceIn(
+        [remoteRow("1b4e28ba-2fa1-11d2-883f-0016d3cca427")],
+        PIPELINE_ID,
+      ),
     ).toBeUndefined();
   });
 });

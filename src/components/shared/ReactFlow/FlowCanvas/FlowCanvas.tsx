@@ -46,7 +46,7 @@ import {
   type TaskSpec,
 } from "@/utils/componentSpec";
 import { componentMetadata } from "@/utils/componentTracking";
-import { readTextFromFile } from "@/utils/dom";
+import { readYamlFromFile } from "@/utils/dom";
 import { deselectAllNodes } from "@/utils/flowUtils";
 import createNodesFromComponentSpec from "@/utils/nodes/createNodesFromComponentSpec";
 import {
@@ -637,7 +637,7 @@ const FlowCanvasContent = ({
     if (event.dataTransfer.files.length > 0) {
       try {
         // Parse the imported YAML to get the component spec
-        const content = await readTextFromFile(event.dataTransfer.files[0]);
+        const content = await readYamlFromFile(event.dataTransfer.files[0]);
         const hydratedComponentRef = await hydrateComponentReference({
           text: content,
         });

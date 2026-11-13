@@ -548,7 +548,7 @@ describe("remote pipeline editor entry", () => {
       });
       renderEditor(<EditorV2 />);
       expect(screen.getByRole("alert")).toHaveTextContent(message);
-      expect(screen.queryByText("View only")).not.toBeInTheDocument();
+      expect(screen.queryByText("Read only")).not.toBeInTheDocument();
       expect(Boolean(screen.queryByRole("button", { name: "Retry" }))).toBe(
         retryable,
       );
@@ -654,7 +654,7 @@ describe("remote pipeline editor entry", () => {
       });
       renderEditor(<EditorV2 />);
       expect(screen.getByRole("alert")).toHaveTextContent(message);
-      expect(screen.queryByText("View only")).not.toBeInTheDocument();
+      expect(screen.queryByText("Read only")).not.toBeInTheDocument();
       expect(screen.getByRole("link", { name: "Home" })).toBeInTheDocument();
       expect(
         screen.getByRole("button", { name: "Sign in" }),

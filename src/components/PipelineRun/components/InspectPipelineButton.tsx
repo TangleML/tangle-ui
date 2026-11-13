@@ -11,7 +11,8 @@ import { getDefaultEditorPath } from "@/routes/editorRoutes";
 import { hasNewTabModifier } from "@/utils/dom";
 
 type InspectPipelineButtonProps = {
-  pipelineName: string;
+  pipelineName?: string;
+  inspectPath?: string;
   showLabel?: boolean;
   displayLabel?: string;
   showTooltip?: boolean;
@@ -22,6 +23,7 @@ type InspectPipelineButtonProps = {
 
 export const InspectPipelineButton = ({
   pipelineName,
+  inspectPath,
   showLabel,
   displayLabel,
   showTooltip = true,
@@ -31,7 +33,9 @@ export const InspectPipelineButton = ({
 
   const handleInspect = useCallback(
     (e: MouseEvent<HTMLButtonElement>) => {
-      const clickThroughUrl = getDefaultEditorPath(pipelineName);
+      const clickThroughUrl =
+        inspectPath ?? (pipelineName ? getDefaultEditorPath(pipelineName) : "");
+      if (!clickThroughUrl) return;
 
       if (hasNewTabModifier(e)) {
         window.open(clickThroughUrl, "_blank");
@@ -40,7 +44,7 @@ export const InspectPipelineButton = ({
 
       navigate({ to: clickThroughUrl });
     },
-    [navigate, pipelineName],
+    [inspectPath, navigate, pipelineName],
   );
 
   return (

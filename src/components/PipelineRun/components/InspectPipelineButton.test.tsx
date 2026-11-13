@@ -18,4 +18,18 @@ describe("<InspectPipelineButton/>", () => {
     act(() => fireEvent.click(inspectButton));
     expect(mockNavigate).toHaveBeenCalledWith({ to: "/editor/foo" });
   });
+
+  test("uses an explicit inspect path for remote pipelines", () => {
+    render(
+      <InspectPipelineButton
+        pipelineName="foo"
+        inspectPath="/editor/pipeline/remote-id"
+      />,
+    );
+    const inspectButton = screen.getByTestId("inspect-pipeline-button");
+    act(() => fireEvent.click(inspectButton));
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: "/editor/pipeline/remote-id",
+    });
+  });
 });

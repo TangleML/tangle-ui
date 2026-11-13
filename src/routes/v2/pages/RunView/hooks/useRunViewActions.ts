@@ -21,12 +21,14 @@ import {
   flattenExecutionStatusStats,
   isExecutionComplete,
 } from "@/utils/executionStatus";
+import { resolvePipelineInspectPath } from "@/utils/remotePipelineRunAnnotations";
 
 interface RunViewActionsReady {
   ready: true;
   componentSpec: ComponentSpec;
   runId: string | null | undefined;
   canAccessEditorSpec: boolean;
+  inspectPath: string | undefined;
   management: RunManagement;
   isInProgress: boolean;
   isComplete: boolean;
@@ -46,7 +48,7 @@ function resolveActions(
   metadata: PipelineRunResponse | undefined,
   details: GetExecutionInfoResponse | undefined,
   management: RunManagement,
-  canAccessEditorSpec: boolean,
+  canAccessLocalEditorSpec: boolean,
 ): RunViewActionsReady {
   const executionStatusStats =
     metadata?.execution_status_stats ??
@@ -60,11 +62,21 @@ function resolveActions(
       buildTaskSpecShape(details?.task_spec, componentSpec),
     ) ?? componentSpec.name;
 
+  const remoteInspectPath = resolvePipelineInspectPath(
+    metadata?.annotations,
+    undefined,
+  );
+  const inspectPath = resolvePipelineInspectPath(
+    metadata?.annotations,
+    pipelineName,
+  );
+
   return {
     ready: true,
     componentSpec,
     runId,
-    canAccessEditorSpec,
+    canAccessEditorSpec: Boolean(remoteInspectPath) || canAccessLocalEditorSpec,
+    inspectPath,
     management,
     isInProgress,
     isComplete,
