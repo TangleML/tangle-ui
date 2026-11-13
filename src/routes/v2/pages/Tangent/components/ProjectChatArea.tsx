@@ -15,6 +15,7 @@ import { useRefreshSessionResources } from "@/routes/v2/pages/Tangent/hooks/useR
 import { AiProviderSetup } from "@/routes/v2/shared/components/AiChat/components/AiProviderSetup";
 import { TANGENT_AI_SETUP } from "@/routes/v2/shared/components/AiChat/components/aiSetupCopy";
 import { ChatEntityRevealProvider } from "@/routes/v2/shared/components/AiChat/components/ChatEntityRevealContext";
+import { getErrorMessage } from "@/utils/string";
 
 export const ProjectChatArea = observer(function ProjectChatArea() {
   const store = useTangentProject();
@@ -64,7 +65,13 @@ export const ProjectChatArea = observer(function ProjectChatArea() {
         onRemoveAgent={(id) => store.closeChatTab(id)}
         references={references}
         commands={commands}
-        onOpenArtifact={(url, title) => store.openArtifactTab(url, title)}
+        onOpenArtifact={(url, title) => {
+          try {
+            store.openArtifactTab(url, title);
+          } catch (error) {
+            notify(getErrorMessage(error), "error");
+          }
+        }}
         onSendPrompt={(content) => store.recordSessionPrompt(content)}
         onError={(message) => notify(message, "error")}
         onResourcesChange={() => refreshSessionResources(activeSessionId)}

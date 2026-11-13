@@ -10,7 +10,19 @@ import {
 import { readOpenTabs, rememberOpenTabs } from "./openTabsStorage";
 import type { OpenTabs, WorkareaTarget } from "./types";
 
-const STORAGE_KEY = "tangent-open-tabs";
+const STORAGE_KEY = "tangent-open-tabs-by-user";
+const OLD_STORAGE_KEY = "tangent-open-tabs";
+const TANGENT = "https://tangent.example";
+const USER = "user-1";
+
+const chatFile: WorkareaTarget = {
+  type: "artifact",
+  identity: idIdentity(`${TANGENT}/api/sessions/chat-a/files/report.html`),
+};
+
+function saved(projectId: string, userId = USER, tangent = TANGENT) {
+  return readOpenTabs({ userId, projectId }, tangent);
+}
 
 const pipeline: WorkareaTarget = {
   type: "pipeline",
@@ -24,9 +36,10 @@ const unsaved: WorkareaTarget = {
 
 const disposers: (() => void)[] = [];
 
-function visit(projectId: string): TangentProjectStore {
-  const store = new TangentProjectStore(projectId, readOpenTabs(projectId));
-  disposers.push(rememberOpenTabs(store));
+function visit(projectId: string, userId = USER): TangentProjectStore {
+  const store = new TangentProjectStore(projectId, saved(projectId, userId));
+  store.setTangentBaseUrl(TANGENT);
+  disposers.push(rememberOpenTabs(store, userId));
   return store;
 }
 
@@ -71,9 +84,9 @@ describe("a project's open tabs", () => {
     });
     visit("project-2").openResolvedView({ title: "Nightly", target: run });
 
-    expect(titles(readOpenTabs("project-1"))).toEqual(["Churn model"]);
-    expect(titles(readOpenTabs("project-2"))).toEqual(["Nightly"]);
-    expect(readOpenTabs("project-3")).toEqual({ tabs: [], activeId: null });
+    expect(titles(saved("project-1"))).toEqual(["Churn model"]);
+    expect(titles(saved("project-2"))).toEqual(["Nightly"]);
+    expect(saved("project-3")).toEqual({ tabs: [], activeId: null });
   });
 
   it("keep a tab's new name and address", () => {
@@ -84,7 +97,7 @@ describe("a project's open tabs", () => {
     store.retitleWorkareaTarget(pipeline, "Churn model");
 
     expect(
-      readOpenTabs("project-1").tabs.map(({ title, target }) => ({
+      saved("project-1").tabs.map(({ title, target }) => ({
         title,
         target,
       })),
@@ -100,7 +113,7 @@ describe("a project's open tabs", () => {
 
     store.closeWorkareaTab(tab.id);
 
-    expect(readOpenTabs("project-1").tabs).toEqual([]);
+    expect(saved("project-1").tabs).toEqual([]);
     expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
@@ -109,52 +122,154 @@ describe("a project's open tabs", () => {
     store.openResolvedView({ title: "Churn model", target: pipeline });
     store.openResolvedView({ title: "Untitled", target: unsaved });
 
-    const saved = readOpenTabs("project-1");
+    const tabs = saved("project-1");
 
-    expect(titles(saved)).toEqual(["Churn model"]);
-    expect(inFront(saved)).toBe("Churn model");
+    expect(titles(tabs)).toEqual(["Churn model"]);
+    expect(inFront(tabs)).toBe("Churn model");
   });
 
   it("stop being saved once the visit ends", () => {
     const store = new TangentProjectStore("project-1");
-    const stop = rememberOpenTabs(store);
+    const stop = rememberOpenTabs(store, USER);
 
     stop();
     store.openResolvedView({ title: "Churn model", target: pipeline });
 
-    expect(readOpenTabs("project-1").tabs).toEqual([]);
+    expect(saved("project-1").tabs).toEqual([]);
   });
 
   it("skip anything saved that isn't a tab", () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        "project-1": {
-          tabs: [
-            { title: "Churn model", target: "pipeline://remote/p-1" },
-            { title: "Unknown kind", target: "notebook://id/1" },
-            { title: "Wrong address", target: "run://name/nightly" },
-            { target: "run://id/r-1" },
-            "nonsense",
-          ],
-          active: "run://id/closed-since",
+        [USER]: {
+          "project-1": {
+            tabs: [
+              { title: "Churn model", target: "pipeline://remote/p-1" },
+              { title: "Unknown kind", target: "notebook://id/1" },
+              { title: "Wrong address", target: "run://name/nightly" },
+              { title: "Not a run's id", target: "run://id/../../users/me" },
+              { target: "run://id/r-1" },
+              "nonsense",
+            ],
+            active: "run://id/closed-since",
+          },
+          "project-2": "nonsense",
         },
-        "project-2": "nonsense",
+        "user-2": "nonsense",
       }),
     );
 
-    const saved = readOpenTabs("project-1");
+    const tabs = saved("project-1");
 
-    expect(saved.tabs.map(({ title, target }) => ({ title, target }))).toEqual([
+    expect(tabs.tabs.map(({ title, target }) => ({ title, target }))).toEqual([
       { title: "Churn model", target: pipeline },
     ]);
-    expect(inFront(saved)).toBe("Churn model");
-    expect(readOpenTabs("project-2")).toEqual({ tabs: [], activeId: null });
+    expect(inFront(tabs)).toBe("Churn model");
+    expect(saved("project-2")).toEqual({ tabs: [], activeId: null });
   });
 
   it("read as none when what was saved can't be read", () => {
     localStorage.setItem(STORAGE_KEY, "{not json");
 
-    expect(readOpenTabs("project-1")).toEqual({ tabs: [], activeId: null });
+    expect(saved("project-1")).toEqual({ tabs: [], activeId: null });
+  });
+
+  it("bring back a file from one of this Tangent's chats", () => {
+    visit("project-1").openResolvedView({ title: "Report", target: chatFile });
+
+    expect(
+      saved("project-1").tabs.map(({ title, target }) => ({ title, target })),
+    ).toEqual([{ title: "Report", target: chatFile }]);
+  });
+
+  it("drop a saved file tab that points outside this Tangent", () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        [USER]: {
+          "project-1": {
+            tabs: [
+              { title: "Churn model", target: "pipeline://remote/p-1" },
+              {
+                title: "Outside page",
+                target: "artifact://id/https://evil.example/page.html",
+              },
+              {
+                title: "Lookalike",
+                target:
+                  "artifact://id/https://evil.example/api/sessions/chat-a/files/report.html",
+              },
+              { title: "Script", target: "artifact://id/javascript:alert(1)" },
+            ],
+            active: "artifact://id/https://evil.example/page.html",
+          },
+        },
+      }),
+    );
+
+    const tabs = saved("project-1");
+
+    expect(titles(tabs)).toEqual(["Churn model"]);
+    expect(inFront(tabs)).toBe("Churn model");
+  });
+
+  it("drop a file tab saved against a Tangent the project no longer uses", () => {
+    visit("project-1").openResolvedView({ title: "Report", target: chatFile });
+
+    expect(
+      titles(saved("project-1", USER, "https://other-tangent.example")),
+    ).toEqual([]);
+  });
+
+  it("are kept apart for each person using this browser", () => {
+    visit("project-1", "user-1").openResolvedView({
+      title: "Churn model",
+      target: pipeline,
+    });
+    visit("project-1", "user-2").openResolvedView({
+      title: "Nightly",
+      target: run,
+    });
+
+    expect(titles(saved("project-1", "user-1"))).toEqual(["Churn model"]);
+    expect(titles(saved("project-1", "user-2"))).toEqual(["Nightly"]);
+    expect(titles(saved("project-1", "user-3"))).toEqual([]);
+  });
+
+  it("leave another person's tabs alone when the last of one's own closes", () => {
+    visit("project-1", "user-2").openResolvedView({
+      title: "Nightly",
+      target: run,
+    });
+    const store = visit("project-1", "user-1");
+    const tab = store.openResolvedView({
+      title: "Churn model",
+      target: pipeline,
+    });
+
+    store.closeWorkareaTab(tab.id);
+
+    expect(titles(saved("project-1", "user-1"))).toEqual([]);
+    expect(titles(saved("project-1", "user-2"))).toEqual(["Nightly"]);
+  });
+
+  it("ignore tabs saved before they were kept per person", () => {
+    localStorage.setItem(
+      OLD_STORAGE_KEY,
+      JSON.stringify({
+        "project-1": {
+          tabs: [{ title: "Churn model", target: "pipeline://remote/p-1" }],
+        },
+      }),
+    );
+
+    expect(saved("project-1").tabs).toEqual([]);
+    expect(saved("project-1", "project-1").tabs).toEqual([]);
+  });
+
+  it("aren't mixed up by a person or project named like a built-in", () => {
+    expect(saved("constructor", "__proto__").tabs).toEqual([]);
+    expect(saved("toString", "constructor").tabs).toEqual([]);
   });
 });

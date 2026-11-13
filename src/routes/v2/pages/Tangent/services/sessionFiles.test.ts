@@ -3,6 +3,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  isTangentSessionUrl,
   sessionFilesOf,
   sessionFileUrl,
   sessionIdOfFileUrl,
@@ -105,25 +106,90 @@ describe("setSessionFilePinned", () => {
   });
 });
 
+const ROOT = "https://tangent.example";
+
 describe("sessionIdOfFileUrl", () => {
   it("names the chat a file's address belongs to", () => {
     const url = sessionFileUrl(BASE, "s-1", "artifacts/a b.html");
 
-    expect(sessionIdOfFileUrl(url)).toBe("s-1");
-    expect(sessionIdOfFileUrl(sessionFileUrl(BASE, "s/2", "notes.md"))).toBe(
-      "s/2",
-    );
+    expect(sessionIdOfFileUrl(url, BASE)).toBe("s-1");
+    expect(
+      sessionIdOfFileUrl(sessionFileUrl(BASE, "s/2", "notes.md"), BASE),
+    ).toBe("s/2");
+    expect(sessionIdOfFileUrl(url, ROOT)).toBe("s-1");
   });
 
   it("names none for an address that isn't a chat's file", () => {
-    expect(sessionIdOfFileUrl("https://example.com/report.html")).toBe(
+    expect(sessionIdOfFileUrl(`${ROOT}/api/sessions/s-1/pins`, BASE)).toBe(
       undefined,
     );
+    expect(sessionIdOfFileUrl(`${ROOT}/api/sessions/%zz/files/a`, BASE)).toBe(
+      undefined,
+    );
+  });
+
+  it("names none for a file's address on another Tangent or site", () => {
+    const elsewhere = "https://evil.example";
+
     expect(
-      sessionIdOfFileUrl("https://tangent.example/api/sessions/s-1/pins"),
+      sessionIdOfFileUrl(sessionFileUrl(elsewhere, "s-1", "a.html"), BASE),
     ).toBe(undefined);
     expect(
-      sessionIdOfFileUrl("https://tangent.example/api/sessions/%zz/files/a"),
+      sessionIdOfFileUrl(
+        `${elsewhere}/page?next=${ROOT}/api/sessions/s-1/files/a.html`,
+        BASE,
+      ),
     ).toBe(undefined);
+    expect(
+      sessionIdOfFileUrl(
+        sessionFileUrl(`${ROOT}/other`, "s-1", "a.html"),
+        `${ROOT}/mine`,
+      ),
+    ).toBe(undefined);
+    expect(sessionIdOfFileUrl("/api/sessions/s-1/files/a.html", BASE)).toBe(
+      undefined,
+    );
+  });
+});
+
+describe("isTangentSessionUrl", () => {
+  it("takes an address under this Tangent's sessions", () => {
+    expect(
+      isTangentSessionUrl(sessionFileUrl(BASE, "s-1", "a.html"), BASE),
+    ).toBe(true);
+    expect(
+      isTangentSessionUrl(
+        sessionFileUrl(`${ROOT}/mine`, "s-1", "a.html"),
+        `${ROOT}/mine/`,
+      ),
+    ).toBe(true);
+  });
+
+  it.each([
+    "https://evil.example/api/sessions/s-1/files/a.html",
+    "https://evil.example/",
+    "javascript:alert(1)",
+    "data:text/html,hello",
+    "not an address",
+    "",
+  ])("turns away %s", (url) => {
+    expect(isTangentSessionUrl(url, BASE)).toBe(false);
+  });
+
+  it("turns away an address that climbs out of the sessions path", () => {
+    expect(isTangentSessionUrl(`${ROOT}/api/sessions/../../admin`, BASE)).toBe(
+      false,
+    );
+    expect(
+      isTangentSessionUrl(`${ROOT}/api/sessions/%2e%2e/%2e%2e/admin`, BASE),
+    ).toBe(false);
+    expect(isTangentSessionUrl(`${ROOT}/api/sessions`, BASE)).toBe(false);
+  });
+
+  it("takes nothing when the base isn't an address with a host", () => {
+    expect(isTangentSessionUrl("data:/api/sessions/x", "data:")).toBe(false);
+    expect(isTangentSessionUrl("https://a.example/api/sessions/x", "")).toBe(
+      false,
+    );
   });
 });

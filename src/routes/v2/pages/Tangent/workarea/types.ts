@@ -44,6 +44,7 @@ export interface WorkareaHostProps {
   isActive: boolean;
   projectId: string;
   sessionId?: string;
+  tangentBaseUrl?: string | null;
   registerTabStore: (tabId: string, store: SharedUIStore) => void;
   unregisterTabStore: (tabId: string) => void;
   tabEnvironmentId: (tabId: string) => string | undefined;

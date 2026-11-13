@@ -18,7 +18,14 @@ vi.mock("@tangent/embed-react", () => ({
 
 const CHAT_FILE = "https://tangent.example/api/sessions/chat-a/files/report.md";
 
-function renderArtifact(url: string, sessionId?: string) {
+const TANGENT = "https://tangent.example";
+const SHARED_FILE = "https://tangent.example/api/sessions/chat-a/shared.md";
+
+function renderArtifact(
+  url: string,
+  sessionId?: string,
+  tangentBaseUrl: string | null = TANGENT,
+) {
   const kind = getWorkareaKind("artifact");
   if (!kind) throw new Error("artifact kind is not registered");
   const tab: WorkareaTab = {
@@ -26,7 +33,9 @@ function renderArtifact(url: string, sessionId?: string) {
     title: "Report",
     target: { type: "artifact", identity: idIdentity(url) },
   };
-  return render(<>{kind.render(tab, { sessionId } as WorkareaHostProps)}</>);
+  return render(
+    <>{kind.render(tab, { sessionId, tangentBaseUrl } as WorkareaHostProps)}</>,
+  );
 }
 
 describe("artifactKind", () => {
@@ -42,19 +51,38 @@ describe("artifactKind", () => {
     expect(screen.getByText(`${CHAT_FILE} read as chat-a`)).toBeInTheDocument();
   });
 
-  it("reads any other address as the chat in view's", () => {
-    renderArtifact("https://example.com/page.html", "chat-b");
+  it("reads this Tangent's other addresses as the chat in view's", () => {
+    renderArtifact(SHARED_FILE, "chat-b");
 
     expect(
-      screen.getByText("https://example.com/page.html read as chat-b"),
+      screen.getByText(`${SHARED_FILE} read as chat-b`),
     ).toBeInTheDocument();
   });
 
   it("asks for a session when an address names none and none is in view", () => {
-    renderArtifact("https://example.com/page.html");
+    renderArtifact(SHARED_FILE);
 
     expect(
       screen.getByText("Start a session to view this artifact."),
     ).toBeInTheDocument();
+  });
+
+  it.each([
+    "https://example.com/page.html",
+    "https://evil.example/api/sessions/chat-a/files/report.md",
+    "javascript:alert(1)",
+  ])("doesn't load %s, which isn't this Tangent's", (url) => {
+    renderArtifact(url, "chat-b");
+
+    expect(
+      screen.getByText(/isn't from one of this project's chats/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/read as/)).toBeNull();
+  });
+
+  it("loads nothing while it doesn't know which Tangent is this project's", () => {
+    renderArtifact(CHAT_FILE, "chat-a", null);
+
+    expect(screen.queryByText(/read as/)).toBeNull();
   });
 });
