@@ -40,7 +40,10 @@ export function useProjects(
   });
 }
 
-export function useProject(id: string | undefined) {
+export function useProject(
+  id: string | undefined,
+  { refetchOnMount = true }: { refetchOnMount?: boolean | "always" } = {},
+) {
   const { configured, available } = useBackend();
 
   return useQuery({
@@ -53,6 +56,7 @@ export function useProject(id: string | undefined) {
     },
     enabled: configured && available && Boolean(id),
     ...projectQueryDefaults,
+    refetchOnMount,
   });
 }
 

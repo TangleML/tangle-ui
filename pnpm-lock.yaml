@@ -96,8 +96,8 @@ importers:
         specifier: ^4.3.3
         version: 4.3.3(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       '@tangent/embed-react':
-        specifier: github:TangleML/tangent-shell#MB/tangent-chat-references&path:packages/embed-react
-        version: https://codeload.github.com/TangleML/tangent-shell/tar.gz/02efdb5b217b5daa0c07c978abd96a83ea40ee0f#path:packages/embed-react(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        specifier: github:TangleML/tangent-shell#MB/tangent-host-resource-events&path:packages/embed-react
+        version: https://codeload.github.com/TangleML/tangent-shell/tar.gz/0ad8235246bbf782ed2cee9900a1ef898fac7fee#path:packages/embed-react(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@tangent/remote-subagent':
         specifier: github:TangleML/tangent-shell#main&path:packages/remote-subagent
         version: https://codeload.github.com/TangleML/tangent-shell/tar.gz/b20e5684db7095e1f7da2d2a963b2bee865329dd#path:packages/remote-subagent
@@ -2704,8 +2704,8 @@ packages:
     peerDependencies:
       vite: ^5.2.0 || ^6 || ^7 || ^8
 
-  '@tangent/embed-react@https://codeload.github.com/TangleML/tangent-shell/tar.gz/02efdb5b217b5daa0c07c978abd96a83ea40ee0f#path:packages/embed-react':
-    resolution: {path: packages/embed-react, tarball: https://codeload.github.com/TangleML/tangent-shell/tar.gz/02efdb5b217b5daa0c07c978abd96a83ea40ee0f}
+  '@tangent/embed-react@https://codeload.github.com/TangleML/tangent-shell/tar.gz/0ad8235246bbf782ed2cee9900a1ef898fac7fee#path:packages/embed-react':
+    resolution: {path: packages/embed-react, tarball: https://codeload.github.com/TangleML/tangent-shell/tar.gz/0ad8235246bbf782ed2cee9900a1ef898fac7fee}
     version: 0.1.1
     peerDependencies:
       react: ^19.0.0
@@ -8383,7 +8383,7 @@ snapshots:
       tailwindcss: 4.3.3
       vite: 8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
 
-  '@tangent/embed-react@https://codeload.github.com/TangleML/tangent-shell/tar.gz/02efdb5b217b5daa0c07c978abd96a83ea40ee0f#path:packages/embed-react(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
+  '@tangent/embed-react@https://codeload.github.com/TangleML/tangent-shell/tar.gz/0ad8235246bbf782ed2cee9900a1ef898fac7fee#path:packages/embed-react(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     dependencies:
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)
