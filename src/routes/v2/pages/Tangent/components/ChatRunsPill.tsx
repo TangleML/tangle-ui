@@ -21,7 +21,10 @@ import {
   useSessionRuns,
 } from "@/routes/v2/pages/Tangent/hooks/useSessionRuns";
 import { runTarget } from "@/services/projects/resourceTarget";
-import { useRunsExecutionStats } from "@/services/projects/useProjectRuns";
+import {
+  isRefusedRun,
+  useRunsExecutionStats,
+} from "@/services/projects/useProjectRuns";
 import { formatRelativeTime } from "@/utils/date";
 import { hasNewTabModifier } from "@/utils/dom";
 import {
@@ -102,7 +105,10 @@ export const ChatRunsPill = observer(function ChatRunsPill({
       run,
       state: stateOf(status),
       label: getExecutionStatusLabel(status),
-      finished: Boolean(data && isExecutionComplete(data)),
+      // A run the backend refuses, such as a deleted one, is over too.
+      finished:
+        Boolean(data && isExecutionComplete(data)) ||
+        isRefusedRun(stats[index]?.error),
     };
   });
   const anyFailed = rows.some(({ state }) => state === "failed");

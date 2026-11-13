@@ -13,6 +13,8 @@ import {
 } from "@/utils/executionStatus";
 import { projectIdsFromAnnotations } from "@/utils/projectRunAnnotation";
 
+import { isSettledRefusal } from "../retryPolicy";
+import { ApiError } from "./errors";
 import { getRunExecutionStats, listProjectRuns } from "./projectRunsService";
 import { projectQueryDefaults } from "./queryDefaults";
 import { ProjectRunsQueryKeys } from "./types";
@@ -38,12 +40,22 @@ export async function invalidateProjectRunQueries(
 }
 
 /**
+ * The backend's settled "no" for a run, such as one that was deleted, which
+ * asking again won't change.
+ */
+export function isRefusedRun(error: unknown): boolean {
+  return error instanceof ApiError && isSettledRefusal(error.status);
+}
+
+/**
  * A run with no executions yet has not started rather than finished, so it
  * keeps polling: that is the "Waiting for upstream" a queued run sits in.
  */
 export function runPollInterval(
   stats: ExecutionStatusStats | null | undefined,
+  error?: unknown,
 ): number | false {
+  if (isRefusedRun(error)) return false;
   return stats && isExecutionComplete(stats) ? false : RUN_POLL_MS;
 }
 
@@ -86,7 +98,7 @@ function runExecutionStatsQuery(runId: string | undefined, enabled: boolean) {
     enabled: enabled && Boolean(runId),
     ...projectQueryDefaults,
     staleTime: RUN_POLL_MS,
-    refetchInterval: ({ state }) => runPollInterval(state.data),
+    refetchInterval: ({ state }) => runPollInterval(state.data, state.error),
   });
 }
 
