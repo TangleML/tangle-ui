@@ -1,7 +1,7 @@
 import type { HostUIComponentProps } from "@tangent/embed-react";
 import { useQuery } from "@tanstack/react-query";
 import { observer } from "mobx-react-lite";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import TaskStatusBar from "@/components/shared/Status/TaskStatusBar";
 import { Icon } from "@/components/ui/icon";
@@ -66,7 +66,9 @@ export const PipelineProgressCard = observer(function PipelineProgressCard({
     details?.task_spec?.componentRef?.spec?.name ??
     "Pipeline run";
   const { data: stats } = useRunExecutionStats(runId);
-  const sessionId = store.activeSessionId;
+  // The chat this card was drawn in. It can outlive a switch to another chat
+  // for a moment, and mustn't hand its run to that one.
+  const [sessionId] = useState(() => store.activeSessionId);
   const recorded = useRef<string | null>(null);
 
   // A card for a run is how the chat learns the agent started it, so the run

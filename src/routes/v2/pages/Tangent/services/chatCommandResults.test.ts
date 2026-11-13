@@ -144,6 +144,14 @@ describe("chat command results", () => {
     expect(parsePipelineIds("  ")).toEqual([]);
   });
 
+  it("takes what was typed as one id when a pipeline is known by it", () => {
+    const known = ["My pipeline", "p-1"];
+
+    expect(parsePipelineIds(" [My pipeline] ", known)).toEqual(["My pipeline"]);
+    expect(parsePipelineIds("My pipeline", [])).toEqual(["My", "pipeline"]);
+    expect(parsePipelineIds("p-1, p-2", known)).toEqual(["p-1", "p-2"]);
+  });
+
   it("reports the runs it started and the pipelines it couldn't start", () => {
     expect(
       runStartsResult([

@@ -45,6 +45,7 @@ export const DockPopover = observer(function DockPopover({
   const dragging = windows.isDraggingWindow;
   const targeted = windows.dropTargetSide === side;
   const open = windows.isDockPopoverOpen(side) && docked.length > 0;
+  const dismissedOutsideRef = useRef(false);
   const close = () => windows.setDockPopoverOpen(side, false);
 
   useEffect(() => {
@@ -58,7 +59,10 @@ export const DockPopover = observer(function DockPopover({
   useDismissOnOutsidePress({
     open,
     refs: [triggerRef, contentRef],
-    onDismiss: close,
+    onDismiss: () => {
+      dismissedOutsideRef.current = true;
+      close();
+    },
   });
 
   if (docked.length === 0 && !dragging) return null;
@@ -102,6 +106,11 @@ export const DockPopover = observer(function DockPopover({
         tabIndex={-1}
         align="end"
         sideOffset={8}
+        onCloseAutoFocus={(event) => {
+          // Closed by a press elsewhere, focus belongs to what was pressed.
+          if (dismissedOutsideRef.current) event.preventDefault();
+          dismissedOutsideRef.current = false;
+        }}
         onOpenAutoFocus={(event) => {
           // A window may already have put focus where it wants it, such as a
           // search box; otherwise focus the popover itself, not a header.

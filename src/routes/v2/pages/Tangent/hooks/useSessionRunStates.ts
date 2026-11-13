@@ -129,6 +129,21 @@ export function withBaseline(
   return { ...seen, baseline: endings.sort().at(-1) ?? "" };
 }
 
+/** `seen` with whatever another tab has seen later, so neither undoes the other. */
+export function withSeenElsewhere(
+  seen: SeenRuns,
+  elsewhere: SeenRuns,
+): SeenRuns {
+  const chats = { ...elsewhere.chats, ...seen.chats };
+  for (const [sessionId, endedAt] of Object.entries(elsewhere.chats)) {
+    if (endedAt > (seen.chats[sessionId] ?? "")) chats[sessionId] = endedAt;
+  }
+  return {
+    baseline: seen.baseline ?? elsewhere.baseline,
+    chats: Object.fromEntries(Object.entries(chats).slice(-MAX_SEEN)),
+  };
+}
+
 function readSeen(): SeenRuns {
   const stored = storage.getItem(SEEN_KEY);
   if (!isRecord(stored)) return { chats: {} };
@@ -187,7 +202,7 @@ export function useSessionRunStates(
   }
 
   useEffect(() => {
-    storage.setItem(SEEN_KEY, seen);
+    storage.setItem(SEEN_KEY, withSeenElsewhere(seen, readSeen()));
   }, [seen]);
 
   return runStatesToShow(statuses, seen, activeSessionId);
