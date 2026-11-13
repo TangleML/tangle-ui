@@ -8,7 +8,10 @@ const openWorkareaTarget = vi.fn();
 const notify = vi.fn();
 
 vi.mock("@/routes/v2/pages/Tangent/context/TangentProjectContext", () => ({
-  useTangentProject: () => ({ openWorkareaTarget }),
+  useTangentProject: () => ({
+    openWorkareaTarget,
+    activeSessionId: "session-1",
+  }),
 }));
 
 vi.mock("@/hooks/useToastNotification", () => ({
@@ -39,13 +42,14 @@ describe("tangentAnchorProtocols run anchor", () => {
     vi.stubGlobal("open", vi.fn());
   });
 
-  it("opens the run in the workarea on a plain click", () => {
+  it("opens the run in the workarea on a plain click, adding it to this chat's runs", () => {
     render(<RunAnchor {...anchorProps()} />);
     fireEvent.click(screen.getByRole("button"));
 
     expect(openWorkareaTarget).toHaveBeenCalledWith(
       { type: "run", identity: "id/run_1" },
       "Training run",
+      { recordRunIn: "session-1" },
     );
     expect(window.open).not.toHaveBeenCalled();
   });
@@ -103,6 +107,7 @@ describe("tangentAnchorProtocols pipeline and document anchors", () => {
     expect(openWorkareaTarget).toHaveBeenCalledWith(
       { type: "pipeline", identity: "id/p-1" },
       "Churn model",
+      { recordRunIn: "session-1" },
     );
   });
 
@@ -123,6 +128,7 @@ describe("tangentAnchorProtocols pipeline and document anchors", () => {
     expect(openWorkareaTarget).toHaveBeenCalledWith(
       { type: "document", identity: "id/d-1" },
       "Brief",
+      { recordRunIn: "session-1" },
     );
   });
 

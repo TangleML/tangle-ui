@@ -9,7 +9,7 @@ import {
   remotePipelineIdentity,
 } from "@/services/projects/resourceTarget";
 
-/** Own drafts for every retained session, even while its editors are unmounted. */
+/** Own the drafts in the project's open tabs, even while their editors are unmounted. */
 export function observeWorkareaPipelineDrafts(
   store: TangentProjectStore,
   storage: PipelineStorageService,
@@ -18,36 +18,34 @@ export function observeWorkareaPipelineDrafts(
   const retained = new Map<string, () => void>();
   const stop = autorun(() => {
     const draftTabs = new Set<string>();
-    for (const [sessionId, { tabs }] of store.workareaBySession) {
-      for (const tab of tabs) {
-        if (tab.target.type !== "pipeline") continue;
-        const { key, value } = parseIdentity(tab.target.identity);
-        if (key !== "draft") continue;
-        draftTabs.add(tab.id);
-        if (retained.has(tab.id)) continue;
-        const draft = storage.retainRemoteDraft(value);
-        if (!draft) continue;
-        let stopPromotion = () => {};
-        retained.set(tab.id, () => {
-          stopPromotion();
-          draft.release();
-        });
-        stopPromotion = reaction(
-          () => draft.file.remote,
-          (remote) => {
-            if (!remote) return;
-            promoteRemoteDraftQuery(queryClient, draft.ref, {
-              source: "remote",
-              ...remote,
-            });
-            store.replaceWorkareaTabTarget(sessionId, tab.id, {
-              type: "pipeline",
-              identity: remotePipelineIdentity(remote.pipelineId),
-            });
-          },
-          { fireImmediately: true },
-        );
-      }
+    for (const tab of store.workareaTabs) {
+      if (tab.target.type !== "pipeline") continue;
+      const { key, value } = parseIdentity(tab.target.identity);
+      if (key !== "draft") continue;
+      draftTabs.add(tab.id);
+      if (retained.has(tab.id)) continue;
+      const draft = storage.retainRemoteDraft(value);
+      if (!draft) continue;
+      let stopPromotion = () => {};
+      retained.set(tab.id, () => {
+        stopPromotion();
+        draft.release();
+      });
+      stopPromotion = reaction(
+        () => draft.file.remote,
+        (remote) => {
+          if (!remote) return;
+          promoteRemoteDraftQuery(queryClient, draft.ref, {
+            source: "remote",
+            ...remote,
+          });
+          store.replaceWorkareaTabTarget(tab.id, {
+            type: "pipeline",
+            identity: remotePipelineIdentity(remote.pipelineId),
+          });
+        },
+        { fireImmediately: true },
+      );
     }
     for (const [tabId, release] of retained) {
       if (draftTabs.has(tabId)) continue;

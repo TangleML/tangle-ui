@@ -22,7 +22,7 @@ function runTarget(path: string): WorkareaTarget | undefined {
 }
 
 function RunAnchor({ path, label }: AnchorProtocolProps) {
-  const open = useOpenWorkareaTarget();
+  const open = useOpenWorkareaTarget({ fromChat: true });
   const target = runTarget(path);
   const newTabHint = target ? "Cmd/Ctrl+click to open in a new tab" : undefined;
 
@@ -41,7 +41,7 @@ function RunAnchor({ path, label }: AnchorProtocolProps) {
 
 /** A pipeline or document someone referenced with `#`, opened in the workarea. */
 function WorkareaTargetAnchor({ href, protocol, label }: AnchorProtocolProps) {
-  const open = useOpenWorkareaTarget();
+  const open = useOpenWorkareaTarget({ fromChat: true });
   const target = isWorkareaTargetString(href)
     ? parseWorkareaTarget(href)
     : undefined;

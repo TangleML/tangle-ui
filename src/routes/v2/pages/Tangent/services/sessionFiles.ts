@@ -112,3 +112,13 @@ export function sessionFileUrl(
   const encodedPath = path.split("/").map(encodeURIComponent).join("/");
   return tangentSessionUrl(baseUrl, sessionId, `files/${encodedPath}`);
 }
+
+export function sessionIdOfFileUrl(url: string): string | undefined {
+  const encoded = /\/api\/sessions\/([^/]+)\/files\//.exec(url)?.[1];
+  if (!encoded) return undefined;
+  try {
+    return decodeURIComponent(encoded);
+  } catch {
+    return undefined;
+  }
+}

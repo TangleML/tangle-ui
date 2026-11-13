@@ -189,13 +189,34 @@ describe("TangentProjectStore chat tabs", () => {
 });
 
 describe("TangentProjectStore workarea tabs", () => {
-  it("refuses to open a tab while no session is active", () => {
+  it("opens a tab while no session is active", () => {
     const store = new TangentProjectStore("project-1");
 
-    expect(() =>
-      store.openResolvedView({ title: "P1", target: pipeline("p1") }),
-    ).toThrow(/No active Tangent session/);
-    expect(store.workareaTabs).toEqual([]);
+    const tab = store.openResolvedView({ title: "P1", target: pipeline("p1") });
+
+    expect(store.workareaTabs).toEqual([tab]);
+    expect(store.activeWorkareaTabId).toBe(tab.id);
+  });
+
+  it("starts with the tabs it is given, having shown only the one in front", () => {
+    const tabs = [
+      { id: "t1", title: "P1", target: pipeline("p1") },
+      { id: "t2", title: "R1", target: run("r1") },
+    ];
+    const store = new TangentProjectStore("project-1", {
+      tabs,
+      activeId: "t2",
+    });
+
+    expect(store.workareaTabs).toEqual(tabs);
+    expect(store.activeWorkareaTabId).toBe("t2");
+    expect(store.hasShownTab("t2")).toBe(true);
+    expect(store.hasShownTab("t1")).toBe(false);
+
+    store.selectWorkareaTab("t1");
+
+    expect(store.hasShownTab("t1")).toBe(true);
+    expect(store.hasShownTab("t2")).toBe(true);
   });
 
   it("focuses an existing target instead of opening a duplicate", () => {
@@ -262,31 +283,29 @@ describe("TangentProjectStore workarea tabs", () => {
     expect(store.activeWorkareaTabId).toBe(p2.id);
   });
 
-  it("keeps each session's workarea independent and restores it on switch", () => {
+  it("keeps the project's tabs open as its chats change", () => {
     const store = activeStore(SESSION_A);
-
     const a = store.openResolvedView({ title: "P1", target: pipeline("p1") });
-    expect(store.workareaTabs.map((tab) => tab.id)).toEqual([a.id]);
 
     store.selectSession(SESSION_B);
-    expect(store.workareaTabs).toEqual([]);
-
-    const b = store.openResolvedView({ title: "P2", target: pipeline("p2") });
-    expect(store.workareaTabs.map((tab) => tab.id)).toEqual([b.id]);
-
-    store.selectSession(SESSION_A);
     expect(store.workareaTabs.map((tab) => tab.id)).toEqual([a.id]);
     expect(store.activeWorkareaTabId).toBe(a.id);
+
+    const b = store.openResolvedView({ title: "P2", target: pipeline("p2") });
+    store.selectSession(SESSION_A);
+
+    expect(store.workareaTabs.map((tab) => tab.id)).toEqual([a.id, b.id]);
+    expect(store.activeWorkareaTabId).toBe(b.id);
   });
 
-  it("drops a session's workarea and chat on dropSession", () => {
+  it("drops a session's chat on dropSession, and keeps the project's tabs", () => {
     const store = activeStore(SESSION_A);
-    store.openResolvedView({ title: "P1", target: pipeline("p1") });
+    const tab = store.openResolvedView({ title: "P1", target: pipeline("p1") });
     store.openAgent(researcher);
 
     store.dropSession(SESSION_A);
 
-    expect(store.workareaTabs).toEqual([]);
+    expect(store.workareaTabs).toEqual([tab]);
     expect(store.chatTabs).toEqual([]);
   });
 });
@@ -742,18 +761,40 @@ describe("TangentProjectStore.waitForTabEnvironment", () => {
 });
 
 describe("TangentProjectStore session runs", () => {
-  it("notes a run down on the chat it was opened in", () => {
+  it("notes a run down on the chat it was opened from", () => {
     const store = activeStore();
     const recordSessionRun = vi
       .fn<NonNullable<TangentSessionIo["recordSessionRun"]>>()
       .mockResolvedValue(undefined);
     store.setSessionIo({ ...makeSessionIo(), recordSessionRun });
 
-    store.openResolvedView({ title: "Nightly", target: run("r-1") });
-    store.openResolvedView({ title: "P1", target: pipeline("p1") });
+    store.openResolvedView(
+      { title: "Nightly", target: run("r-1") },
+      { recordRunIn: SESSION_A },
+    );
+    store.openResolvedView(
+      { title: "P1", target: pipeline("p1") },
+      { recordRunIn: SESSION_A },
+    );
 
     expect(recordSessionRun).toHaveBeenCalledTimes(1);
     expect(recordSessionRun).toHaveBeenCalledWith(SESSION_A, "r-1", "Nightly");
+  });
+
+  it("leaves a run opened from outside a chat out of the open chat's runs", () => {
+    const store = activeStore();
+    const recordSessionRun = vi
+      .fn<NonNullable<TangentSessionIo["recordSessionRun"]>>()
+      .mockResolvedValue(undefined);
+    store.setSessionIo({ ...makeSessionIo(), recordSessionRun });
+
+    const tab = store.openResolvedView({
+      title: "Nightly",
+      target: run("r-1"),
+    });
+
+    expect(store.workareaTabs).toEqual([tab]);
+    expect(recordSessionRun).not.toHaveBeenCalled();
   });
 
   it("still opens the run when the chat can't note it down", async () => {
