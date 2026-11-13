@@ -7,6 +7,7 @@ interface WindowContextValue {
   model: WindowModel;
   content: ReactNode;
   dockIndex?: number;
+  dismissFlyout?: () => void;
 }
 
 const WindowCtx = createContext<WindowContextValue | undefined>(undefined);
