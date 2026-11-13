@@ -37,6 +37,12 @@ describe("runPollInterval", () => {
     expect(
       runPollInterval(undefined, new ProjectRunsApiError("Busy", 503)),
     ).toBeGreaterThan(0);
+    expect(
+      runPollInterval(undefined, new ProjectRunsApiError("Signed out", 401)),
+    ).toBeGreaterThan(0);
+    expect(
+      runPollInterval(undefined, new ProjectRunsApiError("Not allowed", 403)),
+    ).toBeGreaterThan(0);
     expect(runPollInterval(undefined, new Error("offline"))).toBeGreaterThan(0);
   });
 });

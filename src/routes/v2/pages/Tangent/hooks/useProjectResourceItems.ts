@@ -1,7 +1,6 @@
 import type { IconName } from "@/components/ui/icon";
 import { remoteResourceTarget } from "@/services/projects/pipelineResource";
 import { UNTITLED } from "@/services/projects/placeholderNames";
-import { MAX_PAGE_SIZE } from "@/services/projects/queryDefaults";
 import {
   describeResource,
   DOCUMENT,
@@ -16,10 +15,13 @@ import {
   formatWorkareaTarget,
   idIdentity,
 } from "@/services/projects/resourceTarget";
-import type { ProjectResourceSummary } from "@/services/projects/types";
+import type {
+  ProjectResourceEntity,
+  ProjectResourceSummary,
+} from "@/services/projects/types";
 import type { LocalPipelineStatus } from "@/services/projects/useLocalPipelineStatus";
 import { useLocalPipelineStatus } from "@/services/projects/useLocalPipelineStatus";
-import { useProjectResources } from "@/services/projects/useProjectResources";
+import { useEveryProjectResource } from "@/services/projects/useProjectResources";
 import { useRemotePipelineNames } from "@/services/projects/useRemotePipelineNames";
 
 export interface ProjectResourceItem {
@@ -133,17 +135,17 @@ export function toResourceItem(
   };
 }
 
+// Attached runs are kept as documents, so this is every kind the card lists.
+export const CARD_ENTITIES: ProjectResourceEntity[] = ["document", "pipeline"];
+
 /**
  * The project's pipelines and documents as rows someone can open, named as they
  * are now. Shared by the Resources panel and the empty canvas so both list the
  * same things the same way.
  */
 export function useProjectResourceItems(projectId: string) {
-  const query = useProjectResources(projectId, {
-    entity: ["document", "pipeline"],
-    pageSize: MAX_PAGE_SIZE,
-  });
-  const items = query.data?.items ?? [];
+  const query = useEveryProjectResource(projectId, CARD_ENTITIES);
+  const items = query.data ?? [];
   const localPipelines = useLocalPipelineStatus(items);
   const remotePipelineNames = useRemotePipelineNames(items);
 

@@ -8,13 +8,35 @@ import {
 
 import { ProjectResourcesApiError } from "./errors";
 import { mapProjectResource, mapProjectResourceSummary } from "./mappers";
+import { MAX_PAGE_SIZE } from "./queryDefaults";
 import type {
   CreateResourceInput,
   ListProjectResourcesParams,
   ProjectResource,
+  ProjectResourceEntity,
   ProjectResourcePage,
+  ProjectResourceSummary,
   UpdateResourceInput,
 } from "./types";
+
+/** Every page of {@link listProjectResources}, for a list that must be whole. */
+export async function listEveryProjectResource(
+  projectId: string,
+  entity: ProjectResourceEntity[],
+): Promise<ProjectResourceSummary[]> {
+  const items: ProjectResourceSummary[] = [];
+  let pageToken: string | undefined;
+  do {
+    const page = await listProjectResources(projectId, {
+      entity,
+      pageSize: MAX_PAGE_SIZE,
+      pageToken,
+    });
+    items.push(...page.items);
+    pageToken = page.nextPageToken ?? undefined;
+  } while (pageToken);
+  return items;
+}
 
 export async function listProjectResources(
   projectId: string,

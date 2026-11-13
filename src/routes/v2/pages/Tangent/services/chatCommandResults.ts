@@ -47,8 +47,17 @@ export function targetId(target: string): string {
   return parseIdentity(parseWorkareaTarget(target).identity).value;
 }
 
-/** Ids separated by commas or spaces, optionally in brackets, each once. */
-export function parsePipelineIds(args: string): string[] {
+/**
+ * Ids separated by commas or spaces, optionally in brackets, each once. A
+ * pipeline kept in this browser is known by its name, which may hold spaces,
+ * so the whole of what was typed is tried as one of `knownIds` first.
+ */
+export function parsePipelineIds(
+  args: string,
+  knownIds: string[] = [],
+): string[] {
+  const whole = args.replace(/^\s*\[|\]\s*$/g, "").trim();
+  if (knownIds.includes(whole)) return [whole];
   return [
     ...new Set(
       args

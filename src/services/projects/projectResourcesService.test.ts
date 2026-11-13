@@ -14,6 +14,7 @@ import {
   createProjectResource,
   deleteProjectResource,
   getProjectResource,
+  listEveryProjectResource,
   listProjectResources,
   updateProjectResource,
 } from "./projectResourcesService";
@@ -241,6 +242,38 @@ describe("projectResourcesService", () => {
 
     await expect(deleteProjectResource("p1", "r1")).rejects.toMatchObject({
       status: 409,
+    });
+  });
+});
+
+describe("listEveryProjectResource", () => {
+  it("follows every page until there are no more", async () => {
+    const list = vi.mocked(
+      apiSdk.listResourcesApiProjectsProjectIdResourcesGet,
+    );
+    list.mockReset();
+    list
+      .mockResolvedValueOnce(
+        createMockApiResponse({
+          resources: [resourceSummaryDto],
+          next_page_token: "page-2",
+          total_count: 2,
+        }),
+      )
+      .mockResolvedValueOnce(
+        createMockApiResponse({
+          resources: [{ ...resourceSummaryDto, id: "r2" }],
+          next_page_token: null,
+          total_count: 2,
+        }),
+      );
+
+    const items = await listEveryProjectResource("p1", ["pipeline"]);
+
+    expect(items.map(({ id }) => id)).toEqual(["r1", "r2"]);
+    expect(list).toHaveBeenCalledTimes(2);
+    expect(list.mock.calls[1][0]).toMatchObject({
+      query: expect.objectContaining({ page_token: "page-2" }),
     });
   });
 });

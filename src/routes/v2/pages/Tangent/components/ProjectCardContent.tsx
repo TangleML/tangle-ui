@@ -68,6 +68,13 @@ const matching = (query: string, ...texts: string[]) =>
  * nothing to show drops out.
  */
 export const ProjectCardContent = observer(function ProjectCardContent() {
+  // The card stays mounted when another project is opened in place; its
+  // search and sub-view belong to the project they were used in.
+  const { projectId } = useTangentProject();
+  return <ProjectCardBody key={projectId} />;
+});
+
+const ProjectCardBody = observer(function ProjectCardBody() {
   const store = useTangentProject();
   const dismissCard = useOptionalWindowContext()?.dismissFlyout;
   const openWorkareaTarget = useOpenWorkareaTarget();

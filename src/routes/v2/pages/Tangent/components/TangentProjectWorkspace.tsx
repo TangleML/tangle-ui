@@ -49,7 +49,7 @@ export const TangentProjectWorkspace = observer(
             blockAlign="stretch"
             wrap="nowrap"
           >
-            <DockArea side="left" quietHeaders />
+            <DockArea side="left" quietHeaders scrollsAsOne />
             <div
               className="relative flex min-h-0 shrink-0 flex-col"
               style={{ width: chatWidth }}

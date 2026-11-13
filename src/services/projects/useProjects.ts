@@ -42,7 +42,13 @@ export function useProjects(
 
 export function useProject(
   id: string | undefined,
-  { refetchOnMount = true }: { refetchOnMount?: boolean | "always" } = {},
+  {
+    refetchOnMount = true,
+    refetchOnWindowFocus = projectQueryDefaults.refetchOnWindowFocus,
+  }: {
+    refetchOnMount?: boolean | "always";
+    refetchOnWindowFocus?: boolean | "always";
+  } = {},
 ) {
   const { configured, available } = useBackend();
 
@@ -57,6 +63,7 @@ export function useProject(
     enabled: configured && available && Boolean(id),
     ...projectQueryDefaults,
     refetchOnMount,
+    refetchOnWindowFocus,
   });
 }
 

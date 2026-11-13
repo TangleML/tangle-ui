@@ -22,6 +22,9 @@ interface DockAreaProps {
   side: "left" | "right";
   // Headers read as section labels rather than bars, for a sidebar.
   quietHeaders?: boolean;
+  // A fill window fills the dock only while it's alone there; sharing it, every
+  // window shows all of itself and the column scrolls as one.
+  scrollsAsOne?: boolean;
 }
 
 // Context panel ("Properties") is selection-driven and stays visible in
@@ -32,6 +35,7 @@ const FOCUS_MODE_ALLOWED_WINDOW_IDS = new Set(["context-panel"]);
 export const DockArea = observer(function DockArea({
   side,
   quietHeaders,
+  scrollsAsOne = false,
 }: DockAreaProps) {
   const { windows } = useSharedStores();
   const dockArea = windows.getDockAreaConfig(side);
@@ -54,13 +58,14 @@ export const DockArea = observer(function DockArea({
     Boolean(windows.getWindowMiniContent(id)),
   );
   const isEmpty = visibleWindows.length === 0;
-  // A fill window fills the dock only while it's alone there, which needs the
-  // stack to have an explicit height. Sharing the dock, it shows all of itself
-  // like the others and the column scrolls as one, so nothing is squeezed into
-  // a box too small to look scrollable.
+  // A fill window needs the stack to have an explicit height. In a dock that
+  // scrolls as one, it only fills while it's alone, so nothing is squeezed
+  // into a box too small to look scrollable.
+  const hasFillWindow = visibleWindows.some(
+    (id) => windows.getWindowById(id)?.fillDockHeight,
+  );
   const fillsDock =
-    visibleWindows.length === 1 &&
-    Boolean(windows.getWindowById(visibleWindows[0])?.fillDockHeight);
+    hasFillWindow && (!scrollsAsOne || visibleWindows.length === 1);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const [moreBelow, setMoreBelow] = useState(false);
 
@@ -215,7 +220,10 @@ export const DockArea = observer(function DockArea({
       <div
         ref={scrollRef}
         data-dock-scroll
-        className="absolute inset-0 overflow-y-auto overflow-x-hidden reveal-scrollbar"
+        className={cn(
+          "absolute inset-0 overflow-y-auto overflow-x-hidden",
+          scrollsAsOne ? "reveal-scrollbar" : "hide-scrollbar",
+        )}
       >
         <BlockStack className={cn(fillsDock ? "h-full" : "min-h-full")}>
           {visibleWindows.map((windowId, index) => (
@@ -224,7 +232,10 @@ export const DockArea = observer(function DockArea({
               windowId={windowId}
               docked
               dockIndex={index}
-              fillsDock={fillsDock}
+              fillsDock={
+                fillsDock &&
+                Boolean(windows.getWindowById(windowId)?.fillDockHeight)
+              }
               quietHeader={quietHeaders}
             />
           ))}

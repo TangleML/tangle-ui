@@ -15,7 +15,10 @@ import { getErrorMessage } from "@/utils/string";
  * project is read again each time the card opens.
  */
 export function useArchivedProjectItems(projectId: string) {
-  const { data: project } = useProject(projectId, { refetchOnMount: "always" });
+  const { data: project } = useProject(projectId, {
+    refetchOnMount: "always",
+    refetchOnWindowFocus: "always",
+  });
   const queryClient = useQueryClient();
   const notify = useToastNotification();
   const archived: ReadonlySet<string> = new Set(

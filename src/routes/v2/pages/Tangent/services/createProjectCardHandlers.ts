@@ -1,7 +1,10 @@
 import type { Tangent } from "@tangent/embed-react";
 import type { QueryClient } from "@tanstack/react-query";
 
-import { toResourceItem } from "@/routes/v2/pages/Tangent/hooks/useProjectResourceItems";
+import {
+  CARD_ENTITIES,
+  toResourceItem,
+} from "@/routes/v2/pages/Tangent/hooks/useProjectResourceItems";
 import {
   SESSION_RESOURCES,
   sessionsOf,
@@ -24,10 +27,10 @@ import {
 } from "@/routes/v2/pages/Tangent/services/sessionFiles";
 import { sessionResourcesQuery } from "@/routes/v2/pages/Tangent/services/sessionResources";
 import { attachPipelineRunOnce } from "@/services/projects/attachPipelineRun";
+import { UNNAMED_PIPELINE } from "@/services/projects/placeholderNames";
 import { createProjectResource } from "@/services/projects/projectResourcesService";
 import { listProjectRuns } from "@/services/projects/projectRunsService";
 import { getProject } from "@/services/projects/projectsService";
-import { MAX_PAGE_SIZE } from "@/services/projects/queryDefaults";
 import { documentResourceInput } from "@/services/projects/resourceDescriptor";
 import {
   formatWorkareaTarget,
@@ -36,7 +39,10 @@ import {
 } from "@/services/projects/resourceTarget";
 import type { ListProjectResourcesParams } from "@/services/projects/types";
 import type { LocalPipelineStatus } from "@/services/projects/useLocalPipelineStatus";
-import { projectResourcesQueryOptions } from "@/services/projects/useProjectResources";
+import {
+  everyProjectResourceQueryOptions,
+  projectResourcesQueryOptions,
+} from "@/services/projects/useProjectResources";
 
 /** A row on the project card, addressed by its formatted workarea target. */
 export interface ProjectCardEntry {
@@ -56,6 +62,8 @@ interface ProjectCardEntries {
 export interface ProjectCardToolDeps {
   getActiveSessionId: () => string | undefined;
   listEntries: () => Promise<ProjectCardEntries>;
+  // A run past the card's first page, which "Load older runs" reaches.
+  findOlderRun: (target: string) => Promise<ProjectCardEntry | undefined>;
   setArchived: (target: string, archived: boolean) => Promise<void>;
   listFiles: () => Promise<SessionFileRecord[]>;
   pinFile: (sessionId: string, path: string, title: string) => Promise<void>;
@@ -87,10 +95,8 @@ interface ProjectCardHandlerOptions {
   onResourcesChanged: () => Promise<void>;
 }
 
-const CARD_RESOURCES: ListProjectResourcesParams = {
-  entity: ["document", "pipeline"],
-  pageSize: MAX_PAGE_SIZE,
-};
+// As far back as the card's "Load older runs" would reasonably be pressed.
+const MAX_RUN_PAGES = 20;
 
 function entryOf({
   key,
@@ -147,7 +153,10 @@ export function createProjectCardHandlers({
 
     async listEntries() {
       const [summaries, projectRuns, project] = await Promise.all([
-        fetchResources(CARD_RESOURCES),
+        queryClient.fetchQuery({
+          ...everyProjectResourceQueryOptions(projectId, CARD_ENTITIES),
+          staleTime: 0,
+        }),
         listProjectRuns(projectId),
         getProject(projectId),
       ]);
@@ -172,6 +181,28 @@ export function createProjectCardHandlers({
           entryOf({ ...item, at: item.addedAt }),
         ),
       };
+    },
+
+    async findOlderRun(target) {
+      const archived = archivedTargets((await getProject(projectId)).metadata);
+      let pageToken: string | undefined;
+      for (let page = 0; page < MAX_RUN_PAGES; page++) {
+        const runs = await listProjectRuns(projectId, { pageToken });
+        const run = runs.items.find(
+          ({ id }) => formatWorkareaTarget(runTarget(id)) === target,
+        );
+        if (run) {
+          return {
+            target,
+            name: run.pipelineName ?? UNNAMED_PIPELINE,
+            at: run.createdAt,
+            archived: archived.includes(target),
+          };
+        }
+        pageToken = runs.nextPageToken ?? undefined;
+        if (!pageToken) break;
+      }
+      return undefined;
     },
 
     setArchived: (target, archived) =>

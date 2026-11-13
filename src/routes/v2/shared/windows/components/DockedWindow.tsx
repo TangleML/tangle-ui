@@ -213,9 +213,12 @@ export const DockedWindow = observer(function DockedWindow() {
             isDragging && "opacity-50",
           )}
           style={{
-            // A fill window's minimum sits on its slot while it fills the
-            // dock; sharing the dock, it shows all of itself instead.
-            minHeight: model.fillDockHeight ? undefined : model.minDockedHeight,
+            // A fill window that isn't filling shows all of itself, however
+            // short that is.
+            minHeight:
+              model.fillDockHeight && !fillsDock
+                ? undefined
+                : model.minDockedHeight,
             // fillsDock => grow to fill the dock column; otherwise an
             // undefined height fits content and a concrete value fixes the
             // height with the inner content area scrolling.
