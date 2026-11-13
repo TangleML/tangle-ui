@@ -22,6 +22,11 @@ import { newTangentSessionSearch } from "@/routes/tangentSearch";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { useOpenTangentProject } from "@/routes/v2/pages/Tangent/hooks/useOpenTangentProject";
 import { useSessionsOfProjects } from "@/routes/v2/pages/Tangent/hooks/useProjectSessions";
+import {
+  type SessionRunStates,
+  useSessionRunStates,
+} from "@/routes/v2/pages/Tangent/hooks/useSessionRunStates";
+import { useTangentBaseUrl } from "@/routes/v2/pages/Tangent/hooks/useTangentBaseUrl";
 import { useAiGate } from "@/routes/v2/shared/components/AiChat/components/useAiGate";
 import { useOptionalWindowContext } from "@/routes/v2/shared/windows/ContentWindowStateContext";
 import { activeWorkspaces } from "@/services/projects/defaultWorkspace";
@@ -59,6 +64,8 @@ export const ProjectsWindowContent = observer(function ProjectsWindowContent() {
   const aiGate = useAiGate("New chat");
   const { projects: reachable } = useReachableProjects();
   const { projects: pinnedProjects } = usePinnedProjects();
+  const { baseUrl } = useTangentBaseUrl(store.projectId);
+  const runStates = useSessionRunStates(baseUrl, store.activeSessionId);
   const { data: projectInView } = useProject(store.projectId);
   const { data: workspaces } = useWorkspaces();
   const dismissFlyout = useOptionalWindowContext()?.dismissFlyout;
@@ -226,6 +233,7 @@ export const ProjectsWindowContent = observer(function ProjectsWindowContent() {
         open={open}
         inView={project.id === store.projectId}
         onlySessionIds={hasMatchingSessions ? sessionIds : undefined}
+        runStates={runStates}
         onOpenChange={(next) => setOpen(project.id, next)}
       />
     );
@@ -259,12 +267,14 @@ function ProjectGroup({
   open,
   inView,
   onlySessionIds,
+  runStates,
   onOpenChange,
 }: {
   project: ProjectSummary;
   open: boolean;
   inView: boolean;
   onlySessionIds?: ReadonlySet<string>;
+  runStates: SessionRunStates;
   onOpenChange: (open: boolean) => void;
 }) {
   const rename = useRenameProjectAction(project);
@@ -312,6 +322,7 @@ function ProjectGroup({
           <SessionsWindowContent
             projectId={project.id}
             onlySessionIds={onlySessionIds}
+            runStates={runStates}
           />
         </CollapsibleContent>
       </Collapsible>

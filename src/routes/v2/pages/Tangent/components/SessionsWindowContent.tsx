@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
+import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
@@ -21,6 +22,10 @@ import {
   type ProjectSession,
   useProjectSessions,
 } from "@/routes/v2/pages/Tangent/hooks/useProjectSessions";
+import type {
+  SessionRunState,
+  SessionRunStates,
+} from "@/routes/v2/pages/Tangent/hooks/useSessionRunStates";
 import { useOptionalWindowContext } from "@/routes/v2/shared/windows/ContentWindowStateContext";
 import { sessionLabelsById } from "@/services/projects/sessionLabel";
 import { formatRelativeTime } from "@/utils/date";
@@ -28,17 +33,29 @@ import { tracking } from "@/utils/tracking";
 
 const PREVIEW_COUNT = 5;
 
+const NO_RUN_STATES: SessionRunStates = new Map();
+
+const RUN_STATE_LABEL: Record<SessionRunState, string> = {
+  working: "Working",
+  finished: "Finished",
+  failed: "Last run failed",
+};
+
 /**
  * One project's sessions in the sidebar. A session of the project in view is
  * selected in place; one of another project opens that project with it. A
- * search lists every session it matched, and only those.
+ * search lists every session it matched, and only those. A spinner marks a
+ * session with an agent working, and a dot one whose run finished (green) or
+ * failed (red) since it was last open.
  */
 export const SessionsWindowContent = observer(function SessionsWindowContent({
   projectId,
   onlySessionIds,
+  runStates = NO_RUN_STATES,
 }: {
   projectId: string;
   onlySessionIds?: ReadonlySet<string>;
+  runStates?: SessionRunStates;
 }) {
   const store = useTangentProject();
   const openProject = useOpenTangentProject();
@@ -118,6 +135,7 @@ export const SessionsWindowContent = observer(function SessionsWindowContent({
               key={session.sessionId}
               label={label}
               createdAt={session.createdAt}
+              runState={runStates.get(session.sessionId)}
               selected={session.sessionId === activeSessionId}
               onOpen={() => openSession(session.sessionId)}
               onRename={() => void rename(session)}
@@ -144,16 +162,19 @@ export const SessionsWindowContent = observer(function SessionsWindowContent({
 function SessionRow({
   label,
   createdAt,
+  runState,
   selected,
   onOpen,
   onRename,
 }: {
   label: string;
   createdAt: Date;
+  runState?: SessionRunState;
   selected: boolean;
   onOpen: () => void;
   onRename: () => void;
 }) {
+  const stateLabel = runState && RUN_STATE_LABEL[runState];
   return (
     <li
       className={cn(
@@ -164,7 +185,9 @@ function SessionRow({
       <button
         type="button"
         aria-current={selected || undefined}
-        title={`${label} · ${formatRelativeTime(createdAt)}`}
+        title={[label, stateLabel, formatRelativeTime(createdAt)]
+          .filter(Boolean)
+          .join(" · ")}
         onClick={onOpen}
         className="flex min-w-0 flex-1 cursor-pointer rounded-md py-1.5 ps-8 pe-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
         {...tracking("projects.open_session")}
@@ -172,7 +195,23 @@ function SessionRow({
         <Text size="sm" className="min-w-0 truncate">
           {label}
         </Text>
+        {stateLabel && <span className="sr-only">, {stateLabel}</span>}
       </button>
+      {runState === "working" && (
+        <Spinner
+          size={12}
+          className="me-1 shrink-0 text-muted-foreground motion-reduce:animate-none"
+        />
+      )}
+      {(runState === "finished" || runState === "failed") && (
+        <span
+          aria-hidden
+          className={cn(
+            "me-1.5 size-1.5 shrink-0 rounded-full",
+            runState === "finished" ? "bg-success" : "bg-destructive",
+          )}
+        />
+      )}
       <Button
         variant="ghost"
         size="icon"
