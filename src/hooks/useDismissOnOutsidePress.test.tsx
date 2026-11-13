@@ -50,6 +50,22 @@ describe("useDismissOnOutsidePress", () => {
     vi.useRealTimers();
   });
 
+  it("dismisses when a frame inside a shadow root takes focus", () => {
+    vi.useFakeTimers();
+    const { onDismiss } = setup();
+    const host = document.createElement("div");
+    const frame = document.createElement("iframe");
+    host.attachShadow({ mode: "open" }).append(frame);
+    document.body.append(host);
+
+    frame.focus();
+    fireEvent.blur(window);
+    vi.runAllTimers();
+
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
   it("does nothing while closed", () => {
     const closed = setup(false);
     fireEvent.pointerDown(closed.outside);

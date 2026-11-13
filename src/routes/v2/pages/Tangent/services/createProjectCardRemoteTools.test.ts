@@ -11,6 +11,7 @@ function makeDeps(
     listEntries: vi
       .fn()
       .mockResolvedValue({ runs: [], pipelines: [], documents: [] }),
+    findOlderRun: vi.fn().mockResolvedValue(undefined),
     setArchived: vi.fn().mockResolvedValue(undefined),
     listFiles: vi.fn().mockResolvedValue([]),
     pinFile: vi.fn().mockResolvedValue(undefined),
@@ -140,6 +141,22 @@ describe("createProjectCardRemoteTools", () => {
       }),
     ).rejects.toThrow(/run, pipeline or document/);
     expect(deps.setArchived).not.toHaveBeenCalled();
+  });
+
+  it("archives a run the card only shows after Load older runs", async () => {
+    const findOlderRun = vi.fn().mockResolvedValue({
+      target: "run://id/r-old",
+      name: "Train",
+      at: null,
+      archived: false,
+    });
+    const deps = makeDeps({ findOlderRun });
+    const tools = toolsWith(deps);
+
+    await tools.archive_project_item.execute({ target: "run://id/r-old" });
+
+    expect(findOlderRun).toHaveBeenCalledWith("run://id/r-old");
+    expect(deps.setArchived).toHaveBeenCalledWith("run://id/r-old", true);
   });
 
   it("won't archive something that isn't on the card", async () => {

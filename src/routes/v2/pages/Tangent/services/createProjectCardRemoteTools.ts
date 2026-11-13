@@ -44,9 +44,11 @@ async function cardEntry(
 ): Promise<ProjectCardEntry> {
   const target = archivableTarget(args);
   const { runs, pipelines, documents } = await deps.listEntries();
-  const entry = [...runs, ...pipelines, ...documents].find(
-    (candidate) => candidate.target === target,
-  );
+  const entry =
+    [...runs, ...pipelines, ...documents].find(
+      (candidate) => candidate.target === target,
+    ) ??
+    (target.startsWith("run://") ? await deps.findOlderRun(target) : undefined);
   if (!entry) {
     throw new Error(
       `\`${target}\` isn't on the project card. \`list_project_items\` lists what is.`,

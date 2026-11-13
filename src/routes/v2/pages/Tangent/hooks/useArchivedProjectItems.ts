@@ -17,7 +17,7 @@ import { getErrorMessage } from "@/utils/string";
 export function useArchivedProjectItems(projectId: string) {
   const { data: project } = useProject(projectId, {
     refetchOnMount: "always",
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: "always",
   });
   const queryClient = useQueryClient();
   const notify = useToastNotification();

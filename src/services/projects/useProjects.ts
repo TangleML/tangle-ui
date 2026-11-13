@@ -47,7 +47,7 @@ export function useProject(
     refetchOnWindowFocus = projectQueryDefaults.refetchOnWindowFocus,
   }: {
     refetchOnMount?: boolean | "always";
-    refetchOnWindowFocus?: boolean;
+    refetchOnWindowFocus?: boolean | "always";
   } = {},
 ) {
   const { configured, available } = useBackend();
