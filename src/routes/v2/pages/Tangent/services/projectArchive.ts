@@ -1,7 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 
-import { getProject, updateProject } from "@/services/projects/projectsService";
 import { ProjectsQueryKeys } from "@/services/projects/types";
+import { updateProjectMetadata } from "@/services/projects/updateProjectMetadata";
 
 const ARCHIVED_KEY = "tangentArchived";
 
@@ -29,30 +29,9 @@ export function withArchived(
   return { ...metadata, [ARCHIVED_KEY]: [...targets] };
 }
 
-const lastWrite = new Map<string, Promise<unknown>>();
-
-function afterEarlierWrites<T>(
-  projectId: string,
-  write: () => Promise<T>,
-): Promise<T> {
-  const queued = (lastWrite.get(projectId) ?? Promise.resolve()).then(
-    write,
-    write,
-  );
-  lastWrite.set(projectId, queued);
-  const forget = () => {
-    if (lastWrite.get(projectId) === queued) lastWrite.delete(projectId);
-  };
-  queued.then(forget, forget);
-  return queued;
-}
-
 /**
  * Archives or restores an item for everyone in the project, then refetches the
- * project so the card shows it. The PATCH replaces the whole metadata object,
- * so the project is read again just before, and a project's changes are saved
- * one at a time: two that overlapped would each write back a list without the
- * other's item.
+ * project so the card shows it.
  */
 export async function setProjectItemArchived(
   queryClient: QueryClient,
@@ -60,12 +39,9 @@ export async function setProjectItemArchived(
   target: string,
   archived: boolean,
 ): Promise<void> {
-  await afterEarlierWrites(projectId, async () => {
-    const latest = await getProject(projectId);
-    await updateProject(projectId, {
-      metadata: withArchived(latest.metadata, target, archived),
-    });
-  });
+  await updateProjectMetadata(projectId, (metadata) =>
+    withArchived(metadata, target, archived),
+  );
   await queryClient.invalidateQueries({
     queryKey: ProjectsQueryKeys.Id(projectId),
     exact: true,

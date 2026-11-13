@@ -33,7 +33,7 @@ export const fetchExecutionState = async (
   executionId: string,
   backendUrl: string,
 ) => {
-  const url = `${backendUrl}/api/executions/${executionId}/state`;
+  const url = `${backendUrl}/api/executions/${encodeURIComponent(executionId)}/state`;
   return fetchWithErrorHandling(url);
 };
 
@@ -41,7 +41,7 @@ export const fetchExecutionDetails = async (
   executionId: string,
   backendUrl: string,
 ): Promise<GetExecutionInfoResponse> => {
-  const url = `${backendUrl}/api/executions/${executionId}/details`;
+  const url = `${backendUrl}/api/executions/${encodeURIComponent(executionId)}/details`;
   return fetchWithErrorHandling(url);
 };
 
@@ -65,7 +65,7 @@ export const fetchPipelineRun = async (
   runId: string,
   backendUrl: string,
 ): Promise<PipelineRunResponse> => {
-  const url = `${backendUrl}/api/pipeline_runs/${runId}`;
+  const url = `${backendUrl}/api/pipeline_runs/${encodeURIComponent(runId)}`;
   return fetchWithErrorHandling(url);
 };
 
@@ -86,7 +86,7 @@ export const fetchContainerExecutionState = async (
   executionId: string,
   backendUrl: string,
 ): Promise<GetContainerExecutionStateResponse> => {
-  const url = `${backendUrl}/api/executions/${executionId}/container_state`;
+  const url = `${backendUrl}/api/executions/${encodeURIComponent(executionId)}/container_state`;
   return fetchWithErrorHandling(url);
 };
 
@@ -94,7 +94,7 @@ export const fetchContainerLog = async (
   executionId: string,
   backendUrl: string,
 ): Promise<GetContainerExecutionLogResponse> => {
-  const url = `${backendUrl}/api/executions/${executionId}/container_log`;
+  const url = `${backendUrl}/api/executions/${encodeURIComponent(executionId)}/container_log`;
   return fetchWithErrorHandling(url);
 };
 
@@ -167,7 +167,7 @@ export const getArtifactSignedUrl = async (
   backendUrl: string,
 ): Promise<GetArtifactSignedUrlResponse> => {
   const response = await fetch(
-    `${backendUrl}/api/artifacts/${artifactId}/signed_artifact_url`,
+    `${backendUrl}/api/artifacts/${encodeURIComponent(artifactId)}/signed_artifact_url`,
   );
   if (!response.ok) {
     throw new ArtifactFetchError(
@@ -183,7 +183,9 @@ export const getArtifactInfo = async (
   artifactId: string,
   backendUrl: string,
 ): Promise<GetArtifactInfoResponse> => {
-  const response = await fetch(`${backendUrl}/api/artifacts/${artifactId}`);
+  const response = await fetch(
+    `${backendUrl}/api/artifacts/${encodeURIComponent(artifactId)}`,
+  );
   if (!response.ok) {
     throw new ArtifactFetchError(
       response.status,
@@ -200,7 +202,7 @@ export const getExecutionArtifacts = async (
 ) => {
   if (!executionId) return null;
   const response = await fetch(
-    `${backendUrl}/api/executions/${executionId}/artifacts`,
+    `${backendUrl}/api/executions/${encodeURIComponent(executionId)}/artifacts`,
   );
 
   if (!response.ok) {

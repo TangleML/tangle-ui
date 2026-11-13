@@ -36,6 +36,7 @@ import {
   useProject,
   useProjects,
   useUpdateProject,
+  useUpdateProjectMetadata,
 } from "./useProjects";
 import { useWorkspace, useWorkspaces } from "./useWorkspaces";
 import * as workspacesService from "./workspacesService";
@@ -284,6 +285,54 @@ describe("project mutation hooks", () => {
 
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["projects"] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["projects", "p1"] });
+  });
+
+  describe("useUpdateProjectMetadata", () => {
+    it("changes the metadata as it is now, then invalidates list and detail", async () => {
+      vi.mocked(projectsService.getProject).mockResolvedValue({
+        ...project,
+        metadata: { pinned: true },
+      });
+      vi.mocked(projectsService.updateProject).mockResolvedValue(project);
+      const client = makeClient();
+      const invalidate = vi.spyOn(client, "invalidateQueries");
+      const { result } = renderHook(() => useUpdateProjectMetadata(), {
+        wrapper: wrapperFor(client),
+      });
+
+      await act(async () => {
+        await result.current.mutateAsync({
+          id: "p1",
+          name: "New",
+          change: (metadata) => ({ ...metadata, archived: true }),
+        });
+      });
+
+      expect(projectsService.updateProject).toHaveBeenCalledWith("p1", {
+        name: "New",
+        metadata: { pinned: true, archived: true },
+      });
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: ["projects"] });
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: ["projects", "p1"] });
+    });
+
+    it("says so when the project can't be read or saved", async () => {
+      vi.mocked(projectsService.getProject).mockRejectedValue(
+        new Error("down"),
+      );
+      const { result } = renderHook(() => useUpdateProjectMetadata(), {
+        wrapper: wrapperFor(makeClient()),
+      });
+
+      await act(async () => {
+        await result.current
+          .mutateAsync({ id: "p1", change: (metadata) => ({ ...metadata }) })
+          .catch(() => undefined);
+      });
+
+      expect(projectsService.updateProject).not.toHaveBeenCalled();
+      expect(notify).toHaveBeenCalledWith("Failed to update project", "error");
+    });
   });
 
   describe("useDeleteProject", () => {

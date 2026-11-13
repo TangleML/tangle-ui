@@ -223,7 +223,7 @@ export const cancelPipelineRun = async (
   teamId?: string,
 ) => {
   await changeRun(
-    `${backendUrl}/api/pipeline_runs/${runId}/cancel`,
+    `${backendUrl}/api/pipeline_runs/${encodeURIComponent(runId)}/cancel`,
     { method: "POST", headers: teamRequestHeaders(teamId) },
     "Failed to cancel the run",
   );
@@ -233,7 +233,7 @@ export const fetchRunAnnotations = async (
   runId: string,
   backendUrl: string,
 ): Promise<ListAnnotationsApiPipelineRunsIdAnnotationsGetResponse> => {
-  const url = `${backendUrl}/api/pipeline_runs/${runId}/annotations/`;
+  const url = `${backendUrl}/api/pipeline_runs/${encodeURIComponent(runId)}/annotations/`;
   return fetchWithErrorHandling(url);
 };
 
@@ -247,7 +247,7 @@ export const updateRunAnnotation = async (
   teamId?: string,
 ) => {
   const url = new URL(
-    `${backendUrl}/api/pipeline_runs/${runId}/annotations/${annotation.key}`,
+    `${backendUrl}/api/pipeline_runs/${encodeURIComponent(runId)}/annotations/${encodeURIComponent(annotation.key)}`,
   );
   url.searchParams.append("value", annotation.value);
 

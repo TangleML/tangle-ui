@@ -11,6 +11,13 @@ const DAY: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
 
 export const RUN_LIMIT = 10;
 export const ASSET_LIMIT = 5;
+// A command's result is kept as a chat message and replayed to the agent on
+// every turn after, so even a full list stops somewhere.
+const LIST_LIMIT = 50;
+const FULL_LIST = {
+  limit: LIST_LIMIT,
+  more: "The Assets card lists them all.",
+};
 
 /** What the card lists, for the chat's slash commands to show. */
 export interface ProjectListing {
@@ -34,8 +41,33 @@ interface FileLinks {
   fileUrl: (file: SessionFileRecord) => string;
 }
 
+const LINE_BREAKS_AND_CONTROLS = /[\p{Cc}\p{Zl}\p{Zp}]+/gu;
+
+// Names, paths and messages here come from what other project members and
+// agents wrote, and the result is read as markdown by the chat and replayed to
+// the agent, so none of it may end its link, start another, or open a block.
+function plainText(text: string): string {
+  return text
+    .replace(LINE_BREAKS_AND_CONTROLS, " ")
+    .replace(/[\\[\]`<>]/g, "\\$&");
+}
+
+// A link's address ends at its first space or unmatched bracket unless it's in
+// angle brackets, and a name or a file's path can hold either. Bracketed, it's
+// read whole and the agent still sees the real address.
+function linkAddress(href: string): string {
+  const address = href.replace(/[<>\\\p{Cc}\p{Zl}\p{Zp}]/gu, (character) =>
+    encodeURIComponent(character),
+  );
+  return /[\s()]/.test(address) ? `<${address}>` : address;
+}
+
 function link(name: string, href: string): string {
-  return `[${name.replace(/[[\]\\]/g, "\\$&")}](${href})`;
+  return `[${plainText(name)}](${linkAddress(href)})`;
+}
+
+function codeSpan(text: string): string {
+  return `\`${text.replace(/[`\p{Cc}\p{Zl}\p{Zp}]+/gu, "")}\``;
 }
 
 function plural(count: number, noun: string): string {
@@ -73,7 +105,7 @@ function added(at: Date | null): string {
 }
 
 function pipelineRow({ target, name, at }: ProjectCardEntry): string {
-  return `${link(name, target)} · id \`${targetId(target)}\`${added(at)}`;
+  return `${link(name, target)} · id ${codeSpan(targetId(target))}${added(at)}`;
 }
 
 function documentRow({ target, name, at }: ProjectCardEntry): string {
@@ -87,18 +119,11 @@ function runRow(runStatuses: ReadonlyMap<string, string>) {
       .join(" · ");
 }
 
-// A link's address ends at its first space unless it's in angle brackets, and
-// a file's path can hold one. Bracketed, it's read whole and the agent still
-// sees the real path.
-function fileAddress(address: string): string {
-  return /[\s()<>]/.test(address) ? `<${address}>` : address;
-}
-
 function fileRow({ thisChat, fileUrl }: FileLinks) {
   return (file: SessionFileRecord) =>
     file.sessionId === thisChat
-      ? link(file.title, fileAddress(file.path))
-      : `${link(file.title, fileAddress(fileUrl(file)))} · another chat`;
+      ? link(file.title, file.path)
+      : `${link(file.title, fileUrl(file))} · another chat`;
 }
 
 /**
@@ -134,7 +159,7 @@ export function pipelinesResult({ pipelines }: ProjectListing) {
   if (pipelines.length === 0) return "This project has no pipelines yet.";
   const shown = active(pipelines);
   return withArchivedNote(
-    section("Pipelines", shown, pipelineRow),
+    section("Pipelines", shown, pipelineRow, FULL_LIST),
     pipelines.length - shown.length,
     "pipeline",
   );
@@ -144,7 +169,7 @@ export function documentsResult({ documents }: ProjectListing) {
   if (documents.length === 0) return "This project has no documents yet.";
   const shown = active(documents);
   return withArchivedNote(
-    section("Documents", shown, documentRow),
+    section("Documents", shown, documentRow, FULL_LIST),
     documents.length - shown.length,
     "document",
   );
@@ -167,8 +192,10 @@ export function filesResult(files: SessionFileRecord[], links: FileLinks) {
   const reports = files.filter(({ pinned }) => pinned);
   const others = files.filter(({ pinned }) => !pinned);
   return [
-    reports.length > 0 && section("Reports", reports, fileRow(links)),
-    others.length > 0 && section("Other files", others, fileRow(links)),
+    reports.length > 0 &&
+      section("Reports", reports, fileRow(links), FULL_LIST),
+    others.length > 0 &&
+      section("Other files", others, fileRow(links), FULL_LIST),
   ]
     .filter(Boolean)
     .join("\n\n");
@@ -218,7 +245,9 @@ export function runStartsResult(starts: RunStart[]): string {
   const failed = starts.flatMap(({ id, name, runTarget, error }) =>
     runTarget
       ? []
-      : [`\`${id}\`${name ? ` (${name})` : ""}: ${error ?? "didn't start"}`],
+      : [
+          `${codeSpan(id)}${name ? ` (${plainText(name)})` : ""}: ${plainText(error ?? "didn't start")}`,
+        ],
   );
   return [
     started.length > 0 &&

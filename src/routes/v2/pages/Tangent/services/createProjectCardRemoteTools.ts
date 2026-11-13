@@ -76,7 +76,7 @@ async function listedFile(
 ): Promise<SessionFileRecord> {
   const path = requireString(args, "path");
   const sessionId = chatOf(args, deps);
-  const file = (await deps.listFiles()).find(
+  const file = (await deps.listChatFiles(sessionId)).find(
     (candidate) => candidate.sessionId === sessionId && candidate.path === path,
   );
   if (!file) {

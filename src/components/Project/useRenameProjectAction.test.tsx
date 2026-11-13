@@ -3,9 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DialogProvider } from "@/providers/DialogProvider/DialogProvider";
-import { getProject } from "@/services/projects/projectsService";
 import type { Project } from "@/services/projects/types";
-import { useUpdateProject } from "@/services/projects/useProjects";
+import { useUpdateProjectMetadata } from "@/services/projects/useProjects";
 
 import { useRenameProjectAction } from "./useRenameProjectAction";
 
@@ -26,11 +25,7 @@ const notify = vi.fn();
 const track = vi.fn();
 
 vi.mock("@/services/projects/useProjects", () => ({
-  useUpdateProject: vi.fn(),
-}));
-
-vi.mock("@/services/projects/projectsService", () => ({
-  getProject: vi.fn(),
+  useUpdateProjectMetadata: vi.fn(),
 }));
 
 vi.mock("@/hooks/useToastNotification", () => ({
@@ -60,14 +55,10 @@ function Subject({ subject }: { subject: Project }) {
   return <button onClick={() => void rename()}>Rename project</button>;
 }
 
-async function openRename(
-  overrides: Partial<Project> = {},
-  latest: Partial<Project> = overrides,
-) {
-  vi.mocked(useUpdateProject).mockReturnValue({
+async function openRename(overrides: Partial<Project> = {}) {
+  vi.mocked(useUpdateProjectMetadata).mockReturnValue({
     mutate,
-  } as unknown as ReturnType<typeof useUpdateProject>);
-  vi.mocked(getProject).mockResolvedValue({ ...project, ...latest });
+  } as unknown as ReturnType<typeof useUpdateProjectMetadata>);
 
   const user = userEvent.setup();
   render(
@@ -88,15 +79,15 @@ async function submitName(
   await user.click(screen.getByRole("button", { name: "Rename" }));
 }
 
-async function renameTo(
-  name: string,
-  overrides: Partial<Project> = {},
-  latest: Partial<Project> = overrides,
-) {
-  const user = await openRename(overrides, latest);
+async function renameTo(name: string, overrides: Partial<Project> = {}) {
+  const user = await openRename(overrides);
   await submitName(user, name);
 
   await waitFor(() => expect(mutate).toHaveBeenCalled());
+}
+
+function changeAsked(): (metadata: Project["metadata"]) => unknown {
+  return mutate.mock.calls[0][0].change;
 }
 
 describe("useRenameProjectAction", () => {
@@ -113,9 +104,14 @@ describe("useRenameProjectAction", () => {
     await renameTo("Churn model v2");
 
     expect(mutate).toHaveBeenCalledWith(
-      { id: "project-1", input: { name: "Churn model v2", metadata: {} } },
+      {
+        id: "project-1",
+        name: "Churn model v2",
+        change: expect.any(Function),
+      },
       expect.anything(),
     );
+    expect(changeAsked()(null)).toEqual({});
   });
 
   /** A name someone typed is deliberate, so the agent stops offering one. */
@@ -124,54 +120,44 @@ describe("useRenameProjectAction", () => {
       metadata: { provisionalName: true, startingModel: "openai/gpt-5.6" },
     });
 
-    expect(mutate).toHaveBeenCalledWith(
-      {
-        id: "project-1",
-        input: {
-          name: "Churn model v2",
-          metadata: { startingModel: "openai/gpt-5.6" },
-        },
-      },
-      expect.anything(),
-    );
+    expect(
+      changeAsked()({
+        provisionalName: true,
+        startingModel: "openai/gpt-5.6",
+      }),
+    ).toEqual({ startingModel: "openai/gpt-5.6" });
   });
 
-  /** A stale copy would drop keys written since, like the shared folder id. */
+  /**
+   * A stale copy would drop keys written since, like the shared folder id, so
+   * the change is made to whatever the project holds when it's saved rather
+   * than to the copy this page loaded.
+   */
   it("keeps metadata written since the project was loaded", async () => {
-    await renameTo(
-      "Churn model v2",
-      { metadata: { provisionalName: true } },
-      {
-        metadata: { provisionalName: true, tangentSharedFolderId: "folder-1" },
-      },
-    );
+    await renameTo("Churn model v2", { metadata: { provisionalName: true } });
 
-    expect(getProject).toHaveBeenCalledWith("project-1");
-    expect(mutate).toHaveBeenCalledWith(
-      {
-        id: "project-1",
-        input: {
-          name: "Churn model v2",
-          metadata: { tangentSharedFolderId: "folder-1" },
-        },
-      },
-      expect.anything(),
-    );
+    expect(
+      changeAsked()({
+        provisionalName: true,
+        tangentSharedFolderId: "folder-1",
+      }),
+    ).toEqual({ tangentSharedFolderId: "folder-1" });
   });
 
-  it("leaves the project alone when it cannot be re-read", async () => {
+  it("notes why in the console when the rename fails", async () => {
     const consoleError = vi
       .spyOn(console, "error")
       .mockImplementation(() => {});
-    const user = await openRename();
-    vi.mocked(getProject).mockRejectedValue(new Error("down"));
+    await renameTo("Churn model v2");
 
-    await submitName(user, "Churn model v2");
+    const [, options] = mutate.mock.calls[0];
+    options.onError(new Error("down"));
 
-    await waitFor(() =>
-      expect(notify).toHaveBeenCalledWith("Failed to update project", "error"),
+    expect(consoleError).toHaveBeenCalledWith(
+      "Failed to rename the project",
+      expect.any(Error),
     );
-    expect(mutate).not.toHaveBeenCalled();
+    expect(notify).not.toHaveBeenCalledWith("Project renamed", "success");
     consoleError.mockRestore();
   });
 

@@ -251,11 +251,12 @@ describe("useDebugInTangent", () => {
       expect(createProject).not.toHaveBeenCalled();
     });
 
-    it("looks the project up only once", async () => {
+    /** The second read is the fresh one its metadata is written back from. */
+    it("looks the project up once to choose it and once more to write to it", async () => {
       debugRun();
 
       await waitFor(() => expect(navigate).toHaveBeenCalled());
-      expect(getProject).toHaveBeenCalledTimes(1);
+      expect(getProject).toHaveBeenCalledTimes(2);
     });
 
     /**

@@ -35,7 +35,20 @@ vi.mock("@/hooks/useToastNotification", () => ({ default: () => notify }));
 
 vi.mock("@/services/projects/useProjects", () => ({
   useProject: vi.fn(),
-  useUpdateProject: () => ({ mutateAsync: updateProject }),
+  // As the real one does: the change is made to the project as just read.
+  useUpdateProjectMetadata: () => ({
+    mutateAsync: async ({
+      id,
+      change,
+    }: {
+      id: string;
+      change: (metadata: Record<string, unknown> | null) => unknown;
+    }) =>
+      updateProject({
+        id,
+        input: { metadata: change((await getProject(id)).metadata) },
+      }),
+  }),
 }));
 
 vi.mock("@/services/projects/projectsService", () => ({
