@@ -1,5 +1,5 @@
 import { observer } from "mobx-react-lite";
-import { type MouseEvent, type ReactNode, useState } from "react";
+import { type MouseEvent, type ReactNode, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -18,6 +18,7 @@ import {
   type ProjectResourceItem,
   useProjectResourceItems,
 } from "@/routes/v2/pages/Tangent/hooks/useProjectResourceItems";
+import { useProjectSearchFocus } from "@/routes/v2/pages/Tangent/hooks/useProjectSearchFocus";
 import {
   type ProjectFile,
   useProjectSessionFiles,
@@ -27,6 +28,7 @@ import {
   mergeProjectRuns,
   type RunEntry,
 } from "@/routes/v2/pages/Tangent/services/projectRunEntries";
+import { useOptionalWindowContext } from "@/routes/v2/shared/windows/ContentWindowStateContext";
 import {
   formatWorkareaTarget,
   parseIdentity,
@@ -48,7 +50,6 @@ import { getErrorMessage } from "@/utils/string";
 import { tracking } from "@/utils/tracking";
 
 import { AddResourceButton } from "./AddResourceButton";
-import { useDismissProjectCard } from "./projectCardContext";
 import { SearchField } from "./SearchField";
 
 const FAILED_STATUSES = new Set([
@@ -101,8 +102,10 @@ function split<T>(items: T[], isArchived: (item: T) => boolean) {
  */
 export const ProjectCardContent = observer(function ProjectCardContent() {
   const store = useTangentProject();
-  const dismissCard = useDismissProjectCard();
+  const dismissCard = useOptionalWindowContext()?.dismissFlyout;
   const notify = useToastNotification();
+  const searchRef = useRef<HTMLInputElement>(null);
+  useProjectSearchFocus(searchRef);
   const [query, setQuery] = useState("");
   const [fileQuery, setFileQuery] = useState("");
   const [view, setView] = useState<CardView>("main");
@@ -179,7 +182,7 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
     ].every((list) => list.length === 0);
 
   async function openTarget(target: WorkareaTarget, title: string) {
-    dismissCard();
+    dismissCard?.();
     try {
       await store.openWorkareaTarget(target, title);
     } catch (error) {
@@ -196,7 +199,7 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
   }
 
   function openFile(file: ProjectFile) {
-    dismissCard();
+    dismissCard?.();
     store.openArtifactTab(file.url, file.title);
   }
 
@@ -307,6 +310,7 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
             onChange={setFileQuery}
             label="Search all files"
             trackingPrefix="projects.project_card.all_files"
+            inputRef={searchRef}
           />
         </div>
         {shownFiles.length === 0 ? (
@@ -356,6 +360,7 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
           onChange={setQuery}
           label="Search this project"
           trackingPrefix="projects.project_card"
+          inputRef={searchRef}
         />
       </div>
       {nothingMatches && <EmptyNote>Nothing in this project matches</EmptyNote>}

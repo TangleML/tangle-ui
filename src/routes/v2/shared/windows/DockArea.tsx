@@ -20,6 +20,8 @@ import { Window } from "./Window";
 
 interface DockAreaProps {
   side: "left" | "right";
+  // Headers read as section labels rather than bars, for a sidebar.
+  quietHeaders?: boolean;
 }
 
 // Context panel ("Properties") is selection-driven and stays visible in
@@ -27,7 +29,10 @@ interface DockAreaProps {
 // without leaving focus mode.
 const FOCUS_MODE_ALLOWED_WINDOW_IDS = new Set(["context-panel"]);
 
-export const DockArea = observer(function DockArea({ side }: DockAreaProps) {
+export const DockArea = observer(function DockArea({
+  side,
+  quietHeaders,
+}: DockAreaProps) {
   const { windows } = useSharedStores();
   const dockArea = windows.getDockAreaConfig(side);
   const { collapsed } = dockArea;
@@ -49,12 +54,15 @@ export const DockArea = observer(function DockArea({ side }: DockAreaProps) {
     Boolean(windows.getWindowMiniContent(id)),
   );
   const isEmpty = visibleWindows.length === 0;
-  // A fill window needs the stack to have an explicit height so flex-grow can
-  // distribute free space. Without a fill window we keep `min-h-full` so a tall
-  // stack of windows overflows and scrolls instead of being squished.
-  const hasFillWindow = visibleWindows.some(
-    (id) => windows.getWindowById(id)?.fillDockHeight,
-  );
+  // A fill window fills the dock only while it's alone there, which needs the
+  // stack to have an explicit height. Sharing the dock, it shows all of itself
+  // like the others and the column scrolls as one, so nothing is squeezed into
+  // a box too small to look scrollable.
+  const fillsDock =
+    visibleWindows.length === 1 &&
+    Boolean(windows.getWindowById(visibleWindows[0])?.fillDockHeight);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const [moreBelow, setMoreBelow] = useState(false);
 
   useEffect(() => {
     windows.enableDockSide(side);
@@ -82,6 +90,24 @@ export const DockArea = observer(function DockArea({ side }: DockAreaProps) {
     observer.observe(el);
     return () => observer.disconnect();
   }, [side, collapsed, isEmpty]);
+
+  // The dock's scrollbar only shows on hover, so a fade along its bottom says
+  // there's more below.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || collapsed || isEmpty) return;
+    const update = () =>
+      setMoreBelow(el.scrollTop + el.clientHeight < el.scrollHeight - 1);
+    update();
+    el.addEventListener("scroll", update, { passive: true });
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    if (el.firstElementChild) observer.observe(el.firstElementChild);
+    return () => {
+      el.removeEventListener("scroll", update);
+      observer.disconnect();
+    };
+  }, [collapsed, isEmpty]);
 
   if (isEmpty) return null;
 
@@ -187,20 +213,30 @@ export const DockArea = observer(function DockArea({ side }: DockAreaProps) {
         </div>
       )}
       <div
+        ref={scrollRef}
         data-dock-scroll
-        className="absolute inset-0 overflow-y-auto overflow-x-hidden hide-scrollbar"
+        className="absolute inset-0 overflow-y-auto overflow-x-hidden reveal-scrollbar"
       >
-        <BlockStack className={cn(hasFillWindow ? "h-full" : "min-h-full")}>
+        <BlockStack className={cn(fillsDock ? "h-full" : "min-h-full")}>
           {visibleWindows.map((windowId, index) => (
             <Window
               key={windowId}
               windowId={windowId}
               docked
               dockIndex={index}
+              fillsDock={fillsDock}
+              quietHeader={quietHeaders}
             />
           ))}
         </BlockStack>
       </div>
+      {moreBelow && (
+        <div
+          aria-hidden="true"
+          data-dock-more-below
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-30 h-10 bg-linear-to-t from-card to-transparent"
+        />
+      )}
 
       <VerticalResizeHandle
         side={handleSide}

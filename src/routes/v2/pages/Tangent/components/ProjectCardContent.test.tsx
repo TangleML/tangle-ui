@@ -1,6 +1,11 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { createElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { requestProjectSearchFocus } from "@/routes/v2/pages/Tangent/hooks/useProjectSearchFocus";
+import { WindowContextProvider } from "@/routes/v2/shared/windows/ContentWindowStateContext";
+import { WindowStoreImpl } from "@/routes/v2/shared/windows/windowStore";
 
 import { ProjectCardContent } from "./ProjectCardContent";
 
@@ -360,5 +365,36 @@ describe("ProjectCardContent", () => {
       ),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Show archived/ })).toBeNull();
+  });
+
+  it("puts the cursor in its search when asked", () => {
+    render(<ProjectCardContent />);
+
+    act(() => requestProjectSearchFocus());
+
+    expect(
+      screen.getByRole("searchbox", { name: "Search this project" }),
+    ).toHaveFocus();
+  });
+
+  it("closes the popover it's in once something is opened", async () => {
+    const user = userEvent.setup();
+    const dismissFlyout = vi.fn();
+    const windows = new WindowStoreImpl();
+    windows.openWindow(createElement("span"), {
+      id: "card",
+      title: "Assets",
+    });
+    const model = windows.getWindowById("card");
+    if (!model) throw new Error("The card window wasn't opened");
+    render(
+      <WindowContextProvider value={{ model, content: null, dismissFlyout }}>
+        <ProjectCardContent />
+      </WindowContextProvider>,
+    );
+
+    await user.click(screen.getByText("Q3 summary"));
+
+    expect(dismissFlyout).toHaveBeenCalled();
   });
 });

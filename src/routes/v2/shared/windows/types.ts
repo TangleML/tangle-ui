@@ -30,6 +30,7 @@ export interface DockAreaConfig {
 
 export type SnapPreviewType =
   | { type: "edge"; side: "left" | "right" }
+  | { type: "dock-target"; side: "left" | "right" }
   | {
       type: "dock-insert";
       side: "left" | "right";

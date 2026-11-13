@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { type RefObject, useRef } from "react";
 
 import { Icon } from "@/components/ui/icon";
 import { tracking } from "@/utils/tracking";
@@ -9,13 +9,16 @@ export function SearchField({
   onChange,
   label,
   trackingPrefix,
+  inputRef: givenRef,
 }: {
   value: string;
   onChange: (value: string) => void;
   label: string;
   trackingPrefix: string;
+  inputRef?: RefObject<HTMLInputElement | null>;
 }) {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const ownRef = useRef<HTMLInputElement>(null);
+  const inputRef = givenRef ?? ownRef;
 
   function clear() {
     onChange("");
@@ -25,7 +28,7 @@ export function SearchField({
   return (
     <div
       role="search"
-      className="flex h-8 items-center gap-2 rounded-md px-3 text-muted-foreground transition-colors focus-within:bg-foreground/5 focus-within:ring-1 focus-within:ring-ring/50 hover:bg-foreground/5 motion-reduce:transition-none"
+      className="flex h-8 items-center gap-2 rounded-md px-2 text-muted-foreground transition-colors focus-within:bg-foreground/5 focus-within:ring-1 focus-within:ring-ring/50 hover:bg-foreground/5 motion-reduce:transition-none"
     >
       <Icon name="Search" size="sm" className="shrink-0" />
       <input
