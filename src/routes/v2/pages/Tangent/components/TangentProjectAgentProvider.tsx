@@ -9,6 +9,7 @@ import { buildTaskSpecShape } from "@/components/shared/PipelineRunNameTemplate/
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
+import { ProjectCardHandlersContext } from "@/routes/v2/pages/Tangent/context/ProjectCardHandlersContext";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { usePerStore } from "@/routes/v2/pages/Tangent/hooks/usePerStore";
 import { useRemoteEnvAuthToken } from "@/routes/v2/pages/Tangent/hooks/useRemoteEnvAuthToken";
@@ -376,5 +377,9 @@ export function TangentProjectAgentProvider({
     };
   }, [sessionId, tools, routingBridge, agentTargets, baseUrl]);
 
-  return <>{children}</>;
+  return (
+    <ProjectCardHandlersContext.Provider value={projectCard}>
+      {children}
+    </ProjectCardHandlersContext.Provider>
+  );
 }
