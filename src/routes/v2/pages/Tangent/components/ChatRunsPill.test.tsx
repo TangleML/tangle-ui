@@ -2,6 +2,8 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { ProjectRunsApiError } from "@/services/projects/errors";
+
 import { ChatRunsPill } from "./ChatRunsPill";
 
 const openWorkareaTarget = vi.fn();
@@ -17,9 +19,19 @@ vi.mock("@/routes/v2/pages/Tangent/hooks/useSessionRuns", () => ({
   useSessionRuns: () => ({ runs: runs.current, dismiss }),
 }));
 
-vi.mock("@/services/projects/useProjectRuns", () => ({
+const statErrors = vi.hoisted(() => ({
+  current: {} as Record<string, unknown>,
+}));
+
+vi.mock("@/services/projects/useProjectRuns", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("@/services/projects/useProjectRuns")
+  >()),
   useRunsExecutionStats: (ids: string[]) =>
-    ids.map((id) => ({ data: stats.current[id] })),
+    ids.map((id) => ({
+      data: stats.current[id],
+      error: statErrors.current[id] ?? null,
+    })),
 }));
 
 vi.mock("@/hooks/useToastNotification", () => ({ default: () => vi.fn() }));
@@ -45,6 +57,7 @@ describe("ChatRunsPill", () => {
     vi.clearAllMocks();
     runs.current = [];
     stats.current = {};
+    statErrors.current = {};
   });
 
   it("stays out of the way while the chat has no runs", () => {
@@ -128,6 +141,24 @@ describe("ChatRunsPill", () => {
     expect(dismiss).toHaveBeenCalledTimes(1);
     expect(dismiss).toHaveBeenCalledWith(
       expect.objectContaining({ id: "r-2" }),
+    );
+  });
+
+  it("clears a run the backend no longer has along with the finished ones", async () => {
+    const user = userEvent.setup();
+    runs.current = [run("r-1", "Deleted run"), run("r-2", "Unreachable")];
+    statErrors.current = {
+      "r-1": new ProjectRunsApiError("Failed to fetch run r-1", 404),
+      "r-2": new ProjectRunsApiError("Failed to fetch run r-2", 503),
+    };
+    renderPill();
+
+    await user.click(screen.getByRole("button", { name: "2 runs" }));
+    await user.click(screen.getByRole("button", { name: "Clear finished" }));
+
+    expect(dismiss).toHaveBeenCalledTimes(1);
+    expect(dismiss).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "r-1" }),
     );
   });
 
