@@ -2,13 +2,18 @@ import { useQueries, useQuery } from "@tanstack/react-query";
 
 import { useBackend } from "@/providers/BackendProvider";
 import { pointerTo } from "@/services/localPipelines/localPipelinesService";
-import { LocalPipelinesQueryKeys } from "@/services/localPipelines/types";
+import {
+  type LocalPipelinePointer,
+  LocalPipelinesQueryKeys,
+} from "@/services/localPipelines/types";
 import { MINUTES } from "@/utils/constants";
 
 import {
   PIPELINE_RESOURCE_PARAMS,
   pipelineResourceIn,
+  remotePipelineResourceIn,
 } from "./pipelineProjects";
+import type { ProjectPipelineRef } from "./pipelineResource";
 import { listProjectResources } from "./projectResourcesService";
 import type { ProjectResourceSummary, ProjectSummary } from "./types";
 import { ProjectResourcesQueryKeys } from "./types";
@@ -25,6 +30,21 @@ export interface PipelineProjects {
   error: Error | null;
 }
 
+type ResourceFinder = (
+  resources: readonly ProjectResourceSummary[],
+) => ProjectResourceSummary | undefined;
+
+function resourceFinder(
+  pipeline: ProjectPipelineRef | undefined,
+  pointer: LocalPipelinePointer | undefined,
+): ResourceFinder | undefined {
+  if (pipeline?.source === "remote") {
+    return (resources) =>
+      remotePipelineResourceIn(resources, pipeline.pipelineId);
+  }
+  return pointer && ((resources) => pipelineResourceIn(resources, pointer));
+}
+
 /**
  * Which of the reader's projects hold a given pipeline. There is no asking the
  * backend that question — no endpoint answers it and resources cannot be
@@ -39,18 +59,19 @@ export interface PipelineProjects {
  * answer on demand should pass `enabled: false` until then.
  */
 export function usePipelineProjects(
-  pipelineName: string | undefined,
+  pipeline: ProjectPipelineRef | undefined,
   { enabled: wanted = true }: { enabled?: boolean } = {},
 ): PipelineProjects {
   const { configured, available } = useBackend();
-  const enabled = wanted && configured && available && Boolean(pipelineName);
+  const enabled = wanted && configured && available && Boolean(pipeline);
+  const localName = pipeline?.source === "local" ? pipeline.name : undefined;
 
   const { data: pointer, error: pointerError } = useQuery({
     queryKey: LocalPipelinesQueryKeys.Pointer({
-      localName: pipelineName ?? "",
+      localName: localName ?? "",
     }),
-    queryFn: () => pointerTo(pipelineName ?? ""),
-    enabled,
+    queryFn: () => pointerTo(localName ?? ""),
+    enabled: enabled && localName !== undefined,
     staleTime: 1 * MINUTES,
   });
 
@@ -82,18 +103,22 @@ export function usePipelineProjects(
     resources.find((query) => query.error)?.error ??
     null;
 
+  const findResource = resourceFinder(pipeline, pointer);
+
   const isPending =
     enabled &&
     error === null &&
-    (isListPending || !pointer || resources.some((query) => query.isPending));
+    (isListPending ||
+      !findResource ||
+      resources.some((query) => query.isPending));
 
-  if (!pointer) {
+  if (!findResource) {
     return { memberships: [], isPending, error };
   }
 
   const memberships = candidates.flatMap((project, index) => {
     const items = resources[index]?.data?.items;
-    const resource = items && pipelineResourceIn(items, pointer);
+    const resource = items && findResource(items);
     return resource ? [{ project, resource }] : [];
   });
 

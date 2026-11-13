@@ -46,7 +46,7 @@ export function AddDocumentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>Add Document</DialogTitle>
         </DialogHeader>

@@ -18,7 +18,7 @@ const executionDataMock = vi.hoisted(() => ({
   current: {} as {
     runId?: string | null;
     details?: { child_task_execution_ids?: Record<string, string> };
-    segments?: { taskId: string; executionId: string; taskName: string }[];
+    segments?: { taskId: string; executionId: string }[];
   },
 }));
 
@@ -151,8 +151,8 @@ describe("useRunViewSubgraphUrlSync", () => {
 
   it("resolves the target execution id from breadcrumb segments when going shallower", () => {
     executionDataMock.current.segments = [
-      { taskId: "t-a", executionId: "exec-a", taskName: "a" },
-      { taskId: "t-b", executionId: "exec-b", taskName: "b" },
+      { taskId: "a", executionId: "exec-a" },
+      { taskId: "b", executionId: "exec-b" },
     ];
 
     const navigation = sharedStoreMock.navigation;
@@ -172,7 +172,7 @@ describe("useRunViewSubgraphUrlSync", () => {
   it("syncs the navigation store from an external subgraph URL without pushing back", () => {
     routerMocks.params = { subgraphExecutionId: "exec-sub" };
     executionDataMock.current.segments = [
-      { taskId: "t-sub", executionId: "exec-sub", taskName: "sub-task" },
+      { taskId: "sub-task", executionId: "exec-sub" },
     ];
 
     const navigation = sharedStoreMock.navigation;
@@ -185,7 +185,7 @@ describe("useRunViewSubgraphUrlSync", () => {
 
   it("does not push a root URL when the navigation store is cleared (unmount / StrictMode remount)", () => {
     executionDataMock.current.segments = [
-      { taskId: "t-sub", executionId: "exec-sub", taskName: "sub-task" },
+      { taskId: "sub-task", executionId: "exec-sub" },
     ];
 
     const navigation = sharedStoreMock.navigation;
@@ -209,6 +209,48 @@ describe("useRunViewSubgraphUrlSync", () => {
 
     expect(navigation.displayNames).toEqual([ROOT_NAME]);
     expect(routerMocks.navigate).not.toHaveBeenCalled();
+  });
+
+  it("opens a deep link into a nested subgraph by its task names", () => {
+    routerMocks.params = { subgraphExecutionId: "exec-lane" };
+    executionDataMock.current.segments = [
+      { taskId: "Feature dataset", executionId: "exec-stage" },
+      { taskId: "Shop lane", executionId: "exec-lane" },
+    ];
+
+    const navigation = sharedStoreMock.navigation;
+    renderSyncHook();
+
+    expect(navigation.displayNames).toEqual([
+      ROOT_NAME,
+      "Feature dataset",
+      "Shop lane",
+    ]);
+  });
+
+  it("reports the URL's subgraph as shown only once the navigation store opens it", () => {
+    routerMocks.params = { subgraphExecutionId: "exec-lane" };
+    const { result, rerender } = renderSyncHook();
+
+    expect(result.current).toBe(false);
+
+    executionDataMock.current.segments = [
+      { taskId: "Shop lane", executionId: "exec-lane" },
+    ];
+    rerender();
+    expect(sharedStoreMock.navigation.displayNames).toEqual([
+      ROOT_NAME,
+      "Shop lane",
+    ]);
+
+    rerender();
+    expect(result.current).toBe(true);
+  });
+
+  it("reports the root as shown when the URL has no subgraph", () => {
+    const { result } = renderSyncHook();
+
+    expect(result.current).toBe(true);
   });
 });
 
@@ -254,8 +296,8 @@ describe("useRunViewSubgraphExecutionSync (callback mode)", () => {
 
   it("emits the breadcrumb execution id when going shallower", () => {
     executionDataMock.current.segments = [
-      { taskId: "t-a", executionId: "exec-a", taskName: "a" },
-      { taskId: "t-b", executionId: "exec-b", taskName: "b" },
+      { taskId: "a", executionId: "exec-a" },
+      { taskId: "b", executionId: "exec-b" },
     ];
     const onExecutionId = vi.fn();
     const navigation = sharedStoreMock.navigation;

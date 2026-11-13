@@ -1,4 +1,5 @@
 import MonacoEditor from "@monaco-editor/react";
+import type { editor } from "monaco-editor";
 
 import { useMonacoTheme } from "@/hooks/useMonacoTheme";
 
@@ -7,9 +8,16 @@ interface CodeEditorProps {
   language: string;
   onChange?: (value: string) => void;
   readOnly?: boolean;
+  options?: editor.IStandaloneEditorConstructionOptions;
 }
 
-function CodeEditor({ value, language, onChange, readOnly }: CodeEditorProps) {
+function CodeEditor({
+  value,
+  language,
+  onChange,
+  readOnly,
+  options,
+}: CodeEditorProps) {
   const monacoTheme = useMonacoTheme();
 
   return (
@@ -25,6 +33,7 @@ function CodeEditor({ value, language, onChange, readOnly }: CodeEditorProps) {
         wordWrap: "on",
         automaticLayout: true,
         readOnly,
+        ...options,
       }}
     />
   );
