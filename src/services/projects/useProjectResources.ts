@@ -13,6 +13,7 @@ import {
   createProjectResource,
   deleteProjectResource,
   getProjectResource,
+  listEveryProjectResource,
   listProjectResources,
   updateProjectResource,
 } from "./projectResourcesService";
@@ -20,6 +21,7 @@ import { projectQueryDefaults } from "./queryDefaults";
 import type {
   CreateResourceInput,
   ListProjectResourcesParams,
+  ProjectResourceEntity,
   ProjectResourcePage,
   UpdateResourceInput,
 } from "./types";
@@ -59,6 +61,39 @@ export function projectResourcesQueryOptions(
       return listProjectResources(projectId, params);
     },
     ...projectQueryDefaults,
+  });
+}
+
+/** Every one of a project's resources of these kinds, however many pages. */
+export function everyProjectResourceQueryOptions(
+  projectId: string | undefined,
+  entity: ProjectResourceEntity[],
+) {
+  return queryOptions({
+    queryKey: [
+      ...ProjectResourcesQueryKeys.All(projectId ?? ""),
+      "every",
+      entity,
+    ],
+    queryFn: () => {
+      if (!projectId) {
+        throw new Error("Project id is required");
+      }
+      return listEveryProjectResource(projectId, entity);
+    },
+    ...projectQueryDefaults,
+  });
+}
+
+export function useEveryProjectResource(
+  projectId: string | undefined,
+  entity: ProjectResourceEntity[],
+) {
+  const { configured, available } = useBackend();
+
+  return useQuery({
+    ...everyProjectResourceQueryOptions(projectId, entity),
+    enabled: configured && available && Boolean(projectId),
   });
 }
 

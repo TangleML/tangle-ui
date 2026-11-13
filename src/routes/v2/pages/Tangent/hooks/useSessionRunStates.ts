@@ -138,9 +138,13 @@ export function withSeenElsewhere(
   for (const [sessionId, endedAt] of Object.entries(elsewhere.chats)) {
     if (endedAt > (seen.chats[sessionId] ?? "")) chats[sessionId] = endedAt;
   }
+  // Oldest first, so those are the ones that fall off.
+  const oldestFirst = Object.entries(chats).sort(([, a], [, b]) =>
+    a.localeCompare(b),
+  );
   return {
     baseline: seen.baseline ?? elsewhere.baseline,
-    chats: Object.fromEntries(Object.entries(chats).slice(-MAX_SEEN)),
+    chats: Object.fromEntries(oldestFirst.slice(-MAX_SEEN)),
   };
 }
 

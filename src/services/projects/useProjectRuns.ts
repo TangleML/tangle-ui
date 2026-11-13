@@ -13,7 +13,6 @@ import {
 } from "@/utils/executionStatus";
 import { projectIdsFromAnnotations } from "@/utils/projectRunAnnotation";
 
-import { isSettledRefusal } from "../retryPolicy";
 import { ApiError } from "./errors";
 import { getRunExecutionStats, listProjectRuns } from "./projectRunsService";
 import { projectQueryDefaults } from "./queryDefaults";
@@ -40,11 +39,13 @@ export async function invalidateProjectRunQueries(
 }
 
 /**
- * The backend's settled "no" for a run, such as one that was deleted, which
- * asking again won't change.
+ * The backend saying a run is gone, such as one that was deleted, which asking
+ * again won't change. Other refusals, such as a lapsed sign-in, can pass.
  */
 export function isRefusedRun(error: unknown): boolean {
-  return error instanceof ApiError && isSettledRefusal(error.status);
+  return (
+    error instanceof ApiError && (error.status === 404 || error.status === 410)
+  );
 }
 
 /**
