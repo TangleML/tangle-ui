@@ -12,9 +12,10 @@ import { getErrorMessage } from "@/utils/string";
 
 /**
  * Opens a workarea target beside the chat, or says in a toast why it can't. A
- * run Cmd/Ctrl-clicked opens on its own page in a new tab instead.
+ * run Cmd/Ctrl-clicked opens on its own page in a new tab instead. Opened from
+ * the chat, a run also joins that chat's runs.
  */
-export function useOpenWorkareaTarget() {
+export function useOpenWorkareaTarget({ fromChat = false } = {}) {
   const store = useTangentProject();
   const notify = useToastNotification();
 
@@ -24,8 +25,13 @@ export function useOpenWorkareaTarget() {
       window.open(getDefaultRunPath(runId), "_blank");
       return;
     }
+    const opening = fromChat
+      ? store.openWorkareaTarget(target, title, {
+          recordRunIn: store.activeSessionId,
+        })
+      : store.openWorkareaTarget(target, title);
     try {
-      await store.openWorkareaTarget(target, title);
+      await opening;
     } catch (error) {
       notify(getErrorMessage(error), "error");
     }
