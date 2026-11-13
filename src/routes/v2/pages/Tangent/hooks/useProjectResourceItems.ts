@@ -1,6 +1,7 @@
 import type { IconName } from "@/components/ui/icon";
 import { remoteResourceTarget } from "@/services/projects/pipelineResource";
 import { UNTITLED } from "@/services/projects/placeholderNames";
+import { MAX_PAGE_SIZE } from "@/services/projects/queryDefaults";
 import {
   describeResource,
   DOCUMENT,
@@ -140,6 +141,7 @@ function toResourceItem(
 export function useProjectResourceItems(projectId: string) {
   const query = useProjectResources(projectId, {
     entity: ["document", "pipeline"],
+    pageSize: MAX_PAGE_SIZE,
   });
   const items = query.data?.items ?? [];
   const localPipelines = useLocalPipelineStatus(items);
