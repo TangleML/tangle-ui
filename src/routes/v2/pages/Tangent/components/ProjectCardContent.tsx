@@ -105,7 +105,8 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
   const [query, setQuery] = useState("");
   const [fileQuery, setFileQuery] = useState("");
   const [view, setView] = useState<CardView>("main");
-  const { resources, summaries } = useProjectResourceItems(store.projectId);
+  const resourceItems = useProjectResourceItems(store.projectId);
+  const { resources, summaries } = resourceItems;
   const projectRuns = useProjectRuns(store.projectId);
   const files = useProjectSessionFiles(store.projectId);
   const { isArchived, archive, restore } = useArchivedProjectItems(
@@ -285,6 +286,7 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
       projectId={store.projectId}
       resources={summaries}
       kind={kind}
+      disabled={!resourceItems.isLoaded}
     />
   );
   const back = () => setView("main");
@@ -387,7 +389,11 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
             title="Runs"
             count={shownRuns.length}
             action={add("run")}
-            empty="Nothing has been run yet"
+            empty={emptyNote(
+              [projectRuns, resourceItems],
+              "this project's runs",
+              "Nothing has been run yet",
+            )}
           >
             {shownRuns.map(renderRun)}
             {!searching && <LoadOlderRuns query={projectRuns} />}
@@ -398,7 +404,11 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
             title="Pipelines"
             count={shownPipelines.length}
             action={add("pipeline")}
-            empty="No pipelines yet"
+            empty={emptyNote(
+              [resourceItems],
+              "this project's pipelines",
+              "No pipelines yet",
+            )}
           >
             {shownPipelines.map(renderAttached)}
           </CardSection>
@@ -408,7 +418,11 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
             title="Documents"
             count={shownDocuments.length}
             action={add("document")}
-            empty="No documents yet"
+            empty={emptyNote(
+              [resourceItems],
+              "this project's documents",
+              "No documents yet",
+            )}
           >
             {shownDocuments.map(renderAttached)}
           </CardSection>
@@ -428,6 +442,17 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
     </BlockStack>
   );
 });
+
+/** An empty section that is still loading, or failed to, says so instead. */
+function emptyNote(
+  sources: { isLoading: boolean; error: unknown }[],
+  what: string,
+  none: string,
+): string {
+  if (sources.some(({ error }) => error)) return `Couldn't load ${what}`;
+  if (sources.some(({ isLoading }) => isLoading)) return "Loading…";
+  return none;
+}
 
 function EmptyNote({ children }: { children: ReactNode }) {
   return (

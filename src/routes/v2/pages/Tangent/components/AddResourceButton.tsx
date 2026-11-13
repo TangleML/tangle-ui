@@ -22,6 +22,7 @@ interface AddResourceButtonProps {
   projectId: string;
   resources: ProjectResourceSummary[];
   kind: AddableKind;
+  disabled?: boolean;
 }
 
 const ADDABLE: Record<AddableKind, { label: string; trackingId: string }> = {
@@ -90,6 +91,7 @@ export function AddResourceButton({
   projectId,
   resources,
   kind,
+  disabled = false,
 }: AddResourceButtonProps) {
   const { open } = useDialog();
   const notify = useToastNotification();
@@ -144,7 +146,7 @@ export function AddResourceButton({
       size="icon"
       aria-label={label}
       title={label}
-      disabled={isPending}
+      disabled={disabled || isPending}
       onClick={add[kind]}
       className="size-6 shrink-0 text-muted-foreground hover:text-foreground"
       {...tracking(trackingId)}
