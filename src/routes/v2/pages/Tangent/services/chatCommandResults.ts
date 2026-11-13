@@ -1,15 +1,16 @@
-import type { ProjectCardEntry } from "@/routes/v2/pages/Tangent/services/createProjectCardRemoteTools";
+import type { ProjectCardEntry } from "@/routes/v2/pages/Tangent/services/createProjectCardHandlers";
 import type { SessionFileRecord } from "@/routes/v2/pages/Tangent/services/sessionFiles";
 import {
   parseIdentity,
   parseWorkareaTarget,
 } from "@/services/projects/resourceTarget";
 import { formatDate } from "@/utils/date";
+import { pluralize } from "@/utils/string";
 
 const DAY: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
 
 export const RUN_LIMIT = 10;
-const ASSET_LIMIT = 5;
+export const ASSET_LIMIT = 5;
 
 /** What the card lists, for the chat's slash commands to show. */
 export interface ProjectListing {
@@ -17,7 +18,6 @@ export interface ProjectListing {
   pipelines: ProjectCardEntry[];
   documents: ProjectCardEntry[];
   reports: SessionFileRecord[];
-  archived: ReadonlySet<string>;
   runStatuses: ReadonlyMap<string, string>;
 }
 
@@ -39,7 +39,7 @@ function link(name: string, href: string): string {
 }
 
 function plural(count: number, noun: string): string {
-  return `${count} ${noun}${count === 1 ? "" : "s"}`;
+  return `${count} ${pluralize(count, noun)}`;
 }
 
 /** The id a target names: a pipeline's, which `/run` takes, or a run's. */
@@ -117,13 +117,13 @@ function withArchivedNote(text: string, count: number, noun: string): string {
     : text;
 }
 
-function active(entries: ProjectCardEntry[], archived: ReadonlySet<string>) {
-  return entries.filter(({ target }) => !archived.has(target));
+function active(entries: ProjectCardEntry[]) {
+  return entries.filter(({ archived }) => !archived);
 }
 
-export function pipelinesResult({ pipelines, archived }: ProjectListing) {
+export function pipelinesResult({ pipelines }: ProjectListing) {
   if (pipelines.length === 0) return "This project has no pipelines yet.";
-  const shown = active(pipelines, archived);
+  const shown = active(pipelines);
   return withArchivedNote(
     section("Pipelines", shown, pipelineRow),
     pipelines.length - shown.length,
@@ -131,9 +131,9 @@ export function pipelinesResult({ pipelines, archived }: ProjectListing) {
   );
 }
 
-export function documentsResult({ documents, archived }: ProjectListing) {
+export function documentsResult({ documents }: ProjectListing) {
   if (documents.length === 0) return "This project has no documents yet.";
-  const shown = active(documents, archived);
+  const shown = active(documents);
   return withArchivedNote(
     section("Documents", shown, documentRow),
     documents.length - shown.length,
@@ -141,9 +141,9 @@ export function documentsResult({ documents, archived }: ProjectListing) {
   );
 }
 
-export function runsResult({ runs, archived, runStatuses }: ProjectListing) {
+export function runsResult({ runs, runStatuses }: ProjectListing) {
   if (runs.length === 0) return "Nothing has been run in this project yet.";
-  const shown = active(runs, archived);
+  const shown = active(runs);
   return withArchivedNote(
     section("Runs", shown, runRow(runStatuses), { limit: RUN_LIMIT }),
     runs.length - shown.length,
@@ -167,9 +167,9 @@ export function filesResult(files: SessionFileRecord[], links: FileLinks) {
 
 /** A few of each, newest first, pointing at the command that lists the rest. */
 export function assetsResult(listing: ProjectListing, links: FileLinks) {
-  const runs = active(listing.runs, listing.archived);
-  const pipelines = active(listing.pipelines, listing.archived);
-  const documents = active(listing.documents, listing.archived);
+  const runs = active(listing.runs);
+  const pipelines = active(listing.pipelines);
+  const documents = active(listing.documents);
   const limit = ASSET_LIMIT;
   const sections = [
     listing.reports.length > 0 &&

@@ -1,5 +1,7 @@
+import type { QueryClient } from "@tanstack/react-query";
+
 import { getProject, updateProject } from "@/services/projects/projectsService";
-import type { Project } from "@/services/projects/types";
+import { ProjectsQueryKeys } from "@/services/projects/types";
 
 const ARCHIVED_KEY = "tangentArchived";
 
@@ -46,20 +48,26 @@ function afterEarlierWrites<T>(
 }
 
 /**
- * Archives or restores an item for everyone in the project. The PATCH replaces
- * the whole metadata object, so the project is read again just before, and a
- * project's changes are saved one at a time: two that overlapped would each
- * write back a list without the other's item.
+ * Archives or restores an item for everyone in the project, then refetches the
+ * project so the card shows it. The PATCH replaces the whole metadata object,
+ * so the project is read again just before, and a project's changes are saved
+ * one at a time: two that overlapped would each write back a list without the
+ * other's item.
  */
-export function setProjectItemArchived(
+export async function setProjectItemArchived(
+  queryClient: QueryClient,
   projectId: string,
   target: string,
   archived: boolean,
-): Promise<Project> {
-  return afterEarlierWrites(projectId, async () => {
+): Promise<void> {
+  await afterEarlierWrites(projectId, async () => {
     const latest = await getProject(projectId);
-    return updateProject(projectId, {
+    await updateProject(projectId, {
       metadata: withArchived(latest.metadata, target, archived),
     });
+  });
+  await queryClient.invalidateQueries({
+    queryKey: ProjectsQueryKeys.Id(projectId),
+    exact: true,
   });
 }

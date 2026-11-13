@@ -32,6 +32,7 @@ vi.mock("@/services/projects/useProjectRuns", async (importOriginal) => ({
       data: stats.current[id],
       error: statErrors.current[id] ?? null,
     })),
+  useRunExecutionStats: (id: string) => ({ data: stats.current[id] }),
 }));
 
 vi.mock("@/hooks/useToastNotification", () => ({ default: () => vi.fn() }));

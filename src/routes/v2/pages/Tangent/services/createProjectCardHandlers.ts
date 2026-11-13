@@ -2,52 +2,78 @@ import type { Tangent } from "@tangent/embed-react";
 import type { QueryClient } from "@tanstack/react-query";
 
 import { toResourceItem } from "@/routes/v2/pages/Tangent/hooks/useProjectResourceItems";
-import { sessionFilesKey } from "@/routes/v2/pages/Tangent/hooks/useProjectSessionFiles";
 import {
   SESSION_RESOURCES,
   sessionsOf,
 } from "@/routes/v2/pages/Tangent/hooks/useProjectSessions";
 import {
-  runEntry,
-  sessionRunsKey,
+  dismissSessionRun,
+  type SessionRun,
   sessionRunsOf,
 } from "@/routes/v2/pages/Tangent/hooks/useSessionRuns";
-import type {
-  ProjectCardEntry,
-  ProjectCardToolDeps,
-} from "@/routes/v2/pages/Tangent/services/createProjectCardRemoteTools";
 import type { RunInspectDeps } from "@/routes/v2/pages/Tangent/services/createWorkareaRemoteTools";
 import {
   archivedTargets,
   setProjectItemArchived,
 } from "@/routes/v2/pages/Tangent/services/projectArchive";
-import { mergeProjectRuns } from "@/routes/v2/pages/Tangent/services/projectRunEntries";
+import { projectCardLists } from "@/routes/v2/pages/Tangent/services/projectCardEntries";
 import {
-  listSessionFiles,
-  pinSessionFile,
   type SessionFileRecord,
-  unpinSessionFile,
+  sessionFilesOf,
+  setSessionFilePinned,
 } from "@/routes/v2/pages/Tangent/services/sessionFiles";
+import { sessionResourcesQuery } from "@/routes/v2/pages/Tangent/services/sessionResources";
+import { attachPipelineRunOnce } from "@/services/projects/attachPipelineRun";
 import { createProjectResource } from "@/services/projects/projectResourcesService";
 import { listProjectRuns } from "@/services/projects/projectRunsService";
 import { getProject } from "@/services/projects/projectsService";
 import { MAX_PAGE_SIZE } from "@/services/projects/queryDefaults";
-import {
-  documentResourceInput,
-  pipelineRunResourceInput,
-} from "@/services/projects/resourceDescriptor";
+import { documentResourceInput } from "@/services/projects/resourceDescriptor";
 import {
   formatWorkareaTarget,
   idIdentity,
-  parseIdentity,
   runTarget,
-  type WorkareaTarget,
 } from "@/services/projects/resourceTarget";
-import {
-  type ListProjectResourcesParams,
-  ProjectsQueryKeys,
-} from "@/services/projects/types";
+import type { ListProjectResourcesParams } from "@/services/projects/types";
+import type { LocalPipelineStatus } from "@/services/projects/useLocalPipelineStatus";
 import { projectResourcesQueryOptions } from "@/services/projects/useProjectResources";
+
+/** A row on the project card, addressed by its formatted workarea target. */
+export interface ProjectCardEntry {
+  target: string;
+  name: string;
+  at: Date | null;
+  archived: boolean;
+}
+
+interface ProjectCardEntries {
+  runs: ProjectCardEntry[];
+  pipelines: ProjectCardEntry[];
+  documents: ProjectCardEntry[];
+}
+
+/** Live handles into the project card and the chat's runs pill. */
+export interface ProjectCardToolDeps {
+  getActiveSessionId: () => string | undefined;
+  listEntries: () => Promise<ProjectCardEntries>;
+  setArchived: (target: string, archived: boolean) => Promise<void>;
+  listFiles: () => Promise<SessionFileRecord[]>;
+  pinFile: (sessionId: string, path: string, title: string) => Promise<void>;
+  unpinFile: (sessionId: string, path: string) => Promise<void>;
+  listChatRuns: (sessionId: string) => Promise<SessionRun[]>;
+  dismissChatRun: (sessionId: string, runId: string) => Promise<boolean>;
+  addRun: (
+    runId: string,
+    name?: string,
+  ) => Promise<{ added: boolean; target: string }>;
+  addDocument: (title: string, content: string) => Promise<string>;
+}
+
+/** What this browser knows about the project's pipelines, as the card shows them. */
+export interface PipelineLookups {
+  localPipelines: LocalPipelineStatus;
+  remotePipelineNames: ReadonlyMap<string, string>;
+}
 
 interface ProjectCardHandlerOptions {
   projectId: string;
@@ -56,6 +82,7 @@ interface ProjectCardHandlerOptions {
   getBaseUrl: () => string | undefined;
   getAuthToken: () => string | undefined;
   getTangent: () => Tangent;
+  getPipelineLookups: () => PipelineLookups;
   getRunDetails: RunInspectDeps["getRunDetails"];
   onResourcesChanged: () => Promise<void>;
 }
@@ -65,38 +92,24 @@ const CARD_RESOURCES: ListProjectResourcesParams = {
   pageSize: MAX_PAGE_SIZE,
 };
 
-const NOTHING_LOCAL = {
-  unavailable: new Set<string>(),
-  currentNames: new Map<string, string>(),
-};
-
-interface AttachedEntry {
-  target: WorkareaTarget;
+function entryOf({
+  key,
+  name,
+  at,
+  archived,
+}: {
+  key: string;
   name: string;
   at: Date | null;
-}
-
-const newestFirst = (a: { at: Date | null }, b: { at: Date | null }) =>
-  (b.at?.getTime() ?? 0) - (a.at?.getTime() ?? 0);
-
-function entriesOf(
-  attached: AttachedEntry[],
-  type: WorkareaTarget["type"],
-): ProjectCardEntry[] {
-  return attached
-    .filter(({ target }) => target.type === type)
-    .sort(newestFirst)
-    .map(({ target, name, at }) => ({
-      target: formatWorkareaTarget(target),
-      name,
-      at,
-    }));
+  archived: boolean;
+}): ProjectCardEntry {
+  return { target: key, name, at, archived };
 }
 
 /**
- * The project card's reads and writes, outside React, for the agent's tools.
- * Reads skip the cache so the agent sees what's there now, and writes refresh
- * what the card shows.
+ * The project card's reads and writes, outside React, for the agent's tools
+ * and the chat's commands. Reads skip the cache so the agent sees what's there
+ * now; writes are the ones the card's own buttons make.
  */
 export function createProjectCardHandlers({
   projectId,
@@ -105,6 +118,7 @@ export function createProjectCardHandlers({
   getBaseUrl,
   getAuthToken,
   getTangent,
+  getPipelineLookups,
   getRunDetails,
   onResourcesChanged,
 }: ProjectCardHandlerOptions): ProjectCardToolDeps {
@@ -116,147 +130,104 @@ export function createProjectCardHandlers({
       })
     ).items;
 
-  function requireBaseUrl(): string {
+  const readChat = (sessionId: string) =>
+    queryClient.fetchQuery({
+      ...sessionResourcesQuery(getTangent(), sessionId),
+      staleTime: 0,
+    });
+
+  function fileRequest(sessionId: string, path: string, title = path) {
     const baseUrl = getBaseUrl();
     if (!baseUrl) throw new Error("This page can't reach Tangent right now.");
-    return baseUrl;
-  }
-
-  async function listChatFiles(
-    baseUrl: string,
-    sessionId: string,
-  ): Promise<SessionFileRecord[]> {
-    try {
-      return await queryClient.fetchQuery({
-        queryKey: sessionFilesKey(baseUrl, sessionId),
-        queryFn: () =>
-          listSessionFiles({ baseUrl, sessionId, authToken: getAuthToken() }),
-        staleTime: 0,
-      });
-    } catch {
-      // The card skips a chat it can't read, such as someone else's.
-      return [];
-    }
+    return { baseUrl, sessionId, authToken: getAuthToken(), path, title };
   }
 
   return {
     getActiveSessionId,
 
     async listEntries() {
-      const [summaries, projectRuns] = await Promise.all([
+      const [summaries, projectRuns, project] = await Promise.all([
         fetchResources(CARD_RESOURCES),
         listProjectRuns(projectId),
+        getProject(projectId),
       ]);
-      const attached = summaries.flatMap((summary) => {
-        const item = toResourceItem(summary, NOTHING_LOCAL, new Map());
-        return item?.target
-          ? [{ target: item.target, name: item.name, at: summary.createdAt }]
-          : [];
+      const { localPipelines, remotePipelineNames } = getPipelineLookups();
+      const lists = projectCardLists({
+        items: summaries.flatMap(
+          (summary) =>
+            toResourceItem(summary, localPipelines, remotePipelineNames) ?? [],
+        ),
+        summaries,
+        projectRuns: projectRuns.items,
+        archived: new Set(archivedTargets(project.metadata)),
       });
-      const runs = mergeProjectRuns(
-        projectRuns.items,
-        attached
-          .filter(({ target }) => target.type === "run")
-          .map(({ target, name, at }) => ({
-            id: parseIdentity(target.identity).value,
-            pipelineName: name,
-            ranAt: at,
-          })),
-      );
       return {
-        runs: runs.map((run) => ({
-          target: formatWorkareaTarget(runTarget(run.id)),
-          name: run.pipelineName,
-          at: run.ranAt,
-        })),
-        pipelines: entriesOf(attached, "pipeline"),
-        documents: entriesOf(attached, "document"),
+        runs: lists.runs.map((run) =>
+          entryOf({ ...run, name: run.pipelineName, at: run.ranAt }),
+        ),
+        pipelines: lists.pipelines.map((item) =>
+          entryOf({ ...item, at: item.addedAt }),
+        ),
+        documents: lists.documents.map((item) =>
+          entryOf({ ...item, at: item.addedAt }),
+        ),
       };
     },
 
-    async listArchived() {
-      return archivedTargets((await getProject(projectId)).metadata);
-    },
-
-    async setArchived(target, archived) {
-      await setProjectItemArchived(projectId, target, archived);
-      await queryClient.invalidateQueries({
-        queryKey: ProjectsQueryKeys.Id(projectId),
-        exact: true,
-      });
-    },
+    setArchived: (target, archived) =>
+      setProjectItemArchived(queryClient, projectId, target, archived),
 
     async listFiles() {
-      const baseUrl = requireBaseUrl();
       const sessions = sessionsOf(await fetchResources(SESSION_RESOURCES));
       const files = await Promise.all(
-        sessions.map(({ sessionId }) => listChatFiles(baseUrl, sessionId)),
+        sessions.map(({ sessionId }) =>
+          readChat(sessionId).then(
+            (resources) => sessionFilesOf(sessionId, resources),
+            // The card skips a chat it can't read, such as someone else's.
+            () => [],
+          ),
+        ),
       );
       return files
         .flat()
         .sort((a, b) => b.addedAt.getTime() - a.addedAt.getTime());
     },
 
-    async pinFile(sessionId, path, title) {
-      const baseUrl = requireBaseUrl();
-      await pinSessionFile({
-        baseUrl,
-        sessionId,
-        authToken: getAuthToken(),
-        path,
-        title,
-      });
-      await queryClient.invalidateQueries({
-        queryKey: sessionFilesKey(baseUrl, sessionId),
-      });
-    },
+    pinFile: (sessionId, path, title) =>
+      setSessionFilePinned(
+        queryClient,
+        fileRequest(sessionId, path, title),
+        true,
+      ),
 
-    async unpinFile(sessionId, path) {
-      const baseUrl = requireBaseUrl();
-      await unpinSessionFile({
-        baseUrl,
-        sessionId,
-        authToken: getAuthToken(),
-        path,
-      });
-      await queryClient.invalidateQueries({
-        queryKey: sessionFilesKey(baseUrl, sessionId),
-      });
-    },
+    unpinFile: (sessionId, path) =>
+      setSessionFilePinned(queryClient, fileRequest(sessionId, path), false),
 
     async listChatRuns(sessionId) {
-      return sessionRunsOf(await getTangent().listResources(sessionId));
+      return sessionRunsOf(await readChat(sessionId));
     },
 
     async dismissChatRun(sessionId, runId) {
-      const tangent = getTangent();
-      const run = sessionRunsOf(await tangent.listResources(sessionId)).find(
+      const run = sessionRunsOf(await readChat(sessionId)).find(
         ({ id }) => id === runId,
       );
       if (!run) return false;
-      await tangent.addResource(sessionId, runEntry(run, true));
-      await queryClient.invalidateQueries({
-        queryKey: sessionRunsKey(sessionId),
-      });
+      await dismissSessionRun(queryClient, getTangent(), sessionId, run);
       return true;
     },
 
     async addRun(runId, name) {
       const target = formatWorkareaTarget(runTarget(runId));
-      const summaries = await fetchResources(CARD_RESOURCES);
-      if (summaries.some(({ metadata }) => metadata?.identity === target)) {
-        return { added: false, target };
-      }
-      const run = await getRunDetails(runId);
-      await createProjectResource(
-        projectId,
-        pipelineRunResourceInput(
-          runId,
-          name ?? run.pipeline_name ?? `Run ${runId}`,
-        ),
-      );
-      await onResourcesChanged();
-      return { added: true, target };
+      const added = await attachPipelineRunOnce(projectId, {
+        runId,
+        // Fetched even when named, so a run id that doesn't exist isn't added.
+        pipelineName: async () => {
+          const run = await getRunDetails(runId);
+          return name ?? run.pipeline_name ?? `Run ${runId}`;
+        },
+      });
+      if (added) await onResourcesChanged();
+      return { added, target };
     },
 
     async addDocument(title, content) {

@@ -1,3 +1,7 @@
+import {
+  tangentAuthHeaders,
+  tangentUrl,
+} from "@/routes/v2/pages/Tangent/services/tangentApi";
 import { isRecord } from "@/utils/typeGuards";
 
 const SHARED_FOLDER_TIMEOUT_MS = 15000;
@@ -28,18 +32,15 @@ export async function createTangentSharedFolder({
   authToken,
   name,
 }: CreateSharedFolderParams): Promise<TangentSharedFolder> {
-  const response = await fetch(
-    `${baseUrl.replace(/\/+$/, "")}/api/shared-folders`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
-      },
-      body: JSON.stringify(name ? { name } : {}),
-      signal: AbortSignal.timeout(SHARED_FOLDER_TIMEOUT_MS),
+  const response = await fetch(tangentUrl(baseUrl, "/api/shared-folders"), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...tangentAuthHeaders(authToken),
     },
-  );
+    body: JSON.stringify(name ? { name } : {}),
+    signal: AbortSignal.timeout(SHARED_FOLDER_TIMEOUT_MS),
+  });
   if (!response.ok) {
     throw new Error(
       `Failed to create Tangent shared folder (${response.status} ${response.statusText}).`,
