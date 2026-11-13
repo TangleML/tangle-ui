@@ -1,20 +1,21 @@
 import { observer } from "mobx-react-lite";
 
-import { Icon } from "@/components/ui/icon";
-import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { InlineStack } from "@/components/ui/layout";
 import {
   SCROLLING_TAB_STRIP,
   Tabs,
   TabsContent,
   TabsList,
 } from "@/components/ui/tabs";
-import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { CloseableTabTrigger } from "@/routes/v2/pages/Tangent/components/CloseableTabTrigger";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { MIN_WORKAREA_WIDTH } from "@/routes/v2/pages/Tangent/layout";
 import { getWorkareaKind } from "@/routes/v2/pages/Tangent/workarea/registry";
 import type { WorkareaHostProps } from "@/routes/v2/pages/Tangent/workarea/types";
+
+import { CanvasEmptyState } from "./CanvasEmptyState";
+import { ProjectPanelCard } from "./ProjectPanelCard";
 
 /**
  * The right-hand "Dynamic Workarea": a tabbed surface people and Tangent agents
@@ -54,32 +55,35 @@ export const DynamicWorkarea = observer(function DynamicWorkarea() {
       className="relative flex h-full min-w-0 flex-1 flex-col bg-card"
       style={{ minWidth: MIN_WORKAREA_WIDTH }}
     >
-      {workareaTabs.length > 0 ? (
-        <Tabs
-          value={activeWorkareaTabId ?? undefined}
-          onValueChange={(id) => store.selectWorkareaTab(id)}
-          className="flex h-full min-h-0 flex-col gap-0"
+      <Tabs
+        value={activeWorkareaTabId ?? ""}
+        onValueChange={(id) => store.selectWorkareaTab(id)}
+        className="flex h-full min-h-0 flex-col gap-0"
+      >
+        <InlineStack
+          wrap="nowrap"
+          className="w-full shrink-0 shadow-[inset_0_-1px_0_var(--border)]"
         >
-          <InlineStack
-            wrap="nowrap"
-            className="w-full shrink-0 shadow-[inset_0_-1px_0_var(--border)]"
+          <TabsList
+            variant="line"
+            className={cn("min-w-0 flex-1", SCROLLING_TAB_STRIP)}
           >
-            <TabsList
-              variant="line"
-              className={cn("min-w-0 flex-1", SCROLLING_TAB_STRIP)}
-            >
-              {workareaTabs.map((tab) => (
-                <CloseableTabTrigger
-                  key={tab.id}
-                  value={tab.id}
-                  title={tab.title}
-                  icon={getWorkareaKind(tab.target.type)?.icon ?? "FileText"}
-                  onClose={() => store.closeWorkareaTab(tab.id)}
-                />
-              ))}
-            </TabsList>
-          </InlineStack>
-          {workareaTabs.map((tab) => {
+            {workareaTabs.map((tab) => (
+              <CloseableTabTrigger
+                key={tab.id}
+                value={tab.id}
+                title={tab.title}
+                icon={getWorkareaKind(tab.target.type)?.icon ?? "FileText"}
+                onClose={() => store.closeWorkareaTab(tab.id)}
+              />
+            ))}
+          </TabsList>
+          <div className="shrink-0 px-2">
+            <ProjectPanelCard />
+          </div>
+        </InlineStack>
+        {workareaTabs.length > 0 ? (
+          workareaTabs.map((tab) => {
             const viewKind = getWorkareaKind(tab.target.type);
             if (!viewKind) return null;
             const content = viewKind.render(tab, hostPropsFor(tab.id));
@@ -105,27 +109,11 @@ export const DynamicWorkarea = observer(function DynamicWorkarea() {
                 {content}
               </TabsContent>
             );
-          })}
-        </Tabs>
-      ) : (
-        <BlockStack
-          gap="2"
-          align="center"
-          className="min-h-0 flex-1 justify-center p-6 text-center"
-        >
-          <Icon
-            name="LayoutTemplate"
-            size="lg"
-            className="text-muted-foreground"
-          />
-          <Text size="sm" weight="semibold">
-            Nothing open yet
-          </Text>
-          <Text size="sm" tone="subdued">
-            Tangent will open artifacts here as you work.
-          </Text>
-        </BlockStack>
-      )}
+          })
+        ) : (
+          <CanvasEmptyState />
+        )}
+      </Tabs>
     </div>
   );
 });

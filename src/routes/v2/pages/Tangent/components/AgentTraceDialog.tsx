@@ -8,7 +8,6 @@ import {
   clearAgentTraceLog,
   readAgentTraceLog,
 } from "@/agent/middleware/agentTraceLog";
-import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,7 +16,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
@@ -66,7 +64,7 @@ interface AgentTraceDialogProps {
   scope: TraceScope;
 }
 
-function AgentTraceDialog({
+export function AgentTraceDialog({
   open,
   onOpenChange,
   scope,
@@ -177,27 +175,5 @@ function AgentTraceDialog({
         )}
       </DialogContent>
     </Dialog>
-  );
-}
-
-export function AgentTraceButton({ scope }: { scope: TraceScope }) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <>
-      <TooltipButton
-        tooltip="View agent log"
-        tooltipSide="bottom"
-        tooltipAlign="end"
-        aria-label="View agent log"
-        variant="ghost"
-        size="xs"
-        className="shrink-0"
-        onClick={() => setOpen(true)}
-      >
-        <Icon name="ScrollText" size="xs" />
-      </TooltipButton>
-      <AgentTraceDialog open={open} onOpenChange={setOpen} scope={scope} />
-    </>
   );
 }

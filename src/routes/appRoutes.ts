@@ -9,6 +9,10 @@ const TOUR_BASE_PATH = "/tour";
 const TANGENT_BASE_PATH = "/tangent";
 const PROJECTS_BASE_PATH = "/projects";
 
+export function isTangentProjectPath(pathname: string): boolean {
+  return pathname.startsWith(`${TANGENT_BASE_PATH}/`);
+}
+
 export const APP_ROUTES = {
   HOME: "/",
   DASHBOARD: "/dashboard",
