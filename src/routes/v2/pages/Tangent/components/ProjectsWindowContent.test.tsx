@@ -4,6 +4,10 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useDeleteProjectAction } from "@/components/Project/useDeleteProjectAction";
+import {
+  type ProjectSession,
+  useSessionsOfProjects,
+} from "@/routes/v2/pages/Tangent/hooks/useProjectSessions";
 import { usePinnedProjects } from "@/services/projects/usePinnedProjects";
 import { useProject } from "@/services/projects/useProjects";
 import { useReachableProjects } from "@/services/projects/useReachableProjects";
@@ -93,14 +97,33 @@ vi.mock("@/components/shared/Dialogs", () => ({
   ConfirmationDialog: () => null,
 }));
 
+vi.mock("@/routes/v2/pages/Tangent/hooks/useProjectSessions", () => ({
+  useSessionsOfProjects: vi.fn(),
+}));
+
 vi.mock("./SessionsWindowContent", () => ({
-  SessionsWindowContent: ({ projectId }: { projectId: string }) => (
-    <div data-testid={`sessions-${projectId}`} />
+  SessionsWindowContent: ({
+    projectId,
+    onlySessionIds,
+  }: {
+    projectId: string;
+    onlySessionIds?: ReadonlySet<string>;
+  }) => (
+    <div data-testid={`sessions-${projectId}`}>
+      {onlySessionIds && `only ${[...onlySessionIds].join(", ")}`}
+    </div>
   ),
 }));
 
 const CHURN = { id: "project-1", name: "Churn model" };
 const FORECAST = { id: "project-2", name: "Q3 forecasting" };
+
+const BACKFILL: ProjectSession = {
+  resourceId: "resource-s-3",
+  sessionId: "s-3",
+  name: "Backfill March",
+  createdAt: new Date("2026-01-03"),
+};
 
 function given(reachable: { id: string; name: string }[]) {
   vi.mocked(useReachableProjects).mockReturnValue({
@@ -127,6 +150,9 @@ describe("ProjectsWindowContent", () => {
       isDeleting: false,
       confirmation: {},
     } as unknown as ReturnType<typeof useDeleteProjectAction>);
+    vi.mocked(useSessionsOfProjects).mockReturnValue(
+      new Map([[FORECAST.id, [BACKFILL]]]),
+    );
   });
   afterEach(() => vi.resetAllMocks());
 
@@ -255,5 +281,82 @@ describe("ProjectsWindowContent", () => {
     expect(
       pinned.compareDocumentPosition(rest) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+
+  describe("searching", () => {
+    const searchBox = () =>
+      screen.getByRole("searchbox", { name: "Search projects and sessions" });
+
+    it("lists only the projects whose name matches", async () => {
+      const user = userEvent.setup();
+      render(<ProjectsWindowContent />);
+
+      await user.type(searchBox(), "forecast");
+
+      expect(screen.getByText("Q3 forecasting")).toBeInTheDocument();
+      expect(screen.queryByText("Churn model")).toBeNull();
+    });
+
+    it("opens a project to show the sessions that match", async () => {
+      const user = userEvent.setup();
+      render(<ProjectsWindowContent />);
+
+      await user.type(searchBox(), "march");
+
+      expect(screen.queryByText("Churn model")).toBeNull();
+      expect(screen.getByTestId("sessions-project-2")).toHaveTextContent(
+        "only s-3",
+      );
+    });
+
+    it("says when nothing matches", async () => {
+      const user = userEvent.setup();
+      render(<ProjectsWindowContent />);
+
+      await user.type(searchBox(), "retention");
+
+      expect(
+        screen.getByText("No matching projects or sessions"),
+      ).toBeInTheDocument();
+    });
+
+    it("brings every project back when Escape clears it", async () => {
+      const user = userEvent.setup();
+      render(<ProjectsWindowContent />);
+
+      await user.type(searchBox(), "forecast{Escape}");
+
+      expect(searchBox()).toHaveValue("");
+      expect(screen.getByText("Churn model")).toBeInTheDocument();
+    });
+
+    it("reads every project's sessions only while searching", async () => {
+      const user = userEvent.setup();
+      render(<ProjectsWindowContent />);
+      expect(useSessionsOfProjects).toHaveBeenLastCalledWith(
+        ["project-1", "project-2"],
+        false,
+      );
+
+      await user.type(searchBox(), "m");
+
+      expect(useSessionsOfProjects).toHaveBeenLastCalledWith(
+        ["project-1", "project-2"],
+        true,
+      );
+    });
+
+    it("forgets what was opened while searching", async () => {
+      const user = userEvent.setup();
+      render(<ProjectsWindowContent />);
+
+      await user.type(searchBox(), "forecast");
+      await user.click(screen.getByText("Q3 forecasting"));
+      expect(screen.getByTestId("sessions-project-2")).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "Clear search" }));
+
+      expect(screen.queryByTestId("sessions-project-2")).toBeNull();
+      expect(searchBox()).toHaveFocus();
+    });
   });
 });

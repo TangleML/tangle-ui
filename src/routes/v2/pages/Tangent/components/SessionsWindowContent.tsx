@@ -30,12 +30,15 @@ const PREVIEW_COUNT = 5;
 
 /**
  * One project's sessions in the sidebar. A session of the project in view is
- * selected in place; one of another project opens that project with it.
+ * selected in place; one of another project opens that project with it. A
+ * search lists every session it matched, and only those.
  */
 export const SessionsWindowContent = observer(function SessionsWindowContent({
   projectId,
+  onlySessionIds,
 }: {
   projectId: string;
+  onlySessionIds?: ReadonlySet<string>;
 }) {
   const store = useTangentProject();
   const openProject = useOpenTangentProject();
@@ -94,13 +97,16 @@ export const SessionsWindowContent = observer(function SessionsWindowContent({
     );
   }
 
-  const activeIndex = sessions.findIndex(
+  const listed = onlySessionIds
+    ? sessions.filter((session) => onlySessionIds.has(session.sessionId))
+    : sessions;
+  const activeIndex = listed.findIndex(
     (session) => session.sessionId === activeSessionId,
   );
   const visible =
-    showAll || activeIndex >= PREVIEW_COUNT
-      ? sessions
-      : sessions.slice(0, PREVIEW_COUNT);
+    onlySessionIds || showAll || activeIndex >= PREVIEW_COUNT
+      ? listed
+      : listed.slice(0, PREVIEW_COUNT);
 
   return (
     <BlockStack align="stretch">
@@ -119,7 +125,7 @@ export const SessionsWindowContent = observer(function SessionsWindowContent({
           );
         })}
       </BlockStack>
-      {visible.length < sessions.length && (
+      {visible.length < listed.length && (
         <Button
           variant="ghost"
           size="sm"
