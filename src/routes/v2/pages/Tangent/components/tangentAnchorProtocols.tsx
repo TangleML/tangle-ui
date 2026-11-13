@@ -63,7 +63,38 @@ function RunAnchor({ path, label }: AnchorProtocolProps) {
   );
 }
 
+/** A pipeline or document someone referenced with `#`, opened in the workarea. */
+function WorkareaTargetAnchor({ href, protocol, label }: AnchorProtocolProps) {
+  const store = useTangentProject();
+  const notify = useToastNotification();
+  const target = isWorkareaTargetString(href)
+    ? parseWorkareaTarget(href)
+    : undefined;
+
+  async function open() {
+    if (!target) return;
+    try {
+      await store.openWorkareaTarget(target, label);
+    } catch (error) {
+      notify(getErrorMessage(error), "error");
+    }
+  }
+
+  return (
+    <ChatEntityChip
+      icon={
+        resourceMeta(protocol === "document" ? "document" : "pipeline").icon
+      }
+      label={label}
+      disabled={!target}
+      onClick={() => void open()}
+    />
+  );
+}
+
 export const tangentAnchorProtocols: AnchorProtocolMap = {
   ...chatAnchorProtocols,
   run: RunAnchor,
+  pipeline: WorkareaTargetAnchor,
+  document: WorkareaTargetAnchor,
 };

@@ -1,4 +1,8 @@
-import { Chat, type EmbedAgent } from "@tangent/embed-react";
+import {
+  Chat,
+  type EmbedAgent,
+  type EmbedReference,
+} from "@tangent/embed-react";
 import type { ReactNode } from "react";
 
 import { Icon } from "@/components/ui/icon";
@@ -28,6 +32,7 @@ interface TangentChatPaneProps {
   onCloseTab: (id: string) => void;
   onOpenAgent?: (agent: EmbedAgent) => void;
   onRemoveAgent?: (id: string) => void;
+  references?: EmbedReference[];
   onOpenArtifact?: (url: string, title: string) => void;
   onSendPrompt?: (content: string) => void;
   onError?: (message: string) => void;
@@ -47,6 +52,7 @@ export function TangentChatPane({
   onCloseTab,
   onOpenAgent,
   onRemoveAgent,
+  references,
   onOpenArtifact,
   onSendPrompt,
   onError,
@@ -94,6 +100,7 @@ export function TangentChatPane({
             style={{ height: "100%" }}
             onOpenAgent={onOpenAgent}
             onRemoveAgent={onRemoveAgent}
+            references={references}
             onOpenArtifact={onOpenArtifact}
             onSendPrompt={onSendPrompt}
             onError={onError}
@@ -113,6 +120,7 @@ export function TangentChatPane({
               style={{ height: "100%" }}
               onOpenAgent={onOpenAgent}
               onRemoveAgent={onRemoveAgent}
+              references={references}
               onOpenArtifact={onOpenArtifact}
               onSendPrompt={onSendPrompt}
               onError={onError}
