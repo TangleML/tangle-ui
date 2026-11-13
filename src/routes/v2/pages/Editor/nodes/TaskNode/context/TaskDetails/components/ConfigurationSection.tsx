@@ -9,7 +9,6 @@ import {
   parseSchemaToAnnotationConfig,
   resolveSelectedClusterKey,
 } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/AnnotationsEditor/utils";
-import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { ColorPicker } from "@/components/ui/color";
 import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -55,7 +54,6 @@ export const ConfigurationSection = observer(function ConfigurationSection({
 }: ConfigurationSectionProps) {
   const { track } = useAnalytics();
   const spec = useSpec();
-  const conditionalExecutionEnabled = useFlagValue("conditional-execution");
   const {
     toggleCacheDisable,
     saveAnnotation,
@@ -224,7 +222,7 @@ export const ConfigurationSection = observer(function ConfigurationSection({
         )}
       </InlineStack>
 
-      {conditionalExecutionEnabled && isConditionalExecutionSupported(task) && (
+      {isConditionalExecutionSupported(task) && (
         <>
           <Separator />
 

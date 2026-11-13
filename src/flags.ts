@@ -83,20 +83,4 @@ export const ExistingFlags: ConfigFlags = {
     category: "setting",
     dependsOn: "component-search-v2",
   },
-
-  ["compare-runs"]: {
-    name: "Compare runs",
-    description:
-      "Select two runs to compare their pipeline structure and results side by side.",
-    default: true,
-    category: "beta",
-  },
-
-  ["conditional-execution"]: {
-    name: "Conditional task execution",
-    description:
-      'Adds a "Conditional execution" setting to the task Config tab. A conditional task gains a "Run when" port that decides whether it runs, either from a literal or from an upstream value.',
-    default: true,
-    category: "beta",
-  },
 };
