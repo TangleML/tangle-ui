@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { observer } from "mobx-react-lite";
 
+import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -47,14 +48,60 @@ function environmentLabel(environment: TangentEnvironment): string {
   return environment.metadata?.windowName ?? hostLabel(environment);
 }
 
-export const LocalEnvIndicator = observer(function LocalEnvIndicator() {
-  const store = useTangentProject();
-  const { baseUrl } = useTangentBaseUrl(store.projectId);
-  const { sessions } = useProjectSessions(store.projectId);
-  const { data: project } = useProject(store.projectId);
-  const { localEnvironments, isLocalEnvConnected } = useProjectLocalEnv(
+function useLocalEnv(projectId: string) {
+  const { baseUrl } = useTangentBaseUrl(projectId);
+  const { sessions } = useProjectSessions(projectId);
+  const localEnv = useProjectLocalEnv(
     baseUrl,
     sessions.map((session) => session.sessionId),
+  );
+  return { baseUrl, ...localEnv };
+}
+
+/**
+ * A green plug beside project settings while an editor is connected, so it is
+ * plain that agents can reach your local workspace without opening settings.
+ */
+export const LocalEnvStatus = observer(function LocalEnvStatus({
+  onOpen,
+}: {
+  onOpen: () => void;
+}) {
+  const store = useTangentProject();
+  const { localEnvironments, isLocalEnvConnected } = useLocalEnv(
+    store.projectId,
+  );
+
+  if (!isLocalEnvConnected) return null;
+
+  const [single] = localEnvironments;
+  const label =
+    localEnvironments.length === 1
+      ? `Connected to VS Code · ${environmentLabel(single)}`
+      : `Connected to VS Code · ${localEnvironments.length} windows`;
+
+  return (
+    <TooltipButton
+      tooltip={label}
+      tooltipSide="bottom"
+      tooltipAlign="end"
+      aria-label={label}
+      variant="ghost"
+      size="icon"
+      className="size-7 text-success hover:text-success"
+      onClick={onOpen}
+      {...tracking("projects.local_env_status.open")}
+    >
+      <Icon name="Plug" size="sm" />
+    </TooltipButton>
+  );
+});
+
+export const LocalEnvIndicator = observer(function LocalEnvIndicator() {
+  const store = useTangentProject();
+  const { data: project } = useProject(store.projectId);
+  const { baseUrl, localEnvironments, isLocalEnvConnected } = useLocalEnv(
+    store.projectId,
   );
 
   if (!baseUrl) return null;
