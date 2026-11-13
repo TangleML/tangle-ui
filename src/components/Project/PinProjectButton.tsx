@@ -15,7 +15,9 @@ export function PinProjectButton({
   className,
 }: PinProjectButtonProps) {
   const { pinned, isPinning, togglePin } = useProjectPin(project);
-  const label = pinned ? `Unpin ${project.name}` : `Pin ${project.name}`;
+  const label = pinned
+    ? `Remove ${project.name} from favorites`
+    : `Add ${project.name} to favorites`;
 
   return (
     <Button
@@ -29,13 +31,13 @@ export function PinProjectButton({
       className={cn(
         "shrink-0",
         pinned
-          ? "text-brand-accent hover:text-brand-accent"
+          ? "text-warning hover:text-warning"
           : "text-muted-foreground hover:text-foreground",
         className,
       )}
-      {...tracking("projects.pin_project", { new_value: !pinned })}
+      {...tracking("projects.favorite_project", { new_value: !pinned })}
     >
-      <Icon name={pinned ? "PinOff" : "Pin"} size="sm" />
+      <Icon name="Star" size="sm" className={cn(pinned && "fill-warning")} />
     </Button>
   );
 }

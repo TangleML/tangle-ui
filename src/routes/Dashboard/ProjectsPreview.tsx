@@ -1,51 +1,35 @@
-import { ProjectCard } from "@/components/Home/ProjectsSection/ProjectCard";
-import { PROJECT_GRID_ONE_ROW } from "@/components/Home/ProjectsSection/projectGrid";
+import { ProjectRow } from "@/components/Home/ProjectsSection/ProjectRow";
 import { useMyProjects } from "@/components/Home/ProjectsSection/useMyProjects";
-import {
-  useProjectsEnabled,
-  useTangentEnabled,
-} from "@/components/shared/Settings/useFlags";
-import { BlockStack } from "@/components/ui/layout";
-import { Text } from "@/components/ui/typography";
+import { useProjectsEnabled } from "@/components/shared/Settings/useFlags";
 import { useBackend } from "@/providers/BackendProvider";
-import { APP_ROUTES } from "@/routes/appRoutes";
 
-import { SectionHeader } from "./SectionHeader";
+import {
+  DashboardSectionFrame,
+  type DashboardWidgetProps,
+} from "./DashboardSectionFrame";
 
-const PREVIEW_MAX = 8;
-
-export function ProjectsPreview() {
+export function ProjectsPreview(props: DashboardWidgetProps) {
   const projectsEnabled = useProjectsEnabled();
-  const tangentEnabled = useTangentEnabled();
   const { configured, available } = useBackend();
-  const { projects: all, isPending } = useMyProjects();
-
-  // A preview carries no backend warnings of its own — the runs section below
-  // it already says when the backend is the problem.
-  if (!projectsEnabled || !configured || !available) return null;
-
-  const projects = all.slice(0, PREVIEW_MAX);
-
+  const { projects, isPending, error } = useMyProjects();
+  const unavailable = !projectsEnabled
+    ? "Enable Projects in settings to use this section."
+    : !configured || !available
+      ? "Connect a backend to see your projects."
+      : undefined;
   return (
-    <BlockStack gap="3">
-      <SectionHeader
-        title="My Projects"
-        viewAllTo={APP_ROUTES.PROJECTS}
-        viewAllLabel="View all projects"
-      />
-      {!isPending && projects.length === 0 ? (
-        <Text size="sm" tone="subdued">
-          {tangentEnabled
-            ? "No projects yet — start a session to make one."
-            : "No projects yet."}
-        </Text>
-      ) : (
-        <div className={PROJECT_GRID_ONE_ROW}>
-          {projects.map((project) => (
-            <ProjectCard key={project.id} project={project} />
-          ))}
-        </div>
-      )}
-    </BlockStack>
+    <DashboardSectionFrame
+      {...props}
+      unavailable={unavailable}
+      empty={projects.length === 0}
+      loading={!unavailable && isPending}
+      error={error?.message}
+    >
+      <div className="overflow-hidden rounded-lg border border-border">
+        {projects.slice(0, 5).map((project) => (
+          <ProjectRow key={project.id} project={project} compact />
+        ))}
+      </div>
+    </DashboardSectionFrame>
   );
 }

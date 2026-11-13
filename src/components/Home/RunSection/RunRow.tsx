@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { type MouseEvent } from "react";
 
 import type { PipelineRunResponse } from "@/api/types.gen";
@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Text } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
+import { cn } from "@/lib/utils";
 import { useBackend } from "@/providers/BackendProvider";
 import { getDefaultRunPath } from "@/routes/runRoutes";
 import { runAnnotationsQueryOptions } from "@/services/runAnnotations";
@@ -31,12 +32,17 @@ import {
 } from "@/utils/annotations";
 import { formatDate } from "@/utils/date";
 import { hasNewTabModifier } from "@/utils/dom";
-import { getOverallExecutionStatusFromStats } from "@/utils/executionStatus";
+import {
+  getExecutionStatusLabel,
+  getOverallExecutionStatusFromStats,
+} from "@/utils/executionStatus";
 import { copyToClipboard } from "@/utils/string";
 import { tracking } from "@/utils/tracking";
 
 interface RunRowProps {
   run: PipelineRunResponse;
+  responsive?: boolean;
+  overflow?: boolean;
   onFilterByUser?: (createdBy: string) => void;
   selectable?: boolean;
   isSelected?: boolean;
@@ -46,6 +52,8 @@ interface RunRowProps {
 
 const RunRow = ({
   run,
+  responsive = false,
+  overflow = false,
   onFilterByUser,
   selectable = false,
   isSelected = false,
@@ -133,10 +141,19 @@ const RunRow = ({
   return (
     <TableRow
       onClick={handleRowClick}
-      className="cursor-pointer text-muted-foreground text-xs h-10"
+      className={cn(
+        "cursor-pointer text-muted-foreground text-xs",
+        responsive ? "h-12" : "h-10",
+        responsive && overflow && "hidden @[52rem]/dashboard-section:table-row",
+      )}
     >
       {selectable && (
-        <TableCell className="w-8">
+        <TableCell
+          className={cn(
+            "w-8",
+            responsive && "hidden @[52rem]/dashboard-section:table-cell",
+          )}
+        >
           <div
             onClick={(e) => e.stopPropagation()}
             className="flex items-center"
@@ -151,39 +168,83 @@ const RunRow = ({
       )}
       <TableCell>
         <InlineStack gap="2" blockAlign="center" wrap="nowrap">
-          <StatusIcon status={overallStatus} />
           <span
-            className="truncate max-w-100 text-sm text-foreground"
+            className="shrink-0"
+            aria-label={getExecutionStatusLabel(overallStatus)}
+          >
+            <StatusIcon status={overallStatus} />
+          </span>
+          <Link
+            to={clickThroughUrl}
+            onClick={(event) => {
+              event.stopPropagation();
+              if (onRunClick) {
+                event.preventDefault();
+                onRunClick(run);
+              }
+            }}
+            className="min-w-0 truncate text-sm text-foreground no-underline"
             title={name}
           >
             {name}
-          </span>
+          </Link>
           <div
             onClick={(e) => e.stopPropagation()}
-            className="flex items-center text-sm"
+            className={cn(
+              "flex items-center text-sm",
+              responsive && "hidden @[72rem]/dashboard-section:flex",
+            )}
           >
             #
-            <CopyText size="sm" className="text-muted-foreground">
+            <CopyText
+              size={responsive ? "xs" : "sm"}
+              compact={responsive}
+              className="text-muted-foreground"
+            >
               {runId}
             </CopyText>
           </div>
         </InlineStack>
       </TableCell>
-      <TableCell>
+      <TableCell
+        className={cn(
+          responsive && "hidden @[36rem]/dashboard-section:table-cell",
+        )}
+      >
         <div className="w-2/3">
           <StatusBar executionStatusStats={run.execution_status_stats} />
         </div>
       </TableCell>
-      <TableCell>
+      <TableCell
+        className={cn(
+          responsive && "hidden @[36rem]/dashboard-section:table-cell",
+        )}
+      >
         {run.created_at ? formatDate(run.created_at) : "Data not found..."}
       </TableCell>
-      <TableCell>
+      <TableCell
+        className={cn(
+          responsive && "hidden @[52rem]/dashboard-section:table-cell",
+        )}
+      >
         {isTruncated ? createdByContentWithTooltip : createdByContent}
       </TableCell>
-      <TableCell className="max-w-64">
-        {tags && tags.length > 0 && <TagList tags={tags} />}
+      <TableCell
+        className={cn(
+          "max-w-64",
+          responsive && "hidden @[52rem]/dashboard-section:table-cell",
+        )}
+      >
+        {tags && tags.length > 0 && (
+          <TagList tags={tags} wrap={responsive ? "nowrap" : "wrap"} />
+        )}
       </TableCell>
-      <TableCell className="w-0">
+      <TableCell
+        className={cn(
+          "w-0",
+          responsive && "hidden @[52rem]/dashboard-section:table-cell",
+        )}
+      >
         <InlineStack gap="2" blockAlign="center" wrap="nowrap">
           <RunSourceIcon source={source} className="opacity-50" />
           <TooltipButton

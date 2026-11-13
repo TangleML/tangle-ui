@@ -10,7 +10,7 @@ import { useDeleteProject } from "@/services/projects/useProjects";
 import { useWorkspaces } from "@/services/projects/useWorkspaces";
 import { copyToClipboard } from "@/utils/string";
 
-import { ProjectCard } from "./ProjectCard";
+import { ProjectRow } from "./ProjectRow";
 
 const mutate = vi.fn();
 const togglePin = vi.fn();
@@ -116,13 +116,13 @@ function mockFlags(flags: Record<string, boolean>) {
   vi.mocked(useFlagValue).mockImplementation((flag) => flags[flag] ?? false);
 }
 
-function renderCard(overrides: Partial<ProjectSummary> = {}) {
-  return render(<ProjectCard project={{ ...project, ...overrides }} />);
+function renderRow(overrides: Partial<ProjectSummary> = {}) {
+  return render(<ProjectRow project={{ ...project, ...overrides }} />);
 }
 
 async function openDeleteConfirmation(overrides: Partial<ProjectSummary> = {}) {
   const user = userEvent.setup();
-  renderCard(overrides);
+  renderRow(overrides);
 
   await user.click(
     screen.getByRole("button", { name: "Project actions: Churn model" }),
@@ -132,7 +132,7 @@ async function openDeleteConfirmation(overrides: Partial<ProjectSummary> = {}) {
   return screen.findByRole("alertdialog");
 }
 
-describe("ProjectCard", () => {
+describe("ProjectRow", () => {
   beforeEach(() => {
     // jsdom implements neither, and Radix's menu calls both while opening.
     Element.prototype.scrollIntoView = vi.fn();
@@ -148,21 +148,31 @@ describe("ProjectCard", () => {
   });
 
   it("shows the project's name, description and contents", () => {
-    renderCard();
+    renderRow();
 
     expect(screen.getByText("Churn model")).toBeInTheDocument();
     expect(screen.getByText("Q3 churn work")).toBeInTheDocument();
     expect(screen.getByText("3 pipelines · 1 document")).toBeInTheDocument();
   });
 
+  it("keeps dashboard rows compact while retaining project contents and actions", () => {
+    render(<ProjectRow project={project} compact />);
+    expect(screen.getByText("Churn model")).toBeInTheDocument();
+    expect(screen.getByText("3 pipelines · 1 document")).toBeInTheDocument();
+    expect(screen.queryByText("Q3 churn work")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Project actions: Churn model" }),
+    ).toBeInTheDocument();
+  });
+
   /**
-   * A tile sits in a fixed grid track, and its stacks lay children out at
-   * content width unless told otherwise, so a long name ran out over the tile
+   * A row sits in a fixed list track, and its stacks lay children out at
+   * content width unless told otherwise, so a long name ran out over the row
    * beside it. jsdom computes no layout, so the containing classes are what can
    * be pinned; the rendering itself was checked in a browser.
    */
-  it("keeps a name too long for the tile inside it", () => {
-    renderCard({ name: "Supercalifragilisticexpialidocious_Churn_Model_V4" });
+  it("keeps a name too long for the row inside it", () => {
+    renderRow({ name: "Supercalifragilisticexpialidocious_Churn_Model_V4" });
 
     const name = screen.getByText(
       "Supercalifragilisticexpialidocious_Churn_Model_V4",
@@ -172,15 +182,15 @@ describe("ProjectCard", () => {
   });
 
   it("wraps a description that is one unbroken word", () => {
-    renderCard({ description: "Averyverylongsinglewordwithoutanyspacesatall" });
+    renderRow({ description: "Averyverylongsinglewordwithoutanyspacesatall" });
 
     expect(
       screen.getByText("Averyverylongsinglewordwithoutanyspacesatall"),
     ).toHaveClass("wrap-break-word");
   });
 
-  it("keeps a long list of counts inside the tile", () => {
-    renderCard({
+  it("keeps a long list of counts inside the row", () => {
+    renderRow({
       resourceCounts: { pipeline: 12, document: 34, run: 56, notebook: 7 },
     });
 
@@ -188,7 +198,7 @@ describe("ProjectCard", () => {
   });
 
   it("opens the project where the work happens, not its details", () => {
-    renderCard();
+    renderRow();
 
     expect(screen.getByRole("link")).toHaveAttribute(
       "href",
@@ -198,7 +208,7 @@ describe("ProjectCard", () => {
 
   it("still reaches the details page from the menu", async () => {
     const user = userEvent.setup();
-    renderCard();
+    renderRow();
 
     await user.click(
       screen.getByRole("button", { name: "Project actions: Churn model" }),
@@ -213,7 +223,7 @@ describe("ProjectCard", () => {
 
   /**
    * Tangent is what turns a project into somewhere to work. Without it the
-   * project's own page is the only page, so the card goes straight there and
+   * project's own page is the only page, so the row goes straight there and
    * the menu stops offering a second way to the same place.
    */
   describe("without Tangent", () => {
@@ -222,7 +232,7 @@ describe("ProjectCard", () => {
     });
 
     it("opens the project's own page", () => {
-      renderCard();
+      renderRow();
 
       expect(screen.getByRole("link")).toHaveAttribute(
         "href",
@@ -230,9 +240,9 @@ describe("ProjectCard", () => {
       );
     });
 
-    it("drops the details item, which now goes where the card goes", async () => {
+    it("drops the details item, which now goes where the row goes", async () => {
       const user = userEvent.setup();
-      renderCard();
+      renderRow();
 
       await user.click(
         screen.getByRole("button", { name: "Project actions: Churn model" }),
@@ -242,7 +252,7 @@ describe("ProjectCard", () => {
     });
 
     it("does not count sessions the user cannot see", () => {
-      renderCard({
+      renderRow({
         resourceCounts: { pipeline: 3, agent_session: 2, document: 1 },
       });
 
@@ -251,7 +261,7 @@ describe("ProjectCard", () => {
   });
 
   it("counts sessions among a project's contents when Tangent is on", () => {
-    renderCard({
+    renderRow({
       resourceCounts: { pipeline: 3, agent_session: 2, document: 1 },
     });
 
@@ -262,7 +272,7 @@ describe("ProjectCard", () => {
 
   it("copies the project's own url when sharing", async () => {
     const user = userEvent.setup();
-    renderCard();
+    renderRow();
 
     await user.click(
       screen.getByRole("button", { name: "Project actions: Churn model" }),
@@ -280,7 +290,7 @@ describe("ProjectCard", () => {
 
   it("does not delete anything when sharing", async () => {
     const user = userEvent.setup();
-    renderCard();
+    renderRow();
 
     await user.click(
       screen.getByRole("button", { name: "Project actions: Churn model" }),
@@ -291,34 +301,36 @@ describe("ProjectCard", () => {
     expect(screen.queryByRole("alertdialog")).toBeNull();
   });
 
-  /** A pinned project leads the grid, and has to say why it is out in front. */
-  it("marks a pinned project on the card itself", () => {
+  /** A pinned project leads the list, and has to say why it is out in front. */
+  it("marks a favorite project on the row itself", () => {
     mockPin({ pinned: true });
-    renderCard();
+    renderRow();
 
-    expect(screen.getByLabelText("Pinned")).toBeInTheDocument();
+    expect(screen.getByLabelText("Favorite")).toBeInTheDocument();
   });
 
   it("leaves an unpinned project unmarked", () => {
-    renderCard();
+    renderRow();
 
-    expect(screen.queryByLabelText("Pinned")).toBeNull();
+    expect(screen.queryByLabelText("Favorite")).toBeNull();
   });
 
-  it("pins the project from its own menu", async () => {
+  it("adds the project to favorites from its own menu", async () => {
     const user = userEvent.setup();
-    renderCard();
+    renderRow();
 
     await user.click(
       screen.getByRole("button", { name: "Project actions: Churn model" }),
     );
-    await user.click(await screen.findByRole("menuitem", { name: /Pin/ }));
+    await user.click(
+      await screen.findByRole("menuitem", { name: /Add to favorites/ }),
+    );
 
     expect(togglePin).toHaveBeenCalled();
   });
 
   it("names the workspace the project lives in", () => {
-    renderCard();
+    renderRow();
 
     expect(screen.getByLabelText("Workspace")).toBeInTheDocument();
     expect(screen.getByText("ML Research")).toBeInTheDocument();
@@ -327,14 +339,14 @@ describe("ProjectCard", () => {
 
   it("names a workspace that has since been retired", () => {
     mockWorkspaces([{ ...workspace, isActive: false }]);
-    renderCard();
+    renderRow();
 
     expect(screen.getByText("ML Research")).toBeInTheDocument();
   });
 
   it("leaves the workspace out until the list says what it is called", () => {
     mockWorkspaces(undefined);
-    renderCard();
+    renderRow();
 
     expect(screen.queryByLabelText("Workspace")).toBeNull();
     expect(screen.queryByText("workspace-1")).toBeNull();

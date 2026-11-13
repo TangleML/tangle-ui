@@ -30,11 +30,21 @@ vi.mock("@/components/Home/ProjectsSection/useMyProjects", () => ({
   useMyProjects: vi.fn(),
 }));
 
-vi.mock("@/components/Home/ProjectsSection/ProjectCard", () => ({
-  ProjectCard: ({ project }: { project: ProjectSummary }) => (
-    <div data-testid="project-card">{project.name}</div>
+vi.mock("@/components/Home/ProjectsSection/ProjectRow", () => ({
+  ProjectRow: ({ project }: { project: ProjectSummary }) => (
+    <div data-testid="project-row">{project.name}</div>
   ),
 }));
+
+const widgetProps = {
+  section: { id: "projects", type: "projects" as const, width: 3 as const },
+  editing: false,
+  first: true,
+  last: true,
+  onChange: vi.fn(),
+  onRemove: vi.fn(),
+  onMove: vi.fn(),
+};
 
 function project(id: string): ProjectSummary {
   return {
@@ -78,47 +88,45 @@ describe("ProjectsPreview", () => {
   it("shows the projects the user has", () => {
     given(project("a"), project("b"));
 
-    render(<ProjectsPreview />);
+    render(<ProjectsPreview {...widgetProps} />);
 
-    expect(screen.getAllByTestId("project-card")).toHaveLength(2);
+    expect(screen.getAllByTestId("project-row")).toHaveLength(2);
   });
 
   it("leads to the full list", () => {
     given(project("a"));
 
-    render(<ProjectsPreview />);
+    render(<ProjectsPreview {...widgetProps} />);
 
-    expect(
-      screen.getByRole("link", { name: "View all projects →" }),
-    ).toHaveAttribute("href", "/projects");
+    expect(screen.getByRole("link", { name: "View all →" })).toHaveAttribute(
+      "href",
+      "/projects",
+    );
   });
 
-  /**
-   * The row is clipped to one line, so anything past a screenful is invisible
-   * however wide the window is — rendering all of them is only weight.
-   */
-  it("renders no more than a wide screen could show", () => {
+  it("limits the preview to five projects", () => {
     given(...Array.from({ length: 30 }, (_, index) => project(String(index))));
 
-    render(<ProjectsPreview />);
+    render(<ProjectsPreview {...widgetProps} />);
 
-    expect(screen.getAllByTestId("project-card")).toHaveLength(8);
+    expect(screen.getAllByTestId("project-row")).toHaveLength(5);
   });
 
-  it("invites a user with no projects rather than showing an empty row", () => {
-    render(<ProjectsPreview />);
+  it("hides an empty section in view mode", () => {
+    const { container } = render(<ProjectsPreview {...widgetProps} />);
+    expect(container).toBeEmptyDOMElement();
+  });
 
-    expect(
-      screen.getByText("No projects yet — start a session to make one."),
-    ).toBeInTheDocument();
-    expect(screen.queryByTestId("project-card")).toBeNull();
+  it("keeps an empty section available in edit mode", () => {
+    render(<ProjectsPreview {...widgetProps} editing />);
+    expect(screen.getByText(/This section hides/)).toBeInTheDocument();
   });
 
   it("says nothing at all when projects are turned off", () => {
     vi.mocked(useFlagValue).mockReturnValue(false);
     given(project("a"));
 
-    const { container } = render(<ProjectsPreview />);
+    const { container } = render(<ProjectsPreview {...widgetProps} />);
 
     expect(container).toBeEmptyDOMElement();
   });
@@ -130,7 +138,7 @@ describe("ProjectsPreview", () => {
       available: false,
     } as unknown as ReturnType<typeof useBackend>);
 
-    const { container } = render(<ProjectsPreview />);
+    const { container } = render(<ProjectsPreview {...widgetProps} />);
 
     expect(container).toBeEmptyDOMElement();
   });
