@@ -32,6 +32,7 @@ import { documentResourceInput } from "@/services/projects/resourceDescriptor";
 import {
   formatWorkareaTarget,
   idIdentity,
+  isRunOrExecutionId,
   runTarget,
 } from "@/services/projects/resourceTarget";
 import type { ListProjectResourcesParams } from "@/services/projects/types";
@@ -227,6 +228,11 @@ export function createProjectCardHandlers({
     },
 
     async addRun(runId, name) {
+      if (!isRunOrExecutionId(runId)) {
+        throw new Error(
+          `\`${runId}\` isn't a pipeline run's id: an id holds only letters, digits, hyphens and underscores.`,
+        );
+      }
       const target = formatWorkareaTarget(runTarget(runId));
       const added = await attachPipelineRunOnce(projectId, {
         runId,

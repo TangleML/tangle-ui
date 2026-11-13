@@ -10,6 +10,7 @@ import { resourceMeta } from "@/services/projects/resourceMeta";
 import type { WorkareaTarget } from "@/services/projects/resourceTarget";
 import {
   idIdentity,
+  isRunOrExecutionId,
   isWorkareaTargetString,
   parseWorkareaTarget,
 } from "@/services/projects/resourceTarget";
@@ -17,7 +18,7 @@ import {
 function runTarget(path: string): WorkareaTarget | undefined {
   const candidate = `run://${path}`;
   if (isWorkareaTargetString(candidate)) return parseWorkareaTarget(candidate);
-  if (path === "" || path.includes("/")) return undefined;
+  if (!isRunOrExecutionId(path)) return undefined;
   return { type: "run", identity: idIdentity(path) };
 }
 

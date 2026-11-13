@@ -396,6 +396,21 @@ describe("createProjectCardHandlers", () => {
     expect(onResourcesChanged).toHaveBeenCalledTimes(1);
   });
 
+  it.each(["../../users/me", "r-1/cancel", "r-1?x=1", "r 1"])(
+    "won't look up or add %s, which could not be a run's id",
+    async (runId) => {
+      const { handlers, getRunDetails } = setup({ cardResources: [] });
+
+      await expect(handlers.addRun(runId, "Train")).rejects.toThrow(
+        /isn't a pipeline run's id/,
+      );
+
+      expect(getRunDetails).not.toHaveBeenCalled();
+      expect(services.listProjectResources).not.toHaveBeenCalled();
+      expect(services.createProjectResource).not.toHaveBeenCalled();
+    },
+  );
+
   it("won't add a run that doesn't exist, even under a name", async () => {
     const { handlers, getRunDetails } = setup({ cardResources: [] });
     getRunDetails.mockRejectedValue(new Error("Run not-a-run not found"));

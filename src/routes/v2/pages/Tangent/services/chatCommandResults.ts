@@ -34,8 +34,33 @@ interface FileLinks {
   fileUrl: (file: SessionFileRecord) => string;
 }
 
+const LINE_BREAKS_AND_CONTROLS = /[\p{Cc}\p{Zl}\p{Zp}]+/gu;
+
+// Names, paths and messages here come from what other project members and
+// agents wrote, and the result is read as markdown by the chat and replayed to
+// the agent, so none of it may end its link, start another, or open a block.
+function plainText(text: string): string {
+  return text
+    .replace(LINE_BREAKS_AND_CONTROLS, " ")
+    .replace(/[\\[\]`<>]/g, "\\$&");
+}
+
+// A link's address ends at its first space or unmatched bracket unless it's in
+// angle brackets, and a name or a file's path can hold either. Bracketed, it's
+// read whole and the agent still sees the real address.
+function linkAddress(href: string): string {
+  const address = href.replace(/[<>\\\p{Cc}\p{Zl}\p{Zp}]/gu, (character) =>
+    encodeURIComponent(character),
+  );
+  return /[\s()]/.test(address) ? `<${address}>` : address;
+}
+
 function link(name: string, href: string): string {
-  return `[${name.replace(/[[\]\\]/g, "\\$&")}](${href})`;
+  return `[${plainText(name)}](${linkAddress(href)})`;
+}
+
+function codeSpan(text: string): string {
+  return `\`${text.replace(/[`\p{Cc}\p{Zl}\p{Zp}]+/gu, "")}\``;
 }
 
 function plural(count: number, noun: string): string {
@@ -73,7 +98,7 @@ function added(at: Date | null): string {
 }
 
 function pipelineRow({ target, name, at }: ProjectCardEntry): string {
-  return `${link(name, target)} · id \`${targetId(target)}\`${added(at)}`;
+  return `${link(name, target)} · id ${codeSpan(targetId(target))}${added(at)}`;
 }
 
 function documentRow({ target, name, at }: ProjectCardEntry): string {
@@ -87,18 +112,11 @@ function runRow(runStatuses: ReadonlyMap<string, string>) {
       .join(" · ");
 }
 
-// A link's address ends at its first space unless it's in angle brackets, and
-// a file's path can hold one. Bracketed, it's read whole and the agent still
-// sees the real path.
-function fileAddress(address: string): string {
-  return /[\s()<>]/.test(address) ? `<${address}>` : address;
-}
-
 function fileRow({ thisChat, fileUrl }: FileLinks) {
   return (file: SessionFileRecord) =>
     file.sessionId === thisChat
-      ? link(file.title, fileAddress(file.path))
-      : `${link(file.title, fileAddress(fileUrl(file)))} · another chat`;
+      ? link(file.title, file.path)
+      : `${link(file.title, fileUrl(file))} · another chat`;
 }
 
 /**
@@ -218,7 +236,9 @@ export function runStartsResult(starts: RunStart[]): string {
   const failed = starts.flatMap(({ id, name, runTarget, error }) =>
     runTarget
       ? []
-      : [`\`${id}\`${name ? ` (${name})` : ""}: ${error ?? "didn't start"}`],
+      : [
+          `${codeSpan(id)}${name ? ` (${plainText(name)})` : ""}: ${plainText(error ?? "didn't start")}`,
+        ],
   );
   return [
     started.length > 0 &&

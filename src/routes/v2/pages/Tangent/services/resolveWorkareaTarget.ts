@@ -6,6 +6,7 @@ import type {
 } from "@/routes/v2/pages/Tangent/workarea/types";
 import {
   idIdentity,
+  isRunOrExecutionId,
   isWorkareaTargetString,
   parseWorkareaTarget,
 } from "@/services/projects/resourceTarget";
@@ -42,7 +43,9 @@ export function coerceWorkareaTarget(raw: string): WorkareaTarget {
   if (isWorkareaTargetString(raw)) return parseWorkareaTarget(raw);
 
   const runId = runIdFromUrl(raw);
-  if (runId) return { type: "run", identity: idIdentity(runId) };
+  if (runId && isRunOrExecutionId(runId)) {
+    return { type: "run", identity: idIdentity(runId) };
+  }
 
   return parseWorkareaTarget(raw);
 }

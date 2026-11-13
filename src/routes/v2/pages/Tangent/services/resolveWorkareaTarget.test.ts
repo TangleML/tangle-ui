@@ -80,6 +80,15 @@ describe("coerceWorkareaTarget", () => {
     ).toEqual({ type: "run", identity: "id/run-9" });
   });
 
+  it("rejects a run url or target whose id could not be a run's", () => {
+    expect(() =>
+      coerceWorkareaTarget("https://host/runs/..%2F..%2Fusers%2Fme"),
+    ).toThrow(/Unsupported workarea target type/);
+    expect(() => coerceWorkareaTarget("run://id/r-1/cancel")).toThrow(
+      /Malformed run id/,
+    );
+  });
+
   it("rejects a url that names no run", () => {
     expect(() => coerceWorkareaTarget("https://host/pipelines/abc")).toThrow(
       /Unsupported workarea target type/,

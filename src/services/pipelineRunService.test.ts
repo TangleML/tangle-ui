@@ -14,6 +14,7 @@ import { RemoteAuthError } from "@/utils/fetchWithErrorHandling";
 import {
   cancelPipelineRun,
   createPipelineRun,
+  fetchRunAnnotations,
   updateRunAnnotation,
 } from "./pipelineRunService";
 
@@ -215,5 +216,21 @@ describe("acting as a team", () => {
       expect.objectContaining({ method: "PUT" }),
     );
     expect(sentHeaders()).toEqual({ [HEADER_NAME]: TEAM_ID });
+  });
+
+  it("keeps an id or key inside its own part of the address", async () => {
+    await cancelPipelineRun("../users/me?x=1#", BACKEND_URL);
+    await updateRunAnnotation("42/cancel", BACKEND_URL, {
+      key: "../../42/cancel?",
+      value: "x",
+    });
+    mockFetch.mockResolvedValue(jsonResponse(200, {}));
+    await fetchRunAnnotations("42/../43", BACKEND_URL);
+
+    expect(mockFetch.mock.calls.map(([url]) => url)).toEqual([
+      `${BACKEND_URL}/api/pipeline_runs/..%2Fusers%2Fme%3Fx%3D1%23/cancel`,
+      `${BACKEND_URL}/api/pipeline_runs/42%2Fcancel/annotations/..%2F..%2F42%2Fcancel%3F?value=x`,
+      `${BACKEND_URL}/api/pipeline_runs/42%2F..%2F43/annotations/`,
+    ]);
   });
 });
