@@ -28,7 +28,11 @@ import { resolveChatEntity } from "@/routes/v2/shared/components/AiChat/componen
 import { navigateToEntity } from "@/routes/v2/shared/store/focus.actions";
 import type { SharedUIStore } from "@/routes/v2/shared/store/SharedStoreContext";
 import { projectSelector } from "@/services/projects/projectSelector";
-import { idIdentity, sameTarget } from "@/services/projects/resourceTarget";
+import {
+  idIdentity,
+  parseIdentity,
+  sameTarget,
+} from "@/services/projects/resourceTarget";
 import { TANGENT_UI_RUN_SOURCE } from "@/utils/annotationKeys";
 import { getErrorMessage } from "@/utils/string";
 
@@ -87,6 +91,11 @@ export interface TangentSessionIo {
   nameSessionIfUnnamed: (sessionId: string, prompt: string) => Promise<void>;
   notify: (message: string, type: "error") => void;
   projectInstructions?: string | null;
+  recordSessionRun?: (
+    sessionId: string,
+    runId: string,
+    name: string,
+  ) => Promise<void>;
 }
 
 export interface StartSessionOptions {
@@ -345,6 +354,16 @@ export class TangentProjectStore {
       throw new Error(
         "No active Tangent session. Start a session before opening a workarea tab.",
       );
+    }
+    if (view.target.type === "run") {
+      // Best effort: the run still opens if the chat can't note it down.
+      void this.#io
+        ?.recordSessionRun?.(
+          this.activeSessionId,
+          parseIdentity(view.target.identity).value,
+          view.title,
+        )
+        .catch(() => undefined);
     }
     const tabs = this.workareaTabs;
     const existing = tabs.find((tab) => sameTarget(tab.target, view.target));

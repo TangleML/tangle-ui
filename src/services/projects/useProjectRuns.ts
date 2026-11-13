@@ -1,5 +1,10 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import {
+  queryOptions,
+  useInfiniteQuery,
+  useQueries,
+  useQuery,
+} from "@tanstack/react-query";
 
 import { useBackend } from "@/providers/BackendProvider";
 import {
@@ -8,6 +13,8 @@ import {
 } from "@/utils/executionStatus";
 import { projectIdsFromAnnotations } from "@/utils/projectRunAnnotation";
 
+import { isSettledRefusal } from "../retryPolicy";
+import { ApiError } from "./errors";
 import { getRunExecutionStats, listProjectRuns } from "./projectRunsService";
 import { projectQueryDefaults } from "./queryDefaults";
 import { ProjectRunsQueryKeys } from "./types";
@@ -33,12 +40,22 @@ export async function invalidateProjectRunQueries(
 }
 
 /**
+ * The backend's settled "no" for a run, such as one that was deleted, which
+ * asking again won't change.
+ */
+export function isRefusedRun(error: unknown): boolean {
+  return error instanceof ApiError && isSettledRefusal(error.status);
+}
+
+/**
  * A run with no executions yet has not started rather than finished, so it
  * keeps polling: that is the "Waiting for upstream" a queued run sits in.
  */
 export function runPollInterval(
   stats: ExecutionStatusStats | null | undefined,
+  error?: unknown,
 ): number | false {
+  if (isRefusedRun(error)) return false;
   return stats && isExecutionComplete(stats) ? false : RUN_POLL_MS;
 }
 
@@ -69,10 +86,8 @@ export function useProjectRuns(projectId: string | undefined) {
  * alone it serves a settled status to the next mount, which is how a completed
  * run came back still claiming to be waiting.
  */
-export function useRunExecutionStats(runId: string | undefined) {
-  const { configured, available } = useBackend();
-
-  return useQuery({
+function runExecutionStatsQuery(runId: string | undefined, enabled: boolean) {
+  return queryOptions({
     queryKey: ProjectRunsQueryKeys.Stats(runId ?? ""),
     queryFn: () => {
       if (!runId) {
@@ -80,9 +95,24 @@ export function useRunExecutionStats(runId: string | undefined) {
       }
       return getRunExecutionStats(runId);
     },
-    enabled: configured && available && Boolean(runId),
+    enabled: enabled && Boolean(runId),
     ...projectQueryDefaults,
     staleTime: RUN_POLL_MS,
-    refetchInterval: ({ state }) => runPollInterval(state.data),
+    refetchInterval: ({ state }) => runPollInterval(state.data, state.error),
+  });
+}
+
+export function useRunExecutionStats(runId: string | undefined) {
+  const { configured, available } = useBackend();
+  return useQuery(runExecutionStatsQuery(runId, configured && available));
+}
+
+/** {@link useRunExecutionStats} for several runs, sharing its cache and polling. */
+export function useRunsExecutionStats(runIds: string[]) {
+  const { configured, available } = useBackend();
+  return useQueries({
+    queries: runIds.map((runId) =>
+      runExecutionStatsQuery(runId, configured && available),
+    ),
   });
 }

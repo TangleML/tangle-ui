@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { ProjectRunsApiError } from "./errors";
 import { runPollInterval } from "./useProjectRuns";
 
 describe("runPollInterval", () => {
@@ -24,5 +25,18 @@ describe("runPollInterval", () => {
     expect(runPollInterval({})).toBeGreaterThan(0);
     expect(runPollInterval(null)).toBeGreaterThan(0);
     expect(runPollInterval(undefined)).toBeGreaterThan(0);
+  });
+
+  it("stops asking about a run the backend refuses, such as a deleted one", () => {
+    expect(
+      runPollInterval(undefined, new ProjectRunsApiError("Gone", 404)),
+    ).toBe(false);
+  });
+
+  it("keeps polling through an error that may pass", () => {
+    expect(
+      runPollInterval(undefined, new ProjectRunsApiError("Busy", 503)),
+    ).toBeGreaterThan(0);
+    expect(runPollInterval(undefined, new Error("offline"))).toBeGreaterThan(0);
   });
 });
