@@ -9,7 +9,6 @@ import {
   useState,
 } from "react";
 
-import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
@@ -47,7 +46,6 @@ export function TaskNodeInputs({
   const { inputs, taskSpec, state, callbacks } = taskNode;
   const { onSelect } = callbacks;
   const { graphSpec } = useComponentSpec();
-  const isPipelineAggregatorEnabled = useFlagValue("input-aggregator");
   const {
     highlightSearchFilter,
     resetSearchFilter,
@@ -59,9 +57,9 @@ export function TaskNodeInputs({
 
   const [isDragging, setIsDragging] = useState(false);
 
-  const isAggregator =
-    isPipelineAggregatorEnabled &&
-    isPipelineAggregator(taskSpec?.componentRef?.spec?.metadata?.annotations);
+  const isAggregator = isPipelineAggregator(
+    taskSpec?.componentRef?.spec?.metadata?.annotations,
+  );
 
   const internalInputs = useMemo(
     () => [AGGREGATOR_ADD_INPUT_HANDLE_ID, "output_type"],
