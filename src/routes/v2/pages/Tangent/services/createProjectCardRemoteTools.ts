@@ -65,6 +65,32 @@ function archivableTarget(args: unknown): string {
   return formatWorkareaTarget(target);
 }
 
+/** The card's archive button is only on its rows, so the agent's is too. */
+async function cardTarget(
+  args: unknown,
+  deps: ProjectCardToolDeps,
+): Promise<string> {
+  const target = archivableTarget(args);
+  const { runs, pipelines, documents } = await deps.listEntries();
+  if (![...runs, ...pipelines, ...documents].some((e) => e.target === target)) {
+    throw new Error(
+      `\`${target}\` isn't on the project card. \`list_project_items\` lists what is.`,
+    );
+  }
+  return target;
+}
+
+async function archivedTarget(
+  args: unknown,
+  deps: ProjectCardToolDeps,
+): Promise<string> {
+  const target = archivableTarget(args);
+  if (!(await deps.listArchived()).includes(target)) {
+    throw new Error(`\`${target}\` isn't archived.`);
+  }
+  return target;
+}
+
 function chatOf(args: unknown, deps: ProjectCardToolDeps): string {
   const sessionId =
     optionalString(args, "sessionId") ?? deps.getActiveSessionId();
@@ -72,6 +98,27 @@ function chatOf(args: unknown, deps: ProjectCardToolDeps): string {
     throw new Error("No chat is open, so there is no chat to act on.");
   }
   return sessionId;
+}
+
+/**
+ * The card pins and unpins only the files it lists, which come from this
+ * project's own chats, so a chat id from another project is refused.
+ */
+async function listedFile(
+  args: unknown,
+  deps: ProjectCardToolDeps,
+): Promise<SessionFileRecord> {
+  const path = requireString(args, "path");
+  const sessionId = chatOf(args, deps);
+  const file = (await deps.listFiles()).find(
+    (candidate) => candidate.sessionId === sessionId && candidate.path === path,
+  );
+  if (!file) {
+    throw new Error(
+      `No file \`${path}\` in that chat of this project. \`list_project_files\` lists them.`,
+    );
+  }
+  return file;
 }
 
 const TARGET_SCHEMA = {
@@ -155,8 +202,9 @@ export function createProjectCardRemoteTools(
         "everyone in the project and can be restored.",
       inputSchema: TARGET_SCHEMA,
       execute: async (args) => {
-        const target = archivableTarget(args);
-        await getDeps().setArchived(target, true);
+        const deps = getDeps();
+        const target = await cardTarget(args, deps);
+        await deps.setArchived(target, true);
         return { archived: true, target };
       },
     },
@@ -166,8 +214,9 @@ export function createProjectCardRemoteTools(
         "the project card.",
       inputSchema: TARGET_SCHEMA,
       execute: async (args) => {
-        const target = archivableTarget(args);
-        await getDeps().setArchived(target, false);
+        const deps = getDeps();
+        const target = await archivedTarget(args, deps);
+        await deps.setArchived(target, false);
         return { archived: false, target };
       },
     },
@@ -213,9 +262,9 @@ export function createProjectCardRemoteTools(
       },
       execute: async (args) => {
         const deps = getDeps();
-        const path = requireString(args, "path");
+        const { sessionId, path } = await listedFile(args, deps);
         await deps.pinFile(
-          chatOf(args, deps),
+          sessionId,
           path,
           optionalString(args, "title") ?? path,
         );
@@ -234,8 +283,8 @@ export function createProjectCardRemoteTools(
       },
       execute: async (args) => {
         const deps = getDeps();
-        const path = requireString(args, "path");
-        await deps.unpinFile(chatOf(args, deps), path);
+        const { sessionId, path } = await listedFile(args, deps);
+        await deps.unpinFile(sessionId, path);
         return { pinned: false, path };
       },
     },

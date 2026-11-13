@@ -31,6 +31,7 @@ import {
 import { createProjectResource } from "@/services/projects/projectResourcesService";
 import { listProjectRuns } from "@/services/projects/projectRunsService";
 import { getProject } from "@/services/projects/projectsService";
+import { MAX_PAGE_SIZE } from "@/services/projects/queryDefaults";
 import {
   documentResourceInput,
   pipelineRunResourceInput,
@@ -61,6 +62,7 @@ interface ProjectCardHandlerOptions {
 
 const CARD_RESOURCES: ListProjectResourcesParams = {
   entity: ["document", "pipeline"],
+  pageSize: MAX_PAGE_SIZE,
 };
 
 const NOTHING_LOCAL = {
