@@ -5,7 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  '@tangent/shared': github:TangleML/tangent-shell#main&path:packages/shared
+  '@tangent/shared': github:TangleML/tangent-shell#maxy/feat--bundle-global-memory&path:packages/shared
 
 importers:
 
@@ -96,14 +96,14 @@ importers:
         specifier: ^4.3.3
         version: 4.3.3(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       '@tangent/embed-react':
-        specifier: github:TangleML/tangent-shell#main&path:packages/embed-react
-        version: https://codeload.github.com/TangleML/tangent-shell/tar.gz/b20e5684db7095e1f7da2d2a963b2bee865329dd#path:packages/embed-react(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        specifier: github:TangleML/tangent-shell#maxy/feat--bundle-global-memory&path:packages/embed-react
+        version: https://codeload.github.com/TangleML/tangent-shell/tar.gz/191b04a7fb496c0991e38dc0a664b48a937322e1#path:packages/embed-react(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@tangent/remote-subagent':
-        specifier: github:TangleML/tangent-shell#main&path:packages/remote-subagent
-        version: https://codeload.github.com/TangleML/tangent-shell/tar.gz/b20e5684db7095e1f7da2d2a963b2bee865329dd#path:packages/remote-subagent
+        specifier: github:TangleML/tangent-shell#maxy/feat--bundle-global-memory&path:packages/remote-subagent
+        version: https://codeload.github.com/TangleML/tangent-shell/tar.gz/191b04a7fb496c0991e38dc0a664b48a937322e1#path:packages/remote-subagent
       '@tangent/shared':
-        specifier: github:TangleML/tangent-shell#main&path:packages/shared
-        version: https://codeload.github.com/TangleML/tangent-shell/tar.gz/b20e5684db7095e1f7da2d2a963b2bee865329dd#path:packages/shared
+        specifier: github:TangleML/tangent-shell#maxy/feat--bundle-global-memory&path:packages/shared
+        version: https://codeload.github.com/TangleML/tangent-shell/tar.gz/191b04a7fb496c0991e38dc0a664b48a937322e1#path:packages/shared
       '@tanstack/history':
         specifier: 1.162.5
         version: 1.162.5
@@ -2704,19 +2704,19 @@ packages:
     peerDependencies:
       vite: ^5.2.0 || ^6 || ^7 || ^8
 
-  '@tangent/embed-react@https://codeload.github.com/TangleML/tangent-shell/tar.gz/b20e5684db7095e1f7da2d2a963b2bee865329dd#path:packages/embed-react':
-    resolution: {path: packages/embed-react, tarball: https://codeload.github.com/TangleML/tangent-shell/tar.gz/b20e5684db7095e1f7da2d2a963b2bee865329dd}
+  '@tangent/embed-react@https://codeload.github.com/TangleML/tangent-shell/tar.gz/191b04a7fb496c0991e38dc0a664b48a937322e1#path:packages/embed-react':
+    resolution: {path: packages/embed-react, tarball: https://codeload.github.com/TangleML/tangent-shell/tar.gz/191b04a7fb496c0991e38dc0a664b48a937322e1}
     version: 0.1.1
     peerDependencies:
       react: ^19.0.0
       react-dom: ^19.0.0
 
-  '@tangent/remote-subagent@https://codeload.github.com/TangleML/tangent-shell/tar.gz/b20e5684db7095e1f7da2d2a963b2bee865329dd#path:packages/remote-subagent':
-    resolution: {path: packages/remote-subagent, tarball: https://codeload.github.com/TangleML/tangent-shell/tar.gz/b20e5684db7095e1f7da2d2a963b2bee865329dd}
+  '@tangent/remote-subagent@https://codeload.github.com/TangleML/tangent-shell/tar.gz/191b04a7fb496c0991e38dc0a664b48a937322e1#path:packages/remote-subagent':
+    resolution: {path: packages/remote-subagent, tarball: https://codeload.github.com/TangleML/tangent-shell/tar.gz/191b04a7fb496c0991e38dc0a664b48a937322e1}
     version: 0.0.0
 
-  '@tangent/shared@https://codeload.github.com/TangleML/tangent-shell/tar.gz/b20e5684db7095e1f7da2d2a963b2bee865329dd#path:packages/shared':
-    resolution: {path: packages/shared, tarball: https://codeload.github.com/TangleML/tangent-shell/tar.gz/b20e5684db7095e1f7da2d2a963b2bee865329dd}
+  '@tangent/shared@https://codeload.github.com/TangleML/tangent-shell/tar.gz/191b04a7fb496c0991e38dc0a664b48a937322e1#path:packages/shared':
+    resolution: {path: packages/shared, tarball: https://codeload.github.com/TangleML/tangent-shell/tar.gz/191b04a7fb496c0991e38dc0a664b48a937322e1}
     version: 0.0.0
 
   '@tanstack/history@1.162.5':
@@ -8383,21 +8383,21 @@ snapshots:
       tailwindcss: 4.3.3
       vite: 8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
 
-  '@tangent/embed-react@https://codeload.github.com/TangleML/tangent-shell/tar.gz/b20e5684db7095e1f7da2d2a963b2bee865329dd#path:packages/embed-react(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
+  '@tangent/embed-react@https://codeload.github.com/TangleML/tangent-shell/tar.gz/191b04a7fb496c0991e38dc0a664b48a937322e1#path:packages/embed-react(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     dependencies:
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)
 
-  '@tangent/remote-subagent@https://codeload.github.com/TangleML/tangent-shell/tar.gz/b20e5684db7095e1f7da2d2a963b2bee865329dd#path:packages/remote-subagent':
+  '@tangent/remote-subagent@https://codeload.github.com/TangleML/tangent-shell/tar.gz/191b04a7fb496c0991e38dc0a664b48a937322e1#path:packages/remote-subagent':
     dependencies:
-      '@tangent/shared': https://codeload.github.com/TangleML/tangent-shell/tar.gz/b20e5684db7095e1f7da2d2a963b2bee865329dd#path:packages/shared
+      '@tangent/shared': https://codeload.github.com/TangleML/tangent-shell/tar.gz/191b04a7fb496c0991e38dc0a664b48a937322e1#path:packages/shared
       socket.io-client: 4.8.4
     transitivePeerDependencies:
       - bufferutil
       - supports-color
       - utf-8-validate
 
-  '@tangent/shared@https://codeload.github.com/TangleML/tangent-shell/tar.gz/b20e5684db7095e1f7da2d2a963b2bee865329dd#path:packages/shared':
+  '@tangent/shared@https://codeload.github.com/TangleML/tangent-shell/tar.gz/191b04a7fb496c0991e38dc0a664b48a937322e1#path:packages/shared':
     dependencies:
       zod: 4.6.7
 

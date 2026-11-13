@@ -476,6 +476,7 @@ describe("TangentProjectStore.startSession", () => {
           TANGLE_ROOT_CONFIG: "{{uploadsPath}}/tangle-deploy-root-config.yaml",
           TANGLE_DEPLOY_SOURCE: "tangent-ui",
         },
+        memory: { kind: "bundle-kb" },
       },
     );
     expect(io.newSession.mock.calls[0][2].resources?.[0]).toMatchObject({
@@ -635,6 +636,7 @@ describe("TangentProjectStore.startSession", () => {
       children: [
         { kind: "simple-md", root: "project/NOTES" },
         { kind: "pi-memory", root: "project/pi-memory" },
+        { kind: "bundle-kb" },
       ],
     });
     expect(options.resources).toContainEqual({
@@ -645,7 +647,7 @@ describe("TangentProjectStore.startSession", () => {
   });
 
   /** A binding rooted in a folder that is not mounted is rejected server-side. */
-  it("starts without a mount or a binding when the project has no folder", async () => {
+  it("starts with only the bundle knowledge base when the project has no folder", async () => {
     const store = new TangentProjectStore("project-1");
     const io = makeSessionIo(null);
     store.setSessionIo(io);
@@ -654,7 +656,7 @@ describe("TangentProjectStore.startSession", () => {
 
     const options = io.newSession.mock.calls[0][2];
     expect(options.resources?.some((r) => r.kind === "mount")).toBe(false);
-    expect(options).not.toHaveProperty("memory");
+    expect(options.memory).toEqual({ kind: "bundle-kb" });
   });
 
   /** A folder id this Tangent server does not know would fail every start. */
@@ -672,7 +674,7 @@ describe("TangentProjectStore.startSession", () => {
     expect(io.newSession).toHaveBeenCalledTimes(2);
     const retry = io.newSession.mock.calls[1][2];
     expect(retry.resources?.some((r) => r.kind === "mount")).toBe(false);
-    expect(retry).not.toHaveProperty("memory");
+    expect(retry.memory).toEqual({ kind: "bundle-kb" });
     expect(retry.resources).toContainEqual({
       kind: "memory",
       scope: "session",
