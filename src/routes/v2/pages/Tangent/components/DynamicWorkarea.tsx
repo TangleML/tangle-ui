@@ -26,11 +26,13 @@ export const DynamicWorkarea = observer(function DynamicWorkarea() {
   const activeSessionId = store.activeSessionId;
   const workareaTabs = store.workareaTabs;
   const activeWorkareaTabId = store.activeWorkareaTabId;
+  const tangentBaseUrl = store.tangentBaseUrl;
   function hostPropsFor(tabId: string): WorkareaHostProps {
     return {
       isActive: tabId === activeWorkareaTabId,
       projectId: store.projectId,
       sessionId: activeSessionId,
+      tangentBaseUrl,
       registerTabStore: (id, tabStore) => store.registerTabStore(id, tabStore),
       unregisterTabStore: (id) => store.unregisterTabStore(id),
       // A stable per-tab remote-env id so the server can route spawns to this tab.

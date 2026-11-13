@@ -213,7 +213,8 @@ function resolveRunId(deps: WorkareaToolDeps, explicit?: string): string {
 }
 
 const TARGET_DESCRIPTION =
-  "A `type://identity` target: `artifact://id/<url>`, " +
+  "A `type://identity` target: `artifact://id/<url>` for a file's address " +
+  "in one of this project's chats, as `list_project_files` lists them, " +
   "`pipeline://id/<fileId>`, `pipeline://name/<name>`, `pipeline://remote/<pipelineId>`, `pipeline://draft/<draftId>`, or `run://id/<runId>`. " +
   "A run url is also accepted, from any origin, and names the run this " +
   "environment holds under that id.";

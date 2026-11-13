@@ -17,6 +17,7 @@ import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import { TANGENT_BUNDLE_ID } from "@/routes/v2/pages/Tangent/constants";
 import { projectSharedMemorySeed } from "@/routes/v2/pages/Tangent/services/projectSharedMemory";
 import { resolveWorkareaTarget } from "@/routes/v2/pages/Tangent/services/resolveWorkareaTarget";
+import { isTangentSessionUrl } from "@/routes/v2/pages/Tangent/services/sessionFiles";
 import { sessionMemorySeed } from "@/routes/v2/pages/Tangent/services/sessionMemory";
 import { rootConfigSeed } from "@/routes/v2/pages/Tangent/services/sessionRunConfig";
 import type {
@@ -129,6 +130,7 @@ export class TangentProjectStore {
   @observable accessor searchFocusRequested = false;
 
   @observable.ref accessor openTabs: OpenTabs;
+  @observable accessor tangentBaseUrl: string | null = null;
   @observable.shallow accessor chatBySession = new Map<string, ChatSlice>();
 
   // Live tab wiring is intentionally non-observable: it's registered/read by the
@@ -154,6 +156,10 @@ export class TangentProjectStore {
     this.openTabs = openTabs;
     makeObservable(this);
     if (openTabs.activeId) this.#shownTabIds.add(openTabs.activeId);
+  }
+
+  @action setTangentBaseUrl(baseUrl: string | null) {
+    this.tangentBaseUrl = baseUrl;
   }
 
   @action setSessionIo(io: TangentSessionIo) {
@@ -347,8 +353,24 @@ export class TangentProjectStore {
     title?: string,
     options: OpenTargetOptions = {},
   ): Promise<WorkareaTab> {
+    this.#refuseOutsideFile(target);
     const view = await resolveWorkareaTarget(target, { title });
     return this.openResolvedView(view, options);
+  }
+
+  // A file's tab shows whatever its address serves and comes back on every
+  // visit, so an agent talked into opening an outside page can't leave one.
+  #refuseOutsideFile(target: WorkareaTarget) {
+    if (target.type !== "artifact") return;
+    const url = parseIdentity(target.identity).value;
+    if (
+      !this.tangentBaseUrl ||
+      !isTangentSessionUrl(url, this.tangentBaseUrl)
+    ) {
+      throw new Error(
+        "Only a file from one of this Tangent's chats can be opened beside the chat.",
+      );
+    }
   }
 
   /**
@@ -359,6 +381,7 @@ export class TangentProjectStore {
     view: ResolvedWorkareaView,
     { recordRunIn }: OpenTargetOptions = {},
   ): WorkareaTab {
+    this.#refuseOutsideFile(view.target);
     if (recordRunIn && view.target.type === "run") {
       // Best effort: the run still opens if the chat can't note it down.
       void this.#io
@@ -378,6 +401,24 @@ export class TangentProjectStore {
     const tab: WorkareaTab = { ...view, id: crypto.randomUUID() };
     this.#setTabs([...tabs, tab], tab.id);
     return tab;
+  }
+
+  /**
+   * Brings back the tabs saved on an earlier visit once it's known whose they
+   * are, behind anything opened in the meantime.
+   */
+  @action restoreOpenTabs({ tabs, activeId }: OpenTabs) {
+    const open = this.workareaTabs;
+    const restored = tabs.filter(
+      (tab) => !open.some((other) => sameTarget(other.target, tab.target)),
+    );
+    if (restored.length === 0) return;
+    const inFront =
+      this.activeWorkareaTabId ??
+      restored.find((tab) => tab.id === activeId)?.id ??
+      restored.at(-1)?.id ??
+      null;
+    this.#setTabs([...restored, ...open], inFront);
   }
 
   // A tab's title is resolved once, when it opens, so a rename is the only

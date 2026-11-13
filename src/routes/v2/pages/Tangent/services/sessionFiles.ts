@@ -5,6 +5,7 @@ import { sessionResourcesKey } from "@/routes/v2/pages/Tangent/services/sessionR
 import {
   tangentAuthHeaders,
   tangentSessionUrl,
+  tangentUrl,
 } from "@/routes/v2/pages/Tangent/services/tangentApi";
 
 export interface SessionFileRecord {
@@ -113,8 +114,42 @@ export function sessionFileUrl(
   return tangentSessionUrl(baseUrl, sessionId, `files/${encodedPath}`);
 }
 
-export function sessionIdOfFileUrl(url: string): string | undefined {
-  const encoded = /\/api\/sessions\/([^/]+)\/files\//.exec(url)?.[1];
+function pathUnderTangentSessions(
+  url: string,
+  baseUrl: string,
+): string | undefined {
+  let address: URL;
+  let sessions: URL;
+  try {
+    address = new URL(url);
+    sessions = new URL(tangentUrl(baseUrl, "/api/sessions/"));
+  } catch {
+    return undefined;
+  }
+  // Addresses without a host, `data:` and the like, all share the origin "null".
+  if (sessions.origin === "null" || address.origin !== sessions.origin) {
+    return undefined;
+  }
+  return address.pathname.startsWith(sessions.pathname)
+    ? address.pathname.slice(sessions.pathname.length)
+    : undefined;
+}
+
+/**
+ * Whether an address is one of this Tangent's own session addresses. A tab
+ * shows whatever its address serves and comes back on every visit, so one an
+ * agent was talked into opening must not be able to point anywhere else.
+ */
+export function isTangentSessionUrl(url: string, baseUrl: string): boolean {
+  return pathUnderTangentSessions(url, baseUrl) !== undefined;
+}
+
+export function sessionIdOfFileUrl(
+  url: string,
+  baseUrl: string,
+): string | undefined {
+  const path = pathUnderTangentSessions(url, baseUrl);
+  const encoded = path && /^([^/]+)\/files\//.exec(path)?.[1];
   if (!encoded) return undefined;
   try {
     return decodeURIComponent(encoded);
