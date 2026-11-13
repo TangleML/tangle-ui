@@ -33,11 +33,24 @@ describe("useDismissOnOutsidePress", () => {
     expect(onDismiss).toHaveBeenCalledTimes(1);
   });
 
-  it("dismisses when focus leaves the page for a frame, and only while open", () => {
-    const open = setup();
-    fireEvent.blur(window);
-    expect(open.onDismiss).toHaveBeenCalledTimes(1);
+  it("dismisses when a frame takes focus, but not when another app or devtools does", () => {
+    vi.useFakeTimers();
+    const { onDismiss } = setup();
 
+    fireEvent.blur(window);
+    vi.runAllTimers();
+    expect(onDismiss).not.toHaveBeenCalled();
+
+    const frame = document.createElement("iframe");
+    document.body.append(frame);
+    frame.focus();
+    fireEvent.blur(window);
+    vi.runAllTimers();
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
+  it("does nothing while closed", () => {
     const closed = setup(false);
     fireEvent.pointerDown(closed.outside);
     expect(closed.onDismiss).not.toHaveBeenCalled();

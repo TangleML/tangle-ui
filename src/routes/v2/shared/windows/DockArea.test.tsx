@@ -69,7 +69,7 @@ describe("DockArea", () => {
     const windows = leftDock();
     addCard(windows);
     windows.getWindowById("card")?.minimize();
-    const { container } = render(<DockArea side="left" />);
+    const { container } = render(<DockArea side="left" scrollsAsOne />);
 
     const content = projectsContent(container);
     expect(content).toHaveClass("shrink-0");
@@ -95,6 +95,18 @@ describe("DockArea", () => {
     scroller.scrollTop = 600;
     fireEvent.scroll(scroller);
     expect(container.querySelector("[data-dock-more-below]")).toBeNull();
+  });
+
+  it("lets a fill window take the room left beside others unless the dock scrolls as one", () => {
+    const windows = leftDock();
+    addCard(windows);
+    const { container } = render(<DockArea side="left" />);
+
+    const content = projectsContent(container);
+    expect(content).toHaveClass("flex-1");
+    expect(
+      container.querySelector('[data-dock-window-content="card"]'),
+    ).toHaveClass("shrink-0");
   });
 
   it("gives quiet headers a fold button that says whether the window is open", () => {

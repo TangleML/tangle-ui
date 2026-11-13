@@ -9,11 +9,10 @@ import { PipelineProgressCard } from "./PipelineProgressCard";
 const openWorkareaTarget = vi.fn();
 const recordSessionRun = vi.fn().mockResolvedValue(undefined);
 
+const project = vi.hoisted(() => ({ activeSessionId: "session-1" }));
+
 vi.mock("@/routes/v2/pages/Tangent/context/TangentProjectContext", () => ({
-  useTangentProject: () => ({
-    activeSessionId: "session-1",
-    openWorkareaTarget,
-  }),
+  useTangentProject: () => ({ ...project, openWorkareaTarget }),
 }));
 
 vi.mock("@/routes/v2/pages/Tangent/hooks/useSessionRuns", () => ({
@@ -55,7 +54,31 @@ function renderCard(props: Record<string, unknown>) {
 }
 
 describe("PipelineProgressCard", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    project.activeSessionId = "session-1";
+  });
+
+  it("keeps its run with the chat it was drawn in when another chat opens", async () => {
+    const { rerender } = renderCard({ runId: "run-7", title: "Train" });
+    await waitFor(() => expect(recordSessionRun).toHaveBeenCalledTimes(1));
+
+    project.activeSessionId = "session-2";
+    rerender(
+      <PipelineProgressCard
+        name="pipeline-progress"
+        kind="message"
+        props={{ runId: "run-7", title: "Train" }}
+      />,
+    );
+
+    expect(recordSessionRun).toHaveBeenCalledTimes(1);
+    expect(recordSessionRun).toHaveBeenCalledWith(
+      "session-1",
+      "run-7",
+      "Train",
+    );
+  });
 
   it("finds the run behind an execution and shows how far it got", async () => {
     renderCard({ executionId: "exec-1" });

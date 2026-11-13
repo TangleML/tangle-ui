@@ -7,6 +7,7 @@ import {
   statusesFromSnapshot,
   useSessionRunStates,
   withBaseline,
+  withSeenElsewhere,
   withStatus,
 } from "./useSessionRunStates";
 
@@ -123,6 +124,20 @@ describe("session run states", () => {
     expect(first.baseline).toBe(LATER);
     expect(withBaseline(first, new Map())).toBe(first);
     expect(withBaseline({ chats: {} }, new Map()).baseline).toBe("");
+  });
+});
+
+describe("withSeenElsewhere", () => {
+  it("keeps the later of what this tab and another have seen", () => {
+    const merged = withSeenElsewhere(
+      { baseline: EARLIER, chats: { a: LATER, b: EARLIER } },
+      { baseline: LATER, chats: { b: LATER, c: EARLIER } },
+    );
+
+    expect(merged).toEqual({
+      baseline: EARLIER,
+      chats: { a: LATER, b: LATER, c: EARLIER },
+    });
   });
 });
 
