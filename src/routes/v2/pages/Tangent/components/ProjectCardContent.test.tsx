@@ -6,6 +6,7 @@ import { ProjectCardContent } from "./ProjectCardContent";
 
 const pin = vi.fn();
 const unpin = vi.fn();
+const archiveChange = vi.fn();
 
 vi.mock("@/routes/v2/pages/Tangent/context/TangentProjectContext", () => ({
   useTangentProject: () => ({
@@ -20,6 +21,28 @@ vi.mock("@/hooks/useToastNotification", () => ({ default: () => vi.fn() }));
 vi.mock("@/utils/date", () => ({
   formatRelativeTime: (date: Date) => `on ${date.toISOString().slice(5, 10)}`,
 }));
+
+vi.mock("@/routes/v2/pages/Tangent/hooks/useArchivedProjectItems", async () => {
+  const { useState } = await import("react");
+  return {
+    useArchivedProjectItems: () => {
+      const [archived, setArchived] = useState<string[]>([]);
+      const change = (target: string, archive: boolean) => {
+        archiveChange(target, archive);
+        setArchived((current) =>
+          archive
+            ? [...current, target]
+            : current.filter((item) => item !== target),
+        );
+      };
+      return {
+        isArchived: (target: string) => archived.includes(target),
+        archive: (target: string) => change(target, true),
+        restore: (target: string) => change(target, false),
+      };
+    },
+  };
+});
 
 vi.mock("./AddResourceButton", () => ({
   AddResourceButton: ({
@@ -141,9 +164,9 @@ async function search(text: string) {
 
 describe("ProjectCardContent", () => {
   beforeEach(() => {
-    localStorage.clear();
     pin.mockClear();
     unpin.mockClear();
+    archiveChange.mockClear();
     loading.resources = { isLoading: false, isLoaded: true, error: null };
     loading.runs = { isLoading: false, error: null };
   });
@@ -308,6 +331,7 @@ describe("ProjectCardContent", () => {
       screen.getByRole("button", { name: "Archive Project brief" }),
     );
 
+    expect(archiveChange).toHaveBeenCalledWith("document://id/d-1", true);
     expect(screen.queryByText("Project brief")).toBeNull();
     await user.click(screen.getByRole("button", { name: /Show archived/ }));
 

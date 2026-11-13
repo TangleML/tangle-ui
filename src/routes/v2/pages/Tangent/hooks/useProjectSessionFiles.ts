@@ -14,6 +14,12 @@ import { getErrorMessage } from "@/utils/string";
 
 const SESSION_FILES_KEY = "tangent-session-files";
 
+export const sessionFilesKey = (baseUrl: string | null, sessionId: string) => [
+  SESSION_FILES_KEY,
+  baseUrl,
+  sessionId,
+];
+
 export interface ProjectFile {
   key: string;
   sessionId: string;
@@ -38,7 +44,7 @@ export function useProjectSessionFiles(projectId: string) {
 
   const results = useQueries({
     queries: sessions.map(({ sessionId }) => ({
-      queryKey: [SESSION_FILES_KEY, baseUrl, sessionId],
+      queryKey: sessionFilesKey(baseUrl, sessionId),
       queryFn: () =>
         baseUrl ? listSessionFiles({ baseUrl, sessionId, authToken }) : [],
       enabled: Boolean(baseUrl),
@@ -73,7 +79,7 @@ export function useProjectSessionFiles(projectId: string) {
     },
     onSuccess: (_, { file }) =>
       queryClient.invalidateQueries({
-        queryKey: [SESSION_FILES_KEY, baseUrl, file.sessionId],
+        queryKey: sessionFilesKey(baseUrl, file.sessionId),
       }),
     onError: (error) => notify(getErrorMessage(error), "error"),
   });
