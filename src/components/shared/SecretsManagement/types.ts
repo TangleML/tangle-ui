@@ -9,7 +9,6 @@ export interface Secret {
   value?: string;
   createdAt: Date;
   updatedAt: Date;
-  expiresAt?: Date;
   description?: string;
 }
 

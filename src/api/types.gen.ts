@@ -1042,10 +1042,6 @@ export type SecretInfoResponse = {
      */
     updated_at: string;
     /**
-     * Expires At
-     */
-    expires_at?: string | null;
-    /**
      * Description
      */
     description?: string | null;
@@ -1690,10 +1686,6 @@ export type CreateSecretApiSecretsPostData = {
          * Description
          */
         description?: string | null;
-        /**
-         * Expires At
-         */
-        expires_at?: string | null;
     };
     url: '/api/secrets/';
 };
@@ -1757,10 +1749,6 @@ export type UpdateSecretApiSecretsSecretNamePutData = {
          * Description
          */
         description?: string | null;
-        /**
-         * Expires At
-         */
-        expires_at?: string | null;
     };
     url: '/api/secrets/{secret_name}';
 };

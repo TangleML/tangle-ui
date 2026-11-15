@@ -7,18 +7,15 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Textarea } from "@/components/ui/textarea";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
-import { formatDate, parseUTCAsLocalDate, toEndOfDayUTC } from "@/utils/date";
 
 import { isValidSecretValue, type Secret, secretNameProblem } from "../types";
 import { AddSecretButton } from "./AddSecretButton";
-import { EXPIRY_FORMAT, ExpiryDatePicker } from "./ExpiryDatePicker";
 import { UpdateSecretButton } from "./UpdateSecretButton";
 
 interface AddSecretFormState {
   name: string;
   value: string;
   description: string;
-  expiresOn: Date | undefined;
   nameError: string | null;
   valueError: string | null;
 }
@@ -27,7 +24,6 @@ type AddSecretFormAction =
   | { type: "SET_NAME"; payload: string }
   | { type: "SET_VALUE"; payload: string }
   | { type: "SET_DESCRIPTION"; payload: string }
-  | { type: "SET_EXPIRES_ON"; payload: Date | undefined }
   | { type: "RESET" };
 
 function formReducer(
@@ -50,8 +46,6 @@ function formReducer(
     }
     case "SET_DESCRIPTION":
       return { ...state, description: action.payload };
-    case "SET_EXPIRES_ON":
-      return { ...state, expiresOn: action.payload };
     case "RESET":
       return initialFormState;
     default:
@@ -63,7 +57,6 @@ const initialFormState: AddSecretFormState = {
   name: "",
   value: "",
   description: "",
-  expiresOn: undefined,
   nameError: null,
   valueError: null,
 };
@@ -81,21 +74,6 @@ function FieldLengthLimit({ id, atLimit }: { id: string; atLimit: boolean }) {
       {`Up to ${SECRET_FIELD_MAX_LENGTH} characters.`}
     </Text>
   );
-}
-
-export function lastWholeSecondOfDayUTC(day: Date): Date {
-  const endOfDay = new Date(toEndOfDayUTC(day));
-  endOfDay.setUTCMilliseconds(0);
-  return endOfDay;
-}
-
-function expiryHint(existingSecret?: Secret): string | null {
-  if (!existingSecret?.expiresAt) return null;
-  const currentExpiry = formatDate(
-    parseUTCAsLocalDate(existingSecret.expiresAt.toISOString()),
-    EXPIRY_FORMAT,
-  );
-  return `Currently ${currentExpiry}. Leave empty to keep that date.`;
 }
 
 interface AddSecretFormProps {
@@ -130,10 +108,6 @@ export function AddSecretForm({
     dispatch({ type: "SET_DESCRIPTION", payload: e.target.value });
   };
 
-  const handleExpiresOnChange = (date: Date | undefined) => {
-    dispatch({ type: "SET_EXPIRES_ON", payload: date });
-  };
-
   const isReplace = !!existingSecret;
   const nameAtLimit = state.name.length >= SECRET_FIELD_MAX_LENGTH;
   const descriptionAtLimit =
@@ -149,10 +123,6 @@ export function AddSecretForm({
     trimmedDescription !== "" && trimmedDescription !== originalDescription
       ? trimmedDescription
       : undefined;
-  const expiresAt = state.expiresOn
-    ? lastWholeSecondOfDayUTC(state.expiresOn)
-    : undefined;
-  const currentExpiryHint = expiryHint(existingSecret);
 
   return (
     <BlockStack gap="4">
@@ -231,21 +201,6 @@ export function AddSecretForm({
         />
       </BlockStack>
 
-      <BlockStack gap="2">
-        <Label htmlFor="secret-expiry">Expires (optional)</Label>
-        <ExpiryDatePicker
-          id="secret-expiry"
-          value={state.expiresOn}
-          onChange={handleExpiresOnChange}
-          describedBy={currentExpiryHint ? "secret-expiry-hint" : undefined}
-        />
-        {currentExpiryHint && (
-          <Text id="secret-expiry-hint" size="xs" tone="subdued">
-            {currentExpiryHint}
-          </Text>
-        )}
-      </BlockStack>
-
       <InlineStack gap="2" align="end" fill>
         <Button
           variant="outline"
@@ -260,7 +215,6 @@ export function AddSecretForm({
               id: existingSecret.id,
               value: state.value,
               description,
-              expiresAt,
             }}
             teamId={teamId}
             disabled={!isFormValid}
@@ -272,7 +226,6 @@ export function AddSecretForm({
               name: state.name.trim(),
               value: state.value,
               description,
-              expiresAt,
             }}
             teamId={teamId}
             disabled={!isFormValid}

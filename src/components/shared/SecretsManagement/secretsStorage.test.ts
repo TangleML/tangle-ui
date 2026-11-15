@@ -64,7 +64,6 @@ describe("secretsStorage", () => {
                 secret_name: "API_KEY",
                 created_at: "2026-10-01T10:00:00",
                 updated_at: "2026-10-02T10:00:00Z",
-                expires_at: "2026-12-31T23:59:59Z",
                 description: "For the model provider",
               },
             ],
@@ -80,7 +79,6 @@ describe("secretsStorage", () => {
           name: "API_KEY",
           createdAt: new Date("2026-10-01T10:00:00Z"),
           updatedAt: new Date("2026-10-02T10:00:00Z"),
-          expiresAt: new Date("2026-12-31T23:59:59Z"),
           description: "For the model provider",
         },
       ]);
@@ -135,7 +133,7 @@ describe("secretsStorage", () => {
   });
 
   describe("addSecret", () => {
-    it("sends the description and expiry with the team header", async () => {
+    it("sends the description with the team header", async () => {
       vi.mocked(createSecretApiSecretsPost).mockResolvedValue(
         sdkResult(200, { data: {} }),
       );
@@ -145,7 +143,6 @@ describe("secretsStorage", () => {
           name: "API_KEY",
           value: "s3cret",
           description: "For the model provider",
-          expiresAt: new Date("2026-12-31T23:59:59.999Z"),
         },
         TEAM_ID,
       );
@@ -154,7 +151,6 @@ describe("secretsStorage", () => {
         query: {
           secret_name: "API_KEY",
           description: "For the model provider",
-          expires_at: "2026-12-31T23:59:59.999Z",
         },
         body: { secret_value: "s3cret" },
         headers: TEAM_HEADERS,
@@ -179,7 +175,7 @@ describe("secretsStorage", () => {
   });
 
   describe("updateSecret", () => {
-    it("replaces the value, description and expiry with the team header", async () => {
+    it("replaces the value and description with the team header", async () => {
       vi.mocked(updateSecretApiSecretsSecretNamePut).mockResolvedValue(
         sdkResult(200, { data: {} }),
       );
@@ -189,7 +185,6 @@ describe("secretsStorage", () => {
         {
           value: "n3w",
           description: "Rotated",
-          expiresAt: new Date("2027-01-31T23:59:59.999Z"),
         },
         TEAM_ID,
       );
@@ -198,7 +193,6 @@ describe("secretsStorage", () => {
         path: { secret_name: "API_KEY" },
         query: {
           description: "Rotated",
-          expires_at: "2027-01-31T23:59:59.999Z",
         },
         body: { secret_value: "n3w" },
         headers: TEAM_HEADERS,
