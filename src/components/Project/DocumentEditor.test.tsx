@@ -273,6 +273,18 @@ describe("DocumentEditor", () => {
     expect(saveButton()).toBeDisabled();
   });
 
+  it("follows the next save made elsewhere after a save made elsewhere matched what was typed", async () => {
+    const { rerenderWith } = renderEditor();
+
+    await type("# Same");
+    rerenderWith(resource({ payload: { content: "# Same" } }));
+    rerenderWith(resource({ payload: { content: "# Other" } }));
+
+    expect(editor()).toHaveValue("# Other");
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(discardButton()).toBeDisabled();
+  });
+
   it("opens an empty document ready to be written into", async () => {
     renderEditor(resource({ name: null, payload: {} }));
 

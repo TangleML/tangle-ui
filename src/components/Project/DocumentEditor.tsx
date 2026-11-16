@@ -34,6 +34,10 @@ export function DocumentEditor({ projectId, resource }: DocumentEditorProps) {
   const update = useUpdateProjectResource(projectId);
   const { track } = useAnalytics();
 
+  if (edit !== null && edit.draft === saved && !update.isPending) {
+    setEdit(null);
+  }
+
   const content = edit?.draft ?? saved;
   const isDirty = edit !== null && edit.draft !== saved;
   const changedElsewhere = isDirty && edit.startedFrom !== saved;
