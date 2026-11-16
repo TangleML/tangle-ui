@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "packageManager": "pnpm@10.28.0",
   "engines": {
-    "node": ">=22.22.2"
+    "node": ">=24.15.0"
   },
   "description": "Tangle-UI is a web app that allows the users to build and run Machine Learning pipelines using drag and drop without having to set up development environment.",
   "keywords": [
@@ -29,6 +29,7 @@
   "type": "module",
   "scripts": {
     "start": "vite",
+    "oss:dev": "tsx scripts/dev-oss.ts",
     "build": "vite build && tsc",
     "build:ghpages": "VITE_BASE_URL=/tangle-ui/ VITE_GITHUB_PAGES=true vite build --config vite.config.ghpages.js && tsc",
     "build:hf": "VITE_REQUIRE_AUTHORIZATION=true VITE_HUGGING_FACE_AUTHORIZATION=true VITE_BASE_URL=/ VITE_GITHUB_PAGES=true vite build && tsc",
