@@ -3,7 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   describeResource,
   DescriptorTooLargeError,
+  documentBody,
+  documentPayload,
   documentResourceInput,
+  isDocumentResource,
   localPipelinePointerOf,
   localPipelineResourceInput,
   namesLocalPipeline,
@@ -159,6 +162,25 @@ describe("namesLocalPipeline", () => {
   });
 });
 
+describe("isDocumentResource", () => {
+  it("is true of a document row, with or without a descriptor", () => {
+    expect(isDocumentResource(row({ type: "document" }))).toBe(true);
+    expect(isDocumentResource(row(null))).toBe(true);
+  });
+
+  it("is false of a document row that holds something else", () => {
+    expect(isDocumentResource(row({ type: "local_pipeline" }))).toBe(false);
+    expect(isDocumentResource(row({ type: "pipeline_run" }))).toBe(false);
+    expect(isDocumentResource(row({ type: "something_else" }))).toBe(false);
+  });
+
+  it("is false of a row the api files as anything but a document", () => {
+    expect(isDocumentResource(row(null, { entity: "agent_session" }))).toBe(
+      false,
+    );
+  });
+});
+
 describe("localPipelineResourceInput", () => {
   it("files it as a document, which is what the api accepts", () => {
     const input = localPipelineResourceInput({ localName: "Churn model" });
@@ -198,5 +220,31 @@ describe("documentResourceInput", () => {
     expect(describeResource({ metadata: input.metadata ?? null })).toEqual({
       type: "document",
     });
+  });
+});
+
+describe("documentBody", () => {
+  it("reads the content string", () => {
+    expect(documentBody({ payload: { content: "hi" } })).toBe("hi");
+  });
+
+  it("finds no body in a payload without a content string", () => {
+    expect(documentBody({ payload: {} })).toBeUndefined();
+    expect(documentBody({ payload: null })).toBeUndefined();
+    expect(documentBody({ payload: { content: 3 } })).toBeUndefined();
+  });
+});
+
+describe("documentPayload", () => {
+  it("files the body under the content key", () => {
+    expect(documentPayload("hi")).toEqual({ content: "hi" });
+  });
+
+  it("replaces the body and keeps the rest of the payload", () => {
+    expect(documentPayload("new", { content: "old", author: "al" })).toEqual({
+      content: "new",
+      author: "al",
+    });
+    expect(documentPayload("new", null)).toEqual({ content: "new" });
   });
 });

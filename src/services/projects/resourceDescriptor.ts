@@ -9,7 +9,11 @@ import {
   parseWorkareaTarget,
   runTarget,
 } from "./resourceTarget";
-import type { CreateResourceInput, ProjectResourceSummary } from "./types";
+import type {
+  CreateResourceInput,
+  ProjectResource,
+  ProjectResourceSummary,
+} from "./types";
 
 export const LOCAL_PIPELINE = "local_pipeline";
 export const PIPELINE_RUN = "pipeline_run";
@@ -68,6 +72,14 @@ export function describeResource(
 
 export const namesLocalPipeline = (resource: ResourceRow): boolean =>
   describeResource(resource)?.type === LOCAL_PIPELINE;
+
+export function isDocumentResource(
+  resource: Pick<ProjectResourceSummary, "entity" | "metadata">,
+): boolean {
+  if (resource.entity !== "document") return false;
+  const type = describeResource(resource)?.type;
+  return type === undefined || type === DOCUMENT;
+}
 
 /**
  * The id is tried first because a name can be recycled; the name is the
@@ -143,6 +155,22 @@ export function localPipelineResourceInput(
   };
 }
 
+// The backend validates nothing inside a document payload; `content` is this
+// app's convention for the whole body.
+const CONTENT_KEY = "content";
+
+export function documentBody(
+  resource: Pick<ProjectResource, "payload">,
+): string | undefined {
+  const body = resource.payload?.[CONTENT_KEY];
+  return typeof body === "string" ? body : undefined;
+}
+
+export const documentPayload = (
+  body: string,
+  rest: ProjectResource["payload"] = {},
+): Record<string, unknown> => ({ ...rest, [CONTENT_KEY]: body });
+
 /** No identity to record: the row is the document. */
 export function documentResourceInput(
   title: string,
@@ -151,9 +179,7 @@ export function documentResourceInput(
   return {
     entity: "document",
     name: title,
-    // The backend validates nothing inside a document payload; `content` is
-    // this app's convention for the whole body.
-    payload: { content },
+    payload: documentPayload(content),
     metadata: { type: DOCUMENT },
   };
 }
@@ -171,7 +197,7 @@ export function instructionsResourceInput(
   return {
     entity: "document",
     name: INSTRUCTIONS_NAME,
-    payload: { content },
+    payload: documentPayload(content),
     metadata: { type: INSTRUCTIONS },
   };
 }
