@@ -1,5 +1,5 @@
 # Stage 1: Build the React app
-FROM node:22-alpine as build
+FROM node:24-alpine as build
 WORKDIR /app
 
 # RUN git clone https://github.com/Cloud-Pipelines/pipeline-studio-app.git .
