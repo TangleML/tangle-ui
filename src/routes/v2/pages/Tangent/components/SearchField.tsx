@@ -52,7 +52,6 @@ export function SearchField({
           onChange("");
         }}
         className="h-auto p-0 text-sm text-foreground [&::-webkit-search-cancel-button]:appearance-none"
-        {...tracking(`${trackingPrefix}.search`)}
       />
       {value !== "" && (
         <Button
