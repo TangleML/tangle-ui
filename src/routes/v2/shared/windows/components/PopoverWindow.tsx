@@ -70,7 +70,7 @@ const StackedWindow = observer(function StackedWindow() {
               className="shrink-0 text-muted-foreground"
             />
           }
-          trailing={
+          alwaysVisibleAction={
             <FoldButton trackingId="v2.shared_window.dock_popover.fold" />
           }
           quiet

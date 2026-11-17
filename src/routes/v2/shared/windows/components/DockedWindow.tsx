@@ -186,7 +186,7 @@ export const DockedWindow = observer(function DockedWindow() {
               />
             }
             actions={<WindowActions hideMinimize={quietHeader} />}
-            trailing={
+            alwaysVisibleAction={
               quietHeader && (
                 <FoldButton trackingId="v2.shared_window.chrome.fold" />
               )

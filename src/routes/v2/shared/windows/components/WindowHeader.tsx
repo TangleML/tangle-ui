@@ -10,8 +10,7 @@ interface WindowHeaderProps {
   onMouseDown?: (e: MouseEvent) => void;
   leadingIcon?: ReactNode;
   actions?: ReactNode;
-  // Always shown after the actions, such as a fold button.
-  trailing?: ReactNode;
+  alwaysVisibleAction?: ReactNode;
   className?: string;
   style?: CSSProperties;
   actionsOnHover?: boolean;
@@ -25,7 +24,7 @@ export function WindowHeader({
   onMouseDown,
   leadingIcon,
   actions,
-  trailing,
+  alwaysVisibleAction,
   className,
   style,
   actionsOnHover = false,
@@ -79,7 +78,7 @@ export function WindowHeader({
         >
           {actions}
         </div>
-        {trailing}
+        {alwaysVisibleAction}
       </InlineStack>
     </div>
   );
