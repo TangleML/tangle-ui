@@ -11,7 +11,6 @@ const DAY: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
 export const RUN_LIMIT = 10;
 const ASSET_LIMIT = 5;
 
-/** What the card lists, for the chat's slash commands to show. */
 export interface ProjectListing {
   runs: ProjectCardEntry[];
   pipelines: ProjectCardEntry[];
@@ -21,7 +20,6 @@ export interface ProjectListing {
   runStatuses: ReadonlyMap<string, string>;
 }
 
-/** A pipeline `/run` was asked to start, and how that went. */
 export interface RunStart {
   id: string;
   name?: string;
