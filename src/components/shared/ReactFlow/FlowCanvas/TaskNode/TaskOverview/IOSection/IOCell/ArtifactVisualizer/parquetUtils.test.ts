@@ -1,11 +1,11 @@
-import type { FileMetaData } from "hyparquet";
+import type { CompressionCodec, FileMetaData } from "hyparquet";
 import { describe, expect, it } from "vitest";
 
 import {
+  assertDecodableCodecs,
   buildSchemaJson,
   countColumns,
   ParquetUnsupportedCodecError,
-  toReadableParquetError,
 } from "./parquetUtils";
 
 const metadata = (schema: unknown[], numRows: bigint): FileMetaData =>
@@ -80,30 +80,34 @@ describe("buildSchemaJson", () => {
   });
 });
 
-describe("toReadableParquetError", () => {
-  it("turns an unsupported codec failure into a readable error naming the codec", () => {
-    const decodeError = new Error(
-      "parquet unsupported compression codec: ZSTD",
+describe("assertDecodableCodecs", () => {
+  const withCodecs = (...rowGroupCodecs: CompressionCodec[][]): FileMetaData =>
+    ({
+      row_groups: rowGroupCodecs.map((codecs) => ({
+        columns: codecs.map((codec) => ({ meta_data: { codec } })),
+      })),
+    }) as unknown as FileMetaData;
+
+  it("rejects a codec that cannot be decoded, naming it", () => {
+    const check = () => assertDecodableCodecs(withCodecs(["ZSTD"]));
+
+    expect(check).toThrow(ParquetUnsupportedCodecError);
+    expect(check).toThrow(
+      "Unsupported compression codec: ZSTD. Only uncompressed and Snappy-compressed Parquet files can be previewed.",
     );
-
-    const readable = toReadableParquetError(decodeError);
-
-    expect(readable).toBeInstanceOf(ParquetUnsupportedCodecError);
-    expect(readable).toMatchObject({
-      codec: "ZSTD",
-      message:
-        "Unsupported compression codec: ZSTD. Only uncompressed and Snappy-compressed Parquet files can be previewed.",
-      cause: decodeError,
-    });
   });
 
-  it("passes other errors through unchanged", () => {
-    const decodeError = new Error("parquet unsupported encoding: BIT_PACKED");
-
-    expect(toReadableParquetError(decodeError)).toBe(decodeError);
+  it("accepts uncompressed and Snappy-compressed columns", () => {
+    expect(() =>
+      assertDecodableCodecs(withCodecs(["UNCOMPRESSED", "SNAPPY"], ["SNAPPY"])),
+    ).not.toThrow();
   });
 
-  it("passes non-Error values through unchanged", () => {
-    expect(toReadableParquetError("boom")).toBe("boom");
+  it("rejects a file where only some columns use an unsupported codec", () => {
+    const check = () =>
+      assertDecodableCodecs(withCodecs(["SNAPPY", "UNCOMPRESSED"], ["GZIP"]));
+
+    expect(check).toThrow(ParquetUnsupportedCodecError);
+    expect(check).toThrow("Unsupported compression codec: GZIP.");
   });
 });
