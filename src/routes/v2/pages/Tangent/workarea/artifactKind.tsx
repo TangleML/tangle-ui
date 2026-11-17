@@ -35,8 +35,8 @@ function ArtifactWorkareaView({
   tangentBaseUrl: string | null;
 }) {
   const url = parseIdentity(tab.target.identity).value;
-  // The viewer loads whatever its address serves, so an address that isn't
-  // this Tangent's own is never handed to it, however the tab came to be.
+  // Every file tab ends up here however it came to be, so its address is
+  // checked once more before the viewer loads it.
   if (!tangentBaseUrl || !isTangentSessionUrl(url, tangentBaseUrl)) {
     return (
       <ArtifactNotice>

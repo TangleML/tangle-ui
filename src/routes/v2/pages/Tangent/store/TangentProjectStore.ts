@@ -348,8 +348,6 @@ export class TangentProjectStore {
     return this.openResolvedView(view, options);
   }
 
-  // A file's tab shows whatever its address serves and comes back on every
-  // visit, so an agent talked into opening an outside page can't leave one.
   #refuseOutsideFile(target: WorkareaTarget) {
     if (target.type !== "artifact") return;
     const url = parseIdentity(target.identity).value;

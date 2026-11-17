@@ -49,8 +49,8 @@ function canReopen({ target }: WorkareaTab): boolean {
   );
 }
 
-// What's saved can be edited, and was written by whatever an agent opened, so
-// a file's tab comes back only if it's still one of this Tangent's own.
+// What's saved can be edited, so a file's address is checked again on its way
+// back in.
 function isOwnFile(target: WorkareaTarget, tangentBaseUrl: string): boolean {
   return (
     target.type !== "artifact" ||
