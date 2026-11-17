@@ -151,6 +151,7 @@ export class TangentProjectStore {
     this.openTabs = openTabs;
     makeObservable(this);
     if (openTabs.activeId) this.#shownTabIds.add(openTabs.activeId);
+    this.#syncLastEditor();
   }
 
   @action setSessionIo(io: TangentSessionIo) {
@@ -594,7 +595,8 @@ export class TangentProjectStore {
 
   // The editor-bridge fallback keeps the active pipeline tab when one is
   // focused, otherwise the still-open last editor tab, otherwise the newest
-  // pipeline among the open tabs.
+  // pipeline among the tabs that have been shown: one that hasn't isn't
+  // mounted, so it has no bridge to fall back to.
   #syncLastEditor() {
     const tabs = this.workareaTabs;
     const activeTab = tabs.find((tab) => tab.id === this.activeWorkareaTabId);
@@ -605,7 +607,10 @@ export class TangentProjectStore {
     if (tabs.some((tab) => tab.id === this.#lastEditorTabId)) return;
     const lastPipelineTab = [...tabs]
       .reverse()
-      .find((tab) => tab.target.type === "pipeline");
+      .find(
+        (tab) =>
+          tab.target.type === "pipeline" && this.#shownTabIds.has(tab.id),
+      );
     this.#lastEditorTabId = lastPipelineTab?.id ?? null;
   }
 }
