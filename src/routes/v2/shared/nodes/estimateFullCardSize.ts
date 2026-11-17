@@ -2,6 +2,10 @@ import type { Node } from "@xyflow/react";
 
 import type { NodeSize } from "@/components/shared/ReactFlow/FlowCanvas/utils/autolayout";
 import type { ComponentSpec, Task } from "@/models/componentSpec";
+import {
+  condensePorts,
+  resolveConnectedPortNames,
+} from "@/routes/v2/shared/nodes/TaskNode/ports.utils";
 import { AGGREGATOR_INTERNAL_INPUTS } from "@/utils/aggregatorInputs";
 import {
   EDITOR_COLLAPSED_ANNOTATION,
@@ -36,16 +40,10 @@ const lineCount = (text: string, charsPerLine: number) =>
   Math.max(1, Math.ceil(text.length / charsPerLine));
 
 const visibleRowCount = (
-  names: string[],
-  connectedNames: Set<string>,
+  ports: { name: string }[],
+  connectedNames: ReadonlySet<string>,
   collapsed: boolean,
-) => {
-  if (!collapsed) return names.length;
-  const connectedCount = names.filter((name) =>
-    connectedNames.has(name),
-  ).length;
-  return connectedCount > 0 ? connectedCount : Math.min(names.length, 1);
-};
+) => (collapsed ? condensePorts(ports, connectedNames) : ports).length;
 
 const stackedHeight = (heights: number[], gap: number) =>
   heights.length === 0
@@ -66,23 +64,11 @@ export function estimateTaskCardSize(
   );
   const collapsed =
     task.annotations.get(EDITOR_COLLAPSED_ANNOTATION) === "true";
-  const inputNames = (componentSpec?.inputs ?? [])
-    .map((input) => input.name)
-    .filter((name) => !isAggregator || !AGGREGATOR_INTERNAL_INPUTS.has(name));
-  const outputNames = (componentSpec?.outputs ?? []).map(
-    (output) => output.name,
+  const inputs = (componentSpec?.inputs ?? []).filter(
+    (input) => !isAggregator || !AGGREGATOR_INTERNAL_INPUTS.has(input.name),
   );
-
-  const connectedInputs = new Set<string>();
-  const connectedOutputs = new Set<string>();
-  for (const binding of spec.bindings) {
-    if (binding.targetEntityId === task.$id) {
-      connectedInputs.add(binding.targetPortName);
-    }
-    if (binding.sourceEntityId === task.$id) {
-      connectedOutputs.add(binding.sourcePortName);
-    }
-  }
+  const outputs = componentSpec?.outputs ?? [];
+  const connected = resolveConnectedPortNames(task.$id, spec);
 
   const sections: number[] = [];
   if (task.isSubgraph) sections.push(TASK_STATUS_BAR_HEIGHT);
@@ -91,19 +77,15 @@ export function estimateTaskCardSize(
   }
 
   const inputRowCount = visibleRowCount(
-    inputNames,
-    connectedInputs,
+    inputs,
+    connected.inputs,
     collapsed && !isAggregator,
   );
   const inputRows: number[] = Array(inputRowCount).fill(TASK_ROW_HEIGHT);
   if (isAggregator) inputRows.unshift(TASK_ROW_HEIGHT);
   if (inputRows.length > 0) sections.push(rowSectionHeight(inputRows));
 
-  const outputRowCount = visibleRowCount(
-    outputNames,
-    connectedOutputs,
-    collapsed,
-  );
+  const outputRowCount = visibleRowCount(outputs, connected.outputs, collapsed);
   const outputRows: number[] = Array(outputRowCount).fill(TASK_ROW_HEIGHT);
   if (isAggregator) outputRows.unshift(TASK_OUTPUT_TYPE_SELECTOR_HEIGHT);
   if (outputRows.length > 0) sections.push(rowSectionHeight(outputRows));
