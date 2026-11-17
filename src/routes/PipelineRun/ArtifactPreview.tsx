@@ -6,7 +6,7 @@ import {
   PreviewContent,
   PreviewSkeleton,
 } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/TaskOverview/IOSection/IOCell/ArtifactVisualizer/ArtifactPreviewContent";
-import { ArtifactPreviewErrorFallback } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/TaskOverview/IOSection/IOCell/ArtifactVisualizer/ArtifactPreviewError";
+import { renderArtifactPreviewError } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/TaskOverview/IOSection/IOCell/ArtifactVisualizer/ArtifactPreviewError";
 import { ArtifactPreviewHeader } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/TaskOverview/IOSection/IOCell/ArtifactVisualizer/ArtifactPreviewHeader";
 import {
   inferTypeFromUri,
@@ -33,7 +33,7 @@ const ArtifactPreviewPage = () => {
   return (
     <SuspenseWrapper
       fallback={<PreviewSkeleton />}
-      errorFallback={ArtifactPreviewErrorFallback}
+      errorFallback={renderArtifactPreviewError}
     >
       <ArtifactPreviewBody artifactId={artifactId} search={search} />
     </SuspenseWrapper>
