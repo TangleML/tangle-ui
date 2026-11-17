@@ -1,5 +1,6 @@
 import { useTangent } from "@tangent/embed-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useSearch } from "@tanstack/react-router";
 import { type ReactNode, useEffect, useState } from "react";
 
 import {
@@ -7,6 +8,7 @@ import {
   useRequiredContext,
 } from "@/hooks/useRequiredContext";
 import useToastNotification from "@/hooks/useToastNotification";
+import { readTangentSessionParam } from "@/routes/tangentSearch";
 import { useBackfillSessionTags } from "@/routes/v2/pages/Tangent/hooks/useBackfillSessionTags";
 import { usePrepareProjectArrival } from "@/routes/v2/pages/Tangent/hooks/usePrepareProjectArrival";
 import { useProjectSessions } from "@/routes/v2/pages/Tangent/hooks/useProjectSessions";
@@ -28,6 +30,30 @@ interface TangentProjectProviderProps {
   children: ReactNode;
 }
 
+/**
+ * A project gets its own store, but moving between projects swaps the store
+ * rather than remounting the page, so the shell stays put and only the content
+ * changes. The fresh store starts on the session it is headed for, which keeps
+ * the chat from flashing "No active session" while effects catch up.
+ */
+function useProjectStore(
+  projectId: string,
+  seed: { defaultSessionId?: string; askedSessionId?: string },
+): TangentProjectStore {
+  const create = () => {
+    const store = new TangentProjectStore(projectId);
+    store.setDefaultSessionId(seed.defaultSessionId);
+    if (seed.askedSessionId) store.selectSession(seed.askedSessionId);
+    return store;
+  };
+  const [store, setStore] = useState(create);
+  if (store.projectId === projectId) return store;
+
+  const next = create();
+  setStore(next);
+  return next;
+}
+
 export function TangentProjectProvider({
   projectId,
   children,
@@ -43,7 +69,11 @@ export function TangentProjectProvider({
     renameSession,
   } = useProjectSessions(projectId);
   const ensureSharedFolderId = useProjectSharedFolder(projectId);
-  const [store] = useState(() => new TangentProjectStore(projectId));
+  const asked = readTangentSessionParam(useSearch({ strict: false }));
+  const store = useProjectStore(projectId, {
+    defaultSessionId: sessions[0]?.sessionId,
+    askedSessionId: asked?.kind === "existing" ? asked.sessionId : undefined,
+  });
   const storage = usePipelineStorage();
   const queryClient = useQueryClient();
 

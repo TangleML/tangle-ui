@@ -12,7 +12,7 @@ import {
 const stub = createElement("span");
 
 const SAVED_BEFORE_THE_PROJECT_WINDOW_EXISTED = [
-  "tangent-project-sessions",
+  "tangent-project-projects",
   "tangent-project-agents",
   "tangent-project-assets",
   "tangent-project-resources",
@@ -33,7 +33,7 @@ describe("the Tangent project dock order", () => {
   /**
    * A saved layout has no opinion about a window added after it was written, so
    * the reconcile that restores it files the newcomer last. The project window
-   * belongs above the sessions, not under everything.
+   * belongs above the projects, not under everything.
    */
   it("puts the project window first even for a layout that predates it", () => {
     const store = new WindowStoreImpl();
@@ -69,7 +69,7 @@ describe("the Tangent project dock order", () => {
       "tangent-project-secrets",
       "tangent-project-details",
       "tangent-project-runs",
-      "tangent-project-sessions",
+      "tangent-project-projects",
       "tangent-project-assets",
       "tangent-project-agents",
     ];
@@ -91,7 +91,7 @@ describe("the Tangent project dock order", () => {
       "tangent-project-resources",
       "tangent-project-details",
       "tangent-project-runs",
-      "tangent-project-sessions",
+      "tangent-project-projects",
       "tangent-project-assets",
       "tangent-project-agents",
     ];

@@ -9,6 +9,7 @@ import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
+import { usePerStore } from "@/routes/v2/pages/Tangent/hooks/usePerStore";
 import { useRemoteEnvAuthToken } from "@/routes/v2/pages/Tangent/hooks/useRemoteEnvAuthToken";
 import { useTangentBaseUrl } from "@/routes/v2/pages/Tangent/hooks/useTangentBaseUrl";
 import { connectRemoteEnvWithRefresh } from "@/routes/v2/pages/Tangent/services/connectRemoteEnvWithRefresh";
@@ -200,7 +201,7 @@ export function TangentProjectAgentProvider({
     ]);
   };
 
-  const [naming] = useState(() =>
+  const naming = usePerStore(store, () =>
     createNamingHandlers({
       projectId: store.projectId,
       getActiveSessionId: () => store.activeSessionId,
@@ -209,7 +210,7 @@ export function TangentProjectAgentProvider({
     }),
   );
 
-  const [tools] = useState(() =>
+  const tools = usePerStore(store, () =>
     createWorkareaRemoteTools(() => ({
       openTarget: (target, title) => store.openWorkareaTarget(target, title),
       getTabs: () => store.workareaTabs,
@@ -291,10 +292,10 @@ export function TangentProjectAgentProvider({
       namePipeline: naming.namePipeline,
     })),
   );
-  const [routingBridge] = useState(() =>
+  const routingBridge = usePerStore(store, () =>
     createActiveTabRoutingBridge(() => store.getActiveTabBridge()),
   );
-  const [agentTargets] = useState(() =>
+  const agentTargets = usePerStore(store, () =>
     createAgentTargetRouter(() => store.getActiveTabBridge()),
   );
 

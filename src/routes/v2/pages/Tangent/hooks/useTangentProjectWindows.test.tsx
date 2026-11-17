@@ -112,7 +112,7 @@ describe("useTangentProjectWindows", () => {
     const saved = [
       "tangent-project-details",
       SECRETS_WINDOW_ID,
-      "tangent-project-sessions",
+      "tangent-project-projects",
       "tangent-project-agents",
       "tangent-project-assets",
       "tangent-project-resources",

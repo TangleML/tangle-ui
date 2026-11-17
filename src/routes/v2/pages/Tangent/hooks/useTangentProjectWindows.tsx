@@ -4,11 +4,11 @@ import { useEffect } from "react";
 import type { IconName } from "@/components/ui/icon";
 import { AgentsWindowContent } from "@/routes/v2/pages/Tangent/components/AgentsWindowContent";
 import { AssetsWindowContent } from "@/routes/v2/pages/Tangent/components/AssetsWindowContent";
+import { ProjectsWindowContent } from "@/routes/v2/pages/Tangent/components/ProjectsWindowContent";
 import { ProjectWindowContent } from "@/routes/v2/pages/Tangent/components/ProjectWindowContent";
 import { ResourcesWindowContent } from "@/routes/v2/pages/Tangent/components/ResourcesWindowContent";
 import { RunsWindowContent } from "@/routes/v2/pages/Tangent/components/RunsWindowContent";
 import { SecretsWindowContent } from "@/routes/v2/pages/Tangent/components/SecretsWindowContent";
-import { SessionsWindowContent } from "@/routes/v2/pages/Tangent/components/SessionsWindowContent";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { WindowMiniButton } from "@/routes/v2/shared/windows/WindowMiniButton";
@@ -38,10 +38,10 @@ const PROJECT_DOCK_WINDOWS: ProjectDockWindow[] = [
     content: <ProjectWindowContent />,
   },
   {
-    id: "tangent-project-sessions",
-    title: "Sessions",
-    icon: "MessagesSquare",
-    content: <SessionsWindowContent />,
+    id: "tangent-project-projects",
+    title: "Projects",
+    icon: "FolderTree",
+    content: <ProjectsWindowContent />,
   },
   {
     id: "tangent-project-agents",

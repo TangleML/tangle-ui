@@ -4,7 +4,7 @@ export const PROJECT_DETAILS_WINDOW_ID = "tangent-project-details";
 
 export const PROJECT_DOCK_WINDOW_IDS = [
   PROJECT_DETAILS_WINDOW_ID,
-  "tangent-project-sessions",
+  "tangent-project-projects",
   "tangent-project-agents",
   "tangent-project-assets",
   "tangent-project-resources",
@@ -19,7 +19,7 @@ export const rememberedDockWindows = (
 /**
  * A saved layout says nothing about a window added after it was written, so
  * opening that window appends it to the dock — which put the project window
- * underneath everything rather than above the sessions.
+ * underneath everything rather than above the projects.
  *
  * `remembered` is the dock order before this mount opened anything, the only
  * way to tell a genuine newcomer from a window the layout placed: opening
