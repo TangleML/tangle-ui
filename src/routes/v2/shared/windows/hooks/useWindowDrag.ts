@@ -152,6 +152,7 @@ export function useWindowDrag({
         },
         enabledDockSides: windows.enabledDockSides,
         popoverDockSides: windows.popoverDockSides,
+        dockTargetElements: windows.dockTargetElements,
       });
       snapPreviewRef.current = preview;
       setSnapPreview(preview);

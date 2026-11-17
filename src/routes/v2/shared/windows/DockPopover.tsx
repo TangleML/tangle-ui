@@ -15,7 +15,6 @@ import { leaveEscapeToSearchBox } from "@/utils/dom";
 import { tracking } from "@/utils/tracking";
 
 import { PopoverWindow } from "./components/PopoverWindow";
-import { registerDockTargetElement } from "./snapUtils";
 
 interface DockPopoverProps {
   side: "left" | "right";
@@ -52,7 +51,7 @@ export const DockPopover = observer(function DockPopover({
     windows.enablePopoverDock(side);
     return () => {
       windows.disablePopoverDock(side);
-      registerDockTargetElement(side, null);
+      windows.setDockTargetElement(side, null);
     };
   }, [windows, side]);
 
@@ -79,7 +78,7 @@ export const DockPopover = observer(function DockPopover({
         <Button
           ref={(element) => {
             triggerRef.current = element;
-            registerDockTargetElement(side, element);
+            windows.setDockTargetElement(side, element);
           }}
           variant="subtle"
           size="icon-sm"

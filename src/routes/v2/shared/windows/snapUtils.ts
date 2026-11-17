@@ -35,32 +35,18 @@ export function registerDockAreaElement(
   dockAreaElements[side] = element;
 }
 
-/**
- * The button each popover dock shows once it's on screen. A window docks to a
- * popover side only by being dropped on its button, never at the screen edge.
- */
-const dockTargetElements: Record<"left" | "right", HTMLElement | null> = {
-  left: null,
-  right: null,
-};
-
 const DOCK_TARGET_PADDING = 8;
 
-export function registerDockTargetElement(
-  side: "left" | "right",
-  element: HTMLElement | null,
-): void {
-  dockTargetElements[side] = element;
-}
-
+/**
+ * A window docks to a popover side only by being dropped on that dock's
+ * button, never at the screen edge.
+ */
 function detectDockTarget(
   mouseX: number,
   mouseY: number,
-  popoverSides: ReadonlySet<"left" | "right">,
+  dockTargetElements: ReadonlyMap<"left" | "right", HTMLElement>,
 ): SnapPreviewType | null {
-  for (const side of popoverSides) {
-    const el = dockTargetElements[side];
-    if (!el) continue;
+  for (const [side, el] of dockTargetElements) {
     const rect = el.getBoundingClientRect();
     if (
       mouseX >= rect.left - DOCK_TARGET_PADDING &&
@@ -196,6 +182,7 @@ interface DetectSnapPreviewOptions {
   dockAreaWindowIds?: Record<"left" | "right", string[]>;
   enabledDockSides?: ReadonlySet<"left" | "right">;
   popoverDockSides?: ReadonlySet<"left" | "right">;
+  dockTargetElements?: ReadonlyMap<"left" | "right", HTMLElement>;
 }
 
 export function detectSnapPreview(
@@ -207,6 +194,7 @@ export function detectSnapPreview(
     dockAreaWindowIds,
     enabledDockSides = new Set(["left", "right"] as const),
     popoverDockSides = new Set(),
+    dockTargetElements = new Map(),
   } = options;
 
   if (!mousePosition) return null;
@@ -214,7 +202,7 @@ export function detectSnapPreview(
   const target = detectDockTarget(
     mousePosition.x,
     mousePosition.y,
-    popoverDockSides,
+    dockTargetElements,
   );
   if (target) return target;
 

@@ -48,6 +48,13 @@ export class WindowStoreImpl implements WindowStoreRef {
   @observable accessor enabledDockSides: Set<"left" | "right"> = new Set();
   /** Sides whose dock is a popover behind a button rather than a column. */
   @observable accessor popoverDockSides: Set<"left" | "right"> = new Set();
+  /**
+   * The button each popover dock shows once it's on screen. Kept with the
+   * store, so it is a drop target for this store's windows only and not for
+   * those of a pipeline or run embedded in the page with a store of its own.
+   * Plain, since a ref sets it while React commits.
+   */
+  readonly dockTargetElements = new Map<"left" | "right", HTMLElement>();
   @observable accessor isDraggingWindow = false;
   /** The popover dock whose button a dragged window would drop on. */
   @observable accessor dropTargetSide: "left" | "right" | null = null;
@@ -87,6 +94,17 @@ export class WindowStoreImpl implements WindowStoreRef {
     const next = new Set(this.popoverDockSides);
     next.delete(side);
     this.popoverDockSides = next;
+  }
+
+  setDockTargetElement(
+    side: "left" | "right",
+    element: HTMLElement | null,
+  ): void {
+    if (element) {
+      this.dockTargetElements.set(side, element);
+    } else {
+      this.dockTargetElements.delete(side);
+    }
   }
 
   @action setDockPopoverOpen(side: "left" | "right", open: boolean): void {
