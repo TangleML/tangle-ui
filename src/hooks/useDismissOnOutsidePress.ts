@@ -1,4 +1,4 @@
-import { type RefObject, useEffect } from "react";
+import { type RefObject, useEffect, useEffectEvent } from "react";
 
 // Menus and dialogs a popover opens are portaled outside it, so working in one
 // is not a press away from it.
@@ -28,14 +28,22 @@ export function useDismissOnOutsidePress({
   refs: RefObject<Element | null>[];
   onDismiss: () => void;
 }) {
+  // Callers pass a new `refs` array and `onDismiss` on every render. Reading
+  // them through effect events keeps the listeners, and a pending check for a
+  // frame taking focus, in place across those renders.
+  const isInside = useEffectEvent((target: Element) =>
+    refs.some((ref) => ref.current?.contains(target)),
+  );
+  const dismiss = useEffectEvent(onDismiss);
+
   useEffect(() => {
     if (!open) return;
     const dismissIfOutside = (event: PointerEvent) => {
       const target = event.target;
       if (!(target instanceof Element)) return;
-      if (refs.some((ref) => ref.current?.contains(target))) return;
+      if (isInside(target)) return;
       if (target.closest(LAYERS_OPENED_FROM_POPOVER)) return;
-      onDismiss();
+      dismiss();
     };
     // The window also blurs for another app, devtools or a file chooser,
     // none of which is a press on this page; a frame taking focus is.
@@ -43,7 +51,7 @@ export function useDismissOnOutsidePress({
     const dismissIfFrameTookFocus = () => {
       clearTimeout(checking);
       checking = setTimeout(() => {
-        if (focusedElement() instanceof HTMLIFrameElement) onDismiss();
+        if (focusedElement() instanceof HTMLIFrameElement) dismiss();
       });
     };
     document.addEventListener("pointerdown", dismissIfOutside, true);
@@ -53,5 +61,5 @@ export function useDismissOnOutsidePress({
       document.removeEventListener("pointerdown", dismissIfOutside, true);
       window.removeEventListener("blur", dismissIfFrameTookFocus);
     };
-  }, [open, refs, onDismiss]);
+  }, [open]);
 }

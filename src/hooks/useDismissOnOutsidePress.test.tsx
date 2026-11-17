@@ -66,6 +66,32 @@ describe("useDismissOnOutsidePress", () => {
     vi.useRealTimers();
   });
 
+  it("still dismisses for a frame taking focus when its caller re-renders first, with the caller's latest callback", () => {
+    vi.useFakeTimers();
+    const frame = document.createElement("iframe");
+    document.body.append(frame);
+    const staleOnDismiss = vi.fn();
+    const onDismiss = vi.fn();
+    const { rerender } = renderHook(
+      (props: { onDismiss: () => void }) =>
+        useDismissOnOutsidePress({
+          open: true,
+          refs: [{ current: document.createElement("div") }],
+          onDismiss: props.onDismiss,
+        }),
+      { initialProps: { onDismiss: staleOnDismiss } },
+    );
+
+    frame.focus();
+    fireEvent.blur(window);
+    rerender({ onDismiss });
+    vi.runAllTimers();
+
+    expect(staleOnDismiss).not.toHaveBeenCalled();
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
   it("does nothing while closed", () => {
     const closed = setup(false);
     fireEvent.pointerDown(closed.outside);
