@@ -41,14 +41,14 @@ const spec = new YamlDeserializer(new IncrementingIdGenerator()).deserialize({
           componentRef: wideComponent(25),
           arguments: { input_0: { graphInput: { inputName: "source_table" } } },
         },
-        "Judge v4": {
+        "Evaluate A": {
           componentRef: wideComponent(20),
           arguments: {
             input_0: { taskOutput: { taskId: "Prepare", outputName: "table" } },
             input_1: { graphInput: { inputName: "model_name" } },
           },
         },
-        "Judge v6": {
+        "Evaluate B": {
           componentRef: wideComponent(20),
           arguments: {
             input_0: { taskOutput: { taskId: "Prepare", outputName: "table" } },
@@ -59,10 +59,10 @@ const spec = new YamlDeserializer(new IncrementingIdGenerator()).deserialize({
           componentRef: wideComponent(12),
           arguments: {
             input_0: {
-              taskOutput: { taskId: "Judge v4", outputName: "table" },
+              taskOutput: { taskId: "Evaluate A", outputName: "table" },
             },
             input_1: {
-              taskOutput: { taskId: "Judge v6", outputName: "table" },
+              taskOutput: { taskId: "Evaluate B", outputName: "table" },
             },
           },
         },

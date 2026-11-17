@@ -36,6 +36,7 @@ import { pluralize } from "@/utils/string";
 
 import { deriveColorPalette } from "./color.utils";
 import { InputAggregatorHandle } from "./InputAggregatorHandle";
+import { condensePorts } from "./ports.utils";
 import type { TaskNodeInput, TaskNodeViewProps } from "./TaskNode";
 
 const RUN_CONDITION_HANDLE_ID = `input_${IS_ENABLED_PORT_NAME}`;
@@ -339,11 +340,7 @@ export const TaskNodeCard = observer(function TaskNodeCard({
     ? inputs.filter((input) => !AGGREGATOR_INTERNAL_INPUTS.has(input.name))
     : inputs;
 
-  const condensedInputs = filteredInputs.some((input) =>
-    connectedInputNames.has(input.name),
-  )
-    ? filteredInputs.filter((input) => connectedInputNames.has(input.name))
-    : filteredInputs.slice(0, 1);
+  const condensedInputs = condensePorts(filteredInputs, connectedInputNames);
   const hiddenInputCount = filteredInputs.length - condensedInputs.length;
   const inputsSectionToggles =
     !isAggregator && collapsed && hiddenInputCount > 0;
@@ -357,10 +354,7 @@ export const TaskNodeCard = observer(function TaskNodeCard({
       onInputClick(inputName, event);
     };
 
-  const condensedOutputs =
-    outputs.length > 0 && connectedOutputNames.size > 0
-      ? outputs.filter((output) => connectedOutputNames.has(output.name))
-      : outputs.slice(0, 1);
+  const condensedOutputs = condensePorts(outputs, connectedOutputNames);
   const hiddenOutputCount = outputs.length - condensedOutputs.length;
   const showCondensedOutputs =
     collapsed && !outputsExpanded && hiddenOutputCount > 0;
