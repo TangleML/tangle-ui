@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils";
 
 const TONE = {
   subdued: "bg-muted-foreground",
+  info: "bg-info",
   success: "bg-success",
   warning: "bg-warning",
   critical: "bg-destructive",

@@ -46,6 +46,7 @@ interface ListItemProps {
 
 const ICON_TONE = {
   subdued: "text-muted-foreground",
+  info: "text-info",
   success: "text-success",
   warning: "text-warning",
   critical: "text-destructive",
