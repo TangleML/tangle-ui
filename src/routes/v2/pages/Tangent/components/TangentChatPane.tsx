@@ -36,6 +36,7 @@ interface TangentChatPaneProps {
   onOpenArtifact?: (url: string, title: string) => void;
   onSendPrompt?: (content: string) => void;
   onError?: (message: string) => void;
+  onResourcesChange?: () => void;
   headerAction?: ReactNode;
 }
 
@@ -56,6 +57,7 @@ export function TangentChatPane({
   onOpenArtifact,
   onSendPrompt,
   onError,
+  onResourcesChange,
   headerAction,
 }: TangentChatPaneProps) {
   return (
@@ -104,6 +106,9 @@ export function TangentChatPane({
             onOpenArtifact={onOpenArtifact}
             onSendPrompt={onSendPrompt}
             onError={onError}
+            // Every chat of a session reports the same changes, so only
+            // this one, which is always mounted, is listened to.
+            onResourcesChange={onResourcesChange}
           />
         </TabsContent>
         {tabs.map((tab) => (
