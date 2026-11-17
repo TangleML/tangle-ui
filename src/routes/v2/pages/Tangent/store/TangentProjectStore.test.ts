@@ -19,7 +19,6 @@ import { idIdentity } from "@/services/projects/resourceTarget";
 
 import {
   CHAT_TAB_VALUE,
-  PRIME_AGENT_ID,
   TangentProjectStore,
   type TangentSessionIo,
 } from "./TangentProjectStore";
@@ -28,7 +27,7 @@ const SESSION_A = "session-a";
 const SESSION_B = "session-b";
 
 const prime: EmbedAgent = {
-  id: PRIME_AGENT_ID,
+  id: "prime",
   name: "Prime",
   kind: "prime",
   status: "active",
@@ -83,7 +82,6 @@ describe("TangentProjectStore chat tabs", () => {
 
     expect(store.chatTabs).toEqual([]);
     expect(store.chatActiveTab).toBe(CHAT_TAB_VALUE);
-    expect(store.selectedAgentId).toBe(PRIME_AGENT_ID);
   });
 
   it("focuses Chat and does not add a tab when Prime is opened", () => {
@@ -96,7 +94,6 @@ describe("TangentProjectStore chat tabs", () => {
       { id: researcher.id, title: researcher.name },
     ]);
     expect(store.chatActiveTab).toBe(CHAT_TAB_VALUE);
-    expect(store.selectedAgentId).toBe(PRIME_AGENT_ID);
   });
 
   it("adds a tab and focuses it when a sub-agent is opened", () => {
@@ -108,7 +105,6 @@ describe("TangentProjectStore chat tabs", () => {
       { id: researcher.id, title: researcher.name },
     ]);
     expect(store.chatActiveTab).toBe(researcher.id);
-    expect(store.selectedAgentId).toBe(researcher.id);
   });
 
   it("focuses an existing tab without duplicating it", () => {
@@ -133,7 +129,6 @@ describe("TangentProjectStore chat tabs", () => {
 
     expect(store.chatTabs).toEqual([]);
     expect(store.chatActiveTab).toBe(CHAT_TAB_VALUE);
-    expect(store.selectedAgentId).toBe(PRIME_AGENT_ID);
   });
 
   it("leaves the active tab unchanged when an inactive tab is closed", () => {
@@ -184,7 +179,6 @@ describe("TangentProjectStore chat tabs", () => {
 
     expect(store.chatTabs).toEqual([]);
     expect(store.chatActiveTab).toBe(CHAT_TAB_VALUE);
-    expect(store.selectedAgentId).toBe(PRIME_AGENT_ID);
   });
 });
 
