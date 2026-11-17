@@ -1,15 +1,26 @@
 import dagre from "@dagrejs/dagre";
 import type { Edge, Node, XYPosition } from "@xyflow/react";
 
-import { DEFAULT_NODE_DIMENSIONS } from "@/utils/constants";
-
 export type LayoutAlgorithm =
   "sugiyama" | "sugiyama_centered" | "digco" | "dwyer";
+
+export interface NodeSize {
+  width: number;
+  height: number;
+}
+
+export type NodeSizeResolver = (node: Node) => NodeSize;
+
+export const getMeasuredNodeSize: NodeSizeResolver = (node) => ({
+  width: node.measured?.width ?? 0,
+  height: node.measured?.height ?? 0,
+});
 
 export const autoLayoutNodes = (
   nodes: Node[],
   edges: Edge[],
   algorithm: LayoutAlgorithm = "sugiyama",
+  getNodeSize: NodeSizeResolver = getMeasuredNodeSize,
 ): Node[] => {
   const dagreGraph = new dagre.graphlib.Graph();
 
@@ -56,11 +67,10 @@ export const autoLayoutNodes = (
   dagreGraph.setGraph(config);
   dagreGraph.setDefaultEdgeLabel(() => ({}));
 
-  nodes.forEach((node) => {
-    dagreGraph.setNode(node.id, {
-      width: node.measured?.width,
-      height: node.measured?.height,
-    });
+  const sizes = new Map(nodes.map((node) => [node.id, getNodeSize(node)]));
+
+  sizes.forEach((size, nodeId) => {
+    dagreGraph.setNode(nodeId, { ...size });
   });
 
   edges.forEach((edge) => {
@@ -72,23 +82,24 @@ export const autoLayoutNodes = (
   // Apply custom centering for sugiyama_centered
   let centeredPositions: Map<string, XYPosition> | null = null;
   if (algorithm === "sugiyama_centered") {
-    centeredPositions = centerNodesInBuckets(nodes, dagreGraph, config);
+    centeredPositions = centerNodesInBuckets(sizes, dagreGraph, config);
   }
 
   return nodes.map((node) => {
     const nodeWithPosition = dagreGraph.node(node.id);
+    const { width, height } = sizes.get(node.id)!;
 
     let position;
     if (centeredPositions && centeredPositions.has(node.id)) {
       const centered = centeredPositions.get(node.id)!;
       position = {
-        x: centered.x - (node?.measured?.width || 0) / 2,
-        y: centered.y - (node?.measured?.height || 0) / 2,
+        x: centered.x - width / 2,
+        y: centered.y - height / 2,
       };
     } else {
       position = {
-        x: nodeWithPosition.x - (node?.measured?.width || 0) / 2,
-        y: nodeWithPosition.y - (node?.measured?.height || 0) / 2,
+        x: nodeWithPosition.x - width / 2,
+        y: nodeWithPosition.y - height / 2,
       };
     }
 
@@ -107,7 +118,7 @@ export const autoLayoutNodes = (
  * 3. Places nodes as close as possible to center without overlapping
  */
 function centerNodesInBuckets(
-  nodes: Node[],
+  sizes: Map<string, NodeSize>,
   dagreGraph: InstanceType<typeof dagre.graphlib.Graph>,
   config: {
     nodesep: number;
@@ -117,26 +128,21 @@ function centerNodesInBuckets(
     ranksep?: number;
   },
 ): Map<string, XYPosition> {
-  const positions = new Map<
-    string,
-    XYPosition & { width: number; height: number }
-  >();
+  const positions = new Map<string, XYPosition & NodeSize>();
 
-  // Initialize buckets
-  nodes.forEach((node) => {
-    const nodeWithPosition = dagreGraph.node(node.id) as {
+  sizes.forEach((size, nodeId) => {
+    const nodeWithPosition = dagreGraph.node(nodeId) as {
       x: number;
       y: number;
     };
-    positions.set(node.id, {
+    positions.set(nodeId, {
       x: nodeWithPosition.x,
       y: nodeWithPosition.y,
-      width: node.measured?.width || DEFAULT_NODE_DIMENSIONS.w || 300,
-      height: node.measured?.height || DEFAULT_NODE_DIMENSIONS.h || 300,
+      ...size,
     });
   });
 
-  if (nodes.length === 0) return new Map();
+  if (sizes.size === 0) return new Map();
 
   const allY = Array.from(positions.values()).map((p) => p.y);
   const avgY = allY.reduce((sum, y) => sum + y, 0) / allY.length;
