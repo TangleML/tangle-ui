@@ -93,6 +93,8 @@ vi.mock("@/routes/v2/pages/Tangent/hooks/useProjectResourceItems", () => ({
           pipeline(2),
           pipeline(3),
           pipeline(4),
+          pipeline(5),
+          pipeline(6),
           {
             id: "d-1",
             name: "Project brief",
@@ -104,32 +106,48 @@ vi.mock("@/routes/v2/pages/Tangent/hooks/useProjectResourceItems", () => ({
   }),
 }));
 
-vi.mock("@/services/projects/useProjectRuns", () => ({
-  useProjectRuns: () => ({
-    ...loading.runs,
-    data:
-      loading.runs.isLoading || loading.runs.error
-        ? undefined
-        : [
-            {
-              id: "run-1",
-              rootExecutionId: "e-1",
-              pipelineName: "Pipeline 1",
-              createdBy: null,
-              createdAt: new Date("2026-11-05"),
-            },
-            {
-              id: "run-2",
-              rootExecutionId: "e-2",
-              pipelineName: "Somewhere else",
-              createdBy: null,
-              createdAt: new Date("2026-11-04"),
-            },
-          ],
-    hasNextPage: runFeed.hasOlderPage,
-  }),
-  useRunExecutionStats: () => ({ data: undefined, isPending: true }),
-}));
+const olderRun = (n: number) => ({
+  id: `run-${n}`,
+  rootExecutionId: `e-${n}`,
+  pipelineName: `Older run ${n}`,
+  createdBy: null,
+  createdAt: new Date(`2026-10-${30 - n}`),
+});
+
+vi.mock("@/services/projects/useProjectRuns", async () => {
+  const { useState } = await import("react");
+  return {
+    useProjectRuns: () => {
+      const [olderLoaded, setOlderLoaded] = useState(false);
+      return {
+        ...loading.runs,
+        data:
+          loading.runs.isLoading || loading.runs.error
+            ? undefined
+            : [
+                {
+                  id: "run-1",
+                  rootExecutionId: "e-1",
+                  pipelineName: "Pipeline 1",
+                  createdBy: null,
+                  createdAt: new Date("2026-11-05"),
+                },
+                {
+                  id: "run-2",
+                  rootExecutionId: "e-2",
+                  pipelineName: "Somewhere else",
+                  createdBy: null,
+                  createdAt: new Date("2026-11-04"),
+                },
+                ...(olderLoaded ? [3, 4, 5, 6].map(olderRun) : []),
+              ],
+        hasNextPage: runFeed.hasOlderPage && !olderLoaded,
+        fetchNextPage: async () => setOlderLoaded(true),
+      };
+    },
+    useRunExecutionStats: () => ({ data: undefined, isPending: true }),
+  };
+});
 
 const file = (key: string, title: string, pinned: boolean) => ({
   key,
@@ -193,6 +211,7 @@ describe("ProjectCardContent", () => {
     pin.mockClear();
     unpin.mockClear();
     archiveChange.mockClear();
+    localStorage.clear();
     loading.resources = { isLoading: false, isLoaded: true, error: null };
     loading.runs = { isLoading: false, error: null };
     loading.files = { isLoading: false, error: null, none: false };
@@ -313,12 +332,62 @@ describe("ProjectCardContent", () => {
     );
   });
 
-  it("lists every item in a section rather than hiding some behind Show all", () => {
+  it("shows a section's newest five and the rest on Show all, remembered for the project", async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<ProjectCardContent />);
+    const pipelines = () => screen.getByRole("region", { name: "Pipelines" });
+
+    expect(within(pipelines()).getByText("Pipeline 5")).toBeInTheDocument();
+    expect(within(pipelines()).queryByText("Pipeline 6")).toBeNull();
+    expect(
+      within(screen.getByRole("region", { name: "Runs" })).queryByRole(
+        "button",
+        { name: /Show all/ },
+      ),
+    ).toBeNull();
+
+    await user.click(
+      within(pipelines()).getByRole("button", { name: "Show all 6" }),
+    );
+    expect(within(pipelines()).getByText("Pipeline 6")).toBeInTheDocument();
+
+    unmount();
     render(<ProjectCardContent />);
+    expect(within(pipelines()).getByText("Pipeline 6")).toBeInTheDocument();
+
+    await user.click(
+      within(pipelines()).getByRole("button", { name: "Show fewer" }),
+    );
+    expect(within(pipelines()).queryByText("Pipeline 6")).toBeNull();
+  });
+
+  it("shows the older runs it loads when Runs was showing five or fewer", async () => {
+    const user = userEvent.setup();
+    runFeed.hasOlderPage = true;
+    render(<ProjectCardContent />);
+    const runs = () => screen.getByRole("region", { name: "Runs" });
+
+    await user.click(
+      within(runs()).getByRole("button", { name: "Load older runs" }),
+    );
+
+    expect(within(runs()).getByText("Older run 6")).toBeInTheDocument();
+    expect(
+      within(runs()).queryByRole("button", { name: /Show all/ }),
+    ).toBeNull();
+
+    await user.click(
+      within(runs()).getByRole("button", { name: "Show fewer" }),
+    );
+    expect(within(runs()).queryByText("Older run 6")).toBeNull();
+  });
+
+  it("shows every match while searching", async () => {
+    await search("pipeline");
 
     const pipelines = screen.getByRole("region", { name: "Pipelines" });
-    expect(within(pipelines).getByText("Pipeline 4")).toBeInTheDocument();
-    expect(screen.queryByText(/Show all/)).toBeNull();
+    expect(within(pipelines).getByText("Pipeline 6")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Show all/ })).toBeNull();
   });
 
   it("lists runs newest first, whichever pipeline they ran", () => {
