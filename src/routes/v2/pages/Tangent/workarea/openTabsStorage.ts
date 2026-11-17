@@ -13,10 +13,10 @@ import { isRecord } from "@/utils/typeGuards";
 
 import type { OpenTabs, WorkareaTab, WorkareaTarget } from "./types";
 
-// Tabs were once saved per project alone, under "tangent-open-tabs", where a
-// second account in the same browser inherited the first one's. That is left
-// unread.
 const OPEN_TABS_KEY = "tangent-open-tabs-by-user";
+// Where tabs were once saved per project alone, so a second account in the
+// same browser inherited the first one's. It is never read, only cleared.
+const SHARED_OPEN_TABS_KEY = "tangent-open-tabs";
 
 interface TabsOwner {
   userId: string;
@@ -24,8 +24,8 @@ interface TabsOwner {
 }
 
 const storage = getStorage<
-  typeof OPEN_TABS_KEY,
-  { [OPEN_TABS_KEY]: unknown }
+  typeof OPEN_TABS_KEY | typeof SHARED_OPEN_TABS_KEY,
+  { [OPEN_TABS_KEY]: unknown; [SHARED_OPEN_TABS_KEY]: null }
 >();
 
 function savedByUser(): Record<string, unknown> {
@@ -124,6 +124,7 @@ export function rememberOpenTabs(
   store: TangentProjectStore,
   userId: string,
 ): () => void {
+  storage.setItem(SHARED_OPEN_TABS_KEY, null);
   return reaction(
     () => store.openTabs,
     (openTabs) =>

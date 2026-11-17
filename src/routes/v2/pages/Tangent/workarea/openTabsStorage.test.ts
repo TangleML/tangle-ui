@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
 import {
@@ -55,6 +55,7 @@ describe("a project's open tabs", () => {
   beforeEach(() => localStorage.clear());
   afterEach(() => {
     for (const dispose of disposers.splice(0)) dispose();
+    vi.restoreAllMocks();
   });
 
   it("come back on the next visit with the same tab in front", () => {
@@ -266,6 +267,34 @@ describe("a project's open tabs", () => {
 
     expect(saved("project-1").tabs).toEqual([]);
     expect(saved("project-1", "project-1").tabs).toEqual([]);
+  });
+
+  it("leave none behind from before they were kept per person", () => {
+    localStorage.setItem(
+      OLD_STORAGE_KEY,
+      JSON.stringify({
+        "project-1": {
+          tabs: [{ title: "Churn model", target: "pipeline://remote/p-1" }],
+        },
+      }),
+    );
+
+    visit("project-1");
+
+    expect(localStorage.getItem(OLD_STORAGE_KEY)).toBeNull();
+  });
+
+  it("still open when the browser won't let anything be saved or cleared", () => {
+    const refuse = () => {
+      throw new Error("The operation is insecure.");
+    };
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(refuse);
+    vi.spyOn(Storage.prototype, "removeItem").mockImplementation(refuse);
+
+    const store = visit("project-1");
+    store.openResolvedView({ title: "Churn model", target: pipeline });
+
+    expect(titles(store.openTabs)).toEqual(["Churn model"]);
   });
 
   it("aren't mixed up by a person or project named like a built-in", () => {
