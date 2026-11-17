@@ -278,8 +278,8 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
   function expandSection(title: string) {
     rememberExpanded(new Set(expanded).add(title));
   }
-  // A search shows every match, so it's the one time nothing is held back.
-  const preview = (kind: Preview) => (searching ? undefined : kind);
+  const overflowUnlessSearching = (overflow: Overflow) =>
+    searching ? undefined : overflow;
 
   const sections: (Section & { shownWhenEmpty: boolean })[] = [
     {
@@ -290,7 +290,7 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
         "this project's reports",
         "Nothing has been pinned as a report yet",
       ),
-      preview: preview("cut"),
+      overflow: overflowUnlessSearching("footer"),
       footer: searching ? undefined : (
         <FooterButton
           icon="Files"
@@ -316,13 +316,13 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
       rows: runs.active
         .filter(({ pipelineName }) => matches(pipelineName))
         .map(renderRun),
-      more: searching ? undefined : (
+      afterAllRows: searching ? undefined : (
         <LoadOlderRuns
           query={projectRuns}
           onLoad={() => expandSection("Runs")}
         />
       ),
-      preview: preview("expand"),
+      overflow: overflowUnlessSearching("show-all"),
       action: add("run"),
       empty: projectRuns.hasNextPage
         ? undefined
@@ -338,7 +338,7 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
       rows: pipelines.active
         .filter(({ name }) => matches(name))
         .map(renderAttached),
-      preview: preview("expand"),
+      overflow: overflowUnlessSearching("show-all"),
       action: add("pipeline"),
       empty: emptyNote(
         [resourceItems],
@@ -352,7 +352,7 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
       rows: documents.active
         .filter(({ name }) => matches(name))
         .map(renderAttached),
-      preview: preview("expand"),
+      overflow: overflowUnlessSearching("show-all"),
       action: add("document"),
       empty: emptyNote(
         [resourceItems],
@@ -487,18 +487,13 @@ function FooterButton({
   );
 }
 
-/**
- * How a long section holds back its rows: `expand` with a "Show all" row in
- * place, `cut` leaving the rest to its footer. Without one, every row shows.
- */
-type Preview = "expand" | "cut";
+type Overflow = "show-all" | "footer";
 
 interface Section {
   title: string;
   rows: ReactNode[];
-  // Shown after the rows, once they're all showing.
-  more?: ReactNode;
-  preview?: Preview;
+  afterAllRows?: ReactNode;
+  overflow?: Overflow;
   action?: ReactNode;
   empty?: string;
   footer?: ReactNode;
@@ -515,10 +510,10 @@ function CardSections({
 }) {
   return (
     <div className="divide-y divide-border">
-      {sections.map(({ title, rows, more, preview, ...section }) => {
-        const long = preview !== undefined && rows.length > PREVIEW_COUNT;
+      {sections.map(({ title, rows, afterAllRows, overflow, ...section }) => {
+        const long = overflow !== undefined && rows.length > PREVIEW_COUNT;
         const open = expanded.has(title);
-        const clipped = long && !(preview === "expand" && open);
+        const clipped = long && !(overflow === "show-all" && open);
         return (
           <CardSection
             key={title}
@@ -527,8 +522,8 @@ function CardSections({
             {...section}
           >
             {clipped ? rows.slice(0, PREVIEW_COUNT) : rows}
-            {!clipped && more}
-            {long && preview === "expand" && (
+            {!clipped && afterAllRows}
+            {long && overflow === "show-all" && (
               <ShowAllRow
                 open={open}
                 total={rows.length}
