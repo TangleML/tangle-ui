@@ -127,6 +127,7 @@ const mockDataset = (schema: unknown[], numRows: number) => {
   vi.mocked(parquetMetadataAsync).mockResolvedValue({
     schema,
     num_rows: numRows,
+    row_groups: [],
   } as unknown as Awaited<ReturnType<typeof parquetMetadataAsync>>);
   vi.mocked(parquetReadObjects).mockImplementation(
     async ({ rowStart = 0, rowEnd }) => {
@@ -152,6 +153,7 @@ const mockWideDataset = (columnCount: number, numRows: number) => {
       })),
     ],
     num_rows: numRows,
+    row_groups: [],
   } as unknown as Awaited<ReturnType<typeof parquetMetadataAsync>>);
   vi.mocked(parquetReadObjects).mockImplementation(
     async ({ rowStart = 0, rowEnd }) => {
@@ -453,6 +455,7 @@ describe("ParquetVisualizer", () => {
     vi.mocked(parquetMetadata).mockReturnValue({
       schema: SCHEMA,
       num_rows: 1,
+      row_groups: [],
     } as unknown as ReturnType<typeof parquetMetadata>);
     vi.mocked(parquetReadObjects).mockResolvedValue([
       { name: "Alice", score: 100 },
@@ -517,6 +520,7 @@ describe("ParquetVisualizer", () => {
         },
       ],
       num_rows: 5,
+      row_groups: [],
     } as unknown as Awaited<ReturnType<typeof parquetMetadataAsync>>);
     vi.mocked(parquetReadObjects).mockResolvedValue([{ id: 1, label: "a" }]);
 
@@ -582,10 +586,18 @@ describe("ParquetVisualizer", () => {
   });
 
   it("surfaces an unsupported compression codec as a readable error", async () => {
-    mockDataset(SCHEMA, 2);
-    vi.mocked(parquetReadObjects).mockRejectedValue(
-      new Error("parquet unsupported compression codec: ZSTD"),
-    );
+    vi.mocked(parquetMetadataAsync).mockResolvedValue({
+      schema: SCHEMA,
+      num_rows: 2,
+      row_groups: [
+        {
+          columns: [
+            { meta_data: { codec: "SNAPPY" } },
+            { meta_data: { codec: "ZSTD" } },
+          ],
+        },
+      ],
+    } as unknown as Awaited<ReturnType<typeof parquetMetadataAsync>>);
 
     renderWithSuspense(
       <ParquetVisualizer
@@ -597,6 +609,7 @@ describe("ParquetVisualizer", () => {
     expect(await screen.findByTestId("error")).toHaveTextContent(
       "Unsupported compression codec: ZSTD.",
     );
+    expect(vi.mocked(parquetReadObjects)).not.toHaveBeenCalled();
   });
 
   it("shows 'No data' for empty parquet files", async () => {
@@ -651,6 +664,7 @@ describe("ParquetVisualizer", () => {
         },
       ],
       num_rows: 1,
+      row_groups: [],
     } as unknown as Awaited<ReturnType<typeof parquetMetadataAsync>>);
     vi.mocked(parquetReadObjects).mockResolvedValue([{ id: 1, label: "a" }]);
 

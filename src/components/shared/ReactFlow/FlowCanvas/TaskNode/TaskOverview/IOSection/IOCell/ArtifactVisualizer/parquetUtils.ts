@@ -2,6 +2,7 @@ import {
   type AsyncBuffer,
   asyncBufferFromUrl,
   cachedAsyncBuffer,
+  type CompressionCodec,
   type FileMetaData,
   parquetMetadata,
   parquetMetadataAsync,
@@ -30,36 +31,28 @@ export interface OpenedParquet {
 }
 
 export class ParquetUnsupportedCodecError extends Error {
-  constructor(
-    public readonly codec: string,
-    options?: ErrorOptions,
-  ) {
+  constructor(public readonly codec: CompressionCodec) {
     super(
       `Unsupported compression codec: ${codec}. Only uncompressed and Snappy-compressed Parquet files can be previewed.`,
-      options,
     );
     this.name = "ParquetUnsupportedCodecError";
   }
 }
 
-const UNSUPPORTED_CODEC_MESSAGE = /unsupported compression codec: (\w+)/;
+const NATIVELY_DECODED_CODECS: ReadonlySet<CompressionCodec> = new Set([
+  "UNCOMPRESSED",
+  "SNAPPY",
+]);
 
-export function toReadableParquetError(error: unknown): unknown {
-  if (!(error instanceof Error)) return error;
-  const codec = error.message.match(UNSUPPORTED_CODEC_MESSAGE)?.[1];
-  return codec
-    ? new ParquetUnsupportedCodecError(codec, { cause: error })
-    : error;
-}
-
-async function readObjects(
-  options: Parameters<typeof parquetReadObjects>[0],
-): ReturnType<typeof parquetReadObjects> {
-  try {
-    return await parquetReadObjects(options);
-  } catch (error) {
-    throw toReadableParquetError(error);
-  }
+export function assertDecodableCodecs(metadata: FileMetaData): void {
+  const unsupportedCodec = metadata.row_groups
+    .flatMap((rowGroup) => rowGroup.columns)
+    .map((column) => column.meta_data?.codec)
+    .find(
+      (codec) => codec !== undefined && !NATIVELY_DECODED_CODECS.has(codec),
+    );
+  if (unsupportedCodec)
+    throw new ParquetUnsupportedCodecError(unsupportedCodec);
 }
 
 export async function openParquet(
@@ -131,7 +124,8 @@ export async function readParquetRows(
   rowStart: number,
   rowEnd: number,
 ): Promise<ArtifactCell[][]> {
-  const objects = await readObjects({
+  assertDecodableCodecs(metadata);
+  const objects = await parquetReadObjects({
     file: source,
     metadata,
     rowStart,
@@ -144,7 +138,8 @@ export async function readParquetPreview(
   opened: OpenedParquet,
   previewRows: number,
 ): Promise<{ columns: ArtifactColumn[]; rows: ArtifactCell[][] }> {
-  const objects = await readObjects({
+  assertDecodableCodecs(opened.metadata);
+  const objects = await parquetReadObjects({
     file: opened.source,
     metadata: opened.metadata,
     rowEnd: previewRows,

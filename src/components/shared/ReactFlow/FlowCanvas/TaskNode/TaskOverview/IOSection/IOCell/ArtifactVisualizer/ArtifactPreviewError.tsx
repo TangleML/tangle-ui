@@ -3,7 +3,6 @@ import type { ComponentProps } from "react";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { Paragraph } from "@/components/ui/typography";
 import { ArtifactFetchError } from "@/services/executionService";
-import { getErrorMessage } from "@/utils/string";
 
 import { getArtifactRetentionDays } from "../../artifactRetentionUtils";
 import { ParquetUnsupportedCodecError } from "./parquetUtils";
@@ -40,6 +39,12 @@ const ArtifactPreviewError = ({
       )}
     </InfoBox>
   );
+};
+
+const unexpectedErrorDetail = (error: unknown): string | undefined => {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  return undefined;
 };
 
 export const ArtifactPreviewErrorFallback = ({ error }: { error: unknown }) => {
@@ -84,6 +89,7 @@ export const ArtifactPreviewErrorFallback = ({ error }: { error: unknown }) => {
       <ArtifactPreviewError
         title="Failed to load artifact"
         preamble={`An unexpected error occurred (${status}).`}
+        detail={error.message}
         withRetentionHint
       />
     );
@@ -93,7 +99,7 @@ export const ArtifactPreviewErrorFallback = ({ error }: { error: unknown }) => {
     <ArtifactPreviewError
       title="Failed to load artifact"
       preamble="An unexpected error occurred."
-      detail={getErrorMessage(error)}
+      detail={unexpectedErrorDetail(error)}
     />
   );
 };

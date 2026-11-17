@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ArtifactFetchError } from "@/services/executionService";
 
@@ -40,22 +40,30 @@ describe("ArtifactPreviewErrorFallback", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows the HTTP status for a failed fetch", () => {
+  it("does not repeat a placeholder detail for a non-Error throw", () => {
+    render(<ArtifactPreviewErrorFallback error={{ reason: "opaque" }} />);
+
+    expect(
+      screen.getByText("An unexpected error occurred."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("An unknown error occurred"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows the HTTP status and which request failed for a failed fetch", () => {
     render(
       <ArtifactPreviewErrorFallback
         error={
-          new ArtifactFetchError(
-            500,
-            "Server Error",
-            "Failed to fetch artifact.",
-          )
+          new ArtifactFetchError(403, "Forbidden", "Failed to get signed URL.")
         }
       />,
     );
 
     expect(
-      screen.getByText("An unexpected error occurred (500 Server Error)."),
+      screen.getByText("An unexpected error occurred (403 Forbidden)."),
     ).toBeInTheDocument();
+    expect(screen.getByText("Failed to get signed URL.")).toBeInTheDocument();
   });
 
   it("explains an oversized artifact without a retention hint", () => {
@@ -88,5 +96,49 @@ describe("ArtifactPreviewErrorFallback", () => {
 
     expect(screen.getByText("Artifact unavailable")).toBeInTheDocument();
     expect(screen.getByText(/available for up to 30 days/)).toBeInTheDocument();
+  });
+
+  describe("with artifact retention configured", () => {
+    beforeEach(() => {
+      vi.stubEnv("VITE_ARTIFACT_RETENTION_DAYS", "30");
+    });
+
+    it("omits the expiry hint for an unsupported compression codec", () => {
+      render(
+        <ArtifactPreviewErrorFallback
+          error={new ParquetUnsupportedCodecError("ZSTD")}
+        />,
+      );
+
+      expect(screen.getByText("Can't preview this file")).toBeInTheDocument();
+      expect(screen.queryByText(/may have expired/)).not.toBeInTheDocument();
+    });
+
+    it("omits the expiry hint for an error raised after the fetch", () => {
+      render(
+        <ArtifactPreviewErrorFallback error={new Error("Decoding failed")} />,
+      );
+
+      expect(screen.getByText("Decoding failed")).toBeInTheDocument();
+      expect(screen.queryByText(/may have expired/)).not.toBeInTheDocument();
+    });
+
+    it("adds the expiry hint when the fetch fails with a server error", () => {
+      render(
+        <ArtifactPreviewErrorFallback
+          error={
+            new ArtifactFetchError(
+              500,
+              "Server Error",
+              "Failed to fetch artifact.",
+            )
+          }
+        />,
+      );
+
+      expect(
+        screen.getByText(/An unexpected error occurred \(500 Server Error\)\./),
+      ).toHaveTextContent(/may have expired/);
+    });
   });
 });
