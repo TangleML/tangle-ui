@@ -3,11 +3,8 @@ import type { EmbedReference } from "@tangent/embed-react";
 import { useArchivedProjectItems } from "@/routes/v2/pages/Tangent/hooks/useArchivedProjectItems";
 import { useProjectResourceItems } from "@/routes/v2/pages/Tangent/hooks/useProjectResourceItems";
 import { projectCardLists } from "@/routes/v2/pages/Tangent/services/projectCardEntries";
+import { ago } from "@/routes/v2/pages/Tangent/services/relativeTime";
 import { useProjectRuns } from "@/services/projects/useProjectRuns";
-import { formatRelativeTime } from "@/utils/date";
-
-const ago = (date: Date | null) =>
-  date ? formatRelativeTime(date) : undefined;
 
 /**
  * What the project card lists, for the chat's `#` picker: its pipelines and

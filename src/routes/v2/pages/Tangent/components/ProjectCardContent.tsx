@@ -21,10 +21,10 @@ import {
   type ProjectCardRun,
 } from "@/routes/v2/pages/Tangent/services/projectCardEntries";
 import { fileIcon } from "@/routes/v2/pages/Tangent/services/projectFiles";
+import { ago } from "@/routes/v2/pages/Tangent/services/relativeTime";
 import { useOptionalWindowContext } from "@/routes/v2/shared/windows/ContentWindowStateContext";
 import { runTarget } from "@/services/projects/resourceTarget";
 import { useProjectRuns } from "@/services/projects/useProjectRuns";
-import { formatRelativeTime } from "@/utils/date";
 import { containsSearchTerm } from "@/utils/searchUtils";
 import { tracking } from "@/utils/tracking";
 
@@ -33,10 +33,6 @@ import { RunListItem } from "./RunListItem";
 import { SearchField } from "./SearchField";
 
 type CardView = "main" | "files" | "archived";
-
-function ago(date: Date | null | undefined): string | undefined {
-  return date ? formatRelativeTime(date) : undefined;
-}
 
 function split<T extends { archived: boolean }>(items: T[]) {
   return {

@@ -5,9 +5,9 @@ import {
   type ListItemAction,
   type ListItemFlair,
 } from "@/components/ui/list-item";
+import { ago } from "@/routes/v2/pages/Tangent/services/relativeTime";
 import { resourceMeta } from "@/services/projects/resourceMeta";
 import { useRunExecutionStats } from "@/services/projects/useProjectRuns";
-import { formatRelativeTime } from "@/utils/date";
 import {
   getExecutionStatusLabel,
   getOverallExecutionStatusFromStats,
@@ -56,7 +56,7 @@ export function RunListItem({
       density="compact"
       icon={resourceMeta("run").icon}
       title={name}
-      subtitle={at ? formatRelativeTime(at) : undefined}
+      subtitle={ago(at)}
       flair={runStatusFlair(getOverallExecutionStatusFromStats(data))}
       onOpen={onOpen}
       tracking={tracking(trackingId)}
