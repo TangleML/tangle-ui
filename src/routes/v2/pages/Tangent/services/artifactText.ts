@@ -1,9 +1,7 @@
+import { tangentAuthHeaders } from "@/routes/v2/pages/Tangent/services/tangentApi";
+
 const TEXT_ARTIFACT_EXTENSIONS = new Set([
-  "txt",
-  "log",
-  "csv",
   "tsv",
-  "json",
   "yaml",
   "yml",
   "toml",
@@ -16,17 +14,22 @@ const TEXT_ARTIFACT_EXTENSIONS = new Set([
   "js",
 ]);
 
-function artifactPath(url: string): string {
+export interface ArtifactFile {
+  blob: Blob;
+  text: string;
+}
+
+function stripQueryAndHash(url: string): string {
   return url.split(/[?#]/, 1)[0];
 }
 
 export function isTextArtifact(url: string): boolean {
-  const extension = artifactPath(url).split(".").pop()?.toLowerCase();
+  const extension = stripQueryAndHash(url).split(".").pop()?.toLowerCase();
   return extension !== undefined && TEXT_ARTIFACT_EXTENSIONS.has(extension);
 }
 
 export function artifactFilename(url: string): string {
-  const basename = artifactPath(url).split("/").pop() ?? "";
+  const basename = stripQueryAndHash(url).split("/").pop() ?? "";
   try {
     return decodeURIComponent(basename);
   } catch {
@@ -34,18 +37,18 @@ export function artifactFilename(url: string): string {
   }
 }
 
-export async function fetchArtifactText(
+export async function fetchArtifactFile(
   url: string,
   authToken?: string,
-): Promise<string> {
-  const headers: Record<string, string> = {};
-  if (authToken) headers.Authorization = `Bearer ${authToken}`;
-
-  const response = await fetch(url, { headers });
+): Promise<ArtifactFile> {
+  const response = await fetch(url, {
+    headers: tangentAuthHeaders(authToken),
+  });
   if (!response.ok) {
     throw new Error(
       `Failed to load this file (${response.status} ${response.statusText}).`,
     );
   }
-  return response.text();
+  const blob = await response.blob();
+  return { blob, text: await blob.text() };
 }

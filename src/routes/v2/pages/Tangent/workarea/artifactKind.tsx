@@ -1,7 +1,5 @@
 import { ArtifactViewer } from "@tangent/embed-react";
 
-import { BlockStack } from "@/components/ui/layout";
-import { Text } from "@/components/ui/typography";
 import { isTextArtifact } from "@/routes/v2/pages/Tangent/services/artifactText";
 import {
   isTangentSessionUrl,
@@ -12,20 +10,7 @@ import { parseIdentity } from "@/services/projects/resourceTarget";
 import { registerWorkareaKind } from "./registry";
 import { TextArtifactView } from "./TextArtifactView";
 import type { WorkareaTab } from "./types";
-
-function ArtifactNotice({ children }: { children: string }) {
-  return (
-    <BlockStack
-      gap="1"
-      align="center"
-      className="min-h-0 flex-1 justify-center p-6 text-center"
-    >
-      <Text size="sm" tone="subdued">
-        {children}
-      </Text>
-    </BlockStack>
-  );
-}
+import { WorkareaMessage } from "./WorkareaPlaceholder";
 
 function ArtifactWorkareaView({
   tab,
@@ -41,10 +26,10 @@ function ArtifactWorkareaView({
   // checked once more before either viewer loads it.
   if (!tangentBaseUrl || !isTangentSessionUrl(url, tangentBaseUrl)) {
     return (
-      <ArtifactNotice>
+      <WorkareaMessage>
         This file isn&apos;t from one of this project&apos;s chats, so it
         can&apos;t be shown here.
-      </ArtifactNotice>
+      </WorkareaMessage>
     );
   }
   if (isTextArtifact(url)) {
@@ -55,7 +40,7 @@ function ArtifactWorkareaView({
   const owner = sessionIdOfFileUrl(url, tangentBaseUrl) ?? sessionId;
   if (owner === undefined) {
     return (
-      <ArtifactNotice>Start a session to view this artifact.</ArtifactNotice>
+      <WorkareaMessage>Start a session to view this artifact.</WorkareaMessage>
     );
   }
   return (
