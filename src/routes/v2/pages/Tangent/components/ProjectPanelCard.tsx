@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -7,15 +7,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Separator } from "@/components/ui/separator";
-import { Heading } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
+import { IS_MAC } from "@/routes/v2/shared/shortcuts/keys";
 import { tracking } from "@/utils/tracking";
 
-import { AssetsWindowContent } from "./AssetsWindowContent";
+import { ProjectCardContent } from "./ProjectCardContent";
 import { ProjectCardDismissContext } from "./projectCardContext";
-import { ResourcesWindowContent } from "./ResourcesWindowContent";
-import { RunsWindowContent } from "./RunsWindowContent";
+
+const SHORTCUT_LABEL = IS_MAC ? "⌘K" : "Ctrl+K";
 
 // Menus and dialogs the card opens are portaled outside it, so working in one
 // is not a click away from the card.
@@ -23,7 +22,7 @@ const LAYERS_OPENED_FROM_CARD =
   '[role="menu"], [role="dialog"], [role="alertdialog"], [role="listbox"], [data-radix-popper-content-wrapper]';
 
 /**
- * The project's resources, assets and runs in a card over the canvas,
+ * The project's reports, pipelines and documents in a card over the canvas,
  * rather than a dock beside it: a pipeline editor or run open there brings a
  * rail of its own, and two rails side by side read as one cluttered toolbar.
  */
@@ -32,6 +31,27 @@ export function ProjectPanelCard() {
   const cardRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const close = () => setOpen(false);
+
+  // The key works from anywhere on the page, the chat box included, so someone
+  // typing can look something up without reaching for the mouse. An open
+  // dialog keeps it for itself.
+  useEffect(() => {
+    const toggle = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.altKey || event.shiftKey) return;
+      if (!(IS_MAC ? event.metaKey : event.ctrlKey)) return;
+      if (event.key.toLowerCase() !== "k") return;
+      if (
+        !open &&
+        document.querySelector('[role="dialog"][aria-modal="true"]')
+      ) {
+        return;
+      }
+      event.preventDefault();
+      setOpen(!open);
+    };
+    window.addEventListener("keydown", toggle);
+    return () => window.removeEventListener("keydown", toggle);
+  }, [open]);
 
   // Radix listens for outside presses as they bubble, but a pipeline canvas
   // stops them first and an artifact's iframe never sends them up at all, so
@@ -63,8 +83,9 @@ export function ProjectPanelCard() {
           ref={triggerRef}
           variant="ghost"
           size="icon"
-          aria-label="Project resources"
-          title="Resources, assets, and runs"
+          aria-label="Project contents"
+          aria-keyshortcuts={IS_MAC ? "Meta+K" : "Control+K"}
+          title={`Reports, runs, pipelines and documents (${SHORTCUT_LABEL})`}
           className={cn(
             "size-7 text-muted-foreground hover:text-foreground",
             open && "bg-accent text-foreground",
@@ -81,44 +102,11 @@ export function ProjectPanelCard() {
         className="w-[min(92vw,360px)] overflow-hidden rounded-xl p-0"
       >
         <ProjectCardDismissContext value={close}>
-          <div className="reveal-scrollbar max-h-[min(70vh,640px)] overflow-y-auto py-1">
-            <CardSection title="Resources">
-              <ResourcesWindowContent />
-            </CardSection>
-            <Separator />
-            <CardSection title="Assets">
-              <AssetsWindowContent />
-            </CardSection>
-            <Separator />
-            <CardSection title="Runs">
-              <RunsWindowContent />
-            </CardSection>
+          <div className="reveal-scrollbar max-h-[min(80vh,720px)] overflow-y-auto">
+            <ProjectCardContent />
           </div>
         </ProjectCardDismissContext>
       </PopoverContent>
     </Popover>
-  );
-}
-
-function CardSection({
-  title,
-  children,
-}: {
-  title: string;
-  children: ReactNode;
-}) {
-  return (
-    <section aria-label={title} className="flex flex-col gap-1 px-2 py-2">
-      <Heading
-        level={3}
-        size="xs"
-        weight="medium"
-        tone="subdued"
-        className="px-2 pt-1"
-      >
-        {title}
-      </Heading>
-      {children}
-    </section>
   );
 }

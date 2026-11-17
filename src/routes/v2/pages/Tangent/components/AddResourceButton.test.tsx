@@ -85,7 +85,13 @@ async function pickAPipeline(
 ) {
   openDialog.mockResolvedValue(picked);
   const user = userEvent.setup();
-  render(<AddResourceButton projectId="project-1" resources={resources} />);
+  render(
+    <AddResourceButton
+      projectId="project-1"
+      resources={resources}
+      kind="pipeline"
+    />,
+  );
 
   await user.click(screen.getByRole("button", { name: "Add a pipeline" }));
 }
