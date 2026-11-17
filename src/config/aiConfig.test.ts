@@ -90,6 +90,16 @@ describe("aiConfig", () => {
     expect(getEffectiveReasoningEffort(model, "max")).toBe("max");
   });
 
+  it("offers DeepSeek with only its supported reasoning efforts", () => {
+    expect(getAiModelLabel("deepseek-v4.1-flash")).toBe("DeepSeek V4.1 Flash");
+    expect(
+      getAiModelReasoningLevels("deepseek-v4.1-flash").map(
+        (level) => level.value,
+      ),
+    ).toEqual(["low", "high", "max"]);
+    expect(getEffectiveReasoningEffort("deepseek-v4.1-flash")).toBe("high");
+  });
+
   it("labels an empty selection with the first catalog model", () => {
     expect(getAiModelLabel(" ")).toBe("GPT-6 Astra");
   });

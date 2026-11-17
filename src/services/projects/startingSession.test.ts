@@ -101,6 +101,7 @@ describe("startingSession", () => {
 
   it.each([
     ["gpt-6.1-sol", "openai/gpt-6.1-sol"],
+    ["deepseek-v4.1-flash", "deepseek/deepseek-v4.1-flash"],
     ["claude-opus-5-5", "anthropic/claude-opus-5-5"],
     ["anthropic:claude-custom", undefined],
     ["vendor/custom-model", undefined],
@@ -113,6 +114,8 @@ describe("startingSession", () => {
     ["gpt-6.1-terra", "none", "off"],
     ["gpt-6.1-sol", "none", "low"],
     ["gpt-6.1-sol", "max", "xhigh"],
+    ["deepseek-v4.1-flash", "high", "high"],
+    ["deepseek-v4.1-flash", "max", "xhigh"],
     ["my-deployment", "high", undefined],
   ] as const)(
     "runs %s with a %s preference at %s thinking",

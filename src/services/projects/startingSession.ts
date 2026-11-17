@@ -60,6 +60,15 @@ export function getStartingSessionThinkingDepth(
     "model" | "reasoningEffortPreference" | "modelCapabilities"
   >,
 ): ThinkingLevel | undefined {
+  // Tangent registers DeepSeek with Pi xhigh mapped to the proxy max effort.
+  if (config.model === "deepseek-v4.1-flash") {
+    const effort = getEffectiveReasoningEffort(
+      config.model,
+      config.reasoningEffortPreference,
+      config.modelCapabilities,
+    );
+    return effort === "max" ? "xhigh" : asThinkingLevel(effort);
+  }
   const effort = getEffectiveReasoningEffort(
     config.model,
     config.reasoningEffortPreference,
@@ -78,6 +87,9 @@ export function getStartingSessionModel(
     (option) => option.id === config.model,
   );
   if (!isCatalogModel) return undefined;
+  if (config.model === "deepseek-v4.1-flash") {
+    return `deepseek/${config.model}`;
+  }
   const provider =
     getAiProviderConfig(config.model) === AI_CONFIG.providers.anthropic
       ? "anthropic"

@@ -89,6 +89,12 @@ export const AI_CONFIG = {
       description: "Fast model for focused tasks",
       reasoningEfforts: ["low", "medium", "high", "xhigh", "max"],
     },
+    {
+      id: "deepseek-v4.1-flash",
+      label: "DeepSeek V4.1 Flash",
+      description: "Tool-capable reasoning model with a million-token context",
+      reasoningEfforts: ["low", "high", "max"],
+    },
   ] satisfies AiModelOption[],
 };
 
