@@ -2,6 +2,7 @@ import type { GetContainerExecutionStateResponse } from "@/api/types.gen";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLauncherAnnotationSchema } from "@/hooks/useLauncherCapabilities";
+import { useNow } from "@/hooks/useNow";
 import { useBackend } from "@/providers/BackendProvider";
 import { useFetchContainerExecutionState } from "@/services/executionService";
 import {
@@ -9,7 +10,7 @@ import {
   isGraphImplementation,
 } from "@/utils/componentSpec";
 import { EXIT_CODE_OOM } from "@/utils/constants";
-import { formatDate, formatDuration } from "@/utils/date";
+import { formatDate, formatDuration, formatElapsedAgo } from "@/utils/date";
 import { toAbsoluteHttpUrl } from "@/utils/URL";
 
 import type { AttributeProps } from "../ContextPanel/Blocks/Attribute";
@@ -17,6 +18,8 @@ import { ContentBlock } from "../ContextPanel/Blocks/ContentBlock";
 import { KeyValueList } from "../ContextPanel/Blocks/KeyValueList";
 import { InfoBox } from "../InfoBox";
 import { launcherDisplayName } from "../ReactFlow/FlowCanvas/TaskNode/AnnotationsEditor/utils";
+
+const LAST_CHANGE_REFRESH_MS = 1000;
 
 interface ExecutionDetailsProps {
   executionId: string;
@@ -46,6 +49,11 @@ export const ExecutionDetails = ({
     backendUrl,
     status,
   );
+
+  const lastChangeAt = containerState?.ended_at
+    ? undefined
+    : containerState?.updated_at;
+  const now = useNow(LAST_CHANGE_REFRESH_MS, !!lastChangeAt);
 
   const getExecutionItems = () => {
     const items: AttributeProps[] = [
@@ -83,6 +91,13 @@ export const ExecutionDetails = ({
           containerState.started_at,
           containerState.ended_at,
         )} (${formatDate(containerState.ended_at)})`,
+      });
+    }
+
+    if (lastChangeAt) {
+      items.push({
+        label: "Last change",
+        value: `${formatElapsedAgo(lastChangeAt, now)} (${formatDate(lastChangeAt)})`,
       });
     }
 

@@ -19,12 +19,15 @@ import {
   CONTAINER_STATUSES_PRE_LAUNCH,
   flattenExecutionStatusStats,
   getOverallExecutionStatusFromStats,
+  isStatusActivelyLogging,
 } from "@/utils/executionStatus";
 import {
   fetchWithErrorHandling,
   RemoteAuthError,
 } from "@/utils/fetchWithErrorHandling";
 import { rateLimit } from "@/utils/rateLimit";
+
+const CONTAINER_STATE_POLL_INTERVAL_MS = 5000;
 
 const retryUnlessAuth = (failureCount: number, error: Error) =>
   !(error instanceof RemoteAuthError) && failureCount < 3;
@@ -110,6 +113,10 @@ export const useFetchContainerExecutionState = (
     queryKey: ["container-execution-state", executionId],
     queryFn: () => fetchContainerExecutionState(executionId!, backendUrl),
     enabled: shouldFetch,
+    refetchInterval: ({ state }) =>
+      isStatusActivelyLogging(state.data?.status)
+        ? CONTAINER_STATE_POLL_INTERVAL_MS
+        : false,
     refetchOnWindowFocus: false,
     retry: retryUnlessAuth,
   });
