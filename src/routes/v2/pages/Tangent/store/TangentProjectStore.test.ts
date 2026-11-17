@@ -13,7 +13,10 @@ import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import { ComponentSpec, Input, Output, Task } from "@/models/componentSpec";
 import { sessionMemorySeed } from "@/routes/v2/pages/Tangent/services/sessionMemory";
 import { rootConfigSeed } from "@/routes/v2/pages/Tangent/services/sessionRunConfig";
-import type { WorkareaTarget } from "@/routes/v2/pages/Tangent/workarea/types";
+import type {
+  OpenTabs,
+  WorkareaTarget,
+} from "@/routes/v2/pages/Tangent/workarea/types";
 import type { SharedUIStore } from "@/routes/v2/shared/store/SharedStoreContext";
 import { idIdentity } from "@/services/projects/resourceTarget";
 
@@ -352,6 +355,61 @@ describe("TangentProjectStore.getActiveTabBridge", () => {
 
     expect(store.getActiveTabBridge()).toBe(bridgeP1);
   });
+
+  it("falls back to the pipeline a project came back with in front, not one never shown", () => {
+    const store = new TangentProjectStore("project-1", {
+      tabs: [
+        { id: "a", title: "A", target: pipeline("a") },
+        { id: "b", title: "B", target: pipeline("b") },
+        { id: "f", title: "F", target: artifact(CHAT_FILE) },
+      ],
+      activeId: "a",
+    });
+    const bridgeA = makeBridge("a");
+    store.registerTabBridge("a", "pipeline", bridgeA);
+
+    store.selectWorkareaTab("f");
+
+    expect(store.getActiveTabBridge()).toBe(bridgeA);
+  });
+
+  it.each<[string, (saved: OpenTabs) => TangentProjectStore]>([
+    [
+      "as the page opens",
+      (saved) => new TangentProjectStore("project-1", saved),
+    ],
+    [
+      "once it's known whose they are",
+      (saved) => {
+        const store = activeStore();
+        store.restoreOpenTabs(saved);
+        return store;
+      },
+    ],
+  ])(
+    "skips a pipeline that was never shown when the last editor closes, with tabs restored %s",
+    (_when, restore) => {
+      const store = restore({
+        tabs: [
+          { id: "a", title: "A", target: pipeline("a") },
+          { id: "c", title: "C", target: pipeline("c") },
+          { id: "b", title: "B", target: pipeline("b") },
+          { id: "f", title: "F", target: artifact(CHAT_FILE) },
+        ],
+        activeId: "f",
+      });
+      store.selectWorkareaTab("c");
+      const bridgeC = makeBridge("c");
+      store.registerTabBridge("c", "pipeline", bridgeC);
+      store.selectWorkareaTab("a");
+      store.registerTabBridge("a", "pipeline", makeBridge("a"));
+      store.selectWorkareaTab("f");
+
+      store.closeWorkareaTab("a");
+
+      expect(store.getActiveTabBridge()).toBe(bridgeC);
+    },
+  );
 });
 
 interface FakeSharedStore {
