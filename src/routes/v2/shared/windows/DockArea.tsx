@@ -20,7 +20,6 @@ import { Window } from "./Window";
 
 interface DockAreaProps {
   side: "left" | "right";
-  // Headers read as section labels rather than bars, for a sidebar.
   quietHeaders?: boolean;
 }
 
