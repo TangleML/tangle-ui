@@ -1,3 +1,6 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { createElement, type ReactNode } from "react";
 import {
   afterEach,
   beforeEach,
@@ -15,22 +18,23 @@ import {
   fetchExecutionState,
   fetchPipelineRun,
   getExecutionArtifacts,
+  useFetchContainerExecutionState,
 } from "./executionService";
 
 const BACKEND_URL = "https://api.example.com";
 
+let mockFetch: Mock;
+
+beforeEach(() => {
+  mockFetch = vi.fn(async () => new Response("{}", { status: 200 }));
+  global.fetch = mockFetch;
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 describe("execution and run addresses", () => {
-  let mockFetch: Mock;
-
-  beforeEach(() => {
-    mockFetch = vi.fn(async () => new Response("{}", { status: 200 }));
-    global.fetch = mockFetch;
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
   const requested = () => mockFetch.mock.calls.map(([url]) => url);
 
   it("leaves an ordinary id as it is", async () => {
@@ -61,5 +65,49 @@ describe("execution and run addresses", () => {
       `${BACKEND_URL}/api/executions/e%2F..%2F..%2Fsecrets/details`,
       `${BACKEND_URL}/api/pipeline_runs/7%2Fcancel`,
     ]);
+  });
+});
+
+describe("useFetchContainerExecutionState", () => {
+  const jsonResponse = (body: unknown) =>
+    new Response(JSON.stringify(body), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+
+  const renderContainerStateHook = () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(QueryClientProvider, { client: queryClient }, children);
+
+    return renderHook(
+      () => useFetchContainerExecutionState("exec-1", BACKEND_URL),
+      { wrapper },
+    );
+  };
+
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("polls while the container is running and stops once it ends", async () => {
+    mockFetch
+      .mockResolvedValueOnce(jsonResponse({ status: "RUNNING" }))
+      .mockResolvedValueOnce(jsonResponse({ status: "SUCCEEDED" }));
+
+    const { result } = renderContainerStateHook();
+    await waitFor(() => expect(result.current.data?.status).toBe("RUNNING"));
+
+    await act(() => vi.advanceTimersByTimeAsync(5000));
+    await waitFor(() => expect(result.current.data?.status).toBe("SUCCEEDED"));
+
+    await act(() => vi.advanceTimersByTimeAsync(20_000));
+    expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 });
