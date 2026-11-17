@@ -44,6 +44,15 @@ function hostLabel(environment: TangentEnvironment): string {
     : environment.environmentId.slice(separator + 1);
 }
 
+function connectedEnvironmentsSummary(
+  environments: TangentEnvironment[],
+): string {
+  const [only] = environments;
+  return environments.length === 1
+    ? environmentLabel(only)
+    : `${environments.length} windows`;
+}
+
 function environmentLabel(environment: TangentEnvironment): string {
   return environment.metadata?.windowName ?? hostLabel(environment);
 }
@@ -81,11 +90,7 @@ export const LocalEnvStatus = observer(function LocalEnvStatus({
 
   if (!isLocalEnvConnected) return null;
 
-  const [single] = localEnvironments;
-  const label =
-    localEnvironments.length === 1
-      ? `Connected to VS Code · ${environmentLabel(single)}`
-      : `Connected to VS Code · ${localEnvironments.length} windows`;
+  const label = `Editor connected · ${connectedEnvironmentsSummary(localEnvironments)}`;
 
   return (
     <TooltipButton
@@ -140,11 +145,7 @@ function LocalEnvConnectedBadge({
 }: {
   environments: TangentEnvironment[];
 }) {
-  const [single] = environments;
-  const label =
-    environments.length === 1
-      ? `Local env · ${environmentLabel(single)}`
-      : `Local env (${environments.length})`;
+  const label = `Local env · ${connectedEnvironmentsSummary(environments)}`;
 
   return (
     <Popover>

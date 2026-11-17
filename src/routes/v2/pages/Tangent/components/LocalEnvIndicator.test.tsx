@@ -186,7 +186,7 @@ describe("LocalEnvIndicator", () => {
 
     expect(
       screen.getByRole("button", { name: "Local environment connected" }),
-    ).toHaveTextContent("Local env (2)");
+    ).toHaveTextContent("Local env · 2 windows");
   });
 
   it("links to the extension's connect flow for VS Code and Cursor", async () => {
@@ -254,7 +254,7 @@ describe("LocalEnvStatus", () => {
 
     expect(
       screen.getByRole("button", {
-        name: "Connected to VS Code · my-workspace",
+        name: "Editor connected · my-workspace",
       }),
     ).toBeInTheDocument();
   });
@@ -266,7 +266,7 @@ describe("LocalEnvStatus", () => {
     render(<Status onOpen={vi.fn()} />);
 
     expect(
-      screen.getByRole("button", { name: "Connected to VS Code · 2 windows" }),
+      screen.getByRole("button", { name: "Editor connected · 2 windows" }),
     ).toBeInTheDocument();
   });
 
