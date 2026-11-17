@@ -1,4 +1,5 @@
 import type { ComponentProps } from "react";
+import type { FallbackProps } from "react-error-boundary";
 
 import { InfoBox } from "@/components/shared/InfoBox";
 import { Paragraph } from "@/components/ui/typography";
@@ -103,3 +104,9 @@ export const ArtifactPreviewErrorFallback = ({ error }: { error: unknown }) => {
     />
   );
 };
+
+// fallbackRender calls this as a plain function, so it must not be a compiled
+// component itself: the compiler would inject a hook and break the hook rules.
+export const renderArtifactPreviewError = ({ error }: FallbackProps) => (
+  <ArtifactPreviewErrorFallback error={error} />
+);

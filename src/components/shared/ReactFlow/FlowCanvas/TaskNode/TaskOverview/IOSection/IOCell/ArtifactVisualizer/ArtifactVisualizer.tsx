@@ -23,7 +23,7 @@ import {
   PreviewContent,
   PreviewSkeleton,
 } from "./ArtifactPreviewContent";
-import { ArtifactPreviewErrorFallback } from "./ArtifactPreviewError";
+import { renderArtifactPreviewError } from "./ArtifactPreviewError";
 import { ArtifactPreviewHeader } from "./ArtifactPreviewHeader";
 import {
   isVisualizableType,
@@ -152,7 +152,7 @@ const ArtifactVisualizer = ({
           ) : (
             <SuspenseWrapper
               fallback={<PreviewSkeleton />}
-              errorFallback={ArtifactPreviewErrorFallback}
+              errorFallback={renderArtifactPreviewError}
             >
               <PreviewContent
                 name={name}

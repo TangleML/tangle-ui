@@ -3,7 +3,7 @@ import {
   PreviewContent,
   PreviewSkeleton,
 } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/TaskOverview/IOSection/IOCell/ArtifactVisualizer/ArtifactPreviewContent";
-import { ArtifactPreviewErrorFallback } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/TaskOverview/IOSection/IOCell/ArtifactVisualizer/ArtifactPreviewError";
+import { renderArtifactPreviewError } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/TaskOverview/IOSection/IOCell/ArtifactVisualizer/ArtifactPreviewError";
 import {
   isVisualizableType,
   normalizeRawType,
@@ -81,7 +81,7 @@ function ComparisonPane({
         ) : (
           <SuspenseWrapper
             fallback={<PreviewSkeleton />}
-            errorFallback={ArtifactPreviewErrorFallback}
+            errorFallback={renderArtifactPreviewError}
           >
             <PreviewContent
               name={`${label}:${artifact.id}`}
