@@ -3,9 +3,9 @@ import { describe, expect, it } from "vitest";
 import { runStatusFlair } from "./RunListItem";
 
 describe("runStatusFlair", () => {
-  it("is green while running or after succeeding, red after failing, and grey otherwise", () => {
+  it("is blue and pulsing while running, green after succeeding, red after failing, and grey otherwise", () => {
     expect(runStatusFlair("RUNNING")).toMatchObject({
-      tone: "success",
+      tone: "info",
       pulse: true,
     });
     expect(runStatusFlair("SUCCEEDED")).toMatchObject({ tone: "success" });
@@ -14,7 +14,10 @@ describe("runStatusFlair", () => {
       kind: "dot",
       label: "Cancelled",
     });
-    expect(runStatusFlair("SKIPPED")?.tone).toBeUndefined();
+    expect(runStatusFlair("SKIPPED")).toEqual({
+      kind: "dot",
+      label: "Skipped",
+    });
     expect(runStatusFlair(undefined)).toBeUndefined();
   });
 });

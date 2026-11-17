@@ -6,13 +6,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { IconTile } from "@/components/ui/icon-tile";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import type { DialogProps } from "@/providers/DialogProvider/types";
 import type { TeamSummary } from "@/services/teams/types";
-
-import { ListRowIcon } from "./ListRowIcon";
 
 export interface SecretFormDialogProps {
   secret?: Secret;
@@ -54,7 +53,7 @@ export function SecretFormDialog({
     <>
       <DialogHeader>
         <InlineStack gap="3" blockAlign="center" wrap="nowrap">
-          {secret && <ListRowIcon icon="KeyRound" />}
+          {secret && <IconTile icon="KeyRound" />}
           <BlockStack gap="1" className="min-w-0">
             <DialogTitle>
               {secret ? `Replace ${secret.name}` : "Add a workspace secret"}

@@ -10,9 +10,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { StatusDot } from "@/components/ui/status-dot";
 import { Text } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
-import { cn } from "@/lib/utils";
 import { useOpenWorkareaTarget } from "@/routes/v2/pages/Tangent/hooks/useOpenWorkareaTarget";
 import {
   type SessionRun,
@@ -32,7 +32,7 @@ import {
 import { getErrorMessage } from "@/utils/string";
 import { tracking } from "@/utils/tracking";
 
-import { RunListItem } from "./RunListItem";
+import { RunListItem, runStatusFlair } from "./RunListItem";
 
 interface RunRow {
   run: SessionRun;
@@ -81,6 +81,9 @@ export const ChatRunsPill = observer(function ChatRunsPill({
   const anyFailed = failedCount > 0;
   const anyRunning = rows.some(({ running }) => running);
   const finished = rows.filter((row) => row.finished);
+  const worstFlair = runStatusFlair(
+    anyFailed ? "FAILED" : anyRunning ? "RUNNING" : undefined,
+  );
 
   function dismissRun(run: SessionRun) {
     dismiss(run).catch((error: unknown) =>
@@ -103,13 +106,11 @@ export const ChatRunsPill = observer(function ChatRunsPill({
         >
           <Icon name="Play" size="xs" />
           {pillLabel(rows)}
-          {(anyFailed || anyRunning) && (
-            <span
-              aria-hidden
-              className={cn(
-                "size-1.5 rounded-full",
-                anyFailed ? "bg-destructive" : "animate-pulse bg-success",
-              )}
+          {worstFlair?.kind === "dot" && (
+            <StatusDot
+              size="sm"
+              tone={worstFlair.tone}
+              pulse={worstFlair.pulse}
             />
           )}
         </Button>

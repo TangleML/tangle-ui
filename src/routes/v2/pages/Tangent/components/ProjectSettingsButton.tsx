@@ -23,9 +23,8 @@ export function ProjectSettingsButton() {
         tooltipSide="bottom"
         tooltipAlign="end"
         aria-label="Project settings"
-        variant="ghost"
-        size="icon"
-        className="size-7 text-muted-foreground hover:text-foreground"
+        variant="subtle"
+        size="icon-sm"
         onClick={() => setOpen(true)}
         {...tracking("projects.settings.open")}
       >

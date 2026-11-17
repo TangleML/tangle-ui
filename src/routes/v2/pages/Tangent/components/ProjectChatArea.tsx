@@ -1,8 +1,9 @@
 import { observer } from "mobx-react-lite";
 import type { ReactNode } from "react";
 
-import { BlockStack, InlineStack } from "@/components/ui/layout";
-import { Text } from "@/components/ui/typography";
+import { EmptyState } from "@/components/ui/empty-state";
+import { BlockStack } from "@/components/ui/layout";
+import { TabStrip } from "@/components/ui/tabs";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
 import { ProjectSettingsButton } from "@/routes/v2/pages/Tangent/components/ProjectSettingsButton";
@@ -37,18 +38,10 @@ export const ProjectChatArea = observer(function ProjectChatArea() {
   if (!activeSessionId) {
     return (
       <WithoutChat>
-        <BlockStack
-          gap="1"
-          align="center"
-          className="h-full justify-center p-6 text-center"
-        >
-          <Text size="sm" weight="semibold">
-            No active session
-          </Text>
-          <Text size="sm" tone="subdued">
-            Choose New chat in the Projects panel to chat with Tangent.
-          </Text>
-        </BlockStack>
+        <EmptyState
+          title="No active session"
+          description="Choose New chat in the Projects panel to chat with Tangent."
+        />
       </WithoutChat>
     );
   }
@@ -85,12 +78,7 @@ export const ProjectChatArea = observer(function ProjectChatArea() {
 function WithoutChat({ children }: { children: ReactNode }) {
   return (
     <BlockStack className="min-h-0 flex-1">
-      <InlineStack
-        align="end"
-        className="h-10 w-full shrink-0 px-2 shadow-[inset_0_-1px_0_var(--border)]"
-      >
-        <ProjectSettingsButton />
-      </InlineStack>
+      <TabStrip trailing={<ProjectSettingsButton />} />
       <div className="min-h-0 w-full flex-1">{children}</div>
     </BlockStack>
   );

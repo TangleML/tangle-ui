@@ -17,7 +17,7 @@ import {
 import { tracking } from "@/utils/tracking";
 
 /**
- * A pulsing green dot while the run is going, green once it succeeded, red
+ * A pulsing blue dot while the run is going, green once it succeeded, red
  * when it failed, and grey for anything else, such as a cancelled run.
  */
 export function runStatusFlair(
@@ -26,7 +26,7 @@ export function runStatusFlair(
   if (!status) return undefined;
   const label = getExecutionStatusLabel(status);
   if (isInProgressStatus(status)) {
-    return { kind: "dot", label, tone: "success", pulse: true };
+    return { kind: "dot", label, tone: "info", pulse: true };
   }
   if (isFailedStatus(status)) return { kind: "dot", label, tone: "critical" };
   if (status === "SUCCEEDED") return { kind: "dot", label, tone: "success" };
@@ -52,7 +52,6 @@ export function RunListItem({
 
   return (
     <ListItem
-      density="compact"
       icon={resourceMeta("run").icon}
       title={name}
       subtitle={ago(at)}
