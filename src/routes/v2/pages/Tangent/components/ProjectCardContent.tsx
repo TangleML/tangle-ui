@@ -210,7 +210,11 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
         {shownFiles.length === 0 ? (
           <EmptyNote>
             {files.files.length === 0
-              ? "The chats in this project haven't made any files yet"
+              ? emptyNote(
+                  [files],
+                  "this project's files",
+                  "The chats in this project haven't made any files yet",
+                )
               : "No files match"}
           </EmptyNote>
         ) : (
@@ -250,7 +254,11 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
     {
       title: "Reports",
       rows: files.reports.filter(fileMatches).map((file) => renderFile(file)),
-      empty: "Nothing has been pinned as a report yet",
+      empty: emptyNote(
+        [files],
+        "this project's reports",
+        "Nothing has been pinned as a report yet",
+      ),
       footer: searching ? undefined : (
         <FooterButton
           icon="Files"
@@ -260,7 +268,7 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
           trackingId="projects.project_card.all_files"
         />
       ),
-      always: files.files.length > 0,
+      always: true,
     },
     {
       title: "Other files",

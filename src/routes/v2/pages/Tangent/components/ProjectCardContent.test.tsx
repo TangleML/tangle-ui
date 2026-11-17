@@ -70,6 +70,7 @@ vi.mock("./AddResourceButton", () => ({
 const loading = vi.hoisted(() => ({
   resources: { isLoading: false, isLoaded: true, error: null as Error | null },
   runs: { isLoading: false, error: null as Error | null },
+  files: { isLoading: false, error: null as Error | null, none: false },
 }));
 
 const pipeline = (n: number) => ({
@@ -141,15 +142,20 @@ const file = (key: string, title: string, pinned: boolean) => ({
 
 vi.mock("@/routes/v2/pages/Tangent/hooks/useProjectSessionFiles", () => ({
   useProjectSessionFiles: () => {
+    const { isLoading, error, none } = loading.files;
     const summary = file("summary.html", "Q3 summary", true);
+    const listed = !isLoading && !error && !none;
     return {
-      files: [
-        summary,
-        file("plan.md", "Plan", false),
-        file("notes.md", "Notes", false),
-      ],
-      reports: [summary],
-      isLoading: false,
+      files: listed
+        ? [
+            summary,
+            file("plan.md", "Plan", false),
+            file("notes.md", "Notes", false),
+          ]
+        : [],
+      reports: listed ? [summary] : [],
+      isLoading,
+      error,
       pin,
       unpin,
     };
@@ -178,6 +184,7 @@ describe("ProjectCardContent", () => {
     archiveChange.mockClear();
     loading.resources = { isLoading: false, isLoaded: true, error: null };
     loading.runs = { isLoading: false, error: null };
+    loading.files = { isLoading: false, error: null, none: false };
   });
 
   it("says a section is loading rather than that the project has none", () => {
@@ -209,6 +216,62 @@ describe("ProjectCardContent", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText("Couldn't load this project's documents"),
+    ).toBeInTheDocument();
+  });
+
+  it("says the reports and All files are loading rather than that there are none", async () => {
+    const user = userEvent.setup();
+    loading.files = { isLoading: true, error: null, none: false };
+    render(<ProjectCardContent />);
+
+    const reports = screen.getByRole("region", { name: "Reports" });
+    expect(within(reports).getByText("Loading…")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Nothing has been pinned as a report yet"),
+    ).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: /All files/ }));
+
+    expect(screen.getByText("Loading…")).toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        "The chats in this project haven't made any files yet",
+      ),
+    ).toBeNull();
+  });
+
+  it("says when the reports and All files couldn't load", async () => {
+    const user = userEvent.setup();
+    loading.files = { isLoading: false, error: new Error("500"), none: false };
+    render(<ProjectCardContent />);
+
+    expect(
+      screen.getByText("Couldn't load this project's reports"),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /All files/ }));
+
+    expect(
+      screen.getByText("Couldn't load this project's files"),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps Reports and All files in place when the chats have made no files", async () => {
+    const user = userEvent.setup();
+    loading.files = { isLoading: false, error: null, none: true };
+    render(<ProjectCardContent />);
+
+    const reports = screen.getByRole("region", { name: "Reports" });
+    expect(
+      within(reports).getByText("Nothing has been pinned as a report yet"),
+    ).toBeInTheDocument();
+
+    await user.click(
+      within(reports).getByRole("button", { name: /All files/ }),
+    );
+
+    expect(
+      screen.getByText("The chats in this project haven't made any files yet"),
     ).toBeInTheDocument();
   });
 
