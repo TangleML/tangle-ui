@@ -75,12 +75,6 @@ function pillLabel(rows: RunRow[]): string {
   return running > 0 ? `${runs} · ${running} running` : runs;
 }
 
-/**
- * The chat's own runs, in a pill beside its agents: the runs it started or
- * brought in, each with its live status. A red dot says one failed, a pulsing
- * green one that one is running. Dismissing a run only hides it here; it stays
- * in the project's runs.
- */
 export const ChatRunsPill = observer(function ChatRunsPill({
   props,
 }: HostUIComponentProps) {
