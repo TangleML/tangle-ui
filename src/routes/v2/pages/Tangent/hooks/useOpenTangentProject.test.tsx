@@ -11,7 +11,10 @@ import {
 } from "@/services/projects/types";
 import { getWorkspace } from "@/services/projects/workspacesService";
 
-import { useOpenTangentProject } from "./useOpenTangentProject";
+import {
+  cancelPendingProjectMove,
+  useOpenTangentProject,
+} from "./useOpenTangentProject";
 
 const navigate = vi.fn();
 
@@ -33,6 +36,25 @@ function open(queryClient = new QueryClient()) {
   );
   const { result } = renderHook(() => useOpenTangentProject(), { wrapper });
   return { openProject: result.current, queryClient };
+}
+
+type Project = Awaited<ReturnType<typeof getProject>>;
+
+/** `project-1` has to be fetched, and arrives when told to; any other is in hand at once. */
+function givenProjectOneIsSlow() {
+  let arrive: () => void = () => {};
+  vi.mocked(getProject).mockImplementation((id) => {
+    const project = { id, workspaceId: "workspace-1" } as Project;
+    return id === "project-1"
+      ? new Promise<Project>((resolve) => {
+          arrive = () => resolve(project);
+        })
+      : Promise.resolve(project);
+  });
+  vi.mocked(getWorkspace).mockResolvedValue({
+    id: "workspace-1",
+  } as Awaited<ReturnType<typeof getWorkspace>>);
+  return () => arrive();
 }
 
 describe("useOpenTangentProject", () => {
@@ -75,5 +97,34 @@ describe("useOpenTangentProject", () => {
     expect(navigate).toHaveBeenCalledWith(
       expect.objectContaining({ params: { projectId: "project-2" } }),
     );
+  });
+
+  /** Each project's sessions are a list of their own, with their own copy of the hook. */
+  it("lands on the project asked for last, whichever list asked and whichever loads first", async () => {
+    const arrive = givenProjectOneIsSlow();
+    const oneList = open();
+    const anotherList = open();
+
+    const earlier = oneList.openProject("project-1", { session: "session-1" });
+    await anotherList.openProject("project-2", { session: "session-2" });
+    arrive();
+    await earlier;
+
+    expect(navigate).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledWith(
+      expect.objectContaining({ params: { projectId: "project-2" } }),
+    );
+  });
+
+  it("stays put once a move still loading is cancelled", async () => {
+    const arrive = givenProjectOneIsSlow();
+    const { openProject } = open();
+
+    const move = openProject("project-1", { session: "session-1" });
+    cancelPendingProjectMove();
+    arrive();
+    await move;
+
+    expect(navigate).not.toHaveBeenCalled();
   });
 });

@@ -11,6 +11,7 @@ import { useReachableProjects } from "@/services/projects/useReachableProjects";
 import { ProjectsWindowContent } from "./ProjectsWindowContent";
 
 const openProject = vi.fn();
+const cancelPendingProjectMove = vi.fn();
 const startSession = vi.fn();
 
 vi.mock("@tanstack/react-router", () => ({
@@ -21,6 +22,7 @@ vi.mock("@tanstack/react-router", () => ({
 
 vi.mock("@/routes/v2/pages/Tangent/hooks/useOpenTangentProject", () => ({
   useOpenTangentProject: () => openProject,
+  cancelPendingProjectMove: () => cancelPendingProjectMove(),
 }));
 
 /** Stands in for the store's context, so a change re-renders the panel. */
@@ -156,6 +158,16 @@ describe("ProjectsWindowContent", () => {
 
     expect(startSession).toHaveBeenCalled();
     expect(openProject).not.toHaveBeenCalled();
+  });
+
+  /** A move to another project may still be loading, and would take the page there after. */
+  it("cancels a move elsewhere when a new chat starts in the project in view", async () => {
+    const user = userEvent.setup();
+    render(<ProjectsWindowContent />);
+
+    await user.click(screen.getByRole("button", { name: /New chat/ }));
+
+    expect(cancelPendingProjectMove).toHaveBeenCalled();
   });
 
   it("starts a new chat in whichever project was clicked last", async () => {

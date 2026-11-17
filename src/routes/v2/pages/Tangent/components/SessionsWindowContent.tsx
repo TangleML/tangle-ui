@@ -16,7 +16,10 @@ import { useDialog } from "@/providers/DialogProvider/hooks/useDialog";
 import { convertCancelErrorTo } from "@/providers/DialogProvider/utils";
 import { tangentSessionSearch } from "@/routes/tangentSearch";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
-import { useOpenTangentProject } from "@/routes/v2/pages/Tangent/hooks/useOpenTangentProject";
+import {
+  cancelPendingProjectMove,
+  useOpenTangentProject,
+} from "@/routes/v2/pages/Tangent/hooks/useOpenTangentProject";
 import {
   type ProjectSession,
   useProjectSessions,
@@ -80,6 +83,7 @@ export const SessionsWindowContent = observer(function SessionsWindowContent({
   function openSession(sessionId: string) {
     dismissFlyout?.();
     if (isProjectInView) {
+      cancelPendingProjectMove();
       store.selectSession(sessionId);
       return;
     }

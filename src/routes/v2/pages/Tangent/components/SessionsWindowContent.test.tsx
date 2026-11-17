@@ -21,9 +21,11 @@ vi.mock("@tanstack/react-router", () => ({
 
 vi.mock("@/routes/v2/pages/Tangent/hooks/useOpenTangentProject", () => ({
   useOpenTangentProject: () => openProject,
+  cancelPendingProjectMove: () => cancelPendingProjectMove(),
 }));
 
 const openProject = vi.fn();
+const cancelPendingProjectMove = vi.fn();
 const selectSession = vi.fn();
 const renameSession = vi.fn();
 const notify = vi.fn();
@@ -180,6 +182,16 @@ describe("SessionsWindowContent", () => {
 
     expect(selectSession).toHaveBeenCalledWith("session-2");
     expect(openProject).not.toHaveBeenCalled();
+  });
+
+  /** A move to another project may still be loading, and would take the page there after. */
+  it("cancels a move elsewhere when a session of the project in view is picked", async () => {
+    const user = userEvent.setup();
+    renderSessions();
+
+    await user.click(screen.getByText("Feature exploration"));
+
+    expect(cancelPendingProjectMove).toHaveBeenCalled();
   });
 
   /** Its files and resources are that project's, so the page moves there. */

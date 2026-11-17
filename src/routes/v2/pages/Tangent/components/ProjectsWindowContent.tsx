@@ -20,7 +20,10 @@ import { cn } from "@/lib/utils";
 import { APP_ROUTES } from "@/routes/appRoutes";
 import { newTangentSessionSearch } from "@/routes/tangentSearch";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
-import { useOpenTangentProject } from "@/routes/v2/pages/Tangent/hooks/useOpenTangentProject";
+import {
+  cancelPendingProjectMove,
+  useOpenTangentProject,
+} from "@/routes/v2/pages/Tangent/hooks/useOpenTangentProject";
 import { useAiGate } from "@/routes/v2/shared/components/AiChat/components/useAiGate";
 import { useOptionalWindowContext } from "@/routes/v2/shared/windows/ContentWindowStateContext";
 import { activeWorkspaces } from "@/services/projects/defaultWorkspace";
@@ -94,6 +97,7 @@ export const ProjectsWindowContent = observer(function ProjectsWindowContent() {
   function startChat() {
     dismissFlyout?.();
     if (!target || target.id === store.projectId) {
+      cancelPendingProjectMove();
       void store.startSession();
       return;
     }
