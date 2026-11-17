@@ -310,7 +310,7 @@ function ProjectGroup({
               onRename={() => void rename()}
               onDelete={() => void confirmAndDelete()}
               disabled={isDeleting}
-              compact
+              inListRow
               triggerTrackingId="projects.sidebar.project_menu"
             />
           }

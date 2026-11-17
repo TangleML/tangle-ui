@@ -22,8 +22,7 @@ interface ProjectMenuProps {
   onRename?: () => void;
   disabled?: boolean;
   triggerClassName?: string;
-  // A small, quiet trigger, for a menu among a list row's actions.
-  compact?: boolean;
+  inListRow?: boolean;
   triggerTrackingId: string;
 }
 
@@ -38,7 +37,7 @@ export function ProjectMenu({
   onRename,
   disabled,
   triggerClassName,
-  compact = false,
+  inListRow = false,
   triggerTrackingId,
 }: ProjectMenuProps) {
   const navigate = useNavigate();
@@ -57,8 +56,8 @@ export function ProjectMenu({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
-          variant={compact ? "subtle" : "ghost"}
-          size={compact ? "icon-xs" : "icon"}
+          variant={inListRow ? "subtle" : "ghost"}
+          size={inListRow ? "icon-xs" : "icon"}
           className={triggerClassName}
           disabled={disabled}
           aria-label={`Project actions: ${project.name}`}
