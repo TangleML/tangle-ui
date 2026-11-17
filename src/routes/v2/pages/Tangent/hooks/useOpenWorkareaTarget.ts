@@ -15,7 +15,10 @@ import { getErrorMessage } from "@/utils/string";
  * run Cmd/Ctrl-clicked opens on its own page in a new tab instead. Opened from
  * the chat, a run also joins that chat's runs.
  */
-export function useOpenWorkareaTarget({ fromChat = false } = {}) {
+export function useOpenWorkareaTarget({
+  fromChat = false,
+  onOpenBesideChat,
+}: { fromChat?: boolean; onOpenBesideChat?: () => void } = {}) {
   const store = useTangentProject();
   const notify = useToastNotification();
 
@@ -25,6 +28,7 @@ export function useOpenWorkareaTarget({ fromChat = false } = {}) {
       window.open(getDefaultRunPath(runId), "_blank");
       return;
     }
+    onOpenBesideChat?.();
     const opening = fromChat
       ? store.openWorkareaTarget(target, title, {
           recordRunIn: store.activeSessionId,

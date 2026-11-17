@@ -66,7 +66,7 @@ const matching = (query: string, ...texts: string[]) =>
 export const ProjectCardContent = observer(function ProjectCardContent() {
   const store = useTangentProject();
   const dismissCard = useOptionalWindowContext()?.dismissFlyout;
-  const openWorkareaTarget = useOpenWorkareaTarget();
+  const openTarget = useOpenWorkareaTarget({ onOpenBesideChat: dismissCard });
   const searchRef = useRef<HTMLInputElement>(null);
   const focusRequested = store.searchFocusRequested;
   useEffect(() => {
@@ -102,10 +102,6 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
   const documents = split(lists.documents);
   const runs = split(lists.runs);
   const fileMatches = ({ title, path }: ProjectFile) => matches(title, path);
-  const openTarget: typeof openWorkareaTarget = (target, title, event) => {
-    dismissCard?.();
-    return openWorkareaTarget(target, title, event);
-  };
 
   function openFile(file: ProjectFile) {
     dismissCard?.();
