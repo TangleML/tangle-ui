@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { CHAT_TAB_VALUE } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
@@ -6,17 +6,29 @@ import { CHAT_TAB_VALUE } from "@/routes/v2/pages/Tangent/store/TangentProjectSt
 import { TangentChatPane } from "./TangentChatPane";
 
 vi.mock("@tangent/embed-react", () => ({
-  Chat: ({ agentId, autoFocus }: { agentId?: string; autoFocus?: boolean }) => (
+  Chat: ({
+    agentId,
+    autoFocus,
+    onResourcesChange,
+  }: {
+    agentId?: string;
+    autoFocus?: boolean;
+    onResourcesChange?: () => void;
+  }) => (
     <div
       data-testid={agentId ? `chat-${agentId}` : "chat-prime"}
       data-autofocus={String(Boolean(autoFocus))}
+      onClick={() => onResourcesChange?.()}
     />
   ),
 }));
 
 const noop = () => undefined;
 
-function renderPane(activeTab = CHAT_TAB_VALUE) {
+function renderPane(
+  activeTab = CHAT_TAB_VALUE,
+  onResourcesChange: () => void = noop,
+) {
   return render(
     <TangentChatPane
       sessionId="sess-1"
@@ -24,6 +36,7 @@ function renderPane(activeTab = CHAT_TAB_VALUE) {
       activeTab={activeTab}
       onTabChange={noop}
       onCloseTab={noop}
+      onResourcesChange={onResourcesChange}
     />,
   );
 }
@@ -50,5 +63,15 @@ describe("TangentChatPane", () => {
       "data-autofocus",
       "false",
     );
+  });
+
+  it("hears of a change once, from Prime's chat, when every chat of the session reports it", () => {
+    const onResourcesChange = vi.fn();
+    renderPane("agent-1", onResourcesChange);
+
+    fireEvent.click(screen.getByTestId("chat-prime"));
+    fireEvent.click(screen.getByTestId("chat-agent-1"));
+
+    expect(onResourcesChange).toHaveBeenCalledTimes(1);
   });
 });

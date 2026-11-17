@@ -106,6 +106,8 @@ export function TangentChatPane({
             onOpenArtifact={onOpenArtifact}
             onSendPrompt={onSendPrompt}
             onError={onError}
+            // Every chat of a session reports the same changes, so only
+            // this one, which is always mounted, is listened to.
             onResourcesChange={onResourcesChange}
           />
         </TabsContent>
@@ -127,7 +129,6 @@ export function TangentChatPane({
               onOpenArtifact={onOpenArtifact}
               onSendPrompt={onSendPrompt}
               onError={onError}
-              onResourcesChange={onResourcesChange}
             />
           </TabsContent>
         ))}
