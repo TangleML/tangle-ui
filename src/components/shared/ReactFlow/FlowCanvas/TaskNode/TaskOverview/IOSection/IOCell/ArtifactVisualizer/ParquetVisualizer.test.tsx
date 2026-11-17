@@ -387,7 +387,7 @@ describe("ParquetVisualizer", () => {
 
     await waitFor(() =>
       expect(mockNotify).toHaveBeenCalledWith(
-        "Failed to load more rows. Please try again.",
+        "Failed to load more rows: Signed URL expired",
         "error",
       ),
     );
@@ -579,6 +579,24 @@ describe("ParquetVisualizer", () => {
       expect(screen.getByTestId("error")).toBeInTheDocument();
       expect(screen.getByText(/Failed to fetch artifact/)).toBeInTheDocument();
     });
+  });
+
+  it("surfaces an unsupported compression codec as a readable error", async () => {
+    mockDataset(SCHEMA, 2);
+    vi.mocked(parquetReadObjects).mockRejectedValue(
+      new Error("parquet unsupported compression codec: ZSTD"),
+    );
+
+    renderWithSuspense(
+      <ParquetVisualizer
+        signedUrl="https://storage.example.com/zstd.parquet"
+        isFullscreen={false}
+      />,
+    );
+
+    expect(await screen.findByTestId("error")).toHaveTextContent(
+      "Unsupported compression codec: ZSTD.",
+    );
   });
 
   it("shows 'No data' for empty parquet files", async () => {
