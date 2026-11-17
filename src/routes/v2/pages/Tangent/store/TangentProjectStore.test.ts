@@ -764,11 +764,11 @@ describe("TangentProjectStore session runs", () => {
 
     store.openResolvedView(
       { title: "Nightly", target: run("r-1") },
-      { recordRunIn: SESSION_A },
+      { recordRunInSessionId: SESSION_A },
     );
     store.openResolvedView(
       { title: "P1", target: pipeline("p1") },
-      { recordRunIn: SESSION_A },
+      { recordRunInSessionId: SESSION_A },
     );
 
     expect(recordSessionRun).toHaveBeenCalledTimes(1);

@@ -99,9 +99,7 @@ export interface StartSessionOptions {
 }
 
 export interface OpenTargetOptions {
-  // The chat a run was opened from, read before any await so a chat switch
-  // meanwhile can't move it to another chat's runs.
-  recordRunIn?: string;
+  recordRunInSessionId?: string;
 }
 
 /**
@@ -345,17 +343,19 @@ export class TangentProjectStore {
 
   /**
    * The tabs belong to the project, not to whichever chat is open, so a run
-   * joins a chat's runs only when it's opened from that chat.
+   * joins a chat's runs only when it's opened from that chat. The caller
+   * names that chat, read before any await, so a switch to another chat
+   * while the target is resolved can't move the run to that one's runs.
    */
   @action openResolvedView(
     view: ResolvedWorkareaView,
-    { recordRunIn }: OpenTargetOptions = {},
+    { recordRunInSessionId }: OpenTargetOptions = {},
   ): WorkareaTab {
-    if (recordRunIn && view.target.type === "run") {
+    if (recordRunInSessionId && view.target.type === "run") {
       // Best effort: the run still opens if the chat can't note it down.
       void this.#io
         ?.recordSessionRun?.(
-          recordRunIn,
+          recordRunInSessionId,
           parseIdentity(view.target.identity).value,
           view.title,
         )

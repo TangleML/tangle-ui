@@ -31,7 +31,7 @@ export function useOpenWorkareaTarget({
     onOpenBesideChat?.();
     const opening = fromChat
       ? store.openWorkareaTarget(target, title, {
-          recordRunIn: store.activeSessionId,
+          recordRunInSessionId: store.activeSessionId,
         })
       : store.openWorkareaTarget(target, title);
     try {

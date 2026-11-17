@@ -49,7 +49,7 @@ describe("tangentAnchorProtocols run anchor", () => {
     expect(openWorkareaTarget).toHaveBeenCalledWith(
       { type: "run", identity: "id/run_1" },
       "Training run",
-      { recordRunIn: "session-1" },
+      { recordRunInSessionId: "session-1" },
     );
     expect(window.open).not.toHaveBeenCalled();
   });
@@ -107,7 +107,7 @@ describe("tangentAnchorProtocols pipeline and document anchors", () => {
     expect(openWorkareaTarget).toHaveBeenCalledWith(
       { type: "pipeline", identity: "id/p-1" },
       "Churn model",
-      { recordRunIn: "session-1" },
+      { recordRunInSessionId: "session-1" },
     );
   });
 
@@ -128,7 +128,7 @@ describe("tangentAnchorProtocols pipeline and document anchors", () => {
     expect(openWorkareaTarget).toHaveBeenCalledWith(
       { type: "document", identity: "id/d-1" },
       "Brief",
-      { recordRunIn: "session-1" },
+      { recordRunInSessionId: "session-1" },
     );
   });
 
