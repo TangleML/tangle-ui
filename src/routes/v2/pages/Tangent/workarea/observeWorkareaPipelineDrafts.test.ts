@@ -85,7 +85,7 @@ describe("workarea pipeline draft ownership", () => {
     ).toThrow("no longer available");
   });
 
-  it("promotes the owning session and hands off the complete live document", async () => {
+  it("promotes a draft's tab in place and hands off the complete live document", async () => {
     vi.useFakeTimers();
     const { store, storage, file, queryClient, tab } = await setup();
     const loaded = {
@@ -98,23 +98,12 @@ describe("workarea pipeline draft ownership", () => {
       ["editor-v2-spec", getEditorPipelineIdentity(draft)],
       loaded,
     );
-    store.selectSession("session-b");
     const other = store.openResolvedView({
       title: "Other",
       target: { type: "pipeline", identity: remotePipelineIdentity("other") },
     });
     file.promoteToRemote(remote);
     vi.advanceTimersByTime(6 * 60 * 1000);
-    expect(store.activeSessionId).toBe("session-b");
-    expect(store.workareaTabs).toEqual([other]);
-    expect(store.activeWorkareaTabId).toBe(other.id);
-    expect(
-      queryClient.getQueryData([
-        "editor-v2-spec",
-        getEditorPipelineIdentity(remote),
-      ]),
-    ).toBe(loaded);
-    store.selectSession("session-a");
     expect(store.workareaTabs).toEqual([
       {
         ...tab,
@@ -123,23 +112,31 @@ describe("workarea pipeline draft ownership", () => {
           identity: remotePipelineIdentity(remote.pipelineId),
         },
       },
+      other,
     ]);
-    expect(store.activeWorkareaTabId).toBe(tab.id);
+    expect(store.activeWorkareaTabId).toBe(other.id);
+    expect(
+      queryClient.getQueryData([
+        "editor-v2-spec",
+        getEditorPipelineIdentity(remote),
+      ]),
+    ).toBe(loaded);
     storage.discardRemoteDraft(draft);
     expect(() =>
       storage.getRemoteDraftRef(draft.draftId, draft.backendUrl),
     ).toThrow("no longer available");
   });
 
-  it("releases drafts when their owning session is dropped", async () => {
-    const { store, storage } = await setup();
+  it("keeps a draft while its tab is open, though the chat it was opened in is dropped", async () => {
+    const { store, storage, tab } = await setup();
     store.selectSession("session-b");
     storage.discardRemoteDraft(draft);
     store.dropSession("session-a");
     await Promise.resolve();
-    expect(() =>
-      storage.getRemoteDraftRef(draft.draftId, draft.backendUrl),
-    ).toThrow("no longer available");
+    expect(store.workareaTabs).toEqual([tab]);
+    expect(storage.getRemoteDraftRef(draft.draftId, draft.backendUrl)).toBe(
+      draft,
+    );
   });
 
   it("does not resurrect a tab when its save finishes after closing", async () => {

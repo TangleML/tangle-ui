@@ -1,8 +1,9 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { getDefaultRunPath } from "@/routes/runRoutes";
 import { WindowContextProvider } from "@/routes/v2/shared/windows/ContentWindowStateContext";
 import { WindowStoreImpl } from "@/routes/v2/shared/windows/windowStore";
 
@@ -196,6 +197,20 @@ async function search(text: string) {
   return user;
 }
 
+function renderInPopover() {
+  const dismissFlyout = vi.fn();
+  const windows = new WindowStoreImpl();
+  windows.openWindow(createElement("span"), { id: "card", title: "Assets" });
+  const model = windows.getWindowById("card");
+  if (!model) throw new Error("The card window wasn't opened");
+  render(
+    <WindowContextProvider value={{ model, content: null, dismissFlyout }}>
+      <ProjectCardContent />
+    </WindowContextProvider>,
+  );
+  return dismissFlyout;
+}
+
 async function archiveEveryRun() {
   const user = userEvent.setup();
   const runs = screen.getByRole("region", { name: "Runs" });
@@ -212,6 +227,7 @@ describe("ProjectCardContent", () => {
     unpin.mockClear();
     archiveChange.mockClear();
     localStorage.clear();
+    vi.stubGlobal("open", vi.fn());
     loading.resources = { isLoading: false, isLoaded: true, error: null };
     loading.runs = { isLoading: false, error: null };
     loading.files = { isLoading: false, error: null, none: false };
@@ -549,22 +565,37 @@ describe("ProjectCardContent", () => {
 
   it("closes the popover it's in once something is opened", async () => {
     const user = userEvent.setup();
-    const dismissFlyout = vi.fn();
-    const windows = new WindowStoreImpl();
-    windows.openWindow(createElement("span"), {
-      id: "card",
-      title: "Assets",
-    });
-    const model = windows.getWindowById("card");
-    if (!model) throw new Error("The card window wasn't opened");
-    render(
-      <WindowContextProvider value={{ model, content: null, dismissFlyout }}>
-        <ProjectCardContent />
-      </WindowContextProvider>,
-    );
+    const dismissFlyout = renderInPopover();
 
     await user.click(screen.getByText("Q3 summary"));
 
     expect(dismissFlyout).toHaveBeenCalled();
   });
+
+  it("closes the popover it's in when a run opens beside the chat", async () => {
+    const user = userEvent.setup();
+    const dismissFlyout = renderInPopover();
+
+    await user.click(screen.getByText("Somewhere else"));
+
+    expect(dismissFlyout).toHaveBeenCalled();
+  });
+
+  it.each([
+    ["Ctrl", { ctrlKey: true }],
+    ["Cmd", { metaKey: true }],
+  ])(
+    "keeps the popover open when a run is %s-clicked into a new tab",
+    (_key, modifier) => {
+      const dismissFlyout = renderInPopover();
+
+      fireEvent.click(screen.getByText("Somewhere else"), modifier);
+
+      expect(window.open).toHaveBeenCalledWith(
+        getDefaultRunPath("run-2"),
+        "_blank",
+      );
+      expect(dismissFlyout).not.toHaveBeenCalled();
+    },
+  );
 });

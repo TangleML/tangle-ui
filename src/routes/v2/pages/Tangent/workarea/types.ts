@@ -27,6 +27,11 @@ export interface ResolvedWorkareaView {
 
 export type WorkareaTab = ResolvedWorkareaView & { id: string };
 
+export interface OpenTabs {
+  tabs: WorkareaTab[];
+  activeId: string | null;
+}
+
 /**
  * Props the workarea shell passes to every view kind's `render`. Carries the
  * active Tangent session, the per-tab store registry embeddable kinds use to
@@ -59,8 +64,9 @@ export interface WorkareaHostProps {
  * each kind decides its own tab title from the target — a pipeline looks its name
  * up in the registry, a run formats `Run <id>`.
  *
- * `keepMounted: true` keeps the tab mounted while inactive (hidden via CSS) so
- * a live view survives background switches; `false` mounts it only when active.
+ * `keepMounted: true` keeps the tab mounted while inactive (hidden via CSS)
+ * once it has been shown, so a live view survives background switches; `false`
+ * mounts it only when active.
  */
 export interface WorkareaViewKind {
   type: WorkareaViewKindName;

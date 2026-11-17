@@ -19,6 +19,10 @@ import { useRecordSessionRun } from "@/routes/v2/pages/Tangent/hooks/useSessionR
 import { useTangentBaseUrl } from "@/routes/v2/pages/Tangent/hooks/useTangentBaseUrl";
 import { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
 import { observeWorkareaPipelineDrafts } from "@/routes/v2/pages/Tangent/workarea/observeWorkareaPipelineDrafts";
+import {
+  readOpenTabs,
+  rememberOpenTabs,
+} from "@/routes/v2/pages/Tangent/workarea/openTabsStorage";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import { nameFromPrompt } from "@/services/projects/nameFromPrompt";
 import { useProjectInstructions } from "@/services/projects/useProjectInstructions";
@@ -36,14 +40,15 @@ interface TangentProjectProviderProps {
  * A project gets its own store, but moving between projects swaps the store
  * rather than remounting the page, so the shell stays put and only the content
  * changes. The fresh store starts on the session it is headed for, which keeps
- * the chat from flashing "No active session" while effects catch up.
+ * the chat from flashing "No active session" while effects catch up, and with
+ * the tabs the project had open last time.
  */
 function useProjectStore(
   projectId: string,
   seed: { defaultSessionId?: string; askedSessionId?: string },
 ): TangentProjectStore {
   const create = () => {
-    const store = new TangentProjectStore(projectId);
+    const store = new TangentProjectStore(projectId, readOpenTabs(projectId));
     store.setDefaultSessionId(seed.defaultSessionId);
     if (seed.askedSessionId) store.selectSession(seed.askedSessionId);
     return store;
@@ -79,6 +84,7 @@ export function TangentProjectProvider({
     () => observeWorkareaPipelineDrafts(store, storage, queryClient),
     [store, storage, queryClient],
   );
+  useEffect(() => rememberOpenTabs(store), [store]);
 
   useEffect(() => {
     store.setSessionIo({
