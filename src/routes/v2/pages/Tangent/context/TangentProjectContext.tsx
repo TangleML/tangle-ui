@@ -8,21 +8,20 @@ import {
   useRequiredContext,
 } from "@/hooks/useRequiredContext";
 import useToastNotification from "@/hooks/useToastNotification";
+import { userQueryOptions } from "@/hooks/useUserDetails";
 import { readTangentSessionParam } from "@/routes/tangentSearch";
 import { useBackfillSessionTags } from "@/routes/v2/pages/Tangent/hooks/useBackfillSessionTags";
 import { useBuiltFor } from "@/routes/v2/pages/Tangent/hooks/useBuiltFor";
 import { usePrepareProjectArrival } from "@/routes/v2/pages/Tangent/hooks/usePrepareProjectArrival";
 import { useProjectSessions } from "@/routes/v2/pages/Tangent/hooks/useProjectSessions";
 import { useProjectSharedFolder } from "@/routes/v2/pages/Tangent/hooks/useProjectSharedFolder";
+import { useRememberOpenTabs } from "@/routes/v2/pages/Tangent/hooks/useRememberOpenTabs";
 import { useRemoteEnvAuthToken } from "@/routes/v2/pages/Tangent/hooks/useRemoteEnvAuthToken";
 import { useRecordSessionRun } from "@/routes/v2/pages/Tangent/hooks/useSessionRuns";
 import { useTangentBaseUrl } from "@/routes/v2/pages/Tangent/hooks/useTangentBaseUrl";
 import { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
 import { observeWorkareaPipelineDrafts } from "@/routes/v2/pages/Tangent/workarea/observeWorkareaPipelineDrafts";
-import {
-  readOpenTabs,
-  rememberOpenTabs,
-} from "@/routes/v2/pages/Tangent/workarea/openTabsStorage";
+import { readOpenTabs } from "@/routes/v2/pages/Tangent/workarea/openTabsStorage";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import { nameFromPrompt } from "@/services/projects/nameFromPrompt";
 import { useProjectInstructions } from "@/services/projects/useProjectInstructions";
@@ -41,14 +40,27 @@ interface TangentProjectProviderProps {
  * rather than remounting the page, so the shell stays put and only the content
  * changes. The fresh store starts on the session it is headed for, which keeps
  * the chat from flashing "No active session" while effects catch up, and with
- * the tabs the project had open last time.
+ * the tabs this person had open in the project last time, when it's already
+ * known who they are.
  */
 function useProjectStore(
   projectId: string,
-  seed: { defaultSessionId?: string; askedSessionId?: string },
+  seed: {
+    defaultSessionId?: string;
+    askedSessionId?: string;
+    userId?: string;
+    tangentBaseUrl: string | null;
+  },
 ): TangentProjectStore {
   const create = () => {
-    const store = new TangentProjectStore(projectId, readOpenTabs(projectId));
+    const { userId, tangentBaseUrl } = seed;
+    const store = new TangentProjectStore(
+      projectId,
+      userId !== undefined && tangentBaseUrl
+        ? readOpenTabs({ userId, projectId }, tangentBaseUrl)
+        : undefined,
+    );
+    store.setTangentBaseUrl(tangentBaseUrl);
     store.setDefaultSessionId(seed.defaultSessionId);
     if (seed.askedSessionId) store.selectSession(seed.askedSessionId);
     return store;
@@ -72,19 +84,22 @@ export function TangentProjectProvider({
   } = useProjectSessions(projectId);
   const ensureSharedFolderId = useProjectSharedFolder(projectId);
   const asked = readTangentSessionParam(useSearch({ strict: false }));
+  const { baseUrl } = useTangentBaseUrl(projectId);
+  const queryClient = useQueryClient();
   const store = useProjectStore(projectId, {
     defaultSessionId: sessions[0]?.sessionId,
     askedSessionId: asked?.kind === "existing" ? asked.sessionId : undefined,
+    userId: queryClient.getQueryData(userQueryOptions.queryKey)?.id,
+    tangentBaseUrl: baseUrl,
   });
   const storage = usePipelineStorage();
-  const queryClient = useQueryClient();
   const recordSessionRun = useRecordSessionRun();
 
   useEffect(
     () => observeWorkareaPipelineDrafts(store, storage, queryClient),
     [store, storage, queryClient],
   );
-  useEffect(() => rememberOpenTabs(store), [store]);
+  useRememberOpenTabs(store, baseUrl);
 
   useEffect(() => {
     store.setSessionIo({
@@ -120,7 +135,6 @@ export function TangentProjectProvider({
     store.setDefaultSessionId(defaultSessionId);
   }, [store, defaultSessionId]);
 
-  const { baseUrl } = useTangentBaseUrl(projectId);
   const authToken = useRemoteEnvAuthToken();
   useBackfillSessionTags({
     projectId,

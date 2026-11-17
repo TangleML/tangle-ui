@@ -80,6 +80,15 @@ describe("tangentAnchorProtocols run anchor", () => {
     expect(window.open).toHaveBeenCalledWith("/runs/run_2", "_blank");
   });
 
+  it.each(["id/../../users/me", "id/r-1?x=1", "..", "r 1", "r-1%2Fcancel"])(
+    "disables the chip for %s, which could not be a run's id",
+    (path) => {
+      render(<RunAnchor {...anchorProps({ href: `run://${path}`, path })} />);
+
+      expect(screen.getByRole("button")).toBeDisabled();
+    },
+  );
+
   it("disables the chip when the path is not a run", () => {
     render(<RunAnchor {...anchorProps({ path: "name/nope" })} />);
 
@@ -131,6 +140,47 @@ describe("tangentAnchorProtocols pipeline and document anchors", () => {
       { recordRunInSessionId: "session-1" },
     );
   });
+
+  function openedPipeline(href: string) {
+    const PipelineAnchor = tangentAnchorProtocols.pipeline;
+    render(
+      <PipelineAnchor
+        {...anchorProps({
+          href,
+          protocol: "pipeline",
+          path: href.slice("pipeline://".length),
+          label: "Mine",
+        })}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button"));
+    return openWorkareaTarget.mock.calls[0]?.[0];
+  }
+
+  it.each([
+    ["Train model (copy)", "pipeline://name/Train%20model%20(copy)"],
+    ["Café ☃", "pipeline://name/Caf%C3%A9%20%E2%98%83"],
+    ["Top 5%", "pipeline://name/Top%205%25"],
+    ["50%off sale", "pipeline://name/50%off%20sale"],
+  ])(
+    "opens the pipeline named %s from the address the chat's markdown makes of it",
+    (name, href) => {
+      expect(openedPipeline(href)).toEqual({
+        type: "pipeline",
+        identity: `name/${name}`,
+      });
+    },
+  );
+
+  it.each(["Train model (copy)", "Café ☃", "Top 5%", "50%off sale"])(
+    "opens the pipeline named %s from its address as typed",
+    (name) => {
+      expect(openedPipeline(`pipeline://name/${name}`)).toEqual({
+        type: "pipeline",
+        identity: `name/${name}`,
+      });
+    },
+  );
 
   it("can't open a link that isn't a workarea target", () => {
     const PipelineAnchor = tangentAnchorProtocols.pipeline;

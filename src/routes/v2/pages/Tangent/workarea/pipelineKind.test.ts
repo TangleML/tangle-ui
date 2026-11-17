@@ -65,6 +65,7 @@ function renderPipeline(identity: WorkareaIdentity) {
       {
         isActive: true,
         projectId: "project-1",
+        tangentBaseUrl: null,
         tabEnvironmentId: () => undefined,
         registerTabStore: vi.fn(),
         unregisterTabStore: vi.fn(),
@@ -174,6 +175,7 @@ it("shows a recoverable message when an old draft target is unavailable", () => 
       {
         isActive: true,
         projectId: "project-1",
+        tangentBaseUrl: null,
         tabEnvironmentId: () => undefined,
         registerTabStore: vi.fn(),
         unregisterTabStore: vi.fn(),

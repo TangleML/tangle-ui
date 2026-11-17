@@ -11,8 +11,14 @@ import { useBackend } from "@/providers/BackendProvider";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { useOpenWorkareaTarget } from "@/routes/v2/pages/Tangent/hooks/useOpenWorkareaTarget";
 import { useRecordSessionRun } from "@/routes/v2/pages/Tangent/hooks/useSessionRuns";
-import { fetchExecutionDetails } from "@/services/executionService";
-import { runTarget } from "@/services/projects/resourceTarget";
+import {
+  fetchExecutionDetails,
+  retryUnlessAuth,
+} from "@/services/executionService";
+import {
+  isRunOrExecutionId,
+  runTarget,
+} from "@/services/projects/resourceTarget";
 import { useRunExecutionStats } from "@/services/projects/useProjectRuns";
 import {
   countInProgressFromStats,
@@ -29,7 +35,21 @@ function stringProp(
   return typeof value === "string" && value.trim() !== "" ? value : undefined;
 }
 
-function progressLabel(stats: Record<string, number> | null | undefined) {
+// The agent writes a card's props, and its ids go into request paths and the
+// chat's saved runs, so one that isn't shaped like an id is treated as absent.
+function idProp(
+  props: Record<string, unknown>,
+  key: string,
+): string | undefined {
+  const value = stringProp(props, key)?.trim();
+  return value && isRunOrExecutionId(value) ? value : undefined;
+}
+
+function progressLabel(
+  stats: Record<string, number> | null | undefined,
+  isLoading: boolean,
+) {
+  if (stats === undefined && !isLoading) return "Status unavailable";
   if (!stats) return "Loading status…";
   const total = Object.values(stats).reduce((sum, count) => sum + count, 0);
   const ended = total - countInProgressFromStats(stats);
@@ -51,21 +71,23 @@ export const PipelineProgressCard = observer(function PipelineProgressCard({
   const openTarget = useOpenWorkareaTarget();
   const { backendUrl } = useBackend();
   const recordSessionRun = useRecordSessionRun();
-  const executionId = stringProp(props, "executionId");
-  const givenRunId = stringProp(props, "runId");
+  const executionId = idProp(props, "executionId");
+  const givenRunId = idProp(props, "runId");
 
-  const { data: details } = useQuery({
+  const { data: details, isLoading: isFindingRun } = useQuery({
     queryKey: ["tangent-execution-details", executionId],
     queryFn: () => fetchExecutionDetails(executionId ?? "", backendUrl),
     enabled: Boolean(executionId) && !givenRunId,
     staleTime: Infinity,
+    retry: retryUnlessAuth,
   });
   const runId = givenRunId ?? details?.pipeline_run_id ?? undefined;
   const title =
     stringProp(props, "title") ??
     details?.task_spec?.componentRef?.spec?.name ??
     "Pipeline run";
-  const { data: stats } = useRunExecutionStats(runId);
+  const { data: stats, isLoading: isLoadingStats } =
+    useRunExecutionStats(runId);
   // The chat this card was drawn in. It can outlive a switch to another chat
   // for a moment, and mustn't hand its run to that one.
   const [sessionId] = useState(() => store.activeSessionId);
@@ -106,7 +128,7 @@ export const PipelineProgressCard = observer(function PipelineProgressCard({
       <BlockStack gap="1" align="stretch" className="w-full">
         <TaskStatusBar executionStatusStats={stats} />
         <Text size="xs" tone="subdued">
-          {progressLabel(stats)}
+          {progressLabel(stats, isFindingRun || isLoadingStats)}
         </Text>
       </BlockStack>
     </button>

@@ -10,6 +10,7 @@ import { resourceMeta } from "@/services/projects/resourceMeta";
 import type { WorkareaTarget } from "@/services/projects/resourceTarget";
 import {
   idIdentity,
+  isRunOrExecutionId,
   isWorkareaTargetString,
   parseWorkareaTarget,
 } from "@/services/projects/resourceTarget";
@@ -17,7 +18,7 @@ import {
 function runTarget(path: string): WorkareaTarget | undefined {
   const candidate = `run://${path}`;
   if (isWorkareaTargetString(candidate)) return parseWorkareaTarget(candidate);
-  if (path === "" || path.includes("/")) return undefined;
+  if (!isRunOrExecutionId(path)) return undefined;
   return { type: "run", identity: idIdentity(path) };
 }
 
@@ -39,10 +40,28 @@ function RunAnchor({ path, label }: AnchorProtocolProps) {
   );
 }
 
+const PERCENT_ESCAPES = /(?:%[0-9a-f]{2})+/gi;
+
+// The chat draws agent messages and slash-command results as markdown, which
+// percent-encodes a link's address, so a name with a space arrives as `%20`;
+// a person's own message hands the address over as typed. Runs of escapes are
+// decoded one at a time, since a stray `%`, as in "50%off", makes decoding
+// the whole address at once fail.
+function decodedLinkAddress(href: string): string {
+  return href.replace(PERCENT_ESCAPES, (escapes) => {
+    try {
+      return decodeURIComponent(escapes);
+    } catch {
+      return escapes;
+    }
+  });
+}
+
 function WorkareaTargetAnchor({ href, protocol, label }: AnchorProtocolProps) {
   const open = useOpenWorkareaTarget({ fromChat: true });
-  const target = isWorkareaTargetString(href)
-    ? parseWorkareaTarget(href)
+  const address = decodedLinkAddress(href);
+  const target = isWorkareaTargetString(address)
+    ? parseWorkareaTarget(address)
     : undefined;
 
   return (

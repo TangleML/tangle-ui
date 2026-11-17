@@ -3,11 +3,11 @@ import {
   listProjectResources,
   updateProjectResource,
 } from "@/services/projects/projectResourcesService";
-import { getProject, updateProject } from "@/services/projects/projectsService";
 import {
   hasProvisionalName,
   withoutProvisionalName,
 } from "@/services/projects/provisionalName";
+import { updateProjectMetadata } from "@/services/projects/updateProjectMetadata";
 
 interface NamingDeps {
   projectId: string;
@@ -40,14 +40,17 @@ export function createNamingHandlers({
 }: NamingDeps): NamingHandlers {
   return {
     async renameProject(name) {
-      const project = await getProject(projectId);
-      // A name someone chose is the answer; the agent is told not to retry.
-      if (!hasProvisionalName(project.metadata)) return { renamed: false };
+      const { changed } = await updateProjectMetadata(
+        projectId,
+        // A name someone chose is the answer; the agent is told not to retry.
+        (metadata) =>
+          hasProvisionalName(metadata)
+            ? withoutProvisionalName(metadata)
+            : undefined,
+        { name },
+      );
+      if (!changed) return { renamed: false };
 
-      await updateProject(projectId, {
-        name,
-        metadata: withoutProvisionalName(project.metadata),
-      });
       await onRenamed();
       return { renamed: true };
     },

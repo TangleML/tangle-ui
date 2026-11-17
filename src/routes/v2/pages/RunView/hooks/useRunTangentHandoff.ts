@@ -17,7 +17,6 @@ import {
   createProject,
   deleteProject,
   getProject,
-  updateProject,
 } from "@/services/projects/projectsService";
 import { provisionalNameMetadata } from "@/services/projects/provisionalName";
 import { pipelineRunResourceInput } from "@/services/projects/resourceDescriptor";
@@ -26,6 +25,7 @@ import type { StartingSession } from "@/services/projects/startingSession";
 import { startingSessionMetadata } from "@/services/projects/startingSession";
 import type { CreateResourceInput, Project } from "@/services/projects/types";
 import { ProjectsQueryKeys } from "@/services/projects/types";
+import { updateProjectMetadata } from "@/services/projects/updateProjectMetadata";
 import { getErrorMessage } from "@/utils/string";
 
 export interface RunInTangent {
@@ -84,12 +84,10 @@ async function intoExistingProject(
 
   const session = handoff.startingSession?.(run);
   if (session) {
-    await updateProject(project.id, {
-      metadata: {
-        ...(project.metadata ?? {}),
-        ...startingSessionMetadata(session),
-      },
-    });
+    await updateProjectMetadata(project.id, (metadata) => ({
+      ...(metadata ?? {}),
+      ...startingSessionMetadata(session),
+    }));
   }
   return project;
 }

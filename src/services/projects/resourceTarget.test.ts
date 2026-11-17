@@ -11,6 +11,7 @@ import {
   draftPipelineIdentity,
   formatWorkareaTarget,
   idIdentity,
+  isRunOrExecutionId,
   isWorkareaTargetString,
   nameIdentity,
   parseIdentity,
@@ -141,11 +142,40 @@ describe("workareaTarget", () => {
     expect(isWorkareaTargetString("artifact://name/x")).toBe(false);
   });
 
+  it("takes only ids shaped like the backend's for runs and executions", () => {
+    for (const id of ["1", "42", "run-123", "run_1", "019a3F0c7d2e4b6a8c1d"]) {
+      expect(isRunOrExecutionId(id), id).toBe(true);
+    }
+    for (const id of [
+      "",
+      "../../users/me",
+      "r-1/cancel",
+      "r-1?x=1",
+      "r-1#frag",
+      "r 1",
+      "r-1\n",
+      "r%2F1",
+      "a".repeat(129),
+    ]) {
+      expect(isRunOrExecutionId(id), id).toBe(false);
+    }
+  });
+
+  it("rejects a run target whose id could not be a run's", () => {
+    expect(isWorkareaTargetString("run://id/../../users/me")).toBe(false);
+    expect(isWorkareaTargetString("run://id/r-1?x=1")).toBe(false);
+    expect(() => parseWorkareaTarget("run://id/r-1/cancel")).toThrow(
+      /Malformed run id/,
+    );
+  });
+
   it("agrees with the parser on everything it accepts", () => {
     const candidates = [
       "pipeline://id/p1",
       "pipeline://name/Draft",
       "run://id/1",
+      "run://id/../x",
+      "run://id/r 1",
       "run://name/x",
       "artifact://id/a.txt",
       "artifact://name/a.txt",

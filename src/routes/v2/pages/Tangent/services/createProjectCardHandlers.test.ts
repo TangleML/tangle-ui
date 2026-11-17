@@ -284,6 +284,58 @@ describe("createProjectCardHandlers", () => {
     ]);
   });
 
+  it("reads one chat's files without reading the project's other chats", async () => {
+    const tangent = makeTangent((sessionId) => [
+      entry("file", `artifacts/${sessionId}.md`, sessionId),
+    ]);
+    const { handlers } = setup({
+      tangent,
+      sessionResources: [
+        resource("s-1", { entity: "agent_session", entityId: "chat-1" }),
+        resource("s-2", { entity: "agent_session", entityId: "chat-2" }),
+        resource("s-3", { entity: "agent_session", entityId: "chat-3" }),
+      ],
+    });
+
+    const files = await handlers.listChatFiles("chat-2");
+
+    expect(files.map(({ sessionId, path }) => [sessionId, path])).toEqual([
+      ["chat-2", "artifacts/chat-2.md"],
+    ]);
+    expect(tangent.listResources).toHaveBeenCalledTimes(1);
+    expect(tangent.listResources).toHaveBeenCalledWith("chat-2");
+    expect(services.listProjectResources).toHaveBeenCalledTimes(1);
+  });
+
+  it("reads nothing from a chat that isn't one of this project's", async () => {
+    const tangent = makeTangent(() => [
+      entry("file", "artifacts/secret.md", "secret"),
+    ]);
+    const { handlers } = setup({
+      tangent,
+      sessionResources: [
+        resource("s-1", { entity: "agent_session", entityId: "chat-1" }),
+      ],
+    });
+
+    expect(await handlers.listChatFiles("other-project-chat")).toEqual([]);
+    expect(tangent.listResources).not.toHaveBeenCalled();
+  });
+
+  it("finds no files in a chat of this project it can't read", async () => {
+    const tangent = makeTangent(() => {
+      throw new Error("403");
+    });
+    const { handlers } = setup({
+      tangent,
+      sessionResources: [
+        resource("s-1", { entity: "agent_session", entityId: "chat-1" }),
+      ],
+    });
+
+    expect(await handlers.listChatFiles("chat-1")).toEqual([]);
+  });
+
   it("pins through Tangent with the person's token", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response("{}"));
     vi.stubGlobal("fetch", fetchMock);
@@ -346,6 +398,21 @@ describe("createProjectCardHandlers", () => {
     );
     expect(onResourcesChanged).toHaveBeenCalledTimes(1);
   });
+
+  it.each(["../../users/me", "r-1/cancel", "r-1?x=1", "r 1"])(
+    "won't look up or add %s, which could not be a run's id",
+    async (runId) => {
+      const { handlers, getRunDetails } = setup({ cardResources: [] });
+
+      await expect(handlers.addRun(runId, "Train")).rejects.toThrow(
+        /isn't a pipeline run's id/,
+      );
+
+      expect(getRunDetails).not.toHaveBeenCalled();
+      expect(services.listProjectResources).not.toHaveBeenCalled();
+      expect(services.createProjectResource).not.toHaveBeenCalled();
+    },
+  );
 
   it("won't add a run that doesn't exist, even under a name", async () => {
     const { handlers, getRunDetails } = setup({ cardResources: [] });

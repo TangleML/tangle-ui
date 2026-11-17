@@ -18,7 +18,6 @@ import {
   pipelineFileTarget,
   remoteResourceTarget,
 } from "@/services/projects/pipelineResource";
-import { getProject } from "@/services/projects/projectsService";
 import { MAX_PAGE_SIZE } from "@/services/projects/queryDefaults";
 import {
   describeResource,
@@ -35,7 +34,10 @@ import {
   useCreateProjectResource,
   useProjectResources,
 } from "@/services/projects/useProjectResources";
-import { useProject, useUpdateProject } from "@/services/projects/useProjects";
+import {
+  useProject,
+  useUpdateProjectMetadata,
+} from "@/services/projects/useProjects";
 import { getErrorMessage } from "@/utils/string";
 
 interface PrepareProjectArrivalOptions {
@@ -101,7 +103,7 @@ export function usePrepareProjectArrival(
     pageSize: MAX_PAGE_SIZE,
   });
   const { mutateAsync: createResource } = useCreateProjectResource(projectId);
-  const { mutateAsync: updateProject } = useUpdateProject();
+  const { mutateAsync: updateProjectMetadata } = useUpdateProjectMetadata();
   const { isConfigured: isAiConfigured } = useAiProviderSettings();
   const prepared = useRef<TangentProjectStore | null>(null);
 
@@ -123,15 +125,12 @@ export function usePrepareProjectArrival(
       // it, is housekeeping that stops the next arrival repeating it. The
       // session has already started, so a refusal here must not cost the
       // caller the pipeline and the workarea they came for — it is left for
-      // the next arrival to try again. The metadata is re-read because
-      // starting the session may have written to it, and the PATCH replaces
-      // the whole object.
+      // the next arrival to try again.
       if (waiting) {
         try {
-          const latest = await getProject(projectId);
-          await updateProject({
+          await updateProjectMetadata({
             id: projectId,
-            input: { metadata: withoutStartingSession(latest.metadata) },
+            change: withoutStartingSession,
           });
         } catch (error) {
           console.error(

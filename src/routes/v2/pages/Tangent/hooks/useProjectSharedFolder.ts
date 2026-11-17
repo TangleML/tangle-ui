@@ -8,8 +8,9 @@ import {
   readProjectSharedFolderId,
   withProjectSharedFolderId,
 } from "@/services/projects/projectSharedFolder";
-import { getProject, updateProject } from "@/services/projects/projectsService";
+import { getProject } from "@/services/projects/projectsService";
 import { type Project, ProjectsQueryKeys } from "@/services/projects/types";
+import { updateProjectMetadata } from "@/services/projects/updateProjectMetadata";
 
 interface ProvisionParams {
   projectId: string;
@@ -23,11 +24,10 @@ interface ProvisionedFolder {
 }
 
 /**
- * Metadata is read from the server rather than the cache because the PATCH
- * replaces the whole object, and a stale copy would drop keys written since.
- * It is read again after the folder is made so a folder another tab saved in
- * the meantime wins, leaving ours unused rather than splitting the project's
- * memory across two stores.
+ * The project is read from the server rather than the cache, and read again
+ * as the folder is saved, so a folder another tab saved in the meantime wins,
+ * leaving ours unused rather than splitting the project's memory across two
+ * stores.
  */
 async function provisionSharedFolder({
   projectId,
@@ -44,14 +44,19 @@ async function provisionSharedFolder({
     name: projectSharedFolderName(projectId),
   });
 
-  const latest = await getProject(projectId);
-  const savedElsewhere = readProjectSharedFolderId(latest.metadata);
-  if (savedElsewhere) return { id: savedElsewhere, saved: false };
-
-  await updateProject(projectId, {
-    metadata: withProjectSharedFolderId(latest.metadata, folder.id),
-  });
-  return { id: folder.id, saved: true };
+  const { project: latest, changed } = await updateProjectMetadata(
+    projectId,
+    (metadata) =>
+      readProjectSharedFolderId(metadata)
+        ? undefined
+        : withProjectSharedFolderId(metadata, folder.id),
+  );
+  return changed
+    ? { id: folder.id, saved: true }
+    : {
+        id: readProjectSharedFolderId(latest.metadata) ?? folder.id,
+        saved: false,
+      };
 }
 
 /**
