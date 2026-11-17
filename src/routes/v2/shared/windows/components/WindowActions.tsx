@@ -15,7 +15,11 @@ const lightCloseButtonClassName =
 const darkCloseButtonClassName =
   "h-5 w-5 text-gray-300 hover:text-destructive hover:bg-white/10";
 
-export const WindowActions = observer(function WindowActions() {
+export const WindowActions = observer(function WindowActions({
+  hideMinimize = false,
+}: {
+  hideMinimize?: boolean;
+}) {
   const { model } = useWindowContext();
   const buttonClassName = model.isDocked
     ? lightButtonClassName
@@ -30,20 +34,25 @@ export const WindowActions = observer(function WindowActions() {
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
-      {!model.isActionDisabled("minimize") && model.isDocked && (
-        <Button
-          variant="ghost"
-          size="icon"
-          className={buttonClassName}
-          onClick={() => model.toggleMinimize()}
-          aria-label={model.isMinimized ? "Expand" : "Minimize"}
-          {...tracking("v2.shared_window.chrome.minimize", {
-            placement: "docked",
-          })}
-        >
-          <Icon name={model.isMinimized ? "ChevronDown" : "Minus"} size="xs" />
-        </Button>
-      )}
+      {!hideMinimize &&
+        !model.isActionDisabled("minimize") &&
+        model.isDocked && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className={buttonClassName}
+            onClick={() => model.toggleMinimize()}
+            aria-label={model.isMinimized ? "Expand" : "Minimize"}
+            {...tracking("v2.shared_window.chrome.minimize", {
+              placement: "docked",
+            })}
+          >
+            <Icon
+              name={model.isMinimized ? "ChevronDown" : "Minus"}
+              size="xs"
+            />
+          </Button>
+        )}
 
       {!model.isActionDisabled("maximize") && (
         <Button

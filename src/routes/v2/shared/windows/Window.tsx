@@ -10,12 +10,16 @@ interface WindowProps {
   windowId: string;
   docked?: boolean;
   dockIndex?: number;
+  fillsDock?: boolean;
+  quietHeader?: boolean;
 }
 
 export const Window = observer(function Window({
   windowId,
   docked = false,
   dockIndex,
+  fillsDock,
+  quietHeader,
 }: WindowProps) {
   const { windows } = useSharedStores();
   const model = windows.getWindowById(windowId);
@@ -24,7 +28,9 @@ export const Window = observer(function Window({
   const content = windows.getWindowContent(windowId);
 
   return (
-    <WindowContextProvider value={{ model, content, dockIndex }}>
+    <WindowContextProvider
+      value={{ model, content, dockIndex, fillsDock, quietHeader }}
+    >
       {docked ? <DockedWindow /> : <FloatingWindow />}
     </WindowContextProvider>
   );

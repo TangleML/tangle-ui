@@ -7,6 +7,8 @@ interface WindowContextValue {
   model: WindowModel;
   content: ReactNode;
   dockIndex?: number;
+  fillsDock?: boolean;
+  quietHeader?: boolean;
   dismissFlyout?: () => void;
 }
 

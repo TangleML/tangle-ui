@@ -4,6 +4,22 @@ export function hasNewTabModifier(event: MouseEvent) {
   return event.ctrlKey || event.metaKey;
 }
 
+/**
+ * For a popover's `onEscapeKeyDown`. A search box that holds text takes Escape
+ * to clear itself, but Radix closes the popover around it on the same press,
+ * from a listener that runs before the box's own.
+ */
+export function leaveEscapeToSearchBox(event: KeyboardEvent) {
+  const { target } = event;
+  if (
+    target instanceof HTMLInputElement &&
+    target.type === "search" &&
+    target.value !== ""
+  ) {
+    event.preventDefault();
+  }
+}
+
 export class NotTextFileError extends Error {
   constructor(fileName: string) {
     super(`${fileName} is not a UTF-8 text file`);

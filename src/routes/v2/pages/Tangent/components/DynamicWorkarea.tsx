@@ -15,7 +15,7 @@ import { getWorkareaKind } from "@/routes/v2/pages/Tangent/workarea/registry";
 import type { WorkareaHostProps } from "@/routes/v2/pages/Tangent/workarea/types";
 
 import { CanvasEmptyState } from "./CanvasEmptyState";
-import { ProjectPanelCard } from "./ProjectPanelCard";
+import { ProjectDockPopover } from "./ProjectDockPopover";
 
 /**
  * The right-hand "Dynamic Workarea": a tabbed surface people and Tangent agents
@@ -79,7 +79,7 @@ export const DynamicWorkarea = observer(function DynamicWorkarea() {
             ))}
           </TabsList>
           <div className="shrink-0 px-2">
-            <ProjectPanelCard />
+            <ProjectDockPopover />
           </div>
         </InlineStack>
         {workareaTabs.length > 0 ? (
