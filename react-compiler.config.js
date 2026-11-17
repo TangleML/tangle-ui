@@ -108,6 +108,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/components/shared/ReactFlow/FlowCanvas/TaskNode/TaskOverview/IOSection",
   "src/components/shared/ReactFlow/FlowCanvas/TaskNode/TaskOverview/SystemErrorSection.tsx",
   "src/components/ui/typography.tsx",
+  "src/components/ui/list-item.tsx",
 
   "src/providers/DialogProvider",
   "src/providers/TourProvider",
