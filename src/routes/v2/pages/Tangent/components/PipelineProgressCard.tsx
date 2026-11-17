@@ -11,7 +11,10 @@ import { useBackend } from "@/providers/BackendProvider";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { useOpenWorkareaTarget } from "@/routes/v2/pages/Tangent/hooks/useOpenWorkareaTarget";
 import { useRecordSessionRun } from "@/routes/v2/pages/Tangent/hooks/useSessionRuns";
-import { fetchExecutionDetails } from "@/services/executionService";
+import {
+  fetchExecutionDetails,
+  retryUnlessAuth,
+} from "@/services/executionService";
 import {
   isRunOrExecutionId,
   runTarget,
@@ -76,6 +79,7 @@ export const PipelineProgressCard = observer(function PipelineProgressCard({
     queryFn: () => fetchExecutionDetails(executionId ?? "", backendUrl),
     enabled: Boolean(executionId) && !givenRunId,
     staleTime: Infinity,
+    retry: retryUnlessAuth,
   });
   const runId = givenRunId ?? details?.pipeline_run_id ?? undefined;
   const title =

@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fetchExecutionDetails } from "@/services/executionService";
+import { RemoteAuthError } from "@/utils/fetchWithErrorHandling";
 
 import { PipelineProgressCard } from "./PipelineProgressCard";
 
@@ -30,7 +31,8 @@ vi.mock("@/providers/BackendProvider", () => ({
   useBackend: () => ({ backendUrl: "https://tangle.example" }),
 }));
 
-vi.mock("@/services/executionService", () => ({
+vi.mock("@/services/executionService", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/services/executionService")>()),
   fetchExecutionDetails: vi.fn().mockResolvedValue({
     pipeline_run_id: "run-7",
     task_spec: { componentRef: { spec: { name: "Friendly Hello Generator" } } },
@@ -92,6 +94,27 @@ describe("PipelineProgressCard", () => {
       await screen.findByText("Friendly Hello Generator"),
     ).toBeInTheDocument();
     expect(screen.getByText("Succeeded — 3/3 tasks")).toBeInTheDocument();
+  });
+
+  it("doesn't ask again for the run behind an execution once sign-in has lapsed", async () => {
+    vi.mocked(fetchExecutionDetails).mockRejectedValueOnce(
+      new RemoteAuthError("https://tangle.example/api/executions/exec-1"),
+    );
+    const client = new QueryClient();
+    render(
+      <QueryClientProvider client={client}>
+        <PipelineProgressCard
+          name="pipeline-progress"
+          kind="message"
+          props={{ executionId: "exec-1" }}
+        />
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() => expect(fetchExecutionDetails).toHaveBeenCalled());
+    await waitFor(() => expect(client.isFetching()).toBe(0));
+
+    expect(fetchExecutionDetails).toHaveBeenCalledTimes(1);
   });
 
   it("opens the run beside the chat instead of asking the agent to", async () => {

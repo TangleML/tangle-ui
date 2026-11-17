@@ -26,7 +26,7 @@ import {
 } from "@/utils/fetchWithErrorHandling";
 import { rateLimit } from "@/utils/rateLimit";
 
-const retryUnlessAuth = (failureCount: number, error: Error) =>
+export const retryUnlessAuth = (failureCount: number, error: Error) =>
   !(error instanceof RemoteAuthError) && failureCount < 3;
 
 export const fetchExecutionState = async (
