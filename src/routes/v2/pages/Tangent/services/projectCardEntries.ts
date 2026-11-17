@@ -78,7 +78,7 @@ export function projectCardLists({
   projectRuns: ProjectRun[];
   archived: ReadonlySet<string>;
 }): ProjectCardLists {
-  const addedAt = new Map(
+  const addedAtById = new Map(
     summaries.map(({ id, createdAt }) => [id, createdAt]),
   );
   const attached = items
@@ -90,7 +90,7 @@ export function projectCardLists({
           ...item,
           key,
           target: item.target,
-          addedAt: addedAt.get(item.id) ?? null,
+          addedAt: addedAtById.get(item.id) ?? null,
           archived: archived.has(key),
         },
       ];
