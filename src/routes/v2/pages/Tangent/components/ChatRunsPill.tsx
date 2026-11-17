@@ -77,7 +77,8 @@ export const ChatRunsPill = observer(function ChatRunsPill({
         isRefusedRun(stats[index]?.error),
     };
   });
-  const anyFailed = rows.some(({ failed }) => failed);
+  const failedCount = rows.filter(({ failed }) => failed).length;
+  const anyFailed = failedCount > 0;
   const anyRunning = rows.some(({ running }) => running);
   const finished = rows.filter((row) => row.finished);
 
@@ -93,7 +94,11 @@ export const ChatRunsPill = observer(function ChatRunsPill({
         <Button
           variant="outline"
           size="xs"
-          aria-label={`${pillLabel(rows)}${anyFailed ? ", one failed" : ""}`}
+          aria-label={
+            anyFailed
+              ? `${pillLabel(rows)}, ${failedCount} failed`
+              : pillLabel(rows)
+          }
           {...tracking("projects.chat.runs_pill.open")}
         >
           <Icon name="Play" size="xs" />
