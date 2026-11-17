@@ -265,12 +265,18 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
 
   const remembered = expandedByProject[store.projectId];
   const expanded = new Set(Array.isArray(remembered) ? remembered : []);
+  function rememberExpanded(titles: ReadonlySet<string>) {
+    const all = { ...expandedByProject, [store.projectId]: [...titles] };
+    setExpandedByProject(all);
+    storage.setItem(EXPANDED_KEY, all);
+  }
   function toggleSection(title: string) {
     const next = new Set(expanded);
     if (!next.delete(title)) next.add(title);
-    const all = { ...expandedByProject, [store.projectId]: [...next] };
-    setExpandedByProject(all);
-    storage.setItem(EXPANDED_KEY, all);
+    rememberExpanded(next);
+  }
+  function expandSection(title: string) {
+    rememberExpanded(new Set(expanded).add(title));
   }
   // A search shows every match, so it's the one time nothing is held back.
   const preview = (kind: Preview) => (searching ? undefined : kind);
@@ -310,7 +316,12 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
       rows: runs.active
         .filter(({ pipelineName }) => matches(pipelineName))
         .map(renderRun),
-      more: searching ? undefined : <LoadOlderRuns query={projectRuns} />,
+      more: searching ? undefined : (
+        <LoadOlderRuns
+          query={projectRuns}
+          onLoad={() => expandSection("Runs")}
+        />
+      ),
       preview: preview("expand"),
       action: add("run"),
       empty: projectRuns.hasNextPage
@@ -613,8 +624,10 @@ function CardSection({
 
 function LoadOlderRuns({
   query,
+  onLoad,
 }: {
   query: ReturnType<typeof useProjectRuns>;
+  onLoad: () => void;
 }) {
   if (!query.hasNextPage) return null;
   return (
@@ -625,7 +638,10 @@ function LoadOlderRuns({
         align="start"
         fullWidth
         disabled={query.isFetchingNextPage}
-        onClick={() => void query.fetchNextPage()}
+        onClick={() => {
+          onLoad();
+          void query.fetchNextPage();
+        }}
         className="ps-8"
         {...tracking("projects.project_card.load_older_runs")}
       >
