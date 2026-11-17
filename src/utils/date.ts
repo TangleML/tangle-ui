@@ -130,3 +130,22 @@ export const formatRelativeTime = (date: Date) => {
     return `${diffDays} days ago`;
   }
 };
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+export const formatTimeAgo = (
+  date: string | Date,
+  now: Date | number,
+): string => {
+  const elapsedMs = Math.max(
+    0,
+    new Date(now).getTime() - new Date(date).getTime(),
+  );
+
+  if (elapsedMs < MS_PER_DAY) {
+    return `${formatDurationMs(elapsedMs)} ago`;
+  }
+
+  const days = Math.floor(elapsedMs / MS_PER_DAY);
+  return days === 1 ? "1 day ago" : `${days} days ago`;
+};
