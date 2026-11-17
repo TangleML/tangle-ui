@@ -191,4 +191,26 @@ describe("useSessionRunStates", () => {
 
     expect([...result.current]).toEqual([]);
   });
+
+  it("drops a Tangent's marks when it's another Tangent's turn, or there is none", () => {
+    const { result, rerender } = renderHook(
+      ({ baseUrl }) => useSessionRunStates(baseUrl, undefined),
+      { initialProps: { baseUrl: "http://tangent" as string | null } },
+    );
+    const working = {
+      statuses: [{ sessionId: "s-1", status: "busy" }],
+    };
+
+    send("session:status:snapshot", working);
+    expect(result.current.get("s-1")).toBe("working");
+
+    rerender({ baseUrl: "http://another-tangent" });
+    expect([...result.current]).toEqual([]);
+
+    send("session:status:snapshot", working);
+    expect(result.current.get("s-1")).toBe("working");
+
+    rerender({ baseUrl: null });
+    expect([...result.current]).toEqual([]);
+  });
 });

@@ -163,6 +163,9 @@ export function useSessionRunStates(
     );
     return () => {
       socket.disconnect();
+      // The marks are this Tangent's word on its chats, so they go with it:
+      // the next one hasn't answered yet, and with none nothing ever would.
+      setStatuses(new Map());
     };
   }, [baseUrl, authToken]);
 
