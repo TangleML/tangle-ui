@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { leaveEscapeToSearchBox } from "@/utils/dom";
 import { tracking } from "@/utils/tracking";
 
 import { PopoverWindow } from "./components/PopoverWindow";
@@ -130,6 +131,7 @@ export const DockPopover = observer(function DockPopover({
         ref={contentRef}
         tabIndex={-1}
         align="end"
+        onEscapeKeyDown={leaveEscapeToSearchBox}
         sideOffset={8}
         onOpenAutoFocus={(event) => {
           // A window may already have put focus where it wants it, such as a

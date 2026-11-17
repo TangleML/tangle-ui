@@ -1,6 +1,35 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { NotTextFileError, readTextFromFile, readYamlFromFile } from "./dom";
+import {
+  leaveEscapeToSearchBox,
+  NotTextFileError,
+  readTextFromFile,
+  readYamlFromFile,
+} from "./dom";
+
+describe("leaveEscapeToSearchBox", () => {
+  function escapeIn(type: string, value: string) {
+    const input = document.createElement("input");
+    input.type = type;
+    input.value = value;
+    input.addEventListener("keydown", leaveEscapeToSearchBox);
+    const event = new KeyboardEvent("keydown", {
+      key: "Escape",
+      cancelable: true,
+    });
+    input.dispatchEvent(event);
+    return event;
+  }
+
+  it("keeps Escape from closing what a search box with text sits in", () => {
+    expect(escapeIn("search", "forecast").defaultPrevented).toBe(true);
+  });
+
+  it("lets Escape through from an empty search box, and from any other field", () => {
+    expect(escapeIn("search", "").defaultPrevented).toBe(false);
+    expect(escapeIn("text", "forecast").defaultPrevented).toBe(false);
+  });
+});
 
 describe("readTextFromFile", () => {
   it("reads a text file", async () => {

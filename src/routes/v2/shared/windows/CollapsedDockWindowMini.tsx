@@ -9,6 +9,7 @@ import {
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { leaveEscapeToSearchBox } from "@/utils/dom";
 
 import { WindowContextProvider } from "./ContentWindowStateContext";
 import { MAX_DOCK_AREA_WIDTH } from "./types";
@@ -78,6 +79,7 @@ export const CollapsedDockWindowMini = observer(
           align="start"
           sideOffset={6}
           collisionPadding={12}
+          onEscapeKeyDown={leaveEscapeToSearchBox}
           className={cn(
             "p-0 overflow-hidden flex flex-col border shadow-lg z-50",
             "max-h-[min(70vh,720px)] w-[min(92vw,var(--dock-mini-popover-w))]",
