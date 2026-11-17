@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatDuration } from "./date";
+import { formatDuration, formatTimeAgo } from "./date";
 
 describe("formatDuration", () => {
   it("formats seconds correctly", () => {
@@ -99,6 +99,30 @@ describe("formatDuration", () => {
     const endDate = new Date("2024-01-01T10:02:15.000Z");
     expect(formatDuration(startDate.toISOString(), endDate.toISOString())).toBe(
       "2m 15s",
+    );
+  });
+});
+
+describe("formatTimeAgo", () => {
+  const now = new Date("2024-01-02T12:00:00.000Z");
+
+  it.each([
+    ["2024-01-02T11:59:15.000Z", "45s ago"],
+    ["2024-01-02T11:57:30.000Z", "2m 30s ago"],
+    ["2024-01-02T10:36:15.000Z", "1h 23m 45s ago"],
+    ["2024-01-01T12:00:00.000Z", "1 day ago"],
+    ["2023-12-30T11:00:00.000Z", "3 days ago"],
+  ])("formats %s as %s", (date, expected) => {
+    expect(formatTimeAgo(date, now)).toBe(expected);
+  });
+
+  it("clamps a timestamp ahead of now to 0s ago", () => {
+    expect(formatTimeAgo("2024-01-02T12:00:05.000Z", now)).toBe("0s ago");
+  });
+
+  it("accepts a millisecond timestamp for now", () => {
+    expect(formatTimeAgo("2024-01-02T11:59:50.000Z", now.getTime())).toBe(
+      "10s ago",
     );
   });
 });
