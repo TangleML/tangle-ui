@@ -32,7 +32,7 @@ import {
 import { getErrorMessage } from "@/utils/string";
 import { tracking } from "@/utils/tracking";
 
-import { RunListItem } from "./RunListItem";
+import { RunListItem, runStatusFlair } from "./RunListItem";
 
 interface RunRow {
   run: SessionRun;
@@ -81,6 +81,9 @@ export const ChatRunsPill = observer(function ChatRunsPill({
   const anyFailed = failedCount > 0;
   const anyRunning = rows.some(({ running }) => running);
   const finished = rows.filter((row) => row.finished);
+  const worstFlair = runStatusFlair(
+    anyFailed ? "FAILED" : anyRunning ? "RUNNING" : undefined,
+  );
 
   function dismissRun(run: SessionRun) {
     dismiss(run).catch((error: unknown) =>
@@ -103,11 +106,11 @@ export const ChatRunsPill = observer(function ChatRunsPill({
         >
           <Icon name="Play" size="xs" />
           {pillLabel(rows)}
-          {(anyFailed || anyRunning) && (
+          {worstFlair?.kind === "dot" && (
             <StatusDot
               size="sm"
-              tone={anyFailed ? "critical" : "success"}
-              pulse={!anyFailed}
+              tone={worstFlair.tone}
+              pulse={worstFlair.pulse}
             />
           )}
         </Button>
