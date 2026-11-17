@@ -1,7 +1,12 @@
 import type { FileMetaData } from "hyparquet";
 import { describe, expect, it } from "vitest";
 
-import { buildSchemaJson, countColumns } from "./parquetUtils";
+import {
+  buildSchemaJson,
+  countColumns,
+  ParquetUnsupportedCodecError,
+  toReadableParquetError,
+} from "./parquetUtils";
 
 const metadata = (schema: unknown[], numRows: bigint): FileMetaData =>
   ({ schema, num_rows: numRows }) as unknown as FileMetaData;
@@ -72,5 +77,33 @@ describe("buildSchemaJson", () => {
 
     // Must round-trip through JSON without throwing on bigint.
     expect(() => JSON.stringify(json)).not.toThrow();
+  });
+});
+
+describe("toReadableParquetError", () => {
+  it("turns an unsupported codec failure into a readable error naming the codec", () => {
+    const decodeError = new Error(
+      "parquet unsupported compression codec: ZSTD",
+    );
+
+    const readable = toReadableParquetError(decodeError);
+
+    expect(readable).toBeInstanceOf(ParquetUnsupportedCodecError);
+    expect(readable).toMatchObject({
+      codec: "ZSTD",
+      message:
+        "Unsupported compression codec: ZSTD. Only uncompressed and Snappy-compressed Parquet files can be previewed.",
+      cause: decodeError,
+    });
+  });
+
+  it("passes other errors through unchanged", () => {
+    const decodeError = new Error("parquet unsupported encoding: BIT_PACKED");
+
+    expect(toReadableParquetError(decodeError)).toBe(decodeError);
+  });
+
+  it("passes non-Error values through unchanged", () => {
+    expect(toReadableParquetError("boom")).toBe("boom");
   });
 });

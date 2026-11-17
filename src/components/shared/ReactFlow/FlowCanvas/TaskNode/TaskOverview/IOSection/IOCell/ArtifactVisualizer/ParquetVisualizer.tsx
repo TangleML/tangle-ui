@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Paragraph } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import { HOURS } from "@/utils/constants";
+import { getErrorMessage } from "@/utils/string";
 import { downloadStringAsFile } from "@/utils/URL";
 
 import {
@@ -123,7 +124,7 @@ const ParquetTable = ({ base, isFullscreen, signedUrl }: ParquetTableProps) => {
       setRows((prev) => [...prev, ...more]);
     } catch (error) {
       console.error("Failed to load more parquet rows:", error);
-      notify("Failed to load more rows. Please try again.", "error");
+      notify(`Failed to load more rows: ${getErrorMessage(error)}`, "error");
     } finally {
       setIsLoading(false);
     }
