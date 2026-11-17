@@ -60,6 +60,19 @@ export function getStartingSessionThinkingDepth(
     "model" | "reasoningEffortPreference" | "modelCapabilities"
   >,
 ): ThinkingLevel | undefined {
+  const selected = (config.modelCapabilities ?? getAiModelOptions()).find(
+    (m) => m.id === config.model,
+  ) as import("@/config/aiConfig").AiModelOption | undefined;
+  if (selected?.thinkingLevelMap) {
+    const effort = getEffectiveReasoningEffort(
+      config.model,
+      config.reasoningEffortPreference,
+      config.modelCapabilities,
+    );
+    return THINKING_LEVELS.find(
+      (level) => selected.thinkingLevelMap?.[level] === effort,
+    );
+  }
   const effort = getEffectiveReasoningEffort(
     config.model,
     config.reasoningEffortPreference,
@@ -78,6 +91,10 @@ export function getStartingSessionModel(
     (option) => option.id === config.model,
   );
   if (!isCatalogModel) return undefined;
+  const selected = (config.modelCapabilities ?? getAiModelOptions()).find(
+    (m) => m.id === config.model,
+  ) as import("@/config/aiConfig").AiModelOption | undefined;
+  if (selected?.tangentModelId) return selected.tangentModelId;
   const provider =
     getAiProviderConfig(config.model) === AI_CONFIG.providers.anthropic
       ? "anthropic"

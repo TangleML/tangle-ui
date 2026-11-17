@@ -7,10 +7,16 @@ import { isRecord } from "@/utils/typeGuards";
 export interface AiModelOption extends AiModelCapabilities {
   label?: string;
   description?: string;
+  tangentModelId?: string;
+  api?: "openai-responses" | "anthropic-messages";
+  thinkingLevelMap?: Record<string, string | null>;
 }
 
 interface AiModelOptionsConfig {
   models?: AiModelOption[];
+  catalogUrl?: string;
+  defaultModel?: string;
+  replacements?: Record<string, string>;
 }
 
 export const AI_CONFIG = {
@@ -112,6 +118,20 @@ function readModelOption(value: unknown): AiModelOption | null {
 
   return {
     id,
+    ...(typeof value.tangentModelId === "string"
+      ? { tangentModelId: value.tangentModelId }
+      : {}),
+    ...(value.api === "openai-responses" || value.api === "anthropic-messages"
+      ? { api: value.api }
+      : {}),
+    ...(isRecord(value.thinkingLevelMap)
+      ? {
+          thinkingLevelMap: value.thinkingLevelMap as Record<
+            string,
+            string | null
+          >,
+        }
+      : {}),
     ...(typeof value.label === "string" && value.label.trim()
       ? { label: value.label.trim() }
       : {}),
@@ -130,6 +150,9 @@ function readInjectedModelOptions(): AiModelOptionsConfig | null {
   if (!isRecord(config)) return null;
 
   return {
+    ...(typeof config.defaultModel === "string"
+      ? { defaultModel: config.defaultModel }
+      : {}),
     ...(Array.isArray(config.models)
       ? { models: config.models.map(readModelOption).filter((v) => v !== null) }
       : {}),
@@ -144,7 +167,9 @@ export function getAiModelOptions(): AiModelOption[] {
 }
 
 export function getDefaultAiModelId(): string {
-  return getAiModelOptions()[0].id;
+  const options = getAiModelOptions();
+  const preferred = readInjectedModelOptions()?.defaultModel;
+  return options.find((m) => m.id === preferred)?.id ?? options[0].id;
 }
 
 export function supportsAiEmbeddings(apiBase: string): boolean {
@@ -156,7 +181,12 @@ export function supportsAiEmbeddings(apiBase: string): boolean {
 }
 
 export function getAiProviderConfig(modelId: string) {
-  return AI_CONFIG.providers.anthropic.modelPattern.test(modelId)
+  const protocol = getAiModelOptions().find((m) => m.id === modelId)?.api;
+  return (
+    protocol
+      ? protocol === "anthropic-messages"
+      : AI_CONFIG.providers.anthropic.modelPattern.test(modelId)
+  )
     ? AI_CONFIG.providers.anthropic
     : AI_CONFIG.providers.openai;
 }
