@@ -4,9 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   rememberSeen,
   runStatesToShow,
-  seenAsOf,
   statusesFromSnapshot,
   useSessionRunStates,
+  withBaseline,
   withStatus,
 } from "./useSessionRunStates";
 
@@ -83,7 +83,7 @@ describe("session run states", () => {
         { sessionId: "s-open", status: "active", endedAt: LATER },
       ],
     });
-    const seen = { "s-new": EARLIER, "s-seen": EARLIER };
+    const seen = { chats: { "s-new": EARLIER, "s-seen": EARLIER } };
 
     expect([...runStatesToShow(statuses, seen, "s-open")]).toEqual([
       ["s-busy", "working"],
@@ -93,27 +93,36 @@ describe("session run states", () => {
   });
 
   it("remembers each chat once, newest last, and only so many", () => {
-    const seen = rememberSeen({ a: EARLIER, b: EARLIER }, "a", LATER);
-    expect(Object.entries(seen)).toEqual([
+    const seen = rememberSeen(
+      { baseline: EARLIER, chats: { a: EARLIER, b: EARLIER } },
+      "a",
+      LATER,
+    );
+    expect(seen.baseline).toBe(EARLIER);
+    expect(Object.entries(seen.chats)).toEqual([
       ["b", EARLIER],
       ["a", LATER],
     ]);
 
-    let many = {};
+    let many = { chats: {} };
     for (let i = 0; i < 510; i++) many = rememberSeen(many, `s-${i}`, LATER);
-    expect(Object.keys(many)).toHaveLength(500);
-    expect(Object.keys(many)[0]).toBe("s-10");
+    expect(Object.keys(many.chats)).toHaveLength(500);
+    expect(Object.keys(many.chats)[0]).toBe("s-10");
   });
 
-  it("counts everything that had already stopped as seen", () => {
+  it("counts everything that had already stopped as seen the first time, and only then", () => {
     const statuses = statusesFromSnapshot({
       statuses: [
         { sessionId: "s-busy", status: "busy" },
-        { sessionId: "s-done", status: "active", endedAt: EARLIER },
+        { sessionId: "s-old", status: "active", endedAt: EARLIER },
+        { sessionId: "s-done", status: "active", endedAt: LATER },
       ],
     });
 
-    expect(seenAsOf(statuses)).toEqual({ "s-done": EARLIER });
+    const first = withBaseline({ chats: {} }, statuses);
+    expect(first.baseline).toBe(LATER);
+    expect(withBaseline(first, new Map())).toBe(first);
+    expect(withBaseline({ chats: {} }, new Map()).baseline).toBe("");
   });
 });
 
@@ -140,7 +149,7 @@ describe("useSessionRunStates", () => {
   });
 
   it("marks a finished run until its chat is opened, and remembers that", () => {
-    localStorage.setItem(SEEN_KEY, JSON.stringify({}));
+    localStorage.setItem(SEEN_KEY, JSON.stringify({ baseline: "", chats: {} }));
     const { result, rerender } = renderHook(
       ({ active }) => useSessionRunStates("http://tangent", active),
       { initialProps: { active: undefined as string | undefined } },
@@ -163,12 +172,16 @@ describe("useSessionRunStates", () => {
     rerender({ active: undefined });
     expect(result.current.has("s-1")).toBe(false);
     expect(JSON.parse(localStorage.getItem(SEEN_KEY) ?? "{}")).toEqual({
-      "s-1": LATER,
+      baseline: "",
+      chats: { "s-1": LATER },
     });
   });
 
   it("marks a failed run the same way, and doesn't mark one that ended in view", () => {
-    localStorage.setItem(SEEN_KEY, JSON.stringify({ "s-1": EARLIER }));
+    localStorage.setItem(
+      SEEN_KEY,
+      JSON.stringify({ baseline: "", chats: { "s-1": EARLIER } }),
+    );
     const { result, rerender } = renderHook(
       ({ active }) => useSessionRunStates("http://tangent", active),
       { initialProps: { active: "s-2" as string | undefined } },

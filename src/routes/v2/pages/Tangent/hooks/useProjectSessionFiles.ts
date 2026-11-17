@@ -32,7 +32,11 @@ export interface ProjectFile {
 export function useProjectSessionFiles(projectId: string) {
   const tangent = useTangent();
   const { baseUrl } = useTangentBaseUrl(projectId);
-  const { sessions } = useProjectSessions(projectId);
+  const {
+    sessions,
+    isLoading: isLoadingSessions,
+    error: sessionsError,
+  } = useProjectSessions(projectId);
   const authToken = useRemoteEnvAuthToken();
   const queryClient = useQueryClient();
   const notify = useToastNotification();
@@ -71,10 +75,16 @@ export function useProjectSessionFiles(projectId: string) {
     onError: (error) => notify(getErrorMessage(error), "error"),
   });
 
+  // A chat that can't be read, such as someone else's, is left out, so the
+  // files have only failed to load when no chat could be read at all.
+  const noChatCouldBeRead =
+    results.length > 0 && results.every((result) => result.isLoadingError);
+
   return {
     files,
     reports: files.filter((file) => file.pinned),
-    isLoading: results.some((result) => result.isPending),
+    isLoading: isLoadingSessions || results.some((result) => result.isPending),
+    error: sessionsError ?? (noChatCouldBeRead ? results[0].error : null),
     pin: (file: ProjectFile) => setPinned({ file, pin: true }),
     unpin: (file: ProjectFile) => setPinned({ file, pin: false }),
   };

@@ -2,7 +2,7 @@ import type { EmbedResource, Tangent } from "@tangent/embed-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useProjectSessionFiles } from "./useProjectSessionFiles";
 
@@ -29,9 +29,18 @@ vi.mock("@tangent/embed-react", () => ({ useTangent: () => tangent }));
 vi.mock("@/routes/v2/pages/Tangent/hooks/useTangentBaseUrl", () => ({
   useTangentBaseUrl: () => ({ baseUrl: "https://tangent.example" }),
 }));
+const chatList = vi.hoisted(() => ({
+  isLoading: false,
+  error: null as Error | null,
+}));
+
 vi.mock("@/routes/v2/pages/Tangent/hooks/useProjectSessions", () => ({
   useProjectSessions: () => ({
-    sessions: [{ sessionId: "chat-1" }, { sessionId: "chat-2" }],
+    ...chatList,
+    sessions:
+      chatList.isLoading || chatList.error
+        ? []
+        : [{ sessionId: "chat-1" }, { sessionId: "chat-2" }],
   }),
 }));
 vi.mock("@/routes/v2/pages/Tangent/hooks/useRemoteEnvAuthToken", () => ({
@@ -39,16 +48,26 @@ vi.mock("@/routes/v2/pages/Tangent/hooks/useRemoteEnvAuthToken", () => ({
 }));
 vi.mock("@/hooks/useToastNotification", () => ({ default: () => vi.fn() }));
 
+function renderFiles(client: QueryClient) {
+  return renderHook(() => useProjectSessionFiles("project-1"), {
+    wrapper: ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    ),
+  });
+}
+
+const newClient = () =>
+  new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
 describe("useProjectSessionFiles", () => {
+  beforeEach(() => {
+    vi.mocked(tangent.listResources).mockClear();
+    chatList.isLoading = false;
+    chatList.error = null;
+  });
+
   it("lists every chat's files newest first, and settles", async () => {
-    const client = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
-    const { result } = renderHook(() => useProjectSessionFiles("project-1"), {
-      wrapper: ({ children }: { children: ReactNode }) => (
-        <QueryClientProvider client={client}>{children}</QueryClientProvider>
-      ),
-    });
+    const { result } = renderFiles(newClient());
 
     await waitFor(() => expect(result.current.files).toHaveLength(2));
     expect(result.current.reports.map(({ title }) => title)).toEqual([
@@ -58,5 +77,55 @@ describe("useProjectSessionFiles", () => {
     expect(result.current.files[0].url).toBe(
       "https://tangent.example/api/sessions/chat-2/files/artifacts/report.html",
     );
+  });
+
+  it("is loading while the project's chats are still being listed", () => {
+    chatList.isLoading = true;
+
+    const { result } = renderFiles(newClient());
+
+    expect(result.current.isLoading).toBe(true);
+    expect(result.current.error).toBeNull();
+  });
+
+  it("is loading until every chat has been read", async () => {
+    const { result } = renderFiles(newClient());
+
+    expect(result.current.isLoading).toBe(true);
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.error).toBeNull();
+  });
+
+  it("fails when the project's chats couldn't be listed", () => {
+    chatList.error = new Error("The projects service is down");
+
+    const { result } = renderFiles(newClient());
+
+    expect(result.current.error).toBe(chatList.error);
+  });
+
+  it("fails when none of the chats could be read", async () => {
+    const refused = new Error("Tangent is down");
+    vi.mocked(tangent.listResources)
+      .mockRejectedValueOnce(refused)
+      .mockRejectedValueOnce(refused);
+
+    const { result } = renderFiles(newClient());
+
+    await waitFor(() => expect(result.current.error).toBe(refused));
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.files).toEqual([]);
+  });
+
+  it("leaves out a chat it can't read without failing", async () => {
+    vi.mocked(tangent.listResources).mockRejectedValueOnce(
+      new Error("Not your chat"),
+    );
+
+    const { result } = renderFiles(newClient());
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.files).toHaveLength(1);
+    expect(result.current.error).toBeNull();
   });
 });

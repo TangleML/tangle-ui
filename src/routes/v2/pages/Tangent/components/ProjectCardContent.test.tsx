@@ -1,14 +1,17 @@
-import { act, render, screen, within } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { requestProjectSearchFocus } from "@/routes/v2/pages/Tangent/hooks/useProjectSearchFocus";
 import { WindowContextProvider } from "@/routes/v2/shared/windows/ContentWindowStateContext";
 import { WindowStoreImpl } from "@/routes/v2/shared/windows/windowStore";
 
 import { ProjectCardContent } from "./ProjectCardContent";
 
+const focus = vi.hoisted(() => ({
+  searchFocusRequested: false,
+  clearSearchFocusRequest: vi.fn(),
+}));
 const pin = vi.fn();
 const unpin = vi.fn();
 const archiveChange = vi.fn();
@@ -18,6 +21,7 @@ vi.mock("@/routes/v2/pages/Tangent/context/TangentProjectContext", () => ({
     projectId: "project-1",
     openWorkareaTarget: vi.fn(),
     openArtifactTab: vi.fn(),
+    ...focus,
   }),
 }));
 
@@ -66,7 +70,9 @@ vi.mock("./AddResourceButton", () => ({
 const loading = vi.hoisted(() => ({
   resources: { isLoading: false, isLoaded: true, error: null as Error | null },
   runs: { isLoading: false, error: null as Error | null },
+  files: { isLoading: false, error: null as Error | null, none: false },
 }));
+const runFeed = vi.hoisted(() => ({ hasOlderPage: false }));
 
 const pipeline = (n: number) => ({
   id: `p-${n}`,
@@ -120,7 +126,7 @@ vi.mock("@/services/projects/useProjectRuns", () => ({
               createdAt: new Date("2026-11-04"),
             },
           ],
-    hasNextPage: false,
+    hasNextPage: runFeed.hasOlderPage,
   }),
   useRunExecutionStats: () => ({ data: undefined, isPending: true }),
 }));
@@ -137,15 +143,20 @@ const file = (key: string, title: string, pinned: boolean) => ({
 
 vi.mock("@/routes/v2/pages/Tangent/hooks/useProjectSessionFiles", () => ({
   useProjectSessionFiles: () => {
+    const { isLoading, error, none } = loading.files;
     const summary = file("summary.html", "Q3 summary", true);
+    const listed = !isLoading && !error && !none;
     return {
-      files: [
-        summary,
-        file("plan.md", "Plan", false),
-        file("notes.md", "Notes", false),
-      ],
-      reports: [summary],
-      isLoading: false,
+      files: listed
+        ? [
+            summary,
+            file("plan.md", "Plan", false),
+            file("notes.md", "Notes", false),
+          ]
+        : [],
+      reports: listed ? [summary] : [],
+      isLoading,
+      error,
       pin,
       unpin,
     };
@@ -167,6 +178,16 @@ async function search(text: string) {
   return user;
 }
 
+async function archiveEveryRun() {
+  const user = userEvent.setup();
+  const runs = screen.getByRole("region", { name: "Runs" });
+  for (const name of ["Pipeline 1", "Somewhere else"]) {
+    await user.click(
+      within(runs).getByRole("button", { name: `Archive ${name}` }),
+    );
+  }
+}
+
 describe("ProjectCardContent", () => {
   beforeEach(() => {
     pin.mockClear();
@@ -174,6 +195,8 @@ describe("ProjectCardContent", () => {
     archiveChange.mockClear();
     loading.resources = { isLoading: false, isLoaded: true, error: null };
     loading.runs = { isLoading: false, error: null };
+    loading.files = { isLoading: false, error: null, none: false };
+    runFeed.hasOlderPage = false;
   });
 
   it("says a section is loading rather than that the project has none", () => {
@@ -205,6 +228,62 @@ describe("ProjectCardContent", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText("Couldn't load this project's documents"),
+    ).toBeInTheDocument();
+  });
+
+  it("says the reports and All files are loading rather than that there are none", async () => {
+    const user = userEvent.setup();
+    loading.files = { isLoading: true, error: null, none: false };
+    render(<ProjectCardContent />);
+
+    const reports = screen.getByRole("region", { name: "Reports" });
+    expect(within(reports).getByText("Loading…")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Nothing has been pinned as a report yet"),
+    ).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: /All files/ }));
+
+    expect(screen.getByText("Loading…")).toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        "The chats in this project haven't made any files yet",
+      ),
+    ).toBeNull();
+  });
+
+  it("says when the reports and All files couldn't load", async () => {
+    const user = userEvent.setup();
+    loading.files = { isLoading: false, error: new Error("500"), none: false };
+    render(<ProjectCardContent />);
+
+    expect(
+      screen.getByText("Couldn't load this project's reports"),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /All files/ }));
+
+    expect(
+      screen.getByText("Couldn't load this project's files"),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps Reports and All files in place when the chats have made no files", async () => {
+    const user = userEvent.setup();
+    loading.files = { isLoading: false, error: null, none: true };
+    render(<ProjectCardContent />);
+
+    const reports = screen.getByRole("region", { name: "Reports" });
+    expect(
+      within(reports).getByText("Nothing has been pinned as a report yet"),
+    ).toBeInTheDocument();
+
+    await user.click(
+      within(reports).getByRole("button", { name: /All files/ }),
+    );
+
+    expect(
+      screen.getByText("The chats in this project haven't made any files yet"),
     ).toBeInTheDocument();
   });
 
@@ -252,6 +331,27 @@ describe("ProjectCardContent", () => {
     expect(rows[0]).toContain("Pipeline 1");
     expect(rows[0]).toContain("on 11-05");
     expect(rows[1]).toContain("Somewhere else");
+  });
+
+  it("keeps Load older runs when every run loaded so far is archived", async () => {
+    runFeed.hasOlderPage = true;
+    render(<ProjectCardContent />);
+
+    await archiveEveryRun();
+
+    const runs = screen.getByRole("region", { name: "Runs" });
+    expect(
+      within(runs).getByRole("button", { name: "Load older runs" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Nothing has been run yet")).toBeNull();
+  });
+
+  it("says nothing has been run once every run is archived and none are older", async () => {
+    render(<ProjectCardContent />);
+
+    await archiveEveryRun();
+
+    expect(screen.getByText("Nothing has been run yet")).toBeInTheDocument();
   });
 
   it("filters every section by one search, dropping those with no match", async () => {
@@ -368,13 +468,14 @@ describe("ProjectCardContent", () => {
   });
 
   it("puts the cursor in its search when asked", () => {
+    focus.searchFocusRequested = true;
     render(<ProjectCardContent />);
-
-    act(() => requestProjectSearchFocus());
 
     expect(
       screen.getByRole("searchbox", { name: "Search this project" }),
     ).toHaveFocus();
+    expect(focus.clearSearchFocusRequest).toHaveBeenCalled();
+    focus.searchFocusRequested = false;
   });
 
   it("closes the popover it's in once something is opened", async () => {

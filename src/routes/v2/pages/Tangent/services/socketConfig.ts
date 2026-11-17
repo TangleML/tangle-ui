@@ -1,3 +1,5 @@
+import { io, type Socket } from "socket.io-client";
+
 export interface TangentSocketConfig {
   socketUrl: string;
   socketPath: string;
@@ -15,4 +17,16 @@ export function getTangentSocketConfig(baseUrl: string): TangentSocketConfig {
     socketUrl: url.origin,
     socketPath: `${prefix}/socket.io`,
   };
+}
+
+/** A socket to a Tangent server, as this person when there's a token. */
+export function connectTangentSocket(
+  baseUrl: string,
+  authToken: string | undefined,
+): Socket {
+  const { socketUrl, socketPath } = getTangentSocketConfig(baseUrl);
+  return io(socketUrl, {
+    path: socketPath,
+    auth: authToken ? { token: authToken } : {},
+  });
 }
