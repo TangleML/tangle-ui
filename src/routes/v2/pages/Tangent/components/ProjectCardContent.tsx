@@ -248,9 +248,7 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
     );
   }
 
-  // A section stays while it has rows, or, outside a search, while it's one
-  // that always shows.
-  const sections: (Section & { always: boolean })[] = [
+  const sections: (Section & { shownWhenEmpty: boolean })[] = [
     {
       title: "Reports",
       rows: files.reports.filter(fileMatches).map((file) => renderFile(file)),
@@ -268,7 +266,7 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
           trackingId="projects.project_card.all_files"
         />
       ),
-      always: true,
+      shownWhenEmpty: true,
     },
     {
       title: "Other files",
@@ -277,7 +275,7 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
             .filter((file) => !file.pinned && fileMatches(file))
             .map((file) => renderFile(file))
         : [],
-      always: false,
+      shownWhenEmpty: false,
     },
     {
       title: "Runs",
@@ -293,7 +291,7 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
             "this project's runs",
             "Nothing has been run yet",
           ),
-      always: true,
+      shownWhenEmpty: true,
     },
     {
       title: "Pipelines",
@@ -306,7 +304,7 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
         "this project's pipelines",
         "No pipelines yet",
       ),
-      always: true,
+      shownWhenEmpty: true,
     },
     {
       title: "Documents",
@@ -319,11 +317,12 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
         "this project's documents",
         "No documents yet",
       ),
-      always: true,
+      shownWhenEmpty: true,
     },
   ];
   const shownSections = sections.filter(
-    ({ rows, always }) => rows.length > 0 || (always && !searching),
+    ({ rows, shownWhenEmpty }) =>
+      rows.length > 0 || (shownWhenEmpty && !searching),
   );
 
   return (
