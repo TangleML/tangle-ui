@@ -6,7 +6,10 @@ import type {
 } from "@/routes/v2/pages/Tangent/services/createProjectCardHandlers";
 import { coerceWorkareaTarget } from "@/routes/v2/pages/Tangent/services/resolveWorkareaTarget";
 import type { SessionFileRecord } from "@/routes/v2/pages/Tangent/services/sessionFiles";
-import { formatWorkareaTarget } from "@/services/projects/resourceTarget";
+import {
+  formatWorkareaTarget,
+  type WorkareaTarget,
+} from "@/services/projects/resourceTarget";
 import { isRecord } from "@/utils/typeGuards";
 
 const ARCHIVABLE_TYPES = new Set(["run", "pipeline", "document"]);
@@ -26,15 +29,14 @@ function optionalString(args: unknown, key: string): string | undefined {
     : undefined;
 }
 
-/** The card keys what's archived by a target's formatted string. */
-function archivableTarget(args: unknown): string {
+function archivableTarget(args: unknown): WorkareaTarget {
   const target = coerceWorkareaTarget(requireString(args, "target"));
   if (!ARCHIVABLE_TYPES.has(target.type)) {
     throw new Error(
       "Only a run, pipeline or document can be archived from the project card.",
     );
   }
-  return formatWorkareaTarget(target);
+  return target;
 }
 
 /** The card's archive and restore buttons are only on its rows, so the agent's are too. */
@@ -42,11 +44,16 @@ async function cardEntry(
   args: unknown,
   deps: ProjectCardToolDeps,
 ): Promise<ProjectCardEntry> {
-  const target = archivableTarget(args);
+  const archivable = archivableTarget(args);
+  const target = formatWorkareaTarget(archivable);
   const { runs, pipelines, documents } = await deps.listEntries();
-  const entry = [...runs, ...pipelines, ...documents].find(
-    (candidate) => candidate.target === target,
-  );
+  const entry =
+    [...runs, ...pipelines, ...documents].find(
+      (candidate) => candidate.target === target,
+    ) ??
+    (archivable.type === "run"
+      ? await deps.findRunPastFirstPage(target)
+      : undefined);
   if (!entry) {
     throw new Error(
       `\`${target}\` isn't on the project card. \`list_project_items\` lists what is.`,

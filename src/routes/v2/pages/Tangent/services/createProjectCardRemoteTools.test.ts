@@ -11,6 +11,7 @@ function makeDeps(
     listEntries: vi
       .fn()
       .mockResolvedValue({ runs: [], pipelines: [], documents: [] }),
+    findRunPastFirstPage: vi.fn().mockResolvedValue(undefined),
     setArchived: vi.fn().mockResolvedValue(undefined),
     listFiles: vi.fn().mockResolvedValue([]),
     pinFile: vi.fn().mockResolvedValue(undefined),
@@ -142,6 +143,22 @@ describe("createProjectCardRemoteTools", () => {
     expect(deps.setArchived).not.toHaveBeenCalled();
   });
 
+  it("archives a run the card only shows after Load older runs", async () => {
+    const findRunPastFirstPage = vi.fn().mockResolvedValue({
+      target: "run://id/r-old",
+      name: "Train",
+      at: null,
+      archived: false,
+    });
+    const deps = makeDeps({ findRunPastFirstPage });
+    const tools = toolsWith(deps);
+
+    await tools.archive_project_item.execute({ target: "run://id/r-old" });
+
+    expect(findRunPastFirstPage).toHaveBeenCalledWith("run://id/r-old");
+    expect(deps.setArchived).toHaveBeenCalledWith("run://id/r-old", true);
+  });
+
   it("won't archive something that isn't on the card", async () => {
     const deps = makeDeps();
     const tools = toolsWith(deps);
@@ -149,6 +166,7 @@ describe("createProjectCardRemoteTools", () => {
     await expect(
       tools.archive_project_item.execute({ target: "pipeline://name/Train" }),
     ).rejects.toThrow(/isn't on the project card/);
+    expect(deps.findRunPastFirstPage).not.toHaveBeenCalled();
     expect(deps.setArchived).not.toHaveBeenCalled();
   });
 

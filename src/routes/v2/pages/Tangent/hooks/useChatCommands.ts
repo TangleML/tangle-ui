@@ -210,8 +210,7 @@ export function useChatCommands(projectId: string): EmbedCommand[] {
       description: "Start pipelines by id",
       argumentHint: "<ids>",
       run: async (args) => {
-        const ids = parsePipelineIds(args);
-        if (ids.length === 0) {
+        if (parsePipelineIds(args).length === 0) {
           throw new Error(
             "add pipeline ids separated by commas. /pipelines lists them.",
           );
@@ -219,6 +218,10 @@ export function useChatCommands(projectId: string): EmbedCommand[] {
         // The person may open another chat while these start.
         const sessionId = store.activeSessionId;
         const { pipelines } = await handlers.listEntries();
+        const ids = parsePipelineIds(
+          args,
+          pipelines.map(({ target }) => targetId(target)),
+        );
         const starts: RunStart[] = [];
         for (const id of ids) {
           starts.push(await start(id, pipelines, sessionId));

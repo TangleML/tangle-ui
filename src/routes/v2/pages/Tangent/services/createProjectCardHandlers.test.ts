@@ -14,6 +14,7 @@ import {
 
 const services = vi.hoisted(() => ({
   listProjectResources: vi.fn(),
+  listEveryProjectResource: vi.fn(),
   createProjectResource: vi.fn(),
   listProjectRuns: vi.fn(),
   getProject: vi.fn(),
@@ -22,6 +23,7 @@ const services = vi.hoisted(() => ({
 
 vi.mock("@/services/projects/projectResourcesService", () => ({
   listProjectResources: services.listProjectResources,
+  listEveryProjectResource: services.listEveryProjectResource,
   createProjectResource: services.createProjectResource,
 }));
 vi.mock("@/services/projects/projectRunsService", () => ({
@@ -97,6 +99,7 @@ function setup({
       totalCount: 0,
     }),
   );
+  services.listEveryProjectResource.mockResolvedValue(cardResources);
   const getRunDetails = vi.fn().mockResolvedValue({ pipeline_name: "Train" });
   const onResourcesChanged = vi.fn().mockResolvedValue(undefined);
   const handlers = createProjectCardHandlers({
