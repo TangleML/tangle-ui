@@ -97,7 +97,10 @@ export function useProjectSessions(projectId: string) {
 export function useSessionsOfProjects(
   projectIds: string[],
   enabled: boolean,
-): ReadonlyMap<string, ProjectSession[]> {
+): {
+  sessionsByProject: ReadonlyMap<string, ProjectSession[]>;
+  isLoading: boolean;
+} {
   const { configured, available } = useBackend();
   const results = useQueries({
     queries: projectIds.map((projectId) => ({
@@ -106,10 +109,13 @@ export function useSessionsOfProjects(
     })),
   });
 
-  return new Map(
-    projectIds.map((projectId, index) => [
-      projectId,
-      sessionsOf(results[index]?.data?.items),
-    ]),
-  );
+  return {
+    sessionsByProject: new Map(
+      projectIds.map((projectId, index) => [
+        projectId,
+        sessionsOf(results[index]?.data?.items),
+      ]),
+    ),
+    isLoading: results.some((result) => result.isLoading),
+  };
 }

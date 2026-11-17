@@ -16,7 +16,10 @@ import type {
   ProjectResourcePage,
 } from "@/services/projects/types";
 
-import { useProjectSessions } from "./useProjectSessions";
+import {
+  useProjectSessions,
+  useSessionsOfProjects,
+} from "./useProjectSessions";
 
 function sessionResource(
   overrides: Partial<ProjectResource> = {},
@@ -155,5 +158,46 @@ describe("useProjectSessions", () => {
       "p1",
       "r1",
     );
+  });
+});
+
+describe("useSessionsOfProjects", () => {
+  it("is loading until every project's sessions have been read", async () => {
+    let arrive: () => void = () => {};
+    vi.mocked(projectResourcesService.listProjectResources).mockImplementation(
+      (projectId) =>
+        projectId === "p2"
+          ? new Promise<ProjectResourcePage>((resolve) => {
+              arrive = () =>
+                resolve(
+                  page([sessionResource({ id: "r2", entityId: "sess-2" })]),
+                );
+            })
+          : Promise.resolve(page([sessionResource()])),
+    );
+
+    const { result } = renderHook(
+      () => useSessionsOfProjects(["p1", "p2"], true),
+      { wrapper: wrapperFor(makeClient()) },
+    );
+
+    await waitFor(() =>
+      expect(result.current.sessionsByProject.get("p1")).toHaveLength(1),
+    );
+    expect(result.current.isLoading).toBe(true);
+
+    arrive();
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.sessionsByProject.get("p2")).toHaveLength(1);
+  });
+
+  it("isn't loading while it has not been asked to read", () => {
+    const { result } = renderHook(() => useSessionsOfProjects(["p1"], false), {
+      wrapper: wrapperFor(makeClient()),
+    });
+
+    expect(result.current.isLoading).toBe(false);
+    expect(projectResourcesService.listProjectResources).not.toHaveBeenCalled();
   });
 });

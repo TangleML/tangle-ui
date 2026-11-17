@@ -94,10 +94,11 @@ export const ProjectsWindowContent = observer(function ProjectsWindowContent() {
   const target =
     projects.find(({ id }) => id === targetProjectId) ??
     projects.find(({ id }) => id === store.projectId);
-  const sessionsByProject = useSessionsOfProjects(
-    projects.map(({ id }) => id),
-    searching,
-  );
+  const { sessionsByProject, isLoading: isLoadingSessions } =
+    useSessionsOfProjects(
+      projects.map(({ id }) => id),
+      searching,
+    );
   const matches = searching
     ? searchProjects(projects, sessionsByProject, query)
     : undefined;
@@ -191,7 +192,9 @@ export const ProjectsWindowContent = observer(function ProjectsWindowContent() {
       <BlockStack gap="3" align="stretch">
         {searching && shown.length === 0 && (
           <Text size="sm" tone="subdued" className="px-2 py-1">
-            No matching projects or sessions
+            {isLoadingSessions
+              ? "Searching…"
+              : "No matching projects or sessions"}
           </Text>
         )}
         {pinned.length > 0 && (

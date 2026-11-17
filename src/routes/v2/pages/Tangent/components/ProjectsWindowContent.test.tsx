@@ -152,9 +152,10 @@ describe("ProjectsWindowContent", () => {
       isDeleting: false,
       confirmation: {},
     } as unknown as ReturnType<typeof useDeleteProjectAction>);
-    vi.mocked(useSessionsOfProjects).mockReturnValue(
-      new Map([[FORECAST.id, [BACKFILL]]]),
-    );
+    vi.mocked(useSessionsOfProjects).mockReturnValue({
+      sessionsByProject: new Map([[FORECAST.id, [BACKFILL]]]),
+      isLoading: false,
+    });
   });
   afterEach(() => vi.resetAllMocks());
 
@@ -330,6 +331,21 @@ describe("ProjectsWindowContent", () => {
       expect(
         screen.getByText("No matching projects or sessions"),
       ).toBeInTheDocument();
+    });
+
+    /** A session's title can match where no project's name does. */
+    it("doesn't say nothing matches while sessions are still being read", async () => {
+      vi.mocked(useSessionsOfProjects).mockReturnValue({
+        sessionsByProject: new Map(),
+        isLoading: true,
+      });
+      const user = userEvent.setup();
+      render(<ProjectsWindowContent />);
+
+      await user.type(searchBox(), "march");
+
+      expect(screen.getByText("Searching…")).toBeInTheDocument();
+      expect(screen.queryByText("No matching projects or sessions")).toBeNull();
     });
 
     it("brings every project back when Escape clears it", async () => {
