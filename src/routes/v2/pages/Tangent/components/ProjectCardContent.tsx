@@ -14,6 +14,7 @@ import {
   type ProjectFile,
   useProjectSessionFiles,
 } from "@/routes/v2/pages/Tangent/hooks/useProjectSessionFiles";
+import { ASSET_LIMIT } from "@/routes/v2/pages/Tangent/services/chatCommandResults";
 import {
   type ProjectCardItem,
   projectCardLists,
@@ -34,8 +35,7 @@ import { SearchField } from "./SearchField";
 
 type CardView = "main" | "files" | "archived";
 
-// As many as the slash commands show of each.
-const PREVIEW_COUNT = 5;
+const PREVIEW_COUNT = ASSET_LIMIT;
 
 const EXPANDED_KEY = "tangent-card-expanded-sections";
 
