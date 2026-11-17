@@ -25,6 +25,7 @@ export async function listEveryProjectResource(
   entity: ProjectResourceEntity[],
 ): Promise<ProjectResourceSummary[]> {
   const items: ProjectResourceSummary[] = [];
+  const followedTokens = new Set<string>();
   let pageToken: string | undefined;
   do {
     const page = await listProjectResources(projectId, {
@@ -34,6 +35,16 @@ export async function listEveryProjectResource(
     });
     items.push(...page.items);
     pageToken = page.nextPageToken ?? undefined;
+    if (pageToken) {
+      // A token handed out twice would have this ask for the same pages
+      // forever, and the list has to be whole, so it can't just stop there.
+      if (followedTokens.has(pageToken)) {
+        throw new Error(
+          `The resources of project ${projectId} can't be listed in full: the list repeated a page.`,
+        );
+      }
+      followedTokens.add(pageToken);
+    }
   } while (pageToken);
   return items;
 }

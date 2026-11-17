@@ -276,4 +276,24 @@ describe("listEveryProjectResource", () => {
       query: expect.objectContaining({ page_token: "page-2" }),
     });
   });
+
+  it("gives up rather than ask forever when handed a page token it was already given", async () => {
+    const list = vi.mocked(
+      apiSdk.listResourcesApiProjectsProjectIdResourcesGet,
+    );
+    const pageThatPointsAtItself = createMockApiResponse({
+      resources: [resourceSummaryDto],
+      next_page_token: "page-2",
+      total_count: 2,
+    });
+    list.mockReset();
+    list
+      .mockResolvedValueOnce(pageThatPointsAtItself)
+      .mockResolvedValueOnce(pageThatPointsAtItself);
+
+    await expect(listEveryProjectResource("p1", ["pipeline"])).rejects.toThrow(
+      /repeated a page/,
+    );
+    expect(list).toHaveBeenCalledTimes(2);
+  });
 });
