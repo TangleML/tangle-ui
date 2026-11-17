@@ -11,12 +11,12 @@ export interface SessionRun {
   dismissed: boolean;
 }
 
-const sessionRunsKey = (sessionId: string | undefined) => [
+export const sessionRunsKey = (sessionId: string | undefined) => [
   SESSION_RUNS_KEY,
   sessionId,
 ];
 
-function sessionRunsOf(resources: EmbedResource[]): SessionRun[] {
+export function sessionRunsOf(resources: EmbedResource[]): SessionRun[] {
   return resources
     .flatMap((resource) =>
       resource.kind === "host" && resource.uri.startsWith(RUN_URI_PREFIX)
@@ -33,7 +33,10 @@ function sessionRunsOf(resources: EmbedResource[]): SessionRun[] {
     .sort((a, b) => b.addedAt.getTime() - a.addedAt.getTime());
 }
 
-function runEntry(run: { id: string; name: string }, dismissed: boolean) {
+export function runEntry(
+  run: { id: string; name: string },
+  dismissed: boolean,
+) {
   return {
     kind: "host" as const,
     name: run.name,

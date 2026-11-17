@@ -1,3 +1,4 @@
+import { useTangent } from "@tangent/embed-react";
 import { useQueryClient } from "@tanstack/react-query";
 import * as Comlink from "comlink";
 import { type ReactNode, useEffect, useRef, useState } from "react";
@@ -18,6 +19,8 @@ import {
   createAgentTargetRouter,
 } from "@/routes/v2/pages/Tangent/services/createActiveTabRoutingBridge";
 import { createNamingHandlers } from "@/routes/v2/pages/Tangent/services/createNamingHandlers";
+import { createProjectCardHandlers } from "@/routes/v2/pages/Tangent/services/createProjectCardHandlers";
+import { createProjectCardRemoteTools } from "@/routes/v2/pages/Tangent/services/createProjectCardRemoteTools";
 import {
   createWorkareaRemoteTools,
   type RunInspectDeps,
@@ -126,10 +129,13 @@ export function TangentProjectAgentProvider({
   const store = useTangentProject();
   const storage = usePipelineStorage();
   const { baseUrl } = useTangentBaseUrl(store.projectId);
+  const tangent = useTangent();
 
   const authToken = useRemoteEnvAuthToken();
   const authTokenRef = useRef(authToken);
   const backendUrlRef = useRef(backendUrl);
+  const baseUrlRef = useRef(baseUrl);
+  const tangentRef = useRef(tangent);
   const notifyRef = useRef(notify);
   const aiConfigRef = useRef(aiConfig);
   const traceScopeRef = useRef<TraceScope | undefined>(
@@ -172,6 +178,12 @@ export function TangentProjectAgentProvider({
     backendUrlRef.current = backendUrl;
   }, [backendUrl]);
   useEffect(() => {
+    baseUrlRef.current = baseUrl;
+  }, [baseUrl]);
+  useEffect(() => {
+    tangentRef.current = tangent;
+  }, [tangent]);
+  useEffect(() => {
     notifyRef.current = notify;
   }, [notify]);
 
@@ -210,8 +222,22 @@ export function TangentProjectAgentProvider({
     }),
   );
 
-  const tools = usePerStore(store, () =>
-    createWorkareaRemoteTools(() => ({
+  const projectCard = usePerStore(store, () =>
+    createProjectCardHandlers({
+      projectId: store.projectId,
+      queryClient,
+      getActiveSessionId: () => store.activeSessionId,
+      getBaseUrl: () => baseUrlRef.current ?? undefined,
+      getAuthToken: () => authTokenRef.current,
+      getTangent: () => tangentRef.current,
+      getRunDetails: runInspect.getRunDetails,
+      onResourcesChanged: () => refreshProjectResources(),
+    }),
+  );
+
+  const tools = usePerStore(store, () => ({
+    ...createProjectCardRemoteTools(() => projectCard),
+    ...createWorkareaRemoteTools(() => ({
       openTarget: (target, title) => store.openWorkareaTarget(target, title),
       getTabs: () => store.workareaTabs,
       getActiveTabId: () => store.activeWorkareaTabId ?? undefined,
@@ -291,7 +317,7 @@ export function TangentProjectAgentProvider({
       nameSession: naming.nameSession,
       namePipeline: naming.namePipeline,
     })),
-  );
+  }));
   const routingBridge = usePerStore(store, () =>
     createActiveTabRoutingBridge(() => store.getActiveTabBridge()),
   );
