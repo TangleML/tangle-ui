@@ -86,7 +86,6 @@ function alreadyHolds(
   );
 }
 
-/** A quiet "+" beside a card section's heading. */
 export function AddResourceButton({
   projectId,
   resources,
