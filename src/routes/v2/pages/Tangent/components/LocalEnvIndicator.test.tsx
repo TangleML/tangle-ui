@@ -8,7 +8,11 @@ import { useProjectSessions } from "@/routes/v2/pages/Tangent/hooks/useProjectSe
 import { useTangentBaseUrl } from "@/routes/v2/pages/Tangent/hooks/useTangentBaseUrl";
 import { API_URL } from "@/utils/constants";
 
-import { LocalEnvIndicator, LocalEnvStatus } from "./LocalEnvIndicator";
+import {
+  LocalEnvIndicator,
+  LocalEnvStatus,
+  useLocalEnv,
+} from "./LocalEnvIndicator";
 
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@tanstack/react-router")>()),
@@ -90,6 +94,14 @@ function mockLocalEnvironments(environments: Array<string | EnvironmentSpec>) {
   });
 }
 
+function Indicator() {
+  return <LocalEnvIndicator localEnv={useLocalEnv("project-1")} />;
+}
+
+function Status({ onOpen }: { onOpen: () => void }) {
+  return <LocalEnvStatus localEnv={useLocalEnv("project-1")} onOpen={onOpen} />;
+}
+
 describe("LocalEnvIndicator", () => {
   afterEach(() => {
     vi.resetAllMocks();
@@ -99,7 +111,7 @@ describe("LocalEnvIndicator", () => {
     mockBaseUrl(SHELL_URL);
     mockLocalEnvironments([]);
 
-    render(<LocalEnvIndicator />);
+    render(<Indicator />);
 
     expect(
       screen.getByRole("button", { name: "Connect VS Code" }),
@@ -116,7 +128,7 @@ describe("LocalEnvIndicator", () => {
       },
     ]);
 
-    render(<LocalEnvIndicator />);
+    render(<Indicator />);
 
     expect(
       screen.getByRole("button", { name: "Local environment connected" }),
@@ -127,7 +139,7 @@ describe("LocalEnvIndicator", () => {
     mockBaseUrl(SHELL_URL);
     mockLocalEnvironments(["session-1:vscode-abc"]);
 
-    render(<LocalEnvIndicator />);
+    render(<Indicator />);
 
     expect(
       screen.getByRole("button", { name: "Local environment connected" }),
@@ -148,7 +160,7 @@ describe("LocalEnvIndicator", () => {
       },
     ]);
 
-    render(<LocalEnvIndicator />);
+    render(<Indicator />);
     await user.click(
       screen.getByRole("button", { name: "Local environment connected" }),
     );
@@ -170,7 +182,7 @@ describe("LocalEnvIndicator", () => {
       },
     ]);
 
-    render(<LocalEnvIndicator />);
+    render(<Indicator />);
 
     expect(
       screen.getByRole("button", { name: "Local environment connected" }),
@@ -182,7 +194,7 @@ describe("LocalEnvIndicator", () => {
     mockBaseUrl(SHELL_URL);
     mockLocalEnvironments([]);
 
-    render(<LocalEnvIndicator />);
+    render(<Indicator />);
     await user.click(screen.getByRole("button", { name: "Connect VS Code" }));
 
     const apiUrl = encodeURIComponent(API_URL || window.location.origin);
@@ -209,7 +221,7 @@ describe("LocalEnvIndicator", () => {
     mockBaseUrl(null);
     mockLocalEnvironments([]);
 
-    const { container } = render(<LocalEnvIndicator />);
+    const { container } = render(<Indicator />);
 
     expect(container).toBeEmptyDOMElement();
   });
@@ -224,7 +236,7 @@ describe("LocalEnvStatus", () => {
     mockBaseUrl(SHELL_URL);
     mockLocalEnvironments([]);
 
-    const { container } = render(<LocalEnvStatus onOpen={vi.fn()} />);
+    const { container } = render(<Status onOpen={vi.fn()} />);
 
     expect(container).toBeEmptyDOMElement();
   });
@@ -238,7 +250,7 @@ describe("LocalEnvStatus", () => {
       },
     ]);
 
-    render(<LocalEnvStatus onOpen={vi.fn()} />);
+    render(<Status onOpen={vi.fn()} />);
 
     expect(
       screen.getByRole("button", {
@@ -251,7 +263,7 @@ describe("LocalEnvStatus", () => {
     mockBaseUrl(SHELL_URL);
     mockLocalEnvironments(["session-1:vscode-a", "session-1:vscode-b"]);
 
-    render(<LocalEnvStatus onOpen={vi.fn()} />);
+    render(<Status onOpen={vi.fn()} />);
 
     expect(
       screen.getByRole("button", { name: "Connected to VS Code · 2 windows" }),
@@ -264,9 +276,36 @@ describe("LocalEnvStatus", () => {
     mockBaseUrl(SHELL_URL);
     mockLocalEnvironments(["session-1:vscode-a"]);
 
-    render(<LocalEnvStatus onOpen={onOpen} />);
+    render(<Status onOpen={onOpen} />);
     await user.click(screen.getByRole("button"));
 
     expect(onOpen).toHaveBeenCalledTimes(1);
+  });
+});
+
+/** Each read of the environments holds a socket open to Tangent. */
+describe("the plug and the indicator, shown together", () => {
+  afterEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it("show what they are handed without reading the environments themselves", () => {
+    const localEnv = {
+      baseUrl: SHELL_URL,
+      localEnvironments: [],
+      isLocalEnvConnected: false,
+    };
+
+    render(
+      <>
+        <LocalEnvStatus localEnv={localEnv} onOpen={vi.fn()} />
+        <LocalEnvIndicator localEnv={localEnv} />
+      </>,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Connect VS Code" }),
+    ).toBeInTheDocument();
+    expect(useProjectLocalEnv).not.toHaveBeenCalled();
   });
 });

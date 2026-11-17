@@ -80,8 +80,16 @@ function projectLoaded() {
   } as unknown as ReturnType<typeof useProject>);
 }
 
+const NO_EDITOR = {
+  baseUrl: null,
+  localEnvironments: [],
+  isLocalEnvConnected: false,
+};
+
 function renderSettings() {
-  return render(<ProjectSettingsDialog open onOpenChange={vi.fn()} />);
+  return render(
+    <ProjectSettingsDialog open onOpenChange={vi.fn()} localEnv={NO_EDITOR} />,
+  );
 }
 
 describe("ProjectSettingsDialog", () => {

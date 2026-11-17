@@ -30,7 +30,7 @@ import { tracking } from "@/utils/tracking";
 
 import { AgentTraceDialog } from "./AgentTraceDialog";
 import { AttachAgentButton } from "./AttachAgentButton";
-import { LocalEnvIndicator } from "./LocalEnvIndicator";
+import { type LocalEnv, LocalEnvIndicator } from "./LocalEnvIndicator";
 import { SecretsWindowContent } from "./SecretsWindowContent";
 
 const FILLED_FIELD = "bg-background dark:bg-input/30";
@@ -38,6 +38,7 @@ const FILLED_FIELD = "bg-background dark:bg-input/30";
 interface ProjectSettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  localEnv: LocalEnv;
 }
 
 /**
@@ -53,6 +54,7 @@ function focusDialogItself(event: Event) {
 export const ProjectSettingsDialog = observer(function ProjectSettingsDialog({
   open,
   onOpenChange,
+  localEnv,
 }: ProjectSettingsDialogProps) {
   const store = useTangentProject();
   const { data: project } = useProject(store.projectId);
@@ -131,7 +133,7 @@ export const ProjectSettingsDialog = observer(function ProjectSettingsDialog({
                 title="VS Code"
                 description="Let agents work in the folder you have open in VS Code."
               >
-                <LocalEnvIndicator />
+                <LocalEnvIndicator localEnv={localEnv} />
               </SettingRow>
               <SettingRow
                 icon="Bot"

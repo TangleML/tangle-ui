@@ -3,9 +3,10 @@ import { useState } from "react";
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
+import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { tracking } from "@/utils/tracking";
 
-import { LocalEnvStatus } from "./LocalEnvIndicator";
+import { LocalEnvStatus, useLocalEnv } from "./LocalEnvIndicator";
 import { ProjectSettingsDialog } from "./ProjectSettingsDialog";
 
 /**
@@ -14,10 +15,12 @@ import { ProjectSettingsDialog } from "./ProjectSettingsDialog";
  */
 export function ProjectSettingsButton() {
   const [open, setOpen] = useState(false);
+  const { projectId } = useTangentProject();
+  const localEnv = useLocalEnv(projectId);
 
   return (
     <InlineStack gap="1" wrap="nowrap">
-      <LocalEnvStatus onOpen={() => setOpen(true)} />
+      <LocalEnvStatus onOpen={() => setOpen(true)} localEnv={localEnv} />
       <TooltipButton
         tooltip="Project settings"
         tooltipSide="bottom"
@@ -31,7 +34,11 @@ export function ProjectSettingsButton() {
       >
         <Icon name="FolderCog" size="sm" />
       </TooltipButton>
-      <ProjectSettingsDialog open={open} onOpenChange={setOpen} />
+      <ProjectSettingsDialog
+        open={open}
+        onOpenChange={setOpen}
+        localEnv={localEnv}
+      />
     </InlineStack>
   );
 }

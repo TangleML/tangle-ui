@@ -48,7 +48,15 @@ function environmentLabel(environment: TangentEnvironment): string {
   return environment.metadata?.windowName ?? hostLabel(environment);
 }
 
-function useLocalEnv(projectId: string) {
+export interface LocalEnv {
+  baseUrl: string | null;
+  localEnvironments: TangentEnvironment[];
+  isLocalEnvConnected: boolean;
+}
+
+// Each read holds a socket of its own open to Tangent, so whoever shows the
+// plug and the indicator reads once and hands the result to both.
+export function useLocalEnv(projectId: string): LocalEnv {
   const { baseUrl } = useTangentBaseUrl(projectId);
   const { sessions } = useProjectSessions(projectId);
   const localEnv = useProjectLocalEnv(
@@ -64,13 +72,12 @@ function useLocalEnv(projectId: string) {
  */
 export const LocalEnvStatus = observer(function LocalEnvStatus({
   onOpen,
+  localEnv,
 }: {
   onOpen: () => void;
+  localEnv: LocalEnv;
 }) {
-  const store = useTangentProject();
-  const { localEnvironments, isLocalEnvConnected } = useLocalEnv(
-    store.projectId,
-  );
+  const { localEnvironments, isLocalEnvConnected } = localEnv;
 
   if (!isLocalEnvConnected) return null;
 
@@ -97,12 +104,14 @@ export const LocalEnvStatus = observer(function LocalEnvStatus({
   );
 });
 
-export const LocalEnvIndicator = observer(function LocalEnvIndicator() {
+export const LocalEnvIndicator = observer(function LocalEnvIndicator({
+  localEnv,
+}: {
+  localEnv: LocalEnv;
+}) {
   const store = useTangentProject();
   const { data: project } = useProject(store.projectId);
-  const { baseUrl, localEnvironments, isLocalEnvConnected } = useLocalEnv(
-    store.projectId,
-  );
+  const { baseUrl, localEnvironments, isLocalEnvConnected } = localEnv;
 
   if (!baseUrl) return null;
 
