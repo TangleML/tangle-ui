@@ -32,7 +32,7 @@ function ArtifactWorkareaView({
 }: {
   tab: WorkareaTab;
   sessionId: string | undefined;
-  tangentBaseUrl: string | null | undefined;
+  tangentBaseUrl: string | null;
 }) {
   const url = parseIdentity(tab.target.identity).value;
   // The viewer loads whatever its address serves, so an address that isn't
