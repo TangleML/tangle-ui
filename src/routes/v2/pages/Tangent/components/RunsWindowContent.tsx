@@ -25,6 +25,8 @@ import {
 import { getErrorMessage } from "@/utils/string";
 import { tracking } from "@/utils/tracking";
 
+import { useDismissProjectCard } from "./projectCardContext";
+
 const FAILED_STATUSES = new Set([
   "FAILED",
   "UPSTREAM_FAILED",
@@ -75,6 +77,7 @@ function RunListItem({
 
 export function RunsWindowContent() {
   const store = useTangentProject();
+  const dismissCard = useDismissProjectCard();
   const notify = useToastNotification();
   const {
     data,
@@ -90,6 +93,7 @@ export function RunsWindowContent() {
       window.open(getDefaultRunPath(run.id), "_blank");
       return;
     }
+    dismissCard();
     const title = run.pipelineName ?? UNNAMED_PIPELINE;
     try {
       await store.openWorkareaTarget(

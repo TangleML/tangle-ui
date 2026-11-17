@@ -1,180 +1,50 @@
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { DialogProvider } from "@/providers/DialogProvider/DialogProvider";
-import { useProject } from "@/services/projects/useProjects";
+import { AppMenuActions } from "@/routes/v2/shared/components/AppMenuActions";
 
 import { ProjectHeader } from "./ProjectHeader";
 
-class ResizeObserverMock {
-  observe = vi.fn();
-  unobserve = vi.fn();
-  disconnect = vi.fn();
-}
-vi.stubGlobal("ResizeObserver", ResizeObserverMock);
-
-const updateProject = vi.fn();
-const share = vi.fn();
-
-vi.mock("@/providers/BackendProvider", () => ({
-  useBackend: () => ({ backendUrl: "https://backend.example.com" }),
-}));
-
-/** `useShareProjectAction` reaches the router through `@/utils/URL`. */
-vi.mock("@/components/Project/useShareProjectAction", () => ({
-  useShareProjectAction: () => share,
-}));
-
-vi.mock("./LocalEnvIndicator", () => ({
-  LocalEnvIndicator: () => null,
-}));
-
 vi.mock("@tanstack/react-router", () => ({
-  Link: ({
-    children,
-    to,
-    params,
-    ...rest
-  }: {
-    children: ReactNode;
-    to: string;
-    params?: { projectId: string };
-  }) => (
-    <a
-      href={params ? to.replace("$projectId", params.projectId) : to}
-      {...rest}
-    >
-      {children}
-    </a>
-  ),
-  useNavigate: () => vi.fn(),
-  useSearch: () => ({}),
-}));
-
-vi.mock("@/routes/v2/pages/Tangent/context/TangentProjectContext", () => ({
-  useTangentProject: () => ({ projectId: "project-1" }),
-}));
-
-vi.mock("@/providers/AnalyticsProvider", () => ({
-  useAnalytics: () => ({ track: vi.fn() }),
-}));
-
-vi.mock("@/hooks/useToastNotification", () => ({
-  default: () => vi.fn(),
-}));
-
-vi.mock("@/services/projects/useProjects", () => ({
-  useProject: vi.fn(),
-  useUpdateProject: () => ({ mutate: updateProject, isPending: false }),
-}));
-
-vi.mock("@/components/Project/ProjectWorkspaceLabel", () => ({
-  ProjectWorkspaceLabel: ({ project }: { project: { id: string } }) => (
-    <span data-testid="workspace-label">{project.id}</span>
+  Link: ({ children, ...rest }: { children: ReactNode }) => (
+    <a {...rest}>{children}</a>
   ),
 }));
 
-const project = {
-  id: "project-1",
-  name: "Churn model",
-  description: "Q3 churn work",
-  notes: null,
-  workspaceId: "workspace-1",
-  createdBy: "alice@example.com",
-  origin: "user",
-  metadata: null,
-  createdAt: new Date("2026-09-02T10:00:00Z"),
-  updatedAt: new Date("2026-09-15T10:00:00Z"),
-};
-
-function renderHeader() {
-  return render(
-    <DialogProvider disableRouterSync>
-      <ProjectHeader />
-    </DialogProvider>,
-  );
-}
+vi.mock("@/routes/v2/shared/components/AppMenuActions", () => ({
+  AppMenuActions: vi.fn(() => <div data-testid="app-menu-actions" />),
+}));
 
 describe("Tangent ProjectHeader", () => {
-  beforeEach(() => {
-    Element.prototype.scrollIntoView = vi.fn();
-    Element.prototype.hasPointerCapture = vi.fn();
-    vi.mocked(useProject).mockReturnValue({
-      data: project,
-    } as unknown as ReturnType<typeof useProject>);
+  /** It is the app bar on this page, so it carries the app's own actions too. */
+  it("keeps the app's own actions", () => {
+    render(<ProjectHeader />);
+
+    expect(screen.getByTestId("app-menu-actions")).toBeInTheDocument();
   });
 
-  afterEach(() => {
-    vi.resetAllMocks();
-  });
+  it("names Tangle beside its mark", () => {
+    render(<ProjectHeader />);
 
-  it("offers the project's own page from its name", () => {
-    renderHeader();
-
-    expect(screen.getByRole("link", { name: /Churn model/ })).toHaveAttribute(
-      "href",
-      "/projects/project-1",
+    expect(screen.getByAltText("logo")).toHaveAttribute(
+      "src",
+      expect.stringContaining("Tangle_white"),
     );
-    expect(screen.getByText("Churn model")).toBeInTheDocument();
   });
 
-  /** The way out was the logo, which leaves Tangent rather than going up one. */
-  it("offers a way back to the projects list", () => {
-    renderHeader();
+  it("leaves choosing a model to each chat's own picker", () => {
+    render(<ProjectHeader />);
 
-    expect(
-      screen.getByRole("link", { name: "Back to projects" }),
-    ).toHaveAttribute("href", "/projects");
+    expect(vi.mocked(AppMenuActions).mock.calls.at(-1)?.[0]).toEqual({
+      showAiModelQuickSelect: false,
+    });
   });
 
-  /** Pinning is the only thing that keeps a shared project reachable. */
-  it("offers to pin the project from inside it", () => {
-    renderHeader();
+  /** The sidebar and the Project panel name the project now. */
+  it("does not repeat the project's name", () => {
+    render(<ProjectHeader />);
 
-    expect(
-      screen.getByRole("button", { name: "Pin Churn model" }),
-    ).toBeInTheDocument();
-  });
-
-  /** The link was only on the project's own page, two clicks away from here. */
-  it("shares the project without leaving the session", async () => {
-    const user = userEvent.setup();
-    renderHeader();
-
-    await user.click(screen.getByRole("button", { name: "Share Churn model" }));
-
-    expect(share).toHaveBeenCalled();
-  });
-
-  /** The name used to rename on click, which cost the only way back out. */
-  it("does not rename when the name is clicked", async () => {
-    const user = userEvent.setup();
-    renderHeader();
-
-    await user.click(screen.getByText("Churn model"));
-
-    expect(screen.queryByRole("dialog")).toBeNull();
-    expect(updateProject).not.toHaveBeenCalled();
-  });
-
-  it("renames from the pencil beside it", async () => {
-    const user = userEvent.setup();
-    renderHeader();
-
-    await user.click(
-      screen.getByRole("button", { name: "Rename Churn model" }),
-    );
-
-    expect(await screen.findByRole("dialog")).toBeInTheDocument();
-  });
-
-  it("shows the project's workspace label", () => {
-    renderHeader();
-
-    expect(screen.getByTestId("workspace-label")).toHaveTextContent(
-      "project-1",
-    );
+    expect(screen.queryByRole("heading")).toBeNull();
   });
 });

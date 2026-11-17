@@ -11,7 +11,6 @@ import {
   withoutTangentOpenSearch,
 } from "@/routes/tangentSearch";
 import type { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
-import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import { createAndAttachPipeline } from "@/services/projects/createAndAttachPipeline";
 import { nameFromPrompt } from "@/services/projects/nameFromPrompt";
@@ -38,8 +37,6 @@ import {
 } from "@/services/projects/useProjectResources";
 import { useProject, useUpdateProject } from "@/services/projects/useProjects";
 import { getErrorMessage } from "@/utils/string";
-
-import { PROJECT_DETAILS_WINDOW_ID } from "./tangentProjectWindowOrder";
 
 interface PrepareProjectArrivalOptions {
   projectId: string;
@@ -97,7 +94,6 @@ export function usePrepareProjectArrival(
   const search = useSearch({ strict: false });
   const navigate = useNavigate();
   const notify = useToastNotification();
-  const { windows } = useSharedStores();
   const { data: project, isFetching: isProjectFetching } =
     useProject(projectId);
   const { data: documents } = useProjectResources(projectId, {
@@ -143,12 +139,6 @@ export function usePrepareProjectArrival(
             error,
           );
         }
-      }
-
-      // Nothing has been written about a project nobody has worked in, so its
-      // window is a tall empty form sitting above what someone came for.
-      if (isEmpty) {
-        windows.getWindowById(PROJECT_DETAILS_WINDOW_ID)?.minimize();
       }
 
       if (askedToOpen) {
