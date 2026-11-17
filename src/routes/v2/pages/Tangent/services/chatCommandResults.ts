@@ -122,6 +122,7 @@ function active(entries: ProjectCardEntry[]) {
 export function pipelinesResult({ pipelines }: ProjectListing) {
   if (pipelines.length === 0) return "This project has no pipelines yet.";
   const shown = active(pipelines);
+  if (shown.length === 0) return "Every pipeline in this project is archived.";
   return withArchivedNote(
     section("Pipelines", shown, pipelineRow),
     pipelines.length - shown.length,
@@ -132,6 +133,7 @@ export function pipelinesResult({ pipelines }: ProjectListing) {
 export function documentsResult({ documents }: ProjectListing) {
   if (documents.length === 0) return "This project has no documents yet.";
   const shown = active(documents);
+  if (shown.length === 0) return "Every document in this project is archived.";
   return withArchivedNote(
     section("Documents", shown, documentRow),
     documents.length - shown.length,
@@ -142,6 +144,9 @@ export function documentsResult({ documents }: ProjectListing) {
 export function runsResult({ runs, runStatuses }: ProjectListing) {
   if (runs.length === 0) return "Nothing has been run in this project yet.";
   const shown = active(runs);
+  if (shown.length === 0) {
+    return "The latest runs in this project are all archived.";
+  }
   return withArchivedNote(
     section("Runs", shown, runRow(runStatuses), { limit: RUN_LIMIT }),
     runs.length - shown.length,
@@ -191,8 +196,14 @@ export function assetsResult(listing: ProjectListing, links: FileLinks) {
         more: "`/documents` lists them all.",
       }),
   ].filter(Boolean);
-  return sections.length > 0
-    ? sections.join("\n\n")
+  if (sections.length > 0) return sections.join("\n\n");
+  const onlyArchivedLeft = [
+    listing.runs,
+    listing.pipelines,
+    listing.documents,
+  ].some((entries) => entries.length > 0);
+  return onlyArchivedLeft
+    ? "Everything in this project is archived."
     : "This project doesn't have anything in it yet.";
 }
 

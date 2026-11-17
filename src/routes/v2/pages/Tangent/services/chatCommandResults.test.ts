@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   assetsResult,
+  documentsResult,
   filesResult,
   parsePipelineIds,
   pipelinesResult,
@@ -66,6 +67,33 @@ describe("chat command results", () => {
     );
     expect(pipelinesResult(listing())).toBe(
       "This project has no pipelines yet.",
+    );
+  });
+
+  it("says so when everything is archived, rather than listing nothing", () => {
+    const archived = (target: string) => ({
+      target,
+      name: "Old",
+      at: null,
+      archived: true,
+    });
+    const everythingArchived = listing({
+      runs: [archived("run://id/r-1")],
+      pipelines: [archived("pipeline://id/p-1")],
+      documents: [archived("document://id/d-1")],
+    });
+
+    expect(pipelinesResult(everythingArchived)).toBe(
+      "Every pipeline in this project is archived.",
+    );
+    expect(documentsResult(everythingArchived)).toBe(
+      "Every document in this project is archived.",
+    );
+    expect(runsResult(everythingArchived)).toBe(
+      "The latest runs in this project are all archived.",
+    );
+    expect(assetsResult(everythingArchived, links)).toBe(
+      "Everything in this project is archived.",
     );
   });
 
