@@ -34,9 +34,6 @@ import { getErrorMessage } from "@/utils/string";
 
 export const CHAT_TAB_VALUE = "chat";
 
-/** Matches Tangent's Prime agent id (`PI_AGENT.id`) without depending on `@tangent/shared`. */
-export const PRIME_AGENT_ID = "prime";
-
 export interface AgentTab {
   id: string;
   title: string;
@@ -182,12 +179,6 @@ export class TangentProjectStore {
 
   @computed get selectedAssetId(): string | undefined {
     return this.chatSlice.selectedAssetId;
-  }
-
-  @computed get selectedAgentId(): string {
-    return this.chatActiveTab === CHAT_TAB_VALUE
-      ? PRIME_AGENT_ID
-      : this.chatActiveTab;
   }
 
   @action setDefaultSessionId(sessionId: string | undefined) {
