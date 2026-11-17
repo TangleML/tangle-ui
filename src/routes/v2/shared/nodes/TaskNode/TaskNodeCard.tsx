@@ -27,7 +27,7 @@ import {
   CONDITION_SURFACE_CLASSES,
 } from "@/routes/v2/shared/conditionalExecution.styles";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
-import { AGGREGATOR_ADD_INPUT_HANDLE_ID } from "@/utils/aggregatorInputs";
+import { AGGREGATOR_INTERNAL_INPUTS } from "@/utils/aggregatorInputs";
 import {
   IS_ENABLED_PORT_NAME,
   RUN_CONDITION_LABEL,
@@ -37,11 +37,6 @@ import { pluralize } from "@/utils/string";
 import { deriveColorPalette } from "./color.utils";
 import { InputAggregatorHandle } from "./InputAggregatorHandle";
 import type { TaskNodeInput, TaskNodeViewProps } from "./TaskNode";
-
-const AGGREGATOR_INTERNAL_INPUTS = new Set([
-  AGGREGATOR_ADD_INPUT_HANDLE_ID,
-  "output_type",
-]);
 
 const RUN_CONDITION_HANDLE_ID = `input_${IS_ENABLED_PORT_NAME}`;
 

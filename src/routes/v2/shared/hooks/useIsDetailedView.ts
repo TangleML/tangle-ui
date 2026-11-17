@@ -2,8 +2,10 @@ import { useStore } from "@xyflow/react";
 
 import { ZOOM_THRESHOLD } from "@/routes/v2/shared/flowCanvasDefaults";
 
+export const isDetailedZoom = (zoom: number) => zoom >= ZOOM_THRESHOLD;
+
 const zoomSelector = (s: { transform: [number, number, number] }) =>
-  s.transform[2] >= ZOOM_THRESHOLD;
+  isDetailedZoom(s.transform[2]);
 
 /**
  * Returns true when the canvas is zoomed in enough to render the full,
