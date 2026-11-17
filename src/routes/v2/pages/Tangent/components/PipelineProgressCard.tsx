@@ -42,7 +42,11 @@ function idProp(
   return value && isRunOrExecutionId(value) ? value : undefined;
 }
 
-function progressLabel(stats: Record<string, number> | null | undefined) {
+function progressLabel(
+  stats: Record<string, number> | null | undefined,
+  isLoading: boolean,
+) {
+  if (stats === undefined && !isLoading) return "Status unavailable";
   if (!stats) return "Loading status…";
   const total = Object.values(stats).reduce((sum, count) => sum + count, 0);
   const ended = total - countInProgressFromStats(stats);
@@ -67,7 +71,7 @@ export const PipelineProgressCard = observer(function PipelineProgressCard({
   const executionId = idProp(props, "executionId");
   const givenRunId = idProp(props, "runId");
 
-  const { data: details } = useQuery({
+  const { data: details, isLoading: isFindingRun } = useQuery({
     queryKey: ["tangent-execution-details", executionId],
     queryFn: () => fetchExecutionDetails(executionId ?? "", backendUrl),
     enabled: Boolean(executionId) && !givenRunId,
@@ -78,7 +82,8 @@ export const PipelineProgressCard = observer(function PipelineProgressCard({
     stringProp(props, "title") ??
     details?.task_spec?.componentRef?.spec?.name ??
     "Pipeline run";
-  const { data: stats } = useRunExecutionStats(runId);
+  const { data: stats, isLoading: isLoadingStats } =
+    useRunExecutionStats(runId);
   // The chat this card was drawn in. It can outlive a switch to another chat
   // for a moment, and mustn't hand its run to that one.
   const [sessionId] = useState(() => store.activeSessionId);
@@ -119,7 +124,7 @@ export const PipelineProgressCard = observer(function PipelineProgressCard({
       <BlockStack gap="1" align="stretch" className="w-full">
         <TaskStatusBar executionStatusStats={stats} />
         <Text size="xs" tone="subdued">
-          {progressLabel(stats)}
+          {progressLabel(stats, isFindingRun || isLoadingStats)}
         </Text>
       </BlockStack>
     </button>
