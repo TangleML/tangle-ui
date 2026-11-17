@@ -21,8 +21,6 @@ import { Window } from "./Window";
 interface DockAreaProps {
   side: "left" | "right";
   quietHeaders?: boolean;
-  // A fill window fills the dock only while it's alone there; sharing it, every
-  // window shows all of itself and the column scrolls as one.
   scrollsAsOne?: boolean;
 }
 
