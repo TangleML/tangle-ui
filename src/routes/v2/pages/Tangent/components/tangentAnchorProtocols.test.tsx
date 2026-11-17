@@ -141,6 +141,47 @@ describe("tangentAnchorProtocols pipeline and document anchors", () => {
     );
   });
 
+  function openedPipeline(href: string) {
+    const PipelineAnchor = tangentAnchorProtocols.pipeline;
+    render(
+      <PipelineAnchor
+        {...anchorProps({
+          href,
+          protocol: "pipeline",
+          path: href.slice("pipeline://".length),
+          label: "Mine",
+        })}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button"));
+    return openWorkareaTarget.mock.calls[0]?.[0];
+  }
+
+  it.each([
+    ["Train model (copy)", "pipeline://name/Train%20model%20(copy)"],
+    ["Café ☃", "pipeline://name/Caf%C3%A9%20%E2%98%83"],
+    ["Top 5%", "pipeline://name/Top%205%25"],
+    ["50%off sale", "pipeline://name/50%off%20sale"],
+  ])(
+    "opens the pipeline named %s from the address the chat's markdown makes of it",
+    (name, href) => {
+      expect(openedPipeline(href)).toEqual({
+        type: "pipeline",
+        identity: `name/${name}`,
+      });
+    },
+  );
+
+  it.each(["Train model (copy)", "Café ☃", "Top 5%", "50%off sale"])(
+    "opens the pipeline named %s from its address as typed",
+    (name) => {
+      expect(openedPipeline(`pipeline://name/${name}`)).toEqual({
+        type: "pipeline",
+        identity: `name/${name}`,
+      });
+    },
+  );
+
   it("can't open a link that isn't a workarea target", () => {
     const PipelineAnchor = tangentAnchorProtocols.pipeline;
     render(
