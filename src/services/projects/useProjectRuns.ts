@@ -86,7 +86,10 @@ export function useProjectRuns(projectId: string | undefined) {
  * alone it serves a settled status to the next mount, which is how a completed
  * run came back still claiming to be waiting.
  */
-function runExecutionStatsQuery(runId: string | undefined, enabled: boolean) {
+export function runExecutionStatsQuery(
+  runId: string | undefined,
+  enabled: boolean,
+) {
   return queryOptions({
     queryKey: ProjectRunsQueryKeys.Stats(runId ?? ""),
     queryFn: () => {

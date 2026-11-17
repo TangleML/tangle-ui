@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   assetsResult,
+  documentsResult,
   filesResult,
   parsePipelineIds,
   pipelinesResult,
@@ -19,7 +20,6 @@ function listing(overrides: Partial<ProjectListing> = {}): ProjectListing {
     pipelines: [],
     documents: [],
     reports: [],
-    archived: new Set(),
     runStatuses: new Map(),
     ...overrides,
   };
@@ -40,10 +40,19 @@ describe("chat command results", () => {
     const text = pipelinesResult(
       listing({
         pipelines: [
-          { target: "pipeline://remote/p-1", name: "Train [v2]", at: NOV_5 },
-          { target: "pipeline://id/f-2", name: "Old", at: null },
+          {
+            target: "pipeline://remote/p-1",
+            name: "Train [v2]",
+            at: NOV_5,
+            archived: false,
+          },
+          {
+            target: "pipeline://id/f-2",
+            name: "Old",
+            at: null,
+            archived: true,
+          },
         ],
-        archived: new Set(["pipeline://id/f-2"]),
       }),
     );
 
@@ -61,11 +70,39 @@ describe("chat command results", () => {
     );
   });
 
+  it("says so when everything is archived, rather than listing nothing", () => {
+    const archived = (target: string) => ({
+      target,
+      name: "Old",
+      at: null,
+      archived: true,
+    });
+    const everythingArchived = listing({
+      runs: [archived("run://id/r-1")],
+      pipelines: [archived("pipeline://id/p-1")],
+      documents: [archived("document://id/d-1")],
+    });
+
+    expect(pipelinesResult(everythingArchived)).toBe(
+      "Every pipeline in this project is archived.",
+    );
+    expect(documentsResult(everythingArchived)).toBe(
+      "Every document in this project is archived.",
+    );
+    expect(runsResult(everythingArchived)).toBe(
+      "The latest runs in this project are all archived.",
+    );
+    expect(assetsResult(everythingArchived, links)).toBe(
+      "Everything in this project is archived.",
+    );
+  });
+
   it("shows the newest runs with their status, saying how many are left out", () => {
     const runs = Array.from({ length: RUN_LIMIT + 2 }, (_, index) => ({
       target: `run://id/r-${index}`,
       name: `Run ${index}`,
       at: null,
+      archived: false,
     }));
 
     const text = runsResult(
@@ -110,6 +147,7 @@ describe("chat command results", () => {
       target: `pipeline://remote/p-${index}`,
       name: `Pipeline ${index}`,
       at: null,
+      archived: false,
     }));
 
     const text = assetsResult(

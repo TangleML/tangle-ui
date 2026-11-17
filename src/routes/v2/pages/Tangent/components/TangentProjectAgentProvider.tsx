@@ -12,6 +12,7 @@ import { useBackend } from "@/providers/BackendProvider";
 import { ProjectCardHandlersContext } from "@/routes/v2/pages/Tangent/context/ProjectCardHandlersContext";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { usePerStore } from "@/routes/v2/pages/Tangent/hooks/usePerStore";
+import { useProjectResourceItems } from "@/routes/v2/pages/Tangent/hooks/useProjectResourceItems";
 import { useRemoteEnvAuthToken } from "@/routes/v2/pages/Tangent/hooks/useRemoteEnvAuthToken";
 import { useTangentBaseUrl } from "@/routes/v2/pages/Tangent/hooks/useTangentBaseUrl";
 import { connectRemoteEnvWithRefresh } from "@/routes/v2/pages/Tangent/services/connectRemoteEnvWithRefresh";
@@ -131,6 +132,9 @@ export function TangentProjectAgentProvider({
   const storage = usePipelineStorage();
   const { baseUrl } = useTangentBaseUrl(store.projectId);
   const tangent = useTangent();
+  const { localPipelines, remotePipelineNames } = useProjectResourceItems(
+    store.projectId,
+  );
 
   const authToken = useRemoteEnvAuthToken();
   const authTokenRef = useRef(authToken);
@@ -138,6 +142,7 @@ export function TangentProjectAgentProvider({
   const baseUrlRef = useRef(baseUrl);
   const tangentRef = useRef(tangent);
   const notifyRef = useRef(notify);
+  const pipelineLookupsRef = useRef({ localPipelines, remotePipelineNames });
   const aiConfigRef = useRef(aiConfig);
   const traceScopeRef = useRef<TraceScope | undefined>(
     sessionId ? { projectId: store.projectId, sessionId } : undefined,
@@ -187,6 +192,9 @@ export function TangentProjectAgentProvider({
   useEffect(() => {
     notifyRef.current = notify;
   }, [notify]);
+  useEffect(() => {
+    pipelineLookupsRef.current = { localPipelines, remotePipelineNames };
+  }, [localPipelines, remotePipelineNames]);
 
   // Push AI config into the worker whenever the user changes it, so a turn
   // uses the latest provider settings without rebuilding the connection.
@@ -231,6 +239,7 @@ export function TangentProjectAgentProvider({
       getBaseUrl: () => baseUrlRef.current ?? undefined,
       getAuthToken: () => authTokenRef.current,
       getTangent: () => tangentRef.current,
+      getPipelineLookups: () => pipelineLookupsRef.current,
       getRunDetails: runInspect.getRunDetails,
       onResourcesChanged: () => refreshProjectResources(),
     }),

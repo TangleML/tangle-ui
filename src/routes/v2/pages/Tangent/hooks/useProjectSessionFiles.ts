@@ -1,3 +1,4 @@
+import { useTangent } from "@tangent/embed-react";
 import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
 
 import useToastNotification from "@/hooks/useToastNotification";
@@ -5,20 +6,12 @@ import { useProjectSessions } from "@/routes/v2/pages/Tangent/hooks/useProjectSe
 import { useRemoteEnvAuthToken } from "@/routes/v2/pages/Tangent/hooks/useRemoteEnvAuthToken";
 import { useTangentBaseUrl } from "@/routes/v2/pages/Tangent/hooks/useTangentBaseUrl";
 import {
-  listSessionFiles,
-  pinSessionFile,
+  sessionFilesOf,
   sessionFileUrl,
-  unpinSessionFile,
+  setSessionFilePinned,
 } from "@/routes/v2/pages/Tangent/services/sessionFiles";
+import { sessionResourcesQuery } from "@/routes/v2/pages/Tangent/services/sessionResources";
 import { getErrorMessage } from "@/utils/string";
-
-const SESSION_FILES_KEY = "tangent-session-files";
-
-export const sessionFilesKey = (baseUrl: string | null, sessionId: string) => [
-  SESSION_FILES_KEY,
-  baseUrl,
-  sessionId,
-];
 
 export interface ProjectFile {
   key: string;
@@ -37,26 +30,27 @@ export interface ProjectFile {
  * files change; the rest are read again whenever the card opens.
  */
 export function useProjectSessionFiles(projectId: string) {
+  const tangent = useTangent();
   const { baseUrl } = useTangentBaseUrl(projectId);
   const { sessions } = useProjectSessions(projectId);
   const authToken = useRemoteEnvAuthToken();
   const queryClient = useQueryClient();
   const notify = useToastNotification();
 
+  // Converted here rather than in a per-chat `select`: a new select each
+  // render, building new dates each time, never settles.
   const results = useQueries({
     queries: sessions.map(({ sessionId }) => ({
-      queryKey: sessionFilesKey(baseUrl, sessionId),
-      queryFn: () =>
-        baseUrl ? listSessionFiles({ baseUrl, sessionId, authToken }) : [],
+      ...sessionResourcesQuery(tangent, sessionId),
       refetchOnMount: "always" as const,
-      enabled: Boolean(baseUrl),
-      staleTime: 30_000,
     })),
   });
 
   const files: ProjectFile[] = baseUrl
-    ? results
-        .flatMap((result) => result.data ?? [])
+    ? sessions
+        .flatMap(({ sessionId }, index) =>
+          sessionFilesOf(sessionId, results[index]?.data ?? []),
+        )
         .map((record) => ({
           ...record,
           key: `${record.sessionId}:${record.path}`,
@@ -68,21 +62,12 @@ export function useProjectSessionFiles(projectId: string) {
   const { mutate: setPinned } = useMutation({
     mutationFn: async ({ file, pin }: { file: ProjectFile; pin: boolean }) => {
       if (!baseUrl) return;
-      const request = { baseUrl, sessionId: file.sessionId, authToken };
-      if (pin) {
-        await pinSessionFile({
-          ...request,
-          path: file.path,
-          title: file.title,
-        });
-      } else {
-        await unpinSessionFile({ ...request, path: file.path });
-      }
+      await setSessionFilePinned(
+        queryClient,
+        { baseUrl, authToken, ...file },
+        pin,
+      );
     },
-    onSuccess: (_, { file }) =>
-      queryClient.invalidateQueries({
-        queryKey: sessionFilesKey(baseUrl, file.sessionId),
-      }),
     onError: (error) => notify(getErrorMessage(error), "error"),
   });
 

@@ -32,6 +32,7 @@ vi.mock("@/services/projects/useProjectRuns", async (importOriginal) => ({
       data: stats.current[id],
       error: statErrors.current[id] ?? null,
     })),
+  useRunExecutionStats: (id: string) => ({ data: stats.current[id] }),
 }));
 
 vi.mock("@/hooks/useToastNotification", () => ({ default: () => vi.fn() }));
@@ -82,14 +83,22 @@ describe("ChatRunsPill", () => {
     ).toBeInTheDocument();
   });
 
-  it("says when one of them failed", () => {
-    runs.current = [run("r-1", "Nightly")];
-    stats.current = { "r-1": { FAILED: 1, SUCCEEDED: 2 } };
+  it("says how many of them failed", () => {
+    runs.current = [
+      run("r-1", "Nightly"),
+      run("r-2", "Backfill"),
+      run("r-3", "Retrain"),
+    ];
+    stats.current = {
+      "r-1": { FAILED: 1, SUCCEEDED: 2 },
+      "r-2": { SYSTEM_ERROR: 1 },
+      "r-3": { RUNNING: 1 },
+    };
 
     renderPill();
 
     expect(
-      screen.getByRole("button", { name: "1 run, one failed" }),
+      screen.getByRole("button", { name: "3 runs · 1 running, 2 failed" }),
     ).toBeInTheDocument();
   });
 
@@ -168,7 +177,7 @@ describe("ChatRunsPill", () => {
     stats.current = { "r-1": { FAILED: 1, RUNNING: 1 } };
     renderPill();
 
-    await user.click(screen.getByRole("button", { name: "1 run, one failed" }));
+    await user.click(screen.getByRole("button", { name: "1 run, 1 failed" }));
 
     expect(screen.getByText("Runs in this chat")).toBeInTheDocument();
     expect(

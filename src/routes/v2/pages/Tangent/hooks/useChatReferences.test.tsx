@@ -39,9 +39,20 @@ vi.mock("@/routes/v2/pages/Tangent/hooks/useProjectResourceItems", () => ({
   }),
 }));
 
+vi.mock("@/routes/v2/pages/Tangent/hooks/useArchivedProjectItems", () => ({
+  useArchivedProjectItems: () => ({
+    archived: new Set(["run://id/run-5"]),
+  }),
+}));
+
 vi.mock("@/services/projects/useProjectRuns", () => ({
   useProjectRuns: () => ({
     data: [
+      {
+        id: "run-5",
+        pipelineName: "Archived",
+        createdAt: new Date("2026-11-08"),
+      },
       { id: "run-6", pipelineName: "Churn model", createdAt: null },
       {
         id: "run-7",
@@ -53,7 +64,7 @@ vi.mock("@/services/projects/useProjectRuns", () => ({
 }));
 
 describe("useChatReferences", () => {
-  it("offers pipelines, documents and runs by their workarea target, newest first", () => {
+  it("offers pipelines, documents and runs by their workarea target, newest first, leaving out what's archived", () => {
     const { result } = renderHook(() => useChatReferences("project-1"));
 
     expect(result.current).toEqual([

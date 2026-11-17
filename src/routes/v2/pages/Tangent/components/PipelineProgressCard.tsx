@@ -1,27 +1,24 @@
 import type { HostUIComponentProps } from "@tangent/embed-react";
 import { useQuery } from "@tanstack/react-query";
 import { observer } from "mobx-react-lite";
-import { type MouseEvent, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 
 import TaskStatusBar from "@/components/shared/Status/TaskStatusBar";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
-import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
-import { getDefaultRunPath } from "@/routes/runRoutes";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
+import { useOpenWorkareaTarget } from "@/routes/v2/pages/Tangent/hooks/useOpenWorkareaTarget";
 import { useRecordSessionRun } from "@/routes/v2/pages/Tangent/hooks/useSessionRuns";
 import { fetchExecutionDetails } from "@/services/executionService";
 import { runTarget } from "@/services/projects/resourceTarget";
 import { useRunExecutionStats } from "@/services/projects/useProjectRuns";
-import { hasNewTabModifier } from "@/utils/dom";
 import {
   countInProgressFromStats,
   getExecutionStatusLabel,
   getOverallExecutionStatusFromStats,
 } from "@/utils/executionStatus";
-import { getErrorMessage } from "@/utils/string";
 import { tracking } from "@/utils/tracking";
 
 function stringProp(
@@ -51,7 +48,7 @@ export const PipelineProgressCard = observer(function PipelineProgressCard({
   props,
 }: HostUIComponentProps) {
   const store = useTangentProject();
-  const notify = useToastNotification();
+  const openTarget = useOpenWorkareaTarget();
   const { backendUrl } = useBackend();
   const recordSessionRun = useRecordSessionRun();
   const executionId = stringProp(props, "executionId");
@@ -82,25 +79,14 @@ export const PipelineProgressCard = observer(function PipelineProgressCard({
     void recordSessionRun(sessionId, runId, title).catch(() => undefined);
   }, [runId, sessionId, title, recordSessionRun]);
 
-  async function open(event: MouseEvent<HTMLButtonElement>) {
-    if (!runId) return;
-    if (hasNewTabModifier(event)) {
-      window.open(getDefaultRunPath(runId), "_blank");
-      return;
-    }
-    try {
-      await store.openWorkareaTarget(runTarget(runId), title);
-    } catch (error) {
-      notify(getErrorMessage(error), "error");
-    }
-  }
-
   return (
     <button
       type="button"
       disabled={!runId}
       title={runId ? "Open this run beside the chat" : undefined}
-      onClick={(event) => void open(event)}
+      onClick={(event) => {
+        if (runId) void openTarget(runTarget(runId), title, event);
+      }}
       className="my-1 flex w-full cursor-pointer flex-col gap-3 rounded-xl border border-border bg-background p-4 text-left transition-colors outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-default disabled:hover:bg-background"
       {...tracking("projects.chat.pipeline_progress.open_run")}
     >

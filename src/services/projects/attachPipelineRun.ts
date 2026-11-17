@@ -37,11 +37,14 @@ async function holdsPipelineRun(projectId: string, runId: string) {
 
 export async function attachPipelineRunOnce(
   projectId: string,
-  { runId, pipelineName }: { runId: string; pipelineName: string },
-) {
-  if (await holdsPipelineRun(projectId, runId)) return;
-  await createProjectResource(
-    projectId,
-    pipelineRunResourceInput(runId, pipelineName),
-  );
+  {
+    runId,
+    pipelineName,
+  }: { runId: string; pipelineName: string | (() => Promise<string>) },
+): Promise<boolean> {
+  if (await holdsPipelineRun(projectId, runId)) return false;
+  const name =
+    typeof pipelineName === "string" ? pipelineName : await pipelineName();
+  await createProjectResource(projectId, pipelineRunResourceInput(runId, name));
+  return true;
 }
