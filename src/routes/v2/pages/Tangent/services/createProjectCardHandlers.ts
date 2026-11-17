@@ -60,8 +60,9 @@ interface ProjectCardEntries {
 export interface ProjectCardToolDeps {
   getActiveSessionId: () => string | undefined;
   listEntries: () => Promise<ProjectCardEntries>;
-  // A run past the card's first page, which "Load older runs" reaches.
-  findOlderRun: (target: string) => Promise<ProjectCardEntry | undefined>;
+  findRunPastFirstPage: (
+    target: string,
+  ) => Promise<ProjectCardEntry | undefined>;
   setArchived: (target: string, archived: boolean) => Promise<void>;
   listFiles: () => Promise<SessionFileRecord[]>;
   pinFile: (sessionId: string, path: string, title: string) => Promise<void>;
@@ -181,7 +182,7 @@ export function createProjectCardHandlers({
       };
     },
 
-    async findOlderRun(target) {
+    async findRunPastFirstPage(target) {
       const archived = archivedTargets((await getProject(projectId)).metadata);
       let pageToken: string | undefined;
       for (let page = 0; page < MAX_RUN_PAGES; page++) {
