@@ -92,7 +92,6 @@ async function unpinSessionFile({
   }
 }
 
-/** Pins a file to the project's reports or takes it out, for everyone. */
 export async function setSessionFilePinned(
   queryClient: QueryClient,
   request: SessionFileRequest,

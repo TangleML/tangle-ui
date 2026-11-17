@@ -35,7 +35,6 @@ async function holdsPipelineRun(projectId: string, runId: string) {
   return false;
 }
 
-/** Adds a run to the project unless it's there already. Says whether it added it. */
 export async function attachPipelineRunOnce(
   projectId: string,
   {

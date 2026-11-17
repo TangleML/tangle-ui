@@ -33,7 +33,6 @@ export function runStatusFlair(
   return { kind: "dot", label };
 }
 
-/** A pipeline run's row, with its live status. */
 export function RunListItem({
   runId,
   name,
