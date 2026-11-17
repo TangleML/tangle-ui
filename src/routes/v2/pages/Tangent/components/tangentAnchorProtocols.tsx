@@ -63,7 +63,6 @@ function RunAnchor({ path, label }: AnchorProtocolProps) {
   );
 }
 
-/** A pipeline or document someone referenced with `#`, opened in the workarea. */
 function WorkareaTargetAnchor({ href, protocol, label }: AnchorProtocolProps) {
   const store = useTangentProject();
   const notify = useToastNotification();
