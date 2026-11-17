@@ -12,10 +12,10 @@ export const PROJECT_CARD_WINDOW_ID = "tangent-project-card";
 const PROJECTS_MIN_HEIGHT = 320;
 
 /**
- * Every project and its sessions start docked on the left, and the project in
- * view's reports, runs, pipelines and documents in the popover on the right.
- * Either can be dragged to the other side or out to float. Neither can be
- * hidden or closed, since this page has nowhere to bring them back from.
+ * Every project and its sessions start docked on the left, with the project in
+ * view's reports, runs, pipelines and documents under them. Either can be
+ * dragged to the popover on the right or out to float. Neither can be hidden
+ * or closed, since this page has nowhere to bring them back from.
  */
 export function useTangentProjectWindows() {
   const { windows } = useSharedStores();
@@ -45,7 +45,7 @@ export function useTangentProjectWindows() {
         id: PROJECT_CARD_WINDOW_ID,
         title: "Assets",
         persisted: true,
-        defaultDockState: "right",
+        defaultDockState: "left",
         startVisible: true,
         size: { width: 360, height: 600 },
         disabledActions: ["close", "hide"],
