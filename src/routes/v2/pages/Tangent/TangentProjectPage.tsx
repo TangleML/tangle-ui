@@ -11,6 +11,7 @@ import { DialogProvider } from "@/providers/DialogProvider/DialogProvider";
 import { useTheme } from "@/providers/ThemeProvider";
 import { APP_ROUTES } from "@/routes/appRoutes";
 import { tangentAnchorProtocols } from "@/routes/v2/pages/Tangent/components/tangentAnchorProtocols";
+import { tangentUiComponents } from "@/routes/v2/pages/Tangent/components/tangentUiComponents";
 import { getTangentSocketConfig } from "@/routes/v2/pages/Tangent/services/socketConfig";
 import { SharedStoreProvider } from "@/routes/v2/shared/store/SharedStoreContext";
 import { useProject } from "@/services/projects/useProjects";
@@ -150,6 +151,7 @@ function TangentProjectPageContent({ projectId }: { projectId: string }) {
         socketPath={socketPath}
         getToken={getToken}
         anchorProtocols={tangentAnchorProtocols}
+        uiComponents={tangentUiComponents}
       >
         <SharedStoreProvider>
           <TangentProjectProvider projectId={projectId}>
