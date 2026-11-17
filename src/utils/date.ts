@@ -133,13 +133,13 @@ export const formatRelativeTime = (date: Date) => {
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-export const formatTimeAgo = (
-  date: string | Date,
+export const formatElapsedAgo = (
+  since: string | Date,
   now: Date | number,
 ): string => {
   const elapsedMs = Math.max(
     0,
-    new Date(now).getTime() - new Date(date).getTime(),
+    new Date(now).getTime() - new Date(since).getTime(),
   );
 
   if (elapsedMs < MS_PER_DAY) {

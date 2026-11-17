@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatDuration, formatTimeAgo } from "./date";
+import { formatDuration, formatElapsedAgo } from "./date";
 
 describe("formatDuration", () => {
   it("formats seconds correctly", () => {
@@ -103,7 +103,7 @@ describe("formatDuration", () => {
   });
 });
 
-describe("formatTimeAgo", () => {
+describe("formatElapsedAgo", () => {
   const now = new Date("2024-01-02T12:00:00.000Z");
 
   it.each([
@@ -113,15 +113,15 @@ describe("formatTimeAgo", () => {
     ["2024-01-01T12:00:00.000Z", "1 day ago"],
     ["2023-12-30T11:00:00.000Z", "3 days ago"],
   ])("formats %s as %s", (date, expected) => {
-    expect(formatTimeAgo(date, now)).toBe(expected);
+    expect(formatElapsedAgo(date, now)).toBe(expected);
   });
 
   it("clamps a timestamp ahead of now to 0s ago", () => {
-    expect(formatTimeAgo("2024-01-02T12:00:05.000Z", now)).toBe("0s ago");
+    expect(formatElapsedAgo("2024-01-02T12:00:05.000Z", now)).toBe("0s ago");
   });
 
   it("accepts a millisecond timestamp for now", () => {
-    expect(formatTimeAgo("2024-01-02T11:59:50.000Z", now.getTime())).toBe(
+    expect(formatElapsedAgo("2024-01-02T11:59:50.000Z", now.getTime())).toBe(
       "10s ago",
     );
   });

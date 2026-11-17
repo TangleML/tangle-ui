@@ -10,7 +10,7 @@ import {
   isGraphImplementation,
 } from "@/utils/componentSpec";
 import { EXIT_CODE_OOM } from "@/utils/constants";
-import { formatDate, formatDuration, formatTimeAgo } from "@/utils/date";
+import { formatDate, formatDuration, formatElapsedAgo } from "@/utils/date";
 import { toAbsoluteHttpUrl } from "@/utils/URL";
 
 import type { AttributeProps } from "../ContextPanel/Blocks/Attribute";
@@ -19,7 +19,7 @@ import { KeyValueList } from "../ContextPanel/Blocks/KeyValueList";
 import { InfoBox } from "../InfoBox";
 import { launcherDisplayName } from "../ReactFlow/FlowCanvas/TaskNode/AnnotationsEditor/utils";
 
-const LAST_UPDATED_REFRESH_MS = 1000;
+const LAST_CHANGE_REFRESH_MS = 1000;
 
 interface ExecutionDetailsProps {
   executionId: string;
@@ -50,8 +50,10 @@ export const ExecutionDetails = ({
     status,
   );
 
-  const lastUpdatedAt = containerState?.updated_at;
-  const now = useNow(LAST_UPDATED_REFRESH_MS, !!lastUpdatedAt);
+  const lastChangeAt = containerState?.ended_at
+    ? undefined
+    : containerState?.updated_at;
+  const now = useNow(LAST_CHANGE_REFRESH_MS, !!lastChangeAt);
 
   const getExecutionItems = () => {
     const items: AttributeProps[] = [
@@ -92,10 +94,10 @@ export const ExecutionDetails = ({
       });
     }
 
-    if (lastUpdatedAt) {
+    if (lastChangeAt) {
       items.push({
-        label: "Last updated",
-        value: `${formatTimeAgo(lastUpdatedAt, now)} (${formatDate(lastUpdatedAt)})`,
+        label: "Last change",
+        value: `${formatElapsedAgo(lastChangeAt, now)} (${formatDate(lastChangeAt)})`,
       });
     }
 
