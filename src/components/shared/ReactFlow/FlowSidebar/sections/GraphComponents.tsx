@@ -1,6 +1,5 @@
 import { type ChangeEvent, useCallback, useMemo } from "react";
 
-import { ManageLibrariesDialog } from "@/components/shared/GitHubLibrary/ManageLibrariesDialog";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -24,10 +23,10 @@ import {
   IONodeSidebarItem,
   StickyNoteSidebarItem,
 } from "../components/ComponentItem";
-import { LibraryFolderItem } from "../components/FolderItem";
 import PublishedComponentsSearch from "../components/PublishedComponentsSearch";
 import { SidebarSection } from "../components/SidebarSection";
 import { UpgradeAvailableAlertBox } from "../components/UpgradeAvailableAlertBox";
+import { ConnectedLibrariesSection } from "./ConnectedLibrariesSection";
 
 const INPUT_AGGREGATOR_URL =
   "https://raw.githubusercontent.com/TangleML/tangle-ui/refs/heads/master/public/assets/components/input_aggregator.component.yaml";
@@ -42,11 +41,6 @@ const GraphComponents = ({
   const remoteComponentLibrarySearchEnabled = useFlagValue(
     "remote-component-library-search",
   );
-  const githubComponentLibraryEnabled = useFlagValue(
-    "github-component-library",
-  );
-  const { getComponentLibrary, existingComponentLibraries } =
-    useComponentLibrary();
 
   const { updateSearchFilter, currentSearchFilter } = useForcedSearchContext();
   const {
@@ -171,35 +165,7 @@ const GraphComponents = ({
             }
             icon="Folder"
           />
-          {githubComponentLibraryEnabled && (
-            <>
-              <Separator />
-              <BlockStack gap="1" className="pl-2 py-2">
-                <InlineStack className="w-full" align="space-between">
-                  <Text size="sm" tone="subdued">
-                    Connected libraries
-                  </Text>
-                  <ManageLibrariesDialog />
-                </InlineStack>
-
-                {existingComponentLibraries?.length === 0 && (
-                  <BlockStack gap="1" align="center">
-                    <Text size="sm" tone="subdued">
-                      No libraries connected
-                    </Text>
-                  </BlockStack>
-                )}
-              </BlockStack>
-
-              {existingComponentLibraries?.map((library) => (
-                <LibraryFolderItem
-                  key={library.id}
-                  library={getComponentLibrary(library.id)}
-                  icon={library.icon}
-                />
-              ))}
-            </>
-          )}
+          <ConnectedLibrariesSection />
         </BlockStack>
       </BlockStack>
     );
@@ -212,9 +178,6 @@ const GraphComponents = ({
     error,
     searchResult,
     remoteComponentLibrarySearchEnabled,
-    githubComponentLibraryEnabled,
-    existingComponentLibraries,
-    getComponentLibrary,
   ]);
 
   const searchComponent = remoteComponentLibrarySearchEnabled ? (
