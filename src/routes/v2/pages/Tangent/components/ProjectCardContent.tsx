@@ -286,11 +286,13 @@ export const ProjectCardContent = observer(function ProjectCardContent() {
         .map(renderRun),
       more: searching ? undefined : <LoadOlderRuns query={projectRuns} />,
       action: add("run"),
-      empty: emptyNote(
-        [projectRuns, resourceItems],
-        "this project's runs",
-        "Nothing has been run yet",
-      ),
+      empty: projectRuns.hasNextPage
+        ? undefined
+        : emptyNote(
+            [projectRuns, resourceItems],
+            "this project's runs",
+            "Nothing has been run yet",
+          ),
       always: true,
     },
     {

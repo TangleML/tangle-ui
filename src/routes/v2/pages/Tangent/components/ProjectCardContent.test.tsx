@@ -72,6 +72,7 @@ const loading = vi.hoisted(() => ({
   runs: { isLoading: false, error: null as Error | null },
   files: { isLoading: false, error: null as Error | null, none: false },
 }));
+const runFeed = vi.hoisted(() => ({ hasOlderPage: false }));
 
 const pipeline = (n: number) => ({
   id: `p-${n}`,
@@ -125,7 +126,7 @@ vi.mock("@/services/projects/useProjectRuns", () => ({
               createdAt: new Date("2026-11-04"),
             },
           ],
-    hasNextPage: false,
+    hasNextPage: runFeed.hasOlderPage,
   }),
   useRunExecutionStats: () => ({ data: undefined, isPending: true }),
 }));
@@ -177,6 +178,16 @@ async function search(text: string) {
   return user;
 }
 
+async function archiveEveryRun() {
+  const user = userEvent.setup();
+  const runs = screen.getByRole("region", { name: "Runs" });
+  for (const name of ["Pipeline 1", "Somewhere else"]) {
+    await user.click(
+      within(runs).getByRole("button", { name: `Archive ${name}` }),
+    );
+  }
+}
+
 describe("ProjectCardContent", () => {
   beforeEach(() => {
     pin.mockClear();
@@ -185,6 +196,7 @@ describe("ProjectCardContent", () => {
     loading.resources = { isLoading: false, isLoaded: true, error: null };
     loading.runs = { isLoading: false, error: null };
     loading.files = { isLoading: false, error: null, none: false };
+    runFeed.hasOlderPage = false;
   });
 
   it("says a section is loading rather than that the project has none", () => {
@@ -319,6 +331,27 @@ describe("ProjectCardContent", () => {
     expect(rows[0]).toContain("Pipeline 1");
     expect(rows[0]).toContain("on 11-05");
     expect(rows[1]).toContain("Somewhere else");
+  });
+
+  it("keeps Load older runs when every run loaded so far is archived", async () => {
+    runFeed.hasOlderPage = true;
+    render(<ProjectCardContent />);
+
+    await archiveEveryRun();
+
+    const runs = screen.getByRole("region", { name: "Runs" });
+    expect(
+      within(runs).getByRole("button", { name: "Load older runs" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Nothing has been run yet")).toBeNull();
+  });
+
+  it("says nothing has been run once every run is archived and none are older", async () => {
+    render(<ProjectCardContent />);
+
+    await archiveEveryRun();
+
+    expect(screen.getByText("Nothing has been run yet")).toBeInTheDocument();
   });
 
   it("filters every section by one search, dropping those with no match", async () => {
