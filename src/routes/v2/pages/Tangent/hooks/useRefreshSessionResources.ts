@@ -6,10 +6,6 @@ import { sessionResourcesKey } from "@/routes/v2/pages/Tangent/services/sessionR
 const REFRESH_DELAY_MS = 1_000;
 
 /**
- * Refetches what this page built from a chat's Tangent resources: its files
- * and reports on the project card, and its runs pill. The chat calls it when
- * an agent or another person changes them, so nothing waits for a reload.
- *
  * The chat reports a change several times per agent message and each refetch
  * makes Tangent walk the chat's folders, so a burst becomes one refetch once
  * the chat has been quiet for a second.
