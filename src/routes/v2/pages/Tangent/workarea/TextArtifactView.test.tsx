@@ -3,8 +3,9 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { fetchArtifactText } from "@/routes/v2/pages/Tangent/services/artifactText";
-import { downloadStringAsFile } from "@/utils/URL";
+import { fetchArtifactFile } from "@/routes/v2/pages/Tangent/services/artifactText";
+import { downloadBlobAsFile } from "@/utils/URL";
+import { getUserDetails } from "@/utils/user";
 
 import { TextArtifactView } from "./TextArtifactView";
 
@@ -28,21 +29,35 @@ vi.mock("@/components/shared/CodeViewer/CodeEditor", () => ({
   ),
 }));
 
+vi.mock("@/utils/user", () => ({
+  getUserDetails: vi.fn(),
+}));
+
 vi.mock("@/routes/v2/pages/Tangent/hooks/useRemoteEnvAuthToken", () => ({
-  useRemoteEnvAuthToken: () => "jwt",
+  remoteEnvAuthToken: (userId: string | undefined) =>
+    userId ? `jwt-for-${userId}` : undefined,
 }));
 
 vi.mock("@/routes/v2/pages/Tangent/services/artifactText", async (actual) => ({
   ...(await actual<
     typeof import("@/routes/v2/pages/Tangent/services/artifactText")
   >()),
-  fetchArtifactText: vi.fn(),
+  fetchArtifactFile: vi.fn(),
 }));
 
-vi.mock("@/utils/URL", () => ({ downloadStringAsFile: vi.fn() }));
+vi.mock("@/utils/URL", () => ({ downloadBlobAsFile: vi.fn() }));
 
 const FILE_URL =
   "https://tangent.example/api/sessions/s1/files/artifacts/q.sql";
+
+const SQL_FILE = { blob: new Blob(["select 1;"]), text: "select 1;" };
+
+function givenUser() {
+  vi.mocked(getUserDetails).mockResolvedValue({
+    id: "me@example.com",
+    permissions: [],
+  });
+}
 
 function renderView() {
   const queryClient = new QueryClient({
@@ -59,7 +74,8 @@ describe("TextArtifactView", () => {
   afterEach(() => vi.resetAllMocks());
 
   it("shows the file read-only, highlighted by its extension", async () => {
-    vi.mocked(fetchArtifactText).mockResolvedValue("select 1;");
+    givenUser();
+    vi.mocked(fetchArtifactFile).mockResolvedValue(SQL_FILE);
 
     renderView();
 
@@ -67,25 +83,36 @@ describe("TextArtifactView", () => {
     expect(editor).toHaveTextContent("select 1;");
     expect(editor).toHaveAttribute("data-language", "sql");
     expect(editor).toHaveAttribute("data-readonly", "true");
-    expect(fetchArtifactText).toHaveBeenCalledWith(FILE_URL, "jwt");
+    expect(fetchArtifactFile).toHaveBeenCalledWith(
+      FILE_URL,
+      "jwt-for-me@example.com",
+    );
   });
 
-  it("downloads the loaded text under the file's name", async () => {
-    vi.mocked(fetchArtifactText).mockResolvedValue("select 1;");
+  it("downloads the raw file under its name", async () => {
+    givenUser();
+    vi.mocked(fetchArtifactFile).mockResolvedValue(SQL_FILE);
 
     renderView();
     await screen.findByTestId("code-editor");
     await userEvent.click(screen.getByRole("button", { name: "Download" }));
 
-    expect(downloadStringAsFile).toHaveBeenCalledWith(
-      "select 1;",
-      "q.sql",
-      "text/plain",
-    );
+    expect(downloadBlobAsFile).toHaveBeenCalledWith(SQL_FILE.blob, "q.sql");
+  });
+
+  it("waits for the user before loading the file", () => {
+    vi.mocked(getUserDetails).mockReturnValue(new Promise(() => {}));
+
+    renderView();
+
+    expect(screen.getByTestId("spinner")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Download" })).toBeDisabled();
+    expect(fetchArtifactFile).not.toHaveBeenCalled();
   });
 
   it("shows the load error and keeps Download disabled", async () => {
-    vi.mocked(fetchArtifactText).mockRejectedValue(
+    givenUser();
+    vi.mocked(fetchArtifactFile).mockRejectedValue(
       new Error("Failed to load this file (404 Not Found)."),
     );
 
