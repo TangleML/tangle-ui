@@ -9,7 +9,6 @@ import { useChatCommands } from "./useChatCommands";
 const fakes = vi.hoisted(() => ({
   store: { activeSessionId: "chat-1" },
   listEntries: vi.fn(),
-  listArchived: vi.fn(),
   listFiles: vi.fn(),
   resolvePipeline: vi.fn(),
   submit: vi.fn(),
@@ -22,7 +21,6 @@ vi.mock("@/routes/v2/pages/Tangent/context/TangentProjectContext", () => ({
 vi.mock("@/routes/v2/pages/Tangent/context/ProjectCardHandlersContext", () => ({
   useProjectCardHandlers: () => ({
     listEntries: fakes.listEntries,
-    listArchived: fakes.listArchived,
     listFiles: fakes.listFiles,
   }),
 }));
@@ -57,7 +55,12 @@ vi.mock("@/services/teams/useTeamForSubmission", () => ({
   useTeamForSubmission: () => ({ status: "none" }),
 }));
 
-const TRAIN = { target: "pipeline://remote/p-1", name: "Train", at: null };
+const TRAIN = {
+  target: "pipeline://remote/p-1",
+  name: "Train",
+  at: null,
+  archived: false,
+};
 
 function commandNamed(name: string): EmbedCommand {
   const { result } = renderHook(() => useChatCommands("project-1"));
@@ -75,7 +78,6 @@ describe("useChatCommands", () => {
       pipelines: [TRAIN],
       documents: [],
     });
-    fakes.listArchived.mockResolvedValue([]);
     fakes.resolvePipeline.mockResolvedValue({
       read: async () =>
         "name: Train\nimplementation:\n  graph:\n    tasks: {}\n",
@@ -87,6 +89,28 @@ describe("useChatCommands", () => {
     const text = await commandNamed("pipelines").run("");
 
     expect(text).toContain("[Train](pipeline://remote/p-1) · id `p-1`");
+  });
+
+  it("leaves an archived pipeline out of the list, saying one isn't listed", async () => {
+    fakes.listEntries.mockResolvedValue({
+      runs: [],
+      pipelines: [
+        TRAIN,
+        {
+          target: "pipeline://remote/p-2",
+          name: "Retired",
+          at: null,
+          archived: true,
+        },
+      ],
+      documents: [],
+    });
+
+    const text = await commandNamed("pipelines").run("");
+
+    expect(text).toContain("[Train](pipeline://remote/p-1)");
+    expect(text).not.toContain("Retired");
+    expect(text).toContain("1 archived pipeline not listed.");
   });
 
   it("starts each pipeline it's given, puts it in the chat, and reports the rest", async () => {
