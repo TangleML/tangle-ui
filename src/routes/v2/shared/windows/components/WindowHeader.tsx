@@ -14,8 +14,6 @@ interface WindowHeaderProps {
   style?: CSSProperties;
   actionsOnHover?: boolean;
   tone?: "light" | "dark";
-  // Reads as a section label: no hover tint, and the leading icon only on
-  // hover, in the margin, so the title lines up with the content below it.
   quiet?: boolean;
 }
 
@@ -46,6 +44,7 @@ export function WindowHeader({
       onMouseDown={onMouseDown}
     >
       {quiet && leadingIcon && (
+        // In the margin, so the title lines up with the content below it.
         <span className="absolute inset-y-0 start-0.5 flex items-center opacity-0 transition-opacity group-hover/window:opacity-100">
           {leadingIcon}
         </span>
