@@ -7,7 +7,6 @@ interface WindowContextValue {
   model: WindowModel;
   content: ReactNode;
   dockIndex?: number;
-  // Set by a dock for a fill window that's alone there.
   fillsDock?: boolean;
   quietHeader?: boolean;
   dismissFlyout?: () => void;
