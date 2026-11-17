@@ -9,10 +9,7 @@ import { tracking } from "@/utils/tracking";
 import { LocalEnvStatus, useLocalEnv } from "./LocalEnvIndicator";
 import { ProjectSettingsDialog } from "./ProjectSettingsDialog";
 
-/**
- * A folder cog, so it reads apart from the app-wide settings gear, led by a
- * plug while an editor is connected.
- */
+/** A folder cog, so it reads apart from the app-wide settings gear. */
 export function ProjectSettingsButton() {
   const [open, setOpen] = useState(false);
   const { projectId } = useTangentProject();

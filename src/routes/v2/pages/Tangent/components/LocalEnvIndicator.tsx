@@ -75,10 +75,6 @@ export function useLocalEnv(projectId: string): LocalEnv {
   return { baseUrl, ...localEnv };
 }
 
-/**
- * A green plug beside project settings while an editor is connected, so it is
- * plain that agents can reach your local workspace without opening settings.
- */
 export const LocalEnvStatus = observer(function LocalEnvStatus({
   onOpen,
   localEnv,
