@@ -38,7 +38,6 @@ import type { ListProjectResourcesParams } from "@/services/projects/types";
 import type { LocalPipelineStatus } from "@/services/projects/useLocalPipelineStatus";
 import { projectResourcesQueryOptions } from "@/services/projects/useProjectResources";
 
-/** A row on the project card, addressed by its formatted workarea target. */
 export interface ProjectCardEntry {
   target: string;
   name: string;
@@ -52,7 +51,6 @@ interface ProjectCardEntries {
   documents: ProjectCardEntry[];
 }
 
-/** Live handles into the project card and the chat's runs pill. */
 export interface ProjectCardToolDeps {
   getActiveSessionId: () => string | undefined;
   listEntries: () => Promise<ProjectCardEntries>;

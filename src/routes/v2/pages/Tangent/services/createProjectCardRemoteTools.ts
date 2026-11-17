@@ -121,11 +121,6 @@ const RUN_ID_SCHEMA = {
   required: ["runId"],
 };
 
-/**
- * What a person can do from the project card and the chat's runs pill,
- * offered to the agent too. Each tool changes the same shared state the
- * buttons do, so people see what the agent did.
- */
 export function createProjectCardRemoteTools(
   getDeps: () => ProjectCardToolDeps,
 ): RemoteToolMap {
