@@ -1,6 +1,7 @@
 import { cva, type VariantProps } from "class-variance-authority";
 
 import { Icon, type IconName } from "@/components/ui/icon";
+import { cn } from "@/lib/utils";
 
 const iconTileVariants = cva("grid shrink-0 place-items-center", {
   variants: {
@@ -36,7 +37,7 @@ export function IconTile({
   tone,
 }: { icon: IconName } & VariantProps<typeof iconTileVariants>) {
   return (
-    <span aria-hidden className={iconTileVariants({ size, shape, tone })}>
+    <span aria-hidden className={cn(iconTileVariants({ size, shape, tone }))}>
       <Icon name={icon} size={ICON_SIZE[size ?? "md"]} />
     </span>
   );
