@@ -140,6 +140,23 @@ describe("ComponentSearchResults", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("hides connected libraries when showConnectedLibraries is false", () => {
+    render(
+      <ComponentSearchResults
+        {...baseProps}
+        query=""
+        results={[]}
+        browseFolders={[{ name: "Standard library" }]}
+        showConnectedLibraries={false}
+      />,
+    );
+
+    expect(screen.getByText("Standard library")).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("connected-libraries-section"),
+    ).not.toBeInTheDocument();
+  });
+
   it("shows actionable no-results guidance with clickable suggestions", () => {
     const onSuggestedSearch = vi.fn();
     render(

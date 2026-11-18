@@ -31,6 +31,7 @@ interface ComponentSearchResultsProps {
   isLoading: boolean;
   isSearching: boolean;
   isRerankActive: boolean;
+  showConnectedLibraries?: boolean;
   onClearRerank: () => void;
   onSuggestedSearch: (query: string) => void;
 }
@@ -86,6 +87,7 @@ export function ComponentSearchResults({
   isLoading,
   isSearching,
   isRerankActive,
+  showConnectedLibraries = true,
   onClearRerank,
   onSuggestedSearch,
 }: ComponentSearchResultsProps) {
@@ -127,7 +129,7 @@ export function ComponentSearchResults({
         {browseFolders.map((folder) => (
           <FolderItem key={folder.name} folder={folder} />
         ))}
-        <ConnectedLibrariesSection />
+        {showConnectedLibraries && <ConnectedLibrariesSection />}
       </BlockStack>
     );
   }
