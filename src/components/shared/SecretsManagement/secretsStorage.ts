@@ -18,33 +18,9 @@ import {
   TeamImpersonationError,
 } from "@/services/teams/errors";
 import { teamRequestHeaders } from "@/services/teams/teamRequestHeaders";
+import { parseAsUtc } from "@/utils/date";
 
 import { type Secret, SecretsQueryKeys } from "./types";
-
-/**
- * Parses a date string, assuming UTC if no timezone is specified.
- * Handles cases where the server may or may not include timezone info.
- */
-function parseAsUtc(dateString: string): Date {
-  // Already has UTC indicator
-  if (dateString.endsWith("Z")) {
-    return new Date(dateString);
-  }
-
-  // Has positive timezone offset (e.g., +05:00)
-  if (dateString.includes("+")) {
-    return new Date(dateString);
-  }
-
-  // Check for negative timezone offset by looking for - after the date portion
-  // ISO date format: YYYY-MM-DD (positions 0-9), so any - after index 9 is timezone
-  if (dateString.lastIndexOf("-") > 9) {
-    return new Date(dateString);
-  }
-
-  // No timezone info detected, assume UTC
-  return new Date(dateString + "Z");
-}
 
 export class SecretsApiError extends ApiError {
   constructor(message: string, status: number) {

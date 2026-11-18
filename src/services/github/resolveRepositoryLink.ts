@@ -1,7 +1,8 @@
 import { backendRepositorySource } from "./backendRepositorySource";
-import type {
-  GitHubTokenState,
-  GitHubTokenSupport,
+import {
+  type GitHubTokenState,
+  type GitHubTokenSupport,
+  isMissingRouteError,
 } from "./githubBackendClient";
 import {
   anonymousRepositorySource,
@@ -55,8 +56,9 @@ async function tokenSupportOrNone(
   if (!access) return NO_TOKEN_SUPPORT;
   try {
     return await access.readTokenSupport();
-  } catch {
-    return NO_TOKEN_SUPPORT;
+  } catch (error) {
+    if (isMissingRouteError(error)) return NO_TOKEN_SUPPORT;
+    throw error;
   }
 }
 

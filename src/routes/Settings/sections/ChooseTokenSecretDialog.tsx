@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
-import { type FormEvent, useState } from "react";
+import { useState } from "react";
 
 import { PickerOption } from "@/components/Project/PickerOption";
 import { PickerSearchField } from "@/components/Project/PickerSearchField";
+import { SecretsSettingsLink } from "@/components/Project/SecretsSettingsLink";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { secretsListQuery } from "@/components/shared/SecretsManagement/secretsStorage";
 import { Button } from "@/components/ui/button";
@@ -18,8 +18,7 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
-import { Text } from "@/components/ui/typography";
-import { APP_ROUTES } from "@/routes/appRoutes";
+import { Paragraph } from "@/components/ui/typography";
 import { formatRelativeTime } from "@/utils/date";
 import { getErrorMessage } from "@/utils/string";
 import { tracking } from "@/utils/tracking";
@@ -56,11 +55,7 @@ function SecretOptions({ query, picked, onPick }: SecretOptionsProps) {
         title="You have no secrets yet"
         description={
           <>
-            Save your GitHub token in{" "}
-            <Link to={APP_ROUTES.SETTINGS_SECRETS} className="underline">
-              Settings → Secrets
-            </Link>{" "}
-            first.
+            Save your GitHub token in <SecretsSettingsLink /> first.
           </>
         }
         placement="start"
@@ -75,9 +70,9 @@ function SecretOptions({ query, picked, onPick }: SecretOptionsProps) {
 
   if (matching.length === 0) {
     return (
-      <Text size="sm" tone="subdued" className="py-4 text-center">
+      <Paragraph size="sm" tone="subdued" className="py-4 text-center">
         No secrets match “{query.trim()}”.
-      </Text>
+      </Paragraph>
     );
   }
 
@@ -116,8 +111,7 @@ export function ChooseTokenSecretDialog({
 
   const canConfirm = picked !== null && picked !== currentSecretName;
 
-  const confirm = (event: FormEvent) => {
-    event.preventDefault();
+  const confirm = () => {
     if (canConfirm && !isSaving) onConfirm(picked);
   };
 
@@ -139,29 +133,28 @@ export function ChooseTokenSecretDialog({
 
         <SecretOptions query={query} picked={picked} onPick={setPicked} />
 
-        <form onSubmit={confirm}>
-          <DialogFooter className="w-full">
-            <InlineStack gap="2" className="w-full" align="end">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onDismiss}
-                {...tracking("settings.github.token_secret_cancel")}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={!canConfirm || isSaving}
-                {...tracking("settings.github.token_secret_confirm", {
-                  replaced: currentSecretName !== null,
-                })}
-              >
-                Confirm
-              </Button>
-            </InlineStack>
-          </DialogFooter>
-        </form>
+        <DialogFooter className="w-full">
+          <InlineStack gap="2" className="w-full" align="end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onDismiss}
+              {...tracking("settings.github.token_secret_cancel")}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={!canConfirm || isSaving}
+              onClick={confirm}
+              {...tracking("settings.github.token_secret_confirm", {
+                replaced: currentSecretName !== null,
+              })}
+            >
+              Confirm
+            </Button>
+          </InlineStack>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

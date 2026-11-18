@@ -1,8 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type {
-  GitHubTokenState,
-  GitHubTokenSupport,
+import { RemoteAuthError } from "@/utils/fetchWithErrorHandling";
+
+import {
+  GitHubBackendError,
+  type GitHubTokenState,
+  type GitHubTokenSupport,
 } from "./githubBackendClient";
 import { RepositoryLinkError } from "./repositoryUrl";
 import { resolveRepositoryLink } from "./resolveRepositoryLink";
@@ -112,17 +115,55 @@ describe("resolveRepositoryLink", () => {
       expect(requested(BACKEND)).toEqual([]);
     });
 
-    it("treats a token status it can't read as no token support", async () => {
+    it("treats a backend without the token route as no token support", async () => {
       const error = await linkError(
         resolveRepositoryLink(
           REPO_URL,
           access(async () => {
-            throw new Error("backend down");
+            throw new GitHubBackendError("Not Found", 404, null, null);
           }),
         ),
       );
 
       expect(error.message).toBe(NOT_VISIBLE_ANONYMOUSLY);
+      expect(error.needsToken).toBe(false);
+    });
+
+    it("passes on a session that has expired instead of looking anonymously", async () => {
+      reply("GET", GITHUB_REPO, PUBLIC_ON_GITHUB);
+      const expired = new RemoteAuthError(`${BACKEND}/api/github/token_status`);
+
+      await expect(
+        resolveRepositoryLink(
+          REPO_URL,
+          access(async () => {
+            throw expired;
+          }),
+        ),
+      ).rejects.toBe(expired);
+      expect(requested("api.github.com")).toEqual([]);
+    });
+
+    it("passes on any other failure to read the token status", async () => {
+      reply("GET", GITHUB_REPO, PUBLIC_ON_GITHUB);
+
+      await expect(
+        resolveRepositoryLink(
+          REPO_URL,
+          access(async () => {
+            throw new GitHubBackendError(
+              "Database unavailable",
+              500,
+              null,
+              null,
+            );
+          }),
+        ),
+      ).rejects.toMatchObject({
+        name: "GitHubBackendError",
+        message: "Database unavailable",
+      });
+      expect(requested("api.github.com")).toEqual([]);
     });
 
     it("links a public repository anonymously when no token is chosen", async () => {

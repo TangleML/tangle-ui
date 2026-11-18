@@ -8,7 +8,7 @@ import {
 
 import { cn } from "@/lib/utils";
 
-type StackElement = "div" | "span" | "li" | "ol" | "ul";
+type StackElement = "div" | "span" | "li" | "ol" | "ul" | "dd";
 
 const blockStackVariants = cva("flex flex-col w-full", {
   variants: {

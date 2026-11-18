@@ -1,15 +1,13 @@
-import { Link as RouterLink } from "@tanstack/react-router";
-
+import { SecretsSettingsLink } from "@/components/Project/SecretsSettingsLink";
+import { BackendNotConnected } from "@/components/shared/BackendNotConnected";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
 import { Link } from "@/components/ui/link";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
 import { useBackend } from "@/providers/BackendProvider";
-import { APP_ROUTES } from "@/routes/appRoutes";
 import { useGitHubTokenStatus } from "@/services/github/useGitHubToken";
 import { getErrorMessage } from "@/utils/string";
 
@@ -31,29 +29,13 @@ function TokenSteps() {
           the token for it.
         </li>
         <li>
-          Save it as a secret in{" "}
-          <RouterLink to={APP_ROUTES.SETTINGS_SECRETS} className="underline">
-            Settings → Secrets
-          </RouterLink>
-          .
+          Save it as a secret in <SecretsSettingsLink />.
         </li>
         <li>Add that secret below.</li>
       </ol>
       <Text size="xs" tone="subdued">
         A fine-grained token with Contents: read-only access works too, but
         reads only one account or organization.
-      </Text>
-    </BlockStack>
-  );
-}
-
-function BackendNotConnected() {
-  return (
-    <BlockStack align="center" className="py-8">
-      <Icon name="DatabaseZap" size="lg" className="text-subdued" />
-      <Text tone="subdued">Backend not connected</Text>
-      <Text size="xs" tone="subdued">
-        Connect a backend in Settings to set up a GitHub token.
       </Text>
     </BlockStack>
   );
@@ -76,11 +58,7 @@ function GitHubTokenSettings() {
         <InfoBox title="Couldn't check your GitHub token" variant="error">
           {getErrorMessage(error)}
         </InfoBox>
-        <Button
-          variant="secondary"
-          className="w-fit"
-          onClick={() => void refetch()}
-        >
+        <Button variant="secondary" onClick={() => void refetch()}>
           Try again
         </Button>
       </BlockStack>
@@ -123,7 +101,11 @@ export function GitHubSettings() {
 
       <Separator />
 
-      {available ? <GitHubTokenSettings /> : <BackendNotConnected />}
+      {available ? (
+        <GitHubTokenSettings />
+      ) : (
+        <BackendNotConnected description="Connect a backend in Settings to set up a GitHub token." />
+      )}
     </BlockStack>
   );
 }

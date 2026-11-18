@@ -52,10 +52,13 @@ function renderList() {
   );
 }
 
-const rowOf = (name: string) =>
-  screen
+const rowOf = (name: string) => {
+  const row = screen
     .getAllByTestId("secret-item")
-    .find((row) => row.dataset.secretName === name) as HTMLElement;
+    .find((item) => item.dataset.secretName === name);
+  if (!row) throw new Error(`No row for ${name}`);
+  return row;
+};
 
 describe("SecretsList", () => {
   beforeEach(() => {
