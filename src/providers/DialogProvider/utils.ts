@@ -16,6 +16,15 @@ export function generateDialogId(): string {
   return crypto.randomUUID();
 }
 
+export function searchParamKeysReleasedBy(
+  dialogs: readonly DialogInstance[],
+): string[] {
+  return [
+    ...DIALOG_PARAM_KEYS,
+    ...dialogs.flatMap((dialog) => dialog.clearSearchParamsOnClose ?? []),
+  ];
+}
+
 export function omitSearchParams(
   params: Record<string, unknown>,
   keys: readonly string[],

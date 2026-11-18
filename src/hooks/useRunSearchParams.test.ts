@@ -14,9 +14,20 @@ vi.mock("@tanstack/react-router", () => ({
   useSearch: () => mockSearchParams,
 }));
 
+const UNRELATED_SEARCH = { dialog: "add-pipeline-run", dialogId: "abc" };
+
 const expectNavigatedTo = (filters: PipelineRunFilters | undefined) => {
-  const search = filters ? { filter: filters } : {};
-  expect(mockNavigate).toHaveBeenCalledWith({ to: "/test-path", search });
+  expect(mockNavigate).toHaveBeenCalledWith({
+    to: "/test-path",
+    search: expect.any(Function),
+  });
+  const { search } = mockNavigate.mock.calls.at(-1)![0];
+  const expected = filters
+    ? { ...UNRELATED_SEARCH, filter: filters }
+    : UNRELATED_SEARCH;
+  expect(search({ ...UNRELATED_SEARCH, filter: { stale: true } })).toEqual(
+    expected,
+  );
 };
 
 describe("useRunSearchParams", () => {
@@ -160,6 +171,18 @@ describe("useRunSearchParams", () => {
       act(() => result.current.clearFilters());
 
       expectNavigatedTo(undefined);
+    });
+
+    it("keeps search params owned by others, such as an open dialog", () => {
+      const { result } = renderHook(() => useRunSearchParams());
+
+      act(() => result.current.clearFilters());
+
+      const { search } = mockNavigate.mock.calls.at(-1)![0];
+      expect(search({ dialog: "x", dialogId: "1", filter: {} })).toEqual({
+        dialog: "x",
+        dialogId: "1",
+      });
     });
   });
 
