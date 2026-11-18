@@ -1,16 +1,10 @@
 import type {
+  AiModelApi,
   AiModelCapabilities,
+  AiModelOption,
   AiReasoningEffort,
 } from "@/types/aiProvider";
-import { isRecord } from "@/utils/typeGuards";
-
-export interface AiModelOption extends AiModelCapabilities {
-  label?: string;
-  description?: string;
-  tangentModelId?: string;
-  api?: "openai-responses" | "anthropic-messages";
-  thinkingLevelMap?: Record<string, string | null>;
-}
+import { isRecord, isStringRecord } from "@/utils/typeGuards";
 
 interface AiModelOptionsConfig {
   models?: AiModelOption[];
@@ -104,6 +98,26 @@ export function isAiReasoningEffort(
   return AI_CONFIG.reasoningLevels.some((level) => level.value === value);
 }
 
+const AI_MODEL_APIS: readonly AiModelApi[] = [
+  "openai-responses",
+  "anthropic-messages",
+];
+
+export function isAiModelApi(value: unknown): value is AiModelApi {
+  return AI_MODEL_APIS.some((api) => api === value);
+}
+
+export function isThinkingLevelMap(
+  value: unknown,
+): value is Record<string, AiReasoningEffort | null> {
+  return (
+    isRecord(value) &&
+    Object.values(value).every(
+      (effort) => effort === null || isAiReasoningEffort(effort),
+    )
+  );
+}
+
 declare global {
   interface Window {
     __TANGLE_AI_MODELS__?: AiModelOptionsConfig;
@@ -121,16 +135,9 @@ function readModelOption(value: unknown): AiModelOption | null {
     ...(typeof value.tangentModelId === "string"
       ? { tangentModelId: value.tangentModelId }
       : {}),
-    ...(value.api === "openai-responses" || value.api === "anthropic-messages"
-      ? { api: value.api }
-      : {}),
-    ...(isRecord(value.thinkingLevelMap)
-      ? {
-          thinkingLevelMap: value.thinkingLevelMap as Record<
-            string,
-            string | null
-          >,
-        }
+    ...(isAiModelApi(value.api) ? { api: value.api } : {}),
+    ...(isThinkingLevelMap(value.thinkingLevelMap)
+      ? { thinkingLevelMap: value.thinkingLevelMap }
       : {}),
     ...(typeof value.label === "string" && value.label.trim()
       ? { label: value.label.trim() }
@@ -153,6 +160,9 @@ function readInjectedModelOptions(): AiModelOptionsConfig | null {
     ...(typeof config.defaultModel === "string"
       ? { defaultModel: config.defaultModel }
       : {}),
+    ...(isStringRecord(config.replacements)
+      ? { replacements: config.replacements }
+      : {}),
     ...(Array.isArray(config.models)
       ? { models: config.models.map(readModelOption).filter((v) => v !== null) }
       : {}),
@@ -164,6 +174,10 @@ export function getAiModelOptions(): AiModelOption[] {
   return injected?.models && injected.models.length > 0
     ? injected.models
     : AI_CONFIG.models;
+}
+
+export function getAiModelReplacement(modelId: string): string | undefined {
+  return readInjectedModelOptions()?.replacements?.[modelId];
 }
 
 export function getDefaultAiModelId(): string {

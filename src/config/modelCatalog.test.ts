@@ -92,6 +92,34 @@ describe("deployment model catalog", () => {
     expect(getAiModelOptions().map((m) => m.id)).toEqual([model.id]);
   });
 
+  it("hands off the nearest mapped level when the preferred effort has no Pi level", async () => {
+    window.__TANGLE_AI_MODELS__ = { catalogUrl: "/api/example-models" };
+    const gappy = {
+      ...model,
+      reasoningEfforts: ["low", "medium", "high"],
+      thinkingLevelMap: { ...model.thinkingLevelMap, xhigh: null, max: null },
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            ...fixture,
+            defaults: { browser: gappy.id },
+            models: [gappy],
+          }),
+        ),
+      ),
+    );
+    await loadModelCatalog();
+    expect(
+      getStartingSessionThinkingDepth({
+        model: gappy.id,
+        reasoningEffortPreference: "medium",
+      }),
+    ).toBe("low");
+  });
+
   it("rejects failed and invalid catalogs without installing a partial list", async () => {
     window.__TANGLE_AI_MODELS__ = { catalogUrl: "/api/example-models" };
     vi.stubGlobal(
@@ -106,6 +134,18 @@ describe("deployment model catalog", () => {
         .fn()
         .mockResolvedValue(
           new Response(JSON.stringify({ ...fixture, schemaVersion: 2 })),
+        ),
+    );
+    await expect(loadModelCatalog()).rejects.toThrow();
+    expect(window.__TANGLE_AI_MODELS__.models).toBeUndefined();
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(
+            JSON.stringify({ ...fixture, replacements: { old: 42 } }),
+          ),
         ),
     );
     await expect(loadModelCatalog()).rejects.toThrow();

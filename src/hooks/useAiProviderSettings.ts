@@ -3,11 +3,16 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import {
   AI_CONFIG,
   getAiModelOptions,
+  getAiModelReplacement,
   getDefaultAiModelId,
   getEffectiveReasoningEffort,
   isAiReasoningEffort,
 } from "@/config/aiConfig";
-import { getModelCatalogUrl, loadModelCatalog } from "@/config/modelCatalog";
+import {
+  getModelCatalogUrl,
+  loadModelCatalog,
+  MODEL_CATALOG_EVENT,
+} from "@/config/modelCatalog";
 import { useBackend } from "@/providers/BackendProvider";
 import type { AiProviderConfig } from "@/types/aiProvider";
 import { getStorage } from "@/utils/typedStorage";
@@ -77,13 +82,7 @@ const REPLACED_MODEL_IDS = new Map([["gpt-6-sol", "gpt-6.1-sol"]]);
 
 function readModelId(record: Record<string, unknown>, key: string): string {
   const model = readTrimmedString(record, key);
-  return (
-    (typeof window !== "undefined"
-      ? window.__TANGLE_AI_MODELS__?.replacements?.[model]
-      : undefined) ??
-    REPLACED_MODEL_IDS.get(model) ??
-    model
-  );
+  return getAiModelReplacement(model) ?? REPLACED_MODEL_IDS.get(model) ?? model;
 }
 
 function readReasoningPreference(record: Record<string, unknown>) {
@@ -162,10 +161,10 @@ function subscribe(callback: () => void): () => void {
     }
   };
   window.addEventListener("storage", handler);
-  window.addEventListener("tangle:model-catalog", callback);
+  window.addEventListener(MODEL_CATALOG_EVENT, callback);
   return () => {
     window.removeEventListener("storage", handler);
-    window.removeEventListener("tangle:model-catalog", callback);
+    window.removeEventListener(MODEL_CATALOG_EVENT, callback);
   };
 }
 

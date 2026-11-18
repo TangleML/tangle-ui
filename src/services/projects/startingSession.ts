@@ -8,7 +8,7 @@ import {
   getEffectiveReasoningEffort,
   isAiReasoningEffort,
 } from "@/config/aiConfig";
-import type { AiProviderConfig } from "@/types/aiProvider";
+import type { AiModelOption, AiProviderConfig } from "@/types/aiProvider";
 import { HOURS } from "@/utils/constants";
 
 const PROMPT = "startingPrompt";
@@ -54,24 +54,32 @@ const asText = (value: unknown) =>
 const asThinkingLevel = (value: unknown) =>
   THINKING_LEVELS.find((level) => level === value);
 
+function selectedCatalogModel(
+  config: Pick<AiProviderConfig, "model" | "modelCapabilities">,
+): AiModelOption | undefined {
+  return (config.modelCapabilities ?? getAiModelOptions()).find(
+    (option) => option.id === config.model,
+  );
+}
+
 export function getStartingSessionThinkingDepth(
   config: Pick<
     AiProviderConfig,
     "model" | "reasoningEffortPreference" | "modelCapabilities"
   >,
 ): ThinkingLevel | undefined {
-  const selected = (config.modelCapabilities ?? getAiModelOptions()).find(
-    (m) => m.id === config.model,
-  ) as import("@/config/aiConfig").AiModelOption | undefined;
-  if (selected?.thinkingLevelMap) {
+  const thinkingLevelMap = selectedCatalogModel(config)?.thinkingLevelMap;
+  if (thinkingLevelMap) {
+    const reachableEfforts = THINKING_LEVELS.map(
+      (level) => thinkingLevelMap[level],
+    ).filter(isAiReasoningEffort);
     const effort = getEffectiveReasoningEffort(
       config.model,
       config.reasoningEffortPreference,
       config.modelCapabilities,
+      reachableEfforts,
     );
-    return THINKING_LEVELS.find(
-      (level) => selected.thinkingLevelMap?.[level] === effort,
-    );
+    return THINKING_LEVELS.find((level) => thinkingLevelMap[level] === effort);
   }
   const effort = getEffectiveReasoningEffort(
     config.model,
@@ -87,14 +95,9 @@ export function getStartingSessionThinkingDepth(
 export function getStartingSessionModel(
   config: Pick<AiProviderConfig, "model" | "modelCapabilities">,
 ): string | undefined {
-  const isCatalogModel = (config.modelCapabilities ?? getAiModelOptions()).some(
-    (option) => option.id === config.model,
-  );
-  if (!isCatalogModel) return undefined;
-  const selected = (config.modelCapabilities ?? getAiModelOptions()).find(
-    (m) => m.id === config.model,
-  ) as import("@/config/aiConfig").AiModelOption | undefined;
-  if (selected?.tangentModelId) return selected.tangentModelId;
+  const selected = selectedCatalogModel(config);
+  if (!selected) return undefined;
+  if (selected.tangentModelId) return selected.tangentModelId;
   const provider =
     getAiProviderConfig(config.model) === AI_CONFIG.providers.anthropic
       ? "anthropic"
