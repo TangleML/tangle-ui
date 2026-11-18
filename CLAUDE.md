@@ -24,3 +24,7 @@ Removing a comment that violates the above is always in scope for a change you a
 Project conventions live in `.claude/skills/` — start with `project-conventions`, plus
 `typescript-standards`, `react-patterns`, `ui-primitives`, `tangle-domain`, `tanstack-query`,
 `tanstack-router`, `vitest-testing`, `e2e-testing`, `accessibility`, and `open-source`.
+
+When preparing or updating pull request descriptions, use `pr-description`. For
+features spanning companion PRs in multiple repositories, also use
+`distributed-stacks` to document public-safe membership and dependencies.
