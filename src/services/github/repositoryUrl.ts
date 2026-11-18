@@ -2,7 +2,7 @@ import {
   createGitHubApiClient,
   type GitHubApiClient,
   GitHubApiError,
-} from "@/components/shared/GitHubLibrary/utils/githubApiClient";
+} from "./githubApiClient";
 
 const GITHUB_WEB_ORIGIN = "https://github.com";
 const DEFAULT_BRANCH_REF = "HEAD";
