@@ -160,8 +160,8 @@ export const CARD_ENTITIES: ProjectResourceEntity[] = ["document", "pipeline"];
 
 /**
  * The project's pipelines, repositories and documents as rows someone can
- * open, named as they are now. Shared by the Resources panel and the empty canvas so both list the
- * same things the same way.
+ * open, named as they are now. Shared by the project card and the empty
+ * canvas so both list the same things the same way.
  */
 export function useProjectResourceItems(projectId: string) {
   const query = useEveryProjectResource(projectId, CARD_ENTITIES);

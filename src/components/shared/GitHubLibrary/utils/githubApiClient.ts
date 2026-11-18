@@ -1,27 +1,42 @@
 const GITHUB_API_BASE = "https://api.github.com";
 const GITHUB_API_VERSION = "2022-11-28";
 
-/**
- * GitHub API error with additional context
- */
-export class GitHubApiError extends Error {
-  name = "GitHubApiError";
-  constructor(
-    message: string,
-    public statusCode?: number,
-    public endpoint?: string,
-    public originalError?: unknown,
-    public rateLimited = false,
-  ) {
-    super(message);
-  }
-}
-
 const isRateLimitResponse = (response: Response) =>
   response.status === 429 ||
   (response.status === 403 &&
     (response.headers.get("x-ratelimit-remaining") === "0" ||
       response.headers.has("retry-after")));
+
+interface GitHubApiErrorDetails {
+  statusCode?: number;
+  endpoint?: string;
+  originalError?: unknown;
+  rateLimited?: boolean;
+}
+
+export class GitHubApiError extends Error {
+  name = "GitHubApiError";
+  readonly statusCode: number | undefined;
+  readonly endpoint: string | undefined;
+  readonly originalError: unknown;
+  readonly rateLimited: boolean;
+
+  constructor(message: string, details: GitHubApiErrorDetails = {}) {
+    super(message);
+    this.statusCode = details.statusCode;
+    this.endpoint = details.endpoint;
+    this.originalError = details.originalError;
+    this.rateLimited = details.rateLimited ?? false;
+  }
+
+  static fromResponse(message: string, response: Response, endpoint: string) {
+    return new GitHubApiError(message, {
+      statusCode: response.status,
+      endpoint,
+      rateLimited: isRateLimitResponse(response),
+    });
+  }
+}
 
 const encodeRefPath = (ref: string) =>
   ref.split("/").map(encodeURIComponent).join("/");
@@ -85,10 +100,7 @@ interface GitHubApiConfig {
   apiVersion?: string;
 }
 
-/**
- * GitHub API Client class
- */
-class GitHubApiClient {
+export class GitHubApiClient {
   private readonly accessToken: string | undefined;
   private readonly apiBase: string;
   private readonly apiVersion: string;
@@ -145,13 +157,7 @@ class GitHubApiClient {
           // Ignore JSON parsing errors
         }
 
-        throw new GitHubApiError(
-          errorMessage,
-          response.status,
-          endpoint,
-          undefined,
-          isRateLimitResponse(response),
-        );
+        throw GitHubApiError.fromResponse(errorMessage, response, endpoint);
       }
 
       return await response.json();
@@ -162,9 +168,7 @@ class GitHubApiClient {
 
       throw new GitHubApiError(
         `Failed to fetch from GitHub API: ${error instanceof Error ? error.message : String(error)}`,
-        undefined,
-        endpoint,
-        error,
+        { endpoint, originalError: error },
       );
     }
   }

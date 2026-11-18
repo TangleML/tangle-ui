@@ -1,5 +1,6 @@
 import {
   createGitHubApiClient,
+  type GitHubApiClient,
   GitHubApiError,
 } from "@/components/shared/GitHubLibrary/utils/githubApiClient";
 
@@ -134,7 +135,7 @@ async function askGitHub<T>(lookup: Promise<T>): Promise<T> {
 }
 
 async function visibleRepository(
-  client: ReturnType<typeof createGitHubApiClient>,
+  client: GitHubApiClient,
   owner: string,
   repo: string,
 ) {
@@ -149,7 +150,7 @@ async function visibleRepository(
 }
 
 async function resolveRef(
-  client: ReturnType<typeof createGitHubApiClient>,
+  client: GitHubApiClient,
   fullName: string,
   defaultBranch: string,
   segments: string[],

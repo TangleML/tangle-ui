@@ -111,7 +111,10 @@ describe("AddResourceButton", () => {
   it("attaches a pipeline the project does not hold yet", async () => {
     await pickAPipeline([]);
 
-    expect(createResource).toHaveBeenCalledWith(PICKED_PIPELINE);
+    expect(createResource).toHaveBeenCalledWith(
+      PICKED_PIPELINE,
+      expect.anything(),
+    );
   });
 
   it("attaches nothing when the project already holds it", async () => {
@@ -127,7 +130,10 @@ describe("AddResourceButton", () => {
   it("attaches a different pipeline of the same name", async () => {
     await pickAPipeline([attachedRow("pipeline://id/file-2")]);
 
-    expect(createResource).toHaveBeenCalledWith(PICKED_PIPELINE);
+    expect(createResource).toHaveBeenCalledWith(
+      PICKED_PIPELINE,
+      expect.anything(),
+    );
   });
 
   it("recognises a pipeline attached under its name, before it had an id", async () => {
@@ -155,7 +161,10 @@ describe("AddResourceButton", () => {
       PICKED_SAVED_PIPELINE,
     );
 
-    expect(createResource).toHaveBeenCalledWith(PICKED_SAVED_PIPELINE);
+    expect(createResource).toHaveBeenCalledWith(
+      PICKED_SAVED_PIPELINE,
+      expect.anything(),
+    );
   });
 });
 

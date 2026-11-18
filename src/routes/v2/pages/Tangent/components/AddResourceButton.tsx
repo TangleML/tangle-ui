@@ -8,10 +8,7 @@ import { convertCancelErrorTo } from "@/providers/DialogProvider/utils";
 import { AddDocumentDialog } from "@/routes/v2/pages/Tangent/components/AddDocumentDialog";
 import { AddPipelineDialog } from "@/routes/v2/pages/Tangent/components/AddPipelineDialog";
 import { AddPipelineRunDialog } from "@/routes/v2/pages/Tangent/components/AddPipelineRunDialog";
-import {
-  LinkRepositoryDialog,
-  type LinkRepositoryDialogProps,
-} from "@/routes/v2/pages/Tangent/components/LinkRepositoryDialog";
+import { LinkRepositoryDialog } from "@/routes/v2/pages/Tangent/components/LinkRepositoryDialog";
 import type { LocalPipelinePointer } from "@/services/localPipelines/types";
 import { localPipelinePointerOf } from "@/services/projects/resourceDescriptor";
 import type {
@@ -49,7 +46,11 @@ const ADDABLE: Record<AddableKind, { label: string; trackingId: string }> = {
   },
 };
 
-type ResourceDialogComponent = DialogConfig<CreateResourceInput>["component"];
+interface ResourceDialogOptions<TProps> {
+  props?: TProps;
+  size?: DialogConfig<CreateResourceInput>["size"];
+  onSuccess?: () => void;
+}
 
 function identityOf(metadata: Record<string, unknown> | null | undefined) {
   const identity = metadata?.identity;
@@ -107,13 +108,14 @@ export function AddResourceButton({
   const { mutate: createResource, isPending } =
     useCreateProjectResource(projectId);
 
-  async function openResourceDialog(
-    component: ResourceDialogComponent,
+  async function openResourceDialog<TProps = {}>(
+    component: DialogConfig<CreateResourceInput, TProps>["component"],
     routeKey: string,
-    size: DialogConfig<CreateResourceInput>["size"] = "full",
+    { props, size = "full", onSuccess }: ResourceDialogOptions<TProps> = {},
   ) {
-    const result = await open<CreateResourceInput>({
+    const result = await open<CreateResourceInput, TProps>({
       component,
+      props,
       routeKey,
       size,
     }).catch(convertCancelErrorTo(undefined));
@@ -125,7 +127,7 @@ export function AddResourceButton({
       return;
     }
 
-    createResource(result);
+    createResource(result, { onSuccess });
   }
 
   function handleAddPipeline() {
@@ -139,20 +141,13 @@ export function AddResourceButton({
   // The pipeline and run pickers are browsers and want the whole screen; a
   // document editor wants width, but lines that span a wide monitor read badly.
   function handleAddDocument() {
-    void openResourceDialog(AddDocumentDialog, "add-document", "xl");
+    void openResourceDialog(AddDocumentDialog, "add-document", { size: "xl" });
   }
 
-  async function handleLinkRepository() {
-    const result = await open<CreateResourceInput, LinkRepositoryDialogProps>({
-      component: LinkRepositoryDialog,
+  function handleLinkRepository() {
+    void openResourceDialog(LinkRepositoryDialog, "link-repository", {
       props: { resources },
-      routeKey: "link-repository",
       size: "md",
-    }).catch(convertCancelErrorTo(undefined));
-
-    if (!result) return;
-
-    createResource(result, {
       onSuccess: () => track("projects.link_repository_completed"),
     });
   }
@@ -161,7 +156,7 @@ export function AddResourceButton({
     pipeline: handleAddPipeline,
     run: handleAddPipelineRun,
     document: handleAddDocument,
-    repository: () => void handleLinkRepository(),
+    repository: handleLinkRepository,
   };
   const { label, trackingId } = ADDABLE[kind];
 
