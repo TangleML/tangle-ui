@@ -24,6 +24,29 @@
 
 <!-- Link to any related issues using the format #<issue-number> -->
 
+<!--
+Optional: for a shared feature spanning PRs in multiple repositories, uncomment
+and fill in the section below. Use public companion links by default. If private
+PR links or confidential context are needed, put the full declaration in an
+appropriately access-controlled private companion PR, never in this public PR.
+Here, list only verified public companions or omit the section. A private repo
+is not automatically permission to disclose other private repositories' details.
+Keep ordinary context/follow-up links in Related Issue and Pull requests.
+
+## Distributed Stack
+
+Feature: Short public-safe name for the shared feature
+
+### Coordinate with
+- https://github.com/OWNER/REPO/pull/123
+
+### Depends on
+- https://github.com/OWNER/BACKEND-REPO/pull/456
+
+Omit Depends on unless this PR requires the referenced PR first.
+The current PR is included automatically; do not invent URLs or dependencies.
+-->
+
 ## Type of Change
 
 <!-- Please delete options that are not relevant -->
