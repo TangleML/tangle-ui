@@ -18,6 +18,7 @@ import { ASSET_LIMIT } from "@/routes/v2/pages/Tangent/services/chatCommandResul
 import {
   type ProjectCardItem,
   projectCardLists,
+  type ProjectCardRepository,
   type ProjectCardRun,
 } from "@/routes/v2/pages/Tangent/services/projectCardEntries";
 import { fileIcon } from "@/routes/v2/pages/Tangent/services/projectFiles";
@@ -29,7 +30,7 @@ import { containsSearchTerm } from "@/utils/searchUtils";
 import { tracking } from "@/utils/tracking";
 import { getStorage } from "@/utils/typedStorage";
 
-import { AddResourceButton } from "./AddResourceButton";
+import { type AddableKind, AddResourceButton } from "./AddResourceButton";
 import { RunListItem } from "./RunListItem";
 import { SearchField } from "./SearchField";
 
@@ -56,12 +57,12 @@ const matching = (query: string, ...texts: string[]) =>
 
 /**
  * What the project holds, in the order someone looks for it: reports (the
- * files pinned as ready to share), its latest runs, its pipelines, and its
- * documents. Each shows its newest few and the rest on "Show all", which is
- * remembered per project; reports leave the rest to "All files", where every
- * file the chats made waits, with its own search, to be pinned or unpinned.
- * One search filters the card, showing every match, and a section with
- * nothing to show drops out.
+ * files pinned as ready to share), its latest runs, its pipelines, the
+ * repositories it links, and its documents. Each shows its newest few and the
+ * rest on "Show all", which is remembered per project; reports leave the rest
+ * to "All files", where every file the chats made waits, with its own search,
+ * to be pinned or unpinned. One search filters the card, showing every match,
+ * and a section with nothing to show drops out.
  */
 export const ProjectCardContent = observer(function ProjectCardContent() {
   // The card stays mounted when another project is opened in place; its
@@ -106,6 +107,7 @@ const ProjectCardBody = observer(function ProjectCardBody() {
     archived,
   });
   const pipelines = split(lists.pipelines);
+  const repositories = split(lists.repositories);
   const documents = split(lists.documents);
   const runs = split(lists.runs);
   const fileMatches = ({ title, path }: ProjectFile) => matches(title, path);
@@ -200,7 +202,28 @@ const ProjectCardBody = observer(function ProjectCardBody() {
     );
   }
 
-  const add = (kind: "pipeline" | "run" | "document") => (
+  function renderRepository(item: ProjectCardRepository) {
+    const added = ago(item.addedAt);
+    const opening =
+      item.repository.url === undefined
+        ? { disabled: true as const }
+        : { href: item.repository.url };
+    return (
+      <ListItem
+        key={item.id}
+        icon={item.icon}
+        title={item.name}
+        subtitle={added && `Added ${added}`}
+        {...opening}
+        tracking={tracking("projects.open_repository", {
+          surface: "project_card",
+        })}
+        actions={[archiveAction(item.key, item.name)]}
+      />
+    );
+  }
+
+  const add = (kind: AddableKind) => (
     <AddResourceButton
       projectId={store.projectId}
       resources={summaries}
@@ -247,6 +270,10 @@ const ProjectCardBody = observer(function ProjectCardBody() {
   const archivedSections: Section[] = [
     { title: "Runs", rows: runs.archived.map(renderRun) },
     { title: "Pipelines", rows: pipelines.archived.map(renderAttached) },
+    {
+      title: "Repositories",
+      rows: repositories.archived.map(renderRepository),
+    },
     { title: "Documents", rows: documents.archived.map(renderAttached) },
   ].filter(({ rows }) => rows.length > 0);
   const archivedCount = archivedSections.reduce(
@@ -347,6 +374,20 @@ const ProjectCardBody = observer(function ProjectCardBody() {
         [resourceItems],
         "this project's pipelines",
         "No pipelines yet",
+      ),
+      shownWhenEmpty: true,
+    },
+    {
+      title: "Repositories",
+      rows: repositories.active
+        .filter(({ name }) => matches(name))
+        .map(renderRepository),
+      overflow: overflowUnlessSearching("show-all"),
+      action: add("repository"),
+      empty: emptyNote(
+        [resourceItems],
+        "this project's repositories",
+        "No repositories linked yet",
       ),
       shownWhenEmpty: true,
     },

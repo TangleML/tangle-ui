@@ -1,12 +1,17 @@
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import useToastNotification from "@/hooks/useToastNotification";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useDialog } from "@/providers/DialogProvider/hooks/useDialog";
 import type { DialogConfig } from "@/providers/DialogProvider/types";
 import { convertCancelErrorTo } from "@/providers/DialogProvider/utils";
 import { AddDocumentDialog } from "@/routes/v2/pages/Tangent/components/AddDocumentDialog";
 import { AddPipelineDialog } from "@/routes/v2/pages/Tangent/components/AddPipelineDialog";
 import { AddPipelineRunDialog } from "@/routes/v2/pages/Tangent/components/AddPipelineRunDialog";
+import {
+  LinkRepositoryDialog,
+  type LinkRepositoryDialogProps,
+} from "@/routes/v2/pages/Tangent/components/LinkRepositoryDialog";
 import type { LocalPipelinePointer } from "@/services/localPipelines/types";
 import { localPipelinePointerOf } from "@/services/projects/resourceDescriptor";
 import type {
@@ -16,7 +21,7 @@ import type {
 import { useCreateProjectResource } from "@/services/projects/useProjectResources";
 import { tracking } from "@/utils/tracking";
 
-type AddableKind = "pipeline" | "run" | "document";
+export type AddableKind = "pipeline" | "run" | "document" | "repository";
 
 interface AddResourceButtonProps {
   projectId: string;
@@ -37,6 +42,10 @@ const ADDABLE: Record<AddableKind, { label: string; trackingId: string }> = {
   document: {
     label: "Add a document",
     trackingId: "projects.add_document_open",
+  },
+  repository: {
+    label: "Link a repository",
+    trackingId: "projects.link_repository_open",
   },
 };
 
@@ -94,6 +103,7 @@ export function AddResourceButton({
 }: AddResourceButtonProps) {
   const { open } = useDialog();
   const notify = useToastNotification();
+  const { track } = useAnalytics();
   const { mutate: createResource, isPending } =
     useCreateProjectResource(projectId);
 
@@ -132,10 +142,26 @@ export function AddResourceButton({
     void openResourceDialog(AddDocumentDialog, "add-document", "xl");
   }
 
+  async function handleLinkRepository() {
+    const result = await open<CreateResourceInput, LinkRepositoryDialogProps>({
+      component: LinkRepositoryDialog,
+      props: { resources },
+      routeKey: "link-repository",
+      size: "md",
+    }).catch(convertCancelErrorTo(undefined));
+
+    if (!result) return;
+
+    createResource(result, {
+      onSuccess: () => track("projects.link_repository_completed"),
+    });
+  }
+
   const add: Record<AddableKind, () => void> = {
     pipeline: handleAddPipeline,
     run: handleAddPipelineRun,
     document: handleAddDocument,
+    repository: () => void handleLinkRepository(),
   };
   const { label, trackingId } = ADDABLE[kind];
 
