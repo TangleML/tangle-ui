@@ -23,6 +23,9 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80",
         ghost:
           "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
+        // Ghost that recedes until hovered, for the small controls beside a list.
+        subtle:
+          "text-muted-foreground hover:bg-accent hover:text-foreground dark:hover:bg-accent/50",
         link: "text-primary underline-offset-4 hover:underline",
         "link-info": "text-info underline decoration-dotted",
         nav: "bg-stone-700 text-white text-xs font-semibold hover:bg-stone-600 hover:text-white",
@@ -35,6 +38,11 @@ const buttonVariants = cva(
         sm: "h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5",
         lg: "h-10 rounded-md px-6 has-[>svg]:px-4",
         icon: "size-9",
+        "icon-md": "size-8",
+        "icon-sm": "size-7",
+        "icon-xs": "size-6",
+        // A list's own row of text, such as "Show more".
+        row: "h-auto px-2 py-1.5 font-normal",
         min: "h-fit w-fit p-1 rounded-sm",
       },
       shape: {

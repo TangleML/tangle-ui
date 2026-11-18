@@ -11,6 +11,7 @@ import {
   getExecutionStatusLabel,
   getOverallExecutionStatusFromStats,
   isExecutionComplete,
+  isFailedStatus,
 } from "@/utils/executionStatus";
 
 type ChildExecutionStatusStats =
@@ -268,5 +269,16 @@ describe("buildTaskExecutionStatusMap()", () => {
 
   test("omits every task when the run has no state yet", () => {
     expect(buildTaskExecutionStatusMap(details({ train: "e1" })).size).toBe(0);
+  });
+});
+
+describe("isFailedStatus()", () => {
+  test("counts failures and errors, not a cancelled or skipped run", () => {
+    expect(isFailedStatus("FAILED")).toBe(true);
+    expect(isFailedStatus("SYSTEM_ERROR")).toBe(true);
+    expect(isFailedStatus("UPSTREAM_FAILED_OR_SKIPPED")).toBe(true);
+    expect(isFailedStatus("CANCELLED")).toBe(false);
+    expect(isFailedStatus("SKIPPED")).toBe(false);
+    expect(isFailedStatus(undefined)).toBe(false);
   });
 });

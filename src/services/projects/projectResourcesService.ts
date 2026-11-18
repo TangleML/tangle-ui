@@ -8,13 +8,46 @@ import {
 
 import { ProjectResourcesApiError } from "./errors";
 import { mapProjectResource, mapProjectResourceSummary } from "./mappers";
+import { MAX_PAGE_SIZE } from "./queryDefaults";
 import type {
   CreateResourceInput,
   ListProjectResourcesParams,
   ProjectResource,
+  ProjectResourceEntity,
   ProjectResourcePage,
+  ProjectResourceSummary,
   UpdateResourceInput,
 } from "./types";
+
+/** Every page of {@link listProjectResources}, for a list that must be whole. */
+export async function listEveryProjectResource(
+  projectId: string,
+  entity: ProjectResourceEntity[],
+): Promise<ProjectResourceSummary[]> {
+  const items: ProjectResourceSummary[] = [];
+  const followedTokens = new Set<string>();
+  let pageToken: string | undefined;
+  do {
+    const page = await listProjectResources(projectId, {
+      entity,
+      pageSize: MAX_PAGE_SIZE,
+      pageToken,
+    });
+    items.push(...page.items);
+    pageToken = page.nextPageToken ?? undefined;
+    if (pageToken) {
+      // A token handed out twice would have this ask for the same pages
+      // forever, and the list has to be whole, so it can't just stop there.
+      if (followedTokens.has(pageToken)) {
+        throw new Error(
+          `The resources of project ${projectId} can't be listed in full: the list repeated a page.`,
+        );
+      }
+      followedTokens.add(pageToken);
+    }
+  } while (pageToken);
+  return items;
+}
 
 export async function listProjectResources(
   projectId: string,

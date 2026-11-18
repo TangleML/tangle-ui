@@ -1,16 +1,13 @@
-import { Chat } from "@tangent/embed-react";
+import {
+  Chat,
+  type EmbedAgent,
+  type EmbedCommand,
+  type EmbedReference,
+} from "@tangent/embed-react";
 import type { ReactNode } from "react";
 
 import { Icon } from "@/components/ui/icon";
-import { InlineStack } from "@/components/ui/layout";
-import {
-  SCROLLING_TAB_STRIP,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import { cn } from "@/lib/utils";
+import { Tabs, TabsContent, TabsTrigger, TabStrip } from "@/components/ui/tabs";
 import { CloseableTabTrigger } from "@/routes/v2/pages/Tangent/components/CloseableTabTrigger";
 import {
   type AgentTab,
@@ -26,14 +23,19 @@ interface TangentChatPaneProps {
   activeTab: string;
   onTabChange: (value: string) => void;
   onCloseTab: (id: string) => void;
+  onOpenAgent?: (agent: EmbedAgent) => void;
+  onRemoveAgent?: (id: string) => void;
+  references?: EmbedReference[];
+  commands?: EmbedCommand[];
   onOpenArtifact?: (url: string, title: string) => void;
   onSendPrompt?: (content: string) => void;
   onError?: (message: string) => void;
+  onResourcesChange?: () => void;
   headerAction?: ReactNode;
 }
 
 /**
- * The tabbed Tangent chat surface: a Prime "Chat" tab plus one tab per opened
+ * The tabbed Tangent chat surface: a "Prime" tab plus one tab per opened
  * sub-agent. Shared by the editor's docked Tangent window and the Tangent
  * Shell project workspace so their chat behavior stays in sync.
  */
@@ -43,9 +45,14 @@ export function TangentChatPane({
   activeTab,
   onTabChange,
   onCloseTab,
+  onOpenAgent,
+  onRemoveAgent,
+  references,
+  commands,
   onOpenArtifact,
   onSendPrompt,
   onError,
+  onResourcesChange,
   headerAction,
 }: TangentChatPaneProps) {
   return (
@@ -53,30 +60,22 @@ export function TangentChatPane({
       <Tabs
         value={activeTab}
         onValueChange={onTabChange}
-        className="flex h-full min-h-0 flex-col gap-1"
+        className="flex h-full min-h-0 flex-col gap-0"
       >
-        <InlineStack
-          gap="2"
-          align="space-between"
-          blockAlign="center"
-          className="w-full shrink-0"
-        >
-          <TabsList className={cn("min-w-0 max-w-full", SCROLLING_TAB_STRIP)}>
-            <TabsTrigger value={CHAT_TAB_VALUE}>
-              <Icon name="MessageSquare" size="xs" />
-              Chat
-            </TabsTrigger>
-            {tabs.map((tab) => (
-              <CloseableTabTrigger
-                key={tab.id}
-                value={tab.id}
-                title={tab.title}
-                onClose={() => onCloseTab(tab.id)}
-              />
-            ))}
-          </TabsList>
-          {headerAction}
-        </InlineStack>
+        <TabStrip trailing={headerAction}>
+          <TabsTrigger value={CHAT_TAB_VALUE}>
+            <Icon name="MessageSquare" size="xs" />
+            Prime
+          </TabsTrigger>
+          {tabs.map((tab) => (
+            <CloseableTabTrigger
+              key={tab.id}
+              value={tab.id}
+              title={tab.title}
+              onClose={() => onCloseTab(tab.id)}
+            />
+          ))}
+        </TabStrip>
         <TabsContent
           value={CHAT_TAB_VALUE}
           forceMount
@@ -87,9 +86,16 @@ export function TangentChatPane({
             autoFocus
             className="h-full min-h-0"
             style={{ height: "100%" }}
+            onOpenAgent={onOpenAgent}
+            onRemoveAgent={onRemoveAgent}
+            references={references}
+            commands={commands}
             onOpenArtifact={onOpenArtifact}
             onSendPrompt={onSendPrompt}
             onError={onError}
+            // Every chat of a session reports the same changes, so only
+            // this one, which is always mounted, is listened to.
+            onResourcesChange={onResourcesChange}
           />
         </TabsContent>
         {tabs.map((tab) => (
@@ -104,6 +110,9 @@ export function TangentChatPane({
               agentId={tab.id}
               className="h-full min-h-0"
               style={{ height: "100%" }}
+              onOpenAgent={onOpenAgent}
+              onRemoveAgent={onRemoveAgent}
+              references={references}
               onOpenArtifact={onOpenArtifact}
               onSendPrompt={onSendPrompt}
               onError={onError}

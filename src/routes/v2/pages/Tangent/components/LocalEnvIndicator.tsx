@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { observer } from "mobx-react-lite";
 
+import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,19 +44,75 @@ function hostLabel(environment: TangentEnvironment): string {
     : environment.environmentId.slice(separator + 1);
 }
 
+function connectedEnvironmentsSummary(
+  environments: TangentEnvironment[],
+): string {
+  const [only] = environments;
+  return environments.length === 1
+    ? environmentLabel(only)
+    : `${environments.length} windows`;
+}
+
 function environmentLabel(environment: TangentEnvironment): string {
   return environment.metadata?.windowName ?? hostLabel(environment);
 }
 
-export const LocalEnvIndicator = observer(function LocalEnvIndicator() {
-  const store = useTangentProject();
-  const { baseUrl } = useTangentBaseUrl(store.projectId);
-  const { sessions } = useProjectSessions(store.projectId);
-  const { data: project } = useProject(store.projectId);
-  const { localEnvironments, isLocalEnvConnected } = useProjectLocalEnv(
+export interface LocalEnv {
+  baseUrl: string | null;
+  localEnvironments: TangentEnvironment[];
+  isLocalEnvConnected: boolean;
+}
+
+// Each read holds a socket of its own open to Tangent, so whoever shows the
+// plug and the indicator reads once and hands the result to both.
+export function useLocalEnv(projectId: string): LocalEnv {
+  const { baseUrl } = useTangentBaseUrl(projectId);
+  const { sessions } = useProjectSessions(projectId);
+  const localEnv = useProjectLocalEnv(
     baseUrl,
     sessions.map((session) => session.sessionId),
   );
+  return { baseUrl, ...localEnv };
+}
+
+export const LocalEnvStatus = observer(function LocalEnvStatus({
+  onOpen,
+  localEnv,
+}: {
+  onOpen: () => void;
+  localEnv: LocalEnv;
+}) {
+  const { localEnvironments, isLocalEnvConnected } = localEnv;
+
+  if (!isLocalEnvConnected) return null;
+
+  const label = `Editor connected · ${connectedEnvironmentsSummary(localEnvironments)}`;
+
+  return (
+    <TooltipButton
+      tooltip={label}
+      tooltipSide="bottom"
+      tooltipAlign="end"
+      aria-label={label}
+      variant="ghost"
+      size="icon"
+      className="size-7 text-success hover:text-success"
+      onClick={onOpen}
+      {...tracking("projects.local_env_status.open")}
+    >
+      <Icon name="Plug" size="sm" />
+    </TooltipButton>
+  );
+});
+
+export const LocalEnvIndicator = observer(function LocalEnvIndicator({
+  localEnv,
+}: {
+  localEnv: LocalEnv;
+}) {
+  const store = useTangentProject();
+  const { data: project } = useProject(store.projectId);
+  const { baseUrl, localEnvironments, isLocalEnvConnected } = localEnv;
 
   if (!baseUrl) return null;
 
@@ -84,11 +141,7 @@ function LocalEnvConnectedBadge({
 }: {
   environments: TangentEnvironment[];
 }) {
-  const [single] = environments;
-  const label =
-    environments.length === 1
-      ? `Local env · ${environmentLabel(single)}`
-      : `Local env (${environments.length})`;
+  const label = `Local env · ${connectedEnvironmentsSummary(environments)}`;
 
   return (
     <Popover>
@@ -180,11 +233,10 @@ function ConnectEditorPopover({
       <PopoverTrigger asChild {...tracking("projects.connect_editor")}>
         {isConnected ? (
           <Button
-            variant="ghost"
-            size="icon"
+            variant="subtle"
+            size="icon-sm"
             aria-label="Connect another editor window"
             title="Connect another editor window"
-            className="size-7 shrink-0 text-muted-foreground hover:text-foreground"
           >
             <Icon name="Plug" size="sm" />
           </Button>

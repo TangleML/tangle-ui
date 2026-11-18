@@ -46,9 +46,77 @@ export class WindowStoreImpl implements WindowStoreRef {
     },
   };
   @observable accessor enabledDockSides: Set<"left" | "right"> = new Set();
+  /** Sides whose dock is a popover behind a button rather than a column. */
+  @observable accessor popoverDockSides: Set<"left" | "right"> = new Set();
+  /**
+   * The button each popover dock shows once it's on screen. Kept with the
+   * store, so it is a drop target for this store's windows only and not for
+   * those of a pipeline or run embedded in the page with a store of its own.
+   * Plain, since a ref sets it while React commits.
+   */
+  readonly dockTargetElements = new Map<"left" | "right", HTMLElement>();
+  @observable accessor isDraggingWindow = false;
+  /** The popover dock whose button a dragged window would drop on. */
+  @observable accessor dropTargetSide: "left" | "right" | null = null;
+  /** The side whose dock is open as a popover, if any. */
+  @observable accessor openDockPopoverSide: "left" | "right" | null = null;
 
   constructor() {
     makeObservable(this);
+  }
+
+  // -- Dragging --
+
+  /** A dragged window needs the page behind an open dock popover. */
+  @action beginWindowDrag(): void {
+    this.isDraggingWindow = true;
+    this.openDockPopoverSide = null;
+  }
+
+  @action setDropTargetSide(side: "left" | "right" | null): void {
+    this.dropTargetSide = side;
+  }
+
+  @action endWindowDrag(): void {
+    this.isDraggingWindow = false;
+    this.dropTargetSide = null;
+  }
+
+  // -- Dock popovers --
+
+  @action enablePopoverDock(side: "left" | "right"): void {
+    this.enableDockSide(side);
+    this.popoverDockSides = new Set([...this.popoverDockSides, side]);
+  }
+
+  @action disablePopoverDock(side: "left" | "right"): void {
+    this.disableDockSide(side);
+    const next = new Set(this.popoverDockSides);
+    next.delete(side);
+    this.popoverDockSides = next;
+  }
+
+  setDockTargetElement(
+    side: "left" | "right",
+    element: HTMLElement | null,
+  ): void {
+    if (element) {
+      this.dockTargetElements.set(side, element);
+    } else {
+      this.dockTargetElements.delete(side);
+    }
+  }
+
+  @action setDockPopoverOpen(side: "left" | "right", open: boolean): void {
+    if (open) {
+      this.openDockPopoverSide = side;
+    } else if (this.openDockPopoverSide === side) {
+      this.openDockPopoverSide = null;
+    }
+  }
+
+  isDockPopoverOpen(side: "left" | "right"): boolean {
+    return this.openDockPopoverSide === side;
   }
 
   private calculateNewPosition(): Position {

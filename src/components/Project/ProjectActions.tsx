@@ -11,17 +11,9 @@ import { useShareProjectAction } from "./useShareProjectAction";
 
 interface ProjectActionsProps {
   project: Project;
-  showRename?: boolean;
 }
 
-/**
- * Tangent renames from its own header, so it asks for the list without that
- * entry rather than offering the project two ways to be renamed.
- */
-export function ProjectActions({
-  project,
-  showRename = true,
-}: ProjectActionsProps) {
+export function ProjectActions({ project }: ProjectActionsProps) {
   const { confirmAndDelete, isDeleting, confirmation } = useDeleteProjectAction(
     project,
     { navigateAfterDelete: true },
@@ -31,18 +23,16 @@ export function ProjectActions({
 
   return (
     <BlockStack gap="1">
-      {showRename && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full justify-start"
-          onClick={() => void rename()}
-          {...tracking("projects.rename_project_open")}
-        >
-          <Icon name="Pencil" size="sm" />
-          Rename project
-        </Button>
-      )}
+      <Button
+        variant="ghost"
+        size="sm"
+        className="w-full justify-start"
+        onClick={() => void rename()}
+        {...tracking("projects.rename_project_open")}
+      >
+        <Icon name="Pencil" size="sm" />
+        Rename project
+      </Button>
       <Button
         variant="ghost"
         size="sm"

@@ -25,6 +25,7 @@ import type {
   UpdateProjectInput,
 } from "./types";
 import { ProjectsQueryKeys, WorkspacesQueryKeys } from "./types";
+import { updateProjectMetadata } from "./updateProjectMetadata";
 
 export function useProjects(
   params: ListProjectsParams = {},
@@ -40,7 +41,16 @@ export function useProjects(
   });
 }
 
-export function useProject(id: string | undefined) {
+export function useProject(
+  id: string | undefined,
+  {
+    refetchOnMount = true,
+    refetchOnWindowFocus = projectQueryDefaults.refetchOnWindowFocus,
+  }: {
+    refetchOnMount?: boolean | "always";
+    refetchOnWindowFocus?: boolean | "always";
+  } = {},
+) {
   const { configured, available } = useBackend();
 
   return useQuery({
@@ -53,6 +63,8 @@ export function useProject(id: string | undefined) {
     },
     enabled: configured && available && Boolean(id),
     ...projectQueryDefaults,
+    refetchOnMount,
+    refetchOnWindowFocus,
   });
 }
 
@@ -109,6 +121,39 @@ export function useUpdateProject() {
     mutationFn: ({ id, input }: { id: string; input: UpdateProjectInput }) =>
       updateProject(id, input),
     onSuccess: (_project, { id }) => {
+      void queryClient.invalidateQueries({
+        queryKey: ProjectsQueryKeys.All(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ProjectsQueryKeys.Id(id),
+      });
+    },
+    onError: () => {
+      notify("Failed to update project", "error");
+    },
+  });
+}
+
+/**
+ * `useUpdateProject` for a change to the project's metadata, which has to be
+ * made to the metadata as it is now and in turn with the project's other
+ * metadata writes.
+ */
+export function useUpdateProjectMetadata() {
+  const queryClient = useQueryClient();
+  const notify = useToastNotification();
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      change,
+      name,
+    }: {
+      id: string;
+      change: Parameters<typeof updateProjectMetadata>[1];
+      name?: string;
+    }) => updateProjectMetadata(id, change, { name }),
+    onSuccess: (_update, { id }) => {
       void queryClient.invalidateQueries({
         queryKey: ProjectsQueryKeys.All(),
       });

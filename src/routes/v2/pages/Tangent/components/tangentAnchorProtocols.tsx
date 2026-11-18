@@ -2,55 +2,30 @@ import type {
   AnchorProtocolMap,
   AnchorProtocolProps,
 } from "@tangent/embed-react";
-import type { MouseEvent } from "react";
 
-import useToastNotification from "@/hooks/useToastNotification";
-import { getDefaultRunPath } from "@/routes/runRoutes";
-import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
+import { useOpenWorkareaTarget } from "@/routes/v2/pages/Tangent/hooks/useOpenWorkareaTarget";
 import { chatAnchorProtocols } from "@/routes/v2/shared/components/AiChat/components/chatAnchorProtocols";
 import { ChatEntityChip } from "@/routes/v2/shared/components/AiChat/components/ChatEntityChip";
 import { resourceMeta } from "@/services/projects/resourceMeta";
 import type { WorkareaTarget } from "@/services/projects/resourceTarget";
 import {
   idIdentity,
+  isRunOrExecutionId,
   isWorkareaTargetString,
-  parseIdentity,
   parseWorkareaTarget,
 } from "@/services/projects/resourceTarget";
-import { hasNewTabModifier } from "@/utils/dom";
-import { getErrorMessage } from "@/utils/string";
 
 function runTarget(path: string): WorkareaTarget | undefined {
   const candidate = `run://${path}`;
   if (isWorkareaTargetString(candidate)) return parseWorkareaTarget(candidate);
-  if (path === "" || path.includes("/")) return undefined;
+  if (!isRunOrExecutionId(path)) return undefined;
   return { type: "run", identity: idIdentity(path) };
 }
 
 function RunAnchor({ path, label }: AnchorProtocolProps) {
-  const store = useTangentProject();
-  const notify = useToastNotification();
+  const open = useOpenWorkareaTarget({ fromChat: true });
   const target = runTarget(path);
   const newTabHint = target ? "Cmd/Ctrl+click to open in a new tab" : undefined;
-
-  async function openRun() {
-    if (!target) return;
-    try {
-      await store.openWorkareaTarget(target, label);
-    } catch (error) {
-      notify(getErrorMessage(error), "error");
-    }
-  }
-
-  function handleClick(event: MouseEvent<HTMLButtonElement>) {
-    if (!target) return;
-    if (hasNewTabModifier(event)) {
-      const runId = parseIdentity(target.identity).value;
-      window.open(getDefaultRunPath(runId), "_blank");
-      return;
-    }
-    void openRun();
-  }
 
   return (
     <ChatEntityChip
@@ -58,7 +33,47 @@ function RunAnchor({ path, label }: AnchorProtocolProps) {
       label={label}
       title={newTabHint}
       disabled={!target}
-      onClick={handleClick}
+      onClick={(event) => {
+        if (target) void open(target, label, event);
+      }}
+    />
+  );
+}
+
+const PERCENT_ESCAPES = /(?:%[0-9a-f]{2})+/gi;
+
+// The chat draws agent messages and slash-command results as markdown, which
+// percent-encodes a link's address, so a name with a space arrives as `%20`;
+// a person's own message hands the address over as typed. Runs of escapes are
+// decoded one at a time, since a stray `%`, as in "50%off", makes decoding
+// the whole address at once fail.
+function decodedLinkAddress(href: string): string {
+  return href.replace(PERCENT_ESCAPES, (escapes) => {
+    try {
+      return decodeURIComponent(escapes);
+    } catch {
+      return escapes;
+    }
+  });
+}
+
+function WorkareaTargetAnchor({ href, protocol, label }: AnchorProtocolProps) {
+  const open = useOpenWorkareaTarget({ fromChat: true });
+  const address = decodedLinkAddress(href);
+  const target = isWorkareaTargetString(address)
+    ? parseWorkareaTarget(address)
+    : undefined;
+
+  return (
+    <ChatEntityChip
+      icon={
+        resourceMeta(protocol === "document" ? "document" : "pipeline").icon
+      }
+      label={label}
+      disabled={!target}
+      onClick={() => {
+        if (target) void open(target, label);
+      }}
     />
   );
 }
@@ -66,4 +81,6 @@ function RunAnchor({ path, label }: AnchorProtocolProps) {
 export const tangentAnchorProtocols: AnchorProtocolMap = {
   ...chatAnchorProtocols,
   run: RunAnchor,
+  pipeline: WorkareaTargetAnchor,
+  document: WorkareaTargetAnchor,
 };

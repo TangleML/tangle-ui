@@ -13,13 +13,15 @@ import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import { ComponentSpec, Input, Output, Task } from "@/models/componentSpec";
 import { sessionMemorySeed } from "@/routes/v2/pages/Tangent/services/sessionMemory";
 import { rootConfigSeed } from "@/routes/v2/pages/Tangent/services/sessionRunConfig";
-import type { WorkareaTarget } from "@/routes/v2/pages/Tangent/workarea/types";
+import type {
+  OpenTabs,
+  WorkareaTarget,
+} from "@/routes/v2/pages/Tangent/workarea/types";
 import type { SharedUIStore } from "@/routes/v2/shared/store/SharedStoreContext";
 import { idIdentity } from "@/services/projects/resourceTarget";
 
 import {
   CHAT_TAB_VALUE,
-  PRIME_AGENT_ID,
   TangentProjectStore,
   type TangentSessionIo,
 } from "./TangentProjectStore";
@@ -28,7 +30,7 @@ const SESSION_A = "session-a";
 const SESSION_B = "session-b";
 
 const prime: EmbedAgent = {
-  id: PRIME_AGENT_ID,
+  id: "prime",
   name: "Prime",
   kind: "prime",
   status: "active",
@@ -63,6 +65,9 @@ function run(id: string): WorkareaTarget {
   return { type: "run", identity: idIdentity(id) };
 }
 
+const TANGENT = "https://tangent.example/base";
+const CHAT_FILE = `${TANGENT}/api/sessions/chat-a/files/artifacts/a.html`;
+
 function artifact(url: string): WorkareaTarget {
   return { type: "artifact", identity: idIdentity(url) };
 }
@@ -73,6 +78,7 @@ function makeBridge(id: string): ToolBridgeApi {
 
 function activeStore(sessionId = SESSION_A): TangentProjectStore {
   const store = new TangentProjectStore("project-1");
+  store.setTangentBaseUrl(TANGENT);
   store.setDefaultSessionId(sessionId);
   return store;
 }
@@ -83,7 +89,6 @@ describe("TangentProjectStore chat tabs", () => {
 
     expect(store.chatTabs).toEqual([]);
     expect(store.chatActiveTab).toBe(CHAT_TAB_VALUE);
-    expect(store.selectedAgentId).toBe(PRIME_AGENT_ID);
   });
 
   it("focuses Chat and does not add a tab when Prime is opened", () => {
@@ -96,7 +101,6 @@ describe("TangentProjectStore chat tabs", () => {
       { id: researcher.id, title: researcher.name },
     ]);
     expect(store.chatActiveTab).toBe(CHAT_TAB_VALUE);
-    expect(store.selectedAgentId).toBe(PRIME_AGENT_ID);
   });
 
   it("adds a tab and focuses it when a sub-agent is opened", () => {
@@ -108,7 +112,6 @@ describe("TangentProjectStore chat tabs", () => {
       { id: researcher.id, title: researcher.name },
     ]);
     expect(store.chatActiveTab).toBe(researcher.id);
-    expect(store.selectedAgentId).toBe(researcher.id);
   });
 
   it("focuses an existing tab without duplicating it", () => {
@@ -133,7 +136,6 @@ describe("TangentProjectStore chat tabs", () => {
 
     expect(store.chatTabs).toEqual([]);
     expect(store.chatActiveTab).toBe(CHAT_TAB_VALUE);
-    expect(store.selectedAgentId).toBe(PRIME_AGENT_ID);
   });
 
   it("leaves the active tab unchanged when an inactive tab is closed", () => {
@@ -184,18 +186,38 @@ describe("TangentProjectStore chat tabs", () => {
 
     expect(store.chatTabs).toEqual([]);
     expect(store.chatActiveTab).toBe(CHAT_TAB_VALUE);
-    expect(store.selectedAgentId).toBe(PRIME_AGENT_ID);
   });
 });
 
 describe("TangentProjectStore workarea tabs", () => {
-  it("refuses to open a tab while no session is active", () => {
+  it("opens a tab while no session is active", () => {
     const store = new TangentProjectStore("project-1");
 
-    expect(() =>
-      store.openResolvedView({ title: "P1", target: pipeline("p1") }),
-    ).toThrow(/No active Tangent session/);
-    expect(store.workareaTabs).toEqual([]);
+    const tab = store.openResolvedView({ title: "P1", target: pipeline("p1") });
+
+    expect(store.workareaTabs).toEqual([tab]);
+    expect(store.activeWorkareaTabId).toBe(tab.id);
+  });
+
+  it("starts with the tabs it is given, having shown only the one in front", () => {
+    const tabs = [
+      { id: "t1", title: "P1", target: pipeline("p1") },
+      { id: "t2", title: "R1", target: run("r1") },
+    ];
+    const store = new TangentProjectStore("project-1", {
+      tabs,
+      activeId: "t2",
+    });
+
+    expect(store.workareaTabs).toEqual(tabs);
+    expect(store.activeWorkareaTabId).toBe("t2");
+    expect(store.hasShownTab("t2")).toBe(true);
+    expect(store.hasShownTab("t1")).toBe(false);
+
+    store.selectWorkareaTab("t1");
+
+    expect(store.hasShownTab("t1")).toBe(true);
+    expect(store.hasShownTab("t2")).toBe(true);
   });
 
   it("focuses an existing target instead of opening a duplicate", () => {
@@ -262,31 +284,29 @@ describe("TangentProjectStore workarea tabs", () => {
     expect(store.activeWorkareaTabId).toBe(p2.id);
   });
 
-  it("keeps each session's workarea independent and restores it on switch", () => {
+  it("keeps the project's tabs open as its chats change", () => {
     const store = activeStore(SESSION_A);
-
     const a = store.openResolvedView({ title: "P1", target: pipeline("p1") });
-    expect(store.workareaTabs.map((tab) => tab.id)).toEqual([a.id]);
 
     store.selectSession(SESSION_B);
-    expect(store.workareaTabs).toEqual([]);
-
-    const b = store.openResolvedView({ title: "P2", target: pipeline("p2") });
-    expect(store.workareaTabs.map((tab) => tab.id)).toEqual([b.id]);
-
-    store.selectSession(SESSION_A);
     expect(store.workareaTabs.map((tab) => tab.id)).toEqual([a.id]);
     expect(store.activeWorkareaTabId).toBe(a.id);
+
+    const b = store.openResolvedView({ title: "P2", target: pipeline("p2") });
+    store.selectSession(SESSION_A);
+
+    expect(store.workareaTabs.map((tab) => tab.id)).toEqual([a.id, b.id]);
+    expect(store.activeWorkareaTabId).toBe(b.id);
   });
 
-  it("drops a session's workarea and chat on dropSession", () => {
+  it("drops a session's chat on dropSession, and keeps the project's tabs", () => {
     const store = activeStore(SESSION_A);
-    store.openResolvedView({ title: "P1", target: pipeline("p1") });
+    const tab = store.openResolvedView({ title: "P1", target: pipeline("p1") });
     store.openAgent(researcher);
 
     store.dropSession(SESSION_A);
 
-    expect(store.workareaTabs).toEqual([]);
+    expect(store.workareaTabs).toEqual([tab]);
     expect(store.chatTabs).toEqual([]);
   });
 });
@@ -306,7 +326,7 @@ describe("TangentProjectStore.getActiveTabBridge", () => {
     const p1 = store.openResolvedView({ title: "P1", target: pipeline("p1") });
     const bridge = makeBridge("p1");
     store.registerTabBridge(p1.id, "pipeline", bridge);
-    store.openResolvedView({ title: "A", target: artifact("http://a") });
+    store.openResolvedView({ title: "A", target: artifact(CHAT_FILE) });
 
     expect(store.activeWorkareaTabId).not.toBe(p1.id);
     expect(store.getActiveTabBridge()).toBe(bridge);
@@ -329,12 +349,67 @@ describe("TangentProjectStore.getActiveTabBridge", () => {
     store.registerTabBridge(p1.id, "pipeline", bridgeP1);
     const p2 = store.openResolvedView({ title: "P2", target: pipeline("p2") });
     store.registerTabBridge(p2.id, "pipeline", makeBridge("p2"));
-    store.openResolvedView({ title: "A", target: artifact("http://a") });
+    store.openResolvedView({ title: "A", target: artifact(CHAT_FILE) });
 
     store.closeWorkareaTab(p2.id);
 
     expect(store.getActiveTabBridge()).toBe(bridgeP1);
   });
+
+  it("falls back to the pipeline a project came back with in front, not one never shown", () => {
+    const store = new TangentProjectStore("project-1", {
+      tabs: [
+        { id: "a", title: "A", target: pipeline("a") },
+        { id: "b", title: "B", target: pipeline("b") },
+        { id: "f", title: "F", target: artifact(CHAT_FILE) },
+      ],
+      activeId: "a",
+    });
+    const bridgeA = makeBridge("a");
+    store.registerTabBridge("a", "pipeline", bridgeA);
+
+    store.selectWorkareaTab("f");
+
+    expect(store.getActiveTabBridge()).toBe(bridgeA);
+  });
+
+  it.each<[string, (saved: OpenTabs) => TangentProjectStore]>([
+    [
+      "as the page opens",
+      (saved) => new TangentProjectStore("project-1", saved),
+    ],
+    [
+      "once it's known whose they are",
+      (saved) => {
+        const store = activeStore();
+        store.restoreOpenTabs(saved);
+        return store;
+      },
+    ],
+  ])(
+    "skips a pipeline that was never shown when the last editor closes, with tabs restored %s",
+    (_when, restore) => {
+      const store = restore({
+        tabs: [
+          { id: "a", title: "A", target: pipeline("a") },
+          { id: "c", title: "C", target: pipeline("c") },
+          { id: "b", title: "B", target: pipeline("b") },
+          { id: "f", title: "F", target: artifact(CHAT_FILE) },
+        ],
+        activeId: "f",
+      });
+      store.selectWorkareaTab("c");
+      const bridgeC = makeBridge("c");
+      store.registerTabBridge("c", "pipeline", bridgeC);
+      store.selectWorkareaTab("a");
+      store.registerTabBridge("a", "pipeline", makeBridge("a"));
+      store.selectWorkareaTab("f");
+
+      store.closeWorkareaTab("a");
+
+      expect(store.getActiveTabBridge()).toBe(bridgeC);
+    },
+  );
 });
 
 interface FakeSharedStore {
@@ -738,5 +813,145 @@ describe("TangentProjectStore.waitForTabEnvironment", () => {
     vi.advanceTimersByTime(1000);
 
     await expect(pending).resolves.toBeUndefined();
+  });
+});
+
+describe("TangentProjectStore session runs", () => {
+  it("notes a run down on the chat it was opened from", () => {
+    const store = activeStore();
+    const recordSessionRun = vi
+      .fn<NonNullable<TangentSessionIo["recordSessionRun"]>>()
+      .mockResolvedValue(undefined);
+    store.setSessionIo({ ...makeSessionIo(), recordSessionRun });
+
+    store.openResolvedView(
+      { title: "Nightly", target: run("r-1") },
+      { recordRunInSessionId: SESSION_A },
+    );
+    store.openResolvedView(
+      { title: "P1", target: pipeline("p1") },
+      { recordRunInSessionId: SESSION_A },
+    );
+
+    expect(recordSessionRun).toHaveBeenCalledTimes(1);
+    expect(recordSessionRun).toHaveBeenCalledWith(SESSION_A, "r-1", "Nightly");
+  });
+
+  it("leaves a run opened from outside a chat out of the open chat's runs", () => {
+    const store = activeStore();
+    const recordSessionRun = vi
+      .fn<NonNullable<TangentSessionIo["recordSessionRun"]>>()
+      .mockResolvedValue(undefined);
+    store.setSessionIo({ ...makeSessionIo(), recordSessionRun });
+
+    const tab = store.openResolvedView({
+      title: "Nightly",
+      target: run("r-1"),
+    });
+
+    expect(store.workareaTabs).toEqual([tab]);
+    expect(recordSessionRun).not.toHaveBeenCalled();
+  });
+
+  it("still opens the run when the chat can't note it down", async () => {
+    const store = activeStore();
+    store.setSessionIo({
+      ...makeSessionIo(),
+      recordSessionRun: vi.fn().mockRejectedValue(new Error("offline")),
+    });
+
+    const tab = store.openResolvedView({
+      title: "Nightly",
+      target: run("r-1"),
+    });
+
+    expect(store.workareaTabs).toEqual([tab]);
+    await Promise.resolve();
+  });
+});
+
+describe("TangentProjectStore file tabs", () => {
+  it("opens a file from one of this Tangent's chats", () => {
+    const store = activeStore();
+
+    const tab = store.openArtifactTab(CHAT_FILE, "Report");
+    const again = store.openResolvedView({
+      title: "Report",
+      target: artifact(CHAT_FILE),
+    });
+
+    expect(again.id).toBe(tab.id);
+    expect(store.workareaTabs.map(({ target }) => target)).toEqual([
+      artifact(CHAT_FILE),
+    ]);
+  });
+
+  it.each([
+    "https://evil.example/page.html",
+    "https://evil.example/api/sessions/chat-a/files/a.html",
+    "https://tangent.example.evil.example/base/api/sessions/chat-a/files/a.html",
+    "https://tangent.example@evil.example/base/api/sessions/chat-a/files/a.html",
+    "http://tangent.example/base/api/sessions/chat-a/files/a.html",
+    "https://tangent.example/api/sessions/chat-a/files/a.html",
+    "https://tangent.example/base/api/sessions/../../../elsewhere",
+    "https://tangent.example/base/api/sessionsX/chat-a/files/a.html",
+    "https://tangent.example/base/login?next=/api/sessions/",
+    "javascript:alert(1)",
+    "data:text/html,<script>alert(1)</script>",
+    "/base/api/sessions/chat-a/files/a.html",
+    "artifacts/a.html",
+  ])("refuses to open %s, which isn't this Tangent's", async (url) => {
+    const store = activeStore();
+
+    expect(() => store.openArtifactTab(url, "Report")).toThrow(
+      /Only a file from one of this Tangent's chats/,
+    );
+    await expect(
+      store.openWorkareaTarget(artifact(url), "Report"),
+    ).rejects.toThrow(/Only a file from one of this Tangent's chats/);
+    expect(store.workareaTabs).toEqual([]);
+  });
+
+  it("refuses any file until it knows which Tangent is this project's", () => {
+    const store = new TangentProjectStore("project-1");
+
+    expect(() => store.openArtifactTab(CHAT_FILE, "Report")).toThrow(
+      /Only a file/,
+    );
+  });
+
+  it("brings saved tabs back behind what was opened in the meantime", () => {
+    const store = activeStore();
+    const opened = store.openResolvedView({
+      title: "P1",
+      target: pipeline("p1"),
+    });
+
+    store.restoreOpenTabs({
+      tabs: [
+        { id: "saved-1", title: "P1 as saved", target: pipeline("p1") },
+        { id: "saved-2", title: "R1", target: run("r1") },
+      ],
+      activeId: "saved-2",
+    });
+
+    expect(store.workareaTabs.map(({ title }) => title)).toEqual(["R1", "P1"]);
+    expect(store.activeWorkareaTabId).toBe(opened.id);
+  });
+
+  it("puts the saved front tab in front when nothing else is open", () => {
+    const store = activeStore();
+
+    store.restoreOpenTabs({
+      tabs: [
+        { id: "saved-1", title: "P1", target: pipeline("p1") },
+        { id: "saved-2", title: "R1", target: run("r1") },
+      ],
+      activeId: "saved-1",
+    });
+
+    expect(store.activeWorkareaTabId).toBe("saved-1");
+    expect(store.hasShownTab("saved-1")).toBe(true);
+    expect(store.hasShownTab("saved-2")).toBe(false);
   });
 });

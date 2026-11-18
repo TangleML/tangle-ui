@@ -8,7 +8,10 @@ const openWorkareaTarget = vi.fn();
 const notify = vi.fn();
 
 vi.mock("@/routes/v2/pages/Tangent/context/TangentProjectContext", () => ({
-  useTangentProject: () => ({ openWorkareaTarget }),
+  useTangentProject: () => ({
+    openWorkareaTarget,
+    activeSessionId: "session-1",
+  }),
 }));
 
 vi.mock("@/hooks/useToastNotification", () => ({
@@ -39,13 +42,14 @@ describe("tangentAnchorProtocols run anchor", () => {
     vi.stubGlobal("open", vi.fn());
   });
 
-  it("opens the run in the workarea on a plain click", () => {
+  it("opens the run in the workarea on a plain click, adding it to this chat's runs", () => {
     render(<RunAnchor {...anchorProps()} />);
     fireEvent.click(screen.getByRole("button"));
 
     expect(openWorkareaTarget).toHaveBeenCalledWith(
       { type: "run", identity: "id/run_1" },
       "Training run",
+      { recordRunInSessionId: "session-1" },
     );
     expect(window.open).not.toHaveBeenCalled();
   });
@@ -76,8 +80,120 @@ describe("tangentAnchorProtocols run anchor", () => {
     expect(window.open).toHaveBeenCalledWith("/runs/run_2", "_blank");
   });
 
+  it.each(["id/../../users/me", "id/r-1?x=1", "..", "r 1", "r-1%2Fcancel"])(
+    "disables the chip for %s, which could not be a run's id",
+    (path) => {
+      render(<RunAnchor {...anchorProps({ href: `run://${path}`, path })} />);
+
+      expect(screen.getByRole("button")).toBeDisabled();
+    },
+  );
+
   it("disables the chip when the path is not a run", () => {
     render(<RunAnchor {...anchorProps({ path: "name/nope" })} />);
+
+    expect(screen.getByRole("button")).toBeDisabled();
+  });
+});
+
+describe("tangentAnchorProtocols pipeline and document anchors", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("opens a referenced pipeline in the workarea", () => {
+    const PipelineAnchor = tangentAnchorProtocols.pipeline;
+    render(
+      <PipelineAnchor
+        {...anchorProps({
+          href: "pipeline://id/p-1",
+          protocol: "pipeline",
+          path: "id/p-1",
+          label: "Churn model",
+        })}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button"));
+
+    expect(openWorkareaTarget).toHaveBeenCalledWith(
+      { type: "pipeline", identity: "id/p-1" },
+      "Churn model",
+      { recordRunInSessionId: "session-1" },
+    );
+  });
+
+  it("opens a referenced document in the workarea", () => {
+    const DocumentAnchor = tangentAnchorProtocols.document;
+    render(
+      <DocumentAnchor
+        {...anchorProps({
+          href: "document://id/d-1",
+          protocol: "document",
+          path: "id/d-1",
+          label: "Brief",
+        })}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button"));
+
+    expect(openWorkareaTarget).toHaveBeenCalledWith(
+      { type: "document", identity: "id/d-1" },
+      "Brief",
+      { recordRunInSessionId: "session-1" },
+    );
+  });
+
+  function openedPipeline(href: string) {
+    const PipelineAnchor = tangentAnchorProtocols.pipeline;
+    render(
+      <PipelineAnchor
+        {...anchorProps({
+          href,
+          protocol: "pipeline",
+          path: href.slice("pipeline://".length),
+          label: "Mine",
+        })}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button"));
+    return openWorkareaTarget.mock.calls[0]?.[0];
+  }
+
+  it.each([
+    ["Train model (copy)", "pipeline://name/Train%20model%20(copy)"],
+    ["Café ☃", "pipeline://name/Caf%C3%A9%20%E2%98%83"],
+    ["Top 5%", "pipeline://name/Top%205%25"],
+    ["50%off sale", "pipeline://name/50%off%20sale"],
+  ])(
+    "opens the pipeline named %s from the address the chat's markdown makes of it",
+    (name, href) => {
+      expect(openedPipeline(href)).toEqual({
+        type: "pipeline",
+        identity: `name/${name}`,
+      });
+    },
+  );
+
+  it.each(["Train model (copy)", "Café ☃", "Top 5%", "50%off sale"])(
+    "opens the pipeline named %s from its address as typed",
+    (name) => {
+      expect(openedPipeline(`pipeline://name/${name}`)).toEqual({
+        type: "pipeline",
+        identity: `name/${name}`,
+      });
+    },
+  );
+
+  it("can't open a link that isn't a workarea target", () => {
+    const PipelineAnchor = tangentAnchorProtocols.pipeline;
+    render(
+      <PipelineAnchor
+        {...anchorProps({
+          href: "pipeline://nowhere",
+          protocol: "pipeline",
+          path: "nowhere",
+          label: "Lost",
+        })}
+      />,
+    );
 
     expect(screen.getByRole("button")).toBeDisabled();
   });

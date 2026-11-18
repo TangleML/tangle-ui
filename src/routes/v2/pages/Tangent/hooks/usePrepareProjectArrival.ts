@@ -11,7 +11,6 @@ import {
   withoutTangentOpenSearch,
 } from "@/routes/tangentSearch";
 import type { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
-import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import { createAndAttachPipeline } from "@/services/projects/createAndAttachPipeline";
 import { nameFromPrompt } from "@/services/projects/nameFromPrompt";
@@ -19,7 +18,6 @@ import {
   pipelineFileTarget,
   remoteResourceTarget,
 } from "@/services/projects/pipelineResource";
-import { getProject } from "@/services/projects/projectsService";
 import { MAX_PAGE_SIZE } from "@/services/projects/queryDefaults";
 import {
   describeResource,
@@ -36,10 +34,11 @@ import {
   useCreateProjectResource,
   useProjectResources,
 } from "@/services/projects/useProjectResources";
-import { useProject, useUpdateProject } from "@/services/projects/useProjects";
+import {
+  useProject,
+  useUpdateProjectMetadata,
+} from "@/services/projects/useProjects";
 import { getErrorMessage } from "@/utils/string";
-
-import { PROJECT_DETAILS_WINDOW_ID } from "./tangentProjectWindowOrder";
 
 interface PrepareProjectArrivalOptions {
   projectId: string;
@@ -81,11 +80,13 @@ function oldestAttached(
  * project arrives session-less a second time. Reusing the pipeline or run
  * attached last time is what stops that adding a pipeline.
  *
- * The sequence is one mutation so `isIdle` guards all of it, and the pipeline
- * opens only after `startSession` resolves, because the workarea is keyed by
- * session and a tab opened before there is one is dropped. The ref guards what
- * `isIdle` cannot: StrictMode replays this effect inside one commit, where the
- * closure's `isIdle` has not yet seen the first `mutate`.
+ * The sequence is one mutation so `isPending` guards all of it, and the
+ * pipeline opens only after `startSession` resolves, so a session that fails
+ * to start leaves the project as it was. The ref holds the store it prepared,
+ * so moving to another project in place (a new store, same mount) arrives
+ * there too. It also guards what `isPending` cannot:
+ * StrictMode replays this effect inside one commit, where the closure's
+ * `isPending` has not yet seen the first `mutate`.
  */
 export function usePrepareProjectArrival(
   store: TangentProjectStore,
@@ -95,7 +96,6 @@ export function usePrepareProjectArrival(
   const search = useSearch({ strict: false });
   const navigate = useNavigate();
   const notify = useToastNotification();
-  const { windows } = useSharedStores();
   const { data: project, isFetching: isProjectFetching } =
     useProject(projectId);
   const { data: documents } = useProjectResources(projectId, {
@@ -103,9 +103,9 @@ export function usePrepareProjectArrival(
     pageSize: MAX_PAGE_SIZE,
   });
   const { mutateAsync: createResource } = useCreateProjectResource(projectId);
-  const { mutateAsync: updateProject } = useUpdateProject();
+  const { mutateAsync: updateProjectMetadata } = useUpdateProjectMetadata();
   const { isConfigured: isAiConfigured } = useAiProviderSettings();
-  const prepared = useRef(false);
+  const prepared = useRef<TangentProjectStore | null>(null);
 
   const linkAsksForSession = readTangentSessionParam(search)?.kind === "new";
   const waiting = readStartingSession(project?.metadata);
@@ -114,7 +114,7 @@ export function usePrepareProjectArrival(
   const isEmpty = sessionCount === 0;
   const linkAsksToOpen = readTangentOpenParam(search);
 
-  const { mutate, isIdle } = useMutation({
+  const { mutate, isPending } = useMutation({
     mutationFn: async (askedToOpen: WorkareaTarget | undefined) => {
       const started = await store.startSession(
         starting && { ...starting, name: askedFor },
@@ -125,15 +125,12 @@ export function usePrepareProjectArrival(
       // it, is housekeeping that stops the next arrival repeating it. The
       // session has already started, so a refusal here must not cost the
       // caller the pipeline and the workarea they came for — it is left for
-      // the next arrival to try again. The metadata is re-read because
-      // starting the session may have written to it, and the PATCH replaces
-      // the whole object.
+      // the next arrival to try again.
       if (waiting) {
         try {
-          const latest = await getProject(projectId);
-          await updateProject({
+          await updateProjectMetadata({
             id: projectId,
-            input: { metadata: withoutStartingSession(latest.metadata) },
+            change: withoutStartingSession,
           });
         } catch (error) {
           console.error(
@@ -141,12 +138,6 @@ export function usePrepareProjectArrival(
             error,
           );
         }
-      }
-
-      // Nothing has been written about a project nobody has worked in, so its
-      // window is a tall empty form sitting above what someone came for.
-      if (isEmpty) {
-        windows.getWindowById(PROJECT_DETAILS_WINDOW_ID)?.minimize();
       }
 
       if (askedToOpen) {
@@ -210,9 +201,9 @@ export function usePrepareProjectArrival(
   }, [dropsOpenAsk, navigate]);
 
   useEffect(() => {
-    if (!hasArrival || prepared.current) return;
-    if (!isIdle || store.isStartingSession) return;
-    prepared.current = true;
+    if (!hasArrival || prepared.current === store) return;
+    if (isPending || store.isStartingSession) return;
+    prepared.current = store;
     mutate(linkAsksToOpen);
 
     if (linkAsksForSession || linkAsksToOpen) {
@@ -224,7 +215,7 @@ export function usePrepareProjectArrival(
     }
   }, [
     hasArrival,
-    isIdle,
+    isPending,
     store,
     mutate,
     linkAsksForSession,

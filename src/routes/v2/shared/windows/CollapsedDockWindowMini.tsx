@@ -1,5 +1,5 @@
 import { observer } from "mobx-react-lite";
-import { type CSSProperties, useEffect, useState } from "react";
+import { type CSSProperties, useRef, useState } from "react";
 
 import {
   Popover,
@@ -7,8 +7,10 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Text } from "@/components/ui/typography";
+import { useDismissOnOutsidePress } from "@/hooks/useDismissOnOutsidePress";
 import { cn } from "@/lib/utils";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { leaveEscapeToSearchBox } from "@/utils/dom";
 
 import { WindowContextProvider } from "./ContentWindowStateContext";
 import { MAX_DOCK_AREA_WIDTH } from "./types";
@@ -29,30 +31,16 @@ export const CollapsedDockWindowMini = observer(
     const mini = windows.getWindowMiniContent(windowId);
     const content = windows.getWindowContent(windowId);
 
-    // Radix handles outside-clicks by listening for a bubbling `pointerdown`
-    // on `document`. The React Flow canvas (d3-zoom) stops propagation of
-    // `pointerdown`, so that listener never fires and the popover stays open
-    // when clicking the canvas. We can't use a modal popover to work around
-    // this: modal disables outside pointer events, which breaks drag-and-drop
-    // of components onto the canvas. Instead we close explicitly on the one
-    // case Radix misses - a capture-phase pointerdown that lands on the canvas.
-    useEffect(() => {
-      if (!open) return;
-      const handlePointerDownCapture = (event: PointerEvent) => {
-        const target = event.target;
-        if (target instanceof Element && target.closest(".react-flow")) {
-          setOpen(false);
-        }
-      };
-      document.addEventListener("pointerdown", handlePointerDownCapture, true);
-      return () => {
-        document.removeEventListener(
-          "pointerdown",
-          handlePointerDownCapture,
-          true,
-        );
-      };
-    }, [open]);
+    const triggerRef = useRef<HTMLDivElement>(null);
+    const contentRef = useRef<HTMLDivElement>(null);
+
+    // A modal popover would close on the canvas too, but it disables outside
+    // pointer events, which breaks dragging components onto the canvas.
+    useDismissOnOutsidePress({
+      open,
+      refs: [triggerRef, contentRef],
+      onDismiss: () => setOpen(false),
+    });
 
     if (!model || model.state === "hidden" || !mini || !content) {
       return null;
@@ -69,15 +57,20 @@ export const CollapsedDockWindowMini = observer(
           element, so we wrap it in a div that receives the trigger props.
         */}
         <PopoverTrigger asChild>
-          <div className="relative z-20 flex w-full shrink-0 justify-center outline-none">
+          <div
+            ref={triggerRef}
+            className="relative z-20 flex w-full shrink-0 justify-center outline-none"
+          >
             {mini}
           </div>
         </PopoverTrigger>
         <PopoverContent
+          ref={contentRef}
           side={popoverSide}
           align="start"
           sideOffset={6}
           collisionPadding={12}
+          onEscapeKeyDown={leaveEscapeToSearchBox}
           className={cn(
             "p-0 overflow-hidden flex flex-col border shadow-lg z-50",
             "max-h-[min(70vh,720px)] w-[min(92vw,var(--dock-mini-popover-w))]",
@@ -94,7 +87,9 @@ export const CollapsedDockWindowMini = observer(
             </Text>
           </div>
           <div className="min-h-0 flex-1 overflow-auto bg-card">
-            <WindowContextProvider value={{ model, content }}>
+            <WindowContextProvider
+              value={{ model, content, dismissFlyout: () => setOpen(false) }}
+            >
               {content}
             </WindowContextProvider>
           </div>

@@ -11,6 +11,7 @@ import type { EditorPipelineRef } from "@/services/pipelineStorage/types";
 import { pipelineFileTarget } from "@/services/projects/pipelineResource";
 import { parseIdentity } from "@/services/projects/resourceTarget";
 
+import { pipelineRefForTarget } from "./pipelineRef";
 import { registerWorkareaKind } from "./registry";
 import type { WorkareaTarget } from "./types";
 
@@ -25,7 +26,7 @@ function PipelineWorkareaEditor({
   const { backendUrl, ready, configured } = useBackend();
   const storage = usePipelineStorage();
   const project = useTangentProject();
-  const { key, value } = parseIdentity(target.identity);
+  const { key } = parseIdentity(target.identity);
   if (key === "remote" || key === "draft") {
     if (!ready) return <LoadingScreen message="Loading pipeline..." />;
     if (!configured)
@@ -33,14 +34,7 @@ function PipelineWorkareaEditor({
   }
   let pipelineRef: EditorPipelineRef;
   try {
-    pipelineRef =
-      key === "remote"
-        ? { source: "remote", backendUrl, pipelineId: value }
-        : key === "draft"
-          ? storage.getRemoteDraftRef(value, backendUrl)
-          : key === "id"
-            ? { fileId: value, name: title }
-            : { name: value };
+    pipelineRef = pipelineRefForTarget(target, title, { backendUrl, storage });
   } catch (error) {
     return (
       <Paragraph role="alert">

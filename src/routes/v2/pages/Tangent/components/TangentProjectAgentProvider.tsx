@@ -1,3 +1,4 @@
+import { useTangent } from "@tangent/embed-react";
 import { useQueryClient } from "@tanstack/react-query";
 import * as Comlink from "comlink";
 import { type ReactNode, useEffect, useRef, useState } from "react";
@@ -8,7 +9,10 @@ import { buildTaskSpecShape } from "@/components/shared/PipelineRunNameTemplate/
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
+import { ProjectCardHandlersContext } from "@/routes/v2/pages/Tangent/context/ProjectCardHandlersContext";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
+import { useBuiltFor } from "@/routes/v2/pages/Tangent/hooks/useBuiltFor";
+import { useProjectResourceItems } from "@/routes/v2/pages/Tangent/hooks/useProjectResourceItems";
 import { useRemoteEnvAuthToken } from "@/routes/v2/pages/Tangent/hooks/useRemoteEnvAuthToken";
 import { useTangentBaseUrl } from "@/routes/v2/pages/Tangent/hooks/useTangentBaseUrl";
 import { connectRemoteEnvWithRefresh } from "@/routes/v2/pages/Tangent/services/connectRemoteEnvWithRefresh";
@@ -17,6 +21,8 @@ import {
   createAgentTargetRouter,
 } from "@/routes/v2/pages/Tangent/services/createActiveTabRoutingBridge";
 import { createNamingHandlers } from "@/routes/v2/pages/Tangent/services/createNamingHandlers";
+import { createProjectCardHandlers } from "@/routes/v2/pages/Tangent/services/createProjectCardHandlers";
+import { createProjectCardRemoteTools } from "@/routes/v2/pages/Tangent/services/createProjectCardRemoteTools";
 import {
   createWorkareaRemoteTools,
   type RunInspectDeps,
@@ -125,11 +131,18 @@ export function TangentProjectAgentProvider({
   const store = useTangentProject();
   const storage = usePipelineStorage();
   const { baseUrl } = useTangentBaseUrl(store.projectId);
+  const tangent = useTangent();
+  const { localPipelines, remotePipelineNames } = useProjectResourceItems(
+    store.projectId,
+  );
 
   const authToken = useRemoteEnvAuthToken();
   const authTokenRef = useRef(authToken);
   const backendUrlRef = useRef(backendUrl);
+  const baseUrlRef = useRef(baseUrl);
+  const tangentRef = useRef(tangent);
   const notifyRef = useRef(notify);
+  const pipelineLookupsRef = useRef({ localPipelines, remotePipelineNames });
   const aiConfigRef = useRef(aiConfig);
   const traceScopeRef = useRef<TraceScope | undefined>(
     sessionId ? { projectId: store.projectId, sessionId } : undefined,
@@ -171,8 +184,17 @@ export function TangentProjectAgentProvider({
     backendUrlRef.current = backendUrl;
   }, [backendUrl]);
   useEffect(() => {
+    baseUrlRef.current = baseUrl;
+  }, [baseUrl]);
+  useEffect(() => {
+    tangentRef.current = tangent;
+  }, [tangent]);
+  useEffect(() => {
     notifyRef.current = notify;
   }, [notify]);
+  useEffect(() => {
+    pipelineLookupsRef.current = { localPipelines, remotePipelineNames };
+  }, [localPipelines, remotePipelineNames]);
 
   // Push AI config into the worker whenever the user changes it, so a turn
   // uses the latest provider settings without rebuilding the connection.
@@ -200,102 +222,123 @@ export function TangentProjectAgentProvider({
     ]);
   };
 
-  const [naming] = useState(() =>
-    createNamingHandlers({
-      projectId: store.projectId,
-      getActiveSessionId: () => store.activeSessionId,
-      getPipelineBridge: () => store.getActiveTabBridge(),
-      onRenamed: () => refreshProjectResources(),
-    }),
-  );
-
-  const [tools] = useState(() =>
-    createWorkareaRemoteTools(() => ({
-      openTarget: (target, title) => store.openWorkareaTarget(target, title),
-      getTabs: () => store.workareaTabs,
-      getActiveTabId: () => store.activeWorkareaTabId ?? undefined,
-      closeTab: (id) => store.closeWorkareaTab(id),
-      getEnvironmentId: (id) => store.getTabEnvironmentId(id),
-      waitForEnvironment: (id) => store.waitForTabEnvironment(id),
-      runInspect,
-      createPipeline: async (name) => {
-        const file = await createAndAttachPipeline({
-          storage,
-          name: name ?? UNNAMED_PIPELINE,
-          attach: async (input) => {
-            const resource = await createProjectResource(
+  // Everything here acts on one project, so it's built again for the next.
+  const { projectCard, tools, routingBridge, agentTargets } = useBuiltFor(
+    store,
+    () => {
+      const naming = createNamingHandlers({
+        projectId: store.projectId,
+        getActiveSessionId: () => store.activeSessionId,
+        getPipelineBridge: () => store.getActiveTabBridge(),
+        onRenamed: () => refreshProjectResources(),
+      });
+      const projectCard = createProjectCardHandlers({
+        projectId: store.projectId,
+        queryClient,
+        getActiveSessionId: () => store.activeSessionId,
+        getBaseUrl: () => baseUrlRef.current ?? undefined,
+        getAuthToken: () => authTokenRef.current,
+        getTangent: () => tangentRef.current,
+        getPipelineLookups: () => pipelineLookupsRef.current,
+        getRunDetails: runInspect.getRunDetails,
+        onResourcesChanged: () => refreshProjectResources(),
+      });
+      const tools = {
+        ...createProjectCardRemoteTools(() => projectCard),
+        ...createWorkareaRemoteTools(() => ({
+          openTarget: (target, title) =>
+            store.openWorkareaTarget(target, title, {
+              recordRunInSessionId: store.activeSessionId,
+            }),
+          getTabs: () => store.workareaTabs,
+          getActiveTabId: () => store.activeWorkareaTabId ?? undefined,
+          closeTab: (id) => store.closeWorkareaTab(id),
+          getEnvironmentId: (id) => store.getTabEnvironmentId(id),
+          waitForEnvironment: (id) => store.waitForTabEnvironment(id),
+          runInspect,
+          createPipeline: async (name) => {
+            const file = await createAndAttachPipeline({
+              storage,
+              name: name ?? UNNAMED_PIPELINE,
+              attach: async (input) => {
+                const resource = await createProjectResource(
+                  store.projectId,
+                  input,
+                );
+                await refreshProjectResources();
+                return resource;
+              },
+            });
+            return {
+              pipelineName: file.storageKey,
+              fileId: file.id,
+              target: pipelineFileTarget(file),
+            };
+          },
+          importPipeline: async (yaml, name) => {
+            const file = await importAndAttachPipeline({
+              storage,
+              yaml,
+              name,
+              attach: (input) => createProjectResource(store.projectId, input),
+            });
+            await refreshProjectResources();
+            return { pipelineName: file.storageKey, fileId: file.id };
+          },
+          readSessionResource: async (uri) => {
+            const read = readSessionResourceRef.current;
+            if (!read) {
+              throw new Error(
+                "The session environment is not connected, so its resources cannot be read yet.",
+              );
+            }
+            return read(uri);
+          },
+          clonePipeline: async (runId) => {
+            const { pipelineName, remote } = await clonePipelineFromRun(
+              storage,
+              runInspect,
+              runId,
+            );
+            if (remote) {
+              await createProjectResource(
+                store.projectId,
+                remotePipelineResourceInput(remote.pipelineId, pipelineName),
+              );
+              await refreshProjectResources();
+              const target: WorkareaTarget = {
+                type: "pipeline",
+                identity: remotePipelineIdentity(remote.pipelineId),
+              };
+              return { pipelineName, target };
+            }
+            const registered =
+              await storage.resolvePipelineByName(pipelineName);
+            await createProjectResource(
               store.projectId,
-              input,
+              localPipelineResourceInput({
+                localName: pipelineName,
+                ...(registered ? { localId: registered.id } : undefined),
+              }),
             );
             await refreshProjectResources();
-            return resource;
+            return { pipelineName };
           },
-        });
-        return {
-          pipelineName: file.storageKey,
-          fileId: file.id,
-          target: pipelineFileTarget(file),
-        };
-      },
-      importPipeline: async (yaml, name) => {
-        const file = await importAndAttachPipeline({
-          storage,
-          yaml,
-          name,
-          attach: (input) => createProjectResource(store.projectId, input),
-        });
-        await refreshProjectResources();
-        return { pipelineName: file.storageKey, fileId: file.id };
-      },
-      readSessionResource: async (uri) => {
-        const read = readSessionResourceRef.current;
-        if (!read) {
-          throw new Error(
-            "The session environment is not connected, so its resources cannot be read yet.",
-          );
-        }
-        return read(uri);
-      },
-      clonePipeline: async (runId) => {
-        const { pipelineName, remote } = await clonePipelineFromRun(
-          storage,
-          runInspect,
-          runId,
-        );
-        if (remote) {
-          await createProjectResource(
-            store.projectId,
-            remotePipelineResourceInput(remote.pipelineId, pipelineName),
-          );
-          await refreshProjectResources();
-          const target: WorkareaTarget = {
-            type: "pipeline",
-            identity: remotePipelineIdentity(remote.pipelineId),
-          };
-          return { pipelineName, target };
-        }
-        const registered = await storage.resolvePipelineByName(pipelineName);
-        await createProjectResource(
-          store.projectId,
-          localPipelineResourceInput({
-            localName: pipelineName,
-            ...(registered ? { localId: registered.id } : undefined),
-          }),
-        );
-        await refreshProjectResources();
-        return { pipelineName };
-      },
-      refreshResources: refreshProjectResources,
-      renameProject: naming.renameProject,
-      nameSession: naming.nameSession,
-      namePipeline: naming.namePipeline,
-    })),
-  );
-  const [routingBridge] = useState(() =>
-    createActiveTabRoutingBridge(() => store.getActiveTabBridge()),
-  );
-  const [agentTargets] = useState(() =>
-    createAgentTargetRouter(() => store.getActiveTabBridge()),
+          refreshResources: refreshProjectResources,
+          renameProject: naming.renameProject,
+          nameSession: naming.nameSession,
+          namePipeline: naming.namePipeline,
+        })),
+      };
+      return {
+        projectCard,
+        tools,
+        routingBridge: createActiveTabRoutingBridge(() =>
+          store.getActiveTabBridge(),
+        ),
+        agentTargets: createAgentTargetRouter(() => store.getActiveTabBridge()),
+      };
+    },
   );
 
   useEffect(() => {
@@ -349,5 +392,9 @@ export function TangentProjectAgentProvider({
     };
   }, [sessionId, tools, routingBridge, agentTargets, baseUrl]);
 
-  return <>{children}</>;
+  return (
+    <ProjectCardHandlersContext.Provider value={projectCard}>
+      {children}
+    </ProjectCardHandlersContext.Provider>
+  );
 }

@@ -2,13 +2,12 @@ import { RemoveSecretButton } from "@/components/shared/SecretsManagement/compon
 import type { Secret } from "@/components/shared/SecretsManagement/types";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
+import { IconTile } from "@/components/ui/icon-tile";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import type { TeamSummary } from "@/services/teams/types";
 import { formatRelativeTime } from "@/utils/date";
 import { tracking } from "@/utils/tracking";
-
-import { ListRowIcon } from "./ListRowIcon";
 
 interface SecretRowProps {
   secret: Secret;
@@ -42,7 +41,7 @@ export function SecretRow({
       data-testid="secret-item"
       data-secret-name={secret.name}
     >
-      <ListRowIcon icon="KeyRound" />
+      <IconTile icon="KeyRound" />
       <BlockStack align="start" className="min-w-0 flex-1">
         <Text
           size="sm"

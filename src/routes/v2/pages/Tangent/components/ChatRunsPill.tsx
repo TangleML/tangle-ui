@@ -1,0 +1,166 @@
+import type { HostUIComponentProps } from "@tangent/embed-react";
+import { observer } from "mobx-react-lite";
+import { useState } from "react";
+
+import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { StatusDot } from "@/components/ui/status-dot";
+import { Text } from "@/components/ui/typography";
+import useToastNotification from "@/hooks/useToastNotification";
+import { useOpenWorkareaTarget } from "@/routes/v2/pages/Tangent/hooks/useOpenWorkareaTarget";
+import {
+  type SessionRun,
+  useSessionRuns,
+} from "@/routes/v2/pages/Tangent/hooks/useSessionRuns";
+import { runTarget } from "@/services/projects/resourceTarget";
+import {
+  isRefusedRun,
+  useRunsExecutionStats,
+} from "@/services/projects/useProjectRuns";
+import {
+  getOverallExecutionStatusFromStats,
+  isExecutionComplete,
+  isFailedStatus,
+  isInProgressStatus,
+} from "@/utils/executionStatus";
+import { getErrorMessage } from "@/utils/string";
+import { tracking } from "@/utils/tracking";
+
+import { RunListItem, runStatusFlair } from "./RunListItem";
+
+interface RunRow {
+  run: SessionRun;
+  running: boolean;
+  failed: boolean;
+  finished: boolean;
+}
+
+function pillLabel(rows: RunRow[]): string {
+  const runs = rows.length === 1 ? "1 run" : `${rows.length} runs`;
+  const running = rows.filter((row) => row.running).length;
+  return running > 0 ? `${runs} · ${running} running` : runs;
+}
+
+export const ChatRunsPill = observer(function ChatRunsPill({
+  props,
+}: HostUIComponentProps) {
+  const notify = useToastNotification();
+  const openTarget = useOpenWorkareaTarget();
+  const [open, setOpen] = useState(false);
+  const sessionId =
+    typeof props.sessionId === "string" ? props.sessionId : undefined;
+  const { runs, dismiss } = useSessionRuns(sessionId);
+  const shown = runs.filter((run) => !run.dismissed);
+  const stats = useRunsExecutionStats(shown.map(({ id }) => id));
+
+  if (shown.length === 0) {
+    if (open) setOpen(false);
+    return null;
+  }
+
+  const rows: RunRow[] = shown.map((run, index) => {
+    const data = stats[index]?.data;
+    const status = getOverallExecutionStatusFromStats(data);
+    return {
+      run,
+      running: isInProgressStatus(status),
+      failed: isFailedStatus(status),
+      // A run the backend refuses, such as a deleted one, is over too.
+      finished:
+        Boolean(data && isExecutionComplete(data)) ||
+        isRefusedRun(stats[index]?.error),
+    };
+  });
+  const failedCount = rows.filter(({ failed }) => failed).length;
+  const anyFailed = failedCount > 0;
+  const anyRunning = rows.some(({ running }) => running);
+  const finished = rows.filter((row) => row.finished);
+  const worstFlair = runStatusFlair(
+    anyFailed ? "FAILED" : anyRunning ? "RUNNING" : undefined,
+  );
+
+  function dismissRun(run: SessionRun) {
+    dismiss(run).catch((error: unknown) =>
+      notify(getErrorMessage(error), "error"),
+    );
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          size="xs"
+          aria-label={
+            anyFailed
+              ? `${pillLabel(rows)}, ${failedCount} failed`
+              : pillLabel(rows)
+          }
+          {...tracking("projects.chat.runs_pill.open")}
+        >
+          <Icon name="Play" size="xs" />
+          {pillLabel(rows)}
+          {worstFlair?.kind === "dot" && (
+            <StatusDot
+              size="sm"
+              tone={worstFlair.tone}
+              pulse={worstFlair.pulse}
+            />
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent side="top" align="start" className="w-80 p-1">
+        <BlockStack gap="1" align="stretch">
+          <InlineStack
+            align="space-between"
+            wrap="nowrap"
+            className="px-2 pt-1"
+          >
+            <Text size="xs" weight="medium" tone="subdued">
+              Runs in this chat
+            </Text>
+            {finished.length > 0 && (
+              <Button
+                variant="ghost"
+                size="xs"
+                onClick={() => finished.forEach(({ run }) => dismissRun(run))}
+                {...tracking("projects.chat.runs_pill.clear_finished")}
+              >
+                Clear finished
+              </Button>
+            )}
+          </InlineStack>
+          <div className="reveal-scrollbar max-h-72 overflow-y-auto">
+            <BlockStack as="ul" align="stretch">
+              {rows.map(({ run }) => (
+                <RunListItem
+                  key={run.id}
+                  runId={run.id}
+                  name={run.name}
+                  at={run.addedAt}
+                  onOpen={(event) => {
+                    setOpen(false);
+                    void openTarget(runTarget(run.id), run.name, event);
+                  }}
+                  trackingId="projects.chat.runs_pill.open_run"
+                  action={{
+                    icon: "X",
+                    label: `Dismiss ${run.name}`,
+                    onClick: () => dismissRun(run),
+                    tracking: tracking("projects.chat.runs_pill.dismiss"),
+                  }}
+                />
+              ))}
+            </BlockStack>
+          </div>
+        </BlockStack>
+      </PopoverContent>
+    </Popover>
+  );
+});

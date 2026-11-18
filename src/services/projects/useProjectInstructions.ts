@@ -1,6 +1,8 @@
 import { MAX_PAGE_SIZE } from "./queryDefaults";
 import {
   describeResource,
+  documentBody,
+  documentPayload,
   INSTRUCTIONS,
   instructionsResourceInput,
 } from "./resourceDescriptor";
@@ -11,8 +13,6 @@ import {
   useProjectResources,
   useUpdateProjectResource,
 } from "./useProjectResources";
-
-const CONTENT_KEY = "content";
 
 /**
  * A project carries one instructions document; two can only arrive from two
@@ -56,17 +56,15 @@ export function useProjectInstructions(projectId: string): ProjectInstructions {
   const { mutate: updateResource, isPending: isUpdating } =
     useUpdateProjectResource(projectId);
 
-  const body = resource?.payload?.[CONTENT_KEY];
-
   return {
-    instructions: typeof body === "string" ? body : "",
+    instructions: (resource && documentBody(resource)) ?? "",
     isPending: isListPending || (row !== undefined && isBodyPending),
     isSaving: isCreating || isUpdating,
     save: (content: string) => {
       if (row) {
         updateResource({
           resourceId: row.id,
-          input: { payload: { [CONTENT_KEY]: content } },
+          input: { payload: documentPayload(content) },
         });
         return;
       }

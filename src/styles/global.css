@@ -344,36 +344,43 @@ code {
     display: none; /* Chrome, Safari, Opera */
   }
 
-  /* Thin, translucent scrollbar that overlays content without grabbing attention. */
-  .subtle-scrollbar {
+  /* Thin, translucent scrollbar that overlays content without grabbing
+     attention. `reveal-scrollbar` only shows its thumb while the region is
+     hovered or focused, so a page at rest shows no scrollbars at all. */
+  .subtle-scrollbar,
+  .reveal-scrollbar {
+    --scrollbar-thumb: color-mix(
+      in oklch,
+      var(--muted-foreground) 30%,
+      transparent
+    );
     scrollbar-width: thin;
-    scrollbar-color: color-mix(
-        in oklch,
-        var(--muted-foreground) 30%,
-        transparent
-      )
-      transparent;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
   }
 
-  .subtle-scrollbar::-webkit-scrollbar {
+  .reveal-scrollbar:not(:hover, :focus-within) {
+    --scrollbar-thumb: transparent;
+  }
+
+  .subtle-scrollbar::-webkit-scrollbar,
+  .reveal-scrollbar::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
 
-  .subtle-scrollbar::-webkit-scrollbar-track {
+  .subtle-scrollbar::-webkit-scrollbar-track,
+  .reveal-scrollbar::-webkit-scrollbar-track {
     background: transparent;
   }
 
-  .subtle-scrollbar::-webkit-scrollbar-thumb {
-    background-color: color-mix(
-      in oklch,
-      var(--muted-foreground) 25%,
-      transparent
-    );
+  .subtle-scrollbar::-webkit-scrollbar-thumb,
+  .reveal-scrollbar::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb);
     border-radius: 3px;
   }
 
-  .subtle-scrollbar::-webkit-scrollbar-thumb:hover {
+  .subtle-scrollbar::-webkit-scrollbar-thumb:hover,
+  .reveal-scrollbar::-webkit-scrollbar-thumb:hover {
     background-color: color-mix(
       in oklch,
       var(--muted-foreground) 50%,

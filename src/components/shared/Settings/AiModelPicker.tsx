@@ -21,6 +21,7 @@ import {
   getEffectiveReasoningEffort,
 } from "@/config/aiConfig";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
+import { useDismissOnOutsidePress } from "@/hooks/useDismissOnOutsidePress";
 import type { AiReasoningEffort } from "@/types/aiProvider";
 
 interface AiModelPickerProps {
@@ -161,26 +162,14 @@ export function AiModelPicker({
     }
   };
 
-  useEffect(() => {
-    if (!open) return;
-
-    const dismissOnOutsidePress = (event: PointerEvent) => {
-      const target = event.target;
-      if (
-        !(target instanceof Node) ||
-        [triggerRef, contentRef].some((ref) => ref.current?.contains(target))
-      ) {
-        return;
-      }
+  useDismissOnOutsidePress({
+    open,
+    refs: [triggerRef, contentRef],
+    onDismiss: () => {
       dismissedOutsideRef.current = true;
       setView("closed");
-    };
-
-    // Canvas gestures can stop events before Radix's bubbling outside-click handler.
-    document.addEventListener("pointerdown", dismissOnOutsidePress, true);
-    return () =>
-      document.removeEventListener("pointerdown", dismissOnOutsidePress, true);
-  }, [open]);
+    },
+  });
 
   return (
     <Popover

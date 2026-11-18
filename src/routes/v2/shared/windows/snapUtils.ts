@@ -35,6 +35,31 @@ export function registerDockAreaElement(
   dockAreaElements[side] = element;
 }
 
+const DOCK_TARGET_PADDING = 8;
+
+/**
+ * A window docks to a popover side only by being dropped on that dock's
+ * button, never at the screen edge.
+ */
+function detectDockTarget(
+  mouseX: number,
+  mouseY: number,
+  dockTargetElements: ReadonlyMap<"left" | "right", HTMLElement>,
+): SnapPreviewType | null {
+  for (const [side, el] of dockTargetElements) {
+    const rect = el.getBoundingClientRect();
+    if (
+      mouseX >= rect.left - DOCK_TARGET_PADDING &&
+      mouseX <= rect.right + DOCK_TARGET_PADDING &&
+      mouseY >= rect.top - DOCK_TARGET_PADDING &&
+      mouseY <= rect.bottom + DOCK_TARGET_PADDING
+    ) {
+      return { type: "dock-target", side };
+    }
+  }
+  return null;
+}
+
 function isMouseInsideDockArea(
   mouseX: number,
   mouseY: number,
@@ -149,13 +174,15 @@ function calculateInsertPosition(
 
 /**
  * Detect all snap possibilities for the current drag state.
- * Checks dock areas first (highest priority), then edge snap.
+ * Checks dock targets first, then dock areas, then edge snap.
  */
 interface DetectSnapPreviewOptions {
   windowId: string;
   mousePosition?: Position;
   dockAreaWindowIds?: Record<"left" | "right", string[]>;
   enabledDockSides?: ReadonlySet<"left" | "right">;
+  popoverDockSides?: ReadonlySet<"left" | "right">;
+  dockTargetElements?: ReadonlyMap<"left" | "right", HTMLElement>;
 }
 
 export function detectSnapPreview(
@@ -166,9 +193,22 @@ export function detectSnapPreview(
     mousePosition,
     dockAreaWindowIds,
     enabledDockSides = new Set(["left", "right"] as const),
+    popoverDockSides = new Set(),
+    dockTargetElements = new Map(),
   } = options;
 
   if (!mousePosition) return null;
+
+  const target = detectDockTarget(
+    mousePosition.x,
+    mousePosition.y,
+    dockTargetElements,
+  );
+  if (target) return target;
+
+  const columnSides = new Set(
+    [...enabledDockSides].filter((side) => !popoverDockSides.has(side)),
+  );
 
   if (dockAreaWindowIds) {
     const dockSnap = detectDockAreaSnap(
@@ -176,12 +216,12 @@ export function detectSnapPreview(
       mousePosition.y,
       windowId,
       dockAreaWindowIds,
-      enabledDockSides,
+      columnSides,
     );
     if (dockSnap) return dockSnap;
   }
 
-  const edgeSnap = detectEdgeSnap(mousePosition.x, enabledDockSides);
+  const edgeSnap = detectEdgeSnap(mousePosition.x, columnSides);
   if (edgeSnap) {
     return { type: "edge", side: edgeSnap.side };
   }

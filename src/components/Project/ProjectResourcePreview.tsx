@@ -21,6 +21,8 @@ import { useLocalPipeline } from "@/services/localPipelines/useLocalPipelines";
 import { UNTITLED } from "@/services/projects/placeholderNames";
 import {
   describeResource,
+  documentBody,
+  isDocumentResource,
   localPipelinePointerOf,
   PIPELINE_RUN,
 } from "@/services/projects/resourceDescriptor";
@@ -33,10 +35,9 @@ import { tracking } from "@/utils/tracking";
 import { componentSpecToText } from "@/utils/yaml";
 
 import { ColumnHeadingRow } from "./ColumnHeadingRow";
+import { DocumentEditor } from "./DocumentEditor";
 import { type PipelineValidity, pipelineValidity } from "./pipelineValidity";
 import { RunPipelineButton } from "./RunPipelineButton";
-
-const CONTENT_KEY = "content";
 
 interface ProjectResourcePreviewProps {
   projectId: string;
@@ -80,6 +81,17 @@ function Placeholder({ children }: { children: ReactNode }) {
   );
 }
 
+function PreviewFrame({ children }: { children: ReactNode }) {
+  return (
+    <BlockStack
+      align="stretch"
+      className={`overflow-hidden rounded-lg border border-border ${PREVIEW_HEIGHT}`}
+    >
+      {children}
+    </BlockStack>
+  );
+}
+
 const Loading = () => (
   <Placeholder>
     <InlineStack gap="2" blockAlign="center">
@@ -98,11 +110,9 @@ function Code({
   filename: string;
 }) {
   return (
-    <div
-      className={`w-full overflow-hidden rounded-lg border border-border ${PREVIEW_HEIGHT}`}
-    >
+    <PreviewFrame>
       <CodeViewer code={code} language={language} filename={filename} />
-    </div>
+    </PreviewFrame>
   );
 }
 
@@ -115,6 +125,7 @@ function SelectedResource({ projectId, resourceId }: SelectedResourceProps) {
   const {
     data: resource,
     isPending,
+    isLoadingError,
     error,
   } = useProjectResource(projectId, resourceId);
 
@@ -122,7 +133,7 @@ function SelectedResource({ projectId, resourceId }: SelectedResourceProps) {
     return <Loading />;
   }
 
-  if (error) {
+  if (isLoadingError) {
     return (
       <InfoBox title="Error loading preview" variant="error">
         {error.message}
@@ -160,6 +171,18 @@ function SelectedResource({ projectId, resourceId }: SelectedResourceProps) {
           target?.type === "run" ? parseIdentity(target.identity).value : null
         }
       />
+    );
+  }
+
+  if (isDocumentResource(resource)) {
+    return (
+      <PreviewFrame>
+        <DocumentEditor
+          key={resource.id}
+          projectId={projectId}
+          resource={resource}
+        />
+      </PreviewFrame>
     );
   }
 
@@ -336,9 +359,9 @@ function ValidityBadge({ validity }: { validity: PipelineValidity }) {
 }
 
 function PayloadPreview({ resource }: { resource: ProjectResource }) {
-  const body = resource.payload?.[CONTENT_KEY];
+  const body = documentBody(resource);
 
-  if (typeof body === "string") {
+  if (body !== undefined) {
     return (
       <Code
         code={body}

@@ -1,5 +1,10 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  queryOptions,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
@@ -8,6 +13,7 @@ import {
   createProjectResource,
   deleteProjectResource,
   getProjectResource,
+  listEveryProjectResource,
   listProjectResources,
   updateProjectResource,
 } from "./projectResourcesService";
@@ -15,6 +21,7 @@ import { projectQueryDefaults } from "./queryDefaults";
 import type {
   CreateResourceInput,
   ListProjectResourcesParams,
+  ProjectResourceEntity,
   ProjectResourcePage,
   UpdateResourceInput,
 } from "./types";
@@ -41,13 +48,11 @@ export function invalidateProjectResources(
   });
 }
 
-export function useProjectResources(
+export function projectResourcesQueryOptions(
   projectId: string | undefined,
   params: ListProjectResourcesParams = {},
 ) {
-  const { configured, available } = useBackend();
-
-  return useQuery({
+  return queryOptions({
     queryKey: ProjectResourcesQueryKeys.List(projectId ?? "", params),
     queryFn: () => {
       if (!projectId) {
@@ -55,8 +60,52 @@ export function useProjectResources(
       }
       return listProjectResources(projectId, params);
     },
-    enabled: configured && available && Boolean(projectId),
     ...projectQueryDefaults,
+  });
+}
+
+/** Every one of a project's resources of these kinds, however many pages. */
+export function everyProjectResourceQueryOptions(
+  projectId: string | undefined,
+  entity: ProjectResourceEntity[],
+) {
+  return queryOptions({
+    queryKey: [
+      ...ProjectResourcesQueryKeys.All(projectId ?? ""),
+      "every",
+      entity,
+    ],
+    queryFn: () => {
+      if (!projectId) {
+        throw new Error("Project id is required");
+      }
+      return listEveryProjectResource(projectId, entity);
+    },
+    ...projectQueryDefaults,
+  });
+}
+
+export function useEveryProjectResource(
+  projectId: string | undefined,
+  entity: ProjectResourceEntity[],
+) {
+  const { configured, available } = useBackend();
+
+  return useQuery({
+    ...everyProjectResourceQueryOptions(projectId, entity),
+    enabled: configured && available && Boolean(projectId),
+  });
+}
+
+export function useProjectResources(
+  projectId: string | undefined,
+  params: ListProjectResourcesParams = {},
+) {
+  const { configured, available } = useBackend();
+
+  return useQuery({
+    ...projectResourcesQueryOptions(projectId, params),
+    enabled: configured && available && Boolean(projectId),
   });
 }
 
@@ -130,7 +179,11 @@ export function useUpdateProjectResource(projectId: string) {
       resourceId: string;
       input: UpdateResourceInput;
     }) => updateProjectResource(projectId, resourceId, input),
-    onSuccess: () => {
+    onSuccess: (resource) => {
+      queryClient.setQueryData(
+        ProjectResourcesQueryKeys.Id(projectId, resource.id),
+        resource,
+      );
       invalidateProjectResources(queryClient, projectId);
     },
     onError: () => {

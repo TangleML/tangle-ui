@@ -4,9 +4,10 @@ import { isSettledRefusal, MAX_QUERY_RETRIES } from "../retryPolicy";
 import { ApiError } from "./errors";
 
 /**
- * The most the API will return in one page. Its own default is 20, and nothing
- * here follows `nextPageToken` for the lookups that have to search a whole
- * list — so asking for the maximum is what keeps those from missing.
+ * The most the API will return in one page. Its own default is 20. A lookup
+ * that searches a whole list from a single page asks for the maximum so that
+ * it misses as little as it can, and one that follows `nextPageToken` asks for
+ * it to make fewer requests.
  */
 export const MAX_PAGE_SIZE = 100;
 

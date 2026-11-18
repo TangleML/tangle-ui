@@ -194,6 +194,30 @@ describe("project resource mutation hooks", () => {
     });
   });
 
+  it("useUpdateProjectResource fills the resource's cache with what the save returned", async () => {
+    const saved = { ...resource, payload: { content: "Saved" } };
+    vi.mocked(projectResourcesService.updateProjectResource).mockResolvedValue(
+      saved,
+    );
+    const client = makeClient();
+    client.setQueryData(ProjectResourcesQueryKeys.Id("p1", "r1"), resource);
+
+    const { result } = renderHook(() => useUpdateProjectResource("p1"), {
+      wrapper: wrapperFor(client),
+    });
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        resourceId: "r1",
+        input: { payload: { content: "Saved" } },
+      });
+    });
+
+    expect(
+      client.getQueryData(ProjectResourcesQueryKeys.Id("p1", "r1")),
+    ).toEqual(saved);
+  });
+
   /**
    * The row is gone before the request is: waiting for the delete and then a
    * re-read of the list is two round trips in which nothing visibly happens.

@@ -141,6 +141,8 @@ export function useWindowDrag({
         trackDragUndockOnce();
       }
 
+      if (!windows.isDraggingWindow) windows.beginWindowDrag();
+
       const preview = detectSnapPreview({
         windowId: model.id,
         mousePosition: { x: moveE.clientX, y: moveE.clientY },
@@ -149,18 +151,26 @@ export function useWindowDrag({
           right: [...windows.getDockAreaWindowIds("right")],
         },
         enabledDockSides: windows.enabledDockSides,
+        popoverDockSides: windows.popoverDockSides,
+        dockTargetElements: windows.dockTargetElements,
       });
       snapPreviewRef.current = preview;
       setSnapPreview(preview);
+      windows.setDropTargetSide(
+        preview?.type === "dock-target" ? preview.side : null,
+      );
     };
 
     const handleMouseUp = () => {
       const currentPreview = snapPreviewRef.current;
 
-      if (currentPreview?.type === "edge") {
+      if (
+        currentPreview?.type === "edge" ||
+        currentPreview?.type === "dock-target"
+      ) {
         model.dock(currentPreview.side);
         track("v2.shared_window.snap_dock_completed", {
-          snap_kind: "edge",
+          snap_kind: currentPreview.type === "edge" ? "edge" : "dock_target",
           dock_side: currentPreview.side,
         });
       } else if (currentPreview?.type === "dock-insert") {
@@ -175,6 +185,7 @@ export function useWindowDrag({
       if (!model.isAtFront) {
         model.bringToFront();
       }
+      windows.endWindowDrag();
       setIsDragging(false);
       setSnapPreview(null);
       snapPreviewRef.current = null;
