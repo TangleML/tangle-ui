@@ -103,6 +103,20 @@ vi.mock("@/routes/v2/pages/Tangent/hooks/useProjectResourceItems", () => ({
             description: "Document",
             target: { type: "document", identity: "id/d-1" },
           },
+          {
+            id: "r-1",
+            name: "TangleML/components",
+            icon: "FolderGit2",
+            description: "Repository",
+            repository: { url: "https://github.com/TangleML/components" },
+          },
+          {
+            id: "r-2",
+            name: "Tampered",
+            icon: "FolderGit2",
+            description: "Repository",
+            repository: { url: undefined },
+          },
         ],
   }),
 }));
@@ -239,7 +253,7 @@ describe("ProjectCardContent", () => {
     loading.runs = { isLoading: true, error: null };
     render(<ProjectCardContent />);
 
-    for (const name of ["Runs", "Pipelines", "Documents"]) {
+    for (const name of ["Runs", "Pipelines", "Repositories", "Documents"]) {
       const section = screen.getByRole("region", { name });
       expect(within(section).getByText("Loading…")).toBeInTheDocument();
     }
@@ -260,6 +274,9 @@ describe("ProjectCardContent", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText("Couldn't load this project's pipelines"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Couldn't load this project's repositories"),
     ).toBeInTheDocument();
     expect(
       screen.getByText("Couldn't load this project's documents"),
@@ -328,16 +345,20 @@ describe("ProjectCardContent", () => {
 
     expect(screen.getByRole("button", { name: "Add pipeline" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Add run" })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Add repository" }),
+    ).toBeDisabled();
     expect(screen.getByRole("button", { name: "Add document" })).toBeDisabled();
   });
 
-  it("leads with reports, then runs, pipelines and documents, with other files behind All files", () => {
+  it("leads with reports, then runs, pipelines, repositories and documents, with other files behind All files", () => {
     render(<ProjectCardContent />);
 
     expect(sectionNames()).toEqual([
       "Reports",
       "Runs",
       "Pipelines",
+      "Repositories",
       "Documents",
     ]);
     expect(screen.getByText("Q3 summary")).toBeInTheDocument();
@@ -528,6 +549,53 @@ describe("ProjectCardContent", () => {
     const documents = screen.getByRole("region", { name: "Documents" });
     expect(within(documents).getByText("Project brief")).toBeInTheDocument();
     expect(sectionNames()).toEqual(["Documents"]);
+  });
+
+  it("opens a linked repository on GitHub, in a new tab", () => {
+    render(<ProjectCardContent />);
+
+    const repositories = screen.getByRole("region", { name: "Repositories" });
+    const row = within(repositories).getByRole("link", {
+      name: "TangleML/components",
+    });
+    expect(row).toHaveAttribute(
+      "href",
+      "https://github.com/TangleML/components",
+    );
+    expect(row).toHaveAttribute("target", "_blank");
+    expect(row).toHaveAttribute("rel", "noopener noreferrer");
+    expect(row).toHaveAttribute("data-tracking-id", "projects.open_repository");
+  });
+
+  it("lists a repository whose URL leads off GitHub without opening it", () => {
+    render(<ProjectCardContent />);
+
+    const repositories = screen.getByRole("region", { name: "Repositories" });
+    expect(
+      within(repositories).getByRole("button", { name: "Tampered" }),
+    ).toBeDisabled();
+    expect(
+      within(repositories).queryByRole("link", { name: "Tampered" }),
+    ).toBeNull();
+  });
+
+  it("archives a linked repository by its row", async () => {
+    const user = userEvent.setup();
+    render(<ProjectCardContent />);
+
+    await user.click(
+      screen.getByRole("button", { name: "Archive TangleML/components" }),
+    );
+
+    expect(archiveChange).toHaveBeenCalledWith("repository://id/r-1", true);
+    expect(screen.queryByText("TangleML/components")).toBeNull();
+    await user.click(screen.getByRole("button", { name: /Show archived/ }));
+    expect(
+      within(screen.getByRole("region", { name: "Repositories" })).getByRole(
+        "link",
+        { name: "TangleML/components" },
+      ),
+    ).toBeInTheDocument();
   });
 
   it("restores an archived item to its section", async () => {

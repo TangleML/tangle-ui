@@ -4,17 +4,27 @@ const GITHUB_API_VERSION = "2022-11-28";
 /**
  * GitHub API error with additional context
  */
-class GitHubApiError extends Error {
+export class GitHubApiError extends Error {
   name = "GitHubApiError";
   constructor(
     message: string,
     public statusCode?: number,
     public endpoint?: string,
     public originalError?: unknown,
+    public rateLimited = false,
   ) {
     super(message);
   }
 }
+
+const isRateLimitResponse = (response: Response) =>
+  response.status === 429 ||
+  (response.status === 403 &&
+    (response.headers.get("x-ratelimit-remaining") === "0" ||
+      response.headers.has("retry-after")));
+
+const encodeRefPath = (ref: string) =>
+  ref.split("/").map(encodeURIComponent).join("/");
 
 /**
  * Type definitions for GitHub API responses
@@ -70,7 +80,7 @@ interface GitHubTree {
  * Configuration for the GitHub API client
  */
 interface GitHubApiConfig {
-  accessToken: string;
+  accessToken?: string;
   apiBase?: string;
   apiVersion?: string;
 }
@@ -79,7 +89,7 @@ interface GitHubApiConfig {
  * GitHub API Client class
  */
 class GitHubApiClient {
-  private readonly accessToken: string;
+  private readonly accessToken: string | undefined;
   private readonly apiBase: string;
   private readonly apiVersion: string;
 
@@ -94,7 +104,9 @@ class GitHubApiClient {
    */
   private getHeaders(): HeadersInit {
     return {
-      Authorization: `Bearer ${this.accessToken}`,
+      ...(this.accessToken
+        ? { Authorization: `Bearer ${this.accessToken}` }
+        : undefined),
       Accept: "application/vnd.github.v3+json",
       "X-GitHub-Api-Version": this.apiVersion,
     };
@@ -133,7 +145,13 @@ class GitHubApiClient {
           // Ignore JSON parsing errors
         }
 
-        throw new GitHubApiError(errorMessage, response.status, endpoint);
+        throw new GitHubApiError(
+          errorMessage,
+          response.status,
+          endpoint,
+          undefined,
+          isRateLimitResponse(response),
+        );
       }
 
       return await response.json();
@@ -200,8 +218,24 @@ class GitHubApiClient {
    * Check if the client can access a repository
    */
   async checkAccess(repository: string): Promise<boolean> {
+    return this.exists(`/repos/${repository}`);
+  }
+
+  async branchExists(repository: string, branch: string): Promise<boolean> {
+    return this.exists(
+      `/repos/${repository}/git/ref/heads/${encodeRefPath(branch)}`,
+    );
+  }
+
+  async tagExists(repository: string, tag: string): Promise<boolean> {
+    return this.exists(
+      `/repos/${repository}/git/ref/tags/${encodeRefPath(tag)}`,
+    );
+  }
+
+  private async exists(endpoint: string): Promise<boolean> {
     try {
-      await this.getRepository(repository);
+      await this.request(endpoint);
       return true;
     } catch (error) {
       if (error instanceof GitHubApiError && error.statusCode === 404) {
@@ -216,7 +250,7 @@ class GitHubApiClient {
  * Factory function to create a GitHub API client
  */
 export function createGitHubApiClient(
-  accessToken: string,
+  accessToken?: string,
   config?: Partial<GitHubApiConfig>,
 ): GitHubApiClient {
   return new GitHubApiClient({

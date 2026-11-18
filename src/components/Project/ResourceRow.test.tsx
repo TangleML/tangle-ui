@@ -211,6 +211,26 @@ describe("ResourceRow", () => {
     expect(remove.querySelector("[class*='trash']")).toBeNull();
   });
 
+  it("does not offer to delete a repository it only links", () => {
+    renderRow({
+      entity: "document",
+      name: "TangleML/pipeline_components",
+      entityId: null,
+      metadata: {
+        type: "repository",
+        url: "https://github.com/TangleML/pipeline_components",
+      },
+    });
+
+    const remove = screen.getByRole("button", {
+      name: "Remove TangleML/pipeline_components from this project",
+    });
+
+    expect(remove.querySelector(".lucide-x")).toBeInTheDocument();
+    expect(remove.className).not.toMatch(/text-destructive/);
+    expect(screen.getByText("Repository")).toBeVisible();
+  });
+
   it("keeps saying so when the pipeline it names can no longer be worked out", () => {
     renderRow({
       entity: "document",
