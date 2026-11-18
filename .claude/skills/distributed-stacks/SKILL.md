@@ -28,8 +28,15 @@ than declaring a cross-repository group unnecessarily.
 - This repository is public. Never publish private repository names, PR URLs,
   confidential feature names, proprietary relationships, or internal service
   links in its PR descriptions. Treat inaccessible/unknown visibility as private
-  for disclosure purposes. Keep private relationships in an appropriately
-  access-controlled internal coordination tool, not in public Markdown.
+  for disclosure purposes.
+- Default to public companion links when the feature and its relationships are
+  public-safe. If private links or confidential context are needed, put the
+  complete declaration in the description of an appropriately access-controlled
+  private companion PR. Confirm that its audience may see every referenced
+  repository and relationship: private visibility alone does not grant that.
+  Public PRs may declare only public companions or omit the section entirely.
+  If no suitable private companion PR exists, use an appropriately controlled
+  internal coordination tool. Do not create a private PR just to host metadata.
 - All examples and published text must remain vendor-neutral. No internal-tool
   URLs or organization-specific infrastructure assumptions are required.
 
@@ -82,6 +89,11 @@ Without publishing authorization, provide the drafted section in chat. This
 skill does not itself authorize GitHub writes, merges, checkouts or deployments.
 
 ## What consumers can infer
+
+A full declaration on a private companion PR may link public PRs without those
+public PRs linking back to private work. Consumers might require opening that
+private PR and confirming the group before it is visible from all member pages;
+do not promise that an incoming link alone is discovered automatically.
 
 The section is a proposal for shared membership and directed dependencies, not
 proof of agreement from linked PR authors. Tools may require confirmation before

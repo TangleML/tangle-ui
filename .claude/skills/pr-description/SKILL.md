@@ -26,7 +26,10 @@ PRs in other repositories. If so, load
 `## Distributed Stack` section. Distinguish coordinated membership from explicit
 ordering dependencies, preserve existing description content, and verify
 repository visibility before publishing links. Never disclose private companion
-PRs or internal service URLs in this public repository's descriptions.
+PRs or internal service URLs in this public repository's descriptions. For
+mixed-visibility groups, put the complete declaration in a private companion
+PR only when its audience may see those relationships; keep public declarations
+limited to public companions, or omit them.
 
 ## Write the description
 
