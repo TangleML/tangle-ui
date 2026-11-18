@@ -1,4 +1,4 @@
-import { createGitHubApiClient } from "./githubApiClient";
+import { createGitHubApiClient } from "@/services/github/githubApiClient";
 
 /**
  * Fetches files from a GitHub repository that match the provided filter
