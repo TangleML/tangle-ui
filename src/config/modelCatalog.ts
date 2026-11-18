@@ -9,6 +9,8 @@ import { isRecord, isStringRecord } from "@/utils/typeGuards";
 
 export const MODEL_CATALOG_EVENT = "tangle:model-catalog";
 
+export type ModelCatalogStatus = "loading" | "ready" | "failed";
+
 type CatalogModel = AiModelOption &
   Required<Pick<AiModelOption, "label" | "tangentModelId" | "api">>;
 
@@ -37,7 +39,7 @@ function isCatalogModel(value: unknown): value is CatalogModel {
   );
 }
 
-export async function loadModelCatalog() {
+async function loadModelCatalog() {
   const url = getModelCatalogUrl();
   if (!url) return null;
   const response = await fetch(url, { credentials: "include" });
@@ -68,6 +70,47 @@ export async function loadModelCatalog() {
     defaultModel,
     replacements: value.replacements ?? {},
   };
-  window.dispatchEvent(new Event(MODEL_CATALOG_EVENT));
   return getAiModelOptions();
+}
+
+interface CatalogLoad {
+  url: string;
+  status: ModelCatalogStatus;
+  pending: Promise<AiModelOption[] | null>;
+}
+
+let load: CatalogLoad | undefined;
+
+function announce(url: string, status: ModelCatalogStatus) {
+  if (load?.url === url) load.status = status;
+  window.dispatchEvent(new Event(MODEL_CATALOG_EVENT));
+}
+
+export function getModelCatalogStatus(): ModelCatalogStatus {
+  const url = getModelCatalogUrl();
+  if (!url) return "ready";
+  return load?.url === url ? load.status : "loading";
+}
+
+/**
+ * Every AI consumer shares one catalog request per page, so a dozen mounting
+ * hooks cannot fan out into a dozen fetches or re-announce the same catalog.
+ */
+export function ensureModelCatalog(): Promise<AiModelOption[] | null> {
+  const url = getModelCatalogUrl();
+  if (!url) return Promise.resolve(null);
+  if (load?.url !== url || load.status === "failed") {
+    const pending = loadModelCatalog().then(
+      (models) => {
+        announce(url, "ready");
+        return models;
+      },
+      (error: unknown) => {
+        announce(url, "failed");
+        throw error;
+      },
+    );
+    load = { url, status: "loading", pending };
+  }
+  return load.pending;
 }

@@ -11,7 +11,7 @@ import {
   getStartingSessionThinkingDepth,
 } from "@/services/projects/startingSession";
 
-import { loadModelCatalog } from "./modelCatalog";
+import { ensureModelCatalog, getModelCatalogStatus } from "./modelCatalog";
 
 const model = {
   id: "example-model",
@@ -43,18 +43,18 @@ describe("deployment model catalog", () => {
   it("does not fetch a catalog for standalone installations", async () => {
     const fetch = vi.fn();
     vi.stubGlobal("fetch", fetch);
-    expect(await loadModelCatalog()).toBeNull();
+    expect(await ensureModelCatalog()).toBeNull();
     expect(fetch).not.toHaveBeenCalled();
   });
   it("loads authenticated choices and explicit model/thinking handoff", async () => {
-    window.__TANGLE_AI_MODELS__ = { catalogUrl: "/api/example-models" };
+    window.__TANGLE_AI_MODELS__ = { catalogUrl: "/api/example-models/handoff" };
     const fetch = vi
       .fn()
       .mockResolvedValue(new Response(JSON.stringify(fixture)));
     vi.stubGlobal("fetch", fetch);
-    await loadModelCatalog();
+    await ensureModelCatalog();
     expect(fetch).toHaveBeenCalledWith(
-      "/api/example-models",
+      "/api/example-models/handoff",
       expect.objectContaining({ credentials: "include" }),
     );
     expect(getDefaultAiModelId()).toBe(model.id);
@@ -70,8 +70,23 @@ describe("deployment model catalog", () => {
       }),
     ).toBe("xhigh");
   });
+  it("shares one request between every consumer on the page", async () => {
+    window.__TANGLE_AI_MODELS__ = { catalogUrl: "/api/example-models/shared" };
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify(fixture)));
+    vi.stubGlobal("fetch", fetch);
+    expect(getModelCatalogStatus()).toBe("loading");
+    await Promise.all([ensureModelCatalog(), ensureModelCatalog()]);
+    await ensureModelCatalog();
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(getModelCatalogStatus()).toBe("ready");
+  });
+
   it("does not offer agent-only Chat Completions models for browser execution", async () => {
-    window.__TANGLE_AI_MODELS__ = { catalogUrl: "/api/example-models" };
+    window.__TANGLE_AI_MODELS__ = {
+      catalogUrl: "/api/example-models/agent-only",
+    };
     const agentOnly = {
       ...model,
       id: "agent-only",
@@ -88,12 +103,12 @@ describe("deployment model catalog", () => {
           ),
         ),
     );
-    await loadModelCatalog();
+    await ensureModelCatalog();
     expect(getAiModelOptions().map((m) => m.id)).toEqual([model.id]);
   });
 
   it("hands off the nearest mapped level when the preferred effort has no Pi level", async () => {
-    window.__TANGLE_AI_MODELS__ = { catalogUrl: "/api/example-models" };
+    window.__TANGLE_AI_MODELS__ = { catalogUrl: "/api/example-models/gappy" };
     const gappy = {
       ...model,
       reasoningEfforts: ["low", "medium", "high"],
@@ -111,7 +126,7 @@ describe("deployment model catalog", () => {
         ),
       ),
     );
-    await loadModelCatalog();
+    await ensureModelCatalog();
     expect(
       getStartingSessionThinkingDepth({
         model: gappy.id,
@@ -121,12 +136,12 @@ describe("deployment model catalog", () => {
   });
 
   it("rejects failed and invalid catalogs without installing a partial list", async () => {
-    window.__TANGLE_AI_MODELS__ = { catalogUrl: "/api/example-models" };
+    window.__TANGLE_AI_MODELS__ = { catalogUrl: "/api/example-models/invalid" };
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(new Response("{}", { status: 401 })),
     );
-    await expect(loadModelCatalog()).rejects.toThrow();
+    await expect(ensureModelCatalog()).rejects.toThrow();
     expect(window.__TANGLE_AI_MODELS__.models).toBeUndefined();
     vi.stubGlobal(
       "fetch",
@@ -136,7 +151,7 @@ describe("deployment model catalog", () => {
           new Response(JSON.stringify({ ...fixture, schemaVersion: 2 })),
         ),
     );
-    await expect(loadModelCatalog()).rejects.toThrow();
+    await expect(ensureModelCatalog()).rejects.toThrow();
     expect(window.__TANGLE_AI_MODELS__.models).toBeUndefined();
     vi.stubGlobal(
       "fetch",
@@ -148,7 +163,7 @@ describe("deployment model catalog", () => {
           ),
         ),
     );
-    await expect(loadModelCatalog()).rejects.toThrow();
+    await expect(ensureModelCatalog()).rejects.toThrow();
     expect(window.__TANGLE_AI_MODELS__.models).toBeUndefined();
   });
 });

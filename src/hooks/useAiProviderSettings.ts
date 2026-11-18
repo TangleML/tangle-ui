@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 
 import {
   AI_CONFIG,
@@ -9,8 +9,9 @@ import {
   isAiReasoningEffort,
 } from "@/config/aiConfig";
 import {
+  ensureModelCatalog,
+  getModelCatalogStatus,
   getModelCatalogUrl,
-  loadModelCatalog,
   MODEL_CATALOG_EVENT,
 } from "@/config/modelCatalog";
 import { useBackend } from "@/providers/BackendProvider";
@@ -190,20 +191,13 @@ function getServerSnapshot(): AiProviderSettings {
 export function useAiProviderSettings() {
   const { backendUrl } = useBackend();
   const catalogUrl = getModelCatalogUrl();
-  const [catalogReady, setCatalogReady] = useState(!catalogUrl);
+  const catalogStatus = useSyncExternalStore(
+    subscribe,
+    getModelCatalogStatus,
+    () => "ready",
+  );
   useEffect(() => {
-    if (!catalogUrl) return;
-    let active = true;
-    void loadModelCatalog()
-      .then(() => {
-        if (active) setCatalogReady(true);
-      })
-      .catch(() => {
-        if (active) setCatalogReady(false);
-      });
-    return () => {
-      active = false;
-    };
+    if (catalogUrl) ensureModelCatalog().catch(() => undefined);
   }, [catalogUrl]);
   const backendBase = backendUrl.trim().replace(/\/+$/, "");
   const { customConfig, proxyConfig } = useSyncExternalStore(
@@ -230,7 +224,7 @@ export function useAiProviderSettings() {
   const config: AiProviderConfig = {
     apiBase: isOwnKeyEnabled
       ? customConfig.apiBase
-      : backendBase && catalogReady
+      : backendBase && catalogStatus === "ready"
         ? `${backendBase}/api/experimental/ai/v1`
         : "",
     apiKey: isOwnKeyEnabled ? customConfig.apiKey : "",
