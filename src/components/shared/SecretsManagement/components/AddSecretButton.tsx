@@ -9,7 +9,7 @@ import type { Secret } from "../types";
 import { SecretsQueryKeys } from "../types";
 
 interface AddSecretButtonProps {
-  secret: Pick<Secret, "name" | "value" | "description" | "expiresAt">;
+  secret: Pick<Secret, "name" | "value" | "description">;
   teamId?: string;
   disabled?: boolean;
   onSuccess: () => void;

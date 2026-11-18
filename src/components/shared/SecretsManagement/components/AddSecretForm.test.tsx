@@ -8,7 +8,7 @@ import { TeamImpersonationError } from "@/services/teams/errors";
 
 import { addSecret, updateSecret } from "../secretsStorage";
 import { type Secret, SecretsQueryKeys } from "../types";
-import { AddSecretForm, lastWholeSecondOfDayUTC } from "./AddSecretForm";
+import { AddSecretForm } from "./AddSecretForm";
 
 vi.mock("../secretsStorage", () => ({
   addSecret: vi.fn(),
@@ -87,7 +87,6 @@ describe("AddSecretForm", () => {
           name: "API_KEY",
           value: "s3cret",
           description: "Model access",
-          expiresAt: undefined,
         },
         undefined,
       );
@@ -195,34 +194,6 @@ describe("AddSecretForm", () => {
         "new-password",
       );
     });
-
-    it("sends the expiry as the last whole second of the chosen day in UTC", async () => {
-      vi.useFakeTimers({ toFake: ["Date"] });
-      vi.setSystemTime(new Date(2026, 9, 31, 23, 59));
-      const { user } = renderForm();
-
-      await user.type(field("Secret Name"), "API_KEY");
-      await user.type(field("Secret Value"), "s3cret");
-      await user.click(field("Expires (optional)"));
-      await user.click(screen.getByRole("button", { name: /next month/i }));
-      await user.click(screen.getByRole("button", { name: /15th/ }));
-      await user.click(screen.getByRole("button", { name: "Add Secret" }));
-
-      await waitFor(() =>
-        expect(addSecret).toHaveBeenCalledWith(
-          expect.objectContaining({
-            expiresAt: new Date("2026-11-15T23:59:59.000Z"),
-          }),
-          undefined,
-        ),
-      );
-    });
-
-    it("adds no hint to a new secret's expiry", () => {
-      renderForm();
-
-      expect(field("Expires (optional)")).not.toHaveAccessibleDescription();
-    });
   });
 
   describe("replacing", () => {
@@ -249,7 +220,6 @@ describe("AddSecretForm", () => {
           id: "API_KEY",
           value: "n3w",
           description: undefined,
-          expiresAt: undefined,
         },
         undefined,
       );
@@ -292,30 +262,6 @@ describe("AddSecretForm", () => {
       );
     });
 
-    it("names the current expiry by its UTC day and keeps it when left empty", async () => {
-      const { user } = renderForm({
-        existingSecret: {
-          ...existing,
-          expiresAt: new Date("2027-03-03T02:00:00Z"),
-        },
-      });
-
-      expect(field("Expires (optional)")).toHaveAccessibleDescription(
-        "Currently Mar 3, 2027. Leave empty to keep that date.",
-      );
-
-      await user.type(field("New Secret Value"), "n3w");
-      await user.click(screen.getByRole("button", { name: "Update Secret" }));
-
-      await waitFor(() =>
-        expect(updateSecret).toHaveBeenCalledWith(
-          "API_KEY",
-          expect.objectContaining({ expiresAt: undefined }),
-          undefined,
-        ),
-      );
-    });
-
     it("shows the backend's reason when replacing as the team is refused", async () => {
       vi.mocked(updateSecret).mockRejectedValue(
         new TeamImpersonationError(REFUSAL, 403),
@@ -341,15 +287,5 @@ describe("AddSecretForm", () => {
         screen.getByRole("button", { name: "Update Secret" }),
       ).toBeDisabled();
     });
-  });
-});
-
-describe("lastWholeSecondOfDayUTC", () => {
-  it("keeps the local day of an evening when UTC is already on the next one", () => {
-    const christmasEvening = new Date(2026, 11, 25, 21, 0);
-
-    expect(lastWholeSecondOfDayUTC(christmasEvening).toISOString()).toBe(
-      "2026-12-25T23:59:59.000Z",
-    );
   });
 });

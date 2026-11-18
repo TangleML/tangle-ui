@@ -87,9 +87,6 @@ export async function fetchSecretsList(teamId?: string) {
           name: secret.secret_name,
           createdAt: parseAsUtc(secret.created_at),
           updatedAt: parseAsUtc(secret.updated_at),
-          expiresAt: secret.expires_at
-            ? parseAsUtc(secret.expires_at)
-            : undefined,
           description: secret.description ?? undefined,
         }) satisfies Secret,
     ) ?? []
@@ -119,7 +116,6 @@ export async function updateSecret(
     },
     query: {
       description: secret.description,
-      expires_at: secret.expiresAt?.toISOString(),
     },
     body: {
       secret_value: secret.value ?? "",
@@ -147,7 +143,6 @@ export async function addSecret(
     query: {
       secret_name: secret.name ?? "",
       description: secret.description,
-      expires_at: secret.expiresAt?.toISOString(),
     },
     body: {
       secret_value: secret.value ?? "",
