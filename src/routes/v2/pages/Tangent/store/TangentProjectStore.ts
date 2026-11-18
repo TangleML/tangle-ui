@@ -15,7 +15,10 @@ import {
 
 import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import { TANGENT_BUNDLE_ID } from "@/routes/v2/pages/Tangent/constants";
-import { projectSharedMemorySeed } from "@/routes/v2/pages/Tangent/services/projectSharedMemory";
+import {
+  BUNDLE_KNOWLEDGE_BINDING,
+  projectSharedMemorySeed,
+} from "@/routes/v2/pages/Tangent/services/projectSharedMemory";
 import { resolveWorkareaTarget } from "@/routes/v2/pages/Tangent/services/resolveWorkareaTarget";
 import { isTangentSessionUrl } from "@/routes/v2/pages/Tangent/services/sessionFiles";
 import { sessionMemorySeed } from "@/routes/v2/pages/Tangent/services/sessionMemory";
@@ -264,7 +267,7 @@ export class TangentProjectStore {
         model: options?.model,
         thinkingDepth: options?.thinkingDepth,
         tags: [projectSelector(this.projectId)],
-        ...(shared ? { memory: shared.memory } : {}),
+        memory: shared?.memory ?? BUNDLE_KNOWLEDGE_BINDING,
       });
       const { sessionId } = await io
         .newSession(prompt, TANGENT_BUNDLE_ID, sessionOptions(sharedMemory))
