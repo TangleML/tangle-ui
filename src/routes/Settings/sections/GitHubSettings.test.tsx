@@ -293,6 +293,30 @@ describe("GitHubSettings", () => {
       expect(screen.queryByRole("dialog")).toBeNull();
     });
 
+    it("says why the backend refused the secret", async () => {
+      tokenStatus({ state: "not_configured" });
+      reply("PATCH", SETTINGS, {
+        status: 409,
+        body: { detail: "That secret belongs to another team." },
+      });
+      const user = renderSettings();
+
+      await user.click(await screen.findByRole("button", { name: "Add" }));
+      const dialog = await screen.findByRole("dialog");
+      await user.click(
+        await within(dialog).findByRole("button", { name: /GITHUB_TOKEN/ }),
+      );
+      await user.click(within(dialog).getByRole("button", { name: "Confirm" }));
+
+      await waitFor(() =>
+        expect(notify).toHaveBeenCalledWith(
+          "Couldn't use that secret: That secret belongs to another team.",
+          "error",
+        ),
+      );
+      expect(screen.getByRole("dialog")).toBeVisible();
+    });
+
     it("starts from the secret in use, and won't confirm it again", async () => {
       tokenStatus({
         secret_name: "GITHUB_TOKEN",
@@ -378,8 +402,13 @@ describe("GitHubSettings", () => {
       });
     });
 
-    const row = (name: string) =>
-      screen.getByText(name).closest("li") as HTMLElement;
+    const row = (name: string) => {
+      const found = screen
+        .getAllByRole("listitem")
+        .find((item) => within(item).queryByText(name) !== null);
+      if (!found) throw new Error(`No row lists ${name}`);
+      return found;
+    };
 
     async function askToRevoke(
       user: ReturnType<typeof userEvent.setup>,

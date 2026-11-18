@@ -1,5 +1,5 @@
-import { Badge } from "@/components/ui/badge";
-import { Icon } from "@/components/ui/icon";
+import { PrivateRepositoryBadge } from "@/components/Project/PrivateRepositoryBadge";
+import { InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import {
   isCommitSha,
@@ -21,15 +21,10 @@ export function RepositoryDetails({ repository }: RepositoryDetailsProps) {
       <Text as="dt" size="sm" tone="subdued">
         Repository
       </Text>
-      <Text as="dd" size="sm" className="break-all">
-        <span>{`${owner}/${repo}`}</span>
-        {isPrivate && (
-          <Badge size="sm" variant="secondary" className="ml-2 align-middle">
-            <Icon name="Lock" size="xs" />
-            Private
-          </Badge>
-        )}
-      </Text>
+      <InlineStack as="dd" gap="2" blockAlign="center" className="break-all">
+        <Text size="sm">{`${owner}/${repo}`}</Text>
+        {isPrivate && <PrivateRepositoryBadge />}
+      </InlineStack>
 
       <Text as="dt" size="sm" tone="subdued">
         {refLabel(ref)}

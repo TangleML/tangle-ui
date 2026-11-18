@@ -4,6 +4,7 @@ import {
   repositoryUrl,
 } from "@/services/github/repositoryUrl";
 import type { LocalPipelinePointer } from "@/services/localPipelines/types";
+import { stringOrNull } from "@/utils/typeGuards";
 
 import type { WorkareaTarget } from "./resourceTarget";
 import {
@@ -244,9 +245,6 @@ export function repositoryUrlOf(resource: ResourceRow): string | undefined {
   const url = resource.metadata?.url;
   return typeof url === "string" && isGitHubWebUrl(url) ? url : undefined;
 }
-
-const stringOrNull = (value: unknown) =>
-  typeof value === "string" && value !== "" ? value : null;
 
 export function linkedRepositoryOf(
   resource: Pick<ProjectResource, "metadata" | "payload">,

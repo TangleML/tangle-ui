@@ -1,8 +1,8 @@
 import { useState } from "react";
 
+import { PrivateRepositoryBadge } from "@/components/Project/PrivateRepositoryBadge";
 import ConfirmationDialog from "@/components/shared/Dialogs/ConfirmationDialog";
 import { InfoBox } from "@/components/shared/InfoBox";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Icon } from "@/components/ui/icon";
@@ -40,7 +40,7 @@ function GrantRow({ grant, isRevoking, onRevoke }: GrantRowProps) {
       gap="3"
       blockAlign="center"
       wrap="nowrap"
-      className="w-full rounded-md py-1.5 pr-1 pl-1 hover:bg-gray-50 dark:hover:bg-muted"
+      className="w-full rounded-md px-1 py-1.5"
     >
       <Icon name="FolderGit2" size="lg" className="shrink-0" />
       <BlockStack className="min-w-0 flex-1">
@@ -48,12 +48,7 @@ function GrantRow({ grant, isRevoking, onRevoke }: GrantRowProps) {
           <Text size="sm" weight="semibold" className="break-all">
             {fullName(grant)}
           </Text>
-          {grant.isPrivate && (
-            <Badge size="sm" variant="secondary">
-              <Icon name="Lock" size="xs" />
-              Private
-            </Badge>
-          )}
+          {grant.isPrivate && <PrivateRepositoryBadge />}
         </InlineStack>
         <Text size="xs" tone="subdued">
           Added {formatRelativeTime(grant.createdAt)}
@@ -70,6 +65,62 @@ function GrantRow({ grant, isRevoking, onRevoke }: GrantRowProps) {
         Revoke
       </Button>
     </InlineStack>
+  );
+}
+
+interface GrantsListProps {
+  grants: RepositoryGrant[] | undefined;
+  error: Error | null;
+  isPending: boolean;
+  revokingGrantId: string | undefined;
+  onRevoke: (grant: RepositoryGrant) => void;
+}
+
+function GrantsList({
+  grants,
+  error,
+  isPending,
+  revokingGrantId,
+  onRevoke,
+}: GrantsListProps) {
+  if (isPending) {
+    return (
+      <BlockStack align="center" className="py-6">
+        <Spinner />
+      </BlockStack>
+    );
+  }
+
+  if (error) {
+    return (
+      <InfoBox title="Couldn't load your linked repositories" variant="error">
+        {getErrorMessage(error)}
+      </InfoBox>
+    );
+  }
+
+  if (!grants?.length) {
+    return (
+      <EmptyState
+        icon="FolderGit2"
+        title="No linked repositories"
+        placement="start"
+        size="sm"
+      />
+    );
+  }
+
+  return (
+    <BlockStack as="ul" gap="1">
+      {grants.map((grant) => (
+        <GrantRow
+          key={grant.id}
+          grant={grant}
+          isRevoking={revokingGrantId === grant.id}
+          onRevoke={onRevoke}
+        />
+      ))}
+    </BlockStack>
   );
 }
 
@@ -107,35 +158,15 @@ export function RepositoryGrantsPanel() {
     <BlockStack gap="3">
       <Heading level={3}>Linked repositories</Heading>
 
-      {isPending ? (
-        <BlockStack align="center" className="py-6">
-          <Spinner />
-        </BlockStack>
-      ) : error ? (
-        <InfoBox title="Couldn't load your linked repositories" variant="error">
-          {getErrorMessage(error)}
-        </InfoBox>
-      ) : !grants?.length ? (
-        <EmptyState
-          icon="FolderGit2"
-          title="No linked repositories"
-          placement="start"
-          size="sm"
-        />
-      ) : (
-        <BlockStack as="ul" gap="1">
-          {grants.map((grant) => (
-            <GrantRow
-              key={grant.id}
-              grant={grant}
-              isRevoking={
-                revokeGrant.isPending && revokeGrant.variables === grant.id
-              }
-              onRevoke={askToRevoke}
-            />
-          ))}
-        </BlockStack>
-      )}
+      <GrantsList
+        grants={grants}
+        error={error}
+        isPending={isPending}
+        revokingGrantId={
+          revokeGrant.isPending ? revokeGrant.variables : undefined
+        }
+        onRevoke={askToRevoke}
+      />
 
       <ConfirmationDialog
         isOpen={isConfirmingRevoke}

@@ -1,9 +1,8 @@
 import { USER_SETTINGS_PATH } from "@/utils/constants";
-import {
-  fetchWithErrorHandling,
-  RemoteAuthError,
-} from "@/utils/fetchWithErrorHandling";
+import { parseAsUtc } from "@/utils/date";
+import { RemoteAuthError } from "@/utils/fetchWithErrorHandling";
 import { getErrorMessage } from "@/utils/string";
+import { isRecord, stringOrNull } from "@/utils/typeGuards";
 
 const TOKEN_STATUS_PATH = "/api/github/token_status";
 const GRANTS_PATH = "/api/github/repository_grants";
@@ -53,13 +52,6 @@ export class GitHubBackendError extends Error {
   }
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-const stringOrNull = (value: unknown) =>
-  typeof value === "string" && value !== "" ? value : null;
-
 function oneOf<T extends string>(
   allowed: readonly T[],
   value: unknown,
@@ -104,13 +96,11 @@ async function request(url: string, init?: RequestInit): Promise<unknown> {
   if (!response.ok) {
     throw await errorFrom(response);
   }
-  if (response.status === 204) {
-    return undefined;
-  }
-  return response.json();
+  const text = await response.text();
+  return text ? JSON.parse(text) : undefined;
 }
 
-const isMissingRoute = (error: unknown) =>
+export const isMissingRouteError = (error: unknown) =>
   error instanceof GitHubBackendError &&
   error.status === 404 &&
   error.code === null;
@@ -127,10 +117,6 @@ function parseTokenStatus(body: unknown): GitHubTokenStatus {
     login: stringOrNull(body.login),
     tokenKind: oneOf(TOKEN_KINDS, body.token_kind),
   };
-}
-
-function parseTimestamp(value: string) {
-  return new Date(/(Z|[+-]\d\d:?\d\d)$/i.test(value) ? value : `${value}Z`);
 }
 
 function parseGrant(value: unknown): RepositoryGrant {
@@ -159,7 +145,7 @@ function parseGrant(value: unknown): RepositoryGrant {
     repo,
     isPrivate: value.private,
     defaultBranch,
-    createdAt: parseTimestamp(createdAt),
+    createdAt: parseAsUtc(createdAt),
   };
 }
 
@@ -170,7 +156,7 @@ export async function fetchGitHubTokenStatus(
     const body = await request(`${backendUrl}${TOKEN_STATUS_PATH}`);
     return { supported: true, status: parseTokenStatus(body) };
   } catch (error) {
-    if (isMissingRoute(error)) return { supported: false };
+    if (isMissingRouteError(error)) return { supported: false };
     throw error;
   }
 }
@@ -179,9 +165,7 @@ export async function fetchTokenSecretName(
   backendUrl: string,
 ): Promise<string | null> {
   const query = new URLSearchParams({ setting_names: TOKEN_SECRET_SETTING });
-  const body: unknown = await fetchWithErrorHandling(
-    `${backendUrl}${USER_SETTINGS_PATH}?${query}`,
-  );
+  const body = await request(`${backendUrl}${USER_SETTINGS_PATH}?${query}`);
   const settings =
     isRecord(body) && isRecord(body.settings) ? body.settings : {};
   return stringOrNull(settings[TOKEN_SECRET_SETTING]);
@@ -191,7 +175,7 @@ export async function chooseTokenSecret(
   backendUrl: string,
   secretName: string,
 ) {
-  await fetchWithErrorHandling(`${backendUrl}${USER_SETTINGS_PATH}`, {
+  await request(`${backendUrl}${USER_SETTINGS_PATH}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ settings: { [TOKEN_SECRET_SETTING]: secretName } }),
@@ -200,7 +184,7 @@ export async function chooseTokenSecret(
 
 export async function clearTokenSecret(backendUrl: string) {
   const query = new URLSearchParams({ setting_names: TOKEN_SECRET_SETTING });
-  await fetchWithErrorHandling(`${backendUrl}${USER_SETTINGS_PATH}?${query}`, {
+  await request(`${backendUrl}${USER_SETTINGS_PATH}?${query}`, {
     method: "DELETE",
   });
 }

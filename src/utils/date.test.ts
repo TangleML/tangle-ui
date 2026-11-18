@@ -1,6 +1,24 @@
 import { describe, expect, it } from "vitest";
 
-import { formatDuration, formatElapsedAgo } from "./date";
+import { formatDuration, formatElapsedAgo, parseAsUtc } from "./date";
+
+describe("parseAsUtc", () => {
+  it("reads a naive timestamp as UTC", () => {
+    expect(parseAsUtc("2026-11-10T09:00:00").toISOString()).toBe(
+      "2026-11-10T09:00:00.000Z",
+    );
+  });
+
+  it.each([
+    "2026-11-10T09:00:00Z",
+    "2026-11-10T11:00:00+02:00",
+    "2026-11-10T04:00:00-0500",
+  ])("keeps the zone of %s", (timestamp) => {
+    expect(parseAsUtc(timestamp).toISOString()).toBe(
+      "2026-11-10T09:00:00.000Z",
+    );
+  });
+});
 
 describe("formatDuration", () => {
   it("formats seconds correctly", () => {
