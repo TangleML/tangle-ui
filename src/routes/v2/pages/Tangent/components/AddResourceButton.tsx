@@ -9,10 +9,7 @@ import { convertCancelErrorTo } from "@/providers/DialogProvider/utils";
 import { AddDocumentDialog } from "@/routes/v2/pages/Tangent/components/AddDocumentDialog";
 import { AddPipelineDialog } from "@/routes/v2/pages/Tangent/components/AddPipelineDialog";
 import { AddPipelineRunDialog } from "@/routes/v2/pages/Tangent/components/AddPipelineRunDialog";
-import {
-  LinkRepositoryDialog,
-  type LinkRepositoryDialogProps,
-} from "@/routes/v2/pages/Tangent/components/LinkRepositoryDialog";
+import { LinkRepositoryDialog } from "@/routes/v2/pages/Tangent/components/LinkRepositoryDialog";
 import type { LocalPipelinePointer } from "@/services/localPipelines/types";
 import { localPipelinePointerOf } from "@/services/projects/resourceDescriptor";
 import type {
@@ -48,6 +45,13 @@ const ADDABLE: Record<AddableKind, { label: string; trackingId: string }> = {
     label: "Link a repository",
     trackingId: "projects.link_repository_open",
   },
+};
+
+type ResourceDialogConfig<TProps> = DialogConfig<
+  CreateResourceInput,
+  TProps
+> & {
+  onSuccess?: () => void;
 };
 
 function identityOf(metadata: Record<string, unknown> | null | undefined) {
@@ -106,8 +110,11 @@ export function AddResourceButton({
   const { mutate: createResource, isPending } =
     useCreateProjectResource(projectId);
 
-  async function openResourceDialog(config: DialogConfig<CreateResourceInput>) {
-    const result = await open<CreateResourceInput>({
+  async function openResourceDialog<TProps = {}>({
+    onSuccess,
+    ...config
+  }: ResourceDialogConfig<TProps>) {
+    const result = await open<CreateResourceInput, TProps>({
       size: "full",
       ...config,
     }).catch(convertCancelErrorTo(undefined));
@@ -119,7 +126,7 @@ export function AddResourceButton({
       return;
     }
 
-    createResource(result);
+    createResource(result, { onSuccess });
   }
 
   function handleAddPipeline() {
@@ -147,17 +154,12 @@ export function AddResourceButton({
     });
   }
 
-  async function handleLinkRepository() {
-    const result = await open<CreateResourceInput, LinkRepositoryDialogProps>({
+  function handleLinkRepository() {
+    void openResourceDialog({
       component: LinkRepositoryDialog,
       props: { resources },
       routeKey: "link-repository",
       size: "md",
-    }).catch(convertCancelErrorTo(undefined));
-
-    if (!result) return;
-
-    createResource(result, {
       onSuccess: () => track("projects.link_repository_completed"),
     });
   }
@@ -166,7 +168,7 @@ export function AddResourceButton({
     pipeline: handleAddPipeline,
     run: handleAddPipelineRun,
     document: handleAddDocument,
-    repository: () => void handleLinkRepository(),
+    repository: handleLinkRepository,
   };
   const { label, trackingId } = ADDABLE[kind];
 

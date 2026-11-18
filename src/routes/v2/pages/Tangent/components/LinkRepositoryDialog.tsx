@@ -10,7 +10,7 @@ import type {
   ProjectResourceSummary,
 } from "@/services/projects/types";
 
-export interface LinkRepositoryDialogProps {
+interface LinkRepositoryDialogProps {
   resources: ProjectResourceSummary[];
 }
 
