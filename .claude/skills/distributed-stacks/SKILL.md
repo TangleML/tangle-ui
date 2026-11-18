@@ -44,10 +44,12 @@ bullet lists. Replace placeholders; omit the entire section when not applicable.
 Feature: Short descriptive name for the shared feature
 
 ### Coordinate with
+
 - https://github.com/OWNER/REPO/pull/123
 - https://github.com/OTHER-OWNER/OTHER-REPO/pull/456
 
 ### Depends on
+
 - https://github.com/OWNER/BACKEND-REPO/pull/789
 ```
 
