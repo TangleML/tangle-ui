@@ -1,9 +1,6 @@
 import { Link, Outlet, useRouter } from "@tanstack/react-router";
 
-import {
-  useFlagValue,
-  useTangentEnabled,
-} from "@/components/shared/Settings/useFlags";
+import { useTangentEnabled } from "@/components/shared/Settings/useFlags";
 import { Button } from "@/components/ui/button";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -62,14 +59,10 @@ const VSCODE_ITEM: SidebarItem = {
 
 export function SettingsLayout() {
   const router = useRouter();
-  const componentSearchEnabled = useFlagValue("component-search-v2");
-  const aiAssistantEnabled = useFlagValue("ai-assistant");
   const tangentShellEnabled = useTangentEnabled();
   const sidebarItems = [
     ...SIDEBAR_ITEMS,
-    ...(componentSearchEnabled || aiAssistantEnabled || tangentShellEnabled
-      ? [AGENT_ITEM]
-      : []),
+    AGENT_ITEM,
     ...(tangentShellEnabled ? [VSCODE_ITEM] : []),
   ];
 

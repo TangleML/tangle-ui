@@ -9,7 +9,6 @@ import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import { ComponentEditorProvider } from "@/components/shared/ComponentEditor/ComponentEditorProvider";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { LocalPipelineMigration } from "@/components/shared/LocalPipelineMigration";
-import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { InlineStack } from "@/components/ui/layout";
 import { ComponentLibraryProvider } from "@/providers/ComponentLibraryProvider";
@@ -27,10 +26,7 @@ import {
 } from "@/routes/v2/shared/store/SharedStoreContext";
 import { SharedStoreRegistrar } from "@/routes/v2/shared/store/SharedStoreRegistrar";
 import { DockArea } from "@/routes/v2/shared/windows/DockArea";
-import {
-  EMBEDDED_VIEW_PRESET,
-  viewPresetForComponentSearchMode,
-} from "@/routes/v2/shared/windows/viewPresets";
+import { EMBEDDED_VIEW_PRESET } from "@/routes/v2/shared/windows/viewPresets";
 import { WindowContainer } from "@/routes/v2/shared/windows/WindowContainer";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import {
@@ -43,7 +39,6 @@ import { DriverPermissionGate } from "./components/DriverPermissionGate";
 import { FlowCanvas } from "./components/FlowCanvas/FlowCanvas";
 import { RemotePipelineSaveRecovery } from "./components/RemotePipelineSaveRecovery";
 import { RemotePipelineView } from "./components/RemotePipelineView/RemotePipelineView";
-import { useComponentLibraryWindow } from "./hooks/useComponentLibraryWindow";
 import { useComponentSearchV2Window } from "./hooks/useComponentSearchV2Window";
 import { useEditorEscapeShortcut } from "./hooks/useEditorEscapeShortcut";
 import { useEmbeddedInitialDockLayout } from "./hooks/useEmbeddedInitialDockLayout";
@@ -137,8 +132,6 @@ const EmbeddedPipelineEditorCanvas = withSuspenseWrapper(
       });
       useLinkedWindowCleanup();
 
-      const componentSearchV2Enabled = useFlagValue("component-search-v2");
-      useComponentLibraryWindow(!componentSearchV2Enabled);
       usePipelineDetailsWindow();
       useHistoryWindow();
 
@@ -148,13 +141,8 @@ const EmbeddedPipelineEditorCanvas = withSuspenseWrapper(
       useShortcutListener(isActive);
       useEditorEscapeShortcut();
 
-      useComponentSearchV2Window(componentSearchV2Enabled);
-      useEmbeddedInitialDockLayout(
-        viewPresetForComponentSearchMode(
-          EMBEDDED_VIEW_PRESET,
-          componentSearchV2Enabled,
-        ),
-      );
+      useComponentSearchV2Window();
+      useEmbeddedInitialDockLayout(EMBEDDED_VIEW_PRESET);
 
       const activeSpec = navigation.activeSpec;
 

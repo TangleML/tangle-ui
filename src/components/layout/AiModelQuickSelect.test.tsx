@@ -38,31 +38,7 @@ describe("AiModelQuickSelect", () => {
     ).toBeNull();
   });
 
-  it("does not render when all features using the model are disabled", () => {
-    enableFlags({
-      "ai-assistant": false,
-      "component-search-v2": false,
-      "tangent-shell": false,
-    });
-    window.localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, "true");
-    window.localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
-        apiBase: "https://api.example.com/v1",
-        apiKey: "",
-        model: "gpt-4.1-mini",
-      }),
-    );
-
-    render(<AiModelQuickSelect />);
-
-    expect(
-      screen.queryByRole("button", { name: /^AI model and thinking:/ }),
-    ).toBeNull();
-  });
-
   it("shows configured model choices when component search is enabled", () => {
-    enableFlags({ "component-search-v2": true });
     window.localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, "true");
     window.localStorage.setItem(
       STORAGE_KEY,
@@ -109,7 +85,6 @@ describe("AiModelQuickSelect", () => {
       projects: true,
       "tangent-shell": true,
       "ai-assistant": false,
-      "component-search-v2": false,
     });
     window.localStorage.setItem(AI_USE_OWN_KEY_STORAGE_KEY, "false");
 
