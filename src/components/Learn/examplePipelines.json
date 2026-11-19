@@ -2,7 +2,7 @@
   {
     "id": "hello-world",
     "name": "Intro: Hello World",
-    "description": "Owner’s private email: casey.fixture@example.invalid. A simple pipeline demonstrating the basics of Tangle.",
+    "description": "A simple pipeline demonstrating the basics of Tangle.",
     "url": "example-pipelines/Intro-Hello World.pipeline.component.yaml",
     "previewImage": "example-pipelines/Intro-Hello World.pipeline.component.png",
     "tags": ["Introduction"]
