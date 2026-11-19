@@ -96,11 +96,77 @@ function GitHubSettingsHint({ error }: { error: RepositoryLinkError }) {
   );
 }
 
+interface LinkedRepositoryNoticeProps {
+  name: string;
+  archived: boolean;
+  replaceable: boolean;
+}
+
+function LinkedRepositoryNotice({
+  name,
+  archived,
+  replaceable,
+}: LinkedRepositoryNoticeProps) {
+  return (
+    <InfoBox title={archived ? "Archived" : "Already linked"} variant="info">
+      <BlockStack gap="1">
+        <Text size="sm">
+          {archived
+            ? `${name} is linked to this project, but archived. Restore it to show it again.`
+            : `${name} is already linked to this project.`}
+        </Text>
+        {replaceable && (
+          <Text size="sm">
+            Replacing removes the current link and links the repository again as
+            you, with your GitHub access.
+          </Text>
+        )}
+      </BlockStack>
+    </InfoBox>
+  );
+}
+
+type PrimaryAction = "link" | "restore" | "replace" | "none";
+
+const PRIMARY_LABEL: Record<PrimaryAction, string> = {
+  link: "Link",
+  restore: "Restore",
+  replace: "Replace link",
+  none: "Link",
+};
+
+const PRIMARY_TRACKING: Record<PrimaryAction, string> = {
+  link: "projects.link_repository_submit",
+  restore: "projects.link_repository_restore",
+  replace: "projects.link_repository_replace",
+  none: "projects.link_repository_submit",
+};
+
+function primaryActionFor({
+  linked,
+  restorable,
+  replaceable,
+}: {
+  linked: ProjectResourceSummary | undefined;
+  restorable: boolean;
+  replaceable: boolean;
+}): PrimaryAction {
+  if (!linked) return "link";
+  if (restorable) return "restore";
+  return replaceable ? "replace" : "none";
+}
+
 interface RepositoryLinkFormProps {
   resources: ProjectResourceSummary[];
   onSubmit: (input: CreateResourceInput) => void;
   onCancel: () => void;
   isSubmitting?: boolean;
+  isArchived?: (resource: ProjectResourceSummary) => boolean;
+  onRestore?: (resource: ProjectResourceSummary) => void;
+  onReplace?: (
+    resource: ProjectResourceSummary,
+    input: CreateResourceInput,
+  ) => void;
 }
 
 export function RepositoryLinkForm({
@@ -108,6 +174,9 @@ export function RepositoryLinkForm({
   onSubmit,
   onCancel,
   isSubmitting = false,
+  isArchived,
+  onRestore,
+  onReplace,
 }: RepositoryLinkFormProps) {
   const [url, setUrl] = useState("");
   const [checkedUrl, setCheckedUrl] = useState<string | null>(null);
@@ -119,12 +188,20 @@ export function RepositoryLinkForm({
   } = useRepositoryCheck(checkedUrl);
 
   const trimmedUrl = url.trim();
-  const alreadyLinked =
-    checked !== undefined &&
-    resources.some((resource) => repositoryUrlOf(resource) === checked.url);
-  const canLink =
-    checked !== undefined && !alreadyLinked && !isFetching && !isSubmitting;
+  const linked =
+    checked === undefined
+      ? undefined
+      : resources.find((resource) => repositoryUrlOf(resource) === checked.url);
+  const restorable =
+    linked !== undefined &&
+    onRestore !== undefined &&
+    isArchived?.(linked) === true;
+  const replaceable = linked !== undefined && onReplace !== undefined;
+  const busy = checked === undefined || isFetching || isSubmitting;
   const urlRejected = !isFetching && isProblemWithUrl(error);
+
+  const primaryAction = primaryActionFor({ linked, restorable, replaceable });
+  const canAct = !busy && primaryAction !== "none";
 
   const check = () => {
     if (trimmedUrl === "") return;
@@ -135,15 +212,25 @@ export function RepositoryLinkForm({
     setCheckedUrl(trimmedUrl);
   };
 
-  const link = () => {
-    if (canLink) {
+  const replace = () => {
+    if (checked === undefined || busy || !linked) return;
+    onReplace?.(linked, checked.input);
+  };
+
+  const act = () => {
+    if (checked === undefined || !canAct) return;
+    if (!linked) {
       onSubmit(checked.input);
+    } else if (restorable) {
+      onRestore?.(linked);
+    } else {
+      replace();
     }
   };
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
-    link();
+    act();
   };
 
   const handleUrlChange = (value: string) => {
@@ -161,7 +248,7 @@ export function RepositoryLinkForm({
               id={URL_FIELD_ID}
               value={url}
               onChange={(event) => handleUrlChange(event.target.value)}
-              onEnter={checked ? link : check}
+              onEnter={checked ? act : check}
               placeholder="https://github.com/owner/repo"
               aria-describedby={
                 urlRejected ? `${URL_HINT_ID} ${CHECK_ERROR_ID}` : URL_HINT_ID
@@ -209,16 +296,17 @@ export function RepositoryLinkForm({
           {!isFetching && checked && (
             <>
               <RepositoryDetails repository={checked.repository} />
-              {!alreadyLinked && (
+              {linked ? (
+                <LinkedRepositoryNotice
+                  name={repositoryName(checked.repository)}
+                  archived={restorable}
+                  replaceable={replaceable}
+                />
+              ) : (
                 <RepositoryAccessNotice
                   repository={checked.repository}
                   tokensSupported={checked.tokensSupported}
                 />
-              )}
-              {alreadyLinked && (
-                <InfoBox title="Already linked" variant="info">
-                  {`${repositoryName(checked.repository)} is already linked to this project.`}
-                </InfoBox>
               )}
             </>
           )}
@@ -234,12 +322,23 @@ export function RepositoryLinkForm({
             >
               Cancel
             </Button>
+            {restorable && replaceable && (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={busy}
+                onClick={replace}
+                {...tracking("projects.link_repository_replace")}
+              >
+                Replace link
+              </Button>
+            )}
             <Button
               type="submit"
-              disabled={!canLink}
-              {...tracking("projects.link_repository_submit")}
+              disabled={!canAct}
+              {...tracking(PRIMARY_TRACKING[primaryAction])}
             >
-              Link
+              {PRIMARY_LABEL[primaryAction]}
             </Button>
           </InlineStack>
         </DialogFooter>

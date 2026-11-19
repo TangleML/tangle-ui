@@ -201,7 +201,7 @@ describe("AddResourceButton repository link", () => {
     expect(openDialog).toHaveBeenCalledWith(
       expect.objectContaining({
         component: LinkRepositoryDialog,
-        props: { resources },
+        props: { projectId: "project-1", resources },
         routeKey: "link-repository",
       }),
     );

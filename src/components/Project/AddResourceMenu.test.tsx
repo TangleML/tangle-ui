@@ -7,6 +7,7 @@ import { AddResourceMenu } from "./AddResourceMenu";
 
 vi.mock("@/services/projects/useProjectResources", () => ({
   useCreateProjectResource: () => ({ mutate: vi.fn(), isPending: false }),
+  useDeleteProjectResource: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 vi.mock("@/hooks/useToastNotification", () => ({

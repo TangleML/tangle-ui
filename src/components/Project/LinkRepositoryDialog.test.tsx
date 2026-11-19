@@ -6,17 +6,22 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { repositoryResourceInput } from "@/services/projects/resourceDescriptor";
 import type { ProjectResourceSummary } from "@/services/projects/types";
-import { useCreateProjectResource } from "@/services/projects/useProjectResources";
+import {
+  useCreateProjectResource,
+  useDeleteProjectResource,
+} from "@/services/projects/useProjectResources";
 
 import { LinkRepositoryDialog } from "./LinkRepositoryDialog";
 
 const mutate = vi.fn();
+const remove = vi.fn();
 const notify = vi.fn();
 const track = vi.fn();
 const fetchMock = vi.fn<typeof fetch>();
 
 vi.mock("@/services/projects/useProjectResources", () => ({
   useCreateProjectResource: vi.fn(),
+  useDeleteProjectResource: vi.fn(),
 }));
 
 vi.mock("@/hooks/useToastNotification", () => ({
@@ -186,7 +191,26 @@ async function check(user: ReturnType<typeof userEvent.setup>, url: string) {
 }
 
 const linkButton = () => screen.getByRole("button", { name: "Link" });
+const replaceButton = () =>
+  screen.getByRole("button", { name: "Replace link" });
 const urlField = () => screen.getByLabelText("Repository or folder URL");
+
+const REPLACE_HELP =
+  "Replacing removes the current link and links the repository again as you, with your GitHub access.";
+
+function mutations({
+  creating = false,
+  deleting = false,
+}: { creating?: boolean; deleting?: boolean } = {}) {
+  vi.mocked(useCreateProjectResource).mockReturnValue({
+    mutate,
+    isPending: creating,
+  } as unknown as ReturnType<typeof useCreateProjectResource>);
+  vi.mocked(useDeleteProjectResource).mockReturnValue({
+    mutate: remove,
+    isPending: deleting,
+  } as unknown as ReturnType<typeof useDeleteProjectResource>);
+}
 
 describe("LinkRepositoryDialog", () => {
   beforeEach(() => {
@@ -195,10 +219,7 @@ describe("LinkRepositoryDialog", () => {
     vi.stubGlobal("fetch", fetchMock);
     fetchMock.mockImplementation(async (input, init) => answer(input, init));
     github(200, REPOSITORY_BODY);
-    vi.mocked(useCreateProjectResource).mockReturnValue({
-      mutate,
-      isPending: false,
-    } as unknown as ReturnType<typeof useCreateProjectResource>);
+    mutations();
   });
 
   afterEach(() => {
@@ -330,8 +351,8 @@ describe("LinkRepositoryDialog", () => {
     expect(linkButton()).toBeEnabled();
   });
 
-  it("does not link the same repository and folder twice", async () => {
-    const user = await openDialog([
+  describe("when the repository and folder are already linked", () => {
+    const linkedFolder = () =>
       linkedRow(
         repositoryResourceInput({
           owner: "TangleML",
@@ -340,17 +361,76 @@ describe("LinkRepositoryDialog", () => {
           path: "components/data",
           isPrivate: false,
         }),
-      ),
-    ]);
+      );
+    const FOLDER_URL = `${REPO_URL}/tree/master/components/data`;
 
-    await check(user, `${REPO_URL}/tree/master/components/data`);
+    it("offers to replace the link instead of linking it twice", async () => {
+      const user = await openDialog([linkedFolder()]);
 
-    expect(
-      await screen.findByText(
-        "TangleML/pipeline_components/components/data is already linked to this project.",
-      ),
-    ).toBeVisible();
-    expect(linkButton()).toBeDisabled();
+      await check(user, FOLDER_URL);
+
+      expect(
+        await screen.findByText(
+          "TangleML/pipeline_components/components/data is already linked to this project.",
+        ),
+      ).toBeVisible();
+      expect(screen.getByText(REPLACE_HELP)).toBeVisible();
+      expect(screen.queryByRole("button", { name: "Link" })).toBeNull();
+      expect(screen.queryByText("Archived")).toBeNull();
+      expect(replaceButton()).toBeEnabled();
+      expect(replaceButton()).toHaveAttribute(
+        "data-tracking-id",
+        "projects.link_repository_replace",
+      );
+    });
+
+    it("removes the old link and links again as the current user", async () => {
+      const user = await openDialog([linkedFolder()]);
+      await check(user, FOLDER_URL);
+      await screen.findByText(/already linked/);
+
+      await user.click(replaceButton());
+
+      expect(remove).toHaveBeenCalledWith("resource-1", expect.anything());
+      expect(mutate).not.toHaveBeenCalled();
+
+      const [, removal] = remove.mock.calls[0];
+      await act(async () => removal.onSuccess());
+
+      expect(mutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: "TangleML/pipeline_components/components/data",
+        }),
+        expect.anything(),
+      );
+      const [, creation] = mutate.mock.calls[0];
+      await act(async () => creation.onSuccess());
+      expect(track).toHaveBeenCalledWith("projects.link_repository_completed", {
+        private: false,
+        has_grant: false,
+      });
+      expect(notify).toHaveBeenCalledWith("Repository linked", "success");
+    });
+
+    it("replaces on Enter once the URL has been checked", async () => {
+      const user = await openDialog([linkedFolder()]);
+
+      await user.type(urlField(), `${FOLDER_URL}{Enter}`);
+      await screen.findByText(/already linked/);
+      await user.keyboard("{Enter}");
+
+      expect(remove).toHaveBeenCalledTimes(1);
+    });
+
+    it("cannot replace twice while the old link is being removed", async () => {
+      mutations({ deleting: true });
+      const user = await openDialog([linkedFolder()]);
+
+      await check(user, FOLDER_URL);
+      await screen.findByText(/already linked/);
+
+      expect(replaceButton()).toBeDisabled();
+    });
   });
 
   it("links another folder of a repository already linked", async () => {
@@ -416,10 +496,7 @@ describe("LinkRepositoryDialog", () => {
   });
 
   it("cannot be submitted twice while saving", async () => {
-    vi.mocked(useCreateProjectResource).mockReturnValue({
-      mutate,
-      isPending: true,
-    } as unknown as ReturnType<typeof useCreateProjectResource>);
+    mutations({ creating: true });
     const user = await openDialog();
 
     await check(user, REPO_URL);
@@ -647,7 +724,7 @@ describe("LinkRepositoryDialog", () => {
         expect(input.payload).not.toHaveProperty("grantId");
       });
 
-      it("finds a repository linked before the token was chosen", async () => {
+      it("offers to relink a repository linked before the token was chosen, with the grant", async () => {
         grant(false, "master");
         const user = await openDialog([
           linkedRow(
@@ -669,7 +746,14 @@ describe("LinkRepositoryDialog", () => {
           ),
         ).toBeVisible();
         expect(screen.queryByText("No GitHub token")).toBeNull();
-        expect(linkButton()).toBeDisabled();
+        expect(replaceButton()).toBeEnabled();
+
+        await user.click(replaceButton());
+        const [, removal] = remove.mock.calls[0];
+        await act(async () => removal.onSuccess());
+
+        const [input] = mutate.mock.calls[0];
+        expect(input.payload).toMatchObject({ grantId: "7" });
       });
     });
   });

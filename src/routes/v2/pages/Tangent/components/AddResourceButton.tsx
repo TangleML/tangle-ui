@@ -158,7 +158,7 @@ export function AddResourceButton({
   function handleLinkRepository() {
     void openResourceDialog({
       component: LinkRepositoryDialog,
-      props: { resources },
+      props: { projectId, resources },
       routeKey: "link-repository",
       size: "md",
       onSuccess: (linked) =>

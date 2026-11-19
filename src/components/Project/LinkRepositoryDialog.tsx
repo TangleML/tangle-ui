@@ -11,7 +11,10 @@ import type {
   CreateResourceInput,
   ProjectResourceSummary,
 } from "@/services/projects/types";
-import { useCreateProjectResource } from "@/services/projects/useProjectResources";
+import {
+  useCreateProjectResource,
+  useDeleteProjectResource,
+} from "@/services/projects/useProjectResources";
 
 import { RepositoryLinkForm } from "./RepositoryLinkForm";
 import { repositoryLinkedMetadata } from "./repositoryLinkTracking";
@@ -30,6 +33,7 @@ export function LinkRepositoryDialog({
   onOpenChange,
 }: LinkRepositoryDialogProps) {
   const createResource = useCreateProjectResource(projectId);
+  const deleteResource = useDeleteProjectResource(projectId);
   const notify = useToastNotification();
   const { track } = useAnalytics();
 
@@ -46,6 +50,13 @@ export function LinkRepositoryDialog({
     });
   };
 
+  const handleReplace = (
+    linked: ProjectResourceSummary,
+    input: CreateResourceInput,
+  ) => {
+    deleteResource.mutate(linked.id, { onSuccess: () => handleSubmit(input) });
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
@@ -59,8 +70,9 @@ export function LinkRepositoryDialog({
           key={String(open)}
           resources={resources}
           onSubmit={handleSubmit}
+          onReplace={handleReplace}
           onCancel={() => onOpenChange(false)}
-          isSubmitting={createResource.isPending}
+          isSubmitting={createResource.isPending || deleteResource.isPending}
         />
       </DialogContent>
     </Dialog>
