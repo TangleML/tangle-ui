@@ -16,7 +16,10 @@ import {
   CONDITION_ICON_NAME,
 } from "@/routes/v2/shared/conditionalExecution.styles";
 import { deriveColorPalette } from "@/routes/v2/shared/nodes/TaskNode/color.utils";
-import { AGGREGATOR_ADD_INPUT_HANDLE_ID } from "@/utils/aggregatorInputs";
+import {
+  AGGREGATOR_ADD_INPUT_HANDLE_ID,
+  AGGREGATOR_INTERNAL_INPUTS,
+} from "@/utils/aggregatorInputs";
 import {
   IS_ENABLED_PORT_NAME,
   RUN_CONDITION_LABEL,
@@ -24,11 +27,6 @@ import {
 
 import type { TaskNodeViewProps } from "./TaskNode";
 import { createTaskNodeCardVariants } from "./taskNode.variants";
-
-const AGGREGATOR_INTERNAL_INPUTS = new Set([
-  AGGREGATOR_ADD_INPUT_HANDLE_ID,
-  "output_type",
-]);
 
 const PERCEIVED_FONT_SIZE = "32px";
 const s = "var(--simplified-scale, 1)";

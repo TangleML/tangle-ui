@@ -28,7 +28,7 @@ const getEdges = () => [];
 vi.mock("@xyflow/react", () => ({
   SelectionMode: { Full: "full" },
   useNodesInitialized: () => initialized,
-  useReactFlow: () => ({ getNodes, getEdges, fitView }),
+  useReactFlow: () => ({ getNodes, getEdges, getZoom: () => 1, fitView }),
 }));
 vi.mock("@/routes/v2/shared/store/SharedStoreContext", () => ({
   useSharedStores: () => ({ editor, keyboard }),
@@ -49,7 +49,7 @@ it("restores node focus after late measurement lays out an unplaced pipeline", a
   editor.setPendingFocusNode(task.$id);
   const { rerender } = renderHook(() => {
     useFitViewOnFocus();
-    useAutoLayoutShortcut(applyLayout);
+    useAutoLayoutShortcut(applyLayout, spec);
     useLayoutUnplacedSpec(spec);
   });
   await act(async () => vi.advanceTimersByTimeAsync(100));
@@ -67,7 +67,7 @@ it("restores node focus after late measurement lays out an unplaced pipeline", a
 it("still frames the whole graph when layout has no node target", async () => {
   initialized = true;
   renderHook(() => {
-    useAutoLayoutShortcut(applyLayout);
+    useAutoLayoutShortcut(applyLayout, spec);
     useLayoutUnplacedSpec(spec);
   });
   await act(async () => vi.advanceTimersByTimeAsync(100));

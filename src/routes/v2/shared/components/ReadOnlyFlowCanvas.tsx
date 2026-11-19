@@ -59,7 +59,7 @@ export const ReadOnlyFlowCanvas = observer(function ReadOnlyFlowCanvas({
   useCopyShortcut(spec);
   useFitViewOnFocus();
 
-  useAutoLayoutShortcut(rfSetNodes);
+  useAutoLayoutShortcut(rfSetNodes, spec);
   useLayoutUnplacedSpec(spec);
 
   const onNodesChange = (changes: NodeChange[]) => {
