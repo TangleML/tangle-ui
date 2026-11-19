@@ -49,7 +49,7 @@ function AiRerankProgress() {
       className="rounded-md bg-muted/50 px-3 py-2 text-muted-foreground"
     >
       <Spinner size={14} />
-      <Text size="xs" tone="subdued" role="status" aria-live="polite">
+      <Text size="xs" tone="subdued" aria-hidden="true">
         {AI_SEARCH_PROGRESS_VERBS[verbIndex]} component candidates with AI…
       </Text>
     </InlineStack>
@@ -222,6 +222,9 @@ export function ComponentSearchV2Content() {
             {isReranking ? <Spinner size={14} /> : <Icon name="Sparkles" />}
           </Button>
         </InlineStack>
+        <Text className="sr-only" role="status">
+          {isReranking ? "Ranking component search results." : ""}
+        </Text>
         {isReranking && <AiRerankProgress />}
         <SourceFilterBar
           options={sourceFilterOptions}
