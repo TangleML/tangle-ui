@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 
+import type { RunStatusFor } from "./cli/runStatusSource.ts";
 import type { CurrentProjectState } from "./currentProject.ts";
 import { ResourcesTreeProvider } from "./resourcesTree.ts";
 import { RunsTreeProvider } from "./runsTree.ts";
@@ -10,6 +11,7 @@ export interface ProjectViewsDeps {
   currentProject: CurrentProjectState;
   createClient(): Promise<TangleRestClient>;
   activeSessionId(): string | undefined;
+  statusFor: RunStatusFor;
 }
 
 export interface ProjectViews extends vscode.Disposable {
@@ -28,7 +30,7 @@ export function createProjectViews(deps: ProjectViewsDeps): ProjectViews {
     currentProject: () => deps.currentProject.project,
     createClient: deps.createClient,
   };
-  const runs = new RunsTreeProvider(treeDeps);
+  const runs = new RunsTreeProvider({ ...treeDeps, statusFor: deps.statusFor });
   const resources = new ResourcesTreeProvider(treeDeps);
   const sessions = new SessionsTreeProvider({
     ...treeDeps,
