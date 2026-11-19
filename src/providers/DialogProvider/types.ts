@@ -9,6 +9,7 @@ export interface DialogConfig<T = unknown, TProps = {}> {
   component: ComponentType<DialogProps<T, TProps>>;
   props?: TProps;
   routeKey?: string;
+  clearSearchParamsOnClose?: readonly string[];
   size?: "sm" | "md" | "lg" | "xl" | "full";
   closeOnEsc?: boolean;
   closeOnOverlayClick?: boolean;

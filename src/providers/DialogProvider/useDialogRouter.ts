@@ -9,6 +9,7 @@ import {
   getRoutedDialogsAbove,
   getTopRoutedDialog,
   omitSearchParams,
+  searchParamKeysReleasedBy,
 } from "./utils";
 
 function isPendingOrClosing(
@@ -39,7 +40,7 @@ export function useDialogRouter({
 }: UseDialogRouterOptions) {
   const navigate = useNavigate();
   const searchParams = useSearch({ strict: false }) as Record<string, unknown>;
-  const previousStackLength = useRef(stack.length);
+  const previousStack = useRef(stack);
 
   // Dialog routing manages search params dynamically across arbitrary routes.
   // TanStack Router's strict per-route typing cannot express this, so we
@@ -132,7 +133,12 @@ export function useDialogRouter({
   useEffect(() => {
     if (disabled) return;
 
-    if (stack.length < previousStackLength.current) {
+    const removedDialogs = previousStack.current.filter(
+      (previous) => !stack.some((d) => d.id === previous.id),
+    );
+    previousStack.current = stack;
+
+    if (removedDialogs.length > 0) {
       const dialogIdInUrl = searchParams[DIALOG_SEARCH_PARAMS.DIALOG_ID] as
         string | undefined;
 
@@ -141,9 +147,13 @@ export function useDialogRouter({
         !stack.find((d) => d.id === dialogIdInUrl) &&
         !closingDialogIds.current?.has(dialogIdInUrl)
       ) {
-        navigateSearch(omitSearchParams(searchParams, DIALOG_PARAM_KEYS));
+        navigateSearch(
+          omitSearchParams(
+            searchParams,
+            searchParamKeysReleasedBy(removedDialogs),
+          ),
+        );
       }
     }
-    previousStackLength.current = stack.length;
-  }, [disabled, stack.length, navigate, searchParams, stack, closingDialogIds]);
+  }, [disabled, navigate, searchParams, stack, closingDialogIds]);
 }

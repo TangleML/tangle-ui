@@ -11,6 +11,8 @@ import { isRecord } from "@/utils/typeGuards";
 
 const DEBOUNCE_MS = 500;
 
+export const RUN_FILTER_SEARCH_PARAM = "filter";
+
 function parseFilterString(value: string): PipelineRunFilters {
   try {
     return validateFilters(JSON.parse(value));
@@ -79,7 +81,13 @@ export function useRunSearchParams(): UseRunSearchParamsReturn {
 
   const updateUrl = (newFilters: PipelineRunFilters) => {
     const filter = serializeFiltersToUrl(newFilters);
-    navigate({ to: pathname, search: filter ? { filter } : {} });
+    navigate({
+      to: pathname,
+      search: (previous: Record<string, unknown>) => {
+        const { [RUN_FILTER_SEARCH_PARAM]: _, ...rest } = previous;
+        return filter ? { ...rest, [RUN_FILTER_SEARCH_PARAM]: filter } : rest;
+      },
+    });
   };
 
   const setFilter = <K extends keyof PipelineRunFilters>(

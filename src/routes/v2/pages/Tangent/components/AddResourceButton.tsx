@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
+import { RUN_FILTER_SEARCH_PARAM } from "@/hooks/useRunSearchParams";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useDialog } from "@/providers/DialogProvider/hooks/useDialog";
 import type { DialogConfig } from "@/providers/DialogProvider/types";
@@ -39,8 +40,6 @@ const ADDABLE: Record<AddableKind, { label: string; trackingId: string }> = {
     trackingId: "projects.add_document_open",
   },
 };
-
-type ResourceDialogComponent = DialogConfig<CreateResourceInput>["component"];
 
 function identityOf(metadata: Record<string, unknown> | null | undefined) {
   const identity = metadata?.identity;
@@ -97,15 +96,10 @@ export function AddResourceButton({
   const { mutate: createResource, isPending } =
     useCreateProjectResource(projectId);
 
-  async function openResourceDialog(
-    component: ResourceDialogComponent,
-    routeKey: string,
-    size: DialogConfig<CreateResourceInput>["size"] = "full",
-  ) {
+  async function openResourceDialog(config: DialogConfig<CreateResourceInput>) {
     const result = await open<CreateResourceInput>({
-      component,
-      routeKey,
-      size,
+      size: "full",
+      ...config,
     }).catch(convertCancelErrorTo(undefined));
 
     if (!result) return;
@@ -119,17 +113,28 @@ export function AddResourceButton({
   }
 
   function handleAddPipeline() {
-    void openResourceDialog(AddPipelineDialog, "add-pipeline");
+    void openResourceDialog({
+      component: AddPipelineDialog,
+      routeKey: "add-pipeline",
+    });
   }
 
   function handleAddPipelineRun() {
-    void openResourceDialog(AddPipelineRunDialog, "add-pipeline-run");
+    void openResourceDialog({
+      component: AddPipelineRunDialog,
+      routeKey: "add-pipeline-run",
+      clearSearchParamsOnClose: [RUN_FILTER_SEARCH_PARAM],
+    });
   }
 
   // The pipeline and run pickers are browsers and want the whole screen; a
   // document editor wants width, but lines that span a wide monitor read badly.
   function handleAddDocument() {
-    void openResourceDialog(AddDocumentDialog, "add-document", "xl");
+    void openResourceDialog({
+      component: AddDocumentDialog,
+      routeKey: "add-document",
+      size: "xl",
+    });
   }
 
   const add: Record<AddableKind, () => void> = {

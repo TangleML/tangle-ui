@@ -144,6 +144,52 @@ describe("DialogProvider", () => {
     });
   });
 
+  it("strips the dialog's own search params from the URL when it closes", async () => {
+    mockSearchParams = { project: "p1" };
+
+    function TestComponent() {
+      const dialog = useDialog();
+
+      const handleOpen = () => {
+        dialog
+          .open({
+            component: TestDialog,
+            props: { title: "Test" },
+            routeKey: "test-dialog",
+            clearSearchParamsOnClose: ["filter"],
+          })
+          .catch(() => undefined);
+      };
+
+      return <button onClick={handleOpen}>Open Dialog</button>;
+    }
+
+    render(
+      <DialogProvider>
+        <TestComponent />
+      </DialogProvider>,
+    );
+
+    fireEvent.click(screen.getByText("Open Dialog"));
+    await waitFor(() => {
+      expect(screen.getByTestId("test-dialog")).toBeInTheDocument();
+    });
+
+    mockSearchParams = { ...mockSearchParams, filter: { created_by: "me" } };
+    mockNavigate.mockClear();
+
+    fireEvent.click(screen.getByTestId("dialog-cancel"));
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith({
+        search: { project: "p1" },
+      });
+    });
+    expect(
+      mockNavigate.mock.calls.some((call) => "filter" in call[0].search),
+    ).toBe(false);
+  });
+
   it("should handle browser back button", async () => {
     let dialogClosed = false;
 
