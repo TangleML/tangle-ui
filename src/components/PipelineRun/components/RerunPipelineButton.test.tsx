@@ -152,9 +152,16 @@ describe("<RerunPipelineButton/>", () => {
   };
 
   beforeEach(() => {
-    mockFetch.mockResolvedValue({
-      ok: false,
-      statusText: "Not Found",
+    mockFetch.mockImplementation(async (url: string) => {
+      if (url.includes("/annotations/")) {
+        return {
+          ok: true,
+          status: 200,
+          headers: { get: () => "application/json" },
+          json: async () => ({}),
+        };
+      }
+      return { ok: false, statusText: "Not Found" };
     });
 
     navigateMock.mockClear();

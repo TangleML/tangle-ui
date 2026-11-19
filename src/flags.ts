@@ -53,7 +53,7 @@ export const ExistingFlags: ConfigFlags = {
     name: "Projects",
     description:
       "Enable the Projects dashboard for grouping pipelines, documents and runs.",
-    default: false,
+    default: true,
     category: "beta",
   },
 
@@ -61,7 +61,7 @@ export const ExistingFlags: ConfigFlags = {
     name: "Tangent",
     description:
       "Turn Projects into Tangent. Each session chats with an agent that can build, run and debug the pipelines in a project. Needs an AI provider set in AI Configuration.",
-    default: false,
+    default: true,
     category: "beta",
     canEnable: isTangentEnabled,
     dependsOn: "projects",
