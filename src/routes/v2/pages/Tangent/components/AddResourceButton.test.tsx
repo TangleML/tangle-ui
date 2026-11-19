@@ -3,17 +3,26 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { remotePipelineResourceInput } from "@/services/projects/pipelineResource";
-import { localPipelineResourceInput } from "@/services/projects/resourceDescriptor";
+import {
+  localPipelineResourceInput,
+  repositoryResourceInput,
+} from "@/services/projects/resourceDescriptor";
 import type {
   CreateResourceInput,
   ProjectResourceSummary,
 } from "@/services/projects/types";
 
 import { AddResourceButton } from "./AddResourceButton";
+import { LinkRepositoryDialog } from "./LinkRepositoryDialog";
 
 const openDialog = vi.fn();
 const createResource = vi.fn();
 const notify = vi.fn();
+const track = vi.fn();
+
+vi.mock("@/providers/AnalyticsProvider", () => ({
+  useAnalytics: () => ({ track }),
+}));
 
 vi.mock("@/providers/DialogProvider/hooks/useDialog", () => ({
   useDialog: () => ({ open: openDialog }),
@@ -102,7 +111,10 @@ describe("AddResourceButton", () => {
   it("attaches a pipeline the project does not hold yet", async () => {
     await pickAPipeline([]);
 
-    expect(createResource).toHaveBeenCalledWith(PICKED_PIPELINE);
+    expect(createResource).toHaveBeenCalledWith(
+      PICKED_PIPELINE,
+      expect.anything(),
+    );
   });
 
   it("attaches nothing when the project already holds it", async () => {
@@ -118,7 +130,10 @@ describe("AddResourceButton", () => {
   it("attaches a different pipeline of the same name", async () => {
     await pickAPipeline([attachedRow("pipeline://id/file-2")]);
 
-    expect(createResource).toHaveBeenCalledWith(PICKED_PIPELINE);
+    expect(createResource).toHaveBeenCalledWith(
+      PICKED_PIPELINE,
+      expect.anything(),
+    );
   });
 
   it("recognises a pipeline attached under its name, before it had an id", async () => {
@@ -146,6 +161,67 @@ describe("AddResourceButton", () => {
       PICKED_SAVED_PIPELINE,
     );
 
-    expect(createResource).toHaveBeenCalledWith(PICKED_SAVED_PIPELINE);
+    expect(createResource).toHaveBeenCalledWith(
+      PICKED_SAVED_PIPELINE,
+      expect.anything(),
+    );
+  });
+});
+
+describe("AddResourceButton repository link", () => {
+  const LINKED = repositoryResourceInput({
+    owner: "TangleML",
+    repo: "pipeline_components",
+    ref: null,
+    path: null,
+  });
+
+  afterEach(() => vi.resetAllMocks());
+
+  async function chooseLinkARepository(resources: ProjectResourceSummary[]) {
+    const user = userEvent.setup();
+    render(
+      <AddResourceButton
+        projectId="project-1"
+        resources={resources}
+        kind="repository"
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Link a repository" }));
+  }
+
+  it("opens the link dialog with what the project already holds", async () => {
+    openDialog.mockResolvedValue(undefined);
+    const resources = [attachedRow("pipeline://id/file-1")];
+
+    await chooseLinkARepository(resources);
+
+    expect(openDialog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        component: LinkRepositoryDialog,
+        props: { resources },
+        routeKey: "link-repository",
+      }),
+    );
+  });
+
+  it("links the repository the dialog returns and records that it landed", async () => {
+    openDialog.mockResolvedValue(LINKED);
+
+    await chooseLinkARepository([]);
+
+    expect(createResource).toHaveBeenCalledWith(LINKED, expect.anything());
+    const [, options] = createResource.mock.calls[0];
+    options.onSuccess();
+    expect(track).toHaveBeenCalledWith("projects.link_repository_completed");
+  });
+
+  it("links nothing when the dialog is cancelled", async () => {
+    openDialog.mockResolvedValue(undefined);
+
+    await chooseLinkARepository([]);
+
+    expect(createResource).not.toHaveBeenCalled();
   });
 });

@@ -115,4 +115,41 @@ describe("projectCardLists", () => {
       ["r-1", true],
     ]);
   });
+
+  it("lists linked repositories newest first, keyed by their row for archiving", () => {
+    const repository = (id: string, url: string | undefined) => ({
+      id,
+      name: id,
+      icon: "FolderGit2" as const,
+      description: "Repository",
+      repository: { url },
+    });
+    const lists = projectCardLists({
+      items: [
+        repository("repo-old", "https://github.com/TangleML/old"),
+        repository("repo-new", undefined),
+      ],
+      summaries: [summary("repo-old", 1), summary("repo-new", 2)],
+      projectRuns: [],
+      archived: new Set(["repository://id/repo-old"]),
+    });
+
+    expect(
+      lists.repositories.map(({ id, key, archived, repository }) => [
+        id,
+        key,
+        archived,
+        repository.url,
+      ]),
+    ).toEqual([
+      ["repo-new", "repository://id/repo-new", false, undefined],
+      [
+        "repo-old",
+        "repository://id/repo-old",
+        true,
+        "https://github.com/TangleML/old",
+      ],
+    ]);
+    expect(lists.documents).toEqual([]);
+  });
 });

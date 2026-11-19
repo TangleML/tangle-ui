@@ -1,12 +1,14 @@
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import useToastNotification from "@/hooks/useToastNotification";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useDialog } from "@/providers/DialogProvider/hooks/useDialog";
 import type { DialogConfig } from "@/providers/DialogProvider/types";
 import { convertCancelErrorTo } from "@/providers/DialogProvider/utils";
 import { AddDocumentDialog } from "@/routes/v2/pages/Tangent/components/AddDocumentDialog";
 import { AddPipelineDialog } from "@/routes/v2/pages/Tangent/components/AddPipelineDialog";
 import { AddPipelineRunDialog } from "@/routes/v2/pages/Tangent/components/AddPipelineRunDialog";
+import { LinkRepositoryDialog } from "@/routes/v2/pages/Tangent/components/LinkRepositoryDialog";
 import type { LocalPipelinePointer } from "@/services/localPipelines/types";
 import { localPipelinePointerOf } from "@/services/projects/resourceDescriptor";
 import type {
@@ -16,7 +18,7 @@ import type {
 import { useCreateProjectResource } from "@/services/projects/useProjectResources";
 import { tracking } from "@/utils/tracking";
 
-type AddableKind = "pipeline" | "run" | "document";
+export type AddableKind = "pipeline" | "run" | "document" | "repository";
 
 interface AddResourceButtonProps {
   projectId: string;
@@ -38,9 +40,17 @@ const ADDABLE: Record<AddableKind, { label: string; trackingId: string }> = {
     label: "Add a document",
     trackingId: "projects.add_document_open",
   },
+  repository: {
+    label: "Link a repository",
+    trackingId: "projects.link_repository_open",
+  },
 };
 
-type ResourceDialogComponent = DialogConfig<CreateResourceInput>["component"];
+interface ResourceDialogOptions<TProps> {
+  props?: TProps;
+  size?: DialogConfig<CreateResourceInput>["size"];
+  onSuccess?: () => void;
+}
 
 function identityOf(metadata: Record<string, unknown> | null | undefined) {
   const identity = metadata?.identity;
@@ -94,16 +104,18 @@ export function AddResourceButton({
 }: AddResourceButtonProps) {
   const { open } = useDialog();
   const notify = useToastNotification();
+  const { track } = useAnalytics();
   const { mutate: createResource, isPending } =
     useCreateProjectResource(projectId);
 
-  async function openResourceDialog(
-    component: ResourceDialogComponent,
+  async function openResourceDialog<TProps = {}>(
+    component: DialogConfig<CreateResourceInput, TProps>["component"],
     routeKey: string,
-    size: DialogConfig<CreateResourceInput>["size"] = "full",
+    { props, size = "full", onSuccess }: ResourceDialogOptions<TProps> = {},
   ) {
-    const result = await open<CreateResourceInput>({
+    const result = await open<CreateResourceInput, TProps>({
       component,
+      props,
       routeKey,
       size,
     }).catch(convertCancelErrorTo(undefined));
@@ -115,7 +127,7 @@ export function AddResourceButton({
       return;
     }
 
-    createResource(result);
+    createResource(result, { onSuccess });
   }
 
   function handleAddPipeline() {
@@ -129,13 +141,22 @@ export function AddResourceButton({
   // The pipeline and run pickers are browsers and want the whole screen; a
   // document editor wants width, but lines that span a wide monitor read badly.
   function handleAddDocument() {
-    void openResourceDialog(AddDocumentDialog, "add-document", "xl");
+    void openResourceDialog(AddDocumentDialog, "add-document", { size: "xl" });
+  }
+
+  function handleLinkRepository() {
+    void openResourceDialog(LinkRepositoryDialog, "link-repository", {
+      props: { resources },
+      size: "md",
+      onSuccess: () => track("projects.link_repository_completed"),
+    });
   }
 
   const add: Record<AddableKind, () => void> = {
     pipeline: handleAddPipeline,
     run: handleAddPipelineRun,
     document: handleAddDocument,
+    repository: handleLinkRepository,
   };
   const { label, trackingId } = ADDABLE[kind];
 

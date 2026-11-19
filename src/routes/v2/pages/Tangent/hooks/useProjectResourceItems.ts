@@ -5,6 +5,8 @@ import {
   describeResource,
   DOCUMENT,
   INSTRUCTIONS,
+  REPOSITORY,
+  repositoryUrlOf,
 } from "@/services/projects/resourceDescriptor";
 import {
   conceptForDescriptorType,
@@ -30,6 +32,12 @@ export interface ProjectResourceItem {
   icon: IconName;
   description: string;
   target?: WorkareaTarget;
+  repository?: LinkedRepositoryItem;
+}
+
+/** A repository opens on GitHub, so it has a URL where other rows have a target. */
+export interface LinkedRepositoryItem {
+  url: string | undefined;
 }
 
 const BACKEND_PIPELINE_META = {
@@ -104,6 +112,18 @@ export function toResourceItem(
       : { id: resource.id, name: resource.name ?? UNTITLED, ...OTHER_META };
   }
 
+  if (described.type === REPOSITORY) {
+    const meta = resourceMeta("repository");
+    const url = repositoryUrlOf(resource);
+    return {
+      id: resource.id,
+      name: resource.name ?? url ?? UNTITLED,
+      icon: meta.icon,
+      description: meta.label,
+      repository: { url },
+    };
+  }
+
   // A descriptor naming a type this version does not know describes something
   // real that it cannot open, so the row is listed rather than opened wrongly.
   const concept = conceptForDescriptorType(described.type);
@@ -139,9 +159,9 @@ export function toResourceItem(
 export const CARD_ENTITIES: ProjectResourceEntity[] = ["document", "pipeline"];
 
 /**
- * The project's pipelines and documents as rows someone can open, named as they
- * are now. Shared by the Resources panel and the empty canvas so both list the
- * same things the same way.
+ * The project's pipelines, repositories and documents as rows someone can
+ * open, named as they are now. Shared by the project card and the empty
+ * canvas so both list the same things the same way.
  */
 export function useProjectResourceItems(projectId: string) {
   const query = useEveryProjectResource(projectId, CARD_ENTITIES);

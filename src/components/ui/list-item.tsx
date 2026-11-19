@@ -24,7 +24,18 @@ export interface ListItemAction {
   tracking?: TrackingAttributes;
 }
 
-interface ListItemProps {
+type ListItemOpening =
+  | {
+      onOpen: (event: MouseEvent<HTMLButtonElement>) => void;
+      href?: never;
+      disabled?: never;
+    }
+  /** Opens the address in a new tab instead of a view in this app. */
+  | { href: string; onOpen?: never; disabled?: never }
+  /** Can't be opened, though its actions still can. */
+  | { disabled: true; onOpen?: never; href?: never };
+
+type ListItemProps = ListItemOpening & {
   /** Without one, the title lines up under the titles of rows that have one. */
   icon?: IconName;
   title: string;
@@ -38,11 +49,10 @@ interface ListItemProps {
   /** For a row heading a group it opens and closes; its title reads heavier. */
   expanded?: boolean;
   tooltip?: string;
-  onOpen: (event: MouseEvent<HTMLButtonElement>) => void;
   tracking?: TrackingAttributes;
   /** `div` for a row that heads a group inside another list's item. */
   as?: "li" | "div";
-}
+};
 
 const ICON_TONE = {
   subdued: "text-muted-foreground",
@@ -92,12 +102,49 @@ export function ListItem({
   selected = false,
   expanded,
   tooltip,
+  disabled,
   onOpen,
+  href,
   tracking,
   as: Row = "li",
 }: ListItemProps) {
   const flairId = useId();
   const hasActions = actions.length > 0 || menu !== undefined;
+  const openerClassName = cn(
+    "flex min-w-0 cursor-pointer items-center gap-2 py-1.5 pe-2 text-left outline-none after:absolute after:inset-0 after:rounded-md focus-visible:after:ring-2 focus-visible:after:ring-ring/50 focus-visible:after:ring-inset disabled:cursor-default disabled:text-muted-foreground",
+    icon ? "ps-2" : "ps-8",
+  );
+  const content = (
+    <>
+      {icon && (
+        <Icon
+          name={icon}
+          size="sm"
+          aria-hidden
+          className="shrink-0 text-muted-foreground"
+        />
+      )}
+      <Text
+        size="sm"
+        weight={expanded === undefined ? undefined : "medium"}
+        tone="inherit"
+        title={tooltip ? undefined : title}
+        className="min-w-0 flex-1 truncate"
+      >
+        {title}
+      </Text>
+      {subtitle ? (
+        <Text
+          size="xs"
+          tone="subdued"
+          title={subtitle}
+          className="max-w-[45%] shrink-0 truncate"
+        >
+          {subtitle}
+        </Text>
+      ) : null}
+    </>
+  );
 
   return (
     <Row
@@ -109,47 +156,34 @@ export function ListItem({
         selected ? "bg-foreground/10" : "hover:bg-foreground/5",
       )}
     >
-      <button
-        type="button"
-        aria-current={selected || undefined}
-        aria-expanded={expanded}
-        aria-describedby={flair ? flairId : undefined}
-        title={tooltip}
-        onClick={onOpen}
-        {...tracking}
-        className={cn(
-          "flex min-w-0 cursor-pointer items-center gap-2 py-1.5 pe-2 text-left outline-none after:absolute after:inset-0 after:rounded-md focus-visible:after:ring-2 focus-visible:after:ring-ring/50 focus-visible:after:ring-inset",
-          icon ? "ps-2" : "ps-8",
-        )}
-      >
-        {icon && (
-          <Icon
-            name={icon}
-            size="sm"
-            aria-hidden
-            className="shrink-0 text-muted-foreground"
-          />
-        )}
-        <Text
-          size="sm"
-          weight={expanded === undefined ? undefined : "medium"}
-          tone="inherit"
-          title={tooltip ? undefined : title}
-          className="min-w-0 flex-1 truncate"
+      {href === undefined ? (
+        <button
+          type="button"
+          aria-current={selected || undefined}
+          aria-expanded={expanded}
+          aria-describedby={flair ? flairId : undefined}
+          title={tooltip}
+          disabled={disabled}
+          onClick={onOpen}
+          {...tracking}
+          className={openerClassName}
         >
-          {title}
-        </Text>
-        {subtitle ? (
-          <Text
-            size="xs"
-            tone="subdued"
-            title={subtitle}
-            className="max-w-[45%] shrink-0 truncate"
-          >
-            {subtitle}
-          </Text>
-        ) : null}
-      </button>
+          {content}
+        </button>
+      ) : (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-current={selected || undefined}
+          aria-describedby={flair ? flairId : undefined}
+          title={tooltip}
+          {...tracking}
+          className={openerClassName}
+        >
+          {content}
+        </a>
+      )}
       {flair || hasActions ? (
         <div className="pointer-events-none relative grid h-5 self-center pe-2 pointer-coarse:flex pointer-coarse:gap-1">
           {hasActions ? (
