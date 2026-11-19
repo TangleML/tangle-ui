@@ -1,9 +1,17 @@
 import type { QueryClient } from "@tanstack/react-query";
 
+import { idIdentity } from "@/services/projects/resourceTarget";
 import { ProjectsQueryKeys } from "@/services/projects/types";
 import { updateProjectMetadata } from "@/services/projects/updateProjectMetadata";
 
 const ARCHIVED_KEY = "tangentArchived";
+
+/**
+ * A repository has no workarea target to archive it by, so its row's own id
+ * stands in, in the same `type://identity` shape as the targets around it.
+ */
+export const repositoryKey = (resourceId: string) =>
+  `repository://${idIdentity(resourceId)}`;
 
 /** The workarea targets archived out of the project card, e.g. `run://id/…`. */
 export function archivedTargets(

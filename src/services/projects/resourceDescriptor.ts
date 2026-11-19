@@ -4,6 +4,7 @@ import {
   repositoryUrl,
 } from "@/services/github/repositoryUrl";
 import type { LocalPipelinePointer } from "@/services/localPipelines/types";
+import { stringOrNull } from "@/utils/typeGuards";
 
 import type { WorkareaTarget } from "./resourceTarget";
 import {
@@ -215,12 +216,19 @@ export function repositoryResourceInput(
   location: RepositoryLocation,
 ): CreateResourceInput {
   const name = repositoryName(location);
-  const { owner, repo, ref, path } = location;
+  const { owner, repo, ref, path, isPrivate, grantId } = location;
 
   return {
     entity: "document",
     name,
-    payload: { owner, repo, ref, path },
+    payload: {
+      owner,
+      repo,
+      ref,
+      path,
+      private: isPrivate,
+      ...(grantId ? { grantId } : {}),
+    },
     metadata: withinLimit(
       { type: REPOSITORY, url: repositoryUrl(location) },
       name,
@@ -238,9 +246,6 @@ export function repositoryUrlOf(resource: ResourceRow): string | undefined {
   return typeof url === "string" && isGitHubWebUrl(url) ? url : undefined;
 }
 
-const stringOrNull = (value: unknown) =>
-  typeof value === "string" && value !== "" ? value : null;
-
 export function linkedRepositoryOf(
   resource: Pick<ProjectResource, "metadata" | "payload">,
 ): RepositoryLocation | undefined {
@@ -251,11 +256,14 @@ export function linkedRepositoryOf(
   const repo = stringOrNull(payload.repo);
   if (owner === null || repo === null) return undefined;
 
+  const grantId = stringOrNull(payload.grantId);
   return {
     owner,
     repo,
     ref: stringOrNull(payload.ref),
     path: stringOrNull(payload.path),
+    isPrivate: payload.private === true,
+    ...(grantId ? { grantId } : {}),
   };
 }
 

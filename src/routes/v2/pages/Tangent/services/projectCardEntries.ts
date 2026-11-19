@@ -2,10 +2,10 @@ import type {
   LinkedRepositoryItem,
   ProjectResourceItem,
 } from "@/routes/v2/pages/Tangent/hooks/useProjectResourceItems";
+import { repositoryKey } from "@/routes/v2/pages/Tangent/services/projectArchive";
 import { UNNAMED_PIPELINE } from "@/services/projects/placeholderNames";
 import {
   formatWorkareaTarget,
-  idIdentity,
   parseIdentity,
   runTarget,
   type WorkareaTarget,
@@ -46,12 +46,6 @@ export interface ProjectCardLists {
   repositories: ProjectCardRepository[];
   documents: ProjectCardItem[];
 }
-
-/**
- * A repository has no workarea target to archive it by, so its row's own id
- * stands in, in the same `type://identity` shape as the targets around it.
- */
-const repositoryKey = (id: string) => `repository://${idIdentity(id)}`;
 
 const newestFirst = (a: Date | null, b: Date | null) =>
   (b?.getTime() ?? 0) - (a?.getTime() ?? 0);

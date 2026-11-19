@@ -1,4 +1,4 @@
-import { skipToken, useQuery } from "@tanstack/react-query";
+import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 
 import { InfoBox } from "@/components/shared/InfoBox";
@@ -9,11 +9,18 @@ import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
+import { useBackend } from "@/providers/BackendProvider";
 import {
   isProblemWithUrl,
+  RepositoryLinkError,
+  type RepositoryLinkProblem,
   repositoryUrl,
-  resolveRepositoryUrl,
 } from "@/services/github/repositoryUrl";
+import {
+  resolveRepositoryLink,
+  type TokenAccess,
+} from "@/services/github/resolveRepositoryLink";
+import { gitHubTokenStatusQuery } from "@/services/github/useGitHubToken";
 import {
   repositoryName,
   repositoryResourceInput,
@@ -27,29 +34,126 @@ import { MINUTES } from "@/utils/constants";
 import { getErrorMessage } from "@/utils/string";
 import { tracking } from "@/utils/tracking";
 
+import { GitHubSettingsLink } from "./GitHubSettingsLink";
+import { RepositoryAccessNotice } from "./RepositoryAccessNotice";
 import { RepositoryDetails } from "./RepositoryDetails";
 
 const URL_FIELD_ID = "link-repository-url";
 const URL_HINT_ID = "link-repository-url-hint";
 const CHECK_ERROR_ID = "link-repository-check-error";
 
-async function checkRepository(url: string) {
-  const repository = await resolveRepositoryUrl(url);
+async function checkRepository(url: string, access: TokenAccess | null) {
+  const { repository, tokensSupported } = await resolveRepositoryLink(
+    url,
+    access,
+  );
   return {
     repository,
+    tokensSupported,
     url: repositoryUrl(repository),
     input: repositoryResourceInput(repository),
   };
 }
 
+function useTokenAccess(): TokenAccess | null {
+  const { available, backendUrl } = useBackend();
+  const queryClient = useQueryClient();
+  if (!available) return null;
+
+  return {
+    backendUrl,
+    readTokenSupport: () =>
+      queryClient.fetchQuery({
+        ...gitHubTokenStatusQuery(backendUrl),
+        staleTime: 0,
+      }),
+  };
+}
+
 function useRepositoryCheck(url: string | null) {
+  const access = useTokenAccess();
   return useQuery({
-    queryKey: ["github", "repository-link", url],
-    queryFn: url === null ? skipToken : () => checkRepository(url),
+    queryKey: ["github", "repository-link", access?.backendUrl ?? null, url],
+    queryFn: url === null ? skipToken : () => checkRepository(url, access),
     retry: false,
     staleTime: 5 * MINUTES,
     refetchOnWindowFocus: false,
   });
+}
+
+const SETTINGS_HINT_LEAD: Partial<Record<RepositoryLinkProblem, string>> = {
+  token_unusable: "Check it in ",
+  rate_limited: "To look it up with your own GitHub token, choose one in ",
+};
+
+function GitHubSettingsHint({ error }: { error: RepositoryLinkError }) {
+  return (
+    <Text size="sm">
+      {SETTINGS_HINT_LEAD[error.problem] ??
+        "To link private repositories, choose a GitHub token in "}
+      <GitHubSettingsLink />.
+    </Text>
+  );
+}
+
+interface LinkedRepositoryNoticeProps {
+  name: string;
+  archived: boolean;
+  replaceable: boolean;
+}
+
+function LinkedRepositoryNotice({
+  name,
+  archived,
+  replaceable,
+}: LinkedRepositoryNoticeProps) {
+  return (
+    <InfoBox title={archived ? "Archived" : "Already linked"} variant="info">
+      <BlockStack gap="1">
+        <Text size="sm">
+          {archived
+            ? `${name} is linked to this project, but archived. Restore it to show it again.`
+            : `${name} is already linked to this project.`}
+        </Text>
+        {replaceable && (
+          <Text size="sm">
+            Replacing removes the current link and links the repository again as
+            you, with your GitHub access.
+          </Text>
+        )}
+      </BlockStack>
+    </InfoBox>
+  );
+}
+
+type PrimaryAction = "link" | "restore" | "replace" | "none";
+
+const PRIMARY_LABEL: Record<PrimaryAction, string> = {
+  link: "Link",
+  restore: "Restore",
+  replace: "Replace link",
+  none: "Link",
+};
+
+const PRIMARY_TRACKING: Record<PrimaryAction, string> = {
+  link: "projects.link_repository_submit",
+  restore: "projects.link_repository_restore",
+  replace: "projects.link_repository_replace",
+  none: "projects.link_repository_submit",
+};
+
+function primaryActionFor({
+  linked,
+  restorable,
+  replaceable,
+}: {
+  linked: ProjectResourceSummary | undefined;
+  restorable: boolean;
+  replaceable: boolean;
+}): PrimaryAction {
+  if (!linked) return "link";
+  if (restorable) return "restore";
+  return replaceable ? "replace" : "none";
 }
 
 interface RepositoryLinkFormProps {
@@ -57,6 +161,12 @@ interface RepositoryLinkFormProps {
   onSubmit: (input: CreateResourceInput) => void;
   onCancel: () => void;
   isSubmitting?: boolean;
+  isArchived?: (resource: ProjectResourceSummary) => boolean;
+  onRestore?: (resource: ProjectResourceSummary) => void;
+  onReplace?: (
+    resource: ProjectResourceSummary,
+    input: CreateResourceInput,
+  ) => void;
 }
 
 export function RepositoryLinkForm({
@@ -64,6 +174,9 @@ export function RepositoryLinkForm({
   onSubmit,
   onCancel,
   isSubmitting = false,
+  isArchived,
+  onRestore,
+  onReplace,
 }: RepositoryLinkFormProps) {
   const [url, setUrl] = useState("");
   const [checkedUrl, setCheckedUrl] = useState<string | null>(null);
@@ -75,12 +188,20 @@ export function RepositoryLinkForm({
   } = useRepositoryCheck(checkedUrl);
 
   const trimmedUrl = url.trim();
-  const alreadyLinked =
-    checked !== undefined &&
-    resources.some((resource) => repositoryUrlOf(resource) === checked.url);
-  const canLink =
-    checked !== undefined && !alreadyLinked && !isFetching && !isSubmitting;
+  const linked =
+    checked === undefined
+      ? undefined
+      : resources.find((resource) => repositoryUrlOf(resource) === checked.url);
+  const restorable =
+    linked !== undefined &&
+    onRestore !== undefined &&
+    isArchived?.(linked) === true;
+  const replaceable = linked !== undefined && onReplace !== undefined;
+  const busy = checked === undefined || isFetching || isSubmitting;
   const urlRejected = !isFetching && isProblemWithUrl(error);
+
+  const primaryAction = primaryActionFor({ linked, restorable, replaceable });
+  const canAct = !busy && primaryAction !== "none";
 
   const check = () => {
     if (trimmedUrl === "") return;
@@ -91,15 +212,25 @@ export function RepositoryLinkForm({
     setCheckedUrl(trimmedUrl);
   };
 
-  const link = () => {
-    if (canLink) {
+  const replace = () => {
+    if (checked === undefined || busy || !linked) return;
+    onReplace?.(linked, checked.input);
+  };
+
+  const act = () => {
+    if (checked === undefined || !canAct) return;
+    if (!linked) {
       onSubmit(checked.input);
+    } else if (restorable) {
+      onRestore?.(linked);
+    } else {
+      replace();
     }
   };
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
-    link();
+    act();
   };
 
   const handleUrlChange = (value: string) => {
@@ -117,7 +248,7 @@ export function RepositoryLinkForm({
               id={URL_FIELD_ID}
               value={url}
               onChange={(event) => handleUrlChange(event.target.value)}
-              onEnter={checked ? link : check}
+              onEnter={checked ? act : check}
               placeholder="https://github.com/owner/repo"
               aria-describedby={
                 urlRejected ? `${URL_HINT_ID} ${CHECK_ERROR_ID}` : URL_HINT_ID
@@ -137,7 +268,7 @@ export function RepositoryLinkForm({
             </Button>
           </InlineStack>
           <Text id={URL_HINT_ID} size="xs" tone="subdued">
-            A public GitHub repository, or one folder in it.
+            A GitHub repository, or one folder in it.
           </Text>
         </BlockStack>
 
@@ -151,19 +282,31 @@ export function RepositoryLinkForm({
 
           {!isFetching && error && (
             <InfoBox title="Can't link this repository" variant="error">
-              <Text id={CHECK_ERROR_ID} size="sm">
-                {getErrorMessage(error)}
-              </Text>
+              <BlockStack gap="1">
+                <Text id={CHECK_ERROR_ID} size="sm">
+                  {getErrorMessage(error)}
+                </Text>
+                {error instanceof RepositoryLinkError && error.needsToken && (
+                  <GitHubSettingsHint error={error} />
+                )}
+              </BlockStack>
             </InfoBox>
           )}
 
           {!isFetching && checked && (
             <>
               <RepositoryDetails repository={checked.repository} />
-              {alreadyLinked && (
-                <InfoBox title="Already linked" variant="info">
-                  {`${repositoryName(checked.repository)} is already linked to this project.`}
-                </InfoBox>
+              {linked ? (
+                <LinkedRepositoryNotice
+                  name={repositoryName(checked.repository)}
+                  archived={restorable}
+                  replaceable={replaceable}
+                />
+              ) : (
+                <RepositoryAccessNotice
+                  repository={checked.repository}
+                  tokensSupported={checked.tokensSupported}
+                />
               )}
             </>
           )}
@@ -179,12 +322,23 @@ export function RepositoryLinkForm({
             >
               Cancel
             </Button>
+            {restorable && replaceable && (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={busy}
+                onClick={replace}
+                {...tracking("projects.link_repository_replace")}
+              >
+                Replace link
+              </Button>
+            )}
             <Button
               type="submit"
-              disabled={!canLink}
-              {...tracking("projects.link_repository_submit")}
+              disabled={!canAct}
+              {...tracking(PRIMARY_TRACKING[primaryAction])}
             >
-              Link
+              {PRIMARY_LABEL[primaryAction]}
             </Button>
           </InlineStack>
         </DialogFooter>

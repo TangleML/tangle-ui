@@ -1,3 +1,4 @@
+import { repositoryLinkedMetadata } from "@/components/Project/repositoryLinkTracking";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import useToastNotification from "@/hooks/useToastNotification";
@@ -49,7 +50,7 @@ const ADDABLE: Record<AddableKind, { label: string; trackingId: string }> = {
 interface ResourceDialogOptions<TProps> {
   props?: TProps;
   size?: DialogConfig<CreateResourceInput>["size"];
-  onSuccess?: () => void;
+  onSuccess?: (created: CreateResourceInput) => void;
 }
 
 function identityOf(metadata: Record<string, unknown> | null | undefined) {
@@ -127,7 +128,7 @@ export function AddResourceButton({
       return;
     }
 
-    createResource(result, { onSuccess });
+    createResource(result, { onSuccess: () => onSuccess?.(result) });
   }
 
   function handleAddPipeline() {
@@ -146,9 +147,13 @@ export function AddResourceButton({
 
   function handleLinkRepository() {
     void openResourceDialog(LinkRepositoryDialog, "link-repository", {
-      props: { resources },
+      props: { projectId, resources },
       size: "md",
-      onSuccess: () => track("projects.link_repository_completed"),
+      onSuccess: (linked) =>
+        track(
+          "projects.link_repository_completed",
+          repositoryLinkedMetadata(linked),
+        ),
     });
   }
 

@@ -1,11 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  anonymousRepositorySource,
   isGitHubWebUrl,
   RepositoryLinkError,
+  type RepositorySource,
   repositoryUrl,
   resolveRepositoryUrl,
 } from "./repositoryUrl";
+
+const resolveAnonymously = (url: string) =>
+  resolveRepositoryUrl(url, anonymousRepositorySource());
 
 const API = "https://api.github.com";
 const REPO_PATH = "/repos/TangleML/pipeline_components";
@@ -75,11 +80,12 @@ describe("resolveRepositoryUrl", () => {
       "git@github.com:TangleML/pipeline_components.git",
       "git@github.com:TangleML/pipeline_components",
     ])("%s as the whole repository", async (url) => {
-      await expect(resolveRepositoryUrl(url)).resolves.toEqual({
+      await expect(resolveAnonymously(url)).resolves.toEqual({
         owner: "TangleML",
         repo: "pipeline_components",
         ref: null,
         path: null,
+        isPrivate: false,
       });
       expect(requestedPaths()).toEqual([REPO_PATH]);
     });
@@ -88,7 +94,7 @@ describe("resolveRepositoryUrl", () => {
       github({ "/repos/tangleml/Pipeline_Components": REPOSITORY });
 
       await expect(
-        resolveRepositoryUrl("https://github.com/tangleml/Pipeline_Components"),
+        resolveAnonymously("https://github.com/tangleml/Pipeline_Components"),
       ).resolves.toMatchObject({
         owner: "TangleML",
         repo: "pipeline_components",
@@ -97,7 +103,7 @@ describe("resolveRepositoryUrl", () => {
 
     it("a folder on the default branch without looking the branch up", async () => {
       await expect(
-        resolveRepositoryUrl(
+        resolveAnonymously(
           "https://github.com/TangleML/pipeline_components/tree/master/components/data/",
         ),
       ).resolves.toEqual({
@@ -105,6 +111,7 @@ describe("resolveRepositoryUrl", () => {
         repo: "pipeline_components",
         ref: "master",
         path: "components/data",
+        isPrivate: false,
       });
       expect(requestedPaths()).toEqual([REPO_PATH]);
     });
@@ -116,7 +123,7 @@ describe("resolveRepositoryUrl", () => {
       });
 
       await expect(
-        resolveRepositoryUrl(
+        resolveAnonymously(
           "https://github.com/TangleML/pipeline_components/tree/dev",
         ),
       ).resolves.toMatchObject({ ref: "dev", path: null });
@@ -129,7 +136,7 @@ describe("resolveRepositoryUrl", () => {
       });
 
       await expect(
-        resolveRepositoryUrl(
+        resolveAnonymously(
           "https://github.com/TangleML/pipeline_components/tree/feature/new-loader/components",
         ),
       ).resolves.toMatchObject({
@@ -150,7 +157,7 @@ describe("resolveRepositoryUrl", () => {
       });
 
       await expect(
-        resolveRepositoryUrl(
+        resolveAnonymously(
           "https://github.com/TangleML/pipeline_components/tree/v1.2.0/components",
         ),
       ).resolves.toMatchObject({ ref: "v1.2.0", path: "components" });
@@ -165,7 +172,7 @@ describe("resolveRepositoryUrl", () => {
 
     it("a commit without looking it up", async () => {
       await expect(
-        resolveRepositoryUrl(
+        resolveAnonymously(
           `https://github.com/TangleML/pipeline_components/tree/${COMMIT.toUpperCase()}/components`,
         ),
       ).resolves.toMatchObject({ ref: COMMIT, path: "components" });
@@ -174,7 +181,7 @@ describe("resolveRepositoryUrl", () => {
 
     it("HEAD as the default branch", async () => {
       await expect(
-        resolveRepositoryUrl(
+        resolveAnonymously(
           "https://github.com/TangleML/pipeline_components/tree/HEAD/components",
         ),
       ).resolves.toMatchObject({ ref: null, path: "components" });
@@ -182,7 +189,7 @@ describe("resolveRepositoryUrl", () => {
 
     it("a file by linking the folder it is in", async () => {
       await expect(
-        resolveRepositoryUrl(
+        resolveAnonymously(
           "https://github.com/TangleML/pipeline_components/blob/master/components/data/component.yaml",
         ),
       ).resolves.toMatchObject({ ref: "master", path: "components/data" });
@@ -190,7 +197,7 @@ describe("resolveRepositoryUrl", () => {
 
     it("a file at the top of the repository as the whole branch", async () => {
       await expect(
-        resolveRepositoryUrl(
+        resolveAnonymously(
           "https://github.com/TangleML/pipeline_components/blob/master/README.md",
         ),
       ).resolves.toMatchObject({ ref: "master", path: null });
@@ -203,7 +210,7 @@ describe("resolveRepositoryUrl", () => {
       });
 
       await expect(
-        resolveRepositoryUrl(
+        resolveAnonymously(
           "https://github.com/TangleML/pipeline_components/tree/fix%231/docs",
         ),
       ).resolves.toMatchObject({ ref: "fix#1", path: "docs" });
@@ -229,7 +236,7 @@ describe("resolveRepositoryUrl", () => {
       "https://github.com/TangleML/%E0%A4%A",
       "git@gitlab.com:TangleML/pipeline_components.git",
     ])("%s without asking GitHub", async (url) => {
-      await expect(resolveRepositoryUrl(url)).rejects.toThrow(
+      await expect(resolveAnonymously(url)).rejects.toThrow(
         "That isn't a GitHub repository URL. Paste one like https://github.com/owner/repo, or the URL of a folder in it.",
       );
       expect(fetchMock).not.toHaveBeenCalled();
@@ -239,14 +246,14 @@ describe("resolveRepositoryUrl", () => {
       github({});
 
       await expect(
-        resolveRepositoryUrl("https://github.com/TangleML/secret-sauce"),
+        resolveAnonymously("https://github.com/TangleML/secret-sauce"),
       ).rejects.toThrow(
         "This repository is private or doesn't exist. Private repositories aren't supported yet.",
       );
     });
 
     it("a branch, tag or commit the repository does not have", async () => {
-      const result = resolveRepositoryUrl(
+      const result = resolveAnonymously(
         "https://github.com/TangleML/pipeline_components/tree/gone/components",
       );
 
@@ -269,7 +276,7 @@ describe("resolveRepositoryUrl", () => {
       github(routes);
 
       await expect(
-        resolveRepositoryUrl(
+        resolveAnonymously(
           "https://github.com/TangleML/pipeline_components/tree/dev",
         ),
       ).rejects.toThrow(
@@ -283,18 +290,61 @@ describe("resolveRepositoryUrl", () => {
       });
 
       await expect(
-        resolveRepositoryUrl("https://github.com/TangleML/pipeline_components"),
+        resolveAnonymously("https://github.com/TangleML/pipeline_components"),
       ).rejects.toThrow("Server Error");
     });
   });
 
   it("sends no credentials", async () => {
-    await resolveRepositoryUrl(
-      "https://github.com/TangleML/pipeline_components",
-    );
+    await resolveAnonymously("https://github.com/TangleML/pipeline_components");
 
     const [, init] = fetchMock.mock.calls[0];
     expect(init?.headers).not.toHaveProperty("Authorization");
+  });
+});
+
+describe("resolveRepositoryUrl through a source that grants access", () => {
+  const granting = (isPrivate: boolean): RepositorySource => ({
+    getRepository: async (owner, repo) => ({
+      owner,
+      repo,
+      defaultBranch: "main",
+      grant: { id: "7", isPrivate },
+    }),
+    branchExists: async (_, branch) => branch === "release/v2",
+    tagExists: async () => false,
+  });
+
+  it("records the grant of a public repository, which stays public", async () => {
+    await expect(
+      resolveRepositoryUrl(
+        "https://github.com/TangleML/pipeline_components",
+        granting(false),
+      ),
+    ).resolves.toEqual({
+      owner: "TangleML",
+      repo: "pipeline_components",
+      ref: null,
+      path: null,
+      isPrivate: false,
+      grantId: "7",
+    });
+  });
+
+  it("records the grant of a private repository, and that it is private", async () => {
+    await expect(
+      resolveRepositoryUrl(
+        "https://github.com/TangleML/secret-sauce/tree/release/v2/models",
+        granting(true),
+      ),
+    ).resolves.toEqual({
+      owner: "TangleML",
+      repo: "secret-sauce",
+      ref: "release/v2",
+      path: "models",
+      isPrivate: true,
+      grantId: "7",
+    });
   });
 });
 

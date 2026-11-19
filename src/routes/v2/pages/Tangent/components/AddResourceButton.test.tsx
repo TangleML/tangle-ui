@@ -174,6 +174,7 @@ describe("AddResourceButton repository link", () => {
     repo: "pipeline_components",
     ref: null,
     path: null,
+    isPrivate: false,
   });
 
   afterEach(() => vi.resetAllMocks());
@@ -200,7 +201,7 @@ describe("AddResourceButton repository link", () => {
     expect(openDialog).toHaveBeenCalledWith(
       expect.objectContaining({
         component: LinkRepositoryDialog,
-        props: { resources },
+        props: { projectId: "project-1", resources },
         routeKey: "link-repository",
       }),
     );
@@ -214,8 +215,39 @@ describe("AddResourceButton repository link", () => {
     expect(createResource).toHaveBeenCalledWith(LINKED, expect.anything());
     const [, options] = createResource.mock.calls[0];
     options.onSuccess();
-    expect(track).toHaveBeenCalledWith("projects.link_repository_completed");
+    expect(track).toHaveBeenCalledWith("projects.link_repository_completed", {
+      private: false,
+      has_grant: false,
+    });
   });
+
+  it.each([
+    { isPrivate: true, expected: { private: true, has_grant: true } },
+    { isPrivate: false, expected: { private: false, has_grant: true } },
+  ])(
+    "records whether a repository read with a token is private ($isPrivate)",
+    async ({ isPrivate, expected }) => {
+      openDialog.mockResolvedValue(
+        repositoryResourceInput({
+          owner: "TangleML",
+          repo: "secret-sauce",
+          ref: null,
+          path: null,
+          isPrivate,
+          grantId: "7",
+        }),
+      );
+
+      await chooseLinkARepository([]);
+
+      const [, options] = createResource.mock.calls[0];
+      options.onSuccess();
+      expect(track).toHaveBeenCalledWith(
+        "projects.link_repository_completed",
+        expected,
+      );
+    },
+  );
 
   it("links nothing when the dialog is cancelled", async () => {
     openDialog.mockResolvedValue(undefined);
