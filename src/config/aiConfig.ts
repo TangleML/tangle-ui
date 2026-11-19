@@ -1,16 +1,16 @@
 import type {
+  AiModelApi,
   AiModelCapabilities,
+  AiModelOption,
   AiReasoningEffort,
 } from "@/types/aiProvider";
-import { isRecord } from "@/utils/typeGuards";
-
-export interface AiModelOption extends AiModelCapabilities {
-  label?: string;
-  description?: string;
-}
+import { isRecord, isStringRecord } from "@/utils/typeGuards";
 
 interface AiModelOptionsConfig {
   models?: AiModelOption[];
+  catalogUrl?: string;
+  defaultModel?: string;
+  replacements?: Record<string, string>;
 }
 
 export const AI_CONFIG = {
@@ -98,6 +98,26 @@ export function isAiReasoningEffort(
   return AI_CONFIG.reasoningLevels.some((level) => level.value === value);
 }
 
+const AI_MODEL_APIS: readonly AiModelApi[] = [
+  "openai-responses",
+  "anthropic-messages",
+];
+
+export function isAiModelApi(value: unknown): value is AiModelApi {
+  return AI_MODEL_APIS.some((api) => api === value);
+}
+
+export function isThinkingLevelMap(
+  value: unknown,
+): value is Record<string, AiReasoningEffort | null> {
+  return (
+    isRecord(value) &&
+    Object.values(value).every(
+      (effort) => effort === null || isAiReasoningEffort(effort),
+    )
+  );
+}
+
 declare global {
   interface Window {
     __TANGLE_AI_MODELS__?: AiModelOptionsConfig;
@@ -112,6 +132,13 @@ function readModelOption(value: unknown): AiModelOption | null {
 
   return {
     id,
+    ...(typeof value.tangentModelId === "string"
+      ? { tangentModelId: value.tangentModelId }
+      : {}),
+    ...(isAiModelApi(value.api) ? { api: value.api } : {}),
+    ...(isThinkingLevelMap(value.thinkingLevelMap)
+      ? { thinkingLevelMap: value.thinkingLevelMap }
+      : {}),
     ...(typeof value.label === "string" && value.label.trim()
       ? { label: value.label.trim() }
       : {}),
@@ -130,6 +157,12 @@ function readInjectedModelOptions(): AiModelOptionsConfig | null {
   if (!isRecord(config)) return null;
 
   return {
+    ...(typeof config.defaultModel === "string"
+      ? { defaultModel: config.defaultModel }
+      : {}),
+    ...(isStringRecord(config.replacements)
+      ? { replacements: config.replacements }
+      : {}),
     ...(Array.isArray(config.models)
       ? { models: config.models.map(readModelOption).filter((v) => v !== null) }
       : {}),
@@ -143,8 +176,14 @@ export function getAiModelOptions(): AiModelOption[] {
     : AI_CONFIG.models;
 }
 
+export function getAiModelReplacement(modelId: string): string | undefined {
+  return readInjectedModelOptions()?.replacements?.[modelId];
+}
+
 export function getDefaultAiModelId(): string {
-  return getAiModelOptions()[0].id;
+  const options = getAiModelOptions();
+  const preferred = readInjectedModelOptions()?.defaultModel;
+  return options.find((m) => m.id === preferred)?.id ?? options[0].id;
 }
 
 export function supportsAiEmbeddings(apiBase: string): boolean {
@@ -156,7 +195,12 @@ export function supportsAiEmbeddings(apiBase: string): boolean {
 }
 
 export function getAiProviderConfig(modelId: string) {
-  return AI_CONFIG.providers.anthropic.modelPattern.test(modelId)
+  const protocol = getAiModelOptions().find((m) => m.id === modelId)?.api;
+  return (
+    protocol
+      ? protocol === "anthropic-messages"
+      : AI_CONFIG.providers.anthropic.modelPattern.test(modelId)
+  )
     ? AI_CONFIG.providers.anthropic
     : AI_CONFIG.providers.openai;
 }

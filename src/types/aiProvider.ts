@@ -6,12 +6,22 @@ export interface AiModelCapabilities {
   reasoningEfforts?: AiReasoningEffort[];
 }
 
+export type AiModelApi = "openai-responses" | "anthropic-messages";
+
+export interface AiModelOption extends AiModelCapabilities {
+  label?: string;
+  description?: string;
+  tangentModelId?: string;
+  api?: AiModelApi;
+  thinkingLevelMap?: Record<string, AiReasoningEffort | null>;
+}
+
 export interface AiProviderConfig {
   apiBase: string;
   apiKey: string;
   model: string;
   reasoningEffort?: AiReasoningEffort;
   reasoningEffortPreference?: AiReasoningEffort;
-  modelCapabilities?: AiModelCapabilities[];
+  modelCapabilities?: AiModelOption[];
   credentials?: RequestCredentials;
 }
