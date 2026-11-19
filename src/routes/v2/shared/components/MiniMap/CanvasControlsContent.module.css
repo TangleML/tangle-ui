@@ -1,0 +1,59 @@
+.container {
+  position: relative;
+  container-type: inline-size;
+  background-color: var(--background);
+  --xy-minimap-mask-background-color-props: #f0f0f0;
+  --xy-minimap-node-background-color-props: grey;
+}
+
+:global(.dark) .container {
+  --xy-minimap-mask-background-color-props: black;
+}
+
+.layout {
+  position: relative;
+}
+
+@container (min-width: 220px) {
+  .layout {
+    flex-direction: row;
+  }
+}
+
+/* Scoped under .container for specificity over react-flow's base styles. */
+.container .minimap {
+  flex: 1;
+  position: relative;
+  inset: auto;
+  margin: 0;
+  width: 100%;
+  height: 100%;
+}
+
+:global(.dark) .container .minimap {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 0.375rem);
+}
+
+.container .minimap :global(.react-flow__minimap-svg) {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.container .controls {
+  position: relative;
+  inset: auto;
+  margin: 0;
+  box-shadow: none;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-around;
+}
+
+@container (min-width: 220px) {
+  .container .controls {
+    height: 100%;
+    flex-direction: column;
+  }
+}
