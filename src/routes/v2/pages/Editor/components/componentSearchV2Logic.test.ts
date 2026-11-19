@@ -310,6 +310,29 @@ describe("buildResultFolders", () => {
     // Registered libraries are grouped by label, sorted alphabetically.
     expect(connected?.folders?.map((f) => f.name)).toEqual(["Acme", "Zebra"]);
   });
+
+  it("omits the connected libraries folder when includeConnectedLibrariesFolder is false", () => {
+    const standardLibrary: ComponentLibrary = {
+      folders: [{ name: "ML", components: [ref("std-1")] }],
+    };
+    const results = [
+      { reference: ref("u1"), source: USER_SOURCE },
+      { reference: ref("p1"), source: PUBLISHED_SOURCE },
+      { reference: ref("r1"), source: source("registered", "lib-a", "Acme") },
+    ];
+
+    const withConnected = buildResultFolders({ results, standardLibrary });
+    const withoutConnected = buildResultFolders({
+      results,
+      standardLibrary,
+      includeConnectedLibrariesFolder: false,
+    });
+
+    expect(withConnected.map((f) => f.name)).toContain("Connected libraries");
+    expect(withoutConnected).toEqual(
+      withConnected.filter((f) => f.name !== "Connected libraries"),
+    );
+  });
 });
 
 describe("buildLexicalMatches / buildAiCandidateMatches", () => {

@@ -7,6 +7,7 @@ import {
   StickyNoteSidebarItem,
 } from "@/components/shared/ReactFlow/FlowSidebar/components/ComponentItem";
 import FolderItem from "@/components/shared/ReactFlow/FlowSidebar/components/FolderItem";
+import { ConnectedLibrariesSection } from "@/components/shared/ReactFlow/FlowSidebar/sections/ConnectedLibrariesSection";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -30,6 +31,7 @@ interface ComponentSearchResultsProps {
   isLoading: boolean;
   isSearching: boolean;
   isRerankActive: boolean;
+  showConnectedLibraries?: boolean;
   onClearRerank: () => void;
   onSuggestedSearch: (query: string) => void;
 }
@@ -85,6 +87,7 @@ export function ComponentSearchResults({
   isLoading,
   isSearching,
   isRerankActive,
+  showConnectedLibraries = true,
   onClearRerank,
   onSuggestedSearch,
 }: ComponentSearchResultsProps) {
@@ -126,6 +129,7 @@ export function ComponentSearchResults({
         {browseFolders.map((folder) => (
           <FolderItem key={folder.name} folder={folder} />
         ))}
+        {showConnectedLibraries && <ConnectedLibrariesSection />}
       </BlockStack>
     );
   }

@@ -279,9 +279,11 @@ function toUIFolder(folder: ComponentFolder): UIComponentFolder {
 export function buildResultFolders({
   results,
   standardLibrary,
+  includeConnectedLibrariesFolder = true,
 }: {
   results: ComponentSearchV2Result[];
   standardLibrary: ComponentLibrary | undefined;
+  includeConnectedLibrariesFolder?: boolean;
 }): UIComponentFolder[] {
   const user: ComponentReference[] = [];
   const published: ComponentReference[] = [];
@@ -315,7 +317,7 @@ export function buildResultFolders({
   const connectedFolders = [...connectedByName.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([name, components]) => ({ name, components }));
-  if (connectedFolders.length > 0) {
+  if (includeConnectedLibrariesFolder && connectedFolders.length > 0) {
     folders.push({ name: "Connected libraries", folders: connectedFolders });
   }
 
