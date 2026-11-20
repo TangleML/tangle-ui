@@ -1,5 +1,6 @@
 import { type MouseEvent, type ReactNode, useId } from "react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { Spinner } from "@/components/ui/spinner";
@@ -14,7 +15,9 @@ type TrackingAttributes = ReturnType<typeof tracking>;
 export type ListItemFlair =
   | { kind: "dot"; label: string; tone?: StatusDotTone; pulse?: boolean }
   | { kind: "spinner"; label: string }
-  | { kind: "icon"; icon: IconName; label: string; tone?: StatusDotTone };
+  | { kind: "icon"; icon: IconName; label: string; tone?: StatusDotTone }
+  /** Shows its label; the only flair that reads as text. */
+  | { kind: "badge"; label: string; icon?: IconName };
 
 export interface ListItemAction {
   icon: IconName;
@@ -79,7 +82,14 @@ function FlairContent({ flair }: { flair: ListItemFlair }) {
           className={ICON_TONE[flair.tone ?? "subdued"]}
         />
       )}
-      <span className="sr-only">{flair.label}</span>
+      {flair.kind === "badge" ? (
+        <Badge size="sm" variant="secondary">
+          {flair.icon && <Icon name={flair.icon} size="xs" aria-hidden />}
+          {flair.label}
+        </Badge>
+      ) : (
+        <span className="sr-only">{flair.label}</span>
+      )}
     </>
   );
 }

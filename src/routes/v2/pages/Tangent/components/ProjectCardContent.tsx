@@ -1,6 +1,12 @@
 import { observer } from "mobx-react-lite";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 
+import {
+  repositoryWritesAction,
+  useRepositoryWritesToggle,
+} from "@/components/Project/useRepositoryWritesToggle";
+import { writesAllowedFlair } from "@/components/Project/WritesAllowedBadge";
+import { ConfirmationDialog } from "@/components/shared/Dialogs";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -24,7 +30,11 @@ import {
 import { fileIcon } from "@/routes/v2/pages/Tangent/services/projectFiles";
 import { ago } from "@/routes/v2/pages/Tangent/services/relativeTime";
 import { useOptionalWindowContext } from "@/routes/v2/shared/windows/ContentWindowStateContext";
+import type { RepositoryLocation } from "@/services/github/repositoryUrl";
+import { linkedRepositoryOf } from "@/services/projects/resourceDescriptor";
 import { runTarget } from "@/services/projects/resourceTarget";
+import type { ProjectResource } from "@/services/projects/types";
+import { useLinkedRepositories } from "@/services/projects/useLinkedRepositories";
 import { useProjectRuns } from "@/services/projects/useProjectRuns";
 import { containsSearchTerm } from "@/utils/searchUtils";
 import { tracking } from "@/utils/tracking";
@@ -95,6 +105,8 @@ const ProjectCardBody = observer(function ProjectCardBody() {
   const { archived, archive, restore } = useArchivedProjectItems(
     store.projectId,
   );
+  const linkedRepositories = useLinkedRepositories(store.projectId, summaries);
+  const writes = useRepositoryWritesToggle(store.projectId);
 
   const searching = query.trim() !== "";
   const matches = (...texts: string[]) =>
@@ -202,26 +214,52 @@ const ProjectCardBody = observer(function ProjectCardBody() {
     );
   }
 
+  function writesAction(
+    link: ProjectResource,
+    repository: RepositoryLocation,
+    name: string,
+  ): ListItemAction {
+    const { icon, label, trackingId } = repositoryWritesAction(
+      repository,
+      name,
+    );
+    return {
+      icon,
+      label,
+      onClick: () => writes.toggle(link),
+      tracking: tracking(trackingId),
+    };
+  }
+
   function renderRepository(item: ProjectCardRepository) {
     const added = ago(item.addedAt);
     const opening =
       item.repository.url === undefined
         ? { disabled: true as const }
         : { href: item.repository.url };
+    const link = linkedRepositories.get(item.id);
+    const repository = link && linkedRepositoryOf(link);
     return (
       <ListItem
         key={item.id}
         icon={item.icon}
         title={item.name}
         subtitle={added && `Added ${added}`}
+        flair={repository?.allowWrites ? writesAllowedFlair() : undefined}
         {...opening}
         tracking={tracking("projects.open_repository", {
           surface: "project_card",
         })}
-        actions={[archiveAction(item.key, item.name)]}
+        actions={[
+          archiveAction(item.key, item.name),
+          ...(link && repository
+            ? [writesAction(link, repository, item.name)]
+            : []),
+        ]}
       />
     );
   }
+  const writesConfirmation = <ConfirmationDialog {...writes.confirmation} />;
 
   const add = (kind: AddableKind) => (
     <AddResourceButton
@@ -289,6 +327,7 @@ const ProjectCardBody = observer(function ProjectCardBody() {
         ) : (
           <CardSections sections={archivedSections} />
         )}
+        {writesConfirmation}
       </SubView>
     );
   }
@@ -441,6 +480,7 @@ const ProjectCardBody = observer(function ProjectCardBody() {
           />
         </div>
       )}
+      {writesConfirmation}
     </BlockStack>
   );
 });

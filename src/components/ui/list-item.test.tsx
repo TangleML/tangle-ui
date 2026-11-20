@@ -21,6 +21,23 @@ describe("ListItem", () => {
     expect(screen.getByTestId("spinner")).toBeInTheDocument();
   });
 
+  it("shows a badge flair as text and describes the row with it", () => {
+    render(
+      <ul>
+        <ListItem
+          title="Churn model"
+          flair={{ kind: "badge", icon: "PenLine", label: "Writes allowed" }}
+          onOpen={vi.fn()}
+        />
+      </ul>,
+    );
+
+    expect(screen.getByText("Writes allowed")).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Churn model" }),
+    ).toHaveAccessibleDescription("Writes allowed");
+  });
+
   it("says whether a group it heads is open, and keeps a menu with its actions", () => {
     render(
       <ListItem

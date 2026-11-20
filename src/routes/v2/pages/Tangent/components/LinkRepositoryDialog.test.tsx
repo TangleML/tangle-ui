@@ -115,6 +115,22 @@ describe("Tangent LinkRepositoryDialog", () => {
     expect(remove).not.toHaveBeenCalled();
   });
 
+  it("closes with the permission for agents to write when it was turned on", async () => {
+    const { close, user } = renderDialog([]);
+
+    await checkRepository(user);
+    await user.click(
+      screen.getByRole("switch", {
+        name: "Allow agents to write to this repository",
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Link" }));
+
+    expect(close).toHaveBeenCalledWith(
+      repositoryResourceInput({ ...REPOSITORY, allowWrites: true }),
+    );
+  });
+
   it("offers to replace a link the project already holds", async () => {
     const { close, user } = renderDialog([LINKED_ROW]);
 

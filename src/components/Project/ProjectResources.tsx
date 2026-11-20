@@ -31,9 +31,11 @@ import {
   AGENT_SESSION,
   describeResource,
   INSTRUCTIONS,
+  linkedRepositoryOf,
 } from "@/services/projects/resourceDescriptor";
 import { sessionLabelsById } from "@/services/projects/sessionLabel";
 import type { ProjectResourceSummary } from "@/services/projects/types";
+import { useLinkedRepositories } from "@/services/projects/useLinkedRepositories";
 import { useLocalPipelineStatus } from "@/services/projects/useLocalPipelineStatus";
 import { useProjectResources } from "@/services/projects/useProjectResources";
 import { useRemotePipelineNames } from "@/services/projects/useRemotePipelineNames";
@@ -41,9 +43,12 @@ import { tracking } from "@/utils/tracking";
 
 import { AddResourceMenu } from "./AddResourceMenu";
 import { ColumnHeadingRow } from "./ColumnHeadingRow";
+import { RepositoryWritesButton } from "./RepositoryWritesButton";
 import { entityIcon } from "./resourceEntities";
 import { ResourceRow } from "./ResourceRow";
 import { useConfirmedResourceRemoval } from "./useConfirmedResourceRemoval";
+import { useRepositoryWritesToggle } from "./useRepositoryWritesToggle";
+import { WritesAllowedBadge } from "./WritesAllowedBadge";
 
 const PAGE_SIZE = 100;
 
@@ -150,6 +155,8 @@ export function ProjectResources({
   const { currentNames: currentPipelineNames } =
     useLocalPipelineStatus(resources);
   const remotePipelineNames = useRemotePipelineNames(resources);
+  const linkedRepositories = useLinkedRepositories(projectId, resources);
+  const writes = useRepositoryWritesToggle(projectId);
 
   const sessionLabels = sessionLabelsById(
     resources
@@ -230,7 +237,7 @@ export function ProjectResources({
                   Added
                 </Text>
               </TableHead>
-              <TableHead className="w-12 px-2">
+              <TableHead className="w-20 px-2">
                 <span className="sr-only">Actions</span>
               </TableHead>
             </TableRow>
@@ -249,12 +256,26 @@ export function ProjectResources({
                 const currentName =
                   currentPipelineNames.get(resource.id) ??
                   remotePipelineNames.get(resource.id);
+                const link = linkedRepositories.get(resource.id);
+                const repository = link && linkedRepositoryOf(link);
                 return (
                   <ResourceRow
                     key={resource.id}
                     resource={resource}
                     label={sessionLabel ?? currentName}
                     opensElsewhere={sessionLabel !== undefined}
+                    badge={repository?.allowWrites && <WritesAllowedBadge />}
+                    action={
+                      link &&
+                      repository && (
+                        <RepositoryWritesButton
+                          repository={repository}
+                          name={resource.name ?? repository.repo}
+                          disabled={writes.isPending}
+                          onClick={() => writes.toggle(link)}
+                        />
+                      )
+                    }
                     selected={resource.id === selectedResourceId}
                     onSelect={(picked) => {
                       if (sessionLabel) {
@@ -290,6 +311,7 @@ export function ProjectResources({
       )}
 
       <ConfirmationDialog {...confirmationProps} />
+      <ConfirmationDialog {...writes.confirmation} />
     </BlockStack>
   );
 }

@@ -14,6 +14,7 @@ import {
   isProblemWithUrl,
   RepositoryLinkError,
   type RepositoryLinkProblem,
+  type RepositoryLocation,
   repositoryUrl,
 } from "@/services/github/repositoryUrl";
 import {
@@ -34,6 +35,7 @@ import { MINUTES } from "@/utils/constants";
 import { getErrorMessage } from "@/utils/string";
 import { tracking } from "@/utils/tracking";
 
+import { AgentWritesField } from "./AgentWritesField";
 import { GitHubSettingsLink } from "./GitHubSettingsLink";
 import { RepositoryAccessNotice } from "./RepositoryAccessNotice";
 import { RepositoryDetails } from "./RepositoryDetails";
@@ -51,7 +53,6 @@ async function checkRepository(url: string, access: TokenAccess | null) {
     repository,
     tokensSupported,
     url: repositoryUrl(repository),
-    input: repositoryResourceInput(repository),
   };
 }
 
@@ -180,6 +181,7 @@ export function RepositoryLinkForm({
 }: RepositoryLinkFormProps) {
   const [url, setUrl] = useState("");
   const [checkedUrl, setCheckedUrl] = useState<string | null>(null);
+  const [allowWrites, setAllowWrites] = useState(false);
   const {
     data: checked,
     error,
@@ -202,6 +204,10 @@ export function RepositoryLinkForm({
 
   const primaryAction = primaryActionFor({ linked, restorable, replaceable });
   const canAct = !busy && primaryAction !== "none";
+  const canCreateLink = !linked || replaceable;
+
+  const linkInput = (repository: RepositoryLocation) =>
+    repositoryResourceInput({ ...repository, allowWrites });
 
   const check = () => {
     if (trimmedUrl === "") return;
@@ -214,13 +220,13 @@ export function RepositoryLinkForm({
 
   const replace = () => {
     if (checked === undefined || busy || !linked) return;
-    onReplace?.(linked, checked.input);
+    onReplace?.(linked, linkInput(checked.repository));
   };
 
   const act = () => {
     if (checked === undefined || !canAct) return;
     if (!linked) {
-      onSubmit(checked.input);
+      onSubmit(linkInput(checked.repository));
     } else if (restorable) {
       onRestore?.(linked);
     } else {
@@ -306,6 +312,13 @@ export function RepositoryLinkForm({
                 <RepositoryAccessNotice
                   repository={checked.repository}
                   tokensSupported={checked.tokensSupported}
+                />
+              )}
+              {canCreateLink && (
+                <AgentWritesField
+                  checked={allowWrites}
+                  isPublic={!checked.repository.isPrivate}
+                  onCheckedChange={setAllowWrites}
                 />
               )}
             </>

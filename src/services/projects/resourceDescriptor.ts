@@ -216,7 +216,7 @@ export function repositoryResourceInput(
   location: RepositoryLocation,
 ): CreateResourceInput {
   const name = repositoryName(location);
-  const { owner, repo, ref, path, isPrivate, grantId } = location;
+  const { owner, repo, ref, path, isPrivate, grantId, allowWrites } = location;
 
   return {
     entity: "document",
@@ -228,6 +228,7 @@ export function repositoryResourceInput(
       path,
       private: isPrivate,
       ...(grantId ? { grantId } : {}),
+      ...(allowWrites ? { allowWrites: true } : {}),
     },
     metadata: withinLimit(
       { type: REPOSITORY, url: repositoryUrl(location) },
@@ -264,6 +265,7 @@ export function linkedRepositoryOf(
     path: stringOrNull(payload.path),
     isPrivate: payload.private === true,
     ...(grantId ? { grantId } : {}),
+    ...(payload.allowWrites === true ? { allowWrites: true } : {}),
   };
 }
 

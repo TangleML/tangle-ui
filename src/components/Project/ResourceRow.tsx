@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -19,6 +21,8 @@ interface ResourceRowProps {
   onRemove?: (resource: ProjectResourceSummary) => void;
   label?: string;
   opensElsewhere?: boolean;
+  badge?: ReactNode;
+  action?: ReactNode;
 }
 
 export function ResourceRow({
@@ -28,6 +32,8 @@ export function ResourceRow({
   onRemove,
   label,
   opensElsewhere = false,
+  badge,
+  action,
 }: ResourceRowProps) {
   const name = label ?? resource.name ?? UNTITLED;
   const destroys = removingDestroys(resource);
@@ -72,6 +78,7 @@ export function ResourceRow({
               {kindLabel}
             </Badge>
           )}
+          {badge}
         </InlineStack>
       </TableCell>
 
@@ -84,26 +91,34 @@ export function ResourceRow({
       {/* The cell stays whether or not anything can be done in it, so every
           row's columns line up under the fixed table layout. */}
       <TableCell className="text-right">
-        {onRemove && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onRemove(resource)}
-            className={cn(
-              "relative z-10 size-7 text-muted-foreground",
-              destroys ? "hover:text-destructive" : "hover:text-foreground",
-            )}
-            aria-label={
-              destroys ? `Delete ${name}` : `Remove ${name} from this project`
-            }
-            title={
-              destroys ? `Delete ${name}` : `Remove ${name} from this project`
-            }
-            {...tracking("projects.remove_resource_open")}
-          >
-            <Icon name={destroys ? "Trash" : "X"} size="sm" />
-          </Button>
-        )}
+        <InlineStack
+          gap="1"
+          wrap="nowrap"
+          align="end"
+          className="relative z-10"
+        >
+          {action}
+          {onRemove && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onRemove(resource)}
+              className={cn(
+                "size-7 text-muted-foreground",
+                destroys ? "hover:text-destructive" : "hover:text-foreground",
+              )}
+              aria-label={
+                destroys ? `Delete ${name}` : `Remove ${name} from this project`
+              }
+              title={
+                destroys ? `Delete ${name}` : `Remove ${name} from this project`
+              }
+              {...tracking("projects.remove_resource_open")}
+            >
+              <Icon name={destroys ? "Trash" : "X"} size="sm" />
+            </Button>
+          )}
+        </InlineStack>
       </TableCell>
     </TableRow>
   );
