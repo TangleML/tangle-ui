@@ -1,6 +1,9 @@
-import { RUNS_BASE_PATH } from "@/routes/appRoutes";
+import { defaultStringifySearch } from "@tanstack/react-router";
+
+import { APP_ROUTES, RUNS_BASE_PATH } from "@/routes/appRoutes";
 import { getProjectHomePath } from "@/routes/projectRoutes";
 import { getDefaultRunPath } from "@/routes/runRoutes";
+import { tangentSessionSearch } from "@/routes/tangentSearch";
 import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
 
 const convertGcsUrlToBrowserUrl = (
@@ -253,12 +256,13 @@ const getRawExecutionLogsUrl = (
 ): string =>
   `${backendUrl}/api/executions/${encodeURIComponent(executionId)}/stream_container_log`;
 
-/**
- * Where a project card goes, which is where someone following a shared link
- * expects to arrive.
- */
-const getProjectUrl = (projectId: string): string =>
-  buildAbsoluteAppUrl(getProjectHomePath(projectId));
+const getProjectUrl = (projectId: string, sessionId?: string): string => {
+  if (!sessionId) return buildAbsoluteAppUrl(getProjectHomePath(projectId));
+
+  const path = getProjectHomePath(projectId, APP_ROUTES.TANGENT_PROJECT);
+  const search = defaultStringifySearch(tangentSessionSearch(sessionId));
+  return buildAbsoluteAppUrl(path + search);
+};
 
 /**
  * Built from the run's id rather than the address bar, which names a Tangent

@@ -118,6 +118,12 @@ describe("getProjectUrl", () => {
       `${window.location.origin}/tangent/a%2Fb%3Fc`,
     );
   });
+
+  it("encodes the owning project and session in a Tangent link", () => {
+    expect(getProjectUrl("a/b", "chat&open=other")).toBe(
+      `${window.location.origin}/tangent/a%2Fb?session=chat%26open%3Dother`,
+    );
+  });
 });
 
 // normalizeUrl tests
