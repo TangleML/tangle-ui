@@ -6,8 +6,8 @@ import { Switch } from "@/components/ui/switch";
 import { Text } from "@/components/ui/typography";
 import { tracking } from "@/utils/tracking";
 
-export const AGENT_WRITES_LABEL = "Allow agents to write to this repository";
-export const AGENT_WRITES_HELP =
+const AGENT_WRITES_LABEL = "Allow agents to write to this repository";
+const AGENT_WRITES_HELP =
   "Agents can open draft pull requests, create issues and post comments, each marked as written by an agent, and only after you confirm in the chat.";
 export const PUBLIC_WRITES_WARNING =
   "Anything an agent pushes to a public repository is visible immediately.";
