@@ -9,6 +9,7 @@ import { useEdgesState, useNodesState } from "@xyflow/react";
 import type { MouseEvent } from "react";
 import { useLayoutEffect } from "react";
 
+import { useInputDisplayMode } from "@/hooks/useInputDisplayMode";
 import type { ComponentSpec } from "@/models/componentSpec";
 import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { useEdgeSelectionHighlightOverlay } from "@/routes/v2/shared/overlays/edgeSelectionHighlight/useEdgeSelectionHighlightOverlay";
@@ -58,7 +59,18 @@ export function useFlowCanvasState({
 }: UseFlowCanvasStateParams): UseFlowCanvasStateResult {
   const registry = useNodeRegistry();
   const { canvasOverlay } = useSharedStores();
-  const { nodes: specNodes, edges: specEdges } = useSpecToNodesEdges(spec);
+  // Input display modes are an Editor-only concern; the Editor registers the
+  // inputCluster manifest while RunView does not, so we use that as the "is
+  // Editor" check and fall back to "separate" everywhere else.
+  const selectedInputDisplayMode = useInputDisplayMode();
+  const inputDisplayMode =
+    registry.get("inputCluster") !== undefined
+      ? selectedInputDisplayMode
+      : "separate";
+  const { nodes: specNodes, edges: specEdges } = useSpecToNodesEdges(
+    spec,
+    inputDisplayMode,
+  );
 
   const [nodes, setNodes, rfOnNodesChange] = useNodesState(specNodes);
   const [edges, setEdges, rfOnEdgesChange] = useEdgesState(specEdges);

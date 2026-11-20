@@ -79,7 +79,11 @@ import {
 } from "./types";
 import addFlexNode from "./utils/addFlexNode";
 import addTask from "./utils/addTask";
-import { autoLayoutNodes, type LayoutAlgorithm } from "./utils/autolayout";
+import {
+  autoLayoutNodes,
+  buildHandleBoundsMap,
+  type LayoutAlgorithm,
+} from "./utils/autolayout";
 import { createConnectedIONode } from "./utils/createConnectedIONode";
 import { duplicateNodes } from "./utils/duplicateNodes";
 import { isPositionInNode } from "./utils/geometry";
@@ -1157,10 +1161,18 @@ const FlowCanvasContent = ({
     edgesToConsider: Edge[],
     algorithm: LayoutAlgorithm = "sugiyama",
   ) => {
+    const handleBounds = reactFlowInstance
+      ? buildHandleBoundsMap(
+          nodesToLayout.map((node) => node.id),
+          reactFlowInstance.getInternalNode,
+        )
+      : undefined;
+
     const layoutedNodes = autoLayoutNodes(
       nodesToLayout,
       edgesToConsider,
       algorithm,
+      handleBounds,
     );
 
     const updatedSubgraphSpec = updateNodePositions(

@@ -8,6 +8,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { SIMPLIFIED_NODE_HEIGHT } from "@/routes/v2/shared/nodes/nodeLayout";
 
 import type { IONodeViewProps } from "./IONode";
 
@@ -43,8 +44,8 @@ export function IONodeSimplified({
         borderColor,
       )}
       style={{
-        width: `calc(${s} * 220px)`,
-        height: `calc(${s} * 80px)`,
+        width: `calc(${s} * 240px)`,
+        height: `calc(${s} * ${SIMPLIFIED_NODE_HEIGHT}px)`,
         padding: `calc(${s} * 12px) calc(${s} * 16px)`,
         gap: `calc(${s} * 10px)`,
       }}

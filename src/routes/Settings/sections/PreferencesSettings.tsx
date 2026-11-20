@@ -3,6 +3,7 @@ import { BlockStack } from "@/components/ui/layout";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 
 import { useSettingsFlags } from "../SettingsFlagsContext";
+import { InputDisplaySetting } from "./InputDisplaySetting";
 import { PipelineStorageSetting } from "./PipelineStorageSetting";
 import { ThemeSetting } from "./ThemeSetting";
 
@@ -23,6 +24,7 @@ export function PreferencesSettings() {
     <BlockStack gap="6">
       <ThemeSetting />
       <PipelineStorageSetting />
+      <InputDisplaySetting />
       <Settings settings={settings} onChange={handleChange} />
     </BlockStack>
   );

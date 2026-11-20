@@ -1,21 +1,48 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ReactFlowProvider } from "@xyflow/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
+import type { ComponentSpec } from "@/models/componentSpec";
 import { Task } from "@/models/componentSpec";
+import { Binding } from "@/models/componentSpec/entities/binding";
+import { ComponentSpec as ComponentSpecModel } from "@/models/componentSpec/entities/componentSpec";
+import { Input } from "@/models/componentSpec/entities/input";
 import { AggregatorOutputType } from "@/types/aggregator";
 
-import { resolveInputDisplayData, type TaskNodeViewProps } from "./TaskNode";
+import type { InputConnectionActions } from "./InputConnectionActionsContext";
+import { InputConnectionActionsProvider } from "./InputConnectionActionsContext";
+import {
+  resolveGraphInputBindings,
+  resolveInputDisplayData,
+  type TaskNodeViewProps,
+} from "./TaskNode";
 import { TaskNodeCard } from "./TaskNodeCard";
 import { TaskNodeSimplified } from "./TaskNodeSimplified";
+
+const mocks = vi.hoisted(() => ({
+  spec: null as ComponentSpec | null,
+  inputDisplayMode: "separate" as "separate" | "clustered" | "embedded",
+}));
 
 vi.mock("@/providers/ThemeProvider", () => ({
   useTheme: () => ({ resolvedTheme: "light" }),
 }));
 
 vi.mock("@/routes/v2/shared/providers/SpecContext", () => ({
-  useSpec: () => null,
+  useSpec: () => mocks.spec,
+}));
+
+vi.mock("@/hooks/useInputDisplayMode", () => ({
+  useInputDisplayMode: () => mocks.inputDisplayMode,
 }));
 
 const buildProps = (
@@ -33,6 +60,7 @@ const buildProps = (
   outputs: [],
   connectedInputNames: new Set(),
   connectedOutputNames: new Set(),
+  graphInputBindings: {},
   annotations: [],
   cacheDisabled: false,
   isConditional: false,
@@ -49,7 +77,72 @@ const buildProps = (
   ...overrides,
 });
 
+beforeAll(() => {
+  // jsdom lacks the pointer-capture / scroll APIs Radix relies on to open menus.
+  Element.prototype.scrollIntoView = vi.fn();
+  Element.prototype.hasPointerCapture = vi.fn(() => false);
+  Element.prototype.releasePointerCapture = vi.fn();
+});
+
+beforeEach(() => {
+  mocks.spec = null;
+  mocks.inputDisplayMode = "separate";
+});
+
 afterEach(cleanup);
+
+function buildSpecWithGraphInputBinding(): ComponentSpec {
+  const spec = new ComponentSpecModel({ $id: "spec_1", name: "Pipeline" });
+  spec.addInput(new Input({ $id: "in_a", name: "alpha" }));
+  spec.addInput(new Input({ $id: "in_b", name: "beta" }));
+  spec.addTask(new Task({ $id: "task-1", name: "Consumer", componentRef: {} }));
+  spec.addBinding(
+    new Binding({
+      sourceEntityId: "in_a",
+      sourcePortName: "alpha",
+      targetEntityId: "task-1",
+      targetPortName: "config",
+    }),
+  );
+  return spec;
+}
+
+describe("resolveGraphInputBindings", () => {
+  it("includes bindings sourced from graph inputs and skips task outputs", () => {
+    const spec = new ComponentSpecModel({ $id: "spec_1", name: "Pipeline" });
+    spec.addInput(new Input({ $id: "in_a", name: "alpha" }));
+    spec.addTask(
+      new Task({ $id: "producer", name: "Producer", componentRef: {} }),
+    );
+    spec.addTask(
+      new Task({ $id: "task-1", name: "Consumer", componentRef: {} }),
+    );
+    spec.addBinding(
+      new Binding({
+        sourceEntityId: "in_a",
+        sourcePortName: "alpha",
+        targetEntityId: "task-1",
+        targetPortName: "config",
+      }),
+    );
+    spec.addBinding(
+      new Binding({
+        sourceEntityId: "producer",
+        sourcePortName: "out",
+        targetEntityId: "task-1",
+        targetPortName: "data",
+      }),
+    );
+
+    expect(resolveGraphInputBindings("task-1", spec)).toEqual({
+      config: { sourceEntityId: "in_a", sourceName: "alpha" },
+    });
+  });
+
+  it("returns an empty map when spec is null", () => {
+    expect(resolveGraphInputBindings("task-1", null)).toEqual({});
+  });
+});
 
 describe("TaskNodeCard", () => {
   it.each([true, false])(
@@ -346,5 +439,87 @@ describe("TaskNodeCard", () => {
 
     expect(screen.queryByLabelText("2 Succeeded")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("1 Running")).not.toBeInTheDocument();
+  });
+
+  const renderEmbedded = (actions: InputConnectionActions) => {
+    mocks.spec = buildSpecWithGraphInputBinding();
+    mocks.inputDisplayMode = "embedded";
+    render(
+      <ReactFlowProvider>
+        <InputConnectionActionsProvider value={actions}>
+          <TaskNodeCard
+            {...buildProps({
+              isSubgraph: false,
+              inputs: [{ name: "config" }],
+              graphInputBindings: {
+                config: { sourceEntityId: "in_a", sourceName: "alpha" },
+              },
+            })}
+          />
+        </InputConnectionActionsProvider>
+      </ReactFlowProvider>,
+    );
+  };
+
+  it("renders a connected input port as an embedded trigger showing the source input", () => {
+    renderEmbedded({
+      changeInputConnection: vi.fn(),
+      disconnectInput: vi.fn(),
+    });
+
+    const trigger = screen.getByTestId("embedded-input-trigger-config");
+    expect(trigger).toBeInTheDocument();
+    expect(trigger).toHaveTextContent("alpha");
+  });
+
+  it("falls back to the classic port when the Editor context is absent", () => {
+    mocks.spec = buildSpecWithGraphInputBinding();
+    mocks.inputDisplayMode = "embedded";
+    render(
+      <ReactFlowProvider>
+        <TaskNodeCard
+          {...buildProps({
+            isSubgraph: false,
+            inputs: [{ name: "config" }],
+            graphInputBindings: {
+              config: { sourceEntityId: "in_a", sourceName: "alpha" },
+            },
+          })}
+        />
+      </ReactFlowProvider>,
+    );
+
+    expect(
+      screen.queryByTestId("embedded-input-trigger-config"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("reconnects to a different graph input from the dropdown", async () => {
+    const user = userEvent.setup();
+    const changeInputConnection = vi.fn();
+    renderEmbedded({ changeInputConnection, disconnectInput: vi.fn() });
+
+    await user.click(screen.getByTestId("embedded-input-trigger-config"));
+    await user.click(await screen.findByRole("menuitem", { name: "beta" }));
+
+    expect(changeInputConnection).toHaveBeenCalledWith(
+      "task-1",
+      "config",
+      "in_b",
+      "beta",
+    );
+  });
+
+  it("disconnects the input from the dropdown", async () => {
+    const user = userEvent.setup();
+    const disconnectInput = vi.fn();
+    renderEmbedded({ changeInputConnection: vi.fn(), disconnectInput });
+
+    await user.click(screen.getByTestId("embedded-input-trigger-config"));
+    await user.click(
+      await screen.findByRole("menuitem", { name: "Disconnect" }),
+    );
+
+    expect(disconnectInput).toHaveBeenCalledWith("task-1", "config");
   });
 });
