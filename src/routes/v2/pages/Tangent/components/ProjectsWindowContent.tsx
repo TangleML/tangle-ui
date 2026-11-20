@@ -9,6 +9,7 @@ import { useRenameProjectAction } from "@/components/Project/useRenameProjectAct
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { ListItem } from "@/components/ui/list-item";
@@ -138,14 +139,16 @@ export const ProjectsWindowContent = observer(function ProjectsWindowContent() {
     storage.setItem(EXPANDED_KEY, next);
   }
 
-  function startChat() {
+  const newChatDisabled = store.isStartingSession || aiGate.disabled;
+
+  function startChat(projectId: string) {
     dismissFlyout?.();
-    if (!target || target.id === store.projectId) {
+    if (projectId === store.projectId) {
       cancelPendingProjectMove();
       void store.startSession();
       return;
     }
-    void openProject(target.id, newTangentSessionSearch);
+    void openProject(projectId, newTangentSessionSearch);
   }
 
   return (
@@ -159,8 +162,8 @@ export const ProjectsWindowContent = observer(function ProjectsWindowContent() {
               ? aiGate.title
               : `New chat in ${target.name}`
           }
-          disabled={store.isStartingSession || aiGate.disabled}
-          onClick={startChat}
+          disabled={newChatDisabled}
+          onClick={() => startChat(target?.id ?? store.projectId)}
           {...tracking("projects.sidebar.new_chat")}
         >
           {store.isStartingSession ? (
@@ -244,6 +247,17 @@ export const ProjectsWindowContent = observer(function ProjectsWindowContent() {
         onlySessionIds={hasMatchingSessions ? sessionIds : undefined}
         runStates={runStates}
         onOpenChange={(next) => setOpen(project.id, next)}
+        menuAction={
+          <DropdownMenuItem
+            disabled={newChatDisabled}
+            title={aiGate.title}
+            onSelect={() => startChat(project.id)}
+            {...tracking("projects.sidebar.project_menu.new_chat")}
+          >
+            <Icon name="SquarePen" size="sm" />
+            New chat
+          </DropdownMenuItem>
+        }
       />
     );
   }
@@ -278,6 +292,7 @@ function ProjectGroup({
   onlySessionIds,
   runStates,
   onOpenChange,
+  menuAction,
 }: {
   project: ProjectSummary;
   open: boolean;
@@ -285,6 +300,7 @@ function ProjectGroup({
   onlySessionIds?: ReadonlySet<string>;
   runStates: SessionRunStates;
   onOpenChange: (open: boolean) => void;
+  menuAction: ReactNode;
 }) {
   const rename = useRenameProjectAction(project);
   // Deleting the project in view leaves nothing to show here, so that one
@@ -312,7 +328,9 @@ function ProjectGroup({
               disabled={isDeleting}
               inListRow
               triggerTrackingId="projects.sidebar.project_menu"
-            />
+            >
+              {menuAction}
+            </ProjectMenu>
           }
         />
         <CollapsibleContent>

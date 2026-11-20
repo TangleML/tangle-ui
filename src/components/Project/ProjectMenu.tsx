@@ -1,4 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 
 import { useProjectPin } from "@/components/Project/useProjectPin";
 import { useShareProjectAction } from "@/components/Project/useShareProjectAction";
@@ -18,6 +19,7 @@ import { tracking } from "@/utils/tracking";
 
 interface ProjectMenuProps {
   project: ProjectSummary;
+  children?: ReactNode;
   onDelete: () => void;
   onRename?: () => void;
   disabled?: boolean;
@@ -27,12 +29,12 @@ interface ProjectMenuProps {
 }
 
 /**
- * A project's "⋮" menu, shared by its card and the Tangent sidebar so both
- * offer the same things. Deleting is the caller's, which owns the confirmation
- * and whatever it dims while the delete runs.
+ * Project actions shared by the card and the Tangent sidebar. Each surface can
+ * place its own action before the shared items.
  */
 export function ProjectMenu({
   project,
+  children,
   onDelete,
   onRename,
   disabled,
@@ -67,6 +69,7 @@ export function ProjectMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
+        {children}
         <DropdownMenuItem
           disabled={isPinning}
           onSelect={() => void togglePin()}
