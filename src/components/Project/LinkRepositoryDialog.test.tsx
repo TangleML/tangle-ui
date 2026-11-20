@@ -453,6 +453,99 @@ describe("LinkRepositoryDialog", () => {
     expect(linkButton()).toBeEnabled();
   });
 
+  describe("letting agents write", () => {
+    const writesSwitch = () =>
+      screen.getByRole("switch", {
+        name: "Allow agents to write to this repository",
+      });
+    const PUBLIC_WARNING =
+      "Anything an agent pushes to a public repository is visible immediately.";
+
+    it("starts off, and leaves the link read-only unless turned on", async () => {
+      const user = await openDialog();
+
+      await check(user, REPO_URL);
+      await screen.findByText("TangleML/pipeline_components");
+
+      expect(writesSwitch()).not.toBeChecked();
+      expect(writesSwitch()).toHaveAccessibleDescription(
+        /open draft pull requests, create issues and post comments/,
+      );
+      expect(writesSwitch()).toHaveAttribute(
+        "data-tracking-id",
+        "projects.link_repository_allow_writes",
+      );
+
+      await user.click(linkButton());
+
+      const [input] = mutate.mock.calls[0];
+      expect(input.payload).not.toHaveProperty("allowWrites");
+    });
+
+    it("records the permission in the link once turned on", async () => {
+      const user = await openDialog();
+
+      await check(user, REPO_URL);
+      await screen.findByText("TangleML/pipeline_components");
+      await user.click(writesSwitch());
+
+      expect(writesSwitch()).toBeChecked();
+
+      await user.click(linkButton());
+
+      const [input] = mutate.mock.calls[0];
+      expect(input.payload).toMatchObject({ allowWrites: true });
+    });
+
+    it("warns that writes to a public repository show at once", async () => {
+      const user = await openDialog();
+
+      await check(user, REPO_URL);
+      await screen.findByText("TangleML/pipeline_components");
+
+      expect(screen.getByText(PUBLIC_WARNING)).toBeVisible();
+      expect(writesSwitch()).toHaveAccessibleDescription(
+        new RegExp(PUBLIC_WARNING),
+      );
+    });
+
+    it("does not warn about a private repository", async () => {
+      tokenStatus("valid", "octocat");
+      grant(true);
+      const user = await openDialog();
+
+      await check(user, REPO_URL);
+      await screen.findByText("Private");
+
+      expect(writesSwitch()).toBeVisible();
+      expect(screen.queryByText(PUBLIC_WARNING)).toBeNull();
+    });
+
+    it("carries the permission into a replaced link", async () => {
+      const user = await openDialog([
+        linkedRow(
+          repositoryResourceInput({
+            owner: "TangleML",
+            repo: "pipeline_components",
+            ref: null,
+            path: null,
+            isPrivate: false,
+          }),
+        ),
+      ]);
+
+      await check(user, REPO_URL);
+      await screen.findByText(/already linked/);
+      await user.click(writesSwitch());
+      await user.click(replaceButton());
+      const [, removal] = remove.mock.calls[0];
+      await act(async () => removal.onSuccess());
+
+      const [input] = mutate.mock.calls[0];
+      expect(input.payload).toMatchObject({ allowWrites: true });
+    });
+  });
+
   it("rejects a URL that is not a GitHub repository without asking GitHub", async () => {
     const user = await openDialog();
 
