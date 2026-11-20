@@ -6,6 +6,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getDefaultRunPath } from "@/routes/runRoutes";
 import { WindowContextProvider } from "@/routes/v2/shared/windows/ContentWindowStateContext";
 import { WindowStoreImpl } from "@/routes/v2/shared/windows/windowStore";
+import { repositoryResourceInput } from "@/services/projects/resourceDescriptor";
+import type { ProjectResource } from "@/services/projects/types";
 
 import { ProjectCardContent } from "./ProjectCardContent";
 
@@ -16,6 +18,23 @@ const focus = vi.hoisted(() => ({
 const pin = vi.fn();
 const unpin = vi.fn();
 const archiveChange = vi.fn();
+const updateResource = vi.fn();
+const links = vi.hoisted(() => new Map<string, unknown>());
+
+vi.mock("@/services/projects/useLinkedRepositories", () => ({
+  useLinkedRepositories: () => links,
+}));
+
+vi.mock("@/services/projects/useProjectResources", () => ({
+  useUpdateProjectResource: () => ({
+    mutate: updateResource,
+    isPending: false,
+  }),
+}));
+
+vi.mock("@/providers/AnalyticsProvider", () => ({
+  useAnalytics: () => ({ track: vi.fn() }),
+}));
 
 vi.mock("@/routes/v2/pages/Tangent/context/TangentProjectContext", () => ({
   useTangentProject: () => ({
@@ -235,11 +254,38 @@ async function archiveEveryRun() {
   }
 }
 
+function linkRepository(allowWrites: boolean): ProjectResource {
+  const input = repositoryResourceInput({
+    owner: "TangleML",
+    repo: "components",
+    ref: null,
+    path: null,
+    isPrivate: false,
+    allowWrites,
+  });
+  const link: ProjectResource = {
+    id: "r-1",
+    projectId: "project-1",
+    entity: "document",
+    name: input.name ?? null,
+    entityId: null,
+    metadata: input.metadata ?? null,
+    payload: input.payload ?? null,
+    createdBy: null,
+    createdAt: new Date("2026-11-01"),
+    updatedAt: new Date("2026-11-01"),
+  };
+  links.set(link.id, link);
+  return link;
+}
+
 describe("ProjectCardContent", () => {
   beforeEach(() => {
     pin.mockClear();
     unpin.mockClear();
     archiveChange.mockClear();
+    updateResource.mockClear();
+    links.clear();
     localStorage.clear();
     vi.stubGlobal("open", vi.fn());
     loading.resources = { isLoading: false, isLoaded: true, error: null };
@@ -577,6 +623,77 @@ describe("ProjectCardContent", () => {
     expect(
       within(repositories).queryByRole("link", { name: "Tampered" }),
     ).toBeNull();
+  });
+
+  it("marks a repository agents may write to, and stops them by its row", async () => {
+    const link = linkRepository(true);
+    const user = userEvent.setup();
+    render(<ProjectCardContent />);
+
+    const repositories = screen.getByRole("region", { name: "Repositories" });
+    expect(within(repositories).getByText("Writes allowed")).toBeVisible();
+    expect(
+      within(repositories).getByRole("link", { name: "TangleML/components" }),
+    ).toHaveAccessibleDescription("Writes allowed");
+
+    const stop = within(repositories).getByRole("button", {
+      name: "Stop agent writes to TangleML/components",
+    });
+    expect(stop).toHaveAttribute(
+      "data-tracking-id",
+      "projects.repository_stop_writes",
+    );
+    await user.click(stop);
+
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(updateResource).toHaveBeenCalledWith(
+      {
+        resourceId: "r-1",
+        input: { payload: { ...link.payload, allowWrites: false } },
+      },
+      expect.anything(),
+    );
+  });
+
+  it("asks before letting agents write to a public repository", async () => {
+    const link = linkRepository(false);
+    const user = userEvent.setup();
+    render(<ProjectCardContent />);
+
+    const repositories = screen.getByRole("region", { name: "Repositories" });
+    expect(within(repositories).queryByText("Writes allowed")).toBeNull();
+    expect(
+      within(repositories).queryByRole("button", {
+        name: /agent writes to Tampered/,
+      }),
+    ).toBeNull();
+
+    const allow = within(repositories).getByRole("button", {
+      name: "Allow agent writes to TangleML/components",
+    });
+    expect(allow).toHaveAttribute(
+      "data-tracking-id",
+      "projects.repository_allow_writes",
+    );
+    await user.click(allow);
+
+    const dialog = await screen.findByRole("alertdialog");
+    expect(dialog).toHaveTextContent(
+      "Anything an agent pushes to a public repository is visible immediately.",
+    );
+    expect(updateResource).not.toHaveBeenCalled();
+
+    await user.click(
+      within(dialog).getByRole("button", { name: "Allow writes" }),
+    );
+
+    expect(updateResource).toHaveBeenCalledWith(
+      {
+        resourceId: "r-1",
+        input: { payload: { ...link.payload, allowWrites: true } },
+      },
+      expect.anything(),
+    );
   });
 
   it("archives a linked repository by its row", async () => {
