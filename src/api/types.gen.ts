@@ -524,6 +524,7 @@ export type GetContainerExecutionLogResponse = {
      * Orchestration Error Message
      */
     orchestration_error_message?: string | null;
+    troubleshooting?: TroubleshootingGuide | null;
 };
 
 /**
@@ -1115,6 +1116,46 @@ export type TaskSpecOutput = {
         [key: string]: unknown;
     } | null;
 };
+
+/**
+ * TroubleshootingAction
+ */
+export type TroubleshootingAction = {
+    /**
+     * Label
+     */
+    label: string;
+    /**
+     * Url
+     */
+    url: string;
+};
+
+/**
+ * TroubleshootingGuide
+ */
+export type TroubleshootingGuide = {
+    /**
+     * Title
+     */
+    title: string;
+    severity: TroubleshootingSeverity;
+    /**
+     * Body Markdown
+     */
+    body_markdown: string;
+    /**
+     * Actions
+     */
+    actions?: Array<TroubleshootingAction>;
+};
+
+/**
+ * TroubleshootingSeverity
+ *
+ * How strongly the UI should present a troubleshooting guide.
+ */
+export type TroubleshootingSeverity = 'info' | 'warning' | 'error';
 
 /**
  * UserComponentLibraryPinsResponse
