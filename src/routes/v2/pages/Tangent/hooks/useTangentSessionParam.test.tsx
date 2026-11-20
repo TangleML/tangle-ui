@@ -1,4 +1,5 @@
 import { renderHook } from "@testing-library/react";
+import { action, observable } from "mobx";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
@@ -14,8 +15,12 @@ vi.mock("@tanstack/react-router", () => ({
 }));
 
 function makeStore() {
+  const selected = observable.box<string>();
   return {
-    selectSession: vi.fn(),
+    get activeSessionId() {
+      return selected.get();
+    },
+    selectSession: vi.fn(action((id: string) => selected.set(id))),
     startSession: vi.fn().mockResolvedValue(true),
   } as unknown as TangentProjectStore;
 }
@@ -36,18 +41,30 @@ describe("useTangentSessionParam", () => {
     expect(store.startSession).not.toHaveBeenCalled();
   });
 
-  /** Left in the url, it would fight the user for the selection later. */
-  it("takes the request out of the url once it is done", () => {
+  it("keeps a shared link available for reload until another chat is selected", () => {
     search = { session: "sess-a" };
+    const store = makeStore();
 
-    renderHook(() => useTangentSessionParam(makeStore()));
+    renderHook(() => useTangentSessionParam(store));
 
-    expect(navigate).toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
+    store.selectSession("sess-b");
     const { search: rewrite, replace } = navigate.mock.calls[0][0];
     expect(replace).toBe(true);
     expect(rewrite({ session: "sess-a", other: "kept" })).toEqual({
       other: "kept",
     });
+  });
+
+  it("opens a second shared link in the same mounted project", () => {
+    const store = makeStore();
+    search = { session: "sess-a" };
+    const { rerender } = renderHook(() => useTangentSessionParam(store));
+    search = { session: "sess-b" };
+    rerender();
+
+    expect(store.activeSessionId).toBe("sess-b");
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   it("acts once however often it re-renders", () => {

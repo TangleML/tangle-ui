@@ -94,7 +94,7 @@ export function ProjectMenu({
           </DropdownMenuItem>
         )}
         <DropdownMenuItem
-          onSelect={share}
+          onSelect={() => void share()}
           {...tracking("projects.share_project")}
         >
           <Icon name="Share2" size="sm" />

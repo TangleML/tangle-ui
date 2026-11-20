@@ -2,12 +2,16 @@ import useToastNotification from "@/hooks/useToastNotification";
 import { copyToClipboard } from "@/utils/string";
 import { getProjectUrl } from "@/utils/URL";
 
-/** Offered from the project's page and from Tangent, which share one link. */
-export function useShareProjectAction(projectId: string): () => void {
+export function useShareProjectAction(projectId: string) {
   const notify = useToastNotification();
 
-  return () => {
-    copyToClipboard(getProjectUrl(projectId));
-    notify("Project URL copied to clipboard", "success");
+  return async (sessionId?: string) => {
+    const subject = sessionId ? "Session" : "Project";
+    try {
+      await copyToClipboard(getProjectUrl(projectId, sessionId));
+      notify(`${subject} URL copied to clipboard`, "success");
+    } catch {
+      notify(`Could not copy the ${subject.toLowerCase()} link`, "error");
+    }
   };
 }
