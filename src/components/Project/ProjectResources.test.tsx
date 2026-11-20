@@ -6,19 +6,24 @@ import {
   AI_PROVIDER_STORAGE_KEY,
   AI_USE_OWN_KEY_STORAGE_KEY,
 } from "@/hooks/useAiProviderSettings";
+import { repositoryResourceInput } from "@/services/projects/resourceDescriptor";
 import type {
+  ProjectResource,
   ProjectResourcePage,
   ProjectResourceSummary,
 } from "@/services/projects/types";
+import { useLinkedRepositories } from "@/services/projects/useLinkedRepositories";
 import {
   useDeleteProjectResource,
   useProjectResources,
+  useUpdateProjectResource,
 } from "@/services/projects/useProjectResources";
 import { useRemotePipelineNames } from "@/services/projects/useRemotePipelineNames";
 
 import { ProjectResources } from "./ProjectResources";
 
 const mutate = vi.fn();
+const update = vi.fn();
 const notify = vi.fn();
 const track = vi.fn();
 const navigate = vi.fn();
@@ -31,7 +36,12 @@ vi.mock("@tanstack/react-router", async (importOriginal) => ({
 vi.mock("@/services/projects/useProjectResources", () => ({
   useProjectResources: vi.fn(),
   useDeleteProjectResource: vi.fn(),
+  useUpdateProjectResource: vi.fn(),
   useCreateProjectResource: () => ({ mutate: vi.fn(), isPending: false }),
+}));
+
+vi.mock("@/services/projects/useLinkedRepositories", () => ({
+  useLinkedRepositories: vi.fn(),
 }));
 
 vi.mock("@/services/projects/useLocalPipelineStatus", () => ({
@@ -123,6 +133,11 @@ describe("ProjectResources", () => {
       mutate,
       isPending: false,
     } as unknown as ReturnType<typeof useDeleteProjectResource>);
+    vi.mocked(useUpdateProjectResource).mockReturnValue({
+      mutate: update,
+      isPending: false,
+    } as unknown as ReturnType<typeof useUpdateProjectResource>);
+    vi.mocked(useLinkedRepositories).mockReturnValue(new Map());
     mockResources();
     vi.mocked(useRemotePipelineNames).mockReturnValue(new Map());
     enableFlags({ projects: true, "tangent-shell": true });
@@ -600,6 +615,170 @@ describe("ProjectResources", () => {
       expect(screen.queryByRole("alertdialog")).toBeNull();
     });
     expect(mutate).not.toHaveBeenCalled();
+  });
+
+  describe("a linked repository", () => {
+    const PUBLIC_WARNING =
+      "Anything an agent pushes to a public repository is visible immediately.";
+
+    function linkRepository(
+      location: Parameters<typeof repositoryResourceInput>[0],
+    ) {
+      const input = repositoryResourceInput(location);
+      const row = resource({
+        id: "repo-1",
+        name: input.name,
+        metadata: input.metadata,
+      });
+      const link: ProjectResource = { ...row, payload: input.payload ?? null };
+      mockResources({ items: [row], totalCount: 1 });
+      vi.mocked(useLinkedRepositories).mockReturnValue(
+        new Map([[link.id, link]]),
+      );
+      return link;
+    }
+
+    const publicRepository = {
+      owner: "TangleML",
+      repo: "pipeline_components",
+      ref: null,
+      path: null,
+      isPrivate: false,
+    };
+
+    it("says when agents may write to it, and offers to stop them", async () => {
+      const link = linkRepository({
+        ...publicRepository,
+        grantId: "7",
+        allowWrites: true,
+      });
+      renderResources();
+      const user = userEvent.setup();
+
+      expect(screen.getByText("Writes allowed")).toBeVisible();
+
+      const stop = screen.getByRole("button", {
+        name: "Stop agent writes to TangleML/pipeline_components",
+      });
+      expect(stop).toHaveAttribute(
+        "data-tracking-id",
+        "projects.repository_stop_writes",
+      );
+      await user.click(stop);
+
+      expect(screen.queryByRole("alertdialog")).toBeNull();
+      expect(update).toHaveBeenCalledWith(
+        {
+          resourceId: "repo-1",
+          input: { payload: { ...link.payload, allowWrites: false } },
+        },
+        expect.anything(),
+      );
+    });
+
+    it("asks before letting agents write to a public repository", async () => {
+      const link = linkRepository(publicRepository);
+      renderResources();
+      const user = userEvent.setup();
+
+      expect(screen.queryByText("Writes allowed")).toBeNull();
+      const allow = screen.getByRole("button", {
+        name: "Allow agent writes to TangleML/pipeline_components",
+      });
+      expect(allow).toHaveAttribute(
+        "data-tracking-id",
+        "projects.repository_allow_writes",
+      );
+      await user.click(allow);
+
+      const dialog = await screen.findByRole("alertdialog");
+      expect(dialog).toHaveTextContent(
+        "Allow agents to write to this public repository?",
+      );
+      expect(dialog).toHaveTextContent(PUBLIC_WARNING);
+      expect(update).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole("button", { name: "Allow writes" }));
+
+      await waitFor(() =>
+        expect(update).toHaveBeenCalledWith(
+          {
+            resourceId: "repo-1",
+            input: { payload: { ...link.payload, allowWrites: true } },
+          },
+          expect.anything(),
+        ),
+      );
+      const [, options] = update.mock.calls[0];
+      options.onSuccess();
+      expect(track).toHaveBeenCalledWith(
+        "projects.repository_writes_completed",
+        { allowed: true, private: false },
+      );
+      expect(notify).toHaveBeenCalledWith(
+        "Agents can now write to this repository",
+        "success",
+      );
+    });
+
+    it("leaves a public repository read-only when the warning is dismissed", async () => {
+      linkRepository(publicRepository);
+      renderResources();
+      const user = userEvent.setup();
+
+      await user.click(
+        screen.getByRole("button", {
+          name: "Allow agent writes to TangleML/pipeline_components",
+        }),
+      );
+      await screen.findByRole("alertdialog");
+      fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+      await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+      expect(update).not.toHaveBeenCalled();
+    });
+
+    it("lets agents write to a private repository without asking", async () => {
+      const link = linkRepository({
+        ...publicRepository,
+        isPrivate: true,
+        grantId: "7",
+      });
+      renderResources();
+      const user = userEvent.setup();
+
+      await user.click(
+        screen.getByRole("button", {
+          name: "Allow agent writes to TangleML/pipeline_components",
+        }),
+      );
+
+      expect(screen.queryByRole("alertdialog")).toBeNull();
+      expect(update).toHaveBeenCalledWith(
+        {
+          resourceId: "repo-1",
+          input: { payload: { ...link.payload, allowWrites: true } },
+        },
+        expect.anything(),
+      );
+    });
+
+    it("offers no toggle until the link has been read", () => {
+      const input = repositoryResourceInput(publicRepository);
+      mockResources({
+        items: [
+          resource({
+            id: "repo-1",
+            name: input.name,
+            metadata: input.metadata,
+          }),
+        ],
+        totalCount: 1,
+      });
+      renderResources();
+
+      expect(screen.queryByRole("button", { name: /agent writes/ })).toBeNull();
+    });
   });
 
   it("admits when it is showing only the first page", () => {
