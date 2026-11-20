@@ -10,7 +10,6 @@ import { formatRelativeTime } from "@/utils/date";
 
 import { SidebarSection } from "../components/SidebarSection";
 import { ExportPipelineButton } from "./components/ExportPipelineButton";
-import { ImportPipelineButton } from "./components/ImportPipelineButton";
 import { SavePipelineAsButton } from "./components/SavePipelineAsButton";
 import { SavePipelineButton } from "./components/SavePipelineButton";
 
@@ -68,7 +67,6 @@ const FileActions = () => {
         <SavePipelineButton onSaveComplete={handleSaveComplete} />
         <SavePipelineAsButton />
         <ExportPipelineButton />
-        <ImportPipelineButton />
       </InlineStack>
     </SidebarSection>
   );
