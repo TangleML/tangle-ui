@@ -1,6 +1,8 @@
+import { useNavigate } from "@tanstack/react-router";
 import { observer } from "mobx-react-lite";
 import { useState } from "react";
 
+import { useShareProjectAction } from "@/components/Project/useShareProjectAction";
 import {
   RenameDialog,
   type RenameDialogProps,
@@ -57,9 +59,11 @@ export const ProjectSessionList = observer(function ProjectSessionList({
   runStates: SessionRunStates;
 }) {
   const store = useTangentProject();
+  const navigate = useNavigate();
   const openProject = useOpenTangentProject();
   const dismissFlyout = useOptionalWindowContext()?.dismissFlyout;
   const { sessions, renameSession } = useProjectSessions(projectId);
+  const share = useShareProjectAction(projectId);
   const [showAll, setShowAll] = useState(false);
   const isProjectInView = projectId === store.projectId;
   const activeSessionId = isProjectInView ? store.activeSessionId : null;
@@ -100,7 +104,14 @@ export const ProjectSessionList = observer(function ProjectSessionList({
     dismissFlyout?.();
     if (isProjectInView) {
       cancelPendingProjectMove();
-      store.selectSession(sessionId);
+      store.retainSession(sessionId);
+      void navigate({
+        to: ".",
+        search: (previous: Record<string, unknown>) => ({
+          ...previous,
+          ...tangentSessionSearch(sessionId),
+        }),
+      });
       return;
     }
     void openProject(projectId, tangentSessionSearch(sessionId));
@@ -139,6 +150,10 @@ export const ProjectSessionList = observer(function ProjectSessionList({
               selected={session.sessionId === activeSessionId}
               onOpen={() => openSession(session.sessionId)}
               onRename={() => void rename(session)}
+              onShare={() => {
+                if (isProjectInView) store.retainSession(session.sessionId);
+                void share(session.sessionId);
+              }}
             />
           );
         })}
@@ -173,6 +188,7 @@ function SessionRow({
   selected,
   onOpen,
   onRename,
+  onShare,
 }: {
   label: string;
   createdAt: Date;
@@ -180,6 +196,7 @@ function SessionRow({
   selected: boolean;
   onOpen: () => void;
   onRename: () => void;
+  onShare: () => void;
 }) {
   return (
     <ListItem
@@ -201,6 +218,12 @@ function SessionRow({
           label: `Rename ${label}`,
           onClick: onRename,
           tracking: tracking("projects.rename_session_open"),
+        },
+        {
+          icon: "Share2",
+          label: `Share ${label}`,
+          onClick: onShare,
+          tracking: tracking("projects.share_session"),
         },
       ]}
     />

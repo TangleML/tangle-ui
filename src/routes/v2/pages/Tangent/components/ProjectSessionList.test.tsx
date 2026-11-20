@@ -14,8 +14,9 @@ class ResizeObserverMock {
 }
 vi.stubGlobal("ResizeObserver", ResizeObserverMock);
 
-vi.mock("@tanstack/react-router", () => ({
-  useNavigate: () => vi.fn(),
+vi.mock("@tanstack/react-router", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@tanstack/react-router")>()),
+  useNavigate: () => navigate,
   useSearch: () => ({}),
 }));
 
@@ -25,8 +26,10 @@ vi.mock("@/routes/v2/pages/Tangent/hooks/useOpenTangentProject", () => ({
 }));
 
 const openProject = vi.fn();
+const navigate = vi.fn();
 const cancelPendingProjectMove = vi.fn();
 const selectSession = vi.fn();
+const retainSession = vi.fn();
 const renameSession = vi.fn();
 const notify = vi.fn();
 const track = vi.fn();
@@ -37,6 +40,7 @@ vi.mock("@/routes/v2/pages/Tangent/context/TangentProjectContext", () => ({
     activeSessionId: "session-1",
     isStartingSession: false,
     selectSession,
+    retainSession,
     startSession: vi.fn(),
   }),
 }));
@@ -230,8 +234,54 @@ describe("ProjectSessionList", () => {
 
     await user.click(screen.getByText("Feature exploration"));
 
-    expect(selectSession).toHaveBeenCalledWith("session-2");
+    const [{ to, search }] = navigate.mock.calls[0];
+    expect(to).toBe(".");
+    expect(search({ other: "kept" })).toEqual({
+      other: "kept",
+      session: "session-2",
+    });
     expect(openProject).not.toHaveBeenCalled();
+  });
+
+  it.each(["project-1", "project-2"])(
+    "copies a session link for %s without opening the session",
+    async (projectId) => {
+      const user = userEvent.setup();
+      renderSessions(projectId);
+
+      await user.click(
+        screen.getByRole("button", { name: "Share Feature exploration" }),
+      );
+
+      expect(await navigator.clipboard.readText()).toBe(
+        `${window.location.origin}/tangent/${projectId}?session=session-2`,
+      );
+      expect(notify).toHaveBeenCalledWith(
+        "Session URL copied to clipboard",
+        "success",
+      );
+      if (projectId === "project-1") {
+        expect(retainSession).toHaveBeenCalledWith("session-2");
+      }
+      expect(selectSession).not.toHaveBeenCalled();
+      expect(openProject).not.toHaveBeenCalled();
+    },
+  );
+
+  it("reports a refused clipboard write", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(navigator.clipboard, "writeText").mockRejectedValueOnce(
+      new Error("Clipboard unavailable"),
+    );
+    renderSessions();
+
+    await user.click(screen.getByRole("button", { name: "Share Session 1" }));
+
+    expect(notify).toHaveBeenCalledWith(
+      "Could not copy the session link",
+      "error",
+    );
+    expect(notify).not.toHaveBeenCalledWith(expect.anything(), "success");
   });
 
   /** A move to another project may still be loading, and would take the page there after. */
