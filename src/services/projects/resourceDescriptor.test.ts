@@ -324,6 +324,17 @@ describe("repositoryResourceInput", () => {
     );
   });
 
+  it("records that agents may write only when they may", () => {
+    expect(
+      repositoryResourceInput({ ...WHOLE_REPOSITORY, allowWrites: true })
+        .payload,
+    ).toMatchObject({ allowWrites: true });
+    expect(
+      repositoryResourceInput({ ...WHOLE_REPOSITORY, allowWrites: false })
+        .payload,
+    ).not.toHaveProperty("allowWrites");
+  });
+
   it("refuses a folder whose URL is too long to record", () => {
     expect(() =>
       repositoryResourceInput({ ...ONE_FOLDER, path: "a/".repeat(600) + "b" }),
@@ -369,6 +380,22 @@ describe("linkedRepositoryOf", () => {
         payload: { owner: "TangleML", repo: "pipeline_components" },
       }),
     ).toMatchObject({ isPrivate: false });
+  });
+
+  it("reads back whether agents may write, taking only a true for a yes", () => {
+    expect(
+      linkedRepositoryOf(
+        filed(
+          repositoryResourceInput({ ...WHOLE_REPOSITORY, allowWrites: true }),
+        ),
+      ),
+    ).toEqual({ ...WHOLE_REPOSITORY, allowWrites: true });
+    expect(
+      linkedRepositoryOf({
+        metadata: { type: "repository" },
+        payload: { owner: "TangleML", repo: "x", allowWrites: "yes" },
+      }),
+    ).not.toHaveProperty("allowWrites");
   });
 
   it("finds no repository in a row that is something else", () => {
