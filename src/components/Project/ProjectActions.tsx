@@ -37,7 +37,7 @@ export function ProjectActions({ project }: ProjectActionsProps) {
         variant="ghost"
         size="sm"
         className="w-full justify-start"
-        onClick={share}
+        onClick={() => void share()}
         {...tracking("projects.share_project")}
       >
         <Icon name="Share2" size="sm" />
