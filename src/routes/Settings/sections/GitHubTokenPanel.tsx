@@ -30,6 +30,18 @@ function stateSummary({ state, login, secretName }: GitHubTokenStatus) {
   }
 }
 
+const READ_ONLY_HINT =
+  "Writing to repositories needs a token with the repo scope.";
+
+function WriteAccessBadge({ canWrite }: { canWrite: boolean | null }) {
+  if (canWrite === null) return null;
+  return (
+    <Badge size="sm" variant={canWrite ? "inform" : "secondary"}>
+      {canWrite ? "Can write" : "Read only"}
+    </Badge>
+  );
+}
+
 interface GitHubTokenPanelProps {
   status: GitHubTokenStatus;
 }
@@ -42,10 +54,11 @@ export function GitHubTokenPanel({ status }: GitHubTokenPanelProps) {
   const notify = useToastNotification();
   const { track } = useAnalytics();
 
-  const { secretName, state } = status;
+  const { secretName, state, canWrite } = status;
   const isConnected = state === "valid";
   const needsAttention = state === "secret_missing" || state === "invalid";
   const summary = stateSummary(status);
+  const readOnly = isConnected && canWrite === false;
 
   const choose = (name: string) => {
     chooseSecret.mutate(name, {
@@ -86,9 +99,12 @@ export function GitHubTokenPanel({ status }: GitHubTokenPanelProps) {
               {secretName ?? "No secret chosen"}
             </Text>
             {isConnected && (
-              <Badge size="sm" variant="inform">
-                Connected
-              </Badge>
+              <>
+                <Badge size="sm" variant="inform">
+                  Connected
+                </Badge>
+                <WriteAccessBadge canWrite={canWrite} />
+              </>
             )}
             {needsAttention && (
               <Badge size="sm" variant="destructive">
@@ -99,6 +115,11 @@ export function GitHubTokenPanel({ status }: GitHubTokenPanelProps) {
           {summary && (
             <Text size="xs" tone="subdued">
               {summary}
+            </Text>
+          )}
+          {readOnly && (
+            <Text size="xs" tone="subdued">
+              {READ_ONLY_HINT}
             </Text>
           )}
         </BlockStack>
