@@ -2,6 +2,7 @@ import { observer } from "mobx-react-lite";
 
 import { InlineStack } from "@/components/ui/layout";
 import { VerticalResizeHandle } from "@/components/ui/resize-handle";
+import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { useChatPaneWidth } from "@/routes/v2/pages/Tangent/hooks/useChatPaneWidth";
 import { useFindProjectCard } from "@/routes/v2/pages/Tangent/hooks/useFindProjectCard";
@@ -27,6 +28,7 @@ export const TangentProjectWorkspace = observer(
     useFindProjectCard();
     useNarrowLayoutDock();
     const store = useTangentProject();
+    const { isConfigured: isAiConfigured } = useAiProviderSettings();
     useTangentSessionParam(store);
     const { windows } = useSharedStores();
     const dock = windows.getDockAreaConfig("left");
@@ -42,7 +44,9 @@ export const TangentProjectWorkspace = observer(
     return (
       <TangentProjectAgentProvider sessionId={store.activeSessionId}>
         <div className="flex h-full w-full flex-col">
-          <ProjectHeader />
+          <ProjectHeader
+            sessionId={isAiConfigured ? store.activeSessionId : undefined}
+          />
           <InlineStack
             ref={rowRef}
             className="min-h-0 flex-1"
@@ -60,7 +64,7 @@ export const TangentProjectWorkspace = observer(
                 maxWidth={maxChatWidth}
                 onResizeEnd={requestWidth}
               />
-              <ProjectChatArea />
+              <ProjectChatArea isAiConfigured={isAiConfigured} />
               <WindowContainer />
             </div>
             <DynamicWorkarea />
