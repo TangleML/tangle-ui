@@ -693,6 +693,22 @@ describe("TangentProjectStore.startSession", () => {
     expect(io.detachSession).not.toHaveBeenCalled();
   });
 
+  it("keeps a shared empty session when leaving and discards an untouched one", async () => {
+    const store = new TangentProjectStore("project-1");
+    const io = makeSessionIo(null);
+    store.setSessionIo(io);
+
+    await store.startSession();
+    store.retainSession("new-session");
+    await store.discardActiveSessionOnUnmount();
+    expect(io.detachSession).not.toHaveBeenCalled();
+
+    io.newSession.mockResolvedValueOnce({ sessionId: "other-session" });
+    await store.startSession();
+    await store.discardActiveSessionOnUnmount();
+    expect(io.detachSession).toHaveBeenCalledTimes(1);
+  });
+
   it("mounts the project's shared folder and binds memory into it", async () => {
     const store = new TangentProjectStore("project-1");
     const io = makeSessionIo(null, "folder-1");

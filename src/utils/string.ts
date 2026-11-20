@@ -17,9 +17,7 @@ const formatJsonValue = (value: string | object) => {
   }
 };
 
-const copyToClipboard = (text: string) => {
-  navigator.clipboard.writeText(text);
-};
+const copyToClipboard = (text: string) => navigator.clipboard.writeText(text);
 
 const getValue = (value: string | ArgumentType | undefined) => {
   try {

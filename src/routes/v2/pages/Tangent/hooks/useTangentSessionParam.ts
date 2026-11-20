@@ -1,5 +1,6 @@
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { useEffect, useRef } from "react";
+import { when } from "mobx";
+import { useEffect } from "react";
 
 import {
   readTangentSessionParam,
@@ -8,32 +9,34 @@ import {
 import type { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
 
 /**
- * A link selects a session by url. The ask is then taken back out: left there,
- * returning to a session the user has since left would fight them for the
- * selection. A link asking for a new session is `usePrepareProjectArrival`'s.
+ * A shared link must survive a reload, but should stop pointing at the old
+ * chat once the user chooses a different one in the same project.
  */
 export function useTangentSessionParam(store: TangentProjectStore) {
   const search = useSearch({ strict: false });
   const navigate = useNavigate();
-  const handled = useRef<TangentProjectStore | null>(null);
 
   const asked = readTangentSessionParam(search);
   const sessionId = asked?.kind === "existing" ? asked.sessionId : undefined;
 
   useEffect(() => {
-    if (!sessionId || handled.current === store) return;
-    handled.current = store;
+    if (!sessionId) return;
 
     store.selectSession(sessionId);
 
-    void navigate({
-      to: ".",
-      search: (previous: Record<string, unknown>) => {
-        const next = { ...previous };
-        delete next[TANGENT_SESSION_SEARCH_PARAM];
-        return next;
+    return when(
+      () => store.activeSessionId !== sessionId,
+      () => {
+        void navigate({
+          to: ".",
+          search: (previous: Record<string, unknown>) => {
+            const next = { ...previous };
+            delete next[TANGENT_SESSION_SEARCH_PARAM];
+            return next;
+          },
+          replace: true,
+        } as never);
       },
-      replace: true,
-    } as never);
+    );
   }, [sessionId, navigate, store]);
 }
