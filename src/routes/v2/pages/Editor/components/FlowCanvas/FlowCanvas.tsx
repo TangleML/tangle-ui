@@ -3,10 +3,19 @@ import {
   ReactFlow,
   type ReactFlowInstance,
   useConnection,
+  useReactFlow,
+  type XYPosition,
 } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
-import { useState } from "react";
+import { type KeyboardEvent, useState } from "react";
 
+import {
+  FilePickerStatus,
+  type PickOutcome,
+  useFilePicker,
+  YAML_FILE_ACCEPT,
+} from "@/components/shared/FilePicker";
+import { FileDropHighlight } from "@/components/shared/FilePicker/FileDropHighlight";
 import { BlockStack } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
 import type { ComponentSpec } from "@/models/componentSpec";
@@ -30,6 +39,7 @@ import { FloatingSelectionToolbar } from "./components/FloatingSelectionToolbar"
 import { useClipboardShortcuts } from "./hooks/useClipboardShortcuts";
 import { useConnectionBehavior } from "./hooks/useConnectionBehavior";
 import { useDropBehavior } from "./hooks/useDropBehavior";
+import { useFileDropHandler } from "./hooks/useFileDropHandler";
 import { useFlowCanvasOnBeforeDelete } from "./hooks/useFlowCanvasOnBeforeDelete";
 import { useNodeEdgeChanges } from "./hooks/useNodeEdgeChanges";
 import { usePaneClickBehavior } from "./hooks/usePaneClickBehavior";
@@ -37,11 +47,18 @@ import { usePaneClickBehavior } from "./hooks/usePaneClickBehavior";
 interface FlowCanvasProps {
   spec: ComponentSpec | null;
   className?: string;
+  readOnly?: boolean;
 }
+
+const MISSING_DROP_POSITION_OUTCOME: PickOutcome = {
+  status: "error",
+  message: "The drop position could not be read.",
+};
 
 export const FlowCanvas = observer(function FlowCanvas({
   spec,
   className,
+  readOnly = false,
 }: FlowCanvasProps) {
   const registry = useNodeRegistry();
   const nodeTypes = registry.getNodeTypes();
@@ -79,7 +96,39 @@ export const FlowCanvas = observer(function FlowCanvas({
     rfOnEdgesChange,
   );
   const connectionBehavior = useConnectionBehavior(spec, reactFlowInstance);
-  const dropBehavior = useDropBehavior(spec, reactFlowInstance);
+  const { flowToScreenPosition } = useReactFlow();
+  const fileDropHandler = useFileDropHandler(spec);
+  const picker = useFilePicker<{ position: XYPosition }>({
+    accept: YAML_FILE_ACCEPT,
+    onFile: ({ text, file, meta }) =>
+      meta
+        ? fileDropHandler({ file, text, position: meta.position })
+        : MISSING_DROP_POSITION_OUTCOME,
+    disabled: readOnly,
+    guardWindowDrop: !readOnly,
+  });
+  const [fileDropAnchor, setFileDropAnchor] = useState<XYPosition>();
+
+  const handleFileDrop = (files: FileList, meta: { position: XYPosition }) => {
+    const screenPoint = flowToScreenPosition(meta.position);
+    const containerRect = containerRef.current?.getBoundingClientRect();
+    setFileDropAnchor({
+      x: screenPoint.x - (containerRect?.left ?? 0),
+      y: screenPoint.y - (containerRect?.top ?? 0),
+    });
+    void picker.handleFiles(files, "drop", meta);
+  };
+
+  const dismissStatusOnEscape = (event: KeyboardEvent) => {
+    if (event.key !== "Escape") return;
+    // The editor's window Escape handler would otherwise also act on this key.
+    event.stopPropagation();
+    picker.dismissStatus();
+  };
+
+  const dropBehavior = useDropBehavior(spec, reactFlowInstance, {
+    onFileDrop: handleFileDrop,
+  });
   const doubleClickBehavior = useDoubleClickBehavior(spec);
   const paneClickBehavior = usePaneClickBehavior(spec, reactFlowInstance);
 
@@ -108,8 +157,14 @@ export const FlowCanvas = observer(function FlowCanvas({
         {...dropBehavior}
         {...doubleClickBehavior}
         {...paneClickBehavior}
+        onDragEnter={picker.dropTargetProps.onDragEnter}
+        onDragLeave={picker.dropTargetProps.onDragLeave}
+        onDropCapture={picker.reset}
         onEdgeClick={onEdgeClick}
-        onPointerDownCapture={() => editor.setDraggedSincePointerDown(false)}
+        onPointerDownCapture={() => {
+          editor.setDraggedSincePointerDown(false);
+          picker.dismissStatus();
+        }}
         onNodeDragStart={() => editor.setDraggedSincePointerDown(true)}
         onNodeClick={() => editor.requestContextPanelReveal()}
         onInit={setReactFlowInstance}
@@ -125,6 +180,19 @@ export const FlowCanvas = observer(function FlowCanvas({
         <FloatingSelectionToolbar spec={spec} />
         <Background gap={10} className="bg-canvas!" />
       </ReactFlow>
+      <FileDropHighlight
+        isDragging={picker.isDragging}
+        message="Drop to add this component"
+      />
+      <div onKeyDown={dismissStatusOnEscape}>
+        <FilePickerStatus
+          placement="floating"
+          anchor={fileDropAnchor}
+          status={picker.status}
+          onDismiss={picker.dismissStatus}
+          dismissible
+        />
+      </div>
       <CanvasUndoRedo />
     </BlockStack>
   );

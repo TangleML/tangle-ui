@@ -1,12 +1,14 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
+  createEvent,
   fireEvent,
   render,
+  renderHook,
   screen,
   waitFor,
 } from "@testing-library/react";
-import type { ReactFlowInstance } from "@xyflow/react";
+import type { ReactFlowInstance, XYPosition } from "@xyflow/react";
 import { type ReactNode } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
@@ -19,6 +21,7 @@ import { UndoStore } from "@/routes/v2/pages/Editor/store/undoStore";
 import { componentSpecValidatorQuery } from "@/services/componentSpecValidation";
 
 import { useDropBehavior } from "./useDropBehavior";
+import { useFileDropHandler } from "./useFileDropHandler";
 
 const mocks = vi.hoisted(() => ({
   hydrate: vi.fn(),
@@ -28,6 +31,7 @@ const mocks = vi.hoisted(() => ({
   addToLibrary: vi.fn(),
   addTask: vi.fn(),
   track: vi.fn(),
+  fileDrop: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-router", () => ({
@@ -65,9 +69,6 @@ vi.mock("@/routes/v2/pages/Editor/store/actions/useTaskActions", () => ({
   useTaskActions: () => ({ addTask: mocks.addTask }),
 }));
 vi.mock("@/hooks/useToastNotification", () => ({ default: () => vi.fn() }));
-vi.mock("@/utils/dom", () => ({
-  readYamlFromFile: async () => "name: Search",
-}));
 
 const spec = new YamlDeserializer(new IncrementingIdGenerator()).deserialize({
   name: "Existing pipeline",
@@ -88,11 +89,11 @@ const component = {
 };
 
 const flow = {
-  screenToFlowPosition: () => ({ x: 200, y: 200 }),
+  screenToFlowPosition: ({ x, y }: XYPosition) => ({ x: x - 100, y: y - 50 }),
 } as unknown as ReactFlowInstance;
 
 function Canvas() {
-  const behavior = useDropBehavior(spec, flow);
+  const behavior = useDropBehavior(spec, flow, { onFileDrop: mocks.fileDrop });
   return <div data-testid="canvas" onDrop={behavior.onDrop} />;
 }
 
@@ -105,12 +106,21 @@ function Wrapper({ children }: { children: ReactNode }) {
 }
 
 function drop(file = false) {
-  fireEvent.drop(screen.getByTestId("canvas"), {
+  const files = file ? [new File(["name: Search"], "component.yaml")] : [];
+  const canvas = screen.getByTestId("canvas");
+  const event = createEvent.drop(canvas, {
     dataTransfer: {
-      files: file ? [new File(["name: Search"], "component.yaml")] : [],
+      files,
       getData: () => JSON.stringify({ task: { componentRef: component } }),
     },
   });
+  // jsdom has no DragEvent, so the pointer coordinates are set on the event directly.
+  Object.defineProperties(event, {
+    clientX: { value: 300 },
+    clientY: { value: 250 },
+  });
+  fireEvent(canvas, event);
+  return files;
 }
 
 beforeEach(() => {
@@ -142,13 +152,13 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it.each(["library", "replacement", "file"])(
+it.each(["library", "replacement"])(
   "rejects an invalid %s drop without changing the pipeline",
   async (source) => {
     if (source === "replacement")
       mocks.flushReplaceState.mockReturnValue("existing-task");
     render(<Canvas />, { wrapper: Wrapper });
-    drop(source === "file");
+    drop();
     expect(
       await screen.findByRole("dialog", { name: "Invalid component" }),
     ).toBeVisible();
@@ -223,4 +233,97 @@ it("does not add a component if the active pipeline changes during validation", 
   finish?.(component);
   await waitFor(() => expect(validate).toHaveBeenCalled());
   expect(mocks.drop).not.toHaveBeenCalled();
+});
+
+it("hands a file drop to onFileDrop with the position under the pointer", async () => {
+  render(<Canvas />, { wrapper: Wrapper });
+  const files = drop(true);
+  expect(mocks.fileDrop).toHaveBeenCalledWith(files, {
+    position: { x: 200, y: 200 },
+  });
+  expect(validate).not.toHaveBeenCalled();
+  expect(mocks.drop).not.toHaveBeenCalled();
+  expect(mocks.addTask).not.toHaveBeenCalled();
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+});
+
+it("adds a valid component library drop at the position under the pointer", async () => {
+  validate.mockReturnValue({ valid: true });
+  render(<Canvas />, { wrapper: Wrapper });
+  drop();
+  await waitFor(() =>
+    expect(mocks.drop).toHaveBeenCalledWith(
+      spec,
+      expect.objectContaining({ componentRef: component }),
+      { x: 200, y: 200 },
+      undo,
+    ),
+  );
+  expect(mocks.fileDrop).not.toHaveBeenCalled();
+});
+
+const componentText = `name: Search
+implementation:
+  container:
+    image: python:3.12
+`;
+
+it("adds a dropped component file to the canvas and reports success", async () => {
+  validate.mockReturnValue({ valid: true });
+  mocks.addToLibrary.mockResolvedValue(component);
+  const { result } = renderHook(() => useFileDropHandler(spec), {
+    wrapper: Wrapper,
+  });
+  const outcome = await result.current({
+    file: new File([componentText], "component.yaml"),
+    text: componentText,
+    position: { x: 40, y: 60 },
+  });
+  expect(outcome).toEqual({
+    status: "success",
+    message: "Search added to the canvas",
+  });
+  expect(mocks.addToLibrary).toHaveBeenCalledWith(
+    component,
+    "canvas_file_drop_v2",
+  );
+  expect(mocks.addTask).toHaveBeenCalledWith(spec, component, { x: 40, y: 60 });
+});
+
+it("reports the validation error of a dropped file without opening the dialog", async () => {
+  const { result } = renderHook(() => useFileDropHandler(spec), {
+    wrapper: Wrapper,
+  });
+  const outcome = await result.current({
+    file: new File([componentText], "component.yaml"),
+    text: componentText,
+    position: { x: 40, y: 60 },
+  });
+  expect(outcome).toEqual({
+    status: "error",
+    message: "inputs[5].default: Expected a string. Quote numeric defaults.",
+  });
+  expect(mocks.addToLibrary).not.toHaveBeenCalled();
+  expect(mocks.addTask).not.toHaveBeenCalled();
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+});
+
+it("reports the YAML error of a dropped file without adding it", async () => {
+  const text = "name: [unclosed";
+  const { result } = renderHook(() => useFileDropHandler(spec), {
+    wrapper: Wrapper,
+  });
+  const outcome = await result.current({
+    file: new File([text], "broken.yaml"),
+    text,
+    position: { x: 40, y: 60 },
+  });
+  expect(outcome).toMatchObject({
+    status: "error",
+    message: expect.stringContaining("unexpected end of the stream"),
+    detail: expect.stringContaining("name: [unclosed"),
+  });
+  expect(mocks.addToLibrary).not.toHaveBeenCalled();
+  expect(mocks.addTask).not.toHaveBeenCalled();
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 });

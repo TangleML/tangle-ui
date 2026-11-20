@@ -208,9 +208,6 @@ const ImportComponent = ({
                       disabled={isPending}
                       onFile={handleFile}
                     />
-                    <Paragraph tone="subdued" size="sm">
-                      Select a YAML file containing a pipeline component
-                    </Paragraph>
                   </div>
                 </div>
               </TabsContent>

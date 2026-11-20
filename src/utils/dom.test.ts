@@ -4,7 +4,6 @@ import {
   leaveEscapeToSearchBox,
   NotTextFileError,
   readTextFromFile,
-  readYamlFromFile,
 } from "./dom";
 
 describe("leaveEscapeToSearchBox", () => {
@@ -77,21 +76,5 @@ describe("readTextFromFile", () => {
     vi.spyOn(file, "arrayBuffer").mockRejectedValue(notFound);
 
     await expect(readTextFromFile(file)).rejects.toBe(notFound);
-  });
-});
-
-describe("readYamlFromFile", () => {
-  it("reads a YAML file", async () => {
-    const file = new File(["name: Train"], "component.yaml");
-
-    await expect(readYamlFromFile(file)).resolves.toBe("name: Train");
-  });
-
-  it("refuses a file that isn't named .yaml", async () => {
-    const file = new File(["name: Train"], "component.txt");
-
-    await expect(readYamlFromFile(file)).rejects.toThrow(
-      "Only YAML files are supported",
-    );
   });
 });

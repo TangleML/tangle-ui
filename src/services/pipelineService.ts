@@ -281,7 +281,9 @@ export async function importPipelineFromYaml(
       errorMessage = error.message;
     }
 
-    console.error("Failed to import pipeline:", error);
+    if (!(error instanceof yaml.YAMLException)) {
+      console.error("Failed to import pipeline:", error);
+    }
     return {
       name: "",
       overwritten: false,

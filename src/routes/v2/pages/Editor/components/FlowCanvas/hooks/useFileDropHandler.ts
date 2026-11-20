@@ -1,6 +1,9 @@
 import type { XYPosition } from "@xyflow/react";
 
-import useToastNotification from "@/hooks/useToastNotification";
+import {
+  type PickOutcome,
+  yamlErrorOutcome,
+} from "@/components/shared/FilePicker";
 import type { ComponentReference, ComponentSpec } from "@/models/componentSpec";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
@@ -8,9 +11,12 @@ import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskAc
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import type { HydratedComponentReference } from "@/utils/componentSpec";
 import { componentMetadata } from "@/utils/componentTracking";
-import { readYamlFromFile } from "@/utils/dom";
+import { componentSpecFromYaml } from "@/utils/yaml";
 
-import { useValidateComponentDrop } from "./useValidateComponentDrop";
+import {
+  type ComponentDropValidationError,
+  useValidateComponentDrop,
+} from "./useValidateComponentDrop";
 
 /**
  * Bridge between legacy HydratedComponentReference and models ComponentReference.
@@ -23,26 +29,63 @@ function toModelComponentRef(
   return ref as ComponentReference;
 }
 
-export function useFileDropHandler() {
+const PIPELINE_CHANGED_OUTCOME: PickOutcome = {
+  status: "error",
+  message: "The pipeline changed before the component was added.",
+};
+
+export function useFileDropHandler(spec: ComponentSpec | null) {
   const { addTask } = useTaskActions();
   const { addToComponentLibrary } = useComponentLibrary();
   const { track } = useAnalytics();
-  const notify = useToastNotification();
   const { navigation } = useSharedStores();
   const validateComponentDrop = useValidateComponentDrop();
 
-  return async (file: File, spec: ComponentSpec, position: XYPosition) => {
+  return async ({
+    text,
+    position,
+  }: {
+    file: File;
+    text: string;
+    position: XYPosition;
+  }): Promise<PickOutcome> => {
+    if (!spec) {
+      return { status: "error", message: "No pipeline is open." };
+    }
     try {
-      const content = await readYamlFromFile(file);
-      const hydrated = await validateComponentDrop({ text: content });
+      // validateComponentDrop swallows parse errors, so parse first to surface the reason.
+      componentSpecFromYaml(text);
+      let validationErrors: string[] | undefined;
+      const hydrated = await validateComponentDrop(
+        { text },
+        {
+          onError: ({ errors }: ComponentDropValidationError) => {
+            validationErrors = errors;
+          },
+        },
+      );
 
-      if (!hydrated || navigation.activeSpec !== spec) return;
+      if (!hydrated) {
+        return {
+          status: "error",
+          message:
+            validationErrors?.join("\n") ??
+            "The component was not added to the canvas.",
+        };
+      }
+      if (navigation.activeSpec !== spec) return PIPELINE_CHANGED_OUTCOME;
 
       const result = await addToComponentLibrary(
         hydrated,
         "canvas_file_drop_v2",
       );
-      if (!result || navigation.activeSpec !== spec) return;
+      if (!result) {
+        return {
+          status: "error",
+          message: "The component was not added to your library.",
+        };
+      }
+      if (navigation.activeSpec !== spec) return PIPELINE_CHANGED_OUTCOME;
 
       addTask(spec, toModelComponentRef(result), position);
 
@@ -51,9 +94,14 @@ export function useFileDropHandler() {
         drop_kind: "file_import",
         pipeline_id: spec.name,
       });
+
+      return {
+        status: "success",
+        message: `${result.name} added to the canvas`,
+      };
     } catch (error) {
       console.error("Failed to add imported component to canvas:", error);
-      notify("Failed to add component to canvas", "error");
+      return yamlErrorOutcome(error, "Failed to add component to canvas");
     }
   };
 }
