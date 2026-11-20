@@ -23,6 +23,7 @@ import {
   describeResource,
   LOCAL_PIPELINE,
   PIPELINE_RUN,
+  resourceForSession,
 } from "@/services/projects/resourceDescriptor";
 import type { WorkareaTarget } from "@/services/projects/resourceTarget";
 import {
@@ -120,6 +121,9 @@ export function usePrepareProjectArrival(
         starting && { ...starting, name: askedFor },
       );
       if (!started) return;
+      // A pipeline placed on the empty canvas before anyone asks for work
+      // belongs to the project, even if its untouched chat is discarded.
+      const sessionId = starting ? store.activeSessionId : undefined;
 
       // Taking the ask back off the project, whether it ran or a link dropped
       // it, is housekeeping that stops the next arrival repeating it. The
@@ -166,7 +170,7 @@ export function usePrepareProjectArrival(
         storage,
         name: askedFor,
         provisionalName: true,
-        attach: createResource,
+        attach: (input) => createResource(resourceForSession(input, sessionId)),
       });
 
       const target: WorkareaTarget = pipelineFileTarget(file);

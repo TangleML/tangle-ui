@@ -49,11 +49,15 @@ import {
 } from "@/services/projects/pipelineResource";
 import { UNNAMED_PIPELINE } from "@/services/projects/placeholderNames";
 import { createProjectResource } from "@/services/projects/projectResourcesService";
-import { localPipelineResourceInput } from "@/services/projects/resourceDescriptor";
+import {
+  localPipelineResourceInput,
+  resourceForSession,
+} from "@/services/projects/resourceDescriptor";
 import {
   remotePipelineIdentity,
   type WorkareaTarget,
 } from "@/services/projects/resourceTarget";
+import type { CreateResourceInput } from "@/services/projects/types";
 import {
   ProjectResourcesQueryKeys,
   ProjectsQueryKeys,
@@ -222,20 +226,21 @@ export function TangentProjectAgentProvider({
     ]);
   };
 
-  // Everything here acts on one project, so it's built again for the next.
+  // Each tool belongs to the project and chat that registered it, even if a
+  // pending import or a draft's first save finishes after switching chats.
   const { projectCard, tools, routingBridge, agentTargets } = useBuiltFor(
-    store,
+    JSON.stringify([store.projectId, sessionId]),
     () => {
       const naming = createNamingHandlers({
         projectId: store.projectId,
-        getActiveSessionId: () => store.activeSessionId,
+        getActiveSessionId: () => sessionId,
         getPipelineBridge: () => store.getActiveTabBridge(),
         onRenamed: () => refreshProjectResources(),
       });
       const projectCard = createProjectCardHandlers({
         projectId: store.projectId,
         queryClient,
-        getActiveSessionId: () => store.activeSessionId,
+        getActiveSessionId: () => sessionId,
         getBaseUrl: () => baseUrlRef.current ?? undefined,
         getAuthToken: () => authTokenRef.current,
         getTangent: () => tangentRef.current,
@@ -243,12 +248,21 @@ export function TangentProjectAgentProvider({
         getRunDetails: runInspect.getRunDetails,
         onResourcesChanged: () => refreshProjectResources(),
       });
+      async function attach(input: CreateResourceInput) {
+        const resource = await createProjectResource(
+          store.projectId,
+          resourceForSession(input, sessionId),
+        );
+        await refreshProjectResources();
+        return resource;
+      }
+
       const tools = {
         ...createProjectCardRemoteTools(() => projectCard),
         ...createWorkareaRemoteTools(() => ({
           openTarget: (target, title) =>
             store.openWorkareaTarget(target, title, {
-              recordRunInSessionId: store.activeSessionId,
+              recordRunInSessionId: sessionId,
             }),
           getTabs: () => store.workareaTabs,
           getActiveTabId: () => store.activeWorkareaTabId ?? undefined,
@@ -260,14 +274,7 @@ export function TangentProjectAgentProvider({
             const file = await createAndAttachPipeline({
               storage,
               name: name ?? UNNAMED_PIPELINE,
-              attach: async (input) => {
-                const resource = await createProjectResource(
-                  store.projectId,
-                  input,
-                );
-                await refreshProjectResources();
-                return resource;
-              },
+              attach,
             });
             return {
               pipelineName: file.storageKey,
@@ -280,9 +287,8 @@ export function TangentProjectAgentProvider({
               storage,
               yaml,
               name,
-              attach: (input) => createProjectResource(store.projectId, input),
+              attach,
             });
-            await refreshProjectResources();
             return { pipelineName: file.storageKey, fileId: file.id };
           },
           readSessionResource: async (uri) => {
@@ -301,11 +307,9 @@ export function TangentProjectAgentProvider({
               runId,
             );
             if (remote) {
-              await createProjectResource(
-                store.projectId,
+              await attach(
                 remotePipelineResourceInput(remote.pipelineId, pipelineName),
               );
-              await refreshProjectResources();
               const target: WorkareaTarget = {
                 type: "pipeline",
                 identity: remotePipelineIdentity(remote.pipelineId),
@@ -314,14 +318,12 @@ export function TangentProjectAgentProvider({
             }
             const registered =
               await storage.resolvePipelineByName(pipelineName);
-            await createProjectResource(
-              store.projectId,
+            await attach(
               localPipelineResourceInput({
                 localName: pipelineName,
                 ...(registered ? { localId: registered.id } : undefined),
               }),
             );
-            await refreshProjectResources();
             return { pipelineName };
           },
           refreshResources: refreshProjectResources,

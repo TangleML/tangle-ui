@@ -307,7 +307,7 @@ export function createProjectCardRemoteTools(
     add_document_to_project: {
       description:
         "Add a document to the project, as the card's 'Add a document' does: " +
-        "titled text that belongs to the project rather than to one chat. " +
+        "titled text listed in both this chat and its project. " +
         "Returns its `target`, which `open_workarea_target` opens.",
       inputSchema: {
         type: "object",

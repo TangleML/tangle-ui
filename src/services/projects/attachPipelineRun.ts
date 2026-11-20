@@ -7,6 +7,7 @@ import {
   describeResource,
   PIPELINE_RUN,
   pipelineRunResourceInput,
+  resourceForSession,
 } from "./resourceDescriptor";
 import { runTarget, sameTarget } from "./resourceTarget";
 
@@ -40,11 +41,19 @@ export async function attachPipelineRunOnce(
   {
     runId,
     pipelineName,
-  }: { runId: string; pipelineName: string | (() => Promise<string>) },
+    sessionId,
+  }: {
+    runId: string;
+    pipelineName: string | (() => Promise<string>);
+    sessionId?: string;
+  },
 ): Promise<boolean> {
   if (await holdsPipelineRun(projectId, runId)) return false;
   const name =
     typeof pipelineName === "string" ? pipelineName : await pipelineName();
-  await createProjectResource(projectId, pipelineRunResourceInput(runId, name));
+  await createProjectResource(
+    projectId,
+    resourceForSession(pipelineRunResourceInput(runId, name), sessionId),
+  );
   return true;
 }

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { ListItem, type ListItemAction } from "@/components/ui/list-item";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Heading, Text } from "@/components/ui/typography";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { useArchivedProjectItems } from "@/routes/v2/pages/Tangent/hooks/useArchivedProjectItems";
@@ -12,8 +13,8 @@ import { useOpenWorkareaTarget } from "@/routes/v2/pages/Tangent/hooks/useOpenWo
 import { useProjectResourceItems } from "@/routes/v2/pages/Tangent/hooks/useProjectResourceItems";
 import {
   type ProjectFile,
-  useProjectSessionFiles,
-} from "@/routes/v2/pages/Tangent/hooks/useProjectSessionFiles";
+  useProjectSessionAssets,
+} from "@/routes/v2/pages/Tangent/hooks/useProjectSessionAssets";
 import { ASSET_LIMIT } from "@/routes/v2/pages/Tangent/services/chatCommandResults";
 import {
   type ProjectCardItem,
@@ -55,22 +56,45 @@ const matching = (query: string, ...texts: string[]) =>
   texts.some((text) => containsSearchTerm(text, query));
 
 /**
- * What the project holds, in the order someone looks for it: reports (the
- * files pinned as ready to share), its latest runs, its pipelines, and its
- * documents. Each shows its newest few and the rest on "Show all", which is
- * remembered per project; reports leave the rest to "All files", where every
- * file the chats made waits, with its own search, to be pinned or unpinned.
- * One search filters the card, showing every match, and a section with
- * nothing to show drops out.
+ * Opens on the active chat. Both scopes share their rows, search and actions.
+ * Switching chats resets the chat's search and sub-view.
  */
 export const ProjectCardContent = observer(function ProjectCardContent() {
   // The card stays mounted when another project is opened in place; its
   // search and sub-view belong to the project they were used in.
-  const { projectId } = useTangentProject();
-  return <ProjectCardBody key={projectId} />;
+  const { projectId, activeSessionId } = useTangentProject();
+  if (!activeSessionId) return <ProjectCardBody key={projectId} />;
+  return (
+    <Tabs key={projectId} defaultValue="chat" className="gap-0">
+      <TabsList aria-label="Asset scope" className="mx-2 mt-2 w-auto">
+        <TabsTrigger
+          value="chat"
+          {...tracking("projects.project_card.chat_scope")}
+        >
+          This chat
+        </TabsTrigger>
+        <TabsTrigger
+          value="project"
+          {...tracking("projects.project_card.project_scope")}
+        >
+          Entire project
+        </TabsTrigger>
+      </TabsList>
+      <TabsContent value="chat">
+        <ProjectCardBody key={activeSessionId} sessionId={activeSessionId} />
+      </TabsContent>
+      <TabsContent value="project">
+        <ProjectCardBody />
+      </TabsContent>
+    </Tabs>
+  );
 });
 
-const ProjectCardBody = observer(function ProjectCardBody() {
+const ProjectCardBody = observer(function ProjectCardBody({
+  sessionId,
+}: {
+  sessionId?: string;
+}) {
   const store = useTangentProject();
   const dismissCard = useOptionalWindowContext()?.dismissFlyout;
   const openTarget = useOpenWorkareaTarget({ onOpenBesideChat: dismissCard });
@@ -89,8 +113,9 @@ const ProjectCardBody = observer(function ProjectCardBody() {
   );
   const resourceItems = useProjectResourceItems(store.projectId);
   const { resources, summaries } = resourceItems;
-  const projectRuns = useProjectRuns(store.projectId);
-  const files = useProjectSessionFiles(store.projectId);
+  const projectRuns = useProjectRuns(sessionId ? undefined : store.projectId);
+  const sessionAssets = useProjectSessionAssets(store.projectId, sessionId);
+  const scope = sessionId ? "chat" : "project";
   const { archived, archive, restore } = useArchivedProjectItems(
     store.projectId,
   );
@@ -103,6 +128,8 @@ const ProjectCardBody = observer(function ProjectCardBody() {
     items: resources,
     summaries,
     projectRuns: projectRuns.data ?? [],
+    sessionId,
+    sessionRuns: sessionAssets.runs,
     archived,
   });
   const pipelines = split(lists.pipelines);
@@ -150,13 +177,13 @@ const ProjectCardBody = observer(function ProjectCardBody() {
             ? {
                 icon: "PinOff",
                 label: `Unpin ${file.title} from reports`,
-                onClick: () => files.unpin(file),
+                onClick: () => sessionAssets.unpin(file),
                 tracking: tracking("projects.project_card.unpin_report"),
               }
             : {
                 icon: "Pin",
                 label: `Pin ${file.title} to reports`,
-                onClick: () => files.pin(file),
+                onClick: () => sessionAssets.pin(file),
                 tracking: tracking("projects.project_card.pin_report"),
               },
         ]}
@@ -203,6 +230,8 @@ const ProjectCardBody = observer(function ProjectCardBody() {
   const add = (kind: "pipeline" | "run" | "document") => (
     <AddResourceButton
       projectId={store.projectId}
+      sessionId={sessionId}
+      onAddToSession={(id) => store.retainSession(id)}
       resources={summaries}
       kind={kind}
       disabled={!resourceItems.isLoaded}
@@ -211,11 +240,15 @@ const ProjectCardBody = observer(function ProjectCardBody() {
   const back = () => setView("main");
 
   if (view === "files") {
-    const shownFiles = files.files.filter(({ title, path }) =>
+    const shownFiles = sessionAssets.files.filter(({ title, path }) =>
       matching(fileQuery, title, path),
     );
     return (
-      <SubView title="All files" count={files.files.length} onBack={back}>
+      <SubView
+        title="All files"
+        count={sessionAssets.files.length}
+        onBack={back}
+      >
         <div className="px-2">
           <SearchField
             value={fileQuery}
@@ -227,11 +260,13 @@ const ProjectCardBody = observer(function ProjectCardBody() {
         </div>
         {shownFiles.length === 0 ? (
           <EmptyNote>
-            {files.files.length === 0
+            {sessionAssets.files.length === 0
               ? emptyNote(
-                  [files],
-                  "this project's files",
-                  "The chats in this project haven't made any files yet",
+                  [sessionAssets],
+                  `this ${scope}'s files`,
+                  sessionId
+                    ? "This chat hasn't made any files yet"
+                    : "The chats in this project haven't made any files yet",
                 )
               : "No files match"}
           </EmptyNote>
@@ -287,10 +322,12 @@ const ProjectCardBody = observer(function ProjectCardBody() {
   const sections: (Section & { shownWhenEmpty: boolean })[] = [
     {
       title: "Reports",
-      rows: files.reports.filter(fileMatches).map((file) => renderFile(file)),
+      rows: sessionAssets.reports
+        .filter(fileMatches)
+        .map((file) => renderFile(file)),
       empty: emptyNote(
-        [files],
-        "this project's reports",
+        [sessionAssets],
+        `this ${scope}'s reports`,
         "Nothing has been pinned as a report yet",
       ),
       overflow: overflowUnlessSearching("footer"),
@@ -298,7 +335,7 @@ const ProjectCardBody = observer(function ProjectCardBody() {
         <FooterButton
           icon="Files"
           label="All files"
-          count={files.files.length}
+          count={sessionAssets.files.length}
           onClick={() => setView("files")}
           trackingId="projects.project_card.all_files"
         />
@@ -308,7 +345,7 @@ const ProjectCardBody = observer(function ProjectCardBody() {
     {
       title: "Other files",
       rows: searching
-        ? files.files
+        ? sessionAssets.files
             .filter((file) => !file.pinned && fileMatches(file))
             .map((file) => renderFile(file))
         : [],
@@ -319,21 +356,23 @@ const ProjectCardBody = observer(function ProjectCardBody() {
       rows: runs.active
         .filter(({ pipelineName }) => matches(pipelineName))
         .map(renderRun),
-      afterAllRows: searching ? undefined : (
-        <LoadOlderRuns
-          query={projectRuns}
-          onLoad={() => expandSection("Runs")}
-        />
-      ),
+      afterAllRows:
+        searching || sessionId ? undefined : (
+          <LoadOlderRuns
+            query={projectRuns}
+            onLoad={() => expandSection("Runs")}
+          />
+        ),
       overflow: overflowUnlessSearching("show-all"),
       action: add("run"),
-      empty: projectRuns.hasNextPage
-        ? undefined
-        : emptyNote(
-            [projectRuns, resourceItems],
-            "this project's runs",
-            "Nothing has been run yet",
-          ),
+      empty:
+        !sessionId && projectRuns.hasNextPage
+          ? undefined
+          : emptyNote(
+              [sessionId ? sessionAssets : projectRuns, resourceItems],
+              `this ${scope}'s runs`,
+              "Nothing has been run yet",
+            ),
       shownWhenEmpty: true,
     },
     {
@@ -345,7 +384,7 @@ const ProjectCardBody = observer(function ProjectCardBody() {
       action: add("pipeline"),
       empty: emptyNote(
         [resourceItems],
-        "this project's pipelines",
+        `this ${scope}'s pipelines`,
         "No pipelines yet",
       ),
       shownWhenEmpty: true,
@@ -359,7 +398,7 @@ const ProjectCardBody = observer(function ProjectCardBody() {
       action: add("document"),
       empty: emptyNote(
         [resourceItems],
-        "this project's documents",
+        `this ${scope}'s documents`,
         "No documents yet",
       ),
       shownWhenEmpty: true,
@@ -376,13 +415,13 @@ const ProjectCardBody = observer(function ProjectCardBody() {
         <SearchField
           value={query}
           onChange={setQuery}
-          label="Search this project"
+          label={`Search this ${scope}`}
           trackingPrefix="projects.project_card"
           inputRef={searchRef}
         />
       </div>
       {searching && shownSections.length === 0 && (
-        <EmptyNote>Nothing in this project matches</EmptyNote>
+        <EmptyNote>Nothing in this {scope} matches</EmptyNote>
       )}
       <CardSections
         sections={shownSections}
