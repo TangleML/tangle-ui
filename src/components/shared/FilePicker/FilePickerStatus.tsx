@@ -7,9 +7,9 @@ import { cn } from "@/lib/utils";
 
 import type { PickerStatus } from "./useFilePicker";
 
-export type FilePickerStatusPlacement = "inline" | "floating";
+type FilePickerStatusPlacement = "inline" | "floating";
 
-export interface FilePickerStatusAnchor {
+interface FilePickerStatusAnchor {
   x: number;
   y: number;
 }

@@ -31,6 +31,7 @@ type PickerOverrides = Pick<
   | "afterSuccess"
   | "dropZone"
   | "statusDismissible"
+  | "onBrowse"
 >;
 
 function renderPicker(props: PickerOverrides = {}) {
@@ -141,6 +142,29 @@ describe("FilePicker", () => {
     fireEvent.click(zone());
 
     expect(clickSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("calls onBrowse once before opening the file dialog from the browse button and the zone", () => {
+    const onBrowse = vi.fn();
+    renderPicker({ onBrowse });
+
+    fireEvent.click(browseButton());
+
+    expect(onBrowse).toHaveBeenCalledTimes(1);
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    expect(onBrowse.mock.invocationCallOrder[0]).toBeLessThan(
+      clickSpy.mock.invocationCallOrder[0],
+    );
+
+    clickSpy.mockClear();
+    onBrowse.mockClear();
+    fireEvent.click(zone());
+
+    expect(onBrowse).toHaveBeenCalledTimes(1);
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    expect(onBrowse.mock.invocationCallOrder[0]).toBeLessThan(
+      clickSpy.mock.invocationCallOrder[0],
+    );
   });
 
   it("hands a browsed YAML file to onFile and shows the success box with its action", async () => {

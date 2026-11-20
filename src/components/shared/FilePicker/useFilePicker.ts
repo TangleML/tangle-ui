@@ -16,7 +16,7 @@ import {
   readCheckedText,
 } from "./fileChecks";
 
-export type PickSource = "browse" | "drop";
+type PickSource = "browse" | "drop";
 
 type PickAction = { label: string; onSelect: () => void };
 

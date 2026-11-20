@@ -13,7 +13,7 @@ import {
   type UseFilePickerOptions,
 } from "./useFilePicker";
 
-export type FilePickerAfterSuccess = "replace-picker" | "keep-picker";
+type FilePickerAfterSuccess = "replace-picker" | "keep-picker";
 
 interface FilePickerViewProps {
   browse?: boolean;
@@ -36,6 +36,7 @@ interface FilePickerViewProps {
   label: string;
   inputTestId?: string;
   className?: string;
+  onBrowse?: () => void;
 }
 
 export type FilePickerProps<M = unknown> = FilePickerViewProps &
@@ -93,6 +94,7 @@ function FilePickerView<M>({
   label,
   inputTestId = "file-picker-input",
   className,
+  onBrowse,
 }: FilePickerViewProps &
   Pick<UseFilePickerOptions<M>, "accept" | "maxBytes"> & {
     picker: FilePickerHandle<M>;
@@ -106,9 +108,14 @@ function FilePickerView<M>({
   const hidesSurface = succeeded && afterSuccess === "replace-picker";
   const statusAboveSurface = succeeded && afterSuccess === "keep-picker";
 
+  const startBrowse = () => {
+    onBrowse?.();
+    openBrowse();
+  };
+
   const browseFromButton = (event: MouseEvent) => {
     event.stopPropagation();
-    openBrowse();
+    startBrowse();
   };
 
   const statusBox = (
@@ -124,7 +131,7 @@ function FilePickerView<M>({
   const zone = (
     <div
       {...(ownsDropTarget ? dropTargetProps : {})}
-      onClick={clickZoneToBrowse && !disabled ? openBrowse : undefined}
+      onClick={clickZoneToBrowse && !disabled ? startBrowse : undefined}
       className={cn(
         "flex w-full items-center gap-2 rounded-md border border-dashed px-3 py-3 transition-colors",
         isHighlighted ? "border-primary bg-primary/5" : "border-input",
@@ -172,7 +179,7 @@ function FilePickerView<M>({
       variant="outline"
       size="sm"
       disabled={disabled}
-      onClick={openBrowse}
+      onClick={startBrowse}
       className="self-start"
     >
       {browseLabel}

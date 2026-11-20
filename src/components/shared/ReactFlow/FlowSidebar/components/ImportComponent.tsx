@@ -1,17 +1,16 @@
 import { useMutation } from "@tanstack/react-query";
-import { PackagePlus, X } from "lucide-react";
-import { Upload } from "lucide-react";
-import {
-  type ChangeEvent,
-  type ReactNode,
-  useCallback,
-  useRef,
-  useState,
-} from "react";
+import { PackagePlus } from "lucide-react";
+import { type ChangeEvent, type ReactNode, useCallback, useState } from "react";
 
 import { ComponentEditorDialog } from "@/components/shared/ComponentEditor/ComponentEditorDialog";
 import { NewComponentTemplateSelector } from "@/components/shared/ComponentEditor/components/NewComponentTemplateSelector";
 import type { SupportedTemplate } from "@/components/shared/ComponentEditor/types";
+import {
+  FilePicker,
+  type PickOutcome,
+  YAML_FILE_ACCEPT,
+} from "@/components/shared/FilePicker";
+import { yamlErrorOutcome } from "@/components/shared/FilePicker/outcomes";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -32,7 +31,7 @@ import useToastNotification from "@/hooks/useToastNotification";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
 import { hydrateComponentReference } from "@/services/componentService";
-import { getStringFromData } from "@/utils/string";
+import { componentSpecFromYaml } from "@/utils/yaml";
 
 enum TabType {
   URL = "URL",
@@ -52,11 +51,6 @@ const ImportComponent = ({
   const [url, setUrl] = useState("");
   const [tab, setTab] = useState<TabType>(TabType.File);
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<string | ArrayBuffer | null>(
-    null,
-  );
-  const [selectedFileName, setSelectedFileName] = useState<string>("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [componentEditorTemplateSelected, setComponentEditorTemplateSelected] =
     useState<SupportedTemplate | undefined>();
@@ -78,46 +72,18 @@ const ImportComponent = ({
     setTab(value);
   }, []);
 
-  const handleFileChange = useCallback(
-    (event: ChangeEvent<HTMLInputElement>) => {
-      const files = event.target.files;
-      // Don't clear the file if the user cancels the dialog
-      if (!files || files.length === 0) {
-        return;
-      }
+  const {
+    mutate: importComponent,
+    mutateAsync: importComponentAsync,
+    isPending,
+  } = useMutation({
+    mutationFn: async (fileText: string | undefined) => {
+      // hydrateComponentReference swallows parse errors, so parse first to surface the reason.
+      if (fileText !== undefined) componentSpecFromYaml(fileText);
 
-      const file = files[0];
-      setSelectedFileName(file.name);
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const content = e.target?.result;
-        if (content) {
-          setSelectedFile(content);
-        }
-      };
-
-      reader.readAsText(file);
-    },
-    [],
-  );
-
-  const clearSelectedFile = useCallback(() => {
-    setSelectedFile(null);
-    setSelectedFileName("");
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  }, []);
-
-  const { mutate: importComponent, isPending } = useMutation({
-    mutationFn: async () => {
       const componentRef = {
-        text:
-          tab === TabType.File && selectedFile
-            ? getStringFromData(selectedFile)
-            : undefined,
-        url: tab === TabType.URL ? url : undefined,
+        text: fileText,
+        url: fileText === undefined ? url : undefined,
       };
 
       const hydratedComponent = await hydrateComponentReference(componentRef);
@@ -128,27 +94,54 @@ const ImportComponent = ({
 
       return await addToComponentLibrary(hydratedComponent, "import_dialog");
     },
-    onSuccess: async (result) => {
-      setIsOpen(false);
-      setUrl("");
-      setSelectedFile(null);
-      setSelectedFileName("");
+    onSuccess: async (result, fileText) => {
+      const isFileImport = fileText !== undefined;
+      if (!isFileImport) {
+        setIsOpen(false);
+        setUrl("");
+      }
 
       if (result) {
         track("pipeline_editor.add_component.import_completed", {
-          method: tab === TabType.File ? "file" : "url",
+          method: isFileImport ? "file" : "url",
         });
-        notify("Component imported successfully", "success");
+        if (!isFileImport) {
+          notify("Component imported successfully", "success");
+        }
       }
     },
-    onError: (error: Error) => {
-      notify(error.message, "error");
+    onError: (error: Error, fileText) => {
+      if (fileText === undefined) {
+        notify(error.message, "error");
+      }
     },
   });
 
   const handleImport = useCallback(() => {
-    void importComponent();
+    void importComponent(undefined);
   }, [importComponent]);
+
+  const handleFile = async ({
+    text,
+  }: {
+    text: string;
+  }): Promise<PickOutcome> => {
+    try {
+      const result = await importComponentAsync(text);
+      if (!result) {
+        return {
+          status: "error",
+          message: "The component was not added to your library.",
+        };
+      }
+      return {
+        status: "success",
+        message: `${result.name} added to your library`,
+      };
+    } catch (error) {
+      return yamlErrorOutcome(error, "Failed to hydrate component");
+    }
+  };
 
   const handleUrlChange = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
@@ -163,18 +156,13 @@ const ImportComponent = ({
 
       if (!open) {
         setUrl("");
-        setSelectedFile(null);
-        setSelectedFileName("");
       }
       setIsOpen(open);
     },
     [isPending],
   );
 
-  const isButtonDisabled =
-    isPending ||
-    (tab === TabType.URL && !url) ||
-    (tab === TabType.File && !selectedFile);
+  const isButtonDisabled = isPending || !url;
 
   const ButtonComponent = triggerComponent ? (
     triggerComponent
@@ -211,62 +199,15 @@ const ImportComponent = ({
               <TabsContent value={TabType.File}>
                 <div className="grid w-full items-center gap-4 py-4">
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor="file">Component YAML File</Label>
-                    <div className="flex items-center gap-2">
-                      <div className="relative flex-1">
-                        <Input
-                          id="file"
-                          type="file"
-                          accept=".yaml"
-                          onChange={handleFileChange}
-                          disabled={isPending}
-                          ref={fileInputRef}
-                          className={`absolute inset-0 w-full h-full opacity-0 cursor-pointer ${selectedFileName ? "hidden" : ""}`}
-                        />
-                        {!selectedFileName && (
-                          <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 text-center hover:border-primary/50 transition-colors">
-                            <Upload className="h-8 w-8 text-gray-400 mb-2" />
-                            <Paragraph tone="subdued" size="sm">
-                              Drop your YAML file here or click to browse
-                            </Paragraph>
-                            <Paragraph
-                              tone="subdued"
-                              size="xs"
-                              className="mt-1"
-                            >
-                              Supports .yaml files
-                            </Paragraph>
-                          </div>
-                        )}
-                        {selectedFileName && (
-                          <div className="flex flex-1 items-center border rounded-md px-3 py-2 text-sm">
-                            <span className="flex-1 truncate max-w-81.25">
-                              {selectedFileName}
-                            </span>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={clearSelectedFile}
-                              className="h-6 w-6 p-0 ml-1 rounded-full"
-                            >
-                              <X className="h-3.5 w-3.5" />
-                              <span className="sr-only">Clear file</span>
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                      {selectedFileName && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => fileInputRef.current?.click()}
-                        >
-                          Change
-                        </Button>
-                      )}
-                    </div>
+                    <FilePicker
+                      accept={YAML_FILE_ACCEPT}
+                      label="Component YAML file"
+                      errorTitle="Import failed"
+                      successTitle="Import successful"
+                      afterSuccess="replace-picker"
+                      disabled={isPending}
+                      onFile={handleFile}
+                    />
                     <Paragraph tone="subdued" size="sm">
                       Select a YAML file containing a pipeline component
                     </Paragraph>
@@ -305,7 +246,7 @@ const ImportComponent = ({
                 Close
               </Button>
             </DialogClose>
-            {tab !== TabType.New && (
+            {tab === TabType.URL && (
               <Button
                 type="submit"
                 onClick={handleImport}
