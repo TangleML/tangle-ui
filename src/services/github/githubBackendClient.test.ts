@@ -62,6 +62,7 @@ describe("githubBackendClient", () => {
           state: "valid",
           login: "octocat",
           token_kind: "fine_grained",
+          can_write: true,
         }),
       );
 
@@ -72,6 +73,7 @@ describe("githubBackendClient", () => {
           state: "valid",
           login: "octocat",
           tokenKind: "fine_grained",
+          canWrite: true,
         },
       });
       expect(lastRequest().url).toBe(`${BACKEND}/api/github/token_status`);
@@ -94,6 +96,7 @@ describe("githubBackendClient", () => {
           state: "not_configured",
           login: null,
           tokenKind: null,
+          canWrite: null,
         },
       });
     });

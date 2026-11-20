@@ -24,6 +24,7 @@ export interface RepositoryLocation {
   path: string | null;
   isPrivate: boolean;
   grantId?: string;
+  allowWrites?: boolean;
 }
 
 type RepositoryAddress = Pick<

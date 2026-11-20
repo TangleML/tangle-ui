@@ -24,6 +24,7 @@ export interface GitHubTokenStatus {
   state: GitHubTokenState;
   login: string | null;
   tokenKind: GitHubTokenKind | null;
+  canWrite: boolean | null;
 }
 
 export type GitHubTokenSupport =
@@ -116,6 +117,7 @@ function parseTokenStatus(body: unknown): GitHubTokenStatus {
     state,
     login: stringOrNull(body.login),
     tokenKind: oneOf(TOKEN_KINDS, body.token_kind),
+    canWrite: typeof body.can_write === "boolean" ? body.can_write : null,
   };
 }
 
