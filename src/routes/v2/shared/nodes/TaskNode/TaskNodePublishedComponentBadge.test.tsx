@@ -51,6 +51,7 @@ const buildProps = (
   outputs: [],
   connectedInputNames: new Set(),
   connectedOutputNames: new Set(),
+  graphInputBindings: {},
   annotations: [],
   cacheDisabled: false,
   isConditional: false,

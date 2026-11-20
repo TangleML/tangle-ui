@@ -47,6 +47,11 @@ const LAYOUT_ALGORITHMS: {
   },
   { value: "digco", label: "Digco", description: "Compact" },
   { value: "dwyer", label: "Dwyer", description: "Organic" },
+  {
+    value: "pipeline_grid",
+    label: "Pipeline Grid",
+    description: "Port-aware grid",
+  },
 ];
 
 export default function FlowControls({

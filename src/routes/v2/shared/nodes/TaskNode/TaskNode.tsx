@@ -60,6 +60,12 @@ export interface TaskNodeOutput {
   type?: TypeSpecType;
 }
 
+/** A task input port bound to a graph input, keyed by the input port name. */
+export interface GraphInputBinding {
+  sourceEntityId: string;
+  sourceName: string;
+}
+
 export interface TaskNodeViewProps {
   id: string;
   entityId: string;
@@ -73,6 +79,7 @@ export interface TaskNodeViewProps {
   outputs: TaskNodeOutput[];
   connectedInputNames: Set<string>;
   connectedOutputNames: Set<string>;
+  graphInputBindings: Record<string, GraphInputBinding>;
   annotations: { key: string }[];
   taskColor?: string;
   cacheDisabled: boolean;
@@ -171,6 +178,33 @@ function resolveConnectedPortNames(
   }
 
   return { inputs, outputs };
+}
+
+/**
+ * Maps each task input port that is bound to a graph input to that input's id
+ * and name. Bindings sourced from task outputs are excluded so only true
+ * graph-input connections get the embedded treatment.
+ */
+export function resolveGraphInputBindings(
+  entityId: string,
+  spec: ComponentSpec | null,
+): Record<string, GraphInputBinding> {
+  const result: Record<string, GraphInputBinding> = {};
+  if (!spec) return result;
+
+  for (const binding of spec.bindings) {
+    if (binding.targetEntityId !== entityId) continue;
+    const sourceInput = spec.inputs.find(
+      (input) => input.$id === binding.sourceEntityId,
+    );
+    if (!sourceInput) continue;
+    result[binding.targetPortName] = {
+      sourceEntityId: sourceInput.$id,
+      sourceName: sourceInput.name,
+    };
+  }
+
+  return result;
 }
 
 function resolveTaskColor(task: Task): string | undefined {
@@ -274,6 +308,7 @@ export const TaskNode = observer(function TaskNode({
   };
 
   const connectedPorts = resolveConnectedPortNames(entityId, spec);
+  const graphInputBindings = resolveGraphInputBindings(entityId, spec);
   const inputDisplayData = resolveInputDisplayData(task, entityId, spec);
 
   const conditionReferenceLabel = inputDisplayData.values[IS_ENABLED_PORT_NAME];
@@ -298,6 +333,7 @@ export const TaskNode = observer(function TaskNode({
     outputs,
     connectedInputNames: connectedPorts.inputs,
     connectedOutputNames: connectedPorts.outputs,
+    graphInputBindings,
     annotations: task.annotations.map((a) => ({ key: a.key })),
     taskColor: resolveTaskColor(task),
     cacheDisabled:

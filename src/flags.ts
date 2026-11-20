@@ -83,4 +83,12 @@ export const ExistingFlags: ConfigFlags = {
     category: "setting",
     dependsOn: "component-search-v2",
   },
+
+  ["avoid-nodes-edges"]: {
+    name: "Node-avoiding edges",
+    description:
+      "Route pipeline edges orthogonally around nodes instead of drawing smooth curves.",
+    default: false,
+    category: "beta",
+  },
 };

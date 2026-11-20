@@ -15,6 +15,7 @@ import {
   CONDITION_ICON_CLASSES,
   CONDITION_ICON_NAME,
 } from "@/routes/v2/shared/conditionalExecution.styles";
+import { SIMPLIFIED_NODE_HEIGHT } from "@/routes/v2/shared/nodes/nodeLayout";
 import { deriveColorPalette } from "@/routes/v2/shared/nodes/TaskNode/color.utils";
 import { AGGREGATOR_ADD_INPUT_HANDLE_ID } from "@/utils/aggregatorInputs";
 import {
@@ -70,7 +71,7 @@ export function TaskNodeSimplified({
       })}
       style={{
         width: `calc(${s} * 240px)`,
-        height: `calc(${s} * 96px)`,
+        height: `calc(${s} * ${SIMPLIFIED_NODE_HEIGHT}px)`,
         ...(palette
           ? {
               backgroundColor: palette.background,

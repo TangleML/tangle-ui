@@ -8,7 +8,7 @@ import { trimDigest } from "@/components/shared/ManageComponent/utils/digest";
 import { OutputTypeSelector } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/OutputTypeSelector/OutputTypeSelector";
 import TaskStatusBar from "@/components/shared/Status/TaskStatusBar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import {
@@ -17,6 +17,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Text } from "@/components/ui/typography";
+import { useInputDisplayMode } from "@/hooks/useInputDisplayMode";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/providers/ThemeProvider";
 import {
@@ -26,6 +27,10 @@ import {
   CONDITION_ICON_NAME,
   CONDITION_SURFACE_CLASSES,
 } from "@/routes/v2/shared/conditionalExecution.styles";
+import {
+  PORT_ROW_GAP,
+  PORT_ROW_HEIGHT,
+} from "@/routes/v2/shared/nodes/nodeLayout";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { AGGREGATOR_ADD_INPUT_HANDLE_ID } from "@/utils/aggregatorInputs";
 import {
@@ -35,7 +40,9 @@ import {
 import { pluralize } from "@/utils/string";
 
 import { deriveColorPalette } from "./color.utils";
+import { EmbeddedInputHandle } from "./EmbeddedInputHandle";
 import { InputAggregatorHandle } from "./InputAggregatorHandle";
+import { useInputConnectionActions } from "./InputConnectionActionsContext";
 import type { TaskNodeInput, TaskNodeViewProps } from "./TaskNode";
 
 const AGGREGATOR_INTERNAL_INPUTS = new Set([
@@ -76,31 +83,34 @@ const cardVariants = cva(
   },
 );
 
-const classicInputLabelVariants = cva("text-xs rounded-md px-2 py-1 truncate", {
-  variants: {
-    hasValue: { true: "", false: "" },
-    hasDefault: { true: "", false: "" },
-    optional: { true: "", false: "" },
-  },
-  compoundVariants: [
-    {
-      hasValue: false,
-      hasDefault: true,
-      className: "opacity-50 italic",
+const classicInputLabelVariants = cva(
+  "text-xs rounded-md px-2 py-0.5 truncate",
+  {
+    variants: {
+      hasValue: { true: "", false: "" },
+      hasDefault: { true: "", false: "" },
+      optional: { true: "", false: "" },
     },
-    {
+    compoundVariants: [
+      {
+        hasValue: false,
+        hasDefault: true,
+        className: "opacity-50 italic",
+      },
+      {
+        hasValue: false,
+        hasDefault: false,
+        optional: true,
+        className: "opacity-50 italic",
+      },
+    ],
+    defaultVariants: {
       hasValue: false,
       hasDefault: false,
-      optional: true,
-      className: "opacity-50 italic",
+      optional: false,
     },
-  ],
-  defaultVariants: {
-    hasValue: false,
-    hasDefault: false,
-    optional: false,
   },
-});
+);
 
 interface ClassicInputHandleProps {
   input: TaskNodeInput;
@@ -142,8 +152,12 @@ const ClassicInputHandle = observer(function ClassicInputHandle({
   const labelHasDefault = hideValue ? false : hasDefault;
 
   return (
-    <div className="relative w-full h-fit cursor-pointer" onClick={onRowClick}>
-      <div className="absolute -translate-x-6 flex items-center h-3 w-3">
+    <div
+      className="relative w-full cursor-pointer"
+      style={{ height: PORT_ROW_HEIGHT }}
+      onClick={onRowClick}
+    >
+      <div className="absolute top-1/2 -translate-x-6 -translate-y-1/2 flex items-center h-3 w-3">
         <Handle
           isConnectable={isConnectable}
           isConnectableStart={isConnectable}
@@ -302,6 +316,7 @@ export const TaskNodeCard = observer(function TaskNodeCard({
   outputs,
   connectedInputNames,
   connectedOutputNames,
+  graphInputBindings,
   inputDisplayValues,
   secretInputNames,
   onNodeClick,
@@ -322,6 +337,10 @@ export const TaskNodeCard = observer(function TaskNodeCard({
   onOutputTypeChange,
 }: TaskNodeViewProps) {
   const isDark = useTheme().resolvedTheme === "dark";
+  const inputConnectionActions = useInputConnectionActions();
+  const inputDisplayMode = useInputDisplayMode();
+  const embeddedInputsActive =
+    inputConnectionActions !== null && inputDisplayMode === "embedded";
   const palette = taskColor ? deriveColorPalette(taskColor, isDark) : undefined;
   const cardStyle = palette
     ? {
@@ -394,7 +413,7 @@ export const TaskNodeCard = observer(function TaskNodeCard({
       data-tour-card-name={taskName}
     >
       <CardHeader
-        className="px-4 pt-3 pb-0"
+        className="px-4 pt-2 pb-0"
         style={
           palette ? { borderBottomColor: `${palette.border}30` } : undefined
         }
@@ -405,7 +424,7 @@ export const TaskNodeCard = observer(function TaskNodeCard({
             wrap="nowrap"
             blockAlign="center"
             align="space-between"
-            className="w-full"
+            className="w-full h-4"
           >
             <InlineStack
               gap="2"
@@ -457,15 +476,20 @@ export const TaskNodeCard = observer(function TaskNodeCard({
                   <TooltipContent side="top">Cache Disabled</TooltipContent>
                 </Tooltip>
               )}
-              <CardTitle
-                className={cn(
-                  "wrap-anywhere max-w-full text-left text-xs",
-                  !taskColor && "text-card-foreground",
-                )}
-                style={palette ? { color: palette.text } : undefined}
-              >
-                {taskName}
-              </CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span
+                    className={cn(
+                      "min-w-0 truncate leading-none font-semibold text-left text-xs",
+                      !taskColor && "text-card-foreground",
+                    )}
+                    style={palette ? { color: palette.text } : undefined}
+                  >
+                    {taskName}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="top">{taskName}</TooltipContent>
+              </Tooltip>
             </InlineStack>
             {digestMarkup && componentRef ? (
               <PublishedComponentBadge
@@ -481,7 +505,7 @@ export const TaskNodeCard = observer(function TaskNodeCard({
         </BlockStack>
       </CardHeader>
 
-      <CardContent className="p-2 flex flex-col gap-2">
+      <CardContent className="p-2 flex flex-col gap-1">
         {isSubgraph && subgraphExecutionStats && (
           <TaskStatusBar executionStatusStats={subgraphExecutionStats} />
         )}
@@ -512,36 +536,57 @@ export const TaskNodeCard = observer(function TaskNodeCard({
                 : undefined
             }
           >
-            <BlockStack gap="3">
+            <div className="flex flex-col w-full" style={{ gap: PORT_ROW_GAP }}>
               {isAggregator && (
                 <InputAggregatorHandle isConnectable={isConnectable} />
               )}
-              {visibleInputs.map((input, index) => (
-                <ClassicInputHandle
-                  isConnectable={isConnectable}
-                  key={input.name}
-                  input={input}
-                  entityId={entityId}
-                  themed={!palette}
-                  isDark={isDark}
-                  displayValue={
-                    showCondensedInputs
-                      ? index === 0
-                        ? `+${hiddenInputCount} more ${pluralize(hiddenInputCount, "input")}`
-                        : undefined
-                      : inputDisplayValues[input.name]
-                  }
-                  hideValue={showCondensedInputs && index !== 0}
-                  isSecret={secretInputNames.has(input.name)}
-                  onRowClick={
-                    inputsSectionToggles
-                      ? undefined
-                      : openInputProperties(input.name)
-                  }
-                  onLabelClick={openInputProperties(input.name)}
-                  onHandleClick={(e) => onHandleClick(`input_${input.name}`, e)}
-                />
-              ))}
+              {visibleInputs.map((input, index) => {
+                const embeddedBinding = graphInputBindings[input.name];
+                if (
+                  embeddedInputsActive &&
+                  embeddedBinding &&
+                  inputConnectionActions &&
+                  !showCondensedInputs
+                ) {
+                  return (
+                    <EmbeddedInputHandle
+                      key={input.name}
+                      input={input}
+                      entityId={entityId}
+                      binding={embeddedBinding}
+                      actions={inputConnectionActions}
+                    />
+                  );
+                }
+                return (
+                  <ClassicInputHandle
+                    isConnectable={isConnectable}
+                    key={input.name}
+                    input={input}
+                    entityId={entityId}
+                    themed={!palette}
+                    isDark={isDark}
+                    displayValue={
+                      showCondensedInputs
+                        ? index === 0
+                          ? `+${hiddenInputCount} more ${pluralize(hiddenInputCount, "input")}`
+                          : undefined
+                        : inputDisplayValues[input.name]
+                    }
+                    hideValue={showCondensedInputs && index !== 0}
+                    isSecret={secretInputNames.has(input.name)}
+                    onRowClick={
+                      inputsSectionToggles
+                        ? undefined
+                        : openInputProperties(input.name)
+                    }
+                    onLabelClick={openInputProperties(input.name)}
+                    onHandleClick={(e) =>
+                      onHandleClick(`input_${input.name}`, e)
+                    }
+                  />
+                );
+              })}
               {collapsed && inputsExpanded && hiddenInputCount > 0 && (
                 <span
                   className={cn(
@@ -552,7 +597,7 @@ export const TaskNodeCard = observer(function TaskNodeCard({
                   (Click to collapse)
                 </span>
               )}
-            </BlockStack>
+            </div>
           </div>
         )}
 
@@ -577,7 +622,7 @@ export const TaskNodeCard = observer(function TaskNodeCard({
                 : undefined
             }
           >
-            <BlockStack gap="3">
+            <div className="flex flex-col w-full" style={{ gap: PORT_ROW_GAP }}>
               {isAggregator && (
                 <div className="w-full">
                   <OutputTypeSelector
@@ -591,6 +636,7 @@ export const TaskNodeCard = observer(function TaskNodeCard({
                 <div
                   key={output.name}
                   className="flex items-center justify-end w-full cursor-pointer"
+                  style={{ height: PORT_ROW_HEIGHT }}
                   onClick={(e) => {
                     if (collapsed) return;
                     e.stopPropagation();
@@ -615,7 +661,7 @@ export const TaskNodeCard = observer(function TaskNodeCard({
                     <div className="translate-x-3 min-w-0 inline-block max-w-full">
                       <div
                         className={cn(
-                          "text-xs rounded-md px-2 py-1 truncate",
+                          "text-xs rounded-md px-2 py-0.5 truncate",
                           palette
                             ? isDark
                               ? "text-gray-100 bg-white/10 hover:bg-white/15"
@@ -653,7 +699,7 @@ export const TaskNodeCard = observer(function TaskNodeCard({
                   (Click to collapse)
                 </span>
               )}
-            </BlockStack>
+            </div>
           </div>
         )}
       </CardContent>

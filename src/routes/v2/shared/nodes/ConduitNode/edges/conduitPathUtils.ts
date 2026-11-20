@@ -9,7 +9,7 @@ import {
 } from "./orthogonalPolyline";
 import { roundPathCorners } from "./roundPathCorners";
 
-const EDGE_SPACING = 4;
+const EDGE_SPACING = 8;
 
 interface ConduitEdgePathParams {
   sourceX: number;
@@ -38,9 +38,18 @@ interface ConduitPathResult {
 /**
  * Compute the perpendicular offset for an edge on a guideline based on
  * its index among all edges attached to that guideline.
+ *
+ * When `offsetDirection` is set, the bundle fans a single direction (index 0
+ * stays on the guideline, the rest step outward) so edges never bend back under
+ * the node the guideline hugs. Otherwise the bundle centers symmetrically.
  */
-function guidelineEdgeOffset(edgeIndex: number, edgeTotal: number): number {
+function guidelineEdgeOffset({
+  edgeIndex,
+  edgeTotal,
+  offsetDirection,
+}: GuidelineInfo): number {
   if (edgeTotal <= 1) return 0;
+  if (offsetDirection) return offsetDirection * edgeIndex * EDGE_SPACING;
   return (edgeIndex - (edgeTotal - 1) / 2) * EDGE_SPACING;
 }
 
@@ -55,7 +64,7 @@ function closestPointOnGuideline(
   guideline: GuidelineInfo,
   target: XYPosition,
 ): XYPosition {
-  const offset = guidelineEdgeOffset(guideline.edgeIndex, guideline.edgeTotal);
+  const offset = guidelineEdgeOffset(guideline);
 
   if (guideline.orientation === "horizontal") {
     return { x: target.x, y: guideline.coordinate + offset };

@@ -18,6 +18,7 @@ import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { tracking } from "@/utils/tracking";
 
 const LAYOUT_ALGORITHMS: { key: LayoutAlgorithm; label: string }[] = [
+  { key: "pipeline_grid", label: "Pipeline Grid" },
   { key: "sugiyama", label: "Sugiyama" },
   { key: "sugiyama_centered", label: "Sugiyama Centered" },
   { key: "digco", label: "Compact" },
@@ -58,7 +59,7 @@ export const RunViewViewMenu = observer(function RunViewViewMenu() {
                 })}
               >
                 {algo.label}
-                {algo.key === "sugiyama" && (
+                {algo.key === "pipeline_grid" && (
                   <DropdownMenuShortcut>
                     <ShortcutBadge id="auto-layout" />
                   </DropdownMenuShortcut>

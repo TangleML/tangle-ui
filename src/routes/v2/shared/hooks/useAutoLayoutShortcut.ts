@@ -4,6 +4,7 @@ import { useEffect } from "react";
 
 import {
   autoLayoutNodes,
+  buildHandleBoundsMap,
   type LayoutAlgorithm,
 } from "@/components/shared/ReactFlow/FlowCanvas/utils/autolayout";
 import { CMD_OR_CTRL, SHIFT } from "@/routes/v2/shared/shortcuts/keys";
@@ -11,13 +12,15 @@ import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 /**
  * Registers the Cmd+Shift+L auto-layout shortcut.
- * Computes dagre layout and delegates position application to `applyLayout`.
+ * Defaults to the port-aware `pipeline_grid` layout (keeps connected input/output
+ * handles aligned on the snap grid); the View menu can invoke other algorithms
+ * explicitly. Delegates position application to `applyLayout`.
  * Must be called inside a ReactFlowProvider.
  */
 export function useAutoLayoutShortcut(
   applyLayout: (layoutedNodes: Node[]) => void,
 ): void {
-  const { getNodes, getEdges, fitView } = useReactFlow();
+  const { getNodes, getEdges, getInternalNode, fitView } = useReactFlow();
   const { keyboard, editor } = useSharedStores();
 
   useEffect(() => {
@@ -29,7 +32,16 @@ export function useAutoLayoutShortcut(
       const edges = getEdges();
       if (nodes.length === 0) return;
 
-      const layoutedNodes = autoLayoutNodes(nodes, edges, algorithm);
+      const handleBounds = buildHandleBoundsMap(
+        nodes.map((node) => node.id),
+        getInternalNode,
+      );
+      const layoutedNodes = autoLayoutNodes(
+        nodes,
+        edges,
+        algorithm,
+        handleBounds,
+      );
       applyLayout(layoutedNodes);
       onLaidOut?.();
 
@@ -52,5 +64,13 @@ export function useAutoLayoutShortcut(
     });
 
     return unregister;
-  }, [getNodes, getEdges, fitView, applyLayout, keyboard, editor]);
+  }, [
+    getNodes,
+    getEdges,
+    getInternalNode,
+    fitView,
+    applyLayout,
+    keyboard,
+    editor,
+  ]);
 }

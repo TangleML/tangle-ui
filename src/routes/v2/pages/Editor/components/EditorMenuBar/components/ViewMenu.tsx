@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import { CodeViewer } from "@/components/shared/CodeViewer";
 import type { LayoutAlgorithm } from "@/components/shared/ReactFlow/FlowCanvas/utils/autolayout";
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -21,10 +22,12 @@ import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButton";
 import { ShortcutBadge } from "@/routes/v2/shared/components/ShortcutBadge";
 import { focusModeStore } from "@/routes/v2/shared/hooks/useFocusMode";
+import { virtualConduitsOverlayStore } from "@/routes/v2/shared/overlays/virtualConduits/virtualConduitsOverlayStore";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { tracking } from "@/utils/tracking";
 
 const LAYOUT_ALGORITHMS: { key: LayoutAlgorithm; label: string }[] = [
+  { key: "pipeline_grid", label: "Pipeline Grid" },
   { key: "sugiyama", label: "Sugiyama" },
   { key: "sugiyama_centered", label: "Sugiyama Centered" },
   { key: "digco", label: "Compact" },
@@ -35,6 +38,7 @@ export const ViewMenu = observer(function ViewMenu() {
   const { track } = useAnalytics();
   const { keyboard, navigation } = useSharedStores();
   const autoLayoutShortcut = keyboard.getShortcut("auto-layout");
+  const avoidNodesEnabled = useFlagValue("avoid-nodes-edges");
   const [showYaml, setShowYaml] = useState(false);
 
   const spec = navigation.rootSpec;
@@ -67,7 +71,7 @@ export const ViewMenu = observer(function ViewMenu() {
                   }}
                 >
                   {algo.label}
-                  {algo.key === "sugiyama" && (
+                  {algo.key === "pipeline_grid" && (
                     <DropdownMenuShortcut>
                       <ShortcutBadge id="auto-layout" />
                     </DropdownMenuShortcut>
@@ -103,6 +107,20 @@ export const ViewMenu = observer(function ViewMenu() {
               <ShortcutBadge id="focus-mode" />
             </DropdownMenuShortcut>
           </DropdownMenuCheckboxItem>
+          {avoidNodesEnabled && (
+            <DropdownMenuCheckboxItem
+              checked={virtualConduitsOverlayStore.active}
+              onSelect={(e) => e.preventDefault()}
+              onCheckedChange={(checked) => {
+                track("v2.pipeline_editor.view_menu.virtual_conduits.toggle", {
+                  enabled: checked,
+                });
+                virtualConduitsOverlayStore.toggle();
+              }}
+            >
+              Show virtual conduits
+            </DropdownMenuCheckboxItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
 
