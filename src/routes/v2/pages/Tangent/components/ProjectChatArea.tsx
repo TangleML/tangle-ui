@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { BlockStack } from "@/components/ui/layout";
 import { TabStrip } from "@/components/ui/tabs";
-import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
 import { ProjectSettingsButton } from "@/routes/v2/pages/Tangent/components/ProjectSettingsButton";
 import { TangentChatPane } from "@/routes/v2/pages/Tangent/components/TangentChatPane";
@@ -17,10 +16,13 @@ import { TANGENT_AI_SETUP } from "@/routes/v2/shared/components/AiChat/component
 import { ChatEntityRevealProvider } from "@/routes/v2/shared/components/AiChat/components/ChatEntityRevealContext";
 import { getErrorMessage } from "@/utils/string";
 
-export const ProjectChatArea = observer(function ProjectChatArea() {
+export const ProjectChatArea = observer(function ProjectChatArea({
+  isAiConfigured,
+}: {
+  isAiConfigured: boolean;
+}) {
   const store = useTangentProject();
   const notify = useToastNotification();
-  const { isConfigured } = useAiProviderSettings();
   const references = useChatReferences(store.projectId);
   const commands = useChatCommands(store.projectId);
   const refreshSessionResources = useRefreshSessionResources();
@@ -28,7 +30,7 @@ export const ProjectChatArea = observer(function ProjectChatArea() {
 
   // Ahead of the session states: without a provider there is nothing to say to
   // a session, so offering to start one would only make a dead thread.
-  if (!isConfigured) {
+  if (!isAiConfigured) {
     return (
       <WithoutChat>
         <AiProviderSetup {...TANGENT_AI_SETUP} />
