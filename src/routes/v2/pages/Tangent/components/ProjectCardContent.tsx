@@ -30,8 +30,10 @@ import {
 import { fileIcon } from "@/routes/v2/pages/Tangent/services/projectFiles";
 import { ago } from "@/routes/v2/pages/Tangent/services/relativeTime";
 import { useOptionalWindowContext } from "@/routes/v2/shared/windows/ContentWindowStateContext";
+import type { RepositoryLocation } from "@/services/github/repositoryUrl";
 import { linkedRepositoryOf } from "@/services/projects/resourceDescriptor";
 import { runTarget } from "@/services/projects/resourceTarget";
+import type { ProjectResource } from "@/services/projects/types";
 import { useLinkedRepositories } from "@/services/projects/useLinkedRepositories";
 import { useProjectRuns } from "@/services/projects/useProjectRuns";
 import { containsSearchTerm } from "@/utils/searchUtils";
@@ -213,14 +215,13 @@ const ProjectCardBody = observer(function ProjectCardBody() {
   }
 
   function writesAction(
-    item: ProjectCardRepository,
-  ): ListItemAction | undefined {
-    const link = linkedRepositories.get(item.id);
-    const repository = link && linkedRepositoryOf(link);
-    if (!link || !repository) return undefined;
+    link: ProjectResource,
+    repository: RepositoryLocation,
+    name: string,
+  ): ListItemAction {
     const { icon, label, trackingId } = repositoryWritesAction(
       repository,
-      item.name,
+      name,
     );
     return {
       icon,
@@ -237,22 +238,23 @@ const ProjectCardBody = observer(function ProjectCardBody() {
         ? { disabled: true as const }
         : { href: item.repository.url };
     const link = linkedRepositories.get(item.id);
-    const allowsWrites = link && linkedRepositoryOf(link)?.allowWrites;
-    const toggleWrites = writesAction(item);
+    const repository = link && linkedRepositoryOf(link);
     return (
       <ListItem
         key={item.id}
         icon={item.icon}
         title={item.name}
         subtitle={added && `Added ${added}`}
-        flair={allowsWrites ? writesAllowedFlair() : undefined}
+        flair={repository?.allowWrites ? writesAllowedFlair() : undefined}
         {...opening}
         tracking={tracking("projects.open_repository", {
           surface: "project_card",
         })}
         actions={[
           archiveAction(item.key, item.name),
-          ...(toggleWrites ? [toggleWrites] : []),
+          ...(link && repository
+            ? [writesAction(link, repository, item.name)]
+            : []),
         ]}
       />
     );
