@@ -52,7 +52,10 @@ beforeEach(() => {
 it("replaces only matching ID references and preserves ambiguous name-only references", async () => {
   vi.mocked(listProjectResources).mockResolvedValue({
     items: [
-      localResource,
+      {
+        ...localResource,
+        metadata: { ...localResource.metadata, sessionId: "chat-1" },
+      },
       resource({
         ...localPipelineResourceInput({ localName: local.storageKey }),
         id: "name-reference",
@@ -81,6 +84,7 @@ it("replaces only matching ID references and preserves ambiguous name-only refer
       entity: "pipeline",
       entityId: remote.id,
       name: "Project label",
+      metadata: { sessionId: "chat-1" },
     },
     undefined,
   );

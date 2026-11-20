@@ -1,5 +1,6 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { observable, runInAction } from "mobx";
 import { createElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -13,6 +14,7 @@ const focus = vi.hoisted(() => ({
   searchFocusRequested: false,
   clearSearchFocusRequest: vi.fn(),
 }));
+const activeSession = observable.box<string | undefined>();
 const pin = vi.fn();
 const unpin = vi.fn();
 const archiveChange = vi.fn();
@@ -20,6 +22,7 @@ const archiveChange = vi.fn();
 vi.mock("@/routes/v2/pages/Tangent/context/TangentProjectContext", () => ({
   useTangentProject: () => ({
     projectId: "project-1",
+    activeSessionId: activeSession.get(),
     openWorkareaTarget: vi.fn(),
     openArtifactTab: vi.fn(),
     ...focus,
@@ -86,7 +89,13 @@ const pipeline = (n: number) => ({
 vi.mock("@/routes/v2/pages/Tangent/hooks/useProjectResourceItems", () => ({
   useProjectResourceItems: () => ({
     ...loading.resources,
-    summaries: [],
+    summaries: [
+      {
+        id: "d-1",
+        createdAt: new Date("2026-11-05"),
+        metadata: { sessionId: "s-1" },
+      },
+    ],
     resources: !loading.resources.isLoaded
       ? []
       : [
@@ -160,11 +169,11 @@ const file = (key: string, title: string, pinned: boolean) => ({
   pinned,
 });
 
-vi.mock("@/routes/v2/pages/Tangent/hooks/useProjectSessionFiles", () => ({
-  useProjectSessionFiles: () => {
+vi.mock("@/routes/v2/pages/Tangent/hooks/useProjectSessionAssets", () => ({
+  useProjectSessionAssets: (_projectId: string, sessionId?: string) => {
     const { isLoading, error, none } = loading.files;
     const summary = file("summary.html", "Q3 summary", true);
-    const listed = !isLoading && !error && !none;
+    const listed = !isLoading && !error && !none && sessionId !== "s-2";
     return {
       files: listed
         ? [
@@ -174,6 +183,17 @@ vi.mock("@/routes/v2/pages/Tangent/hooks/useProjectSessionFiles", () => ({
           ]
         : [],
       reports: listed ? [summary] : [],
+      runs:
+        sessionId === "s-1"
+          ? [
+              {
+                id: "run-1",
+                name: "Chat training run",
+                addedAt: new Date("2026-11-05"),
+                dismissed: true,
+              },
+            ]
+          : [],
       isLoading,
       error,
       pin,
@@ -223,6 +243,7 @@ async function archiveEveryRun() {
 
 describe("ProjectCardContent", () => {
   beforeEach(() => {
+    runInAction(() => activeSession.set(undefined));
     pin.mockClear();
     unpin.mockClear();
     archiveChange.mockClear();
@@ -232,6 +253,34 @@ describe("ProjectCardContent", () => {
     loading.runs = { isLoading: false, error: null };
     loading.files = { isLoading: false, error: null, none: false };
     runFeed.hasOlderPage = false;
+  });
+
+  it("follows the open chat and keeps project-only assets available in Entire project", async () => {
+    const user = userEvent.setup();
+    runInAction(() => activeSession.set("s-1"));
+    render(<ProjectCardContent />);
+
+    expect(screen.getByRole("tab", { name: "This chat" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.getByText("Q3 summary")).toBeVisible();
+    expect(screen.getByText("Chat training run")).toBeVisible();
+    expect(screen.getByText("Project brief")).toBeVisible();
+    expect(screen.queryByText("Somewhere else")).toBeNull();
+
+    act(() => runInAction(() => activeSession.set("s-2")));
+    expect(screen.queryByText("Q3 summary")).toBeNull();
+    expect(screen.queryByText("Chat training run")).toBeNull();
+    expect(screen.queryByText("Project brief")).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Load older runs" }),
+    ).toBeNull();
+
+    await user.click(screen.getByRole("tab", { name: "Entire project" }));
+    expect(screen.getByText("Somewhere else")).toBeVisible();
+    expect(screen.getByText("Project brief")).toBeVisible();
+    expect(screen.getByText("Q3 summary")).toBeVisible();
   });
 
   it("says a section is loading rather than that the project has none", () => {

@@ -8,7 +8,11 @@ import {
   deleteProjectResource,
   listProjectResources,
 } from "./projectResourcesService";
-import { localPipelinePointerOf } from "./resourceDescriptor";
+import {
+  localPipelinePointerOf,
+  resourceForSession,
+  resourceSessionId,
+} from "./resourceDescriptor";
 import type { ProjectResourceSummary } from "./types";
 
 async function pipelineResources(projectId: string, backendUrl?: string) {
@@ -47,9 +51,12 @@ export async function moveLocalPipelineResourceToRemote(
     try {
       await createProjectResource(
         projectId,
-        remotePipelineResourceInput(
-          remote.id,
-          localResources[0].name ?? remote.storageKey,
+        resourceForSession(
+          remotePipelineResourceInput(
+            remote.id,
+            localResources[0].name ?? remote.storageKey,
+          ),
+          resourceSessionId(localResources[0]),
         ),
         backendUrl,
       );

@@ -122,6 +122,28 @@ function withinLimit(
   return metadata;
 }
 
+/** Remember the chat that attached a resource without changing its project identity. */
+export function resourceForSession(
+  input: CreateResourceInput,
+  sessionId: string | undefined,
+): CreateResourceInput {
+  if (!sessionId) return input;
+  return {
+    ...input,
+    metadata: withinLimit(
+      { ...input.metadata, sessionId },
+      input.name ?? "Resource",
+    ),
+  };
+}
+
+export function resourceSessionId(
+  resource: ResourceRow | undefined,
+): string | undefined {
+  const value = resource?.metadata?.sessionId;
+  return typeof value === "string" ? value : undefined;
+}
+
 /**
  * Filed as `document` rather than `pipeline`: the API accepts only
  * `pipeline | agent_session | document`, and a `pipeline` must name a backend

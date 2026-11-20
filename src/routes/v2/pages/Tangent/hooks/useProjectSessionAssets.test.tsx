@@ -10,7 +10,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { sessionResourcesKey } from "@/routes/v2/pages/Tangent/services/sessionResources";
 
-import { useProjectSessionFiles } from "./useProjectSessionFiles";
+import { useProjectSessionAssets } from "./useProjectSessionAssets";
 
 const tangent = vi.hoisted((): Tangent => ({
   newSession: vi.fn(),
@@ -40,13 +40,17 @@ const chatList = vi.hoisted(() => ({
   error: null as Error | null,
 }));
 
-vi.mock("@/routes/v2/pages/Tangent/hooks/useProjectSessions", () => ({
-  useProjectSessions: () => ({
+vi.mock("@/services/projects/useProjectResources", () => ({
+  useEveryProjectResource: () => ({
     ...chatList,
-    sessions:
+    data:
       chatList.isLoading || chatList.error
         ? []
-        : [{ sessionId: "chat-1" }, { sessionId: "chat-2" }],
+        : ["chat-1", "chat-2"].map((entityId) => ({
+            entityId,
+            id: entityId,
+            createdAt: new Date("2026-11-01"),
+          })),
   }),
 }));
 vi.mock("@/routes/v2/pages/Tangent/hooks/useRemoteEnvAuthToken", () => ({
@@ -54,8 +58,8 @@ vi.mock("@/routes/v2/pages/Tangent/hooks/useRemoteEnvAuthToken", () => ({
 }));
 vi.mock("@/hooks/useToastNotification", () => ({ default: () => vi.fn() }));
 
-function renderFiles(client: QueryClient) {
-  return renderHook(() => useProjectSessionFiles("project-1"), {
+function renderFiles(client: QueryClient, sessionId?: string) {
+  return renderHook(() => useProjectSessionAssets("project-1", sessionId), {
     wrapper: ({ children }: { children: ReactNode }) => (
       <QueryClientProvider client={client}>{children}</QueryClientProvider>
     ),
@@ -65,7 +69,7 @@ function renderFiles(client: QueryClient) {
 const newClient = () =>
   new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
-describe("useProjectSessionFiles", () => {
+describe("useProjectSessionAssets", () => {
   beforeEach(() => {
     vi.mocked(tangent.listResources).mockClear();
     chatList.isLoading = false;
@@ -83,6 +87,23 @@ describe("useProjectSessionFiles", () => {
     expect(result.current.files[0].url).toBe(
       "https://tangent.example/api/sessions/chat-2/files/artifacts/report.html",
     );
+  });
+
+  it("reads only the selected chat, including its run records", async () => {
+    vi.mocked(tangent.listResources).mockResolvedValueOnce([
+      {
+        id: "run-record",
+        sessionId: "chat-2",
+        kind: "host",
+        uri: "run://id/run-1",
+        name: "Train",
+        createdAt: "2026-11-06T00:00:00.000Z",
+      },
+    ]);
+    const { result } = renderFiles(newClient(), "chat-2");
+    await waitFor(() => expect(result.current.runs).toHaveLength(1));
+    expect(result.current.runs[0].id).toBe("run-1");
+    expect(tangent.listResources).toHaveBeenCalledExactlyOnceWith("chat-2");
   });
 
   it("doesn't read the chats again when the card reopens soon after", async () => {

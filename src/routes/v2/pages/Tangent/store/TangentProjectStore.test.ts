@@ -614,6 +614,17 @@ describe("TangentProjectStore.startSession", () => {
     expect(memorySeeds).toHaveLength(1);
   });
 
+  it("keeps an unprompted chat where someone added an asset", async () => {
+    const store = new TangentProjectStore("project-1");
+    const io = makeSessionIo(null);
+    store.setSessionIo(io);
+
+    await store.startSession();
+    store.retainSession("new-session");
+    store.selectSession("other-session");
+    expect(io.detachSession).not.toHaveBeenCalled();
+  });
+
   it("attaches the session after creating it", async () => {
     const store = new TangentProjectStore("project-1");
     const io = makeSessionIo("Standing context");

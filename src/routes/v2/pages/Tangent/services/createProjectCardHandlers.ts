@@ -31,7 +31,10 @@ import { UNNAMED_PIPELINE } from "@/services/projects/placeholderNames";
 import { createProjectResource } from "@/services/projects/projectResourcesService";
 import { listProjectRuns } from "@/services/projects/projectRunsService";
 import { getProject } from "@/services/projects/projectsService";
-import { documentResourceInput } from "@/services/projects/resourceDescriptor";
+import {
+  documentResourceInput,
+  resourceForSession,
+} from "@/services/projects/resourceDescriptor";
 import {
   formatWorkareaTarget,
   idIdentity,
@@ -266,6 +269,7 @@ export function createProjectCardHandlers({
       const target = formatWorkareaTarget(runTarget(runId));
       const added = await attachPipelineRunOnce(projectId, {
         runId,
+        sessionId: getActiveSessionId(),
         // Fetched even when named, so a run id that doesn't exist isn't added.
         pipelineName: async () => {
           const run = await getRunDetails(runId);
@@ -279,7 +283,10 @@ export function createProjectCardHandlers({
     async addDocument(title, content) {
       const resource = await createProjectResource(
         projectId,
-        documentResourceInput(title, content),
+        resourceForSession(
+          documentResourceInput(title, content),
+          getActiveSessionId(),
+        ),
       );
       await onResourcesChanged();
       return formatWorkareaTarget({

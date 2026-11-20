@@ -393,7 +393,11 @@ describe("createProjectCardHandlers", () => {
       "project-1",
       expect.objectContaining({
         name: "Train",
-        metadata: { type: "pipeline_run", identity: "run://id/r-2" },
+        metadata: {
+          type: "pipeline_run",
+          identity: "run://id/r-2",
+          sessionId: "chat-1",
+        },
       }),
     );
     expect(onResourcesChanged).toHaveBeenCalledTimes(1);
@@ -445,7 +449,11 @@ describe("createProjectCardHandlers", () => {
     );
     expect(services.createProjectResource).toHaveBeenCalledWith(
       "project-1",
-      expect.objectContaining({ name: "Brief", payload: { content: "Hello" } }),
+      expect.objectContaining({
+        name: "Brief",
+        payload: { content: "Hello" },
+        metadata: { type: "document", sessionId: "chat-1" },
+      }),
     );
   });
 });

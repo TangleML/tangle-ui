@@ -3,7 +3,10 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { remotePipelineResourceInput } from "@/services/projects/pipelineResource";
-import { localPipelineResourceInput } from "@/services/projects/resourceDescriptor";
+import {
+  localPipelineResourceInput,
+  pipelineRunResourceInput,
+} from "@/services/projects/resourceDescriptor";
 import type {
   CreateResourceInput,
   ProjectResourceSummary,
@@ -14,6 +17,12 @@ import { AddResourceButton } from "./AddResourceButton";
 const openDialog = vi.fn();
 const createResource = vi.fn();
 const notify = vi.fn();
+const keepSession = vi.fn();
+const recordSessionRun = vi.fn();
+
+vi.mock("@/routes/v2/pages/Tangent/hooks/useSessionRuns", () => ({
+  useRecordSessionRun: () => recordSessionRun,
+}));
 
 vi.mock("@/providers/DialogProvider/hooks/useDialog", () => ({
   useDialog: () => ({ open: openDialog }),
@@ -82,6 +91,7 @@ function savedPipelineRow(entityId: string): ProjectResourceSummary {
 async function pickAPipeline(
   resources: ProjectResourceSummary[],
   picked: CreateResourceInput = PICKED_PIPELINE,
+  sessionId?: string,
 ) {
   openDialog.mockResolvedValue(picked);
   const user = userEvent.setup();
@@ -90,6 +100,8 @@ async function pickAPipeline(
       projectId="project-1"
       resources={resources}
       kind="pipeline"
+      sessionId={sessionId}
+      onAddToSession={keepSession}
     />,
   );
 
@@ -103,6 +115,45 @@ describe("AddResourceButton", () => {
     await pickAPipeline([]);
 
     expect(createResource).toHaveBeenCalledWith(PICKED_PIPELINE);
+  });
+
+  it("records the originating chat alongside the pipeline reference", async () => {
+    await pickAPipeline([], PICKED_PIPELINE, "session-1");
+    expect(keepSession).toHaveBeenCalledExactlyOnceWith("session-1");
+
+    expect(createResource).toHaveBeenCalledWith({
+      ...PICKED_PIPELINE,
+      metadata: { ...PICKED_PIPELINE.metadata, sessionId: "session-1" },
+    });
+  });
+
+  it("adds an already attached run to another chat without moving the original attachment", async () => {
+    const pick = pipelineRunResourceInput("run-1", "Training");
+    openDialog.mockResolvedValue(pick);
+    render(
+      <AddResourceButton
+        projectId="project-1"
+        sessionId="chat-2"
+        onAddToSession={keepSession}
+        kind="run"
+        resources={[
+          {
+            ...attachedRow("run://id/run-1"),
+            metadata: { ...pick.metadata, sessionId: "chat-1" },
+          },
+        ]}
+      />,
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Add a pipeline run" }),
+    );
+    expect(recordSessionRun).toHaveBeenCalledExactlyOnceWith(
+      "chat-2",
+      "run-1",
+      "Training",
+    );
+    expect(createResource).not.toHaveBeenCalled();
+    expect(keepSession).toHaveBeenCalledWith("chat-2");
   });
 
   it("attaches nothing when the project already holds it", async () => {
