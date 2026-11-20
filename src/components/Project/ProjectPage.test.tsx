@@ -43,6 +43,11 @@ vi.mock("@/services/projects/useProjectResources", () => ({
   useProjectResource: () => ({ data: undefined, isPending: true, error: null }),
   useDeleteProjectResource: () => ({ mutate: vi.fn(), isPending: false }),
   useCreateProjectResource: () => ({ mutate: vi.fn(), isPending: false }),
+  useUpdateProjectResource: () => ({ mutate: vi.fn(), isPending: false }),
+}));
+
+vi.mock("@/services/projects/useLinkedRepositories", () => ({
+  useLinkedRepositories: () => new Map(),
 }));
 
 vi.mock("@/services/usePipelineSpec", () => ({
