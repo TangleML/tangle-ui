@@ -73,7 +73,7 @@ export function useProjectSharedFolder(
 ): () => Promise<string | undefined> {
   const queryClient = useQueryClient();
   const { baseUrl } = useTangentBaseUrl(projectId);
-  const authToken = useRemoteEnvAuthToken();
+  const authToken = useRemoteEnvAuthToken(baseUrl);
 
   const { mutateAsync } = useMutation({
     scope: { id: `tangent-shared-folder:${projectId}` },

@@ -135,7 +135,7 @@ export function TangentProjectProvider({
     store.setDefaultSessionId(defaultSessionId);
   }, [store, defaultSessionId]);
 
-  const authToken = useRemoteEnvAuthToken();
+  const authToken = useRemoteEnvAuthToken(baseUrl);
   useBackfillSessionTags({
     projectId,
     baseUrl,

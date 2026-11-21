@@ -11,6 +11,9 @@ import { useProjectLocalEnv } from "./useProjectLocalEnv";
 vi.mock("@/routes/v2/pages/Tangent/services/listTangentEnvironments", () => ({
   listTangentEnvironments: vi.fn(),
 }));
+vi.mock("@/routes/v2/pages/Tangent/hooks/useRemoteEnvAuthToken", () => ({
+  useRemoteEnvAuthToken: () => undefined,
+}));
 
 const socketHandlers = new Map<string, (payload: unknown) => void>();
 const disconnect = vi.fn();
