@@ -47,7 +47,7 @@ export function useProjectLocalEnv(
   sessionIds: string[],
 ): ProjectLocalEnv {
   const queryClient = useQueryClient();
-  const authToken = useRemoteEnvAuthToken();
+  const authToken = useRemoteEnvAuthToken(baseUrl);
   const { data: user } = useQuery(userQueryOptions);
   const userId = user?.id;
 

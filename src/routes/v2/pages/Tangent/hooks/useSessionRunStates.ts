@@ -172,7 +172,7 @@ export function useSessionRunStates(
   baseUrl: string | null,
   activeSessionId: string | undefined,
 ): SessionRunStates {
-  const authToken = useRemoteEnvAuthToken();
+  const authToken = useRemoteEnvAuthToken(baseUrl);
   const [statuses, setStatuses] = useState<LobbyStatuses>(() => new Map());
   const [seen, setSeen] = useState(readSeen);
 

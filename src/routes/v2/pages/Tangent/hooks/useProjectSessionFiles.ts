@@ -39,7 +39,7 @@ export function useProjectSessionFiles(projectId: string) {
     isLoading: isLoadingSessions,
     error: sessionsError,
   } = useProjectSessions(projectId);
-  const authToken = useRemoteEnvAuthToken();
+  const authToken = useRemoteEnvAuthToken(baseUrl);
   const queryClient = useQueryClient();
   const notify = useToastNotification();
 

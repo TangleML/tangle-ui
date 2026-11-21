@@ -6,9 +6,10 @@ function base64UrlEncode(value: string): string {
 }
 
 /**
- * Builds a JWT with `alg: "none"` and an empty signature segment. The Tangent
- * embed mint endpoint decodes the claims without verifying the signature, so a
- * client can present its identity without a server-issued credential.
+ * Fallback for backends without identity assertions: a JWT with `alg: "none"`
+ * and an empty signature segment. A Tangent instance decodes the claims
+ * without verifying the signature, so a client can still present its identity
+ * when the backend cannot issue one.
  */
 export function createUnsignedJwt(claims: Record<string, unknown>): string {
   const header = base64UrlEncode(JSON.stringify({ alg: "none", typ: "JWT" }));
