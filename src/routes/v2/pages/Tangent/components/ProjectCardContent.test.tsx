@@ -20,9 +20,20 @@ const unpin = vi.fn();
 const archiveChange = vi.fn();
 const updateResource = vi.fn();
 const links = vi.hoisted(() => new Map<string, unknown>());
+const managed = vi.hoisted(() => ({
+  label: null as string | null,
+  ids: new Set<string>(),
+}));
 
 vi.mock("@/services/projects/useLinkedRepositories", () => ({
   useLinkedRepositories: () => links,
+}));
+
+vi.mock("@/services/github/useManagedAccess", () => ({
+  useManagedRepositories: () => ({
+    label: managed.label,
+    isManaged: (id: string) => managed.ids.has(id),
+  }),
 }));
 
 vi.mock("@/services/projects/useProjectResources", () => ({
@@ -286,6 +297,8 @@ describe("ProjectCardContent", () => {
     archiveChange.mockClear();
     updateResource.mockClear();
     links.clear();
+    managed.label = null;
+    managed.ids.clear();
     localStorage.clear();
     vi.stubGlobal("open", vi.fn());
     loading.resources = { isLoading: false, isLoaded: true, error: null };
@@ -653,6 +666,41 @@ describe("ProjectCardContent", () => {
       },
       expect.anything(),
     );
+  });
+
+  it("names the access a repository is read through, as the backend calls it", () => {
+    linkRepository(false);
+    managed.label = "Gateway";
+    managed.ids.add("r-1");
+    render(<ProjectCardContent />);
+
+    const repositories = screen.getByRole("region", { name: "Repositories" });
+    expect(within(repositories).getByText("Gateway")).toBeVisible();
+    expect(
+      within(repositories).getByRole("link", { name: "TangleML/components" }),
+    ).toHaveAccessibleDescription("Gateway");
+  });
+
+  it("shows managed access and allowed writes together in one flair", () => {
+    linkRepository(true);
+    managed.label = "Gateway";
+    managed.ids.add("r-1");
+    render(<ProjectCardContent />);
+
+    const repositories = screen.getByRole("region", { name: "Repositories" });
+    expect(
+      within(repositories).getByText("Gateway · Writes allowed"),
+    ).toBeVisible();
+    expect(within(repositories).queryByText("Writes allowed")).toBeNull();
+  });
+
+  it("names no access for a repository the backend reads with a token", () => {
+    linkRepository(false);
+    managed.label = "Gateway";
+    render(<ProjectCardContent />);
+
+    const repositories = screen.getByRole("region", { name: "Repositories" });
+    expect(within(repositories).queryByText("Gateway")).toBeNull();
   });
 
   it("asks before letting agents write to a public repository", async () => {

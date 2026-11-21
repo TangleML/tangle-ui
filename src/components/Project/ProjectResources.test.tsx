@@ -6,6 +6,7 @@ import {
   AI_PROVIDER_STORAGE_KEY,
   AI_USE_OWN_KEY_STORAGE_KEY,
 } from "@/hooks/useAiProviderSettings";
+import { useManagedRepositories } from "@/services/github/useManagedAccess";
 import { repositoryResourceInput } from "@/services/projects/resourceDescriptor";
 import type {
   ProjectResource,
@@ -42,6 +43,10 @@ vi.mock("@/services/projects/useProjectResources", () => ({
 
 vi.mock("@/services/projects/useLinkedRepositories", () => ({
   useLinkedRepositories: vi.fn(),
+}));
+
+vi.mock("@/services/github/useManagedAccess", () => ({
+  useManagedRepositories: vi.fn(),
 }));
 
 vi.mock("@/services/projects/useLocalPipelineStatus", () => ({
@@ -138,6 +143,10 @@ describe("ProjectResources", () => {
       isPending: false,
     } as unknown as ReturnType<typeof useUpdateProjectResource>);
     vi.mocked(useLinkedRepositories).mockReturnValue(new Map());
+    vi.mocked(useManagedRepositories).mockReturnValue({
+      label: null,
+      isManaged: () => false,
+    });
     mockResources();
     vi.mocked(useRemotePipelineNames).mockReturnValue(new Map());
     enableFlags({ projects: true, "tangent-shell": true });
@@ -674,6 +683,18 @@ describe("ProjectResources", () => {
         },
         expect.anything(),
       );
+    });
+
+    it("names the access a repository is read through, as the backend calls it", () => {
+      linkRepository({ ...publicRepository, grantId: "7" });
+      vi.mocked(useManagedRepositories).mockReturnValue({
+        label: "Gateway",
+        isManaged: (id) => id === "repo-1",
+      });
+      renderResources();
+
+      expect(screen.getByText("Gateway")).toBeVisible();
+      expect(screen.queryByText("Writes allowed")).toBeNull();
     });
 
     it("asks before letting agents write to a public repository", async () => {
