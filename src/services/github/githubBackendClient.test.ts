@@ -5,6 +5,8 @@ import {
   clearTokenSecret,
   createRepositoryGrant,
   fetchGitHubTokenStatus,
+  fetchManagedAccess,
+  fetchManagedRepositoryIds,
   fetchTokenSecretName,
   GitHubBackendError,
   listRepositoryGrants,
@@ -123,6 +125,78 @@ describe("githubBackendClient", () => {
       fetchMock.mockResolvedValue(json(200, { state: "sleeping" }));
 
       await expect(fetchGitHubTokenStatus(BACKEND)).rejects.toThrow(
+        /can't read/,
+      );
+    });
+  });
+
+  describe("fetchManagedAccess", () => {
+    it("reads what the backend calls its managed access and whom it covers", async () => {
+      fetchMock.mockResolvedValue(
+        json(200, {
+          managed: { label: "Gateway", owners: ["Acme", "acme-labs"] },
+        }),
+      );
+
+      await expect(fetchManagedAccess(BACKEND)).resolves.toEqual({
+        label: "Gateway",
+        owners: ["Acme", "acme-labs"],
+      });
+      expect(lastRequest().url).toBe(`${BACKEND}/api/github/capabilities`);
+    });
+
+    it("is null when the backend has no managed access", async () => {
+      fetchMock.mockResolvedValue(json(200, { managed: null }));
+
+      await expect(fetchManagedAccess(BACKEND)).resolves.toBeNull();
+    });
+
+    it("is null for a backend that predates the route", async () => {
+      fetchMock.mockResolvedValue(json(404, { detail: "Not Found" }));
+
+      await expect(fetchManagedAccess(BACKEND)).resolves.toBeNull();
+    });
+
+    it("refuses managed access without a label", async () => {
+      fetchMock.mockResolvedValue(json(200, { managed: { owners: [] } }));
+
+      await expect(fetchManagedAccess(BACKEND)).rejects.toThrow(/can't read/);
+    });
+  });
+
+  describe("fetchManagedRepositoryIds", () => {
+    it("reads the ids of the links read through managed access", async () => {
+      fetchMock.mockResolvedValue(
+        json(200, {
+          repositories: [
+            { resource_id: "r-1", owner: "Acme", repo: "a" },
+            { resource_id: "r-2", owner: "Acme", repo: "b" },
+          ],
+        }),
+      );
+
+      await expect(fetchManagedRepositoryIds(BACKEND, "p/1")).resolves.toEqual(
+        new Set(["r-1", "r-2"]),
+      );
+      expect(lastRequest().url).toBe(
+        `${BACKEND}/api/projects/p%2F1/managed_repositories`,
+      );
+    });
+
+    it("is empty for a backend that predates the route", async () => {
+      fetchMock.mockResolvedValue(json(404, { detail: "Not Found" }));
+
+      await expect(fetchManagedRepositoryIds(BACKEND, "p-1")).resolves.toEqual(
+        new Set(),
+      );
+    });
+
+    it("refuses an entry without a resource id", async () => {
+      fetchMock.mockResolvedValue(
+        json(200, { repositories: [{ owner: "Acme", repo: "a" }] }),
+      );
+
+      await expect(fetchManagedRepositoryIds(BACKEND, "p-1")).rejects.toThrow(
         /can't read/,
       );
     });

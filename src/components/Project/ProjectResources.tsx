@@ -27,6 +27,7 @@ import {
   tangentSessionSearch,
 } from "@/routes/tangentSearch";
 import { useAiGate } from "@/routes/v2/shared/components/AiChat/components/useAiGate";
+import { useManagedRepositories } from "@/services/github/useManagedAccess";
 import {
   AGENT_SESSION,
   describeResource,
@@ -43,6 +44,7 @@ import { tracking } from "@/utils/tracking";
 
 import { AddResourceMenu } from "./AddResourceMenu";
 import { ColumnHeadingRow } from "./ColumnHeadingRow";
+import { ManagedAccessBadge } from "./ManagedAccessBadge";
 import { RepositoryWritesButton } from "./RepositoryWritesButton";
 import { entityIcon } from "./resourceEntities";
 import { ResourceRow } from "./ResourceRow";
@@ -156,6 +158,7 @@ export function ProjectResources({
     useLocalPipelineStatus(resources);
   const remotePipelineNames = useRemotePipelineNames(resources);
   const linkedRepositories = useLinkedRepositories(projectId, resources);
+  const managed = useManagedRepositories(projectId);
   const writes = useRepositoryWritesToggle(projectId);
 
   const sessionLabels = sessionLabelsById(
@@ -264,7 +267,17 @@ export function ProjectResources({
                     resource={resource}
                     label={sessionLabel ?? currentName}
                     opensElsewhere={sessionLabel !== undefined}
-                    badge={repository?.allowWrites && <WritesAllowedBadge />}
+                    badge={
+                      repository && (
+                        <>
+                          {managed.label !== null &&
+                            managed.isManaged(resource.id) && (
+                              <ManagedAccessBadge label={managed.label} />
+                            )}
+                          {repository.allowWrites && <WritesAllowedBadge />}
+                        </>
+                      )
+                    }
                     action={
                       link &&
                       repository && (

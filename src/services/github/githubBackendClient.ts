@@ -6,6 +6,9 @@ import { isRecord, stringOrNull } from "@/utils/typeGuards";
 
 const TOKEN_STATUS_PATH = "/api/github/token_status";
 const GRANTS_PATH = "/api/github/repository_grants";
+const CAPABILITIES_PATH = "/api/github/capabilities";
+const managedRepositoriesPath = (projectId: string) =>
+  `/api/projects/${encodeURIComponent(projectId)}/managed_repositories`;
 const TOKEN_SECRET_SETTING = "github_token_secret_name";
 
 const TOKEN_STATES = [
@@ -40,6 +43,11 @@ export interface RepositoryGrant {
 }
 
 export type RepositoryRefKind = "branch" | "tag";
+
+export interface ManagedAccess {
+  label: string;
+  owners: string[];
+}
 
 export class GitHubBackendError extends Error {
   name = "GitHubBackendError";
@@ -161,6 +169,56 @@ export async function fetchGitHubTokenStatus(
     if (isMissingRouteError(error)) return { supported: false };
     throw error;
   }
+}
+
+/** The backend's managed access to repositories, or null when it has none or predates it. */
+export async function fetchManagedAccess(
+  backendUrl: string,
+): Promise<ManagedAccess | null> {
+  let body: unknown;
+  try {
+    body = await request(`${backendUrl}${CAPABILITIES_PATH}`);
+  } catch (error) {
+    if (isMissingRouteError(error)) return null;
+    throw error;
+  }
+  if (!isRecord(body)) throw unreadable("its GitHub capabilities");
+  if (body.managed === null || body.managed === undefined) return null;
+  const managed = body.managed;
+  const label = isRecord(managed) ? stringOrNull(managed.label) : null;
+  if (
+    label === null ||
+    !isRecord(managed) ||
+    !Array.isArray(managed.owners) ||
+    !managed.owners.every((owner) => typeof owner === "string")
+  ) {
+    throw unreadable("its GitHub capabilities");
+  }
+  return { label, owners: managed.owners };
+}
+
+/** The ids of a project's repository links read through managed access; empty when the backend predates it. */
+export async function fetchManagedRepositoryIds(
+  backendUrl: string,
+  projectId: string,
+): Promise<ReadonlySet<string>> {
+  let body: unknown;
+  try {
+    body = await request(`${backendUrl}${managedRepositoriesPath(projectId)}`);
+  } catch (error) {
+    if (isMissingRouteError(error)) return new Set();
+    throw error;
+  }
+  if (!isRecord(body) || !Array.isArray(body.repositories)) {
+    throw unreadable("a list of managed repositories");
+  }
+  return new Set(
+    body.repositories.map((entry) => {
+      const id = isRecord(entry) ? stringOrNull(entry.resource_id) : null;
+      if (id === null) throw unreadable("a list of managed repositories");
+      return id;
+    }),
+  );
 }
 
 export async function fetchTokenSecretName(

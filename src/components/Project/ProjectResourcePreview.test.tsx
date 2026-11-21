@@ -14,6 +14,18 @@ vi.mock("@/services/projects/useProjectResources", () => ({
   useProjectResource: vi.fn(),
 }));
 
+const managed = vi.hoisted(() => ({
+  label: null as string | null,
+  ids: new Set<string>(),
+}));
+
+vi.mock("@/services/github/useManagedAccess", () => ({
+  useManagedRepositories: () => ({
+    label: managed.label,
+    isManaged: (id: string) => managed.ids.has(id),
+  }),
+}));
+
 vi.mock("@/services/usePipelineSpec", () => ({
   usePipelineSpec: vi.fn(),
 }));
@@ -652,6 +664,19 @@ describe("ProjectResourcePreview", () => {
       renderPreview("resource-1");
 
       expect(screen.queryByText("Private")).toBeNull();
+    });
+
+    it("names the access the backend reads it through", () => {
+      linked({ grantId: "7" });
+      managed.label = "Gateway";
+      managed.ids.add("resource-1");
+      try {
+        renderPreview("resource-1");
+        expect(screen.getByText("Gateway")).toBeVisible();
+      } finally {
+        managed.label = null;
+        managed.ids.clear();
+      }
     });
   });
 
