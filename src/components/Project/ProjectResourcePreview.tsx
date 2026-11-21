@@ -20,6 +20,7 @@ import {
   type RepositoryLocation,
   repositoryUrl,
 } from "@/services/github/repositoryUrl";
+import { useManagedRepositories } from "@/services/github/useManagedAccess";
 import type { LocalPipelinePointer } from "@/services/localPipelines/types";
 import { useLocalPipeline } from "@/services/localPipelines/useLocalPipelines";
 import { UNTITLED } from "@/services/projects/placeholderNames";
@@ -170,7 +171,13 @@ function SelectedResource({ projectId, resourceId }: SelectedResourceProps) {
 
   const repository = linkedRepositoryOf(resource);
   if (repository) {
-    return <RepositoryPreview repository={repository} />;
+    return (
+      <RepositoryPreview
+        projectId={projectId}
+        resourceId={resourceId}
+        repository={repository}
+      />
+    );
   }
 
   const described = describeResource(resource);
@@ -229,7 +236,18 @@ function RunPreview({ runId }: { runId: string | null }) {
   );
 }
 
-function RepositoryPreview({ repository }: { repository: RepositoryLocation }) {
+interface RepositoryPreviewProps {
+  projectId: string;
+  resourceId: string;
+  repository: RepositoryLocation;
+}
+
+function RepositoryPreview({
+  projectId,
+  resourceId,
+  repository,
+}: RepositoryPreviewProps) {
+  const managed = useManagedRepositories(projectId);
   return (
     <Placeholder>
       <EmptyState
@@ -239,7 +257,10 @@ function RepositoryPreview({ repository }: { repository: RepositoryLocation }) {
         className="max-w-md"
       >
         <BlockStack gap="4" inlineAlign="center">
-          <RepositoryDetails repository={repository} />
+          <RepositoryDetails
+            repository={repository}
+            managedLabel={managed.isManaged(resourceId) ? managed.label : null}
+          />
           <Button variant="outline" size="sm" asChild>
             <a
               href={repositoryUrl(repository)}
