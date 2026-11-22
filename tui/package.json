@@ -19,6 +19,7 @@
     "format": "prettier --write ."
   },
   "dependencies": {
+    "@tangent/chat-client": "github:TangleML/tangent-shell#SPEC-0019&path:packages/chat-client",
     "@tangent/local-agent-host": "github:TangleML/tangent-shell#main&path:packages/local-agent-host",
     "@tangent/remote-subagent": "github:TangleML/tangent-shell#main&path:packages/remote-subagent",
     "@tangent/shared": "github:TangleML/tangent-shell#main&path:packages/shared",
@@ -47,6 +48,7 @@
   },
   "pnpm": {
     "overrides": {
+      "@tangent/chat-client": "github:TangleML/tangent-shell#SPEC-0019&path:packages/chat-client",
       "@tangent/local-agent-host": "github:TangleML/tangent-shell#main&path:packages/local-agent-host",
       "@tangent/remote-subagent": "github:TangleML/tangent-shell#main&path:packages/remote-subagent",
       "@tangent/shared": "github:TangleML/tangent-shell#main&path:packages/shared"

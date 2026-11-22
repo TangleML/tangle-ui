@@ -5,6 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
+  "@tangent/chat-client": github:TangleML/tangent-shell#SPEC-0019&path:packages/chat-client
   "@tangent/local-agent-host": github:TangleML/tangent-shell#main&path:packages/local-agent-host
   "@tangent/remote-subagent": github:TangleML/tangent-shell#main&path:packages/remote-subagent
   "@tangent/shared": github:TangleML/tangent-shell#main&path:packages/shared
@@ -12,15 +13,18 @@ overrides:
 importers:
   .:
     dependencies:
+      "@tangent/chat-client":
+        specifier: github:TangleML/tangent-shell#SPEC-0019&path:packages/chat-client
+        version: https://codeload.github.com/TangleML/tangent-shell/tar.gz/75b33d23c933d95a16a3bc7c95840f676c602e17#path:packages/chat-client
       "@tangent/local-agent-host":
         specifier: github:TangleML/tangent-shell#main&path:packages/local-agent-host
-        version: https://codeload.github.com/TangleML/tangent-shell/tar.gz/c5dc60b1f82c2634f684f6a6297e19421d17329e#path:packages/local-agent-host
+        version: https://codeload.github.com/TangleML/tangent-shell/tar.gz/ba943935316d6073a05f8140e39b6d1c14a466ce#path:packages/local-agent-host
       "@tangent/remote-subagent":
         specifier: github:TangleML/tangent-shell#main&path:packages/remote-subagent
-        version: https://codeload.github.com/TangleML/tangent-shell/tar.gz/c5dc60b1f82c2634f684f6a6297e19421d17329e#path:packages/remote-subagent
+        version: https://codeload.github.com/TangleML/tangent-shell/tar.gz/ba943935316d6073a05f8140e39b6d1c14a466ce#path:packages/remote-subagent
       "@tangent/shared":
         specifier: github:TangleML/tangent-shell#main&path:packages/shared
-        version: https://codeload.github.com/TangleML/tangent-shell/tar.gz/c5dc60b1f82c2634f684f6a6297e19421d17329e#path:packages/shared
+        version: https://codeload.github.com/TangleML/tangent-shell/tar.gz/ba943935316d6073a05f8140e39b6d1c14a466ce#path:packages/shared
       ink:
         specifier: ^6.3.1
         version: 6.8.0(@types/react@19.3.0)(react@19.3.1)
@@ -489,27 +493,35 @@ packages:
         tarball: https://registry.npmjs.org/@socket.io/component-emitter/-/component-emitter-3.1.2.tgz,
       }
 
-  "@tangent/local-agent-host@https://codeload.github.com/TangleML/tangent-shell/tar.gz/c5dc60b1f82c2634f684f6a6297e19421d17329e#path:packages/local-agent-host":
+  "@tangent/chat-client@https://codeload.github.com/TangleML/tangent-shell/tar.gz/75b33d23c933d95a16a3bc7c95840f676c602e17#path:packages/chat-client":
+    resolution:
+      {
+        path: packages/chat-client,
+        tarball: https://codeload.github.com/TangleML/tangent-shell/tar.gz/75b33d23c933d95a16a3bc7c95840f676c602e17,
+      }
+    version: 0.0.0
+
+  "@tangent/local-agent-host@https://codeload.github.com/TangleML/tangent-shell/tar.gz/ba943935316d6073a05f8140e39b6d1c14a466ce#path:packages/local-agent-host":
     resolution:
       {
         path: packages/local-agent-host,
-        tarball: https://codeload.github.com/TangleML/tangent-shell/tar.gz/c5dc60b1f82c2634f684f6a6297e19421d17329e,
+        tarball: https://codeload.github.com/TangleML/tangent-shell/tar.gz/ba943935316d6073a05f8140e39b6d1c14a466ce,
       }
     version: 0.0.0
 
-  "@tangent/remote-subagent@https://codeload.github.com/TangleML/tangent-shell/tar.gz/c5dc60b1f82c2634f684f6a6297e19421d17329e#path:packages/remote-subagent":
+  "@tangent/remote-subagent@https://codeload.github.com/TangleML/tangent-shell/tar.gz/ba943935316d6073a05f8140e39b6d1c14a466ce#path:packages/remote-subagent":
     resolution:
       {
         path: packages/remote-subagent,
-        tarball: https://codeload.github.com/TangleML/tangent-shell/tar.gz/c5dc60b1f82c2634f684f6a6297e19421d17329e,
+        tarball: https://codeload.github.com/TangleML/tangent-shell/tar.gz/ba943935316d6073a05f8140e39b6d1c14a466ce,
       }
     version: 0.0.0
 
-  "@tangent/shared@https://codeload.github.com/TangleML/tangent-shell/tar.gz/c5dc60b1f82c2634f684f6a6297e19421d17329e#path:packages/shared":
+  "@tangent/shared@https://codeload.github.com/TangleML/tangent-shell/tar.gz/ba943935316d6073a05f8140e39b6d1c14a466ce#path:packages/shared":
     resolution:
       {
         path: packages/shared,
-        tarball: https://codeload.github.com/TangleML/tangent-shell/tar.gz/c5dc60b1f82c2634f684f6a6297e19421d17329e,
+        tarball: https://codeload.github.com/TangleML/tangent-shell/tar.gz/ba943935316d6073a05f8140e39b6d1c14a466ce,
       }
     version: 0.0.0
 
@@ -2282,26 +2294,35 @@ snapshots:
 
   "@socket.io/component-emitter@3.1.2": {}
 
-  "@tangent/local-agent-host@https://codeload.github.com/TangleML/tangent-shell/tar.gz/c5dc60b1f82c2634f684f6a6297e19421d17329e#path:packages/local-agent-host":
+  "@tangent/chat-client@https://codeload.github.com/TangleML/tangent-shell/tar.gz/75b33d23c933d95a16a3bc7c95840f676c602e17#path:packages/chat-client":
     dependencies:
-      "@tangent/remote-subagent": https://codeload.github.com/TangleML/tangent-shell/tar.gz/c5dc60b1f82c2634f684f6a6297e19421d17329e#path:packages/remote-subagent
-      "@tangent/shared": https://codeload.github.com/TangleML/tangent-shell/tar.gz/c5dc60b1f82c2634f684f6a6297e19421d17329e#path:packages/shared
-      open: 11.0.4
-    transitivePeerDependencies:
-      - bufferutil
-      - supports-color
-      - utf-8-validate
-
-  "@tangent/remote-subagent@https://codeload.github.com/TangleML/tangent-shell/tar.gz/c5dc60b1f82c2634f684f6a6297e19421d17329e#path:packages/remote-subagent":
-    dependencies:
-      "@tangent/shared": https://codeload.github.com/TangleML/tangent-shell/tar.gz/c5dc60b1f82c2634f684f6a6297e19421d17329e#path:packages/shared
+      "@tangent/shared": https://codeload.github.com/TangleML/tangent-shell/tar.gz/ba943935316d6073a05f8140e39b6d1c14a466ce#path:packages/shared
       socket.io-client: 4.8.4
     transitivePeerDependencies:
       - bufferutil
       - supports-color
       - utf-8-validate
 
-  "@tangent/shared@https://codeload.github.com/TangleML/tangent-shell/tar.gz/c5dc60b1f82c2634f684f6a6297e19421d17329e#path:packages/shared":
+  "@tangent/local-agent-host@https://codeload.github.com/TangleML/tangent-shell/tar.gz/ba943935316d6073a05f8140e39b6d1c14a466ce#path:packages/local-agent-host":
+    dependencies:
+      "@tangent/remote-subagent": https://codeload.github.com/TangleML/tangent-shell/tar.gz/ba943935316d6073a05f8140e39b6d1c14a466ce#path:packages/remote-subagent
+      "@tangent/shared": https://codeload.github.com/TangleML/tangent-shell/tar.gz/ba943935316d6073a05f8140e39b6d1c14a466ce#path:packages/shared
+      open: 11.0.4
+    transitivePeerDependencies:
+      - bufferutil
+      - supports-color
+      - utf-8-validate
+
+  "@tangent/remote-subagent@https://codeload.github.com/TangleML/tangent-shell/tar.gz/ba943935316d6073a05f8140e39b6d1c14a466ce#path:packages/remote-subagent":
+    dependencies:
+      "@tangent/shared": https://codeload.github.com/TangleML/tangent-shell/tar.gz/ba943935316d6073a05f8140e39b6d1c14a466ce#path:packages/shared
+      socket.io-client: 4.8.4
+    transitivePeerDependencies:
+      - bufferutil
+      - supports-color
+      - utf-8-validate
+
+  "@tangent/shared@https://codeload.github.com/TangleML/tangent-shell/tar.gz/ba943935316d6073a05f8140e39b6d1c14a466ce#path:packages/shared":
     dependencies:
       zod: 4.6.7
 

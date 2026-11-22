@@ -1,9 +1,9 @@
+import { ChatClient } from "@tangent/chat-client";
 import { createUnsignedJwt } from "@tangent/local-agent-host/remoteEnvToken.ts";
 import { Box, Text } from "ink";
 import { useEffect, useRef, useState } from "react";
 
 import { authFetch, ensureCookie } from "../auth.ts";
-import { ChatClient } from "../chatClient.ts";
 import { resetConnection, saveConfig, type TuiConfig } from "../config.ts";
 import { startLocalAgentHost } from "../localAgentHost.ts";
 import { startProjectSession } from "../session.ts";
