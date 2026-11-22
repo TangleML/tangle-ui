@@ -1,7 +1,7 @@
+import type { ConversationState } from "@tangent/chat-client";
 import type { ChatMessage } from "@tangent/shared/contracts.ts";
 import { Box, Text } from "ink";
 
-import type { ConversationState } from "../chatState.ts";
 import { Markdown } from "./Markdown.tsx";
 
 const MAX_VISIBLE_MESSAGES = 50;

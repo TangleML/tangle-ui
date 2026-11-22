@@ -1,6 +1,5 @@
+import type { TabInfo } from "@tangent/chat-client";
 import { Box, Text } from "ink";
-
-import type { TabInfo } from "../chatState.ts";
 
 interface TabsProps {
   tabs: TabInfo[];

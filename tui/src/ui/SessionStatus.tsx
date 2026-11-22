@@ -1,6 +1,5 @@
+import type { WorkingAgent } from "@tangent/chat-client";
 import { Box, Text } from "ink";
-
-import type { WorkingAgent } from "../chatState.ts";
 
 interface SessionStatusProps {
   working: WorkingAgent[];

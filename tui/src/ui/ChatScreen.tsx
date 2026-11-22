@@ -1,14 +1,14 @@
-import { Box, type DOMElement, measureElement, Text, useInput } from "ink";
-import open from "open";
-import { useEffect, useRef, useState } from "react";
-
-import type { ChatClient } from "../chatClient.ts";
 import {
+  type ChatClient,
   type ChatState,
   createChatState,
   tabInfos,
   workingConversations,
-} from "../chatState.ts";
+} from "@tangent/chat-client";
+import { Box, type DOMElement, measureElement, Text, useInput } from "ink";
+import open from "open";
+import { useEffect, useRef, useState } from "react";
+
 import { findCommand, parseCommand } from "../commands/builtins.ts";
 import type { CommandContext } from "../commands/types.ts";
 import type { TuiConfig } from "../config.ts";
