@@ -66,8 +66,7 @@ async function requestIdentityAssertion(
   backendUrl: string,
   instanceId: string | undefined,
 ): Promise<IdentityAssertion> {
-  const url = new URL(IDENTITY_ASSERTION_PATH, backendUrl).toString();
-  const response = await fetch(url, {
+  const response = await fetch(`${backendUrl}${IDENTITY_ASSERTION_PATH}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(instanceId ? { instance_id: instanceId } : {}),

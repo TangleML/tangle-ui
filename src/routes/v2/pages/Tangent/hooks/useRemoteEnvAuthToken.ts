@@ -10,7 +10,7 @@ import {
 import { MINUTES } from "@/utils/constants";
 
 // Floors the refetch so a backend handing out an already-stale assertion
-// cannot put the query in a tight loop.
+// cannot put the query in a tight loop, and paces retries after a failure.
 const MIN_REFRESH_DELAY_MS = 1 * MINUTES;
 
 export interface RemoteEnvAuthTokenParams {
@@ -46,10 +46,13 @@ export function useRemoteEnvAuthToken(
   const { data } = useQuery({
     queryKey: ["tangent", "identity-token", backendUrl, instanceId, userId],
     queryFn: () => remoteEnvAuthToken({ backendUrl, instanceId, userId }),
-    enabled: Boolean(backendUrl) && Boolean(userId),
+    enabled: Boolean(backendUrl) && Boolean(userId) && tangentBaseUrl !== null,
     staleTime: Infinity,
     refetchOnWindowFocus: false,
-    refetchInterval: ({ state }) => refreshDelay(state.data),
+    refetchInterval: ({ state }) =>
+      state.status === "error"
+        ? MIN_REFRESH_DELAY_MS
+        : refreshDelay(state.data),
   });
   return data?.token;
 }

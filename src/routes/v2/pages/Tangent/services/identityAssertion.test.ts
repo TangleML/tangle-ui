@@ -111,6 +111,17 @@ describe("fetchIdentityAssertion", () => {
     });
   });
 
+  it("keeps a path prefix on the backend url", async () => {
+    fetchMock.mockResolvedValue(assertionResponse(60 * MINUTES));
+
+    await service.fetchIdentityAssertion("https://host/prefix", "inst-42");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://host/prefix/api/tangent/identity_assertion",
+      expect.anything(),
+    );
+  });
+
   it("sends an empty body when the Tangent url names no instance", async () => {
     fetchMock.mockResolvedValue(assertionResponse(60 * MINUTES));
 

@@ -74,6 +74,15 @@ describe("useRemoteEnvAuthToken", () => {
     expect(identityToken).not.toHaveBeenCalled();
   });
 
+  it("mints nothing until the Tangent url is known", async () => {
+    const { result } = renderToken(null);
+
+    await act(async () => {});
+
+    expect(result.current).toBeUndefined();
+    expect(identityToken).not.toHaveBeenCalled();
+  });
+
   it("has no token when the backend refuses the assertion", async () => {
     vi.mocked(identityToken).mockRejectedValue(new Error("HTTP 500"));
 
@@ -82,6 +91,22 @@ describe("useRemoteEnvAuthToken", () => {
     await act(async () => {});
 
     expect(result.current).toBeUndefined();
+  });
+
+  it("retries a refused assertion after a minute", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.mocked(identityToken)
+      .mockRejectedValueOnce(new Error("HTTP 500"))
+      .mockResolvedValueOnce({ token: "recovered" });
+
+    const { result } = renderToken(PROXIED_INSTANCE);
+    await waitFor(() => expect(identityToken).toHaveBeenCalledTimes(1));
+    expect(result.current).toBeUndefined();
+
+    await act(() => vi.advanceTimersByTimeAsync(1 * MINUTES));
+
+    await waitFor(() => expect(result.current).toBe("recovered"));
+    expect(identityToken).toHaveBeenCalledTimes(2);
   });
 
   it("refreshes the token at its refresh time", async () => {
