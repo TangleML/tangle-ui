@@ -86,7 +86,8 @@ export function useFileDropHandler(spec: ComponentSpec | null) {
       if (!result) {
         return {
           status: "error",
-          message: "Import cancelled",
+          title: "Import cancelled",
+          message: "The component was not added to your library.",
         };
       }
       if (navigation.activeSpec !== spec) return PIPELINE_CHANGED_OUTCOME;

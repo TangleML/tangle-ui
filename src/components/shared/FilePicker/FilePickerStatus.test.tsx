@@ -51,6 +51,20 @@ describe("FilePickerStatus", () => {
     expect(detail.tagName).toBe("PRE");
   });
 
+  it("prefers the status title over errorTitle for an error", () => {
+    render(
+      <FilePickerStatus
+        status={{ ...failed, title: "Import cancelled" }}
+        errorTitle="Upload failed"
+        onDismiss={vi.fn()}
+      />,
+    );
+
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("Import cancelled");
+    expect(alert).not.toHaveTextContent("Upload failed");
+  });
+
   it("shows a success as a polite status with the default title and working actions", () => {
     const onSelect = vi.fn();
     render(

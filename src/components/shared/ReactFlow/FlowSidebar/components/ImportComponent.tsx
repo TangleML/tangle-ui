@@ -131,7 +131,8 @@ const ImportComponent = ({
       if (!result) {
         return {
           status: "error",
-          message: "Import cancelled",
+          title: "Import cancelled",
+          message: "The component was not added to your library.",
         };
       }
       return {

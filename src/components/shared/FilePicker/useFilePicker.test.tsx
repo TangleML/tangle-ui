@@ -121,10 +121,7 @@ describe("useFilePicker drop target", () => {
       }),
     );
     expect(pickedFileNames(onFile)).toEqual(["a.txt"]);
-    expect(readText).toHaveBeenCalledExactlyOnceWith(
-      first,
-      expect.anything(),
-    );
+    expect(readText).toHaveBeenCalledExactlyOnceWith(first, expect.anything());
   });
 
   it("claims a file drag, so the browser doesn't open the file instead", () => {
@@ -261,10 +258,7 @@ describe("useFilePicker browse", () => {
     await act(async () => result.current.inputProps.onChange(event));
 
     expect(input.value).toBe("");
-    expect(readText).toHaveBeenCalledExactlyOnceWith(
-      first,
-      expect.anything(),
-    );
+    expect(readText).toHaveBeenCalledExactlyOnceWith(first, expect.anything());
     await waitFor(() =>
       expect(onFile).toHaveBeenCalledExactlyOnceWith({
         file: first,
@@ -392,6 +386,29 @@ describe("useFilePicker status", () => {
       kind: "error",
       message: "Not a pipeline",
       detail: "missing implementation",
+      fileName: "a.yaml",
+    });
+  });
+
+  it("carries an error outcome's title into the status", async () => {
+    const { result } = renderHook(() =>
+      useFilePicker({
+        onFile: () => ({
+          status: "error",
+          title: "Import cancelled",
+          message: "Nothing was imported",
+        }),
+      }),
+    );
+
+    await act(() =>
+      result.current.handleFiles([new File(["a"], "a.yaml")], "browse"),
+    );
+
+    expect(result.current.status).toEqual({
+      kind: "error",
+      title: "Import cancelled",
+      message: "Nothing was imported",
       fileName: "a.yaml",
     });
   });
@@ -722,9 +739,7 @@ describe("useFilePicker window guard", () => {
 
     expect(windowDrag("dragover", ["Files"]).defaultPrevented).toBe(true);
     expect(windowDrag("drop", ["Files"]).defaultPrevented).toBe(true);
-    expect(windowDrag("dragover", ["text/plain"]).defaultPrevented).toBe(
-      false,
-    );
+    expect(windowDrag("dragover", ["text/plain"]).defaultPrevented).toBe(false);
     expect(windowDrag("drop", ["text/plain"]).defaultPrevented).toBe(false);
 
     unmount();

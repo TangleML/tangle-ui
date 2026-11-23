@@ -31,9 +31,11 @@ export function useValidateComponentDrop() {
 
     try {
       const component = await hydrateComponentReference(reference);
-      const validator = await queryClient.fetchQuery(
-        componentSpecValidatorQuery,
-      );
+      // Offline, the default network mode pauses the query and the drop would sit on 'Reading…' with no error.
+      const validator = await queryClient.fetchQuery({
+        ...componentSpecValidatorQuery,
+        networkMode: "always",
+      });
       const result = validator(
         component?.spec ?? reference.text ?? reference.spec,
       );

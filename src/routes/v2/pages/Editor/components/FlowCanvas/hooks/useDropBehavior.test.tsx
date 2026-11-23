@@ -397,7 +397,11 @@ it("reports a cancelled import when the duplicate dialog is closed", async () =>
   validate.mockReturnValue({ valid: true });
   mocks.addToLibrary.mockResolvedValue(undefined);
   const outcome = await dropComponentFile();
-  expect(outcome).toEqual({ status: "error", message: "Import cancelled" });
+  expect(outcome).toEqual({
+    status: "error",
+    title: "Import cancelled",
+    message: "The component was not added to your library.",
+  });
 });
 
 it("does not add a dropped file to the library if the active pipeline changes during validation", async () => {

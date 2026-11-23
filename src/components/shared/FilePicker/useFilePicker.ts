@@ -22,7 +22,7 @@ type PickAction = { label: string; onSelect: () => void };
 
 export type PickOutcome =
   | { status: "success"; message: ReactNode; actions?: PickAction[] }
-  | { status: "error"; message: ReactNode; detail?: string };
+  | { status: "error"; title?: string; message: ReactNode; detail?: string };
 
 export type PickerStatus =
   | { kind: "idle" }
@@ -198,6 +198,7 @@ export function useFilePicker<M = unknown>({
           }
         : {
             kind: "error",
+            title: outcome.title,
             message: outcome.message,
             detail: outcome.detail,
             fileName: file.name,
