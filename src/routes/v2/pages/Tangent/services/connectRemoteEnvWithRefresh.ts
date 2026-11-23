@@ -35,6 +35,7 @@ export function connectRemoteEnvWithRefresh(
   let refreshTimer: ReturnType<typeof setTimeout> | undefined;
   let environmentId = options.initialEnvironmentId;
   let retryDelayMs = MIN_TOKEN_REFRESH_MS;
+  let reconnectErrorReported = false;
 
   function schedule(delay: number): void {
     refreshTimer = setTimeout(() => void connectWithFreshToken(), delay);
@@ -53,6 +54,7 @@ export function connectRemoteEnvWithRefresh(
       await host.connect(token.token, token.environmentId);
       if (cancelled) return;
       retryDelayMs = MIN_TOKEN_REFRESH_MS;
+      reconnectErrorReported = false;
       onConnected?.(token.environmentId);
       if (token.expiresAtMs) {
         const delay = Math.max(
@@ -63,7 +65,10 @@ export function connectRemoteEnvWithRefresh(
       }
     } catch (error) {
       if (cancelled) return;
-      onError(getErrorMessage(error));
+      if (!reconnectErrorReported) {
+        reconnectErrorReported = true;
+        onError(getErrorMessage(error));
+      }
       schedule(retryDelayMs);
       retryDelayMs = Math.min(retryDelayMs * 2, MAX_TOKEN_RETRY_MS);
     }
