@@ -1,5 +1,5 @@
 import { SocketEvents } from "@tangent/shared/contracts.ts";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useRemoteEnvAuthToken } from "@/routes/v2/pages/Tangent/hooks/useRemoteEnvAuthToken";
 import { connectTangentSocket } from "@/routes/v2/pages/Tangent/services/socketConfig";
@@ -173,12 +173,18 @@ export function useSessionRunStates(
   activeSessionId: string | undefined,
 ): SessionRunStates {
   const authToken = useRemoteEnvAuthToken(baseUrl);
+  const authTokenRef = useRef(authToken);
+  const hasToken = authToken !== undefined;
   const [statuses, setStatuses] = useState<LobbyStatuses>(() => new Map());
   const [seen, setSeen] = useState(readSeen);
 
   useEffect(() => {
+    authTokenRef.current = authToken;
+  }, [authToken]);
+
+  useEffect(() => {
     if (!baseUrl) return;
-    const socket = connectTangentSocket(baseUrl, authToken);
+    const socket = connectTangentSocket(baseUrl, () => authTokenRef.current);
     socket.on("connect", () =>
       socket.emit(SocketEvents.SessionStatusSubscribe),
     );
@@ -196,7 +202,7 @@ export function useSessionRunStates(
       // the next one hasn't answered yet, and with none nothing ever would.
       setStatuses(new Map());
     };
-  }, [baseUrl, authToken]);
+  }, [baseUrl, hasToken]);
 
   const active = activeSessionId ? statuses.get(activeSessionId) : undefined;
   const activeEndedAt = active && !active.working ? active.endedAt : undefined;

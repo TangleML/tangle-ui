@@ -1,6 +1,6 @@
 import { SocketEvents } from "@tangent/shared/contracts.ts";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 import { userQueryOptions } from "@/hooks/useUserDetails";
 import { useRemoteEnvAuthToken } from "@/routes/v2/pages/Tangent/hooks/useRemoteEnvAuthToken";
@@ -48,8 +48,14 @@ export function useProjectLocalEnv(
 ): ProjectLocalEnv {
   const queryClient = useQueryClient();
   const authToken = useRemoteEnvAuthToken(baseUrl);
+  const authTokenRef = useRef(authToken);
+  const hasToken = authToken !== undefined;
   const { data: user } = useQuery(userQueryOptions);
   const userId = user?.id;
+
+  useEffect(() => {
+    authTokenRef.current = authToken;
+  }, [authToken]);
 
   const results = useQueries({
     queries: sessionIds.map((sessionId) => ({
@@ -66,7 +72,7 @@ export function useProjectLocalEnv(
     if (!baseUrl) return;
 
     const projectSessionIds = new Set(sessionIds);
-    const socket = connectTangentSocket(baseUrl, authToken);
+    const socket = connectTangentSocket(baseUrl, () => authTokenRef.current);
     socket.on(SocketEvents.EnvironmentUpdate, (payload: unknown) => {
       const sessionId = broadcastSessionId(payload);
       if (sessionId && !projectSessionIds.has(sessionId)) return;
@@ -79,7 +85,7 @@ export function useProjectLocalEnv(
     return () => {
       socket.disconnect();
     };
-  }, [baseUrl, authToken, queryClient, sessionIds]);
+  }, [baseUrl, hasToken, queryClient, sessionIds]);
 
   const byId = new Map<string, TangentEnvironment>();
   for (const result of results) {

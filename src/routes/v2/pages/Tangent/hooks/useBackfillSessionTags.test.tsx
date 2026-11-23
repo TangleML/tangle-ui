@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -32,13 +32,22 @@ function wrapperFor(client: QueryClient) {
 
 interface Props {
   sessionIds: string[];
-  baseUrl?: string | null;
-  authToken?: string;
+  baseUrl: string | null;
+  authToken: string | undefined;
+}
+
+function props(overrides: Partial<Props> = {}): Props {
+  return {
+    sessionIds: ["s1"],
+    baseUrl: BASE_URL,
+    authToken: AUTH_TOKEN,
+    ...overrides,
+  };
 }
 
 function renderBackfill(client: QueryClient, initialProps: Props) {
   return renderHook(
-    ({ sessionIds, baseUrl = BASE_URL, authToken = AUTH_TOKEN }: Props) =>
+    ({ sessionIds, baseUrl, authToken }: Props) =>
       useBackfillSessionTags({
         projectId: PROJECT_ID,
         baseUrl,
@@ -55,6 +64,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.resetAllMocks();
+  vi.restoreAllMocks();
 });
 
 describe("useBackfillSessionTags", () => {
@@ -63,7 +73,7 @@ describe("useBackfillSessionTags", () => {
     const client = makeClient();
     const invalidate = vi.spyOn(client, "invalidateQueries");
 
-    renderBackfill(client, { sessionIds: ["s1", "s2"] });
+    renderBackfill(client, props({ sessionIds: ["s1", "s2"] }));
 
     await waitFor(() => expect(ensureSessionTag).toHaveBeenCalledTimes(2));
     expect(ensureSessionTag).toHaveBeenCalledWith({
@@ -90,10 +100,13 @@ describe("useBackfillSessionTags", () => {
     vi.mocked(ensureSessionTag).mockResolvedValue(true);
     const client = makeClient();
 
-    const { rerender } = renderBackfill(client, { sessionIds: ["s1", "s2"] });
+    const { rerender } = renderBackfill(
+      client,
+      props({ sessionIds: ["s1", "s2"] }),
+    );
     await waitFor(() => expect(ensureSessionTag).toHaveBeenCalledTimes(2));
 
-    rerender({ sessionIds: ["s1", "s2", "s3"] });
+    rerender(props({ sessionIds: ["s1", "s2", "s3"] }));
 
     await waitFor(() => expect(ensureSessionTag).toHaveBeenCalledTimes(3));
     expect(ensureSessionTag).toHaveBeenLastCalledWith(
@@ -106,7 +119,7 @@ describe("useBackfillSessionTags", () => {
     const client = makeClient();
     const invalidate = vi.spyOn(client, "invalidateQueries");
 
-    renderBackfill(client, { sessionIds: ["s1"] });
+    renderBackfill(client, props());
 
     await waitFor(() => expect(ensureSessionTag).toHaveBeenCalledTimes(1));
     expect(invalidate).not.toHaveBeenCalled();
@@ -115,12 +128,43 @@ describe("useBackfillSessionTags", () => {
   it("does nothing without a base url or auth token", () => {
     const client = makeClient();
 
-    renderBackfill(client, {
-      sessionIds: ["s1"],
-      baseUrl: null,
-      authToken: undefined,
-    });
+    renderBackfill(client, props({ baseUrl: null, authToken: undefined }));
 
     expect(ensureSessionTag).not.toHaveBeenCalled();
+  });
+
+  it("starts once a token arrives", async () => {
+    vi.mocked(ensureSessionTag).mockResolvedValue(false);
+    const client = makeClient();
+    const sessionIds = ["s1"];
+
+    const { rerender } = renderBackfill(
+      client,
+      props({ sessionIds, authToken: undefined }),
+    );
+    await act(async () => {});
+    expect(ensureSessionTag).not.toHaveBeenCalled();
+
+    rerender(props({ sessionIds }));
+
+    await waitFor(() => expect(ensureSessionTag).toHaveBeenCalledTimes(1));
+    expect(ensureSessionTag).toHaveBeenCalledWith(
+      expect.objectContaining({ authToken: AUTH_TOKEN }),
+    );
+  });
+
+  it("does not start over when the token is refreshed", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(ensureSessionTag).mockRejectedValue(new Error("offline"));
+    const client = makeClient();
+    const sessionIds = ["s1"];
+
+    const { rerender } = renderBackfill(client, props({ sessionIds }));
+    await waitFor(() => expect(ensureSessionTag).toHaveBeenCalledTimes(1));
+
+    rerender(props({ sessionIds, authToken: "refreshed-jwt" }));
+    await act(async () => {});
+
+    expect(ensureSessionTag).toHaveBeenCalledTimes(1);
   });
 });

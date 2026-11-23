@@ -47,6 +47,7 @@ beforeEach(async () => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
   vi.useRealTimers();
   vi.restoreAllMocks();
 });
@@ -244,5 +245,41 @@ describe("identityToken", () => {
 
     await expect(service.identityToken(params)).rejects.toThrow("500");
     expect(console.warn).not.toHaveBeenCalled();
+  });
+
+  describe("for an embed url that names no backend instance", () => {
+    const unscoped = { ...params, instanceId: undefined };
+
+    it("presents the unsigned identity without asking the backend", async () => {
+      vi.stubEnv("DEV", false);
+
+      const { token, refreshAtMs } = await service.identityToken(unscoped);
+
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(readJWT(token)).toEqual({ email: "user@example.com" });
+      expect(refreshAtMs).toBeUndefined();
+      expect(console.warn).not.toHaveBeenCalled();
+    });
+
+    it("still mints an assertion in development", async () => {
+      vi.stubEnv("DEV", true);
+      fetchMock.mockResolvedValue(assertionResponse(60 * MINUTES));
+
+      await expect(service.identityToken(unscoped)).resolves.toMatchObject({
+        token: "assertion",
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(requestBody(fetchMock)).toEqual({});
+    });
+  });
+
+  it("mints an assertion for a proxied instance outside development", async () => {
+    vi.stubEnv("DEV", false);
+    fetchMock.mockResolvedValue(assertionResponse(60 * MINUTES));
+
+    await expect(service.identityToken(params)).resolves.toMatchObject({
+      token: "assertion",
+    });
+    expect(requestBody(fetchMock)).toEqual({ instance_id: "inst-42" });
   });
 });

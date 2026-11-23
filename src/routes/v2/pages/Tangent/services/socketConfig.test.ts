@@ -1,6 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { io } from "socket.io-client";
+import { describe, expect, it, vi } from "vitest";
 
-import { getTangentSocketConfig } from "./socketConfig";
+import { connectTangentSocket, getTangentSocketConfig } from "./socketConfig";
+
+vi.mock("socket.io-client", () => ({ io: vi.fn() }));
 
 describe("getTangentSocketConfig", () => {
   it("splits a mounted-prefix baseUrl into origin and prefixed socket path", () => {
@@ -26,5 +29,29 @@ describe("getTangentSocketConfig", () => {
       socketUrl: "https://oasis-staging.shopify.io",
       socketPath: "/tangent/socket.io",
     });
+  });
+});
+
+describe("connectTangentSocket", () => {
+  it("reads the token afresh on each connection attempt", () => {
+    const getAuthToken = vi
+      .fn<() => string | undefined>()
+      .mockReturnValueOnce(undefined)
+      .mockReturnValueOnce("assertion");
+    connectTangentSocket("http://tangent/prefix", getAuthToken);
+
+    const options = vi.mocked(io).mock.calls[0]?.[1];
+    if (typeof options?.auth !== "function") {
+      throw new Error("Expected the socket to take an auth callback");
+    }
+    const payloads: object[] = [];
+    options.auth((data) => payloads.push(data));
+    options.auth((data) => payloads.push(data));
+
+    expect(vi.mocked(io)).toHaveBeenCalledWith(
+      "http://tangent",
+      expect.objectContaining({ path: "/prefix/socket.io" }),
+    );
+    expect(payloads).toEqual([{}, { token: "assertion" }]);
   });
 });

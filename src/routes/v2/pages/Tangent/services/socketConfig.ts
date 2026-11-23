@@ -19,14 +19,21 @@ export function getTangentSocketConfig(baseUrl: string): TangentSocketConfig {
   };
 }
 
-/** A socket to a Tangent server, as this person when there's a token. */
+/**
+ * A socket to a Tangent server, as this person when there's a token. The
+ * token is read on every connection attempt, so a reconnect after a refresh
+ * presents the current one without the caller tearing the socket down.
+ */
 export function connectTangentSocket(
   baseUrl: string,
-  authToken: string | undefined,
+  getAuthToken: () => string | undefined,
 ): Socket {
   const { socketUrl, socketPath } = getTangentSocketConfig(baseUrl);
   return io(socketUrl, {
     path: socketPath,
-    auth: authToken ? { token: authToken } : {},
+    auth: (cb) => {
+      const token = getAuthToken();
+      cb(token ? { token } : {});
+    },
   });
 }

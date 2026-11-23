@@ -122,12 +122,26 @@ function unsignedIdentityToken(email: string): IdentityToken {
   return { token: createUnsignedJwt({ email }) };
 }
 
+function isUnproxiedInstance(instanceId: string | undefined): boolean {
+  return instanceId === undefined && !import.meta.env.DEV;
+}
+
+/**
+ * A signed assertion is scoped to the Tangent instance the backend proxies.
+ * An embed url that names no instance is some other origin, which must not
+ * receive an assertion minted for a backend instance; it gets the unsigned
+ * identity instead. In development the backend accepts an unscoped request,
+ * so a local Tangent is still handed a signed token.
+ */
 export async function identityToken({
   backendUrl,
   instanceId,
   email,
 }: IdentityTokenParams): Promise<IdentityToken> {
-  if (backendsWithoutAssertions.has(backendUrl)) {
+  if (
+    isUnproxiedInstance(instanceId) ||
+    backendsWithoutAssertions.has(backendUrl)
+  ) {
     return unsignedIdentityToken(email);
   }
   try {

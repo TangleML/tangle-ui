@@ -26,9 +26,15 @@ export function useBackfillSessionTags({
 }: BackfillSessionTagsParams): void {
   const queryClient = useQueryClient();
   const ensured = useRef(new Set<string>());
+  const authTokenRef = useRef(authToken);
+  const hasToken = authToken !== undefined;
 
   useEffect(() => {
-    if (!baseUrl || !authToken || sessionIds.length === 0) return;
+    authTokenRef.current = authToken;
+  }, [authToken]);
+
+  useEffect(() => {
+    if (!baseUrl || !hasToken || sessionIds.length === 0) return;
 
     let cancelled = false;
     const tag = projectSelector(projectId);
@@ -37,11 +43,13 @@ export function useBackfillSessionTags({
       let changed = false;
       for (const sessionId of sessionIds) {
         if (ensured.current.has(sessionId)) continue;
+        const currentToken = authTokenRef.current;
+        if (!currentToken) break;
         try {
           const updated = await ensureSessionTag({
             baseUrl,
             sessionId,
-            authToken,
+            authToken: currentToken,
             tag,
           });
           ensured.current.add(sessionId);
@@ -65,5 +73,5 @@ export function useBackfillSessionTags({
     return () => {
       cancelled = true;
     };
-  }, [projectId, baseUrl, authToken, sessionIds, queryClient]);
+  }, [projectId, baseUrl, hasToken, sessionIds, queryClient]);
 }
