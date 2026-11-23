@@ -119,7 +119,7 @@ export function FilePickerStatus({
         ref={elementRef}
         role="alert"
         className={cn(
-          "border border-red-200 bg-red-50 p-3 rounded-md dark:border-red-500/30 dark:bg-red-500/10",
+          "border border-red-200 bg-red-50 p-3 rounded-md dark:border-red-500/30 dark:bg-red-950",
           placementClass,
           className,
         )}
@@ -143,7 +143,7 @@ export function FilePickerStatus({
       role="status"
       aria-live="polite"
       className={cn(
-        "border border-green-200 bg-green-50 p-3 rounded-md dark:border-green-500/30 dark:bg-green-500/10",
+        "border border-green-200 bg-green-50 p-3 rounded-md dark:border-green-500/30 dark:bg-green-950",
         placementClass,
         className,
       )}

@@ -55,6 +55,10 @@ export function useFileDropHandler(spec: ComponentSpec | null) {
     try {
       // validateComponentDrop swallows parse errors, so parse first to surface the reason.
       componentSpecFromYaml(text);
+    } catch (error) {
+      return yamlErrorOutcome(error, "Failed to add component to canvas");
+    }
+    try {
       let validationErrors: string[] | undefined;
       const hydrated = await validateComponentDrop(
         { text },
@@ -82,7 +86,7 @@ export function useFileDropHandler(spec: ComponentSpec | null) {
       if (!result) {
         return {
           status: "error",
-          message: "The component was not added to your library.",
+          message: "Import cancelled",
         };
       }
       if (navigation.activeSpec !== spec) return PIPELINE_CHANGED_OUTCOME;

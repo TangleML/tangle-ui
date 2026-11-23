@@ -320,10 +320,120 @@ it("reports the YAML error of a dropped file without adding it", async () => {
   });
   expect(outcome).toMatchObject({
     status: "error",
-    message: expect.stringContaining("unexpected end of the stream"),
+    message: expect.stringMatching(
+      /^YAML syntax error: unexpected end of the stream/,
+    ),
     detail: expect.stringContaining("name: [unclosed"),
   });
   expect(mocks.addToLibrary).not.toHaveBeenCalled();
   expect(mocks.addTask).not.toHaveBeenCalled();
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+});
+
+async function dropComponentFile(text = componentText) {
+  const { result } = renderHook(() => useFileDropHandler(spec), {
+    wrapper: Wrapper,
+  });
+  return result.current({
+    file: new File([text], "component.yaml"),
+    text,
+    position: { x: 40, y: 60 },
+  });
+}
+
+it("reports a dropped file that is not a component spec without the YAML syntax prefix", async () => {
+  const outcome = await dropComponentFile("hello");
+  expect(outcome).toEqual({
+    status: "error",
+    message: "Invalid component specification format",
+  });
+});
+
+it("reports every validation error of a dropped file one per line", async () => {
+  validate.mockReturnValue({
+    valid: false,
+    errors: ["inputs[0].name: Required.", "outputs[1].type: Unknown type."],
+  });
+  const outcome = await dropComponentFile();
+  expect(outcome).toEqual({
+    status: "error",
+    message: "inputs[0].name: Required.\noutputs[1].type: Unknown type.",
+  });
+});
+
+it("reports a fallback message when validation fails without errors", async () => {
+  validate.mockReturnValue({ valid: false, errors: [] });
+  const outcome = await dropComponentFile();
+  expect(outcome).toEqual({
+    status: "error",
+    message:
+      "The component definition could not be loaded. Check its source and try again.",
+  });
+});
+
+it("reports a load failure when the validator throws", async () => {
+  validate.mockImplementation(() => {
+    throw new Error("Schema unavailable");
+  });
+  const outcome = await dropComponentFile();
+  expect(outcome).toEqual({
+    status: "error",
+    message:
+      "The component or its validation schema could not be loaded. Try dropping the component again.",
+  });
+});
+
+it("reports the error message when adding the dropped file to the library fails", async () => {
+  validate.mockReturnValue({ valid: true });
+  mocks.addToLibrary.mockRejectedValue(new Error("Library storage is full"));
+  const outcome = await dropComponentFile();
+  expect(outcome).toEqual({
+    status: "error",
+    message: "Library storage is full",
+  });
+});
+
+it("reports a cancelled import when the duplicate dialog is closed", async () => {
+  validate.mockReturnValue({ valid: true });
+  mocks.addToLibrary.mockResolvedValue(undefined);
+  const outcome = await dropComponentFile();
+  expect(outcome).toEqual({ status: "error", message: "Import cancelled" });
+});
+
+it("does not add a dropped file to the library if the active pipeline changes during validation", async () => {
+  validate.mockImplementation(() => {
+    navigation.activeSpec = new YamlDeserializer(
+      new IncrementingIdGenerator(),
+    ).deserialize({
+      name: "Other pipeline",
+      implementation: { graph: { tasks: {} } },
+    });
+    return { valid: true };
+  });
+  const outcome = await dropComponentFile();
+  expect(outcome).toEqual({
+    status: "error",
+    message: "The pipeline changed before the component was added.",
+  });
+  expect(mocks.addToLibrary).not.toHaveBeenCalled();
+  expect(mocks.addTask).not.toHaveBeenCalled();
+});
+
+it("does not add a dropped file if the active pipeline changes while it is added to the library", async () => {
+  validate.mockReturnValue({ valid: true });
+  mocks.addToLibrary.mockImplementation(async () => {
+    navigation.activeSpec = new YamlDeserializer(
+      new IncrementingIdGenerator(),
+    ).deserialize({
+      name: "Other pipeline",
+      implementation: { graph: { tasks: {} } },
+    });
+    return component;
+  });
+  const outcome = await dropComponentFile();
+  expect(outcome).toEqual({
+    status: "error",
+    message: "The pipeline changed before the component was added.",
+  });
+  expect(mocks.addTask).not.toHaveBeenCalled();
 });

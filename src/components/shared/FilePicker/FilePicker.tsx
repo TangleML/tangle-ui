@@ -22,10 +22,6 @@ interface FilePickerViewProps {
   clickZoneToBrowse?: boolean;
   disabled?: boolean;
   afterSuccess?: FilePickerAfterSuccess;
-  /**
-   * Governs the error box and the `keep-picker` success box. Under `replace-picker` the
-   * success box is always dismissible, since its ✕ is the only way back to the picker.
-   */
   statusDismissible?: boolean;
   errorTitle?: string;
   successTitle?: string;
@@ -123,6 +119,9 @@ function FilePickerView<M>({
       status={status}
       errorTitle={errorTitle}
       successTitle={successTitle}
+      // statusDismissible governs the error box and the `keep-picker` success box.
+      // Under `replace-picker` the success box is always dismissible, since its ✕
+      // is the only way back to the picker.
       dismissible={hidesSurface || statusDismissible}
       onDismiss={picker.dismissStatus}
     />

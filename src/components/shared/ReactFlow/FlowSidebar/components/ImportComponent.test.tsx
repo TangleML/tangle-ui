@@ -222,9 +222,7 @@ describe("<ImportComponent />", () => {
 
       const alert = await screen.findByRole("alert");
       expect(alert).toHaveTextContent("Import failed");
-      expect(alert).toHaveTextContent(
-        "The component was not added to your library.",
-      );
+      expect(alert).toHaveTextContent("Import cancelled");
       expect(track).not.toHaveBeenCalledWith(
         "pipeline_editor.add_component.import_completed",
         expect.anything(),
