@@ -180,7 +180,9 @@ describe("connectRemoteEnvWithRefresh", () => {
 
     await vi.waitFor(() => expect(onError).toHaveBeenCalledTimes(1));
     await vi.advanceTimersByTimeAsync(5_000);
-    await vi.waitFor(() => expect(fetchRemoteEnvToken).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() =>
+      expect(fetchRemoteEnvToken).toHaveBeenCalledTimes(2),
+    );
     expect(onError).toHaveBeenCalledTimes(1);
 
     await vi.advanceTimersByTimeAsync(10_000);
@@ -188,7 +190,9 @@ describe("connectRemoteEnvWithRefresh", () => {
     expect(onError).toHaveBeenCalledTimes(1);
 
     await vi.advanceTimersByTimeAsync(45_000);
-    await vi.waitFor(() => expect(fetchRemoteEnvToken).toHaveBeenCalledTimes(4));
+    await vi.waitFor(() =>
+      expect(fetchRemoteEnvToken).toHaveBeenCalledTimes(4),
+    );
     await vi.waitFor(() => expect(onError).toHaveBeenCalledTimes(2));
   });
 });
