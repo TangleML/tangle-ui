@@ -3,6 +3,11 @@ import type { InputSpec } from "./componentSpec";
 export const AGGREGATOR_INPUT_PREFIX = "agg_";
 export const AGGREGATOR_ADD_INPUT_HANDLE_ID = "__add_aggregator_input__";
 
+export const AGGREGATOR_INTERNAL_INPUTS: ReadonlySet<string> = new Set([
+  AGGREGATOR_ADD_INPUT_HANDLE_ID,
+  "output_type",
+]);
+
 export const getNextAggregatorInputName = (
   existingInputs: InputSpec[],
 ): string => {
