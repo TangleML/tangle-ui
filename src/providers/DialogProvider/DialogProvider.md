@@ -137,14 +137,15 @@ const { open, close, closeAll } = useDialog();
 
 Configuration object passed to `open()`.
 
-| Property              | Type                                     | Required | Default | Description                                        |
-| --------------------- | ---------------------------------------- | -------- | ------- | -------------------------------------------------- |
-| `component`           | `ComponentType<DialogProps<T, TProps>>`  | Yes      | —       | The React component to render inside the dialog    |
-| `props`               | `TProps`                                 | No       | —       | Extra props forwarded to the component             |
-| `routeKey`            | `string`                                 | No       | —       | Enables URL sync. Value appears as `?dialog=<key>` |
-| `size`                | `"sm" \| "md" \| "lg" \| "xl" \| "full"` | No       | `"md"`  | Controls dialog width                              |
-| `closeOnEsc`          | `boolean`                                | No       | `true`  | Whether pressing ESC closes the dialog             |
-| `closeOnOverlayClick` | `boolean`                                | No       | `true`  | Whether clicking outside closes the dialog         |
+| Property                   | Type                                     | Required | Default | Description                                                                      |
+| -------------------------- | ---------------------------------------- | -------- | ------- | -------------------------------------------------------------------------------- |
+| `component`                | `ComponentType<DialogProps<T, TProps>>`  | Yes      | —       | The React component to render inside the dialog                                  |
+| `props`                    | `TProps`                                 | No       | —       | Extra props forwarded to the component                                           |
+| `routeKey`                 | `string`                                 | No       | —       | Enables URL sync. Value appears as `?dialog=<key>`                               |
+| `clearSearchParamsOnClose` | `readonly string[]`                      | No       | —       | Search params the dialog writes while open; stripped from the URL when it closes |
+| `size`                     | `"sm" \| "md" \| "lg" \| "xl" \| "full"` | No       | `"md"`  | Controls dialog width                                                            |
+| `closeOnEsc`               | `boolean`                                | No       | `true`  | Whether pressing ESC closes the dialog                                           |
+| `closeOnOverlayClick`      | `boolean`                                | No       | `true`  | Whether clicking outside closes the dialog                                       |
 
 ### `DialogProps<T, TProps>`
 
@@ -426,7 +427,8 @@ sequenceDiagram
 1. `routeKey` values should be **unique per dialog type** within a page. They appear in the URL as `?dialog=<routeKey>`.
 2. Dialogs without `routeKey` are invisible to the URL — the browser back button will not close them.
 3. URL params are cleaned up automatically when dialogs close. Do not manually manage `dialog` or `dialogId` search params.
-4. Use `disableRouterSync` on `DialogProvider` in tests to avoid router-related side effects.
+4. A dialog whose content writes its own search params (a filter bar, a tab selector) should list them in `clearSearchParamsOnClose` so they do not linger in the URL after it closes. Content that writes search params must merge into the existing ones; replacing them drops `dialog`/`dialogId` and the router reads that as a back navigation and cancels the dialog.
+5. Use `disableRouterSync` on `DialogProvider` in tests to avoid router-related side effects.
 
 ### Stack Behavior
 

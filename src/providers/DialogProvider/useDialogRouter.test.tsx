@@ -146,6 +146,43 @@ describe("useDialogRouter", () => {
     });
   });
 
+  it("strips the search params released by a dialog that left the stack", () => {
+    const dialog: DialogInstance = {
+      id: "dialog1",
+      component: vi.fn() as any,
+      resolve: vi.fn(),
+      reject: vi.fn(),
+      routeKey: "test",
+      clearSearchParamsOnClose: ["filter"],
+    };
+
+    mockSearchParams = {
+      dialog: "test",
+      dialogId: "dialog1",
+      filter: { created_by: "me" },
+      project: "p1",
+    };
+
+    const { rerender } = renderHook(
+      ({ stack }) =>
+        useDialogRouter({
+          stack,
+          cancel: mockCancel,
+          pendingDialogIds: emptyPendingRef,
+          closingDialogIds: emptyClosingRef,
+        }),
+      {
+        initialProps: { stack: [dialog] },
+      },
+    );
+
+    rerender({ stack: [] });
+
+    expect(mockNavigate).toHaveBeenCalledWith({
+      search: { project: "p1" },
+    });
+  });
+
   it("should not navigate when stack grows", () => {
     const initialStack: DialogInstance[] = [
       {
