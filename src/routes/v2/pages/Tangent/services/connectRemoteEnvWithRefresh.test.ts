@@ -154,4 +154,45 @@ describe("connectRemoteEnvWithRefresh", () => {
 
     expect(fetchRemoteEnvToken).toHaveBeenCalledOnce();
   });
+
+  it("reports reconnect failures once per outage, then reports again after recovery", async () => {
+    const host = makeHost();
+    vi.mocked(fetchRemoteEnvToken)
+      .mockRejectedValueOnce(new Error("Failed to fetch"))
+      .mockRejectedValueOnce(new Error("Failed to fetch"))
+      .mockResolvedValueOnce({
+        token: "token",
+        environmentId: "env-1",
+        expiresAtMs: Date.now() + 90_000,
+      })
+      .mockRejectedValueOnce(new Error("Failed to fetch"));
+    const onError = vi.fn();
+    const onConnected = vi.fn();
+
+    connectRemoteEnvWithRefresh({
+      host,
+      baseUrl: "https://tangent.example",
+      sessionId: "session-1",
+      getAuthToken: () => "auth",
+      onConnected,
+      onError,
+    });
+
+    await vi.waitFor(() => expect(onError).toHaveBeenCalledTimes(1));
+    await vi.advanceTimersByTimeAsync(5_000);
+    await vi.waitFor(() =>
+      expect(fetchRemoteEnvToken).toHaveBeenCalledTimes(2),
+    );
+    expect(onError).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(10_000);
+    await vi.waitFor(() => expect(onConnected).toHaveBeenCalledWith("env-1"));
+    expect(onError).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(45_000);
+    await vi.waitFor(() =>
+      expect(fetchRemoteEnvToken).toHaveBeenCalledTimes(4),
+    );
+    await vi.waitFor(() => expect(onError).toHaveBeenCalledTimes(2));
+  });
 });
