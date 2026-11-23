@@ -99,9 +99,7 @@ export async function readCheckedText(
   if (checkError) throw checkError;
 
   try {
-    return opts.requireText
-      ? await readTextFromFile(file)
-      : await file.text();
+    return opts.requireText ? await readTextFromFile(file) : await file.text();
   } catch (error) {
     if (error instanceof NotTextFileError) {
       throw fileCheckError("not-text", file, opts);
