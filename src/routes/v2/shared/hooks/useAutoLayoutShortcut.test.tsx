@@ -18,6 +18,8 @@ import { useAutoLayoutShortcut } from "./useAutoLayoutShortcut";
 
 const SIMPLIFIED_ZOOM = 0.25;
 const DETAILED_ZOOM = 1;
+const MIN_ZOOM = 0.1;
+const PLACEHOLDER_SCALE_AT_MIN_ZOOM = 3;
 
 const wideComponent = (inputCount: number) => ({
   spec: {
@@ -84,15 +86,24 @@ const placeholderNode = (id: string, type: string, size: NodeSize): Node => ({
   measured: size,
 });
 
-const nodes: Node[] = [
+const placeholderNodes = (scale: number): Node[] => [
   ...spec.tasks.map((task) =>
-    placeholderNode(task.$id, "task", { width: 240, height: 96 }),
+    placeholderNode(task.$id, "task", {
+      width: 240 * scale,
+      height: 96 * scale,
+    }),
   ),
   ...spec.inputs.map((input) =>
-    placeholderNode(input.$id, "input", { width: 220, height: 80 }),
+    placeholderNode(input.$id, "input", {
+      width: 220 * scale,
+      height: 80 * scale,
+    }),
   ),
   ...spec.outputs.map((output) =>
-    placeholderNode(output.$id, "output", { width: 220, height: 80 }),
+    placeholderNode(output.$id, "output", {
+      width: 220 * scale,
+      height: 80 * scale,
+    }),
   ),
 ];
 
@@ -103,6 +114,7 @@ const edges: Edge[] = [...spec.bindings].map((binding) => ({
 }));
 
 let zoom = SIMPLIFIED_ZOOM;
+let nodes = placeholderNodes(1);
 const applyLayout = vi.fn();
 const editor = new EditorStore();
 const keyboard = new KeyboardStore();
@@ -122,6 +134,7 @@ vi.mock("@/routes/v2/shared/store/SharedStoreContext", () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  nodes = placeholderNodes(1);
 });
 afterEach(cleanup);
 
@@ -152,6 +165,20 @@ it("spaces zoomed-out nodes for their full cards, not their placeholders", () =>
 
   expect(
     overlappingPairs(laidOut, (node) => estimateFullCardSize(node, spec)!),
+  ).toEqual([]);
+});
+
+it("spaces nodes for their placeholders when those outgrow the full cards", () => {
+  zoom = MIN_ZOOM;
+  nodes = placeholderNodes(PLACEHOLDER_SCALE_AT_MIN_ZOOM);
+
+  const laidOut = layOutCentered();
+
+  expect(
+    overlappingPairs(laidOut, (node) => estimateFullCardSize(node, spec)!),
+  ).toEqual([]);
+  expect(
+    overlappingPairs(laidOut, (node) => node.measured as NodeSize),
   ).toEqual([]);
 });
 

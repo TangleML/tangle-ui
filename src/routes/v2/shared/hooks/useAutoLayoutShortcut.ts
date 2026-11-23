@@ -6,6 +6,7 @@ import {
   autoLayoutNodes,
   getMeasuredNodeSize,
   type LayoutAlgorithm,
+  type NodeSize,
   type NodeSizeResolver,
 } from "@/components/shared/ReactFlow/FlowCanvas/utils/autolayout";
 import type { ComponentSpec } from "@/models/componentSpec";
@@ -14,13 +15,20 @@ import { estimateFullCardSize } from "@/routes/v2/shared/nodes/estimateFullCardS
 import { CMD_OR_CTRL, SHIFT } from "@/routes/v2/shared/shortcuts/keys";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
+const largerOf = (a: NodeSize, b: NodeSize): NodeSize => ({
+  width: Math.max(a.width, b.width),
+  height: Math.max(a.height, b.height),
+});
+
 /**
  * Registers the Cmd+Shift+L auto-layout shortcut.
  * Computes dagre layout and delegates position application to `applyLayout`.
  * Must be called inside a ReactFlowProvider.
  *
  * Zoomed out, nodes render as placeholders whose measured size says nothing
- * about the full card, so layout sizes the nodes from the spec instead.
+ * about the full card, and which grow past it as zoom approaches the minimum.
+ * Layout reserves room for whichever is larger in each dimension: the
+ * placeholder or the full card estimated from the spec.
  */
 export function useAutoLayoutShortcut(
   applyLayout: (layoutedNodes: Node[]) => void,
@@ -32,8 +40,11 @@ export function useAutoLayoutShortcut(
   useEffect(() => {
     const resolveNodeSize = (): NodeSizeResolver => {
       if (!spec || isDetailedZoom(getZoom())) return getMeasuredNodeSize;
-      return (node) =>
-        estimateFullCardSize(node, spec) ?? getMeasuredNodeSize(node);
+      return (node) => {
+        const measured = getMeasuredNodeSize(node);
+        const estimate = estimateFullCardSize(node, spec);
+        return estimate ? largerOf(estimate, measured) : measured;
+      };
     };
 
     const handleAutoLayout = (
