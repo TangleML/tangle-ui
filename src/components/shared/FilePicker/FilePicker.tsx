@@ -52,11 +52,7 @@ function defaultHint(accept: Accept, maxBytes: number | null) {
 export function FilePicker<M = unknown>(props: FilePickerProps<M>) {
   if (props.picker) {
     return (
-      <FilePickerView
-        {...props}
-        picker={props.picker}
-        ownsDropTarget={false}
-      />
+      <FilePickerView {...props} picker={props.picker} ownsDropTarget={false} />
     );
   }
   return <OwnFilePicker {...props} />;

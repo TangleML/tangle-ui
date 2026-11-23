@@ -129,9 +129,7 @@ describe("<ImportComponent />", () => {
       expect(
         await screen.findByText("my-component added to your library"),
       ).toBeInTheDocument();
-      expect(screen.getByRole("status")).toHaveTextContent(
-        "Import successful",
-      );
+      expect(screen.getByRole("status")).toHaveTextContent("Import successful");
       expect(hydrateComponentReference).toHaveBeenCalledWith({
         text: componentYaml,
         url: undefined,
