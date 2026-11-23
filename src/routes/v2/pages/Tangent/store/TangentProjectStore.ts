@@ -23,6 +23,10 @@ import { resolveWorkareaTarget } from "@/routes/v2/pages/Tangent/services/resolv
 import { isTangentSessionUrl } from "@/routes/v2/pages/Tangent/services/sessionFiles";
 import { sessionMemorySeed } from "@/routes/v2/pages/Tangent/services/sessionMemory";
 import { rootConfigSeed } from "@/routes/v2/pages/Tangent/services/sessionRunConfig";
+import {
+  describeSessionStartError,
+  isMissingBundleError,
+} from "@/routes/v2/pages/Tangent/services/sessionStartError";
 import type {
   OpenTabs,
   ResolvedWorkareaView,
@@ -123,6 +127,7 @@ export class TangentProjectStore {
   @observable accessor selectedSessionId: string | undefined = undefined;
   @observable accessor defaultSessionId: string | undefined = undefined;
   @observable accessor isStartingSession = false;
+  @observable accessor sessionStartError: string | undefined = undefined;
   /** Someone asked for the cursor in the project card's search. A card
    * that isn't on screen yet takes it as soon as it shows. */
   @observable accessor searchFocusRequested = false;
@@ -239,6 +244,7 @@ export class TangentProjectStore {
     const previous = this.activeSessionId;
     runInAction(() => {
       this.isStartingSession = true;
+      this.sessionStartError = undefined;
     });
     try {
       // An empty prompt makes the embed skip the opening turn, so the human
@@ -275,7 +281,7 @@ export class TangentProjectStore {
       const { sessionId } = await io
         .newSession(prompt, TANGENT_BUNDLE_ID, sessionOptions(sharedMemory))
         .catch((error: unknown) => {
-          if (!sharedMemory) throw error;
+          if (!sharedMemory || isMissingBundleError(error)) throw error;
           // The stored folder id may be unknown to this Tangent server (base
           // URL changed, data reset, bad PATCH). Re-reading it would fail the
           // same way on every start, so the session goes without the folder.
@@ -300,7 +306,11 @@ export class TangentProjectStore {
       }
       return true;
     } catch (error) {
-      io.notify(getErrorMessage(error), "error");
+      const message = describeSessionStartError(error);
+      runInAction(() => {
+        this.sessionStartError = message;
+      });
+      io.notify(message, "error");
       return false;
     } finally {
       runInAction(() => {
