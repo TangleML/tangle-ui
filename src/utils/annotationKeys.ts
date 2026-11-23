@@ -16,6 +16,7 @@ export const EDITOR_POSITION_ANNOTATION = "editor.position";
 export const EDITOR_COLLAPSED_ANNOTATION = "editor.collapsed";
 export const EDITOR_FLOW_DIRECTION_ANNOTATION = "editor.flow-direction";
 export const FLEX_NODES_ANNOTATION = "flex-nodes";
+export const INPUT_CLUSTERS_ANNOTATION = "input-clusters";
 export const ZINDEX_ANNOTATION = "zIndex";
 export const SDK_ANNOTATION = "sdk";
 export const TASK_COLOR_ANNOTATION = "tangleml.com/editor/task-color";

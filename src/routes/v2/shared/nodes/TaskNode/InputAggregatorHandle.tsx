@@ -1,6 +1,7 @@
 import { Handle, Position } from "@xyflow/react";
 
 import { InlineStack } from "@/components/ui/layout";
+import { PORT_ROW_HEIGHT } from "@/routes/v2/shared/nodes/nodeLayout";
 import { AGGREGATOR_ADD_INPUT_HANDLE_ID } from "@/utils/aggregatorInputs";
 
 /**
@@ -15,10 +16,11 @@ export function InputAggregatorHandle({
 }) {
   return (
     <div
-      className="relative w-full h-fit"
+      className="relative w-full"
+      style={{ height: PORT_ROW_HEIGHT }}
       data-testid={`input-connection-${AGGREGATOR_ADD_INPUT_HANDLE_ID}`}
     >
-      <div className="absolute -translate-x-6 flex items-center h-3 w-3">
+      <div className="absolute top-1/2 -translate-x-6 -translate-y-1/2 flex items-center h-3 w-3">
         <Handle
           type="target"
           id={AGGREGATOR_ADD_INPUT_HANDLE_ID}
@@ -30,7 +32,7 @@ export function InputAggregatorHandle({
         />
       </div>
       <InlineStack blockAlign="center" className="rounded-md relative">
-        <div className="text-xs text-blue-600! rounded-md px-2 py-1 bg-blue-50 border border-blue-200 border-dashed dark:text-blue-300! dark:bg-blue-500/15 dark:border-blue-500/40">
+        <div className="text-xs text-blue-600! rounded-md px-2 py-0.5 bg-blue-50 border border-blue-200 border-dashed dark:text-blue-300! dark:bg-blue-500/15 dark:border-blue-500/40">
           + Add Input
         </div>
       </InlineStack>

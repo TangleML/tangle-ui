@@ -42,6 +42,7 @@ export function buildPreviewTaskNodeViewProps(
     })),
     connectedInputNames: new Set<string>(),
     connectedOutputNames: new Set<string>(),
+    graphInputBindings: {},
     annotations: [],
     taskColor: undefined,
     cacheDisabled: false,

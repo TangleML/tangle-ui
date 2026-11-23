@@ -93,6 +93,13 @@ export interface ConduitNodeData extends Record<string, unknown> {
 
 export interface ConduitEdgeData extends Record<string, unknown> {
   guidelines: GuidelineInfo[];
+  /**
+   * Precomputed lane-router waypoints (source port -> ... -> target port) for
+   * default edges. When present, `AvoidNodesEdge` renders this polyline
+   * directly, stitching the live handle coordinates onto the ends. See
+   * `conduitLanes.ts`.
+   */
+  routePoints?: XYPosition[];
   conduitColor?: string;
   isInAssignmentMode?: boolean;
   isAssignedToActiveConduit?: boolean;
@@ -104,6 +111,12 @@ export interface GuidelineInfo {
   coordinate: number;
   edgeIndex: number;
   edgeTotal: number;
+  /**
+   * When set, the bundle fans one direction (away from the hugged node)
+   * instead of centering symmetrically. Used by derived virtual conduits so
+   * edges never bend back under their source/target node.
+   */
+  offsetDirection?: -1 | 1;
 }
 
 type DropHandler = (

@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Paragraph } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
+import { FIRST_PORT_ROW_CENTER } from "@/routes/v2/shared/nodes/nodeLayout";
 
 import type { IONodeViewProps } from "./IONode";
 
@@ -37,7 +38,7 @@ export function IONodeCard({
   return (
     <Card
       className={cn(
-        "border-2 max-w-60 p-0 cursor-pointer transition-all",
+        "border-2 w-60 p-0 cursor-pointer transition-all",
         bgColor,
         borderColor,
       )}
@@ -55,7 +56,7 @@ export function IONodeCard({
           </Paragraph>
         )}
       </CardHeader>
-      <CardContent className="py-2 px-4 max-w-60">
+      <CardContent className="py-2 px-4 w-full">
         <BlockStack gap="2">
           <Paragraph
             size="xs"
@@ -93,12 +94,15 @@ export function IONodeCard({
           isConnectableStart={isConnectable}
           isConnectableEnd={isConnectable}
           onClick={onHandleClick}
+          style={{
+            top: FIRST_PORT_ROW_CENTER,
+            transform: `translate(${isInput ? "6px" : "-6px"}, -50%)`,
+          }}
           className={cn(
             // Clickable when read-only; a connectable handle keeps React Flow's
             // pointer rule so a drag passes through handles it can't end on.
             !isConnectable && "pointer-events-auto!",
-            "w-3! h-3! border-0! transform-none! bg-gray-500!",
-            isInput ? "translate-x-1.5" : "-translate-x-1.5",
+            "w-3! h-3! border-0! bg-gray-500!",
           )}
         />
       </CardContent>

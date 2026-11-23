@@ -23,6 +23,11 @@ const edgeConduitSchema = z.object({
   edgeIds: z.array(z.string()),
 });
 
+const inputClusterMetaSchema = z.object({
+  id: z.string(),
+  position: xyPositionSchema,
+});
+
 const flexNodeDataSchema: z.ZodType<FlexNodeData> =
   z.custom<FlexNodeData>(isFlexNodeData);
 
@@ -30,12 +35,14 @@ const flexNodeDataSchema: z.ZodType<FlexNodeData> =
 
 export type GuidelineOrientation = "horizontal" | "vertical";
 export type EdgeConduit = z.infer<typeof edgeConduitSchema>;
+export type InputClusterMeta = z.infer<typeof inputClusterMetaSchema>;
 
 interface AnnotationTypeMap {
   "editor.position": XYPosition;
   "tangleml.com/editor/task-color": string;
   "tangleml.com/editor/edge-conduits": EdgeConduit[];
   "flex-nodes": FlexNodeData[];
+  "input-clusters": InputClusterMeta[];
   notes: string;
   tags: string[];
   "run-name-template": string;
@@ -106,6 +113,7 @@ const codecs = {
   },
   "tangleml.com/editor/edge-conduits": jsonArrayCodec(edgeConduitSchema),
   "flex-nodes": jsonArrayCodec(flexNodeDataSchema),
+  "input-clusters": jsonArrayCodec(inputClusterMetaSchema),
   notes: {
     serialize: (value: string) => value,
     deserialize: (raw: unknown) => (typeof raw === "string" ? raw : ""),
