@@ -186,4 +186,44 @@ describe("ImportPipeline file import", () => {
     expect(screen.getByText("Drop a file here, or")).toBeInTheDocument();
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
+
+  it("keeps the dialog open and the file tab selected while the import is pending", async () => {
+    let resolveImport!: (value: unknown) => void;
+    state.importPipelineFromYaml.mockReturnValue(
+      new Promise((resolve) => {
+        resolveImport = resolve;
+      }),
+    );
+    render(<ImportPipeline />);
+    openDialog();
+    pick(yamlFile());
+    await waitFor(() =>
+      expect(state.importPipelineFromYaml).toHaveBeenCalled(),
+    );
+
+    fireEvent.keyDown(document.activeElement ?? document.body, {
+      key: "Escape",
+    });
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Paste YAML" }));
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(
+      screen.getByRole("tab", { name: "Import from File" }),
+    ).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByText("Reading pipeline.yaml…")).toBeInTheDocument();
+
+    resolveImport({
+      name: "My pipeline",
+      overwritten: false,
+      successful: true,
+    });
+    await screen.findByRole("status");
+
+    fireEvent.keyDown(document.activeElement ?? document.body, {
+      key: "Escape",
+    });
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+  });
 });

@@ -176,6 +176,7 @@ const ImportPipeline = ({
   };
 
   const handleOpenChange = (open: boolean) => {
+    if (!open && isImporting) return;
     setIsOpen(open);
     setError(null);
     setSuccessMessage(null);
@@ -209,7 +210,9 @@ const ImportPipeline = ({
             <Tabs defaultValue="file" className="w-full gap-4">
               <TabsList>
                 <TabsTrigger value="file">Import from File</TabsTrigger>
-                <TabsTrigger value="paste">Paste YAML</TabsTrigger>
+                <TabsTrigger value="paste" disabled={isImporting}>
+                  Paste YAML
+                </TabsTrigger>
               </TabsList>
               <TabsContent value="file">
                 <FilePicker
