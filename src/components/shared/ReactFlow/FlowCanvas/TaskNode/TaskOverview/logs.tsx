@@ -142,7 +142,12 @@ const Logs = ({
   if (error) {
     const backendStatusString = getBackendStatusString(configured, available);
     return (
-      <InfoBox title="Error loading logs" variant="error" width="fit">
+      <InfoBox
+        title="Error loading logs"
+        variant="error"
+        width="fit"
+        className="select-text"
+      >
         <div className="mb-2">{error.message}</div>
         <div className="text-muted-foreground italic">
           {backendStatusString}

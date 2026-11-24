@@ -1,5 +1,6 @@
 import { InfoBox } from "@/components/shared/InfoBox";
 import { UntrustedMarkdown } from "@/components/shared/Markdown/Markdown";
+import { cn } from "@/lib/utils";
 
 import { getSystemErrorSummary } from "./systemErrorSummary";
 
@@ -21,7 +22,7 @@ export const SystemErrorSection = ({
       title="System error"
       variant="error"
       width="full"
-      className={className}
+      className={cn("select-text", className)}
     >
       {/* Markdown for the autolinking: a message that names a URL to visit is
           only actionable if it can be clicked. */}
