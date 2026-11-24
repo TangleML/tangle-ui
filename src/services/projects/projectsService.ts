@@ -20,8 +20,10 @@ import type {
 
 export async function listProjects(
   params: ListProjectsParams = {},
+  backendUrl?: string,
 ): Promise<ProjectPage> {
   const result = await listProjectsApiProjectsGet({
+    ...(backendUrl && { baseUrl: backendUrl }),
     query: {
       workspace_id: params.workspaceId,
       created_by: params.createdBy,

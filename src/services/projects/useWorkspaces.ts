@@ -7,11 +7,11 @@ import { WorkspacesQueryKeys } from "./types";
 import { getWorkspace, listWorkspaces } from "./workspacesService";
 
 export function useWorkspaces() {
-  const { configured, available } = useBackend();
+  const { backendUrl, configured, available } = useBackend();
 
   return useQuery({
-    queryKey: WorkspacesQueryKeys.All(),
-    queryFn: listWorkspaces,
+    queryKey: [...WorkspacesQueryKeys.All(), "list", backendUrl],
+    queryFn: () => listWorkspaces(backendUrl),
     enabled: configured && available,
     ...projectQueryDefaults,
   });

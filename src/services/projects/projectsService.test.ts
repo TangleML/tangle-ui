@@ -71,8 +71,12 @@ describe("workspacesService", () => {
       createMockApiResponse({ workspaces: [workspaceDto], total_count: 1 }),
     );
 
-    const result = await listWorkspaces();
+    const backendUrl = "https://backend.example";
+    const result = await listWorkspaces(backendUrl);
 
+    expect(apiSdk.listWorkspacesApiWorkspacesGet).toHaveBeenCalledWith({
+      baseUrl: backendUrl,
+    });
     expect(result).toHaveLength(1);
     expect(result[0]).toEqual({
       id: "w1",
@@ -119,9 +123,14 @@ describe("projectsService", () => {
       }),
     );
 
-    const page = await listProjects({ workspaceId: "w1", pageSize: 20 });
+    const backendUrl = "https://backend.example";
+    const page = await listProjects(
+      { workspaceId: "w1", pageSize: 20 },
+      backendUrl,
+    );
 
     expect(apiSdk.listProjectsApiProjectsGet).toHaveBeenCalledWith({
+      baseUrl: backendUrl,
       query: {
         workspace_id: "w1",
         created_by: undefined,

@@ -1,32 +1,27 @@
 import { WorkspaceNotice } from "@/components/Project/WorkspaceNotice";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { Button } from "@/components/ui/button";
-import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { Icon } from "@/components/ui/icon";
+import { InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
-import { Heading, Text } from "@/components/ui/typography";
+import { Heading } from "@/components/ui/typography";
 import { useBackend } from "@/providers/BackendProvider";
 import { activeWorkspaces } from "@/services/projects/defaultWorkspace";
-import { usePinnedProjects } from "@/services/projects/usePinnedProjects";
 import { useWorkspaces } from "@/services/projects/useWorkspaces";
 
 import { AllProjectsTable } from "./AllProjectsTable";
 import { CreateProjectDialog } from "./CreateProjectDialog";
-import { NewProjectCard } from "./NewProjectCard";
-import { ProjectCard } from "./ProjectCard";
-import { PROJECT_GRID } from "./projectGrid";
-import { useMyProjects } from "./useMyProjects";
-
-const LoadingProjects = () => (
-  <InlineStack gap="2" blockAlign="center">
-    <Spinner /> Loading...
-  </InlineStack>
-);
 
 export function ProjectsSection() {
   const { configured, available, ready, backendUrl } = useBackend();
+  const { data: workspaces, error: workspaceError } = useWorkspaces();
 
   if (!ready) {
-    return <LoadingProjects />;
+    return (
+      <InlineStack gap="2" blockAlign="center">
+        <Spinner /> Loading...
+      </InlineStack>
+    );
   }
 
   if (!configured) {
@@ -46,93 +41,31 @@ export function ProjectsSection() {
   }
 
   return (
-    <BlockStack gap="6">
-      <section aria-labelledby="my-projects" className="w-full space-y-4">
-        <Heading level={2} id="my-projects">
-          My projects
-        </Heading>
-        <ProjectsGrid />
-      </section>
-      <section
-        aria-labelledby="all-projects"
-        className="min-w-0 w-full space-y-4"
-      >
+    <section
+      aria-labelledby="all-projects"
+      className="min-w-0 w-full space-y-4"
+    >
+      <InlineStack gap="3" align="space-between" blockAlign="center">
         <Heading level={2} id="all-projects">
           All projects
         </Heading>
-        <AllProjectsTable key={backendUrl} />
-      </section>
-    </BlockStack>
-  );
-}
-
-function ProjectsGrid() {
-  const {
-    projects: allProjects,
-    createdBy,
-    totalCount,
-    isPending,
-    error,
-    hasMore,
-    isLoadingMore,
-    loadMore,
-  } = useMyProjects();
-  const { data: workspaces } = useWorkspaces();
-  const { projects: pinned } = usePinnedProjects();
-
-  // Pinned projects lead the grid, so a pinned project of the caller's own is
-  // dropped from the tail to move rather than appear twice.
-  const pinnedIds = new Set(pinned.map((project) => project.id));
-  const rest = allProjects.filter((project) => !pinnedIds.has(project.id));
-  const shown = pinned.length + rest.length;
-
-  // By authorship rather than by what has been paged in: the caller's own
-  // pinned project is inside `totalCount` whether or not its page is fetched.
-  // Without a resolved user the list is everyone's, pins included.
-  const sharedPins = createdBy
-    ? pinned.filter((project) => project.createdBy !== createdBy).length
-    : 0;
-  const available = totalCount + sharedPins;
-
-  if (isPending) {
-    return <LoadingProjects />;
-  }
-
-  if (error) {
-    return (
-      <InfoBox title="Error loading projects" variant="error">
-        {error.message}
-      </InfoBox>
-    );
-  }
-
-  return (
-    <BlockStack gap="4">
+        {workspaces &&
+          !workspaceError &&
+          activeWorkspaces(workspaces).length > 0 && (
+            <CreateProjectDialog
+              key={backendUrl}
+              workspaces={workspaces}
+              trigger={
+                <Button type="button" size="sm">
+                  <Icon name="FolderPlus" size="sm" />
+                  New project
+                </Button>
+              }
+            />
+          )}
+      </InlineStack>
       <WorkspaceNotice />
-      <div className={PROJECT_GRID}>
-        {workspaces && activeWorkspaces(workspaces).length > 0 && (
-          <CreateProjectDialog
-            workspaces={workspaces}
-            trigger={<NewProjectCard />}
-          />
-        )}
-        {pinned.map((project) => (
-          <ProjectCard key={project.id} project={project} />
-        ))}
-        {rest.map((project) => (
-          <ProjectCard key={project.id} project={project} />
-        ))}
-      </div>
-      {hasMore && (
-        <InlineStack gap="3" blockAlign="center">
-          <Button variant="outline" disabled={isLoadingMore} onClick={loadMore}>
-            {isLoadingMore ? "Loading..." : "Load more projects"}
-          </Button>
-          <Text size="sm" tone="subdued">
-            {`Showing ${shown} of ${available}.`}
-          </Text>
-        </InlineStack>
-      )}
-    </BlockStack>
+      <AllProjectsTable key={backendUrl} />
+    </section>
   );
 }

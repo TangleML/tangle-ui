@@ -7,8 +7,8 @@ import type {
   JWTPayload,
 } from "@/components/shared/Authentication/types";
 import { HOURS } from "@/components/shared/ComponentEditor/constants";
+import { userQueryOptions } from "@/hooks/useUserDetails";
 import { useBackend } from "@/providers/BackendProvider";
-import { getUserDetails } from "@/utils/user";
 
 import { HUGGING_FACE_DEFAULT_JWT } from "./constants";
 
@@ -75,7 +75,7 @@ export function useHuggingFaceAuthPopup({
 
   const pollAuthorizationInfo = useEffectEvent(async () => {
     return queryClient
-      .fetchQuery({ queryKey: ["user"], queryFn: getUserDetails, staleTime: 0 })
+      .fetchQuery({ ...userQueryOptions, staleTime: 0 })
       .then((user) => {
         if (user && !!user.id && user.permissions.includes("write")) {
           onSuccess({

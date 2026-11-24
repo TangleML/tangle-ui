@@ -1,8 +1,3 @@
-// Written out rather than composed: Tailwind only generates an arbitrary value
-// it can see whole in the source.
-export const PROJECT_GRID =
-  "grid w-full grid-cols-[repeat(auto-fill,minmax(13rem,15rem))] gap-4";
-
 /**
  * One row, whatever the width. Laying out by column means a card that does not
  * fit has nowhere to wrap to, so the row is cut off rather than spilling into a

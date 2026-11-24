@@ -35,6 +35,7 @@ import { removeRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import { ProjectsApiError } from "./errors";
 import * as projectsService from "./projectsService";
 import type { Project, ProjectPage, Workspace } from "./types";
+import { useProjectAuthor } from "./useProjectAuthor";
 import {
   useCreateProject,
   useDeleteProject,
@@ -117,6 +118,25 @@ describe("workspace query hooks", () => {
     expect(result.current.data).toEqual([workspace]);
   });
 
+  it("requests the new backend's workspaces after a switch", async () => {
+    const nextWorkspace = { ...workspace, id: "w2", name: "Design" };
+    vi.mocked(workspacesService.listWorkspaces)
+      .mockResolvedValueOnce([workspace])
+      .mockResolvedValueOnce([nextWorkspace]);
+    const { result, rerender } = renderHook(() => useWorkspaces(), {
+      wrapper: wrapperFor(makeClient()),
+    });
+    await waitFor(() => expect(result.current.data).toEqual([workspace]));
+
+    backend = { ...defaultBackend, backendUrl: "https://second.example" };
+    rerender();
+
+    await waitFor(() => expect(result.current.data).toEqual([nextWorkspace]));
+    expect(workspacesService.listWorkspaces).toHaveBeenLastCalledWith(
+      backend.backendUrl,
+    );
+  });
+
   it("useWorkspace is disabled without an id", () => {
     const { result } = renderHook(() => useWorkspace(undefined), {
       wrapper: wrapperFor(makeClient()),
@@ -149,6 +169,31 @@ describe("workspace query hooks", () => {
 });
 
 describe("project query hooks", () => {
+  it("resolves the current creator on each selected backend", async ({
+    onTestFinished,
+  }) => {
+    const fetch = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(Response.json({ id: "alice", permissions: [] }))
+      .mockResolvedValueOnce(Response.json({ id: "bob", permissions: [] }));
+    onTestFinished(() => fetch.mockRestore());
+
+    const { result, rerender } = renderHook(() => useProjectAuthor(), {
+      wrapper: wrapperFor(makeClient()),
+    });
+    await waitFor(() => expect(result.current.createdBy).toBe("alice"));
+
+    backend = { ...defaultBackend, backendUrl: "https://second.example" };
+    rerender();
+    expect(result.current.createdBy).toBeUndefined();
+    await waitFor(() => expect(result.current.createdBy).toBe("bob"));
+    const urls = fetch.mock.calls.map(([request]) => (request as Request).url);
+    expect(urls).toEqual([
+      `${defaultBackend.backendUrl}/api/users/me`,
+      `${backend.backendUrl}/api/users/me`,
+    ]);
+  });
+
   it("useProjects returns a page", async () => {
     vi.mocked(projectsService.listProjects).mockResolvedValue(projectPage);
 
@@ -157,9 +202,10 @@ describe("project query hooks", () => {
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(projectsService.listProjects).toHaveBeenCalledWith({
-      workspaceId: "w1",
-    });
+    expect(projectsService.listProjects).toHaveBeenCalledWith(
+      { workspaceId: "w1" },
+      backend.backendUrl,
+    );
     expect(result.current.data).toEqual(projectPage);
   });
 
@@ -176,6 +222,10 @@ describe("project query hooks", () => {
     backend = { ...defaultBackend, backendUrl: "https://second.example" };
     rerender();
     await waitFor(() => expect(result.current.data).toEqual(nextBackendPage));
+    expect(projectsService.listProjects).toHaveBeenLastCalledWith(
+      {},
+      backend.backendUrl,
+    );
   });
 
   it("useProject fetches by id", async () => {
