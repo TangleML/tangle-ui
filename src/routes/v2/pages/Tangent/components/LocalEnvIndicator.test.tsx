@@ -63,6 +63,7 @@ function mockBaseUrl(baseUrl: string | null) {
       },
     ],
     isLoading: false,
+    isLoaded: true,
     error: null,
     isAttaching: false,
     attachSession: vi.fn(),

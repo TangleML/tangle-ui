@@ -83,6 +83,7 @@ export function useProjectSessions(projectId: string) {
   return {
     sessions,
     isLoading: query.isLoading,
+    isLoaded: query.isSuccess,
     error: query.error,
     isAttaching: createResource.isPending,
     attachSession,

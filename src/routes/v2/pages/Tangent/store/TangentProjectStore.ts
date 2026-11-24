@@ -146,7 +146,7 @@ export class TangentProjectStore {
   #shownTabIds = new Set<string>();
 
   #freshSessions = new Map<string, string>();
-  #sessionsWithPrompt = new Set<string>();
+  #keptSessions = new Set<string>();
   #io: TangentSessionIo | null = null;
 
   constructor(projectId: string, openTabs: OpenTabs = NO_TABS) {
@@ -218,11 +218,19 @@ export class TangentProjectStore {
     }
   }
 
+  @action clearSelectedSession() {
+    this.selectedSessionId = undefined;
+  }
+
+  keepSession(sessionId: string) {
+    this.#keptSessions.add(sessionId);
+  }
+
   recordSessionPrompt(content: string) {
     const sessionId = this.activeSessionId;
     if (!sessionId) return;
     if (!content.trim()) return;
-    this.#sessionsWithPrompt.add(sessionId);
+    this.#keptSessions.add(sessionId);
     // A session started inside a project has no opening prompt to be named
     // from, so its first message is the first chance to call it anything. The
     // agent replaces this with a better title once it has read the message.
@@ -292,7 +300,7 @@ export class TangentProjectStore {
         this.selectedSessionId = sessionId;
       });
       if (prompt.trim()) {
-        this.#sessionsWithPrompt.add(sessionId);
+        this.#keptSessions.add(sessionId);
       }
       if (previous && previous !== sessionId) {
         await this.discardEmptySession(previous);
@@ -308,13 +316,13 @@ export class TangentProjectStore {
     }
   }
 
-  // Only sessions started this mount are eligible for auto-discard; a
-  // never-prompted one is detached + deleted on switch/unmount.
+  // Only sessions started this mount are eligible for auto-discard; one never
+  // prompted or shared is detached + deleted on switch/unmount.
   async discardEmptySession(sessionId: string | undefined): Promise<void> {
     if (!sessionId) return;
     const resourceId = this.#freshSessions.get(sessionId);
     if (!resourceId) return;
-    if (this.#sessionsWithPrompt.has(sessionId)) return;
+    if (this.#keptSessions.has(sessionId)) return;
     this.#freshSessions.delete(sessionId);
     this.dropSession(sessionId);
     try {

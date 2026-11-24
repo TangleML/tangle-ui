@@ -1,6 +1,7 @@
 import { observer } from "mobx-react-lite";
 import { useState } from "react";
 
+import { useShareSessionAction } from "@/components/Project/useShareSessionAction";
 import {
   RenameDialog,
   type RenameDialogProps,
@@ -30,9 +31,7 @@ import type {
 import { useOptionalWindowContext } from "@/routes/v2/shared/windows/ContentWindowStateContext";
 import { sessionLabelsById } from "@/services/projects/sessionLabel";
 import { formatRelativeTime } from "@/utils/date";
-import { copyToClipboard } from "@/utils/string";
 import { tracking } from "@/utils/tracking";
-import { getTangentSessionUrl } from "@/utils/URL";
 
 const PREVIEW_COUNT = 5;
 
@@ -72,6 +71,7 @@ export const ProjectSessionList = observer(function ProjectSessionList({
   const { open } = useDialog();
   const notify = useToastNotification();
   const { track } = useAnalytics();
+  const shareSession = useShareSessionAction(projectId);
 
   async function rename(session: ProjectSession) {
     const name = await open<string, RenameDialogProps>({
@@ -99,8 +99,8 @@ export const ProjectSessionList = observer(function ProjectSessionList({
   }
 
   function share(sessionId: string) {
-    copyToClipboard(getTangentSessionUrl(projectId, sessionId));
-    notify("Session URL copied to clipboard", "success");
+    store.keepSession(sessionId);
+    shareSession(sessionId);
   }
 
   function openSession(sessionId: string) {

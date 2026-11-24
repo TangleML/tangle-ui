@@ -17,9 +17,14 @@ export function getProjectHomeRoute() {
   return projectHomeRoute(isTangentEnabled());
 }
 
+function projectPath(route: string, projectId: string): string {
+  return route.replace("$projectId", encodeURIComponent(projectId));
+}
+
 export function getProjectHomePath(projectId: string): string {
-  return getProjectHomeRoute().replace(
-    "$projectId",
-    encodeURIComponent(projectId),
-  );
+  return projectPath(getProjectHomeRoute(), projectId);
+}
+
+export function getTangentProjectPath(projectId: string): string {
+  return projectPath(APP_ROUTES.TANGENT_PROJECT, projectId);
 }

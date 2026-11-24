@@ -693,6 +693,40 @@ describe("TangentProjectStore.startSession", () => {
     expect(io.detachSession).not.toHaveBeenCalled();
   });
 
+  /** Someone may already be opening a link to it. */
+  it("keeps a shared session out of auto-discard", async () => {
+    const store = new TangentProjectStore("project-1");
+    const io = makeSessionIo(null);
+    store.setSessionIo(io);
+
+    await store.startSession();
+    store.keepSession("new-session");
+    store.selectSession("other-session");
+
+    expect(io.detachSession).not.toHaveBeenCalled();
+  });
+
+  it("discards an empty session nobody shared when switching away", async () => {
+    const store = new TangentProjectStore("project-1");
+    const io = makeSessionIo(null);
+    store.setSessionIo(io);
+
+    await store.startSession();
+    store.selectSession("other-session");
+
+    await vi.waitFor(() => expect(io.detachSession).toHaveBeenCalled());
+  });
+
+  it("falls back to the default session once the selection is cleared", () => {
+    const store = new TangentProjectStore("project-1");
+    store.setDefaultSessionId("latest-session");
+    store.selectSession("linked-session");
+
+    store.clearSelectedSession();
+
+    expect(store.activeSessionId).toBe("latest-session");
+  });
+
   it("mounts the project's shared folder and binds memory into it", async () => {
     const store = new TangentProjectStore("project-1");
     const io = makeSessionIo(null, "folder-1");

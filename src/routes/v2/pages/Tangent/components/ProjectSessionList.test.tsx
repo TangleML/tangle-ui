@@ -27,6 +27,7 @@ vi.mock("@/routes/v2/pages/Tangent/hooks/useOpenTangentProject", () => ({
 const openProject = vi.fn();
 const cancelPendingProjectMove = vi.fn();
 const selectSession = vi.fn();
+const keepSession = vi.fn();
 const renameSession = vi.fn();
 const notify = vi.fn();
 const track = vi.fn();
@@ -37,6 +38,7 @@ vi.mock("@/routes/v2/pages/Tangent/context/TangentProjectContext", () => ({
     activeSessionId: "session-1",
     isStartingSession: false,
     selectSession,
+    keepSession,
     startSession: vi.fn(),
   }),
 }));
@@ -222,6 +224,16 @@ describe("ProjectSessionList", () => {
     await user.click(screen.getByRole("button", { name: "Rename Session 1" }));
 
     expect(selectSession).not.toHaveBeenCalled();
+  });
+
+  /** A fresh session nobody prompted is discarded on switch, killing the link. */
+  it("keeps a shared session around for whoever opens the link", async () => {
+    const user = userEvent.setup();
+    renderSessions();
+
+    await user.click(screen.getByRole("button", { name: "Share Session 1" }));
+
+    expect(keepSession).toHaveBeenCalledWith("session-1");
   });
 
   it("copies a link that opens the session", async () => {
