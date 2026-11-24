@@ -39,20 +39,9 @@ You can now run tangle-ui as a standalone web app! Pipelines and data will be st
 4. Add an env variable `VITE_BACKEND_API_URL` with the url where your backend is hosted (most likely `http://127.0.0.1:8000`)
 5. Run the backend & restart the frontend app
 
-<!-- todo: CORS -->
-
 You should now be running Tangle in its entirety and can enjoy its full suite of features!
 
-If you find you are blocked by CORS, you will, for now, need to use the manual steps below.
-
-#### If all Else Fails
-
-1. Complete the installation steps for the backend as specified in the [backend repo](https://github.com/TangleML/tangle)
-2. Co-locate your local `tangle-ui` repo inside your local `tangle` repo
-3. Run `pnpm run build` inside `tangle-ui`
-4. Start the backend using the provided instructions in the `tangle` repo
-
-If you complete these steps the app will launch on `127.0.0.1:8000` with the latest build you've created on the frontend.
+The local backend (`start_local.sh`) accepts requests from any `http://localhost` or `http://127.0.0.1` port, so the app can call it directly. If the app shows "Backend not available", check that the backend is running at the `VITE_BACKEND_API_URL` address. A backend hosted elsewhere must allow your app's address in its CORS settings.
 
 ### AI provider configuration
 
