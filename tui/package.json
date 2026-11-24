@@ -1,0 +1,55 @@
+{
+  "name": "tangent-tui",
+  "version": "0.0.1",
+  "description": "Terminal UI client for Tangent Projects: connect to a Tangle instance, chat with Prime, and host local agents.",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "bin": {
+    "tangent-tui": "./dist/tangent-tui.mjs"
+  },
+  "packageManager": "pnpm@10.28.0",
+  "scripts": {
+    "start": "tsx src/main.tsx",
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test \"src/**/*.test.ts\"",
+    "format": "prettier --write ."
+  },
+  "dependencies": {
+    "@tangent/local-agent-host": "github:TangleML/tangent-shell#main&path:packages/local-agent-host",
+    "@tangent/remote-subagent": "github:TangleML/tangent-shell#main&path:packages/remote-subagent",
+    "@tangent/shared": "github:TangleML/tangent-shell#main&path:packages/shared",
+    "ink": "^6.3.1",
+    "js-yaml": "^4.3.2",
+    "marked": "^14.1.4",
+    "marked-terminal": "^7.3.0",
+    "open": "^10.1.2",
+    "react": "^19.3.1",
+    "socket.io-client": "^4.8.3",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.3.0",
+    "esbuild": "^0.28.2",
+    "eslint": "^9.39.2",
+    "eslint-plugin-simple-import-sort": "^14.0.0",
+    "globals": "^17.7.0",
+    "prettier": "^3.9.6",
+    "tsx": "^4.23.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.65.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "@tangent/local-agent-host": "github:TangleML/tangent-shell#main&path:packages/local-agent-host",
+      "@tangent/remote-subagent": "github:TangleML/tangent-shell#main&path:packages/remote-subagent",
+      "@tangent/shared": "github:TangleML/tangent-shell#main&path:packages/shared"
+    }
+  }
+}
