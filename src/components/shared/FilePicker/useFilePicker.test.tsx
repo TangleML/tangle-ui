@@ -118,6 +118,7 @@ describe("useFilePicker drop target", () => {
         text: "file text",
         source: "drop",
         meta: undefined,
+        isStale: expect.any(Function),
       }),
     );
     expect(pickedFileNames(onFile)).toEqual(["a.txt"]);
@@ -265,6 +266,7 @@ describe("useFilePicker browse", () => {
         text: "file text",
         source: "browse",
         meta: undefined,
+        isStale: expect.any(Function),
       }),
     );
     expect(pickedFileNames(onFile)).toEqual(["a.txt"]);
@@ -419,7 +421,7 @@ describe("useFilePicker status", () => {
     readText
       .mockReturnValueOnce(firstRead.promise)
       .mockReturnValueOnce(secondRead.promise);
-    const onFile = vi.fn(() => success);
+    const onFile = vi.fn<UseFilePickerOptions["onFile"]>(() => success);
     const { result } = renderHook(() => useFilePicker({ onFile }));
     const first = new File(["a"], "a.txt");
     const second = new File(["b"], "b.txt");
@@ -445,12 +447,20 @@ describe("useFilePicker status", () => {
       text: "fresh",
       source: "drop",
       meta: undefined,
+      isStale: expect.any(Function),
     });
     expect(result.current.status).toEqual({
       kind: "success",
       message: "Loaded",
       fileName: "b.txt",
     });
+
+    const winningPick = onFile.mock.calls[0][0];
+    expect(winningPick.isStale()).toBe(false);
+    act(() => {
+      void result.current.handleFiles([new File(["c"], "c.txt")], "drop");
+    });
+    expect(winningPick.isStale()).toBe(true);
   });
 
   it("stays reading until an async onFile resolves", async () => {
@@ -648,6 +658,7 @@ describe("useFilePicker status", () => {
       text: "file text",
       source: "drop",
       meta: { position: 3 },
+      isStale: expect.any(Function),
     });
     expect(pickedFileNames(onFile)).toEqual(["a.txt"]);
   });

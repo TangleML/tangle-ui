@@ -100,9 +100,9 @@ export const FlowCanvas = observer(function FlowCanvas({
   const fileDropHandler = useFileDropHandler(spec);
   const picker = useFilePicker<{ position: XYPosition }>({
     accept: YAML_FILE_ACCEPT,
-    onFile: ({ text, file, meta }) =>
+    onFile: ({ text, file, meta, isStale }) =>
       meta
-        ? fileDropHandler({ file, text, position: meta.position })
+        ? fileDropHandler({ file, text, position: meta.position, isStale })
         : MISSING_DROP_POSITION_OUTCOME,
     disabled: readOnly,
     guardWindowDrop: !readOnly,

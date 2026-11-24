@@ -34,6 +34,11 @@ const PIPELINE_CHANGED_OUTCOME: PickOutcome = {
   message: "The pipeline changed before the component was added.",
 };
 
+const DROP_DISMISSED_OUTCOME: PickOutcome = {
+  status: "error",
+  message: "The drop was dismissed before the component was added.",
+};
+
 export function useFileDropHandler(spec: ComponentSpec | null) {
   const { addTask } = useTaskActions();
   const { addToComponentLibrary } = useComponentLibrary();
@@ -44,10 +49,12 @@ export function useFileDropHandler(spec: ComponentSpec | null) {
   return async ({
     text,
     position,
+    isStale,
   }: {
     file: File;
     text: string;
     position: XYPosition;
+    isStale?: () => boolean;
   }): Promise<PickOutcome> => {
     if (!spec) {
       return { status: "error", message: "No pipeline is open." };
@@ -78,6 +85,7 @@ export function useFileDropHandler(spec: ComponentSpec | null) {
         };
       }
       if (navigation.activeSpec !== spec) return PIPELINE_CHANGED_OUTCOME;
+      if (isStale?.()) return DROP_DISMISSED_OUTCOME;
 
       const result = await addToComponentLibrary(
         hydrated,
@@ -91,6 +99,7 @@ export function useFileDropHandler(spec: ComponentSpec | null) {
         };
       }
       if (navigation.activeSpec !== spec) return PIPELINE_CHANGED_OUTCOME;
+      if (isStale?.()) return DROP_DISMISSED_OUTCOME;
 
       addTask(spec, toModelComponentRef(result), position);
 

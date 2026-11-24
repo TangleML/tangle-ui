@@ -48,6 +48,7 @@ export interface UseFilePickerOptions<M = unknown> {
     text: string;
     source: PickSource;
     meta?: M;
+    isStale: () => boolean;
   }) => PickOutcome | Promise<PickOutcome>;
   accept?: Accept;
   maxBytes?: number | null;
@@ -176,7 +177,7 @@ export function useFilePicker<M = unknown>({
 
     let outcome: PickOutcome;
     try {
-      outcome = await onFile({ file, text, source, meta });
+      outcome = await onFile({ file, text, source, meta, isStale });
     } catch {
       if (isStale()) return;
       setStatus({

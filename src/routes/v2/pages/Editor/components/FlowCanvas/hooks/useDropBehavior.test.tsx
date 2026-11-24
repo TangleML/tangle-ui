@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
   createEvent,
   fireEvent,
@@ -12,6 +13,7 @@ import type { ReactFlowInstance, XYPosition } from "@xyflow/react";
 import { type ReactNode } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
+import { useFilePicker } from "@/components/shared/FilePicker";
 import {
   IncrementingIdGenerator,
   YamlDeserializer,
@@ -439,5 +441,127 @@ it("does not add a dropped file if the active pipeline changes while it is added
     status: "error",
     message: "The pipeline changed before the component was added.",
   });
+  expect(mocks.addTask).not.toHaveBeenCalled();
+});
+
+function renderFileDropPicker() {
+  return renderHook(
+    () => {
+      const fileDropHandler = useFileDropHandler(spec);
+      return useFilePicker<{ position: XYPosition }>({
+        onFile: ({ file, text, meta, isStale }) =>
+          fileDropHandler({
+            file,
+            text,
+            position: meta?.position ?? { x: 0, y: 0 },
+            isStale,
+          }),
+      });
+    },
+    { wrapper: Wrapper },
+  );
+}
+
+function deferHydration() {
+  const finishers: ((value: typeof component) => void)[] = [];
+  mocks.hydrate.mockImplementation(
+    () =>
+      new Promise<typeof component>((resolve) => {
+        finishers.push(resolve);
+      }),
+  );
+  return finishers;
+}
+
+it("does not add a dropped file that is dismissed while it is validated", async () => {
+  const finishers = deferHydration();
+  validate.mockReturnValue({ valid: true });
+  mocks.addToLibrary.mockResolvedValue(component);
+  const { result } = renderFileDropPicker();
+  let handled: Promise<void> | undefined;
+  act(() => {
+    handled = result.current.handleFiles(
+      [new File([componentText], "component.yaml")],
+      "drop",
+      { position: { x: 40, y: 60 } },
+    );
+  });
+  await waitFor(() => expect(finishers).toHaveLength(1));
+  act(() => result.current.dismissStatus());
+  await act(async () => {
+    finishers[0](component);
+    await handled;
+  });
+  expect(mocks.addToLibrary).not.toHaveBeenCalled();
+  expect(mocks.addTask).not.toHaveBeenCalled();
+  expect(result.current.status).toEqual({ kind: "idle" });
+});
+
+it("adds only the second of two quick file drops", async () => {
+  const finishers = deferHydration();
+  validate.mockReturnValue({ valid: true });
+  mocks.addToLibrary.mockResolvedValue(component);
+  const { result } = renderFileDropPicker();
+  let first: Promise<void> | undefined;
+  let second: Promise<void> | undefined;
+  act(() => {
+    first = result.current.handleFiles(
+      [new File([componentText], "first.yaml")],
+      "drop",
+      { position: { x: 40, y: 60 } },
+    );
+  });
+  await waitFor(() => expect(finishers).toHaveLength(1));
+  act(() => {
+    second = result.current.handleFiles(
+      [new File([componentText], "second.yaml")],
+      "drop",
+      { position: { x: 400, y: 600 } },
+    );
+  });
+  await waitFor(() => expect(finishers).toHaveLength(2));
+  await act(async () => {
+    finishers[0](component);
+    finishers[1](component);
+    await Promise.all([first, second]);
+  });
+  expect(mocks.addToLibrary).toHaveBeenCalledTimes(1);
+  expect(mocks.addTask).toHaveBeenCalledTimes(1);
+  expect(mocks.addTask).toHaveBeenCalledWith(spec, component, {
+    x: 400,
+    y: 600,
+  });
+  expect(result.current.status).toMatchObject({
+    kind: "success",
+    message: "Search added to the canvas",
+    fileName: "second.yaml",
+  });
+});
+
+it("does not add a dropped file that is dismissed while it is added to the library", async () => {
+  validate.mockReturnValue({ valid: true });
+  let finishLibraryAdd: ((value: typeof component) => void) | undefined;
+  mocks.addToLibrary.mockImplementation(
+    () =>
+      new Promise<typeof component>((resolve) => {
+        finishLibraryAdd = resolve;
+      }),
+  );
+  const { result } = renderFileDropPicker();
+  let handled: Promise<void> | undefined;
+  act(() => {
+    handled = result.current.handleFiles(
+      [new File([componentText], "component.yaml")],
+      "drop",
+      { position: { x: 40, y: 60 } },
+    );
+  });
+  await waitFor(() => expect(finishLibraryAdd).toBeDefined());
+  act(() => result.current.dismissStatus());
+  await act(async () => {
+    finishLibraryAdd?.(component);
+    await handled;
+  });
+  expect(mocks.addToLibrary).toHaveBeenCalledTimes(1);
   expect(mocks.addTask).not.toHaveBeenCalled();
 });
