@@ -31,10 +31,10 @@ export function useProjects(
   params: ListProjectsParams = {},
   { enabled = true }: { enabled?: boolean } = {},
 ) {
-  const { configured, available } = useBackend();
+  const { backendUrl, configured, available } = useBackend();
 
   return useQuery({
-    queryKey: ProjectsQueryKeys.List(params),
+    queryKey: [...ProjectsQueryKeys.List(params), backendUrl],
     queryFn: () => listProjects(params),
     enabled: enabled && configured && available,
     ...projectQueryDefaults,

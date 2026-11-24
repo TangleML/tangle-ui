@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 
 import { ProjectMenu } from "@/components/Project/ProjectMenu";
 import { useDeleteProjectAction } from "@/components/Project/useDeleteProjectAction";
@@ -8,13 +8,16 @@ import { useTangentEnabled } from "@/components/shared/Settings/useFlags";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
+import { TableCell, TableRow } from "@/components/ui/table";
 import { Paragraph, Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { projectHomeRoute } from "@/routes/projectRoutes";
 import type { ProjectSummary } from "@/services/projects/types";
 import { useWorkspaces } from "@/services/projects/useWorkspaces";
 import { formatDate, formatRelativeTime } from "@/utils/date";
+import { hasNewTabModifier } from "@/utils/dom";
 import { tracking } from "@/utils/tracking";
+import { getProjectUrl } from "@/utils/URL";
 
 import {
   formatResourceCounts,
@@ -23,9 +26,12 @@ import {
 
 interface ProjectCardProps {
   project: ProjectSummary;
+  layout?: "card" | "table";
 }
 
-export function ProjectCard({ project }: ProjectCardProps) {
+export function ProjectCard({ project, layout = "card" }: ProjectCardProps) {
+  const navigate = useNavigate();
+  const inTable = layout === "table";
   const { confirmAndDelete, isDeleting, confirmation } = useDeleteProjectAction(
     project,
     { navigateAfterDelete: false },
@@ -34,10 +40,114 @@ export function ProjectCard({ project }: ProjectCardProps) {
   const { data: workspaces } = useWorkspaces();
   const workspace = workspaces?.find(({ id }) => id === project.workspaceId);
   const tangentEnabled = useTangentEnabled();
-  const resourceCounts = visibleResourceCounts(
-    project.resourceCounts,
-    tangentEnabled,
+  const resources = formatResourceCounts(
+    visibleResourceCounts(project.resourceCounts, tangentEnabled),
   );
+  const destination = {
+    to: projectHomeRoute(tangentEnabled),
+    params: { projectId: project.id },
+  };
+  const createdAt = formatDate(project.createdAt);
+  const updatedAt = formatRelativeTime(project.updatedAt);
+  const icon = (
+    <Icon
+      name={pinned ? "Pin" : "Folder"}
+      size={inTable ? "sm" : "lg"}
+      aria-label={pinned ? "Pinned" : undefined}
+      className={cn(
+        "shrink-0",
+        pinned ? "text-brand-accent" : "text-muted-foreground",
+      )}
+    />
+  );
+  const actions = (
+    <>
+      <ProjectMenu
+        project={project}
+        onDelete={() => void confirmAndDelete()}
+        disabled={isDeleting}
+        inListRow={inTable}
+        triggerClassName={inTable ? undefined : "absolute right-2 top-2"}
+        triggerTrackingId={
+          inTable ? "projects.project_row_menu" : "projects.project_card_menu"
+        }
+      />
+      <ConfirmationDialog {...confirmation} />
+    </>
+  );
+
+  if (inTable) {
+    return (
+      <TableRow
+        className={cn(
+          "cursor-pointer text-xs",
+          isDeleting && "pointer-events-none opacity-50",
+        )}
+        onClick={(event) => {
+          if (isDeleting) return;
+          if (hasNewTabModifier(event)) {
+            window.open(
+              getProjectUrl(project.id),
+              "_blank",
+              "noopener,noreferrer",
+            );
+          } else {
+            void navigate(destination);
+          }
+        }}
+      >
+        <TableCell>
+          <InlineStack
+            gap="2"
+            blockAlign="center"
+            wrap="nowrap"
+            className="min-h-9"
+          >
+            {icon}
+            <BlockStack className="min-w-0">
+              <Link
+                {...destination}
+                disabled={isDeleting}
+                onClick={(event) => event.stopPropagation()}
+                className="max-w-full truncate text-sm hover:underline"
+                title={project.name}
+                {...tracking("projects.project_row")}
+              >
+                {project.name}
+              </Link>
+              {project.description && (
+                <Text
+                  size="xs"
+                  tone="subdued"
+                  className="whitespace-normal wrap-anywhere"
+                >
+                  {project.description}
+                </Text>
+              )}
+            </BlockStack>
+          </InlineStack>
+        </TableCell>
+        <TableCell className="truncate" title={workspace?.name}>
+          {workspace?.name ?? "—"}
+        </TableCell>
+        <TableCell className="whitespace-normal wrap-anywhere">
+          {resources}
+        </TableCell>
+        <TableCell className="truncate" title={createdAt}>
+          {createdAt}
+        </TableCell>
+        <TableCell className="truncate" title={formatDate(project.updatedAt)}>
+          {updatedAt}
+        </TableCell>
+        <TableCell
+          className="text-right"
+          onClick={(event) => event.stopPropagation()}
+        >
+          {actions}
+        </TableCell>
+      </TableRow>
+    );
+  }
 
   return (
     <div
@@ -47,8 +157,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
       )}
     >
       <Link
-        to={projectHomeRoute(tangentEnabled)}
-        params={{ projectId: project.id }}
+        {...destination}
         className="flex h-full flex-col justify-between gap-2 p-4"
         {...tracking("projects.project_card")}
       >
@@ -59,15 +168,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
             wrap="nowrap"
             className="pr-8"
           >
-            <Icon
-              name={pinned ? "Pin" : "Folder"}
-              size="lg"
-              aria-label={pinned ? "Pinned" : undefined}
-              className={cn(
-                "shrink-0",
-                pinned ? "text-brand-accent" : "text-muted-foreground",
-              )}
-            />
+            {icon}
             <Text weight="semibold" className="min-w-0 truncate">
               {project.name}
             </Text>
@@ -86,7 +187,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
         <BlockStack gap="2" align="stretch">
           <Text size="xs" weight="medium" className="truncate">
-            {formatResourceCounts(resourceCounts)}
+            {resources}
           </Text>
           <Separator />
           <BlockStack gap="1" align="stretch">
@@ -104,26 +205,16 @@ export function ProjectCard({ project }: ProjectCardProps) {
               </InlineStack>
             )}
             <Text size="xs" tone="subdued" className="truncate">
-              {`Created ${formatDate(project.createdAt)}`}
+              {`Created ${createdAt}`}
             </Text>
             <Text size="xs" tone="subdued" className="truncate">
-              {`Updated ${formatRelativeTime(project.updatedAt)}`}
+              {`Updated ${updatedAt}`}
             </Text>
           </BlockStack>
         </BlockStack>
       </Link>
 
-      <ProjectMenu
-        project={project}
-        onDelete={() => void confirmAndDelete()}
-        // The card is dimmed while the delete runs, but dimming stops a
-        // pointer and not a keyboard.
-        disabled={isDeleting}
-        triggerClassName="absolute right-2 top-2"
-        triggerTrackingId="projects.project_card_menu"
-      />
-
-      <ConfirmationDialog {...confirmation} />
+      {actions}
     </div>
   );
 }

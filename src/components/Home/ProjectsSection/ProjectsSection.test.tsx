@@ -1,13 +1,16 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { useProjectPin } from "@/components/Project/useProjectPin";
 import { useBackend } from "@/providers/BackendProvider";
+import { listProjects } from "@/services/projects/projectsService";
 import type { ProjectSummary, Workspace } from "@/services/projects/types";
 import { usePinnedProjects } from "@/services/projects/usePinnedProjects";
 import { useWorkspaces } from "@/services/projects/useWorkspaces";
+import { formatDate, formatRelativeTime } from "@/utils/date";
 import { getUserDetails } from "@/utils/user";
 
 import { ProjectsSection } from "./ProjectsSection";
@@ -15,14 +18,28 @@ import { useMyProjects } from "./useMyProjects";
 
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@tanstack/react-router")>()),
-  Link: ({ children }: { children: ReactNode }) => <a>{children}</a>,
+  useNavigate: () => vi.fn(),
+  Link: ({
+    children,
+    to,
+    params,
+  }: {
+    children: ReactNode;
+    to: string;
+    params: { projectId: string };
+  }) => <a href={to.replace("$projectId", params.projectId)}>{children}</a>,
 }));
 
 vi.mock("@/providers/BackendProvider", () => ({
   useBackend: vi.fn(),
 }));
 
-vi.mock("@/services/projects/useProjects", () => ({
+vi.mock("@/services/projects/projectsService", () => ({
+  listProjects: vi.fn(),
+}));
+
+vi.mock("@/services/projects/useProjects", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/services/projects/useProjects")>()),
   useDeleteProject: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
@@ -30,6 +47,10 @@ vi.mock("./useMyProjects", () => ({ useMyProjects: vi.fn() }));
 
 vi.mock("@/services/projects/usePinnedProjects", () => ({
   usePinnedProjects: vi.fn(),
+}));
+
+vi.mock("@/components/Project/useProjectPin", () => ({
+  useProjectPin: vi.fn(),
 }));
 
 vi.mock("@/hooks/useToastNotification", () => ({
@@ -99,9 +120,25 @@ function mockBackend(
 }
 
 const loadMore = vi.fn();
+const otherProject = {
+  ...project,
+  id: "project-2",
+  name: "Forecasting",
+  createdBy: "teammate@example.com",
+};
+const directoryPage = {
+  items: [otherProject],
+  totalCount: 1,
+  nextPageToken: null,
+};
 
 function mockPinned(...projects: ProjectSummary[]): void {
   vi.mocked(usePinnedProjects).mockReturnValue({ projects, isPending: false });
+  vi.mocked(useProjectPin).mockImplementation(({ id }) => ({
+    pinned: projects.some((project) => project.id === id),
+    isPinning: false,
+    togglePin: vi.fn(),
+  }));
 }
 
 function mockProjects(
@@ -144,6 +181,7 @@ describe("ProjectsSection", () => {
     mockBackend();
     mockProjects();
     mockPinned();
+    vi.mocked(listProjects).mockResolvedValue(directoryPage);
   });
 
   afterEach(() => {
@@ -153,20 +191,134 @@ describe("ProjectsSection", () => {
   // Which projects count as the user's own is `useMyProjects`'s job and is
   // covered by its own tests.
 
+  it("pages through every creator's projects independently of the cards", async () => {
+    const firstPage = [
+      otherProject,
+      project,
+      ...Array.from({ length: 8 }, (_, i) => ({
+        ...otherProject,
+        id: `additional-${i}`,
+        name: `Additional project ${i}`,
+      })),
+    ];
+    const lastProject = { ...otherProject, id: "last", name: "Final project" };
+    vi.mocked(listProjects).mockImplementation(async (params) =>
+      params?.pageToken === "second-page"
+        ? { items: [lastProject], totalCount: 11, nextPageToken: null }
+        : { items: firstPage, totalCount: 11, nextPageToken: "second-page" },
+    );
+    const user = userEvent.setup();
+    renderSection();
+
+    const mine = within(screen.getByRole("region", { name: "My projects" }));
+    const all = within(screen.getByRole("region", { name: "All projects" }));
+    const table = within(
+      await all.findByRole("table", { name: "All projects" }),
+    );
+    expect(
+      await table.findByRole("link", { name: "Forecasting" }),
+    ).toBeVisible();
+    expect(mine.queryByText("Forecasting")).toBeNull();
+    expect(table.getAllByRole("row")).toHaveLength(11);
+    expect(table.getByRole("link", { name: "Churn model" })).toHaveAttribute(
+      "href",
+      mine.getByRole("link", { name: /Churn model/ }).getAttribute("href"),
+    );
+    expect(all.getByRole("button", { name: "First page" })).toBeDisabled();
+    expect(all.getByRole("button", { name: "Previous" })).toBeDisabled();
+    await user.click(all.getByRole("button", { name: "Next" }));
+    expect(
+      await table.findByRole("link", { name: "Final project" }),
+    ).toBeVisible();
+    expect(table.queryByRole("link", { name: "Forecasting" })).toBeNull();
+    expect(all.getByRole("button", { name: "Next" })).toBeDisabled();
+    expect(mine.getByRole("link", { name: /Churn model/ })).toBeVisible();
+    await user.click(all.getByRole("button", { name: "Previous" }));
+    expect(
+      await table.findByRole("link", { name: "Forecasting" }),
+    ).toBeVisible();
+    expect(table.queryByRole("link", { name: "Final project" })).toBeNull();
+    const requests = vi
+      .mocked(listProjects)
+      .mock.calls.map(([params]) => params);
+    expect(requests).toContainEqual(
+      expect.objectContaining({ pageSize: 10, pageToken: "second-page" }),
+    );
+    expect(requests.every((params) => params?.createdBy === undefined)).toBe(
+      true,
+    );
+    expect(loadMore).not.toHaveBeenCalled();
+  });
+
+  it("puts the card details and actions in their directory columns", async () => {
+    mockPinned(otherProject);
+    const user = userEvent.setup();
+    renderSection();
+
+    const all = within(screen.getByRole("region", { name: "All projects" }));
+    const table = within(
+      await all.findByRole("table", { name: "All projects" }),
+    );
+    expect(
+      table.getAllByRole("columnheader").map((header) => header.textContent),
+    ).toEqual([
+      "Name",
+      "Workspace",
+      "Resources",
+      "Created at",
+      "Updated at",
+      "Actions",
+    ]);
+    const row = within(await table.findByRole("row", { name: /Forecasting/ }));
+    const [nameCell, workspaceCell, resources, created, updated, actions] =
+      row.getAllByRole("cell");
+    const name = within(nameCell);
+    expect(name.getByRole("link", { name: /Forecasting/ })).toBeVisible();
+    expect(name.getByLabelText("Pinned")).toBeVisible();
+    expect(name.getByText("Q3 churn work")).toBeVisible();
+    expect(workspaceCell).toHaveTextContent("ML Research");
+    expect(resources).toHaveTextContent("3 pipelines · 1 document");
+    expect(created).toHaveTextContent(formatDate(otherProject.createdAt));
+    expect(updated).toHaveTextContent(
+      formatRelativeTime(otherProject.updatedAt),
+    );
+    const handle = table.getByRole("separator", { name: "Resize Name column" });
+    const initialWidth = Number(handle.getAttribute("aria-valuenow"));
+    handle.focus();
+    await user.keyboard("{ArrowRight}");
+    expect(Number(handle.getAttribute("aria-valuenow"))).toBeGreaterThan(
+      initialWidth,
+    );
+    await user.click(
+      within(actions).getByRole("button", {
+        name: "Project actions: Forecasting",
+      }),
+    );
+    expect(
+      await screen.findByRole("menuitem", { name: "Unpin project" }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("menuitem", { name: "Share project" }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("menuitem", { name: "Delete project" }),
+    ).toBeVisible();
+  });
+
   it("renders a project with its resource counts", async () => {
     renderSection();
 
-    expect(await screen.findByText("Churn model")).toBeInTheDocument();
-    expect(screen.getByText("Q3 churn work")).toBeInTheDocument();
-    expect(screen.getByText("3 pipelines · 1 document")).toBeInTheDocument();
+    const mine = within(screen.getByRole("region", { name: "My projects" }));
+    expect(await mine.findByText("Churn model")).toBeInTheDocument();
+    expect(mine.getByText("Q3 churn work")).toBeInTheDocument();
+    expect(mine.getByText("3 pipelines · 1 document")).toBeInTheDocument();
   });
 
   it("labels each project with its workspace", async () => {
     renderSection();
 
-    await screen.findByText("Churn model");
-
-    expect(screen.getByText("ML Research")).toBeInTheDocument();
+    const mine = within(screen.getByRole("region", { name: "My projects" }));
+    expect(await mine.findByText("ML Research")).toBeInTheDocument();
   });
 
   it("offers an admin the same workspaces as anyone else", async () => {
@@ -216,7 +368,8 @@ describe("ProjectsSection", () => {
       ),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "New project" })).toBeNull();
-    expect(screen.queryByText(/workspace/i)).toBeNull();
+    const mine = within(screen.getByRole("region", { name: "My projects" }));
+    expect(mine.queryByText(/workspace/i)).toBeNull();
   });
 
   it("offers a new project card when the user has none", async () => {
@@ -298,7 +451,8 @@ describe("ProjectsSection", () => {
 
     renderSection();
 
-    const tiles = screen.getAllByRole("button", {
+    const mine = within(screen.getByRole("region", { name: "My projects" }));
+    const tiles = mine.getAllByRole("button", {
       name: /New project|Project actions/,
     });
     expect(tiles.map((tile) => tile.getAttribute("aria-label"))).toEqual([
