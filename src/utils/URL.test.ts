@@ -17,6 +17,7 @@ import {
   getIdOrTitleFromPath,
   getProjectUrl,
   getRunUrl,
+  getTangentSessionUrl,
   normalizeUrl,
   parseHttpUrl,
   toAbsoluteHttpUrl,
@@ -116,6 +117,20 @@ describe("getProjectUrl", () => {
 
     expect(getProjectUrl("a/b?c")).toBe(
       `${window.location.origin}/tangent/a%2Fb%3Fc`,
+    );
+  });
+});
+
+describe("getTangentSessionUrl", () => {
+  it("builds an absolute url that opens the session in its project", () => {
+    expect(getTangentSessionUrl("abc-123", "session-1")).toBe(
+      `${window.location.origin}/tangent/abc-123?session=session-1`,
+    );
+  });
+
+  it("escapes ids that would otherwise change the path or query", () => {
+    expect(getTangentSessionUrl("a/b?c", "d&e=f")).toBe(
+      `${window.location.origin}/tangent/a%2Fb%3Fc?session=d%26e%3Df`,
     );
   });
 });

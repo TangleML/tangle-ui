@@ -224,6 +224,25 @@ describe("ProjectSessionList", () => {
     expect(selectSession).not.toHaveBeenCalled();
   });
 
+  it("copies a link that opens the session", async () => {
+    const user = userEvent.setup();
+    renderSessions("project-2");
+
+    await user.click(
+      screen.getByRole("button", { name: "Share Feature exploration" }),
+    );
+
+    expect(await navigator.clipboard.readText()).toBe(
+      `${window.location.origin}/tangent/project-2?session=session-2`,
+    );
+    expect(notify).toHaveBeenCalledWith(
+      "Session URL copied to clipboard",
+      "success",
+    );
+    expect(selectSession).not.toHaveBeenCalled();
+    expect(openProject).not.toHaveBeenCalled();
+  });
+
   it("selects a session of the project in view where it is", async () => {
     const user = userEvent.setup();
     renderSessions();

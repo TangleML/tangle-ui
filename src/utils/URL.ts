@@ -1,6 +1,7 @@
-import { RUNS_BASE_PATH } from "@/routes/appRoutes";
+import { APP_ROUTES, RUNS_BASE_PATH } from "@/routes/appRoutes";
 import { getProjectHomePath } from "@/routes/projectRoutes";
 import { getDefaultRunPath } from "@/routes/runRoutes";
+import { tangentSessionSearch } from "@/routes/tangentSearch";
 import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
 
 const convertGcsUrlToBrowserUrl = (
@@ -260,6 +261,15 @@ const getRawExecutionLogsUrl = (
 const getProjectUrl = (projectId: string): string =>
   buildAbsoluteAppUrl(getProjectHomePath(projectId));
 
+const getTangentSessionUrl = (projectId: string, sessionId: string): string => {
+  const path = APP_ROUTES.TANGENT_PROJECT.replace(
+    "$projectId",
+    encodeURIComponent(projectId),
+  );
+  const search = new URLSearchParams(tangentSessionSearch(sessionId));
+  return buildAbsoluteAppUrl(`${path}?${search}`);
+};
+
 /**
  * Built from the run's id rather than the address bar, which names a Tangent
  * project when the run is open in one of its workarea tabs.
@@ -282,6 +292,7 @@ export {
   getProjectUrl,
   getRawExecutionLogsUrl,
   getRunUrl,
+  getTangentSessionUrl,
   isGithubUrl,
   normalizeUrl,
   parseHttpUrl,

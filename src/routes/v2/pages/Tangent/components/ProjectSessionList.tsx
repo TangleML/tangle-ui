@@ -30,7 +30,9 @@ import type {
 import { useOptionalWindowContext } from "@/routes/v2/shared/windows/ContentWindowStateContext";
 import { sessionLabelsById } from "@/services/projects/sessionLabel";
 import { formatRelativeTime } from "@/utils/date";
+import { copyToClipboard } from "@/utils/string";
 import { tracking } from "@/utils/tracking";
+import { getTangentSessionUrl } from "@/utils/URL";
 
 const PREVIEW_COUNT = 5;
 
@@ -96,6 +98,11 @@ export const ProjectSessionList = observer(function ProjectSessionList({
     }
   }
 
+  function share(sessionId: string) {
+    copyToClipboard(getTangentSessionUrl(projectId, sessionId));
+    notify("Session URL copied to clipboard", "success");
+  }
+
   function openSession(sessionId: string) {
     dismissFlyout?.();
     if (isProjectInView) {
@@ -139,6 +146,7 @@ export const ProjectSessionList = observer(function ProjectSessionList({
               selected={session.sessionId === activeSessionId}
               onOpen={() => openSession(session.sessionId)}
               onRename={() => void rename(session)}
+              onShare={() => share(session.sessionId)}
             />
           );
         })}
@@ -173,6 +181,7 @@ function SessionRow({
   selected,
   onOpen,
   onRename,
+  onShare,
 }: {
   label: string;
   createdAt: Date;
@@ -180,6 +189,7 @@ function SessionRow({
   selected: boolean;
   onOpen: () => void;
   onRename: () => void;
+  onShare: () => void;
 }) {
   return (
     <ListItem
@@ -201,6 +211,12 @@ function SessionRow({
           label: `Rename ${label}`,
           onClick: onRename,
           tracking: tracking("projects.rename_session_open"),
+        },
+        {
+          icon: "Share2",
+          label: `Share ${label}`,
+          onClick: onShare,
+          tracking: tracking("projects.share_session"),
         },
       ]}
     />
