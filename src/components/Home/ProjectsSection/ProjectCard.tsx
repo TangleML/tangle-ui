@@ -36,7 +36,6 @@ export function ProjectCard({ project, layout = "card" }: ProjectCardProps) {
     project,
     { navigateAfterDelete: false },
   );
-  const { pinned } = useProjectPin(project);
   const { data: workspaces } = useWorkspaces();
   const workspace = workspaces?.find(({ id }) => id === project.workspaceId);
   const tangentEnabled = useTangentEnabled();
@@ -49,17 +48,6 @@ export function ProjectCard({ project, layout = "card" }: ProjectCardProps) {
   };
   const createdAt = formatDate(project.createdAt);
   const updatedAt = formatRelativeTime(project.updatedAt);
-  const icon = (
-    <Icon
-      name={pinned ? "Pin" : "Folder"}
-      size={inTable ? "sm" : "lg"}
-      aria-label={pinned ? "Pinned" : undefined}
-      className={cn(
-        "shrink-0",
-        pinned ? "text-brand-accent" : "text-muted-foreground",
-      )}
-    />
-  );
   const actions = (
     <>
       <ProjectMenu
@@ -96,35 +84,18 @@ export function ProjectCard({ project, layout = "card" }: ProjectCardProps) {
           }
         }}
       >
-        <TableCell>
-          <InlineStack
-            gap="2"
-            blockAlign="center"
-            wrap="nowrap"
-            className="min-h-9"
-          >
-            {icon}
-            <BlockStack className="min-w-0">
-              <Link
-                {...destination}
-                disabled={isDeleting}
-                onClick={(event) => event.stopPropagation()}
-                className="max-w-full truncate text-sm hover:underline"
-                title={project.name}
-                {...tracking("projects.project_row")}
-              >
-                {project.name}
-              </Link>
-              {project.description && (
-                <Text
-                  size="xs"
-                  tone="subdued"
-                  className="whitespace-normal wrap-anywhere"
-                >
-                  {project.description}
-                </Text>
-              )}
-            </BlockStack>
+        <TableCell className="text-sm">
+          <InlineStack blockAlign="center" wrap="nowrap" className="min-h-9">
+            <Link
+              {...destination}
+              disabled={isDeleting}
+              onClick={(event) => event.stopPropagation()}
+              className="block truncate hover:underline"
+              title={project.name}
+              {...tracking("projects.project_row")}
+            >
+              {project.name}
+            </Link>
           </InlineStack>
         </TableCell>
         <TableCell className="truncate" title={workspace?.name}>
@@ -168,7 +139,7 @@ export function ProjectCard({ project, layout = "card" }: ProjectCardProps) {
             wrap="nowrap"
             className="pr-8"
           >
-            {icon}
+            <ProjectCardIcon project={project} />
             <Text weight="semibold" className="min-w-0 truncate">
               {project.name}
             </Text>
@@ -216,5 +187,20 @@ export function ProjectCard({ project, layout = "card" }: ProjectCardProps) {
 
       {actions}
     </div>
+  );
+}
+
+function ProjectCardIcon({ project }: { project: ProjectSummary }) {
+  const { pinned } = useProjectPin(project);
+  return (
+    <Icon
+      name={pinned ? "Pin" : "Folder"}
+      size="lg"
+      aria-label={pinned ? "Pinned" : undefined}
+      className={cn(
+        "shrink-0",
+        pinned ? "text-brand-accent" : "text-muted-foreground",
+      )}
+    />
   );
 }

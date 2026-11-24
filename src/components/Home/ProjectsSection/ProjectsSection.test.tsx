@@ -250,7 +250,7 @@ describe("ProjectsSection", () => {
     expect(loadMore).not.toHaveBeenCalled();
   });
 
-  it("puts the card details and actions in their directory columns", async () => {
+  it("shows only the linked title in the Name column and keeps the other project details and actions", async () => {
     mockPinned(otherProject);
     const user = userEvent.setup();
     renderSection();
@@ -272,16 +272,21 @@ describe("ProjectsSection", () => {
     const row = within(await table.findByRole("row", { name: /Forecasting/ }));
     const [nameCell, workspaceCell, resources, created, updated, actions] =
       row.getAllByRole("cell");
-    const name = within(nameCell);
-    expect(name.getByRole("link", { name: /Forecasting/ })).toBeVisible();
-    expect(name.getByLabelText("Pinned")).toBeVisible();
-    expect(name.getByText("Q3 churn work")).toBeVisible();
+    expect(
+      within(nameCell).getByRole("link", { name: "Forecasting" }),
+    ).toBeVisible();
+    expect(nameCell).toHaveTextContent(/^Forecasting$/);
+    expect(nameCell.querySelector("svg")).toBeNull();
     expect(workspaceCell).toHaveTextContent("ML Research");
     expect(resources).toHaveTextContent("3 pipelines · 1 document");
     expect(created).toHaveTextContent(formatDate(otherProject.createdAt));
     expect(updated).toHaveTextContent(
       formatRelativeTime(otherProject.updatedAt),
     );
+    const mine = within(screen.getByRole("region", { name: "My projects" }));
+    const card = within(mine.getByRole("link", { name: /Forecasting/ }));
+    expect(card.getByLabelText("Pinned")).toBeVisible();
+    expect(card.getByText("Q3 churn work")).toBeVisible();
     const handle = table.getByRole("separator", { name: "Resize Name column" });
     const initialWidth = Number(handle.getAttribute("aria-valuenow"));
     handle.focus();
