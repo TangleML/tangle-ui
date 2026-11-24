@@ -7,6 +7,11 @@ type IdentityAssertionModule = typeof import("./identityAssertion");
 
 const BACKEND_URL = "http://backend.example";
 const NOW = new Date("2026-01-01T12:00:00.000Z");
+const params = {
+  backendUrl: BACKEND_URL,
+  instanceId: "inst-42",
+  email: "user@example.com",
+};
 
 function jsonResponse(status: number, body: unknown) {
   return {
@@ -143,10 +148,7 @@ describe("fetchIdentityAssertion", () => {
   it("posts the instance id to the backend's identity assertion route", async () => {
     fetchMock.mockResolvedValue(assertionResponse(60 * MINUTES));
 
-    const assertion = await service.fetchIdentityAssertion(
-      BACKEND_URL,
-      "inst-42",
-    );
+    const assertion = await service.fetchIdentityAssertion(params);
 
     expect(fetchMock).toHaveBeenCalledWith(
       `${BACKEND_URL}/api/tangent/identity_assertion`,
@@ -165,7 +167,10 @@ describe("fetchIdentityAssertion", () => {
   it("keeps a path prefix on the backend url", async () => {
     fetchMock.mockResolvedValue(assertionResponse(60 * MINUTES));
 
-    await service.fetchIdentityAssertion("https://host/prefix", "inst-42");
+    await service.fetchIdentityAssertion({
+      ...params,
+      backendUrl: "https://host/prefix",
+    });
 
     expect(fetchMock).toHaveBeenCalledWith(
       "https://host/prefix/api/tangent/identity_assertion",
@@ -176,7 +181,7 @@ describe("fetchIdentityAssertion", () => {
   it("sends an empty body when the Tangent url names no instance", async () => {
     fetchMock.mockResolvedValue(assertionResponse(60 * MINUTES));
 
-    await service.fetchIdentityAssertion(BACKEND_URL);
+    await service.fetchIdentityAssertion({ ...params, instanceId: undefined });
 
     expect(requestBody(fetchMock)).toEqual({});
   });
@@ -184,9 +189,9 @@ describe("fetchIdentityAssertion", () => {
   it("reuses an assertion that is not close to expiry", async () => {
     fetchMock.mockResolvedValue(assertionResponse(60 * MINUTES));
 
-    const first = await service.fetchIdentityAssertion(BACKEND_URL, "inst-42");
+    const first = await service.fetchIdentityAssertion(params);
     vi.setSystemTime(new Date(NOW.getTime() + 54 * MINUTES));
-    const second = await service.fetchIdentityAssertion(BACKEND_URL, "inst-42");
+    const second = await service.fetchIdentityAssertion(params);
 
     expect(second).toBe(first);
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -197,12 +202,9 @@ describe("fetchIdentityAssertion", () => {
       .mockResolvedValueOnce(assertionResponse(60 * MINUTES, "first"))
       .mockResolvedValueOnce(assertionResponse(120 * MINUTES, "second"));
 
-    await service.fetchIdentityAssertion(BACKEND_URL, "inst-42");
+    await service.fetchIdentityAssertion(params);
     vi.setSystemTime(new Date(NOW.getTime() + 56 * MINUTES));
-    const refreshed = await service.fetchIdentityAssertion(
-      BACKEND_URL,
-      "inst-42",
-    );
+    const refreshed = await service.fetchIdentityAssertion(params);
 
     expect(refreshed.token).toBe("second");
     expect(fetchMock).toHaveBeenCalledTimes(2);
@@ -211,19 +213,35 @@ describe("fetchIdentityAssertion", () => {
   it("keeps separate assertions per backend and instance", async () => {
     fetchMock.mockResolvedValue(assertionResponse(60 * MINUTES));
 
-    await service.fetchIdentityAssertion(BACKEND_URL, "inst-1");
-    await service.fetchIdentityAssertion(BACKEND_URL, "inst-2");
-    await service.fetchIdentityAssertion("http://other.example", "inst-1");
+    await service.fetchIdentityAssertion({ ...params, instanceId: "inst-1" });
+    await service.fetchIdentityAssertion({ ...params, instanceId: "inst-2" });
+    await service.fetchIdentityAssertion({
+      ...params,
+      backendUrl: "http://other.example",
+      instanceId: "inst-1",
+    });
 
     expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("keeps separate assertions per user", async () => {
+    fetchMock.mockResolvedValue(assertionResponse(60 * MINUTES));
+
+    await service.fetchIdentityAssertion(params);
+    await service.fetchIdentityAssertion({
+      ...params,
+      email: "other@example.com",
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it("shares one request between concurrent callers", async () => {
     fetchMock.mockResolvedValue(assertionResponse(60 * MINUTES));
 
     const [first, second] = await Promise.all([
-      service.fetchIdentityAssertion(BACKEND_URL, "inst-42"),
-      service.fetchIdentityAssertion(BACKEND_URL, "inst-42"),
+      service.fetchIdentityAssertion(params),
+      service.fetchIdentityAssertion(params),
     ]);
 
     expect(second).toBe(first);
@@ -235,18 +253,16 @@ describe("fetchIdentityAssertion", () => {
       .mockResolvedValueOnce(jsonResponse(500, {}))
       .mockResolvedValueOnce(assertionResponse(60 * MINUTES));
 
-    await expect(
-      service.fetchIdentityAssertion(BACKEND_URL, "inst-42"),
-    ).rejects.toThrow("500");
-    await expect(
-      service.fetchIdentityAssertion(BACKEND_URL, "inst-42"),
-    ).resolves.toMatchObject({ token: "assertion" });
+    await expect(service.fetchIdentityAssertion(params)).rejects.toThrow("500");
+    await expect(service.fetchIdentityAssertion(params)).resolves.toMatchObject(
+      { token: "assertion" },
+    );
   });
 
   it("reports the status of a refused request", async () => {
     fetchMock.mockResolvedValue(jsonResponse(403, {}));
 
-    const failure = service.fetchIdentityAssertion(BACKEND_URL, "inst-42");
+    const failure = service.fetchIdentityAssertion(params);
 
     await expect(failure).rejects.toBeInstanceOf(
       service.IdentityAssertionRequestError,
@@ -257,24 +273,19 @@ describe("fetchIdentityAssertion", () => {
   it("rejects a response without a token or expiry", async () => {
     fetchMock.mockResolvedValue(jsonResponse(200, { token: "assertion" }));
 
-    await expect(
-      service.fetchIdentityAssertion(BACKEND_URL, "inst-42"),
-    ).rejects.toThrow("malformed");
+    await expect(service.fetchIdentityAssertion(params)).rejects.toThrow(
+      "malformed",
+    );
   });
 });
 
 describe("identityToken", () => {
-  const params = {
-    backendUrl: BACKEND_URL,
-    instanceId: "inst-42",
-    email: "user@example.com",
-  };
-
   it("hands back the assertion with a refresh time five minutes before expiry", async () => {
     fetchMock.mockResolvedValue(assertionResponse(60 * MINUTES));
 
     await expect(service.identityToken(params)).resolves.toEqual({
       token: "assertion",
+      expiresAtMs: NOW.getTime() + 60 * MINUTES,
       refreshAtMs: NOW.getTime() + 55 * MINUTES,
     });
   });
@@ -282,9 +293,11 @@ describe("identityToken", () => {
   it("falls back to an unsigned identity when the backend lacks the route", async () => {
     fetchMock.mockResolvedValue(jsonResponse(404, { detail: "Not Found" }));
 
-    const { token, refreshAtMs } = await service.identityToken(params);
+    const { token, expiresAtMs, refreshAtMs } =
+      await service.identityToken(params);
 
     expect(readJWT(token)).toEqual({ email: "user@example.com" });
+    expect(expiresAtMs).toBeUndefined();
     expect(refreshAtMs).toBeUndefined();
   });
 

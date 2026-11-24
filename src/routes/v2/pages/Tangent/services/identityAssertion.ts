@@ -16,6 +16,7 @@ export interface IdentityAssertion {
 
 export interface IdentityToken {
   token: string;
+  expiresAtMs?: number;
   refreshAtMs?: number;
 }
 
@@ -113,11 +114,12 @@ function isFresh(expiresAtMs: number): boolean {
   return expiresAtMs - Date.now() > REFRESH_LEAD_MS;
 }
 
-export function fetchIdentityAssertion(
-  backendUrl: string,
-  instanceId?: string,
-): Promise<IdentityAssertion> {
-  const key = `${backendUrl}\n${instanceId ?? ""}`;
+export function fetchIdentityAssertion({
+  backendUrl,
+  instanceId,
+  email,
+}: IdentityTokenParams): Promise<IdentityAssertion> {
+  const key = `${backendUrl}\n${instanceId ?? ""}\n${email}`;
   const cached = assertions.get(key);
   if (
     cached &&
@@ -169,11 +171,12 @@ export async function identityToken({
     return unsignedIdentityToken(email);
   }
   try {
-    const { token, expiresAtMs } = await fetchIdentityAssertion(
+    const { token, expiresAtMs } = await fetchIdentityAssertion({
       backendUrl,
       instanceId,
-    );
-    return { token, refreshAtMs: expiresAtMs - REFRESH_LEAD_MS };
+      email,
+    });
+    return { token, expiresAtMs, refreshAtMs: expiresAtMs - REFRESH_LEAD_MS };
   } catch (error) {
     if (!(error instanceof IdentityAssertionUnsupportedError)) throw error;
     backendsWithoutAssertions.add(backendUrl);

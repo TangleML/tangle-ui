@@ -145,10 +145,27 @@ describe("useRemoteEnvAuthToken", () => {
     expect(identityToken).toHaveBeenCalledTimes(2);
   });
 
-  it("stops asking once the backend refuses the assertion", async () => {
+  it("retries after a refused assertion a minute later", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.mocked(identityToken)
+      .mockRejectedValueOnce(
+        new IdentityAssertionRequestError(403, "Forbidden"),
+      )
+      .mockResolvedValueOnce({ token: "recovered" });
+
+    const { result } = renderToken(PROXIED_INSTANCE);
+    await waitFor(() => expect(identityToken).toHaveBeenCalledTimes(1));
+
+    await act(() => vi.advanceTimersByTimeAsync(1 * MINUTES));
+
+    await waitFor(() => expect(result.current).toBe("recovered"));
+    expect(identityToken).toHaveBeenCalledTimes(2);
+  });
+
+  it("stops asking a backend that lacks the identity route", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.mocked(identityToken).mockRejectedValue(
-      new IdentityAssertionRequestError(403, "Forbidden"),
+      new IdentityAssertionRequestError(404, "Not Found"),
     );
 
     const { result } = renderToken(PROXIED_INSTANCE);
@@ -158,6 +175,56 @@ describe("useRemoteEnvAuthToken", () => {
 
     expect(result.current).toBeUndefined();
     expect(identityToken).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the token when a refresh is refused and retries a minute later", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.mocked(identityToken)
+      .mockResolvedValueOnce({
+        token: "first",
+        expiresAtMs: Date.now() + 7 * MINUTES,
+        refreshAtMs: Date.now() + 2 * MINUTES,
+      })
+      .mockRejectedValueOnce(
+        new IdentityAssertionRequestError(429, "Too Many Requests"),
+      )
+      .mockResolvedValueOnce({ token: "second" });
+
+    const { result } = renderToken(PROXIED_INSTANCE);
+    await waitFor(() => expect(result.current).toBe("first"));
+
+    await act(() => vi.advanceTimersByTimeAsync(2 * MINUTES));
+    await waitFor(() => expect(identityToken).toHaveBeenCalledTimes(2));
+    expect(result.current).toBe("first");
+
+    await act(() => vi.advanceTimersByTimeAsync(1 * MINUTES));
+
+    await waitFor(() => expect(result.current).toBe("second"));
+    expect(identityToken).toHaveBeenCalledTimes(3);
+  });
+
+  it("hands out no token past its expiry", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.mocked(identityToken)
+      .mockResolvedValueOnce({
+        token: "first",
+        expiresAtMs: Date.now() + 3 * MINUTES,
+        refreshAtMs: Date.now() + 2 * MINUTES,
+      })
+      .mockRejectedValue(
+        new IdentityAssertionRequestError(429, "Too Many Requests"),
+      );
+
+    const { result } = renderToken(PROXIED_INSTANCE);
+    await waitFor(() => expect(result.current).toBe("first"));
+
+    await act(() => vi.advanceTimersByTimeAsync(2 * MINUTES));
+    await waitFor(() => expect(identityToken).toHaveBeenCalledTimes(2));
+    expect(result.current).toBe("first");
+
+    await act(() => vi.advanceTimersByTimeAsync(1 * MINUTES));
+
+    await waitFor(() => expect(result.current).toBeUndefined());
   });
 
   it("refreshes the token at its refresh time", async () => {

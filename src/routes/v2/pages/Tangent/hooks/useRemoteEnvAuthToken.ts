@@ -1,9 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 
 import { userQueryOptions } from "@/hooks/useUserDetails";
 import { useBackend } from "@/providers/BackendProvider";
 import {
   IdentityAssertionRequestError,
+  IdentityAssertionUnsupportedError,
   type IdentityToken,
   identityToken,
   instanceIdFromTangentBaseUrl,
@@ -34,16 +36,28 @@ function refreshDelay(token: IdentityToken | null | undefined): number | false {
   return Math.max(token.refreshAtMs - Date.now(), MIN_REFRESH_DELAY_MS);
 }
 
-function isRefusal(error: unknown): boolean {
+function isUnsupported(error: unknown): boolean {
   return (
-    error instanceof IdentityAssertionRequestError &&
-    error.status >= 400 &&
-    error.status < 500
+    error instanceof IdentityAssertionUnsupportedError ||
+    (error instanceof IdentityAssertionRequestError && error.status === 404)
   );
 }
 
 function retryDelay(error: unknown): number | false {
-  return isRefusal(error) ? false : MIN_REFRESH_DELAY_MS;
+  return isUnsupported(error) ? false : MIN_REFRESH_DELAY_MS;
+}
+
+function useHasExpired(expiresAtMs: number | undefined): boolean {
+  const [expiredAtMs, setExpiredAtMs] = useState<number>();
+  useEffect(() => {
+    if (expiresAtMs === undefined) return;
+    const timer = setTimeout(
+      () => setExpiredAtMs(expiresAtMs),
+      Math.max(expiresAtMs - Date.now(), 0),
+    );
+    return () => clearTimeout(timer);
+  }, [expiresAtMs]);
+  return expiresAtMs !== undefined && expiredAtMs === expiresAtMs;
 }
 
 export function useRemoteEnvAuthToken(
@@ -68,5 +82,6 @@ export function useRemoteEnvAuthToken(
         ? retryDelay(state.error)
         : refreshDelay(state.data),
   });
-  return data?.token;
+  const expired = useHasExpired(data?.expiresAtMs);
+  return expired ? undefined : data?.token;
 }
