@@ -138,6 +138,36 @@ describe("useProjectLocalEnv", () => {
     expect(connections).toBe(2);
   });
 
+  it("lists the environments again as this person once there is a token", async () => {
+    mockEnvironments([]);
+    const sessionIds = ["s1"];
+
+    const { rerender } = renderHook(
+      () => useProjectLocalEnv(BASE_URL, sessionIds),
+      { wrapper: wrapperFor(makeClient()) },
+    );
+    await waitFor(() =>
+      expect(listTangentEnvironments).toHaveBeenCalledTimes(1),
+    );
+    expect(listTangentEnvironments).toHaveBeenLastCalledWith({
+      baseUrl: BASE_URL,
+      sessionId: "s1",
+      authToken: undefined,
+    });
+
+    vi.mocked(useRemoteEnvAuthToken).mockReturnValue("token-1");
+    rerender();
+
+    await waitFor(() =>
+      expect(listTangentEnvironments).toHaveBeenCalledTimes(2),
+    );
+    expect(listTangentEnvironments).toHaveBeenLastCalledWith({
+      baseUrl: BASE_URL,
+      sessionId: "s1",
+      authToken: "token-1",
+    });
+  });
+
   it("keeps its socket when the token is refreshed", async () => {
     mockEnvironments([]);
     vi.mocked(useRemoteEnvAuthToken).mockReturnValue("token-1");

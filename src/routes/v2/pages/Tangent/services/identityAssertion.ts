@@ -1,12 +1,13 @@
+import { normalizeBackendUrl } from "@/utils/backendIdentity";
 import { MINUTES } from "@/utils/constants";
 import { isRecord } from "@/utils/typeGuards";
 
 import { createUnsignedJwt } from "./createUnsignedJwt";
 
 const IDENTITY_ASSERTION_PATH = "/api/tangent/identity_assertion";
+const TANGENT_INSTANCES_PATH = "/api/tangent/instances/";
 
 const REFRESH_LEAD_MS = 5 * MINUTES;
-const TANGENT_INSTANCE_PATH = /^\/api\/tangent\/instances\/([^/]+)(?:\/|$)/;
 
 export interface IdentityAssertion {
   token: string;
@@ -31,6 +32,16 @@ export class IdentityAssertionUnsupportedError extends Error {
   }
 }
 
+export class IdentityAssertionRequestError extends Error {
+  readonly status: number;
+
+  constructor(status: number, statusText: string) {
+    super(`Failed to fetch an identity assertion (${status} ${statusText}).`);
+    this.name = "IdentityAssertionRequestError";
+    this.status = status;
+  }
+}
+
 interface CacheEntry {
   pending: Promise<IdentityAssertion>;
   expiresAtMs?: number;
@@ -39,17 +50,28 @@ interface CacheEntry {
 const assertions = new Map<string, CacheEntry>();
 const backendsWithoutAssertions = new Set<string>();
 
+/**
+ * The id of the backend-proxied Tangent instance `baseUrl` points at, if any.
+ * Only a url on the backend's own origin and below its path prefix counts; a
+ * proxy-shaped path on any other host is some other Tangent.
+ */
 export function instanceIdFromTangentBaseUrl(
   baseUrl: string,
+  backendUrl: string,
 ): string | undefined {
-  let pathname: string;
   try {
-    pathname = new URL(baseUrl, window.location.href).pathname;
+    const tangent = new URL(baseUrl, window.location.href);
+    const backend = new URL(normalizeBackendUrl(backendUrl));
+    if (tangent.origin !== backend.origin) return undefined;
+
+    const instancesPath = `${backend.pathname.replace(/\/+$/, "")}${TANGENT_INSTANCES_PATH}`;
+    if (!tangent.pathname.startsWith(instancesPath)) return undefined;
+
+    const [id] = tangent.pathname.slice(instancesPath.length).split("/");
+    return id ? decodeURIComponent(id) : undefined;
   } catch {
     return undefined;
   }
-  const match = TANGENT_INSTANCE_PATH.exec(pathname);
-  return match ? decodeURIComponent(match[1]) : undefined;
 }
 
 function parseAssertion(value: unknown): IdentityAssertion | null {
@@ -75,8 +97,9 @@ async function requestIdentityAssertion(
     throw new IdentityAssertionUnsupportedError(backendUrl);
   }
   if (!response.ok) {
-    throw new Error(
-      `Failed to fetch an identity assertion (${response.status} ${response.statusText}).`,
+    throw new IdentityAssertionRequestError(
+      response.status,
+      response.statusText,
     );
   }
   const parsed = parseAssertion(await response.json());
@@ -122,26 +145,27 @@ function unsignedIdentityToken(email: string): IdentityToken {
   return { token: createUnsignedJwt({ email }) };
 }
 
-function isUnproxiedInstance(instanceId: string | undefined): boolean {
+function shouldPresentUnsignedIdentity(
+  backendUrl: string,
+  instanceId: string | undefined,
+): boolean {
+  if (backendsWithoutAssertions.has(backendUrl)) return true;
   return instanceId === undefined && !import.meta.env.DEV;
 }
 
 /**
  * A signed assertion is scoped to the Tangent instance the backend proxies.
- * An embed url that names no instance is some other origin, which must not
- * receive an assertion minted for a backend instance; it gets the unsigned
- * identity instead. In development the backend accepts an unscoped request,
- * so a local Tangent is still handed a signed token.
+ * An embed url that names no backend instance is some other Tangent, which
+ * must not receive an assertion minted for a backend instance; it gets the
+ * unsigned identity instead. In development the backend accepts an unscoped
+ * request, so a local Tangent is still handed a signed token.
  */
 export async function identityToken({
   backendUrl,
   instanceId,
   email,
 }: IdentityTokenParams): Promise<IdentityToken> {
-  if (
-    isUnproxiedInstance(instanceId) ||
-    backendsWithoutAssertions.has(backendUrl)
-  ) {
+  if (shouldPresentUnsignedIdentity(backendUrl, instanceId)) {
     return unsignedIdentityToken(email);
   }
   try {

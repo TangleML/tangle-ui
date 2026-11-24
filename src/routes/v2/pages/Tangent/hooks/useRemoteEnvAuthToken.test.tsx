@@ -1,4 +1,8 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  focusManager,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -16,7 +20,10 @@ vi.mock(
   }),
 );
 
-import { identityToken } from "@/routes/v2/pages/Tangent/services/identityAssertion";
+import {
+  IdentityAssertionRequestError,
+  identityToken,
+} from "@/routes/v2/pages/Tangent/services/identityAssertion";
 import { MINUTES } from "@/utils/constants";
 
 import { useRemoteEnvAuthToken } from "./useRemoteEnvAuthToken";
@@ -41,6 +48,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  focusManager.setFocused(undefined);
   vi.useRealTimers();
 });
 
@@ -58,6 +66,17 @@ describe("useRemoteEnvAuthToken", () => {
 
   it("asks for no instance when the Tangent url names none", async () => {
     const { result } = renderToken("https://tangent.example");
+
+    await waitFor(() => expect(result.current).toBe("assertion"));
+    expect(identityToken).toHaveBeenCalledWith(
+      expect.objectContaining({ instanceId: undefined }),
+    );
+  });
+
+  it("asks for no instance when a proxy-shaped url is on another origin", async () => {
+    const { result } = renderToken(
+      "https://tangent.example/api/tangent/instances/inst-42",
+    );
 
     await waitFor(() => expect(result.current).toBe("assertion"));
     expect(identityToken).toHaveBeenCalledWith(
@@ -93,10 +112,10 @@ describe("useRemoteEnvAuthToken", () => {
     expect(result.current).toBeUndefined();
   });
 
-  it("retries a refused assertion after a minute", async () => {
+  it("retries after a network failure a minute later", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.mocked(identityToken)
-      .mockRejectedValueOnce(new Error("HTTP 500"))
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"))
       .mockResolvedValueOnce({ token: "recovered" });
 
     const { result } = renderToken(PROXIED_INSTANCE);
@@ -109,8 +128,59 @@ describe("useRemoteEnvAuthToken", () => {
     expect(identityToken).toHaveBeenCalledTimes(2);
   });
 
+  it("retries after a backend failure a minute later", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.mocked(identityToken)
+      .mockRejectedValueOnce(
+        new IdentityAssertionRequestError(503, "Service Unavailable"),
+      )
+      .mockResolvedValueOnce({ token: "recovered" });
+
+    const { result } = renderToken(PROXIED_INSTANCE);
+    await waitFor(() => expect(identityToken).toHaveBeenCalledTimes(1));
+
+    await act(() => vi.advanceTimersByTimeAsync(1 * MINUTES));
+
+    await waitFor(() => expect(result.current).toBe("recovered"));
+    expect(identityToken).toHaveBeenCalledTimes(2);
+  });
+
+  it("stops asking once the backend refuses the assertion", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.mocked(identityToken).mockRejectedValue(
+      new IdentityAssertionRequestError(403, "Forbidden"),
+    );
+
+    const { result } = renderToken(PROXIED_INSTANCE);
+    await waitFor(() => expect(identityToken).toHaveBeenCalledTimes(1));
+
+    await act(() => vi.advanceTimersByTimeAsync(5 * MINUTES));
+
+    expect(result.current).toBeUndefined();
+    expect(identityToken).toHaveBeenCalledTimes(1);
+  });
+
   it("refreshes the token at its refresh time", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.mocked(identityToken)
+      .mockResolvedValueOnce({
+        token: "first",
+        refreshAtMs: Date.now() + 2 * MINUTES,
+      })
+      .mockResolvedValueOnce({ token: "second" });
+
+    const { result } = renderToken(PROXIED_INSTANCE);
+    await waitFor(() => expect(result.current).toBe("first"));
+
+    await act(() => vi.advanceTimersByTimeAsync(2 * MINUTES));
+
+    await waitFor(() => expect(result.current).toBe("second"));
+    expect(identityToken).toHaveBeenCalledTimes(2);
+  });
+
+  it("refreshes the token while the tab is in the background", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    focusManager.setFocused(false);
     vi.mocked(identityToken)
       .mockResolvedValueOnce({
         token: "first",

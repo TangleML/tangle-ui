@@ -19,7 +19,7 @@ export function useTangentEmbedToken(
   const queryClient = useQueryClient();
   const { backendUrl } = useBackend();
   const instanceId = baseUrl
-    ? instanceIdFromTangentBaseUrl(baseUrl)
+    ? instanceIdFromTangentBaseUrl(baseUrl, backendUrl)
     : undefined;
   const getToken = () =>
     queryClient

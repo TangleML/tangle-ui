@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { userQueryOptions } from "@/hooks/useUserDetails";
 import { useBackend } from "@/providers/BackendProvider";
 import {
+  IdentityAssertionRequestError,
   type IdentityToken,
   identityToken,
   instanceIdFromTangentBaseUrl,
@@ -33,6 +34,18 @@ function refreshDelay(token: IdentityToken | null | undefined): number | false {
   return Math.max(token.refreshAtMs - Date.now(), MIN_REFRESH_DELAY_MS);
 }
 
+function isRefusal(error: unknown): boolean {
+  return (
+    error instanceof IdentityAssertionRequestError &&
+    error.status >= 400 &&
+    error.status < 500
+  );
+}
+
+function retryDelay(error: unknown): number | false {
+  return isRefusal(error) ? false : MIN_REFRESH_DELAY_MS;
+}
+
 export function useRemoteEnvAuthToken(
   tangentBaseUrl: string | null,
 ): string | undefined {
@@ -40,7 +53,7 @@ export function useRemoteEnvAuthToken(
   const { data: user } = useQuery(userQueryOptions);
   const userId = user?.id;
   const instanceId = tangentBaseUrl
-    ? instanceIdFromTangentBaseUrl(tangentBaseUrl)
+    ? instanceIdFromTangentBaseUrl(tangentBaseUrl, backendUrl)
     : undefined;
 
   const { data } = useQuery({
@@ -49,9 +62,10 @@ export function useRemoteEnvAuthToken(
     enabled: Boolean(backendUrl) && Boolean(userId) && tangentBaseUrl !== null,
     staleTime: Infinity,
     refetchOnWindowFocus: false,
+    refetchIntervalInBackground: true,
     refetchInterval: ({ state }) =>
       state.status === "error"
-        ? MIN_REFRESH_DELAY_MS
+        ? retryDelay(state.error)
         : refreshDelay(state.data),
   });
   return data?.token;

@@ -57,14 +57,34 @@ describe("instanceIdFromTangentBaseUrl", () => {
     expect(
       service.instanceIdFromTangentBaseUrl(
         "https://backend.example/api/tangent/instances/inst-42",
+        "https://backend.example",
       ),
     ).toBe("inst-42");
   });
 
-  it("accepts any host and a path below the instance", () => {
+  it("accepts a path below the instance", () => {
     expect(
       service.instanceIdFromTangentBaseUrl(
         "http://localhost:8000/api/tangent/instances/inst-42/embed/",
+        "http://localhost:8000",
+      ),
+    ).toBe("inst-42");
+  });
+
+  it("follows the backend's path prefix", () => {
+    expect(
+      service.instanceIdFromTangentBaseUrl(
+        "https://host/prefix/api/tangent/instances/inst-42",
+        "https://host/prefix",
+      ),
+    ).toBe("inst-42");
+  });
+
+  it("ignores a trailing slash on the backend url", () => {
+    expect(
+      service.instanceIdFromTangentBaseUrl(
+        "https://host/prefix/api/tangent/instances/inst-42",
+        "https://host/prefix/",
       ),
     ).toBe("inst-42");
   });
@@ -73,8 +93,36 @@ describe("instanceIdFromTangentBaseUrl", () => {
     expect(
       service.instanceIdFromTangentBaseUrl(
         "https://backend.example/api/tangent/instances/team%2Fone",
+        "https://backend.example",
       ),
     ).toBe("team/one");
+  });
+
+  it("has no id for a proxy-shaped path on another origin", () => {
+    expect(
+      service.instanceIdFromTangentBaseUrl(
+        "https://tangent.example/api/tangent/instances/inst-42",
+        "https://backend.example",
+      ),
+    ).toBeUndefined();
+  });
+
+  it("has no id for the same host under another prefix", () => {
+    expect(
+      service.instanceIdFromTangentBaseUrl(
+        "https://host/other/api/tangent/instances/inst-42",
+        "https://host/prefix",
+      ),
+    ).toBeUndefined();
+  });
+
+  it("has no id without a backend url", () => {
+    expect(
+      service.instanceIdFromTangentBaseUrl(
+        "https://backend.example/api/tangent/instances/inst-42",
+        "",
+      ),
+    ).toBeUndefined();
   });
 
   it.each([
@@ -85,7 +133,9 @@ describe("instanceIdFromTangentBaseUrl", () => {
     "https://backend.example/prefix/api/tangent/instances/inst-42",
     "not a url",
   ])("has no id for %s", (url) => {
-    expect(service.instanceIdFromTangentBaseUrl(url)).toBeUndefined();
+    expect(
+      service.instanceIdFromTangentBaseUrl(url, "https://backend.example"),
+    ).toBeUndefined();
   });
 });
 
@@ -191,6 +241,17 @@ describe("fetchIdentityAssertion", () => {
     await expect(
       service.fetchIdentityAssertion(BACKEND_URL, "inst-42"),
     ).resolves.toMatchObject({ token: "assertion" });
+  });
+
+  it("reports the status of a refused request", async () => {
+    fetchMock.mockResolvedValue(jsonResponse(403, {}));
+
+    const failure = service.fetchIdentityAssertion(BACKEND_URL, "inst-42");
+
+    await expect(failure).rejects.toBeInstanceOf(
+      service.IdentityAssertionRequestError,
+    );
+    await expect(failure).rejects.toMatchObject({ status: 403 });
   });
 
   it("rejects a response without a token or expiry", async () => {

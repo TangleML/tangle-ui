@@ -18,8 +18,12 @@ interface ProjectLocalEnv {
   isLocalEnvConnected: boolean;
 }
 
-function environmentsQueryKey(baseUrl: string | null, sessionId: string) {
-  return [...ENVIRONMENTS_QUERY_SCOPE, baseUrl, sessionId] as const;
+function environmentsQueryKey(
+  baseUrl: string | null,
+  sessionId: string,
+  hasToken: boolean,
+) {
+  return [...ENVIRONMENTS_QUERY_SCOPE, baseUrl, sessionId, hasToken] as const;
 }
 
 /**
@@ -59,7 +63,7 @@ export function useProjectLocalEnv(
 
   const results = useQueries({
     queries: sessionIds.map((sessionId) => ({
-      queryKey: environmentsQueryKey(baseUrl, sessionId),
+      queryKey: environmentsQueryKey(baseUrl, sessionId, hasToken),
       queryFn: () => {
         if (!baseUrl) return [];
         return listTangentEnvironments({ baseUrl, sessionId, authToken });
