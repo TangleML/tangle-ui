@@ -2,7 +2,10 @@ import { renderHook } from "@testing-library/react";
 import { action, observable } from "mobx";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
+import {
+  CHAT_TAB_VALUE,
+  TangentProjectStore,
+} from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
 
 import { useTangentSessionParam } from "./useTangentSessionParam";
 
@@ -65,6 +68,43 @@ describe("useTangentSessionParam", () => {
 
     expect(store.activeSessionId).toBe("sess-b");
     expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it("opens the named agent and clears just the message link when its tab is left", () => {
+    const store = new TangentProjectStore("p");
+    search = { session: "s", message: "m", agent: "a" };
+    renderHook(() => useTangentSessionParam(store));
+    expect(store.chatTabs).toEqual([]);
+    // The embed identifies the agent once it has received this session's roster.
+    store.openAgent({
+      id: "a",
+      kind: "subagent",
+      name: "Researcher",
+      conversationId: "thread",
+      status: "active",
+    });
+    expect(navigate).not.toHaveBeenCalled();
+    store.closeChatTab("a");
+    const { search: rewrite } = navigate.mock.calls[0][0];
+    expect(
+      rewrite({ session: "s", message: "m", agent: "a", other: "kept" }),
+    ).toEqual({ session: "s", other: "kept" });
+  });
+
+  it("selects Prime for a linked message when the project already shows another agent", () => {
+    const store = new TangentProjectStore("p");
+    store.selectSession("s");
+    store.openAgent({
+      id: "a",
+      kind: "subagent",
+      name: "Researcher",
+      conversationId: "thread",
+      status: "active",
+    });
+    search = { session: "s", message: "m" };
+    const { result } = renderHook(() => useTangentSessionParam(store));
+    expect(store.chatActiveTab).toBe(CHAT_TAB_VALUE);
+    expect(result.current?.messageId).toBe("m");
   });
 
   it("acts once however often it re-renders", () => {

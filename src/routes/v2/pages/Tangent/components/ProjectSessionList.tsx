@@ -15,7 +15,10 @@ import useToastNotification from "@/hooks/useToastNotification";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useDialog } from "@/providers/DialogProvider/hooks/useDialog";
 import { convertCancelErrorTo } from "@/providers/DialogProvider/utils";
-import { tangentSessionSearch } from "@/routes/tangentSearch";
+import {
+  tangentSessionSearch,
+  withoutTangentMessageSearch,
+} from "@/routes/tangentSearch";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import {
   cancelPendingProjectMove,
@@ -108,7 +111,7 @@ export const ProjectSessionList = observer(function ProjectSessionList({
       void navigate({
         to: ".",
         search: (previous: Record<string, unknown>) => ({
-          ...previous,
+          ...withoutTangentMessageSearch(previous),
           ...tangentSessionSearch(sessionId),
         }),
       });

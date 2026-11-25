@@ -12,6 +12,7 @@ import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProj
 import { useChatCommands } from "@/routes/v2/pages/Tangent/hooks/useChatCommands";
 import { useChatReferences } from "@/routes/v2/pages/Tangent/hooks/useChatReferences";
 import { useRefreshSessionResources } from "@/routes/v2/pages/Tangent/hooks/useRefreshSessionResources";
+import { useTangentSessionParam } from "@/routes/v2/pages/Tangent/hooks/useTangentSessionParam";
 import { AiProviderSetup } from "@/routes/v2/shared/components/AiChat/components/AiProviderSetup";
 import { TANGENT_AI_SETUP } from "@/routes/v2/shared/components/AiChat/components/aiSetupCopy";
 import { ChatEntityRevealProvider } from "@/routes/v2/shared/components/AiChat/components/ChatEntityRevealContext";
@@ -25,6 +26,7 @@ export const ProjectChatArea = observer(function ProjectChatArea() {
   const commands = useChatCommands(store.projectId);
   const refreshSessionResources = useRefreshSessionResources();
   const activeSessionId = store.activeSessionId;
+  const message = useTangentSessionParam(store);
 
   // Ahead of the session states: without a provider there is nothing to say to
   // a session, so offering to start one would only make a dead thread.
@@ -56,7 +58,9 @@ export const ProjectChatArea = observer(function ProjectChatArea() {
       }}
     >
       <TangentChatPane
+        projectId={store.projectId}
         sessionId={activeSessionId}
+        message={message}
         tabs={store.chatTabs}
         activeTab={store.chatActiveTab}
         onTabChange={(value) => store.setChatActiveTab(value)}

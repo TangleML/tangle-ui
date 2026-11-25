@@ -236,7 +236,9 @@ describe("ProjectSessionList", () => {
 
     const [{ to, search }] = navigate.mock.calls[0];
     expect(to).toBe(".");
-    expect(search({ other: "kept" })).toEqual({
+    expect(
+      search({ message: "old", agent: "previous-agent", other: "kept" }),
+    ).toEqual({
       other: "kept",
       session: "session-2",
     });

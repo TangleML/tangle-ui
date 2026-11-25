@@ -30,6 +30,29 @@ describe("readTangentSessionParam", () => {
     });
   });
 
+  it("requires an existing session and a message before opening an agent", () => {
+    expect(
+      readTangentSessionParam({ session: "new", message: "m", agent: "a" }),
+    ).toEqual({ kind: "new" });
+    expect(
+      readTangentSessionParam({ message: "m", agent: "a" }),
+    ).toBeUndefined();
+    expect(readTangentSessionParam({ session: "s", agent: "a" })).toEqual({
+      kind: "existing",
+      sessionId: "s",
+    });
+    expect(
+      readTangentSessionParam({ session: "s", message: "m", agent: ["bad"] }),
+    ).toEqual({ kind: "existing", sessionId: "s" });
+    expect(
+      readTangentSessionParam({ session: "s", message: 42, agent: "prime" }),
+    ).toEqual({
+      kind: "existing",
+      sessionId: "s",
+      message: { messageId: "42" },
+    });
+  });
+
   it("asks for nothing when the param is absent", () => {
     expect(readTangentSessionParam({})).toBeUndefined();
     expect(readTangentSessionParam(undefined)).toBeUndefined();
@@ -76,6 +99,8 @@ describe("withoutTangentArrivalSearch", () => {
     expect(
       withoutTangentArrivalSearch({
         session: "new",
+        message: "msg",
+        agent: "agent",
         open: "run://id/run-7",
         other: "kept",
       }),
