@@ -10,10 +10,8 @@ import type { ReactFlowProps, XYPosition } from "@xyflow/react";
 import { useEffect } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  type PickOutcome,
-  yamlErrorOutcome,
-} from "@/components/shared/FilePicker";
+import { yamlErrorOutcome } from "@/components/shared/FilePicker/outcomes";
+import type { PickOutcome } from "@/components/shared/FilePicker/useFilePicker";
 import {
   IncrementingIdGenerator,
   YamlDeserializer,

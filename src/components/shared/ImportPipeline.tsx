@@ -3,12 +3,10 @@ import { Loader2 } from "lucide-react";
 import type { ReactElement } from "react";
 import { useState } from "react";
 
-import {
-  FilePicker,
-  type PickOutcome,
-  YAML_FILE_ACCEPT,
-  yamlErrorOutcome,
-} from "@/components/shared/FilePicker";
+import { YAML_FILE_ACCEPT } from "@/components/shared/FilePicker/fileChecks";
+import { FilePicker } from "@/components/shared/FilePicker/FilePicker";
+import { yamlErrorOutcome } from "@/components/shared/FilePicker/outcomes";
+import type { PickOutcome } from "@/components/shared/FilePicker/useFilePicker";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,

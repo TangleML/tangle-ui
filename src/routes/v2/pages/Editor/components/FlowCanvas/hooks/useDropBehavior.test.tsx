@@ -13,7 +13,7 @@ import type { ReactFlowInstance, XYPosition } from "@xyflow/react";
 import { type ReactNode } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
-import { useFilePicker } from "@/components/shared/FilePicker";
+import { useFilePicker } from "@/components/shared/FilePicker/useFilePicker";
 import {
   IncrementingIdGenerator,
   YamlDeserializer,

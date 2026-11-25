@@ -2,7 +2,8 @@ import { type FormEvent, useState } from "react";
 
 import { languageFor } from "@/components/shared/CodeViewer";
 import CodeEditor from "@/components/shared/CodeViewer/CodeEditor";
-import { FilePicker, useFilePicker } from "@/components/shared/FilePicker";
+import { FilePicker } from "@/components/shared/FilePicker/FilePicker";
+import { useFilePicker } from "@/components/shared/FilePicker/useFilePicker";
 import { Button } from "@/components/ui/button";
 import { DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";

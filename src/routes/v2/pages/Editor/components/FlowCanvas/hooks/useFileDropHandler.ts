@@ -1,9 +1,7 @@
 import type { XYPosition } from "@xyflow/react";
 
-import {
-  type PickOutcome,
-  yamlErrorOutcome,
-} from "@/components/shared/FilePicker";
+import { yamlErrorOutcome } from "@/components/shared/FilePicker/outcomes";
+import type { PickOutcome } from "@/components/shared/FilePicker/useFilePicker";
 import type { ComponentReference, ComponentSpec } from "@/models/componentSpec";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";

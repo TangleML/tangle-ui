@@ -5,12 +5,10 @@ import { type ChangeEvent, type ReactNode, useCallback, useState } from "react";
 import { ComponentEditorDialog } from "@/components/shared/ComponentEditor/ComponentEditorDialog";
 import { NewComponentTemplateSelector } from "@/components/shared/ComponentEditor/components/NewComponentTemplateSelector";
 import type { SupportedTemplate } from "@/components/shared/ComponentEditor/types";
-import {
-  FilePicker,
-  type PickOutcome,
-  YAML_FILE_ACCEPT,
-} from "@/components/shared/FilePicker";
+import { YAML_FILE_ACCEPT } from "@/components/shared/FilePicker/fileChecks";
+import { FilePicker } from "@/components/shared/FilePicker/FilePicker";
 import { yamlErrorOutcome } from "@/components/shared/FilePicker/outcomes";
+import type { PickOutcome } from "@/components/shared/FilePicker/useFilePicker";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,

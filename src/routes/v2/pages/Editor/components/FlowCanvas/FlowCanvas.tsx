@@ -9,13 +9,13 @@ import {
 import { observer } from "mobx-react-lite";
 import { useEffect, useState } from "react";
 
+import { YAML_FILE_ACCEPT } from "@/components/shared/FilePicker/fileChecks";
+import { FileDropHighlight } from "@/components/shared/FilePicker/FileDropHighlight";
+import { FilePickerStatus } from "@/components/shared/FilePicker/FilePickerStatus";
 import {
-  FilePickerStatus,
   type PickOutcome,
   useFilePicker,
-  YAML_FILE_ACCEPT,
-} from "@/components/shared/FilePicker";
-import { FileDropHighlight } from "@/components/shared/FilePicker/FileDropHighlight";
+} from "@/components/shared/FilePicker/useFilePicker";
 import { BlockStack } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
 import type { ComponentSpec } from "@/models/componentSpec";
