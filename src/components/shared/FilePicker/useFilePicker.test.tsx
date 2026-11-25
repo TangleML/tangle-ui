@@ -584,6 +584,59 @@ describe("useFilePicker status", () => {
     expect(consoleError).not.toHaveBeenCalled();
   });
 
+  it("skips onFile for a read that lands after unmount", async () => {
+    const unmountedRead = deferred<string>();
+    const mountedRead = deferred<string>();
+    readText
+      .mockReturnValueOnce(unmountedRead.promise)
+      .mockReturnValueOnce(mountedRead.promise);
+    const unmountedOnFile = vi.fn(() => success);
+    const mountedOnFile = vi.fn(() => success);
+    const unmounted = renderHook(() =>
+      useFilePicker({ onFile: unmountedOnFile }),
+    );
+    const mounted = renderHook(() => useFilePicker({ onFile: mountedOnFile }));
+
+    act(() => {
+      void unmounted.result.current.handleFiles(
+        [new File(["a"], "a.txt")],
+        "browse",
+      );
+      void mounted.result.current.handleFiles(
+        [new File(["b"], "b.txt")],
+        "browse",
+      );
+    });
+    unmounted.unmount();
+
+    unmountedRead.resolve("text");
+    await act(async () => mountedRead.resolve("text"));
+    await settleOutsideAct();
+
+    expect(unmountedOnFile).not.toHaveBeenCalled();
+    expect(mountedOnFile).toHaveBeenCalledOnce();
+  });
+
+  it("keeps an import onFile already started fresh after unmount", async () => {
+    const importDone = deferred<PickOutcome>();
+    let isStale: (() => boolean) | undefined;
+    const onFile = vi.fn((pick: { isStale: () => boolean }) => {
+      isStale = pick.isStale;
+      return importDone.promise;
+    });
+    const { result, unmount } = renderHook(() => useFilePicker({ onFile }));
+
+    await act(async () => {
+      void result.current.handleFiles([new File(["a"], "a.txt")], "browse");
+    });
+    expect(onFile).toHaveBeenCalledOnce();
+    unmount();
+
+    expect(isStale?.()).toBe(false);
+    importDone.resolve(success);
+    await settleOutsideAct();
+  });
+
   it("keeps a status dismissed during a read dismissed when the read lands", async () => {
     const read = deferred<string>();
     readText.mockReturnValueOnce(read.promise);

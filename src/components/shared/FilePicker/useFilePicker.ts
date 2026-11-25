@@ -133,12 +133,23 @@ export function useFilePicker<M = unknown>({
   // single dragleave does not mean the drag has left the target.
   const dragDepth = useRef(0);
   const latestReadId = useRef(0);
+  const pendingReadId = useRef<number | null>(null);
 
   useEffect(() => {
     if (!guardWindowDrop) return;
     acquireWindowGuard();
     return releaseWindowGuard;
   }, [guardWindowDrop]);
+
+  // Only a read still pending is dropped; an import onFile already started keeps going.
+  useEffect(
+    () => () => {
+      if (pendingReadId.current === latestReadId.current) {
+        latestReadId.current += 1;
+      }
+    },
+    [],
+  );
 
   const handleFiles = async (
     files: FileList | File[],
@@ -154,6 +165,7 @@ export function useFilePicker<M = unknown>({
     setStatus({ kind: "reading", fileName: file.name });
 
     let text: string;
+    pendingReadId.current = readId;
     try {
       text = await readCheckedText(file, {
         accept,
@@ -172,6 +184,8 @@ export function useFilePicker<M = unknown>({
         fileName: file.name,
       });
       return;
+    } finally {
+      if (pendingReadId.current === readId) pendingReadId.current = null;
     }
     if (isStale()) return;
 
