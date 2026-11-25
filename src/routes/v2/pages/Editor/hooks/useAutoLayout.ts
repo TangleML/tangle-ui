@@ -20,5 +20,5 @@ export function useAutoLayout(spec: ComponentSpec | null): void {
     applyAutoLayoutPositions(spec, layoutedNodes);
   };
 
-  useAutoLayoutShortcut(applyLayout);
+  useAutoLayoutShortcut(applyLayout, spec);
 }

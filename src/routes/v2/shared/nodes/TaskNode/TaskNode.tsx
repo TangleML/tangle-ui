@@ -39,6 +39,7 @@ import {
 import { ISO8601_DURATION_ZERO_DAYS } from "@/utils/constants";
 import type { ExecutionStatusStats } from "@/utils/executionStatus";
 
+import { resolveConnectedPortNames } from "./ports.utils";
 import { TaskNodeCard } from "./TaskNodeCard";
 import { TaskNodeSimplified } from "./TaskNodeSimplified";
 
@@ -150,27 +151,6 @@ export function resolveInputDisplayData(
   }
 
   return { values, secretInputNames };
-}
-
-function resolveConnectedPortNames(
-  entityId: string,
-  spec: ComponentSpec | null,
-): { inputs: Set<string>; outputs: Set<string> } {
-  const inputs = new Set<string>();
-  const outputs = new Set<string>();
-
-  if (!spec) return { inputs, outputs };
-
-  for (const binding of spec.bindings) {
-    if (binding.targetEntityId === entityId) {
-      inputs.add(binding.targetPortName);
-    }
-    if (binding.sourceEntityId === entityId) {
-      outputs.add(binding.sourcePortName);
-    }
-  }
-
-  return { inputs, outputs };
 }
 
 function resolveTaskColor(task: Task): string | undefined {

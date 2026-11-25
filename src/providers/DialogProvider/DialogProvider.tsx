@@ -12,11 +12,11 @@ import {
 import { useDialogRouter } from "./useDialogRouter";
 import {
   createCancellationError,
-  DIALOG_PARAM_KEYS,
   DIALOG_SEARCH_PARAMS,
   generateDialogId,
   getTopRoutedDialog,
   omitSearchParams,
+  searchParamKeysReleasedBy,
 } from "./utils";
 
 interface DialogProviderProps {
@@ -90,11 +90,11 @@ export function DialogProvider({
 
     setStack((prev) => prev.filter((d) => d.id !== id));
 
-    if (dialog?.routeKey) {
+    if (dialog?.routeKey || dialog?.clearSearchParamsOnClose?.length) {
       const nextRoutedDialog = getTopRoutedDialog(remainingStack);
       const baseSearch = omitSearchParams(
         searchParamsRef.current,
-        DIALOG_PARAM_KEYS,
+        searchParamKeysReleasedBy([dialog]),
       );
 
       const nextSearch = nextRoutedDialog
@@ -134,7 +134,10 @@ export function DialogProvider({
     });
 
     navigateSearch(
-      omitSearchParams(searchParamsRef.current, DIALOG_PARAM_KEYS),
+      omitSearchParams(
+        searchParamsRef.current,
+        searchParamKeysReleasedBy(stack),
+      ),
     );
   };
 

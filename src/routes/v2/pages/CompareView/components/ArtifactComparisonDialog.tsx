@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
+import { cn } from "@/lib/utils";
 import { artifactDiffLanguage } from "@/routes/v2/pages/CompareView/utils/artifactTextDiff";
 
 import { ArtifactTextDiff } from "./ArtifactTextDiff";
@@ -29,17 +30,20 @@ interface ArtifactComparisonSide {
   type: string | undefined;
 }
 
-function PaneHeader({
-  run,
-  label,
-  type,
-}: Pick<ArtifactComparisonSide, "run" | "label" | "type">) {
+interface PaneHeaderProps extends Pick<
+  ArtifactComparisonSide,
+  "run" | "label" | "type"
+> {
+  grow?: boolean;
+}
+
+function PaneHeader({ run, label, type, grow = false }: PaneHeaderProps) {
   return (
     <InlineStack
       gap="2"
       blockAlign="center"
       wrap="nowrap"
-      className="min-w-0 flex-1"
+      className={cn("min-w-0", grow && "flex-1")}
     >
       <RunTag run={run} label={label} />
       <Text as="span" size="xs" tone="subdued" className="truncate">
@@ -146,8 +150,8 @@ export function ArtifactComparisonDialog({
             className="min-h-0 w-full flex-1 overflow-hidden rounded-lg border p-2"
           >
             <InlineStack gap="3" blockAlign="center" wrap="nowrap">
-              <PaneHeader run="a" label={labelA} type={typeA} />
-              <PaneHeader run="b" label={labelB} type={typeB} />
+              <PaneHeader run="a" label={labelA} type={typeA} grow />
+              <PaneHeader run="b" label={labelB} type={typeB} grow />
             </InlineStack>
             <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
               <ArtifactTextDiff

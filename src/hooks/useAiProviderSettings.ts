@@ -1,12 +1,19 @@
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 
 import {
   AI_CONFIG,
   getAiModelOptions,
+  getAiModelReplacement,
   getDefaultAiModelId,
   getEffectiveReasoningEffort,
   isAiReasoningEffort,
 } from "@/config/aiConfig";
+import {
+  ensureModelCatalog,
+  getModelCatalogStatus,
+  getModelCatalogUrl,
+  MODEL_CATALOG_EVENT,
+} from "@/config/modelCatalog";
 import { useBackend } from "@/providers/BackendProvider";
 import type { AiProviderConfig } from "@/types/aiProvider";
 import { getStorage } from "@/utils/typedStorage";
@@ -76,7 +83,7 @@ const REPLACED_MODEL_IDS = new Map([["gpt-6-sol", "gpt-6.1-sol"]]);
 
 function readModelId(record: Record<string, unknown>, key: string): string {
   const model = readTrimmedString(record, key);
-  return REPLACED_MODEL_IDS.get(model) ?? model;
+  return getAiModelReplacement(model) ?? REPLACED_MODEL_IDS.get(model) ?? model;
 }
 
 function readReasoningPreference(record: Record<string, unknown>) {
@@ -155,7 +162,11 @@ function subscribe(callback: () => void): () => void {
     }
   };
   window.addEventListener("storage", handler);
-  return () => window.removeEventListener("storage", handler);
+  window.addEventListener(MODEL_CATALOG_EVENT, callback);
+  return () => {
+    window.removeEventListener("storage", handler);
+    window.removeEventListener(MODEL_CATALOG_EVENT, callback);
+  };
 }
 
 let cachedJSON = "";
@@ -165,7 +176,7 @@ function getSnapshot(): AiProviderSettings {
     customConfig: readStoredConfig(),
     proxyConfig: readProxySettings(),
   };
-  const json = JSON.stringify(fresh);
+  const json = JSON.stringify({ fresh, models: getAiModelOptions() });
   if (json !== cachedJSON) {
     cachedJSON = json;
     cachedConfig = fresh;
@@ -179,6 +190,15 @@ function getServerSnapshot(): AiProviderSettings {
 
 export function useAiProviderSettings() {
   const { backendUrl } = useBackend();
+  const catalogUrl = getModelCatalogUrl();
+  const catalogStatus = useSyncExternalStore(
+    subscribe,
+    getModelCatalogStatus,
+    () => "ready",
+  );
+  useEffect(() => {
+    if (catalogUrl) ensureModelCatalog().catch(() => undefined);
+  }, [catalogUrl]);
   const backendBase = backendUrl.trim().replace(/\/+$/, "");
   const { customConfig, proxyConfig } = useSyncExternalStore(
     subscribe,
@@ -204,7 +224,7 @@ export function useAiProviderSettings() {
   const config: AiProviderConfig = {
     apiBase: isOwnKeyEnabled
       ? customConfig.apiBase
-      : backendBase
+      : backendBase && catalogStatus === "ready"
         ? `${backendBase}/api/experimental/ai/v1`
         : "",
     apiKey: isOwnKeyEnabled ? customConfig.apiKey : "",
