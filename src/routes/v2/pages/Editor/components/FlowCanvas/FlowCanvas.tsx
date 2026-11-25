@@ -7,7 +7,7 @@ import {
   type XYPosition,
 } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
-import { type KeyboardEvent, useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   FilePickerStatus,
@@ -31,6 +31,7 @@ import { useIsDetailedView } from "@/routes/v2/shared/hooks/useIsDetailedView";
 import { useViewportScaling } from "@/routes/v2/shared/hooks/useViewportScaling";
 import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { CMD_OR_CTRL, SHIFT } from "@/routes/v2/shared/shortcuts/keys";
+import { isEditableTarget } from "@/routes/v2/shared/shortcuts/shortcutUtils";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 import { CanvasUndoRedo } from "./components/CanvasUndoRedo";
@@ -119,12 +120,29 @@ export const FlowCanvas = observer(function FlowCanvas({
     void picker.handleFiles(files, "drop", meta);
   };
 
-  const dismissStatusOnEscape = (event: KeyboardEvent) => {
-    if (event.key !== "Escape") return;
-    // The editor's window Escape handler would otherwise also act on this key.
-    event.stopPropagation();
-    picker.dismissStatus();
-  };
+  const isStatusVisible = picker.status.kind !== "idle";
+  const { dismissStatus } = picker;
+  useEffect(() => {
+    if (!isStatusVisible) return;
+    const dismissStatusOnEscape = (event: KeyboardEvent) => {
+      const container = containerRef.current;
+      if (event.key !== "Escape" || isEditableTarget(event) || !container) {
+        return;
+      }
+      const { target } = event;
+      const isForThisCanvas =
+        target === document.body ||
+        (target instanceof Node && container.contains(target));
+      // Workarea tabs stay mounted while hidden, so a hidden canvas must leave the key alone.
+      if (!isForThisCanvas || container.checkVisibility?.() === false) return;
+      // Capture phase runs before the editor's window Escape shortcut, so it never sees this key.
+      event.stopPropagation();
+      dismissStatus();
+    };
+    window.addEventListener("keydown", dismissStatusOnEscape, true);
+    return () =>
+      window.removeEventListener("keydown", dismissStatusOnEscape, true);
+  }, [isStatusVisible, dismissStatus, containerRef]);
 
   const dropBehavior = useDropBehavior(spec, reactFlowInstance, {
     onFileDrop: handleFileDrop,
@@ -184,15 +202,13 @@ export const FlowCanvas = observer(function FlowCanvas({
         isDragging={picker.isDragging}
         message="Drop to add this component"
       />
-      <div onKeyDown={dismissStatusOnEscape}>
-        <FilePickerStatus
-          placement="floating"
-          anchor={fileDropAnchor}
-          status={picker.status}
-          onDismiss={picker.dismissStatus}
-          dismissible
-        />
-      </div>
+      <FilePickerStatus
+        placement="floating"
+        anchor={fileDropAnchor}
+        status={picker.status}
+        onDismiss={picker.dismissStatus}
+        dismissible
+      />
       <CanvasUndoRedo />
     </BlockStack>
   );

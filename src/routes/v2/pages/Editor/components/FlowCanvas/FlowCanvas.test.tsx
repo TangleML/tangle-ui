@@ -302,6 +302,17 @@ it("keeps an Escape that dismisses the card from reaching window keydown listene
   expect(windowKeyDown).not.toHaveBeenCalled();
 });
 
+it("dismisses the card on Escape with focus left on the body, without reaching window keydown listeners", async () => {
+  await showErrorCard();
+  const windowKeyDown = vi.fn();
+  window.addEventListener("keydown", windowKeyDown);
+  expect(document.activeElement).toBe(document.body);
+  fireEvent.keyDown(document.body, { key: "Escape" });
+  window.removeEventListener("keydown", windowKeyDown);
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  expect(windowKeyDown).not.toHaveBeenCalled();
+});
+
 it("keeps the card and lets a non-Escape key on its dismiss button reach window keydown listeners", async () => {
   await showErrorCard();
   const windowKeyDown = vi.fn();
@@ -310,6 +321,57 @@ it("keeps the card and lets a non-Escape key on its dismiss button reach window 
   dismiss.focus();
   fireEvent.keyDown(dismiss, { key: "a" });
   window.removeEventListener("keydown", windowKeyDown);
+  expect(screen.getByRole("alert")).toBeInTheDocument();
+  expect(windowKeyDown).toHaveBeenCalledTimes(1);
+});
+
+it("lets an Escape on the body reach window keydown listeners when no card is showing", () => {
+  renderCanvas();
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  const windowKeyDown = vi.fn();
+  window.addEventListener("keydown", windowKeyDown);
+  fireEvent.keyDown(document.body, { key: "Escape" });
+  window.removeEventListener("keydown", windowKeyDown);
+  expect(windowKeyDown).toHaveBeenCalledTimes(1);
+});
+
+it("keeps the card and lets an Escape in an input inside the canvas reach window keydown listeners", async () => {
+  await showErrorCard();
+  const input = document.createElement("input");
+  screen.getByTestId("react-flow").appendChild(input);
+  input.focus();
+  const windowKeyDown = vi.fn();
+  window.addEventListener("keydown", windowKeyDown);
+  fireEvent.keyDown(input, { key: "Escape" });
+  window.removeEventListener("keydown", windowKeyDown);
+  expect(screen.getByRole("alert")).toBeInTheDocument();
+  expect(windowKeyDown).toHaveBeenCalledTimes(1);
+});
+
+it("keeps the card and lets an Escape on the body reach window keydown listeners while the canvas is hidden", async () => {
+  await showErrorCard();
+  const canvas = screen.getByTestId("react-flow").parentElement!;
+  canvas.checkVisibility = () => false;
+  const windowKeyDown = vi.fn();
+  window.addEventListener("keydown", windowKeyDown);
+  fireEvent.keyDown(document.body, { key: "Escape" });
+  window.removeEventListener("keydown", windowKeyDown);
+  expect(screen.getByRole("alert")).toBeInTheDocument();
+  expect(windowKeyDown).toHaveBeenCalledTimes(1);
+});
+
+it("keeps the card and lets an Escape on an element outside the canvas reach window keydown listeners", async () => {
+  await showErrorCard();
+  const outside = document.createElement("div");
+  outside.tabIndex = 0;
+  document.body.appendChild(outside);
+  outside.focus();
+  const windowKeyDown = vi.fn();
+  window.addEventListener("keydown", windowKeyDown);
+  fireEvent.keyDown(outside, { key: "Escape" });
+  window.removeEventListener("keydown", windowKeyDown);
+  outside.remove();
   expect(screen.getByRole("alert")).toBeInTheDocument();
   expect(windowKeyDown).toHaveBeenCalledTimes(1);
 });
