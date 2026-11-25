@@ -3,6 +3,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { useEffect, useRef, useState } from "react";
 
 import { listApiPublishedComponentsGet } from "@/api/sdk.gen";
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { supportsAiEmbeddings } from "@/config/aiConfig";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import { getComponentQueryKey } from "@/hooks/useHydrateComponentReference";
@@ -62,6 +63,9 @@ export function useComponentSearchV2State(
   const queryClient = useQueryClient();
   const { backendUrl, configured, available } = useBackend();
   const { config: aiConfig } = useAiProviderSettings();
+  const githubComponentLibraryEnabled = useFlagValue(
+    "github-component-library",
+  );
 
   const { data: standardLibrary, isLoading: isLoadingStandardLibrary } =
     useQuery({
@@ -380,6 +384,7 @@ export function useComponentSearchV2State(
           standardLibrary: disabledSourceKeys.includes("standard")
             ? undefined
             : standardLibrary,
+          includeConnectedLibrariesFolder: !githubComponentLibraryEnabled,
         }),
     searchSuggestions:
       !pauseSearch && results.length === 0

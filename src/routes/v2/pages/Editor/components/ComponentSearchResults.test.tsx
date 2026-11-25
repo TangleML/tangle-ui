@@ -38,6 +38,15 @@ vi.mock(
   }),
 );
 
+vi.mock(
+  "@/components/shared/ReactFlow/FlowSidebar/sections/ConnectedLibrariesSection",
+  () => ({
+    ConnectedLibrariesSection: () => (
+      <div data-testid="connected-libraries-section" />
+    ),
+  }),
+);
+
 const baseProps = {
   browseFolders: [],
   searchSuggestions: [
@@ -93,6 +102,59 @@ describe("ComponentSearchResults", () => {
     ).not.toBeInTheDocument();
     expect(screen.getByTestId("search-results-container")).toBeInTheDocument();
     expect(screen.getByText("Standard library")).toBeInTheDocument();
+  });
+
+  it("shows connected libraries after the browse folders only for an empty query", () => {
+    const { rerender } = render(
+      <ComponentSearchResults
+        {...baseProps}
+        query=""
+        results={[]}
+        browseFolders={[{ name: "Standard library" }]}
+      />,
+    );
+
+    const sections = screen.getAllByTestId("connected-libraries-section");
+    expect(sections).toHaveLength(1);
+    expect(
+      screen.getByTestId("search-results-container").lastElementChild,
+    ).toBe(sections[0]);
+    expect(
+      screen
+        .getByText("Standard library")
+        .compareDocumentPosition(sections[0]) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+
+    rerender(
+      <ComponentSearchResults
+        {...baseProps}
+        query="csv"
+        results={[]}
+        browseFolders={[{ name: "Standard library" }]}
+      />,
+    );
+
+    expect(
+      screen.queryByTestId("connected-libraries-section"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("hides connected libraries when showConnectedLibraries is false", () => {
+    render(
+      <ComponentSearchResults
+        {...baseProps}
+        query=""
+        results={[]}
+        browseFolders={[{ name: "Standard library" }]}
+        showConnectedLibraries={false}
+      />,
+    );
+
+    expect(screen.getByText("Standard library")).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("connected-libraries-section"),
+    ).not.toBeInTheDocument();
   });
 
   it("shows actionable no-results guidance with clickable suggestions", () => {

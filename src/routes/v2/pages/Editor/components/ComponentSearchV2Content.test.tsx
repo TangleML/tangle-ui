@@ -39,13 +39,18 @@ vi.mock("./ComponentSearchResults", () => ({
   ComponentSearchResults: ({
     query,
     isSearching,
+    showConnectedLibraries,
   }: {
     query: string;
     isSearching: boolean;
+    showConnectedLibraries: boolean;
   }) => (
     <div>
       <div data-testid="results-query">{query}</div>
       <div data-testid="results-searching">{String(isSearching)}</div>
+      <div data-testid="results-show-connected">
+        {String(showConnectedLibraries)}
+      </div>
     </div>
   ),
 }));
@@ -185,6 +190,35 @@ describe("ComponentSearchV2Content", () => {
 
     expect(toggleSourceFilter).toHaveBeenCalledWith("user");
     expect(enableAllSources).toHaveBeenCalled();
+  });
+
+  it("hides connected libraries when the registered source is disabled", () => {
+    const { unmount } = render(<ComponentSearchV2Content />);
+    expect(screen.getByTestId("results-show-connected")).toHaveTextContent(
+      "true",
+    );
+    unmount();
+
+    mocks.useComponentSearchV2State.mockImplementation(() => ({
+      results: [],
+      browseFolders: [],
+      searchSuggestions: [],
+      isLoading: false,
+      canRerank: false,
+      isReranking: false,
+      isRerankActive: false,
+      rerank: vi.fn(),
+      clearRerank: vi.fn(),
+      sourceFilterOptions: [],
+      disabledSourceKeys: ["registered"],
+      toggleSourceFilter: vi.fn(),
+      enableAllSources: vi.fn(),
+    }));
+
+    render(<ComponentSearchV2Content />);
+    expect(screen.getByTestId("results-show-connected")).toHaveTextContent(
+      "false",
+    );
   });
 
   it("tracks editor component search completions without query text", async () => {

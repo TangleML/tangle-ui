@@ -244,6 +244,7 @@ export function ComponentSearchV2Content() {
         isLoading={isLoading}
         isSearching={isSearchUiPending}
         isRerankActive={isRerankActive}
+        showConnectedLibraries={!disabledSourceKeys.includes("registered")}
         onClearRerank={clearRerank}
         onSuggestedSearch={handleSuggestedSearch}
       />
