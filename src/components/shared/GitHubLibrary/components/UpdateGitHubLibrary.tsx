@@ -26,7 +26,7 @@ export const UpdateGitHubLibrary = ({
     hasErrors: boolean;
   }>({
     value: "",
-    hasErrors: true,
+    hasErrors: false,
   });
 
   const { mutate: updateGitHubLibrary, isPending } = useMutation({
@@ -47,11 +47,14 @@ export const UpdateGitHubLibrary = ({
         queryKey: ["github-token-status", library.id],
       });
 
-      notify("GitHub library PAT updated successfully", "success");
+      notify("GitHub library token updated", "success");
       onSuccess?.();
     },
     onError: (error) => {
-      notify(`Failed to update GitHub library PAT: ${error.message}`, "error");
+      notify(
+        `Failed to update GitHub library token: ${error.message}`,
+        "error",
+      );
     },
   });
 
@@ -61,14 +64,14 @@ export const UpdateGitHubLibrary = ({
       return;
     }
 
-    await updateGitHubLibrary(state.value);
+    await updateGitHubLibrary(state.value.trim());
   };
 
   return (
     <BlockStack gap="2">
       <InputField
         id="pat"
-        label="Personal Access Token"
+        label="Personal Access Token (optional for public repositories)"
         placeholder="ghp_..."
         value=""
         validate={validatePAT}
@@ -87,7 +90,7 @@ export const UpdateGitHubLibrary = ({
           disabled={state.hasErrors || isPending}
           onClick={handleSubmit}
         >
-          Update PAT {isPending ? <Spinner /> : null}
+          Update token {isPending ? <Spinner /> : null}
         </Button>
       </InlineStack>
     </BlockStack>

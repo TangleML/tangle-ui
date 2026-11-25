@@ -1,5 +1,19 @@
 import { createGitHubApiClient } from "./githubApiClient";
 
+const PRIVATE_REPOSITORY_HINT =
+  "Repository not found. If it is private, add a personal access token.";
+
+function isRepositoryNotFound(error: unknown, repository: string) {
+  return (
+    error instanceof Error &&
+    error.name === "GitHubApiError" &&
+    "statusCode" in error &&
+    error.statusCode === 404 &&
+    "endpoint" in error &&
+    error.endpoint === `/repos/${repository}`
+  );
+}
+
 /**
  * Fetches files from a GitHub repository that match the provided filter
  *
@@ -43,6 +57,9 @@ export async function fetchGitHubFiles(
     // Wait for all file fetches to complete
     return await Promise.all(filePromises);
   } catch (error) {
+    if (!pat.trim() && isRepositoryNotFound(error, repository)) {
+      throw new Error(PRIVATE_REPOSITORY_HINT);
+    }
     throw new Error(
       `Failed to fetch GitHub files: ${error instanceof Error ? error.message : String(error)}`,
     );

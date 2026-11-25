@@ -96,6 +96,7 @@ function ImportResults({
 interface GitHubLibraryProcessState {
   repoName: string;
   accessToken: string;
+  accessTokenHasErrors: boolean;
   hasErrors: boolean;
 }
 
@@ -131,6 +132,7 @@ function ConfigureImport({
   const initialState: GitHubLibraryProcessState = {
     repoName: "",
     accessToken: "",
+    accessTokenHasErrors: false,
     hasErrors: true,
   };
 
@@ -139,8 +141,9 @@ function ConfigureImport({
 
   const { mutate: importComponentsFromGitHubLibrary, isPending } = useMutation({
     mutationFn: async (state: GitHubLibraryProcessState) => {
+      const accessToken = state.accessToken.trim();
       const files = await fetchGitHubFiles(
-        state.accessToken,
+        accessToken,
         state.repoName,
         // todo: in future add support for other patterns
         (name) => name.endsWith(".component.yaml"),
@@ -156,7 +159,7 @@ function ConfigureImport({
       // create a library with the hydrated components
       await ensureGithubLibrary({
         repoName: state.repoName,
-        accessToken: state.accessToken,
+        accessToken,
         components: hydratedComponents,
       });
 
@@ -177,7 +180,7 @@ function ConfigureImport({
 
   const handleSubmit = async () => {
     if (state.hasErrors) {
-      notify("Please fill in all fields", "error");
+      notify("Please fix the invalid fields", "error");
       return;
     }
 
@@ -192,9 +195,10 @@ function ConfigureImport({
       className={cn(isPending && "pointer-events-none opacity-50")}
     >
       <Paragraph tone="subdued" size="xs">
-        Connect a GitHub repository to import components from your library. You
-        can use a Personal Access Token to access repositories (ensure it has
-        the `repo` view-only scope).
+        Connect a GitHub repository to import components from your library. A
+        Personal Access Token is required for private repositories and
+        recommended for public ones, because GitHub limits unauthenticated
+        requests to 60 per hour (ensure it has the `repo` view-only scope).
       </Paragraph>
       <Paragraph tone="subdued" size="xs">
         By default system will scan for files with the `.component.yaml`
@@ -217,12 +221,18 @@ function ConfigureImport({
       />
       <InputField
         id="pat"
-        label="Personal Access Token"
+        label="Personal Access Token (optional for public repositories)"
         placeholder="ghp_..."
         value={state.accessToken}
         validate={validatePAT}
-        onChange={(value) => {
-          dispatch({ type: "UPDATE", payload: { accessToken: value ?? "" } });
+        onChange={(value, error) => {
+          dispatch({
+            type: "UPDATE",
+            payload: {
+              accessToken: value ?? "",
+              accessTokenHasErrors: !!error && error.length > 0,
+            },
+          });
         }}
       />
 
@@ -241,8 +251,7 @@ function ConfigureImport({
 
 function isStateValid(state: GitHubLibraryProcessState): boolean {
   return (
-    !validateRepoName(state.repoName)?.length &&
-    !validatePAT(state.accessToken)?.length
+    !validateRepoName(state.repoName)?.length && !state.accessTokenHasErrors
   );
 }
 

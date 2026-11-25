@@ -70,7 +70,7 @@ interface GitHubTree {
  * Configuration for the GitHub API client
  */
 interface GitHubApiConfig {
-  accessToken: string;
+  accessToken?: string;
   apiBase?: string;
   apiVersion?: string;
 }
@@ -79,7 +79,7 @@ interface GitHubApiConfig {
  * GitHub API Client class
  */
 class GitHubApiClient {
-  private readonly accessToken: string;
+  private readonly accessToken?: string;
   private readonly apiBase: string;
   private readonly apiVersion: string;
 
@@ -93,11 +93,15 @@ class GitHubApiClient {
    * Get common headers for all GitHub API requests
    */
   private getHeaders(): HeadersInit {
-    return {
-      Authorization: `Bearer ${this.accessToken}`,
+    const headers: Record<string, string> = {
       Accept: "application/vnd.github.v3+json",
       "X-GitHub-Api-Version": this.apiVersion,
     };
+    // Public repositories need no token, and GitHub rejects an empty Bearer header with 401.
+    if (this.accessToken) {
+      headers.Authorization = `Bearer ${this.accessToken}`;
+    }
+    return headers;
   }
 
   /**
@@ -216,7 +220,7 @@ class GitHubApiClient {
  * Factory function to create a GitHub API client
  */
 export function createGitHubApiClient(
-  accessToken: string,
+  accessToken?: string,
   config?: Partial<GitHubApiConfig>,
 ): GitHubApiClient {
   return new GitHubApiClient({

@@ -25,6 +25,10 @@ export const TokenStatusButton = withSuspenseWrapper(
           throw new Error("Invalid library configuration");
         }
 
+        if (!library.configuration.access_token) {
+          return null;
+        }
+
         return checkPATStatus(
           library.configuration.repo_name,
           library.configuration.access_token,
@@ -32,6 +36,19 @@ export const TokenStatusButton = withSuspenseWrapper(
       },
       staleTime: 1 * HOURS,
     });
+    if (tokenStatus === null) {
+      return (
+        <TooltipButton
+          tooltip="No token — public repository access. Click to add one."
+          variant="ghost"
+          size="sm"
+          onClick={() => onUpdateClick(library)}
+        >
+          <Icon name="Globe" />
+        </TooltipButton>
+      );
+    }
+
     return (
       <TooltipButton
         tooltip={`Token is ${tokenStatus ? "valid" : "invalid. Click to update."}`}
