@@ -8,19 +8,28 @@ import { convertCancelErrorTo } from "@/providers/DialogProvider/utils";
 import { AddDocumentDialog } from "@/routes/v2/pages/Tangent/components/AddDocumentDialog";
 import { AddPipelineDialog } from "@/routes/v2/pages/Tangent/components/AddPipelineDialog";
 import { AddPipelineRunDialog } from "@/routes/v2/pages/Tangent/components/AddPipelineRunDialog";
+import { useRecordSessionRun } from "@/routes/v2/pages/Tangent/hooks/useSessionRuns";
 import type { LocalPipelinePointer } from "@/services/localPipelines/types";
-import { localPipelinePointerOf } from "@/services/projects/resourceDescriptor";
+import {
+  describeResource,
+  localPipelinePointerOf,
+  resourceForSession,
+} from "@/services/projects/resourceDescriptor";
+import { parseIdentity } from "@/services/projects/resourceTarget";
 import type {
   CreateResourceInput,
   ProjectResourceSummary,
 } from "@/services/projects/types";
 import { useCreateProjectResource } from "@/services/projects/useProjectResources";
+import { getErrorMessage } from "@/utils/string";
 import { tracking } from "@/utils/tracking";
 
 type AddableKind = "pipeline" | "run" | "document";
 
 interface AddResourceButtonProps {
   projectId: string;
+  sessionId?: string;
+  onAddToSession?: (sessionId: string) => void;
   resources: ProjectResourceSummary[];
   kind: AddableKind;
   disabled?: boolean;
@@ -87,12 +96,15 @@ function alreadyHolds(
 
 export function AddResourceButton({
   projectId,
+  sessionId,
+  onAddToSession,
   resources,
   kind,
   disabled = false,
 }: AddResourceButtonProps) {
   const { open } = useDialog();
   const notify = useToastNotification();
+  const recordSessionRun = useRecordSessionRun();
   const { mutate: createResource, isPending } =
     useCreateProjectResource(projectId);
 
@@ -104,12 +116,27 @@ export function AddResourceButton({
 
     if (!result) return;
 
-    if (alreadyHolds(resources, result)) {
-      notify(`${result.name ?? "That"} is already in this project`, "info");
-      return;
-    }
+    try {
+      if (alreadyHolds(resources, result)) {
+        const target = describeResource({
+          metadata: result.metadata ?? null,
+        })?.target;
+        if (sessionId && target?.type === "run") {
+          onAddToSession?.(sessionId);
+          const runId = parseIdentity(target.identity).value;
+          await recordSessionRun(sessionId, runId, result.name ?? runId);
+        } else {
+          notify(`${result.name ?? "That"} is already in this project`, "info");
+        }
+        return;
+      }
 
-    createResource(result);
+      const input = resourceForSession(result, sessionId);
+      if (sessionId) onAddToSession?.(sessionId);
+      createResource(input);
+    } catch (error) {
+      notify(getErrorMessage(error), "error");
+    }
   }
 
   function handleAddPipeline() {

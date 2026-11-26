@@ -1,5 +1,7 @@
 import type { ProjectResourceItem } from "@/routes/v2/pages/Tangent/hooks/useProjectResourceItems";
+import type { SessionRun } from "@/routes/v2/pages/Tangent/hooks/useSessionRuns";
 import { UNNAMED_PIPELINE } from "@/services/projects/placeholderNames";
+import { resourceSessionId } from "@/services/projects/resourceDescriptor";
 import {
   formatWorkareaTarget,
   parseIdentity,
@@ -64,33 +66,40 @@ export function mergeProjectRuns(
 /**
  * What the project card lists: its runs, pipelines and documents, each newest
  * first and keyed by workarea target, which is also how archiving marks them.
- * The card, the chat's `#` picker, the agent and the slash commands all read
- * this, so they list the same things.
+ * Session views combine their own run records with attachments made in the
+ * chat. Older attachments without session metadata belong to the project view.
  */
 export function projectCardLists({
   items,
   summaries,
   projectRuns,
   archived,
+  sessionId,
+  sessionRuns = [],
 }: {
   items: ProjectResourceItem[];
   summaries: ProjectResourceSummary[];
   projectRuns: ProjectRun[];
   archived: ReadonlySet<string>;
+  sessionId?: string;
+  sessionRuns?: SessionRun[];
 }): ProjectCardLists {
-  const addedAtById = new Map(
-    summaries.map(({ id, createdAt }) => [id, createdAt]),
-  );
+  const byId = new Map(summaries.map((summary) => [summary.id, summary]));
   const attached = items
     .flatMap((item) => {
-      if (!item.target) return [];
+      const summary = byId.get(item.id);
+      if (
+        !item.target ||
+        (sessionId && resourceSessionId(summary) !== sessionId)
+      )
+        return [];
       const key = formatWorkareaTarget(item.target);
       return [
         {
           ...item,
           key,
           target: item.target,
-          addedAt: addedAtById.get(item.id) ?? null,
+          addedAt: summary?.createdAt ?? null,
           archived: archived.has(key),
         },
       ];
@@ -99,14 +108,18 @@ export function projectCardLists({
   const ofType = (type: WorkareaTarget["type"]) =>
     attached.filter(({ target }) => target.type === type);
 
-  const runs = mergeProjectRuns(
-    projectRuns,
-    ofType("run").map(({ name, target, addedAt }) => ({
+  const runs = mergeProjectRuns(sessionId ? [] : projectRuns, [
+    ...sessionRuns.map(({ id, name, addedAt }) => ({
+      id,
+      pipelineName: name,
+      ranAt: addedAt,
+    })),
+    ...ofType("run").map(({ name, target, addedAt }) => ({
       id: parseIdentity(target.identity).value,
       pipelineName: name,
       ranAt: addedAt,
     })),
-  ).map((run) => {
+  ]).map((run) => {
     const key = formatWorkareaTarget(runTarget(run.id));
     return { ...run, key, archived: archived.has(key) };
   });

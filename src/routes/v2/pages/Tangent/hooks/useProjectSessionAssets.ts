@@ -2,8 +2,9 @@ import { useTangent } from "@tangent/embed-react";
 import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
 
 import useToastNotification from "@/hooks/useToastNotification";
-import { useProjectSessions } from "@/routes/v2/pages/Tangent/hooks/useProjectSessions";
+import { sessionsOf } from "@/routes/v2/pages/Tangent/hooks/useProjectSessions";
 import { useRemoteEnvAuthToken } from "@/routes/v2/pages/Tangent/hooks/useRemoteEnvAuthToken";
+import { sessionRunsOf } from "@/routes/v2/pages/Tangent/hooks/useSessionRuns";
 import { useTangentBaseUrl } from "@/routes/v2/pages/Tangent/hooks/useTangentBaseUrl";
 import {
   sessionFilesOf,
@@ -11,6 +12,7 @@ import {
   setSessionFilePinned,
 } from "@/routes/v2/pages/Tangent/services/sessionFiles";
 import { sessionResourcesQuery } from "@/routes/v2/pages/Tangent/services/sessionResources";
+import { useEveryProjectResource } from "@/services/projects/useProjectResources";
 import { getErrorMessage } from "@/utils/string";
 
 export interface ProjectFile {
@@ -24,36 +26,40 @@ export interface ProjectFile {
 }
 
 /**
- * Every file the project's chats made, newest first. The pinned ones are its
- * reports: an agent pins what's ready to share, and anyone can pin or unpin a
- * file here, which Tangent keeps for everyone. The open chat says when its
- * files change and a pin or unpin re-reads its chat; the rest are read again
- * when the card opens with a reading that has gone stale, not on every open
- * or return to the tab, which would cost a request per chat each time.
+ * Files and recorded runs share a session resource list. Only the project view
+ * reads every chat. A pin, an unpin or a live resource update refreshes the
+ * originating chat in either view.
  */
-export function useProjectSessionFiles(projectId: string) {
+export function useProjectSessionAssets(
+  projectId: string,
+  onlySessionId?: string,
+) {
   const tangent = useTangent();
   const { baseUrl } = useTangentBaseUrl(projectId);
   const {
-    sessions,
+    data: sessionRows,
     isLoading: isLoadingSessions,
     error: sessionsError,
-  } = useProjectSessions(projectId);
+  } = useEveryProjectResource(projectId, ["agent_session"]);
+  const sessions = sessionsOf(sessionRows);
   const authToken = useRemoteEnvAuthToken();
   const queryClient = useQueryClient();
   const notify = useToastNotification();
 
   // Converted here rather than in a per-chat `select`: a new select each
   // render, building new dates each time, never settles.
+  const included = onlySessionId
+    ? sessions.filter(({ sessionId }) => sessionId === onlySessionId)
+    : sessions;
   const results = useQueries({
-    queries: sessions.map(({ sessionId }) => ({
+    queries: included.map(({ sessionId }) => ({
       ...sessionResourcesQuery(tangent, sessionId),
       refetchOnWindowFocus: false,
     })),
   });
 
   const files: ProjectFile[] = baseUrl
-    ? sessions
+    ? included
         .flatMap(({ sessionId }, index) =>
           sessionFilesOf(sessionId, results[index]?.data ?? []),
         )
@@ -84,6 +90,7 @@ export function useProjectSessionFiles(projectId: string) {
 
   return {
     files,
+    runs: results.flatMap((result) => sessionRunsOf(result.data ?? [])),
     reports: files.filter((file) => file.pinned),
     isLoading: isLoadingSessions || results.some((result) => result.isPending),
     error: sessionsError ?? (noChatCouldBeRead ? results[0].error : null),
