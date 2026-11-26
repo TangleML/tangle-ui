@@ -10,7 +10,7 @@ This is the frontend repo. It contains the entire user interface portion of the 
 
 ## Demo
 
-[Demo](<[https://cloud-pipelines.net/pipeline-studio-app](https://tangleml-tangle.hf.space/#/quick-start)>)
+[Open the Tangle demo](https://tangleml-tangle.hf.space/#/quick-start)
 
 The experimental new version of the Tangle app is now available at <https://tangleml-tangle.hf.space/#/quick-start> . No registration is required to experiment with building pipelines. To install your own app instance, [duplicate](https://huggingface.co/spaces/TangleML/tangle?duplicate=true) the HuggingFace space or follow the [backend installation instructions](https://github.com/Cloud-Pipelines/backend?tab=readme-ov-file#installation).
 
