@@ -17,9 +17,9 @@ export function getProjectHomeRoute() {
   return projectHomeRoute(isTangentEnabled());
 }
 
-export function getProjectHomePath(projectId: string): string {
-  return getProjectHomeRoute().replace(
-    "$projectId",
-    encodeURIComponent(projectId),
-  );
+export function getProjectHomePath(
+  projectId: string,
+  route = getProjectHomeRoute(),
+): string {
+  return route.replace("$projectId", encodeURIComponent(projectId));
 }

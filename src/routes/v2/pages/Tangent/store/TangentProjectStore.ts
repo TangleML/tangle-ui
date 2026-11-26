@@ -145,8 +145,7 @@ export class TangentProjectStore {
   // back with several tabs loads the one in view, not all of them at once.
   #shownTabIds = new Set<string>();
 
-  #freshSessions = new Map<string, string>();
-  #sessionsWithPrompt = new Set<string>();
+  #discardableSessions = new Map<string, string>();
   #io: TangentSessionIo | null = null;
 
   constructor(projectId: string, openTabs: OpenTabs = NO_TABS) {
@@ -210,19 +209,23 @@ export class TangentProjectStore {
     this.defaultSessionId = sessionId;
   }
 
-  @action selectSession(sessionId: string) {
+  @action selectSession(sessionId: string | undefined) {
     const previous = this.activeSessionId;
     this.selectedSessionId = sessionId;
-    if (previous && previous !== sessionId) {
+    if (previous && previous !== this.activeSessionId) {
       void this.discardEmptySession(previous);
     }
+  }
+
+  retainSession(sessionId: string) {
+    this.#discardableSessions.delete(sessionId);
   }
 
   recordSessionPrompt(content: string) {
     const sessionId = this.activeSessionId;
     if (!sessionId) return;
     if (!content.trim()) return;
-    this.#sessionsWithPrompt.add(sessionId);
+    this.retainSession(sessionId);
     // A session started inside a project has no opening prompt to be named
     // from, so its first message is the first chance to call it anything. The
     // agent replaces this with a better title once it has read the message.
@@ -288,12 +291,10 @@ export class TangentProjectStore {
         });
       const resource = await io.attachSession(sessionId, options?.name);
       runInAction(() => {
-        this.#freshSessions.set(sessionId, resource.id);
+        if (!prompt.trim())
+          this.#discardableSessions.set(sessionId, resource.id);
         this.selectedSessionId = sessionId;
       });
-      if (prompt.trim()) {
-        this.#sessionsWithPrompt.add(sessionId);
-      }
       if (previous && previous !== sessionId) {
         await this.discardEmptySession(previous);
       }
@@ -308,14 +309,11 @@ export class TangentProjectStore {
     }
   }
 
-  // Only sessions started this mount are eligible for auto-discard; a
-  // never-prompted one is detached + deleted on switch/unmount.
   async discardEmptySession(sessionId: string | undefined): Promise<void> {
     if (!sessionId) return;
-    const resourceId = this.#freshSessions.get(sessionId);
+    const resourceId = this.#discardableSessions.get(sessionId);
     if (!resourceId) return;
-    if (this.#sessionsWithPrompt.has(sessionId)) return;
-    this.#freshSessions.delete(sessionId);
+    this.#discardableSessions.delete(sessionId);
     this.dropSession(sessionId);
     try {
       await this.#io?.detachSession(resourceId);
