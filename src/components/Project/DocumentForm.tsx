@@ -1,7 +1,9 @@
-import { type FormEvent, useRef, useState } from "react";
+import { type FormEvent, useState } from "react";
 
 import { languageFor } from "@/components/shared/CodeViewer";
 import CodeEditor from "@/components/shared/CodeViewer/CodeEditor";
+import { FilePicker } from "@/components/shared/FilePicker/FilePicker";
+import { useFilePicker } from "@/components/shared/FilePicker/useFilePicker";
 import { Button } from "@/components/ui/button";
 import { DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -12,9 +14,7 @@ import { documentResourceInput } from "@/services/projects/resourceDescriptor";
 import type { CreateResourceInput } from "@/services/projects/types";
 import { tracking } from "@/utils/tracking";
 
-import { readDocumentFile } from "./documentFile";
-import { DocumentFileDropZone } from "./DocumentFileDropZone";
-import { useFileDrop } from "./useFileDrop";
+const MAX_DOCUMENT_FILE_BYTES = 1024 * 1024;
 
 interface DocumentFormProps {
   onSubmit: (input: CreateResourceInput) => void;
@@ -31,38 +31,32 @@ export function DocumentForm({
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [titleFromFile, setTitleFromFile] = useState<string | null>(null);
-  const [fileError, setFileError] = useState<string | null>(null);
-  const [isReadingFile, setIsReadingFile] = useState(false);
-  const latestReadId = useRef(0);
 
-  const fillFromFile = async (file: File, method: "drop" | "browse") => {
-    if (isSubmitting) return;
-
-    const readId = ++latestReadId.current;
-    setIsReadingFile(true);
-    const result = await readDocumentFile(file);
-    if (readId !== latestReadId.current) return;
-
-    setIsReadingFile(false);
-    if (!result.ok) {
-      setFileError(result.error);
-      return;
-    }
-
-    setFileError(null);
-    setTitle((current) =>
-      current.trim() === "" || current === titleFromFile
-        ? result.title
-        : current,
-    );
-    setTitleFromFile(result.title);
-    setContent(result.content);
-    track("projects.add_document_from_file_completed", { method });
-  };
-
-  const { isDraggingFile, dropTargetProps } = useFileDrop(
-    (file) => void fillFromFile(file, "drop"),
-  );
+  const picker = useFilePicker({
+    accept: "any",
+    maxBytes: MAX_DOCUMENT_FILE_BYTES,
+    requireText: true,
+    disabled: isSubmitting,
+    messages: {
+      "not-text": (file) =>
+        `${file.name} isn't a text file. Only text can be added as a document.`,
+      size: (file) => `${file.name} is larger than 1 MB.`,
+    },
+    onFile: ({ file, text, source }) => {
+      setTitle((current) =>
+        current.trim() === "" || current === titleFromFile
+          ? file.name
+          : current,
+      );
+      setTitleFromFile(file.name);
+      setContent(text);
+      track("projects.add_document_from_file_completed", { method: source });
+      return {
+        status: "success",
+        message: `${file.name} loaded into the form`,
+      };
+    },
+  });
 
   const trimmedTitle = title.trim();
   const trimmedContent = content.trim();
@@ -70,7 +64,7 @@ export function DocumentForm({
     trimmedTitle !== "" &&
     trimmedContent !== "" &&
     !isSubmitting &&
-    !isReadingFile;
+    picker.status.kind !== "reading";
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -79,13 +73,23 @@ export function DocumentForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="min-w-0" {...dropTargetProps}>
+    <form
+      onSubmit={handleSubmit}
+      className="min-w-0"
+      {...picker.dropTargetProps}
+    >
       <BlockStack gap="4">
-        <DocumentFileDropZone
-          isDraggingFile={isDraggingFile}
-          error={fileError}
-          disabled={isSubmitting}
-          onFileChosen={(file) => void fillFromFile(file, "browse")}
+        <FilePicker
+          picker={picker}
+          label="Document file"
+          inputTestId="document-file-input"
+          afterSuccess="keep-picker"
+          errorTitle="Couldn't use file"
+          successTitle="File loaded"
+          prompt="Drop a text file here, or"
+          dragPrompt="Drop to fill in the title and content"
+          hint="Text files up to 1 MB"
+          onBrowse={() => track("projects.add_document_browse_file.click")}
         />
 
         <BlockStack gap="2">

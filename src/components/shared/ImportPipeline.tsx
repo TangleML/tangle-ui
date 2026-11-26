@@ -1,8 +1,12 @@
 import { useNavigate } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
-import type { ChangeEvent, ReactElement } from "react";
-import { useRef, useState } from "react";
+import type { ReactElement } from "react";
+import { useState } from "react";
 
+import { YAML_FILE_ACCEPT } from "@/components/shared/FilePicker/fileChecks";
+import { FilePicker } from "@/components/shared/FilePicker/FilePicker";
+import { yamlErrorOutcome } from "@/components/shared/FilePicker/outcomes";
+import type { PickOutcome } from "@/components/shared/FilePicker/useFilePicker";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,7 +18,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,7 +28,6 @@ import {
   getDefaultRemoteEditorPath,
 } from "@/routes/editorRoutes";
 import {
-  importPipelineFromFile,
   importPipelineFromYaml,
   type ImportResult,
 } from "@/services/pipelineService";
@@ -52,15 +54,18 @@ const ImportPipeline = ({
   >(null);
   const [yamlContent, setYamlContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const storage = usePipelineStorage();
 
   const navigateToPipeline = () => {
     if (!importedPipeline) return;
+    goToPipeline(importedPipeline);
+  };
 
+  const goToPipeline = (pipeline: PipelineRef | RemotePipelineRef) => {
     setIsOpen(false);
     setImportedPipeline(null);
     setIsLoading(false);
@@ -68,12 +73,12 @@ const ImportPipeline = ({
     setSuccessMessage(null);
 
     if (onImportComplete) {
-      onImportComplete(importedPipeline);
+      onImportComplete(pipeline);
     } else {
       navigate({
-        to: isRemotePipelineRef(importedPipeline)
-          ? getDefaultRemoteEditorPath(importedPipeline.pipelineId)
-          : getDefaultEditorPath(importedPipeline.name),
+        to: isRemotePipelineRef(pipeline)
+          ? getDefaultRemoteEditorPath(pipeline.pipelineId)
+          : getDefaultEditorPath(pipeline.name),
       });
     }
   };
@@ -99,32 +104,44 @@ const ImportPipeline = ({
     }
   };
 
-  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    setIsLoading(true);
+  const importFileText = async (text: string): Promise<PickOutcome> => {
+    setIsImporting(true);
     setError(null);
     setSuccessMessage(null);
-
     try {
-      const result = await importPipelineFromFile(storage, files[0]);
-      await handleImportResult(result);
-      if (result.successful) {
-        track("pipeline_editor.pipeline_actions.import_pipeline_completed", {
-          method: "file",
-        });
+      const result = await importPipelineFromYaml(storage, text);
+      if (!result.successful) {
+        return yamlErrorOutcome(
+          new Error(result.errorMessage),
+          "Failed to import pipeline. Please check that the YAML is valid.",
+        );
       }
+
+      const pipeline: PipelineRef | RemotePipelineRef = result.remote
+        ? result.remote
+        : {
+            name: result.name,
+            fileId: (await storage.rootFolder.assignFile(result.name)).id,
+          };
+      track("pipeline_editor.pipeline_actions.import_pipeline_completed", {
+        method: "file",
+      });
+      return {
+        status: "success",
+        message: result.errorMessage?.includes("was renamed")
+          ? result.errorMessage
+          : `${result.name} imported`,
+        actions: [
+          { label: "Go to Pipeline", onSelect: () => goToPipeline(pipeline) },
+        ],
+      };
     } catch (err) {
-      setError(
-        (err as Error).message ||
-          "An error occurred while importing the pipeline.",
+      return yamlErrorOutcome(
+        err,
+        "An error occurred while importing the pipeline.",
       );
     } finally {
-      setIsLoading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+      setIsImporting(false);
     }
   };
 
@@ -157,6 +174,7 @@ const ImportPipeline = ({
   };
 
   const handleOpenChange = (open: boolean) => {
+    if (!open && isImporting) return;
     setIsOpen(open);
     setError(null);
     setSuccessMessage(null);
@@ -190,27 +208,20 @@ const ImportPipeline = ({
             <Tabs defaultValue="file" className="w-full gap-4">
               <TabsList>
                 <TabsTrigger value="file">Import from File</TabsTrigger>
-                <TabsTrigger value="paste">Paste YAML</TabsTrigger>
+                <TabsTrigger value="paste" disabled={isImporting}>
+                  Paste YAML
+                </TabsTrigger>
               </TabsList>
               <TabsContent value="file">
-                <div className="grid w-full items-center gap-1.5">
-                  <Label
-                    htmlFor="pipeline-file"
-                    className="text-sm cursor-pointer"
-                  >
-                    Pipeline YAML File. Drag and drop a file here or click to
-                    upload.
-                  </Label>
-                  <Input
-                    ref={fileInputRef}
-                    id="pipeline-file"
-                    type="file"
-                    accept=".yaml,.yml"
-                    onChange={handleFileChange}
-                    disabled={isLoading}
-                    className="cursor-pointer"
-                  />
-                </div>
+                <FilePicker
+                  accept={YAML_FILE_ACCEPT}
+                  label="Pipeline YAML file"
+                  errorTitle="Import failed"
+                  successTitle="Import successful"
+                  afterSuccess="replace-picker"
+                  disabled={isImporting}
+                  onFile={({ text }) => importFileText(text)}
+                />
               </TabsContent>
               <TabsContent value="paste">
                 <div className="grid w-full items-center gap-1.5">

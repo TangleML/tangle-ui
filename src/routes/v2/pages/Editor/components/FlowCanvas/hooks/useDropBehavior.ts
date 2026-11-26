@@ -18,7 +18,6 @@ import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import type { TaskSpec } from "@/utils/componentSpec";
 import { componentMetadata } from "@/utils/componentTracking";
 
-import { useFileDropHandler } from "./useFileDropHandler";
 import { useReplaceDropHandler } from "./useReplaceDropHandler";
 import { useValidateComponentDrop } from "./useValidateComponentDrop";
 
@@ -62,16 +61,20 @@ type DropBehaviorResult = Required<
   Pick<ReactFlowProps, "onDragOver" | "onDrop">
 >;
 
+interface DropBehaviorOptions {
+  onFileDrop?: (files: FileList, meta: { position: XYPosition }) => void;
+}
+
 export function useDropBehavior(
   spec: ComponentSpec | null,
   reactFlowInstance: ReactFlowInstance | null,
+  { onFileDrop }: DropBehaviorOptions = {},
 ): DropBehaviorResult {
   const registry = useNodeRegistry();
   const { undo } = useEditorSession();
   const { track } = useAnalytics();
   const { navigation } = useSharedStores();
   const validateComponentDrop = useValidateComponentDrop();
-  const handleFileDrop = useFileDropHandler();
   const { detectReplaceTarget, flushReplaceState, performReplaceDrop } =
     useReplaceDropHandler(spec, reactFlowInstance);
 
@@ -104,7 +107,7 @@ export function useDropBehavior(
     const droppedTaskComponentRef = payload?.task?.componentRef;
 
     if (isFileDrop(event)) {
-      await handleFileDrop(event.dataTransfer.files[0], spec, position);
+      onFileDrop?.(event.dataTransfer.files, { position });
       return;
     }
 

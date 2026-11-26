@@ -230,6 +230,46 @@ describe("DocumentForm file drop", () => {
     expect(contentField()).toHaveValue("");
   });
 
+  it("confirms a loaded file in a status box", async () => {
+    renderForm();
+
+    fireEvent.drop(form(), fileDrag(modelCard()));
+
+    const status = await screen.findByRole("status");
+    expect(status).toHaveTextContent("File loaded");
+    expect(status).toHaveTextContent("model-card.md loaded into the form");
+  });
+
+  it("says a file over 1 MB is too large, and leaves the fields alone", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await user.type(titleField(), "notes.md");
+    await user.type(contentField(), "Draft");
+    fireEvent.drop(
+      form(),
+      fileDrag(new File(["a".repeat(1024 * 1024 + 1)], "huge.md")),
+    );
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Couldn't use file");
+    expect(
+      screen.getByText("huge.md is larger than 1 MB."),
+    ).toBeInTheDocument();
+    expect(titleField()).toHaveValue("notes.md");
+    expect(contentField()).toHaveValue("Draft");
+    expect(track).not.toHaveBeenCalled();
+  });
+
+  it("highlights the drop zone with the drag prompt when a file enters the form", () => {
+    renderForm();
+
+    fireEvent.dragEnter(form(), fileDrag());
+
+    expect(draggingHint()).toBeInTheDocument();
+    expect(screen.queryByText("Drop a text file here, or")).toBeNull();
+  });
+
   it("highlights while a file is dragged over the form", () => {
     renderForm();
 

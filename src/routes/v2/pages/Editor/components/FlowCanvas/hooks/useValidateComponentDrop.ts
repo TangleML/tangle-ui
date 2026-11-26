@@ -7,20 +7,35 @@ import { hydrateComponentReference } from "@/services/componentService";
 import { componentSpecValidatorQuery } from "@/services/componentSpecValidation";
 import type { ComponentReference } from "@/utils/componentSpec";
 
+export interface ComponentDropValidationError {
+  title: string;
+  componentName: string;
+  errors: string[];
+}
+
+interface ValidateComponentDropOptions {
+  onError?: (error: ComponentDropValidationError) => void;
+}
+
 export function useValidateComponentDrop() {
   const queryClient = useQueryClient();
   const { open } = useDialog();
 
-  return async (reference: ComponentReference) => {
+  return async (
+    reference: ComponentReference,
+    { onError }: ValidateComponentDropOptions = {},
+  ) => {
     let title = "Invalid component";
     let errors: string[];
     let componentName = reference.spec?.name ?? reference.name ?? "Component";
 
     try {
       const component = await hydrateComponentReference(reference);
-      const validator = await queryClient.fetchQuery(
-        componentSpecValidatorQuery,
-      );
+      // Offline, the default network mode pauses the query and the drop would sit on 'Reading…' with no error.
+      const validator = await queryClient.fetchQuery({
+        ...componentSpecValidatorQuery,
+        networkMode: "always",
+      });
       const result = validator(
         component?.spec ?? reference.text ?? reference.spec,
       );
@@ -36,6 +51,11 @@ export function useValidateComponentDrop() {
       errors = [
         "The component or its validation schema could not be loaded. Try dropping the component again.",
       ];
+    }
+
+    if (onError) {
+      onError({ title, componentName, errors });
+      return null;
     }
 
     await open({

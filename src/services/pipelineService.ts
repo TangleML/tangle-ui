@@ -281,37 +281,9 @@ export async function importPipelineFromYaml(
       errorMessage = error.message;
     }
 
-    console.error("Failed to import pipeline:", error);
-    return {
-      name: "",
-      overwritten: false,
-      successful: false,
-      errorMessage,
-    };
-  }
-}
-
-/**
- * Imports a pipeline from a File object (from a file input)
- * @param file The file object from the file input
- * @param overwrite Optional. Whether to overwrite existing pipeline
- * @returns The result of the import operation
- */
-export async function importPipelineFromFile(
-  storage: PipelineStorageService,
-  file: File,
-  overwrite = false,
-): Promise<ImportResult> {
-  try {
-    const yamlContent = await file.text();
-    return importPipelineFromYaml(storage, yamlContent, overwrite);
-  } catch (error) {
-    let errorMessage = "Failed to read file.";
-    if (error instanceof Error) {
-      errorMessage = `File error: ${error.message}`;
+    if (!(error instanceof yaml.YAMLException)) {
+      console.error("Failed to import pipeline:", error);
     }
-
-    console.error("Failed to read file:", error);
     return {
       name: "",
       overwritten: false,

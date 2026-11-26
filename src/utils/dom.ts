@@ -44,13 +44,6 @@ export async function readTextFromFile(file: File): Promise<string> {
   return text;
 }
 
-export async function readYamlFromFile(file: File): Promise<string> {
-  if (!file.name.endsWith(".yaml")) {
-    throw new Error("Only YAML files are supported");
-  }
-  return readTextFromFile(file);
-}
-
 export function createPromiseFromDomEvent(
   eventTarget: EventTarget,
   eventName: string,

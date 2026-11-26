@@ -35,7 +35,6 @@ import useToastNotification from "@/hooks/useToastNotification";
 import { useUserDetails } from "@/hooks/useUserDetails";
 import { cn } from "@/lib/utils";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
-import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useContextPanel } from "@/providers/ContextPanelProvider";
 import { hydrateComponentReference } from "@/services/componentService";
@@ -46,7 +45,6 @@ import {
   type TaskSpec,
 } from "@/utils/componentSpec";
 import { componentMetadata } from "@/utils/componentTracking";
-import { readYamlFromFile } from "@/utils/dom";
 import { deselectAllNodes } from "@/utils/flowUtils";
 import createNodesFromComponentSpec from "@/utils/nodes/createNodesFromComponentSpec";
 import {
@@ -210,7 +208,6 @@ const FlowCanvasContent = ({
   const [shiftKeyPressed, setShiftKeyPressed] = useState(false);
   const [metaKeyPressed, setMetaKeyPressed] = useState(false);
 
-  const { addToComponentLibrary } = useComponentLibrary();
   const { track } = useAnalytics();
 
   const handleKeyDown = (event: KeyboardEvent) => {
@@ -595,12 +592,9 @@ const FlowCanvasContent = ({
   }, [isConnecting, reactFlowInstance]);
 
   const onDragOver = async (event: DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
+    if (event.dataTransfer.types.includes("Files")) return;
 
-    const hasFiles = event.dataTransfer.types.includes("Files");
-    if (hasFiles) {
-      return;
-    }
+    event.preventDefault();
 
     event.dataTransfer.dropEffect = "move";
 
@@ -634,68 +628,10 @@ const FlowCanvasContent = ({
     event.preventDefault();
     if (readOnly) return;
 
-    if (event.dataTransfer.files.length > 0) {
-      try {
-        // Parse the imported YAML to get the component spec
-        const content = await readYamlFromFile(event.dataTransfer.files[0]);
-        const hydratedComponentRef = await hydrateComponentReference({
-          text: content,
-        });
-
-        if (!hydratedComponentRef) {
-          notify(
-            "Failed to parse component spec from imported content",
-            "error",
-          );
-          return;
-        }
-
-        const result = await addToComponentLibrary(
-          hydratedComponentRef,
-          "canvas_file_drop",
-        );
-
-        if (result && reactFlowInstance) {
-          const position = getPositionFromEvent(event, reactFlowInstance);
-          const taskSpec: TaskSpec = {
-            annotations: {},
-            componentRef: hydratedComponentRef,
-          };
-          const { spec: newComponentSpec } = addTask(
-            "task",
-            taskSpec,
-            position,
-            componentSpec,
-          );
-
-          setComponentSpec(newComponentSpec);
-
-          const ref = hydratedComponentRef;
-          if (ref.digest && ref.spec?.name) {
-            addRecentlyUsed({
-              type: "component",
-              id: ref.digest,
-              name: ref.spec.name,
-            });
-          }
-
-          track("pipeline_editor.component.dropped", {
-            ...componentMetadata(hydratedComponentRef, "file"),
-            drop_kind: "file_import",
-            pipeline_id: componentSpec.name,
-          });
-        }
-      } catch (error) {
-        console.error("Failed to add imported component to canvas:", error);
-        notify("Failed to add component to canvas", "error");
-      }
-
-      return;
-    }
-
     const { spec: droppedTask, nodeType } = getNodeFromEvent(event);
 
     if (!nodeType) {
+      setReplaceTarget(null);
       console.error("Dropped node type not identified.");
       return;
     }

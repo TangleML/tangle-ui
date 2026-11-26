@@ -1,15 +1,19 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
+  createEvent,
   fireEvent,
   render,
+  renderHook,
   screen,
   waitFor,
 } from "@testing-library/react";
-import type { ReactFlowInstance } from "@xyflow/react";
+import type { ReactFlowInstance, XYPosition } from "@xyflow/react";
 import { type ReactNode } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
+import { useFilePicker } from "@/components/shared/FilePicker/useFilePicker";
 import {
   IncrementingIdGenerator,
   YamlDeserializer,
@@ -19,6 +23,7 @@ import { UndoStore } from "@/routes/v2/pages/Editor/store/undoStore";
 import { componentSpecValidatorQuery } from "@/services/componentSpecValidation";
 
 import { useDropBehavior } from "./useDropBehavior";
+import { useFileDropHandler } from "./useFileDropHandler";
 
 const mocks = vi.hoisted(() => ({
   hydrate: vi.fn(),
@@ -28,6 +33,7 @@ const mocks = vi.hoisted(() => ({
   addToLibrary: vi.fn(),
   addTask: vi.fn(),
   track: vi.fn(),
+  fileDrop: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-router", () => ({
@@ -65,9 +71,6 @@ vi.mock("@/routes/v2/pages/Editor/store/actions/useTaskActions", () => ({
   useTaskActions: () => ({ addTask: mocks.addTask }),
 }));
 vi.mock("@/hooks/useToastNotification", () => ({ default: () => vi.fn() }));
-vi.mock("@/utils/dom", () => ({
-  readYamlFromFile: async () => "name: Search",
-}));
 
 const spec = new YamlDeserializer(new IncrementingIdGenerator()).deserialize({
   name: "Existing pipeline",
@@ -88,11 +91,11 @@ const component = {
 };
 
 const flow = {
-  screenToFlowPosition: () => ({ x: 200, y: 200 }),
+  screenToFlowPosition: ({ x, y }: XYPosition) => ({ x: x - 100, y: y - 50 }),
 } as unknown as ReactFlowInstance;
 
 function Canvas() {
-  const behavior = useDropBehavior(spec, flow);
+  const behavior = useDropBehavior(spec, flow, { onFileDrop: mocks.fileDrop });
   return <div data-testid="canvas" onDrop={behavior.onDrop} />;
 }
 
@@ -105,12 +108,21 @@ function Wrapper({ children }: { children: ReactNode }) {
 }
 
 function drop(file = false) {
-  fireEvent.drop(screen.getByTestId("canvas"), {
+  const files = file ? [new File(["name: Search"], "component.yaml")] : [];
+  const canvas = screen.getByTestId("canvas");
+  const event = createEvent.drop(canvas, {
     dataTransfer: {
-      files: file ? [new File(["name: Search"], "component.yaml")] : [],
+      files,
       getData: () => JSON.stringify({ task: { componentRef: component } }),
     },
   });
+  // jsdom has no DragEvent, so the pointer coordinates are set on the event directly.
+  Object.defineProperties(event, {
+    clientX: { value: 300 },
+    clientY: { value: 250 },
+  });
+  fireEvent(canvas, event);
+  return files;
 }
 
 beforeEach(() => {
@@ -142,13 +154,13 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it.each(["library", "replacement", "file"])(
+it.each(["library", "replacement"])(
   "rejects an invalid %s drop without changing the pipeline",
   async (source) => {
     if (source === "replacement")
       mocks.flushReplaceState.mockReturnValue("existing-task");
     render(<Canvas />, { wrapper: Wrapper });
-    drop(source === "file");
+    drop();
     expect(
       await screen.findByRole("dialog", { name: "Invalid component" }),
     ).toBeVisible();
@@ -223,4 +235,333 @@ it("does not add a component if the active pipeline changes during validation", 
   finish?.(component);
   await waitFor(() => expect(validate).toHaveBeenCalled());
   expect(mocks.drop).not.toHaveBeenCalled();
+});
+
+it("hands a file drop to onFileDrop with the position under the pointer", async () => {
+  render(<Canvas />, { wrapper: Wrapper });
+  const files = drop(true);
+  expect(mocks.fileDrop).toHaveBeenCalledWith(files, {
+    position: { x: 200, y: 200 },
+  });
+  expect(validate).not.toHaveBeenCalled();
+  expect(mocks.drop).not.toHaveBeenCalled();
+  expect(mocks.addTask).not.toHaveBeenCalled();
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+});
+
+it("adds a valid component library drop at the position under the pointer", async () => {
+  validate.mockReturnValue({ valid: true });
+  render(<Canvas />, { wrapper: Wrapper });
+  drop();
+  await waitFor(() =>
+    expect(mocks.drop).toHaveBeenCalledWith(
+      spec,
+      expect.objectContaining({ componentRef: component }),
+      { x: 200, y: 200 },
+      undo,
+    ),
+  );
+  expect(mocks.fileDrop).not.toHaveBeenCalled();
+});
+
+const componentText = `name: Search
+implementation:
+  container:
+    image: python:3.12
+`;
+
+it("adds a dropped component file to the canvas and reports success", async () => {
+  validate.mockReturnValue({ valid: true });
+  mocks.addToLibrary.mockResolvedValue(component);
+  const { result } = renderHook(() => useFileDropHandler(spec), {
+    wrapper: Wrapper,
+  });
+  const outcome = await result.current({
+    file: new File([componentText], "component.yaml"),
+    text: componentText,
+    position: { x: 40, y: 60 },
+  });
+  expect(outcome).toEqual({
+    status: "success",
+    message: "Search added to the canvas",
+  });
+  expect(mocks.addToLibrary).toHaveBeenCalledWith(
+    component,
+    "canvas_file_drop_v2",
+  );
+  expect(mocks.addTask).toHaveBeenCalledWith(spec, component, { x: 40, y: 60 });
+});
+
+it("reports the validation error of a dropped file without opening the dialog", async () => {
+  const { result } = renderHook(() => useFileDropHandler(spec), {
+    wrapper: Wrapper,
+  });
+  const outcome = await result.current({
+    file: new File([componentText], "component.yaml"),
+    text: componentText,
+    position: { x: 40, y: 60 },
+  });
+  expect(outcome).toEqual({
+    status: "error",
+    message: "inputs[5].default: Expected a string. Quote numeric defaults.",
+  });
+  expect(mocks.addToLibrary).not.toHaveBeenCalled();
+  expect(mocks.addTask).not.toHaveBeenCalled();
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+});
+
+it("reports the YAML error of a dropped file without adding it", async () => {
+  const text = "name: [unclosed";
+  const { result } = renderHook(() => useFileDropHandler(spec), {
+    wrapper: Wrapper,
+  });
+  const outcome = await result.current({
+    file: new File([text], "broken.yaml"),
+    text,
+    position: { x: 40, y: 60 },
+  });
+  expect(outcome).toMatchObject({
+    status: "error",
+    message: expect.stringMatching(
+      /^YAML syntax error: unexpected end of the stream/,
+    ),
+    detail: expect.stringContaining("name: [unclosed"),
+  });
+  expect(mocks.addToLibrary).not.toHaveBeenCalled();
+  expect(mocks.addTask).not.toHaveBeenCalled();
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+});
+
+async function dropComponentFile(text = componentText) {
+  const { result } = renderHook(() => useFileDropHandler(spec), {
+    wrapper: Wrapper,
+  });
+  return result.current({
+    file: new File([text], "component.yaml"),
+    text,
+    position: { x: 40, y: 60 },
+  });
+}
+
+it("reports a dropped file that is not a component spec without the YAML syntax prefix", async () => {
+  const outcome = await dropComponentFile("hello");
+  expect(outcome).toEqual({
+    status: "error",
+    message: "Invalid component specification format",
+  });
+});
+
+it("reports every validation error of a dropped file one per line", async () => {
+  validate.mockReturnValue({
+    valid: false,
+    errors: ["inputs[0].name: Required.", "outputs[1].type: Unknown type."],
+  });
+  const outcome = await dropComponentFile();
+  expect(outcome).toEqual({
+    status: "error",
+    message: "inputs[0].name: Required.\noutputs[1].type: Unknown type.",
+  });
+});
+
+it("reports a fallback message when validation fails without errors", async () => {
+  validate.mockReturnValue({ valid: false, errors: [] });
+  const outcome = await dropComponentFile();
+  expect(outcome).toEqual({
+    status: "error",
+    message:
+      "The component definition could not be loaded. Check its source and try again.",
+  });
+});
+
+it("reports a load failure when the validator throws", async () => {
+  validate.mockImplementation(() => {
+    throw new Error("Schema unavailable");
+  });
+  const outcome = await dropComponentFile();
+  expect(outcome).toEqual({
+    status: "error",
+    message:
+      "The component or its validation schema could not be loaded. Try dropping the component again.",
+  });
+});
+
+it("reports the error message when adding the dropped file to the library fails", async () => {
+  validate.mockReturnValue({ valid: true });
+  mocks.addToLibrary.mockRejectedValue(new Error("Library storage is full"));
+  const outcome = await dropComponentFile();
+  expect(outcome).toEqual({
+    status: "error",
+    message: "Library storage is full",
+  });
+});
+
+it("reports a cancelled import when the duplicate dialog is closed", async () => {
+  validate.mockReturnValue({ valid: true });
+  mocks.addToLibrary.mockResolvedValue(undefined);
+  const outcome = await dropComponentFile();
+  expect(outcome).toEqual({
+    status: "error",
+    title: "Import cancelled",
+    message: "The component was not added to your library.",
+  });
+});
+
+it("does not add a dropped file to the library if the active pipeline changes during validation", async () => {
+  validate.mockImplementation(() => {
+    navigation.activeSpec = new YamlDeserializer(
+      new IncrementingIdGenerator(),
+    ).deserialize({
+      name: "Other pipeline",
+      implementation: { graph: { tasks: {} } },
+    });
+    return { valid: true };
+  });
+  const outcome = await dropComponentFile();
+  expect(outcome).toEqual({
+    status: "error",
+    message: "The pipeline changed before the component was added.",
+  });
+  expect(mocks.addToLibrary).not.toHaveBeenCalled();
+  expect(mocks.addTask).not.toHaveBeenCalled();
+});
+
+it("does not add a dropped file if the active pipeline changes while it is added to the library", async () => {
+  validate.mockReturnValue({ valid: true });
+  mocks.addToLibrary.mockImplementation(async () => {
+    navigation.activeSpec = new YamlDeserializer(
+      new IncrementingIdGenerator(),
+    ).deserialize({
+      name: "Other pipeline",
+      implementation: { graph: { tasks: {} } },
+    });
+    return component;
+  });
+  const outcome = await dropComponentFile();
+  expect(outcome).toEqual({
+    status: "error",
+    message: "The pipeline changed before the component was added.",
+  });
+  expect(mocks.addTask).not.toHaveBeenCalled();
+});
+
+function renderFileDropPicker() {
+  return renderHook(
+    () => {
+      const fileDropHandler = useFileDropHandler(spec);
+      return useFilePicker<{ position: XYPosition }>({
+        onFile: ({ file, text, meta, isStale }) =>
+          fileDropHandler({
+            file,
+            text,
+            position: meta?.position ?? { x: 0, y: 0 },
+            isStale,
+          }),
+      });
+    },
+    { wrapper: Wrapper },
+  );
+}
+
+function deferHydration() {
+  const finishers: ((value: typeof component) => void)[] = [];
+  mocks.hydrate.mockImplementation(
+    () =>
+      new Promise<typeof component>((resolve) => {
+        finishers.push(resolve);
+      }),
+  );
+  return finishers;
+}
+
+it("does not add a dropped file that is dismissed while it is validated", async () => {
+  const finishers = deferHydration();
+  validate.mockReturnValue({ valid: true });
+  mocks.addToLibrary.mockResolvedValue(component);
+  const { result } = renderFileDropPicker();
+  let handled: Promise<void> | undefined;
+  act(() => {
+    handled = result.current.handleFiles(
+      [new File([componentText], "component.yaml")],
+      "drop",
+      { position: { x: 40, y: 60 } },
+    );
+  });
+  await waitFor(() => expect(finishers).toHaveLength(1));
+  act(() => result.current.dismissStatus());
+  await act(async () => {
+    finishers[0](component);
+    await handled;
+  });
+  expect(mocks.addToLibrary).not.toHaveBeenCalled();
+  expect(mocks.addTask).not.toHaveBeenCalled();
+  expect(result.current.status).toEqual({ kind: "idle" });
+});
+
+it("adds only the second of two quick file drops", async () => {
+  const finishers = deferHydration();
+  validate.mockReturnValue({ valid: true });
+  mocks.addToLibrary.mockResolvedValue(component);
+  const { result } = renderFileDropPicker();
+  let first: Promise<void> | undefined;
+  let second: Promise<void> | undefined;
+  act(() => {
+    first = result.current.handleFiles(
+      [new File([componentText], "first.yaml")],
+      "drop",
+      { position: { x: 40, y: 60 } },
+    );
+  });
+  await waitFor(() => expect(finishers).toHaveLength(1));
+  act(() => {
+    second = result.current.handleFiles(
+      [new File([componentText], "second.yaml")],
+      "drop",
+      { position: { x: 400, y: 600 } },
+    );
+  });
+  await waitFor(() => expect(finishers).toHaveLength(2));
+  await act(async () => {
+    finishers[0](component);
+    finishers[1](component);
+    await Promise.all([first, second]);
+  });
+  expect(mocks.addToLibrary).toHaveBeenCalledTimes(1);
+  expect(mocks.addTask).toHaveBeenCalledTimes(1);
+  expect(mocks.addTask).toHaveBeenCalledWith(spec, component, {
+    x: 400,
+    y: 600,
+  });
+  expect(result.current.status).toMatchObject({
+    kind: "success",
+    message: "Search added to the canvas",
+    fileName: "second.yaml",
+  });
+});
+
+it("does not add a dropped file that is dismissed while it is added to the library", async () => {
+  validate.mockReturnValue({ valid: true });
+  let finishLibraryAdd: ((value: typeof component) => void) | undefined;
+  mocks.addToLibrary.mockImplementation(
+    () =>
+      new Promise<typeof component>((resolve) => {
+        finishLibraryAdd = resolve;
+      }),
+  );
+  const { result } = renderFileDropPicker();
+  let handled: Promise<void> | undefined;
+  act(() => {
+    handled = result.current.handleFiles(
+      [new File([componentText], "component.yaml")],
+      "drop",
+      { position: { x: 40, y: 60 } },
+    );
+  });
+  await waitFor(() => expect(finishLibraryAdd).toBeDefined());
+  act(() => result.current.dismissStatus());
+  await act(async () => {
+    finishLibraryAdd?.(component);
+    await handled;
+  });
+  expect(mocks.addToLibrary).toHaveBeenCalledTimes(1);
+  expect(mocks.addTask).not.toHaveBeenCalled();
 });
