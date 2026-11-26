@@ -180,6 +180,17 @@ describe("usePrepareProjectArrival", () => {
     expect(store.startSession).toHaveBeenCalledWith(undefined);
   });
 
+  it("waits for a shared chat link to be checked before starting an empty project", async () => {
+    const store = makeStore();
+    search = { session: "shared" };
+    const { rerender } = prepare(store);
+    await settle();
+    expect(store.startSession).not.toHaveBeenCalled();
+    search = {};
+    rerender();
+    await waitFor(() => expect(store.startSession).toHaveBeenCalledTimes(1));
+  });
+
   /**
    * The opening prompt is spent on the session it starts, so starting one
    * nobody can answer would burn it and leave a dead thread behind.

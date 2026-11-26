@@ -209,10 +209,10 @@ export class TangentProjectStore {
     this.defaultSessionId = sessionId;
   }
 
-  @action selectSession(sessionId: string) {
+  @action selectSession(sessionId: string | undefined) {
     const previous = this.activeSessionId;
     this.selectedSessionId = sessionId;
-    if (previous && previous !== sessionId) {
+    if (previous && previous !== this.activeSessionId) {
       void this.discardEmptySession(previous);
     }
   }

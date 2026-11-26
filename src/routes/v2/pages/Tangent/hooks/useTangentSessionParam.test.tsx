@@ -1,4 +1,4 @@
-import { renderHook } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { action, observable } from "mobx";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -10,6 +10,14 @@ import {
 import { useTangentSessionParam } from "./useTangentSessionParam";
 
 const navigate = vi.fn();
+const notify = vi.fn();
+const client = { fetchQuery: vi.fn() };
+
+vi.mock("@tanstack/react-query", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@tanstack/react-query")>()),
+  useQueryClient: () => client,
+}));
+vi.mock("@/hooks/useToastNotification", () => ({ default: () => notify }));
 let search: Record<string, unknown> = {};
 
 vi.mock("@tanstack/react-router", () => ({
@@ -17,13 +25,17 @@ vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => navigate,
 }));
 
-function makeStore() {
+function makeStore(defaultSessionId?: string) {
   const selected = observable.box<string>();
   return {
-    get activeSessionId() {
+    projectId: "project-1",
+    get selectedSessionId() {
       return selected.get();
     },
-    selectSession: vi.fn(action((id: string) => selected.set(id))),
+    get activeSessionId() {
+      return selected.get() ?? defaultSessionId;
+    },
+    selectSession: vi.fn(action((id: string | undefined) => selected.set(id))),
     startSession: vi.fn().mockResolvedValue(true),
   } as unknown as TangentProjectStore;
 }
@@ -31,6 +43,10 @@ function makeStore() {
 describe("useTangentSessionParam", () => {
   beforeEach(() => {
     search = {};
+    client.fetchQuery.mockResolvedValue({
+      items: ["sess-a", "sess-b", "s"].map((entityId) => ({ entityId })),
+      nextPageToken: null,
+    });
   });
   afterEach(() => vi.resetAllMocks());
 
@@ -141,5 +157,99 @@ describe("useTangentSessionParam", () => {
     expect(store.selectSession).not.toHaveBeenCalled();
     expect(store.startSession).not.toHaveBeenCalled();
     expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it("restores the default chat on Back and the linked chat on Forward", () => {
+    const store = makeStore("sess-a");
+    const { rerender } = renderHook(() => useTangentSessionParam(store));
+    search = { session: "sess-b" };
+    rerender();
+    expect(store.activeSessionId).toBe("sess-b");
+
+    search = {};
+    rerender();
+    expect(store.activeSessionId).toBe("sess-a");
+
+    search = { session: "sess-b" };
+    rerender();
+    expect(store.activeSessionId).toBe("sess-b");
+  });
+
+  it("leaves the current chat open while a requested new chat starts", () => {
+    const store = makeStore("sess-a");
+    search = { session: "sess-b" };
+    const { rerender } = renderHook(() => useTangentSessionParam(store));
+    search = { session: "new" };
+    rerender();
+    search = {};
+    rerender();
+
+    expect(store.activeSessionId).toBe("sess-b");
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it("keeps a newly selected chat when removing the previous chat's link", async () => {
+    const pending = Promise.withResolvers<{
+      items: never[];
+      nextPageToken: null;
+    }>();
+    client.fetchQuery.mockReturnValueOnce(pending.promise);
+    const store = makeStore("sess-a");
+    search = { session: "old" };
+    const { rerender } = renderHook(() => useTangentSessionParam(store));
+
+    store.selectSession("newly-started");
+    search = {};
+    rerender();
+    await act(() => pending.resolve({ items: [], nextPageToken: null }));
+
+    expect(store.activeSessionId).toBe("newly-started");
+    expect(notify).not.toHaveBeenCalled();
+  });
+
+  it("returns to the latest chat when the linked chat is missing", async () => {
+    const store = makeStore("sess-a");
+    search = { session: "gone" };
+    renderHook(() => useTangentSessionParam(store));
+
+    await waitFor(() => expect(store.activeSessionId).toBe("sess-a"));
+    expect(notify).toHaveBeenCalledWith(
+      "That chat isn't available in this project.",
+      "warning",
+    );
+    const { search: rewrite, replace } = navigate.mock.calls[0][0];
+    expect(replace).toBe(true);
+    expect(rewrite({ session: "gone", other: "kept" })).toEqual({
+      other: "kept",
+    });
+  });
+
+  it("keeps an older linked chat found beyond the first page", async () => {
+    client.fetchQuery
+      .mockResolvedValueOnce({ items: [], nextPageToken: "more" })
+      .mockResolvedValueOnce([{ entityId: "older" }]);
+    const store = makeStore("sess-a");
+    search = { session: "older" };
+    await act(() => {
+      renderHook(() => useTangentSessionParam(store));
+    });
+
+    expect(client.fetchQuery).toHaveBeenCalledTimes(2);
+    expect(store.activeSessionId).toBe("older");
+    expect(navigate).not.toHaveBeenCalled();
+    expect(notify).not.toHaveBeenCalled();
+  });
+
+  it("keeps the link when the server cannot confirm which chats exist", async () => {
+    client.fetchQuery.mockRejectedValueOnce(new Error("Offline"));
+    const store = makeStore("sess-a");
+    search = { session: "maybe" };
+    await act(() => {
+      renderHook(() => useTangentSessionParam(store));
+    });
+
+    expect(store.activeSessionId).toBe("maybe");
+    expect(navigate).not.toHaveBeenCalled();
+    expect(notify).not.toHaveBeenCalled();
   });
 });

@@ -107,7 +107,8 @@ export function usePrepareProjectArrival(
   const { isConfigured: isAiConfigured } = useAiProviderSettings();
   const prepared = useRef<TangentProjectStore | null>(null);
 
-  const linkAsksForSession = readTangentSessionParam(search)?.kind === "new";
+  const sessionRequest = readTangentSessionParam(search);
+  const linkAsksForSession = sessionRequest?.kind === "new";
   const waiting = readStartingSession(project?.metadata);
   const starting = linkAsksForSession ? undefined : waiting;
   const askedFor = starting ? nameFromPrompt(starting.prompt) : undefined;
@@ -176,7 +177,10 @@ export function usePrepareProjectArrival(
   });
 
   const knowsWhetherToArrive =
-    !isSessionsLoading && project !== undefined && !isProjectFetching;
+    !isSessionsLoading &&
+    project !== undefined &&
+    !isProjectFetching &&
+    !(isEmpty && sessionRequest?.kind === "existing");
   const asksForArrival =
     isEmpty || starting !== undefined || linkAsksForSession;
 
