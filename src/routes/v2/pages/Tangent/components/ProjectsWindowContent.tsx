@@ -8,7 +8,11 @@ import { useDeleteProjectAction } from "@/components/Project/useDeleteProjectAct
 import { useRenameProjectAction } from "@/components/Project/useRenameProjectAction";
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
 import { Button } from "@/components/ui/button";
-import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { ListItem } from "@/components/ui/list-item";
@@ -18,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { APP_ROUTES } from "@/routes/appRoutes";
 import { newTangentSessionSearch } from "@/routes/tangentSearch";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
+import { useOpenGroups } from "@/routes/v2/pages/Tangent/hooks/useOpenGroups";
 import {
   cancelPendingProjectMove,
   useOpenTangentProject,
@@ -37,23 +42,21 @@ import { useProject } from "@/services/projects/useProjects";
 import { useReachableProjects } from "@/services/projects/useReachableProjects";
 import { useWorkspaces } from "@/services/projects/useWorkspaces";
 import { tracking } from "@/utils/tracking";
-import { getStorage } from "@/utils/typedStorage";
 
+import { groupProjectsByWorkspace } from "./projectsByWorkspace";
 import { ProjectSessionList } from "./ProjectSessionList";
 import { searchProjects } from "./projectSidebarSearch";
 import { SearchField } from "./SearchField";
 
-const EXPANDED_KEY = "tangent-sidebar-expanded-projects";
-
-const storage = getStorage<
-  typeof EXPANDED_KEY,
-  { [EXPANDED_KEY]: Record<string, boolean> }
->();
+const EXPANDED_PROJECTS_KEY = "tangent-sidebar-expanded-projects";
+const EXPANDED_WORKSPACES_KEY = "tangent-sidebar-expanded-workspaces";
 
 /**
  * Every project someone can get back to, each with its sessions, so moving
- * between projects is one click. "New chat" starts in whichever project was
- * clicked last, which is the one in view until another is touched.
+ * between projects is one click. Projects spread over more than one workspace
+ * are gathered under their workspaces, each of which can be closed out of the
+ * way. "New chat" starts in whichever project was clicked last, which is the
+ * one in view until another is touched.
  *
  * A search opens each project with a matching session, and what is opened or
  * closed while searching is forgotten with the search, so it never changes
@@ -72,22 +75,24 @@ export const ProjectsWindowContent = observer(function ProjectsWindowContent() {
   const dismissFlyout = useOptionalWindowContext()?.dismissFlyout;
   const [targetProjectId, setTargetProjectId] = useState(store.projectId);
   const [projectIdInView, setProjectIdInView] = useState(store.projectId);
-  const [expanded, setExpanded] = useState<Record<string, boolean>>(() => ({
-    ...storage.getItem(EXPANDED_KEY),
-    [store.projectId]: true,
-  }));
   const [query, setQuery] = useState("");
-  const [expandedWhileSearching, setExpandedWhileSearching] = useState<
-    Record<string, boolean>
-  >({});
   const searching = query.trim() !== "";
+  const openProjects = useOpenGroups(EXPANDED_PROJECTS_KEY, {
+    defaultOpen: false,
+    searching,
+    initiallyOpen: store.projectId,
+  });
+  const openWorkspaces = useOpenGroups(EXPANDED_WORKSPACES_KEY, {
+    defaultOpen: true,
+    searching,
+  });
 
   // This panel outlives a move to another project in place, so the project
   // arrived in becomes the target and is opened, as it is on a fresh mount.
   if (projectIdInView !== store.projectId) {
     setProjectIdInView(store.projectId);
     setTargetProjectId(store.projectId);
-    setExpanded((current) => ({ ...current, [store.projectId]: true }));
+    openProjects.reveal(store.projectId);
   }
 
   // A shared project opened from a link is neither created nor pinned, but it
@@ -118,24 +123,27 @@ export const ProjectsWindowContent = observer(function ProjectsWindowContent() {
   const pinnedIds = new Set(pinnedProjects.map(({ id }) => id));
   const pinned = shown.filter(({ id }) => pinnedIds.has(id));
   const unpinned = shown.filter(({ id }) => !pinnedIds.has(id));
+  // Counted over every project rather than the search's matches, so the
+  // workspace headings don't come and go as a search is typed.
+  const workspaceIds = new Set(
+    projects
+      .filter(({ id }) => !pinnedIds.has(id))
+      .map(({ workspaceId }) => workspaceId),
+  );
+  const byWorkspace =
+    workspaces && workspaceIds.size > 1
+      ? groupProjectsByWorkspace(unpinned, workspaces)
+      : undefined;
 
   function search(next: string) {
     setQuery(next);
-    setExpandedWhileSearching({});
+    openProjects.forgetSearch();
+    openWorkspaces.forgetSearch();
   }
 
   function setOpen(projectId: string, open: boolean) {
     setTargetProjectId(projectId);
-    if (searching) {
-      setExpandedWhileSearching((current) => ({
-        ...current,
-        [projectId]: open,
-      }));
-      return;
-    }
-    const next = { ...expanded, [projectId]: open };
-    setExpanded(next);
-    storage.setItem(EXPANDED_KEY, next);
+    openProjects.setOpen(projectId, open);
   }
 
   function startChat() {
@@ -217,11 +225,28 @@ export const ProjectsWindowContent = observer(function ProjectsWindowContent() {
             {pinned.map(renderGroup)}
           </ProjectSection>
         )}
-        {unpinned.length > 0 && (
-          <ProjectSection title={pinned.length > 0 ? "Projects" : undefined}>
-            {unpinned.map(renderGroup)}
-          </ProjectSection>
-        )}
+        {byWorkspace
+          ? byWorkspace.map((section) => (
+              <WorkspaceSection
+                key={section.workspaceId}
+                title={section.title}
+                open={openWorkspaces.isOpen(section.workspaceId, {
+                  hasMatches: true,
+                })}
+                onOpenChange={(open) =>
+                  openWorkspaces.setOpen(section.workspaceId, open)
+                }
+              >
+                {section.projects.map(renderGroup)}
+              </WorkspaceSection>
+            ))
+          : unpinned.length > 0 && (
+              <ProjectSection
+                title={pinned.length > 0 ? "Projects" : undefined}
+              >
+                {unpinned.map(renderGroup)}
+              </ProjectSection>
+            )}
       </BlockStack>
     </BlockStack>
   );
@@ -229,17 +254,14 @@ export const ProjectsWindowContent = observer(function ProjectsWindowContent() {
   function renderGroup(project: ProjectSummary) {
     const sessionIds = matchingSessions.get(project.id);
     const hasMatchingSessions = sessionIds !== undefined && sessionIds.size > 0;
-    const remembered = expanded[project.id] ?? false;
-    const open = searching
-      ? (expandedWhileSearching[project.id] ??
-        (hasMatchingSessions || remembered))
-      : remembered;
 
     return (
       <ProjectGroup
         key={project.id}
         project={project}
-        open={open}
+        open={openProjects.isOpen(project.id, {
+          hasMatches: hasMatchingSessions,
+        })}
         inView={project.id === store.projectId}
         onlySessionIds={hasMatchingSessions ? sessionIds : undefined}
         runStates={runStates}
@@ -268,6 +290,63 @@ function ProjectSection({
         {children}
       </BlockStack>
     </BlockStack>
+  );
+}
+
+function WorkspaceSection({
+  title,
+  open,
+  onOpenChange,
+  children,
+}: {
+  title: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  children: ReactNode;
+}) {
+  return (
+    <Collapsible asChild open={open} onOpenChange={onOpenChange}>
+      <BlockStack gap="1" align="stretch">
+        <CollapsibleTrigger asChild>
+          <Button
+            variant="ghost"
+            size="row"
+            align="start"
+            fullWidth
+            {...tracking("projects.sidebar.toggle_workspace")}
+          >
+            <Icon
+              name={open ? "ChevronDown" : "ChevronRight"}
+              size="sm"
+              aria-hidden
+              className="text-muted-foreground"
+            />
+            <InlineStack gap="1" wrap="nowrap" className="min-w-0 flex-1">
+              <Icon
+                name="Shapes"
+                size="xs"
+                aria-hidden
+                className="shrink-0 text-muted-foreground"
+              />
+              <Text
+                size="xs"
+                weight="medium"
+                tone="subdued"
+                title={title}
+                className="min-w-0 truncate"
+              >
+                {title}
+              </Text>
+            </InlineStack>
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <BlockStack as="ul" gap="1" align="stretch" aria-label={title}>
+            {children}
+          </BlockStack>
+        </CollapsibleContent>
+      </BlockStack>
+    </Collapsible>
   );
 }
 

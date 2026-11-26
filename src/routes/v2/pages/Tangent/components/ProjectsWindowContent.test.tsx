@@ -11,6 +11,7 @@ import {
 import { usePinnedProjects } from "@/services/projects/usePinnedProjects";
 import { useProject } from "@/services/projects/useProjects";
 import { useReachableProjects } from "@/services/projects/useReachableProjects";
+import { useWorkspaces } from "@/services/projects/useWorkspaces";
 
 import { ProjectsWindowContent } from "./ProjectsWindowContent";
 
@@ -86,7 +87,11 @@ vi.mock("@/services/projects/useProjects", () => ({
 }));
 
 vi.mock("@/services/projects/useWorkspaces", () => ({
-  useWorkspaces: () => ({ data: undefined }),
+  useWorkspaces: vi.fn(),
+}));
+
+vi.mock("@/components/Home/ProjectsSection/CreateProjectDialog", () => ({
+  CreateProjectDialog: () => null,
 }));
 
 vi.mock("@/components/Project/ProjectMenu", () => ({
@@ -125,8 +130,24 @@ vi.mock("./ProjectSessionList", () => ({
   ),
 }));
 
-const CHURN = { id: "project-1", name: "Churn model" };
-const FORECAST = { id: "project-2", name: "Q3 forecasting" };
+const RESEARCH = { id: "ws-research", name: "Research" };
+const OPERATIONS = { id: "ws-operations", name: "Operations" };
+
+const CHURN = {
+  id: "project-1",
+  name: "Churn model",
+  workspaceId: RESEARCH.id,
+};
+const FORECAST = {
+  id: "project-2",
+  name: "Q3 forecasting",
+  workspaceId: RESEARCH.id,
+};
+const PRICING = {
+  id: "project-3",
+  name: "Pricing experiments",
+  workspaceId: OPERATIONS.id,
+};
 
 const BACKFILL: ProjectSession = {
   resourceId: "resource-s-3",
@@ -135,22 +156,28 @@ const BACKFILL: ProjectSession = {
   createdAt: new Date("2026-01-03"),
 };
 
-function given(reachable: { id: string; name: string }[]) {
+function given(reachable: (typeof CHURN)[], inView = CHURN) {
   vi.mocked(useReachableProjects).mockReturnValue({
     projects: reachable,
     isPending: false,
     error: null,
   } as unknown as ReturnType<typeof useReachableProjects>);
   vi.mocked(useProject).mockReturnValue({
-    data: CHURN,
+    data: inView,
   } as unknown as ReturnType<typeof useProject>);
 }
+
+const searchBox = () =>
+  screen.getByRole("searchbox", { name: "Search projects and sessions" });
 
 describe("ProjectsWindowContent", () => {
   beforeEach(() => {
     localStorage.clear();
     inView.projectId = "project-1";
     given([CHURN, FORECAST]);
+    vi.mocked(useWorkspaces).mockReturnValue({
+      data: [RESEARCH, OPERATIONS],
+    } as unknown as ReturnType<typeof useWorkspaces>);
     vi.mocked(usePinnedProjects).mockReturnValue({
       projects: [],
       isPending: false,
@@ -279,10 +306,11 @@ describe("ProjectsWindowContent", () => {
     });
   });
 
-  it("keeps one unheaded list while nothing is pinned", () => {
+  it("keeps one unheaded list while nothing is pinned and every project shares a workspace", () => {
     render(<ProjectsWindowContent />);
 
     expect(screen.queryByText("Pinned")).toBeNull();
+    expect(screen.queryByText("Research")).toBeNull();
     expect(screen.getAllByRole("list")).toHaveLength(1);
   });
 
@@ -304,10 +332,121 @@ describe("ProjectsWindowContent", () => {
     ).toBeTruthy();
   });
 
-  describe("searching", () => {
-    const searchBox = () =>
-      screen.getByRole("searchbox", { name: "Search projects and sessions" });
+  describe("across workspaces", () => {
+    beforeEach(() => given([CHURN, FORECAST, PRICING]));
 
+    it("gathers the projects of each workspace under its name, by name", () => {
+      render(<ProjectsWindowContent />);
+
+      const operations = screen.getByRole("list", { name: "Operations" });
+      const research = screen.getByRole("list", { name: "Research" });
+      expect(operations).toHaveTextContent("Pricing experiments");
+      expect(operations).not.toHaveTextContent("Churn model");
+      expect(research).toHaveTextContent("Churn model");
+      expect(research).toHaveTextContent("Q3 forecasting");
+      expect(screen.queryByRole("list", { name: "Projects" })).toBeNull();
+      expect(
+        operations.compareDocumentPosition(research) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
+    it("keeps pinned projects in their own section ahead of the workspaces", () => {
+      vi.mocked(usePinnedProjects).mockReturnValue({
+        projects: [FORECAST] as ReturnType<
+          typeof usePinnedProjects
+        >["projects"],
+        isPending: false,
+      });
+
+      render(<ProjectsWindowContent />);
+
+      const pinned = screen.getByRole("list", { name: "Pinned" });
+      const operations = screen.getByRole("list", { name: "Operations" });
+      expect(pinned).toHaveTextContent("Q3 forecasting");
+      expect(
+        screen.getByRole("list", { name: "Research" }),
+      ).not.toHaveTextContent("Q3 forecasting");
+      expect(
+        pinned.compareDocumentPosition(operations) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
+    it("closes a workspace out of the way and remembers it", async () => {
+      const user = userEvent.setup();
+      const { unmount } = render(<ProjectsWindowContent />);
+
+      await user.click(screen.getByRole("button", { name: "Research" }));
+      expect(screen.queryByText("Churn model")).toBeNull();
+      expect(screen.getByText("Pricing experiments")).toBeInTheDocument();
+
+      unmount();
+      render(<ProjectsWindowContent />);
+
+      expect(screen.queryByText("Churn model")).toBeNull();
+      expect(screen.getByRole("button", { name: "Research" })).toHaveAttribute(
+        "aria-expanded",
+        "false",
+      );
+    });
+
+    it("shows a closed workspace's matches while searching, and closes it again after", async () => {
+      const user = userEvent.setup();
+      render(<ProjectsWindowContent />);
+      await user.click(screen.getByRole("button", { name: "Research" }));
+
+      await user.type(searchBox(), "churn");
+
+      expect(screen.getByText("Churn model")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Operations" })).toBeNull();
+
+      await user.click(screen.getByRole("button", { name: "Clear search" }));
+
+      expect(screen.queryByText("Churn model")).toBeNull();
+    });
+
+    it("forgets a workspace closed while searching", async () => {
+      const user = userEvent.setup();
+      render(<ProjectsWindowContent />);
+
+      await user.type(searchBox(), "model");
+      await user.click(screen.getByRole("button", { name: "Research" }));
+      expect(screen.queryByText("Churn model")).toBeNull();
+
+      await user.click(screen.getByRole("button", { name: "Clear search" }));
+
+      expect(screen.getByText("Churn model")).toBeInTheDocument();
+    });
+
+    /** A shared link can open a project in a workspace the caller can't see. */
+    it("lists a project of an unknown workspace under its own heading, last", () => {
+      given([PRICING], { ...CHURN, workspaceId: "ws-elsewhere" });
+
+      render(<ProjectsWindowContent />);
+
+      const operations = screen.getByRole("list", { name: "Operations" });
+      const other = screen.getByRole("list", { name: "Other workspace" });
+      expect(other).toHaveTextContent("Churn model");
+      expect(
+        operations.compareDocumentPosition(other) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
+    it("keeps one list until the workspaces are known", () => {
+      vi.mocked(useWorkspaces).mockReturnValue({
+        data: undefined,
+      } as unknown as ReturnType<typeof useWorkspaces>);
+
+      render(<ProjectsWindowContent />);
+
+      expect(screen.getAllByRole("list")).toHaveLength(1);
+      expect(screen.getByText("Pricing experiments")).toBeInTheDocument();
+    });
+  });
+
+  describe("searching", () => {
     it("lists only the projects whose name matches", async () => {
       const user = userEvent.setup();
       render(<ProjectsWindowContent />);
