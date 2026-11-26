@@ -7,8 +7,7 @@ import {
   CanvasHomeLink,
   CanvasMenuBar,
 } from "@/routes/v2/shared/components/CanvasMenuBar";
-
-import { ReadOnlyBadge } from "./ReadOnlyBadge";
+import { ReadOnlyBadge } from "@/routes/v2/shared/components/ReadOnlyBadge";
 
 export function RemotePipelineFrame({ children }: PropsWithChildren) {
   return (

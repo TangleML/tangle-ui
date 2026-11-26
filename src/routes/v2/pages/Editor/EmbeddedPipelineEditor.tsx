@@ -17,6 +17,8 @@ import { ForcedSearchProvider } from "@/providers/ComponentLibraryProvider/Force
 import { RunSubmissionScopeProvider } from "@/providers/RunSubmissionScopeProvider";
 import { QuickRunSubmitter } from "@/routes/v2/pages/Editor/components/QuickRunSubmitter";
 import { QuickRunSubmitterProvider } from "@/routes/v2/pages/Editor/components/QuickRunSubmitterContext";
+import { EmbeddedCanvasControls } from "@/routes/v2/shared/components/EmbeddedCanvasControls";
+import { useFocusMode } from "@/routes/v2/shared/hooks/useFocusMode";
 import { NodeRegistryProvider } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { SpecProvider } from "@/routes/v2/shared/providers/SpecContext";
 import { useShortcutListener } from "@/routes/v2/shared/shortcuts/useShortcutListener";
@@ -32,6 +34,7 @@ import {
   viewPresetForComponentSearchMode,
 } from "@/routes/v2/shared/windows/viewPresets";
 import { WindowContainer } from "@/routes/v2/shared/windows/WindowContainer";
+import { WindowManagementMenu } from "@/routes/v2/shared/windows/WindowManagementMenu";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import {
   type EditorPipelineRef,
@@ -40,6 +43,7 @@ import {
 } from "@/services/pipelineStorage/types";
 
 import { DriverPermissionGate } from "./components/DriverPermissionGate";
+import { ViewMenu } from "./components/EditorMenuBar/components/ViewMenu";
 import { FlowCanvas } from "./components/FlowCanvas/FlowCanvas";
 import { RemotePipelineSaveRecovery } from "./components/RemotePipelineSaveRecovery";
 import { RemotePipelineView } from "./components/RemotePipelineView/RemotePipelineView";
@@ -149,12 +153,12 @@ const EmbeddedPipelineEditorCanvas = withSuspenseWrapper(
       useEditorEscapeShortcut();
 
       useComponentSearchV2Window(componentSearchV2Enabled);
-      useEmbeddedInitialDockLayout(
-        viewPresetForComponentSearchMode(
-          EMBEDDED_VIEW_PRESET,
-          componentSearchV2Enabled,
-        ),
+      const embeddedPreset = viewPresetForComponentSearchMode(
+        EMBEDDED_VIEW_PRESET,
+        componentSearchV2Enabled,
       );
+      useEmbeddedInitialDockLayout(embeddedPreset);
+      useFocusMode(embeddedPreset);
 
       const activeSpec = navigation.activeSpec;
 
@@ -176,7 +180,15 @@ const EmbeddedPipelineEditorCanvas = withSuspenseWrapper(
                     key={activeSpec.$id ?? "root"}
                     spec={activeSpec}
                     className="h-full"
-                  />
+                  >
+                    <EmbeddedCanvasControls label="Pipeline view controls">
+                      <ViewMenu />
+                      <WindowManagementMenu
+                        presets={[embeddedPreset]}
+                        trackingPrefix="v2.pipeline_editor.windows_menu"
+                      />
+                    </EmbeddedCanvasControls>
+                  </FlowCanvas>
                   <WindowContainer />
                 </div>
                 <DockArea side="right" />

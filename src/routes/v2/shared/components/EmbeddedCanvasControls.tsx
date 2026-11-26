@@ -4,16 +4,20 @@ import type { PropsWithChildren } from "react";
 import { InlineStack } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
 import { CANVAS_MENU_SURFACE_CLASS } from "@/routes/v2/shared/components/CanvasMenuBar";
+import { ReadOnlyBadge } from "@/routes/v2/shared/components/ReadOnlyBadge";
 
-import { ReadOnlyBadge } from "./ReadOnlyBadge";
+interface EmbeddedCanvasControlsProps {
+  label: string;
+  readOnly?: boolean;
+}
 
-export function EmbeddedPipelineViewControls({ children }: PropsWithChildren) {
+export function EmbeddedCanvasControls({
+  label,
+  readOnly = false,
+  children,
+}: PropsWithChildren<EmbeddedCanvasControlsProps>) {
   return (
-    <Panel
-      position="top-right"
-      role="group"
-      aria-label="Pipeline view controls"
-    >
+    <Panel position="top-right" role="group" aria-label={label}>
       <InlineStack
         gap="2"
         blockAlign="center"
@@ -23,7 +27,7 @@ export function EmbeddedPipelineViewControls({ children }: PropsWithChildren) {
           CANVAS_MENU_SURFACE_CLASS,
         )}
       >
-        <ReadOnlyBadge />
+        {readOnly && <ReadOnlyBadge />}
         <InlineStack wrap="nowrap" blockAlign="center">
           {children}
         </InlineStack>

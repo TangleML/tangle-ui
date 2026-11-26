@@ -5,7 +5,7 @@ import {
   useConnection,
 } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 
 import { BlockStack } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
@@ -37,11 +37,13 @@ import { usePaneClickBehavior } from "./hooks/usePaneClickBehavior";
 interface FlowCanvasProps {
   spec: ComponentSpec | null;
   className?: string;
+  children?: ReactNode;
 }
 
 export const FlowCanvas = observer(function FlowCanvas({
   spec,
   className,
+  children,
 }: FlowCanvasProps) {
   const registry = useNodeRegistry();
   const nodeTypes = registry.getNodeTypes();
@@ -124,6 +126,7 @@ export const FlowCanvas = observer(function FlowCanvas({
       >
         <FloatingSelectionToolbar spec={spec} />
         <Background gap={10} className="bg-canvas!" />
+        {children}
       </ReactFlow>
       <CanvasUndoRedo />
     </BlockStack>
