@@ -24,6 +24,23 @@ describe("Tangent ProjectHeader", () => {
     expect(screen.getByTestId("app-menu-actions")).toBeInTheDocument();
   });
 
+  it("shows portraits for the selected chat when the runtime supports them", () => {
+    const tag = "tangent-session-presence";
+    const { container, rerender } = render(<ProjectHeader sessionId="first" />);
+    expect(container.querySelector(tag)).toBeNull();
+
+    customElements.define(tag, class extends HTMLElement {});
+    rerender(<ProjectHeader sessionId="second" />);
+    const portraits = container.querySelector(tag);
+    expect(portraits).toHaveAttribute("session-id", "second");
+
+    rerender(<ProjectHeader sessionId="third" />);
+    expect(portraits).toHaveAttribute("session-id", "third");
+
+    rerender(<ProjectHeader />);
+    expect(container.querySelector(tag)).toBeNull();
+  });
+
   it("names Tangle beside its mark", () => {
     render(<ProjectHeader />);
 
