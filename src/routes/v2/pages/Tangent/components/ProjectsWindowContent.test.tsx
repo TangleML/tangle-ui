@@ -8,6 +8,7 @@ import {
   type ProjectSession,
   useSessionsOfProjects,
 } from "@/routes/v2/pages/Tangent/hooks/useProjectSessions";
+import { useAiGate } from "@/routes/v2/shared/components/AiChat/components/useAiGate";
 import { usePinnedProjects } from "@/services/projects/usePinnedProjects";
 import { useProject } from "@/services/projects/useProjects";
 import { useReachableProjects } from "@/services/projects/useReachableProjects";
@@ -19,6 +20,7 @@ const cancelPendingProjectMove = vi.fn();
 const startSession = vi.fn();
 
 vi.mock("@tanstack/react-router", () => ({
+  useNavigate: () => vi.fn(),
   Link: ({ children, ...rest }: { children: ReactNode }) => (
     <a {...rest}>{children}</a>
   ),
@@ -70,7 +72,7 @@ vi.mock("@/routes/v2/pages/Tangent/context/TangentProjectContext", async () => {
 });
 
 vi.mock("@/routes/v2/shared/components/AiChat/components/useAiGate", () => ({
-  useAiGate: () => ({ disabled: false, title: "" }),
+  useAiGate: vi.fn(),
 }));
 
 vi.mock("@/services/projects/useReachableProjects", () => ({
@@ -89,10 +91,16 @@ vi.mock("@/services/projects/useWorkspaces", () => ({
   useWorkspaces: () => ({ data: undefined }),
 }));
 
-vi.mock("@/components/Project/ProjectMenu", () => ({
-  ProjectMenu: ({ project }: { project: { name: string } }) => (
-    <button type="button" aria-label={`Project actions: ${project.name}`} />
-  ),
+vi.mock("@/components/Project/useProjectPin", () => ({
+  useProjectPin: () => ({
+    pinned: false,
+    isPinning: false,
+    togglePin: vi.fn(),
+  }),
+}));
+
+vi.mock("@/components/Project/useShareProjectAction", () => ({
+  useShareProjectAction: () => vi.fn(),
 }));
 
 vi.mock("@/components/Project/useRenameProjectAction", () => ({
@@ -149,6 +157,13 @@ function given(reachable: { id: string; name: string }[]) {
 describe("ProjectsWindowContent", () => {
   beforeEach(() => {
     localStorage.clear();
+    Element.prototype.scrollIntoView = vi.fn();
+    Element.prototype.hasPointerCapture = vi.fn();
+    vi.mocked(useAiGate).mockReturnValue({
+      isConfigured: true,
+      disabled: false,
+      title: "New chat",
+    });
     inView.projectId = "project-1";
     given([CHURN, FORECAST]);
     vi.mocked(usePinnedProjects).mockReturnValue({
@@ -214,6 +229,54 @@ describe("ProjectsWindowContent", () => {
 
     expect(startSession).not.toHaveBeenCalled();
     expect(openProject).toHaveBeenCalledWith("project-2", { session: "new" });
+  });
+
+  it("starts a chat directly from a collapsed project's menu", async () => {
+    const user = userEvent.setup();
+    render(<ProjectsWindowContent />);
+
+    await user.click(
+      screen.getByRole("button", { name: "Project actions: Q3 forecasting" }),
+    );
+    await user.click(await screen.findByRole("menuitem", { name: "New chat" }));
+
+    expect(openProject).toHaveBeenCalledWith(FORECAST.id, { session: "new" });
+    expect(startSession).not.toHaveBeenCalled();
+  });
+
+  it("uses the current project's menu even when the toolbar targets another project", async () => {
+    const user = userEvent.setup();
+    render(<ProjectsWindowContent />);
+
+    await user.click(screen.getByText(FORECAST.name));
+    await user.click(
+      screen.getByRole("button", { name: "Project actions: Churn model" }),
+    );
+    await user.click(await screen.findByRole("menuitem", { name: "New chat" }));
+
+    expect(cancelPendingProjectMove).toHaveBeenCalled();
+    expect(startSession).toHaveBeenCalledOnce();
+    expect(openProject).not.toHaveBeenCalled();
+  });
+
+  it("disables the menu's New chat action when the AI provider is missing", async () => {
+    vi.mocked(useAiGate).mockReturnValue({
+      isConfigured: false,
+      disabled: true,
+      title: "Set up an AI provider",
+    });
+    const user = userEvent.setup();
+    render(<ProjectsWindowContent />);
+
+    await user.click(
+      screen.getByRole("button", { name: "Project actions: Q3 forecasting" }),
+    );
+    expect(
+      await screen.findByRole("menuitem", { name: "New chat" }),
+    ).toHaveAttribute("aria-disabled", "true");
+    expect(
+      screen.getByRole("menuitem", { name: "Pin project" }),
+    ).not.toHaveAttribute("aria-disabled", "true");
   });
 
   /** The sidebar stays mounted when a session click moves to another project. */
