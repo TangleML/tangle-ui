@@ -32,15 +32,15 @@ describe("groupProjectsByWorkspace", () => {
     ]);
   });
 
-  it("keeps the projects of a workspace it does not know last, under a title of their own", () => {
+  it("keeps the projects of workspaces it does not know last, together under one title", () => {
     const sections = groupProjectsByWorkspace(
-      [project("a", "ws-gone"), project("b", "ws-1")],
+      [project("a", "ws-gone"), project("b", "ws-1"), project("c", "ws-lost")],
       [workspace("ws-1", "Zebra")],
     );
 
     expect(titlesAndIds(sections)).toEqual([
       ["Zebra", ["b"]],
-      ["Other workspace", ["a"]],
+      ["Other workspace", ["a", "c"]],
     ]);
   });
 });

@@ -2,7 +2,13 @@ import { useState } from "react";
 
 import { getStorage } from "@/utils/typedStorage";
 
-const storage = getStorage<string, Record<string, Record<string, boolean>>>();
+type OpenGroupsStorageKey =
+  "tangent-sidebar-expanded-projects" | "tangent-sidebar-expanded-workspaces";
+
+const storage = getStorage<
+  OpenGroupsStorageKey,
+  Record<OpenGroupsStorageKey, Record<string, boolean>>
+>();
 
 interface OpenGroupsOptions {
   defaultOpen: boolean;
@@ -25,7 +31,7 @@ interface OpenGroups {
  * it was closed during that search.
  */
 export function useOpenGroups(
-  storageKey: string,
+  storageKey: OpenGroupsStorageKey,
   { defaultOpen, searching, initiallyOpen }: OpenGroupsOptions,
 ): OpenGroups {
   const [remembered, setRemembered] = useState<Record<string, boolean>>(() => {

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { useOpenGroups } from "./useOpenGroups";
 
-const KEY = "test-open-groups";
+const KEY = "tangent-sidebar-expanded-projects";
 
 function mount(
   options: Partial<Parameters<typeof useOpenGroups>[1]> = {},

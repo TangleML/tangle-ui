@@ -6,36 +6,38 @@ interface WorkspaceProjects {
   projects: ProjectSummary[];
 }
 
-const UNKNOWN_WORKSPACE_TITLE = "Other workspace";
+const OTHER_WORKSPACE_ID = "other-workspace";
+const OTHER_WORKSPACE_TITLE = "Other workspace";
 
 /**
  * The projects of each workspace that has any, by workspace name, each
- * workspace's projects in the order given. A project of a workspace not among
- * those known — one shared from a workspace the caller can't see — comes
- * last, under a title of its own.
+ * workspace's projects in the order given. Projects of workspaces not among
+ * those known — shared from workspaces the caller can't see — come last,
+ * together under one title.
  */
 export function groupProjectsByWorkspace(
   projects: readonly ProjectSummary[],
   workspaces: readonly Workspace[],
 ): WorkspaceProjects[] {
   const names = new Map(workspaces.map(({ id, name }) => [id, name]));
-  const byWorkspace = new Map<string, ProjectSummary[]>();
-  for (const project of projects) {
-    byWorkspace.set(project.workspaceId, [
-      ...(byWorkspace.get(project.workspaceId) ?? []),
-      project,
-    ]);
-  }
-
-  const sections = [...byWorkspace].map(([workspaceId, grouped]) => ({
-    workspaceId,
-    title: names.get(workspaceId) ?? UNKNOWN_WORKSPACE_TITLE,
-    projects: grouped,
-  }));
-  const known = sections
-    .filter(({ workspaceId }) => names.has(workspaceId))
+  const known = [...Map.groupBy(projects, ({ workspaceId }) => workspaceId)]
+    .flatMap(([workspaceId, grouped]) => {
+      const title = names.get(workspaceId);
+      return title === undefined
+        ? []
+        : [{ workspaceId, title, projects: grouped }];
+    })
     .toSorted((a, b) => a.title.localeCompare(b.title));
-  const unknown = sections.filter(({ workspaceId }) => !names.has(workspaceId));
+  const other = projects.filter(({ workspaceId }) => !names.has(workspaceId));
 
-  return [...known, ...unknown];
+  return other.length === 0
+    ? known
+    : [
+        ...known,
+        {
+          workspaceId: OTHER_WORKSPACE_ID,
+          title: OTHER_WORKSPACE_TITLE,
+          projects: other,
+        },
+      ];
 }
