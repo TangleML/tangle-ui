@@ -15,7 +15,7 @@ vi.mock("@tangent/embed-react", () => ({
     autoFocus?: boolean;
     onResourcesChange?: () => void;
   }) => (
-    <div
+    <tangent-chat
       data-testid={agentId ? `chat-${agentId}` : "chat-prime"}
       data-autofocus={String(Boolean(autoFocus))}
       onClick={() => onResourcesChange?.()}
@@ -63,6 +63,46 @@ describe("TangentChatPane", () => {
       "data-autofocus",
       "false",
     );
+  });
+
+  it("shares each tab's messages and sends the target only to the visible transcript", () => {
+    const props = {
+      projectId: "p",
+      sessionId: "s",
+      tabs: [{ id: "a", title: "Researcher" }],
+      onTabChange: noop,
+      onCloseTab: noop,
+      message: { agentId: "a", messageId: "m" },
+    };
+    const { rerender } = render(
+      <TangentChatPane {...props} activeTab={CHAT_TAB_VALUE} />,
+    );
+    const prime = screen.getByTestId("chat-prime");
+    const agent = screen.getByTestId("chat-a");
+    expect(prime).toHaveProperty("targetAgentId", "a");
+    expect(prime).toHaveProperty("targetMessageId", undefined);
+    expect(agent).toHaveProperty("targetMessageId", undefined);
+    expect(prime).toHaveAttribute("data-autofocus", "false");
+
+    rerender(<TangentChatPane {...props} activeTab="a" />);
+    expect(agent).toHaveProperty("targetMessageId", "m");
+    const primeLink = Reflect.get(prime, "getMessageLink")("m");
+    const agentLink = Reflect.get(agent, "getMessageLink")("m");
+    expect(primeLink).toBe(
+      `${window.location.origin}/tangent/p?session=s&message=m`,
+    );
+    expect(agentLink).toBe(`${primeLink}&agent=a`);
+
+    rerender(
+      <TangentChatPane
+        {...props}
+        message={{ messageId: "prime-message" }}
+        activeTab={CHAT_TAB_VALUE}
+      />,
+    );
+    expect(prime).toHaveProperty("targetAgentId", undefined);
+    expect(prime).toHaveProperty("targetMessageId", "prime-message");
+    expect(agent).toHaveProperty("targetMessageId", undefined);
   });
 
   it("hears of a change once, from Prime's chat, when every chat of the session reports it", () => {

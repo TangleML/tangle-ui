@@ -124,6 +124,21 @@ describe("getProjectUrl", () => {
       `${window.location.origin}/tangent/a%2Fb?session=chat%26open%3Dother`,
     );
   });
+
+  it("round-trips a message in an agent's chat", () => {
+    const url = new URL(
+      getProjectUrl("p", "chat", {
+        messageId: "reply/1?x&y",
+        agentId: "agent#a",
+      }),
+    );
+    expect(url.pathname).toBe("/tangent/p");
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      session: "chat",
+      message: "reply/1?x&y",
+      agent: "agent#a",
+    });
+  });
 });
 
 // normalizeUrl tests

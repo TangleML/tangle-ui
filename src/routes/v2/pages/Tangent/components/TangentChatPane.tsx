@@ -4,21 +4,25 @@ import {
   type EmbedCommand,
   type EmbedReference,
 } from "@tangent/embed-react";
-import type { ReactNode } from "react";
+import { type ComponentProps, type ReactNode, useEffect, useRef } from "react";
 
 import { Icon } from "@/components/ui/icon";
 import { Tabs, TabsContent, TabsTrigger, TabStrip } from "@/components/ui/tabs";
+import type { TangentMessageTarget } from "@/routes/tangentSearch";
 import { CloseableTabTrigger } from "@/routes/v2/pages/Tangent/components/CloseableTabTrigger";
 import {
   type AgentTab,
   CHAT_TAB_VALUE,
 } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
+import { getProjectUrl } from "@/utils/URL";
 
 const FORCE_MOUNTED_TAB_PANEL =
   "min-h-0 overflow-hidden data-[state=active]:flex data-[state=active]:flex-col data-[state=inactive]:hidden";
 
 interface TangentChatPaneProps {
+  projectId?: string;
   sessionId: string;
+  message?: TangentMessageTarget;
   tabs: AgentTab[];
   activeTab: string;
   onTabChange: (value: string) => void;
@@ -40,7 +44,9 @@ interface TangentChatPaneProps {
  * Shell project workspace so their chat behavior stays in sync.
  */
 export function TangentChatPane({
+  projectId,
   sessionId,
+  message,
   tabs,
   activeTab,
   onTabChange,
@@ -55,6 +61,16 @@ export function TangentChatPane({
   onResourcesChange,
   headerAction,
 }: TangentChatPaneProps) {
+  const sharedChatProps = {
+    projectId,
+    sessionId,
+    onOpenAgent,
+    onRemoveAgent,
+    references,
+    onOpenArtifact,
+    onSendPrompt,
+    onError,
+  };
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <Tabs
@@ -76,50 +92,84 @@ export function TangentChatPane({
             />
           ))}
         </TabStrip>
-        <TabsContent
-          value={CHAT_TAB_VALUE}
-          forceMount
-          className={FORCE_MOUNTED_TAB_PANEL}
-        >
-          <Chat
-            sessionId={sessionId}
-            autoFocus
-            className="h-full min-h-0"
-            style={{ height: "100%" }}
-            onOpenAgent={onOpenAgent}
-            onRemoveAgent={onRemoveAgent}
-            references={references}
-            commands={commands}
-            onOpenArtifact={onOpenArtifact}
-            onSendPrompt={onSendPrompt}
-            onError={onError}
-            // Every chat of a session reports the same changes, so only
-            // this one, which is always mounted, is listened to.
-            onResourcesChange={onResourcesChange}
-          />
-        </TabsContent>
+        <ChatPanel
+          {...sharedChatProps}
+          autoFocus={!message}
+          targetAgentId={message?.agentId}
+          targetMessageId={
+            activeTab === CHAT_TAB_VALUE && !message?.agentId
+              ? message?.messageId
+              : undefined
+          }
+          commands={commands}
+          // Every chat of a session reports the same changes, so only
+          // this one, which is always mounted, is listened to.
+          onResourcesChange={onResourcesChange}
+        />
         {tabs.map((tab) => (
-          <TabsContent
+          <ChatPanel
             key={tab.id}
-            value={tab.id}
-            forceMount
-            className={FORCE_MOUNTED_TAB_PANEL}
-          >
-            <Chat
-              sessionId={sessionId}
-              agentId={tab.id}
-              className="h-full min-h-0"
-              style={{ height: "100%" }}
-              onOpenAgent={onOpenAgent}
-              onRemoveAgent={onRemoveAgent}
-              references={references}
-              onOpenArtifact={onOpenArtifact}
-              onSendPrompt={onSendPrompt}
-              onError={onError}
-            />
-          </TabsContent>
+            {...sharedChatProps}
+            agentId={tab.id}
+            targetMessageId={
+              activeTab === tab.id && message?.agentId === tab.id
+                ? message.messageId
+                : undefined
+            }
+          />
         ))}
       </Tabs>
     </div>
+  );
+}
+
+interface MessageLinkChatElement extends HTMLElement {
+  getMessageLink?: (messageId: string) => string | undefined;
+  targetMessageId?: string;
+  targetAgentId?: string;
+}
+
+function ChatPanel({
+  projectId,
+  sessionId,
+  agentId,
+  targetAgentId,
+  targetMessageId,
+  ...props
+}: ComponentProps<typeof Chat> & {
+  projectId?: string;
+  targetAgentId?: string;
+  targetMessageId?: string;
+}) {
+  const panel = useRef<HTMLDivElement>(null);
+  // The React package mounts the public element and binds the session first.
+  // The served Tangent runtime owns its message links and transcript scrolling.
+  useEffect(() => {
+    const chat =
+      panel.current?.querySelector<MessageLinkChatElement>("tangent-chat");
+    if (!chat) return;
+    chat.getMessageLink = projectId
+      ? (messageId) =>
+          getProjectUrl(projectId, sessionId, { messageId, agentId })
+      : undefined;
+    chat.targetAgentId = targetAgentId;
+    chat.targetMessageId = targetMessageId;
+  }, [projectId, sessionId, agentId, targetAgentId, targetMessageId]);
+
+  return (
+    <TabsContent
+      ref={panel}
+      value={agentId ?? CHAT_TAB_VALUE}
+      forceMount
+      className={FORCE_MOUNTED_TAB_PANEL}
+    >
+      <Chat
+        {...props}
+        sessionId={sessionId}
+        agentId={agentId}
+        className="h-full min-h-0"
+        style={{ height: "100%" }}
+      />
+    </TabsContent>
   );
 }

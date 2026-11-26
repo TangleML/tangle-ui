@@ -3,7 +3,10 @@ import { defaultStringifySearch } from "@tanstack/react-router";
 import { APP_ROUTES, RUNS_BASE_PATH } from "@/routes/appRoutes";
 import { getProjectHomePath } from "@/routes/projectRoutes";
 import { getDefaultRunPath } from "@/routes/runRoutes";
-import { tangentSessionSearch } from "@/routes/tangentSearch";
+import {
+  type TangentMessageTarget,
+  tangentSessionSearch,
+} from "@/routes/tangentSearch";
 import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
 
 const convertGcsUrlToBrowserUrl = (
@@ -256,11 +259,17 @@ const getRawExecutionLogsUrl = (
 ): string =>
   `${backendUrl}/api/executions/${encodeURIComponent(executionId)}/stream_container_log`;
 
-const getProjectUrl = (projectId: string, sessionId?: string): string => {
+const getProjectUrl = (
+  projectId: string,
+  sessionId?: string,
+  message?: TangentMessageTarget,
+): string => {
   if (!sessionId) return buildAbsoluteAppUrl(getProjectHomePath(projectId));
 
   const path = getProjectHomePath(projectId, APP_ROUTES.TANGENT_PROJECT);
-  const search = defaultStringifySearch(tangentSessionSearch(sessionId));
+  const search = defaultStringifySearch(
+    tangentSessionSearch(sessionId, message),
+  );
   return buildAbsoluteAppUrl(path + search);
 };
 

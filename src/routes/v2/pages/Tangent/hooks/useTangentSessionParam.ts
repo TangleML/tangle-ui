@@ -1,15 +1,19 @@
 import { type QueryClient, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { when } from "mobx";
+import { reaction, when } from "mobx";
 import { useEffect, useRef } from "react";
 
 import useToastNotification from "@/hooks/useToastNotification";
 import {
   readTangentSessionParam,
-  TANGENT_SESSION_SEARCH_PARAM,
+  withoutTangentMessageSearch,
+  withoutTangentSessionSearch,
 } from "@/routes/tangentSearch";
 import { SESSION_RESOURCES } from "@/routes/v2/pages/Tangent/hooks/useProjectSessions";
-import type { TangentProjectStore } from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
+import {
+  CHAT_TAB_VALUE,
+  type TangentProjectStore,
+} from "@/routes/v2/pages/Tangent/store/TangentProjectStore";
 import {
   everyProjectResourceQueryOptions,
   projectResourcesQueryOptions,
@@ -47,6 +51,9 @@ export function useTangentSessionParam(store: TangentProjectStore) {
 
   const asked = readTangentSessionParam(search);
   const sessionId = asked?.kind === "existing" ? asked.sessionId : undefined;
+  const message = asked?.kind === "existing" ? asked.message : undefined;
+  const messageId = message?.messageId;
+  const agentId = message?.agentId;
 
   const newSessionRequested = asked?.kind === "new";
 
@@ -73,13 +80,9 @@ export function useTangentSessionParam(store: TangentProjectStore) {
       () => {
         void navigate({
           to: ".",
-          search: (previous: Record<string, unknown>) => {
-            const next = { ...previous };
-            delete next[TANGENT_SESSION_SEARCH_PARAM];
-            return next;
-          },
+          search: withoutTangentSessionSearch,
           replace: true,
-        } as never);
+        });
       },
     );
     let active = true;
@@ -98,4 +101,26 @@ export function useTangentSessionParam(store: TangentProjectStore) {
       stopWatching();
     };
   }, [sessionId, newSessionRequested, navigate, notify, queryClient, store]);
+
+  useEffect(() => {
+    if (!sessionId || !messageId) return;
+    const tab = agentId ?? CHAT_TAB_VALUE;
+    if (!agentId || store.chatTabs.some(({ id }) => id === agentId)) {
+      store.setChatActiveTab(tab);
+    }
+    // An unopened agent tab is selected by the embed after its roster arrives.
+    return reaction(
+      () => store.chatActiveTab,
+      (activeTab) => {
+        if (activeTab === tab || store.activeSessionId !== sessionId) return;
+        void navigate({
+          to: ".",
+          search: withoutTangentMessageSearch,
+          replace: true,
+        });
+      },
+    );
+  }, [sessionId, messageId, agentId, navigate, store]);
+
+  return store.activeSessionId === sessionId ? message : undefined;
 }
