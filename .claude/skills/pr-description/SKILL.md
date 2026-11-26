@@ -18,6 +18,19 @@ not write code and has not seen the conversation.
 - For a stack, describe only this PR's changes against its actual parent and name
   any dependency. Do not claim behavior delivered only by another PR.
 
+## Cross-repository companion work
+
+Before drafting or updating a PR, check whether the feature has known companion
+PRs in other repositories. If so, load
+[distributed-stacks](../distributed-stacks/SKILL.md) and add or update its portable
+`## Distributed Stack` section. Distinguish coordinated membership from explicit
+ordering dependencies, preserve existing description content, and verify
+repository visibility before publishing links. Never disclose private companion
+PRs or internal service URLs in this public repository's descriptions. For
+mixed-visibility groups, put the complete declaration in a private companion
+PR only when its audience may see those relationships; keep public declarations
+limited to public companions, or omit them.
+
 ## Write the description
 
 - Give the title and opening explanation a clear purpose in everyday language.
