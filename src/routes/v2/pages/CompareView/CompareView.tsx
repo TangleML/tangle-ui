@@ -43,7 +43,7 @@ export function CompareView() {
   const b = search.b ?? "";
 
   const sideA = useRunComparisonSide(a);
-  const sideB = useRunComparisonSide(b);
+  const sideB = useRunComparisonSide(a);
 
   const mode = compareMode(a, b);
 
