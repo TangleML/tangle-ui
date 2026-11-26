@@ -119,14 +119,15 @@ describe("ComponentSearchV2Content", () => {
     expect(screen.getByTestId("upgrade-available-alert")).toBeInTheDocument();
   });
 
-  it("shows active AI rerank progress below the search box", async () => {
+  it("rotates visible ranking progress while keeping the spoken status stable", async () => {
+    let isReranking = false;
     mocks.useComponentSearchV2State.mockImplementation(() => ({
       results: [],
       browseFolders: [],
       searchSuggestions: [],
       isLoading: false,
       canRerank: true,
-      isReranking: true,
+      isReranking,
       isRerankActive: false,
       rerank: vi.fn(),
       clearRerank: vi.fn(),
@@ -136,19 +137,30 @@ describe("ComponentSearchV2Content", () => {
       enableAllSources: vi.fn(),
     }));
 
-    render(<ComponentSearchV2Content />);
+    const { rerender } = render(<ComponentSearchV2Content />);
+    const status = screen.getByRole("status");
+    expect(status).toBeEmptyDOMElement();
 
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "Scanning component candidates with AI…",
-    );
+    isReranking = true;
+    rerender(<ComponentSearchV2Content />);
+    expect(status).toHaveTextContent("Ranking component search results.");
+    expect(
+      screen.getByText("Scanning component candidates with AI…"),
+    ).toHaveAttribute("aria-hidden", "true");
 
     await act(async () => {
       vi.advanceTimersByTime(1200);
     });
 
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "Comparing component candidates with AI…",
-    );
+    expect(
+      screen.getByText("Comparing component candidates with AI…"),
+    ).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByRole("status")).toBe(status);
+    expect(status).toHaveTextContent("Ranking component search results.");
+
+    isReranking = false;
+    rerender(<ComponentSearchV2Content />);
+    expect(status).toBeEmptyDOMElement();
   });
 
   it("shows source filters and toggles them from editor search", () => {
