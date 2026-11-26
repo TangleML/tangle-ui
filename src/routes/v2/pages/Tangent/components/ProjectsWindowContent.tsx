@@ -321,15 +321,23 @@ function WorkspaceSection({
               aria-hidden
               className="text-muted-foreground"
             />
-            <Text
-              size="xs"
-              weight="medium"
-              tone="subdued"
-              title={title}
-              className="min-w-0 flex-1 truncate"
-            >
-              {title}
-            </Text>
+            <InlineStack gap="1" wrap="nowrap" className="min-w-0 flex-1">
+              <Icon
+                name="Shapes"
+                size="xs"
+                aria-hidden
+                className="shrink-0 text-muted-foreground"
+              />
+              <Text
+                size="xs"
+                weight="medium"
+                tone="subdued"
+                title={title}
+                className="min-w-0 truncate"
+              >
+                {title}
+              </Text>
+            </InlineStack>
           </Button>
         </CollapsibleTrigger>
         <CollapsibleContent>
