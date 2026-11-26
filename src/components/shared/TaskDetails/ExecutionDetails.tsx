@@ -80,7 +80,7 @@ export const ExecutionDetails = ({
       items.push({
         label: "Completed in",
         value: `${formatDuration(
-          containerState.started_at,
+          containerState.ended_at,
           containerState.ended_at,
         )} (${formatDate(containerState.ended_at)})`,
       });
