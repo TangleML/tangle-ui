@@ -1,5 +1,7 @@
-import { render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { act, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+
+import type { GetContainerExecutionStateResponse } from "@/api/types.gen";
 
 import { ExecutionDetails } from "./ExecutionDetails";
 
@@ -127,5 +129,62 @@ describe("ExecutionDetails external links", () => {
       "https://huggingface.co/jobs/team/hf-1",
     );
     expect(screen.getByRole("link", { name: "job-123" })).toBeInTheDocument();
+  });
+});
+
+describe("ExecutionDetails last change", () => {
+  const UPDATED_AT = "2024-01-02T12:00:00.000Z";
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2024-01-02T12:00:45.000Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function renderWithContainerState(
+    containerState: Partial<GetContainerExecutionStateResponse>,
+  ) {
+    mockUseFetchContainerExecutionState.mockReturnValue({
+      data: { status: "RUNNING", ...containerState },
+      isLoading: false,
+      error: null,
+    });
+    render(<ExecutionDetails executionId="exec-1" />);
+  }
+
+  test("shows how long ago the execution state last changed", () => {
+    renderWithContainerState({ updated_at: UPDATED_AT });
+
+    expect(screen.getByText("Last change")).toBeInTheDocument();
+    expect(screen.getByText(/^45s ago \(/)).toBeInTheDocument();
+  });
+
+  test("keeps the relative time current while the panel stays open", () => {
+    renderWithContainerState({ updated_at: UPDATED_AT });
+
+    act(() => vi.advanceTimersByTime(15_000));
+
+    expect(screen.getByText(/^1m 0s ago \(/)).toBeInTheDocument();
+  });
+
+  test("omits the row when the backend does not report updated_at", () => {
+    renderWithContainerState({});
+
+    expect(screen.queryByText("Last change")).not.toBeInTheDocument();
+  });
+
+  test("omits the row once the execution has ended", () => {
+    renderWithContainerState({
+      status: "SUCCEEDED",
+      started_at: "2024-01-02T11:00:00.000Z",
+      ended_at: UPDATED_AT,
+      updated_at: UPDATED_AT,
+    });
+
+    expect(screen.queryByText("Last change")).not.toBeInTheDocument();
   });
 });

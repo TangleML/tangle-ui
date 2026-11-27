@@ -532,6 +532,10 @@ export type GetContainerExecutionLogResponse = {
 export type GetContainerExecutionStateResponse = {
     status: ContainerExecutionStatus;
     /**
+     * Updated At
+     */
+    updated_at?: string | null;
+    /**
      * Exit Code
      */
     exit_code?: number | null;
