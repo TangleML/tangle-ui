@@ -1,11 +1,19 @@
 import { type ComponentPropsWithoutRef, useEffect, useState } from "react";
 
+import type { TroubleshootingGuide } from "@/api/types.gen";
 import {
   CodeViewer,
   type CodeViewerHeaderActions,
   CodeViewerHeaderButton,
 } from "@/components/shared/CodeViewer";
 import { InfoBox } from "@/components/shared/InfoBox";
+import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
 import { Link } from "@/components/ui/link";
 import { Spinner } from "@/components/ui/spinner";
@@ -17,6 +25,7 @@ import { shouldStatusHaveLogs } from "@/utils/executionStatus";
 import { getExecutionLogsUrl } from "@/utils/URL";
 
 import { SystemErrorSection } from "./SystemErrorSection";
+import { TroubleshootingGuideSection } from "./TroubleshootingGuideSection";
 
 const LogDisplay = ({
   logs,
@@ -88,6 +97,7 @@ const Logs = ({
   const [logs, setLogs] = useState<{
     log_text?: string;
     system_error_exception_full?: string;
+    troubleshooting?: TroubleshootingGuide;
   }>();
   const { data, isLoading, error, refetch } = useContainerLog(
     executionId,
@@ -100,6 +110,7 @@ const Logs = ({
         log_text: data?.log_text ?? undefined,
         system_error_exception_full:
           data?.system_error_exception_full ?? undefined,
+        troubleshooting: data?.troubleshooting ?? undefined,
       });
     }
 
@@ -156,8 +167,8 @@ const Logs = ({
     );
   }
 
-  return (
-    <div className="flex flex-col gap-4 h-full min-h-0">
+  const errorDetails = (
+    <>
       <SystemErrorSection
         systemErrorExceptionFull={logs?.system_error_exception_full}
         className="shrink-0"
@@ -171,7 +182,37 @@ const Logs = ({
           />
         )}
       </div>
-    </div>
+    </>
+  );
+
+  if (logs?.troubleshooting) {
+    return (
+      <div className="flex flex-col gap-4 h-full min-h-0">
+        <TroubleshootingGuideSection
+          guide={logs.troubleshooting}
+          className="shrink-0"
+        />
+        <Collapsible className="flex flex-col gap-2 flex-1 min-h-0">
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" size="sm" className="group self-start">
+              Show error details
+              <Icon
+                name="ChevronDown"
+                size="sm"
+                className="transition-transform group-data-[state=open]:rotate-180"
+              />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="flex flex-col gap-4 flex-1 min-h-0">
+            {errorDetails}
+          </CollapsibleContent>
+        </Collapsible>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-4 h-full min-h-0">{errorDetails}</div>
   );
 };
 
