@@ -14,7 +14,6 @@ import { Icon } from "@/components/ui/icon";
 import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
-import { ArtifactFetchError } from "@/services/executionService";
 import { hasNewTabModifier } from "@/utils/dom";
 import { copyToClipboard } from "@/utils/string";
 import { getArtifactPreviewUrl } from "@/utils/URL";
@@ -24,7 +23,7 @@ import {
   PreviewContent,
   PreviewSkeleton,
 } from "./ArtifactPreviewContent";
-import { ArtifactPreviewError } from "./ArtifactPreviewError";
+import { renderArtifactPreviewError } from "./ArtifactPreviewError";
 import { ArtifactPreviewHeader } from "./ArtifactPreviewHeader";
 import {
   isVisualizableType,
@@ -153,45 +152,7 @@ const ArtifactVisualizer = ({
           ) : (
             <SuspenseWrapper
               fallback={<PreviewSkeleton />}
-              errorFallback={({ error }) => {
-                if (
-                  error instanceof ArtifactFetchError &&
-                  error.status === 404 &&
-                  import.meta.env.VITE_ARTIFACT_RETENTION_DAYS
-                ) {
-                  return (
-                    <ArtifactPreviewError
-                      title="Artifact unavailable"
-                      preamble="This artifact could not be found."
-                      variant="warning"
-                    />
-                  );
-                }
-
-                if (
-                  error instanceof ArtifactFetchError &&
-                  error.status === 413
-                ) {
-                  return (
-                    <ArtifactPreviewError
-                      title="Too large to preview"
-                      preamble={error.message}
-                      variant="warning"
-                    />
-                  );
-                }
-
-                const statusDetail =
-                  error instanceof ArtifactFetchError
-                    ? ` (${error.status}${error.statusText ? ` ${error.statusText}` : ""})`
-                    : "";
-                return (
-                  <ArtifactPreviewError
-                    title="Failed to load artifact"
-                    preamble={`An unexpected error occurred${statusDetail}.`}
-                  />
-                );
-              }}
+              errorFallback={renderArtifactPreviewError}
             >
               <PreviewContent
                 name={name}

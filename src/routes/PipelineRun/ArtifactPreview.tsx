@@ -6,7 +6,7 @@ import {
   PreviewContent,
   PreviewSkeleton,
 } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/TaskOverview/IOSection/IOCell/ArtifactVisualizer/ArtifactPreviewContent";
-import { ArtifactPreviewError } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/TaskOverview/IOSection/IOCell/ArtifactVisualizer/ArtifactPreviewError";
+import { renderArtifactPreviewError } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/TaskOverview/IOSection/IOCell/ArtifactVisualizer/ArtifactPreviewError";
 import { ArtifactPreviewHeader } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/TaskOverview/IOSection/IOCell/ArtifactVisualizer/ArtifactPreviewHeader";
 import {
   inferTypeFromUri,
@@ -19,10 +19,7 @@ import { Paragraph } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useBackend } from "@/providers/BackendProvider";
-import {
-  ArtifactFetchError,
-  getArtifactInfo,
-} from "@/services/executionService";
+import { getArtifactInfo } from "@/services/executionService";
 import { HOURS } from "@/utils/constants";
 import { copyToClipboard } from "@/utils/string";
 import { getArtifactPreviewUrl } from "@/utils/URL";
@@ -36,38 +33,10 @@ const ArtifactPreviewPage = () => {
   return (
     <SuspenseWrapper
       fallback={<PreviewSkeleton />}
-      errorFallback={ArtifactPreviewErrorFallback}
+      errorFallback={renderArtifactPreviewError}
     >
       <ArtifactPreviewBody artifactId={artifactId} search={search} />
     </SuspenseWrapper>
-  );
-};
-
-const ArtifactPreviewErrorFallback = ({ error }: { error: unknown }) => {
-  if (
-    error instanceof ArtifactFetchError &&
-    error.status === 404 &&
-    import.meta.env.VITE_ARTIFACT_RETENTION_DAYS
-  ) {
-    return (
-      <ArtifactPreviewError
-        title="Artifact unavailable"
-        preamble="This artifact could not be found."
-        variant="warning"
-      />
-    );
-  }
-
-  const statusDetail =
-    error instanceof ArtifactFetchError
-      ? ` (${error.status}${error.statusText ? ` ${error.statusText}` : ""})`
-      : "";
-
-  return (
-    <ArtifactPreviewError
-      title="Failed to load artifact"
-      preamble={`An unexpected error occurred${statusDetail}.`}
-    />
   );
 };
 

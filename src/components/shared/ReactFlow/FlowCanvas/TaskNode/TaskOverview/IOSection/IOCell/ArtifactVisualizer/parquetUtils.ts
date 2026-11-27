@@ -2,6 +2,7 @@ import {
   type AsyncBuffer,
   asyncBufferFromUrl,
   cachedAsyncBuffer,
+  type CompressionCodec,
   type FileMetaData,
   parquetMetadata,
   parquetMetadataAsync,
@@ -27,6 +28,31 @@ type ParquetSource = AsyncBuffer | ArrayBuffer;
 export interface OpenedParquet {
   source: ParquetSource;
   metadata: FileMetaData;
+}
+
+export class ParquetUnsupportedCodecError extends Error {
+  constructor(public readonly codec: CompressionCodec) {
+    super(
+      `Unsupported compression codec: ${codec}. Only uncompressed and Snappy-compressed Parquet files can be previewed.`,
+    );
+    this.name = "ParquetUnsupportedCodecError";
+  }
+}
+
+const NATIVELY_DECODED_CODECS: ReadonlySet<CompressionCodec> = new Set([
+  "UNCOMPRESSED",
+  "SNAPPY",
+]);
+
+export function assertDecodableCodecs(metadata: FileMetaData): void {
+  const unsupportedCodec = metadata.row_groups
+    .flatMap((rowGroup) => rowGroup.columns)
+    .map((column) => column.meta_data?.codec)
+    .find(
+      (codec) => codec !== undefined && !NATIVELY_DECODED_CODECS.has(codec),
+    );
+  if (unsupportedCodec)
+    throw new ParquetUnsupportedCodecError(unsupportedCodec);
 }
 
 export async function openParquet(
@@ -98,6 +124,7 @@ export async function readParquetRows(
   rowStart: number,
   rowEnd: number,
 ): Promise<ArtifactCell[][]> {
+  assertDecodableCodecs(metadata);
   const objects = await parquetReadObjects({
     file: source,
     metadata,
@@ -111,6 +138,7 @@ export async function readParquetPreview(
   opened: OpenedParquet,
   previewRows: number,
 ): Promise<{ columns: ArtifactColumn[]; rows: ArtifactCell[][] }> {
+  assertDecodableCodecs(opened.metadata);
   const objects = await parquetReadObjects({
     file: opened.source,
     metadata: opened.metadata,

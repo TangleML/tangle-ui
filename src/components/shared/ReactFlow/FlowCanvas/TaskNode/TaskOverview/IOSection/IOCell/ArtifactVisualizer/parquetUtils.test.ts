@@ -1,7 +1,12 @@
-import type { FileMetaData } from "hyparquet";
+import type { CompressionCodec, FileMetaData } from "hyparquet";
 import { describe, expect, it } from "vitest";
 
-import { buildSchemaJson, countColumns } from "./parquetUtils";
+import {
+  assertDecodableCodecs,
+  buildSchemaJson,
+  countColumns,
+  ParquetUnsupportedCodecError,
+} from "./parquetUtils";
 
 const metadata = (schema: unknown[], numRows: bigint): FileMetaData =>
   ({ schema, num_rows: numRows }) as unknown as FileMetaData;
@@ -72,5 +77,37 @@ describe("buildSchemaJson", () => {
 
     // Must round-trip through JSON without throwing on bigint.
     expect(() => JSON.stringify(json)).not.toThrow();
+  });
+});
+
+describe("assertDecodableCodecs", () => {
+  const withCodecs = (...rowGroupCodecs: CompressionCodec[][]): FileMetaData =>
+    ({
+      row_groups: rowGroupCodecs.map((codecs) => ({
+        columns: codecs.map((codec) => ({ meta_data: { codec } })),
+      })),
+    }) as unknown as FileMetaData;
+
+  it("rejects a codec that cannot be decoded, naming it", () => {
+    const check = () => assertDecodableCodecs(withCodecs(["ZSTD"]));
+
+    expect(check).toThrow(ParquetUnsupportedCodecError);
+    expect(check).toThrow(
+      "Unsupported compression codec: ZSTD. Only uncompressed and Snappy-compressed Parquet files can be previewed.",
+    );
+  });
+
+  it("accepts uncompressed and Snappy-compressed columns", () => {
+    expect(() =>
+      assertDecodableCodecs(withCodecs(["UNCOMPRESSED", "SNAPPY"], ["SNAPPY"])),
+    ).not.toThrow();
+  });
+
+  it("rejects a file where only some columns use an unsupported codec", () => {
+    const check = () =>
+      assertDecodableCodecs(withCodecs(["SNAPPY", "UNCOMPRESSED"], ["GZIP"]));
+
+    expect(check).toThrow(ParquetUnsupportedCodecError);
+    expect(check).toThrow("Unsupported compression codec: GZIP.");
   });
 });
