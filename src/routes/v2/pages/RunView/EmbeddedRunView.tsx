@@ -12,6 +12,8 @@ import { ComponentSpecProvider } from "@/providers/ComponentSpecProvider";
 import { ContextPanelProvider } from "@/providers/ContextPanelProvider";
 import { ExecutionDataProvider } from "@/providers/ExecutionDataProvider";
 import { RunSubmissionScopeProvider } from "@/providers/RunSubmissionScopeProvider";
+import { RUN_EMBEDDED_VIEW_PRESET } from "@/routes/v2/pages/RunView/runViewWindowPresets";
+import { EmbeddedCanvasControls } from "@/routes/v2/shared/components/EmbeddedCanvasControls";
 import { ReadOnlyFlowCanvas } from "@/routes/v2/shared/components/ReadOnlyFlowCanvas";
 import { useReadOnlySpecLifecycle } from "@/routes/v2/shared/hooks/useReadOnlySpecLifecycle";
 import { NodeRegistryProvider } from "@/routes/v2/shared/nodes/NodeRegistryContext";
@@ -25,8 +27,10 @@ import {
 import { SharedStoreRegistrar } from "@/routes/v2/shared/store/SharedStoreRegistrar";
 import { DockArea } from "@/routes/v2/shared/windows/DockArea";
 import { WindowContainer } from "@/routes/v2/shared/windows/WindowContainer";
+import { WindowManagementMenu } from "@/routes/v2/shared/windows/WindowManagementMenu";
 
 import { RunViewLoadStateFallback } from "./components/RunViewLoadStateFallback";
+import { RunViewViewMenu } from "./components/RunViewMenuBar/components/RunViewViewMenu";
 import { RunViewSelectionToolbar } from "./components/RunViewSelectionToolbar";
 import { useEmbeddedRunViewInitialDockLayout } from "./hooks/useEmbeddedRunViewInitialDockLayout";
 import { useRunViewLoadState } from "./hooks/useRunViewLoadState";
@@ -123,6 +127,13 @@ const EmbeddedRunViewLayout = observer(function EmbeddedRunViewLayout({
                 className="h-full"
               >
                 <RunViewSelectionToolbar spec={activeSpec} />
+                <EmbeddedCanvasControls label="Run view controls">
+                  <RunViewViewMenu />
+                  <WindowManagementMenu
+                    presets={[RUN_EMBEDDED_VIEW_PRESET]}
+                    trackingPrefix="v2.run_view.windows_menu"
+                  />
+                </EmbeddedCanvasControls>
               </ReadOnlyFlowCanvas>
               <WindowContainer />
             </div>
@@ -166,7 +177,8 @@ const EmbeddedRunViewContent = observer(function EmbeddedRunViewContent({
 /**
  * Embeds the run canvas (e.g. inside the Tangent workarea) with only the
  * providers the run content requires. Unlike the standalone `RunViewV2`, it
- * omits the run menu bar and the AI chat window, and keeps an isolated
+ * swaps the run menu bar for floating View/Windows controls, omits the AI chat
+ * window, and keeps an isolated
  * `SharedStoreProvider` so its dock windows don't collide with the surrounding
  * project's windows.
  *

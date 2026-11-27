@@ -25,6 +25,7 @@ import {
   useEditorSession,
 } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { AiChatStoreProvider } from "@/routes/v2/shared/components/AiChat/AiChatStoreContext";
+import { EmbeddedCanvasControls } from "@/routes/v2/shared/components/EmbeddedCanvasControls";
 import { useCanvasControlsWindow } from "@/routes/v2/shared/components/MiniMap/useCanvasControlsWindow";
 import { ReadOnlyFlowCanvas } from "@/routes/v2/shared/components/ReadOnlyFlowCanvas";
 import { useDockAreaAccordion } from "@/routes/v2/shared/hooks/useDockAreaAccordion";
@@ -45,7 +46,6 @@ import { useWindowPersistence } from "@/routes/v2/shared/windows/windowPersisten
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import { getEditorPipelineIdentity } from "@/services/pipelineStorage/types";
 
-import { EmbeddedPipelineViewControls } from "./EmbeddedPipelineViewControls";
 import { RemotePipelineActions } from "./RemotePipelineActions";
 import {
   RemotePipelineFrame,
@@ -193,9 +193,12 @@ const RemotePipelineContent = observer(function RemotePipelineContent({
                 className="h-full"
               >
                 {embedded && (
-                  <EmbeddedPipelineViewControls>
+                  <EmbeddedCanvasControls
+                    label="Pipeline view controls"
+                    readOnly
+                  >
                     {menus}
-                  </EmbeddedPipelineViewControls>
+                  </EmbeddedCanvasControls>
                 )}
               </ReadOnlyFlowCanvas>
               <WindowContainer />
