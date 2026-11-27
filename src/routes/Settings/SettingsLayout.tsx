@@ -9,6 +9,7 @@ import { Icon, type IconName } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Heading, Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
+import { APP_ROUTES } from "@/routes/appRoutes";
 
 import { SettingsFlagsProvider } from "./SettingsFlagsContext";
 
@@ -43,6 +44,12 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
     label: "Secrets",
     icon: "Lock",
     testId: "settings-nav-secrets",
+  },
+  {
+    to: APP_ROUTES.SETTINGS_GITHUB,
+    label: "GitHub",
+    icon: "FolderGit2",
+    testId: "settings-nav-github",
   },
 ];
 

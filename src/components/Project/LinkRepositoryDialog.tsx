@@ -11,9 +11,13 @@ import type {
   CreateResourceInput,
   ProjectResourceSummary,
 } from "@/services/projects/types";
-import { useCreateProjectResource } from "@/services/projects/useProjectResources";
+import {
+  useCreateProjectResource,
+  useDeleteProjectResource,
+} from "@/services/projects/useProjectResources";
 
 import { RepositoryLinkForm } from "./RepositoryLinkForm";
+import { repositoryLinkedMetadata } from "./repositoryLinkTracking";
 
 interface LinkRepositoryDialogProps {
   projectId: string;
@@ -29,17 +33,28 @@ export function LinkRepositoryDialog({
   onOpenChange,
 }: LinkRepositoryDialogProps) {
   const createResource = useCreateProjectResource(projectId);
+  const deleteResource = useDeleteProjectResource(projectId);
   const notify = useToastNotification();
   const { track } = useAnalytics();
 
   const handleSubmit = (input: CreateResourceInput) => {
     createResource.mutate(input, {
       onSuccess: () => {
-        track("projects.link_repository_completed");
+        track(
+          "projects.link_repository_completed",
+          repositoryLinkedMetadata(input),
+        );
         notify("Repository linked", "success");
         onOpenChange(false);
       },
     });
+  };
+
+  const handleReplace = (
+    linked: ProjectResourceSummary,
+    input: CreateResourceInput,
+  ) => {
+    deleteResource.mutate(linked.id, { onSuccess: () => handleSubmit(input) });
   };
 
   return (
@@ -48,16 +63,16 @@ export function LinkRepositoryDialog({
         <DialogHeader>
           <DialogTitle>Link a repository</DialogTitle>
           <DialogDescription>
-            Link a public GitHub repository, or one folder in it, to this
-            project.
+            Link a GitHub repository, or one folder in it, to this project.
           </DialogDescription>
         </DialogHeader>
         <RepositoryLinkForm
           key={String(open)}
           resources={resources}
           onSubmit={handleSubmit}
+          onReplace={handleReplace}
           onCancel={() => onOpenChange(false)}
-          isSubmitting={createResource.isPending}
+          isSubmitting={createResource.isPending || deleteResource.isPending}
         />
       </DialogContent>
     </Dialog>

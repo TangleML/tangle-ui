@@ -10,3 +10,6 @@ export function isStringRecord(
     Object.values(value).every((entry) => typeof entry === "string")
   );
 }
+
+export const stringOrNull = (value: unknown) =>
+  typeof value === "string" && value !== "" ? value : null;

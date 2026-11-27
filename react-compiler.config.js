@@ -63,6 +63,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/services/teams",
   "src/components/shared/Teams",
   "src/services/usePipelineSpec.ts",
+  "src/components/shared/BackendNotConnected.tsx",
   "src/components/shared/FavoriteToggle.tsx",
   "src/components/shared/LocalPipelineMigration.tsx",
   "src/components/shared/PageHeader.tsx",

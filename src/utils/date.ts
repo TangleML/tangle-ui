@@ -35,6 +35,15 @@ export const parseUTCAsLocalDate = (iso: string): Date => {
   return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
 };
 
+/**
+ * The backend serialises naive datetimes without a zone designator, which
+ * `Date` would otherwise read as local time; those are UTC.
+ */
+export const parseAsUtc = (dateString: string): Date =>
+  new Date(
+    /(Z|[+-]\d\d:?\d\d)$/i.test(dateString) ? dateString : `${dateString}Z`,
+  );
+
 const defaultFormat: Intl.DateTimeFormatOptions = {
   month: "short",
   day: "numeric",

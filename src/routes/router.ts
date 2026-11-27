@@ -49,6 +49,7 @@ import ExecutionLogsPage from "./PipelineRun/ExecutionLogs";
 import { AgentSettings } from "./Settings/sections/AgentSettings";
 import { BackendSettings } from "./Settings/sections/BackendSettings";
 import { BetaFeaturesSettings } from "./Settings/sections/BetaFeaturesSettings";
+import { GitHubSettings } from "./Settings/sections/GitHubSettings";
 import { PreferencesSettings } from "./Settings/sections/PreferencesSettings";
 import { SecretsSettings } from "./Settings/sections/SecretsSettings";
 import { VsCodeExtensionSettings } from "./Settings/sections/VsCodeExtensionSettings";
@@ -294,6 +295,12 @@ const secretsReplaceRoute = createRoute({
   component: ReplaceSecretView,
 });
 
+const settingsGitHubRoute = createRoute({
+  getParentRoute: () => settingsLayoutRoute,
+  path: "/github",
+  component: GitHubSettings,
+});
+
 const importRoute = createRoute({
   getParentRoute: () => mainLayout,
   path: APP_ROUTES.IMPORT,
@@ -340,6 +347,7 @@ const settingsRouteTree = settingsLayoutRoute.addChildren([
   settingsAgentRoute,
   settingsVsCodeRoute,
   secretsRouteTree,
+  settingsGitHubRoute,
 ]);
 
 // The v2 editor and run view used to live under their own paths; links to them

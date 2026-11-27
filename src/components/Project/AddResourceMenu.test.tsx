@@ -7,6 +7,7 @@ import { AddResourceMenu } from "./AddResourceMenu";
 
 vi.mock("@/services/projects/useProjectResources", () => ({
   useCreateProjectResource: () => ({ mutate: vi.fn(), isPending: false }),
+  useDeleteProjectResource: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 vi.mock("@/hooks/useToastNotification", () => ({
@@ -15,6 +16,10 @@ vi.mock("@/hooks/useToastNotification", () => ({
 
 vi.mock("@/providers/AnalyticsProvider", () => ({
   useAnalytics: () => ({ track: vi.fn() }),
+}));
+
+vi.mock("@/providers/BackendProvider", () => ({
+  useBackend: () => ({ available: false, backendUrl: "" }),
 }));
 
 vi.mock("@/services/localPipelines/useLocalPipelines", () => ({
