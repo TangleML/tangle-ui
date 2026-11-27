@@ -1,20 +1,45 @@
 const GITHUB_API_BASE = "https://api.github.com";
 const GITHUB_API_VERSION = "2022-11-28";
 
-/**
- * GitHub API error with additional context
- */
-class GitHubApiError extends Error {
+const isRateLimitResponse = (response: Response) =>
+  response.status === 429 ||
+  (response.status === 403 &&
+    (response.headers.get("x-ratelimit-remaining") === "0" ||
+      response.headers.has("retry-after")));
+
+interface GitHubApiErrorDetails {
+  statusCode?: number;
+  endpoint?: string;
+  originalError?: unknown;
+  rateLimited?: boolean;
+}
+
+export class GitHubApiError extends Error {
   name = "GitHubApiError";
-  constructor(
-    message: string,
-    public statusCode?: number,
-    public endpoint?: string,
-    public originalError?: unknown,
-  ) {
+  readonly statusCode: number | undefined;
+  readonly endpoint: string | undefined;
+  readonly originalError: unknown;
+  readonly rateLimited: boolean;
+
+  constructor(message: string, details: GitHubApiErrorDetails = {}) {
     super(message);
+    this.statusCode = details.statusCode;
+    this.endpoint = details.endpoint;
+    this.originalError = details.originalError;
+    this.rateLimited = details.rateLimited ?? false;
+  }
+
+  static fromResponse(message: string, response: Response, endpoint: string) {
+    return new GitHubApiError(message, {
+      statusCode: response.status,
+      endpoint,
+      rateLimited: isRateLimitResponse(response),
+    });
   }
 }
+
+const encodeRefPath = (ref: string) =>
+  ref.split("/").map(encodeURIComponent).join("/");
 
 /**
  * Type definitions for GitHub API responses
@@ -70,16 +95,13 @@ interface GitHubTree {
  * Configuration for the GitHub API client
  */
 interface GitHubApiConfig {
-  accessToken: string;
+  accessToken?: string;
   apiBase?: string;
   apiVersion?: string;
 }
 
-/**
- * GitHub API Client class
- */
-class GitHubApiClient {
-  private readonly accessToken: string;
+export class GitHubApiClient {
+  private readonly accessToken: string | undefined;
   private readonly apiBase: string;
   private readonly apiVersion: string;
 
@@ -94,7 +116,9 @@ class GitHubApiClient {
    */
   private getHeaders(): HeadersInit {
     return {
-      Authorization: `Bearer ${this.accessToken}`,
+      ...(this.accessToken
+        ? { Authorization: `Bearer ${this.accessToken}` }
+        : undefined),
       Accept: "application/vnd.github.v3+json",
       "X-GitHub-Api-Version": this.apiVersion,
     };
@@ -133,7 +157,7 @@ class GitHubApiClient {
           // Ignore JSON parsing errors
         }
 
-        throw new GitHubApiError(errorMessage, response.status, endpoint);
+        throw GitHubApiError.fromResponse(errorMessage, response, endpoint);
       }
 
       return await response.json();
@@ -144,9 +168,7 @@ class GitHubApiClient {
 
       throw new GitHubApiError(
         `Failed to fetch from GitHub API: ${error instanceof Error ? error.message : String(error)}`,
-        undefined,
-        endpoint,
-        error,
+        { endpoint, originalError: error },
       );
     }
   }
@@ -200,8 +222,24 @@ class GitHubApiClient {
    * Check if the client can access a repository
    */
   async checkAccess(repository: string): Promise<boolean> {
+    return this.exists(`/repos/${repository}`);
+  }
+
+  async branchExists(repository: string, branch: string): Promise<boolean> {
+    return this.exists(
+      `/repos/${repository}/git/ref/heads/${encodeRefPath(branch)}`,
+    );
+  }
+
+  async tagExists(repository: string, tag: string): Promise<boolean> {
+    return this.exists(
+      `/repos/${repository}/git/ref/tags/${encodeRefPath(tag)}`,
+    );
+  }
+
+  private async exists(endpoint: string): Promise<boolean> {
     try {
-      await this.getRepository(repository);
+      await this.request(endpoint);
       return true;
     } catch (error) {
       if (error instanceof GitHubApiError && error.statusCode === 404) {
@@ -216,7 +254,7 @@ class GitHubApiClient {
  * Factory function to create a GitHub API client
  */
 export function createGitHubApiClient(
-  accessToken: string,
+  accessToken?: string,
   config?: Partial<GitHubApiConfig>,
 ): GitHubApiClient {
   return new GitHubApiClient({

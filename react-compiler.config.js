@@ -52,6 +52,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/hooks/useTrackRecentlyViewedPipeline.ts",
   "src/hooks/useDismissOnOutsidePress.ts",
   "src/hooks/useNow.ts",
+  "src/services/github",
   "src/services/localPipelines/useLocalPipelines.ts",
   "src/services/projects/useLocalPipelineStatus.ts",
   "src/services/projects/usePipelineProjects.ts",

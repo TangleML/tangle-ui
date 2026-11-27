@@ -1,7 +1,11 @@
-import type { ProjectResourceItem } from "@/routes/v2/pages/Tangent/hooks/useProjectResourceItems";
+import type {
+  LinkedRepositoryItem,
+  ProjectResourceItem,
+} from "@/routes/v2/pages/Tangent/hooks/useProjectResourceItems";
 import { UNNAMED_PIPELINE } from "@/services/projects/placeholderNames";
 import {
   formatWorkareaTarget,
+  idIdentity,
   parseIdentity,
   runTarget,
   type WorkareaTarget,
@@ -29,11 +33,25 @@ export interface ProjectCardItem extends ProjectResourceItem {
   archived: boolean;
 }
 
+export interface ProjectCardRepository extends ProjectResourceItem {
+  key: string;
+  repository: LinkedRepositoryItem;
+  addedAt: Date | null;
+  archived: boolean;
+}
+
 export interface ProjectCardLists {
   runs: ProjectCardRun[];
   pipelines: ProjectCardItem[];
+  repositories: ProjectCardRepository[];
   documents: ProjectCardItem[];
 }
+
+/**
+ * A repository has no workarea target to archive it by, so its row's own id
+ * stands in, in the same `type://identity` shape as the targets around it.
+ */
+const repositoryKey = (id: string) => `repository://${idIdentity(id)}`;
 
 const newestFirst = (a: Date | null, b: Date | null) =>
   (b?.getTime() ?? 0) - (a?.getTime() ?? 0);
@@ -62,8 +80,9 @@ export function mergeProjectRuns(
 }
 
 /**
- * What the project card lists: its runs, pipelines and documents, each newest
- * first and keyed by workarea target, which is also how archiving marks them.
+ * What the project card lists: its runs, pipelines, repositories and documents,
+ * each newest first and keyed by workarea target, which is also how archiving
+ * marks them.
  * The card, the chat's `#` picker, the agent and the slash commands all read
  * this, so they list the same things.
  */
@@ -81,6 +100,21 @@ export function projectCardLists({
   const addedAtById = new Map(
     summaries.map(({ id, createdAt }) => [id, createdAt]),
   );
+  const repositories = items
+    .flatMap((item) => {
+      if (!item.repository) return [];
+      const key = repositoryKey(item.id);
+      return [
+        {
+          ...item,
+          key,
+          repository: item.repository,
+          addedAt: addedAtById.get(item.id) ?? null,
+          archived: archived.has(key),
+        },
+      ];
+    })
+    .sort((a, b) => newestFirst(a.addedAt, b.addedAt));
   const attached = items
     .flatMap((item) => {
       if (!item.target) return [];
@@ -111,5 +145,10 @@ export function projectCardLists({
     return { ...run, key, archived: archived.has(key) };
   });
 
-  return { runs, pipelines: ofType("pipeline"), documents: ofType("document") };
+  return {
+    runs,
+    pipelines: ofType("pipeline"),
+    repositories,
+    documents: ofType("document"),
+  };
 }
