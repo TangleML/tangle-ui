@@ -7,8 +7,12 @@ import { WorkspacesApiError } from "./errors";
 import { mapWorkspace } from "./mappers";
 import type { Workspace } from "./types";
 
-export async function listWorkspaces(): Promise<Workspace[]> {
-  const result = await listWorkspacesApiWorkspacesGet();
+export async function listWorkspaces(
+  backendUrl?: string,
+): Promise<Workspace[]> {
+  const result = await listWorkspacesApiWorkspacesGet(
+    backendUrl ? { baseUrl: backendUrl } : undefined,
+  );
   if (!result.data) {
     throw new WorkspacesApiError(
       "Failed to list workspaces",

@@ -8,8 +8,10 @@ type UserDetailsWithId = GetUserResponse & { id: string };
  *
  * @returns The user details.
  */
-export async function getUserDetails() {
-  const user = await getCurrentUserApiUsersMeGet();
+export async function getUserDetails(backendUrl?: string) {
+  const user = await getCurrentUserApiUsersMeGet(
+    backendUrl === undefined ? undefined : { baseUrl: backendUrl },
+  );
 
   if (user?.response.status !== 200 || !isAuthorizedUser(user.data)) {
     return { id: "Unknown", permissions: [] } as UserDetailsWithId;

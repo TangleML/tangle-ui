@@ -35,7 +35,7 @@ export function useProjects(
 
   return useQuery({
     queryKey: [...ProjectsQueryKeys.List(params), backendUrl],
-    queryFn: () => listProjects(params),
+    queryFn: () => listProjects(params, backendUrl),
     enabled: enabled && configured && available,
     ...projectQueryDefaults,
   });
