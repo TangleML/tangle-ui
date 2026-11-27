@@ -55,7 +55,9 @@ function IssueHeader({ issue }: { issue: ValidationIssue }) {
   const severity: ValidationIssueHeaderSeverity =
     issue.severity === "error" ? "error" : "warning";
   const severityIcon =
-    issue.severity === "error" ? "CircleAlert" : "TriangleAlert";
+    issue.severity === "error"
+      ? "CircleExclamationPoint"
+      : "TriangleExclamationPoint";
 
   return (
     <BlockStack gap="2">

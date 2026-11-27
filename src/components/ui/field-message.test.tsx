@@ -38,7 +38,7 @@ describe("FieldMessage", () => {
 
   it("renders the named icon alongside the message", () => {
     const { container } = render(
-      <FieldMessage tone="warning" icon="TriangleAlert">
+      <FieldMessage tone="warning" icon="TriangleExclamationPoint">
         No longer available
       </FieldMessage>,
     );
@@ -50,7 +50,7 @@ describe("FieldMessage", () => {
   it.each(TONES)("tone=%s tints the icon with a defined token", (tone) => {
     const tokens = colorTokens();
     const { container } = render(
-      <FieldMessage tone={tone} icon="TriangleAlert">
+      <FieldMessage tone={tone} icon="TriangleExclamationPoint">
         message
       </FieldMessage>,
     );
@@ -69,7 +69,7 @@ describe("FieldMessage", () => {
       // Several tone tokens are too light to set text in on a light background,
       // so the tone must never reach the words.
       render(
-        <FieldMessage tone={tone} icon="TriangleAlert">
+        <FieldMessage tone={tone} icon="TriangleExclamationPoint">
           message
         </FieldMessage>,
       );

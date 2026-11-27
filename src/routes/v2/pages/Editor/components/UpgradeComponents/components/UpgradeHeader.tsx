@@ -28,7 +28,11 @@ export function UpgradeHeader({
         </Text>
         {issueCount > 0 && (
           <InlineStack gap="1" blockAlign="center">
-            <Icon name="TriangleAlert" size="xs" className="text-amber-500" />
+            <Icon
+              name="TriangleExclamationPoint"
+              size="xs"
+              className="text-amber-500"
+            />
             <Text size="xs" tone="subdued">
               {issueCount} with issues
             </Text>

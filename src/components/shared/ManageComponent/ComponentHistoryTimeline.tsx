@@ -115,7 +115,7 @@ export const ComponentHistoryTimeline = withSuspenseWrapper(
 
               const icon = [
                 isMostRecent && "CircleDot",
-                isMatchCurrentComponent && "OctagonAlert",
+                isMatchCurrentComponent && "OctagonExclamationPoint",
                 "Circle",
               ].find(Boolean) as ComponentProps<typeof Icon>["name"];
 

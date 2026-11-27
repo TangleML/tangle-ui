@@ -112,7 +112,7 @@ describe("startingSession", () => {
   it.each([
     ["gpt-6.1-terra", "none", "off"],
     ["gpt-6.1-sol", "none", "low"],
-    ["gpt-6.1-sol", "max", "xhigh"],
+    ["gpt-6.1-sol", "max", "max"],
     ["my-deployment", "high", undefined],
   ] as const)(
     "runs %s with a %s preference at %s thinking",

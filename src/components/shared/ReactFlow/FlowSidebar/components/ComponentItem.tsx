@@ -72,7 +72,7 @@ const ComponentIcon = withSuspenseWrapper(
     if (!hasOutdatedComponents)
       return <Icon className={className} {...iconProps} />;
 
-    return <Icon name="BookAlert" className="text-orange-500" />;
+    return <Icon name="BookExclamationPoint" className="text-orange-500" />;
   },
   ComponentIconSkeleton,
   /**

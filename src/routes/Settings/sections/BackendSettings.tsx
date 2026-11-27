@@ -227,7 +227,7 @@ export function BackendSettings() {
           {!inputBackendUrl.trim() && (
             <InlineStack gap="2">
               <Icon
-                name="CircleAlert"
+                name="CircleExclamationPoint"
                 className="inline-block text-destructive"
               />
               <Paragraph tone="critical" size="sm">

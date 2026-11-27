@@ -125,7 +125,7 @@ export const DisplayNameEditor = ({ taskId }: { taskId: string }) => {
       />
       <Activity mode={warning ? "visible" : "hidden"}>
         <InlineStack blockAlign="start" gap="1" wrap="nowrap">
-          <Icon name="TriangleAlert" className="text-warning" />
+          <Icon name="TriangleExclamationPoint" className="text-warning" />
           <Paragraph tone="warning" size="xs">
             {warning}
           </Paragraph>
@@ -133,7 +133,7 @@ export const DisplayNameEditor = ({ taskId }: { taskId: string }) => {
       </Activity>
       <Activity mode={error ? "visible" : "hidden"}>
         <Alert variant="destructive">
-          <Icon name="CircleAlert" />
+          <Icon name="CircleExclamationPoint" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       </Activity>

@@ -91,7 +91,13 @@ export const AutoSaveIndicator = observer(function AutoSaveIndicator() {
             </SavingLayer>
             <IdleLayer>
               <Icon
-                name={error ? "CloudAlert" : isDraft ? "Cloud" : "CloudCheck"}
+                name={
+                  error
+                    ? "CloudExclamationPoint"
+                    : isDraft
+                      ? "Cloud"
+                      : "CloudCheck"
+                }
                 className={error ? "text-red-400" : undefined}
               />
             </IdleLayer>

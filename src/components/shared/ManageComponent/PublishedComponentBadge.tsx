@@ -51,7 +51,9 @@ export const PublishedComponentBadge = withSuspenseWrapper(
             >
               <InlineStack gap="1">
                 {isPublished && (
-                  <Icon name={isOutdated ? "BookAlert" : "BookCheck"} />
+                  <Icon
+                    name={isOutdated ? "BookExclamationPoint" : "BookCheck"}
+                  />
                 )}
                 {children}
               </InlineStack>

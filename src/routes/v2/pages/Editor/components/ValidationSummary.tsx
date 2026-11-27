@@ -99,7 +99,11 @@ export const ValidationSummary = observer(function ValidationSummary({
             size="sm"
             className="shrink-0"
           />
-          <Icon name="TriangleAlert" size="sm" className="shrink-0" />
+          <Icon
+            name="TriangleExclamationPoint"
+            size="sm"
+            className="shrink-0"
+          />
           <Text size="sm" weight="semibold">
             {summaryParts.join(", ")}
           </Text>

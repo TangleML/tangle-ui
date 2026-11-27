@@ -65,7 +65,7 @@ export function UpgradePreviewTaskNode({
               )}
             >
               <Icon
-                name={hasIssues ? "TriangleAlert" : "CircleArrowUp"}
+                name={hasIssues ? "TriangleExclamationPoint" : "CircleArrowUp"}
                 size="xs"
                 className="mr-0.5"
               />

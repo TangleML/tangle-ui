@@ -10,7 +10,7 @@ export function IssuesBanner({ count }: { count: number }) {
       className="px-2 py-1 bg-amber-50 border border-amber-200 rounded-md dark:bg-amber-500/10 dark:border-amber-500/30"
     >
       <Icon
-        name="TriangleAlert"
+        name="TriangleExclamationPoint"
         size="xs"
         className="text-amber-500 shrink-0"
       />

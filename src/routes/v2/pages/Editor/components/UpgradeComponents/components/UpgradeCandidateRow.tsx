@@ -27,7 +27,11 @@ function StatusIcon({ hasIssues }: { hasIssues: boolean }) {
   if (hasIssues) {
     return (
       <span className="inline-flex shrink-0">
-        <Icon name="TriangleAlert" size="sm" className="text-amber-500" />
+        <Icon
+          name="TriangleExclamationPoint"
+          size="sm"
+          className="text-amber-500"
+        />
       </span>
     );
   }

@@ -105,7 +105,9 @@ function PredictedIssuesSection({ issues }: { issues: ValidationIssue[] }) {
       <BlockStack className="gap-0.5">
         {issues.map((issue, index) => {
           const isError = issue.severity === "error";
-          const iconName = isError ? "CircleAlert" : "TriangleAlert";
+          const iconName = isError
+            ? "CircleExclamationPoint"
+            : "TriangleExclamationPoint";
           const color = isError ? "text-red-500" : "text-amber-500";
 
           return (
@@ -179,7 +181,11 @@ export function UpgradeCandidateDetail({
           </Text>
           {hasIssues ? (
             <InlineStack gap="1" blockAlign="center">
-              <Icon name="TriangleAlert" size="sm" className="text-amber-500" />
+              <Icon
+                name="TriangleExclamationPoint"
+                size="sm"
+                className="text-amber-500"
+              />
               <Text size="xs">
                 {candidate.predictedIssues.length} issue
                 {candidate.predictedIssues.length !== 1 ? "s" : ""} detected

@@ -39,7 +39,11 @@ export function ReplaceConfirmationContent({
 
       {hasBreakingChanges && (
         <InlineStack gap="1" blockAlign="center">
-          <Icon name="TriangleAlert" size="sm" className="text-amber-500" />
+          <Icon
+            name="TriangleExclamationPoint"
+            size="sm"
+            className="text-amber-500"
+          />
           <Text size="xs" tone="subdued">
             Some inputs or outputs will be removed, and their connections will
             be lost.

@@ -121,7 +121,7 @@ interface NotFoundStateProps {
 function NotFoundState({ entityId }: NotFoundStateProps) {
   return (
     <EmptyState
-      icon="CircleAlert"
+      icon="CircleExclamationPoint"
       title="Task not found"
       description={
         <Text size="xs" tone="subdued" font="mono">

@@ -391,7 +391,7 @@ export const AnnotationsInput = ({
             </div>
             {!!caption && <FieldMessage truncate>{caption}</FieldMessage>}
             {deprecated && (
-              <FieldMessage tone="warning" icon="TriangleAlert">
+              <FieldMessage tone="warning" icon="TriangleExclamationPoint">
                 {deprecationMessage ?? "No longer available"}
               </FieldMessage>
             )}
@@ -482,7 +482,7 @@ export const AnnotationsInput = ({
         </div>
         {isInvalid && (
           <InlineStack gap="1" className="my-1">
-            <Icon name="TriangleAlert" />
+            <Icon name="TriangleExclamationPoint" />
             <Paragraph size="xs" tone="warning">
               Invalid JSON
             </Paragraph>
@@ -634,7 +634,11 @@ function AnnotationOptionLabel({ option }: { option: AnnotationOption }) {
         <Tooltip>
           <TooltipTrigger asChild>
             <span className="pointer-events-auto inline-flex">
-              <Icon name="TriangleAlert" size="sm" className="text-warning" />
+              <Icon
+                name="TriangleExclamationPoint"
+                size="sm"
+                className="text-warning"
+              />
             </span>
           </TooltipTrigger>
           <TooltipContent className="z-9999">

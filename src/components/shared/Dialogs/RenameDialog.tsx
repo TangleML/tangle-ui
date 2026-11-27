@@ -87,7 +87,11 @@ export function RenameDialog({
               autoFocus
             />
             {showError && (
-              <FieldMessage id={errorId} icon="CircleAlert" tone="critical">
+              <FieldMessage
+                id={errorId}
+                icon="CircleExclamationPoint"
+                tone="critical"
+              >
                 {nameError}
               </FieldMessage>
             )}
