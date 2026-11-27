@@ -11,6 +11,7 @@ import {
 
 import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import { ComponentSpec, Input, Output, Task } from "@/models/componentSpec";
+import { TANGENT_BUNDLE_ID } from "@/routes/v2/pages/Tangent/constants";
 import { sessionMemorySeed } from "@/routes/v2/pages/Tangent/services/sessionMemory";
 import { rootConfigSeed } from "@/routes/v2/pages/Tangent/services/sessionRunConfig";
 import type {
@@ -787,6 +788,47 @@ describe("TangentProjectStore.startSession", () => {
 
     expect(io.newSession).toHaveBeenCalledTimes(1);
     expect(io.notify).toHaveBeenCalledWith("Tangent is down", "error");
+  });
+
+  it("reports a missing bundle without retrying the shared folder", async () => {
+    const store = new TangentProjectStore("project-1");
+    const io = makeSessionIo(null, "folder-1");
+    io.newSession.mockRejectedValue(
+      new Error('{"error":"Agent bundle not found"}'),
+    );
+    store.setSessionIo(io);
+
+    await expect(store.startSession()).resolves.toBe(false);
+
+    const message = `This Tangent server doesn't have the "${TANGENT_BUNDLE_ID}" agent bundle installed.`;
+    expect(io.newSession).toHaveBeenCalledTimes(1);
+    expect(io.notify).toHaveBeenCalledWith(message, "error");
+    expect(store.sessionStartError).toBe(message);
+  });
+
+  it("reads the message out of a refusal's JSON body", async () => {
+    const store = new TangentProjectStore("project-1");
+    const io = makeSessionIo(null);
+    io.newSession.mockRejectedValueOnce(new Error('{"error":"Forbidden"}'));
+    store.setSessionIo(io);
+
+    await store.startSession();
+
+    expect(io.notify).toHaveBeenCalledWith("Forbidden", "error");
+    expect(store.sessionStartError).toBe("Forbidden");
+  });
+
+  it("clears the last start failure once a session starts", async () => {
+    const store = new TangentProjectStore("project-1");
+    const io = makeSessionIo(null);
+    io.newSession.mockRejectedValueOnce(new Error("Tangent is down"));
+    store.setSessionIo(io);
+
+    await store.startSession();
+    expect(store.sessionStartError).toBe("Tangent is down");
+
+    await expect(store.startSession()).resolves.toBe(true);
+    expect(store.sessionStartError).toBeUndefined();
   });
 
   it("reports success only when a session was created", async () => {

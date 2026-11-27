@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { BlockStack } from "@/components/ui/layout";
 import { TabStrip } from "@/components/ui/tabs";
+import { Paragraph } from "@/components/ui/typography";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
 import { ProjectSettingsButton } from "@/routes/v2/pages/Tangent/components/ProjectSettingsButton";
@@ -41,10 +42,23 @@ export const ProjectChatArea = observer(function ProjectChatArea() {
   if (!activeSessionId) {
     return (
       <WithoutChat>
-        <EmptyState
-          title="No active session"
-          description="Choose New chat in the Projects panel to chat with Tangent."
-        />
+        {store.sessionStartError ? (
+          <EmptyState
+            icon="CircleAlert"
+            tone="critical"
+            title="Couldn't start a session"
+            description={store.sessionStartError}
+          >
+            <Paragraph size="sm" tone="subdued">
+              Choose New chat in the Projects panel to try again.
+            </Paragraph>
+          </EmptyState>
+        ) : (
+          <EmptyState
+            title="No active session"
+            description="Choose New chat in the Projects panel to chat with Tangent."
+          />
+        )}
       </WithoutChat>
     );
   }
