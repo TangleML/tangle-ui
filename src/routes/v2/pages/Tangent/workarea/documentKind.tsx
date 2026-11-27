@@ -1,12 +1,10 @@
 import { DocumentEditor } from "@/components/Project/DocumentEditor";
-import { BlockStack } from "@/components/ui/layout";
-import { Spinner } from "@/components/ui/spinner";
-import { Text } from "@/components/ui/typography";
 import { parseIdentity } from "@/services/projects/resourceTarget";
 import { useProjectResource } from "@/services/projects/useProjectResources";
 
 import { registerWorkareaKind } from "./registry";
 import type { WorkareaTab } from "./types";
+import { WorkareaLoading, WorkareaMessage } from "./WorkareaPlaceholder";
 
 function DocumentWorkareaView({
   tab,
@@ -24,29 +22,11 @@ function DocumentWorkareaView({
   } = useProjectResource(projectId, resourceId);
 
   if (isPending) {
-    return (
-      <BlockStack
-        gap="1"
-        align="center"
-        className="min-h-0 flex-1 justify-center p-6"
-      >
-        <Spinner />
-      </BlockStack>
-    );
+    return <WorkareaLoading />;
   }
 
   if (isLoadingError) {
-    return (
-      <BlockStack
-        gap="1"
-        align="center"
-        className="min-h-0 flex-1 justify-center p-6 text-center"
-      >
-        <Text size="sm" tone="subdued">
-          {error.message}
-        </Text>
-      </BlockStack>
-    );
+    return <WorkareaMessage>{error.message}</WorkareaMessage>;
   }
 
   return <DocumentEditor projectId={projectId} resource={resource} />;

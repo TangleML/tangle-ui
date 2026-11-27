@@ -5,8 +5,7 @@ import CodeEditor from "@/components/shared/CodeViewer/CodeEditor";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
-import { BlockStack, InlineStack } from "@/components/ui/layout";
-import { Text } from "@/components/ui/typography";
+import { BlockStack } from "@/components/ui/layout";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { UNTITLED } from "@/services/projects/placeholderNames";
 import {
@@ -17,6 +16,8 @@ import { resourceMeta } from "@/services/projects/resourceMeta";
 import type { ProjectResource } from "@/services/projects/types";
 import { useUpdateProjectResource } from "@/services/projects/useProjectResources";
 import { tracking } from "@/utils/tracking";
+
+import { ResourceHeader } from "./ResourceHeader";
 
 interface Edit {
   startedFrom: string;
@@ -85,44 +86,29 @@ export function DocumentEditor({ projectId, resource }: DocumentEditorProps) {
 
   return (
     <BlockStack className="min-h-0 w-full flex-1">
-      <InlineStack
-        gap="2"
-        wrap="nowrap"
-        className="w-full shrink-0 border-b border-border px-3 py-1.5"
+      <ResourceHeader
+        icon={resourceMeta("document").icon}
+        title={name}
+        status={isDirty ? "Unsaved changes" : undefined}
       >
-        <Icon
-          name={resourceMeta("document").icon}
+        <Button
+          variant="ghost"
           size="xs"
-          className="shrink-0 text-muted-foreground"
-        />
-        <Text size="sm" weight="medium" className="truncate">
-          {name}
-        </Text>
-        {isDirty && (
-          <Text size="xs" tone="subdued" className="shrink-0">
-            Unsaved changes
-          </Text>
-        )}
-        <InlineStack gap="1" wrap="nowrap" className="ml-auto shrink-0">
-          <Button
-            variant="ghost"
-            size="xs"
-            disabled={edit === null || update.isPending}
-            onClick={discard}
-            {...tracking("projects.discard_document_edits")}
-          >
-            Discard
-          </Button>
-          <Button
-            size="xs"
-            disabled={!canSave}
-            onClick={save}
-            {...tracking("projects.save_document")}
-          >
-            {update.isPending ? "Saving…" : "Save"}
-          </Button>
-        </InlineStack>
-      </InlineStack>
+          disabled={edit === null || update.isPending}
+          onClick={discard}
+          {...tracking("projects.discard_document_edits")}
+        >
+          Discard
+        </Button>
+        <Button
+          size="xs"
+          disabled={!canSave}
+          onClick={save}
+          {...tracking("projects.save_document")}
+        >
+          {update.isPending ? "Saving…" : "Save"}
+        </Button>
+      </ResourceHeader>
 
       {changedElsewhere && (
         <Alert className="rounded-none border-x-0 border-t-0">
