@@ -235,7 +235,7 @@ describe("StartSessionPrompt", () => {
   it.each([
     ["GPT-6.1 Terra", "gpt-6.1-terra", "Home", "None", "off", "none"],
     ["GPT-6.1 Sol", "gpt-6.1-sol", "Home", "Low", "low", "low"],
-    ["GPT-6.1 Sol", "gpt-6.1-sol", "End", "Extra high", "xhigh", "xhigh"],
+    ["GPT-6.1 Sol", "gpt-6.1-sol", "End", "Max", "max", "max"],
   ])(
     "starts with the shared picker selection (%s, %s, %s)",
     async (modelLabel, model, key, label, depth, preference) => {
@@ -300,44 +300,68 @@ describe("StartSessionPrompt", () => {
     );
   });
 
-  it.each([
-    ["gpt-6.1-sol", "GPT-6.1 Sol", "Extra high", "xhigh", "3"],
-    ["custom", "Custom", "High", "high", "1"],
-  ])(
-    "shows and submits the supported level for a saved Max preference (%s)",
-    async (model, label, effortLabel, depth, maximum) => {
-      if (model === "custom") {
-        window.__TANGLE_AI_MODELS__ = {
-          models: [
-            { id: model, label, reasoningEfforts: ["low", "high", "max"] },
-          ],
-        };
-      }
-      const saved = JSON.stringify({ model, reasoningEffortPreference: "max" });
-      localStorage.setItem(AI_PROXY_STORAGE_KEY, saved);
-      renderPrompt();
+  it("starts at max thinking from a saved Max preference", async () => {
+    localStorage.setItem(
+      AI_PROXY_STORAGE_KEY,
+      JSON.stringify({
+        model: "gpt-6.1-sol",
+        reasoningEffortPreference: "max",
+      }),
+    );
+    renderPrompt();
 
-      const user = userEvent.setup();
-      await user.click(
-        screen.getByRole("button", {
-          name: `AI model and thinking: ${label}, ${effortLabel}`,
-        }),
-      );
-      const slider = screen.getByRole("slider", { name: "Thinking" });
-      expect(slider).toHaveAttribute("aria-valuetext", effortLabel);
-      expect(slider).toHaveAttribute("aria-valuemax", maximum);
-      expect(screen.getByText(/Your max preference is saved/)).toBeVisible();
-      slider.focus();
-      await user.keyboard("{Escape}");
-      await type("Build a churn model{Enter}");
+    const user = userEvent.setup();
+    await user.click(
+      screen.getByRole("button", {
+        name: "AI model and thinking: GPT-6.1 Sol, Max",
+      }),
+    );
+    const slider = screen.getByRole("slider", { name: "Thinking" });
+    expect(slider).toHaveAttribute("aria-valuetext", "Max");
+    expect(slider).toHaveAttribute("aria-valuemax", "4");
+    expect(screen.queryByText(/preference is saved/)).not.toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    await type("Build a churn model{Enter}");
 
-      expect(vi.mocked(createProject).mock.calls[0][0].metadata).toMatchObject({
-        startingModel: `openai/${model}`,
-        startingThinkingDepth: depth,
-      });
-      expect(localStorage.getItem(AI_PROXY_STORAGE_KEY)).toBe(saved);
-    },
-  );
+    expect(vi.mocked(createProject).mock.calls[0][0].metadata).toMatchObject({
+      startingModel: "openai/gpt-6.1-sol",
+      startingThinkingDepth: "max",
+    });
+  });
+
+  it("shows and submits the supported level for a saved Max preference", async () => {
+    window.__TANGLE_AI_MODELS__ = {
+      models: [
+        { id: "custom", label: "Custom", reasoningEfforts: ["low", "high"] },
+      ],
+    };
+    const saved = JSON.stringify({
+      model: "custom",
+      reasoningEffortPreference: "max",
+    });
+    localStorage.setItem(AI_PROXY_STORAGE_KEY, saved);
+    renderPrompt();
+
+    const user = userEvent.setup();
+    await user.click(
+      screen.getByRole("button", {
+        name: "AI model and thinking: Custom, High",
+      }),
+    );
+    const slider = screen.getByRole("slider", { name: "Thinking" });
+    expect(slider).toHaveAttribute("aria-valuetext", "High");
+    expect(slider).toHaveAttribute("aria-valuemax", "1");
+    expect(screen.getByText(/Your max preference is saved/)).toBeVisible();
+    slider.focus();
+    await user.keyboard("{Escape}");
+    await type("Build a churn model{Enter}");
+
+    expect(vi.mocked(createProject).mock.calls[0][0].metadata).toMatchObject({
+      startingModel: "openai/custom",
+      startingThinkingDepth: "high",
+    });
+    expect(localStorage.getItem(AI_PROXY_STORAGE_KEY)).toBe(saved);
+  });
 
   /**
    * Tangent runs sessions through its own proxy, which cannot reach a model
