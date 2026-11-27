@@ -1,3 +1,4 @@
+import { ManagedAccessBadge } from "@/components/Project/ManagedAccessBadge";
 import { PrivateRepositoryBadge } from "@/components/Project/PrivateRepositoryBadge";
 import { WritesAllowedBadge } from "@/components/Project/WritesAllowedBadge";
 import { InlineStack } from "@/components/ui/layout";
@@ -12,9 +13,13 @@ const refLabel = (ref: string | null) =>
 
 interface RepositoryDetailsProps {
   repository: RepositoryLocation;
+  managedLabel?: string | null;
 }
 
-export function RepositoryDetails({ repository }: RepositoryDetailsProps) {
+export function RepositoryDetails({
+  repository,
+  managedLabel = null,
+}: RepositoryDetailsProps) {
   const { owner, repo, ref, path, isPrivate, allowWrites } = repository;
 
   return (
@@ -25,6 +30,7 @@ export function RepositoryDetails({ repository }: RepositoryDetailsProps) {
       <InlineStack as="dd" gap="2" blockAlign="center" className="break-all">
         <Text size="sm">{`${owner}/${repo}`}</Text>
         {isPrivate && <PrivateRepositoryBadge />}
+        {managedLabel !== null && <ManagedAccessBadge label={managedLabel} />}
         {allowWrites && <WritesAllowedBadge />}
       </InlineStack>
 

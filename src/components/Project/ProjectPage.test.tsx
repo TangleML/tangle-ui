@@ -50,6 +50,10 @@ vi.mock("@/services/projects/useLinkedRepositories", () => ({
   useLinkedRepositories: () => new Map(),
 }));
 
+vi.mock("@/services/github/useManagedAccess", () => ({
+  useManagedRepositories: () => ({ label: null, isManaged: () => false }),
+}));
+
 vi.mock("@/services/usePipelineSpec", () => ({
   usePipelineSpec: () => ({ data: undefined, isPending: true, error: null }),
 }));

@@ -1,11 +1,11 @@
 import { observer } from "mobx-react-lite";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 
+import { repositoryRowFlair } from "@/components/Project/ManagedAccessBadge";
 import {
   repositoryWritesAction,
   useRepositoryWritesToggle,
 } from "@/components/Project/useRepositoryWritesToggle";
-import { writesAllowedFlair } from "@/components/Project/WritesAllowedBadge";
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -31,6 +31,7 @@ import { fileIcon } from "@/routes/v2/pages/Tangent/services/projectFiles";
 import { ago } from "@/routes/v2/pages/Tangent/services/relativeTime";
 import { useOptionalWindowContext } from "@/routes/v2/shared/windows/ContentWindowStateContext";
 import type { RepositoryLocation } from "@/services/github/repositoryUrl";
+import { useManagedRepositories } from "@/services/github/useManagedAccess";
 import { linkedRepositoryOf } from "@/services/projects/resourceDescriptor";
 import { runTarget } from "@/services/projects/resourceTarget";
 import type { ProjectResource } from "@/services/projects/types";
@@ -106,6 +107,7 @@ const ProjectCardBody = observer(function ProjectCardBody() {
     store.projectId,
   );
   const linkedRepositories = useLinkedRepositories(store.projectId, summaries);
+  const managed = useManagedRepositories(store.projectId);
   const writes = useRepositoryWritesToggle(store.projectId);
 
   const searching = query.trim() !== "";
@@ -245,7 +247,10 @@ const ProjectCardBody = observer(function ProjectCardBody() {
         icon={item.icon}
         title={item.name}
         subtitle={added && `Added ${added}`}
-        flair={repository?.allowWrites ? writesAllowedFlair() : undefined}
+        flair={repositoryRowFlair({
+          managedLabel: managed.isManaged(item.id) ? managed.label : null,
+          allowWrites: repository?.allowWrites,
+        })}
         {...opening}
         tracking={tracking("projects.open_repository", {
           surface: "project_card",
