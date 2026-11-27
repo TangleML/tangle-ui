@@ -54,6 +54,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/hooks/useNow.ts",
   "src/services/github",
   "src/services/localPipelines/useLocalPipelines.ts",
+  "src/services/projects/useLinkedRepositories.ts",
   "src/services/projects/useLocalPipelineStatus.ts",
   "src/services/projects/usePipelineProjects.ts",
   "src/services/projects/useProjectInstructions.ts",

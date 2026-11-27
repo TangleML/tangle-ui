@@ -45,7 +45,13 @@ function reply(method: string, url: string, answer: () => Response) {
 
 const supported = (state: GitHubTokenState): GitHubTokenSupport => ({
   supported: true,
-  status: { secretName: "GITHUB_TOKEN", state, login: null, tokenKind: null },
+  status: {
+    secretName: "GITHUB_TOKEN",
+    state,
+    login: null,
+    tokenKind: null,
+    canWrite: null,
+  },
 });
 
 const access = (readTokenSupport: () => Promise<GitHubTokenSupport>) => ({

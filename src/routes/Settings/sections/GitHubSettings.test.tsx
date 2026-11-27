@@ -206,6 +206,57 @@ describe("GitHubSettings", () => {
       expect(screen.getByRole("button", { name: "Change" })).toBeVisible();
     });
 
+    it("says when the token can write", async () => {
+      tokenStatus({
+        secret_name: "GITHUB_TOKEN",
+        state: "valid",
+        login: "octocat",
+        token_kind: "classic",
+        can_write: true,
+      });
+      renderSettings();
+
+      expect(await screen.findByText("Can write")).toBeVisible();
+      expect(screen.queryByText("Read only")).toBeNull();
+      expect(
+        screen.queryByText(/needs a token with the repo scope/),
+      ).toBeNull();
+    });
+
+    it("says when the token can only read, and what writing needs", async () => {
+      tokenStatus({
+        secret_name: "GITHUB_TOKEN",
+        state: "valid",
+        login: "octocat",
+        token_kind: "classic",
+        can_write: false,
+      });
+      renderSettings();
+
+      expect(await screen.findByText("Read only")).toBeVisible();
+      expect(
+        screen.getByText(
+          "Writing to repositories needs a token with the repo scope.",
+        ),
+      ).toBeVisible();
+      expect(screen.queryByText("Can write")).toBeNull();
+    });
+
+    it("says nothing about writing when the backend can't tell", async () => {
+      tokenStatus({
+        secret_name: "GITHUB_TOKEN",
+        state: "valid",
+        login: "octocat",
+        token_kind: "fine_grained",
+        can_write: null,
+      });
+      renderSettings();
+
+      expect(await screen.findByText("Connected as @octocat")).toBeVisible();
+      expect(screen.queryByText("Can write")).toBeNull();
+      expect(screen.queryByText("Read only")).toBeNull();
+    });
+
     it("says when the secret has gone, and shows the steps again", async () => {
       tokenStatus({ secret_name: "GITHUB_TOKEN", state: "secret_missing" });
       renderSettings();
