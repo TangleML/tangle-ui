@@ -8,7 +8,7 @@
     "jsx": "react-jsx",
     "module": "ESNext",
     "lib": ["ES2024", "ESNext", "DOM", "DOM.Iterable"],
-    "types": ["vite/client", "node", "@testing-library/jest-dom"],
+    "types": ["vite/client", "node", "@testing-library/jest-dom/vitest"],
 
     /* Bundler mode */
     "moduleResolution": "bundler",

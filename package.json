@@ -148,7 +148,7 @@
     "@playwright/test": "^1.65.1",
     "@rolldown/plugin-babel": "^0.3.1",
     "@testing-library/dom": "^10.4.2",
-    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/jest-dom": "^8.0.0",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.13",
     "@types/node": "^26.6.10",
@@ -176,7 +176,7 @@
     "typescript-eslint": "^8.74.0",
     "vite": "^8.3.8",
     "vite-plugin-bugsnag": "^2.0.2",
-    "vitest": "^4.1.11"
+    "vitest": "^5.1.2"
   },
   "pnpm": {
     "overrides": {
