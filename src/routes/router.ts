@@ -26,7 +26,6 @@ import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
 import RootLayout from "../components/layout/RootLayout";
 import { APP_ROUTES } from "./appRoutes";
 import { DashboardComponentsV2View } from "./Dashboard/DashboardComponentsV2View";
-import { DashboardComponentsView } from "./Dashboard/DashboardComponentsView";
 import { DashboardFavoritesView } from "./Dashboard/DashboardFavoritesView";
 import { DashboardHomeView } from "./Dashboard/DashboardHomeView";
 import { DashboardLayout } from "./Dashboard/DashboardLayout";
@@ -121,11 +120,8 @@ const dashboardPipelinesRoute = createRoute({
 const dashboardComponentsRoute = createRoute({
   getParentRoute: () => dashboardRoute,
   path: "/components",
-  component: DashboardComponentsView,
   beforeLoad: ({ search }) => {
-    if (isFlagEnabled("component-search-v2")) {
-      throw redirect({ to: APP_ROUTES.DASHBOARD_COMPONENTS_V2, search });
-    }
+    throw redirect({ to: APP_ROUTES.DASHBOARD_COMPONENTS_V2, search });
   },
 });
 
@@ -133,11 +129,6 @@ const dashboardComponentsV2Route = createRoute({
   getParentRoute: () => dashboardRoute,
   path: "/components-v2",
   component: DashboardComponentsV2View,
-  beforeLoad: ({ search }) => {
-    if (!isFlagEnabled("component-search-v2")) {
-      throw redirect({ to: APP_ROUTES.DASHBOARD_COMPONENTS, search });
-    }
-  },
 });
 
 const dashboardProjectsRoute = createRoute({
@@ -248,15 +239,6 @@ const settingsAgentRoute = createRoute({
   getParentRoute: () => settingsLayoutRoute,
   path: "/agent",
   component: AgentSettings,
-  beforeLoad: () => {
-    if (
-      !isFlagEnabled("component-search-v2") &&
-      !isFlagEnabled("ai-assistant") &&
-      !isTangentEnabled()
-    ) {
-      throw redirect({ to: APP_ROUTES.SETTINGS_BACKEND });
-    }
-  },
 });
 
 const settingsVsCodeRoute = createRoute({

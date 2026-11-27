@@ -21,12 +21,10 @@ function ComponentSearchV2MiniContent() {
   );
 }
 
-export function useComponentSearchV2Window(enabled: boolean) {
+export function useComponentSearchV2Window() {
   const { windows } = useSharedStores();
 
   useEffect(() => {
-    if (!enabled) return;
-
     const existing = windows.getWindowById(COMPONENT_SEARCH_V2_WINDOW_ID);
     if (existing) {
       existing.restore();
@@ -45,5 +43,5 @@ export function useComponentSearchV2Window(enabled: boolean) {
       defaultDockState: "left",
       miniContent: <ComponentSearchV2MiniContent />,
     });
-  }, [enabled, windows]);
+  }, [windows]);
 }

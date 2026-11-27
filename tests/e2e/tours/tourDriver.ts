@@ -7,7 +7,6 @@ import type {
   TourDefinition,
   TourStep,
 } from "@/components/Learn/tours/registry";
-import { ExistingFlags } from "@/flags";
 import {
   componentWindowIdForFlag,
   LEGACY_COMPONENT_WINDOW_ID,
@@ -116,10 +115,7 @@ export function loadTour(fileName: string): TourDef {
   );
   assertTourDef(parsed, fileName);
 
-  const componentWindowId = componentWindowIdForFlag(
-    ExistingFlags["component-search-v2"].default,
-  );
-  if (componentWindowId === LEGACY_COMPONENT_WINDOW_ID) return parsed;
+  const componentWindowId = componentWindowIdForFlag(true);
 
   return {
     ...parsed,

@@ -78,7 +78,6 @@ import { RemotePipelineError } from "./components/RemotePipelineView/RemotePipel
 import { RemotePipelineShell } from "./components/RemotePipelineView/RemotePipelineShell";
 import { RemotePipelineView } from "./components/RemotePipelineView/RemotePipelineView";
 import { useAiChatWindow } from "./hooks/useAiChatWindow";
-import { useComponentLibraryWindow } from "./hooks/useComponentLibraryWindow";
 import { useComponentSearchV2Window } from "./hooks/useComponentSearchV2Window";
 import { useEditorEscapeShortcut } from "./hooks/useEditorEscapeShortcut";
 import { useHistoryWindow } from "./hooks/useHistoryWindow";
@@ -139,8 +138,6 @@ const PipelineEditor = withSuspenseWrapper(
     usePropertiesWindowPositioning();
     useLinkedWindowCleanup();
 
-    const componentSearchV2Enabled = useFlagValue("component-search-v2");
-    useComponentLibraryWindow(!componentSearchV2Enabled);
     usePipelineDetailsWindow();
     usePipelineTreeWindow();
     useHistoryWindow();
@@ -157,8 +154,8 @@ const PipelineEditor = withSuspenseWrapper(
     const aiEnabled = useFlagValue("ai-assistant");
     useAiChatWindow(aiEnabled);
 
-    useComponentSearchV2Window(componentSearchV2Enabled);
-    useSeedInitialDockLayoutFromPreset(componentSearchV2Enabled);
+    useComponentSearchV2Window();
+    useSeedInitialDockLayoutFromPreset();
 
     const activeSpec = navigation.activeSpec;
 
