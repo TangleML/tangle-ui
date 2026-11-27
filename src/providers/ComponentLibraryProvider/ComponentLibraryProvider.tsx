@@ -115,7 +115,7 @@ const ComponentLibraryContext =
 // place — see `./libraries/setup`.
 ensureLibraryFactoriesRegistered();
 
-function useComponentLibraryRegistry() {
+export function useComponentLibraryRegistry() {
   const queryClient = useQueryClient();
   const { backendUrl } = useBackend();
   const [existingComponentLibraries, setExistingComponentLibraries] = useState<
@@ -144,11 +144,20 @@ function useComponentLibraryRegistry() {
   );
 
   useEffect(() => {
+    const loadedLibraries: StoredLibrary[] = [];
     registeredComponentLibraries?.forEach((library) => {
-      componentLibraries.set(library.id, createLibraryObject(library));
+      try {
+        componentLibraries.set(library.id, createLibraryObject(library));
+        loadedLibraries.push(library);
+      } catch (error) {
+        console.error(
+          `Skipping component library "${library.id}" of type "${library.type}": it could not be loaded.`,
+          error,
+        );
+      }
     });
 
-    setExistingComponentLibraries(registeredComponentLibraries ?? []);
+    setExistingComponentLibraries(loadedLibraries);
   }, [registeredComponentLibraries, componentLibraries]);
 
   const getComponentLibraryObject = useCallback(
