@@ -35,7 +35,7 @@ export const InputValidationIndicator = observer(
 
     return (
       <Icon
-        name="CircleAlert"
+        name="CircleExclamationPoint"
         size="xs"
         className={cn(
           "shrink-0 size-3",

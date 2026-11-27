@@ -20,7 +20,7 @@ const ComponentSpecCheckStatement = ({
       {isValid ? (
         <Icon name="Check" className="text-green-500" />
       ) : (
-        <Icon name="OctagonAlert" className="text-yellow-500" />
+        <Icon name="OctagonExclamationPoint" className="text-yellow-500" />
       )}
       <Text as="span" size="sm">
         {isValid ? validLabel : invalidLabel}

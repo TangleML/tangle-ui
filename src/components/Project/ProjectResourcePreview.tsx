@@ -346,7 +346,7 @@ function ValidityBadge({ validity }: { validity: PipelineValidity }) {
   return (
     <InlineStack gap="1" blockAlign="center" wrap="nowrap">
       <Icon
-        name={valid ? "CircleCheck" : "CircleAlert"}
+        name={valid ? "CircleCheck" : "CircleExclamationPoint"}
         size="xs"
         className={valid ? "text-status-succeeded" : "text-status-failed"}
         aria-hidden="true"

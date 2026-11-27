@@ -112,7 +112,11 @@ export function ProjectPicker({ pipeline }: ProjectPickerProps) {
 
           {error && (
             <InlineStack gap="2" blockAlign="center" className="px-2 py-1.5">
-              <Icon name="CircleAlert" size="xs" aria-hidden="true" />
+              <Icon
+                name="CircleExclamationPoint"
+                size="xs"
+                aria-hidden="true"
+              />
               <Text size="xs" tone="critical">
                 {`Could not look up this pipeline's projects.`}
               </Text>

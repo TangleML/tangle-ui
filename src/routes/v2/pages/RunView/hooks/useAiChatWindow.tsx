@@ -28,7 +28,7 @@ export function getRunSuggestedPrompts(
   if (status && FAILED_STATUSES.has(status)) {
     return [
       SUMMARIZE_PROMPT,
-      { label: "Why did this run fail?", icon: "CircleAlert" },
+      { label: "Why did this run fail?", icon: "CircleExclamationPoint" },
       { label: "Which tasks failed and why?", icon: "ListChecks" },
     ];
   }

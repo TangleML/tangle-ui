@@ -113,7 +113,7 @@ const PipelineNameDialog = ({
           <Input value={name} onChange={handleOnChange} />
           <Activity mode={error && touched ? "visible" : "hidden"}>
             <Alert variant="destructive">
-              <Icon name="CircleAlert" />
+              <Icon name="CircleExclamationPoint" />
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           </Activity>

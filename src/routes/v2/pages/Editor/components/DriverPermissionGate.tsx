@@ -99,7 +99,10 @@ export function DriverPermissionGate({
 
   return (
     <BlockStack fill align="center" inlineAlign="center" gap="4">
-      <Icon name="ShieldAlert" className="size-12 text-muted-foreground" />
+      <Icon
+        name="ShieldExclamationPoint"
+        className="size-12 text-muted-foreground"
+      />
       <Heading level={2} size="lg" weight="semibold">
         Permission Required
       </Heading>

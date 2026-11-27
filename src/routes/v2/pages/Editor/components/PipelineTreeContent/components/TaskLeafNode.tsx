@@ -66,7 +66,7 @@ export const TaskLeafNode = observer(function TaskLeafNode({
         trackingId="v2.pipeline_editor.pipeline_tree.task_nav"
       >
         <Icon
-          name={hasIssues ? "CircleAlert" : "Circle"}
+          name={hasIssues ? "CircleExclamationPoint" : "Circle"}
           size="xs"
           className={treeNodeLeafIconToneVariants({
             tone: iconTone,

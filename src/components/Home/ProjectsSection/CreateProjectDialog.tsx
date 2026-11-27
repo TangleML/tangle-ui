@@ -129,7 +129,7 @@ export function CreateProjectDialog({
               />
               {submitAttempted && nameError && (
                 <Alert variant="destructive">
-                  <Icon name="CircleAlert" />
+                  <Icon name="CircleExclamationPoint" />
                   <AlertDescription>{nameError}</AlertDescription>
                 </Alert>
               )}

@@ -72,7 +72,7 @@ export const treeNodeLabelToneVariants = cva("transition-colors truncate", {
   },
 });
 
-/** Leaf task status icon (Circle / CircleAlert) — includes bg-white ring. */
+/** Leaf task status icon (Circle / CircleExclamationPoint) — includes bg-white ring. */
 export const treeNodeLeafIconToneVariants = cva(
   "shrink-0 mt-0.5 rounded-full transition-colors bg-white dark:bg-card",
   {

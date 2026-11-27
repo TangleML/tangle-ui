@@ -1,7 +1,7 @@
 import {
-  CircleAlert,
   CircleCheck,
   CircleEllipsis,
+  CircleExclamationPoint,
   CircleHelp,
   CircleMinus,
   CircleX,
@@ -52,11 +52,13 @@ const Icon = ({ status }: { status?: string }) => {
     case "FAILED":
     case "UPSTREAM_FAILED":
     case "UPSTREAM_FAILED_OR_SKIPPED":
-      return <CircleAlert className="w-4 h-4 text-status-failed" />;
+      return <CircleExclamationPoint className="w-4 h-4 text-status-failed" />;
     case "SYSTEM_ERROR":
-      return <CircleAlert className="w-4 h-4 text-status-system-error" />;
+      return (
+        <CircleExclamationPoint className="w-4 h-4 text-status-system-error" />
+      );
     case "INVALID":
-      return <CircleAlert className="w-4 h-4 text-status-invalid" />;
+      return <CircleExclamationPoint className="w-4 h-4 text-status-invalid" />;
     case "RUNNING":
     case "STARTING":
       return <RefreshCw className="w-4 h-4 text-status-running animate-spin" />;

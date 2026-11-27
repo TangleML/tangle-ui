@@ -68,7 +68,7 @@ export function DocumentFileDropZone({
         />
       </InlineStack>
       {error && (
-        <FieldMessage tone="critical" icon="CircleAlert">
+        <FieldMessage tone="critical" icon="CircleExclamationPoint">
           {error}
         </FieldMessage>
       )}

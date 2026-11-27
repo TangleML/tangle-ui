@@ -16,7 +16,7 @@ export function WorkspaceNotice() {
 
   return (
     <Alert className="w-fit">
-      <Icon name="CircleAlert" />
+      <Icon name="CircleExclamationPoint" />
       <AlertDescription>{message}</AlertDescription>
     </Alert>
   );

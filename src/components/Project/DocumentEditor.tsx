@@ -126,7 +126,7 @@ export function DocumentEditor({ projectId, resource }: DocumentEditorProps) {
 
       {changedElsewhere && (
         <Alert className="rounded-none border-x-0 border-t-0">
-          <Icon name="CircleAlert" />
+          <Icon name="CircleExclamationPoint" />
           <AlertDescription>
             This document was changed elsewhere since you started editing. Save
             replaces that version with yours; Discard loads it.

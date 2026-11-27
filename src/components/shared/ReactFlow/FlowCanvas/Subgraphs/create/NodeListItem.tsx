@@ -63,7 +63,10 @@ export function NodeListItem({
         </Paragraph>
         {isOrphaned && (
           <InlineStack gap="1" wrap="nowrap">
-            <Icon name="TriangleAlert" className="text-destructive" />
+            <Icon
+              name="TriangleExclamationPoint"
+              className="text-destructive"
+            />
             <Paragraph size="xs" tone="critical">
               Orphaned
             </Paragraph>

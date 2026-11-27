@@ -44,7 +44,7 @@ export const ProjectChatArea = observer(function ProjectChatArea() {
       <WithoutChat>
         {store.sessionStartError ? (
           <EmptyState
-            icon="CircleAlert"
+            icon="CircleExclamationPoint"
             tone="critical"
             title="Couldn't start a session"
             description={store.sessionStartError}
