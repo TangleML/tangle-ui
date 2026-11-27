@@ -20,7 +20,12 @@ vi.mock("@/hooks/useToastNotification", () => ({
   default: () => notify,
 }));
 
-let backend = { configured: true, available: true };
+const defaultBackend = {
+  configured: true,
+  available: true,
+  backendUrl: "https://first.example",
+};
+let backend = defaultBackend;
 vi.mock("@/providers/BackendProvider", () => ({
   useBackend: () => backend,
 }));
@@ -97,7 +102,7 @@ function wrapperFor(client: QueryClient) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  backend = { configured: true, available: true };
+  backend = defaultBackend;
 });
 
 describe("workspace query hooks", () => {
@@ -133,7 +138,7 @@ describe("workspace query hooks", () => {
   });
 
   it("is disabled when the backend is unavailable", () => {
-    backend = { configured: true, available: false };
+    backend = { ...defaultBackend, available: false };
     const { result } = renderHook(() => useWorkspaces(), {
       wrapper: wrapperFor(makeClient()),
     });
@@ -156,6 +161,21 @@ describe("project query hooks", () => {
       workspaceId: "w1",
     });
     expect(result.current.data).toEqual(projectPage);
+  });
+
+  it("requests a fresh project list when the backend changes", async () => {
+    const nextBackendPage = { ...projectPage, items: [], totalCount: 0 };
+    vi.mocked(projectsService.listProjects)
+      .mockResolvedValueOnce(projectPage)
+      .mockResolvedValueOnce(nextBackendPage);
+    const { result, rerender } = renderHook(() => useProjects(), {
+      wrapper: wrapperFor(makeClient()),
+    });
+    await waitFor(() => expect(result.current.data).toEqual(projectPage));
+
+    backend = { ...defaultBackend, backendUrl: "https://second.example" };
+    rerender();
+    await waitFor(() => expect(result.current.data).toEqual(nextBackendPage));
   });
 
   it("useProject fetches by id", async () => {

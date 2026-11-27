@@ -17,7 +17,7 @@ vi.mock("@/components/shared/Settings/useFlags", () => {
 });
 
 vi.mock("@/components/Home/ProjectsSection/ProjectsSection", () => ({
-  ProjectsSection: () => null,
+  ProjectsSection: () => <div data-testid="project-lists" />,
 }));
 
 vi.mock("@/components/Home/ProjectsSection/StartSessionPrompt", () => ({
@@ -48,16 +48,14 @@ describe("DashboardProjectsView", () => {
       expect(
         screen.getByRole("heading", { level: 1, name: "Tangent" }),
       ).toBeInTheDocument();
-      expect(
-        screen.getByRole("heading", { level: 2, name: "Projects" }),
-      ).toBeInTheDocument();
+      expect(screen.getByTestId("project-lists")).toBeInTheDocument();
     });
 
     it("puts starting a session ahead of the list", () => {
       render(<DashboardProjectsView />);
 
       const prompt = screen.getByLabelText("Start a new session");
-      const projects = screen.getByRole("heading", { name: "Projects" });
+      const projects = screen.getByTestId("project-lists");
 
       expect(
         prompt.compareDocumentPosition(projects) &

@@ -38,10 +38,7 @@ export function DashboardProjectsView() {
         </BlockStack>
       )}
 
-      <BlockStack gap="4">
-        {tangentEnabled && <Heading level={2}>Projects</Heading>}
-        <ProjectsSection />
-      </BlockStack>
+      <ProjectsSection />
     </BlockStack>
   );
 }

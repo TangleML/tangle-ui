@@ -3,12 +3,13 @@ import { InfoBox } from "@/components/shared/InfoBox";
 import { Button } from "@/components/ui/button";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
-import { Text } from "@/components/ui/typography";
+import { Heading, Text } from "@/components/ui/typography";
 import { useBackend } from "@/providers/BackendProvider";
 import { activeWorkspaces } from "@/services/projects/defaultWorkspace";
 import { usePinnedProjects } from "@/services/projects/usePinnedProjects";
 import { useWorkspaces } from "@/services/projects/useWorkspaces";
 
+import { AllProjectsTable } from "./AllProjectsTable";
 import { CreateProjectDialog } from "./CreateProjectDialog";
 import { NewProjectCard } from "./NewProjectCard";
 import { ProjectCard } from "./ProjectCard";
@@ -22,7 +23,7 @@ const LoadingProjects = () => (
 );
 
 export function ProjectsSection() {
-  const { configured, available, ready } = useBackend();
+  const { configured, available, ready, backendUrl } = useBackend();
 
   if (!ready) {
     return <LoadingProjects />;
@@ -44,7 +45,25 @@ export function ProjectsSection() {
     );
   }
 
-  return <ProjectsGrid />;
+  return (
+    <BlockStack gap="6">
+      <section aria-labelledby="my-projects" className="w-full space-y-4">
+        <Heading level={2} id="my-projects">
+          My projects
+        </Heading>
+        <ProjectsGrid />
+      </section>
+      <section
+        aria-labelledby="all-projects"
+        className="min-w-0 w-full space-y-4"
+      >
+        <Heading level={2} id="all-projects">
+          All projects
+        </Heading>
+        <AllProjectsTable key={backendUrl} />
+      </section>
+    </BlockStack>
+  );
 }
 
 function ProjectsGrid() {

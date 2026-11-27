@@ -1,18 +1,12 @@
 import { useMutationState, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
-import { type PointerEvent, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import { CopyText } from "@/components/shared/CopyText/CopyText";
 import { PaginationControls } from "@/components/shared/PaginationControls";
+import { ResizableTableHeader } from "@/components/shared/ResizableTableHeader";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { Text } from "@/components/ui/typography";
 import { useRemotePipelinesPage } from "@/hooks/useRemotePipelinesPage";
 import { useBackend } from "@/providers/BackendProvider";
@@ -31,16 +25,14 @@ import {
 import { RemotePipelineActions } from "./RemotePipelineActions";
 import { RemotePipelinesFilters } from "./RemotePipelinesFilters";
 
-const COLUMN_NAMES = [
-  "Name",
-  "ID",
-  "User",
-  "Created at",
-  "Updated at",
-  "Current version",
+const COLUMNS = [
+  { name: "Name", width: 25 },
+  { name: "ID", width: 15 },
+  { name: "User", width: 20 },
+  { name: "Created at", width: 12 },
+  { name: "Updated at", width: 12 },
+  { name: "Current version", width: 16 },
 ];
-const INITIAL_COLUMN_WIDTHS = [25, 15, 20, 12, 12, 16];
-const MIN_COLUMN_WIDTH_PERCENT = 8;
 
 interface RemotePipelinesTableProps {
   filters: RemotePipelineSearchFilters;
@@ -51,28 +43,6 @@ interface RemotePipelinesPagination {
   backendUrl: string;
   filterQuery?: string;
   tokens: string[];
-}
-
-function maxColumnWidthIncrease(widths: number[], index: number) {
-  return (
-    (Math.min(...widths.slice(index + 1)) - MIN_COLUMN_WIDTH_PERCENT) *
-    (widths.length - index - 1)
-  );
-}
-
-function resizeColumnWidths(widths: number[], index: number, delta: number) {
-  const remaining = widths.length - index - 1;
-  const maxDelta = maxColumnWidthIncrease(widths, index);
-  const change = Math.max(
-    MIN_COLUMN_WIDTH_PERCENT - widths[index],
-    Math.min(delta, maxDelta),
-  );
-
-  return widths.map((width, columnIndex) => {
-    if (columnIndex < index) return width;
-    if (columnIndex === index) return width + change;
-    return width - change / remaining;
-  });
 }
 
 export function RemotePipelinesTable({
@@ -107,15 +77,7 @@ export function RemotePipelinesTable({
   }
   const currentPage = pageTokens.length + 1;
   const pageToken = pageTokens.at(-1);
-  const [columnWidths, setColumnWidths] = useState(INITIAL_COLUMN_WIDTHS);
   const tableRef = useRef<HTMLTableElement>(null);
-  const actionsHeaderRef = useRef<HTMLTableCellElement>(null);
-  const dragRef = useRef<{
-    pointerId: number;
-    startX: number;
-    tableWidth: number;
-    widths: number[];
-  } | null>(null);
   const canFetch =
     ready && configured && available && !isEditingFilters && !invalidId;
   const {
@@ -164,10 +126,6 @@ export function RemotePipelinesTable({
         : "Failed to load pipelines.";
   else if (pipelines.length === 0) message = "No pipelines found.";
 
-  function stopResizing(event: PointerEvent<HTMLDivElement>) {
-    if (dragRef.current?.pointerId === event.pointerId) dragRef.current = null;
-  }
-
   return (
     <BlockStack gap="4" className="w-full">
       <RemotePipelinesFilters
@@ -183,102 +141,12 @@ export function RemotePipelinesTable({
         aria-busy={isFetching}
         className="table-fixed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       >
-        <TableHeader>
-          <TableRow className="text-xs">
-            {COLUMN_NAMES.map((name, index) => (
-              <TableHead
-                key={name}
-                scope="col"
-                className="relative"
-                style={{ width: `${columnWidths[index]}%` }}
-              >
-                <Text
-                  size="xs"
-                  weight="medium"
-                  className="block truncate"
-                  title={name}
-                >
-                  {name}
-                </Text>
-                {index < COLUMN_NAMES.length - 1 && (
-                  <div
-                    role="separator"
-                    aria-label={`Resize ${name} column`}
-                    aria-orientation="vertical"
-                    aria-valuemin={MIN_COLUMN_WIDTH_PERCENT}
-                    aria-valuemax={
-                      columnWidths[index] +
-                      maxColumnWidthIncrease(columnWidths, index)
-                    }
-                    aria-valuenow={columnWidths[index]}
-                    tabIndex={0}
-                    title={`Drag or use arrow keys to resize ${name}`}
-                    className="absolute inset-y-0 right-0 w-2 cursor-col-resize touch-none select-none hover:bg-muted focus-visible:bg-muted focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:border-ring"
-                    onPointerDown={(event) => {
-                      if (event.button !== 0 || dragRef.current) return;
-                      const tableWidth =
-                        (tableRef.current?.getBoundingClientRect().width ?? 0) -
-                        (actionsHeaderRef.current?.getBoundingClientRect()
-                          .width ?? 0);
-                      if (tableWidth <= 0) return;
-                      event.preventDefault();
-                      event.currentTarget.setPointerCapture(event.pointerId);
-                      dragRef.current = {
-                        pointerId: event.pointerId,
-                        startX: event.clientX,
-                        tableWidth,
-                        widths: columnWidths,
-                      };
-                    }}
-                    onPointerMove={(event) => {
-                      const drag = dragRef.current;
-                      if (!drag || drag.pointerId !== event.pointerId) return;
-                      setColumnWidths(
-                        resizeColumnWidths(
-                          drag.widths,
-                          index,
-                          ((event.clientX - drag.startX) / drag.tableWidth) *
-                            100,
-                        ),
-                      );
-                    }}
-                    onPointerUp={stopResizing}
-                    onPointerCancel={stopResizing}
-                    onLostPointerCapture={stopResizing}
-                    onKeyDown={(event) => {
-                      if (
-                        event.key !== "ArrowLeft" &&
-                        event.key !== "ArrowRight"
-                      )
-                        return;
-                      event.preventDefault();
-                      setColumnWidths((widths) =>
-                        resizeColumnWidths(
-                          widths,
-                          index,
-                          event.key === "ArrowRight" ? 1 : -1,
-                        ),
-                      );
-                    }}
-                  >
-                    <span
-                      aria-hidden="true"
-                      className="absolute inset-y-2 left-1/2 w-px bg-border"
-                    />
-                  </div>
-                )}
-              </TableHead>
-            ))}
-            <TableHead ref={actionsHeaderRef} scope="col" className="w-20">
-              <span className="sr-only">Actions</span>
-            </TableHead>
-          </TableRow>
-        </TableHeader>
+        <ResizableTableHeader columns={COLUMNS} />
         <TableBody>
           {message ? (
             <TableRow>
               <TableCell
-                colSpan={COLUMN_NAMES.length + 1}
+                colSpan={COLUMNS.length + 1}
                 className="whitespace-normal text-center"
               >
                 <Text size="sm" tone="subdued">
