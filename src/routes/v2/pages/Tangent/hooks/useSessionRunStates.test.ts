@@ -1,6 +1,8 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { useRemoteEnvAuthToken } from "@/routes/v2/pages/Tangent/hooks/useRemoteEnvAuthToken";
+
 import {
   rememberSeen,
   runStatesToShow,
@@ -11,21 +13,37 @@ import {
   withStatus,
 } from "./useSessionRunStates";
 
+type SocketAuth = (cb: (data: object) => void) => void;
+
 const socketHandlers = new Map<string, (payload: unknown) => void>();
+let connections = 0;
+let socketAuth: SocketAuth | undefined;
 
 vi.mock("socket.io-client", () => ({
-  io: () => ({
-    on: (event: string, handler: (payload: unknown) => void) => {
-      socketHandlers.set(event, handler);
-    },
-    emit: vi.fn(),
-    disconnect: vi.fn(),
-  }),
+  io: (_url: string, options: { auth: SocketAuth }) => {
+    connections += 1;
+    socketAuth = options.auth;
+    return {
+      on: (event: string, handler: (payload: unknown) => void) => {
+        socketHandlers.set(event, handler);
+      },
+      emit: vi.fn(),
+      disconnect: vi.fn(),
+    };
+  },
 }));
 
 vi.mock("@/routes/v2/pages/Tangent/hooks/useRemoteEnvAuthToken", () => ({
-  useRemoteEnvAuthToken: () => undefined,
+  useRemoteEnvAuthToken: vi.fn(() => undefined),
 }));
+
+function authPayload(): object {
+  let payload: object = {};
+  socketAuth?.((data) => {
+    payload = data;
+  });
+  return payload;
+}
 
 const SEEN_KEY = "tangent-sessions-seen";
 const EARLIER = "2026-11-10T09:00:00.000Z";
@@ -144,6 +162,9 @@ describe("withSeenElsewhere", () => {
 describe("useSessionRunStates", () => {
   beforeEach(() => {
     socketHandlers.clear();
+    connections = 0;
+    socketAuth = undefined;
+    vi.mocked(useRemoteEnvAuthToken).mockReturnValue(undefined);
     localStorage.clear();
   });
   afterEach(() => localStorage.clear());
@@ -218,6 +239,38 @@ describe("useSessionRunStates", () => {
     rerender({ active: "s-1" });
 
     expect([...result.current]).toEqual([]);
+  });
+
+  it("connects again as this person once there is a token", () => {
+    const { rerender } = renderHook(() =>
+      useSessionRunStates("http://tangent", undefined),
+    );
+    expect(connections).toBe(1);
+    expect(authPayload()).toEqual({});
+
+    vi.mocked(useRemoteEnvAuthToken).mockReturnValue("token-1");
+    rerender();
+
+    expect(connections).toBe(2);
+    expect(authPayload()).toEqual({ token: "token-1" });
+  });
+
+  it("keeps its socket and marks when the token is refreshed", () => {
+    vi.mocked(useRemoteEnvAuthToken).mockReturnValue("token-1");
+    const { result, rerender } = renderHook(() =>
+      useSessionRunStates("http://tangent", undefined),
+    );
+    send("session:status:snapshot", {
+      statuses: [{ sessionId: "s-1", status: "busy" }],
+    });
+    expect(result.current.get("s-1")).toBe("working");
+
+    vi.mocked(useRemoteEnvAuthToken).mockReturnValue("token-2");
+    rerender();
+
+    expect(connections).toBe(1);
+    expect(result.current.get("s-1")).toBe("working");
+    expect(authPayload()).toEqual({ token: "token-2" });
   });
 
   it("drops a Tangent's marks when it's another Tangent's turn, or there is none", () => {

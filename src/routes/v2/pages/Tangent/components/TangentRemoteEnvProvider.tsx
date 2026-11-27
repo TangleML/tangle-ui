@@ -59,7 +59,7 @@ export function TangentRemoteEnvProvider({
   const { projectId } = useTangentProject();
   const { baseUrl } = useTangentBaseUrl(projectId);
 
-  const authToken = useRemoteEnvAuthToken();
+  const authToken = useRemoteEnvAuthToken(baseUrl);
   const authTokenRef = useRef(authToken);
   const aiConfigRef = useRef(aiConfig);
   const contextRef = useRef(context);

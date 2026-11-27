@@ -3,6 +3,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { useRemoteEnvAuthToken } from "@/routes/v2/pages/Tangent/hooks/useRemoteEnvAuthToken";
 import type { TangentEnvironment } from "@/routes/v2/pages/Tangent/services/listTangentEnvironments";
 import { listTangentEnvironments } from "@/routes/v2/pages/Tangent/services/listTangentEnvironments";
 
@@ -11,17 +12,24 @@ import { useProjectLocalEnv } from "./useProjectLocalEnv";
 vi.mock("@/routes/v2/pages/Tangent/services/listTangentEnvironments", () => ({
   listTangentEnvironments: vi.fn(),
 }));
+vi.mock("@/routes/v2/pages/Tangent/hooks/useRemoteEnvAuthToken", () => ({
+  useRemoteEnvAuthToken: vi.fn(() => undefined),
+}));
 
 const socketHandlers = new Map<string, (payload: unknown) => void>();
 const disconnect = vi.fn();
+let connections = 0;
 
 vi.mock("socket.io-client", () => ({
-  io: () => ({
-    on: (event: string, handler: (payload: unknown) => void) => {
-      socketHandlers.set(event, handler);
-    },
-    disconnect,
-  }),
+  io: () => {
+    connections += 1;
+    return {
+      on: (event: string, handler: (payload: unknown) => void) => {
+        socketHandlers.set(event, handler);
+      },
+      disconnect,
+    };
+  },
 }));
 
 const USER_ID = "me@example.com";
@@ -59,6 +67,7 @@ function mockEnvironments(environments: TangentEnvironment[]) {
 
 beforeEach(() => {
   socketHandlers.clear();
+  connections = 0;
   vi.clearAllMocks();
 });
 
@@ -110,6 +119,71 @@ describe("useProjectLocalEnv", () => {
     );
     expect(result.current.isLocalEnvConnected).toBe(false);
     expect(result.current.localEnvironments).toEqual([]);
+  });
+
+  it("connects again as this person once there is a token", async () => {
+    mockEnvironments([]);
+    const sessionIds = ["s1"];
+
+    const { rerender } = renderHook(
+      () => useProjectLocalEnv(BASE_URL, sessionIds),
+      { wrapper: wrapperFor(makeClient()) },
+    );
+    await waitFor(() => expect(connections).toBe(1));
+
+    vi.mocked(useRemoteEnvAuthToken).mockReturnValue("token-1");
+    rerender();
+
+    expect(disconnect).toHaveBeenCalledTimes(1);
+    expect(connections).toBe(2);
+  });
+
+  it("lists the environments again as this person once there is a token", async () => {
+    mockEnvironments([]);
+    const sessionIds = ["s1"];
+
+    const { rerender } = renderHook(
+      () => useProjectLocalEnv(BASE_URL, sessionIds),
+      { wrapper: wrapperFor(makeClient()) },
+    );
+    await waitFor(() =>
+      expect(listTangentEnvironments).toHaveBeenCalledTimes(1),
+    );
+    expect(listTangentEnvironments).toHaveBeenLastCalledWith({
+      baseUrl: BASE_URL,
+      sessionId: "s1",
+      authToken: undefined,
+    });
+
+    vi.mocked(useRemoteEnvAuthToken).mockReturnValue("token-1");
+    rerender();
+
+    await waitFor(() =>
+      expect(listTangentEnvironments).toHaveBeenCalledTimes(2),
+    );
+    expect(listTangentEnvironments).toHaveBeenLastCalledWith({
+      baseUrl: BASE_URL,
+      sessionId: "s1",
+      authToken: "token-1",
+    });
+  });
+
+  it("keeps its socket when the token is refreshed", async () => {
+    mockEnvironments([]);
+    vi.mocked(useRemoteEnvAuthToken).mockReturnValue("token-1");
+    const sessionIds = ["s1"];
+
+    const { rerender } = renderHook(
+      () => useProjectLocalEnv(BASE_URL, sessionIds),
+      { wrapper: wrapperFor(makeClient()) },
+    );
+    await waitFor(() => expect(connections).toBe(1));
+
+    vi.mocked(useRemoteEnvAuthToken).mockReturnValue("token-2");
+    rerender();
+
+    expect(disconnect).not.toHaveBeenCalled();
+    expect(connections).toBe(1);
   });
 
   it("refetches only for environment:update broadcasts within the project", async () => {

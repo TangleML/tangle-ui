@@ -136,7 +136,7 @@ export function TangentProjectAgentProvider({
     store.projectId,
   );
 
-  const authToken = useRemoteEnvAuthToken();
+  const authToken = useRemoteEnvAuthToken(baseUrl);
   const authTokenRef = useRef(authToken);
   const backendUrlRef = useRef(backendUrl);
   const baseUrlRef = useRef(baseUrl);
